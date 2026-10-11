@@ -97,7 +97,7 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	public static float toFloat(final byte[] bytes) {

@@ -25,8 +25,7 @@ import com.sqlapp.data.schemas.Event;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
 
-public class MySqlCreateEventFactory extends
-		AbstractCreateEventFactory<MySqlSqlBuilder> {
+public class MySqlCreateEventFactory extends AbstractCreateEventFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Event obj, MySqlSqlBuilder builder) {
@@ -41,8 +40,7 @@ public class MySqlCreateEventFactory extends
 		} else if (obj.getIntervalValue() != null) {
 			builder.every().space()._add(obj.getIntervalValue());
 			if (obj.getStarts() != null) {
-				builder.starts().space()
-						._add(DateUtils.format(obj.getStarts()));
+				builder.starts().space()._add(DateUtils.format(obj.getStarts()));
 			}
 			if (obj.getEnds() != null) {
 				builder.ends().space()._add(DateUtils.format(obj.getEnds()));

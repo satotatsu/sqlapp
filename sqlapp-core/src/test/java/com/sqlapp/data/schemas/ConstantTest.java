@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.schemas;
 
-
 public class ConstantTest extends AbstractDbObjectTest<Constant> {
 
 	public static Constant getConstant() {

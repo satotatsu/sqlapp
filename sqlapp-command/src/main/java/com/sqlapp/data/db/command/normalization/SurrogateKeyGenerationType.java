@@ -9,6 +9,5 @@ package com.sqlapp.data.db.command.normalization;
  * Generation mechanism for surrogate primary-key values.
  */
 public enum SurrogateKeyGenerationType {
-	IDENTITY,
-	SEQUENCE
+	IDENTITY, SEQUENCE
 }

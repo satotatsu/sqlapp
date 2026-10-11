@@ -130,8 +130,12 @@ public class LegacyMigrationMapping {
 	public static class GeneratedKey {
 		private String column;
 		private String dataType;
-		private String generationType;
+		private GeneratedKeyGenerationType generationType;
 		private String sequence;
+	}
+
+	public enum GeneratedKeyGenerationType {
+		IDENTITY, SEQUENCE
 	}
 
 	@Getter
@@ -216,7 +220,7 @@ public class LegacyMigrationMapping {
 	public static class TransformationRecord {
 		private int sequence;
 		private String command;
-		private String status;
+		private TransformationStatus status;
 		private String inputFingerprint;
 		private String outputFingerprint;
 		private Map<String, Object> configuration = new LinkedHashMap<>();
@@ -267,6 +271,10 @@ public class LegacyMigrationMapping {
 
 	public enum RelationshipType {
 		HIERARCHICAL, REFERENCE
+	}
+
+	public enum TransformationStatus {
+		SUCCESS
 	}
 
 	public enum DiagnosticSeverity {

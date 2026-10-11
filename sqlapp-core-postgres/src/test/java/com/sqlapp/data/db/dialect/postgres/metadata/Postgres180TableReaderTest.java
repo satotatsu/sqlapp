@@ -24,28 +24,17 @@ class Postgres180TableReaderTest {
 		Table table = new TestReader().read(resultSet);
 
 		assertEquals("42", table.getSpecifics().get("relallfrozen"));
-		assertEquals("12.5",
-				table.getStatistics().get("total_vacuum_time"));
-		assertEquals("3.25",
-				table.getStatistics().get("total_autovacuum_time"));
-		assertEquals("7.75",
-				table.getStatistics().get("total_analyze_time"));
-		assertEquals("1.5",
-				table.getStatistics().get("total_autoanalyze_time"));
+		assertEquals("12.5", table.getStatistics().get("total_vacuum_time"));
+		assertEquals("3.25", table.getStatistics().get("total_autovacuum_time"));
+		assertEquals("7.75", table.getStatistics().get("total_analyze_time"));
+		assertEquals("1.5", table.getStatistics().get("total_autoanalyze_time"));
 	}
 
 	private CachedRowSet rowSet() throws SQLException {
-		String[] names = {
-				"table_name", "schema_name", "remarks", "table_id",
-				"relallfrozen", "total_vacuum_time",
-				"total_autovacuum_time", "total_analyze_time",
-				"total_autoanalyze_time"
-		};
-		int[] types = {
-				Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
-				Types.BIGINT, Types.DOUBLE, Types.DOUBLE, Types.DOUBLE,
-				Types.DOUBLE
-		};
+		String[] names = { "table_name", "schema_name", "remarks", "table_id", "relallfrozen", "total_vacuum_time",
+				"total_autovacuum_time", "total_analyze_time", "total_autoanalyze_time" };
+		int[] types = { Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.BIGINT, Types.DOUBLE,
+				Types.DOUBLE, Types.DOUBLE, Types.DOUBLE };
 		RowSetMetaDataImpl metadata = new RowSetMetaDataImpl();
 		metadata.setColumnCount(names.length);
 		for (int i = 0; i < names.length; i++) {

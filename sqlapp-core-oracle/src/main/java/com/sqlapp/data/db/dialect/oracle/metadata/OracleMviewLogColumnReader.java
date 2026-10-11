@@ -48,11 +48,10 @@ public class OracleMviewLogColumnReader extends MviewLogColumnReader {
 	}
 
 	@Override
-	protected List<ReferenceColumn> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ReferenceColumn> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_MVIEW_LOG_FILTER_COLS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"DBA_MVIEW_LOG_FILTER_COLS");
 		final List<ReferenceColumn> result = list();
 		if (!dba) {
 			return result;

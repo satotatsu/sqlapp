@@ -25,7 +25,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -57,14 +61,13 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.FileRowIteratorFactory;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.TextFileWriter;
 
@@ -119,53 +122,34 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 
 	@Override
 	protected void doRun() {
+		validateOutputFileType();
 		List<File> list = getTargetFiles();
 		for (File file : list) {
-			if (!this.getFileFilter().test(file)) {
-				continue;
-			}
 			DataFormat workbookFileType = DataFormat.parse(file);
-			RowIteratorHandler rowIteratorHandler;
+			if (workbookFileType == null) {
+				throw new IllegalArgumentException("Unsupported data file format: " + file);
+			}
+			if (workbookFileType.isToml()) {
+				throw new IllegalArgumentException(
+						"TOML input is not supported for data conversion because TOML has no root array: " + file);
+			}
 			Table[] table = new Table[1];
 			table[0] = new Table();
-			if (workbookFileType.isWorkbook()) {
-				rowIteratorHandler = new ExcelRowIteratorHandler(file);
-				table[0].setRowIteratorHandler(rowIteratorHandler);
-			} else if (workbookFileType.isCsv()) {
-				rowIteratorHandler = new CsvRowIteratorHandler(file, this.getCsvEncoding());
-				table[0].setRowIteratorHandler(rowIteratorHandler);
-			} else if (workbookFileType.isJson()) {
-				rowIteratorHandler = new JsonRowIteratorHandler(file, this.getJsonConverter());
-				table[0].setRowIteratorHandler(rowIteratorHandler);
-			} else {
+			if (workbookFileType.isXml()) {
 				execute(() -> {
 					table[0] = SchemaUtils.readXml(file);
 				});
+			} else {
+				final RowIteratorHandler rowIteratorHandler = FileRowIteratorFactory.create(file, getCsvEncoding(), 0,
+						0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> value);
+				table[0].setRowIteratorHandler(rowIteratorHandler);
 			}
 			execute(() -> {
 				File tempFile = null;
 				try {
-					File outputFile;
-					if (this.getOutputDirectory() != null
-							&& !CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())
-							&& !CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())) {
-						String path = file.getParentFile().getName();
-						path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(), path);
-						File parent = new File(path);
-						if (!parent.exists()) {
-							parent.mkdirs();
-						}
-						tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-								"." + this.getOutputFileType().getFileExtension(), parent);
-						outputFile = new File(parent, FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())
-								+ "." + this.getOutputFileType().getFileExtension());
-					} else {
-						tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-								"." + this.getOutputFileType().getFileExtension(), file.getParentFile());
-						outputFile = new File(file.getParentFile(),
-								FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
-										+ this.getOutputFileType().getFileExtension());
-					}
+					final OutputFiles outputFiles = createOutputFiles(file);
+					tempFile = outputFiles.temporary();
+					final File outputFile = outputFiles.output();
 					if (this.getOutputFileType().isWorkbook()) {
 						readAll(table[0]);
 						writeTableAsExcel(tempFile, table[0], this.getOutputFileType());
@@ -181,17 +165,60 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					} else {
 						table[0].writeXml(tempFile);
 					}
-					tempFile.renameTo(outputFile);
+					moveOutput(tempFile, outputFile);
 					if (this.isRemoveOriginalFile()) {
-						file.delete();
+						Files.delete(file.toPath());
 					}
 				} catch (Exception e) {
-					if (tempFile != null && tempFile.exists()) {
-						tempFile.delete();
+					if (tempFile != null) {
+						try {
+							Files.deleteIfExists(tempFile.toPath());
+						} catch (final IOException cleanupFailure) {
+							e.addSuppressed(cleanupFailure);
+						}
 					}
 					throw e;
 				}
 			});
+		}
+	}
+
+	private OutputFiles createOutputFiles(final File input) throws IOException {
+		final File inputParent = input.getAbsoluteFile().getParentFile();
+		final File outputParent;
+		if (getOutputDirectory() != null && !CommonUtils.eq(getOutputDirectory(), getDirectory())
+				&& !CommonUtils.eq(getOutputDirectory(), input.getParentFile())) {
+			outputParent = new File(getOutputDirectory(), inputParent.getName());
+		} else {
+			outputParent = inputParent;
+		}
+		Files.createDirectories(outputParent.toPath());
+		final String baseName = FileUtils.getFileNameWithoutExtension(input.getName());
+		final String temporaryPrefix = baseName.length() >= 3 ? baseName : (baseName + "___").substring(0, 3);
+		final String extension = "." + getOutputFileType().getFileExtension();
+		final File temporary = Files.createTempFile(outputParent.toPath(), temporaryPrefix, extension).toFile();
+		final File output = new File(outputParent, baseName + extension);
+		return new OutputFiles(temporary, output);
+	}
+
+	private record OutputFiles(File temporary, File output) {
+	}
+
+	private void validateOutputFileType() {
+		if (getOutputFileType() == null) {
+			throw new IllegalArgumentException("Output data format is required.");
+		}
+		if (getOutputFileType().isToml()) {
+			throw new IllegalArgumentException("TOML output is not supported because TOML has no root array.");
+		}
+	}
+
+	private static void moveOutput(final File temporary, final File output) throws IOException {
+		try {
+			Files.move(temporary.toPath(), output.toPath(), StandardCopyOption.ATOMIC_MOVE,
+					StandardCopyOption.REPLACE_EXISTING);
+		} catch (final AtomicMoveNotSupportedException e) {
+			Files.move(temporary.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
 		}
 	}
 
@@ -210,15 +237,15 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
 			List<String> headers = table.getColumns().stream().map(c -> c.getName()).collect(Collectors.toList());
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			String[] values = new String[table.getColumns().size()];
 			for (Row row : table.getRows()) {
+				String[] values = new String[table.getColumns().size()];
 				int i = 0;
 				boolean set = false;
 				for (Column column : table.getColumns()) {
 					Object value = row.get(column);
 					String text = column.getFormatter().format(value);
+					values[i++] = text;
 					if (!CommonUtils.isEmpty(text)) {
-						values[i++] = text;
 						set = true;
 					}
 				}
@@ -349,44 +376,54 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 		if (this.files != null) {
 			// files優先
 			for (File file : files) {
-				findFiles(file, list);
+				findFiles(file, list, true);
 			}
 			return list;
 		}
-		findFiles(this.getDirectory(), list);
+		findFiles(this.getDirectory(), list, this.getDirectory() != null);
 		return list;
 	}
 
-	private void findFiles(File file, List<File> list) {
+	private void findFiles(final File file, final List<File> list, final boolean required) {
 		if (file == null) {
 			return;
 		}
 		if (!file.exists()) {
+			if (required) {
+				throw new IllegalArgumentException("Input file or directory does not exist: " + file);
+			}
 			return;
 		}
 		if (file.isDirectory()) {
 			File[] children = file.listFiles(f -> true);
-			if (children != null) {
-				for (File child : children) {
-					if (child.isFile()) {
-						addFile(child, list);
-					} else {
-						if (isRecursive()) {
-							findFiles(child, list);
-						}
+			if (children == null) {
+				throw new UncheckedIOException(new IOException("Cannot list input directory: " + file));
+			}
+			for (File child : children) {
+				if (child.isFile()) {
+					addFile(child, list, false);
+				} else {
+					if (isRecursive()) {
+						findFiles(child, list, false);
 					}
 				}
 			}
 		} else {
-			addFile(file, list);
+			addFile(file, list, required);
 		}
 	}
 
-	private void addFile(File file, List<File> list) {
+	private void addFile(final File file, final List<File> list, final boolean required) {
 		if (!file.exists()) {
+			if (required) {
+				throw new IllegalArgumentException("Input file does not exist: " + file);
+			}
 			return;
 		}
 		DataFormat workbookFileType = DataFormat.parse(file);
+		if (workbookFileType == null && required) {
+			throw new IllegalArgumentException("Unsupported data file format: " + file);
+		}
 		if (workbookFileType != null && workbookFileType != this.getOutputFileType()) {
 			if (getFileFilter().test(file)) {
 				list.add(file);

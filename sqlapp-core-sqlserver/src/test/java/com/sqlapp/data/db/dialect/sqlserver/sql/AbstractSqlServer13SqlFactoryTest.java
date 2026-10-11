@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-public abstract class AbstractSqlServer13SqlFactoryTest extends AbstractSqlServerSqlFactoryTest{
+public abstract class AbstractSqlServer13SqlFactoryTest extends AbstractSqlServerSqlFactoryTest {
 
 	@Override
 	protected int getMajorVersion() {

@@ -54,99 +54,98 @@ public class BinaryUtilsTest {
 
 	@Test
 	public void testToBinaryUUID() {
-		UUID val=UUID.randomUUID();
-		byte[] bytes=BinaryUtils.toBinary(val);
-		UUID ret=BinaryUtils.toUUID(bytes);
+		UUID val = UUID.randomUUID();
+		byte[] bytes = BinaryUtils.toBinary(val);
+		UUID ret = BinaryUtils.toUUID(bytes);
 		assertEquals(val, ret);
 	}
 
 	@Test
 	public void testToBinaryUUIDArray() {
-		UUID[] vals=new UUID[]{UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()};
-		byte[] bytes=BinaryUtils.toBinary(vals);
-		UUID[] ret=BinaryUtils.toUUIDArray(bytes);
+		UUID[] vals = new UUID[] { UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() };
+		byte[] bytes = BinaryUtils.toBinary(vals);
+		UUID[] ret = BinaryUtils.toUUIDArray(bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToBinaryByteOrderUUIDArray() {
-		UUID[] vals=new UUID[]{UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()};
-		byte[] bytes=BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
-		UUID[] ret=BinaryUtils.toUUIDArray(ByteOrder.LITTLE_ENDIAN, bytes);
+		UUID[] vals = new UUID[] { UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID() };
+		byte[] bytes = BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
+		UUID[] ret = BinaryUtils.toUUIDArray(ByteOrder.LITTLE_ENDIAN, bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToBinaryShort() {
-		short val=5;
-		byte[] bytes=BinaryUtils.toBinary(val);
-		short ret=BinaryUtils.toShort(bytes);
+		short val = 5;
+		byte[] bytes = BinaryUtils.toBinary(val);
+		short ret = BinaryUtils.toShort(bytes);
 		assertEquals(val, ret);
 	}
 
 	@Test
 	public void testToShortArrayByteArray() {
-		short[] vals=new short[]{1, 2, 3};
-		byte[] bytes=BinaryUtils.toBinary(vals);
-		short[] ret=BinaryUtils.toShortArray(bytes);
+		short[] vals = new short[] { 1, 2, 3 };
+		byte[] bytes = BinaryUtils.toBinary(vals);
+		short[] ret = BinaryUtils.toShortArray(bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToShortArrayByteOrderByteArray() {
-		short[] vals=new short[]{1, 2, 3};
-		byte[] bytes=BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
-		short[] ret=BinaryUtils.toShortArray(ByteOrder.LITTLE_ENDIAN, bytes);
+		short[] vals = new short[] { 1, 2, 3 };
+		byte[] bytes = BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
+		short[] ret = BinaryUtils.toShortArray(ByteOrder.LITTLE_ENDIAN, bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToBinaryInt() {
-		int val=5;
-		byte[] bytes=BinaryUtils.toBinary(val);
-		int ret=BinaryUtils.toInt(bytes);
+		int val = 5;
+		byte[] bytes = BinaryUtils.toBinary(val);
+		int ret = BinaryUtils.toInt(bytes);
 		assertEquals(val, ret);
 	}
 
 	@Test
 	public void testToIntByteOrderByteArray() {
-		int[] vals=new int[]{1, 2, 3};
-		byte[] bytes=BinaryUtils.toBinary(vals);
-		int[] ret=BinaryUtils.toIntArray(bytes);
+		int[] vals = new int[] { 1, 2, 3 };
+		byte[] bytes = BinaryUtils.toBinary(vals);
+		int[] ret = BinaryUtils.toIntArray(bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToIntArrayByteOrderByteArray() {
-		int[] vals=new int[]{1, 2, 3};
-		byte[] bytes=BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
-		int[] ret=BinaryUtils.toIntArray(ByteOrder.LITTLE_ENDIAN, bytes);
+		int[] vals = new int[] { 1, 2, 3 };
+		byte[] bytes = BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
+		int[] ret = BinaryUtils.toIntArray(ByteOrder.LITTLE_ENDIAN, bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToBinaryLong() {
-		long val=5L;
-		byte[] bytes=BinaryUtils.toBinary(val);
-		long ret=BinaryUtils.toLong(bytes);
+		long val = 5L;
+		byte[] bytes = BinaryUtils.toBinary(val);
+		long ret = BinaryUtils.toLong(bytes);
 		assertEquals(val, ret);
 	}
 
 	@Test
 	public void testToBinaryLongArray() {
-		long[] vals=new long[]{1L, 2L, 3L};
-		byte[] bytes=BinaryUtils.toBinary(vals);
-		long[] ret=BinaryUtils.toLongArray(bytes);
+		long[] vals = new long[] { 1L, 2L, 3L };
+		byte[] bytes = BinaryUtils.toBinary(vals);
+		long[] ret = BinaryUtils.toLongArray(bytes);
 		assertArrayEquals(vals, ret);
 	}
 
 	@Test
 	public void testToBinaryByteOrderLongArray() {
-		long[] vals=new long[]{1L, 2L, 3L};
-		byte[] bytes=BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
-		long[] ret=BinaryUtils.toLongArray(ByteOrder.LITTLE_ENDIAN, bytes);
+		long[] vals = new long[] { 1L, 2L, 3L };
+		byte[] bytes = BinaryUtils.toBinary(ByteOrder.LITTLE_ENDIAN, vals);
+		long[] ret = BinaryUtils.toLongArray(ByteOrder.LITTLE_ENDIAN, bytes);
 		assertArrayEquals(vals, ret);
 	}
-
 
 }

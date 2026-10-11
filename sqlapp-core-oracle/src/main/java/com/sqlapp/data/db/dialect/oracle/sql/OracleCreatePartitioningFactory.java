@@ -30,8 +30,7 @@ import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.SubPartition;
 import com.sqlapp.util.CommonUtils;
 
-public class OracleCreatePartitioningFactory extends
-		AbstractCreatePartitioningFactory<OracleSqlBuilder> {
+public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningFactory<OracleSqlBuilder> {
 
 	@Override
 	public void addObjectDetail(Partitioning obj, OracleSqlBuilder builder) {
@@ -43,28 +42,25 @@ public class OracleCreatePartitioningFactory extends
 		builder.names(obj.getPartitioningColumns());
 		builder._add(" )");
 		if (obj.getPartitioningType().isSizePartitioning()) {
-			builder.space().partitions().space()
-					._add(obj.getPartitionSize());
+			builder.space().partitions().space()._add(obj.getPartitionSize());
 		}
 		if (obj.getSubPartitioningType() != null) {
-			builder.lineBreak().subpartitionBy().space()
-					._add(obj.getSubPartitioningType());
+			builder.lineBreak().subpartitionBy().space()._add(obj.getSubPartitioningType());
 			builder._add("(");
 			builder.names(obj.getSubPartitioningColumns());
 			builder._add(" )");
 		}
-		appendPartitionDefinition(false, obj,
-				obj.getPartitions(), builder);
+		appendPartitionDefinition(false, obj, obj.getPartitions(), builder);
 	}
 
-	protected void appendPartitionDefinition(boolean subpartition,
-			Partitioning obj, List<? extends AbstractPartition<?>> partitionCollection, OracleSqlBuilder builder) {
+	protected void appendPartitionDefinition(boolean subpartition, Partitioning obj,
+			List<? extends AbstractPartition<?>> partitionCollection, OracleSqlBuilder builder) {
 		if (partitionCollection.size() > 0) {
 			builder.lineBreak()._add("(");
 			builder.appendIndent(1);
 			for (int i = 0; i < partitionCollection.size(); i++) {
 				AbstractPartition<?> partition = partitionCollection.get(i);
-				builder.lineBreak().comma(i>0);
+				builder.lineBreak().comma(i > 0);
 				appendPartitionDefinition(subpartition, obj, partition, builder);
 			}
 			builder.appendIndent(-1);
@@ -72,8 +68,8 @@ public class OracleCreatePartitioningFactory extends
 		}
 	}
 
-	protected void appendPartitionDefinition(boolean subpartition,
-			Partitioning partitionInfo, AbstractPartition<?> partition, OracleSqlBuilder builder) {
+	protected void appendPartitionDefinition(boolean subpartition, Partitioning partitionInfo,
+			AbstractPartition<?> partition, OracleSqlBuilder builder) {
 		builder.subpartition(subpartition);
 		builder.partition(!subpartition);
 		builder.space().name(partition.getName()).space();
@@ -87,10 +83,10 @@ public class OracleCreatePartitioningFactory extends
 		}
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
-		if (partition instanceof Partition){
+		if (partition instanceof Partition) {
 			for (int j = 0; j < partition.toPartition().getSubPartitions().size(); j++) {
 				SubPartition subPartition = partition.toPartition().getSubPartitions().get(j);
-				builder.lineBreak().comma(j>0);
+				builder.lineBreak().comma(j > 0);
 				appendPartitionDefinition(true, partitionInfo, subPartition, builder);
 			}
 		}
@@ -98,18 +94,16 @@ public class OracleCreatePartitioningFactory extends
 		builder.lineBreak()._add(")");
 	}
 
-	protected void appendPartitionDefinition(PartitioningType partitioningType,
-			AbstractPartition<?> partition, OracleSqlBuilder builder) {
-		if (partitioningType == PartitioningType.Range||partitioningType == PartitioningType.RangeColumns) {
+	protected void appendPartitionDefinition(PartitioningType partitioningType, AbstractPartition<?> partition,
+			OracleSqlBuilder builder) {
+		if (partitioningType == PartitioningType.Range || partitioningType == PartitioningType.RangeColumns) {
 			if ("MAXVALUE".equalsIgnoreCase(partition.getHighValue())) {
 				builder.values().lessThan().space()._add(partition.getHighValue());
 			} else {
-				builder.values().lessThan().space()._add("(")
-						._add(partition.getHighValue())._add(")");
+				builder.values().lessThan().space()._add("(")._add(partition.getHighValue())._add(")");
 			}
 		} else if (partitioningType == PartitioningType.List) {
-			builder.values().in()._add("(")._add(partition.getHighValue())
-					._add(")");
+			builder.values().in()._add("(")._add(partition.getHighValue())._add(")");
 		}
 		if (!CommonUtils.isEmpty(partition.getTableSpaceName())) {
 			builder.tablespace().eq().name(partition.getTableSpaceName());

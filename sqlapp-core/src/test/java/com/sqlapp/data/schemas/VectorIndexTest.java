@@ -22,12 +22,9 @@ class VectorIndexTest {
 		final Catalog catalog = new Catalog("CAT");
 		final Schema schema = new Schema("PUBLIC");
 		final Table table = new Table("DOCUMENTS");
-		final Column vector = new Column("EMBEDDING")
-				.setDataType(DataType.VECTOR)
-				.setVectorElementDataType(DataType.REAL)
-				.setVectorDimension(768);
-		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", vector)
-				.setIndexType(IndexType.Vector)
+		final Column vector = new Column("EMBEDDING").setDataType(DataType.VECTOR)
+				.setVectorElementDataType(DataType.REAL).setVectorDimension(768);
+		final Index index = new Index("IDX_DOCUMENTS_EMBEDDING", vector).setIndexType(IndexType.Vector)
 				.setVectorDistanceType(VectorDistanceType.Cosine);
 		catalog.getSchemas().add(schema);
 		schema.getTables().add(table);
@@ -43,8 +40,8 @@ class VectorIndexTest {
 		catalog.writeXml(writer);
 		final Catalog restored = new Catalog();
 		restored.loadXml(new StringReader(writer.toString()));
-		final Index restoredIndex = restored.getSchemas().get("PUBLIC")
-				.getTables().get("DOCUMENTS").getIndexes().get("IDX_DOCUMENTS_EMBEDDING");
+		final Index restoredIndex = restored.getSchemas().get("PUBLIC").getTables().get("DOCUMENTS").getIndexes()
+				.get("IDX_DOCUMENTS_EMBEDDING");
 		assertEquals(IndexType.Vector, restoredIndex.getIndexType());
 		assertEquals(VectorDistanceType.Cosine, restoredIndex.getVectorDistanceType());
 		assertEquals(index, restoredIndex);

@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 
-public class Postgres83CatalogReader extends PostgresCatalogReader{
+public class Postgres83CatalogReader extends PostgresCatalogReader {
 
 	public Postgres83CatalogReader(Dialect dialect) {
 		super(dialect);

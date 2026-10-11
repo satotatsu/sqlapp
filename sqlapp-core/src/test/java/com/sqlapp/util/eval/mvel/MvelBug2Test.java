@@ -38,23 +38,23 @@ import org.mvel2.ParserContext;
 
 public class MvelBug2Test {
 
-	private ConcurrentMap<String, Serializable> map=new ConcurrentHashMap<String, Serializable>();
-	
+	private ConcurrentMap<String, Serializable> map = new ConcurrentHashMap<String, Serializable>();
+
 	@Test
 	public void test() {
-		Map<String, Object> map=new HashMap<String, Object>();
+		Map<String, Object> map = new HashMap<String, Object>();
 		boolean val;
 		//
 		map.put("a", null);
-		val=doEvalBoolean("isEmpty(a)", map);
+		val = doEvalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 		//
 		map.put("a", "");
-		val=doEvalBoolean("isEmpty(a)", map);
+		val = doEvalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 		//
 		map.put("a", 1);
-		val=doEvalBoolean("isEmpty(a)", map);
+		val = doEvalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 	}
 
@@ -62,19 +62,19 @@ public class MvelBug2Test {
 		return MVEL.executeExpression(getCompliedExpression(expression), val, boolean.class);
 	}
 
-	private Serializable getCompliedExpression(String expression){
-		Serializable compliedExpression=map.get(expression);
-		if (compliedExpression==null){
-			compliedExpression=MVEL.compileExpression(expression, getParserContext());
-			Serializable org=map.putIfAbsent(expression, compliedExpression);
-			return org!=null?org:compliedExpression;
+	private Serializable getCompliedExpression(String expression) {
+		Serializable compliedExpression = map.get(expression);
+		if (compliedExpression == null) {
+			compliedExpression = MVEL.compileExpression(expression, getParserContext());
+			Serializable org = map.putIfAbsent(expression, compliedExpression);
+			return org != null ? org : compliedExpression;
 		}
 		return compliedExpression;
 	}
 
-	private ParserContext getParserContext(){
-		ParserContext parserContext=new ParserContext();
-		//parserContext.setStrictTypeEnforcement(true);
+	private ParserContext getParserContext() {
+		ParserContext parserContext = new ParserContext();
+		// parserContext.setStrictTypeEnforcement(true);
 		try {
 			addAllStaticMethodsImport(parserContext, CommonUtils.class);
 		} catch (Exception e) {
@@ -85,55 +85,57 @@ public class MvelBug2Test {
 
 	/**
 	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
 	 * @param parserContext
 	 * @param clazz
 	 */
-	private static void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz){
-		List<Method> methods=getAllStaticMethods(clazz);
-		for(Method method:methods){
+	private static void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz) {
+		List<Method> methods = getAllStaticMethods(clazz);
+		for (Method method : methods) {
 			parserContext.addImport(method.getName(), method);
 		}
 	}
 
 	/**
 	 * クラス内のstaticメソッドを全て取得します
+	 * 
 	 * @param clazz
 	 */
-	private static List<Method> getAllStaticMethods(Class<?> clazz){
-		List<Method> list=new ArrayList<Method>();
-		for(Method method:clazz.getMethods()){
-			if((method.getModifiers()&Modifier.STATIC)==0){
+	private static List<Method> getAllStaticMethods(Class<?> clazz) {
+		List<Method> list = new ArrayList<Method>();
+		for (Method method : clazz.getMethods()) {
+			if ((method.getModifiers() & Modifier.STATIC) == 0) {
 				continue;
 			}
-			if((method.getModifiers()&Modifier.PUBLIC)==0){
+			if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
 				continue;
 			}
-			if(method.getName().equals("forName")){
+			if (method.getName().equals("forName")) {
 				continue;
 			}
 			list.add(method);
 		}
 		return list;
 	}
-	
-	public static class CommonUtils{
 
-		public static boolean isEmpty(final String obj){
-			return obj==null||obj.length()==0;
+	public static class CommonUtils {
+
+		public static boolean isEmpty(final String obj) {
+			return obj == null || obj.length() == 0;
 		}
 
-		public static boolean isEmpty(final Object obj){
-			if (obj==null) {
+		public static boolean isEmpty(final Object obj) {
+			if (obj == null) {
 				return true;
 			}
-			if (obj instanceof String){
-				return ((String)obj).length()==0;
-			}else if (obj instanceof Collection<?>){
-				return ((Collection<?>)obj).size()==0;
-			}else if (obj instanceof Map<?, ?>){
-				return ((Map<?, ?>)obj).size()==0;
-			}else if (obj instanceof Object[]){
-				return ((Object[])obj).length==0;
+			if (obj instanceof String) {
+				return ((String) obj).length() == 0;
+			} else if (obj instanceof Collection<?>) {
+				return ((Collection<?>) obj).size() == 0;
+			} else if (obj instanceof Map<?, ?>) {
+				return ((Map<?, ?>) obj).size() == 0;
+			} else if (obj instanceof Object[]) {
+				return ((Object[]) obj).length == 0;
 			}
 			return false;
 		}

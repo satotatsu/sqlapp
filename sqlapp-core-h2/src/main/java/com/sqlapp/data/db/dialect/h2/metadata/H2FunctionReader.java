@@ -48,12 +48,10 @@ public class H2FunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Function> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -71,8 +69,7 @@ public class H2FunctionReader extends FunctionReader {
 				obj.setClassName(java_class);
 				obj.setMethodName(java_method);
 				if (modern) {
-					obj.setSpecificName(getString(rs,
-							"SPECIFIC_NAME"));
+					obj.setSpecificName(getString(rs, "SPECIFIC_NAME"));
 				}
 				obj.setRemarks(remarks);
 				result.add(obj);
@@ -81,13 +78,10 @@ public class H2FunctionReader extends FunctionReader {
 		return result;
 	}
 
-	protected SqlNode getSqlSqlNode(
-			ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
-			return getSqlNodeCache().getString(
-					"functionAliases_200.sql");
+			return getSqlNodeCache().getString("functionAliases_200.sql");
 		}
 		return getSqlNodeCache().getString("functionAliases.sql");
 	}

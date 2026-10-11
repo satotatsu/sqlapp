@@ -29,19 +29,19 @@ public class MessageDigestsTest {
 
 	@Test
 	public void testMD2() throws UnsupportedEncodingException {
-		final String val=MessageDigests.MD2.checksumAsString("abc".getBytes("UTF8")).toUpperCase();
+		final String val = MessageDigests.MD2.checksumAsString("abc".getBytes("UTF8")).toUpperCase();
 		assertEquals("DA853B0D3F88D99B30283A69E6DED6BB", val);
 	}
 
 	@Test
 	public void testMD5() throws UnsupportedEncodingException {
-		final String val=MessageDigests.MD5.checksumAsString("abc".getBytes("UTF8")).toUpperCase();
+		final String val = MessageDigests.MD5.checksumAsString("abc".getBytes("UTF8")).toUpperCase();
 		assertEquals("900150983CD24FB0D6963F7D28E17F72", val);
 	}
 
 	@Test
 	public void testSHA256() throws UnsupportedEncodingException {
-		final String val=MessageDigests.SHA256.checksumAsString("abc".getBytes("UTF8")).toUpperCase();
+		final String val = MessageDigests.SHA256.checksumAsString("abc".getBytes("UTF8")).toUpperCase();
 		assertEquals("BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD", val);
 	}
 

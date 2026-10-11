@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.oracle.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MviewReader;
 
-public class Oracle10gSchemaReader extends OracleSchemaReader{
+public class Oracle10gSchemaReader extends OracleSchemaReader {
 
 	protected Oracle10gSchemaReader(Dialect dialect) {
 		super(dialect);

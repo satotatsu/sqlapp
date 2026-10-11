@@ -22,9 +22,13 @@ package com.sqlapp.data.schemas.rowiterator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -33,10 +37,23 @@ import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
 
 public class ExcelRowIteratorHandlerTest2 extends AbstractRowExcelIteratorHandlerTest {
+	@TempDir
+	Path directory;
+
+	@BeforeEach
+	void createHeaderlessWorkbook() throws Exception {
+		try (var input = Files.newInputStream(Path.of("src/test/resources/testWithoutHeader.xlsx"));
+				var workbook = WorkbookFactory.create(input);
+				var output = Files.newOutputStream(directory.resolve("items.xlsx"))) {
+			final var sheet = workbook.getSheetAt(0);
+			sheet.removeRow(sheet.getRow(0));
+			workbook.write(output);
+		}
+	}
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {
-		return new ExcelRowIteratorHandler(new File("src/test/resources/testWithoutHeader.xlsx"), 0);
+		return new ExcelRowIteratorHandler(directory.resolve("items.xlsx").toFile(), 0);
 	}
 
 	@Test

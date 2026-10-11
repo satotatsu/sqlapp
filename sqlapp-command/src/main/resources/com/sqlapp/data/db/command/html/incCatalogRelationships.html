@@ -18,6 +18,7 @@
 		@if{_summary_relations_small!=null}
 			<div id="Compact" class="diagram-panel">
 				<div class="diagram-container">
+					<p><a href="diagrams/@{_summary_relations_small.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 					<iframe class="diagram-frame" loading="lazy" src="diagrams/_summary_relations_small.@{_diagramExtension}" style="@{_summary_relations_small.iframeStyle}"></iframe>
 				</div>
 			</div>
@@ -25,18 +26,21 @@
 		@if{_summary_relations_small_logical!=null}
 			<div id="LogicalCompact" class="diagram-panel">
 				<div class="diagram-container">
+					<p><a href="diagrams/@{_summary_relations_small_logical.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 					<iframe class="diagram-frame" loading="lazy" src="diagrams/_summary_relations_small_logical.@{_diagramExtension}" style="@{_summary_relations_small_logical.iframeStyle}"></iframe>
 				</div>
 			</div>
 		@end{}
 			<div id="Full" class="diagram-panel">
 				<div class="diagram-container">
+					<p><a href="diagrams/@{_summary_relations_large.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 					<iframe class="diagram-frame" src="diagrams/_summary_relations_large.@{_diagramExtension}" style="@{_summary_relations_large.iframeStyle}"></iframe>
 				</div>
 			</div>
 		@if{_summary_relations_large_logical!=null}
 			<div id="LogicalFull" class="diagram-panel">
 				<div class="diagram-container">
+					<p><a href="diagrams/@{_summary_relations_large_logical.mermaidFileUrl}" download>Mermaid (.mmd)</a></p>
 					<iframe class="diagram-frame" loading="lazy" src="diagrams/_summary_relations_large_logical.@{_diagramExtension}" style="@{_summary_relations_large_logical.iframeStyle}"></iframe>
 				</div>
 			</div>

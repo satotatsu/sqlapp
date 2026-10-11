@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class FunctionFamilyTest extends AbstractDbObjectTest<FunctionFamily> {
 
-public class FunctionFamilyTest extends AbstractDbObjectTest<FunctionFamily>{
-
-	public static FunctionFamily getFunctionFamily(String name){
-		FunctionFamily obj=new FunctionFamily();
+	public static FunctionFamily getFunctionFamily(String name) {
+		FunctionFamily obj = new FunctionFamily();
 		obj.setFunctionName(name);
 		return obj;
 	}

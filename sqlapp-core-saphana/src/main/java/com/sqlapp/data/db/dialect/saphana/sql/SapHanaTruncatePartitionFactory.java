@@ -42,14 +42,14 @@ public class SapHanaTruncatePartitionFactory extends AbstractTruncatePartitionFa
 			addSql(sqlList, builder, SqlType.TRUNCATE, obj);
 			return sqlList;
 		}
-		Partition partition=(Partition)obj;
+		Partition partition = (Partition) obj;
 		if (partition.getSubPartitions().isEmpty()) {
 			final SapHanaSqlBuilder builder = createSqlBuilder();
 			addTruncateTable(obj, builder);
 			addSql(sqlList, builder, SqlType.TRUNCATE, obj);
 			return sqlList;
 		}
-		for(SubPartition sub:partition.getSubPartitions()) {
+		for (SubPartition sub : partition.getSubPartitions()) {
 			final SapHanaSqlBuilder builder = createSqlBuilder();
 			addTruncateTable(sub, builder);
 			addSql(sqlList, builder, SqlType.TRUNCATE, obj);
@@ -58,7 +58,7 @@ public class SapHanaTruncatePartitionFactory extends AbstractTruncatePartitionFa
 	}
 
 	protected void addTruncateTable(final AbstractPartition<?> obj, final SapHanaSqlBuilder builder) {
-		final Table table=obj.getPartitioning().getTable();
+		final Table table = obj.getPartitioning().getTable();
 		builder.truncate().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(table, builder);
@@ -68,9 +68,9 @@ public class SapHanaTruncatePartitionFactory extends AbstractTruncatePartitionFa
 	@Override
 	protected void addTruncatePartition(Table table, AbstractPartition<?> obj, SapHanaSqlBuilder builder) {
 		// TODO Auto-generated method stub
-		builder.partition().space().brackets(()->{
+		builder.partition().space().brackets(() -> {
 			builder.space();
-			if (obj.getId()!=null) {
+			if (obj.getId() != null) {
 				builder._add(obj.getId());
 			} else {
 				builder._add(obj.getName());

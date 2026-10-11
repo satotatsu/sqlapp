@@ -60,8 +60,7 @@ class RepeatColumnClusterBuilderTest {
 
 		assertEquals(0, RepeatColumnClusterBuilder.of(table).build().size());
 		assertEquals(1, RepeatColumnClusterBuilder.of(table).minimumColumnCount(1).build().size());
-		assertThrows(IllegalArgumentException.class,
-				() -> RepeatColumnClusterBuilder.of(table).minimumColumnCount(0));
+		assertThrows(IllegalArgumentException.class, () -> RepeatColumnClusterBuilder.of(table).minimumColumnCount(0));
 	}
 
 	public Table createTable() {

@@ -26,14 +26,13 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-
 public class CaseInsensitiveLinkedMapTest {
 	/**
 	 * Test method for {@link com.sqlapp.util.CaseInsensitiveMap#entrySet()}.
 	 */
 	@Test
 	public void testEntrySet() {
-		Map<String, String> map=caseInsensitiveLinkedMap();
+		Map<String, String> map = caseInsensitiveLinkedMap();
 		map.put("aB", "a");
 		map.put("Ab", "c");
 		map.put("Bc", "b");
@@ -41,21 +40,21 @@ public class CaseInsensitiveLinkedMapTest {
 		map.put("EF", "e");
 		assertEquals("c", map.get("aB"));
 		assertEquals("c", map.get("AB"));
-		int i=0;
-		for(Map.Entry<String, String> entry:map.entrySet()){
-			if (i==0){
+		int i = 0;
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			if (i == 0) {
 				assertTrue("aB".endsWith(entry.getKey()));
 				assertEquals("c", entry.getValue());
 			}
-			if (i==1){
+			if (i == 1) {
 				assertTrue("Bc".endsWith(entry.getKey()));
 				assertEquals("b", entry.getValue());
 			}
-			if (i==2){
+			if (i == 2) {
 				assertTrue("cD".endsWith(entry.getKey()));
 				assertEquals("c", entry.getValue());
 			}
-			if (i==3){
+			if (i == 3) {
 				assertTrue("EF".endsWith(entry.getKey()));
 				assertEquals("e", entry.getValue());
 			}

@@ -51,8 +51,7 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UniqueConstraint> result = list();
@@ -63,21 +62,28 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 				String schema_name = getString(rs, "constraint_schema");
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				UniqueConstraint c = map.get(schema_name, table_name,
-						constraint_name);
+				UniqueConstraint c = map.get(schema_name, table_name, constraint_name);
 				if (c == null) {
-					boolean primary = !"unique".equalsIgnoreCase(getString(rs,
-							"constraint_type"));
+					boolean primary = !"unique".equalsIgnoreCase(getString(rs, "constraint_type"));
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
-					c.setDeferrability(Deferrability.getDeferrability(
-							rs.getBoolean("is_deferrable"),
+					c.setRemarks(getString(rs, "remarks"));
+					c.setIndexName(getString(rs, "index_name"));
+					if (rs.getBoolean("nulls_not_distinct")) {
+						c.getSpecifics().put(
+								com.sqlapp.data.db.dialect.postgres.sql.PostgresCreateIndexFactory.NULLS_NOT_DISTINCT,
+								"true");
+					}
+					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
-					PostgresTemporalConstraintMetadata.apply(c,
-							getString(rs, "consrc"));
+					PostgresTemporalConstraintMetadata.apply(c, getString(rs, "consrc"));
 					result.add(c);
 					map.put(schema_name, table_name, constraint_name, c);
+				}
+				if (rs.getBoolean("is_included")) {
+					c.getIndex().getIncludes().add(getString(rs, COLUMN_NAME));
+					return;
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(table_name);
@@ -88,6 +94,17 @@ public class PostgresUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
+			if (productVersionInfo.getMajorVersion() >= 15)
+				return getSqlNodeCache().getString("uniqueConstraints150.sql");
+			if (productVersionInfo.getMajorVersion() >= 11)
+				return getSqlNodeCache().getString("uniqueConstraints110.sql");
+		}
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 8 || productVersionInfo.getMajorVersion() == 8
+						&& productVersionInfo.getMinorVersion() != null && productVersionInfo.getMinorVersion() >= 4)) {
+			return getSqlNodeCache().getString("uniqueConstraints84.sql");
+		}
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}
 

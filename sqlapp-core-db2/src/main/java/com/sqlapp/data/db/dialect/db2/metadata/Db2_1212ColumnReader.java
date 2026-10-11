@@ -16,8 +16,8 @@ import com.sqlapp.jdbc.ExResultSet;
 
 public class Db2_1212ColumnReader extends Db2_1050ColumnReader {
 
-	private static final Pattern VECTOR_TYPE =
-			Pattern.compile("VECTOR\\s*\\(\\s*(FLOAT32|REAL|INT8)\\s*\\)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern VECTOR_TYPE = Pattern.compile("VECTOR\\s*\\(\\s*(FLOAT32|REAL|INT8)\\s*\\)",
+			Pattern.CASE_INSENSITIVE);
 
 	protected Db2_1212ColumnReader(final Dialect dialect) {
 		super(dialect);
@@ -30,8 +30,8 @@ public class Db2_1212ColumnReader extends Db2_1050ColumnReader {
 		if (matcher.matches()) {
 			column.setDataType(DataType.VECTOR);
 			column.setDataTypeName("VECTOR");
-			column.setVectorElementDataType("INT8".equalsIgnoreCase(matcher.group(1))
-					? DataType.TINYINT : DataType.REAL);
+			column.setVectorElementDataType(
+					"INT8".equalsIgnoreCase(matcher.group(1)) ? DataType.TINYINT : DataType.REAL);
 			column.setVectorDimension(getInteger(rs, "LENGTH"));
 			column.setLength((Long) null);
 			column.setScale(null);

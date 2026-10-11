@@ -37,40 +37,43 @@ public enum SapHanaIndexOptions {
 		public void setIndex(Index obj, Object value) {
 			setSpecificsProperty(obj, value);
 		}
+
 		@Override
 		public void setUniqueConstraint(UniqueConstraint obj, Object value) {
 			setSpecificsProperty(obj, value);
 		}
 	},
-	FILLFACTOR(){
+	FILLFACTOR() {
 		@Override
 		public void setIndex(Index obj, Object value) {
 			setSpecificsProperty(obj, value);
 		}
+
 		@Override
 		public void setUniqueConstraint(UniqueConstraint obj, Object value) {
 			setSpecificsProperty(obj, value);
 		}
+
 		@Override
-		protected void setSpecificsProperty(SpecificsProperty<?> obj, final Object value){
-			Integer val=Converters.getDefault().convertObject(value, Integer.class);
-			if (val==null) {
+		protected void setSpecificsProperty(SpecificsProperty<?> obj, final Object value) {
+			Integer val = Converters.getDefault().convertObject(value, Integer.class);
+			if (val == null) {
 				obj.getSpecifics().remove(getColumnKey());
 				obj.getSpecifics().remove(toString());
-			}else if (val.intValue()>=0&&val.intValue()<=100) {
+			} else if (val.intValue() >= 0 && val.intValue() <= 100) {
 				obj.getSpecifics().remove(getColumnKey());
 				obj.getSpecifics().remove(toString());
-				if (val.intValue()!=0) {
+				if (val.intValue() != 0) {
 					obj.getSpecifics().put(this.toString(), val);
 				}
 			}
 		}
+
 		@Override
 		public String getColumnKey() {
 			return "BTREE_FILL_FACTOR";
 		}
-	},
-	;
+	},;
 
 	public Class<?> getValueClass() {
 		return null;
@@ -80,7 +83,7 @@ public enum SapHanaIndexOptions {
 		return null;
 	}
 
-	public void setIndex(Index obj, Object value){
+	public void setIndex(Index obj, Object value) {
 		setSpecificsProperty(obj, value);
 	}
 
@@ -92,8 +95,8 @@ public enum SapHanaIndexOptions {
 	}
 
 	public void setTable(final ExResultSet rs, Table table) throws SQLException {
-		setParams(rs, val->{
-			if (val!=null) {
+		setParams(rs, val -> {
+			if (val != null) {
 				setTable(table, val.toString());
 			} else {
 				setTable(table, null);
@@ -101,9 +104,9 @@ public enum SapHanaIndexOptions {
 		});
 	}
 
-	public void setIndex(final ExResultSet rs, Index index) throws SQLException {	
-		setParams(rs, val->{
-			if (val!=null) {
+	public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+		setParams(rs, val -> {
+			if (val != null) {
 				setIndex(index, val);
 			} else {
 				setIndex(index, null);
@@ -111,8 +114,8 @@ public enum SapHanaIndexOptions {
 		});
 	}
 
-	public static void setAllIndex(final ExResultSet rs, Index index) throws SQLException {	
-		for(SapHanaIndexOptions enm:SapHanaIndexOptions.values()) {
+	public static void setAllIndex(final ExResultSet rs, Index index) throws SQLException {
+		for (SapHanaIndexOptions enm : SapHanaIndexOptions.values()) {
 			enm.setIndex(rs, index);
 		}
 	}
@@ -121,17 +124,17 @@ public enum SapHanaIndexOptions {
 		return this.toString();
 	}
 
-	protected void setSpecificsProperty(SpecificsProperty<?> obj, final Object value){
-		if (value==null) {
+	protected void setSpecificsProperty(SpecificsProperty<?> obj, final Object value) {
+		if (value == null) {
 			obj.getSpecifics().remove(this.toString().toUpperCase());
 		} else {
 			obj.getSpecifics().put(this.toString().toUpperCase(), value.toString().toUpperCase());
 		}
 	}
 
-	public void setUniqueConstraint(final ExResultSet rs, UniqueConstraint obj) throws SQLException {	
-		setParams(rs, val->{
-			if (val!=null) {
+	public void setUniqueConstraint(final ExResultSet rs, UniqueConstraint obj) throws SQLException {
+		setParams(rs, val -> {
+			if (val != null) {
 				setUniqueConstraint(obj, val);
 			} else {
 				setUniqueConstraint(obj, null);
@@ -139,8 +142,8 @@ public enum SapHanaIndexOptions {
 		});
 	}
 
-	public static void setAllUniqueConstraint(final ExResultSet rs, UniqueConstraint uk) throws SQLException {	
-		for(SapHanaIndexOptions enm:SapHanaIndexOptions.values()) {
+	public static void setAllUniqueConstraint(final ExResultSet rs, UniqueConstraint uk) throws SQLException {
+		for (SapHanaIndexOptions enm : SapHanaIndexOptions.values()) {
 			enm.setUniqueConstraint(rs, uk);
 		}
 	}
@@ -154,13 +157,13 @@ public enum SapHanaIndexOptions {
 	}
 
 	public static SapHanaIndexOptions parse(Object obj) {
-		SapHanaIndexOptions enm=EnumUtils.parse(SapHanaIndexOptions.class, obj);
-		if (enm!=null) {
+		SapHanaIndexOptions enm = EnumUtils.parse(SapHanaIndexOptions.class, obj);
+		if (enm != null) {
 			return enm;
 		}
 		if (obj instanceof String) {
-			String val=String.class.cast(obj).toUpperCase().replace("_", "");
-			for(SapHanaIndexOptions e:SapHanaIndexOptions.values()) {
+			String val = String.class.cast(obj).toUpperCase().replace("_", "");
+			for (SapHanaIndexOptions e : SapHanaIndexOptions.values()) {
 				if (CommonUtils.eq(val, e.toString().replace("_", ""))) {
 					return e;
 				}

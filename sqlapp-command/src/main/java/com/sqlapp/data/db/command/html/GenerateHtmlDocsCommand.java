@@ -23,6 +23,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,6 +53,11 @@ import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.viewpoint.SchemaViewpointCommandSupport;
 import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
+import com.sqlapp.data.db.dialect.DefaultDialectHolder;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -152,7 +158,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		return value;
 	}
 
-	private TableFileReader createTableFileReader() {
+	TableFileReader createTableFileReader() {
 		TableFileReader tableFileReader = new TableFileReader();
 		tableFileReader.setContext(this.getContext());
 		tableFileReader.setCsvEncoding(this.getCsvEncoding());
@@ -160,6 +166,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		tableFileReader.setFileDirectory(this.getFileDirectory());
 		tableFileReader.setFileFilter(this.getFileFilter());
 		tableFileReader.setJsonConverter(this.getJsonConverter());
+		tableFileReader.setYamlConverter(this.getYamlConverter());
 		tableFileReader.setPlaceholderPrefix(this.getPlaceholderPrefix());
 		tableFileReader.setPlaceholders(this.isPlaceholders());
 		tableFileReader.setPlaceholderSuffix(this.getPlaceholderSuffix());
@@ -400,14 +407,14 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		final String largeName = "_summary_relations_large";
 		execute(() -> {
 			RelationImageHolder holder = createCatalogRelationImage(largeName, catalog, false);
-			context.put(largeName, holder);
+			putImage(context, largeName, holder);
 		}, futures);
 		//
 		final String largeNameLogical = largeName + "_logical";
 		execute(() -> {
 			RelationImageHolder holder = createCatalogRelationImage(largeNameLogical, catalog, true);
 			if (holder != null) {
-				context.put(largeNameLogical, holder);
+				putImage(context, largeNameLogical, holder);
 			}
 		}, futures);
 		//
@@ -415,7 +422,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		execute(() -> {
 			RelationImageHolder imapSmall = createRelationSmallImage(smallName, list, false);
 			if (imapSmall != null) {
-				context.put(smallName, imapSmall);
+				putImage(context, smallName, imapSmall);
 			}
 		}, futures);
 		//
@@ -423,9 +430,15 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		execute(() -> {
 			RelationImageHolder imapSmall = createRelationSmallImage(smallNameLogical, list, true);
 			if (imapSmall != null) {
-				context.put(smallNameLogical, imapSmall);
+				putImage(context, smallNameLogical, imapSmall);
 			}
 		}, futures);
+	}
+
+	private void putImage(ParametersContext context, String name, RelationImageHolder holder) {
+		synchronized (context) {
+			context.put(name, holder);
+		}
 	}
 
 	private Future<?> submit(Runnable ｒunnable) {
@@ -521,6 +534,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
 		String iframeStyle = toIframeStyle(svgResult);
 		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
+		holder.setMermaidFile(writeMermaid(name,
+				catalog.getSchemas().stream().flatMap(schema -> schema.getTables().stream()).toList(), svgCreator));
 		return holder;
 	}
 
@@ -541,7 +556,14 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
 		String iframeStyle = toIframeStyle(svgResult);
 		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
+		holder.setMermaidFile(writeMermaid(name, list, svgCreator));
 		return holder;
+	}
+
+	private File writeMermaid(String name, Collection<Table> tables, TableSvgCreator creator) {
+		File file = new File(diagramsPath, name + ".mmd");
+		FileUtils.writeText(file.getAbsolutePath(), "UTF8", creator.generateMermaid(tables));
+		return file;
 	}
 
 	private TableSvgCreator createCreateSvgCreator(SVGDrawMode svgDrawMode, NameMode nameMode, String path,
@@ -592,46 +614,32 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	private void writeTables(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
 		List<Table> list = getList(catalog, MenuDefinition.Tables);
+		Map<Dialect, SqlFactoryRegistry> ddlRegistries = new IdentityHashMap<>();
+		Map<Table, String> tableDdl = new IdentityHashMap<>();
+		for (Table table : list) {
+			tableDdl.put(table, createTableDdl(table, ddlRegistries));
+		}
 		execute(() -> {
 			outputMenu(catalog, context, rootMenu, MenuDefinition.Tables, list);
 		}, futures);
 		//
 		outputMenuDetails(catalog, context.clone(), rootMenu.clone(), MenuDefinition.Tables, list, (con, obj) -> {
 			Table val = (Table) obj;
-			con.put("viewpointDocuments",
-					viewpointDocuments.stream().filter(viewpoint -> viewpoint.contains(val)).toList());
-			if (!hasRelation(val)) {
-				return;
-			}
-			RelationImageHolder holder = createTableRelationImage(val, false, "../tables/");
-			if (holder != null) {
-				con.put("relations", holder);
-			}
-			//
-			holder = createTableRelationImage(val, true, "../tables/");
-			if (holder != null) {
-				con.put("relations_logical", holder);
-			}
+			con.put("ddl", tableDdl.get(val));
 		}, futures);
 	}
 
-	private boolean hasRelation(Table table) {
-		if (!CommonUtils.isEmpty(table.getChildRelations())) {
-			return true;
+	String createTableDdl(Table table) {
+		return createTableDdl(table, new IdentityHashMap<>());
+	}
+
+	private String createTableDdl(Table table, Map<Dialect, SqlFactoryRegistry> registries) {
+		Dialect dialect = SchemaUtils.getDialect(table);
+		if (dialect == null) {
+			dialect = DefaultDialectHolder.DefaultDialect;
 		}
-		if (!CommonUtils.isEmpty(table.getConstraints().getForeignKeyConstraints())) {
-			return true;
-		}
-		if (!CommonUtils.isEmpty(table.getInherits())) {
-			return true;
-		}
-		if (table.getPartitionParent() != null) {
-			return true;
-		}
-		if (table.getPartitioning() != null && !CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
-			return true;
-		}
-		return false;
+		SqlFactoryRegistry registry = registries.computeIfAbsent(dialect, Dialect::createSqlFactoryRegistry);
+		return SqlOperation.toText(registry.createSql(table, SqlType.CREATE)).stripTrailing();
 	}
 
 	private void outputMenuDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
@@ -729,61 +737,6 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 			return renderer.render(context);
 		} catch (Exception e) {
 			throw new RuntimeException("template=" + renderer.getTemplateResource(), e);
-		}
-	}
-
-	private RelationImageHolder createTableRelationImage(Table table, boolean logical, String path) {
-		Set<Table> tables = CommonUtils.set();
-		tables.add(table);
-		table.getChildRelations().forEach(fk -> {
-			tables.add(fk.getTable());
-		});
-		table.getConstraints().getForeignKeyConstraints().forEach(fk -> {
-			tables.add(fk.getRelatedTable());
-		});
-		setParentPartitionTables(table, tables);
-		setChildPartitionTables(table, tables);
-		if (tables.size() == 0) {
-			return null;
-		}
-		if (logical) {
-			if (!hasDisplayName(tables)) {
-				return null;
-			}
-		}
-		Consumer<TableNode> cons = (tNode -> {
-			if (tNode.getTable() == table) {
-				SVGDrawMode.NORMAL.reset(tNode);
-			}
-		});
-		if (logical) {
-			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.LOGICAL, path, cons);
-			return createImage(HtmlUtils.objectFullPath(table) + "_logical", tables, svgCreator);
-		} else {
-			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.NORMAL, path, cons);
-			return createImage(HtmlUtils.objectFullPath(table), tables, svgCreator);
-		}
-	}
-
-	private void setParentPartitionTables(Table table, Set<Table> tables) {
-		if (table == null) {
-			return;
-		}
-		if (table.getPartitionParent() == null) {
-			return;
-		}
-		tables.add(table.getPartitionParent().getTable());
-		setParentPartitionTables(table.getPartitionParent().getTable(), tables);
-	}
-
-	private void setChildPartitionTables(Table table, Set<Table> tables) {
-		if (table == null) {
-			return;
-		}
-		if (table.getPartitioning() != null && !CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
-			table.getPartitioning().getPartitionTables().forEach(t -> {
-				tables.add(t);
-			});
 		}
 	}
 

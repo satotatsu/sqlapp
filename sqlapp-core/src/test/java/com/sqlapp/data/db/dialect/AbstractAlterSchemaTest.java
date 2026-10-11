@@ -34,24 +34,23 @@ public abstract class AbstractAlterSchemaTest extends AbstractSqlFactoryTest {
 	protected SqlFactory<Schema> dropOperationFactory;
 
 	protected void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Schema("scm"), SqlType.ALTER);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Schema("scm"), SqlType.ALTER);
 	}
 
 	protected String getAlterSqlText(final String filename1, final String filename2) throws Exception {
-		final Catalog catalog1=new Catalog();
+		final Catalog catalog1 = new Catalog();
 		catalog1.getSchemas().loadXml(FileUtils.getInputStream(this.getClass(), filename1));
-		final Catalog catalog2=new Catalog();
+		final Catalog catalog2 = new Catalog();
 		catalog2.getSchemas().loadXml(FileUtils.getInputStream(this.getClass(), filename2));
-		final DbObjectDifference dbDiff=catalog1.getSchemas().get(0).diff(catalog2.getSchemas().get(0));
-		final List<SqlOperation> operations=createOperationFactory.createDiffSql(dbDiff);
-		final StringBuilder builder=new StringBuilder();
-		for(int i=0;i<operations.size();i++){
-			final SqlOperation operation=operations.get(i);
+		final DbObjectDifference dbDiff = catalog1.getSchemas().get(0).diff(catalog2.getSchemas().get(0));
+		final List<SqlOperation> operations = createOperationFactory.createDiffSql(dbDiff);
+		final StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < operations.size(); i++) {
+			final SqlOperation operation = operations.get(i);
 			builder.append(operation.getSqlText());
 			builder.append(";\n");
 		}
-		return builder.substring(0, builder.length()-1).toString();
+		return builder.substring(0, builder.length() - 1).toString();
 	}
 
 }

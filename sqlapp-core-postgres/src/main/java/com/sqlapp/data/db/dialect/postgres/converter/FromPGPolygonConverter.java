@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Polygon;
 import org.postgresql.geometric.PGpolygon;
 
-public class FromPGPolygonConverter extends AbstractFromObjectConverter<Polygon, PGpolygon>{
+public class FromPGPolygonConverter extends AbstractFromObjectConverter<Polygon, PGpolygon> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Polygon copy(Object obj){
-		if (obj==null){
+	public Polygon copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Polygon)convertObject(obj).clone();
+		return (Polygon) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGPolygonConverter extends AbstractFromObjectConverter<Polygon,
 
 	@Override
 	protected Polygon toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGpolygon pgObject=new PGpolygon(val);
+			PGpolygon pgObject = new PGpolygon(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Polygon toObject(PGpolygon value) {
-		Polygon obj=new Polygon();
+		Polygon obj = new Polygon();
 		obj.setValue(value.getValue());
 		return obj;
 	}

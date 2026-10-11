@@ -29,21 +29,22 @@ public class Postgres82SqlFactoryRegistry extends PostgresSqlFactoryRegistry {
 		super(dialect);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
 	 */
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
 	}
-	
+
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				Postgres82CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				Postgres82AlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, Postgres82CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, Postgres82AlterTableFactory.class);
 	}
 
 }

@@ -37,16 +37,14 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class MySqlProcedureArgument553Reader extends
-		MySqlProcedureArgumentReader {
+public class MySqlProcedureArgument553Reader extends MySqlProcedureArgumentReader {
 
 	protected MySqlProcedureArgument553Reader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -68,9 +66,8 @@ public class MySqlProcedureArgument553Reader extends
 		}
 	}
 
-	protected void createNamedArguments(ExResultSet rs,
-			ProductVersionInfo productVersionInfo, List<NamedArgument> result)
-			throws SQLException {
+	protected void createNamedArguments(ExResultSet rs, ProductVersionInfo productVersionInfo,
+			List<NamedArgument> result) throws SQLException {
 		if (productVersionInfo.gte(5, 5, 3)) {
 			NamedArgument obj = createNamedArgument(rs);
 			result.add(obj);
@@ -79,8 +76,7 @@ public class MySqlProcedureArgument553Reader extends
 		}
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		Procedure routine = new Procedure();
 		routine.setCatalogName(getString(rs, SPECIFIC_CATALOG));
 		routine.setSchemaName(getString(rs, SPECIFIC_SCHEMA));
@@ -97,8 +93,7 @@ public class MySqlProcedureArgument553Reader extends
 		getDialect().setDbType(productDataType, notZero(maxLength, numericPrecision), numericScale, obj);
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
-		obj.setDirection(ParameterDirection.parse(getString(rs,
-				"PARAMETER_MODE")));
+		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_MODE")));
 		return obj;
 	}
 

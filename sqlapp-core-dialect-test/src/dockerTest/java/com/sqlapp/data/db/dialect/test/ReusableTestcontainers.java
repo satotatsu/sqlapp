@@ -7,7 +7,10 @@ package com.sqlapp.data.db.dialect.test;
 
 import org.testcontainers.containers.GenericContainer;
 
-/** Opt-in local container reuse while retaining disposable containers by default. */
+/**
+ * Opt-in local container reuse while retaining disposable containers by
+ * default.
+ */
 public final class ReusableTestcontainers {
 	private static final boolean REUSE = Boolean.getBoolean("sqlapp.testcontainers.reuse");
 

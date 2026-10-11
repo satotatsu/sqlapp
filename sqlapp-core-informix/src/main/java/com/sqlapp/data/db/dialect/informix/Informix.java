@@ -25,7 +25,9 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.informix.metadata.InformixCatalogReader;
+import com.sqlapp.data.db.dialect.informix.sql.InformixSqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * Informix固有情報クラス
@@ -64,6 +66,7 @@ public class Informix extends Dialect {
 		getDbDataTypes().addNVarchar(255);
 		// Binary
 		getDbDataTypes().addBinary(LEN_2GB, type -> {
+			type.addColumnTypeMatcher("BYTE");
 			type.setCreateFormat("BYTE");
 		});
 		// Boolean
@@ -119,6 +122,12 @@ public class Informix extends Dialect {
 		getDbDataTypes().addDecimal(type -> {
 			type.setMaxPrecision(32).setMaxScale(32);
 		});
+		getDbDataTypes().addMoney("MONEY", type -> {
+		});
+		getDbDataTypes().addIntervalYearToMonth(type -> {
+		});
+		getDbDataTypes().addIntervalDayToSecond(type -> {
+		});
 	}
 
 	/**
@@ -170,6 +179,11 @@ public class Informix extends Dialect {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new InformixCatalogReader(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new InformixSqlFactoryRegistry(this);
 	}
 
 	@Override

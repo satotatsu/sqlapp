@@ -41,8 +41,7 @@ public class PostgresUserReader extends UserReader {
 	}
 
 	@Override
-	protected List<User> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<User> result = list();
@@ -67,8 +66,8 @@ public class PostgresUserReader extends UserReader {
 		obj.setId(getString(rs, "usesysid"));
 		setSpecifics(rs, "usecreatedb", "createdb", obj);
 		setSpecifics(rs, "usesuper", "superuser", obj);
-		//TODO postgres bugs
-		//setDbSpecificInfo(rs, "usecatupd", "updatedb", obj);
+		// TODO postgres bugs
+		// setDbSpecificInfo(rs, "usecatupd", "updatedb", obj);
 		// setDbSpecificInfo(rs, "passwd", obj);
 		setSpecifics(rs, "valuntil", "valid until", obj);
 		setSpecifics(rs, "useconfig", obj);

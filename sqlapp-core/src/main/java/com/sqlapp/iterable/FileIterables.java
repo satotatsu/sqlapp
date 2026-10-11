@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
@@ -37,80 +36,93 @@ import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public class FileIterables {
 
+	public static boolean supports(File file) {
+		return file != null && supports(DataFormat.parse(file));
+	}
+
+	public static boolean supports(Path path) {
+		return path != null && supports(DataFormat.parse(path));
+	}
+
+	private static boolean supports(DataFormat format) {
+		return format != null && format.supportsMapRows();
+	}
+
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
-		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
-				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
+		return requireMapFormat(p).createMapIterable(p);
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(File p) {
-		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
-				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
+		return requireMapFormat(p).createMapIterable(p);
 	}
 
-	private static <T> Iterable<Map<String, Object>> readAsMapInternal(T p, Supplier<DataFormat> func,
-			Function<DataFormat, Iterable<Map<String, Object>>> convertByWorkbook,
-			Supplier<Iterable<Map<String, Object>>> convertByXml,
-			Supplier<Iterable<Map<String, Object>>> convertByExcel) {
-		DataFormat type = func.get();
-		if (type == null) {
-			return Collections.emptyList();
+	private static DataFormat requireMapFormat(Path path) {
+		final DataFormat format = path == null ? null : DataFormat.parse(path);
+		if (!supports(format)) {
+			throw new IllegalArgumentException("Unsupported data file format: " + path);
 		}
-		Iterable<Map<String, Object>> itr = convertByWorkbook.apply(type);
-		if (itr != null) {
-			return itr;
+		return format;
+	}
+
+	private static DataFormat requireMapFormat(File file) {
+		final DataFormat format = file == null ? null : DataFormat.parse(file);
+		if (!supports(format)) {
+			throw new IllegalArgumentException("Unsupported data file format: " + file);
 		}
-		if (type == DataFormat.XML) {
-			itr = convertByXml.get();
-			return itr;
-		}
-		if (type == DataFormat.EXCEL) {
-			itr = convertByExcel.get();
-			return itr;
-		}
-		return Collections.emptyList();
+		return format;
+	}
+
+	private static Iterable<Map<String, Object>> readSupportedAsMap(Path path) {
+		return supports(path) ? readAsMap(path) : Collections.emptyList();
+	}
+
+	private static Iterable<Map<String, Object>> readSupportedAsMap(File file) {
+		return supports(file) ? readAsMap(file) : Collections.emptyList();
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, Predicate<Path> filter) {
-		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, Predicate<Path> filter) {
-		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, Predicate<File> filter) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, Predicate<File> filter) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
 		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filterExpression, cmvelEvaluator,
-				p -> readAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+				p -> readSupportedAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator,
+				p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
 		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filterExpression, cmvelEvaluator,
-				p -> readAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+				p -> readSupportedAsMap(p), p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
-		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator, p -> readAsMap(p),
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator,
+				p -> readSupportedAsMap(p),
 				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
@@ -134,7 +146,7 @@ public class FileIterables {
 		try {
 			final List<T> pathList = walkFunction.apply(pathObj);
 			for (T p : pathList) {
-				if (!fileFilter.test(pathObj)) {
+				if (!fileFilter.test(p)) {
 					continue;
 				}
 				Iterable<Map<String, Object>> itr = readerConverter.apply(p);
@@ -186,22 +198,6 @@ public class FileIterables {
 			throw new RuntimeException(e);
 		}
 		return result;
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromXml(File file) {
-		return new XmlRowIterable(file);
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromXml(Path path) {
-		return new XmlRowIterable(path);
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromExcel(File file) {
-		return new ExcelIterable(file);
-	}
-
-	private static Iterable<Map<String, Object>> createMapIterableFromExcel(Path path) {
-		return new ExcelIterable(path);
 	}
 
 	@FunctionalInterface

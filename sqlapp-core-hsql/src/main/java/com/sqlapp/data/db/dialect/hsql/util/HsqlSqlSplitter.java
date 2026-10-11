@@ -27,42 +27,46 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 
-public class HsqlSqlSplitter extends SqlSplitter{
+public class HsqlSqlSplitter extends SqlSplitter {
 
 	public HsqlSqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern FUNCTION_PATTERN=Pattern.compile("\\s*(CREATE|ALTER)\\s+(AGGREGATE\\s+)?(?<type>FUNCTION|PROCEDURE|SPECIFIC\\s+ROUTINE)(?<part>.*?)\\s+BEGIN\\s+(.*)", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
 
-	private static final Pattern END_PATTERN=Pattern.compile("\\s*END\\s*;?\\s*", Pattern.CASE_INSENSITIVE);
-	
+	private static final Pattern FUNCTION_PATTERN = Pattern.compile(
+			"\\s*(CREATE|ALTER)\\s+(AGGREGATE\\s+)?(?<type>FUNCTION|PROCEDURE|SPECIFIC\\s+ROUTINE)(?<part>.*?)\\s+BEGIN\\s+(.*)",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+
+	private static final Pattern END_PATTERN = Pattern.compile("\\s*END\\s*;?\\s*", Pattern.CASE_INSENSITIVE);
+
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isStartStatement(String text, StringHolder stringHolder){
-				Matcher matcher=stringHolder.substringMatcher(FUNCTION_PATTERN);
-				if (matcher.matches()){
-					String type=matcher.group("type");
-					String part=matcher.group("part");
-					if (part.contains(";")){
+			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				Matcher matcher = stringHolder.substringMatcher(FUNCTION_PATTERN);
+				if (matcher.matches()) {
+					String type = matcher.group("type");
+					String part = matcher.group("part");
+					if (part.contains(";")) {
 						return false;
 					}
-					int index=stringHolder.indexOf(type);
-					int beginPos=stringHolder.searchWord("BEGIN", index+type.length());
-					if (beginPos>=0){
-						int endPos=stringHolder.searchLineOf(END_PATTERN, beginPos+5);
-						if (endPos>=0){
-							int delPos=stringHolder.indexOf(this.getCurrentDelimiter(), endPos+3);
+					int index = stringHolder.indexOf(type);
+					int beginPos = stringHolder.searchWord("BEGIN", index + type.length());
+					if (beginPos >= 0) {
+						int endPos = stringHolder.searchLineOf(END_PATTERN, beginPos + 5);
+						if (endPos >= 0) {
+							int delPos = stringHolder.indexOf(this.getCurrentDelimiter(), endPos + 3);
 							setPosition(delPos);
 							return true;
-						} else{
-							stringHolder.throwInvalidTextException("[Delimiter["+this.getCurrentDelimiter()+"] of "+type+" not found.["+stringHolder.substringAt()+"]");
+						} else {
+							stringHolder.throwInvalidTextException("[Delimiter[" + this.getCurrentDelimiter() + "] of "
+									+ type + " not found.[" + stringHolder.substringAt() + "]");
 						}
 						return true;
-					} else{
-						stringHolder.throwInvalidTextException("[END] of "+type+" not found.["+stringHolder.substringAt()+"]");
+					} else {
+						stringHolder.throwInvalidTextException(
+								"[END] of " + type + " not found.[" + stringHolder.substringAt() + "]");
 					}
 				}
 				return false;

@@ -49,8 +49,8 @@ public class Db2Utils {
 		return INDEX_TYPE_MAP.get(trim(indexType));
 	}
 
-	public static void setRutine(Dialect dialect, ExResultSet rs,
-			ReaderOptions readerOption, Routine<?> obj) throws SQLException {
+	public static void setRutine(Dialect dialect, ExResultSet rs, ReaderOptions readerOption, Routine<?> obj)
+			throws SQLException {
 		obj.setName(getString(rs, ROUTINE_NAME));
 		obj.setDialect(dialect);
 		obj.setSpecificName(getString(rs, SPECIFIC_NAME));
@@ -73,8 +73,7 @@ public class Db2Utils {
 		obj.setRemarks(getString(rs, "REMARKS"));
 	}
 
-	protected static String getString(ExResultSet rs, String name)
-			throws SQLException {
+	protected static String getString(ExResultSet rs, String name) throws SQLException {
 		return rtrim(rs.getString(name));
 	}
 

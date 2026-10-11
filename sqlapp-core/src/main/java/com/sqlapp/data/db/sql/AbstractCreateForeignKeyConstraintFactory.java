@@ -80,7 +80,7 @@ public abstract class AbstractCreateForeignKeyConstraintFactory<S extends Abstra
 				&&!CommonUtils.eq(obj.getTable().getSchemaName(), obj.getRelatedTable().getSchemaName())){
 			builder.name(obj.getRelatedTable(), true);
 		} else{
-			builder.name(obj.getRelatedTable(), false);
+			builder.name(obj.getRelatedTable(), this.getOptions().isDecorateSchemaName());
 		}
 		builder.space()._add('(');
 		builder.names(obj.getRelatedColumns());

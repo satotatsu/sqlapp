@@ -34,7 +34,7 @@ public class MariadbSchema10_27Reader extends MySqlSchema564Reader {
 	public MariadbSchema10_27Reader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected TableReader newTableReader() {
 		return new MariadbTable10_27Reader(this.getDialect());

@@ -12,12 +12,10 @@ import com.sqlapp.data.schemas.View;
 /**
  * Creates a Vertica view without dropping its existing grants.
  */
-public class VirticaCreateViewFactory
-		extends AbstractCreateViewFactory<VirticaSqlBuilder> {
+public class VirticaCreateViewFactory extends AbstractCreateViewFactory<VirticaSqlBuilder> {
 
 	@Override
-	protected void createObject(final View obj,
-			final VirticaSqlBuilder builder) {
+	protected void createObject(final View obj, final VirticaSqlBuilder builder) {
 		builder.create().or().replace().view();
 	}
 }

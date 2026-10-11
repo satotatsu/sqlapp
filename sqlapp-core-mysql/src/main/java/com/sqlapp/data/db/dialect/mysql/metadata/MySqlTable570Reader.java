@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.mysql.metadata;
 
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnReader;
 
@@ -28,7 +27,6 @@ public class MySqlTable570Reader extends MySqlTable564Reader {
 	protected MySqlTable570Reader(Dialect dialect) {
 		super(dialect);
 	}
-
 
 	/*
 	 * (non-Javadoc)

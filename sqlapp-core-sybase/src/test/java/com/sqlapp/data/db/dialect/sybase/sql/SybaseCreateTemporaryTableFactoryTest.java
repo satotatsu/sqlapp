@@ -49,7 +49,7 @@ public class SybaseCreateTemporaryTableFactoryTest extends AbstractSybaseSqlFact
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		final String expected = """
-				CREATE TABLE [#tableB]
+				CREATE TABLE #tableB
 				(
 					  [colA] INT NOT NULL
 					, [colB] BIGINT NOT NULL CHECK (colB>0)

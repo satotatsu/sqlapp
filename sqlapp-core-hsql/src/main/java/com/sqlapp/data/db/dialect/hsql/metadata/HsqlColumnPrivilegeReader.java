@@ -41,8 +41,7 @@ public class HsqlColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<ColumnPrivilege> result = list();
@@ -60,8 +59,7 @@ public class HsqlColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return getSqlNodeCache().getString("columnPrivileges.sql");
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs) throws SQLException {
 		ColumnPrivilege obj = new ColumnPrivilege();
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));

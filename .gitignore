@@ -1,7 +1,9 @@
 /.gradle/
 /.gradle-user-home/
 /.gradle-codex/
+/.gradle-job-verify/
 /build/
 /bin/
 /.settings/
 /.project
+/.tmp

@@ -18,31 +18,36 @@
  */
 
 package com.sqlapp.util;
+
 /**
  * ベンチマーク用のクラス
+ * 
  * @author satoh
  *
  */
 public abstract class AbstractBenchMark {
-	private int count=10000;
-	
-	public AbstractBenchMark(){}
-	public AbstractBenchMark(int count){
-		this.count=count;
+	private int count = 10000;
+
+	public AbstractBenchMark() {
 	}
-	public long execute(){
-		long start=System.currentTimeMillis();
-		int size=getCount();
-		for(int i=0;i<size;i++){
+
+	public AbstractBenchMark(int count) {
+		this.count = count;
+	}
+
+	public long execute() {
+		long start = System.currentTimeMillis();
+		int size = getCount();
+		for (int i = 0; i < size; i++) {
 			handle();
 		}
-		long end=System.currentTimeMillis();
-		return (end-start);
+		long end = System.currentTimeMillis();
+		return (end - start);
 	}
-	
+
 	protected abstract void handle();
-	
-	protected int getCount(){
+
+	protected int getCount() {
 		return count;
 	}
 }

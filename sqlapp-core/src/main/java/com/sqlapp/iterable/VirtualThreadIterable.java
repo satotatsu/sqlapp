@@ -51,6 +51,7 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 		BlockingQueue<Message<T>> queue = new ArrayBlockingQueue<>(queueSize);
 
 		Thread producerThread = Thread.ofVirtual().start(() -> {
+			Throwable failure = null;
 			try {
 				producer.accept(value -> {
 					try {
@@ -63,13 +64,20 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 			} catch (ProducerInterruptedException e) {
 				// Consumerが途中終了してProducerをinterruptしたケース
 			} catch (Throwable e) {
-				offerTerminalMessage(queue, new Failure<>(e));
+				failure = e;
 			} finally {
 				try {
 					finalizer.run();
 				} catch (Throwable e) {
-					offerTerminalMessage(queue, new Failure<>(e));
+					if (failure == null) {
+						failure = e;
+					} else if (failure != e) {
+						failure.addSuppressed(e);
+					}
 				} finally {
+					if (failure != null) {
+						offerTerminalMessage(queue, new Failure<>(failure));
+					}
 					offerTerminalMessage(queue, End.instance());
 				}
 			}

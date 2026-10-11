@@ -50,8 +50,7 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
@@ -64,11 +63,9 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 				Index index = map.get(schemaName, tableName, name);
 				if (index == null) {
 					index = createIndex(connection, rs);
-					map.put(index.getSchemaName(), index.getTableName(),
-							index.getName(), index);
+					map.put(index.getSchemaName(), index.getTableName(), index.getName(), index);
 				}
-				index.getColumns().add(
-						new Column(getString(rs, "INTERNAL_COLUMN_NAME")));
+				index.getColumns().add(new Column(getString(rs, "INTERNAL_COLUMN_NAME")));
 			}
 		});
 		return map.toList();
@@ -78,8 +75,7 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 		return getSqlNodeCache().getString("fulltextIndexes.sql");
 	}
 
-	protected Index createIndex(final Connection connection, ExResultSet rs)
-			throws SQLException {
+	protected Index createIndex(final Connection connection, ExResultSet rs) throws SQLException {
 		Index obj = new Index(getString(rs, INDEX_NAME));
 		obj.setIndexType(IndexType.FullText);
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -88,8 +84,7 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 		return obj;
 	}
 
-	protected void setDbSpecificInfo(ExResultSet rs, Index obj)
-			throws SQLException {
+	protected void setDbSpecificInfo(ExResultSet rs, Index obj) throws SQLException {
 		setSpecifics(rs, "LANGUAGE_COLUMN", obj);
 		setSpecifics(rs, "MIME_TYPE_COLUMN", obj);
 		setSpecifics(rs, "LANGUAGE_DETECTION", obj);

@@ -23,14 +23,13 @@ import com.sqlapp.data.db.dialect.hsql.util.HsqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class HsqlCreateSequenceFactory extends
-		AbstractCreateSequenceFactory<HsqlSqlBuilder> {
-	
+public class HsqlCreateSequenceFactory extends AbstractCreateSequenceFactory<HsqlSqlBuilder> {
+
 	@Override
-	protected void addCache(final Sequence obj, HsqlSqlBuilder builder){
+	protected void addCache(final Sequence obj, HsqlSqlBuilder builder) {
 	}
-	
+
 	@Override
-	protected void addOrder(final Sequence obj, HsqlSqlBuilder builder){
+	protected void addOrder(final Sequence obj, HsqlSqlBuilder builder) {
 	}
 }

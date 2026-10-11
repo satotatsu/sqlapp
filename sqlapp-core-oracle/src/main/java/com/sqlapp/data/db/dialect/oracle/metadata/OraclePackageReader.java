@@ -50,8 +50,7 @@ public class OraclePackageReader extends PackageReader {
 	private static final String OBJECT_TYPE = "PACKAGE";
 
 	@Override
-	protected List<Package> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Package> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		context.put("objectType", OBJECT_TYPE);
@@ -69,15 +68,16 @@ public class OraclePackageReader extends PackageReader {
 				}
 			}
 		});
-		List<Package> result= map.toList();
+		List<Package> result = map.toList();
 		ParametersContext cnt = new ParametersContext();
-		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
-		for(Package obj:result){
-			List<String> source=routines.get(obj.getSchemaName(), obj.getName());
-			String def=OracleMetadataUtils.getPackageStatement(obj, source);
-			if (def!=null){
+		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
+				this.getDialect(), cnt, result, OBJECT_TYPE);
+		for (Package obj : result) {
+			List<String> source = routines.get(obj.getSchemaName(), obj.getName());
+			String def = OracleMetadataUtils.getPackageStatement(obj, source);
+			if (def != null) {
 				obj.setStatement(def);
-			} else{
+			} else {
 				obj.setDefinition(source);
 			}
 		}
@@ -92,7 +92,7 @@ public class OraclePackageReader extends PackageReader {
 		OracleMetadataUtils.setCommonInfo(rs, obj);
 		return obj;
 	}
-	
+
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("routines.sql");
 	}

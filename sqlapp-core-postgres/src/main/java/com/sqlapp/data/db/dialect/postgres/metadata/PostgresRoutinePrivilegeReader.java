@@ -30,7 +30,6 @@ import java.util.List;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.RoutinePrivilegeReader;
 import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.RoutinePrivilege;
@@ -46,8 +45,7 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 	}
 
 	@Override
-	protected List<RoutinePrivilege> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<RoutinePrivilege> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<RoutinePrivilege> result = list();
@@ -65,8 +63,7 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 		return getSqlNodeCache().getString("routinePrivileges.sql");
 	}
 
-	protected RoutinePrivilege createPrivilege(Connection connection,
-			ExResultSet rs) throws SQLException {
+	protected RoutinePrivilege createPrivilege(Connection connection, ExResultSet rs) throws SQLException {
 		RoutinePrivilege obj = new RoutinePrivilege();
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, "ROUTINE_SCHEMA"));
@@ -77,21 +74,19 @@ public class PostgresRoutinePrivilegeReader extends RoutinePrivilegeReader {
 		obj.setGrantable("YES".equals(getString(rs, "IS_GRANTABLE")));
 		obj.setHierachy("YES".equals(getString(rs, "WITH_HIERARCHY")));
 		int argNo = rs.getInt("pronargs");
-		Function function = new Function(getString(rs, ROUTINE_NAME));
+		SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
+		obj.getSpecifics().put("ROUTINE_KIND", rs.getString("routine_kind"));
 		if (argNo > 0) {
 			String allArgTypes = unwrap(rs.getString("proargtypes"), "{", "}");
 			if (allArgTypes != null) {
 				String[] argArray = split(allArgTypes, "[, ]");
-				SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(
-						connection, this.getDialect(), argArray);
+				List<NamedArgument> arguments = PostgresUtils.getTypeInfoById(connection, this.getDialect(), argArray);
 				for (NamedArgument argument : arguments) {
-					builder.add(argument.getDataTypeName());
+					builder.add(PostgresUtils.typeName(argument));
 				}
-				obj.setSpecificName(function.getName() + "("
-						+ builder.toString() + ")");
 			}
 		}
+		obj.setSpecificName(obj.getObjectName() + "(" + builder.toString() + ")");
 		return obj;
 	}
 }

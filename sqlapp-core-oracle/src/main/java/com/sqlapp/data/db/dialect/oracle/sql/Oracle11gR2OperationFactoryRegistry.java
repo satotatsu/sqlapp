@@ -32,7 +32,6 @@ public class Oracle11gR2OperationFactoryRegistry extends Oracle11gSqlFactoryRegi
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(MviewLog.class, SqlType.CREATE,
-				Oracle11gR2CreateMviewLogFactory.class);
+		registerSqlFactory(MviewLog.class, SqlType.CREATE, Oracle11gR2CreateMviewLogFactory.class);
 	}
 }

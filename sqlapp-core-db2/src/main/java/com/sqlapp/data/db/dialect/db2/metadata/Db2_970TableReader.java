@@ -36,19 +36,19 @@ public class Db2_970TableReader extends Db2_950TableReader {
 
 	@Override
 	protected Table createTable(final ExResultSet rs) throws SQLException {
-		final Table table=super.createTable(rs);
+		final Table table = super.createTable(rs);
 		return table;
 	}
-	
+
 	@Override
 	protected SqlNode getPartitionSqlNode() {
 		return getSqlNodeCache().getString("partitions970.sql");
 	}
-	
+
 	@Override
-	protected Partition readPartition(final ExResultSet rs, final Table table) throws SQLException{
-		final Partition partition=super.readPartition(rs, table);
-		final String indexTableSpace = getString(rs,"INDEX_TABLE_SPACE");
+	protected Partition readPartition(final ExResultSet rs, final Table table) throws SQLException {
+		final Partition partition = super.readPartition(rs, table);
+		final String indexTableSpace = getString(rs, "INDEX_TABLE_SPACE");
 		partition.setIndexTableSpaceName(indexTableSpace);
 		this.setStatistics(rs, "CARD", partition);
 		this.setStatistics(rs, "OVERFLOW", partition);
@@ -64,14 +64,15 @@ public class Db2_970TableReader extends Db2_950TableReader {
 		this.setStatistics(rs, "LASTUSED", partition);
 		return partition;
 	}
-	
+
 	@Override
-	protected void setStatistics(final ExResultSet rs, final String key,  final StatisticsProperty<?> obj) throws SQLException{
-		final Object ret=rs.getObject(key);
-		if (ret instanceof Number){
-			final Number val=Number.class.cast(ret);
-			this.setStatistics(key, val, obj, val!=null&&val.longValue()!=-1);
-		} else{
+	protected void setStatistics(final ExResultSet rs, final String key, final StatisticsProperty<?> obj)
+			throws SQLException {
+		final Object ret = rs.getObject(key);
+		if (ret instanceof Number) {
+			final Number val = Number.class.cast(ret);
+			this.setStatistics(key, val, obj, val != null && val.longValue() != -1);
+		} else {
 			this.setStatistics(key, ret, obj);
 		}
 	}

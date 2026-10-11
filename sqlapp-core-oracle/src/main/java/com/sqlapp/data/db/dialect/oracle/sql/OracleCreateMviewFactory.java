@@ -32,8 +32,7 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Mview;
 import com.sqlapp.data.schemas.Table;
 
-public class OracleCreateMviewFactory extends
-		AbstractCreateMviewFactory<OracleSqlBuilder> {
+public class OracleCreateMviewFactory extends AbstractCreateMviewFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Mview obj, OracleSqlBuilder builder) {
@@ -48,20 +47,23 @@ public class OracleCreateMviewFactory extends
 	}
 
 	@Override
-	protected void addOtherDefinitions(Mview table, List<SqlOperation> result){
-		if (table.getRemarks()!=null){
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().materialized().view().space().name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(table.getRemarks());
+	protected void addOtherDefinitions(Mview table, List<SqlOperation> result) {
+		if (table.getRemarks() != null) {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().materialized().view().space().name(table, this.getOptions().isDecorateSchemaName())
+					.is().sqlChar(table.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
-		table.getColumns().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+		table.getColumns().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
-		table.getIndexes().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+		table.getIndexes().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is()
+					.sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
 	}
@@ -90,12 +92,10 @@ public class OracleCreateMviewFactory extends
 		if (index == null) {
 			return;
 		}
-		SqlFactory<Index> sqlFactory = getSqlFactoryRegistry()
-				.getSqlFactory(index, SqlType.CREATE);
+		SqlFactory<Index> sqlFactory = getSqlFactoryRegistry().getSqlFactory(index, SqlType.CREATE);
 		if (sqlFactory instanceof OracleCreateIndexFactory) {
 			builder.lineBreak().comma();
-			OracleCreateIndexFactory indexOperation 
-				= (OracleCreateIndexFactory) sqlFactory;
+			OracleCreateIndexFactory indexOperation = (OracleCreateIndexFactory) sqlFactory;
 			indexOperation.addObjectDetail(index, null, builder);
 		}
 	}

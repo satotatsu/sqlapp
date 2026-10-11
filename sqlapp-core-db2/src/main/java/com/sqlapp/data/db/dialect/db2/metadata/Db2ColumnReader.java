@@ -52,8 +52,7 @@ public class Db2ColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -75,21 +74,20 @@ public class Db2ColumnReader extends ColumnReader {
 		obj.setNullable("Y".equals(getString(rs, "NULLS")));
 		obj.setIdentity("Y".equals(getString(rs, "IDENTITY")));
 		if (obj.isIdentity()) {
-			obj.setIdentityGenerationType("A".equalsIgnoreCase(getString(rs, "GENERATED"))
-					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
+			obj.setIdentityGenerationType(
+					"A".equalsIgnoreCase(getString(rs, "GENERATED")) ? IdentityGenerationType.Always
+							: IdentityGenerationType.ByDefault);
 			obj.setSequence(new Sequence());
 			obj.setIdentityStep(rs.getBigDecimal("INCREMENT"));
 			obj.setIdentityStartValue(rs.getBigDecimal("START"));
 			obj.setIdentityMaxValue(rs.getBigDecimal("MAXVALUE"));
 			obj.setIdentityMinValue(rs.getBigDecimal("MINVALUE"));
-			obj.setIdentityCycle(
-					"Y".equalsIgnoreCase(getString(rs, "CYCLE")));
+			obj.setIdentityCycle("Y".equalsIgnoreCase(getString(rs, "CYCLE")));
 			long cache = rs.getLong("CACHE");
 			if (cache != -1) {
 				obj.setIdentityCacheSize(cache);
 			}
-			obj.setIdentityOrder(
-					"Y".equalsIgnoreCase(getString(rs, "ORDER")));
+			obj.setIdentityOrder("Y".equalsIgnoreCase(getString(rs, "ORDER")));
 		}
 		Long length = this.getLong(rs, "LENGTH");
 		Integer scale = this.getInteger(rs, "SCALE");

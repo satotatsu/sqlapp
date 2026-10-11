@@ -24,7 +24,7 @@ import com.sqlapp.data.geometry.Lseg;
 import org.postgresql.geometric.PGlseg;
 import java.sql.SQLException;
 
-public class ToPGLsegConverter extends AbstractToObjectConverter<PGlseg, Lseg>{
+public class ToPGLsegConverter extends AbstractToObjectConverter<PGlseg, Lseg> {
 
 	/**
 	 * serialVersionUID
@@ -47,11 +47,8 @@ public class ToPGLsegConverter extends AbstractToObjectConverter<PGlseg, Lseg>{
 
 	@Override
 	protected PGlseg toDbType(Lseg obj) {
-		return new PGlseg(obj.getPoints()[0].getX()
-				, obj.getPoints()[0].getY()
-				, obj.getPoints()[1].getX()
-				, obj.getPoints()[1].getY()
-			);
+		return new PGlseg(obj.getPoints()[0].getX(), obj.getPoints()[0].getY(), obj.getPoints()[1].getX(),
+				obj.getPoints()[1].getY());
 	}
 
 	@Override
@@ -59,15 +56,16 @@ public class ToPGLsegConverter extends AbstractToObjectConverter<PGlseg, Lseg>{
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGlseg copy(Object obj){
-		if (obj==null){
+	public PGlseg copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

@@ -1,14 +1,21 @@
 SELECT
-*
-FROM information_schema.routines
-WHERE routine_type='PROCEDURE'
+db_name() AS specific_catalog
+, user_name(o.uid) AS specific_schema
+, o.name AS routine_name
+, o.name AS specific_name
+, o.crdate AS created
+, o.crdate AS last_altered
+, c.text AS routine_definition
+FROM sysobjects o
+INNER JOIN syscomments c ON o.id=c.id
+WHERE o.type='P'
   /*if isNotEmpty(catalogName) */
-  AND specific_catalog IN /*catalogName;type=NVARCHAR*/('%')
+  AND db_name() IN /*catalogName;type=VARCHAR*/('%')
   /*end*/
   /*if isNotEmpty(schemaName) */
-  AND specific_schema IN /*schemaName;type=NVARCHAR*/('%')
+  AND user_name(o.uid) IN /*schemaName;type=VARCHAR*/('%')
   /*end*/
   /*if isNotEmpty(procedureName) */
-  AND specific_name IN /*procedureName;type=NVARCHAR*/('%')
+  AND o.name IN /*procedureName;type=VARCHAR*/('%')
   /*end*/
-order by routine_schema, routine_name
+ORDER BY user_name(o.uid), o.name, c.colid

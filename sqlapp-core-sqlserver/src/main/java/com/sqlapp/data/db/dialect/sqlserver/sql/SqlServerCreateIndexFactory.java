@@ -30,13 +30,11 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServerCreateIndexFactory extends
-		AbstractCreateIndexFactory<SqlServerSqlBuilder> 
-	implements AddTableObjectDetailFactory<Index, SqlServerSqlBuilder>{
+public class SqlServerCreateIndexFactory extends AbstractCreateIndexFactory<SqlServerSqlBuilder>
+		implements AddTableObjectDetailFactory<Index, SqlServerSqlBuilder> {
 
 	@Override
-	public void addObjectDetail(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+	public void addObjectDetail(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
 		builder.unique(obj.isUnique());
 		addIndexType(obj, table, builder);
 		builder.index().space();
@@ -45,36 +43,33 @@ public class SqlServerCreateIndexFactory extends
 			builder.on();
 			builder.name(table);
 		}
-		builder.space().brackets(()->{
+		builder.space().brackets(() -> {
 			builder.names(obj.getColumns());
 			builder.space();
 		});
 		addObjectDetailAfter(obj, table, builder);
 	}
 
-	protected void addIndexType(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		if (obj.getIndexType()!=null&&obj.getIndexType().isClusterd()) {
+	protected void addIndexType(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
+		if (obj.getIndexType() != null && obj.getIndexType().isClusterd()) {
 			builder.clustered();
 		}
 	}
-	
-	protected void addObjectDetailAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+
+	protected void addObjectDetailAfter(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
 		addIndexWithOption(obj, table, builder);
 	}
-	
-	protected void addIndexWithOption(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		final Map<String,String> map=createIndexWithOption(obj, table);
+
+	protected void addIndexWithOption(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
+		final Map<String, String> map = createIndexWithOption(obj, table);
 		if (!map.isEmpty()) {
 			builder.lineBreak();
-			builder.with().space().brackets(()->{
-				builder.indent(()->{
-					final boolean[] first=new boolean[]{true};
-					map.forEach((k,v)->{
+			builder.with().space().brackets(() -> {
+				builder.indent(() -> {
+					final boolean[] first = new boolean[] { true };
+					map.forEach((k, v) -> {
 						builder.lineBreak().comma(!first[0])._add(k).eq().space()._add(v);
-						first[0]=false;
+						first[0] = false;
 					});
 				});
 				builder.lineBreak();
@@ -82,31 +77,31 @@ public class SqlServerCreateIndexFactory extends
 		}
 	}
 
-	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
-		final Map<String,String> map=CommonUtils.linkedMap();
-		String key=SqlServerIndexOptions.PAD_INDEX.toString();
-		String val=obj.getSpecifics().get(key);
-		if (val!=null){
+	protected Map<String, String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String, String> map = CommonUtils.linkedMap();
+		String key = SqlServerIndexOptions.PAD_INDEX.toString();
+		String val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=SqlServer2000IndexReader.FILL_FACTOR;
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = SqlServer2000IndexReader.FILL_FACTOR;
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(SqlServerIndexOptions.FILLFACTOR.toString(), val);
-		} else{
-			val=obj.getSpecifics().get(SqlServerIndexOptions.FILLFACTOR.toString());
-			if (val!=null){
+		} else {
+			val = obj.getSpecifics().get(SqlServerIndexOptions.FILLFACTOR.toString());
+			if (val != null) {
 				map.put(SqlServerIndexOptions.FILLFACTOR.toString(), val);
 			}
 		}
-		key=SqlServerIndexOptions.ALLOW_ROW_LOCKS.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = SqlServerIndexOptions.ALLOW_ROW_LOCKS.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
-		key=SqlServerIndexOptions.ALLOW_PAGE_LOCKS.toString();
-		val=obj.getSpecifics().get(key);
-		if (val!=null){
+		key = SqlServerIndexOptions.ALLOW_PAGE_LOCKS.toString();
+		val = obj.getSpecifics().get(key);
+		if (val != null) {
 			map.put(key, val);
 		}
 		return map;

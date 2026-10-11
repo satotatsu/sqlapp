@@ -68,6 +68,8 @@ public abstract class ForeignKeyConstraintReader extends
 				rColumns[i] = createColumn(cPair.refCatalogName,
 						cPair.refSchemaName, cPair.refTableName,
 						cPair.refColumnName);
+				// Keep the referenced owner available when only the child table is loaded.
+				rTable.getColumns().add(rColumns[i]);
 			}
 			c.setColumns(columns);
 			c.setRelatedColumns(rColumns);

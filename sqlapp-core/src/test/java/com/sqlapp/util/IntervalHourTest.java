@@ -30,15 +30,15 @@ public class IntervalHourTest {
 
 	@Test
 	public void testSecondType() {
-		IntervalHour interval1=IntervalHour.parse("Interval '529' hour");
-		Interval interval2=interval1.toInterval();
+		IntervalHour interval1 = IntervalHour.parse("Interval '529' hour");
+		Interval interval2 = interval1.toInterval();
 		assertTrue(interval2.equals(interval1));
 	}
 
 	@Test
 	public void testParse() {
-		IntervalHour interval1=IntervalHour.parse("Interval '529' hour");
-		IntervalHour interval2=new IntervalHour(529);
+		IntervalHour interval1 = IntervalHour.parse("Interval '529' hour");
+		IntervalHour interval2 = new IntervalHour(529);
 		assertTrue(interval1.equals(interval2));
 	}
 

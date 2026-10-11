@@ -175,6 +175,11 @@ public class Hsql2_0_0 extends Hsql {
 	}
 
 	@Override
+	public boolean supportsSequencePreallocation() {
+		return true;
+	}
+
+	@Override
 	public CorrelationStrategy getCorrelationStrategy() {
 		return CorrelationStrategy.BY_KEY;
 	}

@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.spanner.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -37,6 +38,18 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("spanner", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Spanner);
+	}
+
+	@Test
+	public void testMetadataReaderIsIndependentOfReportedVersion() {
+		assertCatalogReader(0, 0, 0);
+		assertCatalogReader(1, 0, 0);
+		assertCatalogReader(99, 0, 0);
+	}
+
+	private void assertCatalogReader(int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("spanner", major, minor, revision);
+		assertEquals("SpannerCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
 	}
 
 	@Test

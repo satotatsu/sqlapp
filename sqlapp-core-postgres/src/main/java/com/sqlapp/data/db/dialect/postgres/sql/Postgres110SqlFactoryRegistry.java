@@ -29,24 +29,30 @@ public class Postgres110SqlFactoryRegistry extends Postgres100SqlFactoryRegistry
 		super(dialect);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
 	 */
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllSqlOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllSqlOperation()
 	 */
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				Postgres110CreateIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				Postgres110CreateUniqueConstraintFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, Postgres110CreateIndexFactory.class);
 	}
-	
-	
+
 }

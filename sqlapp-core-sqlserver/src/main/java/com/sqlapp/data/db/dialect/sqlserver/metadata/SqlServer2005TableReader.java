@@ -33,6 +33,8 @@ import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.Partition;
+import com.sqlapp.data.schemas.Statistics;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableSpace;
@@ -55,11 +57,10 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	 * @param context
 	 */
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final SqlNode node = getSqlSqlNode(productVersionInfo);
-		final DoubleKeyMap<String,String,Table> result = new DoubleKeyMap<String,String,Table>();
+		final DoubleKeyMap<String, String, Table> result = new DoubleKeyMap<String, String, Table>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
@@ -69,7 +70,7 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 		});
 		return result.toList();
 	}
-	
+
 	/**
 	 * メタデータの詳細情報を設定するためのメソッドです。子クラスでのオーバーライドを想定しています。
 	 * 
@@ -77,35 +78,35 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	 * @param obj
 	 */
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> obj) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> obj) throws SQLException {
 		super.setMetadataDetail(connection, context, obj);
-		if (CommonUtils.isEmpty(obj)){
+		if (CommonUtils.isEmpty(obj)) {
 			return;
 		}
-		final DoubleKeyMap<String,String,Table> tableMap = new DoubleKeyMap<String,String,Table>();
-		for(final Table table:obj){
+		final DoubleKeyMap<String, String, Table> tableMap = new DoubleKeyMap<String, String, Table>();
+		for (final Table table : obj) {
 			tableMap.put(table.getSchemaName(), table.getName(), table);
 		}
 		setPartitioning(connection, tableMap);
 	}
 
-	protected void setPartitioning(final Connection connection,final DoubleKeyMap<String,String,Table> tableMap){
+	protected void setPartitioning(final Connection connection, final DoubleKeyMap<String, String, Table> tableMap) {
 		final SqlNode node = getSqlNodeCache().getString("partitionColumns2005.sql");
-		final ParametersContext context=new ParametersContext();
+		final ParametersContext context = new ParametersContext();
 		context.put(SCHEMA_NAME, tableMap.keySet());
 		context.put(TABLE_NAME, tableMap.secondKeySet());
-		final DoubleKeyMap<String,String,Table> partTableMap=CommonUtils.doubleKeyMap();
+		final DoubleKeyMap<String, String, Table> partTableMap = CommonUtils.doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-				final String schemaName=rs.getString(SCHEMA_NAME);
-				final String tableName=rs.getString(TABLE_NAME);
-				final String columnName=rs.getString(COLUMN_NAME);
-				final Table table=tableMap.get(schemaName, tableName);
+				final String schemaName = rs.getString(SCHEMA_NAME);
+				final String tableName = rs.getString(TABLE_NAME);
+				final String columnName = rs.getString(COLUMN_NAME);
+				final Table table = tableMap.get(schemaName, tableName);
 				if (table != null) {
-					final Column column=table.getColumns().get(columnName);
-					final ReferenceColumn rcolumn=new ReferenceColumn(column);
+					final Column column = table.getColumns().get(columnName);
+					final ReferenceColumn rcolumn = new ReferenceColumn(column);
 					table.getPartitioning().getPartitioningColumns().add(rcolumn);
 					partTableMap.put(schemaName, tableName, table);
 				}
@@ -114,35 +115,33 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 		setPartitions(connection, partTableMap);
 	}
 
-	protected void setPartitions(final Connection connection,final DoubleKeyMap<String,String,Table> tableMap){
+	protected void setPartitions(final Connection connection, final DoubleKeyMap<String, String, Table> tableMap) {
+		if (tableMap.toList().isEmpty())
+			return;
 		final SqlNode node = getPartitionsSqlNode();
-		final ParametersContext context=new ParametersContext();
+		final ParametersContext context = new ParametersContext();
 		context.put(SCHEMA_NAME, tableMap.keySet());
 		context.put(TABLE_NAME, tableMap.secondKeySet());
-		final DoubleKeyMap<String,String,Table> partTableMap=CommonUtils.doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-				final String schemaName=rs.getString(SCHEMA_NAME);
-				final String tableName=rs.getString(TABLE_NAME);
-				final String columnName=rs.getString(COLUMN_NAME);
-				final Table table=tableMap.get(schemaName, tableName);
-				if (table != null) {
-					final Column column=table.getColumns().get(columnName);
-					final ReferenceColumn rcolumn=new ReferenceColumn(column);
-					table.getPartitioning().getPartitioningColumns().add(rcolumn);
-					partTableMap.put(schemaName, tableName, table);
-				}
+				Table table = tableMap.get(rs.getString(SCHEMA_NAME), rs.getString(TABLE_NAME));
+				if (table == null)
+					return;
+				Partition partition = new Partition(Integer.toString(rs.getInt("partition_number")));
+				Statistics.ROWS.setValue(rs, "rows", partition);
+				setStatistics(rs, "total_space", partition);
+				setStatistics(rs, "used_space", partition);
+				table.getPartitioning().getPartitions().add(partition);
 			}
 		});
 	}
-	
+
 	protected SqlNode getPartitionsSqlNode() {
 		final SqlNode node = getSqlNodeCache().getString("partitions2005.sql");
 		return node;
 	}
 
-	
 	@Override
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables2005.sql");
@@ -152,19 +151,19 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
 		table.setLastAlteredAt(rs.getTimestamp("modify_date"));
-		final String partitionScheme=this.getString(rs, "partition_scheme");
-		if (!CommonUtils.isEmpty(partitionScheme)){
+		final String partitionScheme = this.getString(rs, "partition_scheme");
+		if (!CommonUtils.isEmpty(partitionScheme)) {
 			table.toPartitioning().getPartitioning().setPartitionSchemeName(partitionScheme);
-			table.setTableSpace((TableSpace)null);
+			table.setTableSpace((TableSpace) null);
 		}
 		setSpecifics(rs, "large_value_types_out_of_row", table);
-		Boolean bool=Converters.getDefault().convertObject(rs.getObject("has_var_decimal"), Boolean.class);
-		if (bool!=null&&bool.booleanValue()) {
+		Boolean bool = Converters.getDefault().convertObject(rs.getObject("has_var_decimal"), Boolean.class);
+		if (bool != null && bool.booleanValue()) {
 			table.getSpecifics().put("has_var_decimal", bool);
 		}
 		return table;
 	}
-	
+
 	@Override
 	protected void setTableComment(Connection connection, final Table table) {
 	}

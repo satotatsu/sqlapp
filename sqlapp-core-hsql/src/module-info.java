@@ -26,5 +26,8 @@ module com.sqlapp.core.hsql {
 	exports com.sqlapp.data.db.dialect.hsql;
 	exports com.sqlapp.data.db.dialect.hsql.metadata;
 	exports com.sqlapp.data.db.dialect.hsql.resolver;
+	exports com.sqlapp.data.db.dialect.hsql.bulk;
 	exports com.sqlapp.data.db.dialect.hsql.sql to com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+		com.sqlapp.data.db.dialect.hsql.bulk.HsqlSetBasedMigrationSnapshotProvider;
 }

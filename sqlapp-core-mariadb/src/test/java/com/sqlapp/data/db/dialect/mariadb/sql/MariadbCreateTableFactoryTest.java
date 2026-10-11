@@ -51,8 +51,7 @@ public class MariadbCreateTableFactoryTest extends AbstractMariadbSqlFactoryTest
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(),
-				SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
 	}
 
 	@Test
@@ -79,17 +78,16 @@ public class MariadbCreateTableFactoryTest extends AbstractMariadbSqlFactoryTest
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.BIGINT);
 		table.getColumns().add(column);
-		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50)
-				.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
+				.setCollation("utf8mb4_binary");
 		table.getColumns().add(column);
 		column = new Column("cold").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
-		table.getColumns().add(c->{
-			c.setName("cole").setDataType(DataType.ENUM).setDataTypeName(
-					"enum('a', 'b', 'c')");
+		table.getColumns().add(c -> {
+			c.setName("cole").setDataType(DataType.ENUM).setDataTypeName("enum('a', 'b', 'c')");
 		});
 		//
-		Index index=new Index("indexa");
+		Index index = new Index("indexa");
 		index.setIndexType(IndexType.Hash);
 		index.getColumns().add("colc");
 		table.getIndexes().add(index);
@@ -102,23 +100,21 @@ public class MariadbCreateTableFactoryTest extends AbstractMariadbSqlFactoryTest
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
 		partitionInfo.setSubPartitioningType(PartitioningType.Key);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
-		partitionInfo.getSubPartitioningColumns().add(
-				table.getColumns().get("colb"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
+		partitionInfo.getSubPartitioningColumns().add(table.getColumns().get("colb"));
 		List<Partition> partitions = getPartitions("p", 0, 1);
 		partitionInfo.getPartitions().addAll(partitions);
 		List<Partition> subpartitions = getPartitions("s", 0, 3);
-		CommonUtils.first(partitions).getSubPartitions().addAll(subpartitions.stream().map(p->p.toSubPartition()).collect(Collectors.toList()));
+		CommonUtils.first(partitions).getSubPartitions()
+				.addAll(subpartitions.stream().map(p -> p.toSubPartition()).collect(Collectors.toList()));
 		return partitionInfo;
 	}
 
 	private List<Partition> getPartitions(String baseName, int start, int size) {
 		List<Partition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			Partition partition = new Partition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			Partition partition = new Partition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {

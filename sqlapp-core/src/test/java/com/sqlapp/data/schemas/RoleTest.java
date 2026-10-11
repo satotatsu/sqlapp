@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class RoleTest extends AbstractDbObjectTest<Role> {
 
-public class RoleTest extends AbstractDbObjectTest<Role>{
-
-	public static Role getRole(){
-		Role role=new Role();
+	public static Role getRole() {
+		Role role = new Role();
 		role.setName("role1").setGrantable(true);
 		return role;
 	}

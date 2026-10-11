@@ -23,11 +23,29 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class SqlServer2012CreateSequenceFactory extends
-		AbstractCreateSequenceFactory<SqlServerSqlBuilder> {
-	
+public class SqlServer2012CreateSequenceFactory extends AbstractCreateSequenceFactory<SqlServerSqlBuilder> {
+
 	@Override
-	protected void addOrder(final Sequence obj, SqlServerSqlBuilder builder){
+	protected void addOrder(final Sequence obj, SqlServerSqlBuilder builder) {
 	}
 
+	@Override
+	protected void addDataType(final Sequence sequence, SqlServerSqlBuilder builder) {
+		String name = sequence.getDataTypeName();
+		if (sequence.getDataType() == com.sqlapp.data.db.datatype.DataType.DECIMAL
+				|| name != null && (name.equalsIgnoreCase("decimal") || name.equalsIgnoreCase("numeric"))) {
+			if (sequence.getScale() != null && sequence.getScale() != 0)
+				throw new IllegalArgumentException("SQL Server sequence scale must be zero");
+			builder.as().space()._add(name == null ? "DECIMAL" : name)._add("(")
+					._add(sequence.getPrecision() == null ? 38 : sequence.getPrecision())._add(",0)");
+		} else {
+			super.addDataType(sequence, builder);
+		}
+	}
+
+	@Override
+	protected void addOptions(final Sequence sequence, SqlServerSqlBuilder builder) {
+		if (!sequence.isCache() && sequence.getCacheSize() == null)
+			builder.space()._add("NO CACHE");
+	}
 }

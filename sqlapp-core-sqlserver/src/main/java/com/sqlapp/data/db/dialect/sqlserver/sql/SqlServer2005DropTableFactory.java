@@ -29,9 +29,8 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 
-public class SqlServer2005DropTableFactory extends
-		AbstractDropTableFactory<SqlServerSqlBuilder> {
-	
+public class SqlServer2005DropTableFactory extends AbstractDropTableFactory<SqlServerSqlBuilder> {
+
 	@Override
 	public List<SqlOperation> createSql(Table obj) {
 		SqlServerSqlBuilder builder = createSqlBuilder();
@@ -41,7 +40,7 @@ public class SqlServer2005DropTableFactory extends
 		addSql(sqlList, builder, SqlType.DROP, obj);
 		return sqlList;
 	}
-	
+
 	protected void addIfNotExists(Table obj, List<SqlOperation> sqlList) {
 		if (this.getOptions().isDropIfExists()) {
 			SqlServerSqlBuilder builder = this.newSqlBuilder(getDialect());
@@ -49,5 +48,5 @@ public class SqlServer2005DropTableFactory extends
 			addSql(sqlList, builder, SqlType.DROP, obj);
 		}
 	}
-	
+
 }

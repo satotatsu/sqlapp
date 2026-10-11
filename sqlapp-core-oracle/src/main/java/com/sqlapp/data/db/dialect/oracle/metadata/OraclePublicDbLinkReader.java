@@ -45,8 +45,7 @@ public class OraclePublicDbLinkReader extends PublicDbLinkReader {
 	}
 
 	@Override
-	protected List<PublicDbLink> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<PublicDbLink> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode();
 		final List<PublicDbLink> result = list();
@@ -82,8 +81,7 @@ public class OraclePublicDbLinkReader extends PublicDbLinkReader {
 	 * @throws SQLException
 	 */
 	@Override
-	protected void setMetadataDetail(Connection connection, PublicDbLink dbLink)
-			throws SQLException {
+	protected void setMetadataDetail(Connection connection, PublicDbLink dbLink) throws SQLException {
 		if (!isEmpty(dbLink.getUserId())) {
 			return;
 		}
@@ -91,8 +89,7 @@ public class OraclePublicDbLinkReader extends PublicDbLinkReader {
 		sql.addSql("DBMS_METADATA.GET_DDL(");
 		sql.addSqlLine("FROM ALL_DB_LINKS");
 		sql.addSqlLine("WHERE 0=0");
-		String ddl = OracleMetadataUtils.getDdl(connection, "DB_LINK",
-				"PUBLIC", dbLink.getName());
+		String ddl = OracleMetadataUtils.getDdl(connection, "DB_LINK", "PUBLIC", dbLink.getName());
 		String val = getGroupString(OracleDbLinkReader.DB_LINK_PATTERN1, ddl, 1);
 		if (val != null) {
 			dbLink.setPasswordEncrypted(true);

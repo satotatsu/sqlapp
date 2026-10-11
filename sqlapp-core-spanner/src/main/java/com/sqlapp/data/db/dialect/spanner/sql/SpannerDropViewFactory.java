@@ -12,14 +12,10 @@ import com.sqlapp.data.schemas.View;
 /**
  * GoogleSQL Cloud Spanner DROP VIEW.
  */
-public class SpannerDropViewFactory
-		extends AbstractDropViewFactory<SpannerSqlBuilder> {
+public class SpannerDropViewFactory extends AbstractDropViewFactory<SpannerSqlBuilder> {
 
 	@Override
-	protected void addDropObject(final View view,
-			final SpannerSqlBuilder builder) {
-		builder.drop().view()
-				.ifExists(getOptions().isDropIfExists())
-				.name(view, getOptions().isDecorateSchemaName());
+	protected void addDropObject(final View view, final SpannerSqlBuilder builder) {
+		builder.drop().view().ifExists(getOptions().isDropIfExists()).name(view, getOptions().isDecorateSchemaName());
 	}
 }

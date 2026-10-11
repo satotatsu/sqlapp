@@ -21,6 +21,8 @@ package com.sqlapp.data.schemas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.exceptions.MultipleRootTablesException;
 import com.sqlapp.util.CommonUtils;
 
 class TableRelationTreeHolderTest {
@@ -45,6 +48,185 @@ class TableRelationTreeHolderTest {
 		for (TableRelation tableRel : holder.getRelationTree().values()) {
 			System.out.println("tableRel=" + tableRel);
 		}
+	}
+
+	@Test
+	void selectsTheRequestedForeignKeyWhenAChildHasMultipleParents() {
+		List<Table> tables = getTables();
+		Table child = tables.get(2);
+		ForeignKeyConstraint selected = child.getConstraints().getForeignKeyConstraints().getFirst();
+		Table alternativeParent = tables.getFirst();
+		child.getConstraints().addForeignKeyConstraint("fk_alternative", child.getColumns().get("ID"),
+				alternativeParent.getColumns().get("ID"));
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(tables,
+				foreignKey -> foreignKey.getTable() != child || foreignKey == selected);
+
+		assertEquals("tabB", holder.getTableRelation(child).getParent().getName());
+	}
+
+	@Test
+	void rejectsMultipleParentForeignKeysWithoutASelection() {
+		List<Table> tables = getTables();
+		Table child = tables.get(2);
+		Table alternativeParent = tables.getFirst();
+		child.getConstraints().addForeignKeyConstraint("fk_alternative", child.getColumns().get("ID"),
+				alternativeParent.getColumns().get("ID"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(tables));
+
+		assertTrue(exception.getMessage().contains("Multiple parent foreign keys remain for table tabC"));
+		assertTrue(exception.getMessage().contains("fk_alternative"));
+		assertTrue(exception.getMessage().contains("fk_tabC"));
+	}
+
+	@Test
+	void ignoresSelfReferenceToAnEquivalentTableInstance() {
+		Table table = new Table("tabA");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		table.setPrimaryKey(table.getColumns().get("ID"));
+		Table equivalent = new Table("TABA");
+		equivalent.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getConstraints().addForeignKeyConstraint("fk_self", table.getColumns().get("PARENT_ID"),
+				equivalent.getColumns().get("ID"));
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(table);
+
+		TableRelation relation = holder.getTableRelation(table);
+		assertEquals(table, relation.getTable());
+		assertNull(relation.getParent());
+	}
+
+	@Test
+	void ignoresAnUnresolvedForeignKeyOutsideTheTree() {
+		Table table = new Table("tabA");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		table.setPrimaryKey(table.getColumns().get("ID"));
+		ForeignKeyConstraint foreignKey = new ForeignKeyConstraint("fk_external");
+		foreignKey.getColumns().add(table.getColumns().get("PARENT_ID"));
+		foreignKey.setRelatedTableName("missing_parent");
+		foreignKey.getRelatedColumns().add("ID");
+		table.getConstraints().add(foreignKey);
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(table);
+
+		assertNull(holder.getTableRelation(table).getParent());
+	}
+
+	@Test
+	void keepsSameSchemaAndTableNamesDistinctAcrossCatalogs() {
+		Catalog firstCatalog = new Catalog("CATALOG1");
+		Schema firstSchema = new Schema("PUBLIC");
+		firstCatalog.getSchemas().add(firstSchema);
+		Table first = new Table("MEMBER");
+		firstSchema.getTables().add(first);
+
+		Catalog secondCatalog = new Catalog("CATALOG2");
+		Schema secondSchema = new Schema("PUBLIC");
+		secondCatalog.getSchemas().add(secondSchema);
+		Table second = new Table("MEMBER");
+		secondSchema.getTables().add(second);
+
+		assertThrows(MultipleRootTablesException.class, () -> new TableRelationTreeHolder(first, second));
+	}
+
+	@Test
+	void resolvesAParentRepresentedByAnEquivalentTableInstance() {
+		Table parent = new Table("PARENT");
+		parent.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		parent.setPrimaryKey(parent.getColumns().get("ID"));
+		Table equivalentParent = new Table("parent");
+		equivalentParent.getColumns().add(new Column("id").setDataType(DataType.INT));
+		Table child = new Table("CHILD");
+		child.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		child.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		child.setPrimaryKey(child.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("fk_parent", child.getColumns().get("PARENT_ID"),
+				equivalentParent.getColumns().get("id"));
+
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(parent, child);
+
+		assertEquals(parent, holder.getTableRelation(child).getParentTableRelation().getTable());
+	}
+
+	@Test
+	void rejectsDuplicateQualifiedIdentityIgnoringCase() {
+		Catalog catalog = new Catalog("CATALOG");
+		Schema schema = new Schema("PUBLIC");
+		catalog.getSchemas().add(schema);
+		Table first = new Table("MEMBER");
+		schema.getTables().add(first);
+		Catalog equivalentCatalog = new Catalog("catalog");
+		Schema equivalentSchema = new Schema("public");
+		equivalentCatalog.getSchemas().add(equivalentSchema);
+		Table second = new Table("member");
+		equivalentSchema.getTables().add(second);
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(first, second));
+
+		assertEquals("Duplicate table identity in relation tree: catalog.public.member", exception.getMessage());
+	}
+
+	@Test
+	void rejectsAnEmptyTreeWithAnActionableMessage() {
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(List.of()));
+
+		assertEquals("Table relation tree requires at least one table.", exception.getMessage());
+	}
+
+	@Test
+	void rejectsACyclicTreeWithAnActionableMessage() {
+		Table first = new Table("FIRST");
+		first.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		first.getColumns().add(new Column("SECOND_ID").setDataType(DataType.INT));
+		first.setPrimaryKey(first.getColumns().get("ID"));
+		Table second = new Table("SECOND");
+		second.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		second.getColumns().add(new Column("FIRST_ID").setDataType(DataType.INT));
+		second.setPrimaryKey(second.getColumns().get("ID"));
+		first.getConstraints().addForeignKeyConstraint("fk_second", first.getColumns().get("SECOND_ID"),
+				second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("fk_first", second.getColumns().get("FIRST_ID"),
+				first.getColumns().get("ID"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(first, second));
+
+		assertEquals("Table relation tree contains no root table; check for a cyclic relationship.",
+				exception.getMessage());
+	}
+
+	@Test
+	void rejectsACycleDisconnectedFromTheSingleRoot() {
+		Table root = table("ROOT", "ID", null);
+		Table first = table("FIRST", "ID", "SECOND_ID");
+		Table second = table("SECOND", "ID", "FIRST_ID");
+		first.getConstraints().addForeignKeyConstraint("fk_second", first.getColumns().get("SECOND_ID"),
+				second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("fk_first", second.getColumns().get("FIRST_ID"),
+				first.getColumns().get("ID"));
+
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+				() -> new TableRelationTreeHolder(root, first, second));
+
+		assertTrue(exception.getMessage().contains("tables unreachable from root"));
+		assertTrue(exception.getMessage().contains("FIRST"));
+		assertTrue(exception.getMessage().contains("SECOND"));
+	}
+
+	private Table table(String name, String primaryKey, String foreignKey) {
+		Table table = new Table(name);
+		table.getColumns().add(new Column(primaryKey).setDataType(DataType.INT));
+		if (foreignKey != null) {
+			table.getColumns().add(new Column(foreignKey).setDataType(DataType.INT));
+		}
+		table.setPrimaryKey(table.getColumns().get(primaryKey));
+		return table;
 	}
 
 	private List<Table> getTables() {

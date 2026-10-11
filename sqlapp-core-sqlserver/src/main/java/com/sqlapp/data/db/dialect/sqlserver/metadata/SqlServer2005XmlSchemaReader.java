@@ -42,8 +42,7 @@ public class SqlServer2005XmlSchemaReader extends XmlSchemaReader {
 	}
 
 	@Override
-	protected List<XmlSchema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<XmlSchema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<XmlSchema> result = list();

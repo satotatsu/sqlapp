@@ -51,8 +51,7 @@ public class OracleColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		TripleKeyMap<String, String, String, Column> result = CommonUtils.tripleKeyMap();
@@ -63,27 +62,28 @@ public class OracleColumnReader extends ColumnReader {
 				result.put(column.getSchemaName(), column.getTableName(), column.getName(), column);
 			}
 		});
-		List<Column> list=result.toList();
-		if (list.isEmpty()){
+		List<Column> list = result.toList();
+		if (list.isEmpty()) {
 			return list;
 		}
-		ParametersContextBuilder builder=ParametersContextBuilder.create().schemaName(result.keySet().toArray(new String[0]));
+		ParametersContextBuilder builder = ParametersContextBuilder.create()
+				.schemaName(result.keySet().toArray(new String[0]));
 		builder.tableName(result.secondKeySet().toArray(new String[0]));
-		String[] columnNames=result.thirdKeySet().toArray(new String[0]);
-		if (columnNames.length<100){
+		String[] columnNames = result.thirdKeySet().toArray(new String[0]);
+		if (columnNames.length < 100) {
 			builder.columnName(columnNames);
 		}
-		ParametersContext con=builder.build();
+		ParametersContext con = builder.build();
 		SqlNode commentNode = getCommentsSqlSqlNode(productVersionInfo);
 		execute(connection, commentNode, con, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=getString(rs, "OWNER");
-				String tableName=getString(rs, TABLE_NAME);
-				String columnName=getString(rs, COLUMN_NAME);
-				String comment=getString(rs, "COMMENTS");
-				Column column=result.get(schemaName, tableName, columnName);
-				if (column!=null){
+				String schemaName = getString(rs, "OWNER");
+				String tableName = getString(rs, TABLE_NAME);
+				String columnName = getString(rs, COLUMN_NAME);
+				String comment = getString(rs, "COMMENTS");
+				Column column = result.get(schemaName, tableName, columnName);
+				if (column != null) {
 					column.setRemarks(comment);
 				}
 			}
@@ -98,7 +98,7 @@ public class OracleColumnReader extends ColumnReader {
 	protected SqlNode getCommentsSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("columnComments.sql");
 	}
-	
+
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		String dataDefault = getString(rs, "DATA_DEFAULT");
 		String column_name = getString(rs, COLUMN_NAME);
@@ -114,9 +114,8 @@ public class OracleColumnReader extends ColumnReader {
 		column.setOctetLength(rs.getLong("DATA_LENGTH"));
 		column.setSchemaName(getString(rs, "OWNER"));
 		column.setTableName(getString(rs, TABLE_NAME));
-		//column.setRemarks(getString(rs, "COMMENTS"));
-		column.setCharacterSemantics(CharacterSemantics.parse(getString(rs,
-				"CHAR_USED")));
+		// column.setRemarks(getString(rs, "COMMENTS"));
+		column.setCharacterSemantics(CharacterSemantics.parse(getString(rs, "CHAR_USED")));
 		setStatistics(rs, "LAST_ANALYZED", column);
 		return column;
 	}

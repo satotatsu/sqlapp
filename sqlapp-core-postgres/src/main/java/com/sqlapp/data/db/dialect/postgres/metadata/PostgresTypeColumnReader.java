@@ -51,8 +51,7 @@ public class PostgresTypeColumnReader extends TypeColumnReader {
 	}
 
 	@Override
-	protected List<TypeColumn> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TypeColumn> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		context.put("relkind", getType());

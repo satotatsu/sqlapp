@@ -24,15 +24,12 @@ import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.ltrim;
 import static com.sqlapp.util.CommonUtils.notEmpty;
 
-import java.lang.ref.WeakReference;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,8 +57,7 @@ public class PostgresUtils extends ReaderUtils {
 	 * @param column
 	 * @throws SQLException
 	 */
-	public static void setColumnMetadata(ResultSet rs, Dialect dialect,
-			AbstractColumn<?> column) throws SQLException {
+	public static void setColumnMetadata(ResultSet rs, Dialect dialect, AbstractColumn<?> column) throws SQLException {
 		column.setName(rs.getString("attname"));
 		column.setSchemaName(rs.getString("nspname"));
 		String productDataType = rs.getString("typname");
@@ -83,13 +79,21 @@ public class PostgresUtils extends ReaderUtils {
 		String generatedType = rs.getString("attgenerated");
 		if (!isEmpty(identityType)) {
 			autoIncrement = true;
-			column.setIdentityGenerationType("a".equals(identityType)
-					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
+			column.setIdentityGenerationType(
+					"a".equals(identityType) ? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
 		}
 		column.setNullable(nullable);
 		column.setIdentity(autoIncrement);
-		dialect.setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision)
-				, CommonUtils.notZero(numericScale, datetimeScale, intervalScale), column);
+		// The shared model stores fractional datetime/interval precision in length,
+		// while scale is reserved for numeric types. Keep explicit precision zero.
+		Long precision = typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale);
+		dialect.setDbType(productDataType, precision, numericScale, column);
+		String kind = rs.getString("typtype");
+		if ((column.getDataType() == com.sqlapp.data.db.datatype.DataType.OTHER && rs.getString("atttypid") != null)
+				|| "e".equals(kind) || "d".equals(kind) || "c".equals(kind) || "r".equals(kind) || "m".equals(kind)) {
+			NamedArgument type = getTypeInfoById(rs.getStatement().getConnection(), dialect, rs.getString("atttypid"));
+			column.setDataType(type.getDataType()).setDataTypeName(type.getDataTypeName());
+		}
 		if (!isEmpty(sequenceName)) {
 			String[] names = sequenceName.split("[.]");
 			Sequence sequence = new Sequence(names[names.length - 1]);
@@ -104,8 +108,18 @@ public class PostgresUtils extends ReaderUtils {
 		column.setRemarks(rs.getString("remarks"));
 	}
 
-	static void setGeneratedExpression(AbstractColumn<?> column,
-			String expression, String generatedType) {
+	static Long typePrecision(Long maxLength, Long numericPrecision, Integer datetimePrecision,
+			Integer intervalPrecision) {
+		if (maxLength != null)
+			return maxLength;
+		if (numericPrecision != null)
+			return numericPrecision;
+		if (datetimePrecision != null)
+			return datetimePrecision.longValue();
+		return intervalPrecision == null ? null : intervalPrecision.longValue();
+	}
+
+	static void setGeneratedExpression(AbstractColumn<?> column, String expression, String generatedType) {
 		if (!isEmpty(generatedType)) {
 			column.setFormula(expression);
 			column.setFormulaPersisted("s".equals(generatedType));
@@ -113,8 +127,6 @@ public class PostgresUtils extends ReaderUtils {
 			column.setDefaultValue(expression);
 		}
 	}
-
-	private static Map<String, WeakReference<NamedArgument>> TYPE_CACHE = new HashMap<>();
 
 	/**
 	 * IDから型情報を取得します
@@ -124,31 +136,14 @@ public class PostgresUtils extends ReaderUtils {
 	 * @param typeId
 	 * @return 型情報
 	 */
-	public static NamedArgument getTypeInfoById(Connection connection,
-			final Dialect dialect, final String typeId) {
-		WeakReference<NamedArgument> ref=TYPE_CACHE.get(typeId);
-		NamedArgument arg=null;
-		if (ref != null) {
-			arg=ref.get();
-			if (arg != null) {
-				return arg;
-			} else{
-				synchronized(TYPE_CACHE){
-					Set<String> keySet=CommonUtils.set();
-					for(Map.Entry<String, WeakReference<NamedArgument>> entry:TYPE_CACHE.entrySet()){
-						if (entry.getValue()==null||entry.getValue().get()==null){
-							keySet.add(entry.getKey());
-						}
-					}
-					for(String key:keySet){
-						TYPE_CACHE.remove(key);
-					}
-				}
-			}
+	public static NamedArgument getTypeInfoById(Connection connection, final Dialect dialect, final String typeId) {
+		long oid = Long.parseLong(typeId);
+		if (oid < 0 || oid > 0xffffffffL) {
+			throw new IllegalArgumentException("PostgreSQL type OID must be an unsigned 32-bit value: " + typeId);
 		}
 		SqlNode node = getSqlNodeCache().getString("typeById.sql");
 		final ParametersContext context = new ParametersContext();
-		context.put("typeId", Integer.valueOf(typeId));
+		context.put("typeId", oid);
 		final NamedArgument obj = new NamedArgument();
 		obj.setDialect(dialect);
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -157,35 +152,36 @@ public class PostgresUtils extends ReaderUtils {
 				String typeName = rs.getString("type_name");
 				obj.setDialect(dialect);
 				obj.setDataTypeName(typeName);
-				synchronized (TYPE_CACHE) {
-					TYPE_CACHE.put(typeId, new WeakReference<>(obj));
-				}
+				obj.setArrayDimension(rs.getInt("array_dimension"));
 			}
 		});
-		if (obj.getDataTypeName() == null&&obj.getDataType()==null) {
-			throw new RuntimeException("typeId=" + typeId);
+		if (obj.getDataTypeName() == null && obj.getDataType() == null) {
+			throw new IllegalArgumentException("PostgreSQL type OID not found: " + typeId);
 		}
 		return obj;
 	}
 
-	public static List<NamedArgument> getTypeInfoById(Connection connection,
-			final Dialect dialect, final String... typeIds) {
+	static String typeName(NamedArgument argument) {
+		String name = isEmpty(argument.getDataTypeName()) ? argument.getDataType().getTypeName()
+				: argument.getDataTypeName();
+		return name + "[]".repeat(argument.getArrayDimension());
+	}
+
+	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,
+			final String... typeIds) {
 		List<NamedArgument> result = list();
 		for (String typeId : typeIds) {
-			NamedArgument routineArgument = getTypeInfoById(connection,
-					dialect, typeId);
+			NamedArgument routineArgument = getTypeInfoById(connection, dialect, typeId);
 			result.add(routineArgument);
 		}
 		return result;
 	}
 
-	public static List<NamedArgument> getTypeInfoById(Connection connection,
-			final Dialect dialect, final String[] typeIds, String[] argNames,
-			String[] argModes) {
+	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,
+			final String[] typeIds, String[] argNames, String[] argModes) {
 		List<NamedArgument> result = list();
 		for (int i = 0; i < typeIds.length; i++) {
-			NamedArgument routineArgument = getTypeInfoById(connection,
-					dialect, typeIds[i]);
+			NamedArgument routineArgument = getTypeInfoById(connection, dialect, typeIds[i]);
 			if (!isEmpty(argModes) && argModes.length > i) {
 				String mode = argModes[i];
 				if ("o".equalsIgnoreCase(mode)) {
@@ -203,13 +199,11 @@ public class PostgresUtils extends ReaderUtils {
 		return result;
 	}
 
-	public static List<NamedArgument> getTypeInfoById(Connection connection,
-			final Dialect dialect, final String[] typeIds, String[] argNames,
-			String[] argModes, String[] argDefaults) {
+	public static List<NamedArgument> getTypeInfoById(Connection connection, final Dialect dialect,
+			final String[] typeIds, String[] argNames, String[] argModes, String[] argDefaults) {
 		List<NamedArgument> result = list();
 		for (int i = 0; i < typeIds.length; i++) {
-			NamedArgument routineArgument = getTypeInfoById(connection,
-					dialect, typeIds[i]);
+			NamedArgument routineArgument = getTypeInfoById(connection, dialect, typeIds[i]);
 			if (!isEmpty(argModes) && argModes.length > i) {
 				String mode = argModes[i];
 				if ("o".equalsIgnoreCase(mode)) {
@@ -230,10 +224,8 @@ public class PostgresUtils extends ReaderUtils {
 		return result;
 	}
 
-	
-	protected static JdbcQueryHandler execute(final Connection connection,
-			SqlNode node, final ParametersContext context,
-			ResultSetNextHandler handler) {
+	protected static JdbcQueryHandler execute(final Connection connection, SqlNode node,
+			final ParametersContext context, ResultSetNextHandler handler) {
 		JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
 		return jdbcQueryHandler.execute(connection, context);
 	}
@@ -241,24 +233,24 @@ public class PostgresUtils extends ReaderUtils {
 	protected static SqlNodeCache getSqlNodeCache() {
 		return SqlNodeCache.getInstance(PostgresUtils.class);
 	}
-	
-	private static final Pattern RELOPTION_PATTERN=Pattern.compile("\\s*\\{(.*)\\}\\s*", Pattern.CASE_INSENSITIVE);
-	
-	public static Map<String,String> parseRelOption(String value){
-		if (value==null||value.length()==0){
+
+	private static final Pattern RELOPTION_PATTERN = Pattern.compile("\\s*\\{(.*)\\}\\s*", Pattern.CASE_INSENSITIVE);
+
+	public static Map<String, String> parseRelOption(String value) {
+		if (value == null || value.length() == 0) {
 			return Collections.emptyMap();
 		}
-		Map<String,String> map=CommonUtils.map();
-		Matcher matcher=RELOPTION_PATTERN.matcher(value);
-		if (matcher.matches()){
-			value=matcher.group(1);
-			String[] args=value.split("\\s*(,;)\\s*");
-			for(String arg:args){
-				String[] splits=arg.split("\\s*=\\s*");
-				if (splits.length==2){
+		Map<String, String> map = CommonUtils.map();
+		Matcher matcher = RELOPTION_PATTERN.matcher(value);
+		if (matcher.matches()) {
+			value = matcher.group(1);
+			String[] args = value.split("\\s*(,;)\\s*");
+			for (String arg : args) {
+				String[] splits = arg.split("\\s*=\\s*");
+				if (splits.length == 2) {
 					map.put(splits[0], splits[1]);
-				}else{
-					throw new IllegalArgumentException("value="+value);
+				} else {
+					throw new IllegalArgumentException("value=" + value);
 				}
 			}
 		}

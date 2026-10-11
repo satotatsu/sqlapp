@@ -51,8 +51,7 @@ public class OracleTypeReader extends TypeReader {
 	private static final String OBJECT_TYPE = "TYPE";
 
 	@Override
-	protected List<Type> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Type> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Type> result = list();
@@ -64,8 +63,9 @@ public class OracleTypeReader extends TypeReader {
 			}
 		});
 		ParametersContext cnt = new ParametersContext();
-		DoubleKeyMap<String, String, List<String>> routines=OracleMetadataUtils.getRoutineSources(connection, this.getDialect(), cnt, result, OBJECT_TYPE);
-		for(Type obj:result){
+		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
+				this.getDialect(), cnt, result, OBJECT_TYPE);
+		for (Type obj : result) {
 			obj.setDefinition(routines.get(obj.getSchemaName(), obj.getName()));
 		}
 		return result;

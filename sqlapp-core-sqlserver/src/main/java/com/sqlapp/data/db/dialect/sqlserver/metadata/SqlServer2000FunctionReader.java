@@ -50,8 +50,7 @@ public class SqlServer2000FunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
@@ -84,9 +83,8 @@ public class SqlServer2000FunctionReader extends FunctionReader {
 			obj.setDefinition(definition);
 		}
 		FunctionReturning ret = obj.getReturning();
-		String productDataType=SqlServerUtils.getFunctionReturnName(definition);
-		this.getDialect().setDbType(productDataType,
-				null, null, ret);
+		String productDataType = SqlServerUtils.getFunctionReturnName(definition);
+		this.getDialect().setDbType(productDataType, null, null, ret);
 		return obj;
 	}
 

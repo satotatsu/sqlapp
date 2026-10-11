@@ -44,8 +44,7 @@ public class MySqlFunctionArgument553Reader extends MySqlFunctionArgumentReader 
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -68,9 +67,8 @@ public class MySqlFunctionArgument553Reader extends MySqlFunctionArgumentReader 
 		}
 	}
 
-	protected void createNamedArguments(ExResultSet rs,
-			ProductVersionInfo productVersionInfo, List<NamedArgument> result)
-			throws SQLException {
+	protected void createNamedArguments(ExResultSet rs, ProductVersionInfo productVersionInfo,
+			List<NamedArgument> result) throws SQLException {
 		if (productVersionInfo.gte(5, 5, 3)) {
 			NamedArgument obj = createNamedArgument(rs);
 			result.add(obj);
@@ -79,8 +77,7 @@ public class MySqlFunctionArgument553Reader extends MySqlFunctionArgumentReader 
 		}
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		Function routine = new Function(getString(rs, SPECIFIC_NAME));
 		routine.setDialect(this.getDialect());
 		routine.setCatalogName(getString(rs, SPECIFIC_CATALOG));
@@ -96,8 +93,7 @@ public class MySqlFunctionArgument553Reader extends MySqlFunctionArgumentReader 
 		getDialect().setDbType(productDataType, notZero(maxLength, numericPrecision), numericScale, obj);
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
-		obj.setDirection(ParameterDirection.parse(getString(rs,
-				"PARAMETER_MODE")));
+		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_MODE")));
 		return obj;
 	}
 

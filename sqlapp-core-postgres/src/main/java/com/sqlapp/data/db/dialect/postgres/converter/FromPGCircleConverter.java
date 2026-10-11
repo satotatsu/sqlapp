@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Circle;
 import org.postgresql.geometric.PGcircle;
 
-public class FromPGCircleConverter extends AbstractFromObjectConverter<Circle, PGcircle>{
+public class FromPGCircleConverter extends AbstractFromObjectConverter<Circle, PGcircle> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Circle copy(Object obj){
-		if (obj==null){
+	public Circle copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Circle)convertObject(obj).clone();
+		return (Circle) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGCircleConverter extends AbstractFromObjectConverter<Circle, P
 
 	@Override
 	protected Circle toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGcircle pgObject=new PGcircle(val);
+			PGcircle pgObject = new PGcircle(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Circle toObject(PGcircle value) {
-		Circle obj=new Circle();
+		Circle obj = new Circle();
 		obj.setValue(value.getValue());
 		return obj;
 	}

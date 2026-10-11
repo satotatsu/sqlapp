@@ -22,7 +22,6 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractRefreshMviewFactory;
 
-public class OracleRefreshMviewFactory extends
-		AbstractRefreshMviewFactory<OracleSqlBuilder> {
+public class OracleRefreshMviewFactory extends AbstractRefreshMviewFactory<OracleSqlBuilder> {
 
 }

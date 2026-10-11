@@ -21,7 +21,7 @@ package com.sqlapp.data.db.sql;
 
 import com.sqlapp.data.db.dialect.AbstractSqlFactoryTest;
 
-public abstract class AbstractStandardFactoryTest extends AbstractSqlFactoryTest{
+public abstract class AbstractStandardFactoryTest extends AbstractSqlFactoryTest {
 
 	@Override
 	protected String productName() {

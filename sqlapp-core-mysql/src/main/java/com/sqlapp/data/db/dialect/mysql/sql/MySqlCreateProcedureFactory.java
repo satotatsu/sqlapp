@@ -24,8 +24,7 @@ import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlCreateProcedureFactory extends
-		AbstractCreateProcedureFactory<MySqlSqlBuilder> {
+public class MySqlCreateProcedureFactory extends AbstractCreateProcedureFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Procedure obj, MySqlSqlBuilder builder) {

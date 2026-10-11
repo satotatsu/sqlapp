@@ -15,14 +15,12 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class Oracle23aiDropViewFactory extends DropViewFactory {
 
 	@Override
-	protected void addDropObject(final View view,
-			final AbstractSqlBuilder<?> builder) {
+	protected void addDropObject(final View view, final AbstractSqlBuilder<?> builder) {
 		if (!OracleJsonDualityViewUtils.isJsonRelationalDualityView(view)) {
 			super.addDropObject(view, builder);
 			return;
 		}
-		builder.drop().view().space()
-				.ifExists(getOptions().isDropIfExists()).space()
-				.name(view, getOptions().isDecorateSchemaName());
+		builder.drop().view().space().ifExists(getOptions().isDropIfExists()).space().name(view,
+				getOptions().isDecorateSchemaName());
 	}
 }

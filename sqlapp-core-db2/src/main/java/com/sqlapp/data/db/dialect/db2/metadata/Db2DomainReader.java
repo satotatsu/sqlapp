@@ -34,6 +34,7 @@ import com.sqlapp.data.db.metadata.DomainReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+
 /**
  * DB2のドメイン読み込みクラス
  * 
@@ -47,8 +48,7 @@ public class Db2DomainReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Domain> result = list();
@@ -74,11 +74,11 @@ public class Db2DomainReader extends DomainReader {
 		obj.setValid("Y".equalsIgnoreCase(getString(rs, "VALID")));
 		String productDataType = getString(rs, "sourcename");
 		Long length = rs.getLongValue("LENGTH");
-		if (length!=null && length.longValue() > 0) {
+		if (length != null && length.longValue() > 0) {
 			obj.setLength(length);
 		}
 		Integer scale = rs.getInteger("SCALE");
-		if (scale!=null && scale.intValue() > 0) {
+		if (scale != null && scale.intValue() > 0) {
 			obj.setScale(scale);
 		}
 		String metaType = getString(rs, "METATYPE");

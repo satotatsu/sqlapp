@@ -103,7 +103,7 @@ public class Postgres82 extends Postgres {
 	public CatalogReader getCatalogReader() {
 		return new Postgres82CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

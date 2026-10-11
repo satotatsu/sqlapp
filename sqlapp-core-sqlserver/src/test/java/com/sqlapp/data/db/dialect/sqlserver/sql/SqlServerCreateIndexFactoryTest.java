@@ -43,27 +43,18 @@ public class SqlServerCreateIndexFactoryTest extends AbstractSqlServer11SqlFacto
 
 	@BeforeEach
 	public void before() {
-		operationFacroty = this.sqlFactoryRegistry.getSqlFactory(new Index("indexA"),
-				State.Added);
+		operationFacroty = this.sqlFactoryRegistry.getSqlFactory(new Index("indexA"), State.Added);
 	}
 
 	@Test
 	public void testGetDdl() {
 		final Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("0"));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("0"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		final Index index = table.getIndexes().get("IDX_tableA1");
 		index.setWhere("colC>1");
 		index.getSpecifics().put(SqlServer2000IndexReader.FILL_FACTOR, "40");
@@ -72,7 +63,7 @@ public class SqlServerCreateIndexFactoryTest extends AbstractSqlServer11SqlFacto
 		index.getSpecifics().put(SqlServerIndexOptions.ALLOW_PAGE_LOCKS.toString(), "ON");
 		index.getSpecifics().put("ONLINE", "ON");
 		index.getIncludes().add("colB");
-		index.toPartitioning(p->{
+		index.toPartitioning(p -> {
 			p.setPartitionSchemeName("PF_FUNC1");
 			p.getPartitioningColumns().add("colB");
 		});

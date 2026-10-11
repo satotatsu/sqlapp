@@ -1,0 +1,254 @@
+# Building and testing sqlapp
+
+[Documentation index](../README.md) · [Section index](README.md)
+
+This page describes development verification for the sqlapp repository. It
+does not cover publishing credentials or release deployment.
+
+## Prerequisites
+
+- Java 21
+- The checked-in Gradle Wrapper
+- UTF-8 source and generated text
+- Docker only when explicitly running `sqlapp-core-dialect-test:dockerTest`
+
+Check the active tools before diagnosing a build failure:
+
+```shell
+java -version
+./gradlew --version
+```
+
+On Windows PowerShell, replace `./gradlew` with `.\gradlew.bat`. The wrapper
+currently selects Gradle 9.6.1 and configures a Java 21 toolchain.
+
+## Repository build
+
+Run the normal multi-project build from the repository root:
+
+```shell
+./gradlew build
+```
+
+The shared Java convention compiles Java and Groovy as UTF-8, creates source
+and Javadoc artifacts, runs JUnit Platform tests, and makes builds using that
+convention depend on their JaCoCo report. The normal build does not run the
+optional Docker database suites.
+
+Use `clean` only when stale build output is relevant to the problem being
+investigated:
+
+```shell
+./gradlew clean build
+```
+
+Build output belongs under each module's `build/` directory and must not be
+committed.
+
+## Focused verification
+
+Start with the smallest test scope that proves the change.
+
+For publication changes, generate POMs locally and check their Central metadata
+and plugin marker dependency without uploading or requiring signing credentials:
+
+```shell
+./gradlew :sqlapp-gradle-plugin:generatePomFileForPluginMavenPublication :sqlapp-gradle-plugin:generatePomFileForSqlappPluginPluginMarkerMavenPublication :sqlapp-core:generatePomFileForMavenJavaPublication
+python -m unittest discover -s docs/development -p test_publication_poms.py
+./gradlew :sqlapp-gradle-plugin:publishAllPublicationsToNmcpRepository --dry-run
+```
+
+The plugin must publish only `pluginMaven` and `sqlappPluginPluginMarkerMaven`,
+with signing tasks for both. Libraries retain `mavenJava`. The shared convention
+applies Central POM metadata and signing to every publication. Apply
+`java-gradle-plugin` before `com.sqlapp.maven-deploy` so the convention selects
+the plugin publication instead of creating a duplicate library publication.
+The Python checks read generated files, so always regenerate POMs first.
+
+Run one test class:
+
+```shell
+./gradlew :sqlapp-core:test --tests com.sqlapp.data.schemas.TableTest
+```
+
+Run one module's tests:
+
+```shell
+./gradlew :sqlapp-core-postgres:test
+```
+
+Run a module build, including compilation, tests, Javadoc/source artifacts,
+and its normal verification tasks:
+
+```shell
+./gradlew :sqlapp-gradle-plugin:build
+```
+
+For a shared-core change, expand verification in this order:
+
+1. the changed test class;
+2. the changed module;
+3. directly affected command, plugin, renderer, or dialect modules;
+4. the repository build.
+
+Do not repeatedly run the full build when a focused failure still needs to be
+understood.
+
+## Test categories
+
+| Category | Location/task | External database |
+|---|---|---|
+| Unit and module tests | Each module's `src/test`; `<module>:test` | Normally no production service; some modules use embedded/file databases |
+| Gradle plugin tests | `sqlapp-gradle-plugin:test` | Uses project fixtures, HSQLDB, Access/UCanAccess, and Gradle test support as required by the test |
+| Dialect resolver and SQL tests | Each `sqlapp-core-{db}:test` | Normally no external server |
+| Real-engine integration tests | `sqlapp-core-dialect-test:dockerTest` | Disposable Testcontainers databases or emulators |
+| Proprietary/service-only verification | Manual, environment-specific | Explicitly supplied licensed database or cloud service |
+
+`sqlapp-core-dialect-test:test` is disabled. Its opt-in integration source set
+is executed through `dockerTest`, so a successful normal `build` is not evidence
+that real database containers ran.
+
+## Docker dialect tests
+
+Docker tests may start database containers, initialize schemas, and execute
+DDL/DML against those disposable containers. Confirm that Docker points to the
+intended local/container environment before running them. Never redirect these
+tests to an external or production database.
+
+Run one database package at a time:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests "com.sqlapp.data.db.dialect.test.postgres.*"
+```
+
+Example packages include `db2`, `firebird`, `informix`, `mariadb`, `mysql`,
+`oracle`, `postgres`, `saphana`, `spanner`, `sqlite`, `sqlserver`, `sybase`,
+and `virtica`. The exact images and coverage are recorded in the
+[compatibility matrix](../compatibility.md).
+
+Testcontainers reuse is off by default. Enable it only for local iterative
+work when retaining containers is intentional:
+
+```shell
+./gradlew -PtestcontainersReuse=true \
+  :sqlapp-core-dialect-test:dockerTest \
+  --tests "com.sqlapp.data.db.dialect.test.postgres.*"
+```
+
+Oracle 26ai uses a product-version boundary reported as `23.26.x`. The suite
+supports an explicit image and expected dialect:
+
+```shell
+./gradlew \
+  -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart \
+  -PoracleExpectedDialect=26ai \
+  :sqlapp-core-dialect-test:dockerTest \
+  --tests "com.sqlapp.data.db.dialect.test.oracle.*"
+```
+
+Some suites require large images, additional memory, or licensed/service
+environments. An unavailable environment is an unexecuted test, not a pass.
+
+## Test and coverage output
+
+Gradle writes ordinary test reports under:
+
+```text
+<module>/build/reports/tests/test/
+```
+
+JaCoCo reports are under the corresponding module's `build/reports/jacoco/`
+tree. Docker-test reports use the `dockerTest` task name below
+`sqlapp-core-dialect-test/build/reports/tests/`.
+
+When reporting verification, include:
+
+- exact commands;
+- passed and failed scopes;
+- tests intentionally not run;
+- every external database, image, or emulator used;
+- generated fixtures intentionally changed.
+
+Do not state that the complete build passed when only a module or test class
+was executed.
+
+## Dependency and toolchain troubleshooting
+
+Use dependency insight before changing versions:
+
+```shell
+./gradlew :sqlapp-gradle-plugin:dependencies --configuration runtimeClasspath
+```
+
+Useful diagnostics include:
+
+```shell
+./gradlew projects
+./gradlew tasks --all
+./gradlew :sqlapp-core-postgres:test --stacktrace
+```
+
+If dependency download fails, distinguish a network/repository failure from a
+compilation or test failure. Do not update dependency versions merely to work
+around a transient repository problem.
+
+For reproducible automation, use a dedicated Gradle user home and `--no-daemon`
+when the execution environment requires isolation:
+
+```shell
+./gradlew --gradle-user-home .gradle-user-home build --no-daemon
+```
+
+The local cache directory must remain uncommitted.
+
+## Documentation checks
+
+For documentation-only changes, run the offline checker from the repository
+root. This optional contributor tool uses Python 3.8 or later and the standard
+library; Java builds and application users do not require Python.
+
+```shell
+python -B docs/development/check_documentation.py
+```
+
+The checker validates local inline Markdown links and images in `README.md`,
+`CONTRIBUTING.md`, and `docs/**/*.md`, including heading fragments, duplicate
+heading suffixes, and closed fenced code blocks. It also checks that every
+current documentation page is reachable through links from `docs/README.md`.
+Pages containing the existing `This guide has moved to` notice are excluded
+from that reachability requirement, but their links are still checked.
+Failures produce diagnostics and a nonzero exit code. The checker reads files
+only and does not access external URLs or databases.
+
+This is a check for the repository's current Markdown conventions, not a full
+Markdown renderer: reference-style links, raw HTML links/anchors, and complex
+nested link destinations are not validated. Review those manually if added.
+It does not validate the claims on external pages or execute documentation
+examples.
+
+When changing the checker, run its negative and boundary fixtures:
+
+```shell
+python -B -m unittest discover -s docs/development -p test_check_documentation.py -v
+```
+
+## Refresh README demo previews
+
+The README embeds actual generated Mermaid, change SQL, and migration summary
+text. After changing the demos, run the complete tour successfully, then refresh
+the saved previews with the optional Python contributor tool:
+
+```shell
+./gradlew --init-script docs/examples/offline-html/demo.init.gradle demoSqlapp
+python -B docs/development/refresh_demo_previews.py
+python -B -m unittest discover -s docs/development -p test_refresh_demo_previews.py -v
+python -B docs/development/check_documentation.py
+```
+
+On Windows, replace `./gradlew` with `.\gradlew.bat`. The refresh script reads
+`build/docs` and updates the three marked README blocks and text files under
+`docs/examples/previews`. It checks that the verification reports contain the
+expected match and deliberate mismatch for the same plan. Missing inputs or
+invalid markers fail before writing any preview. It does not run the demos or
+capture screenshots; review the generated documentation in a browser separately.

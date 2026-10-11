@@ -57,6 +57,7 @@ public final class TableSpaceFile extends AbstractNamedObject<TableSpaceFile>
 
 	public TableSpaceFile(String name, String filePath) {
 		super(name);
+		this.filePath = filePath;
 	}
 
 	@Override

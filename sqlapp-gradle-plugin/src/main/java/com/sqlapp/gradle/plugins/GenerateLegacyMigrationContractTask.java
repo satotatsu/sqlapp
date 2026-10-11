@@ -17,14 +17,13 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.GenerateLegacyMigrationContractCommand;
+import com.sqlapp.data.db.command.migration.legacy.GenerateLegacyMigrationContractCommand;
 
 /**
  * Gradle task for generating the legacy extraction and load contract.
  */
 @DisableCachingByDefault
-public abstract class GenerateLegacyMigrationContractTask
-		extends AbstractTask<GenerateLegacyMigrationContractCommand> {
+public abstract class GenerateLegacyMigrationContractTask extends AbstractTask<GenerateLegacyMigrationContractCommand> {
 
 	public GenerateLegacyMigrationContractTask() {
 		getEncoding().convention("UTF-8");

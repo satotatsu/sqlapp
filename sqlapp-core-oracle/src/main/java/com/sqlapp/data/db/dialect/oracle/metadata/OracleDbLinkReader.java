@@ -52,8 +52,7 @@ public class OracleDbLinkReader extends DbLinkReader {
 	}
 
 	@Override
-	protected List<DbLink> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<DbLink> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<DbLink> result = list();
@@ -82,11 +81,9 @@ public class OracleDbLinkReader extends DbLinkReader {
 		return dbLink;
 	}
 
-	public static final Pattern DB_LINK_PATTERN1 = Pattern
-			.compile(".*IDENTIFEID\\s+BY\\s+VALUES\\s+'([^']*)'.*");
+	public static final Pattern DB_LINK_PATTERN1 = Pattern.compile(".*IDENTIFEID\\s+BY\\s+VALUES\\s+'([^']*)'.*");
 
-	public static final Pattern DB_LINK_PATTERN2 = Pattern
-			.compile(".*IDENTIFEID\\s+BY\\s+\"([^\"]*)\".*");
+	public static final Pattern DB_LINK_PATTERN2 = Pattern.compile(".*IDENTIFEID\\s+BY\\s+\"([^\"]*)\".*");
 
 	/**
 	 * DBリンクのパスワード設定
@@ -96,8 +93,7 @@ public class OracleDbLinkReader extends DbLinkReader {
 	 * @throws SQLException
 	 */
 	@Override
-	protected void setMetadataDetail(Connection connection, DbLink dbLink)
-			throws SQLException {
+	protected void setMetadataDetail(Connection connection, DbLink dbLink) throws SQLException {
 		if (!isEmpty(dbLink.getUserId())) {
 			return;
 		}
@@ -105,8 +101,7 @@ public class OracleDbLinkReader extends DbLinkReader {
 		sql.addSql("DBMS_METADATA.GET_DDL(");
 		sql.addSqlLine("FROM ALL_DB_LINKS");
 		sql.addSqlLine("WHERE 0=0");
-		String ddl = OracleMetadataUtils.getDdl(connection, "DB_LINK",
-				dbLink.getSchemaName(), dbLink.getName());
+		String ddl = OracleMetadataUtils.getDdl(connection, "DB_LINK", dbLink.getSchemaName(), dbLink.getName());
 		String val = getGroupString(DB_LINK_PATTERN1, ddl, 1);
 		if (val != null) {
 			dbLink.setPasswordEncrypted(true);

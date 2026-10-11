@@ -22,12 +22,14 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SequenceReader;
 import com.sqlapp.data.db.metadata.TableReader;
+
 /**
  * SqlServer2012のスキーマ読み込み
+ * 
  * @author satoh
  *
  */
-public class SqlServer2012SchemaReader extends SqlServer2008SchemaReader{
+public class SqlServer2012SchemaReader extends SqlServer2008SchemaReader {
 
 	public SqlServer2012SchemaReader(Dialect dialect) {
 		super(dialect);
@@ -37,7 +39,7 @@ public class SqlServer2012SchemaReader extends SqlServer2008SchemaReader{
 	protected TableReader newTableReader() {
 		return new SqlServer2012TableReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected SequenceReader newSequenceReader() {
 		return new SqlServer2012SequenceReader(this.getDialect());

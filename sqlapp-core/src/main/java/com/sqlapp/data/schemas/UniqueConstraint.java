@@ -45,7 +45,8 @@ import com.sqlapp.util.ToStringBuilder;
 public final class UniqueConstraint extends Constraint implements PrimaryKeyProperty<UniqueConstraint>
 	, IndexProperty<UniqueConstraint>
 	, ReferenceColumnsProperty<UniqueConstraint>
-	, IndexTypeProperty<UniqueConstraint>{
+	, IndexTypeProperty<UniqueConstraint>
+	, com.sqlapp.data.schemas.properties.IncludeColumnsProperty<UniqueConstraint>{
 
 	/**
 	 * serialVersionUID
@@ -269,6 +270,9 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 		if (!isEmpty(getColumns())) {
 			getColumns().writeXml(stax);
 		}
+		if (!isEmpty(getIncludes())) {
+			getIncludes().writeXml(SchemaObjectProperties.INCLUDED_COLUMNS.getLabel(), stax);
+		}
 	}
 
 	protected void writeXmlAsPrimary(final StaxWriter stax) throws XMLStreamException {
@@ -287,6 +291,9 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 			getColumns().writeXml(stax);
 		}
 		writeCommonValue(stax);
+		if (!isEmpty(getIncludes())) {
+			getIncludes().writeXml(SchemaObjectProperties.INCLUDED_COLUMNS.getLabel(), stax);
+		}
 		stax.addIndentLevel(-1);
 		stax.newLine();
 		stax.indent();
@@ -321,6 +328,9 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 		if (!equals(SchemaProperties.INDEX_TYPE, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaObjectProperties.INCLUDED_COLUMNS, val, equalsHandler)) {
+			return false;
+		}
 		if (!this.isPrimaryKey()) {
 			if (!equals(SchemaProperties.NAME, val, equalsHandler)) {
 				return false;
@@ -334,6 +344,12 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 			return this.getParent().getTable();
 		}
 		return null;
+	}
+
+	/** Payload columns of the backing index, excluded from the unique key. */
+	@Override
+	public ReferenceColumnCollection getIncludes() {
+		return getIndex().getIncludes();
 	}
 	
 	@Override

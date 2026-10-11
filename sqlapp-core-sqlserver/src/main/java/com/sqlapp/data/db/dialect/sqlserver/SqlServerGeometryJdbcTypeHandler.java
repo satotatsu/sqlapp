@@ -30,30 +30,27 @@ import org.geolatte.geom.codec.db.sqlserver.Encoders;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 
-public class SqlServerGeometryJdbcTypeHandler  implements JdbcTypeHandler {
+public class SqlServerGeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	public SqlServerGeometryJdbcTypeHandler() {
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, int columnIndex)
-			throws SQLException {
-		byte[] bytes=rs.getBytes(columnIndex);
+	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
+		byte[] bytes = rs.getBytes(columnIndex);
 		return Decoders.decode(bytes);
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, String columnLabel)
-			throws SQLException {
-		byte[] bytes=rs.getBytes(columnLabel);
+	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
+		byte[] bytes = rs.getBytes(columnLabel);
 		return Decoders.decode(bytes);
 	}
 
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex,
-			Object x) throws SQLException {
-		Geometry<?> geometry=Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
-	    byte[] bytes = Encoders.encode(geometry);
-	    stmt.setObject(parameterIndex, bytes);
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+		Geometry<?> geometry = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
+		byte[] bytes = Encoders.encode(geometry);
+		stmt.setObject(parameterIndex, bytes);
 	}
 }

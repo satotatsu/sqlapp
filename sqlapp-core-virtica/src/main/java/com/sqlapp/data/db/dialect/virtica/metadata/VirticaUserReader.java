@@ -42,8 +42,7 @@ public class VirticaUserReader extends UserReader {
 	}
 
 	@Override
-	protected List<User> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<User> result = list();
@@ -63,6 +62,7 @@ public class VirticaUserReader extends UserReader {
 
 	protected User createUser(ExResultSet rs) throws SQLException {
 		User obj = new User(getString(rs, USER_NAME));
+		obj.setId(getString(rs, "USER_ID"));
 		obj.setAdmin(rs.getBoolean("IS_SUPER_USER"));
 		obj.setLockedAt(getTimestamp(rs, "LOCK_TIME"));
 		setSpecifics(rs, "PROFILE_NAME", obj);

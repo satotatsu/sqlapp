@@ -23,21 +23,23 @@ import java.sql.SQLException;
 import com.sqlapp.data.geometry.Line;
 import org.postgresql.geometric.PGline;
 
-public class FromPGLineConverter extends AbstractFromObjectConverter<Line, PGline>{
+public class FromPGLineConverter extends AbstractFromObjectConverter<Line, PGline> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Line copy(Object obj){
-		if (obj==null){
+	public Line copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Line)convertObject(obj).clone();
+		return (Line) convertObject(obj).clone();
 	}
 
 	@Override
@@ -52,18 +54,18 @@ public class FromPGLineConverter extends AbstractFromObjectConverter<Line, PGlin
 
 	@Override
 	protected Line toObjectFromString(String value) {
-		String val=(String)value;
+		String val = (String) value;
 		try {
-			PGline pgObject=new PGline(val);
+			PGline pgObject = new PGline(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Line toObject(PGline value) {
-		Line obj=new Line();
+		Line obj = new Line();
 		obj.setValue(value.getValue());
 		return obj;
 	}

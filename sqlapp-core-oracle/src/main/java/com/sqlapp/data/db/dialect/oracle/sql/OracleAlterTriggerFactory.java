@@ -41,61 +41,62 @@ import com.sqlapp.util.CommonUtils;
 public class OracleAlterTriggerFactory extends AbstractAlterTriggerFactory<OracleSqlBuilder> {
 
 	@Override
-	protected List<SqlOperation> doCreateDiffSql(DbObjectDifference difference, Map<String, Difference<?>> allDiff){
-		Difference<?> nameDiff=allDiff.get(SchemaProperties.NAME.getLabel());
-		Difference<?> enableDiff=allDiff.get(SchemaProperties.ENABLE.getLabel());
-		if (nameDiff==null&&enableDiff==null){
+	protected List<SqlOperation> doCreateDiffSql(DbObjectDifference difference, Map<String, Difference<?>> allDiff) {
+		Difference<?> nameDiff = allDiff.get(SchemaProperties.NAME.getLabel());
+		Difference<?> enableDiff = allDiff.get(SchemaProperties.ENABLE.getLabel());
+		if (nameDiff == null && enableDiff == null) {
 			return super.doCreateDiffSql(difference, allDiff);
 		}
-		long count=allDiff.entrySet().stream().filter(e->{
-			if(SchemaProperties.NAME.getLabel().equals(e.getKey())){
+		long count = allDiff.entrySet().stream().filter(e -> {
+			if (SchemaProperties.NAME.getLabel().equals(e.getKey())) {
 				return false;
 			}
-			if(SchemaProperties.SPECIFIC_NAME.getLabel().equals(e.getKey())){
+			if (SchemaProperties.SPECIFIC_NAME.getLabel().equals(e.getKey())) {
 				return false;
 			}
-			if(SchemaProperties.ENABLE.getLabel().equals(e.getKey())){
+			if (SchemaProperties.ENABLE.getLabel().equals(e.getKey())) {
 				return false;
 			}
 			return true;
 		}).count();
-		List<SqlOperation> list=CommonUtils.list();
-		if (count==0){
-			SqlOperation operation=createAlterSql(difference, allDiff, nameDiff, enableDiff);
+		List<SqlOperation> list = CommonUtils.list();
+		if (count == 0) {
+			SqlOperation operation = createAlterSql(difference, allDiff, nameDiff, enableDiff);
 			list.add(operation);
-		} else{
+		} else {
 			return super.doCreateDiffSql(difference, allDiff);
 		}
 		return list;
 	}
 
-	protected SqlOperation createAlterSql(DbObjectDifference difference, Map<String, Difference<?>> allDiff, Difference<?> nameDiff, Difference<?> enableDiff){
-		Trigger original=difference.getOriginal(Trigger.class);
-		Trigger target=difference.getTarget(Trigger.class);
+	protected SqlOperation createAlterSql(DbObjectDifference difference, Map<String, Difference<?>> allDiff,
+			Difference<?> nameDiff, Difference<?> enableDiff) {
+		Trigger original = difference.getOriginal(Trigger.class);
+		Trigger target = difference.getTarget(Trigger.class);
 		OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().trigger().space();
-		if (nameDiff!=null){
-			if (this.getOptions().isDecorateSchemaName()){
+		if (nameDiff != null) {
+			if (this.getOptions().isDecorateSchemaName()) {
 				builder.name(target.getSchemaName());
 				builder._add(".");
 			}
 			builder.name(original, false);
-		} else{
+		} else {
 			builder.name(target, this.getOptions().isDecorateSchemaName());
 		}
-		if (enableDiff!=null){
-			Boolean bool=enableDiff.getTarget(Boolean.class);
-			if (bool!=null){
-				if (bool.booleanValue()){
+		if (enableDiff != null) {
+			Boolean bool = enableDiff.getTarget(Boolean.class);
+			if (bool != null) {
+				if (bool.booleanValue()) {
 					builder.enable();
-				} else{
+				} else {
 					builder.disable();
 				}
 			}
 		}
-		if (nameDiff!=null){
+		if (nameDiff != null) {
 			builder.rename().to().name(target, false);
 		}
-		return createOperation(builder.toString(),SqlType.ALTER, original, target);
+		return createOperation(builder.toString(), SqlType.ALTER, original, target);
 	}
 }

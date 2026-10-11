@@ -23,7 +23,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.Clock;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.TimeZone;
 
 /**
@@ -48,9 +47,7 @@ public class TimeZoneConverter extends AbstractConverter<TimeZone> {
 		} else if (value instanceof TimeZone) {
 			return (TimeZone) value;
 		} else if (value instanceof ZoneId) {
-			return TimeZone.getTimeZone(((ZoneId) value).getId());
-		} else if (value instanceof ZoneOffset) {
-			return TimeZone.getTimeZone(((ZoneOffset) value).getId());
+			return TimeZone.getTimeZone((ZoneId) value);
 		} else if (value instanceof Clock) {
 			return TimeZone.getTimeZone(((Clock) value).getZone());
 		}

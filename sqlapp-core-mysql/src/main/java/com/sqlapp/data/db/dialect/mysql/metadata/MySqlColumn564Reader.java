@@ -32,7 +32,7 @@ public class MySqlColumn564Reader extends MySqlColumnReader {
 	}
 
 	@Override
-	protected Long getMaxLength(ExResultSet rs) throws SQLException{
+	protected Long getMaxLength(ExResultSet rs) throws SQLException {
 		Long maxLength = getLong(rs, "CHARACTER_MAXIMUM_LENGTH");
 		Long numericPrecision = getLong(rs, "NUMERIC_PRECISION");
 		Long datetimePrecision = getLong(rs, "DATETIME_PRECISION");

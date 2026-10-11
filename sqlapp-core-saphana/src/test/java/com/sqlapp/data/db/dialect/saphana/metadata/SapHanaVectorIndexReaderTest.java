@@ -16,13 +16,8 @@ class SapHanaVectorIndexReaderTest {
 
 	@Test
 	void testSimilarityFunctionMapping() {
-		assertEquals(VectorDistanceType.Cosine,
-				SapHanaVectorIndexReader.toVectorDistanceType(
-						"COSINE_SIMILARITY"));
-		assertEquals(VectorDistanceType.Euclidean,
-				SapHanaVectorIndexReader.toVectorDistanceType(
-						"L2DISTANCE"));
-		assertNull(SapHanaVectorIndexReader.toVectorDistanceType(
-				"FUTURE_DISTANCE"));
+		assertEquals(VectorDistanceType.Cosine, SapHanaVectorIndexReader.toVectorDistanceType("COSINE_SIMILARITY"));
+		assertEquals(VectorDistanceType.Euclidean, SapHanaVectorIndexReader.toVectorDistanceType("L2DISTANCE"));
+		assertNull(SapHanaVectorIndexReader.toVectorDistanceType("FUTURE_DISTANCE"));
 	}
 }

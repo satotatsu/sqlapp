@@ -33,7 +33,8 @@ public class MariadbColumn10_27Reader extends MySqlColumn570Reader {
 	}
 
 	@Override
-	protected void setDefaultValue(final Connection connection, final ExResultSet rs, final Column column, final String def) {
+	protected void setDefaultValue(final Connection connection, final ExResultSet rs, final Column column,
+			final String def) {
 		if (def != null) {
 			column.setDefaultValue(def);
 		}

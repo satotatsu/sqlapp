@@ -13,6 +13,9 @@ int no=1;
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Value")}>Value</th>
+				@if{_prefix.defaultValueCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DefaultValue")}>Default Value</th>
+				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
@@ -23,6 +26,9 @@ int no=1;
 			<tr>
 				<!-- include(incTableSchemaFooter.html) -->
 				<td @{renderOptions.tableHeaderColAttr("Value")}></td>
+				@if{_prefix.defaultValueCount>0}
+				<td @{renderOptions.tableHeaderColAttr("DefaultValue")}></td>
+				@end{}
 				<!-- include(incTableFooter.html) -->
 			</tr>
 		</tfoot>
@@ -30,6 +36,9 @@ int no=1;
 			<tr>
 				<!-- include(incTableSchemaBodyNoDetail.html) -->
 				<td @{renderOptions.tableBodyColAttr("Value")}>@{coalesce(obj.value, "")}</td>
+				@if{_prefix.defaultValueCount>0}
+				<td @{renderOptions.tableBodyColAttr("DefaultValue")}>@{coalesce(obj.defaultValue, "")}</td>
+				@end{}
 				<!-- include(incTableBody.html) -->
 			</tr>@end{}
 		</tbody>

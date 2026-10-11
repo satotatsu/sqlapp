@@ -53,8 +53,7 @@ public class H2ColumnReader extends ColumnReader {
 	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Column> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -93,36 +92,27 @@ public class H2ColumnReader extends ColumnReader {
 		return result;
 	}
 
-	private void setModernProperties(final ExResultSet rs,
-			final Column column) throws SQLException {
-		final boolean identity = "YES".equalsIgnoreCase(
-				getString(rs, "IS_IDENTITY"));
+	private void setModernProperties(final ExResultSet rs, final Column column) throws SQLException {
+		final boolean identity = "YES".equalsIgnoreCase(getString(rs, "IS_IDENTITY"));
 		column.setIdentity(identity);
 		if (identity) {
-			column.setIdentityGenerationType("ALWAYS".equalsIgnoreCase(getString(rs, "IDENTITY_GENERATION"))
-					? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
-			column.setIdentityStartValue(getLong(rs,
-					"IDENTITY_START"));
-			column.setIdentityStep(getLong(rs,
-					"IDENTITY_INCREMENT"));
-			column.setIdentityMaxValue(getLong(rs,
-					"IDENTITY_MAXIMUM"));
-			column.setIdentityMinValue(getLong(rs,
-					"IDENTITY_MINIMUM"));
-			column.setIdentityCycle("YES".equalsIgnoreCase(
-					getString(rs, "IDENTITY_CYCLE")));
+			column.setIdentityGenerationType(
+					"ALWAYS".equalsIgnoreCase(getString(rs, "IDENTITY_GENERATION")) ? IdentityGenerationType.Always
+							: IdentityGenerationType.ByDefault);
+			column.setIdentityStartValue(getLong(rs, "IDENTITY_START"));
+			column.setIdentityStep(getLong(rs, "IDENTITY_INCREMENT"));
+			column.setIdentityMaxValue(getLong(rs, "IDENTITY_MAXIMUM"));
+			column.setIdentityMinValue(getLong(rs, "IDENTITY_MINIMUM"));
+			column.setIdentityCycle("YES".equalsIgnoreCase(getString(rs, "IDENTITY_CYCLE")));
 		}
-		if ("ALWAYS".equalsIgnoreCase(
-				getString(rs, "IS_GENERATED"))) {
-			column.setFormula(getString(rs,
-					"GENERATION_EXPRESSION"));
+		if ("ALWAYS".equalsIgnoreCase(getString(rs, "IS_GENERATED"))) {
+			column.setFormula(getString(rs, "GENERATION_EXPRESSION"));
 		}
 		column.setOnUpdate(getString(rs, "COLUMN_ON_UPDATE"));
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
 			return getSqlNodeCache().getString("columns_200.sql");
 		}

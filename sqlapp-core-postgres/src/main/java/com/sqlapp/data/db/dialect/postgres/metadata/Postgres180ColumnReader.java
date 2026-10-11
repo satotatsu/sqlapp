@@ -26,10 +26,8 @@ public class Postgres180ColumnReader extends Postgres100ColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
-		Postgres180ColumnMetadata.applyNamedNotNull(column,
-				getString(rs, "not_null_constraint_name"),
-				rs.getBoolean("not_null_no_inherit"),
-				rs.getBoolean("not_null_validated"));
+		Postgres180ColumnMetadata.applyNamedNotNull(column, getString(rs, "not_null_constraint_name"),
+				rs.getBoolean("not_null_no_inherit"), rs.getBoolean("not_null_validated"));
 		return column;
 	}
 }

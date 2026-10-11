@@ -37,16 +37,14 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlProcedureArgumentReader extends
-		RoutineArgumentReader<Procedure> {
+public class MySqlProcedureArgumentReader extends RoutineArgumentReader<Procedure> {
 
 	protected MySqlProcedureArgumentReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -63,9 +61,8 @@ public class MySqlProcedureArgumentReader extends
 		return getSqlNodeCache().getString("procedureArguments.sql");
 	}
 
-	protected void createNamedArguments(ExResultSet rs,
-			ProductVersionInfo productVersionInfo, List<NamedArgument> result)
-			throws SQLException {
+	protected void createNamedArguments(ExResultSet rs, ProductVersionInfo productVersionInfo,
+			List<NamedArgument> result) throws SQLException {
 		String paramList = getString(rs, "param_list");
 		String[] args = paramList.split("\\s*,\\s*");
 		for (String arg : args) {
@@ -74,16 +71,14 @@ public class MySqlProcedureArgumentReader extends
 		}
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs, String arg)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs, String arg) throws SQLException {
 		Procedure routine = new Procedure(getString(rs, ROUTINE_NAME));
 		routine.setDialect(this.getDialect());
 		routine.setCatalogName(getString(rs, CATALOG_NAME));
 		routine.setSchemaName(getString(rs, SCHEMA_NAME));
 		routine.setSpecificName(getString(rs, SPECIFIC_NAME));
 		NamedArgument obj = createObject();
-		MySqlUtils.setProcedureNamedArgument(arg,
-				obj);
+		MySqlUtils.setProcedureNamedArgument(arg, obj);
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		SchemaUtils.setRoutine(obj, routine);

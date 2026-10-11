@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
+import com.sqlapp.data.db.metadata.RoutinePrivilegeReader;
 
 /**
  * Postgres 11.0 以降のカタログ読み込み
@@ -32,6 +33,11 @@ public class Postgres110CatalogReader extends Postgres100CatalogReader {
 
 	public Postgres110CatalogReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
+		return new Postgres110RoutinePrivilegeReader(getDialect());
 	}
 
 	@Override

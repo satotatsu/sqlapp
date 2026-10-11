@@ -47,7 +47,9 @@ public class LegacyMigrationLoadPlan {
 
 	private List<String> resolvedDataSetIds = new ArrayList<>();
 
-	private String tableOperationMode = "INSERT_IGNORE";
+	private TableOperationMode tableOperationMode = TableOperationMode.INSERT_IGNORE;
+
+	private String stagingTablePrefix;
 
 	/**
 	 * Maximum root rows sent in one JDBC batch.
@@ -61,20 +63,40 @@ public class LegacyMigrationLoadPlan {
 
 	private boolean deleteCommittedRoots = true;
 
-	private String rootCursorStrategy = "DIALECT";
+	private RootCursorStrategy rootCursorStrategy = RootCursorStrategy.DIALECT;
 
 	private TransactionPolicy transaction = new TransactionPolicy();
 
 	private List<LoadDataSet> dataSets = new ArrayList<>();
 
+	public enum TableOperationMode {
+		INSERT, INSERT_IGNORE, MERGE, REPLACE
+	}
+
+	public enum RootCursorStrategy {
+		DIALECT, HOLD, REOPEN
+	}
+
+	public enum CommitUnit {
+		ROOT_BATCH
+	}
+
+	public enum StagingDeleteTiming {
+		BEFORE_COMMIT
+	}
+
+	public enum RestartUnit {
+		ROOT
+	}
+
 	@Getter
 	@Setter
 	public static class TransactionPolicy {
 		private boolean autoCommit = false;
-		private String commitUnit = "ROOT_BATCH";
-		private String stagingDeleteTiming = "BEFORE_COMMIT";
+		private CommitUnit commitUnit = CommitUnit.ROOT_BATCH;
+		private StagingDeleteTiming stagingDeleteTiming = StagingDeleteTiming.BEFORE_COMMIT;
 		private boolean targetAndStagingDeleteAtomic = true;
-		private String restartUnit = "ROOT";
+		private RestartUnit restartUnit = RestartUnit.ROOT;
 	}
 
 	@Getter
@@ -83,6 +105,7 @@ public class LegacyMigrationLoadPlan {
 		private String id;
 		private String fileName;
 		private String stagingTable;
+		private String targetCatalog;
 		private String targetSchema;
 		private String targetTable;
 		private String parentDataSetId;
@@ -90,6 +113,7 @@ public class LegacyMigrationLoadPlan {
 		private int loadOrder;
 		private List<String> sourceBusinessKey = new ArrayList<>();
 		private List<String> targetPrimaryKey = new ArrayList<>();
+		private List<String> targetForeignKey = new ArrayList<>();
 		private List<LoadField> fields = new ArrayList<>();
 		private List<JoinKey> parentJoinKeys = new ArrayList<>();
 	}
@@ -105,7 +129,7 @@ public class LegacyMigrationLoadPlan {
 		private Integer scale;
 		private boolean extracted;
 		private boolean targetGenerated;
-		private String action;
+		private LegacyMigrationMapping.ColumnAction action;
 	}
 
 	@Getter
@@ -113,6 +137,5 @@ public class LegacyMigrationLoadPlan {
 	public static class JoinKey {
 		private String parentStagingColumn;
 		private String childStagingColumn;
-		private String targetForeignKeyColumn;
 	}
 }

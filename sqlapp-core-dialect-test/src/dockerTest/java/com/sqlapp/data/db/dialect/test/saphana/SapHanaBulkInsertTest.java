@@ -1,0 +1,339 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.dialect.test.saphana;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.time.Duration;
+import java.util.List;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.testcontainers.containers.BindMode;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.utility.DockerImageName;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.command.migration.bulk.FileBulkMigrationCheckpointStore;
+import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationRepairAssertions;
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
+import com.sqlapp.data.db.dialect.test.BulkMigrationLoadAssertions;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.bulk.BulkInsertResolver;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertResolver;
+
+/** Exercises JDBC batch bulk insertion against SAP HANA Express 2.0. */
+class SapHanaBulkInsertTest {
+	private static final String PASSWORD = "HxeTest9xA";
+	private static final Path PASSWORD_DIRECTORY = createPasswordDirectory();
+	private static final GenericContainer<?> HANA = ReusableTestcontainers
+			.configure(new GenericContainer<>(DockerImageName.parse("saplabs/hanaexpress:2.00.088.00.20251110.1"))
+					.withFileSystemBind(PASSWORD_DIRECTORY.toString(), "/hana/mounts", BindMode.READ_WRITE)
+					.withCommand("--passwords-url", "file:///hana/mounts/password.json", "--agree-to-sap-license",
+							"--dont-check-system")
+					.withExposedPorts(39041)
+					.withCreateContainerCmdModifier(
+							command -> command.withHostName("hxehost").getHostConfig().withShmSize(1L << 30))
+					.waitingFor(
+							Wait.forLogMessage(".*Startup finished.*", 1).withStartupTimeout(Duration.ofMinutes(30))));
+
+	@BeforeAll
+	static void startContainer() {
+		ReusableTestcontainers.start(HANA);
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		ReusableTestcontainers.stop(HANA);
+	}
+
+	@Test
+	void sustainsChunkedLobAndDuplicateLoad(@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory)
+			throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP TABLE SQLAPP_BULK_LOAD_HANA");
+			} catch (java.sql.SQLException ignored) {
+				// The isolated test database can start without the table.
+			}
+			statement.execute("CREATE TABLE SQLAPP_BULK_LOAD_HANA (CODE NVARCHAR(20) PRIMARY KEY, "
+					+ "CONTENT NCLOB, PAYLOAD BLOB)");
+			BulkMigrationLoadAssertions.assertChunkedLobAndDuplicateLoad(connection,
+					BulkMigrationLoadAssertions.table(null, "SQLAPP_BULK_LOAD_HANA", "CODE", "CONTENT", "PAYLOAD"),
+					"CODE", "CONTENT", "PAYLOAD", "SELECT COUNT(*) FROM SQLAPP_BULK_LOAD_HANA",
+					"SELECT CONTENT, PAYLOAD FROM SQLAPP_BULK_LOAD_HANA WHERE CODE = ?", checkpointDirectory);
+		}
+	}
+
+	@Test
+	void fencesJdbcJobLeaseOwnersAcrossConnections() throws Exception {
+		try (Connection first = createConnection(); Connection second = createConnection()) {
+			BulkMigrationJobAssertions.assertJdbcLeaseOwnerFencing(first, second);
+		}
+	}
+
+	@Test
+	void migratesParentBeforeChildAndAggregatesFileCheckpointStatus(
+			@org.junit.jupiter.api.io.TempDir final Path checkpointDirectory) throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_BULK_JOB CASCADE");
+			} catch (java.sql.SQLException ignored) {
+			}
+			statement.execute("CREATE SCHEMA SQLAPP_BULK_JOB");
+			statement.execute(
+					"CREATE TABLE SQLAPP_BULK_JOB.PARENT_ROWS " + "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("CREATE TABLE SQLAPP_BULK_JOB.CHILD_ROWS "
+					+ "(ID INTEGER PRIMARY KEY, PARENT_ID INTEGER NOT NULL, TXT NVARCHAR(100), "
+					+ "FOREIGN KEY (PARENT_ID) REFERENCES SQLAPP_BULK_JOB.PARENT_ROWS(ID))");
+			final Table parent = jobTable("PARENT_ROWS", false);
+			parent.getRows().add(row -> {
+				row.put("ID", 1);
+				row.put("TXT", "parent");
+			});
+			final Table child = jobTable("CHILD_ROWS", true);
+			child.getConstraints().addForeignKeyConstraint("FK_SQLAPP_BULK_JOB_CHILD",
+					new Column[] { child.getColumns().get("PARENT_ID") },
+					new Column[] { parent.getColumns().get("ID") });
+			child.getRows().add(row -> {
+				row.put("ID", 10);
+				row.put("PARENT_ID", 1);
+				row.put("TXT", "child");
+			});
+
+			BulkMigrationJobAssertions.assertDependencyOrderAndAggregatedStatus(connection, parent, child,
+					new FileBulkMigrationCheckpointStore(checkpointDirectory), BulkMigrationCheckpointMode.FILE);
+			try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM SQLAPP_BULK_JOB.CHILD_ROWS c "
+					+ "JOIN SQLAPP_BULK_JOB.PARENT_ROWS p ON p.ID = c.PARENT_ID")) {
+				resultSet.next();
+				assertEquals(1, resultSet.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void databaseCheckpointRejectsTransactionBreakingStaging() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_CHUNK_MIGRATION CASCADE");
+			} catch (java.sql.SQLException ignored) {
+			}
+			statement.execute("CREATE SCHEMA SQLAPP_CHUNK_MIGRATION");
+			statement.execute("CREATE TABLE SQLAPP_CHUNK_MIGRATION.TARGET_ROWS "
+					+ "(CODE NVARCHAR(20) PRIMARY KEY, NAME NVARCHAR(100))");
+			final Table table = new Table("TARGET_ROWS").setSchemaName("SQLAPP_CHUNK_MIGRATION");
+			final Column code = new Column("CODE").setDataType(DataType.NVARCHAR).setLength(20);
+			table.getColumns().add(code);
+			table.getColumns().add(new Column("NAME").setDataType(DataType.NVARCHAR).setLength(100));
+			table.setPrimaryKey("PK_SQLAPP_CHUNK_MIGRATION", code);
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointRejected(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
+			BulkMigrationTransactionAssertions.assertDatabaseCheckpointInsertAtomic(connection, table, "CODE", "NAME",
+					"SELECT COUNT(*) FROM SQLAPP_CHUNK_MIGRATION.TARGET_ROWS");
+		}
+	}
+
+	@Test
+	void repairsJdbcKeysetMismatchIntoADifferentTargetAndReverifies() throws Exception {
+		try (Connection sourceConnection = createConnection();
+				Connection targetConnection = createConnection();
+				var statement = targetConnection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_BULK_REPAIR CASCADE");
+			} catch (java.sql.SQLException ignored) {
+			}
+			statement.execute("CREATE SCHEMA SQLAPP_BULK_REPAIR");
+			statement.execute("CREATE COLUMN TABLE SQLAPP_BULK_REPAIR.SOURCE_ROWS "
+					+ "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("CREATE COLUMN TABLE SQLAPP_BULK_REPAIR.TARGET_ROWS "
+					+ "(ID INTEGER PRIMARY KEY, TXT NVARCHAR(100))");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (1, 'one')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (2, 'two')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (3, 'three')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.SOURCE_ROWS VALUES (4, 'four')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (1, 'one')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (2, 'wrong')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (3, 'three')");
+			statement.execute("INSERT INTO SQLAPP_BULK_REPAIR.TARGET_ROWS VALUES (4, 'four')");
+			BulkMigrationRepairAssertions.assertDifferentTargetRepair(sourceConnection, targetConnection,
+					jobTable("SQLAPP_BULK_REPAIR", "SOURCE_ROWS", false),
+					jobTable("SQLAPP_BULK_REPAIR", "TARGET_ROWS", false), List.of("ID", "TXT"), false);
+		}
+	}
+
+	@Test
+	void insertsBatchesAndGeneratedByDefaultIdentity() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_BULK CASCADE");
+			} catch (java.sql.SQLException ignored) {
+				// The isolated test database can start without the schema.
+			}
+			statement.execute("CREATE SCHEMA SQLAPP_BULK");
+			statement.execute("CREATE COLUMN TABLE SQLAPP_BULK.BULK_ROWS ("
+					+ "ID BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY, "
+					+ "TXT NVARCHAR(200), NULLABLE_VALUE NVARCHAR(20), "
+					+ "EMPTY_VALUE NVARCHAR(20), PAYLOAD VARBINARY(20))");
+
+			final Table generated = createTable();
+			generated.getRows().add(row -> {
+				row.put("TXT", "日本語\nline");
+				row.put("NULLABLE_VALUE", null);
+				row.put("EMPTY_VALUE", "");
+				row.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
+			});
+			generated.getRows().add(row -> row.put("TXT", "second"));
+			generated.getRows().add(row -> row.put("TXT", "third"));
+			assertEquals(3,
+					BulkInsertResolver.execute(connection, generated, BulkOption.builder().batchSize(2).build()));
+
+			final Table explicit = createTable();
+			explicit.getRows().add(row -> {
+				row.put("ID", 42L);
+				row.put("TXT", "explicit");
+				row.put("EMPTY_VALUE", "");
+				row.put("PAYLOAD", new byte[] { 1 });
+			});
+			assertEquals(1,
+					BulkInsertResolver.execute(connection, explicit, BulkOption.builder().keepIdentity(true).build()));
+
+			try (var resultSet = statement.executeQuery("SELECT ID, TXT, " + "NULLABLE_VALUE, EMPTY_VALUE, PAYLOAD "
+					+ "FROM SQLAPP_BULK.BULK_ROWS ORDER BY ID")) {
+				resultSet.next();
+				assertEquals(1L, resultSet.getLong("ID"));
+				assertEquals("日本語\nline", resultSet.getString("TXT"));
+				assertNull(resultSet.getString("NULLABLE_VALUE"));
+				assertEquals("", resultSet.getString("EMPTY_VALUE"));
+				assertArrayEquals(new byte[] { 0, (byte) 0xff }, resultSet.getBytes("PAYLOAD"));
+				resultSet.next();
+				assertEquals(2L, resultSet.getLong("ID"));
+				resultSet.next();
+				assertEquals(3L, resultSet.getLong("ID"));
+				resultSet.next();
+				assertEquals(42L, resultSet.getLong("ID"));
+			}
+		}
+	}
+
+	@Test
+	void upsertsThroughLocalTableAndMerge() throws Exception {
+		try (Connection connection = createConnection(); var statement = connection.createStatement()) {
+			try {
+				statement.execute("DROP SCHEMA SQLAPP_UPSERT CASCADE");
+			} catch (java.sql.SQLException ignored) {
+				// The isolated test database can start without the schema.
+			}
+			statement.execute("CREATE SCHEMA SQLAPP_UPSERT");
+			statement.execute("CREATE COLUMN TABLE SQLAPP_UPSERT.UPSERT_ROWS ("
+					+ "ID BIGINT GENERATED BY DEFAULT AS IDENTITY UNIQUE, "
+					+ "CODE NVARCHAR(20) PRIMARY KEY, TXT NVARCHAR(200), "
+					+ "AMOUNT DECIMAL(12,2), PAYLOAD VARBINARY(20))");
+			statement.execute("INSERT INTO SQLAPP_UPSERT.UPSERT_ROWS "
+					+ "(CODE, TXT, AMOUNT, PAYLOAD) VALUES ('A', 'old', 1.00, X'01')");
+
+			final Table table = createUpsertTable();
+			table.getRows().add(row -> {
+				row.put("CODE", "A");
+				row.put("TXT", "更新後\nline");
+				row.put("AMOUNT", new java.math.BigDecimal("12.34"));
+				row.put("PAYLOAD", new byte[] { 0, (byte) 0xff });
+			});
+			table.getRows().add(row -> {
+				row.put("CODE", "B");
+				row.put("TXT", null);
+			});
+			table.getRows().add(row -> {
+				row.put("CODE", "C");
+				row.put("TXT", "");
+				row.put("PAYLOAD", new byte[] { 2 });
+			});
+
+			assertEquals(3, BulkUpsertResolver.execute(connection, table,
+					BulkUpsertOption.builder().bulkOption(BulkOption.builder().batchSize(2).build()).build()));
+			try (var rs = statement.executeQuery(
+					"SELECT ID, CODE, TXT, AMOUNT, PAYLOAD " + "FROM SQLAPP_UPSERT.UPSERT_ROWS ORDER BY CODE")) {
+				rs.next();
+				assertEquals(1L, rs.getLong("ID"));
+				assertEquals("更新後\nline", rs.getString("TXT"));
+				assertEquals(new java.math.BigDecimal("12.34"), rs.getBigDecimal("AMOUNT"));
+				assertArrayEquals(new byte[] { 0, (byte) 0xff }, rs.getBytes("PAYLOAD"));
+				rs.next();
+				assertEquals("B", rs.getString("CODE"));
+				assertNull(rs.getString("TXT"));
+				rs.next();
+				assertEquals("C", rs.getString("CODE"));
+				assertEquals("", rs.getString("TXT"));
+				assertArrayEquals(new byte[] { 2 }, rs.getBytes("PAYLOAD"));
+			}
+		}
+	}
+
+	private static Table createTable() {
+		final Table table = new Table("BULK_ROWS").setSchemaName("SQLAPP_BULK");
+		table.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setIdentity(true));
+		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR));
+		table.getColumns().add(new Column("NULLABLE_VALUE").setDataType(DataType.NVARCHAR));
+		table.getColumns().add(new Column("EMPTY_VALUE").setDataType(DataType.NVARCHAR));
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY));
+		return table;
+	}
+
+	private static Table createUpsertTable() {
+		final Table table = new Table("UPSERT_ROWS").setSchemaName("SQLAPP_UPSERT");
+		final Column id = new Column("ID").setDataType(DataType.BIGINT).setIdentity(true);
+		final Column code = new Column("CODE").setDataType(DataType.NVARCHAR).setLength(20);
+		table.getColumns().add(id);
+		table.getColumns().add(code);
+		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(200));
+		table.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
+		table.getColumns().add(new Column("PAYLOAD").setDataType(DataType.VARBINARY).setLength(20));
+		table.setPrimaryKey("PK_SQLAPP_UPSERT", code);
+		return table;
+	}
+
+	private static Table jobTable(final String name, final boolean child) {
+		return jobTable("SQLAPP_BULK_JOB", name, child);
+	}
+
+	private static Table jobTable(final String schemaName, final String name, final boolean child) {
+		final Table table = new Table(name).setSchemaName(schemaName);
+		final Column id = new Column("ID").setDataType(DataType.INT);
+		table.getColumns().add(id);
+		if (child) {
+			table.getColumns().add(new Column("PARENT_ID").setDataType(DataType.INT));
+		}
+		table.getColumns().add(new Column("TXT").setDataType(DataType.NVARCHAR).setLength(100));
+		table.setPrimaryKey("PK_" + name, id);
+		return table;
+	}
+
+	private static Connection createConnection() throws Exception {
+		final String url = "jdbc:sap://localhost:" + HANA.getMappedPort(39041) + "/?databaseName=HXE";
+		return DriverManager.getConnection(url, "SYSTEM", PASSWORD);
+	}
+
+	private static Path createPasswordDirectory() {
+		try {
+			final Path directory = Files.createTempDirectory("sqlapp-hana-bulk-");
+			Files.writeString(directory.resolve("password.json"), "{\"master_password\":\"" + PASSWORD + "\"}",
+					StandardCharsets.UTF_8);
+			return directory;
+		} catch (Exception e) {
+			throw new ExceptionInInitializerError(e);
+		}
+	}
+}

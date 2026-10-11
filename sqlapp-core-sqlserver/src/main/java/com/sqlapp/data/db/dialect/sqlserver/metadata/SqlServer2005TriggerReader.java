@@ -50,8 +50,7 @@ public class SqlServer2005TriggerReader extends TriggerReader {
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Trigger> result = list();
@@ -90,7 +89,7 @@ public class SqlServer2005TriggerReader extends TriggerReader {
 		} else {
 			trigger.setActionTiming("AFTER");
 		}
-		List<String> events=getEventManipulation(rs);
+		List<String> events = getEventManipulation(rs);
 		trigger.getEventManipulation().addAll(events);
 		if ("OBJECT_OR_COLUMN".equalsIgnoreCase(parent_class_desc)) {
 			trigger.setTableName(parentName);
@@ -171,8 +170,7 @@ public class SqlServer2005TriggerReader extends TriggerReader {
 		}
 
 		/**
-		 * @param order
-		 *            the order to set
+		 * @param order the order to set
 		 */
 		protected void setOrder(int order) {
 			this.order = order;

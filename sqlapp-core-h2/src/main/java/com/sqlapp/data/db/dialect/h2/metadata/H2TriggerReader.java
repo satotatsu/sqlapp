@@ -47,8 +47,7 @@ public class H2TriggerReader extends TriggerReader {
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final Dialect dialect = this.getDialect();
@@ -60,8 +59,7 @@ public class H2TriggerReader extends TriggerReader {
 				trigger.setDialect(dialect);
 				String before = getString(rs, "BEFORE");
 				trigger.setActionTiming(before);
-				trigger.getEventManipulation().add(
-						getString(rs, "TRIGGER_TYPE"));
+				trigger.getEventManipulation().add(getString(rs, "TRIGGER_TYPE"));
 				trigger.setCatalogName(getString(rs, "TRIGGER_CATALOG"));
 				trigger.setSchemaName(getString(rs, "TRIGGER_SCHEMA"));
 				trigger.setTableSchemaName(getString(rs, "TABLE_SCHEMA"));
@@ -76,8 +74,7 @@ public class H2TriggerReader extends TriggerReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
 			return getSqlNodeCache().getString("triggers_200.sql");
 		}

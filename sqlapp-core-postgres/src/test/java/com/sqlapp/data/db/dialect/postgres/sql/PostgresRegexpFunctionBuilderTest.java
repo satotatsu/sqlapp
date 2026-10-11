@@ -12,14 +12,9 @@ class PostgresRegexpFunctionBuilderTest {
 
 	@Test
 	void testRegexpReplaceWithNamedArguments() {
-		String sql = new PostgresRegexpFunctionBuilder(
-				DialectHolder.postgreSQL180, Function.REPLACE)
-				.argument("string", "'A PostgreSQL function'")
-				.argument("pattern", "'a|e|i|o|u'")
-				.argument("replacement", "'X'")
-				.argument("start", "1")
-				.argument("N", "3")
-				.argument("flags", "'i'")
+		String sql = new PostgresRegexpFunctionBuilder(DialectHolder.postgreSQL180, Function.REPLACE)
+				.argument("string", "'A PostgreSQL function'").argument("pattern", "'a|e|i|o|u'")
+				.argument("replacement", "'X'").argument("start", "1").argument("N", "3").argument("flags", "'i'")
 				.build();
 
 		assertEquals(
@@ -29,37 +24,26 @@ class PostgresRegexpFunctionBuilderTest {
 
 	@Test
 	void testRegexpInstrWithNamedArguments() {
-		String sql = new PostgresRegexpFunctionBuilder(
-				DialectHolder.postgreSQL180, Function.INSTR)
-				.argument("string", "code")
-				.argument("pattern", "'(c..)(...)'")
-				.argument("subexpr", "2")
-				.build();
+		String sql = new PostgresRegexpFunctionBuilder(DialectHolder.postgreSQL180, Function.INSTR)
+				.argument("string", "code").argument("pattern", "'(c..)(...)'").argument("subexpr", "2").build();
 
-		assertEquals(
-				"regexp_instr(string => code, pattern => '(c..)(...)', subexpr => 2)",
-				sql);
+		assertEquals("regexp_instr(string => code, pattern => '(c..)(...)', subexpr => 2)", sql);
 	}
 
 	@Test
 	void testRejectBeforePostgres18() {
-		PostgresRegexpFunctionBuilder builder =
-				new PostgresRegexpFunctionBuilder(
-						DialectHolder.postgreSQL170, Function.LIKE)
-						.argument("string", "name")
-						.argument("pattern", "'^A'");
+		PostgresRegexpFunctionBuilder builder = new PostgresRegexpFunctionBuilder(DialectHolder.postgreSQL170,
+				Function.LIKE).argument("string", "name").argument("pattern", "'^A'");
 
 		assertThrows(IllegalArgumentException.class, builder::build);
 	}
 
 	@Test
 	void testValidateArguments() {
-		PostgresRegexpFunctionBuilder builder =
-				new PostgresRegexpFunctionBuilder(
-						DialectHolder.postgreSQL180, Function.COUNT);
+		PostgresRegexpFunctionBuilder builder = new PostgresRegexpFunctionBuilder(DialectHolder.postgreSQL180,
+				Function.COUNT);
 
-		assertThrows(IllegalArgumentException.class,
-				() -> builder.argument("replacement", "'X'"));
+		assertThrows(IllegalArgumentException.class, () -> builder.argument("replacement", "'X'"));
 		assertThrows(IllegalArgumentException.class, builder::build);
 	}
 }

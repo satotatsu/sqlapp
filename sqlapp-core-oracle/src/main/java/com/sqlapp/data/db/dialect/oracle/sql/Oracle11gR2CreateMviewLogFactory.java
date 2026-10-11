@@ -30,8 +30,7 @@ import com.sqlapp.data.schemas.MviewLog;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
 
-public class Oracle11gR2CreateMviewLogFactory extends
-		AbstractCreateMviewLogFactory<OracleSqlBuilder> {
+public class Oracle11gR2CreateMviewLogFactory extends AbstractCreateMviewLogFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final MviewLog obj, OracleSqlBuilder builder) {
@@ -40,59 +39,59 @@ public class Oracle11gR2CreateMviewLogFactory extends
 		} else {
 			builder.create().materialized().view().log().on();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
-			if (!CommonUtils.isEmpty(obj.getTableSpaceName())){
+			if (!CommonUtils.isEmpty(obj.getTableSpaceName())) {
 				builder.lineBreak()._add(obj.getTableSpaceName());
 			}
 			builder.lineBreak();
 			builder.with();
-			boolean added=false;
-			if (obj.isSaveObjectId()){
+			boolean added = false;
+			if (obj.isSaveObjectId()) {
 				builder.comma(added);
 				builder.object().id();
-				added=true;
+				added = true;
 			}
-			if (obj.isSavePrimaryKey()){
+			if (obj.isSavePrimaryKey()) {
 				builder.comma(added);
 				builder.primaryKey();
-				added=true;
+				added = true;
 			}
-			if (obj.isSaveRowIds()){
+			if (obj.isSaveRowIds()) {
 				builder.comma(added);
 				builder.rowid();
-				added=true;
+				added = true;
 			}
-			if (obj.isSaveSequence()){
+			if (obj.isSaveSequence()) {
 				builder.comma(added);
 				builder.sequence();
-				added=true;
+				added = true;
 			}
-			if (obj.isCommitScnBased()){
+			if (obj.isCommitScnBased()) {
 				builder.comma(added);
 				builder.commit().scn();
-				added=true;
+				added = true;
 			}
-			if (!CommonUtils.isEmpty(obj.getColumns())){
+			if (!CommonUtils.isEmpty(obj.getColumns())) {
 				builder.lineBreak();
 				builder.names(obj.getColumns());
 			}
-			if (obj.isIncludeNewValues()){
+			if (obj.isIncludeNewValues()) {
 				builder.lineBreak();
 				builder.including().new_().values();
 			}
 			builder.lineBreak();
 			builder.purge();
-			if (obj.isPurgeDeferred()){
+			if (obj.isPurgeDeferred()) {
 				builder.start().with().space()._add(DateUtils.format(obj.getPurgeStart()));
-				if (!CommonUtils.isEmpty(obj.getPurgeInterval())){
+				if (!CommonUtils.isEmpty(obj.getPurgeInterval())) {
 					builder.space().repeat()._add(obj.getPurgeInterval());
-				} else{
-					//builder.space().next().space()._add(DateUtils.format(obj.getPurgeStart()));
+				} else {
+					// builder.space().next().space()._add(DateUtils.format(obj.getPurgeStart()));
 				}
-			} else{
+			} else {
 				builder.immediate();
-				if (obj.isPurgeAsynchronous()){
+				if (obj.isPurgeAsynchronous()) {
 					builder.asynchronous();
-				} else{
+				} else {
 					builder.synchronous();
 				}
 			}

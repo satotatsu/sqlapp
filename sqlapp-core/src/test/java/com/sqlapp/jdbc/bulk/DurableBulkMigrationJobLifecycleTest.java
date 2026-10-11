@@ -1,0 +1,355 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.jdbc.bulk;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
+class DurableBulkMigrationJobLifecycleTest {
+	@Test
+	void recoveryResultsRejectAmbiguousOrForeignStateTransitions() {
+		final var prepared = new BulkMigrationMaintenanceState("job", "plan", BulkMigrationMaintenanceStatus.PREPARED,
+				NOW, null);
+		final var restored = new BulkMigrationMaintenanceState("job", "plan", BulkMigrationMaintenanceStatus.RESTORED,
+				NOW, null);
+		final var complete = new BulkMigrationMaintenanceState("job", "plan", BulkMigrationMaintenanceStatus.COMPLETE,
+				NOW, null);
+		final var foreign = new BulkMigrationMaintenanceState("other", "plan", BulkMigrationMaintenanceStatus.RESTORED,
+				NOW, null);
+
+		assertFalse(new BulkMigrationMaintenanceRecoveryResult("job", "plan", null, null, false).recovered());
+		assertTrue(new BulkMigrationMaintenanceRecoveryResult("job", "plan", prepared, restored, true).recovered());
+		assertFalse(new BulkMigrationMaintenanceRecoveryResult("job", "plan", complete, complete, false).recovered());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan", prepared, null, false));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan", prepared, foreign, true));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan", complete, restored, true));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult("job", "plan", prepared, prepared, false));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationMaintenanceRecoveryResult("other", "plan", prepared, restored, true));
+	}
+
+	private static final Instant NOW = Instant.parse("2026-08-31T00:00:00Z");
+
+	@Test
+	void inMemoryMaintenanceStateIsKeyedByStableJobId() throws Exception {
+		final var store = new InMemoryBulkMigrationMaintenanceStateStore();
+		final var state = new BulkMigrationMaintenanceState("job", "plan-v1", BulkMigrationMaintenanceStatus.PREPARED,
+				NOW, null);
+		store.save(state);
+
+		assertEquals(state, store.load("job").orElseThrow());
+		assertTrue(store.load("plan-v1").isEmpty());
+		store.delete("job");
+		assertTrue(store.load("job").isEmpty());
+	}
+
+	@Test
+	void maintenanceStateCanBeComparedOrStrictlyBoundToAPlan() {
+		final var plan = BulkMigrationJobPlanner.plan("job", List.of());
+		final var matching = new BulkMigrationMaintenanceState("job", plan.getFingerprint(),
+				BulkMigrationMaintenanceStatus.COMPLETE, NOW, null);
+		final var previous = new BulkMigrationMaintenanceState("job", "previous",
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null);
+
+		assertTrue(matching.isFor(plan));
+		assertEquals(matching, matching.validateAgainst(plan));
+		assertFalse(previous.isFor(plan));
+		assertThrows(IllegalArgumentException.class, () -> previous.validateAgainst(plan));
+	}
+
+	@Test
+	void classifiesOnlyInterruptedMaintenanceAsRequiringRecovery() {
+		assertTrue(BulkMigrationMaintenanceStatus.PREPARING.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.PREPARED.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.POST_PROCESSING.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.RESTORING.requiresRecovery());
+		assertTrue(BulkMigrationMaintenanceStatus.RESTORE_FAILED.requiresRecovery());
+		assertFalse(BulkMigrationMaintenanceStatus.RESTORED.requiresRecovery());
+		assertFalse(BulkMigrationMaintenanceStatus.COMPLETE.requiresRecovery());
+	}
+
+	@Test
+	void recordsSuccessfulLifecycleTransitions() throws Exception {
+		final var store = new RecordingStore();
+		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, store);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+
+		BulkMigrationJobExecutor.executePlan(connection(), plan);
+
+		assertEquals(
+				List.of(BulkMigrationMaintenanceStatus.PREPARING, BulkMigrationMaintenanceStatus.PREPARED,
+						BulkMigrationMaintenanceStatus.POST_PROCESSING, BulkMigrationMaintenanceStatus.COMPLETE),
+				store.statuses());
+		assertEquals(NOW, store.states.get(0).updatedAt());
+	}
+
+	@Test
+	void refusesToOverwriteInterruptedStateBeforeStartingOrRestoring() throws Exception {
+		final var events = new ArrayList<String>();
+		final var store = new RecordingStore();
+		final BulkMigrationJobLifecycle delegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) {
+				events.add("before");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan, Throwable failure) {
+				events.add("restore");
+			}
+		};
+		final var lifecycle = lifecycle(delegate, store);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
+
+		final IllegalStateException failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), plan));
+
+		assertTrue(failure.getMessage().contains("explicit recovery"));
+		assertTrue(events.isEmpty());
+		assertEquals(List.of(BulkMigrationMaintenanceStatus.PREPARED), store.statuses());
+	}
+
+	@Test
+	void permitsExecutionAfterTerminalMaintenanceState() throws Exception {
+		final var store = new RecordingStore();
+		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, store);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
+				BulkMigrationMaintenanceStatus.RESTORED, NOW, null));
+
+		BulkMigrationJobExecutor.executePlan(connection(), plan);
+
+		assertEquals(BulkMigrationMaintenanceStatus.COMPLETE, store.states.get(store.states.size() - 1).status());
+	}
+
+	@Test
+	void detectsInterruptedMaintenanceAfterThePlanConfigurationChanges() throws Exception {
+		final var store = new RecordingStore();
+		final var originalLifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, store);
+		final var original = BulkMigrationJobPlanner.plan("shared-job", List.of(), originalLifecycle);
+		store.save(new BulkMigrationMaintenanceState(original.getJobId(), original.getFingerprint(),
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
+		final BulkMigrationJobLifecycle changedDelegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "changed";
+			}
+		};
+		final var changedLifecycle = lifecycle(changedDelegate, store);
+		final var changed = BulkMigrationJobPlanner.plan("shared-job", List.of(), changedLifecycle);
+
+		assertNotEquals(original.getFingerprint(), changed.getFingerprint());
+		assertEquals(original.getFingerprint(), changedLifecycle.inspect(changed).orElseThrow().planFingerprint());
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobExecutor.executePlan(connection(), changed));
+		assertThrows(IllegalStateException.class,
+				() -> changedLifecycle.recoverInterrupted(connection(), changed, changed.getFingerprint()));
+		assertEquals(List.of(BulkMigrationMaintenanceStatus.PREPARED), store.statuses());
+	}
+
+	@Test
+	void rechecksInterruptedStateAfterAcquiringJobLease() throws Exception {
+		final var maintenanceStore = new RecordingStore();
+		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, maintenanceStore);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		final var leases = new InMemoryBulkMigrationJobLeaseStore();
+		final BulkMigrationJobLeaseStore racingStore = new BulkMigrationJobLeaseStore() {
+			@Override
+			public java.util.Optional<BulkMigrationJobLease> load(String fingerprint) throws SQLException {
+				return leases.load(fingerprint);
+			}
+
+			@Override
+			public boolean tryAcquire(BulkMigrationJobLease lease, Instant now) throws SQLException {
+				final boolean acquired = leases.tryAcquire(lease, now);
+				if (acquired) {
+					maintenanceStore.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
+							BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
+				}
+				return acquired;
+			}
+
+			@Override
+			public boolean renew(BulkMigrationJobLease lease, Instant now) throws SQLException {
+				return leases.renew(lease, now);
+			}
+
+			@Override
+			public void release(String fingerprint, String ownerId) throws SQLException {
+				leases.release(fingerprint, ownerId);
+			}
+
+			@Override
+			public void release(BulkMigrationJobLease lease) throws SQLException {
+				leases.release(lease);
+			}
+		};
+		final var manager = new BulkMigrationJobLeaseManager(racingStore, "owner", Duration.ofMinutes(1));
+
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobExecutor.executePlan(connection(), plan,
+				BulkMigrationJobListener.NO_OP, ChunkedBulkMigrationListener.NO_OP, manager));
+
+		assertEquals(List.of(BulkMigrationMaintenanceStatus.PREPARED), maintenanceStore.statuses());
+		assertTrue(leases.load(plan.getJobId()).isEmpty());
+	}
+
+	@Test
+	void recordsRestoreFailureWithoutMaskingIt() {
+		final var store = new RecordingStore();
+		final BulkMigrationJobLifecycle delegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) throws SQLException {
+				throw new SQLException("prepare failed");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan, Throwable failure)
+					throws SQLException {
+				throw new SQLException("restore failed");
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle(delegate, store));
+
+		final SQLException failure = assertThrows(SQLException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), plan));
+
+		assertEquals("prepare failed", failure.getMessage());
+		assertEquals("restore failed", failure.getSuppressed()[0].getMessage());
+		assertEquals(List.of(BulkMigrationMaintenanceStatus.PREPARING, BulkMigrationMaintenanceStatus.RESTORING,
+				BulkMigrationMaintenanceStatus.RESTORE_FAILED), store.statuses());
+		assertEquals("restore failed", store.states.get(2).failureMessage());
+	}
+
+	@Test
+	void truncatesOnlyThePersistedRestoreFailureMessage() {
+		final var store = new RecordingStore();
+		final String message = "x".repeat(1_100);
+		final BulkMigrationJobLifecycle delegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public void before(Connection connection, BulkMigrationJobPlan plan) throws SQLException {
+				throw new SQLException("prepare failed");
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan, Throwable failure)
+					throws SQLException {
+				throw new SQLException(message);
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle(delegate, store));
+
+		final SQLException failure = assertThrows(SQLException.class,
+				() -> BulkMigrationJobExecutor.executePlan(connection(), plan));
+
+		assertEquals(message, failure.getSuppressed()[0].getMessage());
+		assertEquals(1_000, store.states.get(2).failureMessage().length());
+	}
+
+	@Test
+	void explicitlyRecoversOnlyAnApprovedNonterminalPlan() throws Exception {
+		final var events = new ArrayList<String>();
+		final var store = new RecordingStore();
+		final BulkMigrationJobLifecycle delegate = new BulkMigrationJobLifecycle() {
+			@Override
+			public String getConfigurationFingerprint() {
+				return "recover-v1";
+			}
+
+			@Override
+			public void restore(Connection connection, BulkMigrationJobPlan plan, Throwable failure) {
+				events.add(failure.getMessage());
+			}
+		};
+		final var lifecycle = lifecycle(delegate, store);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(), lifecycle);
+		store.save(new BulkMigrationMaintenanceState(plan.getJobId(), plan.getFingerprint(),
+				BulkMigrationMaintenanceStatus.PREPARED, NOW, null));
+
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED, lifecycle.inspect(plan).orElseThrow().status());
+		assertThrows(IllegalArgumentException.class,
+				() -> lifecycle.recoverInterrupted(connection(), plan, "wrong-fingerprint"));
+		assertTrue(events.isEmpty());
+
+		final var recovered = lifecycle.recoverInterrupted(connection(), plan, plan.getFingerprint());
+		assertTrue(recovered.recovered());
+		assertEquals(BulkMigrationMaintenanceStatus.PREPARED, recovered.previousState().status());
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED, recovered.currentState().status());
+		assertEquals(List.of("Recovering interrupted migration maintenance from PREPARED"), events);
+
+		final var noOp = lifecycle.recoverInterrupted(connection(), plan, plan.getFingerprint());
+		assertFalse(noOp.recovered());
+		assertEquals(BulkMigrationMaintenanceStatus.RESTORED, noOp.currentState().status());
+		assertEquals(plan.getJobId(), noOp.jobId());
+		assertEquals(plan.getFingerprint(), noOp.planFingerprint());
+		assertEquals(noOp, noOp.validateAgainst(plan));
+
+		final var otherPlan = BulkMigrationJobPlanner.plan("other-job", List.of(), lifecycle);
+		assertThrows(IllegalArgumentException.class, () -> noOp.validateAgainst(otherPlan));
+	}
+
+	@Test
+	void emptyRecoveryResultStillIdentifiesItsValidatedPlan() throws Exception {
+		final var lifecycle = lifecycle(BulkMigrationJobLifecycle.NO_OP, new RecordingStore());
+		final var plan = BulkMigrationJobPlanner.plan("empty-job", List.of(), lifecycle);
+
+		final var result = lifecycle.recoverInterrupted(connection(), plan, plan.getFingerprint());
+
+		assertFalse(result.recovered());
+		assertEquals("empty-job", result.jobId());
+		assertEquals(plan.getFingerprint(), result.planFingerprint());
+		assertEquals(result, result.validateAgainst(plan));
+	}
+
+	private static DurableBulkMigrationJobLifecycle lifecycle(final BulkMigrationJobLifecycle delegate,
+			final RecordingStore store) {
+		return new DurableBulkMigrationJobLifecycle(delegate, store, Clock.fixed(NOW, ZoneOffset.UTC));
+	}
+
+	private static Connection connection() {
+		return (Connection) java.lang.reflect.Proxy.newProxyInstance(
+				DurableBulkMigrationJobLifecycleTest.class.getClassLoader(), new Class<?>[] { Connection.class },
+				(proxy, method, args) -> {
+					throw new UnsupportedOperationException();
+				});
+	}
+
+	private static final class RecordingStore implements BulkMigrationMaintenanceStateStore {
+		private final List<BulkMigrationMaintenanceState> states = new ArrayList<>();
+
+		@Override
+		public java.util.Optional<BulkMigrationMaintenanceState> load(String jobId) {
+			return states.stream().filter(state -> state.jobId().equals(jobId)).reduce((first, second) -> second);
+		}
+
+		@Override
+		public void save(BulkMigrationMaintenanceState state) {
+			states.add(state);
+		}
+
+		@Override
+		public void delete(String fingerprint) {
+		}
+
+		private List<BulkMigrationMaintenanceStatus> statuses() {
+			return states.stream().map(BulkMigrationMaintenanceState::status).toList();
+		}
+	}
+}

@@ -9,14 +9,13 @@ SELECT
 	, t.lock_escalation_desc AS lock_escalation
 	, text_in_row_limit
 	, p.data_compression_desc AS data_compression
-	, idx.compression_delay
 	, large_value_types_out_of_row
 	, COALESCE(objectproperty(t.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
 	, dsidx.name AS file_group_name
 	, COALESCE(lob.Name,'') AS lob_file_group_name
 	, COALESCE(filestr.Name,'') AS stream_file_group_name
 	, COALESCE(ctt.is_track_columns_updated_on,0) AS is_track_columns_updated_on
-	, COALESCE(ctt.object_id,0) AS has_change_tracking
+	, CAST(CASE WHEN ctt.object_id IS NULL THEN 0 ELSE 1 END AS bit) AS has_change_tracking
 	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 	, ps.name AS partition_scheme
 FROM sys.tables t

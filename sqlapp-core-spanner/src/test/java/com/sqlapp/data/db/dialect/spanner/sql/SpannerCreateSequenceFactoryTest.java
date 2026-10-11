@@ -17,19 +17,14 @@ class SpannerCreateSequenceFactoryTest extends SpannerSqlFactoryTest {
 
 	@Test
 	void testCreateBitReversedSequence() {
-		final Sequence sequence = new Sequence("SINGER_ID_SEQUENCE")
-				.setStartValue(1000);
+		final Sequence sequence = new Sequence("SINGER_ID_SEQUENCE").setStartValue(1000);
 		sequence.setDialect(dialect);
-		sequence.getSpecifics().put(
-				SpannerCreateSequenceFactory.SKIP_RANGE_MIN, 100L);
-		sequence.getSpecifics().put(
-				SpannerCreateSequenceFactory.SKIP_RANGE_MAX, 199L);
+		sequence.getSpecifics().put(SpannerCreateSequenceFactory.SKIP_RANGE_MIN, 100L);
+		sequence.getSpecifics().put(SpannerCreateSequenceFactory.SKIP_RANGE_MAX, 199L);
 
-		final String sql = sqlFactoryRegistry.createSql(sequence,
-				SqlType.CREATE).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
-		assertTrue(sql.contains(
-				"CREATE SEQUENCE IF NOT EXISTS SINGER_ID_SEQUENCE"), sql);
+		final String sql = sqlFactoryRegistry.createSql(sequence, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(sql.contains("CREATE SEQUENCE IF NOT EXISTS SINGER_ID_SEQUENCE"), sql);
 		assertTrue(sql.contains("START COUNTER WITH 1000"), sql);
 		assertTrue(sql.contains("BIT_REVERSED_POSITIVE"), sql);
 		assertTrue(sql.contains("SKIP RANGE 100"), sql);
@@ -38,17 +33,12 @@ class SpannerCreateSequenceFactoryTest extends SpannerSqlFactoryTest {
 
 	@Test
 	void testIgnoreUnsupportedGenericOptions() {
-		final Sequence sequence = new Sequence("SINGER_ID_SEQUENCE")
-				.setIncrementBy(1)
-				.setMinValue(1)
-				.setMaxValue(10000)
-				.setCacheSize(20)
-				.setCycle(true);
+		final Sequence sequence = new Sequence("SINGER_ID_SEQUENCE").setIncrementBy(1).setMinValue(1).setMaxValue(10000)
+				.setCacheSize(20).setCycle(true);
 		sequence.setDialect(dialect);
 
-		final String sql = sqlFactoryRegistry.createSql(sequence,
-				SqlType.CREATE).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(sequence, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
 		assertTrue(sql.contains("BIT_REVERSED_POSITIVE"), sql);
 		assertTrue(!sql.contains("INCREMENT"), sql);
 		assertTrue(!sql.contains("MINVALUE"), sql);
@@ -61,12 +51,9 @@ class SpannerCreateSequenceFactoryTest extends SpannerSqlFactoryTest {
 	void testRejectIncompleteSkipRange() {
 		final Sequence sequence = new Sequence("SINGER_ID_SEQUENCE");
 		sequence.setDialect(dialect);
-		sequence.getSpecifics().put(
-				SpannerCreateSequenceFactory.SKIP_RANGE_MIN, 100L);
+		sequence.getSpecifics().put(SpannerCreateSequenceFactory.SKIP_RANGE_MIN, 100L);
 
-		assertThrows(IllegalArgumentException.class,
-				() -> sqlFactoryRegistry.createSql(sequence,
-						SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(sequence, SqlType.CREATE));
 	}
 
 	@Test
@@ -74,12 +61,9 @@ class SpannerCreateSequenceFactoryTest extends SpannerSqlFactoryTest {
 		final Sequence sequence = new Sequence("SINGER_ID_SEQUENCE");
 		sequence.setDialect(dialect);
 
-		final String sql = sqlFactoryRegistry.createSql(sequence,
-				SqlType.SEQUENCE_NEXT_VALUES).get(0).getSqlText()
+		final String sql = sqlFactoryRegistry.createSql(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(sql.contains(
-				"GET_NEXT_SEQUENCE_VALUE(SEQUENCE SINGER_ID_SEQUENCE)"),
-				sql);
+		assertTrue(sql.contains("GET_NEXT_SEQUENCE_VALUE(SEQUENCE SINGER_ID_SEQUENCE)"), sql);
 		assertTrue(sql.contains("UNNEST(GENERATE_ARRAY("), sql);
 	}
 }

@@ -57,8 +57,7 @@ public class OracleMviewReader extends MviewReader {
 	 * @param context
 	 */
 	@Override
-	protected List<Table> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -79,8 +78,9 @@ public class OracleMviewReader extends MviewReader {
 	protected Mview createTable(ExResultSet rs) throws SQLException {
 		Mview table = createTable(getString(rs, "MVIEW_NAME"));
 		table.setSchemaName(getString(rs, "OWNER"));
-		table.setRemarks("COMMENTS");
+		// Consume the LONG query before accessing columns that follow it in the result.
 		table.setStatement(getString(rs, "QUERY"));
+		table.setRemarks(getString(rs, "COMMENTS"));
 		setSpecifics(rs, "REFRESH_MODE", table);
 		setSpecifics(rs, "REFRESH_METHOD", table);
 		setSpecifics(rs, "BUILD_MODE", table);
@@ -89,8 +89,7 @@ public class OracleMviewReader extends MviewReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final Table table) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final Table table) throws SQLException {
 
 	}
 
@@ -108,8 +107,7 @@ public class OracleMviewReader extends MviewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

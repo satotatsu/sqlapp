@@ -26,21 +26,23 @@ import com.sqlapp.data.interval.Interval;
 import java.sql.SQLException;
 import org.postgresql.util.PGInterval;
 
-public class FromPGIntervalConverter extends AbstractFromObjectConverter<Interval, PGInterval>{
+public class FromPGIntervalConverter extends AbstractFromObjectConverter<Interval, PGInterval> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Interval copy(Object obj){
-		if (obj==null){
+	public Interval copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Interval)convertObject(obj).clone();
+		return (Interval) convertObject(obj).clone();
 	}
 
 	@Override
@@ -55,36 +57,31 @@ public class FromPGIntervalConverter extends AbstractFromObjectConverter<Interva
 
 	@Override
 	protected Interval toObjectFromString(String value) {
-		String val=(String)value;
-		if (Interval.isParsable(val)){
+		String val = (String) value;
+		if (Interval.isParsable(val)) {
 			return Interval.parse(val);
 		}
 		try {
-			PGInterval pgObject=new PGInterval(val);
+			PGInterval pgObject = new PGInterval(val);
 			return toObject(pgObject);
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	protected Interval toObject(PGInterval value) {
-		int years=value.getYears();
-		int months=value.getMonths();
-		int days=value.getDays();
-		int hours=value.getHours();
-		int minutes=value.getMinutes();
-		double seconds=value.getSeconds();
-		Interval interval=new Interval(abs(years)
-				, abs(months)
-				, abs(days)
-				, abs(hours)
-				, abs(minutes)
-				, abs(seconds));
-		int notZeroInt=notZero(years, months, days, hours, minutes);
-		if (notZeroInt<0){
+		int years = value.getYears();
+		int months = value.getMonths();
+		int days = value.getDays();
+		int hours = value.getHours();
+		int minutes = value.getMinutes();
+		double seconds = value.getSeconds();
+		Interval interval = new Interval(abs(years), abs(months), abs(days), abs(hours), abs(minutes), abs(seconds));
+		int notZeroInt = notZero(years, months, days, hours, minutes);
+		if (notZeroInt < 0) {
 			interval.scale(-1);
-		} else if (seconds<0){
+		} else if (seconds < 0) {
 			interval.scale(-1);
 		}
 		return interval;

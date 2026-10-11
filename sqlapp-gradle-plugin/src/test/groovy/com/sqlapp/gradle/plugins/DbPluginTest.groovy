@@ -19,6 +19,8 @@
 
 package com.sqlapp.gradle.plugins
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf
+
 import org.gradle.api.Project;
 import org.gradle.api.Task
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,10 @@ class DbPluginTest extends AbstractTaskTest{
 		project.getPlugins().apply(DbPlugin.class);
 		project.evaluate()
 		Task task=project.tasks.exportSchemaXml
+		assertInstanceOf(ExportAccessSchemaXmlTask,
+			project.tasks.exportAccessSchemaXml)
+		assertInstanceOf(ExportSqliteSchemaXmlTask,
+			project.tasks.exportSqliteSchemaXml)
 		//task.exec()
 	}
 }

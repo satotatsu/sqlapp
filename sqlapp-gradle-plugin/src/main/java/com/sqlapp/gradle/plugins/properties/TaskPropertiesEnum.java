@@ -230,6 +230,10 @@ public enum TaskPropertiesEnum {
 			}
 			final DataSourceTaskProperty extension = cast(taskProps);
 			final DataSourceProperty prop = cast(obj);
+			if (taskProps instanceof OptionalDataSourceTaskProperty
+					&& !extension.getDataSource().isConfigured()) {
+				return;
+			}
 			final DataSource ds = extension.getDataSource().createDataSource();
 			if (DEBUG.isInstanceof(taskProps)) {
 				final DebugTaskProperty debugProperty = cast(taskProps);

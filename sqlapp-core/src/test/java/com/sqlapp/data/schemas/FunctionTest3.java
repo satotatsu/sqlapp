@@ -18,10 +18,12 @@
  */
 
 package com.sqlapp.data.schemas;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
-public class FunctionTest3  {
+
+public class FunctionTest3 {
 
 	public static Function getFunction(String name) {
 		Function obj = new Function(name);
@@ -29,7 +31,7 @@ public class FunctionTest3  {
 		obj.setOnNullCall(OnNullCall.CalledOnNullInput);
 		obj.setSqlSecurity(SqlSecurity.Definer);
 		obj.getArguments().add(arg);
-		obj.getReturning().toTable().getTable().getColumns().add(c->{
+		obj.getReturning().toTable().getTable().getColumns().add(c -> {
 			c.setName("colA");
 		});
 		obj.setRemarks("コメント");
@@ -38,11 +40,11 @@ public class FunctionTest3  {
 
 	@Test
 	public void testSpecificName() {
-		Schema schema=new Schema();
-		Function func=getFunction("func1");
+		Schema schema = new Schema();
+		Function func = getFunction("func1");
 		func.setSpecificName("func1_specific1");
 		schema.getFunctions().add(func);
-		func=getFunction("func1");
+		func = getFunction("func1");
 		func.setSpecificName("func1_specific2");
 		schema.getFunctions().add(func);
 		assertEquals(2, schema.getFunctions().size());

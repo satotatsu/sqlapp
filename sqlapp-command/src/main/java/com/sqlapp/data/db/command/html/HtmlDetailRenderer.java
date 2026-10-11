@@ -19,9 +19,9 @@
 
 package com.sqlapp.data.db.command.html;
 
-public class HtmlDetailRenderer extends HtmlRenderer{
-	
-	public HtmlDetailRenderer(){
+public class HtmlDetailRenderer extends HtmlRenderer {
+
+	public HtmlDetailRenderer() {
 		this.setLayoutTemplate(this.readResource("basicDetailLayout.html"));
 	}
 }

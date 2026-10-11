@@ -25,18 +25,16 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.SqlSecurity;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2005CreateFunctionFactory extends
-		AbstractCreateFunctionFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreateFunctionFactory extends AbstractCreateFunctionFactory<SqlServerSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Function obj,
-			SqlServerSqlBuilder builder) {
+	protected void addCreateObject(final Function obj, SqlServerSqlBuilder builder) {
 		if (this.getOptions().isDropIfExists()) {
 			builder.createOrAlter();
 		} else {
 			builder.create();
 		}
-		if (obj.getFunctionType()!=null&&obj.getFunctionType().isAggregate()) {
+		if (obj.getFunctionType() != null && obj.getFunctionType().isAggregate()) {
 			builder.aggregate();
 		} else {
 			builder.function();
@@ -47,7 +45,7 @@ public class SqlServer2005CreateFunctionFactory extends
 		if (!CommonUtils.isEmpty(obj.getReturning().getName())) {
 			builder.space()._add(obj.getReturning().getName());
 		}
-		if (obj.getFunctionType()!=null&&obj.getFunctionType().isTable()) {
+		if (obj.getFunctionType() != null && obj.getFunctionType().isTable()) {
 			builder.table();
 			if (!CommonUtils.isEmpty(obj.getReturning().getDefinition())) {
 				builder.lineBreak()._add(obj.getReturning().getDefinition());
@@ -55,7 +53,7 @@ public class SqlServer2005CreateFunctionFactory extends
 		} else {
 			builder.space()._add(obj.getReturning());
 		}
-		if (obj.getOnNullCall() != null || obj.getExecuteAs() != null||obj.getSqlSecurity()!=null) {
+		if (obj.getOnNullCall() != null || obj.getExecuteAs() != null || obj.getSqlSecurity() != null) {
 			String conditionKey = "with";
 			builder.lineBreak().with();
 			builder.setCondition(conditionKey, false);
@@ -63,8 +61,8 @@ public class SqlServer2005CreateFunctionFactory extends
 				builder.space()._add(obj.getOnNullCall());
 				builder.setCondition(conditionKey, true);
 			}
-			if (obj.getExecuteAs() != null||obj.getSqlSecurity()!=null) {
-				builder.$if(builder.getCondition(conditionKey), ()->{
+			if (obj.getExecuteAs() != null || obj.getSqlSecurity() != null) {
+				builder.$if(builder.getCondition(conditionKey), () -> {
 					builder.lineBreak();
 					builder.comma().space();
 				});
@@ -72,9 +70,9 @@ public class SqlServer2005CreateFunctionFactory extends
 				if (!CommonUtils.isEmpty(obj.getExecuteAs())) {
 					builder.space().sqlNchar(obj.getExecuteAs());
 				} else {
-					if (obj.getSqlSecurity()==SqlSecurity.Invoker){
+					if (obj.getSqlSecurity() == SqlSecurity.Invoker) {
 						builder.caller();
-					}else if (obj.getSqlSecurity()==SqlSecurity.Definer){
+					} else if (obj.getSqlSecurity() == SqlSecurity.Definer) {
 						builder.owner();
 					}
 				}
@@ -88,8 +86,7 @@ public class SqlServer2005CreateFunctionFactory extends
 			if (!CommonUtils.isEmpty(obj.getClassNamePrefix())) {
 				builder._add(obj.getClassNamePrefix() + ".");
 			}
-			builder._add(obj.getClassName() + ".")
-					._add(obj.getMethodName());
+			builder._add(obj.getClassName() + ".")._add(obj.getMethodName());
 		}
 	}
 }

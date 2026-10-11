@@ -48,8 +48,7 @@ public class SqlServer2000PublicDbLinkReader extends PublicDbLinkReader {
 	}
 
 	@Override
-	protected List<PublicDbLink> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<PublicDbLink> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<PublicDbLink> result = list();

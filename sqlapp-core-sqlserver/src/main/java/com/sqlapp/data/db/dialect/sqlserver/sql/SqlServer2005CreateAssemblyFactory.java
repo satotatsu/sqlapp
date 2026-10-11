@@ -26,12 +26,10 @@ import com.sqlapp.data.schemas.AssemblyFile;
 import com.sqlapp.util.BinaryUtils;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2005CreateAssemblyFactory extends
-		AbstractCreateAssemblyFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreateAssemblyFactory extends AbstractCreateAssemblyFactory<SqlServerSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Assembly obj,
-			SqlServerSqlBuilder builder) {
+	protected void addCreateObject(final Assembly obj, SqlServerSqlBuilder builder) {
 		builder.create().space();
 		builder._add(obj.getClass().getSimpleName().toUpperCase());
 		builder.name(obj);
@@ -43,14 +41,12 @@ public class SqlServer2005CreateAssemblyFactory extends
 			if (CommonUtils.isEmpty(asf.getContent())) {
 				builder._add(asf.getName());
 			} else {
-				builder._add("0x")._add(
-						BinaryUtils.toHexString(asf.getContent()));
+				builder._add("0x")._add(BinaryUtils.toHexString(asf.getContent()));
 			}
 		}
 		if (obj.getPermissionSet() != null) {
 			builder.lineBreak();
-			builder.with().permissionSet().space().eq().space()
-					._add(obj.getPermissionSet());
+			builder.with().permissionSet().space().eq().space()._add(obj.getPermissionSet());
 		}
 	}
 }

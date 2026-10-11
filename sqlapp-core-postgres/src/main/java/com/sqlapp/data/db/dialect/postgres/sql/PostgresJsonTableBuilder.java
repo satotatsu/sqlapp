@@ -15,9 +15,9 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 import com.sqlapp.util.CommonUtils;
 
 /**
- * Builder for PostgreSQL 17 {@code JSON_TABLE}.
- * SQL expressions and SQL type definitions are accepted as SQL fragments;
- * identifiers and JSON paths are escaped by this builder.
+ * Builder for PostgreSQL 17 {@code JSON_TABLE}. SQL expressions and SQL type
+ * definitions are accepted as SQL fragments; identifiers and JSON paths are
+ * escaped by this builder.
  */
 public class PostgresJsonTableBuilder {
 	private final Dialect dialect;
@@ -66,8 +66,7 @@ public class PostgresJsonTableBuilder {
 		return this;
 	}
 
-	public PostgresJsonTableBuilder nested(String nestedPath,
-			Consumer<PostgresJsonTableBuilder> columnConsumer) {
+	public PostgresJsonTableBuilder nested(String nestedPath, Consumer<PostgresJsonTableBuilder> columnConsumer) {
 		PostgresJsonTableBuilder nested = new PostgresJsonTableBuilder(dialect);
 		columnConsumer.accept(nested);
 		if (nested.columns.isEmpty()) {
@@ -126,10 +125,12 @@ public class PostgresJsonTableBuilder {
 
 	private class OrdinalityColumn implements JsonTableColumn {
 		private final String name;
+
 		OrdinalityColumn(String name) {
 			require(name, "column name");
 			this.name = name;
 		}
+
 		@Override
 		public void append(StringBuilder builder) {
 			builder.append(dialect.quote(name)).append(" FOR ORDINALITY");
@@ -141,6 +142,7 @@ public class PostgresJsonTableBuilder {
 		private final String sqlType;
 		private final String path;
 		private final boolean exists;
+
 		ValueColumn(String name, String sqlType, String path, boolean exists) {
 			require(name, "column name");
 			require(sqlType, "sqlType");
@@ -149,6 +151,7 @@ public class PostgresJsonTableBuilder {
 			this.path = path;
 			this.exists = exists;
 		}
+
 		@Override
 		public void append(StringBuilder builder) {
 			builder.append(dialect.quote(name)).append(" ").append(sqlType);
@@ -164,11 +167,13 @@ public class PostgresJsonTableBuilder {
 	private class NestedColumn implements JsonTableColumn {
 		private final String path;
 		private final List<JsonTableColumn> columns;
+
 		NestedColumn(String path, List<JsonTableColumn> columns) {
 			require(path, "nested path");
 			this.path = path;
 			this.columns = List.copyOf(columns);
 		}
+
 		@Override
 		public void append(StringBuilder builder) {
 			builder.append("NESTED PATH ").append(sqlString(path)).append(" COLUMNS (");

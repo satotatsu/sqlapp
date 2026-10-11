@@ -55,8 +55,7 @@ public class Db2SynonymReader extends SynonymReader {
 	 * (java.sql.Connection, com.sqlapp.data.parameter.ParametersContext)
 	 */
 	@Override
-	protected List<Synonym> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Synonym> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Synonym> result = list();

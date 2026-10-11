@@ -21,9 +21,7 @@ package com.sqlapp.data.db.dialect.mysql.sql;
 
 import org.junit.jupiter.api.BeforeEach;
 
-
-public class MySqlSqlFactoryRegistryTest extends
-	AbstractMySqlSqlFactoryTest {
+public class MySqlSqlFactoryRegistryTest extends AbstractMySqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {

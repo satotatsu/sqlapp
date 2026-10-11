@@ -29,8 +29,11 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ooxml.POIXMLException;
@@ -39,7 +42,12 @@ import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
+import com.sqlapp.data.schemas.RowIteratorHandler;
+import com.sqlapp.data.schemas.function.RowValueConverter;
+import com.sqlapp.iterable.JsonMapIterable;
+import com.sqlapp.iterable.ExcelIterable;
 import com.sqlapp.iterable.TextMapIterable;
+import com.sqlapp.iterable.XmlRowIterable;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
@@ -282,6 +290,7 @@ public enum DataFormat {
 		public JsonConverter createJsonConverter() {
 			return new JsonConverter();
 		}
+
 	},
 	JSONL() {
 		@Override
@@ -373,33 +382,87 @@ public enum DataFormat {
 	},;
 
 	public Iterable<Map<String, Object>> createMapIterable(File file) {
+		if (file != null && isEmptyRegularFile(file.toPath()) && supportsEmptyTextData()) {
+			return java.util.Collections.emptyList();
+		}
+		if (isJson()) {
+			return new JsonMapIterable(file);
+		}
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(file, reader);
+		}
+		if (isXml()) {
+			return new XmlRowIterable(file);
+		}
+		if (isWorkbook()) {
+			return new ExcelIterable(file, this);
 		}
 		return null;
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Path path) {
+		if (path != null && isEmptyRegularFile(path) && supportsEmptyTextData()) {
+			return java.util.Collections.emptyList();
+		}
+		if (isJson()) {
+			return new JsonMapIterable(path);
+		}
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(path, reader);
 		}
+		if (isXml()) {
+			return new XmlRowIterable(path);
+		}
+		if (isWorkbook()) {
+			return new ExcelIterable(path, this);
+		}
 		return null;
 	}
 
+	private boolean supportsEmptyTextData() {
+		return isCsv() || isJson() || isJsonl() || isYaml() || isToml();
+	}
+
+	private static boolean isEmptyRegularFile(final Path path) {
+		if (!Files.isRegularFile(path)) {
+			return false;
+		}
+		try {
+			return Files.size(path) == 0L;
+		} catch (final IOException e) {
+			return false;
+		}
+	}
+
 	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
+		if (isJson()) {
+			return new JsonMapIterable(inputStream);
+		}
 		final ObjectReader reader = getObjectReader();
 		if (reader != null) {
 			return new TextMapIterable(inputStream, reader);
+		}
+		if (isXml()) {
+			return new XmlRowIterable(inputStream);
+		}
+		if (isWorkbook()) {
+			return new ExcelIterable(inputStream, this);
 		}
 		return null;
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Reader reader) {
+		if (isJson()) {
+			return new JsonMapIterable(reader);
+		}
 		final ObjectReader objReader = getObjectReader();
 		if (objReader != null) {
 			return new TextMapIterable(reader, objReader);
+		}
+		if (isXml()) {
+			return new XmlRowIterable(reader);
 		}
 		return null;
 	}
@@ -453,6 +516,64 @@ public enum DataFormat {
 	}
 
 	/**
+	 * Returns whether this format can be exposed as rows of map values.
+	 */
+	public boolean supportsMapRows() {
+		return getObjectReader() != null || isJson() || isXml() || isWorkbook();
+	}
+
+	/**
+	 * Creates a row iterator handler for this format.
+	 */
+	public RowIteratorHandler createRowIteratorHandler(final File file) {
+		return createRowIteratorHandler(file, "UTF-8", 0, 1, new JsonConverter(), new YamlConverter(),
+				new TomlConverter(), (row, column, value) -> value);
+	}
+
+	/**
+	 * Creates a row iterator handler for this format.
+	 */
+	public RowIteratorHandler createRowIteratorHandler(final Path path) {
+		Objects.requireNonNull(path, "path");
+		return createRowIteratorHandler(path.toFile());
+	}
+
+	/**
+	 * Creates a configured row iterator handler for this format.
+	 */
+	public RowIteratorHandler createRowIteratorHandler(final File file, final String csvEncoding,
+			final int csvSkipHeaderRowsSize, final int excelSkipHeaderRowsSize,
+			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
+			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
+		Objects.requireNonNull(file, "file");
+		if (isCsv()) {
+			final CsvRowIteratorHandler handler = new CsvRowIteratorHandler(file, csvEncoding,
+					csvSkipHeaderRowsSize, valueConverter);
+			handler.setPreserveColumnTypes(true);
+			return handler;
+		}
+		if (isXml()) {
+			return new XmlRowIteratorHandler(file, valueConverter);
+		}
+		if (isToml()) {
+			return new TomlRowIteratorHandler(file, tomlConverter, valueConverter);
+		}
+		if (isYaml()) {
+			return new YamlRowIteratorHandler(file, yamlConverter, valueConverter);
+		}
+		if (isJsonl()) {
+			return new JsonLineRowIteratorHandler(file, jsonConverter, valueConverter);
+		}
+		if (isJson()) {
+			return new JsonRowIteratorHandler(file, jsonConverter, valueConverter);
+		}
+		if (isWorkbook()) {
+			return new ExcelRowIteratorHandler(file, this, excelSkipHeaderRowsSize, valueConverter);
+		}
+		throw new IllegalStateException("Unsupported data format: " + this);
+	}
+
+	/**
 	 * ワークブックを作成します。
 	 */
 	public Workbook createWorkbook() {
@@ -473,10 +594,10 @@ public enum DataFormat {
 	private static final ObjectReader TSV_READER = MAP_READER.with(TSV_SCHEMA);
 	private static final ObjectReader SSV_READER = MAP_READER.with(SSV_SCHEMA);
 	private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
-	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, Object>>() {
 	});
 	private static final JsonMapper JSON_MAPPER = new JsonMapper();
-	private static final ObjectReader JSONL_READER = JSON_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	private static final ObjectReader JSONL_READER = JSON_MAPPER.readerFor(new TypeReference<Map<String, Object>>() {
 	});
 
 	public ObjectReader getObjectReader() {
@@ -632,34 +753,20 @@ public enum DataFormat {
 	}
 
 	public boolean match(final String text) {
-		if (text == null) {
-			return false;
-		}
-		final String lowername = text.toLowerCase();
-		if (lowername.endsWith("." + this.getFileExtension())) {
-			return true;
-		}
-		if (text.equalsIgnoreCase(this.toString())) {
-			return true;
-		}
-		for (String ext : this.getFileExtensions()) {
-			if (lowername.endsWith("." + ext)) {
-				return true;
-			}
-		}
-		return false;
+		return this == parse(text);
 	}
 
 	public static DataFormat parse(final String text) {
 		if (text == null) {
 			return null;
 		}
-		final String lowername = text.trim().toLowerCase();
+		final String normalized = text.trim();
+		final String lowername = normalized.toLowerCase(Locale.ROOT);
 		for (final DataFormat val : values()) {
 			if (lowername.endsWith("." + val.getFileExtension())) {
 				return val;
 			}
-			if (text.equalsIgnoreCase(val.toString())) {
+			if (normalized.equalsIgnoreCase(val.toString())) {
 				return val;
 			}
 		}
@@ -677,7 +784,7 @@ public enum DataFormat {
 		}
 		for (final DataFormat val : values()) {
 			for (String ext : val.getFileExtensions()) {
-				if (ext.equals(text)) {
+				if (ext.equals(lowername)) {
 					return val;
 				}
 			}

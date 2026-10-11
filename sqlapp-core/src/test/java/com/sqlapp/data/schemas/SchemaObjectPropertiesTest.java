@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * SchemaProperties
+ * 
  * @author 竜夫
  *
  */
@@ -34,7 +35,7 @@ public class SchemaObjectPropertiesTest {
 
 	@Test
 	public void testAll() throws ParseException {
-		for(final SchemaObjectProperties prop:SchemaObjectProperties.values()){
+		for (final SchemaObjectProperties prop : SchemaObjectProperties.values()) {
 			assertNotNull(prop.getDefaultValue());
 		}
 	}

@@ -89,7 +89,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	public static short toShort(final byte[] bytes) {

@@ -42,6 +42,7 @@ public class Db2_1050 extends Db2_1010 {
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param nextVersionDialectSupplier
 	 */
 	public Db2_1050(final Supplier<Dialect> nextVersionDialectSupplier) {
@@ -68,7 +69,7 @@ public class Db2_1050 extends Db2_1010 {
 		}
 		return true;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -83,9 +84,9 @@ public class Db2_1050 extends Db2_1010 {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Db2_1050SqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public Db2SqlBuilder createSqlBuilder(){
+	public Db2SqlBuilder createSqlBuilder() {
 		return super.createSqlBuilder();
 	}
 }

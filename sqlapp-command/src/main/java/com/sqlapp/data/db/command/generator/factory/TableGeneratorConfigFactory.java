@@ -53,6 +53,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
@@ -243,7 +244,7 @@ public class TableGeneratorConfigFactory {
 	private boolean hasMultiForeignKeyInPrimaryKeyColumn(final Table table) {
 		final List<ForeignKeyConstraint> fks = CommonUtils.list();
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
-			if (fk.getRelatedTable() == table) {
+			if (SchemaUtils.isSameTable(fk.getRelatedTable(), table)) {
 				continue;
 			}
 			List<Column> cols = fk.getColumns();

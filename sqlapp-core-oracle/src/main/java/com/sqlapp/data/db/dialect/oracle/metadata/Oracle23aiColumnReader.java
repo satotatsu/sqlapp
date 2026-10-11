@@ -17,8 +17,7 @@ import com.sqlapp.jdbc.ExResultSet;
 public class Oracle23aiColumnReader extends Oracle12cColumnReader {
 
 	private static final Pattern VECTOR_INFO = Pattern.compile(
-			"VECTOR\\s*\\(\\s*(\\*|\\d+)\\s*,\\s*(FLOAT32|FLOAT64|INT8|BINARY)\\s*\\)",
-			Pattern.CASE_INSENSITIVE);
+			"VECTOR\\s*\\(\\s*(\\*|\\d+)\\s*,\\s*(FLOAT32|FLOAT64|INT8|BINARY)\\s*\\)", Pattern.CASE_INSENSITIVE);
 
 	protected Oracle23aiColumnReader(final Dialect dialect) {
 		super(dialect);

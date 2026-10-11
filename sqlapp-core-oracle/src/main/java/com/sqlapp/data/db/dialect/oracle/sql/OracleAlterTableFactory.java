@@ -51,81 +51,82 @@ import com.sqlapp.util.CommonUtils;
 public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSqlBuilder> {
 
 	@Override
-	protected void addOtherDefinitions(final Map<String, Difference<?>> allDiff
-			, final Table originalTable, final Table table, final List<SqlOperation> result){
-		final Map<String, Difference<?>> diff=this.getAll(allDiff, OracleUtils.getTableStatisticsKeys());
-		if (diff.isEmpty()){
+	protected void addOtherDefinitions(final Map<String, Difference<?>> allDiff, final Table originalTable,
+			final Table table, final List<SqlOperation> result) {
+		final Map<String, Difference<?>> diff = this.getAll(allDiff, OracleUtils.getTableStatisticsKeys());
+		if (diff.isEmpty()) {
 			return;
 		}
 		final OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().table();
 		builder.name(table);
 		builder.appendIndent(1);
-		boolean hasChange=false;
-		boolean hasStorage=false;
-		for(final Map.Entry<String, Difference<?>> entry:diff.entrySet()){
-			if (!entry.getValue().getState().isChanged()){
+		boolean hasChange = false;
+		boolean hasStorage = false;
+		for (final Map.Entry<String, Difference<?>> entry : diff.entrySet()) {
+			if (!entry.getValue().getState().isChanged()) {
 				continue;
 			}
-			final Difference<?> diffValue=entry.getValue();
-			if (diffValue.getTarget()==null){
+			final Difference<?> diffValue = entry.getValue();
+			if (diffValue.getTarget() == null) {
 				continue;
 			}
-			if (builder.isStoragePropertyName(entry.getKey())){
+			if (builder.isStoragePropertyName(entry.getKey())) {
 				continue;
-			} else{
-				hasStorage=true;
+			} else {
+				hasStorage = true;
 			}
 			builder.lineBreak().oracleProperty(entry.getKey(), diffValue.getTarget(String.class));
-			hasChange=true;
+			hasChange = true;
 		}
-		if (hasStorage){
+		if (hasStorage) {
 			builder.lineBreak().storage();
 			builder.lineBreak()._add("(");
 			builder.appendIndent(1);
-			for(final Map.Entry<String, Difference<?>> entry:diff.entrySet()){
-				if (!entry.getValue().getState().isChanged()){
+			for (final Map.Entry<String, Difference<?>> entry : diff.entrySet()) {
+				if (!entry.getValue().getState().isChanged()) {
 					continue;
 				}
-				if (!builder.isStoragePropertyName(entry.getKey())){
+				if (!builder.isStoragePropertyName(entry.getKey())) {
 					continue;
 				}
-				final Difference<?> diffValue=entry.getValue();
-				if (diffValue.getTarget()==null){
+				final Difference<?> diffValue = entry.getValue();
+				if (diffValue.getTarget() == null) {
 					continue;
 				}
 				builder.lineBreak().oracleProperty(entry.getKey(), diffValue.getTarget(String.class));
 			}
 			builder.appendIndent(-1);
 			builder.lineBreak()._add(")");
-			hasChange=true;
+			hasChange = true;
 		}
 		builder.appendIndent(-1);
-		if (hasChange){
-			add(result, createOperation(builder.toString(),SqlType.ALTER, originalTable, table));
+		if (hasChange) {
+			add(result, createOperation(builder.toString(), SqlType.ALTER, originalTable, table));
 		}
-		addCommentDefinitions(allDiff
-				, originalTable, table, result);
+		addCommentDefinitions(allDiff, originalTable, table, result);
 	}
-	
-	protected void addCommentDefinitions(final Map<String, Difference<?>> allDiff
-			, final Table originalTable, final Table table, final List<SqlOperation> result){
+
+	protected void addCommentDefinitions(final Map<String, Difference<?>> allDiff, final Table originalTable,
+			final Table table, final List<SqlOperation> result) {
 		final Difference<?> tableProp = allDiff.get(SchemaProperties.REMARKS.getLabel());
-		if (tableProp!=null&&tableProp.getState().isChanged()){
-			final OracleSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
-				.$if(table.getRemarks()!=null, ()->builder.sqlChar(table.getRemarks()), ()->builder.is().null_());
+		if (tableProp != null && tableProp.getState().isChanged()) {
+			final OracleSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().$if(
+					table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.is().null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		final DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.COLUMNS.getLabel());
 		if (colsDiff != null) {
-			final List<DbObjectPropertyDifference> diffs=colsDiff.findModifiedProperties(this.getDialect(), SchemaProperties.REMARKS.getLabel(), Column.class);
+			final List<DbObjectPropertyDifference> diffs = colsDiff.findModifiedProperties(this.getDialect(),
+					SchemaProperties.REMARKS.getLabel(), Column.class);
 			for (final DbObjectPropertyDifference diff : diffs) {
-				final Column obj=diff.getTarget(Column.class);
-				final OracleSqlBuilder builder=this.createSqlBuilder();
-				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName()).is()
-					.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is().null_());
+				final Column obj = diff.getTarget(Column.class);
+				final OracleSqlBuilder builder = this.createSqlBuilder();
+				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName())
+						.is().$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()),
+								() -> builder.is().null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -140,16 +141,16 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 	 * @param sqlBuilder
 	 */
 	@Override
-	protected void addColumnDefinitions(final Map<String, Difference<?>> allDiff
-			, final Table originalTable, final Table table,
-			final DbObjectDifferenceCollection colsDiff, final List<SqlOperation> result) {
+	protected void addColumnDefinitions(final Map<String, Difference<?>> allDiff, final Table originalTable,
+			final Table table, final DbObjectDifferenceCollection colsDiff, final List<SqlOperation> result) {
 		addDeleteColumn(originalTable, table, colsDiff.getList(State.Deleted), result);
 		addAddColumn(originalTable, table, colsDiff.getList(State.Added), result);
 		addRenameOrAlterColumn(originalTable, table, colsDiff.getList(State.Modified), result);
 	}
-	
-	protected void addDeleteColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,final List<SqlOperation> result){
-		if (CommonUtils.isEmpty(diffs)){
+
+	protected void addDeleteColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,
+			final List<SqlOperation> result) {
+		if (CommonUtils.isEmpty(diffs)) {
 			return;
 		}
 		final OracleSqlBuilder builder = createSqlBuilder();
@@ -157,11 +158,11 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		builder.drop().space()._add("( ");
 		builder.appendIndent(1);
-		int i=0;
-		final List<Column> columns=CommonUtils.list();
+		int i = 0;
+		final List<Column> columns = CommonUtils.list();
 		for (final DbObjectDifference diff : diffs) {
 			final Column column = diff.getOriginal(Column.class);
-			builder._add(", ", i>0);
+			builder._add(", ", i > 0);
 			builder.name(column.getName());
 			columns.add(column);
 			i++;
@@ -170,23 +171,24 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		builder._add(" )");
 		add(result, createOperation(builder.toString(), SqlType.ALTER, columns));
 	}
-	
-	protected void addAddColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,final List<SqlOperation> result){
-		if (CommonUtils.isEmpty(diffs)){
+
+	protected void addAddColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,
+			final List<SqlOperation> result) {
+		if (CommonUtils.isEmpty(diffs)) {
 			return;
 		}
-		final List<Column> objects=CommonUtils.list();
+		final List<Column> objects = CommonUtils.list();
 		final OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		builder.add().space()._add("(");
 		builder.appendIndent(1);
-		int i=0;
+		int i = 0;
 		for (final DbObjectDifference diff : diffs) {
 			final Column column = diff.getTarget(Column.class);
 			objects.add(column);
-			builder.lineBreak(i==0)._add("  ", i==0);
-			builder.lineBreak(i>0)._add(", ", i>0);
+			builder.lineBreak(i == 0)._add("  ", i == 0);
+			builder.lineBreak(i > 0)._add(", ", i > 0);
 			builder.name(column);
 			builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 			i++;
@@ -195,24 +197,25 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		builder.lineBreak()._add(")");
 		add(result, createOperation(builder.toString(), SqlType.ALTER, objects));
 	}
-	
-	protected void addRenameOrAlterColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,final List<SqlOperation> result){
-		if (CommonUtils.isEmpty(diffs)){
+
+	protected void addRenameOrAlterColumn(final Table originalTable, final Table table,
+			final List<DbObjectDifference> diffs, final List<SqlOperation> result) {
+		if (CommonUtils.isEmpty(diffs)) {
 			return;
 		}
-		final List<DbObjectDifference> renameList=CommonUtils.list();
-		final List<DbObjectDifference> modifyList=CommonUtils.list();
-		final List<DbObjectDifference> dropAddList=CommonUtils.list();
+		final List<DbObjectDifference> renameList = CommonUtils.list();
+		final List<DbObjectDifference> modifyList = CommonUtils.list();
+		final List<DbObjectDifference> dropAddList = CommonUtils.list();
 		for (final DbObjectDifference diff : diffs) {
 			final Column oldColumn = diff.getOriginal(Column.class);
 			final Column column = diff.getTarget(Column.class);
 			if (!CommonUtils.eq(oldColumn.getName(), column.getName())) {
-				if (diff.getProperties().size()==1){
+				if (diff.getProperties().size() == 1) {
 					renameList.add(diff);
-				} else{
+				} else {
 					dropAddList.add(diff);
 				}
-			} else{
+			} else {
 				modifyList.add(diff);
 			}
 		}
@@ -222,8 +225,9 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		addAddColumn(originalTable, table, dropAddList, result);
 	}
 
-	protected void addRenameColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,final List<SqlOperation> result){
-		if (CommonUtils.isEmpty(diffs)){
+	protected void addRenameColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,
+			final List<SqlOperation> result) {
+		if (CommonUtils.isEmpty(diffs)) {
 			return;
 		}
 		for (final DbObjectDifference diff : diffs) {
@@ -231,7 +235,8 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		}
 	}
 
-	protected void addRenameColumn(final Table originalTable, final Table table, final DbObjectDifference diff,final List<SqlOperation> result){
+	protected void addRenameColumn(final Table originalTable, final Table table, final DbObjectDifference diff,
+			final List<SqlOperation> result) {
 		final OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
@@ -243,9 +248,10 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		builder.name(column);
 		add(result, createOperation(builder.toString(), SqlType.ALTER, orgColumn, column));
 	}
-	
-	protected void addModifyColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,final List<SqlOperation> result){
-		if (CommonUtils.isEmpty(diffs)){
+
+	protected void addModifyColumn(final Table originalTable, final Table table, final List<DbObjectDifference> diffs,
+			final List<SqlOperation> result) {
+		if (CommonUtils.isEmpty(diffs)) {
 			return;
 		}
 		final OracleSqlBuilder builder = createSqlBuilder();
@@ -253,16 +259,16 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		builder.modify().space()._add("(");
 		builder.appendIndent(1);
-		int i=0;
-		final List<Column> originals=CommonUtils.list();
-		final List<Column> targets=CommonUtils.list();
+		int i = 0;
+		final List<Column> originals = CommonUtils.list();
+		final List<Column> targets = CommonUtils.list();
 		for (final DbObjectDifference diff : diffs) {
 			final Column orgColumn = diff.getOriginal(Column.class);
 			originals.add(orgColumn);
 			final Column column = diff.getTarget(Column.class);
 			targets.add(column);
-			builder.lineBreak(i==0)._add("  ", i==0);
-			builder.lineBreak(i>0)._add(", ", i>0);
+			builder.lineBreak(i == 0)._add("  ", i == 0);
+			builder.lineBreak(i > 0)._add(", ", i > 0);
 			builder.name(column);
 			builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 			i++;
@@ -279,14 +285,13 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 	 * @param sqlBuilder
 	 */
 	@Override
-	protected void addPartitionDefinition(final Map<String, Difference<?>> allDiff
-			, final Table originalTable, final Table table
-			,final DbObjectDifference partitioningProp
-			,final List<SqlOperation> result) {
+	protected void addPartitionDefinition(final Map<String, Difference<?>> allDiff, final Table originalTable,
+			final Table table, final DbObjectDifference partitioningProp, final List<SqlOperation> result) {
 		final Partitioning originalPartitioning = partitioningProp.getOriginal(Partitioning.class);
 		final Partitioning partitioning = partitioningProp.getTarget(Partitioning.class);
-		final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(new Partitioning(), SqlType.CREATE);
-		if (addObjectDetail==null){
+		final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail = getAddObjectDetail(
+				new Partitioning(), SqlType.CREATE);
+		if (addObjectDetail == null) {
 			return;
 		}
 		final OracleSqlBuilder builder = createSqlBuilder();
@@ -301,8 +306,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 			builder.remove().partitioning();
 			add(result, createOperation(builder.toString(), SqlType.DROP, originalPartitioning));
 		} else {
-			modifyPartitionByDefinition(partitioningProp,
-					originalPartitioning, partitioning, builder);
+			modifyPartitionByDefinition(partitioningProp, originalPartitioning, partitioning, builder);
 			add(result, createOperation(builder.toString(), SqlType.ALTER, originalPartitioning, partitioning));
 		}
 	}
@@ -315,31 +319,27 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 	 * @param partitioning
 	 * @param builder
 	 */
-	protected void modifyPartitionByDefinition(
-			final DbObjectDifference partitioningProp,
-			final Partitioning originalPartitioning, final Partitioning partitioning,
-			final OracleSqlBuilder builder) {
-		final Map<String, Difference<?>> allDiff = partitioningProp.getProperties(
-				State.Modified, State.Added, State.Deleted);
+	protected void modifyPartitionByDefinition(final DbObjectDifference partitioningProp,
+			final Partitioning originalPartitioning, final Partitioning partitioning, final OracleSqlBuilder builder) {
+		final Map<String, Difference<?>> allDiff = partitioningProp.getProperties(State.Modified, State.Added,
+				State.Deleted);
 		final DbObjectDifferenceCollection partitionsDifference = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.PARTITIONS.getLabel());
 		final DbObjectPropertyDifference partitionSizeDifference = (DbObjectPropertyDifference) allDiff
 				.get(SchemaProperties.PARTITION_SIZE.getLabel());
 		final DbObjectPropertyDifference subpartitionSizeDifference = (DbObjectPropertyDifference) allDiff
 				.get(SchemaProperties.SUB_PARTITION_SIZE.getLabel());
-		final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(partitioning, SqlType.CREATE);
+		final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail = getAddObjectDetail(partitioning,
+				SqlType.CREATE);
 		if (originalPartitioning.getPartitioningType() == partitioning.getPartitioningType()) {
-			if (originalPartitioning.getSubPartitioningType() == partitioning
-					.getSubPartitioningType()) {
+			if (originalPartitioning.getSubPartitioningType() == partitioning.getSubPartitioningType()) {
 				// パーティション種類未変更
-				if (partitioning.getPartitioningType().isSizePartitioning()
-						&& partitionsDifference == null) {
+				if (partitioning.getPartitioningType().isSizePartitioning() && partitionsDifference == null) {
 					final Integer size = partitionSizeDifference.getTarget(Integer.class);
 					// Hashパーティションサイズ変更
 					builder.coalesce().partition().space()._add(size);
 				} else {
-					modifyPartitions(originalPartitioning, partitioning,
-							partitionsDifference, builder);
+					modifyPartitions(originalPartitioning, partitioning, partitionsDifference, builder);
 				}
 			} else {
 				builder.remove().partitioning();
@@ -353,10 +353,8 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		}
 	}
 
-	protected void modifyPartitions(final Partitioning originalPartitioning,
-			final Partitioning partitioning,
-			final DbObjectDifferenceCollection partitionsDifference,
-			final OracleSqlBuilder builder) {
+	protected void modifyPartitions(final Partitioning originalPartitioning, final Partitioning partitioning,
+			final DbObjectDifferenceCollection partitionsDifference, final OracleSqlBuilder builder) {
 		List<DbObjectDifference> child = null;
 		child = partitionsDifference.getList(State.Added);
 		if (!CommonUtils.isEmpty(child)) {
@@ -373,19 +371,20 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		}
 	}
 
-	protected void addPartitionsDefinition(final Partitioning partitioning,
-			final List<DbObjectDifference> child, final OracleSqlBuilder builder) {
-		final OracleCreatePartitioningFactory factory=this.getSqlFactoryRegistry().getSqlFactory(partitioning, SqlType.CREATE);
-		if (factory==null){
+	protected void addPartitionsDefinition(final Partitioning partitioning, final List<DbObjectDifference> child,
+			final OracleSqlBuilder builder) {
+		final OracleCreatePartitioningFactory factory = this.getSqlFactoryRegistry().getSqlFactory(partitioning,
+				SqlType.CREATE);
+		if (factory == null) {
 			return;
 		}
 		builder.add().partition();
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
-		int i=0;
+		int i = 0;
 		for (final DbObjectDifference partitionDifference : child) {
 			final Partition partition = partitionDifference.getTarget(Partition.class);
-			builder.lineBreak().comma(i>0);
+			builder.lineBreak().comma(i > 0);
 			factory.appendPartitionDefinition(false, partitioning, partition, builder);
 			i++;
 		}
@@ -393,8 +392,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		builder.lineBreak()._add(")");
 	}
 
-	protected void deletePartitionsDefinition(final List<DbObjectDifference> child,
-			final OracleSqlBuilder builder) {
+	protected void deletePartitionsDefinition(final List<DbObjectDifference> child, final OracleSqlBuilder builder) {
 		builder.comma(!builder.isFirstElement()).drop().partition();
 		builder.setFirstElement(false);
 		for (int i = 0; i < child.size(); i++) {

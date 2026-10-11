@@ -21,7 +21,7 @@ package com.sqlapp.data.db.dialect.sqlserver.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
 
-public class SqlServer2016Sp1SqlBuilder extends SqlServer2008SqlBuilder{
+public class SqlServer2016Sp1SqlBuilder extends SqlServer2008SqlBuilder {
 
 	/**
 	 * serialVersionUID
@@ -32,17 +32,15 @@ public class SqlServer2016Sp1SqlBuilder extends SqlServer2008SqlBuilder{
 		super(dialect);
 	}
 
-	
-	public SqlServer2016Sp1SqlBuilder count(){
+	public SqlServer2016Sp1SqlBuilder count() {
 		appendElement("COUNT_BIG");
 		return instance();
 	}
 
 	@Override
-	public SqlServer2016Sp1SqlBuilder instance(){
-		return (SqlServer2016Sp1SqlBuilder)super.instance();
+	public SqlServer2016Sp1SqlBuilder instance() {
+		return (SqlServer2016Sp1SqlBuilder) super.instance();
 	}
-	
 
 	public SqlServer2016Sp1SqlBuilder createOrAlter() {
 		appendElement("CREATE OR ALTER");

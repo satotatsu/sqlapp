@@ -2,7 +2,9 @@ SELECT
   current_database() AS trigger_catalog
 , n.nspname AS trigger_schema
 , t.tgname AS trigger_name
+, c.relname AS table_name
 , t.oid
+, pg_get_triggerdef(t.oid) AS definition
 , substring(pg_get_triggerdef(t.oid) from
            position('EXECUTE PROCEDURE' in substring(pg_get_triggerdef(t.oid) from 48)) + 47)
  AS action_statement
@@ -17,7 +19,7 @@ SELECT
 , CASE WHEN t.tgtype & 16 = 16 THEN 'UPDATE' ELSE '' END
  AS is_update
 , tgenabled
-, obj_description(t.oid, current_database()) as remarks
+, obj_description(t.oid, 'pg_trigger') as remarks
 , t.*
 FROM pg_catalog.pg_namespace n
 INNER JOIN pg_catalog.pg_class c

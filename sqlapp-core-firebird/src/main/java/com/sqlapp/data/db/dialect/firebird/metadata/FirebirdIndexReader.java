@@ -64,7 +64,8 @@ public class FirebirdIndexReader extends IndexReader {
 				String schema_name = null;
 				String name = trim(getString(rs, INDEX_NAME));
 				String columnName = trim(getString(rs, COLUMN_NAME));
-				boolean uniqueness = !rs.getBoolean("NON_UNIQUE");
+				String expression = trim(getString(rs, "EXPRESSION_SOURCE"));
+				boolean uniqueness = rs.getBoolean("UNIQUE_FLAG");
 				Index index = map.get(catalog_name, schema_name, name);
 				if (index == null) {
 					index = new Index(name);
@@ -74,14 +75,17 @@ public class FirebirdIndexReader extends IndexReader {
 					index.setUnique(uniqueness);
 					index.setEnable(!rs.getBoolean("INDEX_INACTIVE"));
 					index.setRemarks(getString(rs, "DESCRIPTION"));
+					index.setWhere(normalizeCondition(trim(getString(rs, "CONDITION_SOURCE"))));
 					//
 					map.put(catalog_name, schema_name, name, index);
 					result.add(index);
 				}
 				boolean isDesc = rs.getBoolean("IS_DESC");
-				if (isDesc) {
+				if (columnName == null && expression != null) {
+					index.getColumns().add(expression, isDesc ? Order.Desc : Order.Asc);
+				} else if (isDesc) {
 					index.getColumns().add(new Column(columnName), Order.Desc);
-				} else {
+				} else if (columnName != null) {
 					index.getColumns().add(new Column(columnName), Order.Asc);
 				}
 			}
@@ -91,5 +95,9 @@ public class FirebirdIndexReader extends IndexReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("indexes.sql");
+	}
+
+	private String normalizeCondition(final String condition) {
+		return condition == null ? null : condition.replaceFirst("(?is)^\\s*WHERE\\s+", "").trim();
 	}
 }

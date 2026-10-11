@@ -31,13 +31,10 @@ public class Postgres180ConstraintDropBuilder {
 		return drop(constraint, true, false, false);
 	}
 
-	public String drop(Constraint constraint, boolean only,
-			boolean ifExists, boolean cascade) {
+	public String drop(Constraint constraint, boolean only, boolean ifExists, boolean cascade) {
 		Objects.requireNonNull(constraint, "constraint");
-		if (constraint.getParent() == null
-				|| constraint.getParent().getTable() == null) {
-			throw new IllegalArgumentException(
-					"Constraint must belong to a table.");
+		if (constraint.getParent() == null || constraint.getParent().getTable() == null) {
+			throw new IllegalArgumentException("Constraint must belong to a table.");
 		}
 		if (only && dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
 			throw new IllegalArgumentException(
@@ -48,16 +45,13 @@ public class Postgres180ConstraintDropBuilder {
 			builder.append("ONLY ");
 		}
 		if (!CommonUtils.isEmpty(constraint.getSchemaName())) {
-			builder.append(dialect.quote(constraint.getSchemaName()))
-					.append(".");
+			builder.append(dialect.quote(constraint.getSchemaName())).append(".");
 		}
-		builder.append(dialect.quote(require(constraint.getTableName(),
-				"tableName"))).append(" DROP CONSTRAINT ");
+		builder.append(dialect.quote(require(constraint.getTableName(), "tableName"))).append(" DROP CONSTRAINT ");
 		if (ifExists) {
 			builder.append("IF EXISTS ");
 		}
-		builder.append(dialect.quote(require(constraint.getName(),
-				"constraintName")));
+		builder.append(dialect.quote(require(constraint.getName(), "constraintName")));
 		if (cascade) {
 			builder.append(" CASCADE");
 		}

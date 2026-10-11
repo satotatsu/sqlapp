@@ -30,21 +30,19 @@ public class PackageTest {
 
 	@Test
 	public void testAll() {
-		ClassFinder classFinder=new ClassFinder();
-		classFinder.setFilter(c->{
+		ClassFinder classFinder = new ClassFinder();
+		classFinder.setFilter(c -> {
 			return DbDataType.class.isAssignableFrom(c);
 		});
-		for(DataType types:DataType.values()){
+		for (DataType types : DataType.values()) {
 			assertNotEquals(types.getSurrogate(), types);
 			assertNotEquals(types.getUpperSurrogate(), types);
 		}
 	}
-
 
 	@Test
 	public void testGetTypeName() {
 		assertEquals("INT", DataType.INT.getTypeName());
 	}
 
-	
 }

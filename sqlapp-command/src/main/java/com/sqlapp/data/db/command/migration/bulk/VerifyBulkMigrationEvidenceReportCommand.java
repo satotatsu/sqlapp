@@ -1,0 +1,202 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.bulk;
+
+import java.io.File;
+
+import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.exceptions.CommandException;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/** Revalidates a saved bulk migration audit artifact and its source reports. */
+@Getter
+@Setter
+public class VerifyBulkMigrationEvidenceReportCommand extends AbstractCommand {
+	private File evidenceReportFile;
+	private File operationalReportFile;
+	private File verificationReportFile;
+	private File configurationFile;
+	private File assessmentReportFile;
+	private File ddlVerificationReportFile;
+	private File targetValidationReportFile;
+	private String expectedTargetEnvironmentId;
+	private String expectedEvidenceReportFingerprint;
+	private String expectedPlanFingerprint;
+	private String expectedConfigurationFingerprint;
+	private Long maxEvidenceAgeSeconds;
+	private Long maxEvidenceFileSizeBytes;
+	private Long maxApprovalArtifactFileSizeBytes;
+	private Long maxTargetValidationReportFileSizeBytes;
+	private BulkMigrationEvidenceReport report;
+	private String evidenceReportFingerprint;
+
+	@Override
+	protected void doRun() {
+		report = null;
+		evidenceReportFingerprint = null;
+		requireFile(evidenceReportFile, "evidenceReportFile");
+		requireFile(operationalReportFile, "operationalReportFile");
+		requireFile(verificationReportFile, "verificationReportFile");
+		optionalFile(configurationFile, "configurationFile");
+		optionalFile(assessmentReportFile, "assessmentReportFile");
+		optionalFile(ddlVerificationReportFile, "ddlVerificationReportFile");
+		optionalFile(targetValidationReportFile, "targetValidationReportFile");
+		validateExpectedTargetEnvironment();
+		validateLimits();
+		final var evidenceSnapshot = new BulkMigrationEvidenceReportIO().readSnapshot(evidenceReportFile.toPath(),
+				maxEvidenceFileSizeBytes);
+		evidenceReportFingerprint = evidenceSnapshot.fingerprint();
+		if (expectedEvidenceReportFingerprint != null) {
+			if (!expectedEvidenceReportFingerprint.matches("sha256:[0-9a-f]{64}")) {
+				throw new CommandException("expectedEvidenceReportFingerprint must be a lowercase SHA-256 value.");
+			}
+			if (!expectedEvidenceReportFingerprint.equals(evidenceReportFingerprint)) {
+				throw new CommandException(
+						"evidenceReportFile fingerprint does not match expectedEvidenceReportFingerprint.");
+			}
+		}
+		if (expectedPlanFingerprint != null && expectedPlanFingerprint.isBlank()) {
+			throw new CommandException("expectedPlanFingerprint must not be blank.");
+		}
+		if (expectedConfigurationFingerprint != null
+				&& !expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
+		}
+		if (maxEvidenceAgeSeconds != null && maxEvidenceAgeSeconds <= 0) {
+			throw new CommandException("maxEvidenceAgeSeconds must be greater than zero.");
+		}
+		final var operationalSnapshot = new BulkMigrationOperationalReportIO()
+				.readSnapshot(operationalReportFile.toPath(), maxEvidenceFileSizeBytes);
+		final var verificationSnapshot = new BulkMigrationVerificationReportIO()
+				.readSnapshot(verificationReportFile.toPath(), maxEvidenceFileSizeBytes);
+		report = new BulkMigrationEvidenceReportIO().verifySources(evidenceSnapshot.report(), operationalSnapshot,
+				verificationSnapshot);
+		final var targetValidationSnapshot = targetValidationReportFile == null ? null
+				: new BulkMigrationTargetValidationReportIO().readSnapshot(targetValidationReportFile.toPath(),
+						maxTargetValidationReportFileSizeBytes);
+		verifySourceArtifact(configurationFile, BulkMigrationEvidenceReport.ARTIFACT_CONFIGURATION,
+				report.provenance() == null ? null : report.provenance().configurationFingerprint(),
+				"configurationFile", "configurationFingerprint");
+		verifySourceArtifact(assessmentReportFile, BulkMigrationEvidenceReport.ARTIFACT_ASSESSMENT_REPORT,
+				report.provenance() == null ? null : report.provenance().assessmentReportFingerprint(),
+				"assessmentReportFile", "assessmentReportFingerprint");
+		verifySourceArtifact(ddlVerificationReportFile, BulkMigrationEvidenceReport.ARTIFACT_DDL_VERIFICATION_REPORT,
+				report.provenance() == null ? null : report.provenance().ddlVerificationReportFingerprint(),
+				"ddlVerificationReportFile", "ddlVerificationReportFingerprint");
+		verifyTargetValidationArtifact(targetValidationSnapshot);
+		verifyTargetValidationReport(operationalSnapshot.report(),
+				targetValidationSnapshot == null ? null : targetValidationSnapshot.report());
+		if (expectedPlanFingerprint != null && !expectedPlanFingerprint.equals(report.planFingerprint())) {
+			throw new CommandException("Evidence report does not match expectedPlanFingerprint.");
+		}
+		if (expectedConfigurationFingerprint != null && (report.provenance() == null
+				|| !expectedConfigurationFingerprint.equals(report.provenance().configurationFingerprint()))) {
+			throw new CommandException("Evidence report does not match expectedConfigurationFingerprint.");
+		}
+		if (maxEvidenceAgeSeconds != null) {
+			final java.time.Instant now = java.time.Instant.now();
+			if (report.generatedAt().isAfter(now)) {
+				throw new CommandException(
+						"Evidence report generatedAt is in the future; check clock synchronization.");
+			}
+			try {
+				if (report.generatedAt().plusSeconds(maxEvidenceAgeSeconds).isBefore(now)) {
+					throw new CommandException("Evidence report has expired.");
+				}
+			} catch (final java.time.DateTimeException | ArithmeticException e) {
+				throw new CommandException("maxEvidenceAgeSeconds is outside the supported time range.", e);
+			}
+		}
+		info("Bulk migration evidence report verified: ", evidenceReportFile.getAbsolutePath());
+	}
+
+	private void verifyTargetValidationReport(final BulkMigrationOperationalReport operational,
+			final BulkMigrationTargetValidationReport targetReport) {
+		if (targetReport == null) {
+			return;
+		}
+		final var executedTaskIds = operational.tasks().stream().map(BulkMigrationOperationalReport.Task::taskId)
+				.toList();
+		final var provenance = report.provenance();
+		final var approvalProvenance = provenance == null ? null
+				: new BulkMigrationArtifactProvenance(provenance.configurationFingerprint(),
+						provenance.assessmentReportFingerprint(), provenance.ddlVerificationReportFingerprint());
+		if (!report.jobId().equals(targetReport.jobId())
+				|| !report.planFingerprint().equals(targetReport.planFingerprint())
+				|| !executedTaskIds.equals(targetReport.taskIds())
+				|| targetReport.generatedAt().isAfter(operational.generatedAt()) || provenance == null
+				|| !provenance.configurationFingerprint().equals(targetReport.configurationFingerprint())
+				|| !java.util.Objects.equals(approvalProvenance, targetReport.provenance())
+				|| expectedTargetEnvironmentId != null
+						&& !expectedTargetEnvironmentId.equals(targetReport.targetEnvironmentId())) {
+			throw new CommandException(
+					"Target validation report does not match the saved evidence report or was created after execution.");
+		}
+	}
+
+	private void verifyTargetValidationArtifact(final BulkMigrationTargetValidationReportIO.Snapshot snapshot) {
+		if (snapshot == null) {
+			return;
+		}
+		if (!report.verifiedArtifacts().contains(BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT)) {
+			throw new CommandException("targetValidationReportFile was not verified by the saved evidence report.");
+		}
+		final String expected = report.provenance() == null ? null
+				: report.provenance().targetValidationReportFingerprint();
+		if (expected == null || !expected.equals(snapshot.fingerprint())) {
+			throw new CommandException("targetValidationReportFile does not match targetValidationReportFingerprint.");
+		}
+	}
+
+	private void validateExpectedTargetEnvironment() {
+		if (expectedTargetEnvironmentId == null) {
+			return;
+		}
+		if (expectedTargetEnvironmentId.isBlank()) {
+			throw new CommandException("expectedTargetEnvironmentId must not be blank.");
+		}
+		if (targetValidationReportFile == null) {
+			throw new CommandException("expectedTargetEnvironmentId requires targetValidationReportFile.");
+		}
+	}
+
+	private static void requireFile(final File file, final String property) {
+		if (file == null || !file.isFile()) {
+			throw new CommandException(property + " must be an existing file.");
+		}
+	}
+
+	private static void optionalFile(final File file, final String property) {
+		if (file != null && !file.isFile()) {
+			throw new CommandException(property + " must be an existing file.");
+		}
+	}
+
+	private void verifySourceArtifact(final File file, final String artifact, final String expectedFingerprint,
+			final String fileProperty, final String provenanceProperty) {
+		if (file == null) {
+			return;
+		}
+		if (!report.verifiedArtifacts().contains(artifact)) {
+			throw new CommandException(fileProperty + " was not verified by the saved evidence report.");
+		}
+		final Long maxFileSizeBytes = BulkMigrationEvidenceReport.ARTIFACT_TARGET_VALIDATION_REPORT.equals(artifact)
+				? maxTargetValidationReportFileSizeBytes
+				: maxApprovalArtifactFileSizeBytes;
+		BulkMigrationArtifactProvenanceVerifier.verify(file, expectedFingerprint, fileProperty, provenanceProperty,
+				maxFileSizeBytes);
+	}
+
+	private void validateLimits() {
+		positive(maxEvidenceFileSizeBytes, "maxEvidenceFileSizeBytes");
+		positive(maxApprovalArtifactFileSizeBytes, "maxApprovalArtifactFileSizeBytes");
+		positive(maxTargetValidationReportFileSizeBytes, "maxTargetValidationReportFileSizeBytes");
+	}
+
+	private static void positive(final Long value, final String property) {
+		if (value != null && value <= 0) {
+			throw new CommandException(property + " must be greater than zero.");
+		}
+	}
+}

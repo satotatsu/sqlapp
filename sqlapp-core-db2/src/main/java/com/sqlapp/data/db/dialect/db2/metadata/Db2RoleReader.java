@@ -42,8 +42,7 @@ public class Db2RoleReader extends RoleReader {
 	}
 
 	@Override
-	protected List<Role> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Role> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Role> result = list();

@@ -39,11 +39,13 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.util.AbstractSqlBuilder#count()
 	 */
 	@Override
-	public PhoenixSqlBuilder count(){
+	public PhoenixSqlBuilder count() {
 		appendElement("COUNT_BIG");
 		return instance();
 	}
@@ -53,12 +55,10 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 		appendElement("UPSERT");
 		return instance();
 	}
-	
-	
+
 	@Override
-	public PhoenixSqlBuilder clone(){
-		return (PhoenixSqlBuilder)super.clone();
+	public PhoenixSqlBuilder clone() {
+		return (PhoenixSqlBuilder) super.clone();
 	}
 
-	
 }

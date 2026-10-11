@@ -15,8 +15,7 @@ final class Postgres180ReturningSupport {
 	private Postgres180ReturningSupport() {
 	}
 
-	static void add(Table table, SqlSignature signature, TableOptions options,
-			AbstractSqlBuilder<?> builder) {
+	static void add(Table table, SqlSignature signature, TableOptions options, AbstractSqlBuilder<?> builder) {
 		String oldAlias = options.getReturningOldAlias().apply(table);
 		String newAlias = options.getReturningNewAlias().apply(table);
 		if (CommonUtils.isEmpty(oldAlias) && CommonUtils.isEmpty(newAlias)) {
@@ -25,11 +24,9 @@ final class Postgres180ReturningSupport {
 		if (!CommonUtils.isEmpty(oldAlias) && oldAlias.equalsIgnoreCase(newAlias)) {
 			throw new IllegalArgumentException("OLD and NEW aliases must be different.");
 		}
-		var columns = options.getReturningColumnStrategy().apply(table)
-				.getWithoutCheck(signature).getKeyColumns();
+		var columns = options.getReturningColumnStrategy().apply(table).getWithoutCheck(signature).getKeyColumns();
 		if (columns.isEmpty()) {
-			throw new IllegalArgumentException(
-					"RETURNING requires at least one selected column.");
+			throw new IllegalArgumentException("RETURNING requires at least one selected column.");
 		}
 		builder.lineBreak()._add("RETURNING WITH").space().brackets(() -> {
 			boolean comma = false;

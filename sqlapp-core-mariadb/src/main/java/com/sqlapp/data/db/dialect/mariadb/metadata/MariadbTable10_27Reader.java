@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.mariadb.metadata;
 
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.metadata.MySqlTable564Reader;
 import com.sqlapp.data.db.metadata.ColumnReader;
@@ -32,7 +31,6 @@ public class MariadbTable10_27Reader extends MySqlTable564Reader {
 	protected MariadbTable10_27Reader(Dialect dialect) {
 		super(dialect);
 	}
-
 
 	/*
 	 * (non-Javadoc)

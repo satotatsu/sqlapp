@@ -28,8 +28,8 @@ public class SapHanaCreateTableFactory extends AbstractCreateTableFactory<SapHan
 	@Override
 	protected void addCreateObject(final Table obj, final SapHanaSqlBuilder builder) {
 		builder.create();
-		builder.column(obj.getTableDataStoreType()==null||obj.getTableDataStoreType().isColumn());
-		builder.row(obj.getTableDataStoreType()!=null&&obj.getTableDataStoreType().isRow());
+		builder.column(obj.getTableDataStoreType() == null || obj.getTableDataStoreType().isColumn());
+		builder.row(obj.getTableDataStoreType() != null && obj.getTableDataStoreType().isRow());
 		builder.table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}

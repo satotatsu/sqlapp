@@ -50,13 +50,11 @@ public class MySqlUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UniqueConstraint> result = list();
-		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = CommonUtils
-				.quadKeyMap();
+		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = CommonUtils.quadKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -64,19 +62,16 @@ public class MySqlUniqueConstraintReader extends UniqueConstraintReader {
 				String schema_name = getString(rs, "constraint_schema");
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				UniqueConstraint c = map.get(catalog_name, schema_name,
-						table_name, constraint_name);
+				UniqueConstraint c = map.get(catalog_name, schema_name, table_name, constraint_name);
 				if (c == null) {
-					boolean primary = !"UNIQUE".equalsIgnoreCase(getString(rs,
-							"constraint_type"));
+					boolean primary = !"UNIQUE".equalsIgnoreCase(getString(rs, "constraint_type"));
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setCatalogName(catalog_name);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					// CONSTRAINT_TYPE
 					result.add(c);
-					map.put(catalog_name, schema_name, table_name,
-							constraint_name, c);
+					map.put(catalog_name, schema_name, table_name, constraint_name, c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(table_name);

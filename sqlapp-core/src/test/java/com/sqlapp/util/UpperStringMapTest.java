@@ -27,14 +27,14 @@ public class UpperStringMapTest {
 
 	@Test
 	public void testContainsKeyObject() {
-		UpperMap<String> map=new UpperMap<String>();
+		UpperMap<String> map = new UpperMap<String>();
 		map.put("aaaa", "a");
 		assertTrue(map.containsKey("aaaa"));
 	}
 
 	@Test
 	public void testGetObject() {
-		UpperMap<String> map=new UpperMap<String>();
+		UpperMap<String> map = new UpperMap<String>();
 		map.put("aaaa", "a");
 		assertEquals(map.get("aaaa"), "a");
 		assertEquals(map.get("Aaaa"), "a");
@@ -47,12 +47,12 @@ public class UpperStringMapTest {
 
 	@Test
 	public void testRemoveObject() {
-		UpperMap<String> map=new UpperMap<String>();
+		UpperMap<String> map = new UpperMap<String>();
 		map.put("aaaa", "a");
 		map.put("aaab", "b");
 		assertTrue(map.containsKey("AAAA"));
 		map.remove("aaaa");
-		assertTrue(map.get("aaaa")==null);
+		assertTrue(map.get("aaaa") == null);
 	}
 
 }

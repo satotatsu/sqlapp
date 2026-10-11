@@ -155,6 +155,10 @@ public enum RowComparisonOperator {
 			columnsHolder.addName(col, prefix, builder);
 			addOperator(builder);
 			builder.space()._add("?");
+			BindParameter firstParameter = new BindParameter();
+			firstParameter.setColumn(col);
+			firstParameter.setValue(row.get(col));
+			holder.getBindParameters().add(firstParameter);
 			for (int i = 1; i < size; i++) {
 				int[] cnt = new int[1];
 				cnt[0] = i;

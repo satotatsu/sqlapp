@@ -22,6 +22,13 @@ module com.sqlapp.core.virtica {
 	requires java.sql;
 	requires com.sqlapp.core;
 	exports com.sqlapp.data.db.dialect.virtica;
+	exports com.sqlapp.data.db.dialect.virtica.bulk;
 	exports com.sqlapp.data.db.dialect.virtica.metadata;
 	exports com.sqlapp.data.db.dialect.virtica.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.virtica.bulk.VirticaBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.virtica.bulk.VirticaBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+			com.sqlapp.data.db.dialect.virtica.bulk.VirticaSetBasedMigrationSnapshotProvider;
 }

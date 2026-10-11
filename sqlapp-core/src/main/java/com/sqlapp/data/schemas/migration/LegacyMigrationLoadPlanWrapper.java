@@ -8,6 +8,7 @@ package com.sqlapp.data.schemas.migration;
 import java.util.List;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.JoinKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan.LoadDataSet;
@@ -31,7 +32,8 @@ public class LegacyMigrationLoadPlanWrapper {
 
 	public LegacyMigrationLoadPlanWrapper(LegacyMigrationLoadPlan inner) {
 		this.inner = inner;
-		this.dataSets = inner.getDataSets().stream().map(o -> new LoadDataSetWrapper(o)).toList();
+		this.dataSets = inner.getDataSets() == null ? List.of()
+				: inner.getDataSets().stream().map(o -> new LoadDataSetWrapper(o)).toList();
 	}
 
 	public String getFormat() {
@@ -82,7 +84,7 @@ public class LegacyMigrationLoadPlanWrapper {
 		return this.inner.getResolvedDataSetIds();
 	}
 
-	public String getTableOperationMode() {
+	public LegacyMigrationLoadPlan.TableOperationMode getTableOperationMode() {
 		return this.inner.getTableOperationMode();
 	}
 
@@ -98,7 +100,11 @@ public class LegacyMigrationLoadPlanWrapper {
 		return this.inner.isDeleteCommittedRoots();
 	}
 
-	public String getRootCursorStrategy() {
+	public String getStagingTablePrefix() {
+		return this.inner.getStagingTablePrefix();
+	}
+
+	public LegacyMigrationLoadPlan.RootCursorStrategy getRootCursorStrategy() {
 		return this.inner.getRootCursorStrategy();
 	}
 
@@ -129,6 +135,10 @@ public class LegacyMigrationLoadPlanWrapper {
 			return this.inner.getParentDataSetId();
 		}
 
+		public String getTargetCatalog() {
+			return this.inner.getTargetCatalog();
+		}
+
 		public int getHierarchyDepth() {
 			return this.inner.getHierarchyDepth();
 		}
@@ -145,6 +155,10 @@ public class LegacyMigrationLoadPlanWrapper {
 			return this.inner.getTargetPrimaryKey();
 		}
 
+		public List<String> getTargetForeignKey() {
+			return this.inner.getTargetForeignKey();
+		}
+
 		public LoadDataSetWrapper(final LoadDataSet inner) {
 			this.inner = inner;
 			fields = inner.getFields().stream().map(o -> new LoadFieldWrapper(o)).toList();
@@ -153,6 +167,7 @@ public class LegacyMigrationLoadPlanWrapper {
 
 		private Table stagingTable;
 		private Table targetTable;
+		private ForeignKeyConstraint targetForeignKeyConstraint;
 	}
 
 	@Getter
@@ -188,7 +203,7 @@ public class LegacyMigrationLoadPlanWrapper {
 			return this.inner.isTargetGenerated();
 		}
 
-		public String getAction() {
+		public LegacyMigrationMapping.ColumnAction getAction() {
 			return this.inner.getAction();
 		}
 
@@ -207,6 +222,5 @@ public class LegacyMigrationLoadPlanWrapper {
 
 		private Column parentStagingColumn;
 		private Column childStagingColumn;
-		private Column targetForeignKeyColumn;
 	}
 }

@@ -61,20 +61,21 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 	void testDeleteChildren() throws SQLException {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
+			connection.setAutoCommit(false);
 			Schema schema = createSchema(connection);
 			Table parentTable = schema.getTables().get("PARENT_TABLE");
 			Table childTable = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables())) {
-				session.setTableOperationMode(table -> table == childTable ? TableOperationMode.DELETE
-						: TableOperationMode.NONE);
+			new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
+				session.setTableOperationMode(
+						table -> table == childTable ? TableOperationMode.DELETE : TableOperationMode.NONE);
 
 				Row parent = session.newRow(parentTable);
 				parent.put("ID", 1);
 
 				Row child = session.newRow(childTable);
 				child.put("ID", 11);
-			}
+			});
 
 			parentTable.read(connection);
 			childTable.read(connection);
@@ -92,13 +93,14 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 	void testReplaceChildrenByRootRows() throws SQLException {
 		try (HikariDataSource dataSource = newInternalDataSource();
 				Connection connection = dataSource.getConnection()) {
+			connection.setAutoCommit(false);
 			Schema schema = createSchema(connection);
 			Table parentTable = schema.getTables().get("PARENT_TABLE");
 			Table childTable = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables())) {
-				session.setTableOperationMode(table -> table == childTable ? TableOperationMode.REPLACE
-						: TableOperationMode.UPDATE);
+			new JdbcTreeDataSession(connection, schema.getTables()).execute(session -> {
+				session.setTableOperationMode(
+						table -> table == childTable ? TableOperationMode.REPLACE : TableOperationMode.UPDATE);
 
 				Row parent = session.newRow(parentTable);
 				parent.put("ID", 1);
@@ -110,13 +112,13 @@ class JdbcTreeDataSessionDeleteReplaceTest extends AbstractDbCommandTest {
 				child = session.newRow(childTable);
 				child.put("ID", 14);
 				child.put("TXT", "child-14");
-			}
+			});
 
 			parentTable.read(connection);
 			childTable.read(connection);
 			assertEquals(2, parentTable.getRows().size());
-			assertEquals("parent-1-replaced", parentTable.getRows().find(row -> Integer.valueOf(1).equals(row.get("ID")))
-					.get("TXT"));
+			assertEquals("parent-1-replaced",
+					parentTable.getRows().find(row -> Integer.valueOf(1).equals(row.get("ID"))).get("TXT"));
 			assertEquals(3, childTable.getRows().size());
 			assertTrue(childTable.getRows().stream().noneMatch(row -> Integer.valueOf(11).equals(row.get("ID"))));
 			assertTrue(childTable.getRows().stream().noneMatch(row -> Integer.valueOf(12).equals(row.get("ID"))));

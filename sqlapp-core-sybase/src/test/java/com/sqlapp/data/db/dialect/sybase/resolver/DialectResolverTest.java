@@ -53,6 +53,32 @@ public class DialectResolverTest {
 	}
 
 	@Test
+	public void testMetadataReaderIsAvailableAcrossAseVersions() {
+		assertCatalogReader(12, 5, 0);
+		assertCatalogReader(15, 7, 0);
+		assertCatalogReader(16, 0, 3);
+	}
+
+	private void assertCatalogReader(int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("ASE", major, minor, revision);
+		assertEquals("SybaseCatalogReader", dialect.getCatalogReader().getClass().getSimpleName());
+		assertEquals("SybaseRoleReader", dialect.getCatalogReader()
+				.getRoleReader().getClass().getSimpleName());
+		assertEquals("SybaseUserReader", dialect.getCatalogReader()
+				.getUserReader().getClass().getSimpleName());
+		assertEquals("SybasePublicDbLinkReader", dialect.getCatalogReader()
+				.getPublicDbLinkReader().getClass().getSimpleName());
+		assertEquals("SybaseRoleMemberReader", dialect.getCatalogReader()
+				.getRoleMemberReader().getClass().getSimpleName());
+		assertEquals("SybaseSettingReader", dialect.getCatalogReader()
+				.getSettingReader().getClass().getSimpleName());
+		assertEquals("SybaseDomainReader", dialect.getCatalogReader().getSchemaReader()
+				.getDomainReader().getClass().getSimpleName());
+		assertEquals("SybaseTriggerReader", dialect.getCatalogReader().getSchemaReader()
+				.getTriggerReader().getClass().getSimpleName());
+	}
+
+	@Test
 	public void testServiceLoader() {
 		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
 		boolean find = false;

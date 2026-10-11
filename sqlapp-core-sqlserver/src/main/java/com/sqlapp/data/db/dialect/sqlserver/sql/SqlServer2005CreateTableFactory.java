@@ -36,14 +36,14 @@ import com.sqlapp.data.schemas.Table;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2005CreateTableFactory extends
-		AbstractCreateTableFactory<SqlServerSqlBuilder> {
+public class SqlServer2005CreateTableFactory extends AbstractCreateTableFactory<SqlServerSqlBuilder> {
 
 	@Override
 	protected void addOption(final Table table, final SqlServerSqlBuilder builder) {
-		if(table.getPartitioning()!=null){
-			final AddObjectDetail<Partitioning,SqlServerSqlBuilder> addObjectDetail=this.getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
-			if (addObjectDetail!=null){
+		if (table.getPartitioning() != null) {
+			final AddObjectDetail<Partitioning, SqlServerSqlBuilder> addObjectDetail = this
+					.getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
+			if (addObjectDetail != null) {
 				addObjectDetail.addObjectDetail(table.getPartitioning(), builder);
 			}
 		}

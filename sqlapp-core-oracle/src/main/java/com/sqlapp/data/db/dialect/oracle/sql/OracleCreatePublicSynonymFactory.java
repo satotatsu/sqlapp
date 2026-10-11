@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreatePublicSynonymFactory;
 import com.sqlapp.data.schemas.PublicSynonym;
 
-public class OracleCreatePublicSynonymFactory extends
-		AbstractCreatePublicSynonymFactory<OracleSqlBuilder> {
+public class OracleCreatePublicSynonymFactory extends AbstractCreatePublicSynonymFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final PublicSynonym obj, OracleSqlBuilder builder) {

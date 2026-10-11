@@ -32,54 +32,55 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Data
-public class AbstractHtmlElement implements Cloneable{
-	private String id=null;
-	
+public class AbstractHtmlElement implements Cloneable {
+	private String id = null;
+
 	@Getter(lombok.AccessLevel.PUBLIC)
 	@Setter(lombok.AccessLevel.PROTECTED)
 	private AbstractHtmlElement parent;
-	
-	private List<AbstractHtmlElement> children=new ArrayList<>();
-	
-	protected void add(AbstractHtmlElement element){
-		if (children==null){
-			children=new ArrayList<>();
+
+	private List<AbstractHtmlElement> children = new ArrayList<>();
+
+	protected void add(AbstractHtmlElement element) {
+		if (children == null) {
+			children = new ArrayList<>();
 		}
 		children.add(element);
 	}
-	
-	protected <T extends AbstractHtmlElement> List<T> getChildren(Class<T> clazz){
-		if (children==null){
+
+	protected <T extends AbstractHtmlElement> List<T> getChildren(Class<T> clazz) {
+		if (children == null) {
 			return Collections.emptyList();
 		}
 		@SuppressWarnings("unchecked")
-		List<T> list=children.stream().filter(e->e!=null&&clazz.isInstance(e)).map(e->(T)e).collect(Collectors.toList());
+		List<T> list = children.stream().filter(e -> e != null && clazz.isInstance(e)).map(e -> (T) e)
+				.collect(Collectors.toList());
 		return list;
 	}
-	
+
 	@Override
-	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder();
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder();
 		builder.add("id", id);
 		builder.add("children", children);
 		toString(builder);
 		return builder.toString();
 	}
-	
-	protected void toString(ToStringBuilder builder){
-		
+
+	protected void toString(ToStringBuilder builder) {
+
 	}
-	
+
 	@Override
-	public AbstractHtmlElement clone(){
+	public AbstractHtmlElement clone() {
 		AbstractHtmlElement clone;
 		try {
-			clone = (AbstractHtmlElement)super.clone();
-			List<AbstractHtmlElement> cloneChildren=CommonUtils.list();
-			for(AbstractHtmlElement child:children){
+			clone = (AbstractHtmlElement) super.clone();
+			List<AbstractHtmlElement> cloneChildren = CommonUtils.list();
+			for (AbstractHtmlElement child : children) {
 				cloneChildren.add(child.clone());
 			}
-			clone.children=cloneChildren;
+			clone.children = cloneChildren;
 			return clone;
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException(e);

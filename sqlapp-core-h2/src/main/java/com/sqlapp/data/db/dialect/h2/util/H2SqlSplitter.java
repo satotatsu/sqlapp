@@ -27,23 +27,25 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 
-public class H2SqlSplitter extends SqlSplitter{
+public class H2SqlSplitter extends SqlSplitter {
 
 	public H2SqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern FUNCTION_PATTERN=Pattern.compile("(?<all>\\s*(CREATE|ALTER)\\s+(?<type>ALIAS)[^;]*?\\s+AS\\s+\\$\\$(.*?)\\$\\$).*", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
-	
+
+	private static final Pattern FUNCTION_PATTERN = Pattern.compile(
+			"(?<all>\\s*(CREATE|ALTER)\\s+(?<type>ALIAS)[^;]*?\\s+AS\\s+\\$\\$(.*?)\\$\\$).*",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isStartStatement(String text, StringHolder stringHolder){
-				Matcher matcher=stringHolder.substringMatcher(FUNCTION_PATTERN);
-				if (matcher.matches()){
-					String all=matcher.group("all");
-					setPosition(stringHolder.getPosition()+all.length());
+			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				Matcher matcher = stringHolder.substringMatcher(FUNCTION_PATTERN);
+				if (matcher.matches()) {
+					String all = matcher.group("all");
+					setPosition(stringHolder.getPosition() + all.length());
 					return true;
 				}
 				return false;

@@ -58,8 +58,7 @@ public class HsqlTableReader extends TableReader {
 	 * @param connection
 	 * @param context
 	 */
-	protected List<Table> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -120,8 +119,7 @@ public class HsqlTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

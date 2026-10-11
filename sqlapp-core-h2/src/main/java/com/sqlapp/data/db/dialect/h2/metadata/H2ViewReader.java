@@ -48,9 +48,8 @@ public class H2ViewReader extends AbstractISViewReader {
 		return new H2ColumnReader(this.getDialect());
 	}
 
-	private static final Pattern pattern = Pattern.compile(
-			"CREATE.+VIEW.+[\\s]+AS[\\s]+(.*)", Pattern.CASE_INSENSITIVE
-					+ Pattern.MULTILINE);
+	private static final Pattern pattern = Pattern.compile("CREATE.+VIEW.+[\\s]+AS[\\s]+(.*)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
 	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
@@ -73,8 +72,7 @@ public class H2ViewReader extends AbstractISViewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

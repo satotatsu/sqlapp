@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
@@ -49,13 +50,14 @@ class ExcelUtilsTest {
 			ExcelUtils.writeWorkbook(workbook, file);
 		}
 		File file = new File(testProjectDir, "sample.xlsx");
-		try (XSSFWorkbook workbook = new XSSFWorkbook(file)) {
+		ExcelUtils.readWorkbook(file, workbook -> {
 			Sheet sheet = ExcelUtils.getSheet(workbook, "sheet1");
 			Row row = sheet.getRow(0);
 			Cell cell = row.getCell(0);
 			Object obj = ExcelUtils.getCellValue(cell);
 			assertEquals(3, obj);
-		}
+		});
+		Files.delete(file.toPath());
 	}
 
 }

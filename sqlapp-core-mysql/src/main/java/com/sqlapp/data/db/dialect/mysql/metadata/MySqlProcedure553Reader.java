@@ -44,8 +44,7 @@ public class MySqlProcedure553Reader extends MySqlProcedureReader {
 	}
 
 	@Override
-	protected Procedure createProcedure(ExResultSet rs,
-			ProductVersionInfo productVersionInfo) throws SQLException {
+	protected Procedure createProcedure(ExResultSet rs, ProductVersionInfo productVersionInfo) throws SQLException {
 		if (productVersionInfo.lt(5, 5, 3)) {
 			return super.createProcedure(rs, productVersionInfo);
 		}

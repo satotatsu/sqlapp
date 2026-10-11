@@ -42,58 +42,55 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class SapHanaUtils {
 
-	protected static Index createIndex(Dialect dialect, final Connection connection, ResultSet rs) throws SQLException{
-        Index index=new Index(getString(rs, INDEX_NAME));
-        index.setSchemaName(getString(rs, SCHEMA_NAME));
-        index.setTableName(getString(rs, TABLE_NAME));
-        index.setId(""+rs.getLong("INDEX_OID"));
-        String type=getString(rs, INDEX_TYPE);
-        setIndexType(type, index);
+	protected static Index createIndex(Dialect dialect, final Connection connection, ResultSet rs) throws SQLException {
+		Index index = new Index(getString(rs, INDEX_NAME));
+		index.setSchemaName(getString(rs, SCHEMA_NAME));
+		index.setTableName(getString(rs, TABLE_NAME));
+		index.setId("" + rs.getLong("INDEX_OID"));
+		String type = getString(rs, INDEX_TYPE);
+		setIndexType(type, index);
 		setSpecifics(dialect, rs, "BTREE_FILL_FACTOR", index);
 		setSpecifics(dialect, rs, "BTREE_SPLIT_TYPE", index);
 		setSpecifics(dialect, rs, "BTREE_SPLIT_POSITION", index);
-        return index;
+		return index;
 	}
 
-	static void setIndexType(final String productIndexType,
-			final Index index) {
-		final boolean unique = productIndexType != null
-				&& productIndexType.contains("UNIQUE");
+	static void setIndexType(final String productIndexType, final Index index) {
+		final boolean unique = productIndexType != null && productIndexType.contains("UNIQUE");
 		final String type = productIndexType == null ? null
-				: productIndexType.replace(" UNIQUE", "")
-						.replace("_UNIQUE", "");
+				: productIndexType.replace(" UNIQUE", "").replace("_UNIQUE", "");
 		index.setUnique(unique);
 		index.setIndexType(IndexType.parse(type));
 		index.setCompression(type != null && type.startsWith("CP"));
 	}
 
-	protected static String getString(ResultSet rs, String columnLabel) throws SQLException{
+	protected static String getString(ResultSet rs, String columnLabel) throws SQLException {
 		return rs.getNString(columnLabel);
 	}
-	
-	protected static JdbcQueryHandler execute(final Connection connection, SqlNode node
-			, final ParametersContext context, ResultSetNextHandler handler) {
-		JdbcQueryHandler jdbcQueryHandler=new JdbcQueryHandler(node, handler);
+
+	protected static JdbcQueryHandler execute(final Connection connection, SqlNode node,
+			final ParametersContext context, ResultSetNextHandler handler) {
+		JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
 		return jdbcQueryHandler.execute(connection, context);
 	}
 
-	
-	protected static SqlNodeCache getSqlNodeCache(){
+	protected static SqlNodeCache getSqlNodeCache() {
 		return SqlNodeCache.getInstance(SapHanaUtils.class);
 	}
 
 	/**
 	 * DB固有情報を設定します
+	 * 
 	 * @param rs
 	 * @param columnName
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected static void setSpecifics(Dialect dialect, ResultSet rs, String columnName
-			, AbstractDbObject<?> obj) throws SQLException{
-		Object val=rs.getObject(columnName);
-		if (!isEmpty(val)){
-			String text=Converters.getDefault().convertString(val, val.getClass());
+	protected static void setSpecifics(Dialect dialect, ResultSet rs, String columnName, AbstractDbObject<?> obj)
+			throws SQLException {
+		Object val = rs.getObject(columnName);
+		if (!isEmpty(val)) {
+			String text = Converters.getDefault().convertString(val, val.getClass());
 			obj.getSpecifics().put(columnName, text);
 		}
 	}

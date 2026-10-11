@@ -70,7 +70,7 @@ public class Postgres130 extends Postgres120 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres130CatalogReader(this);
 	}
-	
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres130SqlFactoryRegistry(this);

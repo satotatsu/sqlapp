@@ -38,16 +38,14 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlFunctionArgumentReader extends
-		RoutineArgumentReader<Function> {
+public class MySqlFunctionArgumentReader extends RoutineArgumentReader<Function> {
 
 	protected MySqlFunctionArgumentReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -64,9 +62,8 @@ public class MySqlFunctionArgumentReader extends
 		return getSqlNodeCache().getString("functionArguments.sql");
 	}
 
-	protected void createNamedArguments(ExResultSet rs,
-			ProductVersionInfo productVersionInfo, List<NamedArgument> result)
-			throws SQLException {
+	protected void createNamedArguments(ExResultSet rs, ProductVersionInfo productVersionInfo,
+			List<NamedArgument> result) throws SQLException {
 		String paramList = getString(rs, "param_list");
 		String[] args = paramList.split("\\s*,\\s*");
 		for (String arg : args) {
@@ -75,8 +72,7 @@ public class MySqlFunctionArgumentReader extends
 		}
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs, String arg)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs, String arg) throws SQLException {
 		Function routine = new Function(getString(rs, ROUTINE_NAME));
 		routine.setDialect(this.getDialect());
 		routine.setCatalogName(getString(rs, CATALOG_NAME));
@@ -90,8 +86,7 @@ public class MySqlFunctionArgumentReader extends
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		SchemaUtils.setRoutine(obj, routine);
-		this.getDialect().setDbType(productDataType, null,null,
-				obj);
+		this.getDialect().setDbType(productDataType, null, null, obj);
 		return obj;
 	}
 

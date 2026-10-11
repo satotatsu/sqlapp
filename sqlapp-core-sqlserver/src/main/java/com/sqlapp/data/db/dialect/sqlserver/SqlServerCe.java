@@ -24,65 +24,65 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.CascadeRule;
 
-public class SqlServerCe extends SqlServer2005{
-    /**
+public class SqlServerCe extends SqlServer2005 {
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -7304524420135145648L;
 
-    protected SqlServerCe(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SqlServerCe(Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-    }
+	}
 
-    /**
-     * データ型の登録
-     */
+	/**
+	 * データ型の登録
+	 */
 	@Override
-    protected void registerDataType(){
-    	super.registerDataType();
+	protected void registerDataType() {
+		super.registerDataType();
 	}
 
 	/**
 	 * DB製品名
 	 */
-    public String getProductName(){
-        return "SQLServerCE";
-    }
+	public String getProductName() {
+		return "SQLServerCE";
+	}
 
-    public boolean supportsWith(){
-        return true;
-    }
-    /**
-     * TOP句のサポート
-     */
-    public boolean supportsTop() {
-        return true;
-    }
+	public boolean supportsWith() {
+		return true;
+	}
 
-    public boolean supportsRuleOnDelete(CascadeRule rule)
-    {
-        return true;
-    }
+	/**
+	 * TOP句のサポート
+	 */
+	public boolean supportsTop() {
+		return true;
+	}
 
-    public boolean supportsRuleOnUpdate(CascadeRule rule)
-    {
-        return true;
-    }
-    public boolean supportsDefaultValueFunction()
-    {
-        return true;
-    }
+	public boolean supportsRuleOnDelete(CascadeRule rule) {
+		return true;
+	}
+
+	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+		return true;
+	}
+
+	public boolean supportsDefaultValueFunction() {
+		return true;
+	}
+
 	@Override
-    public int hashCode(){
-    	return super.hashCode()+37;
-    }
+	public int hashCode() {
+		return super.hashCode() + 37;
+	}
 
-    /**
-     * 同値判定
-     */
+	/**
+	 * 同値判定
+	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;

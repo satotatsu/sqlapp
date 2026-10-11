@@ -29,7 +29,8 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
  * @author satoh
  * 
  */
-public class OracleCreateForeignKeyConstraintFactory extends AbstractCreateForeignKeyConstraintFactory<OracleSqlBuilder> {
+public class OracleCreateForeignKeyConstraintFactory
+		extends AbstractCreateForeignKeyConstraintFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addMatchOption(ForeignKeyConstraint obj, OracleSqlBuilder builder) {

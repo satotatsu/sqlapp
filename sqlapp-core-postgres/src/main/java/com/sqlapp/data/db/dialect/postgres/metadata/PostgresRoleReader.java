@@ -47,8 +47,7 @@ public class PostgresRoleReader extends RoleReader {
 	}
 
 	@Override
-	protected List<Role> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Role> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Role> result = list();
@@ -74,8 +73,8 @@ public class PostgresRoleReader extends RoleReader {
 		setSpecifics(rs, "rolinherit", "inherit", obj);
 		setSpecifics(rs, "rolcreaterole", "createrole", obj);
 		setSpecifics(rs, "rolcreatedb", "createdb", obj);
-		//TODO bugs
-		//setDbSpecificInfo(rs, "rolcatupdate", "updatedb", obj);
+		// TODO bugs
+		// setDbSpecificInfo(rs, "rolcatupdate", "updatedb", obj);
 		setSpecifics(rs, "rolcanlogin", "login", obj);
 		setSpecifics(rs, "rolconnlimit", "connection limit", obj);
 		// setDbSpecificInfo(rs, "rolpassword", obj);

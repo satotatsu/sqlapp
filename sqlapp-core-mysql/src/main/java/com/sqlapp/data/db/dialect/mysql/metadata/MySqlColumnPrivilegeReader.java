@@ -47,8 +47,8 @@ public class MySqlColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context, ProductVersionInfo productVersionInfo) {
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
+			ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ColumnPrivilege> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -65,8 +65,7 @@ public class MySqlColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return getSqlNodeCache().getString("columnPrivileges.sql");
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs) throws SQLException {
 		String catalogName = getString(rs, TABLE_CATALOG);
 		String schemaName = getString(rs, TABLE_SCHEMA);
 		String objectName = getString(rs, TABLE_NAME);

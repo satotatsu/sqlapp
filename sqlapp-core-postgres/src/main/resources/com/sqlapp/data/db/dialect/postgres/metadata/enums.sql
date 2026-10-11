@@ -3,6 +3,7 @@ SELECT
 , n.nspname
 , t.typname
 , e.enumlabel
+, obj_description(t.oid, 'pg_type') AS remarks
 FROM pg_catalog.pg_enum e
 INNER JOIN pg_catalog.pg_type t
   on (e.enumtypid=t.oid)
@@ -15,4 +16,4 @@ WHERE 1=1
   /*if isNotEmpty(domainName)*/
   AND t.typname IN /*domainName*/('%')
   /*end*/
-ORDER BY n.nspname, t.typname
+ORDER BY n.nspname, t.typname, e.oid

@@ -20,10 +20,13 @@
 package com.sqlapp.util.iterator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -54,5 +57,57 @@ class MultiIteratorTest {
 			builder.append(val);
 		}
 		assertEquals(result, builder.toString());
+	}
+
+	@Test
+	void listBackedIterableCanBeTraversedMoreThanOnce() {
+		final MultiIterable<List<Integer>, Integer> iterable = new MultiIterable<>(
+				List.of(List.of(1), List.of(2)), List::iterator);
+
+		assertEquals(List.of(1, 2), collect(iterable));
+		assertEquals(List.of(1, 2), collect(iterable));
+	}
+
+	private static <T> List<T> collect(final Iterable<T> iterable) {
+		final java.util.ArrayList<T> values = new java.util.ArrayList<>();
+		iterable.forEach(values::add);
+		return values;
+	}
+
+	@Test
+	void closesCurrentAndParentWhilePreservingReadFailure() {
+		final RuntimeException readFailure = new RuntimeException("read");
+		final Exception currentCloseFailure = new Exception("current close");
+		final Exception parentCloseFailure = new Exception("parent close");
+		final AtomicInteger closes = new AtomicInteger();
+		final class ParentIterator implements Iterator<Integer>, AutoCloseable {
+			private final Iterator<Integer> delegate = List.of(1).iterator();
+			@Override public boolean hasNext() { return delegate.hasNext(); }
+			@Override public Integer next() { return delegate.next(); }
+			@Override public void close() throws Exception {
+				closes.incrementAndGet();
+				throw parentCloseFailure;
+			}
+		}
+		final class CurrentIterator implements Iterator<String>, AutoCloseable {
+			@Override public boolean hasNext() { throw readFailure; }
+			@Override public String next() { throw new AssertionError("next must not be called"); }
+			@Override public void close() throws Exception {
+				closes.incrementAndGet();
+				throw currentCloseFailure;
+			}
+		}
+		final MultiIterator<Integer, String> iterator = new MultiIterator<>(new ParentIterator(),
+				value -> new CurrentIterator());
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class, iterator::hasNext);
+
+		assertSame(readFailure, thrown);
+		assertEquals(2, closes.get());
+		assertEquals(2, thrown.getSuppressed().length);
+		assertSame(currentCloseFailure, thrown.getSuppressed()[0]);
+		assertSame(parentCloseFailure, thrown.getSuppressed()[1]);
+		iterator.close();
+		assertEquals(2, closes.get());
 	}
 }

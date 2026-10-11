@@ -174,6 +174,11 @@ public class SapHana extends Dialect {
 	}
 
 	@Override
+	public boolean supportsMerge() {
+		return true;
+	}
+
+	@Override
 	public boolean supportsIdentitySequencePreallocation() {
 		return true;
 	}

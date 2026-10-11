@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-10T00:19:24.144Z" hostname="DESKTOP-KFUI26G" time="2.19">
+  <properties/>
+  <testcase name="registersDedicatedBulkProviders()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="1.264"/>
+  <testcase name="rejectsUnsupportedReleaseAndUnidentifiedVendor()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="0.034"/>
+  <testcase name="propagatesRetryWithoutReplayingRowsAndClosesIterator()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="0.322"/>
+  <testcase name="generatesModelDdlAndRejectsKeylessMerge()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="0.429"/>
+  <testcase name="resolvesReleaseBannerWithoutPollutingPostgresCache()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="0.014"/>
+  <testcase name="preservesCompleteDefinitionThroughXmlWithoutDuplicatingComponents()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="0.096"/>
+  <testcase name="surfacesIdentificationFailure()" classname="com.sqlapp.data.db.dialect.cockroach.CockroachDialectTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

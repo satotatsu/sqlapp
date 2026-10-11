@@ -38,9 +38,8 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> tables)
-			throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> tables) throws SQLException {
 		super.setMetadataDetail(connection, context, tables);
 		if (tables == null || tables.isEmpty()) {
 			return;
@@ -49,8 +48,7 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 		try {
 			execute(connection, node, context, new ResultSetNextHandler() {
 				@Override
-				public void handleResultSetNext(final ExResultSet rs)
-						throws SQLException {
+				public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 					applyAnnotation(rs, tables);
 				}
 			});
@@ -59,13 +57,11 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 				throw e;
 			}
 			logger.warn("Oracle schema annotation metadata is unavailable or "
-					+ "not permitted; annotations are skipped. "
-					+ e.getMessage());
+					+ "not permitted; annotations are skipped. " + e.getMessage());
 		}
 	}
 
-	private void applyAnnotation(final ExResultSet rs,
-			final List<Table> tables) throws SQLException {
+	private void applyAnnotation(final ExResultSet rs, final List<Table> tables) throws SQLException {
 		final String owner = getString(rs, "ANNOTATION_OWNER");
 		final String objectName = getString(rs, "OBJECT_NAME");
 		final String objectType = getString(rs, "OBJECT_TYPE");
@@ -74,14 +70,12 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 		if ("TABLE".equalsIgnoreCase(objectType)) {
 			final Table table = findTable(tables, owner, objectName);
 			if (table != null) {
-				target = columnName == null ? table
-						: table.getColumns().get(columnName);
+				target = columnName == null ? table : table.getColumns().get(columnName);
 			}
 		} else if ("INDEX".equalsIgnoreCase(objectType)) {
 			for (Table table : tables) {
 				final Index index = table.getIndexes().get(objectName);
-				if (index != null && (owner == null
-						|| owner.equalsIgnoreCase(index.getSchemaName())
+				if (index != null && (owner == null || owner.equalsIgnoreCase(index.getSchemaName())
 						|| owner.equalsIgnoreCase(table.getSchemaName()))) {
 					target = index;
 					break;
@@ -89,18 +83,15 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 			}
 		}
 		if (target != null) {
-			OracleAnnotationUtils.setAnnotation(target,
-					getString(rs, "ANNOTATION_NAME"),
+			OracleAnnotationUtils.setAnnotation(target, getString(rs, "ANNOTATION_NAME"),
 					getString(rs, "ANNOTATION_VALUE"));
 		}
 	}
 
-	private Table findTable(final List<Table> tables, final String owner,
-			final String name) {
+	private Table findTable(final List<Table> tables, final String owner, final String name) {
 		for (Table table : tables) {
 			if (name.equalsIgnoreCase(table.getName())
-					&& (owner == null
-							|| owner.equalsIgnoreCase(table.getSchemaName()))) {
+					&& (owner == null || owner.equalsIgnoreCase(table.getSchemaName()))) {
 				return table;
 			}
 		}

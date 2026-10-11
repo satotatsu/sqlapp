@@ -19,13 +19,25 @@
 
 package com.sqlapp.data.db.dialect.spanner.metadata;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.schemas.Order;
 
 public class SpannerUtilsTest {
 
 	@Test
 	public void testGetCascadeRule() {
 
+	}
+
+	@Test
+	public void testParseOrderIgnoresCatalogValueCase() {
+		assertEquals(Order.Asc, SpannerUtils.parseOrder("asc"));
+		assertEquals(Order.Desc, SpannerUtils.parseOrder("DESC"));
+		assertNull(SpannerUtils.parseOrder(null));
 	}
 
 }

@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.hsql.util.HsqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 
-public class HsqlCreateFunctionFactory extends
-		AbstractCreateFunctionFactory<HsqlSqlBuilder> {
+public class HsqlCreateFunctionFactory extends AbstractCreateFunctionFactory<HsqlSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Function obj, HsqlSqlBuilder builder) {
@@ -54,10 +53,8 @@ public class HsqlCreateFunctionFactory extends
 		if (obj.getSavepointLevel() != null) {
 			builder.lineBreak()._add(obj.getSavepointLevel());
 		}
-		if (obj.getMaxDynamicResultSets() != null
-				&& obj.getMaxDynamicResultSets().intValue() > 0) {
-			builder.lineBreak().dynamic().result().sets().space()
-					._add(obj.getMaxDynamicResultSets());
+		if (obj.getMaxDynamicResultSets() != null && obj.getMaxDynamicResultSets().intValue() > 0) {
+			builder.lineBreak().dynamic().result().sets().space()._add(obj.getMaxDynamicResultSets());
 		}
 		if (!"SQL".equals(obj.getLanguage())) {
 			builder.lineBreak().no().sql();
@@ -68,18 +65,13 @@ public class HsqlCreateFunctionFactory extends
 		if ("SQL".equals(obj.getLanguage())) {
 			builder.lineBreak()._add(obj.getStatement());
 		} else {
-			String methodFullPath=null;
-			if (obj.getClassNamePrefix()!=null){
-				methodFullPath=obj.getClassNamePrefix()+":"+obj.getClassName() + "." + obj.getMethodName();
-			} else{
-				methodFullPath=obj.getClassName() + "." + obj.getMethodName();
+			String methodFullPath = null;
+			if (obj.getClassNamePrefix() != null) {
+				methodFullPath = obj.getClassNamePrefix() + ":" + obj.getClassName() + "." + obj.getMethodName();
+			} else {
+				methodFullPath = obj.getClassName() + "." + obj.getMethodName();
 			}
-			builder.lineBreak()
-					.external()
-					.name()
-					.space()
-					.sqlChar(
-							methodFullPath);
+			builder.lineBreak().external().name().space().sqlChar(methodFullPath);
 		}
 	}
 }

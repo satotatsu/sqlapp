@@ -157,6 +157,66 @@ uses sqlapp's schema model, SQL generation, dialect handling, and
 | `deleteCommittedRoots` | `Property<Boolean>` | yes | `true` | Delete committed staging roots; otherwise mark them loaded |
 | `stagingTablePrefix` | `Property<String>` | yes | `TMP_` | Staging-table prefix |
 | `rootCursorStrategy` | `Property<String>` | yes | `DIALECT` | Cursor strategy selection |
+
+The Gradle properties remain strings for concise build-script configuration,
+but they are parsed at the command boundary into the typed load-plan enums.
+`tableOperationMode` accepts `INSERT`, `INSERT_IGNORE`, `MERGE`, or `REPLACE`;
+`rootCursorStrategy` accepts `DIALECT`, `HOLD`, or `REOPEN`. Generated YAML
+stores those stable enum names and rejects unknown values when read.
+The generated transaction policy is typed in the same way: `commitUnit` is
+`ROOT_BATCH`, `stagingDeleteTiming` is `BEFORE_COMMIT`, and `restartUnit` is
+`ROOT`. These values describe the loader's atomic restart contract and unknown
+policy names are rejected rather than interpreted loosely.
+Contract and load-plan field `action` values likewise use the shared
+`ColumnAction` enum. Their YAML representation remains the stable names such as
+`COPY`, `GENERATE`, and `DROP`; an unknown name is rejected during loading.
+Contract collection properties such as `ancestorKeys` and field
+`indexedSources` must be present even when empty. Explicit `null` values are
+rejected at the contract boundary instead of failing later during planning or
+provenance comparison.
+Repeated-column extraction uses the typed `occurrenceSourceMode` value
+`NUMBERED_COLUMNS`, which is serialized by that stable name and also rejects
+unknown names during contract loading.
+Occurrence lineage is validated as one unit: the mapping must contain exactly
+one `GENERATE` column with the `OCCURRENCE_NUMBER` conversion, the occurrence
+configuration must name that same staging and target column and declare a
+positive maximum, and every numbered source-column index must be within that
+maximum. The same rules apply when a generated contract is read, so incomplete
+or contradictory occurrence metadata is rejected before extraction or loading.
+The contract CSV `recordSeparator` is also typed and accepts only `CRLF` or
+`LF`; the Gradle and command properties remain strings at their configuration
+boundary and are converted before the contract is written.
+Generated-key lineage records use the typed `generationType` values `IDENTITY`
+and `SEQUENCE`; mappings retain these names in YAML and reject unknown values.
+Generated-key lineage is validated as one unit: its column must be part of the
+target primary key and have a matching `GENERATE` column mapping and target
+data type; `SEQUENCE` requires a sequence name while `IDENTITY` must not declare
+one.
+Mapping diagnostics require a typed severity, actionable code/message/action,
+and a valid table mapping reference when one is present. Diagnostic summary
+counts are checked against the actual warning, skipped, and error collections.
+Transformation history must be in strictly increasing sequence order. Its first
+and last fingerprints must match the mapping source and target, and adjacent
+steps with recorded boundary fingerprints must form a continuous chain.
+Mapping headers require a migration ID, an offset-based `generatedAt`, generator
+identity, and source/target schema file names and fingerprints. Optional source
+definition-file entries require both path and type, so incomplete provenance is
+rejected when the mapping is read rather than during a later generation step.
+Hierarchical relationships are validated bidirectionally: every child
+`parent` declaration must have exactly one matching hierarchical relationship,
+and every hierarchical relationship must have the corresponding child parent
+declaration. Parent reference pairs are validated with the relationship data.
+The source and resolved parent-reference pairs must match the relationship's
+source and target key pairs in the same order, preventing a structurally valid
+but semantically different join from reaching contract generation.
+When a contract records `mappingFile` and `mappingFingerprint`, validation also
+checks every non-skipped data set and its source/target identity, hierarchy,
+keys, occurrence settings, fields, and ancestor joins against that exact
+mapping. CSV file names and staging table names remain operational overrides;
+lineage semantics cannot be changed while retaining the mapping provenance.
+Load-plan roots must not declare `targetForeignKey` or `parentJoinKeys`; those
+properties are valid only for child data sets and malformed plans are rejected
+before a database connection is opened.
 | `databaseProductName` | `Property<String>` | no | — | Product used for offline dialect resolution |
 | `databaseProductMajorVersion` | `Property<Integer>` | yes | `0` | Product major version |
 | `databaseProductMinorVersion` | `Property<Integer>` | yes | `0` | Product minor version |

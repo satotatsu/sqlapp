@@ -1,0 +1,21 @@
+SELECT
+  a.OWNER
+, a.DIMENSION_NAME
+, a.ATTRIBUTE_NAME
+, a.LEVEL_NAME
+, a.COLUMN_NAME
+, l.DETAILOBJ_OWNER
+, l.DETAILOBJ_NAME
+FROM ALL_DIM_ATTRIBUTES a
+JOIN ALL_DIM_LEVELS l
+  ON a.OWNER = l.OWNER
+ AND a.DIMENSION_NAME = l.DIMENSION_NAME
+ AND a.LEVEL_NAME = l.LEVEL_NAME
+WHERE 1=1
+  /*if isNotEmpty(schemaName)*/
+  AND a.OWNER IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(dimensionName)*/
+  AND a.DIMENSION_NAME IN /*dimensionName*/('%')
+  /*end*/
+ORDER BY a.OWNER, a.DIMENSION_NAME, a.ATTRIBUTE_NAME, a.COLUMN_NAME

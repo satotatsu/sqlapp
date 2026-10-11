@@ -151,8 +151,7 @@ public class SimpleBeanUtilsTest {
 		final Parent2 parent2 = SimpleBeanUtils.convertCI(parent1, Parent2.class);
 		assertEquals("aaa", parent2.getName());
 		assertTrue(parent2.getChild_property() != null);
-		assertEquals(parent1.childProperty.id, parent2.getChild_property()
-				.getId());
+		assertEquals(parent1.childProperty.id, parent2.getChild_property().getId());
 	}
 
 	/**
@@ -197,15 +196,14 @@ public class SimpleBeanUtilsTest {
 		assertEquals("aaa", map.get(1).name);
 		assertEquals("bbb", map.get(2).name);
 	}
-	
-	
+
 	@Test
 	public void testSetField() {
 		final Dummy2 dummy = new Dummy2();
-		boolean bool= SimpleBeanUtils.setField(dummy, "id", -10);
+		boolean bool = SimpleBeanUtils.setField(dummy, "id", -10);
 		assertEquals(true, bool);
 		assertEquals(-10, dummy.getId());
-		bool= SimpleBeanUtils.setField(dummy, "baseId", -20);
+		bool = SimpleBeanUtils.setField(dummy, "baseId", -20);
 		assertEquals(true, bool);
 		assertEquals(-20, dummy.getBaseId());
 	}
@@ -226,10 +224,9 @@ public class SimpleBeanUtilsTest {
 		public void setBaseId(final int baseId) {
 			this.baseId = baseId;
 		}
-		
+
 	}
 
-	
 	static class Dummy1 {
 		public int id;
 		public String name;
@@ -240,7 +237,7 @@ public class SimpleBeanUtilsTest {
 		public Type typeVal;
 	}
 
-	static class Dummy2 extends Base{
+	static class Dummy2 extends Base {
 		private int id;
 		private String name;
 		private boolean enable = false;
@@ -257,8 +254,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param fiscal_year
-		 *            the fiscal_year to set
+		 * @param fiscal_year the fiscal_year to set
 		 */
 		public void setFiscal_year(final String fiscal_year) {
 			this.fiscal_year = fiscal_year;
@@ -272,8 +268,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param enable
-		 *            the enable to set
+		 * @param enable the enable to set
 		 */
 		public void setEnable(final boolean enable) {
 			this.enable = enable;
@@ -287,8 +282,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param id
-		 *            the id to set
+		 * @param id the id to set
 		 */
 		public void setId(final int id) {
 			this.id = id;
@@ -302,8 +296,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param name
-		 *            the name to set
+		 * @param name the name to set
 		 */
 		public void setName(final String name) {
 			this.name = name;
@@ -333,8 +326,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param id
-		 *            the id to set
+		 * @param id the id to set
 		 */
 		public void setId(final int id) {
 			this.id = id;
@@ -348,8 +340,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param name
-		 *            the name to set
+		 * @param name the name to set
 		 */
 		public void setName(final String name) {
 			this.name = name;
@@ -363,8 +354,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param child_property
-		 *            the child_property to set
+		 * @param child_property the child_property to set
 		 */
 		public void setChild_property(final Child2 child_property) {
 			this.child_property = child_property;
@@ -384,8 +374,7 @@ public class SimpleBeanUtilsTest {
 		}
 
 		/**
-		 * @param id
-		 *            the id to set
+		 * @param id the id to set
 		 */
 		public void setId(final int id) {
 			this.id = id;
@@ -394,6 +383,7 @@ public class SimpleBeanUtilsTest {
 
 	public static enum Type implements EnumConvertable<Integer> {
 		A(1), B(2);
+
 		Integer value;
 
 		Type(final Integer value) {

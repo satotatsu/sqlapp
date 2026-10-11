@@ -37,6 +37,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.TripleKeyMap;
+
 /**
  * DB2のインデックス読み込みクラス
  * 
@@ -50,8 +51,7 @@ public class Db2IndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Index> result = list();
@@ -62,8 +62,7 @@ public class Db2IndexReader extends IndexReader {
 				String catalogName = null;
 				String schemaName = getString(rs, SCHEMA_NAME);
 				String name = getString(rs, INDEX_NAME);
-				boolean uniqueness = !"D".equalsIgnoreCase(getString(rs,
-						"UNIQUERULE"));
+				boolean uniqueness = !"D".equalsIgnoreCase(getString(rs, "UNIQUERULE"));
 				Index index = map.get(catalogName, schemaName, name);
 				if (index == null) {
 					index = new Index(name);
@@ -71,11 +70,9 @@ public class Db2IndexReader extends IndexReader {
 					index.setSchemaName(schemaName);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(uniqueness);
-					index.setCompression("Y".equalsIgnoreCase(getString(rs,
-							"COMPRESSION")));
+					index.setCompression("Y".equalsIgnoreCase(getString(rs, "COMPRESSION")));
 					index.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
-					index.setIndexType(Db2Utils.getIndexType(getString(rs,
-							"INDEXTYPE")));
+					index.setIndexType(Db2Utils.getIndexType(getString(rs, "INDEXTYPE")));
 					index.setTableSpaceName(this.getString(rs, "table_space"));
 					index.setRemarks(getString(rs, REMARKS));
 					setSpecifics(rs, "PCTFREE", index);
@@ -91,8 +88,7 @@ public class Db2IndexReader extends IndexReader {
 				if ("I".equalsIgnoreCase(colOrder)) {
 					index.getColumns().add(new Column(columnName), true);
 				} else {
-					index.getColumns().add(new Column(columnName),
-							Order.parse(colOrder));
+					index.getColumns().add(new Column(columnName), Order.parse(colOrder));
 				}
 			}
 		});

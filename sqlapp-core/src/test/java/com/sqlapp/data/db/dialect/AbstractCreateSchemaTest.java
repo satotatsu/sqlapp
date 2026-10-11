@@ -33,22 +33,20 @@ public abstract class AbstractCreateSchemaTest extends AbstractSqlFactoryTest {
 	SqlFactory<Schema> dropOperationFactory;
 
 	protected void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Schema("scm"), SqlType.CREATE);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Schema("scm"), SqlType.CREATE);
 	}
 
 	protected String getSqlText(final String filename) throws Exception {
-		final SchemaCollection schemas=SchemaUtils.readXml(this.getClass(), filename);
-		final List<SqlOperation> operations=createOperationFactory.createSql(schemas);
-		final StringBuilder builder=new StringBuilder();
-		for(int i=0;i<operations.size();i++){
-			final SqlOperation operation=operations.get(i);
+		final SchemaCollection schemas = SchemaUtils.readXml(this.getClass(), filename);
+		final List<SqlOperation> operations = createOperationFactory.createSql(schemas);
+		final StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < operations.size(); i++) {
+			final SqlOperation operation = operations.get(i);
 			builder.append(operation.getSqlText());
 			builder.append(";\n\n");
 		}
-		return builder.substring(0, builder.length()-1).toString();
+		return builder.substring(0, builder.length() - 1).toString();
 	}
-	
 
 	@Override
 	protected abstract String productName();

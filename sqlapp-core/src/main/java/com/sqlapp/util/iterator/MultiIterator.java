@@ -19,19 +19,24 @@
 
 package com.sqlapp.util.iterator;
 
-import java.io.Closeable;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
-import com.sqlapp.util.FileUtils;
-
-public class MultiIterator<S, T> implements Iterator<T> {
+public class MultiIterator<S, T> implements Iterator<T>, AutoCloseable {
 
 	private Iterator<S> iterator;
 
 	private Iterator<T> current;
 
 	private Function<S, Iterator<T>> converter;
+	private final Set<Iterator<?>> closedIterators = Collections.newSetFromMap(new IdentityHashMap<>());
+	private boolean closed;
 
 	public MultiIterator(Iterable<S> iterable, Function<S, Iterator<T>> converter) {
 		this.iterator = iterable.iterator();
@@ -47,46 +52,68 @@ public class MultiIterator<S, T> implements Iterator<T> {
 
 	@Override
 	public boolean hasNext() {
-		boolean bool;
-		if (current == null) {
-			while (iterator.hasNext()) {
-				current = converter.apply(iterator.next());
-				bool = current.hasNext();
-				if (bool) {
-					return bool;
-				} else {
-					closeInternal(current);
-				}
-			}
-		} else {
-			bool = current.hasNext();
-			if (bool) {
-				return bool;
-			}
-			while (iterator.hasNext()) {
-				current = converter.apply(iterator.next());
-				bool = current.hasNext();
-				if (bool) {
-					return bool;
-				} else {
-					closeInternal(current);
-				}
-			}
+		if (closed) {
+			return false;
 		}
-		closeInternal(iterator);
-		return false;
+		try {
+			while (true) {
+				if (current != null) {
+					if (current.hasNext()) {
+						return true;
+					}
+					closeOne(null, current);
+					current = null;
+				}
+				if (!iterator.hasNext()) {
+					close();
+					return false;
+				}
+				current = Objects.requireNonNull(converter.apply(iterator.next()),
+						"converter returned a null iterator");
+			}
+		} catch (final RuntimeException | Error e) {
+			closeOnFailure(e);
+			throw e;
+		}
 	}
 
 	@Override
 	public T next() {
-		return current.next();
+		if (!hasNext()) {
+			throw new NoSuchElementException();
+		}
+		try {
+			return current.next();
+		} catch (final RuntimeException | Error e) {
+			closeOnFailure(e);
+			throw e;
+		}
 	}
 
-	private void closeInternal(Iterator<?> itr) {
-		if (itr instanceof Closeable) {
-			FileUtils.close((Closeable) itr);
-		} else if (itr instanceof AutoCloseable) {
-			FileUtils.close((AutoCloseable) itr);
+	@Override
+	public void close() {
+		if (closed) {
+			return;
 		}
+		closed = true;
+		closeOne(null, current, iterator);
+	}
+
+	private void closeOnFailure(final Throwable failure) {
+		if (closed) {
+			return;
+		}
+		closed = true;
+		closeOne(failure, current, iterator);
+	}
+
+	private void closeOne(final Throwable failure, final Iterator<?>... iterators) {
+		final List<Iterator<?>> open = new java.util.ArrayList<>(iterators.length);
+		for (final Iterator<?> candidate : iterators) {
+			if (candidate != null && closedIterators.add(candidate)) {
+				open.add(candidate);
+			}
+		}
+		IteratorCloseUtils.close(failure, open.toArray(Iterator<?>[]::new));
 	}
 }

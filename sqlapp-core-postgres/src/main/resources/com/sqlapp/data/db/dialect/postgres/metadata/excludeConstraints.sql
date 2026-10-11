@@ -6,7 +6,7 @@ SELECT DISTINCT
   , nr.nspname AS table_schema
   , r.relname AS table_name
   , a.attname AS column_name
-  , a.attnum
+  , key_position.position AS column_position
   , c.contype
   , CASE c.contype
     WHEN 'c' THEN 'CHECK'
@@ -15,20 +15,18 @@ SELECT DISTINCT
     WHEN 'u' THEN 'UNIQUE'
     WHEN 'x' THEN 'EXCLUDE'
     END AS constraint_type
-  , pg_get_constraintdef(c.oid) as consrc --êßñÒéÆ
+  , pg_get_constraintdef(c.oid) as consrc
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
-  , d.refobjsubid
   , c.conexclop
 FROM pg_catalog.pg_constraint c
 INNER JOIN pg_catalog.pg_class r
   ON (c.conrelid = r.oid)
-INNER JOIN pg_catalog.pg_depend d
-  ON (c.oid = d.objid
-  AND r.oid = d.refobjid)
+INNER JOIN generate_subscripts(c.conkey, 1) key_position(position)
+  ON (TRUE)
 INNER JOIN pg_catalog.pg_attribute a
   ON (r.oid = a.attrelid
-  AND d.refobjsubid = a.attnum )
+  AND a.attnum = c.conkey[key_position.position])
 INNER JOIN pg_catalog.pg_namespace nc
   ON (c.connamespace = nc.oid)
 INNER JOIN pg_catalog.pg_namespace nr
@@ -47,4 +45,4 @@ WHERE 1=1
   /*if isNotEmpty(constraintName)*/
   AND c.conname IN /*constraintName*/('%')
   /*end*/
-ORDER BY nr.nspname, r.relname, c.contype, c.conname, d.refobjsubid
+ORDER BY nr.nspname, r.relname, c.contype, c.conname, key_position.position

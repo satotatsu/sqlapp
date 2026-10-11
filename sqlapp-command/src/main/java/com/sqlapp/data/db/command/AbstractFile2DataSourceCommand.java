@@ -50,6 +50,9 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 
 	private List<File> files = null;
 
+	/** Schema model objects supplied directly instead of, or with, XML files. */
+	private List<DbCommonObject<?>> schemaObjects = null;
+
 	private SqlExecutor sqlExecutor = DefaultSqlExecutor.getInstance();
 
 	/*
@@ -60,6 +63,9 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	@Override
 	protected void doRun() {
 		List<DbCommonObject<?>> totalObjects = CommonUtils.list();
+		if (!CommonUtils.isEmpty(getSchemaObjects())) {
+			totalObjects.addAll(getSchemaObjects());
+		}
 		final ConvertHandler convertHandler = getConvertHandler();
 		if (!CommonUtils.isEmpty(getFiles())) {
 			for (final File file : getFiles()) {

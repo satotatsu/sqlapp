@@ -338,7 +338,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	private String normalize(String dataTypeName) {
 		String text = trim(dataTypeName);
-		text = CommonUtils.unwrap(dataTypeName, '"');
+		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)) return text;
+		text = CommonUtils.unwrap(text, '"');
 		return text.replaceAll("\s+", " ");
 	}
 
@@ -763,6 +764,16 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 */
 	public boolean supportsBatchExecuteGeneratedKeys() {
 		return false;
+	}
+
+	/**
+	 * Maximum number of rows for which a generated-key result can be mapped back
+	 * to input rows safely. The data session splits only generated-key batches to
+	 * this size. Dialects whose drivers return only the final key from a JDBC batch
+	 * should return {@code 1}.
+	 */
+	public int getMaxGeneratedKeysBatchSize() {
+		return Integer.MAX_VALUE;
 	}
 
 	/**

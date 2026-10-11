@@ -48,8 +48,7 @@ public class SapHanaColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -67,8 +66,7 @@ public class SapHanaColumnReader extends ColumnReader {
 		long max_length = rs.getLong("LENGTH");
 		Integer scale = getInteger(rs, "SCALE");
 		String productDataType = getString(rs, "DATA_TYPE_NAME");
-		boolean allowDBNull = "TRUE".equalsIgnoreCase(getString(rs,
-				"IS_NULLABLE"));
+		boolean allowDBNull = "TRUE".equalsIgnoreCase(getString(rs, "IS_NULLABLE"));
 		Column obj = new Column(getString(rs, COLUMN_NAME));
 		obj.setNullable(allowDBNull);
 		this.getDialect().setDbType(productDataType, max_length, scale, obj);

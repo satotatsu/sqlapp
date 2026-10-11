@@ -33,10 +33,9 @@ import com.sqlapp.util.CommonUtils;
 public class Postgres110CreateIndexFactory extends PostgresCreateIndexFactory {
 
 	@Override
-	protected void addIncludes(final Index obj, final Table table,
-			final PostgresSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(obj.getIncludes())){
-			builder.lineBreak().include().space().brackets(()->{
+	protected void addIncludes(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getIncludes())) {
+			builder.lineBreak().include().space().brackets(() -> {
 				builder.space();
 				builder.names(obj.getIncludes());
 				builder.space();

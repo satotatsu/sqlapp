@@ -1,0 +1,259 @@
+/*
+ * Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com>
+ *
+ * This file is part of sqlapp-core-dialect-test.
+ */
+package com.sqlapp.data.db.dialect.test.db2;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Locale;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.dialect.db2.Db2_1215;
+import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.PartitioningType;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriodType;
+import com.sqlapp.data.schemas.UniqueConstraint;
+
+/** Db2 12.1.5 integration coverage for the metadata reader tree. */
+class Db2MetadataReaderTest {
+	private static final String IMAGE = "icr.io/db2_community/db2:12.1.5.0";
+	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container(IMAGE);
+
+	@BeforeAll
+	static void startContainer() {
+		DB2.start();
+	}
+
+	@AfterAll
+	static void stopContainer() {
+		if (!ReusableTestcontainers.isReuseEnabled()) {
+			DB2.stop();
+		}
+	}
+
+	@Test
+	void sequenceConfigurationSurvivesXmlAndDdl() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.Db2HanaSequenceAuditAssertions.verify(connection, true);
+		}
+	}
+
+	@Test
+	void testReadsRepresentativeSchemaObjectsFromLatestDb2() throws SQLException {
+		try (Connection connection = DB2.createConnection("")) {
+			createSchemaObjects(connection);
+			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			assertInstanceOf(Db2_1215.class, dialect);
+
+			String schemaName = DB2.getUsername().toUpperCase(Locale.ROOT);
+			var schemaReader = dialect.getCatalogReader().getSchemaReader();
+			schemaReader.setSchemaName(schemaName);
+			Schema schema = schemaReader.getAllFull(connection).stream()
+					.filter(current -> schemaName.equalsIgnoreCase(current.getName())).findFirst()
+					.orElseThrow(() -> new AssertionError("Db2 test schema was not loaded."));
+
+			Table parent = schema.getTables().get("METADATA_PARENT");
+			assertNotNull(parent);
+			assertEquals("Metadata parent table", parent.getRemarks());
+			UniqueConstraint primaryKey = assertInstanceOf(UniqueConstraint.class,
+					parent.getConstraints().get("PK_METADATA_PARENT"));
+			assertEquals(2, primaryKey.getColumns().size());
+			assertEquals("Display name", parent.getColumns().get("NAME").getRemarks());
+
+			Table child = schema.getTables().get("METADATA_CHILD");
+			assertNotNull(child);
+			assertTrue(child.getColumns().get("ID").isIdentity());
+			assertTrue(child.getColumns().get("CODE").isNotNull());
+			assertNotNull(child.getConstraints().get("UK_METADATA_CHILD_CODE"));
+			assertNotNull(child.getConstraints().get("CK_METADATA_CHILD_AMOUNT"));
+			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
+					child.getConstraints().get("FK_METADATA_CHILD_PARENT"));
+			assertEquals(2, foreignKey.getColumns().size());
+			assertEquals(2, foreignKey.getRelatedColumns().size());
+			assertNotNull(child.getIndexes().get("IDX_METADATA_CHILD_PARENT"));
+			Table partitioned = schema.getTables().get("METADATA_PARTITIONED");
+			assertNotNull(partitioned);
+			assertEquals(PartitioningType.Range, partitioned.getPartitioning().getPartitioningType());
+			assertEquals("BUCKET", partitioned.getPartitioning().getPartitioningColumns().get(0).getName());
+			assertEquals(2, partitioned.getPartitioning().getPartitions().size());
+			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_LOW"));
+			assertNotNull(partitioned.getPartitioning().getPartitions().get("P_HIGH"));
+			Table temporal = schema.getTables().get("METADATA_TEMPORAL");
+			assertNotNull(temporal);
+			var businessTime = temporal.getTemporalPeriods().get("BUSINESS_TIME");
+			assertNotNull(businessTime);
+			assertEquals(TemporalPeriodType.APPLICATION_TIME, businessTime.getPeriodType());
+			assertEquals("BUSINESS_START", businessTime.getStartColumnName());
+			assertEquals("BUSINESS_END", businessTime.getEndColumnName());
+			Table mdc = schema.getTables().get("METADATA_MDC");
+			assertNotNull(mdc);
+			assertEquals("C", mdc.getColumns().get("REGION").getSpecifics().get("TYPE"));
+			assertNotNull(mdc.getColumns().get("REGION").getSpecifics().get("DIMENSION"));
+			assertNotNull(mdc.getColumns().get("BUCKET").getSpecifics().get("DIMENSION"));
+			var money = schema.getDomains().get("METADATA_MONEY");
+			assertNotNull(money);
+			assertEquals(DataType.DECIMAL, money.getDataType());
+			Table typed = schema.getTables().get("METADATA_TYPED");
+			assertNotNull(typed);
+			assertEquals("METADATA_MONEY", typed.getColumns().get("AMOUNT").getDataTypeName());
+			var address = schema.getTypes().get("METADATA_ADDRESS");
+			assertNotNull(address);
+			assertEquals(2, address.getColumns().size());
+			assertEquals(DataType.VARCHAR, address.getColumns().get("STREET").getDataType());
+			assertEquals(100L, address.getColumns().get("STREET").getLength());
+			assertEquals(DataType.CHAR, address.getColumns().get("POSTAL_CODE").getDataType());
+			assertNotNull(schema.getSequences().get("METADATA_SEQ"));
+			var view = schema.getViews().get("METADATA_VIEW");
+			assertNotNull(view);
+			assertTrue(String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
+			assertNotNull(procedure);
+			assertEquals(1, procedure.getArguments().size());
+			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
+			assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
+			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
+			var function = schema.getFunctions().get("METADATA_FUNCTION");
+			assertNotNull(function);
+			assertEquals(1, function.getArguments().size());
+			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
+			assertEquals(DataType.DECIMAL, function.getArguments().get(0).getDataType());
+			var compiledFunction = schema.getFunctions().get("METADATA_COMPILED_FUNCTION");
+			assertNotNull(compiledFunction);
+			assertEquals(1, compiledFunction.getArguments().size());
+			String compiledFunctionStatement = String.join("\n", compiledFunction.getStatement())
+					.toUpperCase(Locale.ROOT);
+			assertTrue(compiledFunctionStatement.contains("RETURN"));
+			assertTrue(compiledFunctionStatement.contains("P_AMOUNT"));
+			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
+			assertNotNull(trigger);
+			assertEquals("METADATA_CHILD", trigger.getTableName());
+			assertTrue(String.join("\n", trigger.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
+			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_ALIAS"));
+		}
+	}
+
+	private void createSchemaObjects(final Connection connection) throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			drop(statement, "DROP TRIGGER METADATA_TRIGGER");
+			drop(statement, "DROP PROCEDURE METADATA_PROCEDURE");
+			drop(statement, "DROP FUNCTION METADATA_FUNCTION");
+			drop(statement, "DROP FUNCTION METADATA_COMPILED_FUNCTION");
+			drop(statement, "DROP VIEW METADATA_VIEW");
+			drop(statement, "DROP ALIAS METADATA_PARENT_ALIAS");
+			drop(statement, "DROP TABLE METADATA_CHILD");
+			drop(statement, "DROP TABLE METADATA_PARENT");
+			drop(statement, "DROP TABLE METADATA_AUDIT");
+			drop(statement, "DROP TABLE METADATA_PARTITIONED");
+			drop(statement, "DROP TABLE METADATA_TEMPORAL");
+			drop(statement, "DROP TABLE METADATA_MDC");
+			drop(statement, "DROP TABLE METADATA_TYPED");
+			drop(statement, "DROP TYPE METADATA_ADDRESS");
+			drop(statement, "DROP TYPE METADATA_MONEY");
+			drop(statement, "DROP SEQUENCE METADATA_SEQ");
+			statement.execute("""
+					CREATE DISTINCT TYPE METADATA_MONEY AS DECIMAL(18, 2)
+					 WITH COMPARISONS
+					""");
+			statement.execute("""
+					CREATE TYPE METADATA_ADDRESS AS (
+					 STREET VARCHAR(100), POSTAL_CODE CHAR(5)) MODE DB2SQL
+					""");
+			statement.execute("CREATE SEQUENCE METADATA_SEQ START WITH 50 INCREMENT BY 10");
+			statement.execute("""
+					CREATE TABLE METADATA_PARENT (
+					 ID BIGINT NOT NULL, REGION CHAR(2) NOT NULL,
+					 NAME VARCHAR(100) NOT NULL,
+					 CONSTRAINT PK_METADATA_PARENT PRIMARY KEY (ID, REGION))
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_CHILD (
+					 ID BIGINT GENERATED BY DEFAULT AS IDENTITY,
+					 PARENT_ID BIGINT NOT NULL, PARENT_REGION CHAR(2) NOT NULL,
+					 CODE VARCHAR(40) DEFAULT 'unknown' NOT NULL,
+					 AMOUNT DECIMAL(18, 2) NOT NULL,
+					 CONSTRAINT PK_METADATA_CHILD PRIMARY KEY (ID),
+					 CONSTRAINT UK_METADATA_CHILD_CODE UNIQUE (CODE),
+					 CONSTRAINT CK_METADATA_CHILD_AMOUNT CHECK (AMOUNT >= 0),
+					 CONSTRAINT FK_METADATA_CHILD_PARENT FOREIGN KEY
+					 (PARENT_ID, PARENT_REGION) REFERENCES METADATA_PARENT(ID, REGION))
+					""");
+			statement.execute("CREATE INDEX IDX_METADATA_CHILD_PARENT ON METADATA_CHILD(PARENT_ID DESC, CODE)");
+			statement.execute("COMMENT ON TABLE METADATA_PARENT IS 'Metadata parent table'");
+			statement.execute("COMMENT ON COLUMN METADATA_PARENT.NAME IS 'Display name'");
+			statement.execute("CREATE VIEW METADATA_VIEW AS SELECT ID, CODE FROM METADATA_CHILD");
+			statement.execute("CREATE ALIAS METADATA_PARENT_ALIAS FOR METADATA_PARENT");
+			statement.execute("CREATE TABLE METADATA_AUDIT (ID BIGINT)");
+			statement.execute("""
+					CREATE TABLE METADATA_PARTITIONED (
+					 ID BIGINT NOT NULL, BUCKET INTEGER NOT NULL, PAYLOAD VARCHAR(100))
+					 PARTITION BY RANGE (BUCKET) (
+					  PARTITION P_LOW STARTING FROM (MINVALUE) ENDING AT (99) INCLUSIVE,
+					  PARTITION P_HIGH STARTING FROM (100) INCLUSIVE ENDING AT (MAXVALUE))
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_TEMPORAL (
+					 ID BIGINT NOT NULL PRIMARY KEY,
+					 BUSINESS_START DATE NOT NULL,
+					 BUSINESS_END DATE NOT NULL,
+					 PAYLOAD VARCHAR(100),
+					 PERIOD BUSINESS_TIME (BUSINESS_START, BUSINESS_END))
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_MDC (
+					 REGION CHAR(2) NOT NULL, BUCKET INTEGER NOT NULL,
+					 PAYLOAD VARCHAR(100))
+					 ORGANIZE BY DIMENSIONS (REGION, BUCKET)
+					""");
+			statement.execute("""
+					CREATE TABLE METADATA_TYPED (
+					 ID BIGINT NOT NULL PRIMARY KEY,
+					 AMOUNT METADATA_MONEY)
+					""");
+			statement.execute("""
+					CREATE PROCEDURE METADATA_PROCEDURE(IN P_PARENT_ID BIGINT)
+					 LANGUAGE SQL BEGIN ATOMIC INSERT INTO METADATA_AUDIT VALUES P_PARENT_ID; END
+					""");
+			statement.execute("""
+					CREATE FUNCTION METADATA_FUNCTION(P_AMOUNT DECIMAL(18,2))
+					 RETURNS DECIMAL(18,2) LANGUAGE SQL DETERMINISTIC RETURN P_AMOUNT * 2
+					""");
+			statement.execute("""
+					CREATE FUNCTION METADATA_COMPILED_FUNCTION(P_AMOUNT DECIMAL(18,2))
+					 RETURNS DECIMAL(18,2) LANGUAGE SQL DETERMINISTIC
+					 BEGIN RETURN P_AMOUNT * 3; END
+					""");
+			statement.execute("""
+					CREATE TRIGGER METADATA_TRIGGER AFTER INSERT ON METADATA_CHILD
+					 REFERENCING NEW AS N FOR EACH ROW
+					 INSERT INTO METADATA_AUDIT VALUES N.ID
+					""");
+		}
+	}
+
+	private void drop(final Statement statement, final String sql) throws SQLException {
+		try {
+			statement.execute(sql);
+		} catch (SQLException e) {
+			if (!"42704".equals(e.getSQLState())) {
+				throw e;
+			}
+		}
+	}
+}

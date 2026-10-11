@@ -40,7 +40,6 @@ import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 
 /**
  * ExcelIterable
@@ -49,26 +48,52 @@ import com.sqlapp.util.FileUtils;
  * 
  */
 public class ExcelIterable extends AbstractMapIterable {
+	private final DataFormat workbookFormat;
 
 	public ExcelIterable(File file) {
 		super(file);
+		this.workbookFormat = null;
+	}
+
+	public ExcelIterable(File file, DataFormat format) {
+		super(file);
+		this.workbookFormat = requireWorkbookFormat(format);
 	}
 
 	public ExcelIterable(Path path) {
 		super(path);
+		this.workbookFormat = null;
+	}
+
+	public ExcelIterable(Path path, DataFormat format) {
+		super(path);
+		this.workbookFormat = requireWorkbookFormat(format);
 	}
 
 	public ExcelIterable(InputStream inputStream) {
+		this(inputStream, DataFormat.EXCEL);
+	}
+
+	public ExcelIterable(InputStream inputStream, DataFormat format) {
 		super(inputStream);
+		this.workbookFormat = requireWorkbookFormat(format);
 	}
 
 	public ExcelIterable(Reader reader) {
 		super(reader);
+		this.workbookFormat = null;
+	}
+
+	private static DataFormat requireWorkbookFormat(final DataFormat format) {
+		if (format == null || !format.isWorkbook()) {
+			throw new IllegalArgumentException("Workbook format is required: " + format);
+		}
+		return format;
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(File file) {
-		return new ExcelIterator(file);
+		return new ExcelIterator(file, workbookFormat);
 	}
 
 	protected <T> Iterator<Map<String, Object>> iteratorInternal(T obj, XmlReaderOptions options,
@@ -95,12 +120,12 @@ public class ExcelIterable extends AbstractMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(Path path) {
-		return new ExcelIterator(path);
+		return new ExcelIterator(path, workbookFormat);
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(InputStream inputStream) {
-		return new ExcelIterator(inputStream);
+		return new ExcelIterator(inputStream, workbookFormat);
 	}
 
 	@Override
@@ -111,23 +136,39 @@ public class ExcelIterable extends AbstractMapIterable {
 	public static class ExcelIterator implements Iterator<Map<String, Object>>, AutoCloseable {
 
 		ExcelIterator(final File file) {
+			this(file, null);
+		}
+
+		ExcelIterator(final File file, final DataFormat format) {
 			this.file = file;
 			this.inputStream = null;
+			this.workbookFormat = format;
 		}
 
 		ExcelIterator(final InputStream inputStream) {
+			this(inputStream, DataFormat.EXCEL);
+		}
+
+		ExcelIterator(final InputStream inputStream, final DataFormat format) {
 			this.file = null;
 			this.inputStream = inputStream;
+			this.workbookFormat = format;
 		}
 
 		ExcelIterator(final Path path) {
 			this(path.toFile());
 		}
 
+		ExcelIterator(final Path path, final DataFormat format) {
+			this(path.toFile(), format);
+		}
+
 		private final File file;
 		private final InputStream inputStream;
+		private final DataFormat workbookFormat;
 		private Workbook workbook;
 		private boolean initialized = false;
+		private boolean closed;
 
 		private final Map<Number, Column> columnIndexColumnMap = CommonUtils.map();
 
@@ -147,9 +188,10 @@ public class ExcelIterable extends AbstractMapIterable {
 		private void preInitialize() {
 			try {
 				if (file != null) {
-					this.workbook = DataFormat.parse(file).createWorkBook(file, null, true);
+					final DataFormat format = workbookFormat != null ? workbookFormat : DataFormat.parse(file);
+					this.workbook = format.createWorkBook(file, null, true);
 				} else {
-					this.workbook = DataFormat.EXCEL.createWorkBook(inputStream);
+					this.workbook = workbookFormat.createWorkBook(inputStream);
 				}
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
@@ -200,14 +242,31 @@ public class ExcelIterable extends AbstractMapIterable {
 
 		@Override
 		public void close() throws Exception {
-			try {
-				if (workbook != null) {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			Exception failure = null;
+			if (workbook != null) {
+				try {
 					workbook.close();
+				} catch (final Exception e) {
+					failure = e;
 				}
-				if (inputStream != null) {
-					FileUtils.close(inputStream);
+			}
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				} catch (final Exception e) {
+					if (failure == null) {
+						failure = e;
+					} else if (failure != e) {
+						failure.addSuppressed(e);
+					}
 				}
-			} catch (final IOException e) {
+			}
+			if (failure != null) {
+				throw failure;
 			}
 		}
 
@@ -219,6 +278,7 @@ public class ExcelIterable extends AbstractMapIterable {
 
 		@Override
 		public Map<String, Object> next() {
+			initialize();
 			org.apache.poi.ss.usermodel.Row row = read();
 			Map<String, Object> map = CommonUtils.linkedMap();
 			set(row, map);

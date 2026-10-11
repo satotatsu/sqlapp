@@ -65,8 +65,6 @@ public class SybaseUserReader extends UserReader {
 		User obj = new User(name);
 		obj.setLoginUserName(getString(rs, "login_user_name"));
 		obj.setCatalogName(catalog_name);
-		obj.setCreatedAt(rs.getTimestamp("create_date"));
-		obj.setLastAlteredAt(rs.getTimestamp("modify_date"));
 		obj.setId("" + rs.getInt("principal_id"));
 		return obj;
 	}

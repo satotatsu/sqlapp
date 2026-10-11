@@ -26,8 +26,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.generator.config.FileGeneratorConfig;
-import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.command.generator.config.strategy.ValueSelectStrategy;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.datatype.DataType;

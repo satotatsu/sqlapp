@@ -50,8 +50,7 @@ public class HsqlViewReader extends ViewReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -70,14 +69,12 @@ public class HsqlViewReader extends ViewReader {
 		Table view = createTable(getString(rs, TABLE_NAME));
 		view.setCatalogName(getString(rs, TABLE_CATALOG));
 		view.setSchemaName(getString(rs, TABLE_SCHEMA));
-		String statement=getString(rs, "VIEW_DEFINITION");
+		String statement = getString(rs, "VIEW_DEFINITION");
 		view.setStatement(HsqlUtils.normalizeStatement(view, statement));
-		view.setReadonly(!toBoolean(getString(rs, "IS_UPDATABLE"))
-				.booleanValue());
+		view.setReadonly(!toBoolean(getString(rs, "IS_UPDATABLE")).booleanValue());
 		view.setRemarks(comment);
 		return view;
 	}
-	
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("views.sql");
@@ -97,8 +94,7 @@ public class HsqlViewReader extends ViewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

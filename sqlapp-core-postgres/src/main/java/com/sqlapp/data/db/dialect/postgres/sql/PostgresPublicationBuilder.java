@@ -20,10 +20,8 @@ import com.sqlapp.util.CommonUtils;
  * PostgreSQL logical-replication publication SQL builder.
  */
 public class PostgresPublicationBuilder {
-	private static final Set<String> PUBLISH_OPERATIONS =
-			Set.of("insert", "update", "delete", "truncate");
-	private static final Set<String> GENERATED_COLUMN_MODES =
-			Set.of("none", "stored");
+	private static final Set<String> PUBLISH_OPERATIONS = Set.of("insert", "update", "delete", "truncate");
+	private static final Set<String> GENERATED_COLUMN_MODES = Set.of("none", "stored");
 
 	private final Dialect dialect;
 	private final String publicationName;
@@ -43,15 +41,13 @@ public class PostgresPublicationBuilder {
 		return this;
 	}
 
-	public PostgresPublicationBuilder table(String tableName,
-			String... columnNames) {
+	public PostgresPublicationBuilder table(String tableName, String... columnNames) {
 		return table(null, tableName, false, null, columnNames);
 	}
 
-	public PostgresPublicationBuilder table(String schemaName, String tableName,
-			boolean only, String rowFilter, String... columnNames) {
-		PublishedTable table = new PublishedTable(schemaName,
-				require(tableName, "tableName"), only, rowFilter);
+	public PostgresPublicationBuilder table(String schemaName, String tableName, boolean only, String rowFilter,
+			String... columnNames) {
+		PublishedTable table = new PublishedTable(schemaName, require(tableName, "tableName"), only, rowFilter);
 		if (columnNames != null) {
 			for (String columnName : columnNames) {
 				table.columns.add(require(columnName, "columnName"));
@@ -63,15 +59,12 @@ public class PostgresPublicationBuilder {
 
 	public PostgresPublicationBuilder publish(String... operations) {
 		if (operations == null || operations.length == 0) {
-			throw new IllegalArgumentException(
-					"At least one publish operation is required.");
+			throw new IllegalArgumentException("At least one publish operation is required.");
 		}
 		for (String operation : operations) {
-			String normalized = require(operation, "publish operation")
-					.toLowerCase(Locale.ROOT);
+			String normalized = require(operation, "publish operation").toLowerCase(Locale.ROOT);
 			if (!PUBLISH_OPERATIONS.contains(normalized)) {
-				throw new IllegalArgumentException(
-						"Unsupported publish operation: " + operation);
+				throw new IllegalArgumentException("Unsupported publish operation: " + operation);
 			}
 			publishOperations.add(normalized);
 		}
@@ -80,11 +73,9 @@ public class PostgresPublicationBuilder {
 
 	public PostgresPublicationBuilder publishGeneratedColumns(String value) {
 		checkPostgres18();
-		String normalized = require(value, "publishGeneratedColumns")
-				.toLowerCase(Locale.ROOT);
+		String normalized = require(value, "publishGeneratedColumns").toLowerCase(Locale.ROOT);
 		if (!GENERATED_COLUMN_MODES.contains(normalized)) {
-			throw new IllegalArgumentException(
-					"publishGeneratedColumns must be none or stored.");
+			throw new IllegalArgumentException("publishGeneratedColumns must be none or stored.");
 		}
 		this.generatedColumnMode = normalized;
 		return this;
@@ -97,11 +88,9 @@ public class PostgresPublicationBuilder {
 
 	public String create() {
 		if (allTables && !tables.isEmpty()) {
-			throw new IllegalArgumentException(
-					"FOR ALL TABLES cannot be combined with individual tables.");
+			throw new IllegalArgumentException("FOR ALL TABLES cannot be combined with individual tables.");
 		}
-		StringBuilder builder = new StringBuilder("CREATE PUBLICATION ")
-				.append(dialect.quote(publicationName));
+		StringBuilder builder = new StringBuilder("CREATE PUBLICATION ").append(dialect.quote(publicationName));
 		if (allTables) {
 			builder.append(" FOR ALL TABLES");
 		} else if (!tables.isEmpty()) {
@@ -114,15 +103,12 @@ public class PostgresPublicationBuilder {
 
 	public String alterParameters() {
 		if (!tables.isEmpty() || allTables) {
-			throw new IllegalArgumentException(
-					"ALTER parameter SQL cannot contain publication tables.");
+			throw new IllegalArgumentException("ALTER parameter SQL cannot contain publication tables.");
 		}
 		if (!hasParameters()) {
-			throw new IllegalArgumentException(
-					"At least one publication parameter is required.");
+			throw new IllegalArgumentException("At least one publication parameter is required.");
 		}
-		StringBuilder builder = new StringBuilder("ALTER PUBLICATION ")
-				.append(dialect.quote(publicationName));
+		StringBuilder builder = new StringBuilder("ALTER PUBLICATION ").append(dialect.quote(publicationName));
 		appendParameters(builder, " SET (");
 		return builder.toString();
 	}
@@ -160,27 +146,22 @@ public class PostgresPublicationBuilder {
 		builder.append(prefix);
 		List<String> parameters = new ArrayList<>();
 		if (!publishOperations.isEmpty()) {
-			parameters.add("publish = "
-					+ sqlString(String.join(", ", publishOperations)));
+			parameters.add("publish = " + sqlString(String.join(", ", publishOperations)));
 		}
 		if (generatedColumnMode != null) {
-			parameters.add("publish_generated_columns = "
-					+ generatedColumnMode);
+			parameters.add("publish_generated_columns = " + generatedColumnMode);
 		}
 		if (publishViaPartitionRoot != null) {
-			parameters.add("publish_via_partition_root = "
-					+ publishViaPartitionRoot);
+			parameters.add("publish_via_partition_root = " + publishViaPartitionRoot);
 		}
 		builder.append(String.join(", ", parameters)).append(")");
 	}
 
 	private boolean hasParameters() {
-		return !publishOperations.isEmpty() || generatedColumnMode != null
-				|| publishViaPartitionRoot != null;
+		return !publishOperations.isEmpty() || generatedColumnMode != null || publishViaPartitionRoot != null;
 	}
 
-	private void appendQualifiedName(StringBuilder builder, String schemaName,
-			String tableName) {
+	private void appendQualifiedName(StringBuilder builder, String schemaName, String tableName) {
 		if (!CommonUtils.isEmpty(schemaName)) {
 			builder.append(dialect.quote(schemaName)).append(".");
 		}
@@ -189,8 +170,7 @@ public class PostgresPublicationBuilder {
 
 	private void checkPostgres18() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"publish_generated_columns requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("publish_generated_columns requires PostgreSQL 18 or later.");
 		}
 	}
 
@@ -212,8 +192,7 @@ public class PostgresPublicationBuilder {
 		private final String rowFilter;
 		private final List<String> columns = new ArrayList<>();
 
-		private PublishedTable(String schemaName, String tableName, boolean only,
-				String rowFilter) {
+		private PublishedTable(String schemaName, String tableName, boolean only, String rowFilter) {
 			this.schemaName = schemaName;
 			this.tableName = tableName;
 			this.only = only;

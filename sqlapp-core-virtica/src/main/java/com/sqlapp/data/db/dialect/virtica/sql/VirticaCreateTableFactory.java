@@ -12,14 +12,11 @@ import com.sqlapp.data.schemas.Table;
 /**
  * Vertica CREATE TABLE.
  */
-public class VirticaCreateTableFactory
-		extends AbstractCreateTableFactory<VirticaSqlBuilder> {
+public class VirticaCreateTableFactory extends AbstractCreateTableFactory<VirticaSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Table table,
-			final VirticaSqlBuilder builder) {
-		builder.create().table()
-				.ifNotExists(getOptions().isCreateIfNotExists()).space()
-				.name(table, getOptions().isDecorateSchemaName());
+	protected void addCreateObject(final Table table, final VirticaSqlBuilder builder) {
+		builder.create().table().ifNotExists(getOptions().isCreateIfNotExists()).space().name(table,
+				getOptions().isDecorateSchemaName());
 	}
 }

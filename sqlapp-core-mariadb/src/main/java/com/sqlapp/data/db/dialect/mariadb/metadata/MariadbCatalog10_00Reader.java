@@ -23,7 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.metadata.MySqlCatalog564Reader;
 import com.sqlapp.data.db.metadata.SchemaReader;
 
-public class MariadbCatalog10_00Reader extends MySqlCatalog564Reader{
+public class MariadbCatalog10_00Reader extends MySqlCatalog564Reader {
 
 	public MariadbCatalog10_00Reader(Dialect dialect) {
 		super(dialect);

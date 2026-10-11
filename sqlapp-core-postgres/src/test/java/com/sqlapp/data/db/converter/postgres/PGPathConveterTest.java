@@ -19,17 +19,16 @@
 
 package com.sqlapp.data.db.converter.postgres;
 
-
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGPathConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGPathConverter;
 import com.sqlapp.data.geometry.Path;
 
-public class PGPathConveterTest extends AbstractConveterTest<Path>{
+public class PGPathConveterTest extends AbstractConveterTest<Path> {
 
 	@Override
 	protected Path newInstance() {
-		return new Path(1,2,3,4,5,6,7,8);
+		return new Path(1, 2, 3, 4, 5, 6, 7, 8);
 	}
 
 	@Override

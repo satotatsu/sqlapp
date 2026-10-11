@@ -23,7 +23,6 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -68,16 +67,12 @@ public class SybasePublicDbLinkReader extends PublicDbLinkReader {
 
 	protected PublicDbLink createDbLink(ExResultSet rs) throws SQLException {
 		String name = getString(rs, "name");
-		String connection_catalog = getString(rs, "catalog");
-		String userName = getString(rs, "user_name");
 		String data_source = getString(rs, "data_source");
-		Timestamp modifyDate = rs.getTimestamp("modify_date");
 		PublicDbLink obj = new PublicDbLink(name);
-		obj.setUserId(userName);
 		obj.setDataSource(data_source);
-		obj.setConnectionCatalog(connection_catalog);
-		obj.setLastAlteredAt(modifyDate);
-		setSpecifics(rs, "provider_string", obj);
+		setSpecifics(rs, "srvclass", obj);
+		setSpecifics(rs, "srvstatus", obj);
+		setSpecifics(rs, "srvsecmech", obj);
 		return obj;
 	}
 }

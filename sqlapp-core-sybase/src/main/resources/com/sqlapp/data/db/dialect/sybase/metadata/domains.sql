@@ -6,12 +6,16 @@ SELECT
 , t.length
 , t.prec
 , t.scale
-, T.collation as collation_name
+, NULL as collation_name
 , bt.name as base_type_name
 FROM systypes t
 INNER JOIN systypes bt
-  ON (t.xtype=bt.xtype
-     AND t.name<>bt.name)
+  ON (t.type=bt.type
+     AND bt.usertype=(
+       SELECT min(bt2.usertype)
+       FROM systypes bt2
+       WHERE bt2.type=t.type
+     ))
 INNER JOIN sysusers u
   ON (t.uid=u.uid)
 WHERE t.name not in
@@ -52,9 +56,9 @@ WHERE t.name not in
 	, 'sysname'
   )
   /*if isNotEmpty(schemaName) */
-  AND u.name IN /*schemaName;type=NVARCHAR*/('%')
+  AND u.name IN /*schemaName;type=VARCHAR*/('%')
   /*end*/
   /*if isNotEmpty(domainName) */
-  AND t.name IN /*domainName;type=NVARCHAR*/('%')
+  AND t.name IN /*domainName;type=VARCHAR*/('%')
   /*end*/
 ORDER BY t.name

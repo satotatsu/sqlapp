@@ -52,8 +52,7 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
@@ -66,20 +65,17 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 				String constraintName = getString(rs, CONSTRAINT_NAME);
 				// String expression=getString(rs, "filter_condition");
 				boolean primary = "P".equalsIgnoreCase(getString(rs, "TYPE"));
-				UniqueConstraint c = map.get(catalogName, schemaName,
-						constraintName);
+				UniqueConstraint c = map.get(catalogName, schemaName, constraintName);
 				if (c == null) {
 					c = new UniqueConstraint(constraintName, primary);
 					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
 					Index index = c.getIndex();
-					index.setIndexType(Db2Utils.getIndexType(getString(rs,
-							"INDEXTYPE")));
+					index.setIndexType(Db2Utils.getIndexType(getString(rs, "INDEXTYPE")));
 					index.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					index.setRemarks(getString(rs, REMARKS));
-					index.setCompression("Y".equalsIgnoreCase(getString(rs,
-							"COMPRESSION")));
+					index.setCompression("Y".equalsIgnoreCase(getString(rs, "COMPRESSION")));
 					setSpecifics(rs, "MINPCTUSED", index);
 					setSpecifics(rs, "REVERSE_SCANS", index);
 					map.put(catalogName, schemaName, constraintName, c);
@@ -89,8 +85,7 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 				if ("I".equalsIgnoreCase(colOrder)) {
 					c.getColumns().add(new Column(columnName), true);
 				} else {
-					c.getColumns().add(new Column(columnName),
-							Order.parse(colOrder));
+					c.getColumns().add(new Column(columnName), Order.parse(colOrder));
 				}
 			}
 		});

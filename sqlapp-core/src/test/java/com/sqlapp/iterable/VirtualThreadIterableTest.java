@@ -20,6 +20,8 @@
 package com.sqlapp.iterable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +46,23 @@ class VirtualThreadIterableTest {
 			i++;
 		}
 		assertEquals(count, i);
+	}
+
+	@Test
+	void preservesProducerFailureAndSuppressesFinalizerFailure() {
+		final RuntimeException producerFailure = new RuntimeException("producer");
+		final RuntimeException finalizerFailure = new RuntimeException("finalizer");
+		final var iterator = new VirtualThreadIterable<String>(values -> {
+			throw producerFailure;
+		}, () -> {
+			throw finalizerFailure;
+		}, 2).iterator();
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class, iterator::hasNext);
+
+		assertSame(producerFailure, thrown);
+		assertEquals(1, thrown.getSuppressed().length);
+		assertSame(finalizerFailure, thrown.getSuppressed()[0]);
 	}
 
 }

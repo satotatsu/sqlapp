@@ -24,7 +24,7 @@ import com.sqlapp.data.interval.Interval;
 import org.postgresql.util.PGInterval;
 import java.sql.SQLException;
 
-public class ToPGIntervalConverter extends AbstractToObjectConverter<PGInterval, Interval>{
+public class ToPGIntervalConverter extends AbstractToObjectConverter<PGInterval, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -47,17 +47,12 @@ public class ToPGIntervalConverter extends AbstractToObjectConverter<PGInterval,
 
 	@Override
 	protected PGInterval toDbType(Interval obj) {
-		int scale=1;
-		if (!obj.isPositive()){
-			scale=-1;
+		int scale = 1;
+		if (!obj.isPositive()) {
+			scale = -1;
 		}
-		return new PGInterval(obj.getYears()*scale
-				, obj.getMonths()*scale
-				, obj.getDays()*scale
-				, obj.getHours()*scale
-				, obj.getMinutes()*scale
-				, obj.getSecondsAsDouble()*scale
-				);
+		return new PGInterval(obj.getYears() * scale, obj.getMonths() * scale, obj.getDays() * scale,
+				obj.getHours() * scale, obj.getMinutes() * scale, obj.getSecondsAsDouble() * scale);
 	}
 
 	@Override
@@ -65,15 +60,16 @@ public class ToPGIntervalConverter extends AbstractToObjectConverter<PGInterval,
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGInterval copy(Object obj){
-		if (obj==null){
+	public PGInterval copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

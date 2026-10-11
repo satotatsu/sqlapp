@@ -19,8 +19,7 @@
 
 package com.sqlapp.data.schemas;
 
-public class DimensionHierarchyJoinKeyTest extends
-		AbstractDbObjectTest<DimensionHierarchyJoinKey> {
+public class DimensionHierarchyJoinKeyTest extends AbstractDbObjectTest<DimensionHierarchyJoinKey> {
 
 	@Override
 	protected DimensionHierarchyJoinKey getObject() {
@@ -28,10 +27,11 @@ public class DimensionHierarchyJoinKeyTest extends
 		return obj;
 	}
 
-	public static DimensionHierarchyJoinKey getDimensionHierarchyJoinKey(String name, String columnName, String tableName) {
+	public static DimensionHierarchyJoinKey getDimensionHierarchyJoinKey(String name, String columnName,
+			String tableName) {
 		DimensionHierarchyJoinKey obj = new DimensionHierarchyJoinKey();
 		obj.setLevelName(name);
-		DimensionHierarchyJoinKeyColumn column=new DimensionHierarchyJoinKeyColumn();
+		DimensionHierarchyJoinKeyColumn column = new DimensionHierarchyJoinKeyColumn();
 		column.setName(columnName);
 		column.setTableName(tableName);
 		obj.getColumns().add(column);
@@ -40,7 +40,7 @@ public class DimensionHierarchyJoinKeyTest extends
 
 	@Override
 	protected void testDiffString(DimensionHierarchyJoinKey obj1, DimensionHierarchyJoinKey obj2) {
-		DimensionHierarchyJoinKeyColumn column=new DimensionHierarchyJoinKeyColumn();
+		DimensionHierarchyJoinKeyColumn column = new DimensionHierarchyJoinKeyColumn();
 		column.setName("country_region");
 		column.setTableName("customers");
 		obj2.getColumns().add(column);

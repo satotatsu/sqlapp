@@ -40,8 +40,7 @@ public class ColumnCollectionTest {
 	@Test
 	public void testHandle() throws XMLStreamException {
 		Column column = new Column();
-		column.setName("A").setLength(1).setNullable(false)
-				.setDataType(DataType.BIT).setRemarks("カラムA");
+		column.setName("A").setLength(1).setNullable(false).setDataType(DataType.BIT).setRemarks("カラムA");
 		column.getExtendedProperties().put("INITIAL", "TRUE");
 		column.getSpecifics().put("TABLE_SPACE", "TABLE_SPACEA");
 		column.getValues().add("1");
@@ -61,7 +60,8 @@ public class ColumnCollectionTest {
 		//
 		StringReader reader = new StringReader(writer.toString());
 		StaxReader staxReader = new StaxReader(reader);
-		AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = new ColumnCollection().getDbObjectXmlReaderHandler();
+		AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = new ColumnCollection()
+				.getDbObjectXmlReaderHandler();
 		ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, null);

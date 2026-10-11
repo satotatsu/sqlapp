@@ -25,7 +25,7 @@ import com.sqlapp.data.geometry.Polygon;
 import org.postgresql.geometric.PGpolygon;
 import java.sql.SQLException;
 
-public class ToPGPolygonConverter extends AbstractToObjectConverter<PGpolygon, Polygon>{
+public class ToPGPolygonConverter extends AbstractToObjectConverter<PGpolygon, Polygon> {
 
 	/**
 	 * serialVersionUID
@@ -48,10 +48,10 @@ public class ToPGPolygonConverter extends AbstractToObjectConverter<PGpolygon, P
 
 	@Override
 	protected PGpolygon toDbType(Polygon obj) {
-		PGpolygon ret= newInstance();
+		PGpolygon ret = newInstance();
 		try {
 			setValue(ret, obj.toString());
-		} catch(SQLException e) {
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 		return ret;
@@ -62,15 +62,16 @@ public class ToPGPolygonConverter extends AbstractToObjectConverter<PGpolygon, P
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGpolygon copy(Object obj){
-		if (obj==null){
+	public PGpolygon copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

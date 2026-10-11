@@ -22,9 +22,8 @@ public class MariadbCreateTableFactory extends MySqlCreateTableFactory {
 			if (period.getStartColumnName() == null || period.getEndColumnName() == null) {
 				continue;
 			}
-			builder.lineBreak().comma()._add("PERIOD FOR ").name(period.getName())
-					.space()._add("(").name(period.getStartColumnName())
-					.comma().space().name(period.getEndColumnName())._add(")");
+			builder.lineBreak().comma()._add("PERIOD FOR ").name(period.getName()).space()._add("(")
+					.name(period.getStartColumnName()).comma().space().name(period.getEndColumnName())._add(")");
 		}
 	}
 

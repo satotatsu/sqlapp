@@ -35,24 +35,16 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				VirticaCreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DROP,
-				VirticaDropTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, VirticaCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, VirticaDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, VirticaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, VirticaTruncateTemporaryTableFactory.class);
-		registerSqlFactory(Sequence.class, SqlType.CREATE,
-				VirticaCreateSequenceFactory.class);
-		registerSqlFactory(Sequence.class, SqlType.ALTER,
-				VirticaAlterSequenceFactory.class);
-		registerSqlFactory(Sequence.class, SqlType.DROP,
-				VirticaDropSequenceFactory.class);
-		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
-				VirticaSequenceNextValuesFactory.class);
-		registerSqlFactory(View.class, SqlType.CREATE,
-				VirticaCreateViewFactory.class);
-		registerSqlFactory(View.class, SqlType.DROP,
-				VirticaDropViewFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE, VirticaCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, VirticaAlterSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.DROP, VirticaDropSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, VirticaSequenceNextValuesFactory.class);
+		registerSqlFactory(View.class, SqlType.CREATE, VirticaCreateViewFactory.class);
+		registerSqlFactory(View.class, SqlType.DROP, VirticaDropViewFactory.class);
 	}
 
 }

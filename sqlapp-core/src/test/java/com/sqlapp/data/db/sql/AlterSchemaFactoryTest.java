@@ -45,9 +45,8 @@ public class AlterSchemaFactoryTest extends AbstractStandardFactoryTest {
 	public void testGetDdlTable() {
 		final Schema schema1 = getSchema1("schemaA");
 		final Schema schema2 = getSchema2("schemaA");
-		final SqlFactory<Schema> command = dialect
-				.createSqlFactoryRegistry().getSqlFactory(
-						new Schema(), State.Modified);
+		final SqlFactory<Schema> command = dialect.createSqlFactoryRegistry().getSqlFactory(new Schema(),
+				State.Modified);
 		final DbObjectDifference diff = schema1.diff(schema2);
 		final List<SqlOperation> list = command.createDiffSql(diff);
 		System.out.println(list);
@@ -82,20 +81,12 @@ public class AlterSchemaFactoryTest extends AbstractStandardFactoryTest {
 
 	protected Table getTable(final String name) {
 		final Table table = new Table(name);
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("''"));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("''"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		return table;
 	}
 

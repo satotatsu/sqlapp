@@ -47,8 +47,7 @@ public class SqlServer2000TableSpaceReader extends TableSpaceReader {
 	}
 
 	@Override
-	protected List<TableSpace> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpace> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableSpace> result = CommonUtils.list();

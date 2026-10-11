@@ -125,7 +125,7 @@ public class SybaseCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleReader newRoleReader() {
-		return null;
+		return new SybaseRoleReader(this.getDialect());
 	}
 
 	@Override
@@ -160,7 +160,7 @@ public class SybaseCatalogReader extends CatalogReader {
 
 	@Override
 	protected SettingReader newSettingReader() {
-		return null;
+		return new SybaseSettingReader(this.getDialect());
 	}
 
 	@Override

@@ -1,0 +1,40 @@
+SELECT
+  current_database() AS trigger_catalog
+, n.nspname AS trigger_schema
+, t.tgname AS trigger_name
+, c.relname AS table_name
+, t.oid
+, pg_get_triggerdef(t.oid) AS definition
+, substring(pg_get_triggerdef(t.oid) from
+           position('EXECUTE PROCEDURE' in substring(pg_get_triggerdef(t.oid) from 48)) + 47)
+ AS action_statement
+, CASE WHEN t.tgtype & 1 = 1 THEN 'ROW' ELSE 'STATEMENT' END
+ AS action_orientation
+, CASE WHEN t.tgtype & 2 = 2 THEN 'BEFORE'
+       WHEN t.tgtype & 64 = 64 THEN 'INSTEAD OF' ELSE 'AFTER' END
+ AS condition_timing
+, CASE WHEN t.tgtype & 4 = 4 THEN 'INSERT' ELSE '' END
+ AS is_insert
+, CASE WHEN t.tgtype & 8 = 8 THEN 'DELETE' ELSE '' END
+ AS is_delete
+, CASE WHEN t.tgtype & 16 = 16 THEN 'UPDATE' ELSE '' END
+ AS is_update
+, CASE WHEN t.tgtype & 32 = 32 THEN 'TRUNCATE' ELSE '' END
+ AS is_truncate
+, tgenabled
+, obj_description(t.oid, 'pg_trigger') as remarks
+, t.*
+FROM pg_catalog.pg_namespace n
+INNER JOIN pg_catalog.pg_class c
+ on (n.oid = c.relnamespace)
+INNER JOIN pg_catalog.pg_trigger t
+ on (c.oid = t.tgrelid) 
+WHERE 1=1
+  AND NOT t.tgisinternal
+  /*if isNotEmpty(schemaName) */
+  AND n.nspname IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(triggerName) */
+  AND t.tgname IN /*triggerName*/('%')
+  /*end*/
+ORDER BY n.nspname, t.tgname

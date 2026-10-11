@@ -19,20 +19,24 @@
 
 package com.sqlapp.gradle.plugins.extension;
 
+import java.time.Duration;
+
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
@@ -44,6 +48,11 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	public MigrationExtension(ObjectFactory objects) {
 		super(objects);
 		this.setDataSource(objects.newInstance((DataSourceExtension.class)));
+		getChecksumValidation().convention(false);
+		getRejectOutOfOrder().convention(false);
+		getRejectNonTransactional().convention(false);
+		getRequireDownMigration().convention(false);
+		getRepeatableMigrations().convention(false);
 	}
 
 	public void call(Action<MigrationExtension> cons) {
@@ -86,6 +95,55 @@ public abstract class MigrationExtension extends AbstractDbExtension
 	@Optional
 	public abstract Property<Boolean> getShowVersionOnly();
 
+	/** Optional checksum recording and validation; disabled by default. */
+	@Input
+	public abstract Property<Boolean> getChecksumValidation();
+
+	/** Optional strict rejection of migrations inserted below the current version. */
+	@Input
+	public abstract Property<Boolean> getRejectOutOfOrder();
+
+	/** Optional rejection of migrations selected for non-transactional execution. */
+	@Input
+	public abstract Property<Boolean> getRejectNonTransactional();
+
+	/** Optional requirement that each selected up migration has down SQL. */
+	@Input
+	public abstract Property<Boolean> getRequireDownMigration();
+
+	/** Enables R__*.sql migrations that rerun when their checksum changes. */
+	@Input
+	public abstract Property<Boolean> getRepeatableMigrations();
+
+	/** Optional expected live Schema XML immediately before migration. */
+	@InputFile
+	@Optional
+	public abstract RegularFileProperty getPreMigrationSchemaFile();
+
+	/** Optional reviewed migration-plan JSON required to match execution. */
+	@InputFile
+	@Optional
+	public abstract RegularFileProperty getExpectedPlanFile();
+
+	/** Optional maximum age, in seconds, of the reviewed migration plan. */
+	@Input
+	@Optional
+	public abstract Property<Long> getExpectedPlanMaxAgeSeconds();
+
+	/** Optional externally approved SHA-256 fingerprint of the reviewed plan. */
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedPlanFingerprint();
+
+	/** Optional JDBC timeout for acquiring the migration-history lock. */
+	@Input
+	@Optional
+	public abstract Property<Integer> getLockTimeoutSeconds();
+
+	/** Optional machine-readable migration execution report destination. */
+	@Internal
+	public abstract RegularFileProperty getExecutionReportFile();
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
@@ -103,6 +161,29 @@ public abstract class MigrationExtension extends AbstractDbExtension
 		super.initializeCommand(command);
 		if (command instanceof MigrationCommand) {
 			MigrationCommand com = (MigrationCommand) command;
+			com.setChecksumValidation(getChecksumValidation().get());
+			com.setRejectOutOfOrder(getRejectOutOfOrder().get());
+			com.setRejectNonTransactional(getRejectNonTransactional().get());
+			com.setRequireDownMigration(getRequireDownMigration().get());
+			com.setRepeatableMigrations(getRepeatableMigrations().get());
+			if (getPreMigrationSchemaFile().isPresent()) {
+				com.setPreMigrationSchemaFile(getPreMigrationSchemaFile().get().getAsFile());
+			}
+			if (getExpectedPlanFile().isPresent()) {
+				com.setExpectedPlanFile(getExpectedPlanFile().get().getAsFile());
+			}
+			if (getExpectedPlanMaxAgeSeconds().isPresent()) {
+				com.setExpectedPlanMaxAge(Duration.ofSeconds(getExpectedPlanMaxAgeSeconds().get()));
+			}
+			if (getExpectedPlanFingerprint().isPresent()) {
+				com.setExpectedPlanFingerprint(getExpectedPlanFingerprint().get());
+			}
+			if (getLockTimeoutSeconds().isPresent()) {
+				com.setLockTimeoutSeconds(getLockTimeoutSeconds().get());
+			}
+			if (getExecutionReportFile().isPresent()) {
+				com.setExecutionReportFile(getExecutionReportFile().get().getAsFile());
+			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());
 			}

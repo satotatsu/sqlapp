@@ -85,6 +85,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithCombinedPK() throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection connection = ds.getConnection();) {
+			connection.setAutoCommit(false);
 			System.out.println("---------------------------INSERT------------------------------------");
 			this.dropTables(connection, "TAB_1_1");
 			this.dropTables(connection, "TAB_1");
@@ -137,12 +138,12 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
 			int i;
-			try (session) {
-				for (i = 0; i < 3; i++) {
+			session.execute(activeSession -> {
+				for (int batchIndex = 0; batchIndex < 3; batchIndex++) {
 					Row row = session.newRow(tab);
-					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
-					row.put("TXT", tab.getName() + "_TXT_" + i);
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + batchIndex);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + batchIndex);
+					row.put("TXT", tab.getName() + "_TXT_" + batchIndex);
 					for (int j = 0; j < 2; j++) {
 						row = session.newRow(tab1);
 						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
@@ -156,7 +157,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -213,12 +214,12 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
 			session.setTableOperationMode(TableOperationMode.UPDATE);
-			try (session) {
-				for (i = 0; i < 4; i++) { // 3 rows -> 4 rows
+			session.execute(activeSession -> {
+				for (int batchIndex = 0; batchIndex < 4; batchIndex++) { // 3 rows -> 4 rows
 					Row row = session.newRow(tab);
-					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
-					row.put("TXT", tab.getName() + "_TXT_" + i + "_UPDATED");
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + batchIndex);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + batchIndex);
+					row.put("TXT", tab.getName() + "_TXT_" + batchIndex + "_UPDATED");
 					for (int j = 0; j < 2; j++) {
 						row = session.newRow(tab1);
 						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
@@ -232,7 +233,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -289,12 +290,12 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
 			session.setTableOperationMode(TableOperationMode.MERGE);
-			try (session) {
-				for (i = 0; i < 4; i++) {// 3 rows-> 4 rows
+			session.execute(activeSession -> {
+				for (int batchIndex = 0; batchIndex < 4; batchIndex++) {// 3 rows-> 4 rows
 					Row row = session.newRow(tab);
-					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
-					row.put("TXT", tab.getName() + "_TXT_" + i + "_MERGE");
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + batchIndex);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + batchIndex);
+					row.put("TXT", tab.getName() + "_TXT_" + batchIndex + "_MERGE");
 					for (int j = 0; j < 3; j++) {// 2 rows-> 3 rows
 						row = session.newRow(tab1);
 						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
@@ -308,7 +309,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
@@ -365,12 +366,12 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
 			session.setTableOperationMode(TableOperationMode.INSERT_IGNORE);
-			try (session) {
-				for (i = 0; i < 5; i++) {// 4 rows-> 5 rows
+			session.execute(activeSession -> {
+				for (int batchIndex = 0; batchIndex < 5; batchIndex++) {// 4 rows-> 5 rows
 					Row row = session.newRow(tab);
-					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
-					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
-					row.put("TXT", tab.getName() + "_TXT_" + i + "_NOT_EXISTS");
+					row.put("PK_COL1", tab.getName() + "_PK_COL1_" + batchIndex);
+					row.put("PK_COL2", tab.getName() + "_PK_COL2_" + batchIndex);
+					row.put("TXT", tab.getName() + "_TXT_" + batchIndex + "_NOT_EXISTS");
 					for (int j = 0; j < 4; j++) { // 3 rows-> 4 rows
 						row = session.newRow(tab1);
 						row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
@@ -384,7 +385,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 						}
 					}
 				}
-			}
+			});
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());

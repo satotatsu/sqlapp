@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sybase.metadata;
 
-import static com.sqlapp.data.db.dialect.sybase.metadata.SybaseUtils.replaceNames;
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 import static com.sqlapp.util.CommonUtils.unwrap;
 
@@ -61,14 +60,12 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 				String catalog_name = getString(rs, CATALOG_NAME);
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				String columnName = getString(rs, COLUMN_NAME);
 				CheckConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = createCheckConstraint(rs);
 					map.put(catalog_name, schema_name, constraint_name, c);
 				} else {
-					String definition = replaceNames(c.getExpression(), columnName);
-					c.setExpression(definition);
+					c.setExpression(c.getExpression() + getString(rs, "definition"));
 				}
 			}
 		});
@@ -85,7 +82,7 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 		String columnName = getString(rs, COLUMN_NAME);
 		String tableName = getString(rs, TABLE_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
-		String definition = replaceNames(unwrap(getString(rs, "definition"), '(', ')'), columnName);
+		String definition = unwrap(getString(rs, "definition"), '(', ')');
 		CheckConstraint c = new CheckConstraint(constraint_name, definition);
 		c.setCatalogName(getString(rs, CATALOG_NAME));
 		c.setSchemaName(getString(rs, SCHEMA_NAME));

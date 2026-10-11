@@ -21,10 +21,8 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * PostgreSQL 18 named NOT NULL constraint creation.
  */
 public class Postgres180CreateNotNullConstraintFactory
-		extends AbstractCreateNamedObjectFactory<NotNullConstraint,
-				AbstractSqlBuilder<?>>
-		implements AddTableObjectDetailFactory<NotNullConstraint,
-				AbstractSqlBuilder<?>> {
+		extends AbstractCreateNamedObjectFactory<NotNullConstraint, AbstractSqlBuilder<?>>
+		implements AddTableObjectDetailFactory<NotNullConstraint, AbstractSqlBuilder<?>> {
 
 	@Override
 	public List<SqlOperation> createSql(NotNullConstraint constraint) {
@@ -36,20 +34,15 @@ public class Postgres180CreateNotNullConstraintFactory
 	}
 
 	@Override
-	public void addCreateObject(NotNullConstraint constraint,
-			AbstractSqlBuilder<?> builder) {
-		builder.alter().table()
-				.name(constraint.getTable(),
-						getOptions().isDecorateSchemaName())
-				.add();
+	public void addCreateObject(NotNullConstraint constraint, AbstractSqlBuilder<?> builder) {
+		builder.alter().table().name(constraint.getTable(), getOptions().isDecorateSchemaName()).add();
 		addObjectDetail(constraint, constraint.getTable(), builder);
 	}
 
 	@Override
-	public void addObjectDetail(NotNullConstraint constraint, Table table,
-			AbstractSqlBuilder<?> builder) {
-		builder.constraint().space().name(constraint.getName()).space()
-				.notNull().space().name(constraint.getColumnName());
+	public void addObjectDetail(NotNullConstraint constraint, Table table, AbstractSqlBuilder<?> builder) {
+		builder.constraint().space().name(constraint.getName()).space().notNull().space()
+				.name(constraint.getColumnName());
 		if (constraint.isNoInherit()) {
 			builder.space()._add("NO INHERIT");
 		}

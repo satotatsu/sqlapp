@@ -29,8 +29,7 @@ public class InformixColumnReader extends JdbcColumnReader {
 			column.setIdentity(true);
 			column.setIdentityGenerationType(IdentityGenerationType.ByDefault);
 			column.setDefaultValue(null);
-		} else if ("SERIAL8".equalsIgnoreCase(typeName)
-				|| "BIGSERIAL".equalsIgnoreCase(typeName)) {
+		} else if ("SERIAL8".equalsIgnoreCase(typeName) || "BIGSERIAL".equalsIgnoreCase(typeName)) {
 			column.setDataType(DataType.BIGSERIAL);
 			column.setIdentity(true);
 			column.setIdentityGenerationType(IdentityGenerationType.ByDefault);

@@ -25,6 +25,7 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,8 +53,7 @@ public class VirticaFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Function> map = new TripleKeyMap<String, String, String, Function>();
@@ -61,8 +61,7 @@ public class VirticaFunctionReader extends FunctionReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Function function = createFunction(rs);
-				map.put(function.getCatalogName(), function.getSchemaName(),
-						function.getSpecificName(), function);
+				map.put(function.getCatalogName(), function.getSchemaName(), function.getSpecificName(), function);
 			}
 		});
 		return map.toList();
@@ -70,19 +69,24 @@ public class VirticaFunctionReader extends FunctionReader {
 
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = new Function(getString(rs, FUNCTION_NAME));
+		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDefinition(getString(rs, "FUNCTION_DEFINITION"));
 		obj.setRemarks(getString(rs, "COMMENT"));
 		setReturning(rs, obj);
-		String args=getString(rs, "FUNCTION_ARGUMENT_TYPE");
-		String[] splits=args.split("\\s*,\\s*");
-		for(String split:splits){
-			NamedArgument argument=createNamedArgument(split);
+		String args = getString(rs, "FUNCTION_ARGUMENT_TYPE");
+		obj.setSpecificName(createSpecificName(obj.getName(), args));
+		for (String split : splitArguments(args)) {
+			NamedArgument argument = createNamedArgument(split);
 			obj.getArguments().add(argument);
 		}
 		this.setSpecifics(rs, "VOLATILITY", obj);
 		this.setSpecifics(rs, "IS_FENCED", obj);
-		this.setSpecifics(rs, "VOLATILITY", obj);
+		this.setSpecifics(rs, "IS_STRICT", obj);
 		return obj;
+	}
+
+	protected String createSpecificName(String functionName, String parameters) {
+		return functionName + "(" + (parameters == null ? "" : parameters.trim()) + ")";
 	}
 
 	protected void setReturning(ExResultSet rs, Function obj) throws SQLException {
@@ -92,19 +96,42 @@ public class VirticaFunctionReader extends FunctionReader {
 		this.getDialect().setDbType(data_type, null, null, ret);
 	}
 
-	protected NamedArgument createNamedArgument(String parameter)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(String parameter) throws SQLException {
 		NamedArgument obj = new NamedArgument();
-		Matcher matcher=NAMED_ARGUMENT_PATTERN.matcher(parameter);
-		if (matcher.matches()){
+		Matcher matcher = NAMED_ARGUMENT_PATTERN.matcher(parameter);
+		if (matcher.matches()) {
 			obj.setName(matcher.group(1));
 			this.getDialect().setDbType(matcher.group(2), null, null, obj);
+		} else {
+			this.getDialect().setDbType(parameter.trim(), null, null, obj);
 		}
 		return obj;
 	}
 
-	private static final Pattern NAMED_ARGUMENT_PATTERN=Pattern.compile("\\s*([^\\s])\\s+(.*)");
-	
+	protected List<String> splitArguments(String parameters) {
+		List<String> result = new ArrayList<>();
+		if (parameters == null || parameters.trim().isEmpty()) {
+			return result;
+		}
+		int start = 0;
+		int depth = 0;
+		for (int i = 0; i < parameters.length(); i++) {
+			char c = parameters.charAt(i);
+			if (c == '(') {
+				depth++;
+			} else if (c == ')' && depth > 0) {
+				depth--;
+			} else if (c == ',' && depth == 0) {
+				result.add(parameters.substring(start, i).trim());
+				start = i + 1;
+			}
+		}
+		result.add(parameters.substring(start).trim());
+		return result;
+	}
+
+	private static final Pattern NAMED_ARGUMENT_PATTERN = Pattern.compile("\\s*(\\S+)\\s+(.+)");
+
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("functions.sql");
 	}

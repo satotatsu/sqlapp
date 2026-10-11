@@ -23,7 +23,10 @@ module com.sqlapp.core.h2mod {
 	requires com.sqlapp.core;
 
 	exports com.sqlapp.data.db.dialect.h2;
+	exports com.sqlapp.data.db.dialect.h2.bulk;
 	exports com.sqlapp.data.db.dialect.h2.metadata;
 	exports com.sqlapp.data.db.dialect.h2.resolver;
 	exports com.sqlapp.data.db.dialect.h2.sql to com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+		com.sqlapp.data.db.dialect.h2.bulk.H2SetBasedMigrationSnapshotProvider;
 }

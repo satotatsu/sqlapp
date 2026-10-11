@@ -49,8 +49,7 @@ public class MySqlProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Procedure> result = list();
@@ -68,8 +67,7 @@ public class MySqlProcedureReader extends ProcedureReader {
 		return getSqlNodeCache().getString("procedures.sql");
 	}
 
-	protected Procedure createProcedure(ExResultSet rs,
-			ProductVersionInfo productVersionInfo) throws SQLException {
+	protected Procedure createProcedure(ExResultSet rs, ProductVersionInfo productVersionInfo) throws SQLException {
 		Procedure obj = new Procedure(getString(rs, ROUTINE_NAME));
 		obj.setSpecificName(getString(rs, SPECIFIC_NAME));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
@@ -87,8 +85,7 @@ public class MySqlProcedureReader extends ProcedureReader {
 		String[] args = paramList.split("\\s*,\\s*");
 		for (String arg : args) {
 			NamedArgument argument = createObject();
-			MySqlUtils.setProcedureNamedArgument(arg,
-					argument);
+			MySqlUtils.setProcedureNamedArgument(arg, argument);
 			obj.getArguments().add(argument);
 		}
 		return obj;
@@ -98,15 +95,15 @@ public class MySqlProcedureReader extends ProcedureReader {
 	protected RoutineArgumentReader<?> newRoutineArgumentReader() {
 		return null;
 	}
-	
-	protected NamedArgument createObject(){
-		NamedArgument obj=new NamedArgument();
+
+	protected NamedArgument createObject() {
+		NamedArgument obj = new NamedArgument();
 		obj.setDialect(this.getDialect());
 		return obj;
 	}
 
-	protected NamedArgument createObject(String name){
-		NamedArgument obj=new NamedArgument(name);
+	protected NamedArgument createObject(String name) {
+		NamedArgument obj = new NamedArgument(name);
 		obj.setDialect(this.getDialect());
 		return obj;
 	}

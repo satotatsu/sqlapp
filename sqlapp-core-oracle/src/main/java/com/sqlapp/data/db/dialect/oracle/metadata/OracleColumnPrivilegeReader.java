@@ -41,11 +41,10 @@ public class OracleColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_COL_PRIVS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"DBA_COL_PRIVS");
 		SqlNode node = getSqlSqlNode(dba);
 		OracleMetadataUtils.setDba(dba, context);
 		final List<ColumnPrivilege> result = list();
@@ -67,8 +66,7 @@ public class OracleColumnPrivilegeReader extends ColumnPrivilegeReader {
 		}
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs) throws SQLException {
 		String schemaName = getString(rs, "TABLE_SCHEMA");
 		String objectName = getString(rs, TABLE_NAME);
 		ColumnPrivilege obj = new ColumnPrivilege();

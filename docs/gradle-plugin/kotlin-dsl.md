@@ -1,0 +1,306 @@
+# Gradle plugin with Kotlin DSL
+
+The main Gradle plugin guides use Groovy DSL because the companion example
+project uses `build.gradle`. This page shows the equivalent Kotlin DSL syntax
+for common Schema XML, HTML and Access migration verification workflows.
+
+sqlapp task properties use Gradle's lazy `Property`, `ListProperty`,
+`DirectoryProperty`, and `RegularFileProperty` APIs. In `build.gradle.kts`, set
+them with `set`, `add`, or `addAll` instead of Groovy assignment.
+
+## Apply the plugin and add the database runtime
+
+```kotlin
+plugins {
+    java
+    id("com.sqlapp.db") version "<sqlapp-version>"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    runtimeOnly("com.sqlapp:sqlapp-core-postgres:<sqlapp-version>")
+    runtimeOnly("org.postgresql:postgresql:<jdbc-driver-version>")
+}
+```
+
+The Java plugin supplies the `runtimeClasspath` configuration that sqlapp
+tasks use for JDBC drivers and dialect discovery. Keep the sqlapp plugin and
+dialect versions aligned, and choose the JDBC driver version explicitly.
+
+## Export Schema XML
+
+Import the task type and configure the existing registered task:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ExportSchemaXmlTask
+
+tasks.named<ExportSchemaXmlTask>("exportSchemaXml") {
+    dataSource {
+        jdbcUrl.set(providers.environmentVariable("SQLAPP_JDBC_URL"))
+        username.set(providers.environmentVariable("SQLAPP_DB_USER"))
+        password.set(providers.environmentVariable("SQLAPP_DB_PASSWORD"))
+    }
+
+    includeSchemas.add("public")
+    target.set("catalog")
+    dumpRows.set(false)
+    outputDirectory.set(layout.buildDirectory.dir("schema"))
+    outputFileName.set("Catalog.xml")
+}
+```
+
+Run `./gradlew exportSchemaXml`, or `.\gradlew.bat exportSchemaXml` in Windows
+PowerShell. The example writes `build/schema/Catalog.xml`.
+
+`dumpRows` defaults to the command behavior when it is not set. Set it to
+`false` explicitly for a metadata-only export.
+
+## Load DataSource settings from a file
+
+Use the nested DataSource extension's file collection:
+
+```kotlin
+tasks.named<ExportSchemaXmlTask>("exportSchemaXml") {
+    dataSource {
+        properties.from(
+            layout.projectDirectory.file("config/dataSource.properties")
+        )
+        username.set(providers.environmentVariable("SQLAPP_DB_USER"))
+        password.set(providers.environmentVariable("SQLAPP_DB_PASSWORD"))
+        maximumPoolSize.set(2)
+    }
+}
+```
+
+An example properties file is:
+
+```properties
+jdbcUrl=jdbc:postgresql://localhost:5432/app
+driverClassName=org.postgresql.Driver
+```
+
+The loader also accepts Java-properties XML, JSON, YAML, and YML. Supply more
+than one file with additional `properties.from(...)` calls or one call with
+multiple arguments. Files are merged in their supplied order; directly set
+extension values override loaded values. See
+[Configure a DataSource from a file](task-reference.md#configure-a-data-source-from-a-file)
+for the complete behavior.
+
+## Generate HTML after export
+
+Keep the task provider returned by `tasks.named` and use it as the dependency:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ExportSchemaXmlTask
+import com.sqlapp.gradle.plugins.GenerateHtmlDocsTask
+
+val exportSchemaXml = tasks.named<ExportSchemaXmlTask>("exportSchemaXml")
+
+tasks.named<GenerateHtmlDocsTask>("generateHtmlDocs") {
+    dependsOn(exportSchemaXml)
+    targetFile.set(layout.buildDirectory.file("schema/Catalog.xml"))
+    outputDirectory.set(layout.buildDirectory.dir("docs/database"))
+}
+```
+
+Gradle does not infer the task dependency from matching file paths. Keep the
+explicit `dependsOn` when the XML must be refreshed before documentation is
+generated. For reviewed offline XML, omit the dependency and point
+`targetFile` to that saved file.
+
+## Verify Access migration DDL
+
+The minimum Kotlin DSL configuration for generated Access migration phases
+sets only the directory:
+
+```kotlin
+import com.sqlapp.gradle.plugins.VerifyDatabaseMigrationDdlPhasesTask
+
+tasks.named<VerifyDatabaseMigrationDdlPhasesTask>("verifyDatabaseMigrationDdlPhases") {
+    directory.set(layout.buildDirectory.dir("reports/access-target-phases"))
+}
+```
+
+This performs the offline manifest, checksum, marker and provenance checks.
+Assessment and approval settings are optional. After review, enable the
+composite deployment gate and supply the two independently recorded approval
+fingerprints:
+
+```kotlin
+tasks.named<VerifyDatabaseMigrationDdlPhasesTask>("verifyDatabaseMigrationDdlPhases") {
+    directory.set(layout.buildDirectory.dir("reports/access-target-phases"))
+    assessmentReportFile.set(layout.buildDirectory.file("reports/migration.json"))
+    expectedAssessmentReportFingerprint.set("sha256:...")
+    expectedManifestFingerprint.set("sha256:...")
+    requireDeploymentReady.set(true)
+    verificationReportFile.set(layout.buildDirectory.file("reports/ddl-verification.json"))
+}
+```
+
+See [Database migration assessment](database-migration-assessment.md) for
+Access-to-Oracle and Access-to-SQL Server generation, review and approval
+steps.
+
+The initial-load job generator also has a concise Kotlin DSL entry point:
+
+```kotlin
+import com.sqlapp.gradle.plugins.GenerateAccessBulkMigrationJobConfigurationTask
+
+tasks.named<GenerateAccessBulkMigrationJobConfigurationTask>(
+    "generateAccessBulkMigrationJobConfiguration"
+) {
+    assessmentReportFile.set(layout.buildDirectory.file("reports/migration.json"))
+    schemaFile.set(layout.buildDirectory.file("schema/access.xml"))
+    outputFile.set(layout.buildDirectory.file("reports/access-load.yaml"))
+}
+```
+
+Approval-controlled runs can additionally set `ddlVerificationReportFile`,
+`expectedAssessmentReportFingerprint`, and
+`expectedDdlVerificationReportFingerprint`. All three remain optional for the
+simple workflow.
+
+Validate the generated job against the live target before executing it:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ValidateBulkMigrationTargetTask
+
+tasks.named<ValidateBulkMigrationTargetTask>("validateBulkMigrationTarget") {
+    configurationFile.set(layout.buildDirectory.file("reports/access-load.yaml"))
+    sourceDataSource {
+        jdbcUrl.set(providers.environmentVariable("ACCESS_JDBC_URL"))
+    }
+    dataSource {
+        jdbcUrl.set(providers.environmentVariable("TARGET_JDBC_URL"))
+        username.set(providers.environmentVariable("TARGET_DB_USER"))
+        password.set(providers.environmentVariable("TARGET_DB_PASSWORD"))
+    }
+    expectedConfigurationFingerprint.set(
+        providers.environmentVariable("APPROVED_JOB_SHA256")
+    )
+    assessmentReportFile.set(layout.buildDirectory.file("reports/migration.json"))
+    ddlVerificationReportFile.set(layout.buildDirectory.file("reports/ddl-verification.json"))
+    reportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    targetEnvironmentId.set("production-oracle")
+}
+```
+
+The task reads live target metadata and the optional empty-target condition,
+but does not migrate rows or create migration state. The approval files and
+atomic JSON report are optional for the simple workflow.
+
+An approval-controlled execution can require that fresh report:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ExecuteBulkMigrationJobTask
+
+tasks.named<ExecuteBulkMigrationJobTask>("executeBulkMigrationJob") {
+    configurationFile.set(layout.buildDirectory.file("reports/access-load.yaml"))
+    sourceDataSource { jdbcUrl.set(providers.environmentVariable("ACCESS_JDBC_URL")) }
+    dataSource { jdbcUrl.set(providers.environmentVariable("TARGET_JDBC_URL")) }
+    targetValidationReportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    expectedTargetValidationReportFingerprint.set(
+        providers.environmentVariable("APPROVED_TARGET_VALIDATION_SHA256")
+    )
+    maxTargetValidationAgeSeconds.set(3600L)
+    targetEnvironmentId.set("production-oracle")
+}
+```
+
+The age is required when the report gate is used. Execution compares every
+recorded job and target database identity and repeats the live validation
+before writing rows.
+
+The post-load audit and its later offline revalidation are also available from
+typed Kotlin DSL tasks:
+
+```kotlin
+import com.sqlapp.gradle.plugins.VerifyBulkMigrationEvidenceReportTask
+import com.sqlapp.gradle.plugins.VerifyBulkMigrationEvidenceTask
+
+tasks.named<VerifyBulkMigrationEvidenceTask>("verifyBulkMigrationEvidence") {
+    operationalReportFile.set(layout.buildDirectory.file("reports/access-load-operations.json"))
+    verificationReportFile.set(layout.buildDirectory.file("reports/access-load-verification.json"))
+    targetValidationReportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    expectedTargetEnvironmentId.set("production-oracle")
+    outputFile.set(layout.buildDirectory.file("reports/access-load-evidence.json"))
+}
+
+tasks.named<VerifyBulkMigrationEvidenceReportTask>("verifyBulkMigrationEvidenceReport") {
+    evidenceReportFile.set(layout.buildDirectory.file("reports/access-load-evidence.json"))
+    operationalReportFile.set(layout.buildDirectory.file("reports/access-load-operations.json"))
+    verificationReportFile.set(layout.buildDirectory.file("reports/access-load-verification.json"))
+    targetValidationReportFile.set(layout.buildDirectory.file("reports/target-validation.json"))
+    expectedTargetEnvironmentId.set("production-oracle")
+    expectedEvidenceReportFingerprint.set(providers.environmentVariable("APPROVED_EVIDENCE_SHA256"))
+}
+```
+
+Add the optional configuration, assessment, DDL-verification and target-validation files when the
+archival check must cover the complete approval chain. See
+[Database migration assessment](database-migration-assessment.md) for the full
+set of identity and freshness gates.
+
+## Configure list and map properties
+
+Use Gradle's collection-property methods:
+
+```kotlin
+tasks.named<ExportSchemaXmlTask>("exportSchemaXml") {
+    includeSchemas.addAll("public", "audit")
+    excludeTables.add("temporary_work")
+    parameters.put("environment", "development")
+}
+```
+
+Calling `set(listOf(...))` replaces the property's full value. `add` and
+`addAll` preserve values supplied by conventions or earlier configuration.
+Use `put` and `putAll` for `MapProperty` values.
+
+## Register a task type without a fixed name
+
+Some public task classes are not registered automatically. Register them with
+their concrete type. For example:
+
+```kotlin
+import com.sqlapp.gradle.plugins.ConvertDataTask
+
+tasks.register<ConvertDataTask>("convertReferenceData") {
+    directory.set(layout.projectDirectory.dir("src/main/data"))
+    outputDirectory.set(layout.buildDirectory.dir("converted-data"))
+    includes.add("**/*.csv")
+    outputFileType.set("json")
+    csvEncoding.set("UTF-8")
+    recursive.set(false)
+    removeOriginalFile.set(false)
+}
+```
+
+Before copying this example, check the task's inputs and file effects in
+[Custom tasks and versioned migrations](custom-tasks-and-migrations.md) and the
+[task reference](task-reference.md). Conversion tasks can be configured to
+remove their original input files; leave that option disabled unless deletion
+is intended.
+
+## Groovy-to-Kotlin property mapping
+
+| Groovy DSL | Kotlin DSL |
+|---|---|
+| `target = 'catalog'` | `target.set("catalog")` |
+| `dumpRows = false` | `dumpRows.set(false)` |
+| `includeSchemas.add('public')` | `includeSchemas.add("public")` |
+| `outputDirectory = layout.buildDirectory.dir('schema')` | `outputDirectory.set(layout.buildDirectory.dir("schema"))` |
+| `targetFile = file('schema.xml')` | `targetFile.set(layout.projectDirectory.file("schema.xml"))` |
+| `properties file('config/db.properties')` | `properties.from(layout.projectDirectory.file("config/db.properties"))` |
+
+Use typed `tasks.named<TaskType>(...)` and `tasks.register<TaskType>(...)` so
+Kotlin can expose task-specific properties at script compilation time. A
+string-only `tasks.named("...")` provider exposes only the base Gradle `Task`
+API inside its configuration block.
+
+For task names and all properties, continue with the
+[Gradle plugin task guide](README.md). For runtime or path problems, see
+[Troubleshooting](troubleshooting.md).

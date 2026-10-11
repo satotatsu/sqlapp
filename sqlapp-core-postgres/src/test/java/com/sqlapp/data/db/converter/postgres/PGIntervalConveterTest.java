@@ -19,17 +19,16 @@
 
 package com.sqlapp.data.db.converter.postgres;
 
-
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGIntervalConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGIntervalConverter;
 import com.sqlapp.data.interval.Interval;
 
-public class PGIntervalConveterTest extends AbstractConveterTest<Interval>{
+public class PGIntervalConveterTest extends AbstractConveterTest<Interval> {
 
 	@Override
 	protected Interval newInstance() {
-		return new Interval(2011,02,25,0,0,0);
+		return new Interval(2011, 02, 25, 0, 0, 0);
 	}
 
 	@Override

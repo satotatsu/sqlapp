@@ -13,34 +13,24 @@ class PostgresFdwConnectionBuilderTest {
 	void testListDetailedConnections() {
 		assertEquals(
 				"SELECT server_name, user_name, valid, used_in_xact, closed, remote_backend_pid FROM postgres_fdw_get_connections(true)",
-				new PostgresFdwConnectionBuilder(
-						DialectHolder.postgreSQL180)
-						.listConnections(true));
+				new PostgresFdwConnectionBuilder(DialectHolder.postgreSQL180).listConnections(true));
 	}
 
 	@Test
 	void testRejectDetailedConnectionsBeforePostgres18() {
 		assertThrows(IllegalArgumentException.class,
-				() -> new PostgresFdwConnectionBuilder(
-						DialectHolder.postgreSQL170)
-						.listConnections(false));
+				() -> new PostgresFdwConnectionBuilder(DialectHolder.postgreSQL170).listConnections(false));
 	}
 
 	@Test
 	void testDisconnectServer() {
-		assertEquals(
-				"SELECT postgres_fdw_disconnect('reporting''server')",
-				new PostgresFdwConnectionBuilder(
-						DialectHolder.postgreSQL170)
-						.disconnect("reporting'server"));
+		assertEquals("SELECT postgres_fdw_disconnect('reporting''server')",
+				new PostgresFdwConnectionBuilder(DialectHolder.postgreSQL170).disconnect("reporting'server"));
 	}
 
 	@Test
 	void testDisconnectAllServers() {
-		assertEquals(
-				"SELECT postgres_fdw_disconnect_all()",
-				new PostgresFdwConnectionBuilder(
-						DialectHolder.postgreSQL170)
-						.disconnectAll());
+		assertEquals("SELECT postgres_fdw_disconnect_all()",
+				new PostgresFdwConnectionBuilder(DialectHolder.postgreSQL170).disconnectAll());
 	}
 }

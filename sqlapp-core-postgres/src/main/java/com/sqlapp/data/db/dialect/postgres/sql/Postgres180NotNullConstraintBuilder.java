@@ -29,43 +29,34 @@ public class Postgres180NotNullConstraintBuilder {
 	public String validate(NotNullConstraint constraint) {
 		checkVersion();
 		return alterTable(constraint) + " VALIDATE CONSTRAINT "
-				+ dialect.quote(require(constraint.getName(),
-						"constraintName"));
+				+ dialect.quote(require(constraint.getName(), "constraintName"));
 	}
 
 	public String setNoInherit(NotNullConstraint constraint, boolean value) {
-		return alterConstraint(constraint,
-				value ? "NO INHERIT" : "INHERIT");
+		return alterConstraint(constraint, value ? "NO INHERIT" : "INHERIT");
 	}
 
-	private String alterConstraint(NotNullConstraint constraint,
-			String action) {
+	private String alterConstraint(NotNullConstraint constraint, String action) {
 		checkVersion();
 		return alterTable(constraint) + " ALTER CONSTRAINT "
-				+ dialect.quote(require(constraint.getName(),
-						"constraintName"))
-				+ " " + action;
+				+ dialect.quote(require(constraint.getName(), "constraintName")) + " " + action;
 	}
 
 	private String alterTable(NotNullConstraint constraint) {
 		Objects.requireNonNull(constraint, "constraint");
 		if (constraint.getTable() == null) {
-			throw new IllegalArgumentException(
-					"NotNullConstraint must belong to a table.");
+			throw new IllegalArgumentException("NotNullConstraint must belong to a table.");
 		}
 		StringBuilder builder = new StringBuilder("ALTER TABLE ");
 		if (!CommonUtils.isEmpty(constraint.getSchemaName())) {
-			builder.append(dialect.quote(constraint.getSchemaName()))
-					.append(".");
+			builder.append(dialect.quote(constraint.getSchemaName())).append(".");
 		}
-		return builder.append(dialect.quote(require(
-				constraint.getTableName(), "tableName"))).toString();
+		return builder.append(dialect.quote(require(constraint.getTableName(), "tableName"))).toString();
 	}
 
 	private void checkVersion() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"Named NOT NULL constraint alteration requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("Named NOT NULL constraint alteration requires PostgreSQL 18 or later.");
 		}
 	}
 

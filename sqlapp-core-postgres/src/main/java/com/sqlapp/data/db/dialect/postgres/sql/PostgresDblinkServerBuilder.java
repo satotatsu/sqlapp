@@ -19,8 +19,7 @@ import com.sqlapp.util.CommonUtils;
  * {@code dblink_fdw} foreign-server SQL builder.
  */
 public class PostgresDblinkServerBuilder {
-	private static final Set<String> USER_MAPPING_OPTIONS =
-			Set.of("user", "password");
+	private static final Set<String> USER_MAPPING_OPTIONS = Set.of("user", "password");
 
 	private final Dialect dialect;
 	private final String serverName;
@@ -33,18 +32,14 @@ public class PostgresDblinkServerBuilder {
 	}
 
 	public PostgresDblinkServerBuilder option(String name, String value) {
-		String normalized = require(name, "optionName")
-				.toLowerCase(Locale.ROOT);
+		String normalized = require(name, "optionName").toLowerCase(Locale.ROOT);
 		if (USER_MAPPING_OPTIONS.contains(normalized)) {
-			throw new IllegalArgumentException(
-					name + " must be specified in a user mapping.");
+			throw new IllegalArgumentException(name + " must be specified in a user mapping.");
 		}
 		if ("use_scram_passthrough".equals(normalized)) {
-			throw new IllegalArgumentException(
-					"use_scram_passthrough must be set using its dedicated method.");
+			throw new IllegalArgumentException("use_scram_passthrough must be set using its dedicated method.");
 		}
-		options.put(normalized,
-				Objects.requireNonNull(value, "optionValue"));
+		options.put(normalized, Objects.requireNonNull(value, "optionValue"));
 		return this;
 	}
 
@@ -59,8 +54,7 @@ public class PostgresDblinkServerBuilder {
 		if (ifNotExists) {
 			builder.append("IF NOT EXISTS ");
 		}
-		builder.append(dialect.quote(serverName))
-				.append(" FOREIGN DATA WRAPPER dblink_fdw");
+		builder.append(dialect.quote(serverName)).append(" FOREIGN DATA WRAPPER dblink_fdw");
 		Map<String, String> all = new LinkedHashMap<>(options);
 		if (useScramPassthrough) {
 			all.put("use_scram_passthrough", "true");
@@ -71,16 +65,13 @@ public class PostgresDblinkServerBuilder {
 
 	public String alterScramPassthrough(boolean value, boolean add) {
 		checkPostgres18();
-		StringBuilder builder = new StringBuilder("ALTER SERVER ")
-				.append(dialect.quote(serverName));
-		Map<String, String> option = Map.of(
-				"use_scram_passthrough", Boolean.toString(value));
+		StringBuilder builder = new StringBuilder("ALTER SERVER ").append(dialect.quote(serverName));
+		Map<String, String> option = Map.of("use_scram_passthrough", Boolean.toString(value));
 		appendOptions(builder, option, add ? "ADD" : "SET");
 		return builder.toString();
 	}
 
-	private void appendOptions(StringBuilder builder,
-			Map<String, String> values, String action) {
+	private void appendOptions(StringBuilder builder, Map<String, String> values, String action) {
 		if (values.isEmpty()) {
 			return;
 		}
@@ -93,8 +84,7 @@ public class PostgresDblinkServerBuilder {
 			if (action != null) {
 				builder.append(action).append(" ");
 			}
-			builder.append(entry.getKey()).append(" ")
-					.append(sqlString(entry.getValue()));
+			builder.append(entry.getKey()).append(" ").append(sqlString(entry.getValue()));
 		}
 		builder.append(")");
 	}
@@ -107,8 +97,7 @@ public class PostgresDblinkServerBuilder {
 
 	private void checkPostgres18() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"dblink_fdw use_scram_passthrough requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("dblink_fdw use_scram_passthrough requires PostgreSQL 18 or later.");
 		}
 	}
 

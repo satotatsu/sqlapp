@@ -19,9 +19,8 @@ class NotNullConstraintTest {
 		catalog.getSchemas().add(schema);
 		schema.getTables().add(table);
 		table.getColumns().add(column);
-		NotNullConstraint constraint = new NotNullConstraint(
-				"NN_CUSTOMERS_CUSTOMER_ID", column)
-				.setNoInherit(true).setValidated(false);
+		NotNullConstraint constraint = new NotNullConstraint("NN_CUSTOMERS_CUSTOMER_ID", column).setNoInherit(true)
+				.setValidated(false);
 		table.getConstraints().add(constraint);
 
 		column.setName("ID");
@@ -34,14 +33,12 @@ class NotNullConstraintTest {
 		catalog.writeXml(writer);
 		Catalog restored = new Catalog();
 		restored.loadXml(new StringReader(writer.toString()));
-		NotNullConstraint restoredConstraint = restored.getSchemas()
-				.get("PUBLIC").getTables().get("CUSTOMERS").getConstraints()
-				.getNotNullConstraints().get(0);
+		NotNullConstraint restoredConstraint = restored.getSchemas().get("PUBLIC").getTables().get("CUSTOMERS")
+				.getConstraints().getNotNullConstraints().get(0);
 		assertEquals("ID", restoredConstraint.getColumnName());
 		assertTrue(restoredConstraint.isNoInherit());
 		assertTrue(!restoredConstraint.isValidated());
-		assertSame(restored.getSchemas().get("PUBLIC").getTables()
-				.get("CUSTOMERS").getColumns().get("ID"),
+		assertSame(restored.getSchemas().get("PUBLIC").getTables().get("CUSTOMERS").getColumns().get("ID"),
 				restoredConstraint.getColumn());
 	}
 }

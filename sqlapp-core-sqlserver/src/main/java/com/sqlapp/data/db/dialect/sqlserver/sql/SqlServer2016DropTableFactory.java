@@ -18,6 +18,7 @@
  */
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
+
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropTableFactory;
 import com.sqlapp.data.schemas.Table;

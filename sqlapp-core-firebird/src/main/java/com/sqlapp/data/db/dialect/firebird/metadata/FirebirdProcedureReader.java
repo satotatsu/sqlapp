@@ -31,6 +31,7 @@ import com.sqlapp.data.db.metadata.ProcedureReader;
 import com.sqlapp.data.db.metadata.RoutineArgumentReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Procedure;
+import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -65,6 +66,26 @@ public class FirebirdProcedureReader extends ProcedureReader {
 			procedure.setStatement(source);
 		}
 		return procedure;
+	}
+
+	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Procedure> procedures)
+			throws SQLException {
+		FirebirdProcedureArgumentReader reader = new FirebirdProcedureArgumentReader(this.getDialect());
+		reader.setCatalogName(this.getCatalogName());
+		reader.setSchemaName(this.getSchemaName());
+		initializeChild(reader);
+		reader.setObjectName(null);
+		reader.setReadDbObjectPredicate((obj, metadataReader) -> true);
+		List<NamedArgument> arguments = reader.getAllFull(connection);
+		for (Procedure procedure : procedures) {
+			procedure.setDialect(this.getDialect());
+			for (NamedArgument argument : arguments) {
+				if (procedure.getName().equals(argument.getRoutineName())) {
+					procedure.getArguments().add(argument);
+				}
+			}
+		}
 	}
 
 	/*

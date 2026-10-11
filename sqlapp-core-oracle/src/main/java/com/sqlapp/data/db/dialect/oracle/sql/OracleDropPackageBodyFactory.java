@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropPackageBodyFactory;
 import com.sqlapp.data.schemas.PackageBody;
 
-public class OracleDropPackageBodyFactory extends
-		AbstractDropPackageBodyFactory<OracleSqlBuilder> {
+public class OracleDropPackageBodyFactory extends AbstractDropPackageBodyFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addDropObject(PackageBody obj, OracleSqlBuilder builder) {

@@ -48,8 +48,7 @@ public class SqlServer2005ProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Procedure> result = list();

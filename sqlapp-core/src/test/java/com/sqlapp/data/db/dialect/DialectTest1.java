@@ -29,44 +29,44 @@ import com.sqlapp.data.schemas.Column;
 
 public class DialectTest1 {
 
-	Dialect dialect=DialectResolver.getInstance().getDialect("default", 1, 1);
-	
+	Dialect dialect = DialectResolver.getInstance().getDialect("default", 1, 1);
+
 	@Test
 	public void testNvarchar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setLength(2000);
 		column.setDataType(DataType.NVARCHAR);
-		DbDataType<?> dbDataType=dialect.getDbDataType(column);
+		DbDataType<?> dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.NVARCHAR, dbDataType.getDataType());
 		//
 		column.setLength(2001);
-		dbDataType=dialect.getDbDataType(column);
+		dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.NCLOB, dbDataType.getDataType());
 	}
-	
+
 	@Test
 	public void testVarchar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setLength(2000);
 		column.setDataType(DataType.VARCHAR);
-		DbDataType<?> dbDataType=dialect.getDbDataType(column);
+		DbDataType<?> dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.VARCHAR, dbDataType.getDataType());
 		//
 		column.setLength(2001);
-		dbDataType=dialect.getDbDataType(column);
+		dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.CLOB, dbDataType.getDataType());
 	}
-	
+
 	@Test
 	public void testChar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setLength(254);
 		column.setDataType(DataType.CHAR);
-		DbDataType<?> dbDataType=dialect.getDbDataType(column);
+		DbDataType<?> dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.CHAR, dbDataType.getDataType());
 		//
 		column.setLength(255);
-		dbDataType=dialect.getDbDataType(column);
+		dbDataType = dialect.getDbDataType(column);
 		assertEquals(DataType.VARCHAR, dbDataType.getDataType());
 	}
 

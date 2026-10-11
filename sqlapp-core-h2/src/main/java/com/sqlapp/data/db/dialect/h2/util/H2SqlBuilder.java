@@ -47,10 +47,10 @@ public class H2SqlBuilder extends AbstractSqlBuilder<H2SqlBuilder> {
 		appendElement("ALIAS");
 		return instance();
 	}
-	
+
 	@Override
-	public H2SqlBuilder clone(){
-		return (H2SqlBuilder)super.clone();
+	public H2SqlBuilder clone() {
+		return (H2SqlBuilder) super.clone();
 	}
 
 }

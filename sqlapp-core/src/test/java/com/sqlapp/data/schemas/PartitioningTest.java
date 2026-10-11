@@ -21,14 +21,12 @@ package com.sqlapp.data.schemas;
 
 public class PartitioningTest extends AbstractDbObjectTest<Partitioning> {
 
-	private Partitioning getPartitionInfo(PartitioningType partitioningType,
-			PartitioningType subPartitioningType, String... columnNames) {
+	private Partitioning getPartitionInfo(PartitioningType partitioningType, PartitioningType subPartitioningType,
+			String... columnNames) {
 		Partitioning partitionInfo = new Partitioning(partitioningType);
 		partitionInfo.setSubPartitioningType(subPartitioningType);
 		for (int i = 0; i < 3; i++) {
-			partitionInfo.getPartitions().add(
-					getPartitionWithSub("patition" + i, i % 2 == 0, "highValue"
-							+ i));
+			partitionInfo.getPartitions().add(getPartitionWithSub("patition" + i, i % 2 == 0, "highValue" + i));
 		}
 		partitionInfo.getPartitioningColumns().add(columnNames);
 		for (int i = 0; i < 5; i++) {
@@ -37,8 +35,7 @@ public class PartitioningTest extends AbstractDbObjectTest<Partitioning> {
 		return partitionInfo;
 	}
 
-	private Partition getPartitionWithSub(String name, boolean compression,
-			String highValue) {
+	private Partition getPartitionWithSub(String name, boolean compression, String highValue) {
 		Partition partition = new Partition();
 		partition.setCompression(compression);
 		partition.setHighValue(highValue);
@@ -46,15 +43,13 @@ public class PartitioningTest extends AbstractDbObjectTest<Partitioning> {
 		partition.setName(name);
 		partition.setTableSpaceName("tableSpace1");
 		for (int i = 0; i < 3; i++) {
-			SubPartition subPartition = getSubPartition("sub" + name + i,
-					compression, highValue + i);
+			SubPartition subPartition = getSubPartition("sub" + name + i, compression, highValue + i);
 			partition.getSubPartitions().add(subPartition);
 		}
 		return partition;
 	}
 
-	private SubPartition getSubPartition(String name, boolean compression,
-			String highValue) {
+	private SubPartition getSubPartition(String name, boolean compression, String highValue) {
 		SubPartition partition = new SubPartition();
 		partition.setCompression(compression);
 		partition.setHighValue(highValue);
@@ -65,8 +60,7 @@ public class PartitioningTest extends AbstractDbObjectTest<Partitioning> {
 
 	@Override
 	protected Partitioning getObject() {
-		return getPartitionInfo(PartitioningType.Range, PartitioningType.List,
-				"colA", "colB");
+		return getPartitionInfo(PartitioningType.Range, PartitioningType.List, "colA", "colB");
 	}
 
 	@Override

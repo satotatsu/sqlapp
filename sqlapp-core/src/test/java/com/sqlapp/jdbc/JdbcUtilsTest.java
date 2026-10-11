@@ -40,10 +40,10 @@ public class JdbcUtilsTest {
 	 */
 	@Test
 	public void testgetDriverClassNameByUrlError() {
-		try{
+		try {
 			JdbcUtils.getDriverClassNameByUrl("jdbc:oracle:thin:@127.0.0.1:1521:DBName");
 			assertTrue(false);
-		} catch(JdbcDriverNotFoundException e){
+		} catch (JdbcDriverNotFoundException e) {
 			assertTrue(true);
 		}
 	}

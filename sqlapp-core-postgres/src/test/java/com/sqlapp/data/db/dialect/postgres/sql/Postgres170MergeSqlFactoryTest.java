@@ -34,8 +34,7 @@ class Postgres170MergeSqlFactoryTest extends AbstractPostgresSqlFactoryTest {
 		assertFalse(defaultSql.contains("RETURNING"), defaultSql);
 
 		factory.getTableOptions().setMergeTableWithReturning(true);
-		String returningSql = factory.createSql(table).get(0).getSqlText()
-				.replace("\"", "").replaceAll("\\s+", " ");
+		String returningSql = factory.createSql(table).get(0).getSqlText().replace("\"", "").replaceAll("\\s+", " ");
 		assertTrue(returningSql.contains("RETURNING _target_.ID"), returningSql);
 	}
 
@@ -43,8 +42,8 @@ class Postgres170MergeSqlFactoryTest extends AbstractPostgresSqlFactoryTest {
 	void testPostgres16DoesNotEmitPostgres17Clause() {
 		Table table = table();
 		table.setDialect(DialectHolder.postgreSQL160);
-		SqlFactory<Table> factory = DialectHolder.postgreSQL160.createSqlFactoryRegistry()
-				.getSqlFactory(table, SqlType.MERGE);
+		SqlFactory<Table> factory = DialectHolder.postgreSQL160.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.MERGE);
 		factory.getTableOptions().setMergeTableWithDelete(true);
 		String sql = factory.createSql(table).get(0).getSqlText().replaceAll("\\s+", " ");
 		assertFalse(sql.contains("BY SOURCE"), sql);

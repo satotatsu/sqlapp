@@ -1,0 +1,54 @@
+SELECT DISTINCT
+  current_database() AS constraint_catalog
+  , nc.nspname AS constraint_schema
+  , c.conname AS constraint_name
+  , obj_description(c.constraint_oid, 'pg_constraint') AS remarks
+  , current_database() AS table_catalog
+  , nr.nspname AS table_schema
+  , r.relname AS table_name
+  , a.attname AS column_name
+  , a.attnum
+  , c.contype
+  , CASE c.contype
+    WHEN 'c' THEN 'CHECK'
+    WHEN 'f' THEN 'FOREIGN KEY'
+    WHEN 'p' THEN 'PRIMARY KEY'
+    WHEN 'u' THEN 'UNIQUE'
+    WHEN 'x' THEN 'EXCLUDE'
+    END AS constraint_type
+  , pg_get_constraintdef(c.constraint_oid) as consrc --制約式
+  , c.condeferrable AS is_deferrable
+  , c.condeferred AS initially_deferred 
+  , c.key_position > backing.indnkeyatts AS is_included
+  , backing.indnullsnotdistinct AS nulls_not_distinct
+  , backing_name.relname AS index_name
+  , c.key_position
+FROM (
+  SELECT source.*, source.oid AS constraint_oid, generate_subscripts(source.conkey, 1) AS key_position
+  FROM pg_catalog.pg_constraint source
+) c
+INNER JOIN pg_catalog.pg_index backing ON backing.indexrelid = c.conindid
+INNER JOIN pg_catalog.pg_class backing_name ON backing_name.oid = c.conindid
+INNER JOIN pg_catalog.pg_class r
+  ON (c.conrelid = r.oid)
+INNER JOIN pg_catalog.pg_attribute a
+  ON (r.oid = a.attrelid AND a.attnum = c.conkey[c.key_position])
+INNER JOIN pg_catalog.pg_namespace nc
+  ON (c.connamespace = nc.oid)
+INNER JOIN pg_catalog.pg_namespace nr
+  ON (r.relnamespace = nr.oid)
+WHERE 1=1
+  AND r.relkind IN ('r','p')
+  AND c.contype IN ('u','p')
+  AND (NOT pg_is_other_temp_schema(nr.oid)) 
+  AND NOT attisdropped
+  /*if isNotEmpty(schemaName)*/
+  AND nr.nspname IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND r.relname IN /*tableName*/('%')
+  /*end*/
+  /*if isNotEmpty(constraintName)*/
+  AND c.conname IN /*constraintName*/('%')
+  /*end*/
+ORDER BY nr.nspname, r.relname, c.contype, c.conname, c.key_position

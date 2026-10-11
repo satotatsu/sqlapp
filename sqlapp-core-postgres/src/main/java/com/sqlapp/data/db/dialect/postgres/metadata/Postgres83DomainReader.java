@@ -34,13 +34,10 @@ public class Postgres83DomainReader extends PostgresDomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Domain> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		List<Domain> result = super.doGetAll(connection, context,
-				productVersionInfo);
-		List<Domain> enumList = getAllEnumInfo(connection, context,
-				productVersionInfo);
+		List<Domain> result = super.doGetAll(connection, context, productVersionInfo);
+		List<Domain> enumList = getAllEnumInfo(connection, context, productVersionInfo);
 		result.addAll(enumList);
 		return result;
 	}
@@ -51,8 +48,7 @@ public class Postgres83DomainReader extends PostgresDomainReader {
 	 * @param connection
 	 * @param context
 	 */
-	protected List<Domain> getAllEnumInfo(Connection connection,
-			final ParametersContext context,
+	protected List<Domain> getAllEnumInfo(Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		PostgresEnumReader reader = new PostgresEnumReader(this.getDialect());
 		this.initializeChild(reader);

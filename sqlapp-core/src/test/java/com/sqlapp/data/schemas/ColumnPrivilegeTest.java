@@ -29,7 +29,7 @@ public class ColumnPrivilegeTest extends AbstractDbObjectTest<ColumnPrivilege> {
 		column.setGranteeName("grantee");
 		return column;
 	}
-	
+
 	@Override
 	protected ColumnPrivilege getObject() {
 		return getColumnPrivilege("colA");

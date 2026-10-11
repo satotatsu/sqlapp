@@ -260,7 +260,9 @@ public class SqlSignature {
 
 		public String getKeyColumnsText() {
 			SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-			builder.add(keyColumns);
+			for (final Column column : keyColumns) {
+				builder.add(column.getName());
+			}
 			return builder.toString();
 		}
 

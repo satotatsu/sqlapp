@@ -47,8 +47,7 @@ public class SapHanaTriggerReader extends TriggerReader {
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Trigger> result = list();
@@ -76,8 +75,8 @@ public class SapHanaTriggerReader extends TriggerReader {
 		trigger.addEventManipulation(event);
 		String actionTime = getString(rs, "TRIGGER_ACTION_TIME");
 		trigger.setActionTiming(actionTime);
-		trigger.setTableName(getString(rs, "SUBJECT_TABLE_NAME"));
 		trigger.setTableSchemaName(getString(rs, "SUBJECT_TABLE_SCHEMA"));
+		trigger.setTableName(getString(rs, "SUBJECT_TABLE_NAME"));
 		trigger.setDefinition(getString(rs, "DEFINITION"));
 		return trigger;
 	}

@@ -41,8 +41,7 @@ public class SqlServer2000RoleMemberReader extends RoleMemberReader {
 	}
 
 	@Override
-	protected List<RoleMember> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<RoleMember> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<RoleMember> result = list();
@@ -57,7 +56,7 @@ public class SqlServer2000RoleMemberReader extends RoleMemberReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roleMember2000.sql");
+		return getSqlNodeCache().getString("roleMembers2000.sql");
 	}
 
 	protected RoleMember createRoleMember(ExResultSet rs) throws SQLException {

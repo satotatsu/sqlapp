@@ -24,13 +24,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.db.sql.SqlSignature;
@@ -49,6 +52,7 @@ import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.ToStringBuilder;
+import com.sqlapp.util.TripleKeyMap;
 
 import lombok.Getter;
 
@@ -58,14 +62,19 @@ import lombok.Getter;
 @Getter
 public class TableRelationTreeHolder implements Iterable<TableRelation> {
 	private final DoubleKeyMap<String, String, TableRelation> tableMap = CommonUtils.doubleKeyMap();
+	private final TripleKeyMap<String, String, String, TableRelation> qualifiedTableMap = CommonUtils.tripleKeyMap();
 	private final TableRelation rootTableRelation;
 
 	public DoubleKeyMap<String, String, TableRelation> getRelationTree() {
 		return tableMap;
 	}
 
+	public TripleKeyMap<String, String, String, TableRelation> getQualifiedRelationTree() {
+		return qualifiedTableMap;
+	}
+
 	public Optional<TableRelation> findFirst(Predicate<TableRelation> predicate) {
-		for (TableRelation tableRelation : tableMap.values()) {
+		for (TableRelation tableRelation : qualifiedTableMap.values()) {
 			if (predicate.test(tableRelation)) {
 				return Optional.of(tableRelation);
 			}
@@ -78,20 +87,42 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 	}
 
 	public TableRelationTreeHolder(Collection<Table> tables) {
+		this(tables, foreignKey -> true);
+	}
+
+	public TableRelationTreeHolder(Collection<Table> tables,
+			Predicate<ForeignKeyConstraint> foreignKeyPredicate) {
+		Objects.requireNonNull(tables, "tables");
+		Objects.requireNonNull(foreignKeyPredicate, "foreignKeyPredicate");
+		if (tables.isEmpty()) {
+			throw new IllegalArgumentException("Table relation tree requires at least one table.");
+		}
 		for (Table table : tables) {
+			Objects.requireNonNull(table, "table");
+			if (getTableRelation(table) != null) {
+				throw new IllegalArgumentException("Duplicate table identity in relation tree: "
+						+ qualifiedName(table));
+			}
 			final TableRelation tableRelation = new TableRelation(table);
 			tableMap.put(table.getSchemaName(), table.getName(), tableRelation);
+			qualifiedTableMap.put(table.getCatalogName(), table.getSchemaName(), table.getName(), tableRelation);
 		}
 		// 対象テーブル内にある親を設定
 		for (Table table : tables) {
-			final TableRelation tableRelation = tableMap.get(table.getSchemaName(), table.getName());
-			List<ForeignKeyConstraint> fks = table.getConstraints()
-					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != table);
-			for (ForeignKeyConstraint fk : fks) {
-				if (tableMap.containsKey(fk.getRelatedTable().getSchemaName(), fk.getRelatedTable().getName())) {
-					tableRelation.setForeignKeyConstraint(fk);
-					break;
-				}
+			final TableRelation tableRelation = getTableRelation(table);
+			List<ForeignKeyConstraint> candidates = table.getConstraints()
+					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != null
+							&& !SchemaUtils.isSameTable(fk.getRelatedTable(), table)
+							&& foreignKeyPredicate.test(fk)).stream()
+					.filter(fk -> getTableRelation(fk.getRelatedTable()) != null).toList();
+			if (candidates.size() > 1) {
+				throw new IllegalArgumentException("Multiple parent foreign keys remain for table "
+						+ qualifiedName(table) + ": "
+						+ candidates.stream().map(ForeignKeyConstraint::getName).sorted().toList()
+						+ "; select one with foreignKeyPredicate.");
+			}
+			if (!candidates.isEmpty()) {
+				tableRelation.setForeignKeyConstraint(candidates.getFirst());
 			}
 		}
 		// 対象テーブル内にある子を設定
@@ -99,9 +130,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			if (tableRelation.getParent() == null) {
 				continue;
 			}
-			final TableRelation parentTableRelation = tableMap.get(
-					tableRelation.getForeignKeyConstraint().getRelatedTableSchemaName(),
-					tableRelation.getForeignKeyConstraint().getRelatedTableName());
+			final Table relatedTable = tableRelation.getForeignKeyConstraint().getRelatedTable();
+			final TableRelation parentTableRelation = getTableRelation(relatedTable);
 			parentTableRelation.addChild(tableRelation);
 		}
 		List<TableRelation> rootList = CommonUtils.list();
@@ -114,11 +144,45 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			Table[] tableArray = rootList.stream().map(tr -> tr.getTable()).toArray(i -> new Table[i]);
 			throw new MultipleRootTablesException(tableArray);
 		}
+		if (rootList.isEmpty()) {
+			throw new IllegalArgumentException("Table relation tree contains no root table; "
+					+ "check for a cyclic relationship.");
+		}
 		this.rootTableRelation = rootList.getFirst();
+		validateReachability();
+	}
+
+	private void validateReachability() {
+		Set<TableRelation> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+		ArrayDeque<TableRelation> pending = new ArrayDeque<>();
+		pending.add(rootTableRelation);
+		while (!pending.isEmpty()) {
+			TableRelation current = pending.removeFirst();
+			if (visited.add(current)) {
+				pending.addAll(current.getChildren());
+			}
+		}
+		if (visited.size() != qualifiedTableMap.values().size()) {
+			List<String> unreachable = qualifiedTableMap.values().stream()
+					.filter(relation -> !visited.contains(relation))
+					.map(relation -> qualifiedName(relation.getTable())).sorted().toList();
+			throw new IllegalArgumentException("Table relation tree contains tables unreachable from root; "
+					+ "check for a cyclic relationship: " + unreachable);
+		}
+	}
+
+	private String qualifiedName(Table table) {
+		return java.util.stream.Stream.of(table.getCatalogName(), table.getSchemaName(), table.getName())
+				.filter(Objects::nonNull).collect(java.util.stream.Collectors.joining("."));
 	}
 
 	public TableRelation getTableRelation(Table table) {
-		return tableMap.get(table.getSchemaName(), table.getName());
+		TableRelation relation = qualifiedTableMap.get(
+				table.getCatalogName(), table.getSchemaName(), table.getName());
+		if (relation != null) {
+			return relation;
+		}
+		return findFirst(item -> SchemaUtils.isSameTable(item.getTable(), table)).orElse(null);
 	}
 
 	public static class TableRelation implements Closeable {
@@ -290,14 +354,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 			@Override
 			public boolean next() throws SQLException {
-				if (currentIndex < subList.size()) {
-					return true;
+				if (loadSubList()) {
+					currentIndex = 0;
 				}
-				if (!loadSubList()) {
-					return false;
-				}
-				currentIndex = 0;
-				return !subList.isEmpty();
+				return currentIndex < subList.size();
 			}
 
 			@Override
@@ -327,7 +387,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			private boolean resultSetNext = true;
 			private final List<Row> loadedList = CommonUtils.list();
 			private final List<Column> resultSetColumns = CommonUtils.list();
-			private long readResulSetCount = 0;
 
 			@Override
 			public boolean next() throws SQLException {
@@ -339,16 +398,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				}
 				readFromResultSet();
 				currentIndex = 0;
-				if (!getRows().isEmpty() || !loadedList.isEmpty()) {
-					if (readResulSetCount > 1) {
-						if (this.resultSetNext) {
-							return true;
-						}
-					} else {
-						return true;
-					}
-				}
-				return false;
+				// Reaching EOF does not discard the final, partially filled batch.
+				return !loadedList.isEmpty();
 			}
 
 			@Override
@@ -415,7 +466,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 						break;
 					}
 				}
-				readResulSetCount++;
 				this.resultSetNext = hasNext;
 				if (!hasNext) {
 					close();
@@ -647,6 +697,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 	@Override
 	public Iterator<TableRelation> iterator() {
-		return tableMap.values().iterator();
+		return qualifiedTableMap.values().iterator();
 	}
 }

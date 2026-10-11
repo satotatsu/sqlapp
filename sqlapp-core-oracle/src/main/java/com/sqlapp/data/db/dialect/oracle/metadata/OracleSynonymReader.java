@@ -48,11 +48,10 @@ public class OracleSynonymReader extends SynonymReader {
 	 * (java.sql.Connection, com.sqlapp.data.parameter.ParametersContext)
 	 */
 	@Override
-	protected List<Synonym> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Synonym> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_SYNONYMS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"DBA_SYNONYMS");
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		OracleMetadataUtils.setDba(dba, context);
 		final List<Synonym> result = list();

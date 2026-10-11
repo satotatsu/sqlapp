@@ -48,14 +48,12 @@ public class OracleTableSpaceReader extends TableSpaceReader {
 	}
 
 	@Override
-	protected List<TableSpace> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpace> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_TABLESPACES");
+		boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS", "DBA_TABLESPACES");
 		final List<TableSpace> result = list();
-		if (!dba){
+		if (!dba) {
 			return result;
 		}
 		OracleMetadataUtils.setDbaOrUser(dba, context);
@@ -85,7 +83,7 @@ public class OracleTableSpaceReader extends TableSpaceReader {
 		setSpecifics(rs, "MIN_EXTLEN", tableSpace);
 		setSpecifics(rs, "STATUS", tableSpace); // ONLINE OFFLINE READ ONLY
 		setSpecifics(rs, "CONTENTS", tableSpace); // UNDO PERMANENT
-														// TEMPORARY
+													// TEMPORARY
 		setSpecifics(rs, "LOGGING", tableSpace);
 		setSpecifics(rs, "FORCE_LOGGING", tableSpace);
 		setSpecifics(rs, "EXTENT_MANAGEMENT", tableSpace);

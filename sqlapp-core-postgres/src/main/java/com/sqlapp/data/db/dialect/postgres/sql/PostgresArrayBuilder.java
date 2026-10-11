@@ -39,25 +39,21 @@ public class PostgresArrayBuilder {
 		return "array_sort(" + arrayExpression + ", " + descending + ")";
 	}
 
-	public String arraySort(String arrayExpression, boolean descending,
-			boolean nullsFirst) {
+	public String arraySort(String arrayExpression, boolean descending, boolean nullsFirst) {
 		checkVersion();
 		require(arrayExpression);
-		return "array_sort(" + arrayExpression + ", " + descending + ", "
-				+ nullsFirst + ")";
+		return "array_sort(" + arrayExpression + ", " + descending + ", " + nullsFirst + ")";
 	}
 
 	private void checkVersion() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"array_sort and array_reverse require PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("array_sort and array_reverse require PostgreSQL 18 or later.");
 		}
 	}
 
 	private void require(String value) {
 		if (CommonUtils.isEmpty(value)) {
-			throw new IllegalArgumentException(
-					"arrayExpression must not be empty.");
+			throw new IllegalArgumentException("arrayExpression must not be empty.");
 		}
 	}
 }

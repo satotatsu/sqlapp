@@ -48,8 +48,7 @@ public class SqlServer2005SettingReader extends SettingReader {
 	}
 
 	@Override
-	protected List<Setting> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Setting> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Setting> result = list();

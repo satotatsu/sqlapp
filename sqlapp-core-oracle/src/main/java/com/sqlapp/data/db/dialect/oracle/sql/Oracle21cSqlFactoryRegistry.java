@@ -18,7 +18,6 @@ public class Oracle21cSqlFactoryRegistry extends Oracle19cSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Function.class, SqlType.CREATE,
-				Oracle21cCreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, Oracle21cCreateFunctionFactory.class);
 	}
 }

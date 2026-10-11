@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
 
-public class Hsql2_1_0 extends Hsql2_0_0{
+public class Hsql2_1_0 extends Hsql2_0_0 {
 
 	/**
 	 * serialVersionUID

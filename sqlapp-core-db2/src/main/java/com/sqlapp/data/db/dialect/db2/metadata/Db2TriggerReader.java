@@ -48,8 +48,7 @@ public class Db2TriggerReader extends TriggerReader {
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Trigger> result = list();

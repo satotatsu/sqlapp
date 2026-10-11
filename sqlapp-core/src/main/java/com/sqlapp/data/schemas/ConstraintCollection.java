@@ -461,7 +461,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		return list.stream().filter(con -> {
 			boolean match = true;
 			for (final ReferenceColumn fkcol : con.getColumns()) {
-				final Column column = columnMap.get(con.getName());
+				final Column column = columnMap.get(fkcol.getName());
 				if (column == null) {
 					match = false;
 					break;

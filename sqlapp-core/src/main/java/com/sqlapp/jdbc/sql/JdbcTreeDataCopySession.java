@@ -116,6 +116,8 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		this.target.setAfterCommitEveryRootBatchesHandler((i, row) -> {
 			if (!source.isSameConnection(target)) {
 				source.commitForce();
+			} else {
+				source.recordSharedCommit();
 			}
 			rootCursorCommitted = true;
 		});
@@ -217,6 +219,32 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		}
 		if (exception != null) {
 			throw exception;
+		}
+	}
+
+	/**
+	 * Copies rows within the source and target execution boundaries. On success,
+	 * the final source batch is processed before the target batch is committed.
+	 * On failure both sessions discard buffered rows and roll back uncommitted work.
+	 * Separate connections do not provide an atomic distributed transaction.
+	 *
+	 * @param work copy configuration and row processing
+	 * @throws SQLException if copying or transaction completion fails
+	 */
+	public JdbcTreeDataCopyExecutionResult execute(SQLConsumer<JdbcTreeDataCopySession> work) throws SQLException {
+		JdbcTreeDataExecutionResult[] targetResult = new JdbcTreeDataExecutionResult[1];
+		boolean previousCommitManagement = source.externallyManagedCommits;
+		source.externallyManagedCommits = true;
+		try (this) {
+			JdbcTreeDataExecutionResult sourceResult = source.execute(reader -> {
+				targetResult[0] = target.execute(writer -> {
+					work.accept(this);
+					source.finishExecution();
+				});
+			});
+			return new JdbcTreeDataCopyExecutionResult(sourceResult, targetResult[0]);
+		} finally {
+			source.externallyManagedCommits = previousCommitManagement;
 		}
 	}
 

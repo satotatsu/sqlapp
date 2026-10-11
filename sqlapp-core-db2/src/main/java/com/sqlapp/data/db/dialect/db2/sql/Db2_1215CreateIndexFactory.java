@@ -31,8 +31,7 @@ public class Db2_1215CreateIndexFactory extends CreateIndexFactory {
 	public static final String PCT_NODES_TO_CACHE = "PCT_NODES_TO_CACHE";
 
 	@Override
-	public void addObjectDetail(final Index index, final Table table,
-			final AbstractSqlBuilder<?> builder) {
+	public void addObjectDetail(final Index index, final Table table, final AbstractSqlBuilder<?> builder) {
 		if (index.getIndexType() != IndexType.Vector) {
 			super.addObjectDetail(index, table, builder);
 			return;
@@ -75,33 +74,31 @@ public class Db2_1215CreateIndexFactory extends CreateIndexFactory {
 		final ReferenceColumn reference = index.getColumns().get(0);
 		final Column column = table.getColumns().get(reference.getName());
 		if (column == null || column.getDataType() != DataType.VECTOR) {
-			throw new IllegalArgumentException("VECTOR index column must have VECTOR data type: "
-					+ reference.getName());
+			throw new IllegalArgumentException(
+					"VECTOR index column must have VECTOR data type: " + reference.getName());
 		}
 		if (index.getVectorDistanceType() == VectorDistanceType.Cosine
 				&& column.getVectorElementDataType() != DataType.REAL) {
-			throw new IllegalArgumentException("COSINE distance requires a FLOAT32 VECTOR column: "
-					+ reference.getName());
+			throw new IllegalArgumentException(
+					"COSINE distance requires a FLOAT32 VECTOR column: " + reference.getName());
 		}
 	}
 
-	private void addCompressedVectorsTableSpace(final Index index,
-			final AbstractSqlBuilder<?> builder) {
+	private void addCompressedVectorsTableSpace(final Index index, final AbstractSqlBuilder<?> builder) {
 		final String value = index.getSpecifics().get(COMPRESSED_VECTORS_TABLE_SPACE_NAME);
 		if (value != null) {
 			builder.space()._add("COMPRESSED VECTORS IN").space().name(value);
 		}
 	}
 
-	private void addIntegerOption(final Index index, final AbstractSqlBuilder<?> builder,
-			final String name, final int minimum, final int maximum) {
+	private void addIntegerOption(final Index index, final AbstractSqlBuilder<?> builder, final String name,
+			final int minimum, final int maximum) {
 		final Integer value = index.getSpecifics().get(name, Integer.class);
 		if (value == null) {
 			return;
 		}
 		if (value < minimum || value > maximum) {
-			throw new IllegalArgumentException(name + " must be between " + minimum
-					+ " and " + maximum + ": " + value);
+			throw new IllegalArgumentException(name + " must be between " + minimum + " and " + maximum + ": " + value);
 		}
 		builder.space()._add(name).space()._add(value);
 	}

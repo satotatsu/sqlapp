@@ -1,0 +1,5 @@
+com.sqlapp.data.db.dialect.cockroach
+com.sqlapp.data.db.dialect.cockroach.bulk
+com.sqlapp.data.db.dialect.cockroach.metadata
+com.sqlapp.data.db.dialect.cockroach.resolver
+com.sqlapp.data.db.dialect.cockroach.sql

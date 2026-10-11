@@ -1,0 +1,1226 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.bulk;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
+import java.io.File;
+import java.sql.SQLException;
+import java.nio.file.Path;
+import java.nio.file.Files;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobResult;
+import com.sqlapp.jdbc.bulk.BulkMigrationMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
+import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
+import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.util.MessageDigests;
+import com.sqlapp.util.YamlConverter;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
+class ExecuteBulkMigrationJobCommandTest extends AbstractDbCommandTest {
+	@TempDir
+	Path temporaryDirectory;
+
+	@Test
+	void validatesOptionalSchemaFingerprintBeforePlanResolution() throws Exception {
+		try (var source = dataSource("bulk_schema_fingerprint_source");
+				var target = dataSource("bulk_schema_fingerprint_target")) {
+			final Schema schema = new Schema("PUBLIC");
+			final File schemaFile = temporaryDirectory.resolve("fingerprinted-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setTasks(List.of());
+			final File configurationFile = temporaryDirectory.resolve("fingerprinted-job.yaml").toFile();
+			configuration.setSchemaFingerprint("sha256:" + "0".repeat(64));
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			try (var connection = source.getConnection()) {
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+				configuration.setSchemaFingerprint(null);
+				final var provenance = new BulkMigrationJobConfiguration.Provenance();
+				provenance.setAssessmentReportFingerprint("SHA256:" + "0".repeat(64));
+				configuration.setProvenance(provenance);
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+				provenance.setAssessmentReportFingerprint("sha256:" + "0".repeat(64));
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertNotNull(new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+				final String configurationFingerprint = "sha256:"
+						+ MessageDigests.SHA256.checksumAsString(configurationFile);
+				assertEquals(configurationFingerprint,
+						new BulkMigrationJobConfigurationResolver()
+								.resolveJob(configurationFile, connection, configurationFingerprint).provenance()
+								.configurationFingerprint());
+				assertThrows(CommandException.class, () -> new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, connection, "sha256:" + "f".repeat(64)));
+			}
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(configurationFile);
+			command.setExpectedConfigurationFingerprint("sha256:" + "f".repeat(64));
+			assertThrows(CommandException.class, command::run);
+			command.setExpectedConfigurationFingerprint("SHA256:" + "f".repeat(64));
+			assertThrows(CommandException.class, command::run);
+			command.setExpectedConfigurationFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile));
+			command.setMaxConfigurationFileSizeBytes(Files.size(configurationFile.toPath()) - 1);
+			final var sizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Configuration file exceeds maxConfigurationFileSizeBytes.", sizeRejection.getMessage());
+			command.setMaxConfigurationFileSizeBytes(Files.size(configurationFile.toPath()));
+			command.setMaxSchemaFileSizeBytes(Files.size(schemaFile.toPath()) - 1);
+			final var schemaSizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Schema XML file exceeds maxSchemaFileSizeBytes.", schemaSizeRejection.getMessage());
+			command.setMaxSchemaFileSizeBytes(Files.size(schemaFile.toPath()));
+			assertDoesNotThrow(command::run);
+		}
+	}
+
+	@Test
+	void validatesOptionalApprovalArtifactsAgainstConfigurationProvenance() throws Exception {
+		try (var source = dataSource("bulk_approval_source"); var target = dataSource("bulk_approval_target")) {
+			final File schemaFile = temporaryDirectory.resolve("approval-schema.xml").toFile();
+			new Schema("PUBLIC").writeXml(schemaFile);
+			final File assessmentFile = temporaryDirectory.resolve("assessment.json").toFile();
+			final File ddlVerificationFile = temporaryDirectory.resolve("ddl-verification.json").toFile();
+			Files.writeString(assessmentFile.toPath(), "{\"status\":\"REVIEW_REQUIRED\"}");
+			Files.writeString(ddlVerificationFile.toPath(), "{\"status\":\"VERIFIED\"}");
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setTasks(List.of());
+			final var provenance = new BulkMigrationJobConfiguration.Provenance();
+			provenance
+					.setAssessmentReportFingerprint("sha256:" + MessageDigests.SHA256.checksumAsString(assessmentFile));
+			provenance.setDdlVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(ddlVerificationFile));
+			configuration.setProvenance(provenance);
+			final File configurationFile = temporaryDirectory.resolve("approval-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(configurationFile);
+			command.setAssessmentReportFile(assessmentFile);
+			command.setDdlVerificationReportFile(ddlVerificationFile);
+			command.setMaxApprovalArtifactFileSizeBytes(Files.size(assessmentFile.toPath()) - 1);
+			assertEquals("assessmentReportFile exceeds maxApprovalArtifactFileSizeBytes.",
+					assertThrows(CommandException.class, command::run).getMessage());
+			command.setMaxApprovalArtifactFileSizeBytes(
+					Math.max(Files.size(assessmentFile.toPath()), Files.size(ddlVerificationFile.toPath())));
+			assertDoesNotThrow(command::run);
+
+			Files.writeString(assessmentFile.toPath(), "{\"status\":\"CHANGED\"}");
+			assertThrows(CommandException.class, command::run);
+			Files.writeString(assessmentFile.toPath(), "{\"status\":\"REVIEW_REQUIRED\"}");
+			provenance.setDdlVerificationReportFingerprint(null);
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			assertThrows(CommandException.class, command::run);
+		}
+	}
+
+	@Test
+	void requiresMatchingFreshTargetValidationEvidenceWhenConfigured() throws Exception {
+		try (var source = dataSource("bulk_target_evidence_source");
+				var target = dataSource("bulk_target_evidence_target")) {
+			final File schemaFile = temporaryDirectory.resolve("target-evidence-schema.xml").toFile();
+			new Schema("PUBLIC").writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setJobId("approved-empty-job");
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setTasks(List.of());
+			final var operationalReport = new BulkMigrationJobConfiguration.Report();
+			operationalReport.setTargetFile("target-evidence-operations.json");
+			configuration.setReport(operationalReport);
+			final File job = temporaryDirectory.resolve("target-evidence-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+
+			final BulkMigrationJobConfigurationResolver.Resolution resolved;
+			try (var sourceConnection = source.getConnection()) {
+				resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
+			}
+			final File evidence = temporaryDirectory.resolve("target-evidence.json").toFile();
+			final var reportIO = new BulkMigrationTargetValidationReportIO();
+			final String productName;
+			final String productVersion;
+			final String catalogName;
+			final String schemaName;
+			try (var targetConnection = target.getConnection()) {
+				productName = targetConnection.getMetaData().getDatabaseProductName();
+				productVersion = targetConnection.getMetaData().getDatabaseProductVersion();
+				catalogName = targetConnection.getCatalog();
+				schemaName = targetConnection.getSchema();
+			}
+			reportIO.write(evidence.toPath(),
+					new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+							Instant.now(), resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+							resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+							resolved.provenance(), "production", productName, productVersion, catalogName, schemaName));
+
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(job);
+			command.setTargetValidationReportFile(evidence);
+			command.setMaxTargetValidationAgeSeconds(60L);
+			command.setTargetEnvironmentId("production");
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			command.setMaxTargetValidationReportFileSizeBytes(Files.size(evidence.toPath()) - 1);
+			final var sizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report file exceeds maxTargetValidationReportFileSizeBytes.",
+					sizeRejection.getMessage());
+			command.setMaxTargetValidationReportFileSizeBytes(Files.size(evidence.toPath()));
+			assertDoesNotThrow(command::run);
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(evidence),
+					command.getApprovedTargetValidationReportFingerprint());
+			final var executedReport = new BulkMigrationOperationalReportIO()
+					.read(temporaryDirectory.resolve("target-evidence-operations.json"));
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(evidence),
+					executedReport.provenance().targetValidationReportFingerprint());
+
+			reportIO.write(evidence.toPath(),
+					new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+							Instant.now(), resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+							resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+							resolved.provenance(), "production", "different-product", productVersion, catalogName,
+							schemaName));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			assertThrows(CommandException.class, command::run);
+			final var rejectedReport = new BulkMigrationOperationalReportIO()
+					.read(temporaryDirectory.resolve("target-evidence-operations.json"));
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
+					rejectedReport.execution().event());
+
+			reportIO.write(evidence.toPath(),
+					new BulkMigrationTargetValidationReport(BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION,
+							Instant.now().minusSeconds(120), resolved.plan().getJobId(),
+							resolved.plan().getFingerprint(), resolved.provenance().configurationFingerprint(),
+							resolved.plan().getTaskIds(), resolved.provenance(), "production", productName,
+							productVersion, catalogName, schemaName));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(evidence));
+			assertThrows(CommandException.class, command::run);
+			command.setMaxTargetValidationAgeSeconds(null);
+			assertThrows(CommandException.class, command::run);
+		}
+	}
+
+	@Test
+	void executesProgrammaticPlanAgainstConfiguredDataSource() throws Exception {
+		try (var dataSource = newDataSource()) {
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(dataSource);
+			command.setCloseDataSource(false);
+			command.setPlan(BulkMigrationJobPlanner.plan(List.of()));
+			final Path executionReport = temporaryDirectory.resolve("programmatic-execution.json");
+			command.setExecutionReportFile(executionReport.toFile());
+			command.setMaxExecutionReportFileSizeBytes(1_000_000L);
+
+			command.run();
+
+			assertNotNull(command.getResult());
+			assertEquals(command.getPlan().getFingerprint(), command.getResult().getPlanFingerprint());
+			assertEquals(List.of(), command.getResult().getTasks());
+			assertEquals(0, command.getExecutionReport().processedRows());
+			assertEquals(command.getPlan().getFingerprint(), command.getExecutionReport().planFingerprint());
+			assertEquals(command.getExecutionReport(), new BulkMigrationJobExecutionReportIO().read(executionReport));
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(executionReport.toFile()),
+					command.getExecutionReportFingerprint());
+
+			command.setMaxExecutionReportFileSizeBytes(1L);
+			final var reportFailure = assertThrows(BulkMigrationExecutionReportException.class, command::run);
+			assertNotNull(reportFailure.getMigrationResult());
+
+			final Path failedOutput = temporaryDirectory.resolve("programmatic-failure.json");
+			final Path staleSuccess = temporaryDirectory.resolve("stale-success.json");
+			Files.writeString(staleSuccess, "stale");
+			final var failed = new ExecuteBulkMigrationJobCommand();
+			failed.setDataSource(dataSource);
+			failed.setCloseDataSource(false);
+			failed.setPlan(BulkMigrationJobPlanner.plan("failed-access-job", List.of()));
+			failed.setExecutionReportFile(staleSuccess.toFile());
+			failed.setExecutionFailureReportFile(failedOutput.toFile());
+			failed.setListener(new BulkMigrationJobListener() {
+				@Override
+				public void onJobStarted(final String planFingerprint, final int taskCount) {
+					throw new IllegalStateException("listener stopped execution");
+				}
+			});
+			assertThrows(IllegalStateException.class, failed::run);
+			assertFalse(Files.exists(staleSuccess));
+			final var failedReport = new BulkMigrationJobFailureReportIO().read(failedOutput, 1_000_000L);
+			assertEquals("FAILED", failedReport.status());
+			assertEquals("failed-access-job", failedReport.jobId());
+			assertEquals(IllegalStateException.class.getName(), failedReport.failureType());
+			assertEquals(List.of(), failedReport.completedTasks());
+			assertNotNull(failed.getExecutionFailureReportFingerprint());
+		}
+	}
+
+	@Test
+	void executesWithDedicatedDatabaseLeaseConnection() {
+		try (var dataSource = newDataSource()) {
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(dataSource);
+			command.setCloseDataSource(false);
+			command.setPlan(BulkMigrationJobPlanner.plan(List.of()));
+			command.setLeaseConfiguration(BulkMigrationJobLeaseConfiguration.database("gradle-worker"));
+
+			command.run();
+
+			assertNotNull(command.getResult());
+			assertEquals(command.getPlan().getFingerprint(), command.getResult().getPlanFingerprint());
+		}
+	}
+
+	@Test
+	void executesDeclarativeConfigurationFromSeparateSource() throws Exception {
+		try (var source = dataSource("bulk_source"); var target = dataSource("bulk_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
+			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
+
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("schema.xml").toFile();
+			schema.writeXml(schemaFile);
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setJobId("nightly-items");
+			configuration.setSchemaFile("schema.xml");
+			final var provenance = new BulkMigrationJobConfiguration.Provenance();
+			provenance.setAssessmentReportFingerprint("sha256:" + "a".repeat(64));
+			provenance.setDdlVerificationReportFingerprint("sha256:" + "d".repeat(64));
+			configuration.setProvenance(provenance);
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setResume(false);
+			final var bulk = new BulkMigrationJobConfiguration.Bulk();
+			bulk.setBatchSize(250);
+			bulk.setKeepNulls(true);
+			task.setBulk(bulk);
+			final var retry = new BulkMigrationJobConfiguration.Retry();
+			retry.setMaxRetries(3);
+			retry.setSqlStates(List.of("40001"));
+			task.setRetry(retry);
+			final var lease = new BulkMigrationJobConfiguration.Lease();
+			lease.setMode(BulkMigrationJobLeaseMode.DATABASE);
+			lease.setOwnerId("yaml-worker");
+			lease.setDurationSeconds(90);
+			configuration.setLease(lease);
+			configuration.setTasks(List.of(task));
+			final File configurationFile = temporaryDirectory.resolve("job.yaml").toFile();
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			try (var connection = source.getConnection()) {
+				final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile,
+						connection);
+				final var plan = resolution.plan();
+				assertEquals("nightly-items", plan.getJobId());
+				assertEquals(List.of("items"), plan.getTaskIds());
+				assertEquals(BulkMigrationJobLeaseMode.DATABASE, resolution.leaseConfiguration().mode());
+				assertEquals("yaml-worker", resolution.leaseConfiguration().ownerId());
+				assertEquals(90, resolution.leaseConfiguration().duration().toSeconds());
+				assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
+						resolution.provenance().configurationFingerprint());
+				assertEquals("sha256:" + "a".repeat(64), resolution.provenance().assessmentReportFingerprint());
+				final var options = plan.getTasks().get(0).getOptions();
+				assertEquals(250, options.getBulkOption().getBatchSize());
+				assertEquals(true, options.getBulkOption().isKeepNulls());
+				assertSame(options.getBulkOption(), options.getBulkUpsertOption().getBulkOption());
+				assertEquals(3, options.getRetryOption().getMaxRetries());
+				assertEquals(List.of("40001"), options.getRetryOption().getSqlStates());
+				try (var targetConnection = target.getConnection()) {
+					targetConnection.setAutoCommit(true);
+					final var reportPlan = ExecuteBulkMigrationJobCommand.withExplicitDatabaseCheckpointStores(plan,
+							targetConnection);
+					assertEquals("nightly-items", reportPlan.getJobId());
+					assertEquals(plan.getFingerprint(), reportPlan.getFingerprint());
+					assertEquals(JdbcBulkMigrationCheckpointStore.class,
+							reportPlan.getTasks().get(0).getCheckpointStore().getClass());
+					final Path reportFile = temporaryDirectory.resolve("reports/non-empty.json");
+					new BulkMigrationOperationalReportJobListener(reportPlan, reportFile)
+							.onJobStarted(reportPlan.getFingerprint(), 1);
+					assertEquals(true, Files.isRegularFile(reportFile));
+					final var verificationResult = ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1);
+					assertEquals(true, verificationResult.isMatch());
+					assertEquals(plan.getFingerprint(), verificationResult.getPlanFingerprint());
+					assertEquals(2, verificationResult.getExpectedRows());
+					assertEquals(List.of("ID", "NAME"), verificationResult.getTasks().get(0).getColumns());
+					executeSql(targetConnection, "UPDATE PUBLIC.ITEMS SET NAME='changed' WHERE ID=2");
+					final var mismatch = ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1);
+					assertEquals(false, mismatch.isMatch());
+					assertEquals(1, mismatch.getMismatchedTasks());
+					final var idOnly = ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1,
+							Map.of("items", List.of("ID")));
+					assertEquals(true, idOnly.isMatch());
+					assertEquals(List.of("ID"), idOnly.getTasks().get(0).getColumns());
+					final int originalIsolation = targetConnection.getTransactionIsolation();
+					final boolean originalAutoCommit = targetConnection.getAutoCommit();
+					assertEquals(true,
+							ExecuteBulkMigrationJobCommand.verifyWithIsolation(plan, targetConnection, 1,
+									Map.of("items", List.of("ID")), BulkMigrationVerificationIsolation.REPEATABLE_READ)
+									.isMatch());
+					assertEquals(originalIsolation, targetConnection.getTransactionIsolation());
+					assertEquals(originalAutoCommit, targetConnection.getAutoCommit());
+					final Path idOnlyReport = temporaryDirectory.resolve("reports/id-only.json");
+					new BulkMigrationVerificationReportIO().write(idOnlyReport, plan.getFingerprint(), idOnly);
+					assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationReportIO()
+							.write(idOnlyReport, "different-plan", idOnly));
+					final var idOnlyArtifact = new BulkMigrationVerificationReportIO().read(idOnlyReport,
+							plan.getFingerprint());
+					assertEquals(List.of("ID"), idOnlyArtifact.tasks().get(0).columns());
+					assertEquals("DEFAULT", idOnlyArtifact.isolation());
+				}
+			}
+
+			task.setCheckpointMode(BulkMigrationCheckpointMode.FILE);
+			task.setCheckpointDirectory("checkpoints");
+			task.setRetry(new BulkMigrationJobConfiguration.Retry());
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			try (var connection = source.getConnection()) {
+				final var filePlan = new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection);
+				assertEquals(FileBulkMigrationCheckpointStore.class,
+						filePlan.getTasks().get(0).getCheckpointStore().getClass());
+			}
+
+			final var mismatchReport = new BulkMigrationJobConfiguration.Report();
+			mismatchReport.setTargetFile("reports/mismatch-status.json");
+			configuration.setReport(mismatchReport);
+			final var mismatchVerification = new BulkMigrationJobConfiguration.Verification();
+			mismatchVerification.setTargetFile("reports/mismatch-verification.json");
+			mismatchVerification.setRepairPlanOnMismatchFile("reports/mismatch-repair.json");
+			mismatchVerification.setIsolation(BulkMigrationVerificationIsolation.REPEATABLE_READ);
+			configuration.setVerification(mismatchVerification);
+			configuration.setLease(null);
+			task.setMode(BulkMigrationMode.INSERT);
+			executeSql(source, "TRUNCATE TABLE PUBLIC.ITEMS");
+			executeSql(target, "TRUNCATE TABLE PUBLIC.ITEMS");
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			final var mismatchCommand = new ExecuteBulkMigrationJobCommand();
+			mismatchCommand.setDataSource(target);
+			mismatchCommand.setSourceDataSource(source);
+			mismatchCommand.setCloseDataSource(false);
+			mismatchCommand.setConfigurationFile(configurationFile);
+			mismatchCommand.setListener(new BulkMigrationJobListener() {
+				@Override
+				public void onJobCompleted(final BulkMigrationJobResult result) {
+					try {
+						executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (3, 'after')");
+					} catch (SQLException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			});
+			assertThrows(RuntimeException.class, mismatchCommand::run);
+			assertEquals(false, mismatchCommand.getVerificationResult().isMatch());
+			final var operationalArtifact = new BulkMigrationOperationalReportIO()
+					.read(temporaryDirectory.resolve("reports/mismatch-status.json"));
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_FAILED,
+					operationalArtifact.execution().event());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(configurationFile),
+					operationalArtifact.provenance().configurationFingerprint());
+			assertEquals("sha256:" + "a".repeat(64), operationalArtifact.provenance().assessmentReportFingerprint());
+			final var mismatchArtifact = new BulkMigrationVerificationReportIO()
+					.read(temporaryDirectory.resolve("reports/mismatch-verification.json"));
+			assertEquals(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(
+							temporaryDirectory.resolve("reports/mismatch-verification.json").toFile()),
+					mismatchCommand.getVerificationReportFingerprint());
+			assertEquals(false, mismatchArtifact.match());
+			assertEquals("REPEATABLE_READ", mismatchArtifact.isolation());
+			assertEquals(operationalArtifact.provenance(), mismatchArtifact.provenance());
+			assertNotNull(mismatchArtifact.tasks().get(0).expectedKeysetFingerprint());
+			assertNotNull(mismatchArtifact.tasks().get(0).actualKeysetFingerprint());
+			final var mismatchChunk = mismatchArtifact.tasks().get(0).mismatches().get(0);
+			assertEquals(1, mismatchArtifact.tasks().get(0).mismatchedChunks());
+			assertEquals(null, mismatchChunk.expectedFirstKey());
+			assertNotNull(mismatchChunk.actualFirstKey());
+			assertNotNull(mismatchChunk.actualLastKey());
+			final var repairArtifact = new BulkMigrationJobRepairPlanReportIO()
+					.read(temporaryDirectory.resolve("reports/mismatch-repair.json"));
+			assertEquals(
+					"sha256:" + MessageDigests.SHA256
+							.checksumAsString(temporaryDirectory.resolve("reports/mismatch-repair.json").toFile()),
+					mismatchCommand.getRepairPlanReportFingerprint());
+			assertEquals(List.of("items"),
+					repairArtifact.tasks().stream().map(BulkMigrationJobRepairPlanReport.Task::taskId).toList());
+			assertEquals(0, repairArtifact.estimatedReplayRows());
+
+			final var twoMismatches = new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 2, 2,
+					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "a", "b"),
+							new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(1, 1, 1, "c", "d")));
+			final var cappedResult = new com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult(
+					List.of(new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult("items", List.of("ID"),
+							twoMismatches)));
+			final Path cappedFile = temporaryDirectory.resolve("reports/capped.json");
+			new BulkMigrationVerificationReportIO().write(cappedFile, "plan",
+					BulkMigrationVerificationIsolation.DEFAULT, 1, cappedResult);
+			final var cappedTask = new BulkMigrationVerificationReportIO().read(cappedFile).tasks().get(0);
+			assertEquals(2, cappedTask.mismatchedChunks());
+			assertEquals(1, cappedTask.mismatches().size());
+
+			configuration.setTasks(List.of());
+			final var report = new BulkMigrationJobConfiguration.Report();
+			report.setTargetFile("reports/status.json");
+			configuration.setReport(report);
+			final var verification = new BulkMigrationJobConfiguration.Verification();
+			verification.setChunkSize(1);
+			verification.setTargetFile("reports/verification.json");
+			configuration.setVerification(verification);
+			// Verification is a common post-processing step and must also run when no
+			// cross-process lease is configured.
+			configuration.setLease(null);
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+
+			final var command = new ExecuteBulkMigrationJobCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(configurationFile);
+			command.run();
+
+			assertEquals(0, command.getResult().getTasks().size());
+			assertEquals(true, command.getVerificationResult().isMatch());
+			assertEquals(true, Files.isRegularFile(temporaryDirectory.resolve("reports/verification.json")));
+			final var verificationReport = new BulkMigrationVerificationReportIO().read(
+					temporaryDirectory.resolve("reports/verification.json"), command.getResult().getPlanFingerprint());
+			assertEquals(true, verificationReport.match());
+			assertEquals(0, verificationReport.mismatchedTasks());
+			assertThrows(CommandException.class, () -> new BulkMigrationVerificationReportIO()
+					.read(temporaryDirectory.resolve("reports/verification.json"), "wrong"));
+			assertEquals(true, Files.isRegularFile(temporaryDirectory.resolve("reports/status.json")));
+
+			final var fileLease = new BulkMigrationJobConfiguration.Lease();
+			fileLease.setMode(BulkMigrationJobLeaseMode.FILE);
+			fileLease.setOwnerId("file-worker");
+			fileLease.setDirectory("leases");
+			configuration.setLease(fileLease);
+			verification.setTargetFile("reports/verification-file-lease.json");
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			final var fileLeaseCommand = new ExecuteBulkMigrationJobCommand();
+			fileLeaseCommand.setDataSource(target);
+			fileLeaseCommand.setSourceDataSource(source);
+			fileLeaseCommand.setCloseDataSource(false);
+			fileLeaseCommand.setConfigurationFile(configurationFile);
+			fileLeaseCommand.run();
+			assertNotNull(fileLeaseCommand.getVerificationResult());
+			assertEquals(true, Files.isRegularFile(temporaryDirectory.resolve("reports/verification-file-lease.json")));
+			final Path statusFile = temporaryDirectory.resolve("reports/status.json");
+			final var fileSuccess = new BulkMigrationOperationalReportIO().read(statusFile);
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_COMPLETED, fileSuccess.execution().event());
+			assertNotNull(fileSuccess.execution().leaseAcquisitionId());
+
+			final BulkMigrationJobPlan emptyPlan;
+			try (var sourceConnection = source.getConnection()) {
+				emptyPlan = new BulkMigrationJobConfigurationResolver().resolveJob(configurationFile, sourceConnection)
+						.plan();
+			}
+			final var fileBlocker = BulkMigrationJobLeaseManagerFactory.create(null, BulkMigrationJobLeaseConfiguration
+					.file("blocking-file-worker", temporaryDirectory.resolve("leases")));
+			try (var ignored = fileBlocker.acquire(emptyPlan)) {
+				final var rejectedCommand = new ExecuteBulkMigrationJobCommand();
+				rejectedCommand.setDataSource(target);
+				rejectedCommand.setSourceDataSource(source);
+				rejectedCommand.setCloseDataSource(false);
+				rejectedCommand.setConfigurationFile(configurationFile);
+				assertThrows(RuntimeException.class, rejectedCommand::run);
+			}
+			final var fileRejected = new BulkMigrationOperationalReportIO().read(statusFile);
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED, fileRejected.execution().event());
+			assertNull(fileRejected.execution().leaseAcquisitionId());
+
+			final var databaseLease = new BulkMigrationJobConfiguration.Lease();
+			databaseLease.setMode(BulkMigrationJobLeaseMode.DATABASE);
+			databaseLease.setOwnerId("database-worker");
+			configuration.setLease(databaseLease);
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+			final BulkMigrationJobPlan databasePlan;
+			try (var sourceConnection = source.getConnection()) {
+				databasePlan = new BulkMigrationJobConfigurationResolver()
+						.resolveJob(configurationFile, sourceConnection).plan();
+			}
+			try (var leaseConnection = target.getConnection()) {
+				leaseConnection.setAutoCommit(true);
+				final var databaseBlocker = BulkMigrationJobLeaseManagerFactory.create(leaseConnection,
+						BulkMigrationJobLeaseConfiguration.database("blocking-database-worker"));
+				try (var ignored = databaseBlocker.acquire(databasePlan)) {
+					final var rejectedCommand = new ExecuteBulkMigrationJobCommand();
+					rejectedCommand.setDataSource(target);
+					rejectedCommand.setSourceDataSource(source);
+					rejectedCommand.setCloseDataSource(false);
+					rejectedCommand.setConfigurationFile(configurationFile);
+					assertThrows(RuntimeException.class, rejectedCommand::run);
+				}
+			}
+			final var databaseRejected = new BulkMigrationOperationalReportIO().read(statusFile);
+			assertEquals(BulkMigrationOperationalReport.ExecutionEvent.JOB_REJECTED,
+					databaseRejected.execution().event());
+			assertNull(databaseRejected.execution().leaseAcquisitionId());
+		}
+	}
+
+	@Test
+	void resolvesAndVerifiesRenamedTargetTable() throws Exception {
+		try (var source = dataSource("bulk_renamed_source"); var target = dataSource("bulk_renamed_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'one'), (2, 'two')");
+			executeSql(target, "CREATE TABLE PUBLIC.CUSTOMERS (CUSTOMER_ID INT NOT NULL, NAME VARCHAR(30))");
+			executeSql(target, "INSERT INTO PUBLIC.CUSTOMERS VALUES (1, 'one'), (2, 'two')");
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("renamed-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setTargetTable("PUBLIC.CUSTOMERS");
+			task.setColumnMappings(Map.of("ID", "CUSTOMER_ID"));
+			task.setMode(BulkMigrationMode.INSERT);
+			task.setResume(false);
+			task.setKeysetColumns(List.of("ID"));
+			task.setVerificationColumns(List.of("ID", "NAME"));
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("renamed-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
+				final var plan = new BulkMigrationJobConfigurationResolver().resolve(job, sourceConnection);
+				assertEquals("CUSTOMERS", plan.getTasks().getFirst().getEffectiveTargetTable().getName());
+				assertEquals("CUSTOMER_ID",
+						plan.getTasks().getFirst().getEffectiveTargetTable().getColumns().get(0).getName());
+				final SQLException nonUnique = assertThrows(SQLException.class,
+						() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
+				assertEquals(true, nonUnique.getMessage().contains("unique index"));
+				executeSql(targetConnection,
+						"ALTER TABLE PUBLIC.CUSTOMERS ADD CONSTRAINT UK_CUSTOMERS UNIQUE (CUSTOMER_ID)");
+				assertDoesNotThrow(() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
+				assertEquals(true, ExecuteBulkMigrationJobCommand.verify(plan, targetConnection, 1).isMatch());
+				task.setRequireEmptyTarget(true);
+				new YamlConverter().writeJsonValue(job, configuration);
+				final var emptyRequiredPlan = new BulkMigrationJobConfigurationResolver().resolve(job,
+						sourceConnection);
+				final SQLException notEmpty = assertThrows(SQLException.class,
+						() -> BulkMigrationTargetValidator.validate(targetConnection, emptyRequiredPlan));
+				assertEquals(true, notEmpty.getMessage().contains("must be empty"));
+				executeSql(targetConnection, "ALTER TABLE PUBLIC.CUSTOMERS DROP COLUMN NAME");
+				final SQLException missing = assertThrows(SQLException.class,
+						() -> BulkMigrationTargetValidator.validate(targetConnection, plan));
+				assertEquals(true, missing.getMessage().contains("items"));
+				assertEquals(true, missing.getMessage().contains("NAME"));
+				final AtomicBoolean rejected = new AtomicBoolean();
+				final var command = new ExecuteBulkMigrationJobCommand();
+				command.setDataSource(target);
+				command.setCloseDataSource(false);
+				command.setPlan(plan);
+				command.setListener(new BulkMigrationJobListener() {
+					@Override
+					public void onJobRejected(final String planFingerprint, final Throwable failure) {
+						rejected.set(true);
+					}
+				});
+				assertThrows(RuntimeException.class, command::run);
+				assertEquals(true, rejected.get());
+			}
+		}
+	}
+
+	@Test
+	void rejectsAmbiguousUnqualifiedTableName() throws Exception {
+		try (var source = dataSource("bulk_ambiguous")) {
+			final Catalog catalog = new Catalog("CATALOG");
+			for (final String schemaName : List.of("A", "B")) {
+				final Schema schema = new Schema(schemaName);
+				final Table table = new Table("ITEMS");
+				table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+				table.setPrimaryKey("PK_" + schemaName, table.getColumns().get("ID"));
+				schema.getTables().add(table);
+				catalog.getSchemas().add(schema);
+			}
+			final File schemaFile = temporaryDirectory.resolve("ambiguous.xml").toFile();
+			catalog.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile("ambiguous.xml");
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("ITEMS");
+			task.setResume(false);
+			configuration.setTasks(List.of(task));
+			final File configurationFile = temporaryDirectory.resolve("ambiguous.yaml").toFile();
+			new YamlConverter().writeJsonValue(configurationFile, configuration);
+
+			try (var connection = source.getConnection()) {
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+			}
+		}
+	}
+
+	@Test
+	void configurationResultsOwnAndValidateResolvedValues() {
+		final List<String> columns = new ArrayList<>(List.of("ID"));
+		final Map<String, List<String>> columnsByTask = new LinkedHashMap<>();
+		columnsByTask.put("items", columns);
+		final Path relativeReport = Path.of("build", "verification.json");
+		final var verification = new BulkMigrationJobConfigurationResolver.VerificationConfiguration(10, true,
+				relativeReport, columnsByTask, BulkMigrationVerificationIsolation.REPEATABLE_READ, 25);
+
+		columns.clear();
+		columnsByTask.clear();
+		assertEquals(List.of("ID"), verification.columnsByTask().get("items"));
+		assertEquals(relativeReport.toAbsolutePath().normalize(), verification.targetFile());
+		assertThrows(UnsupportedOperationException.class, () -> verification.columnsByTask().clear());
+		assertThrows(UnsupportedOperationException.class, () -> verification.columnsByTask().get("items").clear());
+		assertThrows(IllegalArgumentException.class, () -> verification(0, 1, Map.of("items", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class, () -> verification(1, 0, Map.of("items", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class, () -> verification(1, 1, Map.of(" ", List.of("ID"))));
+		assertThrows(IllegalArgumentException.class, () -> verification(1, 1, Map.of("items", List.of("ID", "ID"))));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(null,
+						BulkMigrationOperationalReportFailurePolicy.FAIL_JOB));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobConfigurationResolver.OperationalReportConfiguration(relativeReport, null));
+	}
+
+	private static BulkMigrationJobConfigurationResolver.VerificationConfiguration verification(final int chunkSize,
+			final int maxReportedMismatches, final Map<String, List<String>> columnsByTask) {
+		return new BulkMigrationJobConfigurationResolver.VerificationConfiguration(chunkSize, true, null, columnsByTask,
+				BulkMigrationVerificationIsolation.DEFAULT, maxReportedMismatches);
+	}
+
+	@Test
+	void rejectsInvalidDeclarativeTaskStructureBeforePlanning() throws Exception {
+		try (var source = dataSource("bulk_invalid_task_structure")) {
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("task-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final File configurationFile = temporaryDirectory.resolve("invalid-task.yaml").toFile();
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+
+			final List<BulkMigrationJobConfiguration.Task> nullTask = new ArrayList<>();
+			nullTask.add(null);
+			configuration.setTasks(nullTask);
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			final var first = new BulkMigrationJobConfiguration.Task();
+			first.setTable("ITEMS");
+			first.setResume(false);
+			configuration.setTasks(List.of(first));
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			first.setId("items");
+			final var second = new BulkMigrationJobConfiguration.Task();
+			second.setId("items");
+			second.setTable("ITEMS");
+			second.setResume(false);
+			configuration.setTasks(List.of(first, second));
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			second.setId("items-copy");
+			first.setMigrationId("same-checkpoint");
+			second.setMigrationId("same-checkpoint");
+			configuration.setTasks(List.of(first, second));
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			configuration.setTasks(null);
+			assertInvalidConfiguration(source, configurationFile, configuration);
+
+			configuration.setTasks(List.of());
+			configuration.setJobId(" ");
+			assertInvalidConfiguration(source, configurationFile, configuration);
+		}
+	}
+
+	private static void assertInvalidConfiguration(final HikariDataSource source, final File configurationFile,
+			final BulkMigrationJobConfiguration configuration) throws Exception {
+		new YamlConverter().writeJsonValue(configurationFile, configuration);
+		try (var connection = source.getConnection()) {
+			assertThrows(CommandException.class,
+					() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+		}
+	}
+
+	@Test
+	void resolvesMappedCompositeUpsertColumnsFromSourceNames() throws Exception {
+		try (var source = dataSource("bulk_mapped_composite")) {
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ACCESS_LINES");
+			table.getColumns().add(new Column("ACCESS_ORDER_ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("ACCESS_LINE_NO").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("DESCRIPTION").setDataType(DataType.VARCHAR));
+			table.setPrimaryKey("PK_ACCESS_LINES", table.getColumns().get("ACCESS_ORDER_ID"),
+					table.getColumns().get("ACCESS_LINE_NO"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("mapped-composite-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			final var verification = new BulkMigrationJobConfiguration.Verification();
+			verification.setRepairPlanOnMismatchFile("reports/mapped-repair.json");
+			configuration.setVerification(verification);
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("access-lines");
+			task.setTable("PUBLIC.ACCESS_LINES");
+			task.setTargetTable("PUBLIC.ORDER_LINES");
+			task.setResume(false);
+			task.setColumnMappings(Map.of("ACCESS_ORDER_ID", "ORDER_ID", "ACCESS_LINE_NO", "LINE_NO"));
+			task.setKeyColumns(List.of("ACCESS_ORDER_ID", "ACCESS_LINE_NO"));
+			task.setUpdateColumns(List.of("DESCRIPTION"));
+			task.setVerificationColumns(List.of("ACCESS_ORDER_ID", "DESCRIPTION"));
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("mapped-composite-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+
+			try (var connection = source.getConnection()) {
+				final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(job, connection);
+				final var resolvedTask = resolution.plan().getTasks().get(0);
+				assertEquals(List.of("ORDER_ID", "LINE_NO"),
+						resolvedTask.getOptions().getBulkUpsertOption().getKeyColumns());
+				assertEquals(List.of("DESCRIPTION"),
+						resolvedTask.getOptions().getBulkUpsertOption().getUpdateColumns());
+				assertEquals(List.of("ACCESS_ORDER_ID", "DESCRIPTION"),
+						resolution.verificationConfiguration().columnsByTask().get("access-lines"));
+				assertEquals(temporaryDirectory.resolve("reports/mapped-repair.json").toAbsolutePath().normalize(),
+						resolution.verificationConfiguration().repairPlanOnMismatchFile());
+				assertEquals("ACCESS_ORDER_ID", resolvedTask.getSourceColumnName("ORDER_ID"));
+			}
+
+			task.setKeyColumns(List.of("MISSING"));
+			assertInvalidConfiguration(source, job, configuration);
+		}
+	}
+
+	@Test
+	void rejectsInvalidVerificationColumnsBeforeExecution() throws Exception {
+		try (var source = dataSource("bulk_invalid_verification")) {
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("verification-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			configuration.setTasks(List.of(task));
+			final File configurationFile = temporaryDirectory.resolve("verification-job.yaml").toFile();
+
+			try (var connection = source.getConnection()) {
+				task.setVerificationColumns(List.of("MISSING"));
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+
+				task.setVerificationColumns(List.of("ID", "ID"));
+				new YamlConverter().writeJsonValue(configurationFile, configuration);
+				assertThrows(CommandException.class,
+						() -> new BulkMigrationJobConfigurationResolver().resolve(configurationFile, connection));
+			}
+		}
+	}
+
+	@Test
+	void executesOnlyAReverifiedApprovedDeclarativeRepairPlan() throws Exception {
+		try (var source = dataSource("approved_job_repair_source");
+				var target = dataSource("approved_job_repair_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'source')");
+			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(30))");
+			executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'changed')");
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(30));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("approved-repair-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setResume(false);
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("approved-repair-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+			final Path approval = temporaryDirectory.resolve("approved-repair.json");
+			final Path targetValidation = temporaryDirectory.resolve("approved-repair-target.json");
+			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
+				final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
+				final var verified = ExecuteBulkMigrationJobCommand.verify(resolved.plan(), targetConnection,
+						resolved.verificationConfiguration().chunkSize());
+				final var plan = ExecuteBulkMigrationJobCommand.repairPlan(resolved.plan(), targetConnection, verified);
+				new BulkMigrationJobRepairPlanReportIO().write(approval, plan);
+				final var metadata = targetConnection.getMetaData();
+				new BulkMigrationTargetValidationReportIO().write(targetValidation,
+						new BulkMigrationTargetValidationReport(
+								BulkMigrationTargetValidationReport.CURRENT_FORMAT_VERSION, Instant.now(),
+								resolved.plan().getJobId(), resolved.plan().getFingerprint(),
+								resolved.provenance().configurationFingerprint(), resolved.plan().getTaskIds(),
+								resolved.provenance(), "repair-test", metadata.getDatabaseProductName(),
+								metadata.getDatabaseProductVersion(), targetConnection.getCatalog(),
+								targetConnection.getSchema()));
+			}
+			final var command = new ExecuteBulkMigrationJobRepairCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(job);
+			command.setApprovedRepairPlanFile(approval.toFile());
+			command.setExpectedApprovedRepairPlanFileFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()));
+			command.setMaxApprovedRepairPlanAgeSeconds(60L);
+			command.setTargetValidationReportFile(targetValidation.toFile());
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			command.setMaxTargetValidationAgeSeconds(60L);
+			command.setTargetEnvironmentId("repair-test");
+			final Path repairReports = temporaryDirectory.resolve("repair-reports");
+			Files.createDirectories(repairReports);
+			final Path postRepairVerification = repairReports.resolve("post-repair-verification.json");
+			final Path repairExecution = repairReports.resolve("repair-execution.json");
+			final Path staleFailure = repairReports.resolve("repair-failure.json");
+			Files.writeString(staleFailure, "stale");
+			command.setRepairReportDirectory(repairReports.toFile());
+			final Path automaticOutcome = repairReports.resolve("repair-outcome.json");
+			command.setMaxApprovedRepairPlanFileSizeBytes(Files.size(approval) - 1);
+			final var sizeRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Approved repair plan file exceeds maxApprovedRepairPlanFileSizeBytes.",
+					sizeRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			command.setMaxApprovedRepairPlanFileSizeBytes(Files.size(approval));
+
+			command.setExpectedTargetValidationReportFingerprint("sha256:" + "0".repeat(64));
+			final var fingerprintRejection = assertThrows(CommandException.class, command::run);
+			assertEquals(
+					"targetValidationReportFile fingerprint does not match expectedTargetValidationReportFingerprint.",
+					fingerprintRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			command.setTargetEnvironmentId("another-environment");
+			final var environmentRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report does not match targetEnvironmentId.",
+					environmentRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			command.setTargetEnvironmentId("repair-test");
+			final var approvedTarget = new BulkMigrationTargetValidationReportIO().read(targetValidation);
+			new BulkMigrationTargetValidationReportIO().write(targetValidation, withTargetValidationIdentity(
+					approvedTarget, Instant.now().minusSeconds(120), approvedTarget.databaseProductName()));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			final var staleRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report is older than maxTargetValidationAgeSeconds.",
+					staleRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			new BulkMigrationTargetValidationReportIO().write(targetValidation,
+					withTargetValidationIdentity(approvedTarget, Instant.now(), "another-database"));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+			final var databaseRejection = assertThrows(CommandException.class, command::run);
+			assertEquals("Target validation report does not match the connected target database.",
+					databaseRejection.getMessage());
+			assertEquals("changed", itemName(target));
+			new BulkMigrationTargetValidationReportIO().write(targetValidation,
+					withTargetValidationIdentity(approvedTarget, Instant.now(), approvedTarget.databaseProductName()));
+			command.setExpectedTargetValidationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()));
+
+			command.run();
+
+			assertFalse(Files.exists(staleFailure));
+			assertEquals(1, command.getResult().getReplayedRows());
+			assertEquals(true, command.getVerificationResult().isMatch());
+			final var automaticOutcomeArtifact = new BulkMigrationJobRepairOutcomeReportIO().read(automaticOutcome);
+			assertEquals("SUCCEEDED", automaticOutcomeArtifact.status());
+			assertEquals(automaticOutcomeArtifact, command.getOutcomeReport());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()),
+					command.getApprovedRepairPlanFileFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()),
+					command.getRepairExecutionReportFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()),
+					command.getPostRepairVerificationReportFingerprint());
+			assertNull(command.getRepairFailureReportFingerprint());
+			final var executionArtifact = new BulkMigrationJobRepairExecutionReportIO().read(repairExecution);
+			assertEquals(command.getResult().getPlanFingerprint(), executionArtifact.repairPlanFingerprint());
+			assertEquals(1, executionArtifact.replayedRows());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(approval.toFile()),
+					executionArtifact.approvedRepairPlanFileFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()),
+					executionArtifact.provenance().targetValidationReportFingerprint());
+			final var postRepairArtifact = new BulkMigrationVerificationReportIO().read(postRepairVerification);
+			assertEquals(true, postRepairArtifact.match());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(targetValidation.toFile()),
+					postRepairArtifact.provenance().targetValidationReportFingerprint());
+			final var evidence = new VerifyBulkMigrationJobRepairEvidenceCommand();
+			evidence.setRepairReportDirectory(repairReports.toFile());
+			evidence.setApprovedRepairPlanFile(approval.toFile());
+			evidence.setExpectedRepairExecutionReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()));
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()));
+			evidence.setExpectedMigrationPlanFingerprint(postRepairArtifact.planFingerprint());
+			evidence.setExpectedRepairPlanFingerprint(executionArtifact.repairPlanFingerprint());
+			evidence.setExpectedConfigurationFingerprint(executionArtifact.provenance().configurationFingerprint());
+			evidence.setMaxEvidenceAgeSeconds(60L);
+			evidence.run();
+			assertEquals(executionArtifact, evidence.getReport());
+			final var outcome = new VerifyBulkMigrationJobRepairOutcomeCommand();
+			outcome.setApprovedRepairPlanFile(approval.toFile());
+			outcome.setRepairReportDirectory(repairReports.toFile());
+			outcome.run();
+			assertEquals(VerifyBulkMigrationJobRepairOutcomeCommand.Status.SUCCEEDED, outcome.getStatus());
+			assertEquals(executionArtifact, outcome.getExecutionReport());
+			assertNull(outcome.getFailureReport());
+			final var outcomeArtifact = new BulkMigrationJobRepairOutcomeReportIO().read(automaticOutcome);
+			assertEquals("SUCCEEDED", outcomeArtifact.status());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()),
+					outcomeArtifact.repairExecutionReportFingerprint());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()),
+					outcomeArtifact.postRepairVerificationReportFingerprint());
+			final var savedOutcome = new VerifyBulkMigrationJobRepairOutcomeReportCommand();
+			savedOutcome.setApprovedRepairPlanFile(approval.toFile());
+			savedOutcome.setRepairReportDirectory(repairReports.toFile());
+			savedOutcome.setExpectedStatus("SUCCEEDED");
+			savedOutcome.run();
+			assertEquals(outcomeArtifact, savedOutcome.getReport());
+			evidence.setExpectedPostRepairVerificationReportFingerprint("sha256:" + "0".repeat(64));
+			final var verificationFingerprintRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals(
+					"postRepairVerificationReportFile fingerprint does not match expectedPostRepairVerificationReportFingerprint.",
+					verificationFingerprintRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()));
+			final Path changedApproval = temporaryDirectory.resolve("changed-approved-repair.json");
+			Files.copy(approval, changedApproval);
+			Files.writeString(changedApproval, System.lineSeparator(), java.nio.file.StandardOpenOption.APPEND);
+			evidence.setApprovedRepairPlanFile(changedApproval.toFile());
+			final var changedApprovalRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals("Repair execution report does not match approvedRepairPlanFile.",
+					changedApprovalRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setApprovedRepairPlanFile(approval.toFile());
+			final Path expiredExecution = temporaryDirectory.resolve("expired-repair-execution.json");
+			new BulkMigrationJobRepairExecutionReportIO().write(expiredExecution,
+					withRepairCompletedAt(executionArtifact, Instant.now().minusSeconds(120)));
+			evidence.setRepairExecutionReportFile(expiredExecution.toFile());
+			evidence.setExpectedRepairExecutionReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(expiredExecution.toFile()));
+			evidence.setMaxEvidenceAgeSeconds(60L);
+			final var expiredRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals("Post-repair verification report does not match successful repair execution.",
+					expiredRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setRepairExecutionReportFile(repairExecution.toFile());
+			evidence.setExpectedRepairExecutionReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(repairExecution.toFile()));
+			final Path incompleteVerification = temporaryDirectory.resolve("incomplete-post-repair-verification.json");
+			new BulkMigrationVerificationReportIO().write(incompleteVerification,
+					new BulkMigrationVerificationReport(BulkMigrationVerificationReport.CURRENT_FORMAT_VERSION,
+							Instant.now(), postRepairArtifact.planFingerprint(), postRepairArtifact.isolation(), true,
+							0, 0, 0, List.of(), postRepairArtifact.provenance()));
+			evidence.setPostRepairVerificationReportFile(incompleteVerification.toFile());
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(incompleteVerification.toFile()));
+			final var incompleteRejection = assertThrows(CommandException.class, evidence::run);
+			assertEquals("Post-repair verification report does not match successful repair execution.",
+					incompleteRejection.getMessage());
+			assertNull(evidence.getReport());
+			evidence.setPostRepairVerificationReportFile(postRepairVerification.toFile());
+			evidence.setExpectedPostRepairVerificationReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(postRepairVerification.toFile()));
+			evidence.setExpectedRepairPlanFingerprint("different-plan");
+			assertThrows(CommandException.class, evidence::run);
+			assertNull(evidence.getReport());
+			try (var connection = target.getConnection();
+					var rows = connection.createStatement().executeQuery("SELECT NAME FROM PUBLIC.ITEMS WHERE ID=1")) {
+				rows.next();
+				assertEquals("source", rows.getString(1));
+			}
+			assertThrows(CommandException.class, command::run);
+			assertNull(command.getResult());
+			assertNull(command.getVerificationResult());
+		}
+	}
+
+	@Test
+	void writesFailureEvidenceWhenApprovedRepairExecutionFails() throws Exception {
+		try (var source = dataSource("failed_job_repair_source"); var target = dataSource("failed_job_repair_target")) {
+			executeSql(source, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(100))");
+			executeSql(source, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'value-too-long-for-target')");
+			executeSql(target, "CREATE TABLE PUBLIC.ITEMS (ID INT NOT NULL PRIMARY KEY, NAME VARCHAR(5))");
+			executeSql(target, "INSERT INTO PUBLIC.ITEMS VALUES (1, 'old')");
+			final Schema schema = new Schema("PUBLIC");
+			final Table table = new Table("ITEMS");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
+			table.setPrimaryKey("PK_ITEMS", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			final File schemaFile = temporaryDirectory.resolve("failed-repair-schema.xml").toFile();
+			schema.writeXml(schemaFile);
+			final var configuration = new BulkMigrationJobConfiguration();
+			configuration.setSchemaFile(schemaFile.getName());
+			configuration.setVerification(new BulkMigrationJobConfiguration.Verification());
+			final var task = new BulkMigrationJobConfiguration.Task();
+			task.setId("items");
+			task.setTable("PUBLIC.ITEMS");
+			task.setResume(false);
+			configuration.setTasks(List.of(task));
+			final File job = temporaryDirectory.resolve("failed-repair-job.yaml").toFile();
+			new YamlConverter().writeJsonValue(job, configuration);
+			final Path approval = temporaryDirectory.resolve("failed-repair-plan.json");
+			try (var sourceConnection = source.getConnection(); var targetConnection = target.getConnection()) {
+				final var resolved = new BulkMigrationJobConfigurationResolver().resolveJob(job, sourceConnection);
+				final var verified = ExecuteBulkMigrationJobCommand.verify(resolved.plan(), targetConnection,
+						resolved.verificationConfiguration().chunkSize());
+				new BulkMigrationJobRepairPlanReportIO().write(approval,
+						ExecuteBulkMigrationJobCommand.repairPlan(resolved.plan(), targetConnection, verified));
+			}
+			final Path failureFile = temporaryDirectory.resolve("repair-failure.json");
+			final Path staleExecutionFile = temporaryDirectory.resolve("stale-repair-execution.json");
+			final Path staleVerificationFile = temporaryDirectory.resolve("stale-post-repair-verification.json");
+			Files.writeString(staleExecutionFile, "stale");
+			Files.writeString(staleVerificationFile, "stale");
+			final var command = new ExecuteBulkMigrationJobRepairCommand();
+			command.setDataSource(target);
+			command.setSourceDataSource(source);
+			command.setCloseDataSource(false);
+			command.setConfigurationFile(job);
+			command.setApprovedRepairPlanFile(approval.toFile());
+			command.setRepairFailureReportFile(failureFile.toFile());
+			command.setRepairExecutionReportFile(failureFile.toFile());
+			command.setRepairOutcomeReportFile(temporaryDirectory.resolve("incomplete-outcome.json").toFile());
+			final var incompleteOutcome = assertThrows(CommandException.class, command::run);
+			assertEquals("repairOutcomeReportFile requires repairExecutionReportFile, repairFailureReportFile "
+					+ "and postRepairVerificationReportFile.", incompleteOutcome.getMessage());
+			command.setRepairOutcomeReportFile(null);
+			final var collision = assertThrows(CommandException.class, command::run);
+			assertEquals("Bulk migration repair artifact files must use distinct paths.", collision.getMessage());
+			command.setRepairExecutionReportFile(staleExecutionFile.toFile());
+			command.setPostRepairVerificationReportFile(staleVerificationFile.toFile());
+			final Path outcomeFile = temporaryDirectory.resolve("failed-repair-outcome.json");
+			Files.writeString(outcomeFile, "stale");
+			command.setRepairOutcomeReportFile(outcomeFile.toFile());
+
+			assertThrows(RuntimeException.class, command::run);
+
+			assertFalse(Files.exists(staleExecutionFile));
+			assertFalse(Files.exists(staleVerificationFile));
+			final var failure = new BulkMigrationJobRepairFailureReportIO().read(failureFile);
+			final var outcome = new BulkMigrationJobRepairOutcomeReportIO().read(outcomeFile);
+			assertEquals("EXECUTION_FAILED", outcome.status());
+			assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(failureFile.toFile()),
+					outcome.repairFailureReportFingerprint());
+			assertEquals(outcome.repairFailureReportFingerprint(), command.getRepairFailureReportFingerprint());
+			assertNull(command.getRepairExecutionReportFingerprint());
+			assertNull(command.getPostRepairVerificationReportFingerprint());
+			assertEquals(outcome, command.getOutcomeReport());
+			assertEquals("EXECUTION", failure.phase());
+			assertEquals("items", failure.failedTaskId());
+			assertEquals(List.of(), failure.completedTasks());
+			final var evidence = new VerifyBulkMigrationJobRepairFailureEvidenceCommand();
+			evidence.setRepairFailureReportFile(failureFile.toFile());
+			evidence.setApprovedRepairPlanFile(approval.toFile());
+			evidence.setExpectedRepairFailureReportFingerprint(
+					"sha256:" + MessageDigests.SHA256.checksumAsString(failureFile.toFile()));
+			evidence.setExpectedMigrationPlanFingerprint(failure.migrationPlanFingerprint());
+			evidence.setExpectedRepairPlanFingerprint(failure.repairPlanFingerprint());
+			evidence.setMaxEvidenceAgeSeconds(60L);
+			evidence.run();
+			assertEquals(failure, evidence.getReport());
+			assertEquals("old", itemName(target));
+		}
+	}
+
+	private static BulkMigrationJobRepairExecutionReport withRepairCompletedAt(
+			final BulkMigrationJobRepairExecutionReport report, final Instant completedAt) {
+		return new BulkMigrationJobRepairExecutionReport(report.formatVersion(), completedAt,
+				report.migrationPlanFingerprint(), report.repairPlanFingerprint(),
+				report.approvedRepairPlanFileFingerprint(), report.mismatchChunks(), report.replayedChunks(),
+				report.replayedRows(), report.affectedRows(), report.tasksRequiringManualReconciliation(),
+				report.tasks(), report.provenance());
+	}
+
+	private static BulkMigrationTargetValidationReport withTargetValidationIdentity(
+			final BulkMigrationTargetValidationReport report, final Instant generatedAt,
+			final String databaseProductName) {
+		return new BulkMigrationTargetValidationReport(report.formatVersion(), generatedAt, report.jobId(),
+				report.planFingerprint(), report.configurationFingerprint(), report.taskIds(), report.provenance(),
+				report.targetEnvironmentId(), databaseProductName, report.databaseProductVersion(),
+				report.catalogName(), report.schemaName());
+	}
+
+	private static String itemName(final HikariDataSource dataSource) throws SQLException {
+		try (var connection = dataSource.getConnection();
+				var rows = connection.createStatement().executeQuery("SELECT NAME FROM PUBLIC.ITEMS WHERE ID=1")) {
+			rows.next();
+			return rows.getString(1);
+		}
+	}
+
+	private static HikariDataSource dataSource(final String name) {
+		final HikariConfig config = new HikariConfig();
+		config.setJdbcUrl("jdbc:hsqldb:mem:" + name);
+		config.setUsername("SA");
+		config.setPassword("");
+		return new HikariDataSource(config);
+	}
+}

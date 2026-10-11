@@ -49,8 +49,7 @@ public class Postgres83OperatorClassReader extends OperatorClassReader {
 	}
 
 	@Override
-	protected List<OperatorClass> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<OperatorClass> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<OperatorClass> result = list();
@@ -68,10 +67,8 @@ public class Postgres83OperatorClassReader extends OperatorClassReader {
 		return getSqlNodeCache().getString("operatorClasses83.sql");
 	}
 
-	protected OperatorClass createOperatorClass(ExResultSet rs)
-			throws SQLException {
-		OperatorClass obj = new OperatorClass(getString(rs,
-				"operator_class_name"));
+	protected OperatorClass createOperatorClass(ExResultSet rs) throws SQLException {
+		OperatorClass obj = new OperatorClass(getString(rs, "operator_class_name"));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDialect(this.getDialect());
 		obj.setIndexType(getString(rs, "index_type"));

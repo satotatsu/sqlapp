@@ -185,6 +185,12 @@ public class DialectResolver extends AbstractDialectResolver {
 	 * @param databaseMetaData
 	 */
 	public Dialect getDialect(final DatabaseMetaData databaseMetaData) {
+		for (ProductNameDialectResolver resolver : getResolverList()) {
+			final Dialect dialect = resolver.resolveDatabaseMetaData(databaseMetaData);
+			if (dialect != null) {
+				return dialect;
+			}
+		}
 		final ProductVersionInfo productVersionInfo = DbUtils.getProductVersionInfo(databaseMetaData);
 		return getDialect(productVersionInfo.getName(), productVersionInfo.getMajorVersion(),
 				productVersionInfo.getMinorVersion(), productVersionInfo.getRevision());

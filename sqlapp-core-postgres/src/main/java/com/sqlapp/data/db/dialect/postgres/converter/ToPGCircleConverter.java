@@ -24,7 +24,7 @@ import com.sqlapp.data.geometry.Circle;
 import org.postgresql.geometric.PGcircle;
 import java.sql.SQLException;
 
-public class ToPGCircleConverter extends AbstractToObjectConverter<PGcircle, Circle>{
+public class ToPGCircleConverter extends AbstractToObjectConverter<PGcircle, Circle> {
 
 	/**
 	 * serialVersionUID
@@ -47,9 +47,7 @@ public class ToPGCircleConverter extends AbstractToObjectConverter<PGcircle, Cir
 
 	@Override
 	protected PGcircle toDbType(Circle obj) {
-		return new PGcircle(obj.getX()
-				, obj.getY(), obj.getR()
-				);
+		return new PGcircle(obj.getX(), obj.getY(), obj.getR());
 	}
 
 	@Override
@@ -57,15 +55,16 @@ public class ToPGCircleConverter extends AbstractToObjectConverter<PGcircle, Cir
 		obj.setValue(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public PGcircle copy(Object obj){
-		if (obj==null){
+	public PGcircle copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);
 	}
-
 
 }

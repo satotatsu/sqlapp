@@ -19,10 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
-public class MviewLogTest extends AbstractDbObjectTest<MviewLog>{
+public class MviewLogTest extends AbstractDbObjectTest<MviewLog> {
 
-	public static MviewLog getMviewLog(String name){
-		MviewLog mviewLog=new MviewLog(name);
+	public static MviewLog getMviewLog(String name) {
+		MviewLog mviewLog = new MviewLog(name);
 		mviewLog.setSavePrimaryKey(true).setSaveObjectId(true);
 		mviewLog.setPurgeStart(toTimestamp("2011-02-01 22:30:35"));
 		mviewLog.setMasterTableName("MasterTable");

@@ -25,49 +25,26 @@ import com.sqlapp.data.schemas.Difference;
 import com.sqlapp.util.CommonUtils;
 
 public class OracleUtils {
-	private static String[] TABLE_STATISTICS_PROPERTIES=new String[]{
-		"PCT_FREE"
-		,"PCT_USED"
-		,"INI_TRANS"
-		,"MAX_TRANS"
-		,"INITIAL_EXTENT"
-		,"NEXT_EXTENT"
-		,"MIN_EXTENTS"
-		,"MAX_EXTENTS"
-		,"PCT_INCREASE"
-		,"FREELISTS"
-		,"FREELIST_GROUPS"
-		,"LOGGING"
-		,"COMPRESS_FOR"
-		,"INTERVAL"
-		,"BUFFER_POOL"
-	};
-	
+	private static String[] TABLE_STATISTICS_PROPERTIES = new String[] { "PCT_FREE", "PCT_USED", "INI_TRANS",
+			"MAX_TRANS", "INITIAL_EXTENT", "NEXT_EXTENT", "MIN_EXTENTS", "MAX_EXTENTS", "PCT_INCREASE", "FREELISTS",
+			"FREELIST_GROUPS", "LOGGING", "COMPRESS_FOR", "INTERVAL", "BUFFER_POOL" };
 
-	private static String[] TABLE_STORAGE_PROPERTIES=new String[]{
-		"INITIAL_EXTENT"
-		,"NEXT_EXTENT"
-		,"MIN_EXTENTS"
-		,"MAX_EXTENTS"
-		,"FREELISTS"
-		,"FREELIST_GROUPS"
-		,"BUFFER_POOL"
-	};
-	
-	public static String[] getTableStatisticsKeys(){
+	private static String[] TABLE_STORAGE_PROPERTIES = new String[] { "INITIAL_EXTENT", "NEXT_EXTENT", "MIN_EXTENTS",
+			"MAX_EXTENTS", "FREELISTS", "FREELIST_GROUPS", "BUFFER_POOL" };
+
+	public static String[] getTableStatisticsKeys() {
 		return TABLE_STATISTICS_PROPERTIES;
 	}
 
-	public static String[] getTableStorageKeys(){
+	public static String[] getTableStorageKeys() {
 		return TABLE_STORAGE_PROPERTIES;
 	}
 
-	
-	public Map<String, Difference<?>> getAll(Map<String, Difference<?>> allDiff, String... args){
-		Map<String, Difference<?>> result=CommonUtils.map();
-		for(String arg:args){
-			Difference<?> diff=allDiff.get(arg);
-			if (diff!=null){
+	public Map<String, Difference<?>> getAll(Map<String, Difference<?>> allDiff, String... args) {
+		Map<String, Difference<?>> result = CommonUtils.map();
+		for (String arg : args) {
+			Difference<?> diff = allDiff.get(arg);
+			if (diff != null) {
 				result.put(arg, diff);
 			}
 		}

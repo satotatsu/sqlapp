@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class RoleMemberTest extends AbstractDbObjectTest<RoleMember> {
 
-public class RoleMemberTest extends AbstractDbObjectTest<RoleMember>{
-
-	public static RoleMember getRoleMember(){
-		RoleMember roleMember=new RoleMember();
+	public static RoleMember getRoleMember() {
+		RoleMember roleMember = new RoleMember();
 		roleMember.setGranteeName("dbo");
 		roleMember.setMemberRoleName("aaaa");
 		return roleMember;

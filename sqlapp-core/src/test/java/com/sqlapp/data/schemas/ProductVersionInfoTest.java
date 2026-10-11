@@ -51,89 +51,64 @@ public class ProductVersionInfoTest {
 
 	@Test
 	public void testEq() {
-		assertTrue(productVersionInfo1.eq(majorVersion, minorVersion,
-				revision));
+		assertTrue(productVersionInfo1.eq(majorVersion, minorVersion, revision));
 		assertTrue(productVersionInfo2.eq(majorVersion, minorVersion, null));
 	}
 
 	@Test
 	public void testGte() {
-		assertTrue(productVersionInfo1.gte(majorVersion, minorVersion,
-				revision));
+		assertTrue(productVersionInfo1.gte(majorVersion, minorVersion, revision));
 		assertTrue(productVersionInfo2.gte(majorVersion, minorVersion, null));
 		//
-		assertTrue(productVersionInfo1.gte(majorVersion - 1, minorVersion,
-				revision));
-		assertTrue(productVersionInfo2
-				.gte(majorVersion - 1, minorVersion, null));
+		assertTrue(productVersionInfo1.gte(majorVersion - 1, minorVersion, revision));
+		assertTrue(productVersionInfo2.gte(majorVersion - 1, minorVersion, null));
 		//
-		assertTrue(productVersionInfo1.gte(majorVersion, minorVersion - 1,
-				revision));
-		assertTrue(productVersionInfo2
-				.gte(majorVersion, minorVersion - 1, null));
+		assertTrue(productVersionInfo1.gte(majorVersion, minorVersion - 1, revision));
+		assertTrue(productVersionInfo2.gte(majorVersion, minorVersion - 1, null));
 		//
-		assertTrue(productVersionInfo1.gte(majorVersion, minorVersion,
-				revision - 1));
+		assertTrue(productVersionInfo1.gte(majorVersion, minorVersion, revision - 1));
 		//
-		assertTrue(productVersionInfo1.gte(majorVersion - 1, minorVersion - 1,
-				revision - 1));
+		assertTrue(productVersionInfo1.gte(majorVersion - 1, minorVersion - 1, revision - 1));
 	}
 
 	@Test
 	public void testGt() {
-		assertFalse(productVersionInfo1.gt(majorVersion, minorVersion,
-				revision));
+		assertFalse(productVersionInfo1.gt(majorVersion, minorVersion, revision));
 		//
-		assertTrue(productVersionInfo1.gt(majorVersion - 1, minorVersion,
-				revision));
-		assertTrue(productVersionInfo1.gt(majorVersion, minorVersion - 1,
-				revision));
-		assertTrue(productVersionInfo1.gt(majorVersion, minorVersion,
-				revision - 1));
-		assertTrue(productVersionInfo1.gt(majorVersion - 1, minorVersion - 1,
-				revision - 1));
+		assertTrue(productVersionInfo1.gt(majorVersion - 1, minorVersion, revision));
+		assertTrue(productVersionInfo1.gt(majorVersion, minorVersion - 1, revision));
+		assertTrue(productVersionInfo1.gt(majorVersion, minorVersion, revision - 1));
+		assertTrue(productVersionInfo1.gt(majorVersion - 1, minorVersion - 1, revision - 1));
 		//
 		assertTrue(productVersionInfo1.gt(majorVersion, minorVersion, null));
 	}
 
 	@Test
 	public void testLt() {
-		assertFalse(productVersionInfo1.lt(majorVersion, minorVersion,
-				revision));
+		assertFalse(productVersionInfo1.lt(majorVersion, minorVersion, revision));
 		//
-		assertTrue(productVersionInfo1.lt(majorVersion + 1, minorVersion,
-				revision));
-		assertTrue(productVersionInfo1.lt(majorVersion, minorVersion + 1,
-				revision));
-		assertTrue(productVersionInfo1.lt(majorVersion, minorVersion,
-				revision + 1));
-		assertTrue(productVersionInfo1.lt(majorVersion + 1, minorVersion + 1,
-				revision + 1));
+		assertTrue(productVersionInfo1.lt(majorVersion + 1, minorVersion, revision));
+		assertTrue(productVersionInfo1.lt(majorVersion, minorVersion + 1, revision));
+		assertTrue(productVersionInfo1.lt(majorVersion, minorVersion, revision + 1));
+		assertTrue(productVersionInfo1.lt(majorVersion + 1, minorVersion + 1, revision + 1));
 		//
 		assertFalse(productVersionInfo1.lt(majorVersion, minorVersion, null));
 	}
 
 	@Test
 	public void testLte() {
-		assertTrue(productVersionInfo1.lte(majorVersion, minorVersion,
-				revision));
+		assertTrue(productVersionInfo1.lte(majorVersion, minorVersion, revision));
 		assertTrue(productVersionInfo2.lte(majorVersion, minorVersion, null));
 		//
-		assertTrue(productVersionInfo1.lte(majorVersion + 1, minorVersion,
-				revision));
-		assertTrue(productVersionInfo2
-				.lte(majorVersion + 1, minorVersion, null));
+		assertTrue(productVersionInfo1.lte(majorVersion + 1, minorVersion, revision));
+		assertTrue(productVersionInfo2.lte(majorVersion + 1, minorVersion, null));
 		//
-		assertTrue(productVersionInfo1.lte(majorVersion, minorVersion + 1,
-				revision));
-		assertTrue(productVersionInfo2
-				.lte(majorVersion, minorVersion + 1, null));
+		assertTrue(productVersionInfo1.lte(majorVersion, minorVersion + 1, revision));
+		assertTrue(productVersionInfo2.lte(majorVersion, minorVersion + 1, null));
 		//
-		assertTrue(productVersionInfo1.lte(majorVersion, minorVersion,
-				revision + 1));
+		assertTrue(productVersionInfo1.lte(majorVersion, minorVersion, revision + 1));
 		//
-		assertTrue(productVersionInfo1.lte(majorVersion + 1, minorVersion + 1,
-				revision + 1));
+		assertTrue(productVersionInfo1.lte(majorVersion + 1, minorVersion + 1, revision + 1));
 	}
 
 }

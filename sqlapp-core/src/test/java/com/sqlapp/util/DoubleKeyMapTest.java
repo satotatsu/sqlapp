@@ -31,7 +31,7 @@ public class DoubleKeyMapTest {
 
 	@Test
 	public void testGetST() {
-		DoubleKeyMap<String, String, Object> map=doubleKeyMap();
+		DoubleKeyMap<String, String, Object> map = doubleKeyMap();
 		map.put("k1a", "k2a", "val1");
 		map.put("k1a", "k2b", "val2");
 		map.put("k1b", "k2a", "val3");
@@ -46,13 +46,13 @@ public class DoubleKeyMapTest {
 
 	@Test
 	public void testToMap() {
-		List<Bean> list=new ArrayList<>();
+		List<Bean> list = new ArrayList<>();
 		list.add(new Bean("k1a", 1, "val1"));
 		list.add(new Bean("k1a", 2, "val2"));
 		list.add(new Bean("k1b", 2, "val3"));
 		list.add(new Bean("k1b", 3, "val4"));
 		list.add(new Bean("k1b", 4, "val5"));
-		DoubleKeyMap<String, Integer, Bean> map=DoubleKeyMap.toMap(list, c->c.key1, c->c.key2);
+		DoubleKeyMap<String, Integer, Bean> map = DoubleKeyMap.toMap(list, c -> c.key1, c -> c.key2);
 		assertEquals("val1", map.get("k1a", 1).value);
 		assertEquals("val2", map.get("k1a", 2).value);
 		assertEquals("val3", map.get("k1b", 2).value);
@@ -62,7 +62,7 @@ public class DoubleKeyMapTest {
 
 	@Test
 	public void testToMapList() {
-		List<Bean> list=new ArrayList<>();
+		List<Bean> list = new ArrayList<>();
 		list.add(new Bean("k1a", 1, "val1"));
 		list.add(new Bean("k1a", 1, "val1_1"));
 		list.add(new Bean("k1a", 2, "val2"));
@@ -70,21 +70,22 @@ public class DoubleKeyMapTest {
 		list.add(new Bean("k1b", 2, "val3_1"));
 		list.add(new Bean("k1b", 3, "val4"));
 		list.add(new Bean("k1b", 4, "val5"));
-		DoubleKeyMap<String, Integer, List<Bean>> map=DoubleKeyMap.toListMap(list, c->c.key1, c->c.key2);
+		DoubleKeyMap<String, Integer, List<Bean>> map = DoubleKeyMap.toListMap(list, c -> c.key1, c -> c.key2);
 		assertEquals(2, map.get("k1a", 1).size());
 		assertEquals(1, map.get("k1a", 2).size());
 		assertEquals(2, map.get("k1b", 2).size());
 	}
 
-	static class Bean{
-		public Bean(String key1, Integer key2, Object value){
-			this.key1=key1;
-			this.key2=key2;
-			this.value=value;
+	static class Bean {
+		public Bean(String key1, Integer key2, Object value) {
+			this.key1 = key1;
+			this.key2 = key2;
+			this.value = value;
 		}
+
 		public String key1;
 		public Integer key2;
 		public Object value;
 	}
-	
+
 }

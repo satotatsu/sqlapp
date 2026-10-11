@@ -20,12 +20,13 @@
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.ltrim;
 import static com.sqlapp.util.CommonUtils.notEmpty;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.DomainReader;
@@ -51,16 +52,22 @@ public class PostgresDomainReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Domain> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Domain> result = list();
+		final Map<String, Domain> byId = new LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Domain obj = createDomain(rs);
-				result.add(obj);
+				Domain existing = byId.putIfAbsent(obj.getId(), obj);
+				if (existing == null) {
+					result.add(obj);
+				} else if (!CommonUtils.isEmpty(obj.getCheck())) {
+					existing.setCheck(CommonUtils.isEmpty(existing.getCheck()) ? obj.getCheck()
+							: "(" + existing.getCheck() + ") AND (" + obj.getCheck() + ")");
+				}
 			}
 		});
 		return result;
@@ -74,19 +81,17 @@ public class PostgresDomainReader extends DomainReader {
 		String productDataType = getString(rs, "typname");
 		int arrayDimension = rs.getInt("typndims");
 		String intervalTypeName = getString(rs, "interval_type_name");
-		if (arrayDimension > 0) {
-			productDataType = ltrim(productDataType, '_');
-		}
 		productDataType = notEmpty(intervalTypeName, productDataType);
 		Long maxLength = getLong(rs, "max_length");
 		Long numericPrecision = getLong(rs, "numeric_precision");
-		Integer numericScale = getInt(rs, "numeric_scale");
-		Integer datetimeScale = getInt(rs, "datetime_scale");
-		Integer intervalScale = getInt(rs, "interval_scale");
+		Integer numericScale = getInteger(rs, "numeric_scale");
+		Integer datetimeScale = getInteger(rs, "datetime_scale");
+		Integer intervalScale = getInteger(rs, "interval_scale");
 		Domain obj = new Domain(getString(rs, "domain_name"));
 		obj.setNullable(!rs.getBoolean("typnotnull"));
-		getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision)
-				, CommonUtils.notZero(numericScale, datetimeScale, intervalScale), obj);
+		getDialect().setDbType(productDataType,
+				PostgresUtils.typePrecision(maxLength, numericPrecision, datetimeScale, intervalScale), numericScale,
+				obj);
 		obj.setId(getString(rs, "oid"));
 		// obj.setCatalogName(getString(rs, "domain_catalog"));
 		obj.setSchemaName(getString(rs, "domain_schema"));
@@ -96,8 +101,7 @@ public class PostgresDomainReader extends DomainReader {
 		obj.setCheck(getString(rs, "consrc")); // ドメイン制約式
 		boolean is_deferrable = rs.getBoolean("is_deferrable");
 		boolean initially_deferred = rs.getBoolean("initially_deferred");
-		obj.setDeferrability(Deferrability.getDeferrability(is_deferrable,
-				initially_deferred));
+		obj.setDeferrability(Deferrability.getDeferrability(is_deferrable, initially_deferred));
 		return obj;
 	}
 }

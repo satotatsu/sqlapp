@@ -21,8 +21,7 @@ import com.sqlapp.util.CommonUtils;
 public class PostgresFileFdwOptionsBuilder {
 	private static final Set<String> FORMATS = Set.of("text", "csv", "binary");
 	private static final Set<String> ON_ERRORS = Set.of("stop", "ignore");
-	private static final Set<String> LOG_VERBOSITIES =
-			Set.of("default", "verbose", "silent");
+	private static final Set<String> LOG_VERBOSITIES = Set.of("default", "verbose", "silent");
 
 	private final Dialect dialect;
 	private final Map<String, String> options = new LinkedHashMap<>();
@@ -58,15 +57,12 @@ public class PostgresFileFdwOptionsBuilder {
 	}
 
 	public PostgresFileFdwOptionsBuilder option(String name, String value) {
-		String normalizedName = require(name, "optionName")
-				.toLowerCase(Locale.ROOT);
-		if (Set.of("filename", "program", "format", "on_error",
-				"reject_limit", "log_verbosity").contains(normalizedName)) {
-			throw new IllegalArgumentException(
-					normalizedName + " must be set using its dedicated method.");
+		String normalizedName = require(name, "optionName").toLowerCase(Locale.ROOT);
+		if (Set.of("filename", "program", "format", "on_error", "reject_limit", "log_verbosity")
+				.contains(normalizedName)) {
+			throw new IllegalArgumentException(normalizedName + " must be set using its dedicated method.");
 		}
-		options.put(normalizedName,
-				Objects.requireNonNull(value, "optionValue"));
+		options.put(normalizedName, Objects.requireNonNull(value, "optionValue"));
 		return this;
 	}
 
@@ -84,8 +80,7 @@ public class PostgresFileFdwOptionsBuilder {
 	}
 
 	public PostgresFileFdwOptionsBuilder logVerbosity(String value) {
-		this.logVerbosity = normalized(
-				value, "logVerbosity", LOG_VERBOSITIES);
+		this.logVerbosity = normalized(value, "logVerbosity", LOG_VERBOSITIES);
 		return this;
 	}
 
@@ -114,43 +109,35 @@ public class PostgresFileFdwOptionsBuilder {
 			if (index++ > 0) {
 				builder.append(", ");
 			}
-			builder.append(entry.getKey()).append(" ")
-					.append(sqlString(entry.getValue()));
+			builder.append(entry.getKey()).append(" ").append(sqlString(entry.getValue()));
 		}
 		return builder.append(")").toString();
 	}
 
 	private void validate() {
 		if ((filename == null) == (program == null)) {
-			throw new IllegalArgumentException(
-					"Exactly one of filename or program must be specified.");
+			throw new IllegalArgumentException("Exactly one of filename or program must be specified.");
 		}
 		if (onError != null || rejectLimit != null || logVerbosity != null) {
 			if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-				throw new IllegalArgumentException(
-						"file_fdw error-handling options require PostgreSQL 18 or later.");
+				throw new IllegalArgumentException("file_fdw error-handling options require PostgreSQL 18 or later.");
 			}
 		}
-		if ("ignore".equals(onError)
-				&& !Set.of("text", "csv").contains(format)) {
-			throw new IllegalArgumentException(
-					"onError ignore requires text or csv format.");
+		if ("ignore".equals(onError) && !Set.of("text", "csv").contains(format)) {
+			throw new IllegalArgumentException("onError ignore requires text or csv format.");
 		}
 		if (rejectLimit != null && !"ignore".equals(onError)) {
-			throw new IllegalArgumentException(
-					"rejectLimit requires onError ignore.");
+			throw new IllegalArgumentException("rejectLimit requires onError ignore.");
 		}
 		if (logVerbosity != null && !"ignore".equals(onError)) {
-			throw new IllegalArgumentException(
-					"logVerbosity requires onError ignore.");
+			throw new IllegalArgumentException("logVerbosity requires onError ignore.");
 		}
 	}
 
 	private String normalized(String value, String name, Set<String> values) {
 		String normalized = require(value, name).toLowerCase(Locale.ROOT);
 		if (!values.contains(normalized)) {
-			throw new IllegalArgumentException(
-					name + " must be one of " + values + ".");
+			throw new IllegalArgumentException(name + " must be one of " + values + ".");
 		}
 		return normalized;
 	}

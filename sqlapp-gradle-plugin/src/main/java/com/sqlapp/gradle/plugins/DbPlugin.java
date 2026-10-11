@@ -36,8 +36,43 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTask(project, "migrationInsert", MigrationInsertTask.class);
 		registerTask(project, "migrationRepair", MigrationRepairTask.class);
+		registerTask(project, "migrationValidate", MigrationValidateTask.class);
+		registerTask(project, "migrationPlan", MigrationPlanTask.class);
+		registerTask(project, "migrationEnvironmentSnapshot", MigrationEnvironmentSnapshotTask.class);
+		registerTask(project, "compareMigrationEnvironments", CompareMigrationEnvironmentsTask.class);
+		registerTask(project, "assessMigration", AssessMigrationTask.class);
+		registerTask(project, "assessAccessOracleMigration", AssessAccessOracleMigrationTask.class);
+		registerTask(project, "assessDatabaseMigration", AssessDatabaseMigrationTask.class);
+		registerTask(project, "verifyDatabaseMigrationDdlPhases", VerifyDatabaseMigrationDdlPhasesTask.class);
+		registerTask(project, "generateAccessBulkMigrationJobConfiguration",
+				GenerateAccessBulkMigrationJobConfigurationTask.class);
+		registerTask(project, "verifyMigrationExecutionReport", VerifyMigrationExecutionReportTask.class);
+		registerTask(project, "generateBulkMigrationOperationalReport",
+				GenerateBulkMigrationOperationalReportTask.class);
+		registerTask(project, "generateBulkMigrationJobRepairPlanReport",
+				GenerateBulkMigrationJobRepairPlanReportTask.class);
+		registerTask(project, "executeBulkMigrationJob", ExecuteBulkMigrationJobTask.class);
+		registerTask(project, "executeBulkMigrationJobRepair", ExecuteBulkMigrationJobRepairTask.class);
+		registerTask(project, "validateBulkMigrationTarget", ValidateBulkMigrationTargetTask.class);
+		registerTask(project, "verifyBulkMigrationEvidence", VerifyBulkMigrationEvidenceTask.class);
+		registerTask(project, "verifyBulkMigrationEvidenceReport", VerifyBulkMigrationEvidenceReportTask.class);
+		registerTask(project, "verifyBulkMigrationJobRepairEvidence",
+				VerifyBulkMigrationJobRepairEvidenceTask.class);
+		registerTask(project, "verifyBulkMigrationJobRepairFailureEvidence",
+				VerifyBulkMigrationJobRepairFailureEvidenceTask.class);
+		registerTask(project, "verifyBulkMigrationJobRepairOutcome",
+				VerifyBulkMigrationJobRepairOutcomeTask.class);
+		registerTask(project, "verifyBulkMigrationJobRepairOutcomeReport",
+				VerifyBulkMigrationJobRepairOutcomeReportTask.class);
+		registerTask(project, "generateMigrationSnapshotApprovalReport",
+				GenerateMigrationSnapshotApprovalReportTask.class);
+		registerTask(project, "executeMigrationSnapshot", ExecuteMigrationSnapshotTask.class);
+		registerTask(project, "verifyMigrationSnapshotReport", VerifyMigrationSnapshotReportTask.class);
+		registerTask(project, "verifyMigrationSnapshotFailureReport", VerifyMigrationSnapshotFailureReportTask.class);
 		//
 		registerTask(project, "exportSchemaXml", ExportSchemaXmlTask.class);
+		registerTask(project, "exportAccessSchemaXml", ExportAccessSchemaXmlTask.class);
+		registerTask(project, "exportSqliteSchemaXml", ExportSqliteSchemaXmlTask.class);
 		//
 		registerTask(project, "diffSchemaXml", DiffSchemaXmlTask.class);
 		//

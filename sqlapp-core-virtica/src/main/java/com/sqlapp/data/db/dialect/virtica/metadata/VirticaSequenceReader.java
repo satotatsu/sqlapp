@@ -48,8 +48,7 @@ public class VirticaSequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Sequence> result = list();
@@ -74,6 +73,7 @@ public class VirticaSequenceReader extends SequenceReader {
 		obj.setMaxValue(rs.getLong("MAXIMUM"));
 		obj.setIncrementBy(rs.getLong("INCREMENT_BY"));
 		obj.setCacheSize(rs.getLong("SESSION_CACHE_COUNT"));
+		obj.setCache(obj.getCacheSize() > 1);
 		obj.setLastValue(rs.getLong("CURRENT_VALUE"));
 		obj.setCycle(rs.getBoolean("ALLOW_CYCLE"));
 		obj.setId(rs.getString("SEQUENCE_ID"));

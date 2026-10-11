@@ -21,12 +21,14 @@ package com.sqlapp.data.db.dialect.oracle.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
+
 /**
  * Oracle10gのカタログ読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class Oracle10gCatalogReader extends OracleCatalogReader{
+public class Oracle10gCatalogReader extends OracleCatalogReader {
 
 	public Oracle10gCatalogReader(Dialect dialect) {
 		super(dialect);

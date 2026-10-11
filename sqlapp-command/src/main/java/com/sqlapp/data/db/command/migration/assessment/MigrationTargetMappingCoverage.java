@@ -1,0 +1,234 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.assessment;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Objects;
+
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Evidence;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Finding;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Inventory;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.ObjectId;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessment.Severity;
+import com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentSource;
+import com.sqlapp.data.schemas.migration.assessment.ResolvedMigrationTargetMapping;
+
+/** Reports source objects omitted from an otherwise valid target mapping. */
+final class MigrationTargetMappingCoverage {
+	MigrationAssessment assess(final MigrationAssessmentSource source, final ResolvedMigrationTargetMapping mapping) {
+		final var mappedTables = new HashSet<ObjectId>();
+		final var mappedColumns = new HashSet<ObjectId>();
+		final var mappingsByTable = new HashMap<ObjectId, ResolvedMigrationTargetMapping.TableMapping>();
+		mapping.tables().forEach(table -> {
+			mappedTables.add(table.sourceTable());
+			mappingsByTable.put(table.sourceTable(), table);
+			table.columns().forEach(column -> mappedColumns.add(column.sourceColumn()));
+		});
+		final var profiles = new HashMap<ObjectId, com.sqlapp.data.schemas.migration.assessment.MigrationDataProfile.ColumnProfile>();
+		if (source.dataProfile() != null) {
+			source.dataProfile().tables()
+					.forEach(table -> table.columns().forEach(column -> profiles.put(column.column(), column)));
+		}
+		final var findings = new ArrayList<Finding>();
+		int omittedTables = 0;
+		int omittedColumns = 0;
+		int semanticDifferences = 0;
+		int unresolvedAutoNumberStrategies = 0;
+		for (final var schema : source.schemas()) {
+			for (final var table : schema.getTables()) {
+				final var tableId = new ObjectId(schema.getCatalogName(), schema.getName(), "table", table.getName());
+				if (!mappedTables.contains(tableId)) {
+					omittedTables++;
+					findings.add(new Finding("migration.mapping.unmapped-table", Severity.REVIEW, Evidence.SCHEMA,
+							tableId, "The source table is not present in the target mapping.",
+							"Add it to the mapping, or record that the table is intentionally outside the migration scope.",
+							null));
+					continue;
+				}
+				final var tableMapping = mappingsByTable.get(tableId);
+				for (final var constraint : table.getConstraints()) {
+					if (constraint instanceof CheckConstraint check && expression(check.getExpression()) != null) {
+						semanticDifferences++;
+						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
+								constraint.getName() == null ? "<unnamed validation>" : constraint.getName(),
+								table.getName());
+						findings.add(semanticFinding("table-validation-expression", constraintId, "table",
+								"Access table validation expression", value(expression(check.getExpression())),
+								"mapped CHECK expressions require translation review"));
+					}
+					if (constraint instanceof ForeignKeyConstraint foreignKey
+							&& (foreignKey.getUpdateRule() == CascadeRule.Cascade
+									|| foreignKey.getDeleteRule() == CascadeRule.Cascade)) {
+						semanticDifferences++;
+						final var constraintId = new ObjectId(schema.getCatalogName(), schema.getName(), "constraint",
+								constraint.getName() == null ? "<unnamed relationship>" : constraint.getName(),
+								table.getName());
+						final String relatedTable = foreignKey.getRelatedTable() == null ? "<unresolved>"
+								: foreignKey.getRelatedTable().getName();
+						findings.add(
+								semanticFinding("relationship-action", constraintId, "relationship",
+										"Access relationship actions to " + relatedTable, "update="
+												+ foreignKey.getUpdateRule() + ", delete=" + foreignKey.getDeleteRule(),
+										"target cascade clauses omitted"));
+					}
+				}
+				for (final var index : table.getIndexes()) {
+					final var indexId = new ObjectId(schema.getCatalogName(), schema.getName(), "index",
+							index.getName() == null ? "<unnamed index>" : index.getName(), table.getName());
+					if (Boolean.TRUE.equals(index.getSpecifics().get("IGNORE_NULLS", Boolean.class))) {
+						semanticDifferences++;
+						findings.add(semanticFinding("index-null-handling", indexId, "index", "Access IgnoreNulls",
+								"true", "target index design unspecified"));
+					}
+					if (index.isUnique()) {
+						semanticDifferences++;
+						findings.add(semanticFinding("unique-index-design", indexId, "index",
+								"Access standalone unique index", "present",
+								"target NULL and uniqueness design unspecified"));
+					}
+				}
+				final boolean primaryComplete = primaryComplete(table, tableMapping);
+				for (final var column : table.getColumns()) {
+					final var columnId = new ObjectId(schema.getCatalogName(), schema.getName(), "column",
+							column.getName(), table.getName());
+					if (!mappedColumns.contains(columnId)) {
+						omittedColumns++;
+						findings.add(new Finding("migration.mapping.unmapped-column", Severity.REVIEW, Evidence.SCHEMA,
+								columnId, "The source column is not present in the target mapping.",
+								"Add it to the mapping, or record that the column is intentionally excluded or derived.",
+								null));
+						continue;
+					}
+					final var columnMapping = tableMapping.columns().stream()
+							.filter(candidate -> candidate.sourceColumn().equals(columnId)).findFirst().orElseThrow();
+					if (column.isIdentity() && columnMapping.identity() == null) {
+						unresolvedAutoNumberStrategies++;
+					}
+					final boolean sourceRequired = column.isNotNull() || column.isIdentity();
+					final String sourceNullability = sourceRequired ? "required" : "nullable";
+					final String targetNullability = targetNullability(table, column.getName(), primaryComplete,
+							columnMapping.nullable());
+					if ((!"unspecified".equals(targetNullability) && !sourceNullability.equals(targetNullability))
+							|| (sourceRequired && "unspecified".equals(targetNullability))) {
+						semanticDifferences++;
+						findings.add(semanticFinding("nullability-change", columnId, "nullability", sourceNullability,
+								targetNullability));
+					}
+					if (column.isIdentity() != Boolean.TRUE.equals(columnMapping.identity())) {
+						semanticDifferences++;
+						final String targetIdentity = columnMapping.identity() == null ? "unspecified"
+								: columnMapping.identity().toString();
+						if (column.isIdentity()) {
+							findings.add(new Finding("migration.mapping.identity-change", Severity.REVIEW,
+									Evidence.SCHEMA, columnId,
+									"Mapped Access AutoNumber generation changes from true to " + targetIdentity + ".",
+									"Check the Access New Values setting (Increment or Random; GUID uses a separate generator), "
+											+ "then explicitly select target identity generation or a documented alternative and test the first new row.",
+									null));
+						} else {
+							findings.add(
+									semanticFinding("identity-change", columnId, "identity", "false", targetIdentity));
+						}
+					}
+					final var profile = profiles.get(columnId);
+					if (column.isIdentity() && Boolean.TRUE.equals(columnMapping.identity()) && profile != null
+							&& profile.numeric() != null && profile.numeric().minimum() != null
+							&& profile.numeric().minimum().signum() < 0) {
+						semanticDifferences++;
+						findings.add(new Finding("migration.mapping.observed-negative-autonumber", Severity.WARNING,
+								Evidence.DATABASE, columnId,
+								"Negative Access AutoNumber values were observed while target identity generation is enabled.",
+								"Check whether Access New Values uses Random. Preserve existing keys and references, then approve "
+										+ "the intentional change to sequential target generation or define a compatible alternative.",
+								null));
+					}
+					final String sourceDefault = expression(column.getDefaultValue());
+					final String targetDefault = expression(columnMapping.defaultExpression());
+					if (!Objects.equals(sourceDefault, targetDefault)) {
+						semanticDifferences++;
+						findings.add(semanticFinding("default-change", columnId, "default expression",
+								value(sourceDefault), value(targetDefault)));
+					}
+					if (Boolean.TRUE.equals(column.getSpecifics().get("access.allowZeroLength", Boolean.class))) {
+						semanticDifferences++;
+						findings.add(semanticFinding("allow-zero-length", columnId, "empty-string policy",
+								"Access AllowZeroLength=true", "target validation unspecified"));
+					}
+					final String sourceFormula = expression(column.getFormula());
+					if (sourceFormula != null) {
+						semanticDifferences++;
+						findings.add(semanticFinding("calculated-expression", columnId, "calculated expression",
+								value(sourceFormula), "materialized target column; load conversion="
+										+ value(expression(columnMapping.conversion()))));
+					}
+					final String sourceValidation = expression(column.getCheck());
+					if (sourceValidation != null) {
+						semanticDifferences++;
+						findings.add(semanticFinding("column-validation-expression", columnId,
+								"Access field validation expression", value(sourceValidation),
+								"mapped CHECK expressions require translation review"));
+					}
+				}
+			}
+		}
+		return new MigrationAssessment(findings,
+				java.util.List.of(new Inventory(null, "", "unmappedTables", omittedTables),
+						new Inventory(null, "", "unmappedColumnsInMappedTables", omittedColumns),
+						new Inventory(null, "", "mappingSemanticDifferences", semanticDifferences),
+						new Inventory(null, "", "unresolvedAutoNumberStrategies", unresolvedAutoNumberStrategies)));
+	}
+
+	private static boolean primaryComplete(final Table table,
+			final ResolvedMigrationTargetMapping.TableMapping mapping) {
+		final var primary = table.getConstraints().getPrimaryKeyConstraint();
+		if (primary == null || primary.getColumns().isEmpty()) {
+			return false;
+		}
+		final var mapped = new HashSet<String>();
+		mapping.columns().forEach(column -> mapped.add(key(column.sourceColumn().name())));
+		return primary.getColumns().stream().allMatch(column -> mapped.contains(key(column.getName())));
+	}
+
+	private static String targetNullability(final Table table, final String columnName, final boolean primaryComplete,
+			final Boolean nullable) {
+		if (primaryComplete && table.getConstraints().getPrimaryKeyConstraint().getColumns().stream()
+				.anyMatch(column -> key(column.getName()).equals(key(columnName)))) {
+			return "required";
+		}
+		if (nullable == null) {
+			return "unspecified";
+		}
+		return nullable ? "nullable" : "required";
+	}
+
+	private static Finding semanticFinding(final String suffix, final ObjectId object, final String property,
+			final String sourceValue, final String targetValue) {
+		return semanticFinding(suffix, object, "column", property, sourceValue, targetValue);
+	}
+
+	private static Finding semanticFinding(final String suffix, final ObjectId object, final String objectKind,
+			final String property, final String sourceValue, final String targetValue) {
+		return new Finding("migration.mapping." + suffix, Severity.REVIEW, Evidence.SCHEMA, object,
+				"Mapped " + objectKind + " changes " + property + " from " + sourceValue + " to " + targetValue + ".",
+				"Confirm the change is intentional and validate affected rows during a rehearsal migration.", null);
+	}
+
+	private static String expression(final String value) {
+		return value == null || value.isBlank() ? null : value.trim();
+	}
+
+	private static String value(final String value) {
+		return value == null ? "<none>" : value;
+	}
+
+	private static String key(final String value) {
+		return value.toUpperCase(Locale.ROOT);
+	}
+}

@@ -57,6 +57,7 @@ module com.sqlapp.core {
 	exports com.sqlapp.data.interval;
 	exports com.sqlapp.data.parameter;
 	exports com.sqlapp.data.schemas;
+	exports com.sqlapp.data.schemas.migration.assessment;
 	exports com.sqlapp.data.schemas.function;
 	exports com.sqlapp.data.schemas.properties;
 	exports com.sqlapp.data.schemas.properties.complex;
@@ -64,6 +65,7 @@ module com.sqlapp.core {
 	exports com.sqlapp.data.schemas.rowiterator;
 	exports com.sqlapp.exceptions;
 	exports com.sqlapp.jdbc;
+	exports com.sqlapp.jdbc.bulk;
 	exports com.sqlapp.jdbc.sql;
 	exports com.sqlapp.jdbc.sql.node;
 	exports com.sqlapp.thread;
@@ -75,4 +77,8 @@ module com.sqlapp.core {
 	exports com.sqlapp.util.function;
 	exports com.sqlapp.util.iterator;
 	exports com.sqlapp.util.xml;
+	uses com.sqlapp.jdbc.bulk.BulkInsertProvider;
+	uses com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentProvider;
+	uses com.sqlapp.jdbc.bulk.BulkUpsertProvider;
+	uses com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 }

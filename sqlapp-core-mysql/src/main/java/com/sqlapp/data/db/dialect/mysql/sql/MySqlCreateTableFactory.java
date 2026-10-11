@@ -34,8 +34,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlCreateTableFactory extends
-		AbstractCreateTableFactory<MySqlSqlBuilder> {
+public class MySqlCreateTableFactory extends AbstractCreateTableFactory<MySqlSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Table table, MySqlSqlBuilder builder) {
@@ -64,17 +63,16 @@ public class MySqlCreateTableFactory extends
 	}
 
 	@Override
-	protected void addIndexDefinitions(Table table,List<SqlOperation> result) {
+	protected void addIndexDefinitions(Table table, List<SqlOperation> result) {
 	}
-	
+
 	/**
 	 * Engine定義を追加します
 	 * 
 	 * @param table
 	 * @param sqlBuilder
 	 */
-	protected void addEnginDefinition(final Table table,
-			MySqlSqlBuilder builder) {
+	protected void addEnginDefinition(final Table table, MySqlSqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getSpecifics().get("ENGINE"))) {
 			builder.engine().eq()._add(table.getSpecifics().get("ENGINE"));
 		}
@@ -86,8 +84,7 @@ public class MySqlCreateTableFactory extends
 	 * @param table
 	 * @param sqlBuilder
 	 */
-	protected void addRowformatDefinition(final Table table,
-			MySqlSqlBuilder builder) {
+	protected void addRowformatDefinition(final Table table, MySqlSqlBuilder builder) {
 		String rowFormat = (String) table.getSpecifics().get("ROW_FORMAT");
 		if (!CommonUtils.isEmpty(rowFormat)) {
 			builder.rowFormat().eq()._add(rowFormat);
@@ -104,8 +101,7 @@ public class MySqlCreateTableFactory extends
 	 * @param table
 	 * @param sqlBuilder
 	 */
-	protected void addCollateDefinition(final Table table,
-			MySqlSqlBuilder builder) {
+	protected void addCollateDefinition(final Table table, MySqlSqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getCollation())) {
 			builder.collate().eq()._add(table.getCollation());
 		}
@@ -117,12 +113,9 @@ public class MySqlCreateTableFactory extends
 	 * @param table
 	 * @param sqlBuilder
 	 */
-	protected void addRemarkDefinition(final Table table,
-			MySqlSqlBuilder builder) {
+	protected void addRemarkDefinition(final Table table, MySqlSqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getRemarks())) {
-			builder.comment()
-					.eq()
-					.sqlChar(table.getRemarks());
+			builder.comment().eq().sqlChar(table.getRemarks());
 		}
 	}
 
@@ -132,8 +125,7 @@ public class MySqlCreateTableFactory extends
 	 * @param colDiff
 	 * @param sqlBuilder
 	 */
-	protected void addAutoIncrementDefinition(final Table table,
-			MySqlSqlBuilder builder) {
+	protected void addAutoIncrementDefinition(final Table table, MySqlSqlBuilder builder) {
 		for (Column column : table.getColumns()) {
 			if (!column.isIdentity()) {
 				continue;
@@ -142,10 +134,8 @@ public class MySqlCreateTableFactory extends
 				if (current == null) {
 					current = column.getIdentityStartValue();
 				}
-				if (current != null
-						&& !CommonUtils.eq(current, Long.valueOf(1))) {
-					builder.space()
-							.property("AUTO_INCREMENT", current);
+				if (current != null && !CommonUtils.eq(current, Long.valueOf(1))) {
+					builder.space().property("AUTO_INCREMENT", current);
 				}
 				return;
 			}
@@ -158,20 +148,19 @@ public class MySqlCreateTableFactory extends
 	 * @param table
 	 * @param sqlBuilder
 	 */
-	protected void addPartitionByDefinition(final Table table,
-			MySqlSqlBuilder builder) {
+	protected void addPartitionByDefinition(final Table table, MySqlSqlBuilder builder) {
 		if (table.getPartitioning() != null) {
-			AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
+			AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail = getAddObjectDetail(
+					table.getPartitioning(), SqlType.CREATE);
 			addObjectDetail.addObjectDetail(table.getPartitioning(), builder);
 		}
 	}
 
 	@Override
-	protected void addConstraintDefinitions(Table table, MySqlSqlBuilder builder){
+	protected void addConstraintDefinitions(Table table, MySqlSqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
 	}
-	
-	
+
 	/**
 	 * インデックスを追加します
 	 * 
@@ -179,7 +168,7 @@ public class MySqlCreateTableFactory extends
 	 * @param builder
 	 */
 	protected void addIndexDefinitions(final Table table, MySqlSqlBuilder builder) {
-		for(Index index:table.getIndexes()){
+		for (Index index : table.getIndexes()) {
 			if (!table.getConstraints().contains(index.getName())) {
 				addIndexDefinition(index, builder);
 			}
@@ -193,8 +182,9 @@ public class MySqlCreateTableFactory extends
 	 * @param builder
 	 */
 	protected void addIndexDefinition(final Index index, MySqlSqlBuilder builder) {
-		AddTableObjectDetailFactory<Index, MySqlSqlBuilder> indexOperation=this.getAddTableObjectDetailOperationFactory(index);
-		if (indexOperation!=null) {
+		AddTableObjectDetailFactory<Index, MySqlSqlBuilder> indexOperation = this
+				.getAddTableObjectDetailOperationFactory(index);
+		if (indexOperation != null) {
 			builder.lineBreak().comma();
 			indexOperation.addObjectDetail(index, null, builder);
 		}

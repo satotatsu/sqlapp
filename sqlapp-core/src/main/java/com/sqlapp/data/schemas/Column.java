@@ -152,7 +152,9 @@ public final class Column extends AbstractColumn<Column>
 	@SuppressWarnings("rawtypes")
 	public ConvertObject getConverter() {
 		if (converter == null) {
-			if (this.getDataType() != null) {
+			if (this.getArrayDimension() > 0) {
+				converter = new DefaultConverter();
+			} else if (this.getDataType() != null) {
 				converter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
 			}
 			if (converter == null) {
@@ -204,6 +206,15 @@ public final class Column extends AbstractColumn<Column>
 
 	protected Column setColumns(final ColumnCollection columns) {
 		this.setParent(columns);
+		return this;
+	}
+
+	@Override
+	public Column setArrayDimension(final int dimension) {
+		if (getArrayDimension() != dimension) {
+			super.setArrayDimension(dimension);
+			converter = null;
+		}
 		return this;
 	}
 

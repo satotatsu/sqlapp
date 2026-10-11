@@ -44,7 +44,7 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
 		String generationType = getString(rs, "GENERATION_TYPE");
-		if (generationType!=null){
+		if (generationType != null) {
 			column.setIdentity(true);
 			column.setIdentityGenerationType(generationType);
 			column.setSequenceSchemaName(getString(rs, "OWNER"));
@@ -54,39 +54,44 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 		}
 		return column;
 	}
-	
-	private void setIdentityOptions(Column column, String identityOptions){
-		if (identityOptions==null){
-			return ;
+
+	private void setIdentityOptions(Column column, String identityOptions) {
+		if (identityOptions == null) {
+			return;
 		}
-		String[] splits=identityOptions.split("[,]");
-		for(String split:splits){
-			split=CommonUtils.trim(split);
-			String[] keyValue=split.split(":");
-			String key=keyValue[0];
-			String value=CommonUtils.trim(keyValue[1]);
-			if ("START WITH".equalsIgnoreCase(key)){
-				column.setIdentityStartValue((Number)Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
+		String[] splits = identityOptions.split("[,]");
+		for (String split : splits) {
+			split = CommonUtils.trim(split);
+			String[] keyValue = split.split(":");
+			String key = keyValue[0];
+			String value = CommonUtils.trim(keyValue[1]);
+			if ("START WITH".equalsIgnoreCase(key)) {
+				column.setIdentityStartValue(
+						(Number) Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
 			}
-			if ("INCREMENT BY".equalsIgnoreCase(key)){
-				column.setIdentityStep((Number)Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
+			if ("INCREMENT BY".equalsIgnoreCase(key)) {
+				column.setIdentityStep(
+						(Number) Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
 			}
-			if ("MAX_VALUE".equalsIgnoreCase(key)){
-				column.getSequence().setMaxValue((Number)Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
+			if ("MAX_VALUE".equalsIgnoreCase(key)) {
+				column.getSequence().setMaxValue(
+						(Number) Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
 			}
-			if ("MIN_VALUE".equalsIgnoreCase(key)){
-				column.getSequence().setMinValue((Number)Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
+			if ("MIN_VALUE".equalsIgnoreCase(key)) {
+				column.getSequence().setMinValue(
+						(Number) Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
 			}
-			if ("CYCLE_FLAG".equalsIgnoreCase(key)){
+			if ("CYCLE_FLAG".equalsIgnoreCase(key)) {
 				column.getSequence().setCycle(Converters.getDefault().convertObject(value, Boolean.class));
 			}
-			if ("CACHE_SIZE".equalsIgnoreCase(key)){
-				column.getSequence().setCacheSize((Number)Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
+			if ("CACHE_SIZE".equalsIgnoreCase(key)) {
+				column.getSequence().setCacheSize(
+						(Number) Converters.getDefault().convertObject(value, column.getDataType().getDefaultClass()));
 			}
-			if ("ORDER_FLAG".equalsIgnoreCase(key)){
+			if ("ORDER_FLAG".equalsIgnoreCase(key)) {
 				column.getSequence().setOrder(Converters.getDefault().convertObject(value, Boolean.class));
 			}
 		}
 	}
-	
+
 }

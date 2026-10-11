@@ -1,0 +1,188 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.gradle.plugins;
+
+import org.gradle.api.Action;
+import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.work.DisableCachingByDefault;
+
+import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobLeaseConfiguration;
+import com.sqlapp.data.db.command.migration.bulk.ExecuteBulkMigrationJobCommand;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobListener;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationListener;
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
+
+/** Executes a programmatically assembled bulk migration job. */
+@DisableCachingByDefault(because = "Executes mutations against an external database")
+public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<ExecuteBulkMigrationJobCommand> {
+
+	public ExecuteBulkMigrationJobTask() {
+		setSourceDataSource(getProject().getObjects().newInstance(DataSourceExtension.class));
+	}
+
+	public void call(final Action<ExecuteBulkMigrationJobTask> action) {
+		action.execute(this);
+	}
+
+	@Internal
+	public abstract Property<BulkMigrationJobPlan> getPlan();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getConfigurationFile();
+
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedConfigurationFingerprint();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxConfigurationFileSizeBytes();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxSchemaFileSizeBytes();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getAssessmentReportFile();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getDdlVerificationReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxApprovalArtifactFileSizeBytes();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getTargetValidationReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<String> getExpectedTargetValidationReportFingerprint();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxTargetValidationAgeSeconds();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxTargetValidationReportFileSizeBytes();
+
+	@Input
+	@Optional
+	public abstract Property<String> getTargetEnvironmentId();
+
+	@OutputFile
+	@Optional
+	public abstract RegularFileProperty getExecutionReportFile();
+
+	@OutputFile
+	@Optional
+	public abstract RegularFileProperty getExecutionFailureReportFile();
+
+	@Input
+	@Optional
+	public abstract Property<Long> getMaxExecutionReportFileSizeBytes();
+
+	@Nested
+	public abstract DataSourceExtension getSourceDataSource();
+
+	public abstract void setSourceDataSource(DataSourceExtension value);
+
+	public void sourceDataSource(final Action<DataSourceExtension> action) {
+		action.execute(getSourceDataSource());
+	}
+
+	@Internal
+	public abstract Property<BulkMigrationJobListener> getListener();
+
+	@Internal
+	public abstract Property<ChunkedBulkMigrationListener> getChunkListener();
+
+	@Internal
+	public abstract Property<BulkMigrationJobLeaseConfiguration> getLeaseConfiguration();
+
+	@Override
+	protected void beforeRun(final ExecuteBulkMigrationJobCommand command) {
+		if (getPlan().isPresent()) {
+			command.setPlan(getPlan().get());
+		}
+		if (getConfigurationFile().isPresent()) {
+			command.setConfigurationFile(getConfigurationFile().get().getAsFile());
+			command.setSourceDataSource(getSourceDataSource().createDataSource());
+		}
+		if (getExpectedConfigurationFingerprint().isPresent()) {
+			command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().get());
+		}
+		if (getMaxConfigurationFileSizeBytes().isPresent()) {
+			command.setMaxConfigurationFileSizeBytes(getMaxConfigurationFileSizeBytes().get());
+		}
+		if (getMaxSchemaFileSizeBytes().isPresent()) {
+			command.setMaxSchemaFileSizeBytes(getMaxSchemaFileSizeBytes().get());
+		}
+		if (getAssessmentReportFile().isPresent()) {
+			command.setAssessmentReportFile(getAssessmentReportFile().get().getAsFile());
+		}
+		if (getDdlVerificationReportFile().isPresent()) {
+			command.setDdlVerificationReportFile(getDdlVerificationReportFile().get().getAsFile());
+		}
+		if (getMaxApprovalArtifactFileSizeBytes().isPresent()) {
+			command.setMaxApprovalArtifactFileSizeBytes(getMaxApprovalArtifactFileSizeBytes().get());
+		}
+		if (getTargetValidationReportFile().isPresent()) {
+			command.setTargetValidationReportFile(getTargetValidationReportFile().get().getAsFile());
+		}
+		if (getExpectedTargetValidationReportFingerprint().isPresent()) {
+			command.setExpectedTargetValidationReportFingerprint(getExpectedTargetValidationReportFingerprint().get());
+		}
+		if (getMaxTargetValidationAgeSeconds().isPresent()) {
+			command.setMaxTargetValidationAgeSeconds(getMaxTargetValidationAgeSeconds().get());
+		}
+		if (getMaxTargetValidationReportFileSizeBytes().isPresent()) {
+			command.setMaxTargetValidationReportFileSizeBytes(
+					getMaxTargetValidationReportFileSizeBytes().get());
+		}
+		if (getTargetEnvironmentId().isPresent()) {
+			command.setTargetEnvironmentId(getTargetEnvironmentId().get());
+		}
+		if (getExecutionReportFile().isPresent()) {
+			command.setExecutionReportFile(getExecutionReportFile().get().getAsFile());
+		}
+		if (getExecutionFailureReportFile().isPresent()) {
+			command.setExecutionFailureReportFile(getExecutionFailureReportFile().get().getAsFile());
+		}
+		if (getMaxExecutionReportFileSizeBytes().isPresent()) {
+			command.setMaxExecutionReportFileSizeBytes(getMaxExecutionReportFileSizeBytes().get());
+		}
+		if (getListener().isPresent()) {
+			command.setListener(getListener().get());
+		}
+		if (getChunkListener().isPresent()) {
+			command.setChunkListener(getChunkListener().get());
+		}
+		if (getLeaseConfiguration().isPresent()) {
+			command.setLeaseConfiguration(getLeaseConfiguration().get());
+		}
+	}
+
+	@Override
+	protected ExecuteBulkMigrationJobCommand createCommand() {
+		return new ExecuteBulkMigrationJobCommand();
+	}
+}

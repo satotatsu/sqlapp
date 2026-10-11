@@ -43,8 +43,7 @@ public class PhoenixLockTableFactoryTest extends AbstractPhoenixSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.LOCK);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.LOCK);
 	}
 
 	@Test

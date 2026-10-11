@@ -27,8 +27,7 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Mask;
 
-public class Db2_1010AlterMaskFactory extends
-		AbstractAlterMaskFactory<Db2SqlBuilder> {
+public class Db2_1010AlterMaskFactory extends AbstractAlterMaskFactory<Db2SqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(Mask obj) {

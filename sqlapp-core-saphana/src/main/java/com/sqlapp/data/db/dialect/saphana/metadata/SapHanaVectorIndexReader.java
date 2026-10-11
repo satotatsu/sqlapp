@@ -33,15 +33,13 @@ public class SapHanaVectorIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(final ExResultSet rs)
-					throws SQLException {
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 				result.add(createIndex(rs));
 			}
 		});
@@ -54,28 +52,24 @@ public class SapHanaVectorIndexReader extends IndexReader {
 		index.setTableName(getString(rs, TABLE_NAME));
 		index.setIndexType(IndexType.Vector);
 		index.getColumns().add(new Column(getString(rs, COLUMN_NAME)));
-		index.setVectorDistanceType(toVectorDistanceType(
-				getString(rs, "SIMILARITY_FUNCTION")));
+		index.setVectorDistanceType(toVectorDistanceType(getString(rs, "SIMILARITY_FUNCTION")));
 		setSpecifics(rs, "INDEX_TYPE", index);
 		setSpecifics(rs, "BUILD_CONFIGURATION", index);
 		setSpecifics(rs, "SEARCH_CONFIGURATION", index);
 		return index;
 	}
 
-	static VectorDistanceType toVectorDistanceType(
-			final String similarityFunction) {
+	static VectorDistanceType toVectorDistanceType(final String similarityFunction) {
 		if ("COSINE_SIMILARITY".equalsIgnoreCase(similarityFunction)) {
 			return VectorDistanceType.Cosine;
 		}
-		if ("L2DISTANCE".equalsIgnoreCase(similarityFunction)
-				|| "L2_DISTANCE".equalsIgnoreCase(similarityFunction)) {
+		if ("L2DISTANCE".equalsIgnoreCase(similarityFunction) || "L2_DISTANCE".equalsIgnoreCase(similarityFunction)) {
 			return VectorDistanceType.Euclidean;
 		}
 		return null;
 	}
 
-	protected SqlNode getSqlSqlNode(
-			final ProductVersionInfo productVersionInfo) {
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("vectorIndexes.sql");
 	}
 }

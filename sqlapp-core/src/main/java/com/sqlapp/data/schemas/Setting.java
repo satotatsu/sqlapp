@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.DefaultProperty;
+import com.sqlapp.data.schemas.properties.DefaultValueProperty;
 import com.sqlapp.data.schemas.properties.DisplayValueProperty;
 import com.sqlapp.data.schemas.properties.ValueProperty;
 import com.sqlapp.util.StaxWriter;
@@ -39,6 +40,7 @@ public final class Setting extends AbstractNamedObject<Setting> implements
 		HasParent<SettingCollection>
 	,ValueProperty<Setting>
 	,DisplayValueProperty<Setting>
+	,DefaultValueProperty<Setting>
 	,DefaultProperty<Setting>
 	{
 	/** serialVersionUID */
@@ -47,6 +49,8 @@ public final class Setting extends AbstractNamedObject<Setting> implements
 	private String value = null;
 	/** 表示値 */
 	private String displayValue = null;
+	/** Default value. */
+	private String defaultValue = null;
 	/** デフォルト */
 	private boolean _default = (Boolean)SchemaProperties.DEFAULT.getDefaultValue();
 
@@ -82,6 +86,9 @@ public final class Setting extends AbstractNamedObject<Setting> implements
 		if (!equals(SchemaProperties.DISPLAY_VALUE, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaProperties.DEFAULT_VALUE, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.DEFAULT, val, equalsHandler)) {
 			return false;
 		}
@@ -92,6 +99,7 @@ public final class Setting extends AbstractNamedObject<Setting> implements
 	protected void toStringDetail(ToStringBuilder builder) {
 		builder.add(SchemaProperties.VALUE, getValue());
 		builder.add(SchemaProperties.DISPLAY_VALUE, getDisplayValue());
+		builder.add(SchemaProperties.DEFAULT_VALUE, getDefaultValue());
 		builder.add(SchemaProperties.DEFAULT, isDefault());
 	}
 
@@ -101,6 +109,7 @@ public final class Setting extends AbstractNamedObject<Setting> implements
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.VALUE.getLabel(), this.getValue());
 		stax.writeAttribute(SchemaProperties.DISPLAY_VALUE.getLabel(), this.getDisplayValue());
+		stax.writeAttribute(SchemaProperties.DEFAULT_VALUE.getLabel(), this.getDefaultValue());
 		stax.writeAttribute(SchemaProperties.DEFAULT.getLabel(), this.isDefault());
 	}
 
@@ -137,6 +146,17 @@ public final class Setting extends AbstractNamedObject<Setting> implements
 	@Override
 	public Setting setDisplayValue(String displayValue) {
 		this.displayValue = displayValue;
+		return this;
+	}
+
+	@Override
+	public String getDefaultValue() {
+		return defaultValue;
+	}
+
+	@Override
+	public Setting setDefaultValue(String defaultValue) {
+		this.defaultValue = defaultValue;
 		return this;
 	}
 	

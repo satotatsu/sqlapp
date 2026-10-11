@@ -7,9 +7,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
 
 public class Postgres180DeleteFactory extends DeleteFactory {
 	@Override
-	protected void addDeleteAfter(Table table, SqlSignature sqlSignature,
-			AbstractSqlBuilder<?> builder) {
-		Postgres180ReturningSupport.add(table, sqlSignature, getTableOptions(),
-				builder);
+	protected void addDeleteAfter(Table table, SqlSignature sqlSignature, AbstractSqlBuilder<?> builder) {
+		Postgres180ReturningSupport.add(table, sqlSignature, getTableOptions(), builder);
 	}
 }

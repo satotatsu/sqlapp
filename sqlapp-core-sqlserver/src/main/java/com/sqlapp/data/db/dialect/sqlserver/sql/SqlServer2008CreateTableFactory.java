@@ -20,11 +20,15 @@
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Locale;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.OnOffType;
 
@@ -39,18 +43,17 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 	@Override
 	protected void addOption(final Table table, final SqlServerSqlBuilder builder) {
 		super.addOption(table, builder);
-		final Map<String, String> map = table.getSpecifics();
-		if(table.isCompression()) {
+		if (table.isCompression()) {
 			builder.lineBreak();
-			builder.with().space().brackets(()->{
+			builder.with().space().brackets(() -> {
 				builder.dataCompression().eq().space();
 				if ("ROW".equalsIgnoreCase(table.getCompressionType())) {
 					builder.row();
-				}else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
+				} else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.page();
-				}else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
+				} else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.columnstore();
-				}else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
+				} else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.columnstoreArchive();
 				} else {
 					builder.row();
@@ -61,37 +64,75 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			SqlServerSqlBuilder child = builder.newInstance();
 			addWithOption(table, child);
 			if (!child.toString().isEmpty()) {
-				builder.with().space().brackets(()->{
+				builder.with().space().brackets(() -> {
 					builder.space();
 					builder._add(child.toString());
 				});
 			}
 		}
-		final Boolean val = Converters.getDefault().convertObject(
-				map.get("HAS_CHANGE_TRACKING"), Boolean.class);
-		if (val != null) {
-			builder.lineBreak();
-			if (val.booleanValue()) {
-				builder.enable().changeTracking();
-			} else {
-				builder.lineBreak();
-				builder.disable().changeTracking();
-			}
-		}
 	}
-	
+
+	@Override
+	public List<SqlOperation> createSql(final Table table) {
+		List<SqlOperation> result = super.createSql(table);
+		String escalation = table.getSpecifics().get("LOCK_ESCALATION");
+		if (escalation != null) {
+			if (!List.of("AUTO", "TABLE", "DISABLE").contains(escalation.toUpperCase(Locale.ROOT))) {
+				throw new IllegalArgumentException("Invalid LOCK_ESCALATION: " + escalation);
+			}
+			SqlServerSqlBuilder builder = createSqlBuilder();
+			builder.alter().table().space().name(table)._add(" SET (LOCK_ESCALATION = ")
+					._add(escalation.toUpperCase(Locale.ROOT))._add(")");
+			add(result, createOperation(builder.toString(), SqlType.ALTER, table));
+		}
+		Boolean tracking = Converters.getDefault().convertObject(table.getSpecifics().get("HAS_CHANGE_TRACKING"),
+				Boolean.class);
+		if (Boolean.TRUE.equals(tracking)) {
+			SqlServerSqlBuilder builder = createSqlBuilder();
+			builder.alter().table().space().name(table).space();
+			builder.enable().changeTracking();
+			Boolean columns = table.getSpecifics().get("is_track_columns_updated_on", Boolean.class);
+			if (columns != null)
+				builder._add(" WITH (TRACK_COLUMNS_UPDATED = ")._add(columns ? "ON" : "OFF")._add(")");
+			add(result, createOperation(builder.toString(), SqlType.ALTER, table));
+		}
+		String largeValues = table.getSpecifics().get("large_value_types_out_of_row");
+		if (Boolean.TRUE.equals(Converters.getDefault().convertObject(largeValues, Boolean.class))) {
+			addTableOption(table, result, "large value types out of row", "ON");
+		}
+		String textLimit = table.getSpecifics().get("text_in_row_limit");
+		if (textLimit != null && Integer.parseInt(textLimit) > 0)
+			addTableOption(table, result, "text in row", textLimit);
+		return result;
+	}
+
+	private void addTableOption(Table table, List<SqlOperation> result, String option, String value) {
+		SqlServerSqlBuilder name = createSqlBuilder();
+		name.name(table, true);
+		String sql = "EXEC sys.sp_tableoption N'" + name.toString().replace("'", "''") + "', N'" + option + "', N'"
+				+ value.replace("'", "''") + "'";
+		add(result, createOperation(sql, SqlType.ALTER, table));
+	}
+
 	protected void addWithOption(final Table table, final SqlServerSqlBuilder builder) {
 		final Map<String, String> map = table.getSpecifics();
-		boolean[] first = new boolean[]{true};
-		map.forEach((k,v) -> {
-			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k)) {
+		boolean[] first = new boolean[] { true };
+		map.forEach((k, v) -> {
+			String key = k.toLowerCase(Locale.ROOT);
+			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v)))
+					|| (key.equals("temporal_type") && ("0".equals(v) || "NON_TEMPORAL_TABLE".equals(v)))
+					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v))))
+				return;
+			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k) || "LOCK_ESCALATION".equalsIgnoreCase(k)
+					|| "text_in_row_limit".equalsIgnoreCase(k) || "is_track_columns_updated_on".equalsIgnoreCase(k)
+					|| "large_value_types_out_of_row".equalsIgnoreCase(k) || "has_var_decimal".equalsIgnoreCase(k)) {
 				return;
 			}
 			if (!first[0]) {
 				builder.space().comma();
 			}
-			SqlServerIndexOptions enm=SqlServerIndexOptions.parse(k);
-			if (enm!=null) {
+			SqlServerIndexOptions enm = SqlServerIndexOptions.parse(k);
+			if (enm != null) {
 				builder._add(enm);
 				first[0] = false;
 				if (CommonUtils.isEmpty(v)) {
@@ -99,8 +140,8 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 				}
 				builder.space().eq().space();
 				if (enm.isOnOff()) {
-					OnOffType onOffType=OnOffType.parse(k, null);
-					if (onOffType==null) {
+					OnOffType onOffType = OnOffType.parse(v, null);
+					if (onOffType == null) {
 						builder._add(enm.getDefaultValue());
 					} else {
 						builder._add(onOffType);

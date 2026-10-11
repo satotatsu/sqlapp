@@ -73,20 +73,20 @@ public class Mdb extends Dialect {
 		});
 		// NCHAR
 		getDbDataTypes().addNChar("TEXT", 255, type -> {
-			type.setLiteral("'", "'");
+			type.setLiteral("'", "'").setDefaultValueLiteral("''");
 		});
 		// NVARCHAR
 		getDbDataTypes().addNVarchar("TEXT", 255, type -> {
-			type.setLiteral("'", "'");
+			type.setLiteral("'", "'").setDefaultValueLiteral("''");
 		});
 		// LONGNVARCHAR
 		getDbDataTypes().addLongNVarchar("MEMO", LEN_1GB, type -> {
 			type.setColumnTypeMatcher("LONGTEXT", "MEMO");
-			type.setLiteral("'", "'").setCreateFormat("MEMO");
+			type.setLiteral("'", "'").setCreateFormat("MEMO").setDefaultValueLiteral("''");
 		});
 		// NCLOB
 		getDbDataTypes().addNClob("MEMO", LEN_1GB, type -> {
-			type.setCreateFormat("MEMO");
+			type.setCreateFormat("MEMO").setDefaultValueLiteral("''");
 		});
 		// BLOB
 		getDbDataTypes().addBlob("OLE", LEN_2GB, type -> {
@@ -188,6 +188,11 @@ public class Mdb extends Dialect {
 	}
 
 	@Override
+	public int getMaxGeneratedKeysBatchSize() {
+		return 1;
+	}
+
+	@Override
 	public String getIdentityColumnString() {
 		return "COUNTER";
 	}
@@ -210,6 +215,16 @@ public class Mdb extends Dialect {
 	@Override
 	public String getCurrentTimeFunction() {
 		return "TIME()";
+	}
+
+	@Override
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
+	@Override
+	public boolean supportsValues() {
+		return true;
 	}
 
 	@Override
@@ -239,8 +254,7 @@ public class Mdb extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		return rule == CascadeRule.None || rule == CascadeRule.Cascade
-				|| rule == CascadeRule.SetNull;
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade || rule == CascadeRule.SetNull;
 	}
 
 	@Override

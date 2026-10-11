@@ -209,6 +209,11 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
+	public boolean supportsMerge() {
+		return true;
+	}
+
+	@Override
 	public String getIdentityInsertDefaultValue(Column column) {
 		return column.getIdentityGenerationType() == IdentityGenerationType.ByDefault ? "default" : null;
 	}

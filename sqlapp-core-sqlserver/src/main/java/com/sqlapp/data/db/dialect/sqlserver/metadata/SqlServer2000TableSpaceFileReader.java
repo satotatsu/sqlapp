@@ -47,8 +47,7 @@ public class SqlServer2000TableSpaceFileReader extends TableSpaceFileReader {
 	}
 
 	@Override
-	protected List<TableSpaceFile> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpaceFile> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableSpaceFile> result = list();
@@ -66,10 +65,8 @@ public class SqlServer2000TableSpaceFileReader extends TableSpaceFileReader {
 		return getSqlNodeCache().getString("tableSpaceFiles2000.sql");
 	}
 
-	protected TableSpaceFile createStorageFile(ExResultSet rs)
-			throws SQLException {
-		TableSpaceFile obj = new TableSpaceFile(getString(rs, "name"),
-				getString(rs, "physical_name"));
+	protected TableSpaceFile createStorageFile(ExResultSet rs) throws SQLException {
+		TableSpaceFile obj = new TableSpaceFile(getString(rs, "name"), getString(rs, "physical_name"));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setTableSpaceName(getString(rs, "file_group_name"));
 		obj.setAutoExtensible(rs.getInt("growth") > 0);

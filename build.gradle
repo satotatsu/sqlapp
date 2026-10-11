@@ -20,7 +20,7 @@ allprojects {
 }
 
 wrapper {
-	gradleVersion = '9.6.1'
+	gradleVersion = '9.8.1'
 }
 
 java {
@@ -62,27 +62,27 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-command"))
 	nmcpAggregation(project(":sqlapp-core-test"))
 	nmcpAggregation(project(":sqlapp-core-db2"))
-	nmcpAggregation(project(":sqlapp-core-derby"))
 	nmcpAggregation(project(":sqlapp-core-firebird"))
 	nmcpAggregation(project(":sqlapp-core-h2"))
-	nmcpAggregation(project(":sqlapp-core-hirdb"))
 	nmcpAggregation(project(":sqlapp-core-informix"))
 	nmcpAggregation(project(":sqlapp-core-mdb"))
 	nmcpAggregation(project(":sqlapp-core-mysql"))
 	nmcpAggregation(project(":sqlapp-core-mariadb"))
 	nmcpAggregation(project(":sqlapp-core-oracle"))
 	nmcpAggregation(project(":sqlapp-core-postgres"))
+	nmcpAggregation(project(":sqlapp-core-aurora-postgres"))
+	nmcpAggregation(project(":sqlapp-core-alloydb"))
+	nmcpAggregation(project(":sqlapp-core-yugabyte"))
+	nmcpAggregation(project(":sqlapp-core-cockroach"))
 	nmcpAggregation(project(":sqlapp-core-saphana"))
 	nmcpAggregation(project(":sqlapp-core-spanner"))
 	nmcpAggregation(project(":sqlapp-core-sqlite"))
 	nmcpAggregation(project(":sqlapp-core-sqlserver"))
 	nmcpAggregation(project(":sqlapp-core-sybase"))
-	nmcpAggregation(project(":sqlapp-core-symfoware"))
 	nmcpAggregation(project(":sqlapp-core-virtica"))
 	nmcpAggregation(project(":sqlapp-core-phoenix"))
 //	nmcpAggregation(project(":sqlapp-core-dialect-test"))
 	nmcpAggregation(project(":sqlapp-core-hsql"))
-	nmcpAggregation(project(":sqlapp-graphviz"))
 	nmcpAggregation(project(":sqlapp-gradle-plugin"))
 	nmcpAggregation(project(":sqlapp-elk-svg"))
 }
@@ -119,7 +119,7 @@ subprojects {
 
 eclipse {
 	wrapper {
-		gradleVersion = '9.5.1'
+		gradleVersion = '9.8.1'
 	}
 	
 	project {

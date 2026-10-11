@@ -20,6 +20,7 @@
 package com.sqlapp.util.eval.mvel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -30,7 +31,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalField;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +43,28 @@ public class MvelUtilsTest {
 
 	@BeforeEach
 	public void setUp() throws Exception {
+	}
+
+	@AfterEach
+	void clearBasePath() {
+		MvelUtils.setBasePath(null);
+	}
+
+	@Test
+	void keepsBasePathLocalToTheCurrentThread() throws Exception {
+		MvelUtils.setBasePath("main");
+		final AtomicReference<String> childInitial = new AtomicReference<>();
+		final AtomicReference<String> childValue = new AtomicReference<>();
+		final Thread child = Thread.ofPlatform().start(() -> {
+			childInitial.set(MvelUtils.getBasePath());
+			MvelUtils.setBasePath("child");
+			childValue.set(MvelUtils.getBasePath());
+		});
+		child.join();
+
+		assertNull(childInitial.get());
+		assertEquals("child", childValue.get());
+		assertEquals("main", MvelUtils.getBasePath());
 	}
 
 	@Test

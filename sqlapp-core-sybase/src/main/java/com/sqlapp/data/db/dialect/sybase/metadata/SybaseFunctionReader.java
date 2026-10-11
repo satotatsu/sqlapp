@@ -24,14 +24,15 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.FunctionReader;
 import com.sqlapp.data.db.metadata.RoutineArgumentReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Function;
-import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -54,13 +55,21 @@ public class SybaseFunctionReader extends FunctionReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
+		final Map<Function, StringBuilder> definitions = new LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Function routine = createFunction(rs);
-				result.add(routine);
+				String name = getString(rs, ROUTINE_NAME);
+				Function function = result.isEmpty() ? null : result.get(result.size() - 1);
+				if (function == null || !name.equals(function.getName())) {
+					function = createFunction(rs);
+					result.add(function);
+					definitions.put(function, new StringBuilder());
+				}
+				definitions.get(function).append(getString(rs, "routine_definition"));
 			}
 		});
+		definitions.forEach(this::setDefinition);
 		return result;
 	}
 
@@ -79,14 +88,23 @@ public class SybaseFunctionReader extends FunctionReader {
 		obj.setCreatedAt(created);
 		obj.setLastAlteredAt(lastAltered);
 		String definition = getString(rs, "routine_definition");
-		if (this.getReaderOptions().isReadDefinition()) {
+		if (this.getReaderOptions().isReadDefinition()
+				|| this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(definition);
 		}
-		FunctionReturning ret = obj.getReturning();
-		String productDataType=SybaseUtils.getFunctionReturnName(definition);
-		this.getDialect().setDbType(productDataType,
-				null, null, ret);
 		return obj;
+	}
+
+	private void setDefinition(Function function, StringBuilder definitionBuilder) {
+		String definition = definitionBuilder.toString();
+		if (this.getReaderOptions().isReadDefinition()
+				|| this.getReaderOptions().isReadStatement()) {
+			function.setDefinition(definition);
+		}
+		String productDataType = SybaseUtils.getFunctionReturnName(definition);
+		if (productDataType != null) {
+			this.getDialect().setDbType(productDataType, null, null, function.getReturning());
+		}
 	}
 
 	@Override

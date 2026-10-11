@@ -33,17 +33,15 @@ public class SchemaTest extends AbstractDbObjectTest<Schema> {
 		schema.getTables().add(TableTest.getTable("TableA"));
 		schema.getViews().add(ViewTest.getView("ViewA"));
 		schema.getMviews().add(MviewTest.getMview("MViewA"));
-		schema.getExternalTables().add(
-				ExternalTableTest.getExternalTable("ExternalTableA"));
+		schema.getExternalTables().add(ExternalTableTest.getExternalTable("ExternalTableA"));
 		schema.getMviewLogs().add(MviewLogTest.getMviewLog("MviewLogName"));
 		schema.getOperators().add(OperatorTest.getOperator("VARCHAR"));
-		schema.getOperatorClasses().add(
-				OperatorClassTest.getOperatorClass("operatorClassA"));
+		schema.getOperatorClasses().add(OperatorClassTest.getOperatorClass("operatorClassA"));
 		//
-		Function func1=FunctionTest.getFunction("functionA");
+		Function func1 = FunctionTest.getFunction("functionA");
 		func1.setSpecificName("functionA_specific1");
 		schema.getFunctions().add(func1);
-		func1=FunctionTest.getFunction("functionA");
+		func1 = FunctionTest.getFunction("functionA");
 		func1.setSpecificName("functionA_specific2");
 		schema.getFunctions().add(func1);
 		schema.getProcedures().add(ProcedureTest.getProcedure("procedureA"));
@@ -81,7 +79,7 @@ public class SchemaTest extends AbstractDbObjectTest<Schema> {
 		DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}
-	
+
 	@Test
 	public void testToCatalog() {
 		Schema cc = new Schema();
@@ -92,7 +90,7 @@ public class SchemaTest extends AbstractDbObjectTest<Schema> {
 		cc.setProductMajorVersion(5);
 		cc.setProductMinorVersion(6);
 		cc.setProductRevision(7);
-		Catalog catalog=cc.toCatalog();
+		Catalog catalog = cc.toCatalog();
 		assertEquals("utf8", catalog.getCharacterSet());
 		assertEquals(CharacterSemantics.Char, catalog.getCharacterSemantics());
 		assertEquals("utf8_bin", catalog.getCollation());

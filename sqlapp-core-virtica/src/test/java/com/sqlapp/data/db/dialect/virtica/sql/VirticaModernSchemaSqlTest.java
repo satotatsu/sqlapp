@@ -25,36 +25,25 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 	void testTableExistenceClausesAndNativeUuid() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
-		table.getColumns().add(
-				new Column("ID").setDataType(DataType.UUID));
-		final String createSql = sqlFactoryRegistry
-				.createSql(table, SqlType.CREATE).get(0).getSqlText()
+		table.getColumns().add(new Column("ID").setDataType(DataType.UUID));
+		final String createSql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(createSql.contains(
-				"CREATE TABLE IF NOT EXISTS DOCUMENTS"), createSql);
+		assertTrue(createSql.contains("CREATE TABLE IF NOT EXISTS DOCUMENTS"), createSql);
 		assertTrue(createSql.contains("ID UUID"), createSql);
-		final String dropSql = sqlFactoryRegistry
-				.createSql(table, SqlType.DROP).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
-		assertTrue(dropSql.contains("DROP TABLE IF EXISTS DOCUMENTS"),
-				dropSql);
+		final String dropSql = sqlFactoryRegistry.createSql(table, SqlType.DROP).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(dropSql.contains("DROP TABLE IF EXISTS DOCUMENTS"), dropSql);
 	}
 
 	@Test
 	void testIdentityColumn() {
 		final Table table = new Table("EVENTS");
 		table.setDialect(dialect);
-		table.getColumns().add(new Column("ID")
-				.setDataType(DataType.BIGINT)
-				.setIdentity(true)
-				.setIdentityStartValue(100)
-				.setIdentityStep(10)
-				.setIdentityCacheSize(1000));
-		final String sql = sqlFactoryRegistry
-				.createSql(table, SqlType.CREATE).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
-		assertTrue(sql.contains("ID BIGINT IDENTITY (100, 10, 1000)"),
-				sql);
+		table.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setIdentity(true)
+				.setIdentityStartValue(100).setIdentityStep(10).setIdentityCacheSize(1000));
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(sql.contains("ID BIGINT IDENTITY (100, 10, 1000)"), sql);
 	}
 
 	@Test
@@ -67,11 +56,9 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 		sequence.setMaxValue(BigInteger.valueOf(999999));
 		sequence.setCacheSize(100);
 		sequence.setCycle(true);
-		final String sql = sqlFactoryRegistry
-				.createSql(sequence, SqlType.CREATE).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
-		assertTrue(sql.contains("CREATE SEQUENCE IF NOT EXISTS ORDER_SEQ"),
-				sql);
+		final String sql = sqlFactoryRegistry.createSql(sequence, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(sql.contains("CREATE SEQUENCE IF NOT EXISTS ORDER_SEQ"), sql);
 		assertTrue(sql.contains("START WITH 100"), sql);
 		assertTrue(sql.contains("INCREMENT BY 10"), sql);
 		assertTrue(sql.contains("MAXVALUE 999999"), sql);
@@ -90,22 +77,18 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 		sequence.setMaxValue(BigInteger.valueOf(999999));
 		sequence.setCacheSize(50);
 		sequence.setCycle(true);
-		final String alterSql = sqlFactoryRegistry
-				.createSql(sequence, SqlType.ALTER).get(0).getSqlText()
+		final String alterSql = sqlFactoryRegistry.createSql(sequence, SqlType.ALTER).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(alterSql.contains("ALTER SEQUENCE ORDER_SEQ"),
-				alterSql);
+		assertTrue(alterSql.contains("ALTER SEQUENCE ORDER_SEQ"), alterSql);
 		assertTrue(alterSql.contains("INCREMENT BY 5"), alterSql);
 		assertTrue(alterSql.contains("MINVALUE 1"), alterSql);
 		assertTrue(alterSql.contains("MAXVALUE 999999"), alterSql);
 		assertTrue(alterSql.contains("RESTART WITH 500"), alterSql);
 		assertTrue(alterSql.contains("CACHE 50"), alterSql);
 		assertTrue(alterSql.contains("CYCLE"), alterSql);
-		final String dropSql = sqlFactoryRegistry
-				.createSql(sequence, SqlType.DROP).get(0).getSqlText()
+		final String dropSql = sqlFactoryRegistry.createSql(sequence, SqlType.DROP).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(dropSql.contains(
-				"DROP SEQUENCE IF EXISTS ORDER_SEQ"), dropSql);
+		assertTrue(dropSql.contains("DROP SEQUENCE IF EXISTS ORDER_SEQ"), dropSql);
 	}
 
 	@Test
@@ -113,33 +96,27 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 		final Sequence sequence = new Sequence("ORDER_SEQ");
 		new Schema("PUBLIC").getSequences().add(sequence);
 		sequence.setDialect(dialect);
-		final String sql = sqlFactoryRegistry
-				.createSql(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0)
-				.getSqlText().replaceAll("\\s+", " ");
+		final String sql = sqlFactoryRegistry.createSql(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0).getSqlText()
+				.replaceAll("\\s+", " ");
 		assertTrue(sql.contains(
 				"WITH RECURSIVE SQLAPP_SEQUENCE_ROWS(N) AS (SELECT 1 UNION ALL SELECT N + 1 FROM SQLAPP_SEQUENCE_ROWS WHERE N < /*context*/1)"),
 				sql);
-		assertTrue(sql.contains(
-				"SELECT NEXTVAL('PUBLIC.ORDER_SEQ') FROM SQLAPP_SEQUENCE_ROWS"),
-				sql);
+		assertTrue(sql.contains("SELECT NEXTVAL('PUBLIC.ORDER_SEQ') FROM SQLAPP_SEQUENCE_ROWS"), sql);
 	}
 
 	@Test
 	void testCreateAndDropView() {
 		final View view = new View("ACTIVE_DOCUMENTS");
 		view.setDialect(dialect);
-		view.setStatement(
-				"SELECT ID FROM DOCUMENTS WHERE ACTIVE = TRUE");
-		final String createSql = sqlFactoryRegistry
-				.createSql(view, SqlType.CREATE).get(0).getSqlText()
+		view.setStatement("SELECT ID FROM DOCUMENTS WHERE ACTIVE = TRUE");
+		final String createSql = sqlFactoryRegistry.createSql(view, SqlType.CREATE).get(0).getSqlText()
 				.replaceAll("\\s+", " ");
-		assertTrue(createSql.contains(
-				"CREATE OR REPLACE VIEW ACTIVE_DOCUMENTS AS SELECT ID FROM DOCUMENTS WHERE ACTIVE = TRUE"),
+		assertTrue(
+				createSql.contains(
+						"CREATE OR REPLACE VIEW ACTIVE_DOCUMENTS AS SELECT ID FROM DOCUMENTS WHERE ACTIVE = TRUE"),
 				createSql);
-		final String dropSql = sqlFactoryRegistry
-				.createSql(view, SqlType.DROP).get(0).getSqlText()
-				.replaceAll("\\s+", " ");
-		assertTrue(dropSql.contains(
-				"DROP VIEW IF EXISTS ACTIVE_DOCUMENTS"), dropSql);
+		final String dropSql = sqlFactoryRegistry.createSql(view, SqlType.DROP).get(0).getSqlText().replaceAll("\\s+",
+				" ");
+		assertTrue(dropSql.contains("DROP VIEW IF EXISTS ACTIVE_DOCUMENTS"), dropSql);
 	}
 }

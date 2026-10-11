@@ -87,6 +87,21 @@ public class SchemaUtils {
 	}
 
 	/**
+	 * Returns whether two table objects identify the same catalog, schema and
+	 * table, ignoring identifier case.
+	 *
+	 * @param left  first table
+	 * @param right second table
+	 * @return {@code true} when both tables identify the same table
+	 */
+	public static boolean isSameTable(final Table left, final Table right) {
+		return left != null && right != null
+				&& CommonUtils.eqIgnoreCase(left.getCatalogName(), right.getCatalogName())
+				&& CommonUtils.eqIgnoreCase(left.getSchemaName(), right.getSchemaName())
+				&& CommonUtils.eqIgnoreCase(left.getName(), right.getName());
+	}
+
+	/**
 	 * 指定したファイルのXMLの内容を自動判定してDBオブジェクトを返します。内容の読み込みは行いません。
 	 * 
 	 * @param path
@@ -274,7 +289,7 @@ public class SchemaUtils {
 			br = new BufferedReader(reader, readlimit);
 			br.mark(readlimit);
 			@SuppressWarnings("resource")
-			final StaxReader staxReader = new StaxReader(reader);
+			final StaxReader staxReader = new StaxReader(br);
 			staxReader.nextFristStartElement();
 			if (!staxReader.isStartElement()) {
 				return null;
@@ -1248,6 +1263,9 @@ public class SchemaUtils {
 	 * @return 正規化した後の値
 	 */
 	public static String normalizeDataType(String value) {
+		if (isQuotedQualifiedTypeName(value)) {
+			return trim(value);
+		}
 		value = trim(value).replaceAll("\s+", " ");
 		final StringBuilder builder = new StringBuilder(value.length());
 		char c;
@@ -1303,6 +1321,29 @@ public class SchemaUtils {
 			}
 		}
 		return builder.toString();
+	}
+
+	/** Returns whether a type name contains quoted identifiers and an unquoted qualification dot. */
+	public static boolean isQuotedQualifiedTypeName(String value) {
+		if (value == null) return false;
+		boolean identifier = false;
+		boolean literal = false;
+		boolean quoted = false;
+		boolean qualified = false;
+		for (int i = 0; i < value.length(); i++) {
+			char current = value.charAt(i);
+			if (current == '\'' && !identifier) {
+				if (literal && i + 1 < value.length() && value.charAt(i + 1) == '\'') { i++; continue; }
+				literal = !literal;
+			} else if (current == '"' && !literal) {
+				if (identifier && i + 1 < value.length() && value.charAt(i + 1) == '"') { i++; continue; }
+				identifier = !identifier;
+				quoted = true;
+			} else if (current == '.' && !identifier && !literal) {
+				qualified = true;
+			}
+		}
+		return quoted && qualified;
 	}
 
 	/**

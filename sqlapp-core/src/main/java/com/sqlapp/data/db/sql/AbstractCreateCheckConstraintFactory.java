@@ -64,7 +64,7 @@ public abstract class AbstractCreateCheckConstraintFactory<S extends AbstractSql
 	public void addObjectDetail(final CheckConstraint obj, Table table, S builder) {
 		builder.constraint().space();
 		if (table!=null){
-			builder.name(obj, this.getOptions().isDecorateSchemaName());
+			builder.name(obj, false);
 		} else{
 			builder.name(obj, false);
 		}

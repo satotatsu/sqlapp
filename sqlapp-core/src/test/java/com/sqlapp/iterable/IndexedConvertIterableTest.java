@@ -20,6 +20,12 @@
 package com.sqlapp.iterable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,9 +35,10 @@ class IndexedConvertIterableTest {
 
 	@Test
 	void testZero() {
-		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(0L), (index, val) -> {
-			return "a" + val;
-		});
+		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(0L),
+				(index, val) -> {
+					return "a" + val;
+				});
 		long i = 0;
 		for (String val : iterable) {
 			assertEquals("a" + i, val);
@@ -42,15 +49,53 @@ class IndexedConvertIterableTest {
 
 	@Test
 	void test() {
-		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(10L), (index, val) -> {
-			return "a" + val;
-		});
+		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(10L),
+				(index, val) -> {
+					return "a" + val;
+				});
 		long i = 0;
 		for (String val : iterable) {
 			assertEquals("a" + i, val);
 			i++;
 		}
 		assertEquals(10, i);
+	}
+
+	@Test
+	void closesSourceAndPreservesConversionFailure() {
+		final RuntimeException conversionFailure = new RuntimeException("convert");
+		final Exception closeFailure = new Exception("close");
+		final AtomicInteger closes = new AtomicInteger();
+		final class ClosingIterator implements Iterator<Integer>, AutoCloseable {
+			private final Iterator<Integer> delegate = List.of(1).iterator();
+
+			@Override
+			public boolean hasNext() {
+				return delegate.hasNext();
+			}
+
+			@Override
+			public Integer next() {
+				return delegate.next();
+			}
+
+			@Override
+			public void close() throws Exception {
+				closes.incrementAndGet();
+				throw closeFailure;
+			}
+		}
+		final Iterator<String> iterator = new IndexedConvertIterable<Integer, String>(
+				() -> new ClosingIterator(), (index, value) -> {
+					throw conversionFailure;
+				}).iterator();
+
+		final RuntimeException thrown = assertThrows(RuntimeException.class, iterator::next);
+
+		assertSame(conversionFailure, thrown);
+		assertEquals(1, closes.get());
+		assertEquals(1, thrown.getSuppressed().length);
+		assertSame(closeFailure, thrown.getSuppressed()[0]);
 	}
 
 }

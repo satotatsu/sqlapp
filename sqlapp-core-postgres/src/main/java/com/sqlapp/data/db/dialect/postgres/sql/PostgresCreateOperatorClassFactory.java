@@ -36,8 +36,7 @@ import com.sqlapp.data.schemas.OperatorFamily;
  * 
  * 
  */
-public class PostgresCreateOperatorClassFactory extends
-		AbstractCreateOperatorClassFactory<PostgresSqlBuilder> {
+public class PostgresCreateOperatorClassFactory extends AbstractCreateOperatorClassFactory<PostgresSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(OperatorClass obj) {
@@ -48,26 +47,22 @@ public class PostgresCreateOperatorClassFactory extends
 		return sqlList;
 	}
 
-	protected void addCreateObject(final OperatorClass obj,
-			PostgresSqlBuilder builder) {
+	protected void addCreateObject(final OperatorClass obj, PostgresSqlBuilder builder) {
 		builder.create().operator()._class();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		if (obj.isDefault()) {
 			builder.default_();
 		}
-		builder.for_().type().space()._add(obj.getDataTypeName()).using()
-				._add(obj.getIndexType()).as();
+		builder.for_().type().space()._add(obj.getDataTypeName()).using()._add(obj.getIndexType()).as();
 		builder.appendIndent(+1);
 		for (OperatorFamily operatorFamily : obj.getOperatorFamilies()) {
 			builder.lineBreak();
-			builder.operator().space()
-					._add(operatorFamily.getStrategyNumber()).space()
+			builder.operator().space()._add(operatorFamily.getStrategyNumber()).space()
 					._add(operatorFamily.getOperatorName());
 		}
 		for (FunctionFamily functionFamily : obj.getFunctionFamilies()) {
 			builder.lineBreak();
-			builder.operator().space()
-					._add(functionFamily.getSupportNumber()).space()
+			builder.operator().space()._add(functionFamily.getSupportNumber()).space()
 					._add(functionFamily.getFunctionName());
 		}
 		builder.appendIndent(-1);

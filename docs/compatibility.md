@@ -1,0 +1,2611 @@
+# Compatibility and database verification matrix
+
+This page separates three facts that are easy to confuse:
+
+1. A dialect artifact exists for a database family.
+2. The resolver contains version-specific implementations for that family.
+3. A particular server version has real-engine integration-test coverage.
+
+A version-specific class shows intentional compatibility behavior in the code;
+it does not prove that every feature was executed against every server release
+in that range. Conversely, a real-engine test covers the scenarios in that
+test suite, not the database product's complete feature set.
+
+This matrix was audited from the repository source and test configuration on
+2026-09-19. The test images listed below were not rerun as part of this
+documentation change.
+
+## Java and Gradle
+
+| Component | Current baseline | Compatibility statement |
+|---|---|---|
+| Published Java artifacts | Java 21 | Sources are compiled with a Java 21 toolchain. Consumers should use a Java 21 or later runtime compatible with the published bytecode. |
+| Repository build | Gradle Wrapper 9.6.1 | This is the checked-in, supported build path for release verification. |
+| Gradle plugin | Java 21; tested by this repository with Gradle 9.6.1 | A lower or upper Gradle compatibility range has not yet been established. Do not infer one from Gradle API compilation alone. |
+| Companion example | Java 21; Gradle Wrapper 9.6.1 | The `develop` branch of `sqlapp-gradle-example` uses the same current baseline. |
+
+Before publishing, the release build should run with the checked-in wrapper.
+If compatibility with older Gradle releases is promised, add a TestKit matrix
+and record the oldest and newest verified versions here.
+
+## Coverage labels
+
+| Label | Meaning |
+|---|---|
+| Real-engine | A repository integration suite is configured for, or the continuation record documents execution against, the named server or emulator version. |
+| Module | Dialect unit/module tests and SQL or resolver tests exist, but this table does not identify a current real-server run. |
+| Environment-dependent | Verification needs proprietary software, a cloud service, or another environment not supplied by the routine test suite. |
+
+“Configured” is deliberately weaker than “passed for this release.” The
+release checklist must record which integration suites were actually run.
+
+## Database dialect matrix
+
+| Database family | Artifact | Version-aware implementation in source | Current real-engine evidence | Current confidence boundary |
+|---|---|---|---|---|
+| IBM Db2 | `sqlapp-core-db2` | 9.5, 9.7, 9.8, 10.1, 10.5, 11.1, 11.5, 12.1.0, 12.1.2, 12.1.5 | Db2 Community 11.5.8.0 and 12.1.5.0 test images | Older resolver branches are retained but are not all represented by current container runs. |
+| Firebird | `sqlapp-core-firebird` | 2.0, 2.5, 3.0, 5.0 | Firebird 3.0 and 5.0 test images | Firebird 2.x compatibility is code-level/module coverage in the current suite. |
+| H2 | `sqlapp-core-h2` | Pre-2.x and 2.x split | Module-level H2 tests | The 1.x reader is preserved; current real-engine version evidence is not recorded here. |
+| HSQLDB | `sqlapp-core-hsql` | 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.3.4, 2.4.0 | Module/in-process tests; JDBC dependency 2.7.4 | Version branches older than the current driver remain compatibility code. |
+| Informix | `sqlapp-core-informix` | Generic Informix resolver | Informix Developer Database 14.10.FC9W1DE image | Older server-version boundaries are not expressed as separate dialect classes. |
+| Microsoft Access / MDB | `sqlapp-core-mdb` | Generic Access/MDB resolver through UCanAccess | Access 2010 database creation and metadata tests are documented | Japanese index collation in the supplied sample is read-only with the current Jackcess path. |
+| MariaDB | `sqlapp-core-mariadb` | 10.0, 10.0.5, 10.2.0, 10.2.5, 10.2.7, 10.3.0, 10.5.0, 11.4.0, 11.5.0, 11.8.0, 12.1.0 | MariaDB 10.5, 11.4, and 11.8 test images | MariaDB inherits compatible MySQL behavior and overrides version-specific differences. |
+| MySQL | `sqlapp-core-mysql` | 5.6.4, 5.6.5, 5.7, 8.0, 8.0.1, 8.4, 9.0 | MySQL 5.7, 8.0, and 8.4 test images | MySQL 9.0 is resolver/module coverage without a current listed container run. |
+| Oracle Database | `sqlapp-core-oracle` | 10g, 11g, 11g R2, 12c, 18c, 19c, 21c, 23ai, 26ai | Oracle Database Free 23ai image; optional pinned 26ai image | Oracle 26ai reports product version `23.26.x`; older branches are not all container-tested. Dialect support does not imply that the current test JDBC driver is certified for every server version; verify the exact driver/JDK/database combination for legacy sources. |
+| Apache Phoenix | `sqlapp-core-phoenix` | Generic resolver plus a 5.3.1 feature boundary | Module SQL, resolver, and sequence-block tests | Phoenix 5.3.1 multi-row UPSERT still requires verification against a real cluster. |
+| YugabyteDB YSQL | `sqlapp-core-yugabyte` | PostgreSQL engine 11 and 15 baselines | Module tests and local containers 2024.2.11.0-b36 / 2026.1.2.0-b137 | Supported relational compatibility scope: schema recreation, COPY/upsert, checkpoint/resume and conflict handling verified on both baselines. Physical/distributed extensions and multi-node failover excluded; see [scope and limits](../sqlapp-core-yugabyte/README.md). |
+| Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
+| PostgreSQL | `sqlapp-core-postgres` | Explicit branches from 8.2 through 18 | PostgreSQL 14 and 18.4 test images | Historical branches are preserved, but current containers do not rerun every major release. |
+| SAP HANA | `sqlapp-core-saphana` | Platform and HANA Cloud split | SAP HANA Express 2.0 (`2.00.088`) image | HANA Cloud vector-index and fuzzy-search catalog behavior requires a HANA Cloud tenant. |
+| Google Cloud Spanner | `sqlapp-core-spanner` | Generic Cloud Spanner resolver | Cloud Spanner emulator | Search/vector index, locality/storage, and some service-only metadata require a real service environment. |
+| SQLite | `sqlapp-core-sqlite` | Generic SQLite resolver | File/in-process tests with Xerial SQLite JDBC | No server version applies; behavior also depends on the bundled/native SQLite version in the selected driver. |
+| Microsoft SQL Server | `sqlapp-core-sqlserver` | 2000, 2005, 2008/R2, 2012, 2014, 2016/SP1, 2017, 2019, 2022 | SQL Server 2017, 2019, 2022, and 2025 test images | SQL Server 2025 currently resolves through the latest compatible implemented dialect unless a newer boundary is added. |
+| Sybase ASE | `sqlapp-core-sybase` | Generic Sybase resolver | SAP ASE 16 image | Generated-key propagation for IDENTITY is intentionally rejected on the tested jTDS batch path. |
+| Vertica | `sqlapp-core-virtica` | 7.2, 8.0, 9.0, 11.1.1, 12.0.4 | Vertica CE 25.1.0-0 image | Modern servers use the latest compatible dialect; projection, segmentation, KSAFE, flex-table, and external-table work remains deferred. |
+
+The artifact name `sqlapp-core-virtica` retains its historical spelling.
+
+## YSQL completion scope
+
+The ordinary relational metadata/recreation and COPY/UPSERT migration scope is
+implemented and verified on the two fixed YSQL 11/15 baselines. Use the
+[consolidated YSQL guide](../sqlapp-core-yugabyte/README.md) for a minimal Java
+entry point, a version-specific behavior table, transaction ownership and limits;
+use the [integration guide](../sqlapp-core-dialect-test/README.md#yugabytedb-ysql-compatibility)
+for reproducible engine-specific commands.
+
+The latest full implementation run passed 2,738 ordinary tests (one optional
+external YSQL skip), 62 cases on each YSQL baseline and Yugabyte assembly.
+The [whole-schema acceptance record](#whole-schema-and-data-acceptance-on-ysql)
+contains its exact command and checks. The sections below retain historical
+batch evidence; their older counts do not replace this final scope.
+The subsequent documentation consolidation passed the offline checker (654 local
+links and 59 reachable pages), its four unit tests, and 11 additional local links
+in the two module READMEs. The YSQL README Java example compiled with Java 21
+against the existing core/PostgreSQL/Yugabyte classes. Unchanged database tests
+were not repeated; no production or external database was accessed.
+
+This completion claim excludes YCQL, arbitrary cyclic dependency reconstruction,
+automatic owner/ACL replay, sequence live-position migration, multi-node failover and performance qualification. Placement metadata/CREATE
+was added subsequently; see [its scope](#ysql-placement-metadata-and-create-ddl). Those
+would require separately scoped work and evidence. It does not mean every
+PostgreSQL feature or every YugabyteDB release is supported.
+
+## JDBC versions in the current verification build
+
+These are test or implementation dependencies in the current checkout. They
+are not a declaration that applications must use exactly these versions.
+
+| Database | JDBC dependency used by current build/test configuration |
+|---|---|
+| Firebird | Jaybird `6.0.5` in dialect integration tests; dialect artifact currently uses `5.0.6.java11` |
+| HSQLDB | `org.hsqldb:hsqldb:2.7.4` |
+| Informix | `com.ibm.informix:jdbc:15.0.1.2` |
+| Db2 | `com.ibm.db2:jcc:12.1.4.0` |
+| MariaDB | `org.mariadb.jdbc:mariadb-java-client:3.5.9` |
+| MySQL | `com.mysql:mysql-connector-j:9.7.0` |
+| Oracle | `com.oracle.database.jdbc:ojdbc11:23.26.2.0.0` |
+| Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
+| PostgreSQL | `org.postgresql:postgresql:42.7.11` |
+| SAP HANA | `com.sap.cloud.db.jdbc:ngdbc:2.29.7` |
+| Cloud Spanner | `com.google.cloud:google-cloud-spanner-jdbc:2.41.0` |
+| SQLite | `org.xerial:sqlite-jdbc:3.53.1.0` |
+| SQL Server | Microsoft JDBC `13.4.0.jre11` in integration tests; dialect artifact currently uses `13.5.0.jre11-preview` |
+| Sybase ASE | jTDS `1.3.1` in integration tests |
+| Vertica | `com.vertica.jdbc:vertica-jdbc:25.3.0-0` |
+
+Drivers absent from this table must be supplied from the database vendor or an
+appropriate compatible distribution. See
+[Published artifacts and dependency selection](artifacts.md) for dependency
+scope guidance.
+
+## Feature-specific compatibility
+
+The database matrix does not mean that every sqlapp feature has the same
+coverage. Consult these focused references before using advanced operations:
+
+- [Bulk insert and migration provider matrix](data/bulk-insert.md)
+- [Dialect enhancement verification and limitations](development/dialect-enhancement-continuation.md)
+- [Schema viewpoints](schema/viewpoints.md)
+- [Gradle plugin task guide](gradle-plugin/README.md)
+
+Generated-key handling, set-based migration, metadata catalogs, temporary
+tables, UPSERT syntax, and lease storage each have narrower compatibility
+boundaries than basic dialect resolution.
+
+## Release verification expectations
+
+For each published release:
+
+1. Run unit tests for every changed dialect module.
+2. Run the real-engine integration suites for changed databases when the
+   required environment is available.
+3. Record every tested server image and JDBC driver in the release notes.
+4. Identify configured suites that were not run.
+5. Do not broaden a supported-version claim solely because a newer server
+   falls back to the latest known dialect.
+
+Production users should validate metadata export and generated DDL against a
+non-production instance matching the exact server and JDBC driver versions
+used in production.
+
+## Symfoware transition
+
+The legacy `sqlapp-core-symfoware` artifact and public Java packages have been
+removed. Native-interface databases are no longer supported. This is a breaking
+change for consumers of the old artifact or classes.
+
+Symfoware Server (Postgres) uses `sqlapp-core-postgres` through a compatible JDBC
+connection reporting `PostgreSQL` and the actual PostgreSQL engine major/minor
+version in `DatabaseMetaData`. It reuses PostgreSQL resolution, metadata readers
+and SQL factories. Do not substitute the Symfoware product release (V12.x, etc.)
+for the PostgreSQL engine version. Bare `Symfoware` is not a PostgreSQL alias,
+because it cannot safely distinguish Native and Postgres interfaces.
+
+Vendor driver identification, extensions, permissions, schema recreatability and
+migration operations remain unverified against Symfoware. No real Symfoware
+server was used for this transition. Verify the target server/driver combination
+before use; PostgreSQL unit tests do not establish vendor compatibility.
+
+## Removed Derby and HiRDB dialects
+
+`sqlapp-core-derby` and `sqlapp-core-hirdb`, including their public Java packages,
+are no longer built or published. This is a breaking change for applications
+using those artifacts or classes. Derby and HiRDB are no longer supported
+sources or targets, including migration sources. Use an earlier sqlapp release
+if the removed dialects are required.
+
+The general resolver fallback for unknown products is unchanged. Receiving a
+generic dialect does not establish support for a removed database. Do not use
+that fallback to generate or execute database-specific migration SQL.
+
+## Index schema qualification
+
+When `decorateSchemaName` is enabled, generated CREATE INDEX statements now
+qualify the target table even when the index and table have the same schema.
+Previously that path ignored the option and depended on the session search path.
+Disabling the option retains unqualified names for same-schema objects. Public
+APIs and Schema XML formats are unchanged.
+
+The PostgreSQL 10–12 table metadata query no longer references PostgreSQL-13-only
+insert-triggered autovacuum settings. PostgreSQL 13+ retains these fields in its
+separate version-specific query. Schema XML and SQL-generation APIs are unchanged.
+
+## Foreign-key SQL generation
+
+With `decorateSchemaName` enabled, foreign-key references now qualify a table
+in the same schema, matching table/index name decoration and avoiding reliance
+on the session search path. With the option disabled, the same-schema reference
+stays unqualified. This affects dialects using the shared foreign-key factory.
+PostgreSQL SQL factories (including YSQL inheritance) now render `CascadeRule.None`
+as `NO ACTION` for both delete and update, instead of invalid `NONE` syntax.
+Public APIs and Schema XML formats are unchanged.
+
+## PostgreSQL internal triggers
+
+PostgreSQL 9.0+ metadata readers (also used by the YSQL 11/15 baselines) now
+exclude `pg_trigger.tgisinternal` implementation triggers. Foreign keys remain
+in the Schema constraint model; their internal triggers must not be emitted as
+additional user-authored CREATE TRIGGER statements during schema recreation.
+User-defined triggers remain available. The pre-9.0 query is unchanged because
+those catalogs do not expose this flag. Public APIs and Schema XML formats are
+unchanged; exported trigger collections may contain fewer implementation objects.
+
+Catalog boundaries: [PostgreSQL 9.0](https://www.postgresql.org/docs/9.0/catalog-pg-trigger.html)
+and [PostgreSQL 8.4](https://www.postgresql.org/docs/8.4/catalog-pg-trigger.html).
+
+## PostgreSQL/YSQL upsert and COPY array boundaries
+
+The PostgreSQL 9.5–14 ON CONFLICT SQL factory, also used by YSQL 11/15, now
+emits `DO NOTHING` when no non-key column can be updated. A table containing
+only its conflict key can therefore be inserted repeatedly without generating
+an empty `DO UPDATE`. Tables with updateable columns retain their update path.
+
+The shared PostgreSQL COPY reader now retains nested Java array dimensions.
+It distinguishes primitive byte arrays used as numeric array values from
+scalar `bytea` elements inside binary array columns. Existing scalar binary
+COPY and null/empty-string handling are retained. YSQL tests verify integer
+and text matrices, primitive-byte smallint arrays and bytea arrays through
+COPY, staging upsert and JDBC readback. Public APIs and configuration formats
+are unchanged.
+
+## PostgreSQL/YSQL trigger firing state
+
+PostgreSQL 9.0+ trigger readers and SQL factories, inherited by YSQL 11/15,
+retain disabled triggers and the `ALWAYS`/`REPLICA` firing modes during
+recreation. CREATE is followed by the required ALTER TABLE statement. Ordinary
+enabled triggers keep their existing single CREATE statement.
+
+The optional existing `Trigger.specifics` map entry `TRIGGER_FIRING_MODE` accepts
+`ALWAYS` or `REPLICA`; `enable=false` restores the disabled state. Invalid values
+fail explicitly, and restoring a special state requires the modeled table name.
+The public factory constant `Postgres90CreateTriggerFactory.FIRING_MODE` is an
+additive API. Schema XML uses its existing optional vendor-attribute format.
+The pre-9.0 readers and factories are unchanged.
+
+TRUNCATE is now retained in the event metadata. Complete trigger definitions
+remain authoritative for recreating WHEN conditions and row/statement triggers.
+Firing-state syntax: [PostgreSQL 9.0 ALTER TABLE](https://www.postgresql.org/docs/9.0/sql-altertable.html).
+
+## PostgreSQL/YSQL covering partial indexes
+
+CREATE INDEX now emits INCLUDE before storage options and WHERE, following
+PostgreSQL's clause order. This fixes recreation of partial covering indexes;
+indexes without INCLUDE retain their existing ordering. The owning PostgreSQL
+factory hook remains available and now runs immediately after the key columns.
+
+PostgreSQL 11+ index queries, inherited by YSQL 11/15, read partial predicates
+with `pg_get_expr(indpred, indrelid)` and key ASC/DESC flags from the catalog for
+B-tree/LSM indexes. They no longer infer those fields from a regular expression
+over the complete CREATE INDEX statement. The pre-11 metadata query and parsing
+path are unchanged. No public API, configuration or Schema XML format changes
+are required. Physical YugabyteDB index layout remains outside the support scope.
+
+Clause order: [PostgreSQL 11 CREATE INDEX](https://www.postgresql.org/docs/11/sql-createindex.html).
+
+## NULL ordering and PostgreSQL/YSQL expression index keys
+
+The shared `NullsOrder.NullsLast` enum now renders `NULLS LAST` instead of the
+incorrect `NULLS FIRST`. Enum names, public APIs and the Schema XML structure
+are unchanged. Existing FIRST/LAST XML round trips are covered by core tests.
+SQL generated for a modeled LAST order intentionally changes to the correct value.
+
+PostgreSQL 11+ B-tree/LSM index readers, also used by YSQL 11/15, retain the
+catalog NULL-order flags. Other access methods and pre-11 readers retain their
+existing behavior. The PostgreSQL index factory emits ASC explicitly when a
+NULL order is modeled, so YSQL cannot reinterpret an omitted first-key order
+as HASH. YugabyteDB physical hash/range placement is still outside the
+compatibility scope; generated indexes express the modeled logical sort order.
+
+Unresolved keys in an `IndexType.Function` index are generated as parenthesized
+SQL expressions rather than quoted identifier names. Resolved table columns
+retain normal identifier quoting. Tests recreate `lower(label)` indexes and
+verify their UNIQUE behavior; custom collations and operator classes are not
+covered by this verification.
+
+YSQL defaults: [CREATE INDEX](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_index/).
+
+## PostgreSQL 15+/YSQL 15 NULLS NOT DISTINCT indexes
+
+The PostgreSQL 15+ CREATE INDEX factory now emits `NULLS NOT DISTINCT` after
+the key/INCLUDE clauses and before storage options and WHERE. Previously it
+appeared between UNIQUE and INDEX, producing invalid syntax. YSQL 15 inherits
+the corrected factory and its reader retains `indnullsnotdistinct` in the
+existing `nullsNotDistinct` vendor attribute.
+
+Per the requested compatibility policy, pre-15 dialects ignore this attribute
+and keep ordinary UNIQUE semantics (multiple NULL values are allowed).
+Non-unique indexes and values other than case-insensitive `true` also retain
+the existing ignore behavior. No new configuration errors or public API/XML
+format changes are introduced by this fix.
+
+Verification covers a covering partial UNIQUE index: YSQL 15 rejects duplicate
+NULL keys inside the predicate after recreation, while excluded rows may still
+repeat NULL. YSQL 11 ignores the option and permits repeated NULL keys. Both
+engines reject repeated non-NULL keys inside the predicate.
+
+Clause order: [PostgreSQL 15 CREATE INDEX](https://www.postgresql.org/docs/15/sql-createindex.html).
+
+## PostgreSQL/YSQL INSTEAD OF trigger metadata
+
+The PostgreSQL 9.0+ trigger query now distinguishes the INSTEAD timing bit from
+AFTER. This corrects metadata for view triggers on PostgreSQL 9.1+ and YSQL
+11/15, where INSTEAD OF is supported. The existing column and bit operations
+remain valid on 9.0, which has no such triggers; its BEFORE/AFTER behavior and
+the pre-9.0 query remain unchanged.
+
+Complete executable trigger definitions remain authoritative for recreation.
+The corrected `actionTiming` also makes the Schema metadata agree with that DDL.
+No public API, configuration or XML-format changes are required. Verification
+uses a UNION ALL view that cannot be automatically updated, recreates its
+INSTEAD OF trigger, and checks INSERT, UPDATE and DELETE through the view.
+
+Version boundary: [PostgreSQL 9.1 CREATE TRIGGER](https://www.postgresql.org/docs/9.1/sql-createtrigger.html).
+
+## PostgreSQL/YSQL trigger comments
+
+Both legacy and 9.0+ PostgreSQL trigger queries now use
+`obj_description(trigger_oid, 'pg_trigger')`. The second argument identifies
+the containing catalog, not the current database; the previous database-name
+argument could lose comments. Other trigger version boundaries are unchanged.
+
+The PostgreSQL CREATE TRIGGER factory, inherited by YSQL 11/15, now restores
+modeled `remarks` with a separate COMMENT ON TRIGGER statement after creation
+and firing-state restoration. Trigger names are unqualified; the target table
+or view follows the existing schema-decoration option. Identifier and SQL
+literal quoting use the dialect builder. No-comment objects retain the
+existing operation count. Comment restoration requires the modeled target
+table/view name, including when CREATE is supplied as a full definition; readers
+already supply that name. Public APIs and Schema XML formats are unchanged.
+
+Verification covers table-trigger comments across ordinary, disabled, ALWAYS
+and REPLICA states, plus Japanese text and apostrophes on a recreated INSTEAD
+OF view trigger. Comment lookup: [PostgreSQL system information functions](https://www.postgresql.org/docs/15/functions-info.html).
+Comment syntax: [PostgreSQL COMMENT](https://www.postgresql.org/docs/15/sql-comment.html).
+
+## YSQL sequence comments
+
+The YugabyteDB YSQL 11/15 sequence reader now obtains comments with
+`pg_catalog.obj_description(sequence_oid, 'pg_class')` alongside the existing
+`pg_sequence` configuration fields. The inherited PostgreSQL sequence factory
+already emits COMMENT ON SEQUENCE for modeled remarks, so no SQL-generation
+change is needed. API and Schema XML formats remain unchanged; full metadata
+exports now retain an additional existing remarks field when a comment exists.
+
+The real-engine round trip checks Japanese/apostrophe comments, start and
+increment values, and the resulting nextval values. Live sequence position and
+ownership remain outside the supported recreation scope. Ordinary PostgreSQL
+sequence readers are unchanged.
+
+## Typed YSQL sequences
+
+The YSQL 11/15 reader preserves the `smallint`, `integer` or `bigint` sequence
+type from `pg_sequence.seqtypid` in the existing Schema model. The PostgreSQL
+10+ CREATE SEQUENCE factory emits `AS` for these types, including type-name
+aliases resolved by the dialect. Earlier PostgreSQL versions and unsupported
+types retain the previous behavior of omitting the type clause. Unspecified
+types also retain their existing default behavior.
+
+The additive `Postgres100CreateSequenceFactory` is registered from PostgreSQL
+10 onward; existing public signatures and Schema XML formats are unchanged.
+Ordinary PostgreSQL metadata readers are unchanged. The local YSQL matrix
+checks all three types with ascending and descending increments, bounds, cache
+configuration and nextval results after recreation. Live position and ownership
+remain outside this support scope.
+
+## YSQL sequence bounds and cycling
+
+The local YSQL 11/15 integration matrix additionally recreates all three
+sequence types using their full signed integer bounds, in both directions,
+with and without CYCLE. It verifies exact metadata values through 64-bit
+bounds, preservation of the cycle flag, and nextval behavior at the boundary:
+cycling wraps to the opposite bound and continues; non-cycling reports
+SQLSTATE 2200H. These are single-session checks using CACHE 100. They do not
+assert consecutive values across connections or nodes. No production-code,
+public API or Schema XML changes were needed for this coverage.
+
+## PostgreSQL/YSQL schema fidelity batch
+
+The shared PostgreSQL readers now preserve the following metadata for YSQL
+11/15 and ordinary PostgreSQL:
+
+- Enum labels use `pg_enum.enumsortorder` on PostgreSQL 9.1+, including values
+  inserted with ALTER TYPE BEFORE/AFTER. PostgreSQL 8.3–9.0 uses OID order and
+  never references the newer column. The enum reader also retains type comments.
+- Domains with multiple CHECK constraints produce one Domain object. Each
+  expression is parenthesized and combined with AND, retaining acceptance and
+  rejection behavior in the existing single `check` property. Separate domain
+  constraint names are not retained by this representation.
+- Domain/type comments use the `pg_type` catalog; index comments use `pg_class`
+  in all three index-query generations. The correction does not require a
+  newer catalog column.
+
+CREATE DOMAIN/TYPE for modeled domains and enums now appends COMMENT ON when
+remarks are present. Standalone CREATE INDEX also appends its comment; table
+recreation continues using its existing index-comment path. Comments are
+quoted through the dialect builder. Objects without comments retain the
+previous operation count. Existing APIs and Schema XML formats are unchanged;
+commented objects can now return an additional SET_COMMENT operation.
+
+Real YSQL 11/15 tests cover non-alphabetical enum order after BEFORE/AFTER,
+Unicode/apostrophe labels and comments, multiple domain checks with OR inside
+one check, numeric precision/scale, defaults and NOT NULL. They execute the
+recreated objects and check SQLSTATE 23514/23502/23505 for rejected domain
+values, nulls and duplicate index keys. Standalone and table-based index
+recreation both preserve comments and uniqueness. Composite-type recreation
+is covered by the separate batch below.
+
+The COPY/upsert matrix additionally covers one-dimensional UUID, numeric,
+boolean, date and timestamp arrays, distinguishing SQL NULL, empty arrays and
+NULL elements. Numeric scale, leap-day dates and timestamp microseconds are
+checked after COPY and an actual upsert update. Other array element types and
+multidimensional variants of these added types remain unverified.
+
+Catalog references: [PostgreSQL 9.1 pg_enum](https://www.postgresql.org/docs/9.1/catalog-pg-enum.html),
+[PostgreSQL object-description functions](https://www.postgresql.org/docs/15/functions-info.html#FUNCTIONS-INFO-COMMENT-TABLE).
+
+## Composite types, views and table constraints
+
+PostgreSQL composite-type metadata now stores a complete executable CREATE TYPE
+in `definition`, replacing the incorrect use of pg_get_ruledef with a type OID.
+Attribute order, typmods, array dimensions and schema-qualified user-defined type references are
+read from pg_attribute/pg_type. Dropped attributes are excluded by the query.
+PostgreSQL 9.1+ uses a separate query to preserve attribute collations; older
+versions never reference attcollation or pg_collation. Supplemental modeled
+columns retain attribute comments. The definition is authoritative for CREATE;
+modeled attributes are not mandatory duplicates of its contents.
+
+The additive PostgresCreateTypeFactory is registered through the normal SQL
+factory registry. It uses `definition` when available and can also generate a
+simple composite type from modeled columns. Type and attribute comments are
+emitted separately. View recreation likewise preserves column comments in
+addition to the existing view comment. View comments are joined using both
+object OID and the pg_class catalog identity.
+
+Table constraint metadata and recreation now preserve CHECK, PK/UNIQUE and FK
+comments. COMMENT ON CONSTRAINT leaves the constraint name unqualified and
+qualifies its owning table. Constant CHECK expressions without column references
+are retained. Foreign keys are grouped by schema, owning table and constraint
+name so equal names on different tables do not merge. FK key positions are
+preserved. PK/UNIQUE metadata follows conkey positions rather than physical
+column order. PostgreSQL 8.4+ uses generate_subscripts; older branches now use
+the generate_series fallback described below.
+
+The YSQL 11/15 matrix recreates a quoted composite type containing numeric
+precision/scale, two-dimensional text arrays, enum/domain references and enum arrays, with an
+explicit C collation and Unicode/apostrophe comments on the type and attribute.
+It changes search_path between reading and recreation and evaluates composite
+values afterward, compares the complete recreated definition and checks array
+dimensions on the re-read model. Separate cases verify quoted view/column comments and view
+results, and recreate two parent/child pairs with equal FK names, reversed key
+positions, constant checks and constraint comments. Rejected inserts assert
+SQLSTATE 23503, 23514 and 23505.
+
+YSQL 11 rejected ALTER TYPE DROP ATTRIBUTE during test preparation with an
+unsupported-feature error. That operation and real dropped-attribute metadata
+are outside this verified scope; the query exclusion is covered by unit checks.
+Composite ALTER, extension-specific attribute types and cross-object dependency
+planning for arbitrary composite-type graphs remain unverified. Existing APIs,
+XML formats and dependencies are unchanged. Objects with comments may yield
+additional SET_COMMENT operations. The changed checkConstraints.sql resource
+was converted from its legacy CP932 text encoding to UTF-8.
+
+
+## Deferrable foreign keys
+
+PostgreSQL foreign-key SQL generation preserves the Schema model's existing
+Deferrability setting for both CREATE TABLE and standalone ALTER TABLE ADD
+CONSTRAINT. InitiallyDeferred and InitiallyImmediate emit DEFERRABLE followed
+by the initial mode. NotDeferrable and an absent setting retain the ordinary,
+non-deferrable default without adding a clause. The PostgreSQL 18 temporal
+foreign-key factory uses the same behavior. Public APIs, XML formats and
+module dependencies are unchanged.
+
+This change concerns foreign keys. YugabyteDB does not support deferrable
+primary-key or UNIQUE constraints; no support for those is implied. View
+security/check options are covered below; NOT VALID constraint preservation
+is covered below.
+
+The integration case reads a full Schema containing the referenced parent,
+recreates both initial modes, and checks child-before-parent insertion,
+SET CONSTRAINTS DEFERRED and rejection with SQLSTATE 23503 when switching back
+to immediate checking. The immediate case also drops and recreates the FK
+through standalone ALTER TABLE generation. The first test attempt using a
+standalone TableReader exposed a separate reference-resolution issue:
+the generated FK referenced the child table. The shared reader fix described
+below now covers that standalone path as well.
+See YugabyteDB's [ALTER TABLE reference](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_alter_table/)
+for its foreign-key-only deferrability support.
+
+Validation: the focused PostgreSQL FK test class passed both tests; the full
+PostgreSQL/YSQL/command regression then passed 758 unit tests (one optional
+external test skipped), with 81 unchanged plugin tests reused. Both local
+YSQL compatibility tasks passed all 33 cases each (66 total), including the
+composite-array correction from the preceding batch. Yugabyte packaging passed.
+No generated files were intentionally edited and no external/production
+database was accessed. The first focused integration attempt failed on the
+standalone TableReader reference-resolution limitation described above; the
+final full-Schema test and complete matrix passed.
+
+
+## Standalone foreign-key reference ownership
+
+The shared ForeignKeyConstraintReader constructed a referenced Table but left
+its referenced Columns detached. Their catalog/schema/table identifiers were
+read correctly. When no parent Table was available in a containing Schema,
+ReferenceColumnCollection.getTable() fell back to the owning child Table;
+SQL generation then used that incorrect resolved Table. This was a model
+ownership problem after catalog reading, not a YSQL deferrability restriction
+or a missing REFERENCES clause in the SQL factory.
+
+The helper now attaches referenced Columns to the referenced Table it already
+constructs. A standalone read retains an owner with the correct identity;
+when a complete Schema is available, getRelatedTable() continues to prefer
+the canonical Table resolved from it. The helper is shared by PostgreSQL,
+DB2, MySQL, Oracle, H2, SQL Server and other readers, so the fix belongs in
+sqlapp-core rather than a PostgreSQL-only SQL-generation workaround. No
+public API, XML format, dependency or vendor-version boundary changes.
+
+The core regression reproduces the incorrect parent before the fix and
+checks same-named child columns, catalog/schema identity, composite-column
+order, full-Schema resolution and self references. Local YSQL 11/15 tests
+read only the child through TableReader, recreate a quoted cross-schema
+composite FK through CREATE TABLE and standalone ADD CONSTRAINT, read it
+back and reject orphan inserts with SQLSTATE 23503. The retained referenced
+Table contains only the referenced columns; it is not a full parent-table
+metadata snapshot. Other database engines have unit regressions, not new
+real-database verification for this fix.
+
+Final validation on 2026-10-08: the focused core reader tests passed 2/2;
+the focused standalone TableReader case passed on both local YSQL engines.
+The broad Gradle run executed :sqlapp-core:test, :test for every retained
+dialect module in settings.gradle, :sqlapp-command:test and
+:sqlapp-gradle-plugin:test: 2,677 passed, one optional external test skipped.
+:sqlapp-core-dialect-test:yugabyte11CompatibilityTest and
+:sqlapp-core-dialect-test:yugabyte15CompatibilityTest each passed 34 cases
+(68 total). :sqlapp-core-yugabyte:assemble was up to date. The initial new
+unit test first needed API/type corrections to compile, then reproduced the
+ownership failure before the implementation fix; all final checks passed.
+No external or production database was accessed, and no generated output
+was intentionally edited.
+
+
+## View check and security options
+
+PostgreSQL view metadata now retains security_barrier, check_option and
+security_invoker from pg_class.reloptions in the existing Schema Specifics map.
+Views read from the database need no additional configuration to preserve
+these settings when regenerated. PostgreSQL 9.2+ reads reloptions; the older
+query keeps a typed NULL placeholder without referencing that catalog column.
+Version-specific factories enable security_barrier from 9.2, check_option
+from 9.4 and security_invoker from 15. Yugabyte YSQL 11/15 inherits the matching
+PostgreSQL factory, with no vendor checks in shared code.
+
+The ordinary statement-only CREATE VIEW path is unchanged when no supported
+options are specified. Advanced callers can use the additive constants
+PostgresCreateViewFactory.SECURITY_BARRIER, CHECK_OPTION and SECURITY_INVOKER
+as Specifics keys. Boolean values accept true/false, ignoring case and outer
+whitespace; check_option accepts local/cascaded. Invalid values and a known
+option configured for an unsupported target version throw an actionable
+IllegalArgumentException. Security semantics are not silently discarded.
+Complete definition DDL remains authoritative; separately modeled options are
+not appended to it. Public XML formats and dependencies are unchanged.
+
+The local YSQL matrix reads, drops and recreates nested updatable views with
+security_barrier=true and both CHECK OPTION modes, compares re-read options,
+and verifies rejected writes with SQLSTATE 44000. A separate case creates a
+NOLOGIN test role and verifies the recreated security_invoker view on YSQL 15
+rejects access without base-table privileges (42501), then permits it after a
+SELECT grant. YSQL 11 retains ordinary owner-based access. Roles and schemas
+are unique disposable test fixtures and are removed afterward. These cases
+do not migrate roles or GRANTs, or establish RLS-policy and non-leakproof
+predicate evaluation guarantees. NOT VALID constraint preservation is covered
+below. See the [PostgreSQL CREATE VIEW reference](https://www.postgresql.org/docs/15/sql-createview.html)
+for the options and permission semantics.
+
+Validation on 2026-10-08: focused view/query unit tests passed 5/5 and both
+new integration cases passed on each YSQL engine. The complete run of
+:sqlapp-core-postgres:test, :sqlapp-core-yugabyte:test, :sqlapp-command:test and
+:sqlapp-gradle-plugin:test passed 842 tests and skipped one optional external
+YSQL test. Both yugabyte11CompatibilityTest and yugabyte15CompatibilityTest
+passed all 36 cases (72 total); :sqlapp-core-yugabyte:assemble passed.
+The initial unit run had one test assertion comparing the definition list
+rather than its generated SQL text; that assertion was corrected and the
+final suite passed. No external or production database was accessed and no
+generated output was intentionally edited.
+
+
+## NOT VALID CHECK and foreign-key constraints
+
+The existing metadata readers now retain a terminal NOT VALID clause from
+pg_get_constraintdef in Constraint Specifics, using the additive public key
+PostgresConstraintOptions.NOT_VALID ("notValid"). A CHECK expression containing
+the text 'NOT VALID' is not treated as an unvalidated constraint. No new catalog
+columns are required. Read models preserve this state automatically.
+
+PostgreSQL 9.1+ foreign-key and 9.2+ CHECK factories support the flag; the
+PostgreSQL 18 factory variants retain their existing enforcement behavior.
+For advanced authored models, true requests NOT VALID and false retains the
+ordinary default. Invalid boolean values and unsupported target versions fail
+clearly instead of silently changing validation semantics. Existing APIs and
+XML formats remain compatible; constants and version-specific factories are
+additive and no dependencies changed.
+
+NOT VALID is an ALTER TABLE ADD CONSTRAINT option. CREATE TABLE generation
+therefore omits marked CHECK/FK constraints from its inline list, then composes
+the registered constraint factories to emit separate ALTER TABLE operations.
+Constraint comments follow those operations. The Schema model is not mutated,
+and ordinary constraints keep their previous generation path. The operation
+list for a table with unvalidated constraints is intentionally longer.
+
+Local YSQL 11/15 verification starts with a row violating both constraints,
+reads the state through standalone TableReader, drops and regenerates both
+constraints without scanning away the old violation, and confirms new invalid
+writes still fail with 23514/23503. VALIDATE CONSTRAINT fails on the old row,
+then succeeds after that row is repaired; re-reading no longer marks the
+constraints NOT VALID. Recreating the empty table from the original model
+preserves unvalidated state and Unicode/apostrophe constraint comments, while
+still rejecting new violations. NOT VALID does not permit loading invalid
+rows into a newly constrained table; migration of legacy violating data needs
+a separate data/constraint execution plan. No automatic validation, constraint
+disabling or data repair is performed by SQL generation.
+
+Domain and partition-specific validation rules, concurrent validation locking,
+and PostgreSQL 18 combined NOT ENFORCED/NOT VALID execution are not verified
+on real engines by this batch. The PostgreSQL 18 factories have unit coverage;
+the real-engine scope is the two YSQL baselines. See the
+[PostgreSQL ALTER TABLE reference](https://www.postgresql.org/docs/18/sql-altertable.html)
+for validation semantics, and the [9.2 release notes](https://www.postgresql.org/docs/9.2/release-9-2.html)
+for the CHECK support boundary.
+
+Validation on 2026-10-08: focused NOT VALID and constraint-metadata unit tests
+passed 7/7, and the focused integration case passed on each local YSQL engine.
+The final Gradle run executed :sqlapp-core-postgres:test,
+:sqlapp-core-yugabyte:test and :sqlapp-command:test: 764 passed, one optional
+external YSQL test skipped. :sqlapp-gradle-plugin:test reused its 81 passing
+results. Both yugabyte11CompatibilityTest and yugabyte15CompatibilityTest
+passed all 37 cases (74 total); :sqlapp-core-yugabyte:assemble was up to date.
+The first integration-test insertion script failed before creating the test,
+so its first invocation found no matching test; the insertion was corrected
+and the focused and final runs passed. No external/production database was
+accessed and no generated output was intentionally edited.
+
+
+## Foreign-key actions and historical constraint queries
+
+PostgreSQL 18 used a separate FK factory that emitted the Schema enum None as
+NONE in ON DELETE/ON UPDATE clauses. The ordinary PostgreSQL factory already
+translated that enum to NO ACTION. Both factories now compose the same
+PostgreSQL-local action renderer, preserving CASCADE, RESTRICT, SET NULL and
+SET DEFAULT and emitting valid NO ACTION. No public API, XML format or module
+dependency changes. The catalog-query spelling RISTRICT is also corrected to
+RESTRICT; the existing permissive enum parser already recognized the former
+r-prefixed spelling, so that typo alone did not lose the modeled action.
+
+The FK query unconditionally used generate_subscripts (introduced in 8.4),
+and both FK and 8.4+ unique-key queries referenced preceding FROM items from
+a table function, which requires 9.3's implicit LATERAL behavior. Both queries
+now expand conkey in a derived SELECT list instead. Version 8.4+ uses
+generate_subscripts; older branches use generate_series with array_lower and
+array_upper. Both preserve conkey order, and FK columns are paired with the
+same position in confkey. The old PK/UNIQUE pg_depend ordering is removed in
+favor of ordinal key order even before 8.4. The derived query explicitly
+projects source.oid AS constraint_oid, because OID is a system column before
+PostgreSQL 12 and is absent from SELECT *. Namespace OIDs keep their normal
+catalog references. No version-specific column or LATERAL dependency is added
+to older branches.
+
+Unit tests cover historical query selection from the resolver's 8.x default
+through current branches, including the 8.4 function boundary, and all five
+referential actions through PostgreSQL 18. Local YSQL 11/15 cases recreate and
+exercise every ON UPDATE/ON DELETE action, including NULL/default target values
+and 23503 rejection. Parent deletion with RESTRICT rejects immediately even
+when the FK is declared deferred; NO ACTION allows deleting the parent before
+the child within one transaction and committing after both deletions.
+
+A separate local case forces 8.3, 8.4, 9.2 and 15 query selection against each
+current YSQL catalog and verifies reversed composite PK, UNIQUE and FK column
+order. This establishes query execution and key-pairing semantics on those two
+engines, not real execution against historical PostgreSQL servers; legacy
+server compatibility still needs its own engine matrix. PostgreSQL 18 action
+rendering has unit coverage in this batch, not new PostgreSQL 18 real-engine
+verification. Primary version references: [PostgreSQL 8.4 release notes](https://www.postgresql.org/docs/9.2/release-8-4.html)
+and [PostgreSQL 9.3 release notes](https://www.postgresql.org/docs/9.3/release-9-3.html).
+
+
+Validation on 2026-10-08: the full PostgreSQL/YSQL/command regression executed
+and passed 766 cases, with one optional external YSQL test skipped. Gradle
+reused the plugin result (81 passing cases); Yugabyte assemble was up to date.
+Both local compatibility tasks passed all 39 cases each (78 real-engine cases).
+Initial focused failures exposed the missing pre-12 system OID projection, an
+incorrect namespace alias introduced during the rewrite, and missing options
+in the direct-reader test setup; all were corrected before the successful
+focused and complete runs. No external or production database was accessed,
+and no generated files were manually changed.
+
+
+## PostgreSQL 18 foreign-key MATCH generation
+
+The PostgreSQL 18-specific foreign-key factory now preserves the Schema model's
+MATCH option, as the older PostgreSQL factories already do. Previously its
+abstract base hook emitted no MATCH clause, silently changing MATCH FULL to
+the database default. Standalone ALTER TABLE and inline CREATE TABLE paths
+are covered across PostgreSQL 8, 11, 15 and 18, including an unset option.
+The change is confined to PostgreSQL 18 SQL generation; metadata readers,
+public APIs, XML and dependencies are unchanged. MATCH PARTIAL is retained
+as requested by the model, consistently with older factories; SQL rendering
+coverage does not establish database support for that option.
+
+
+Validation on 2026-10-08: the focused foreign-key factory class passed all four
+cases after correcting an ambiguous null setter call in the new test. The full
+PostgreSQL, Yugabyte, command and plugin regression completed successfully:
+PostgreSQL 220, Yugabyte four (one optional external test skipped), and command
+543 cases passed; the unchanged plugin result (81 cases) was reused. No real
+database test was rerun for this PostgreSQL 18-only generation change, and
+PostgreSQL 18 server execution remains unverified in this batch.
+
+
+## Constraint recreation and keyword recognition
+
+PostgreSQL PRIMARY KEY and UNIQUE SQL factories now retain DEFERRABLE and
+INITIALLY IMMEDIATE/DEFERRED from the Schema model in both standalone ALTER
+TABLE and inline CREATE TABLE generation. A PostgreSQL 9.0 factory isolates
+this syntax from the older 8.x branch, whose generation remains unchanged;
+the PostgreSQL 18 temporal factory also preserves the setting. FK and unique
+constraints share the same deferrability renderer. No existing public API,
+XML format or dependency changes are required; the 9.0 factory is additive.
+Version reference: [PostgreSQL 9.0 CREATE TABLE](https://www.postgresql.org/docs/9.0/sql-createtable.html).
+
+YSQL still supports deferred foreign keys rather than deferred PRIMARY KEY or
+UNIQUE constraints. Generated SQL preserves the request instead of silently
+changing its timing. The local YSQL matrix explicitly checks the database's
+0A000 rejection for the latter constraints, rather than claiming their support.
+See [YSQL CREATE TABLE](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_table/).
+
+Metadata recognition now masks quoted identifiers and string literals before
+looking for PERIOD, WITHOUT OVERLAPS and terminal NOT ENFORCED syntax. Names
+such as period_id and CHECK expressions containing 'NOT ENFORCED' no longer
+acquire PostgreSQL 18-only flags. Actual temporal syntax, including quoted
+period column names, retains unit coverage. On local YSQL 11/15 the new
+composite-FK case reads and recreates MATCH FULL and MATCH SIMPLE through
+both table and standalone paths, checks partial-NULL rejection/acceptance,
+and verifies that a CHECK literal is still enforced without a spurious flag.
+PostgreSQL 18 temporal execution and historical PostgreSQL servers remain
+outside this real-engine matrix. MATCH semantics reference:
+[PostgreSQL 18 CREATE TABLE](https://www.postgresql.org/docs/18/sql-createtable.html).
+
+
+Validation on 2026-10-08: 11 focused unit cases and two new real-engine cases
+on each YSQL baseline passed. The subsequent complete regression passed
+PostgreSQL 222, Yugabyte four and command 543 cases (769 executed passes),
+with one optional external YSQL test skipped. The plugin's 81 passing cases
+and Yugabyte assemble were up to date. Both full local compatibility tasks
+passed 41 cases each (82 real-engine cases), including the explicit unsupported
+constraint checks. Commands: :sqlapp-core-postgres:test, :sqlapp-core-yugabyte:test,
+:sqlapp-command:test, :sqlapp-gradle-plugin:test, :sqlapp-core-yugabyte:assemble,
+:sqlapp-core-dialect-test:yugabyte11CompatibilityTest and
+:sqlapp-core-dialect-test:yugabyte15CompatibilityTest through the repository
+Gradle wrapper. No external/production database was accessed and no generated
+files were manually changed.
+
+
+## Covering constraints, NULL uniqueness and Schema XML
+
+PostgreSQL 11+ constraint metadata now distinguishes key positions from
+INCLUDE payload positions using pg_index.indnkeyatts. PostgreSQL 15+ reads
+indnullsnotdistinct for UNIQUE NULLS NOT DISTINCT. Dedicated 11 and 15 queries
+keep these catalog fields out of earlier branches. The same version boundaries
+apply to standalone and inline constraint generation, with INCLUDE preceding
+DEFERRABLE and NULLS NOT DISTINCT restricted to UNIQUE rather than PRIMARY KEY.
+PostgreSQL 18's temporal factory composes the same options. Earlier branches
+retain their previous omission of options they cannot express, consistently
+with existing index generation. See [PostgreSQL 15 CREATE TABLE](https://www.postgresql.org/docs/15/sql-createtable.html).
+
+The canonical Schema model stores payload columns in the backing Index.
+UniqueConstraint now exposes the existing IncludeColumnsProperty/getIncludes
+view of that collection and persists the existing optional includes element
+in standalone constraint XML and table PRIMARY KEY XML. Payload columns take
+part in equality, clone and difference processing while remaining separate
+from key columns. Existing XML without includes is unchanged and accepted;
+older binaries are not guaranteed to retain the newly persisted constraint
+payload metadata. No dependency changes or vendor-specific fields were added
+to core.
+
+The local YSQL test reads reversed composite keys with quoted payload names,
+round-trips through Schema XML, recreates PRIMARY KEY/UNIQUE tables and
+standalone UNIQUE constraints, and verifies that different payloads cannot
+bypass key uniqueness. It checks ordinary NULL-distinct behavior on YSQL 11
+and NULLS NOT DISTINCT behavior on YSQL 15. Historical PostgreSQL engines and
+PostgreSQL 18 temporal combinations remain outside this real-engine matrix.
+
+A separate shared fix addresses SchemaUtils.readXml(Reader): the initial root
+probe now reads through the same BufferedReader that is marked and reset for
+object loading. Previously it consumed the underlying Reader directly, so
+the subsequent load could see end-of-input. Focused tests cover automatic
+Table/Catalog detection with Unicode and normal Schema equality. The XML format
+and caller ownership behavior of this reader API are unchanged.
+
+
+Validation on 2026-10-09: the focused common-model/Reader tests and PostgreSQL
+query/generator tests passed after fixing the new test setup's API types. The
+initial real-engine tests exposed both the automatic Reader consumption bug
+and missing constraint includes serialization; both are now fixed and the
+focused cases pass on both YSQL baselines. The full core/all-retained-dialect/
+command/plugin regression then executed 2,692 passing cases, with one optional
+external YSQL case skipped. The plugin's 81 cases were executed, and Yugabyte
+assemble was up to date. Both full local compatibility tasks passed 42 cases
+each (84 real-engine cases). No generated files were manually modified and no
+external/production database was accessed.
+
+Executed repository Gradle Wrapper tasks: :sqlapp-core:test and every included
+:sqlapp-core-{db}:test, :sqlapp-core-test:test (no sources), :sqlapp-command:test,
+:sqlapp-gradle-plugin:test, :sqlapp-core-yugabyte:assemble,
+:sqlapp-core-dialect-test:yugabyte11CompatibilityTest and
+:sqlapp-core-dialect-test:yugabyte15CompatibilityTest. Scope selection used the
+retained module list in settings.gradle and excluded generic external-database
+integration tasks.
+
+
+## CHECK inheritance, standalone constraint comments and FK XML identity
+
+PostgreSQL CHECK metadata now preserves a terminal NO INHERIT option in
+Specifics.noInherit, without matching that text in quoted identifiers/literals.
+PostgreSQL 9.2+ ordinary and PostgreSQL 18 factories retain it before enforcement
+and validation options. Earlier factories omit the unavailable syntax, while
+malformed boolean values fail clearly. No new catalog column dependency is
+introduced in older readers. The local YSQL case verifies connoinherit and
+convalidated after recreation and checks that invalid new rows still fail.
+It does not establish child-table inheritance support in YSQL or test that
+behavior on a real PostgreSQL server. Reference:
+[PostgreSQL inheritance](https://www.postgresql.org/docs/11/ddl-inherit.html).
+
+Standalone CHECK, FK and PRIMARY KEY/UNIQUE generation now returns CREATE
+followed by SET_COMMENT operations when remarks are present. UNIQUE/PRIMARY
+KEY generation also restores the backing-index comment, resolving remarks
+from the table's canonical index when needed after XML loading. The new index
+created by an ADD CONSTRAINT column list uses the constraint name; a different
+source index name is not used as a nonexistent destination comment target.
+Schema-qualified names and Unicode/apostrophes are escaped by the SQL builder.
+Callers must execute all returned operations to retain comments. Inline table
+creation keeps its existing comment phase, filtering standalone comment
+operations for separately added NOT VALID constraints to avoid duplicates.
+
+The integration test also exposed an independent shared XML bug: detached FK
+reference columns could be resolved to identically named local columns when
+reading a standalone Table, causing generated SQL to reference the child
+itself and allow an otherwise invalid foreign-key value. The XML reader now
+keeps referenced columns owned by a referenced Table and adds them together,
+retaining schema identity and column order. Self-references reuse canonical
+local columns. Focused tests cover same-named columns, reversed composite
+positions, quoted cross-schema names, standalone self-references and canonical
+Schema parent/self relationships. Public APIs and XML formats are unchanged;
+this changes the incorrectly restored reference ownership for existing XML.
+The local YSQL case round-trips the Table through XML, recreates constraints
+and then the table, verifies constraint/index comments, and checks CHECK/FK/
+UNIQUE violations through SQLSTATE 23514/23503/23505.
+
+Validation on 2026-10-09: focused PostgreSQL constraint/metadata tests and shared
+FK XML tests passed. The focused disposable YSQL 11/15 tests passed after fixing
+the XML ownership defect exposed by the FK violation assertion. The full Gradle
+core/all-retained-dialect/command/plugin test run, Yugabyte assemble, and
+`yugabyte11CompatibilityTest` / `yugabyte15CompatibilityTest` completed with
+BUILD SUCCESSFUL: 2,697 ordinary cases passed and one optional external YSQL
+case was skipped; both real-engine matrices passed 43 cases each (86 total).
+The plugin's 81 cases executed; assemble was up to date. No external or production
+database was accessed and no generated files were edited manually. PostgreSQL
+historical/18 behavior is covered by unit tests, not real-engine verification;
+child-table inheritance remains outside the YSQL compatibility scope.
+
+
+## Array element type modifiers and fractional datetime precision
+
+PostgreSQL column metadata queries now decode length, numeric precision/scale,
+and datetime/interval precision using the array element OID when `attndims > 0`.
+Scalar columns continue to use their original type OID. The existing base,
+10/11, 12-17 and 18 query variants retain their version-specific catalog fields;
+no new catalog columns, module dependencies, resolver branches or public APIs
+were introduced. The base query is also used for composite-type attributes.
+This fixes invalid regeneration such as `numeric(0,0)[][]` for a source
+`numeric(12,3)[][]`, and lost `varchar(n)` array element lengths.
+
+The shared PostgreSQL column mapper now stores fractional datetime and interval
+precision in the Schema model's `length`, where the type generators expect it;
+`scale` retains numeric scale. Explicit datetime precision zero is preserved.
+This affects ordinary and array columns. XML remains in the existing format,
+although newly read metadata now includes the corrected length/precision.
+
+A disposable YSQL 11/15 case reads a table, round-trips Schema XML, regenerates
+the table and checks array dimensions, numeric precision/scale, varchar length
+and timestamp precision. COPY and staging upsert then move two-dimensional UUID,
+numeric, boolean, date, timestamp, bytea and varchar values, SQL NULL, empty
+arrays and NULL elements. The second phase swaps NULL/empty/nonempty values
+between existing rows, checking updates as well as inserts. Binary elements
+include zero, 0xff, quotes, backslashes and empty bytea; strings include Unicode,
+apostrophes, quotes and backslashes. Unit tests cover scalar/array datetime
+precision 0/3/6, numeric zero/nonzero scale, character lengths and interval
+precision. Domain metadata and interval field qualifiers are separate paths and
+are not expanded by this change; other element types, arbitrary dimensions and
+non-default array lower bounds remain outside the verified scope.
+
+Catalog references: [pg_type element OIDs](https://www.postgresql.org/docs/11/catalog-pg-type.html)
+and [pg_attribute type modifiers/dimensions](https://www.postgresql.org/docs/11/catalog-pg-attribute.html).
+
+Validation on 2026-10-09: the added case first exposed invalid numeric array DDL
+and missing datetime precision; both defects were fixed before the successful
+focused tests. The final Gradle run executed `:sqlapp-core-postgres:test`,
+`:sqlapp-core-yugabyte:test`, `:sqlapp-command:test`,
+`:sqlapp-core-yugabyte:assemble`, and both full YSQL compatibility tasks.
+BUILD SUCCESSFUL: PostgreSQL 230, Yugabyte 4 and command 543 cases passed (777),
+with one optional external YSQL case skipped. Both disposable real-engine
+matrices passed 44 cases each (88 total); assemble was up to date. Unchanged
+core/other-dialect/plugin suites were not rerun in this batch. No external or
+production database was accessed and no generated files were edited manually.
+The base/18 column-query variants and interval precision were not verified on
+historical/18 real engines; their compatibility limits remain as stated above.
+
+
+## Array domains, fractional precision and quoted base types
+
+PostgreSQL domain metadata now resolves the base array's element OID for its
+numeric precision/scale, character length and datetime/interval precision.
+Builtin element names come from `format_type`; user-defined names are always
+schema-qualified with catalog identifier quoting, independently of search_path.
+Array suffixes live only in the Domain's array dimension. Scalar domains continue
+to use their original base type. The column and domain readers share a local
+precision selector that retains zero fractional precision in model `length`;
+numeric `scale` remains separate. Existing catalog/version boundaries and
+dialect resolution are unchanged.
+
+The PostgreSQL domain factory preserves qualified, quoted OTHER base type names
+rather than passing them through the builtin type formatter. The domain reader
+also retains the actual user-defined base type instead of `USER-DEFINED`.
+This applies to scalar and array domains whose base type remains available
+when the domain is recreated. Dependency ordering for arbitrary domain/type
+graphs is not added.
+
+Focused coverage includes XML round trips and recreated numeric(12,3)[][],
+varchar(7)[][], timestamp(3)[][] and timestamp(0) domains; defaults, CHECK,
+NOT NULL, comments, NULL elements, timestamp rounding and actual 23502/23514
+rejections are checked. Another case recreates scalar/array domains over an
+enum in a quoted schema, read while that schema is on search_path and recreated
+after removing it, with a dot in the quoted type name,
+apostrophes in labels, defaults, cardinality checks and invalid-enum SQLSTATE
+22P02. Unit SQL generation covers the existing PostgreSQL 8.3/11/15/18 registry
+boundaries and exactly one array suffix per modeled dimension.
+
+These tests exposed a separate common issue: type-name normalization stripped
+outer quotes from qualified names and changed quoted identifier contents.
+`SchemaUtils.normalizeDataType` and Dialect type matching now preserve quoted
+qualified names, including escaped quotes and repeated spaces. Existing builtin
+normalization, including quoted CHAR and enum literals, remains covered.
+The additive `SchemaUtils.isQuotedQualifiedTypeName(String)` utility shares the
+quote-aware detection between both paths. Existing signatures, XML format,
+configuration and module dependencies are unchanged. This shared correction
+also applies to Column type setters; it is not a PostgreSQL-only conditional.
+Single unqualified quoted type names retain the previous normalization behavior.
+
+References: [domain catalog representation](https://www.postgresql.org/docs/11/catalog-pg-type.html)
+and [CREATE DOMAIN](https://www.postgresql.org/docs/11/sql-createdomain.html).
+
+Validation on 2026-10-09: focused common SchemaUtils/Dialect, PostgreSQL domain
+SQL/column precision, and both disposable YSQL domain tests passed. The expanded
+search_path assertion exposed unqualified base type metadata; always-qualified
+catalog names fixed it and both focused engine runs then passed. The final
+Gradle invocation selected core/all-retained-dialect `test` tasks, command and
+plugin tests, Yugabyte assemble, and both full YSQL compatibility tasks:
+BUILD SUCCESSFUL. Across this batch's initial run and final rerun, 2,703 ordinary
+cases passed and one optional external YSQL case was skipped. The final run
+reused unchanged core/plugin results as UP-TO-DATE; PostgreSQL/Yugabyte/command
+and both engine matrices executed again after the final catalog SQL change.
+Both matrices passed 46 cases each (92 real-engine cases); assemble was up to
+date. No external or production database was accessed and no generated files
+were edited manually. Historical PostgreSQL and PostgreSQL 18 real engines,
+arbitrary domain dependency graphs, interval field qualifiers and single
+unqualified quoted type-name normalization remain outside this verified scope.
+
+
+## Unconstrained numeric and varchar, and PostgreSQL 15 numeric scale
+
+PostgreSQL metadata and SQL generation now preserve omitted numeric precision
+and varchar length, including arrays and domains. The catalog queries keep
+unconstrained varchar length NULL instead of -5 or an artificial 1 GiB limit.
+Domain readers retain SQL NULL for optional precision fields instead of treating
+it as zero. SQL generation emits bare NUMERIC, DECIMAL and VARCHAR when the
+modifier is absent, preserving the server's unconstrained semantics.
+
+Numeric catalog modifiers decode scale as a signed 11-bit value. This decoding
+also preserves legacy nonnegative scales and uses no new catalog columns.
+PostgreSQL 15 and later accept negative scale and scale greater than precision;
+type-name matching also accepts negative-scale NUMERIC/DECIMAL arrays from 15.
+Generation validates precision 1..1000 and scale -1000..1000, and rejects extended
+scale on pre-15 dialects rather than changing its rounding semantics. An explicit
+nonzero scale requires precision. Existing public APIs, XML and dependencies
+are unchanged. SQL changes cover all four PostgreSQL column query versions and
+the shared domain query; PostgreSQL-compatible dialects inherit these fixes.
+
+The real-engine regression recreates scalar/array columns and domains through
+Schema XML, then stores a 1,501-digit integer with fractional digits and a
+40,000-character Unicode string through bulk insertion. It checks exact values,
+NULL array elements and unconstrained catalog modifiers. The 15 baseline also
+checks numeric(2,-3) rounding, numeric(3,5) fractional rounding, domain defaults
+and overflow SQLSTATE 22003; the 11 baseline checks rejection of negative scale.
+
+References: [PostgreSQL 15 numeric types](https://www.postgresql.org/docs/15/datatype-numeric.html)
+and [numeric typmod implementation](https://github.com/postgres/postgres/blob/REL_15_STABLE/src/backend/utils/adt/numeric.c).
+
+
+Validation on 2026-10-09: the focused boundary cases first reproduced invalid
+varchar modifiers and loss of signed numeric scale; all focused cases passed
+after correction. The final invocation executed PostgreSQL, Yugabyte and command
+`test` tasks, Yugabyte `assemble`, and both full YSQL compatibility tasks:
+BUILD SUCCESSFUL in 7m 7s. PostgreSQL passed 234 cases, Yugabyte passed 4 with one
+optional external test skipped, and command passed 543 (781 ordinary passes).
+Both engines passed all 48 cases each (96 real-engine passes). Public APIs,
+configuration, XML format and module dependencies are unchanged. Invalid numeric
+modifiers now fail explicitly instead of being clipped. Only disposable local
+containers were used; no external/production database was accessed and generated
+files were not edited manually. Historical PostgreSQL and PostgreSQL 18 real
+engines remain unverified; their SQL/type boundaries are covered by unit tests.
+
+
+## Bit strings and interval field restrictions
+
+PostgreSQL column queries (all supported query variants) and domain queries now
+keep an omitted bit varying length NULL rather than -1. SQL generation emits
+bare VARBIT for the unconstrained type; explicit BIT/VARBIT lengths remain
+unchanged. Type matching recognizes the catalog spelling BIT VARYING, including
+length modifiers and arrays. BIT without a length still resolves from catalog
+metadata as BIT(1). Bytea behavior is unchanged.
+
+PostgreSQL 12+ column queries now decode interval field masks instead of reporting
+every qualified interval as unrestricted INTERVAL. Historical column readers and
+domains already decode these masks. SQL generation preserves YEAR, YEAR TO MONTH,
+DAY TO HOUR, DAY TO MINUTE, DAY TO SECOND, HOUR TO MINUTE, HOUR TO SECOND, MINUTE
+TO SECOND and single-field restrictions. The YEAR spelling is corrected. Native
+PostgreSQL interval matching uses fractional precision after the field clause,
+with no SQL-standard leading precision defaults. Explicit fractional precision
+0..6 is retained for INTERVAL and clauses ending in SECOND, including arrays.
+
+A common Schema issue also affected other dialects: AbstractColumn omitted
+interval modifiers from XML and ignored interval length when comparing objects.
+Column, Domain, TypeColumn and NamedArgument now retain existing length/scale
+attributes through XML, and precision changes affect equality. This uses existing
+XML attributes and APIs; old XML without modifiers remains readable with absent
+values. No vendor-specific conditional was added to core. For PostgreSQL,
+length represents fractional precision; other dialects retain their existing
+interpretation of model length/scale. This correction may expose real interval
+precision differences previously omitted from migration comparisons.
+
+The focused engine tests cover unlimited, bounded and fixed bit strings, scalar
+and array columns, domains, 42,000-bit values, NULL and empty array elements, and
+length mismatch errors. Interval coverage compares values before and after
+Schema XML recreation for 20 field/precision declarations, scalar/array columns,
+scalar/array domains and defaults, including precision zero and fractional
+rounding. These tests use disposable local YSQL 11 and 15 containers.
+
+References: [bit string types](https://www.postgresql.org/docs/15/datatype-bit.html)
+and [interval fields and precision](https://www.postgresql.org/docs/15/datatype-datetime.html).
+
+
+Validation on 2026-10-09: focused tests reproduced -1 bit varying length and
+loss of interval YEAR field restrictions and precision-zero rounding. The
+initial common test incorrectly treated TypeColumn as a standalone XML root;
+it was corrected to round-trip Type/Procedure owners for type attributes and
+arguments. The final focused common XML/equality tests and PostgreSQL native
+type matching/generation tests passed, as did both focused engine runs.
+The final regression selected core and every retained dialect `test` task,
+command/plugin tests, Yugabyte assemble and both full YSQL compatibility tasks:
+BUILD SUCCESSFUL in 9m 51s. Results total 2,711 ordinary passes with one optional
+external YSQL case skipped, and 50 passes on each engine (100 real-engine passes),
+with no failures or errors. No external/production database was accessed, no
+module dependency/version/configuration was changed, and no generated files
+were edited manually. Historical PostgreSQL and PostgreSQL 18 remain unverified
+on real engines; unit tests cover type generation and matching at those boundaries.
+
+
+## Routine OID isolation and array type identity
+
+PostgreSQL routine type lookup no longer shares mutable NamedArgument instances
+through a process-wide cache keyed only by OID. Each lookup now reads the supplied
+connection and returns a fresh type object, so argument names, directions,
+defaults, database-local OIDs and renamed types cannot leak between lookups.
+This deliberately trades cache hits for correct connection/DDL visibility;
+metadata lookup performance has not been benchmarked. OID parameters accept the
+unsigned 32-bit range through JDBC long binding, and missing/out-of-range OIDs
+produce explicit unchecked errors containing the OID.
+
+The typeById query reads the element type and a separate array dimension for true
+array types. Builtin names use format_type; custom names always use separately
+quoted schema/type identifiers. No new-version catalog columns are introduced.
+Array function returns now retain their dimension in the Schema model and XML.
+PostgreSQL SQL generation preserves array dimensions for routine arguments,
+returns and other AbstractColumn/type-property entry points. CREATE FUNCTION
+honors the existing decorateSchemaName option. Routine identity strings include
+array suffixes in modern and legacy function, function-family and privilege
+readers, and retain a builtin fallback when the model omits dataTypeName.
+Public signatures, configuration, XML attributes and dependencies are unchanged.
+
+The real-engine tests mutate a first lookup, repeat it on another connection,
+rename a quoted enum, read it again, and verify independent legacy arguments
+with the same integer OID. They also exercise the maximum unsigned OID as a
+missing type. UUID-array and quoted-enum-array returns are read with the custom
+schema on search_path, round-tripped through XML, and recreated after resetting
+search_path. Scalar f(uuid) and array f(uuid[]) overloads retain distinct model
+identities and invoke their original behavior after XML recreation.
+
+This batch covers routine OID type lookup and native array signature preservation;
+complex quoted/default argument tokenization, TABLE return parsing and procedure
+recreation were not expanded. Historical PostgreSQL servers and PostgreSQL 18
+were not run against real engines; generation unit tests cover 8.3/11/15/18.
+
+References: [pg_type](https://www.postgresql.org/docs/11/catalog-pg-type.html)
+and [OID representation](https://www.postgresql.org/docs/11/datatype-oid.html).
+
+
+Validation on 2026-10-09: focused tests reproduced mutable OID lookup leakage,
+array return/argument loss and scalar/array overload collisions. The corrected
+focused unit tests and three real-engine cases passed on both engines. The final
+regression ran PostgreSQL/Yugabyte unit tests, command/plugin tests, Yugabyte
+assemble and both complete YSQL compatibility tasks: BUILD SUCCESSFUL in 7m 36s.
+Results were 867 ordinary passes, one optional external-database test skipped,
+and 53 passes on each local YSQL engine (106 real-engine passes), with zero
+failures/errors. No external or production database was accessed. No public API,
+configuration format, XML attributes or dependency versions changed; no generated
+files were manually edited. Historical PostgreSQL and PostgreSQL 18 real engines
+and the performance impact of uncached type lookup remain unverified.
+
+
+## Routine catalog arguments and executable recreation
+
+PostgreSQL 8.4+ function readers now obtain argument type OIDs, names and modes
+from pg_proc arrays instead of splitting pg_get_function_arguments at commas.
+This preserves quoted names containing spaces/commas, unnamed arguments, OUT,
+INOUT, VARIADIC, TABLE output columns and schema-qualified custom array types.
+Only input/INOUT/variadic types contribute to overload identity. Zero-input
+functions still read OUT and TABLE arguments. The defaults list is deparsed with
+pg_get_expr and split at top-level commas while respecting parentheses, array
+brackets, SQL quotes, escaped E strings and dollar quotes. Defaults attach to the
+last N input arguments, and the Schema value excludes the DEFAULT keyword.
+
+PostgreSQL SQL generation quotes argument names, emits direction once, preserves
+VARIADIC and DEFAULT, and recreates RETURNS TABLE and RETURNS SETOF. Body dollar
+quote tags use valid identifiers and advance past collisions, avoiding the
+previous non-incrementing delimiter loop. Executable definition takes precedence
+over statement generation. Local SET clauses and external library bindings are
+retained through definition because the shared model cannot represent them.
+PostgreSQL 11+ procedures returned by the existing function reader also retain
+CREATE PROCEDURE in definition; no new procedure collection/API is introduced.
+The prokind-dependent branch remains in the PostgreSQL 11 reader.
+
+The shared Routine model no longer treats a period in a signature's qualified
+type name as a schema separator. Dots inside quoted routine names and signatures
+prefixed by the known routine name are also retained. Existing schema-qualified
+specific names and null fallback remain supported. Function XML and Procedure
+identity tests cover this shared correction. No public signatures, XML attributes, configuration
+formats, dependency versions or module dependencies are changed. PostgreSQL 11+
+procedure metadata adds ROUTINE_KIND=PROCEDURE within the existing vendor-specific
+properties so comment and DROP generation retain object kind across XML.
+
+Routine comments are now read through obj_description. PostgreSQL function DROP
+and COMMENT identities are generated from modeled input/INOUT/variadic types,
+including arrays and custom quoted types; OUT arguments are excluded. The
+registry selects a PostgreSQL-specific DROP factory. Procedure metadata uses
+COMMENT ON PROCEDURE and DROP PROCEDURE. The old function-comment fixture omitted
+the required input signature and was corrected; argument-list spacing remains
+compatible with the existing CREATE fixture.
+
+The real-engine matrix drops nine original functions, round-trips the models
+through XML, recreates them and invokes defaults, OUT-only/INOUT, variadic,
+TABLE/SETOF, custom array arguments and a dotted quoted function name with colliding
+body dollar tags. A separate case drops and recreates a procedure and function
+with local search_path settings, then verifies their effects on a disposable table.
+The final expanded cases use generated DROP operations and verify routine comments
+after XML recreation, including the procedure comment.
+All objects reside in UUID-named local container schemas removed in finally blocks.
+
+Limitations: historical PostgreSQL and PostgreSQL 18 are not verified on real
+engines. External C library loading is not tested. Search-path-dependent names
+inside deparsed default expressions and routine bodies are not rewritten; callers
+must preserve their resolution context. Aggregate/window function regeneration,
+routine grants and ALTER PROCEDURE generation are outside this batch.
+Definition-backed procedures remain represented by the existing function reader.
+
+Catalog field/mode/default alignment follows [PostgreSQL 11 pg_proc](https://www.postgresql.org/docs/11/catalog-pg-proc.html), and generation follows
+[CREATE FUNCTION](https://www.postgresql.org/docs/11/sql-createfunction.html).
+
+
+Validation on 2026-10-09: focused cases passed on local YSQL 11/15 after correcting
+TABLE type rendering and shared qualified-signature handling. The expanded cases
+verified generated DROP, function/procedure comments, SET settings and invocation.
+An initial wide run found only CREATE argument-list whitespace in an existing
+fixture; this was corrected and the comment fixture now includes its required
+input signature. A later focused compilation error was corrected before the
+successful expanded runs. The complete regression then ran core, all retained
+dialect test tasks, command/plugin tests, Yugabyte assemble and both full YSQL
+tasks: BUILD SUCCESSFUL in 7m 48s, 2,720 ordinary passes with one optional external
+case skipped, and 55 passes on each engine (110 real-engine passes), zero failures.
+
+A final review identified that the shared collection assigns synthetic $N names
+to unnamed arguments. PostgreSQL metadata now retains UNNAMED_ARGUMENT=true in
+existing vendor-specific properties and generation omits that synthetic name.
+The final boundary cases cover unnamed arguments with defaults, defaults after
+interleaved OUT arguments, and an INOUT default. This supplements the complete
+regression above; final boundary revalidation is recorded below.
+
+
+Final boundary revalidation: the unnamed/interleaved/INOUT-default cases passed
+on both engines. After that last PostgreSQL-local change, all ordinary core,
+retained dialect, command and plugin test tasks plus Yugabyte assemble were
+selected again, and all three routine matrix cases ran on both engines:
+BUILD SUCCESSFUL in 1m 59s. Results were 2,721 ordinary passes, one optional
+external-database case skipped and six real-engine matrix passes, with zero
+failures/errors. The preceding complete YSQL regression covered 110 cases; the
+last unnamed-argument branch was rechecked with the focused six-case matrix,
+not by repeating the unrelated full YSQL suite again. No external/production
+database was accessed. No generated files were manually edited. Documentation
+and the intentional function-comment SQL fixture were updated; public signatures,
+configuration formats, XML attributes and dependencies remain unchanged.
+
+
+## Routine EXECUTE privilege round-trip
+
+PostgreSQL routine privilege readers now always retain the full input signature,
+including f() for zero-input functions. They retain FUNCTION/PROCEDURE kind in the
+existing ROUTINE_KIND vendor property. The namespace join ties the pg_proc object
+to the information_schema routine schema. The PostgreSQL 11 catalog reader selects
+a version-specific privilege reader/query for prokind; the legacy query has no
+prokind dependency. Input type OIDs continue to use the existing type resolver, so
+array and schema-qualified custom type signatures remain exact.
+
+The PostgreSQL registry now supports RoutinePrivilege with SqlType.GRANT and
+SqlType.REVOKE. These operations grant/revoke EXECUTE on the exact signature and
+preserve WITH GRANT OPTION when granting. An omitted privilege means EXECUTE,
+the only routine privilege; explicitly unsupported privileges, DENY/conflicting
+states, missing signatures/grantees, unknown kinds, pre-11 procedures and a PUBLIC
+grant option fail with actionable errors. Names are quoted with embedded double
+quotes escaped; PUBLIC remains the SQL recipient keyword. The generic hierarchy
+flag has no PostgreSQL routine meaning and does not affect these operations.
+REVOKE removes EXECUTE, uses PostgreSQL's default RESTRICT behavior, and does not
+silently add CASCADE or turn grantable into a grant-option-only action.
+
+The common entry point remains the existing reader and SQL registry:
+
+```java
+var reader = dialect.getCatalogReader().getRoutinePrivilegeReader();
+var context = new com.sqlapp.data.parameter.ParametersContext();
+context.put("schemaName", "app");
+var privileges = reader.getAllFull(connection, context);
+var registry = dialect.createSqlFactoryRegistry();
+registry.getOptions().setDecorateSchemaName(true);
+for (var privilege : privileges) {
+    var grantOperations = registry.createSql(privilege, SqlType.GRANT);
+    // Review or execute operation.getSqlText() in the intended grantor context.
+}
+```
+
+This is an explicit privilege-operation path. CREATE FUNCTION/CREATE SCHEMA does
+not automatically reset or replay ACLs. Default PUBLIC EXECUTE, schema/type USAGE,
+role membership and existing grants still affect effective access. Metadata retains
+the information_schema visibility rules: only grants involving currently enabled
+roles are visible; this is not a privileged dump of all ACLs. Grantor name
+is retained in the model/XML, but generated operations run as the caller and do
+not switch roles or impersonate the original grantor. Restoring a particular grant
+chain therefore requires the correct execution role and order. The tests use the
+original owning session; cross-grantor/delegation-chain restoration is unverified.
+
+The local YSQL matrix covers three overloaded dotted-name functions (zero inputs,
+uuid[], and a quoted custom enum[] plus OUT), a procedure, a quoted NOLOGIN role,
+PUBLIC and grant option. A Catalog XML round-trip retains signatures, object kind,
+grantor/grantee and grantability. Generated REVOKE removes all selected grants;
+role-switched execution is denied with SQLSTATE 42501. Generated GRANT restores
+ACLs and allows all three functions and the procedure to execute as that role.
+A separate schema USAGE grant supports name lookup; this is not inferred from
+EXECUTE. Every object and temporary role is removed in finally blocks. Unit tests
+also cover embedded identifier quotes and PostgreSQL 8.3/10/11/15/18 boundaries.
+
+Public signatures, configuration formats, XML attributes and dependencies remain
+unchanged. The new registry support and factories are additive and local to the
+PostgreSQL module; Yugabyte inherits them through its existing 11/15 dialects.
+Historical PostgreSQL and PostgreSQL 18 real engines are unverified. ALTER routine
+operations and automatic catalog ACL replay remain outside this batch.
+
+References: [PostgreSQL 11 GRANT](https://www.postgresql.org/docs/11/sql-grant.html)
+and [REVOKE](https://www.postgresql.org/docs/11/sql-revoke.html); metadata visibility
+follows [routine_privileges](https://www.postgresql.org/docs/15/infoschema-routine-privileges.html).
+
+
+Validation on 2026-10-09: initial focused tests exposed test setup assumptions
+(the catalog-level reader uses ParametersContext, generic hierarchy defaults are
+not meaningful for routines, and quote assertions must set schema-decoration
+options explicitly). These were corrected before final validation. Four focused
+unit tests and the privilege round-trip/execution matrix passed on both engines.
+The final regression ran :sqlapp-core-postgres:test, :sqlapp-core-yugabyte:test,
+:sqlapp-command:test, :sqlapp-gradle-plugin:test, :sqlapp-core-yugabyte:assemble,
+and both complete yugabyte11CompatibilityTest/yugabyte15CompatibilityTest tasks:
+BUILD SUCCESSFUL in 7m 50s. Results were 876 ordinary passes, one optional external
+YSQL test skipped, and 57 passes on each engine (114 real-engine passes), with
+zero failures/errors. Only disposable local YSQL containers were accessed;
+temporary schema/NOLOGIN-role objects were removed. No external/production
+database, dependency/version, public API signature or configuration format was
+changed, and no generated files were manually edited. New routine privilege
+factory/reader support is additive. Historical PostgreSQL and PostgreSQL 18 real
+engines and cross-grantor delegation-chain restoration remain unverified.
+
+
+## Explicit PostgreSQL routine identities without argument models
+
+PostgreSQL and YSQL DROP and COMMENT identity generation preserves an explicit
+`Function.specificName` such as `f(uuid[])` when the argument collection is empty.
+This supports identity-only models and their Schema XML round-trips without
+accidentally targeting the zero-argument overload. The specific name must start
+with the model's function name followed by `(` and end with `)`; use the unquoted
+model name and SQL type expressions inside the parentheses. Schema decoration
+continues to follow the existing SQL factory option. When arguments are modeled,
+the modeled input, INOUT and variadic types remain authoritative, excluding OUT
+arguments. Public APIs and Schema XML formats are unchanged.
+
+Unit coverage exercises PostgreSQL 8.3, 11, 15 and 18 SQL generation. Disposable
+local YSQL 11 and 15 coverage creates three overloads with no arguments, UUID
+arrays and schema-qualified custom enum arrays, drops the two array overloads
+from XML-restored identity-only models, and verifies the zero-argument function
+still executes. This change does not add routine ALTER or automatic ACL replay.
+
+
+## PostgreSQL and YSQL routine attribute differences
+
+The existing SQL registry now accepts function model differences for routine
+attribute changes:
+
+```java
+Function target = original.clone()
+    .setDeterministic(null).setStable(true)
+    .setOnNullCall(OnNullCall.ReturnsNullOnNullInput)
+    .setSqlSecurity(SqlSecurity.Invoker)
+    .setRemarks(null);
+List<SqlOperation> operations = registry.createSql(original.diff(target));
+```
+
+Function differences support volatility (IMMUTABLE, STABLE, VOLATILE), null-input
+behavior, SECURITY INVOKER/DEFINER, and remarks. A null remarks value explicitly
+clears an existing comment using `IS NULL`. Clearing null-input or security
+attributes selects PostgreSQL defaults (CALLED ON NULL INPUT, SECURITY INVOKER).
+Volatility follows the existing CREATE generator: a non-null deterministic flag
+selects IMMUTABLE or VOLATILE; otherwise stable=true selects STABLE and the
+remaining case selects VOLATILE. Clear deterministic when selecting STABLE.
+
+PostgreSQL 11+ and PostgreSQL 15-based YSQL procedures support security and
+comment differences. The tested PostgreSQL 11-based YSQL engine rejects ALTER
+PROCEDURE, so its dialect rejects security changes before returning SQL;
+procedure comment differences remain supported. Procedure volatility and
+null-input attributes are invalid. Older PostgreSQL dialects reject procedure
+changes. Aggregate changes require an explicit migration.
+
+ALTER uses the original routine's input identity and existing schema decoration
+option. Attribute-only changes do not replay executable definitions, replace the
+body, drop the routine or restore ACLs. Body changes use the separate verified
+replacement path described below. Definition-backed routines can therefore change these
+attributes without resetting local SET options or external-language settings.
+Re-read metadata after applying changes to refresh a stored executable definition.
+
+Changes outside this attribute set (including executable definition,
+arguments, return type, name, schema, language, owner and vendor specifics) fail
+before any operations are returned. A direct ALTER request with only a target
+model also fails with guidance to supply original.diff(target). These cases
+require an explicit migration. Body changes are supported only by the verified
+catalog replacement path below; this is not a general routine replacement planner.
+Existing CREATE/DROP behavior and Schema XML formats are unchanged. The newly
+registered ALTER path makes unsupported modifications explicit instead of leaving
+function changes without a PostgreSQL-specific implementation.
+
+Disposable local YSQL 11 and 15 tests change and reverse function attributes and
+exercise dependent views and null inputs. They assert preservation of OID,
+owner, ACL, body, local SET options and custom COST. Procedure security is tested
+on YSQL 15; YSQL 11 verifies the capability boundary and comment changes. Unit
+coverage checks PostgreSQL 8.3/11/15/18 generation, comment removal, reverse
+changes, and rejection of signature/body changes. The shared Routine model also
+preserves a dotted routine name when cloning an identity with no explicit input
+signature, avoiding an invented schema qualification during difference creation.
+
+See PostgreSQL's [ALTER FUNCTION](https://www.postgresql.org/docs/11/sql-alterfunction.html)
+and [ALTER PROCEDURE](https://www.postgresql.org/docs/11/sql-alterprocedure.html)
+references for the attribute operations. No external or production database is
+used by these tests.
+
+
+Final regression for this batch passed 2,731 ordinary tests across the shared
+core, retained dialects, command and Gradle plugin modules; one optional external
+database test was skipped. Both local YSQL compatibility tasks passed all 59
+cases each (118 real-engine passes), and the Yugabyte assembly succeeded. The
+initial focused YSQL 11 run exposed its unsupported ALTER PROCEDURE operation;
+the final version-specific factory and tests account for that boundary. No
+production/external databases were accessed, and no generated files were
+intentionally edited.
+
+
+## Verified PostgreSQL and YSQL routine body replacement
+
+A metadata-read SQL or PLpgSQL routine can now change its statement through the
+existing difference entry point:
+
+```java
+Function target = original.clone().setStatement("SELECT value + 10");
+List<SqlOperation> operations = registry.createSql(original.diff(target));
+```
+
+PostgreSQL 8.4+ readers retain `pg_get_functiondef` as supplemental vendor metadata
+under `POSTGRES_ROUTINE_DDL_BASE64`. The value encodes UTF-8 DDL to preserve
+newlines through the existing Schema XML specifics representation. No XML format
+or configuration changes are required. Historical models can use a complete
+executable definition as a fallback. PostgreSQL 8.3 models without a suitable
+catalog definition require an explicit migration.
+
+The generator verifies a matching schema-qualified CREATE OR REPLACE identity,
+SQL/PLpgSQL language, and a dollar-quoted body matching the original statement.
+It permits only whitespace or a terminator after the closing body delimiter.
+Outer body whitespace is ignored for comparison; interior text remains exact.
+Only the body and its delimiter are replaced. A collision-free dollar tag is
+selected for the target body. COST, ROWS, PARALLEL, LEAKPROOF, local SET and other
+clauses present in the catalog DDL are retained rather than regenerated from an
+incomplete model. Target volatility, null-input and security attributes are then
+reapplied using ALTER, including when they are unchanged in the difference.
+This prevents a previous attribute-only model edit from being reset by the
+stored catalog template. Comment differences use the existing separate operation.
+
+The replacement DDL uses the catalog's explicit schema even when schema decoration
+is disabled, as executable definitions already do. The original model must be a
+fresh, unchanged snapshot of the intended target database; clone it to create the
+target. Re-read metadata before another body change or reversing a body change,
+since the original body must match the stored template. Execute the returned
+operations using the caller's existing transaction/error handling. Generation
+does not provide transaction guarantees or validate the target routine body.
+
+PostgreSQL 11+ and tested PostgreSQL 15-based YSQL procedures use this path as
+well. PostgreSQL 11-based YSQL procedures are rejected before returning SQL
+because this path requires the unsupported ALTER PROCEDURE attribute step.
+External-language bindings, SQL-standard parsed bodies without a dollar-quoted
+body, mismatched/stale templates and identity/signature/return/language changes
+require an explicit migration. Independent catalog snapshots may include definition changes only when verified
+to describe the same header and the modeled body change, as described below.
+Other complete definition changes remain unsupported.
+A supplemental template-only difference generates no SQL; changes to other
+vendor specifics still fail. This is not an ACL, owner or COST migration planner.
+
+Disposable local YSQL 11 and 15 tests replace SQL function bodies after Schema
+XML round-trip, verify changed results through an existing dependent view,
+re-read and reverse the body, and assert OID/owner/ACL/local SET/custom COST
+preservation. They also execute multiline PLpgSQL body changes with dollar-tag
+collisions. YSQL 15 additionally replaces and invokes a procedure body; YSQL 11
+asserts the capability boundary. Older PostgreSQL real engines are unverified.
+
+The preservation approach follows PostgreSQL's
+[CREATE FUNCTION rules](https://www.postgresql.org/docs/11/sql-createfunction.html)
+and [CREATE PROCEDURE rules](https://www.postgresql.org/docs/15/sql-createprocedure.html):
+replacement preserves ownership and grants while other attributes follow the
+specified definition. The retained catalog DDL is therefore necessary to keep
+attributes that the shared routine model does not independently represent.
+
+
+Final body-replacement regression: PostgreSQL, Yugabyte, command and Gradle plugin
+unit suites passed 884 tests with one optional external database case skipped.
+Both local YSQL 11/15 compatibility tasks passed all 60 cases each (120 real-engine
+passes), with no failures/errors; Yugabyte assembly also succeeded. Initial
+focused failures exposed the statement/definition List representation and XML
+specifics newline normalization; the final implementation and XML regression
+coverage account for both. No external/production databases were accessed, and
+no generated files were intentionally edited.
+
+
+## Independent routine snapshots for body differences
+
+The body-difference path now accepts independently read original and target
+routine models, including Schema XML snapshots. When a body change also changes
+the executable definition or supplemental catalog DDL, both snapshots must
+verify their own modeled body against their own catalog definition. Their
+headers are compared after replacing the body and its dollar tag with a common
+marker. A target executable definition must also agree with its supplemental
+catalog DDL when both are present.
+
+If these checks succeed, the definition change is treated as part of the body
+change and the existing replacement generator retains the original header.
+This supports SQL and PLpgSQL functions with or without a separately stored
+executable definition, and supported PostgreSQL/YSQL 15 procedures. A known
+pair of verified before/after snapshots can generate both forward and reverse
+body operations without re-reading between those operations. The actual target
+must still match the original snapshot for the chosen direction; there is no
+live drift detection or execution transaction guarantee.
+
+Header comparison is deliberately exact after body/tag replacement and outer
+whitespace normalization. COST, SET, signature, language and other header
+changes mixed into the body change fail before any SQL is returned. Even modeled
+attribute changes that change the catalog header should be migrated separately
+when using independent snapshots. This path does not interpret arbitrary CREATE
+DDL or merge unrelated definition edits. Existing clone-and-edit body changes
+continue to use their unchanged original catalog template.
+
+Local YSQL 11/15 tests independently read and XML-round-trip before and after
+SQL/PLpgSQL function states, generate forward and reverse SQL, invoke the
+resulting routines, and verify OID/owner/ACL/SET/COST preservation. YSQL 15 also
+invokes a procedure after both directions; YSQL 11 asserts its procedure boundary.
+Actual catalog snapshots mixing a body change with COST or search_path changes
+are rejected. Unit tests additionally reject a target definition inconsistent
+with its supplemental DDL and cover bodies without a separate definition.
+Public APIs, configuration and Schema XML formats are unchanged; implementation
+changes are confined to the PostgreSQL dialect module and shared local YSQL tests.
+
+
+Final snapshot-difference regression passed 885 ordinary tests (one optional
+external database case skipped) and all 61 compatibility cases per local YSQL
+engine (122 real-engine passes), with zero failures/errors. Yugabyte assembly
+also succeeded. The initial real-engine failure was a test fixture replacing a
+digit in a UUID schema name, corrected before final regression. No external or
+production database was accessed, and no generated files were intentionally edited.
+
+Executed final command:
+
+```powershell
+.\gradlew.bat :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
+```
+
+
+## Whole-schema and data acceptance on YSQL
+
+The standard Schema CREATE registry is exercised on both local YSQL 11 and 15
+through metadata reading, Schema XML serialization including rows, schema drop,
+recreation, parent-first COPY and UPSERT. The fixture combines non-public-schema
+enums and domains, sequences, primary/foreign keys, SQL and trigger functions,
+a dependent view, triggers and table/column comments. Data assertions cover
+Unicode and commas, exact decimals, binary data, arrays with null elements,
+empty arrays and null values. Recreated triggers, foreign keys and domain
+checks are executed, and metadata is read again after restoration.
+
+This acceptance path exposed three defects that are fixed:
+
+- Schema CREATE now retains its declared collection order and isolates each
+  factory's optional order extensions. Types and domains precede functions,
+  then tables, views and triggers. This is not a general dependency graph solver.
+- PostgreSQL column metadata resolves custom type OIDs to qualified names,
+  allowing enum/domain columns outside the search path to be recreated. Existing
+  version-specific catalog queries remain unchanged; this also benefits YSQL.
+- Constraint column resolution copies its input list before resolving references.
+  XML constraint parsing previously overwrote table-column ordinals and could
+  silently lose row values. The fix also preserves self-assignment and the
+  ownership of supplied table columns for all dialects.
+
+Public APIs, configuration and Schema XML formats are unchanged. The affected
+implementation modules are sqlapp-core and sqlapp-core-postgres, with acceptance
+coverage in sqlapp-core-dialect-test. The real-engine verification targets YSQL
+11/15; PostgreSQL uses the shared metadata implementation but was not separately
+verified on a real PostgreSQL server in this batch.
+
+This fixture deliberately copies parent rows before child rows. Arbitrary cyclic
+object dependencies, automatic owner/ACL replay, sequence high-water restoration,
+YCQL, distributed topology and performance qualification are outside this
+acceptance claim. Tests use disposable local containers and UUID schemas only;
+no external or production database is accessed.
+
+Final acceptance regression passed 2,738 ordinary tests (one optional external
+case skipped) and 62 cases on each local YSQL engine (124 real-engine passes),
+with zero failures/errors. Yugabyte assembly succeeded. Focused tests first
+reproduced and then verified the fixes for CREATE order, custom column types and
+constraint XML row loss. No generated files were intentionally edited.
+
+Executed final command:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-db2:test :sqlapp-core-firebird:test :sqlapp-core-h2:test :sqlapp-core-hsql:test :sqlapp-core-informix:test :sqlapp-core-mariadb:test :sqlapp-core-mdb:test :sqlapp-core-mysql:test :sqlapp-core-oracle:test :sqlapp-core-phoenix:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-saphana:test :sqlapp-core-spanner:test :sqlapp-core-sqlite:test :sqlapp-core-sqlserver:test :sqlapp-core-sybase:test :sqlapp-core-virtica:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
+```
+
+
+## YSQL placement metadata and CREATE DDL
+
+The Yugabyte module now owns placement metadata readers and CREATE factories
+for YSQL 11/15. TableSpace replica-placement JSON and owner, table/index
+Tablespace references, explicit Colocation, grouped Hash and Range keys,
+read-time tablet counts and range boundaries survive XML and executable CREATE.
+The shared Schema model, PostgreSQL implementation, public configuration entry
+points and XML formats are unchanged; the new `YSQL_*` specifics are additive.
+See the [key reference and target overrides](../sqlapp-core-yugabyte/README.md#placement-metadata-and-create-ddl).
+
+Table/index properties come from `yb_table_properties`; range boundaries come
+from `yb_get_range_split_clause`. TableSpace options are read as JDBC arrays
+rather than split on commas inside JSON. Primary-key indexes share table storage,
+so their physical settings are obtained from the table rather than the virtual
+index relation. UNIQUE constraints with placement snapshots are created through
+a placed unique index followed by `ALTER TABLE ... UNIQUE USING INDEX`.
+This retains their independent split policy and normal constraint identity.
+Foreign keys follow those UNIQUE attachments, including self-references.
+Generation does not mutate the source model. PostgreSQL factory registration
+remains unchanged and YSQL version-specific factories inherit their nearest
+PostgreSQL counterparts to retain INCLUDE/NULLS NOT DISTINCT behavior.
+
+The generated colocated-table path checks that the target database is colocated.
+It fails explicitly on an incompatible target. User Tablespace creation requires
+placement JSON; invalid/mutually exclusive settings fail before returning SQL.
+Target regions/zones, owners and Tablespaces must exist as appropriate; callers
+can edit existing model references/specifics before generation. There is no
+cluster provisioning or automatic topology-name translation.
+
+Split counts and boundaries reflect read-time layout, not necessarily the
+original creation settings. Runtime node/tablet identities and distinct custom
+tablegroups are not replayed. SQL-partitioned parents have no DocDB storage and
+are excluded from these placement reads; partition hierarchy recreation and
+placement remain outside this new coverage. Automatic ALTER/movement, multi-node
+placement/failover and performance are not part of the implementation.
+
+Official syntax references: [CREATE TABLE](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_table/),
+[CREATE INDEX](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_index/),
+[CREATE TABLESPACE](https://docs.yugabyte.com/stable/api/ysql/the-sql-language/statements/ddl_create_tablespace/).
+Local tests use only owned disposable containers, UUID schemas/tablespaces and a
+UUID colocated database. No external/production database is accessed.
+
+Validation on 2026-10-10: YSQL 11 and 15 each passed all 64 real-engine cases
+(128 passes total). The two added cases cover placement XML/CREATE rereading,
+replica policies, key/split/index storage, UNIQUE attachment with a self-referencing
+foreign key, incompatible Colocation targets and explicit Colocation opt-out.
+The Yugabyte module passed 10 tests with one optional external test skipped.
+PostgreSQL (256), command (543) and Gradle plugin (81) test tasks were up-to-date;
+their retained results have zero failures/errors. Assembly succeeded. Initial
+focused runs exposed and resolved primary-index storage, TABLESPACE OWNER syntax,
+Range ASC defaults and UNIQUE backing-index creation issues before this final run.
+
+```powershell
+.\gradlew.bat :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-yugabyte:assemble :sqlapp-core-dialect-test:yugabyte11CompatibilityTest :sqlapp-core-dialect-test:yugabyte15CompatibilityTest --continue --console=plain
+```
+
+## YSQL follow-up backlog
+
+Recorded on 2026-10-10. The agreed YSQL 11/15 implementation scope is complete;
+the following are separate future work, not release blockers for that scope.
+The verified baseline remains the two documented single-node container builds.
+
+- Multi-node qualification: verify region/zone replica and leader placement,
+  node loss/failover, transaction retries and sustained COPY/UPSERT workloads.
+  Record topology, build versions, failure scenarios and measured results before
+  claiming distributed performance or availability guarantees.
+- Target placement mapping: optionally map source cloud/region/zone, Tablespace
+  and owner names to explicit target policies. Preserve the existing direct
+  Schema/Specifics editing path and reject ambiguous mappings.
+- Existing-object placement changes: plan ALTER/repartition or data movement
+  separately from CREATE, including supported version boundaries, operational
+  impact, failure recovery and post-change verification.
+- Advanced storage recreation: investigate SQL partition hierarchy/placement
+  and custom tablegroups/colocation groups. Runtime node/tablet identities must
+  not become portable schema settings.
+- Broader compatibility qualification: expand release coverage beyond the pinned
+  YSQL 11/15 builds when needed; automatic ACL/owner replay and transactional DDL
+  guarantees require their own design and verification.
+
+Resume with a separately selected scope and acceptance criteria. No external or
+production database access is implied by this backlog.
+
+## CockroachDB dedicated dialect
+
+Added `sqlapp-core-cockroach`, service and JPMS registration, publication
+aggregation and dedicated release resolution for CockroachDB 24.3+.
+The PostgreSQL JDBC product label is disambiguated using the release banner.
+No shared core implementation or Schema XML format change was required.
+
+Dedicated readers preserve complete CREATE definitions and supplementary model
+metadata. Tables, constraints, indexes, views, sequences, enum types and
+SQL/PLpgSQL functions round-trip through standard Schema XML/CREATE paths.
+Function overload identity uses argument signatures rather than runtime OIDs;
+recreation preserves these identities on both qualified releases.
+COPY reuses PostgreSQL streaming with owned-transaction rollback. UPSERT uses
+shared key planning and JDBC batching with ON CONFLICT, avoiding the unsupported
+PostgreSQL CTAS WITH NO DATA staging path. SQLSTATE 40001 remains visible without
+replaying a consumed input stream.
+
+Executed qualification:
+
+```shell
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-cockroach:assemble :sqlapp-core-cockroach:generatePomFileForMavenJavaPublication :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+Result: **7 module tests and 16 real-engine tests per baseline (32 real-engine
+passes)** on owned local `cockroachdb/cockroach:v24.3.0` and
+`cockroachdb/cockroach:v25.4.0` containers. Coverage includes typed Unicode,
+UUID, binary, decimal, JSON and built-in array COPY/UPSERT; hidden keys,
+hash sharding/families, enum escaping, function overloads, atomic failures,
+caller rollback, serialization failure, checkpoint/resume and chunked loads.
+No external or production database was accessed. Assembly and publication POM
+generation succeeded; artifact coordinates, required publication metadata and
+core/PostgreSQL dependencies were checked. Documentation validation passed
+659 local links and 59 reachable pages, plus four checker tests.
+
+Regression command:
+
+```shell
+./gradlew :sqlapp-core-cockroach:assemble :sqlapp-core-cockroach:test :sqlapp-core-postgres:test :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest --continue --console=plain
+```
+
+Result: YSQL 11/15 each passed 64 real-engine cases again (**128 passes**).
+The PostgreSQL (256), Yugabyte (10 plus one optional external skip), command
+(543) and Gradle plugin (81) module results remained successful through
+up-to-date tasks. Cockroach module tests passed seven cases. After switching
+function identities to argument signatures, assembly and the complete
+Cockroach matrix were rerun successfully (16 cases on each image).
+No external database test ran. No generated artifact was staged by this
+qualification.
+
+### CockroachDB follow-up backlog
+
+- Multi-node failover, contention, whole-transaction retries and performance.
+- Cross-topology region mapping, arbitrary zone configurations and multi-region runtime qualification.
+- ACL/owner replay, procedures/triggers/domains/materialized views and broader
+  catalog coverage; sequence high-water and arrays of types other than enums.
+- Advanced ALTER/diff and cross-object dependency planning, cyclic foreign-key
+  recreation and transactional DDL guarantees. See the following ALTER/DROP
+  qualification for the ordinary modeled changes now supported.
+- Additional release qualification beyond the two pinned single-node images.
+
+See [module usage and boundaries](../sqlapp-core-cockroach/README.md).
+
+## CockroachDB ALTER, DROP and Schema differences
+
+The dedicated 24.3+ registry now maps modified Schema, table, index, function,
+view, enum Type and sequence objects to dedicated ALTER factories. Public
+entry points and Schema XML remain unchanged. CREATE still prefers complete
+catalog definitions; table ALTER consumes modeled components, while function
+and view replacements consume complete target definitions.
+
+Qualified changes: ordinary column add/drop/type/default/nullability and
+quoted rename, table rename, CHECK/UNIQUE/FK constraints, table-scoped index
+replacement/drop/STORING, table/column/index comments and comment clearing,
+exact function overload replacement/drop, dependent view replacement, ordered
+enum additions and label rename, sequence configuration without restart, and
+whole-Schema additions/dependency-ordered deletions with metadata/data checks.
+The readers now retain column comments and sequence configuration fields.
+
+UNIQUE removal uses DROP INDEX on the owning table. No implicit CASCADE is
+added. Unsupported primary-key/storage/locality/schema moves, malformed or
+unsupported enum transformations, stale index definitions and sequence
+restart/CYCLE are rejected rather than silently ignored. Arbitrary dependency
+cycles and concurrent key/reference changes remain outside qualification.
+DDL can apply partially; execution errors must be surfaced and the Schema
+re-read before planning a retry.
+
+The shared PostgreSQL table ALTER comment handling was also corrected:
+property differences refer to their owning Column/Index/Constraint, comment
+clearing emits IS NULL once, and comment-only changes generate comments without
+unnecessary column ALTER or index/constraint drop/recreation. A regression
+covers all four comment kinds and their removal. No shared core or dependency
+version change was required.
+
+Executed focused/matrix command:
+
+```shell
+./gradlew :sqlapp-core-postgres:test --tests '*PostgresAlterTableSqlFactoryTest' :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+Result: **12 Cockroach module tests**, **9 PostgreSQL ALTER-table tests** and
+**27 real-engine cases on each pinned CockroachDB image (54 passes)** succeeded.
+The full matrix includes the preceding CREATE/COPY/UPSERT/checkpoint tests.
+Earlier compilation/test failures were corrected; final matrix execution used
+one Gradle invocation after overlapping invocations had conflicted over test
+result files. The engine checks used only owned disposable local containers.
+
+Final regression command:
+
+```shell
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-cockroach:assemble :sqlapp-core-yugabyte:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:yugabyteCompatibilityTest --continue --console=plain
+```
+
+BUILD SUCCESSFUL. PostgreSQL: 257 passes; Yugabyte module: 10 passes and one
+optional external-database test skipped; command: 543 passes; Gradle plugin:
+81 passes. Yugabyte real-engine compatibility: 64 passes on each baseline
+(128 total). Cockroach assembly succeeded. Only owned local containers were used.
+
+A final rename safeguard rejects Schema delete/add pairs with the same table
+ID. Rename intentionally through `originalTable.diff(targetTable)`; without
+stable IDs, review name-based Schema deletion/addition plans explicitly.
+The added regression brings the Cockroach module suite to 13 passing tests.
+
+Final safeguard verification:
+
+```shell
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroachCompatibilityTest --console=plain
+```
+
+BUILD SUCCESSFUL: 13 module tests and 27 real-engine cases on each of 24.3.0
+and 25.4.0 (54 passes). Documentation validation passed: 659 local links,
+59 reachable pages, closed code fences, and four validator unit tests.
+Generated Cockroach build artifacts were restored after recording results.
+
+## CockroachDB enum arrays
+
+The 24.3+ column reader resolves enum scalar and array element identities
+through `pg_type.typelem` and namespace joins. It keeps fully quoted,
+schema-qualified type names and models enum elements as OTHER, preventing
+built-in type names such as `text` from overriding a user-defined enum.
+Built-in arrays retain their existing type mapping. This adds one catalog
+query per column-reader invocation rather than a query per column.
+
+Public APIs, dependencies and Schema XML format are unchanged. The owning
+Cockroach dialect and opt-in dialect-test module are the only code changes.
+The two new real-engine cases cover:
+
+- Quoted/underscore-prefixed enum names outside search_path, full Schema XML
+  and saved-definition recreation, plus model-only table CREATE.
+- COPY and UPSERT updates with comma, quote, Unicode, empty and literal NULL
+  labels, SQL NULL arrays, empty arrays and NULL elements.
+- Schema-qualified enums named like a built-in type, two schemas containing
+  the same enum name, and separation from ordinary TEXT arrays.
+- Invalid enum array data surfacing SQLExceptions, executor-owned rollback
+  and auto-commit restoration for COPY and UPSERT.
+
+Other user-defined type families and multidimensional arrays remain outside
+qualification. CockroachDB's [24.3 ARRAY reference](https://www.cockroachlabs.com/docs/v24.3/array)
+describes one-dimensional arrays and explicitly excludes nested arrays.
+
+Executed qualification:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*recreatesAndBulkLoadsQuotedEnumArraysOutsideSearchPath' --console=plain
+./gradlew :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*distinguishesEnumTypesWithBuiltinNamesAndRejectsInvalidArrayData' --console=plain
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+Both focused tests passed, followed by BUILD SUCCESSFUL for the full suite:
+13 module passes and 29 passes per pinned engine (58 real-engine passes).
+No test failed or was skipped. Tests used owned disposable local containers
+and UUID schemas only; no external database was accessed. No new shared-code
+changes were made in this batch, so PostgreSQL/YSQL/command/plugin regression
+results above were not re-run. Generated Cockroach build changes were restored;
+source changes from the preceding ALTER/DROP batch were preserved.
+
+Documentation validation passed (659 local links, 59 reachable pages, closed
+code fences and four validator unit tests), as did source/document whitespace
+checks.
+
+## CockroachDB placement qualification and completion boundary
+
+The 24.3+ dialect now reads Table `COCKROACH_LOCALITY` and Catalog primary,
+additional/secondary region and survival-goal specifics. Shared Schema XML
+retains them without a format change. Table CREATE honors explicit locality
+over saved LOCALITY only, retaining the body/comments; modeled CREATE appends
+the locality clause. Catalog CREATE configures an existing selected database
+before creating its contents. It does not create/select databases or remove
+existing regions. Region names are quoted; incomplete/invalid configuration
+fails with actionable errors. See the [specifics reference](../sqlapp-core-cockroach/README.md#placement-specifics).
+
+The engine-owned public region enum is recreated through PRIMARY REGION,
+not through duplicate CREATE TYPE. Non-regional user types remain visible.
+Cockroach Schema CREATE now honors the shared createIfNotExists option,
+allowing Catalog contents to reuse public while preserving strict mode.
+No shared module, dependency version or existing public method was changed.
+
+The requested baseline CockroachDB work is complete after this placement
+batch. Remaining work is deliberately separate: multi-node failover,
+contention/retry/performance, cross-topology translation, arbitrary zone
+configuration, multi-region execution of additional/secondary regions and
+REGION-failure goals, ACL/owner replay, broader object families, sequence
+high-water snapshots, advanced dependency/ALTER planning and general
+transactional DDL guarantees. These do not prevent normal use within the
+qualified CREATE/ALTER/DROP, metadata/XML and bulk/checkpoint scope.
+
+Executed placement qualification:
+
+```shell
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*CockroachDialectTest' --tests '*preservesDatabaseAndTablePlacement' --tests '*preservesOrdinaryCatalogAndUserTypeWithoutPlacement' --continue --console=plain
+./gradlew :sqlapp-core-cockroach:test :sqlapp-core-cockroach:assemble :sqlapp-core-dialect-test:cockroachCompatibilityTest --continue --console=plain
+```
+
+The focused run passed 16 module tests and both placement/ordinary-database
+engine cases. The final full run was BUILD SUCCESSFUL: **16 module passes**,
+**31 real-engine passes on each pinned 24.3.0 and 25.4.0 image (62 total)**,
+and successful assembly. No final failures or skips. All database changes
+were confined to owned disposable containers, UUID databases/schemas and a
+single declared region/zone. No external database was accessed.
+
+The initial definition-list compilation mismatch, JDBC setCatalog test setup
+and duplicate engine-owned region-type replay were corrected. One intermediate
+container run failed with a transient wall-clock-offset error; the clean
+focused rerun and final matrix passed without changing clock safety settings.
+Additional-region/secondary/SURVIVE REGION SQL and invalid configuration are
+unit-tested; their multi-region execution is not claimed. Shared PostgreSQL,
+YSQL, command and plugin tests were not rerun because this batch changes only
+the Cockroach dialect and its opt-in engine tests.
+
+Documentation checks passed: 660 local links, 59 reachable pages, closed code
+fences and four validator unit tests. Source/doc whitespace checks passed.
+Tracked generated Cockroach build files were restored after recording results;
+prior source changes remain intact. CockroachDB baseline work is complete at
+the user's requested completion boundary, with the backlog above retained.
+
+## Aurora PostgreSQL implementation boundary
+
+The Aurora dialect uses PostgreSQL engine 14–17 readers and factories, with
+connection-specific AWS marker/function identification and dedicated bulk
+provider registration. Existing PostgreSQL, YSQL and Cockroach identities are
+preserved. No existing public API or configuration format is changed; the
+new artifact depends on PostgreSQL to avoid duplicating its implementation.
+
+The local matrix checks upstream PostgreSQL SQL and JDBC behavior only, not
+Aurora. The optional `auroraExternalTest` is excluded from all default/Docker
+and matrix tasks, requires explicit destructive-test opt-in, and was not run.
+No external database or AWS resource was accessed. See the
+[Aurora guide](../sqlapp-core-aurora-postgres/README.md) for remaining qualification work.
+
+Executed Aurora-dialect validation (2026-10-10, Java 21 / repository wrapper):
+
+```shell
+./gradlew :sqlapp-core-aurora-postgres:test --tests '*AuroraDialectTest' --console=plain
+./gradlew :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest --continue --console=plain
+./gradlew :sqlapp-core-aurora-postgres:test :sqlapp-core-aurora-postgres:assemble :sqlapp-core-postgres:test --continue --console=plain
+./gradlew :sqlapp-core-postgres:test --rerun :sqlapp-core-dialect-test:compileDockerTestJava --console=plain
+```
+
+Final results: **7 Aurora module passes**, **4 upstream compatibility passes
+on each PostgreSQL 14.22/15.17/16.13/17.9 image (16 total)**, successful Aurora
+JAR/sources/Javadoc assembly, **257 PostgreSQL regression passes** explicitly
+rerun, and successful compilation of the optional external-test fixture.
+No final failures or skips. The first matrix attempts exposed a Gradle task
+closure error and a checked-exception issue in the test fixture; both were
+corrected before the successful full matrix. The final external preflight was
+compiled after adding validation of Aurora identity before any schema writes.
+No external Aurora execution is claimed. New Javadoc reports missing-comment
+warnings; existing Gradle deprecation warnings remain.
+
+The change adds `sqlapp-core-aurora-postgres`, integration test scaffolding, settings /
+publication aggregation and documentation. Existing shared production code,
+JDBC dependency versions and configuration formats remain unchanged. Local
+PostgreSQL test containers were disposable. Tracked Cockroach build output
+regenerated as a compilation dependency was restored after recording results;
+prior Cockroach and PostgreSQL source changes were preserved.
+
+Local POM and Gradle module metadata generation also passed:
+
+```shell
+./gradlew :sqlapp-core-aurora-postgres:generatePomFileForMavenJavaPublication :sqlapp-core-aurora-postgres:generateMetadataFileForMavenJavaPublication --console=plain
+```
+
+The POM exposes core and PostgreSQL dependencies at the existing project
+version; no publication or upload was performed. Documentation validation
+passed (665 local links, 59 reachable pages, closed code fences), together
+with four documentation-validator unit tests. Source/doc whitespace checks
+passed; no generated build output is intentionally included in the change.
+
+AlloyDB validation commands were executed with Java 21 and the repository
+wrapper on Windows (commands shown with the portable wrapper name):
+
+```shell
+./gradlew :sqlapp-core-alloydb:test --tests '*AlloyDBDialectTest' --console=plain
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-dialect-test:alloydb16CompatibilityTest --continue --console=plain
+./gradlew :sqlapp-core-postgres:test --tests '*PostgresDropTableRegistrationTest' :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*generatedAlterAndDropExecute' --tests '*metadataAndGeneratedDdlRecreateTable' --continue --console=plain
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-alloydb:test :sqlapp-core-aurora-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-cockroach:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-alloydb:assemble :sqlapp-core-alloydb:generatePomFileForMavenJavaPublication :sqlapp-core-alloydb:generateMetadataFileForMavenJavaPublication :sqlapp-core-dialect-test:alloydbCompatibilityTest --continue --console=plain
+```
+
+The broad run was repeated after correcting the numeric-array test's API
+usage. The implementation did not change between the successful Omni matrix
+and that final confirmation. No external AlloyDB or Aurora test was executed.
+The local probe container and its anonymous volume were removed. The new
+module ignores its generated output; tracked Cockroach build output regenerated
+by dependency compilation/tests is restored after recording test counts.
+Existing staged/unstaged source work is preserved; no publication/upload,
+commit, dependency-version or local-setting change is performed.
+
+Final AlloyDB confirmation was **BUILD SUCCESSFUL** (2026-10-10):
+
+| Verification | Passed | Skipped | Failures |
+|---|---:|---:|---:|
+| AlloyDB unit/module | 7 | 0 | 0 |
+| Official Omni 15.17.0 | 8 | 0 | 0 |
+| Official Omni 16.8.0 | 8 | 0 | 0 |
+| Official Omni 17.9.0 | 8 | 0 | 0 |
+| Upstream PostgreSQL 17.9 control | 8 | 0 | 0 |
+| PostgreSQL module regression | 259 | 0 | 0 |
+| Aurora module regression | 7 | 0 | 0 |
+| YSQL module regression | 10 | 1 | 0 |
+| Cockroach module regression | 16 | 0 | 0 |
+| Command regression | 543 | 0 | 0 |
+| Gradle plugin regression | 81 | 0 | 0 |
+
+The one existing YSQL skip is
+`YugabyteMetadataRoundTripTest.readsAndRecreatesTableFromSchemaModel`; YSQL and
+Cockroach real-engine matrices were not rerun in this batch. The final broad
+confirmation reuses unchanged successful Gradle task results where applicable.
+Omni/ordinary-PostgreSQL tests were also rerun successfully in that final build.
+Aurora/managed AlloyDB real-service execution remains unverified.
+
+AlloyDB assembly, JAR/source/Javadoc attachments, local publication POM and
+Gradle module metadata generation passed. The JAR contains four SPI descriptors
+and no deferred PostgreSQL 18 class. The POM exposes core and PostgreSQL at the
+existing project version. Documentation link/reachability/fence checks and four
+validator unit tests passed; source/doc whitespace checks passed. Existing
+Gradle deprecation warnings remain. No generated build output is intentionally
+included in this change.
+
+Modified production modules are `sqlapp-core-alloydb` (new) and
+`sqlapp-core-postgres` (one DROP factory registration). The other changes are
+integration-test scaffolding, settings/publication aggregation and guides.
+Existing public APIs and configuration formats are preserved. The remaining
+cloud/columnar/vector/snapshot-execution/performance/failover limitations are
+retained in the AlloyDB guide.
+
+
+### AlloyDB Omni SCD2 follow-up (2026-10-10)
+
+The inherited set-based snapshot executor is now exercised against official
+Omni 15.17.0, 16.8.0 and 17.9.0, plus PostgreSQL 17.9 as the control. The new
+shared case creates its history table through the Schema model and CREATE
+factory, and verifies inserts, changed/missing-row expiration, unchanged rows,
+history timestamps and current flags. Caller rollback, a commit-time guard
+failure and duplicate source rejection are followed by successful retries.
+No runtime implementation or public API changes were needed.
+
+Executed with Java 21 and the repository wrapper:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*snapshotHistoryAndFailureRespectTransactionBoundaries' --console=plain
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-dialect-test:alloydbCompatibilityTest --console=plain
+```
+
+The final aggregate was BUILD SUCCESSFUL: all 9 cases on each Omni image
+(27 total), all 9 PostgreSQL control cases, and the 7 AlloyDB module tests.
+An initial attempt could not locate the stopped local Docker daemon; Rancher
+Desktop was started and the tests rerun. An initial fixture with unspecified
+LONGVARCHAR length generated invalid varchar(0); using explicit VARCHAR(100)
+keeps this snapshot test independent of that separate PostgreSQL generator
+follow-up. Managed AlloyDB/external database tests were not executed.
+Columnar/ScaNN behavior and other vendor-specific scope remain deferred in the
+[AlloyDB guide](../sqlapp-core-alloydb/README.md).
+
+
+### PostgreSQL unbounded character DDL follow-up (2026-10-10)
+
+The PostgreSQL SQL builder now handles an unbounded `LONGVARCHAR` like the
+existing unbounded `VARCHAR` path, generating `VARCHAR` without a length.
+An explicit `text` name on either type generates `TEXT`, including arrays;
+explicit VARCHAR lengths retain the previous behavior. The fix is in the
+PostgreSQL dialect and inherited by compatible families; no resolver, reader,
+public API or configuration format changed. Unit cases cover PostgreSQL
+8/11/15/18 generation, lengths, TEXT, arrays and the public CREATE factory.
+See the [PostgreSQL character type specification](https://www.postgresql.org/docs/current/datatype-character.html).
+
+The SCD2 fixture was restored to its original length-free LONGVARCHAR model.
+A new shared integration case executes generated CREATE and stores/reads
+60,000-character Japanese values, unbounded VARCHAR arrays with empty/null
+elements and explicit TEXT on Omni 15.17.0/16.8.0/17.9.0 and PostgreSQL 17.9.
+The earlier varchar(0) follow-up is resolved for these model types.
+
+Validation commands (Java 21, repository wrapper):
+
+```shell
+./gradlew :sqlapp-core-postgres:test --tests '*PostgresCharacterTypeTest' --console=plain
+./gradlew :sqlapp-core-postgres:test :sqlapp-core-alloydb:test :sqlapp-core-aurora-postgres:test :sqlapp-core-yugabyte:test :sqlapp-core-cockroach:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:alloydbCompatibilityTest --continue --console=plain
+python docs/development/check_documentation.py
+```
+
+The targeted class passed both cases. The real-engine matrix passed all
+10 cases per Omni image (30 total) and all 10 PostgreSQL controls. Module
+results: PostgreSQL 261 passed, AlloyDB 7, Aurora PostgreSQL 7, YSQL 10 with
+one pre-existing skipped case, CockroachDB 16, command 543 and Gradle plugin
+81. The aggregate was BUILD SUCCESSFUL in 4m 21s. Documentation validation
+passed 668 local links and 59 reachable pages.
+No external/cloud database tests or real YSQL/CockroachDB engine matrices
+were run. Columnar/ScaNN work remains deferred; this is a character DDL fix.
+
+
+### AlloyDB ScaNN table indexes and set-based metadata (2026-10-10)
+
+`sqlapp-core-alloydb` now supplies version-compatible catalog/schema/table
+reader paths and index CREATE factories for engines 15/16/17. ScaNN keys,
+schema-qualified operator classes and creation options survive Index specifics
+and Schema XML; shared IndexType.Vector and vectorDistanceType are populated.
+New vector indexes need only a column and supported distance; SQL specifics
+are optional advanced overrides. Ordinary indexes continue through PostgreSQL
+factories. No existing API or configuration was removed, and no PostgreSQL
+reader/resolver was changed. New reader/factory classes are additive exports.
+
+The initial supplemental reader performed per-index SELECTs. It was replaced
+before completion with one set-based vendor catalog query scoped by the same
+schema/table/index filters as the base reader. An actual JDBC statement-count
+test checks two SELECTs for one and six indexes, and one SELECT for a regular
+B-tree-only selection. AGENTS.md now requires all dialect metadata readers to
+avoid N+1 SELECTs, with documented exceptions only for exceptionally difficult
+or unavailable bulk retrieval. This adds a repository-wide rule; it does not
+claim a full audit/refactor of every pre-existing dialect reader.
+
+The official disposable Omni fixture installs vector/alloydb_scann locally,
+creates cosine/L2/dot-product indexes, a typed expression/partial index with
+FLAT quantization and an index generated from the shared model. It reads
+metadata, round-trips XML, executes generated DROP/CREATE and compares
+pg_get_indexdef before/after. Ordinary B-tree metadata is a control. Runtime
+readers and SQL factories do not install extensions or change server flags.
+See the [AlloyDB guide](../sqlapp-core-alloydb/README.md) for specifics and limits.
+
+Targeted ScaNN unit and Omni 16 tests were run before the full matrix. Initial
+test harness compilation errors (collection/reader APIs) and a missing
+ReaderOptions on a standalone test reader were corrected before rerunning.
+No failures were silently ignored.
+
+Final validation commands (Java 21, repository Gradle Wrapper):
+
+```shell
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-alloydb:assemble :sqlapp-core-dialect-test:alloydbCompatibilityTest :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+python docs/development/check_documentation.py
+```
+
+Managed AlloyDB, external databases, materialized-view ScaNN metadata, named
+tablespace execution, vector performance/recall and columnar configuration
+were not qualified by this batch. The manually started ScaNN probe container
+is disposable and removed with its anonymous volume after verification.
+
+
+The final confirmation was BUILD SUCCESSFUL in 2m 10s: all 10 AlloyDB module
+cases, all 11 cases on each of the three Omni images (33 total), and all
+10 PostgreSQL control cases passed with zero failures/skips. AlloyDB assembly,
+sources/Javadoc and packaged scannIndexes.sql were verified. Command and Gradle
+plugin regression tasks were UP-TO-DATE (their prior results remain 543 and 81
+passed); they were not re-executed in this batch. Documentation validation
+passed 669 local links, 59 reachable pages and closed code fences.
+
+The first final-matrix attempt found that Omni 15 requires 10,000 or more rows
+for the new-model index with default ScaNN options; the 200-row fixture was
+insufficient. The fixture was increased to 10,000 rows, engine defaults were
+left intact and the complete matrix was rerun successfully. This boundary is
+recorded in the guide. Explicit num_leaves=1 test indexes also work with smaller
+populations. No server error is suppressed or converted to a silent fallback.
+
+
+### AlloyDB Omni persistent columnar target configuration (2026-10-10)
+
+`AlloyDBColumnarConfiguration` uses the canonical Catalog/Table model to read,
+edit and plan persistent google_columnar_engine.relations settings. AlloyDB
+15/16/17 catalog readers enrich Table specifics from the existing batch-read
+Catalog.settings: this adds zero SELECTs and no per-table metadata queries.
+Engine enablement, memory and auto-columnarization flags remain in the inherited
+settings model/XML. Runtime column-store cache contents are not exported as
+configuration. The public API addition does not remove existing API/configuration
+and introduces no dependencies or changes to PostgreSQL itself.
+
+Table specifics alloydb.columnar.columns stores named columns, '*' for all
+columns or '-' for explicit removal. The nonempty removal marker is necessary
+because existing Schema XML omits empty specifics values. An absent key preserves
+the original instance selection. Planning requires a captured instance-wide
+baseline, merges modeled changes while preserving unmodeled tables/other
+schemas/databases, and returns original/desired relations and explicit SQL
+operations. Ordinary CREATE TABLE does not apply instance settings. Generation
+never executes SQL or enables/restarts an instance. See the
+[AlloyDB guide](../sqlapp-core-alloydb/README.md) for usage and boundaries.
+
+The SQL application path targets explicitly administered Omni single servers:
+ALTER SYSTEM for the relations flag and pg_reload_conf, outside transactions.
+Managed cloud flag management, orchestrator provisioning and automatic
+configuration execution are not implemented. Re-read the baseline before
+application; generated SQL is not an optimistic concurrency lock. The tested
+flag grammar accepts case-sensitive ASCII letters/digits/underscores, but
+rejects SQL quotes and punctuation. A disposable Omni 16 probe demonstrated
+that a quoted flag is stored but rejected by the background population parser;
+this library fails clearly instead of emitting such unsupported names.
+
+The dedicated integration fixture enables columnar processing with 128 MiB
+memory only in an owned disposable container, reads a filtered Catalog,
+retains an unread table, round-trips XML and executes generated settings SQL.
+It restarts that container and verifies three selected columns across both
+tables. Docker/Testcontainers inspect metadata is refreshed after restart
+because dynamic published ports can change; the initial cached-port test
+attempt failed to reconnect even though the columns had populated, and the
+fixture was corrected before the matrix was rerun.
+
+The new matrix also exposed an older ScaNN test assumption: approximate search
+can return a different first row. Index DDL equivalence remains checked for all
+five ScaNN variants; the exact nearest-neighbor result control now disables
+index/bitmap scans instead of asserting exact recall from an ANN index.
+
+Validation commands (Java 21, repository wrapper):
+
+```shell
+./gradlew :sqlapp-core-alloydb:test --tests '*AlloyDBColumnarConfigurationTest' --console=plain
+./gradlew :sqlapp-core-dialect-test:alloydb16CompatibilityTest --tests '*persistentColumnarSelectionSurvivesXmlAndRestart' --console=plain
+./gradlew :sqlapp-core-alloydb:test :sqlapp-core-alloydb:assemble :sqlapp-core-dialect-test:alloydbCompatibilityTest :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+python docs/development/check_documentation.py
+```
+
+No external or managed database was accessed; no host settings, production
+configuration, dependency versions or ordinary Omni fixture flags were changed.
+Materialized-view target enrichment, arbitrary quoted/Unicode identifiers,
+cache removal/refresh behavior, unsupported-type qualification, performance
+and managed-cloud execution remain outside the qualified scope.
+
+Final verification: the aggregate build passed in 3m 5s. AlloyDB module tests
+passed 16/16; official Omni 15.17.0, 16.8.0 and 17.9.0 each passed 12/12
+(36 container tests); the PostgreSQL control passed 10/10, with no failures
+or skips. Command and Gradle plugin test tasks were UP-TO-DATE in this run.
+The targeted columnar unit class passed 6/6 after the XML clear marker fix:
+empty specifics values are omitted by XML, so explicit removal uses `-`.
+Documentation validation passed: 670 local links and 59 current pages.
+Only disposable local databases were used and the owned probe was removed.
+
+### PostgreSQL-family metadata audit fixes (2026-10-11)
+
+The audit fixes stay in `sqlapp-core-postgres`, `sqlapp-core-yugabyte` and
+`sqlapp-core-cockroach`; regression tests also cover the directly inheriting
+Aurora PostgreSQL and AlloyDB dialects. Shared Schema APIs, XML format,
+dependencies and product resolver ranges are unchanged.
+
+PostgreSQL 10+ sequence configuration is now read from `pg_catalog.pg_sequences`
+in one filtered query, including integer type, bounds, increment, cache, cycle,
+comments and nullable last value. The previously unused `sequences100.sql`
+contained `pg.sequences`; it is corrected and selected at the 10 boundary.
+YSQL 11/15 uses this common query instead of a detail query per sequence.
+Before PostgreSQL 10, configuration remains in individual sequence relations:
+the listing plus one UNION ALL query over quoted relation identifiers reads
+all requested sequences, preserving the old catalog representation without
+N+1 round trips. The current connection selects the database; schema and
+sequence identifiers are quoted individually. An unavailable last value is
+not inferred or used as a verified migration high-water mark. See the
+[PostgreSQL 10 sequence catalog change](https://www.postgresql.org/docs/10/release-10.html)
+and [pg_sequences semantics](https://www.postgresql.org/docs/17/view-pg-sequences.html).
+
+The PostgreSQL 9.3-9.6 column reader accidentally selected the 10+ identity SQL.
+It now selects the pre-10 query; legacy serial lookup also qualifies and quotes
+both schema and table instead of relying on search_path. The common PostgreSQL
+identifier quoter now handles reserved/identifier-sensitive grammar words and
+leading digits, including a real `unique` index recreation regression.
+
+Index metadata now retains table space, access method, deparsed key expressions,
+operator classes, collations, key ordering/null ordering, and relation options
+in the existing single catalog query. Collation catalogs are isolated to 9.1+;
+INCLUDE stays 11+, and NULLS NOT DISTINCT stays 15+. Vendor options survive
+Schema XML. `postgres.index.keys` and `postgres.index.method` are authoritative
+catalog SQL fragments for exact recreation; `postgres.index.options` retains
+all catalog options as SQL. Applications changing modeled keys or individual
+option specifics must remove/update the corresponding raw fragment first.
+Ordinary newly authored indexes need none of these keys. Table identity,
+index name, includes, uniqueness, predicate, tablespace and comments remain
+separate modeled fields. YSQL multi-column HASH grouping continues to use its
+placement-aware key generator, and tablespace is emitted only once.
+ScaNN retains its existing vendor-specific key/options generation.
+
+CockroachDB index definitions now reuse the definition in the original catalog
+query, adding zero queries. ENUM labels are joined into the type query.
+Table/view/sequence CREATE definitions are read once per requested object kind
+from `crdb_internal.create_statements`, filtered to the current database and
+requested schema/name set, rather than issuing SHOW CREATE per object.
+Complete executable definitions continue to preserve vendor DDL and locality.
+YSQL placement now batches the requested non-partitioned table OIDs and their
+indexes in one query, including table properties, tablespaces and conditional
+range-split deparsing. Primary-key storage inheritance is preserved. The public
+single-table placement reader delegates to the added `readAll` method.
+No per-object-query exception was introduced.
+
+Regression coverage compares complete index definitions after XML/recreation
+(pattern operator class, expression/collation, GIN options, INCLUDE, unique
+index and an actual tablespace). It tests quoted sequence names and comments,
+configuration and the PostgreSQL 9.6/10 boundary. Executed-SQL counters verify
+that sequence, CockroachDB definition/ENUM/index and YSQL placement query
+counts stay constant when the object set grows. Only owned local disposable
+containers are used; cloud/external database tasks remain unexecuted.
+
+The full real-engine/dependent-module build passed in 21m 23s:
+
+| Task | Tests |
+| --- | ---: |
+| `dockerTest` | 7 |
+| `yugabyte11CompatibilityTest` | 65 |
+| `yugabyte15CompatibilityTest` | 65 |
+| `cockroach24CompatibilityTest` | 32 |
+| `cockroach25CompatibilityTest` | 32 |
+| `auroraPostgres14CompatibilityTest` | 5 |
+| `auroraPostgres15CompatibilityTest` | 5 |
+| `auroraPostgres16CompatibilityTest` | 5 |
+| `auroraPostgres17CompatibilityTest` | 5 |
+| `alloydb15CompatibilityTest` | 13 |
+| `alloydb16CompatibilityTest` | 13 |
+| `alloydb17CompatibilityTest` | 13 |
+| `alloydbPostgresControlTest` | 11 |
+
+All listed container cases passed without skips. The Aurora row uses ordinary
+PostgreSQL containers for inherited compatibility, not AWS Aurora. The Omni
+rows use official Omni engines, not managed Google Cloud AlloyDB.
+
+Full matrix command:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.postgres.*Metadata*' :sqlapp-core-dialect-test:yugabyteCompatibilityTest :sqlapp-core-dialect-test:cockroachCompatibilityTest :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest :sqlapp-core-dialect-test:alloydbCompatibilityTest :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+The final assertion-strengthening run passed in 4m 40s: 17 focused container
+cases passed across the same version matrix. These additionally compare all
+recreated sequence configuration fields and count every executed statement
+in the focused PostgreSQL sequence/CockroachDB index readers (including
+ordinary statements, not just prepared statements). The YSQL sequence counter
+also catches singular pg_sequence detail queries. The full matrix above
+contains 271 passing cases; focused rechecks are overlapping coverage.
+
+Final unit/dependent results:
+
+| Module | Passed | Skipped |
+| --- | ---: | ---: |
+| `sqlapp-core-postgres` | 265 | 0 |
+| `sqlapp-core-yugabyte` | 10 | 1 |
+| `sqlapp-core-cockroach` | 16 | 0 |
+| `sqlapp-core-aurora-postgres` | 7 | 0 |
+| `sqlapp-core-alloydb` | 16 | 0 |
+| `sqlapp-command` | 543 | 0 |
+| `sqlapp-gradle-plugin` | 81 | 0 |
+
+The dialect/command results contain 857 passing cases. Gradle plugin results
+retain 81 passing cases, with the plugin task UP-TO-DATE in the final run;
+these are not claimed as 81 newly executed tests. The one skipped case is the
+existing explicitly opt-in external YSQL round-trip test; no external database
+was accessed. Java 21 and the repository wrapper were used. The final run
+included the five dialect module test tasks plus command/plugin tests; focused
+container filters were `preservesSequenceAndAdvancedIndexMetadata`,
+`preservesExplicitIndexTablespace`, `PostgresLegacyMetadataRegressionTest`,
+`metadataPlacementAndSequenceQueriesAreSetBased` and
+`metadataQueryCountsDoNotGrowWithObjects` on the matrix tasks listed above.
+Documentation validation passed (670 local links, 59 reachable current pages),
+and diff whitespace checks passed. Earlier exploratory attempts exposed the
+pre-10 column-reader mismatch and keyword quoting problem and were repaired
+before the successful matrix. The bare `postgres:10.23` tag was unavailable;
+the qualified legacy test uses the verified official `postgres:10.23-bullseye`.
+No dependency versions, production settings or external database configuration
+were modified. Tracked CockroachDB build output regenerated by verification
+is restored to the pre-existing index state; no generated-file change is intended.
+
+
+### Oracle and SQL Server metadata audit (2026-10-11)
+
+The audit follows the PostgreSQL-family work: metadata query counts must stay
+constant as the requested object set grows, and read metadata must survive Schema
+XML serialization and executable DDL recreation. Changes are local to
+`sqlapp-core-oracle`, `sqlapp-core-sqlserver`, and the shared Docker test module;
+public entry points, dependencies, and Schema XML formats are unchanged.
+
+Oracle changes apply to the existing 10g-and-later reader hierarchy, with vector
+catalog access isolated to 23ai/26ai:
+
+- Table and index partition details, ordered partition/subpartition keys, and
+  subpartition storage are fetched in batches. Results are routed by owner and
+  object name; rows from other owner/name combinations are ignored.
+- Vector and hybrid vector supplemental metadata are read once per object kind,
+  rather than once per index. Existing missing-catalog/permission diagnostics are
+  retained; other SQL errors still propagate. Hybrid metadata remains limited to
+  the connected user's `CTX_USER_INDEX_OBJECTS` visibility.
+- `DEFERRABLE` and `DEFERRED` are interpreted separately. Unique, check, and foreign-key
+  constraint enabled state comes from `STATUS`, not the `INVALID` flag.
+- Materialized-view comments come from the catalog. The LONG query is consumed
+  before later result columns to avoid Oracle JDBC stream-closed errors.
+- Oracle index SQL omits the invalid generic BTREE token, emits BITMAP in its
+  Oracle grammar position, and retains local/global partition placement, local
+  partition/subpartition names and tablespaces, and ordinary index tablespace and
+  compression. Locality is stored in optional `oracle.index.locality` specifics;
+  ordinary bitmap indexes use `oracle.index.bitmap`.
+
+SQL Server changes apply to 2005-and-later index and partition readers, and
+2008-and-later table SQL generation; the SQL Server 2000 branch is unchanged:
+
+- Index identity includes catalog, schema, **table**, and index name. Identically
+  named indexes on different tables no longer merge.
+- Index partition schemes and partition columns use the existing Partitioning
+  model. Implicit non-key partition columns are not emitted as index keys.
+  Ordinary index filegroup placement is emitted when no partition scheme exists.
+- Table partition statistics populate Partition objects instead of trying to
+  read a nonexistent column and adding duplicate partition key columns. Only
+  the heap/clustered rowstore contributes; LOB and rowstore allocation units use
+  their respective `partition_id`/`hobt_id` joins. Empty partitions remain visible.
+- `LOCK_ESCALATION` and enabled change tracking generate separate ALTER TABLE
+  operations after CREATE. Column tracking is retained; the catalog projects tracking presence as a
+  boolean instead of storing an object ID that cannot be parsed as a flag. Large-value and legacy
+  text-in-row storage options use separate `sp_tableoption` operations.
+  Default catalog flags are not emitted as invalid CREATE TABLE options.
+  Invalid LOCK_ESCALATION values fail explicitly.
+- ON/OFF option parsing uses the configured value rather than the option name.
+- SQL Server decimal/numeric sequences retain integral scale zero instead of
+  inheriting an invalid fractional default. Nonzero sequence scale fails clearly.
+- SQL Server NO CACHE sequences retain NO CACHE after XML/DDL/reread. Oracle
+  NOCACHE sequences emit NOCACHE instead of invalid CACHE 0; ORDER is retained.
+  Original Oracle sequence start values and migration high-water guarantees
+  cannot be inferred from ALL_SEQUENCES and are not claimed by these checks.
+- Pre-2016 table queries do not reference `sys.indexes.compression_delay`.
+  Resolver boundaries and later queries are preserved.
+
+Regression coverage includes a one-versus-many partition query-count comparison,
+Oracle composite local index XML/DDL/reread, and SQL Server partitioned table plus
+filtered INCLUDE/DESC index XML/DDL/reread on the existing Docker baselines.
+Version-boundary unit tests do not qualify old Oracle/SQL Server installations.
+This work is not a blanket certification of every vendor feature or deployment.
+DB link credential extraction, arbitrary domain indexes, and advanced
+memory-optimized/graph/temporal/Ledger DDL require separate focused coverage.
+External databases are not used by this audit.
+
+Catalog references: [Oracle partition keys](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_PART_KEY_COLUMNS.html),
+[Oracle index subpartitions](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_IND_SUBPARTITIONS.html),
+[SQL Server allocation units](https://learn.microsoft.com/ja-jp/sql/relational-databases/system-catalog-views/sys-allocation-units-transact-sql?view=sql-server-ver17),
+and [SQL Server change tracking](https://learn.microsoft.com/en-us/sql/relational-databases/track-changes/enable-and-disable-change-tracking-sql-server).
+
+
+Verification command (Java 21, repository Gradle Wrapper, owned disposable local
+Testcontainers only):
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-core-sqlserver:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleMetadataReaderTest*' --tests '*sqlserver.*MetadataReaderTest*' :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+Development runs exposed and failed on the LONG stream ordering, generic Oracle
+index syntax, SQL Server table options, unquoted PRIMARY filegroup, and decimal
+sequence scale issues described above; those findings were fixed. One overlapping
+Gradle test invocation also conflicted over generated results files. Final
+verification uses serial execution after the overlapping invocations have ended.
+
+
+Final verification: **BUILD SUCCESSFUL** (3m 38s). All 843 test cases passed;
+no failures or skips:
+
+| Scope | Passing tests |
+| --- | ---: |
+| Oracle unit tests | 108 |
+| SQL Server unit tests | 101 |
+| Oracle 23ai + SQL Server 2017/2019/2022/2025 metadata Docker tests | 10 |
+| command tests | 543 |
+| Gradle plugin tests | 81 |
+
+The 10 container cases include one-versus-many query counts, Schema XML/DDL
+recreation, enabled/disabled Oracle constraints, local index partition names and
+storage, Oracle sequence cache/order, SQL Server decimal and uncached sequences,
+filtered INCLUDE/DESC indexes, and enabled change tracking with column tracking.
+Only owned temporary schemas/tables and databases in disposable local containers
+were modified. No external or production database was accessed. No generated
+build artifacts are intentionally retained in the source diff.
+
+
+### Db2, SQLite and SAP HANA metadata audit (2026-10-11)
+
+This audit strengthens the existing dialects without changing public APIs, dependencies,
+configuration formats or the Schema XML format. Changes are owned by `sqlapp-core-db2`,
+`sqlapp-core-sqlite` and `sqlapp-core-saphana`; local integration coverage is in
+`sqlapp-core-dialect-test`.
+
+- **Db2 LUW:** sequence metadata recognizes catalog `CACHE=1` as `NO CACHE`.
+  Generation retains `ORDER` and emits `NO CACHE` for disabled caching and catalog
+  sentinel values instead of invalid `CACHE 0`/`CACHE 1`. Decimal sequence types retain
+  their precision with scale zero; nonzero scale is rejected. Bulk partition readers
+  skip rows outside the exact selected schema/table pairs and skip an empty selection.
+  The resolver and supported older catalog branches are unchanged. This is LUW coverage,
+  not a claim about Db2 for z/OS or IBM i.
+- **SQLite:** on 3.16 and newer, table-valued PRAGMAs batch column, index, primary key,
+  UNIQUE, CHECK and foreign-key metadata across the selected tables. Table options are
+  fetched together. Table detail takes six statements for either one or eight tables,
+  with no additional SELECT per index or column. Table enumeration is separate.
+  `table_xinfo` is used from 3.26; earlier versions retain `table_info`. Views remain
+  eligible for column reads. Schema parameters keep attached databases isolated.
+  Index generation now retains partial predicates and uses SQLite's index-schema / unqualified
+  table syntax, automatically qualifying attached schemas. The optional `sqlite.index.keys` specifics preserves complete key SQL, including
+  COLLATE, expressions and sort order. It takes precedence over modeled key columns; callers
+  editing those columns must update or remove it. SQLite-created autoindexes are not emitted
+  as independent CREATE INDEX statements. Expression-index sort order and partial predicates
+  are retained, and `WHERE` inside
+  a quoted identifier, expression string or comment is not mistaken for the predicate.
+  Before 3.16, the legacy per-object PRAGMA/JDBC path remains: these releases lack
+  table-valued PRAGMAs, so there is no equivalent catalog join for column/index/FK detail.
+- **SAP HANA:** sequence reads retain decimal start numbers beyond Java `long`, cache
+  size/state and creation time. The locally verified `CACHE_SIZE=1` representation
+  is treated as no caching. Generation retains `NO CACHE` and the existing optional
+  `RESET_BY_QUERY` specifics as `RESET BY <query>`. Partition reads skip empty selections
+  and rows outside the requested schema/table pairs. Hash subpartition size uses the
+  second-level count rather than repeating the first-level count. Existing HANA Platform
+  and HANA Cloud resolver boundaries remain unchanged.
+
+Tests cover SQLite in-memory databases, constant query counts, attached schemas,
+generated columns and rowid keys; mocked metadata checks cover large sequence starts,
+partition routing and empty selections. Local disposable database tests cover Db2
+11.5.8 / 12.1.5 and SAP HANA Express 2.00.088, including sequence XML → DDL → reread.
+No external or production database is used. Schema recreation tests verify configuration,
+not a live sequence migration high-water mark. Older Db2/HANA instances and managed HANA
+Cloud are not qualified by these local tests; specialized storage, security and advanced
+DDL features still require focused coverage.
+
+Verification uses Java 21 and the repository wrapper:
+
+```powershell
+.\gradlew.bat :sqlapp-core-db2:test :sqlapp-core-sqlite:test :sqlapp-core-saphana:test --continue --console=plain
+.\gradlew.bat :sqlapp-core-db2:test :sqlapp-core-sqlite:test :sqlapp-core-saphana:test :sqlapp-core-dialect-test:dockerTest --tests '*db2.*MetadataReaderTest' --tests '*saphana.SapHanaMetadataReaderTest' --tests '*sqlite.SqliteMetadataReaderTest' :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+The final focused module run passed **128 tests** (Db2 40, SQLite 61, HANA 27),
+with no failures, errors or skips. The local database/dependent-module matrix was
+**BUILD SUCCESSFUL** (10m15s), and the final module/dependent verification after the
+last SQLite default-schema fix was **BUILD SUCCESSFUL** (48s). Combined final results
+are **758 passing tests**, with zero failures, errors or skips:
+
+| Scope | Tests |
+| --- | ---: |
+| Db2 unit | 40 |
+| SQLite unit / in-memory integration | 61 |
+| HANA unit | 27 |
+| Db2 11.5 / 12.1, HANA Express, SQLite metadata integration | 6 |
+| command | 543 |
+| Gradle plugin | 81 |
+
+The last dependent verification command was:
+
+```powershell
+.\gradlew.bat :sqlapp-core-db2:test :sqlapp-core-sqlite:test :sqlapp-core-saphana:test :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+```
+
+Documentation link/fence validation also passed. No generated files are intentionally
+retained; only this audit's temporary logs and tracked build-output changes were cleaned up.
+ Development runs caught and corrected catalog no-cache
+sentinels and test-fixture assumptions about Schema numeric types and reader parentage;
+those failed development runs are not counted as successful verification.
+
+Primary references: [SQLite PRAGMA functions](https://www.sqlite.org/pragma.html#pragfunc),
+[SQLite 3.26 table_xinfo boundary](https://sqlite.org/releaselog/3_26_0.html),
+[Db2 LUW CREATE SEQUENCE](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-create-sequence),
+[HANA SEQUENCES catalog](https://help.sap.com/docs/SAP_HANA_PLATFORM/4fe29514fd584807ac9f2a04f6754767/20cf0e79751910149462bf9e7d571ab8.html),
+and [HANA RESET BY / cache syntax](https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-database-sql-reference-guide/alter-sequence-statement-data-definition).
+
+
+## Remaining dialect metadata and sequence audit (2026-10)
+
+This batch changes MySQL (and inherited MariaDB), Firebird, H2, HSQLDB,
+Informix, SAP ASE (`sqlapp-core-sybase`) and Vertica (`sqlapp-core-virtica`).
+Public APIs, Schema XML formats and dependency versions are unchanged.
+MDB remains available for migration. Phoenix and Spanner are included in the
+module regression scope; this does not imply new server/cluster coverage.
+
+- MySQL/MariaDB indexes are grouped by catalog, schema, **table and index**.
+  Tables may use the same index name without their columns being merged. Index
+  remarks come from `INDEX_COMMENT`, rather than the internal `COMMENT` status.
+  Set-based retrieval is retained; integration tests assert one statistics SELECT
+  for a multi-table read. The fix is shared by supported MySQL/MariaDB readers.
+- HSQLDB sequences recognize the catalog's `YES` cycle flag, while retaining
+  compatibility with `Y`. In-memory tests recreate both cyclic and non-cyclic
+  sequences and compare start, increment and bounds.
+- H2 2.x sequence CREATE DDL retains MINVALUE, MAXVALUE and CYCLE. Its reader also
+  retains the declared data type and numeric metadata. H2 1.x keeps its existing
+  clause selection and catalog query. Cache sizes 0/1 or an explicitly disabled
+  cache generate NO CACHE; negative sizes fail clearly. In-memory recreation
+  checks INTEGER type, bounds, cycle and no-cache behavior.
+- Firebird 3.0+ sequence CREATE DDL retains START WITH and INCREMENT BY. Firebird
+  2.x factory behavior is unchanged. START WITH is preserved as catalog metadata;
+  Firebird 3's first generated value remains start + increment, according to its
+  server semantics. Package CREATE registration now uses the Schema Package
+  class rather than `java.lang.Package`. Unit tests cover 2.5/3.0/5.0 selection.
+- Informix has a dialect-owned sequence CREATE factory. It omits unsupported AS
+  type syntax, emits NOCACHE for a disabled/zero cache, and rejects negative or
+  enabled size-one caches (Informix requires at least two cached values). The
+  sequence reader reflects whether catalog caching is enabled.
+- Vertica sequence CREATE/ALTER honors disabled caching and sizes 0/1 as NO CACHE;
+  negative sizes fail clearly. Its reader reflects cache enablement. The sequence
+  catalog has no original START value: CURRENT_VALUE is distribution state and
+  is not treated as the original start or as a safe migration high-water mark.
+- ASE normal and unique index readers also include table identity when grouping
+  rows. Synthetic catalog tests cover same-named indexes on distinct tables.
+
+Local disposable integration coverage for this batch: MySQL 5.7/8.0/8.4,
+MariaDB 10.5/11.4/11.8, Firebird 3.0, Informix 14.10 and Vertica CE 25.1.
+Embedded coverage uses the repository's H2 and HSQLDB drivers. External services
+and production databases are not accessed. Older server releases, Firebird 5
+live sequence recreation, ASE live same-name metadata and Phoenix clusters
+remain outside this batch's real-server verification. Vertica projections,
+segmentation and KSAFE remain separate work.
+
+References: [H2 sequence grammar](https://h2database.github.io/html/grammar.html),
+[HSQLDB sequences](https://hsqldb.org/doc/guide/databaseobjects-chapt.html),
+[Firebird 3 sequence semantics](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref30/fblangref30-ddl-sequence.html),
+[Informix cache rules](https://www.ibm.com/docs/en/informix-servers/12.10.0?topic=css-cache-nocache-option),
+[Vertica sequence syntax](https://docs.vertica.com/11.1.x/en/sql-reference/statements/create-statements/create-sequence/),
+and [Vertica sequence catalog](https://docs.vertica.com/11.1.x/en/sql-reference/system-tables/v-catalog-schema/sequences/).
+
+
+Verification commands for this audit (Java 21, repository wrapper):
+
+```powershell
+.\gradlew.bat :sqlapp-core-mysql:test :sqlapp-core-mariadb:test :sqlapp-core-firebird:test :sqlapp-core-h2:test :sqlapp-core-hsql:test :sqlapp-core-informix:test :sqlapp-core-sybase:test :sqlapp-core-virtica:test :sqlapp-core-mdb:test :sqlapp-core-phoenix:test :sqlapp-core-spanner:test :sqlapp-command:test :sqlapp-gradle-plugin:test --continue --console=plain
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*mysql.*MetadataReaderTest' --tests '*mariadb.*MetadataReaderTest' --tests '*firebird.Firebird30MetadataReaderTest' --tests '*informix.InformixBulkInsertTest.recreatesUncachedSequence' --tests '*virtica.VirticaBulkInsertTest.recreatesUncachedSequence' --console=plain
+```
+
+Development verification caught two test-compilation errors (a protected reader
+accessor and a constraint fluent setter's return type); both were corrected.
+These intermediate failed runs are not counted as passing verification.
+Cache disabling also works without a size (`cache=false`, absent `cacheSize`),
+covered by SQL factory regression tests; default caching remains unchanged.
+
+
+Final verification: **1,017 passing tests**, zero failures, errors or skips.
+The final module/dependent command succeeded in 18s (previous full run plus
+incremental final checks); the disposable database matrix succeeded in 3m05s.
+
+| Scope | Tests |
+| --- | ---: |
+| `sqlapp-core-mysql` | 78 |
+| `sqlapp-core-mariadb` | 34 |
+| `sqlapp-core-firebird` | 13 |
+| `sqlapp-core-h2` | 48 |
+| `sqlapp-core-hsql` | 46 |
+| `sqlapp-core-informix` | 9 |
+| `sqlapp-core-sybase` | 30 |
+| `sqlapp-core-virtica` | 30 |
+| `sqlapp-core-mdb` | 42 |
+| `sqlapp-core-phoenix` | 7 |
+| `sqlapp-core-spanner` | 40 |
+| `sqlapp-command` | 543 |
+| `sqlapp-gradle-plugin` | 81 |
+| Disposable database matrix | 16 |
+
+Documentation validation passed (670 local links, 59 reachable current pages,
+closed code fences). No generated files are intentionally retained.

@@ -17,12 +17,14 @@ SELECT
         ELSE null 
       END AS varchar
     ) AS definition
+  , NULL::text[] AS view_options
   , d.description AS remarks
 FROM pg_catalog.pg_class c 
 INNER JOIN pg_catalog.pg_namespace n
   ON (c.relnamespace = n.oid)
 LEFT OUTER JOIN pg_catalog.pg_description d 
   ON (c.oid = d.objoid
+  AND d.classoid = 'pg_catalog.pg_class'::regclass
   AND d.objsubid = 0) 
 WHERE c.relkind ='v'
   /*if isNotEmpty(schemaName)*/

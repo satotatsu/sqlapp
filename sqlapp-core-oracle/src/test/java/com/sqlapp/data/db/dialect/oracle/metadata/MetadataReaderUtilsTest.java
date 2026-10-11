@@ -47,36 +47,23 @@ public class MetadataReaderUtilsTest {
 	@Test
 	public void testGetMetaClass() {
 
-		System.out.println(MetadataReaderUtils.getTypeParameterClass(dialect
-				.getCatalogReader().getClass()));
-		System.out.println(MetadataReaderUtils.getMetaClass(dialect
-				.getCatalogReader().getClass()));
-		assertEquals(Catalog.class, MetadataReaderUtils.getMetaClass(dialect
-				.getCatalogReader().getClass()));
-		assertEquals(
-				Schema.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getClass()));
-		assertEquals(
-				Table.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getTableReader().getClass()));
-		assertEquals(
-				View.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getViewReader().getClass()));
-		assertEquals(
-				Mview.class,
-				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader()
-						.getSchemaReader().getMviewReader().getClass()));
+		System.out.println(MetadataReaderUtils.getTypeParameterClass(dialect.getCatalogReader().getClass()));
+		System.out.println(MetadataReaderUtils.getMetaClass(dialect.getCatalogReader().getClass()));
+		assertEquals(Catalog.class, MetadataReaderUtils.getMetaClass(dialect.getCatalogReader().getClass()));
+		assertEquals(Schema.class,
+				MetadataReaderUtils.getMetaClass(dialect.getCatalogReader().getSchemaReader().getClass()));
+		assertEquals(Table.class, MetadataReaderUtils
+				.getMetaClass(dialect.getCatalogReader().getSchemaReader().getTableReader().getClass()));
+		assertEquals(View.class, MetadataReaderUtils
+				.getMetaClass(dialect.getCatalogReader().getSchemaReader().getViewReader().getClass()));
+		assertEquals(Mview.class, MetadataReaderUtils
+				.getMetaClass(dialect.getCatalogReader().getSchemaReader().getMviewReader().getClass()));
 	}
 
 	@Test
 	public void testOracleGetTypes() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("oracle",
-				11, 0);
-		Set<Class<?>> types = MetadataReaderUtils.supportedSchemaTypes(dialect
-				.getCatalogReader());
+		Dialect dialect = DialectResolver.getInstance().getDialect("oracle", 11, 0);
+		Set<Class<?>> types = MetadataReaderUtils.supportedSchemaTypes(dialect.getCatalogReader());
 		System.out.println(types);
 		assertTrue(types.contains(Mview.class));
 		assertTrue(types.contains(View.class));

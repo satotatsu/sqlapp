@@ -70,7 +70,7 @@ public class Postgres110 extends Postgres100 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres110CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

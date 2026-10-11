@@ -97,7 +97,7 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	public static double toDouble(final byte[] bytes) {

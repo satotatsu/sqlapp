@@ -2,11 +2,12 @@ SELECT DISTINCT
   current_database() AS constraint_catalog
   , nc.nspname AS constraint_schema
   , c.conname AS constraint_name
+  , obj_description(c.constraint_oid, 'pg_constraint') AS remarks
   , current_database() AS table_catalog
   , pr.nspname AS table_schema
   , p.relname AS table_name
   , pc.attname AS column_name
-  , pc.attnum AS column_index
+  , c.key_position AS column_index
   , rr.nspname AS referential_table_schema
   , r.relname AS referential_table_name
   , rc.attname AS referential_column_name
@@ -20,14 +21,14 @@ SELECT DISTINCT
     END AS constraint_type
   , CASE c.confupdtype
     WHEN 'a' THEN 'NO ACTION'
-    WHEN 'r' THEN 'RISTRICT'
+    WHEN 'r' THEN 'RESTRICT'
     WHEN 'c' THEN 'CASCADE'
     WHEN 'n' THEN 'SET NULL'
     ELSE 'SET DEFAULT'
     END AS update_rule
   , CASE c.confdeltype
     WHEN 'a' THEN 'NO ACTION'
-    WHEN 'r' THEN 'RISTRICT'
+    WHEN 'r' THEN 'RESTRICT'
     WHEN 'c' THEN 'CASCADE'
     WHEN 'n' THEN 'SET NULL'
     ELSE 'SET DEFAULT'
@@ -37,15 +38,18 @@ SELECT DISTINCT
     WHEN 'p' THEN 'PARTIAL'
     ELSE 'SIMPLE'
     END AS match_option
-  , pg_get_constraintdef(c.oid) as consrc --êßñÒéÆ
+  , pg_get_constraintdef(c.constraint_oid) as consrc
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
-FROM pg_catalog.pg_constraint c
+FROM (
+  SELECT source.*, source.oid AS constraint_oid, generate_series(array_lower(source.conkey, 1), array_upper(source.conkey, 1)) AS key_position
+  FROM pg_catalog.pg_constraint source
+) c
 INNER JOIN pg_catalog.pg_class p
   ON (c.conrelid = p.oid)
 INNER JOIN pg_catalog.pg_attribute pc
   ON (p.oid = pc.attrelid
-  AND pc.attnum = ANY (c.conkey))
+  AND pc.attnum = c.conkey[c.key_position])
 INNER JOIN pg_catalog.pg_namespace nc
   ON (c.connamespace = nc.oid)
 INNER JOIN pg_catalog.pg_namespace pr
@@ -54,7 +58,7 @@ INNER JOIN pg_catalog.pg_class r
   ON (c.confrelid = r.oid)
 INNER JOIN pg_catalog.pg_attribute rc
   ON (r.oid = rc.attrelid
-  AND rc.attnum = ANY (c.confkey))
+  AND rc.attnum = c.confkey[c.key_position])
 INNER JOIN pg_catalog.pg_namespace rr
   ON (r.relnamespace = rr.oid)
 WHERE 1=1
@@ -71,4 +75,4 @@ WHERE 1=1
   /*if isNotEmpty(constraintName)*/
   AND c.conname IN /*constraintName*/('%')
   /*end*/
-ORDER BY pr.nspname, p.relname, c.conname, pc.attnum
+ORDER BY pr.nspname, p.relname, c.conname, column_index

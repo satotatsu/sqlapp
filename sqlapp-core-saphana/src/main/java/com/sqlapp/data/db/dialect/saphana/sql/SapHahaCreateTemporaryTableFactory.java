@@ -40,7 +40,7 @@ public class SapHahaCreateTemporaryTableFactory extends AbstractCreateTemporaryT
 	protected void addCreateObject(final Table obj, final SapHanaSqlBuilder builder) {
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
-		builder.create().local().table();
+		builder.create().local().temporary().table();
 		builder.space()._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
 	}

@@ -27,35 +27,40 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 
-public class SqliteSqlSplitter extends SqlSplitter{
+public class SqliteSqlSplitter extends SqlSplitter {
 
 	public SqliteSqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern FUNCTION_PATTERN=Pattern.compile("\\s*CREATE\\s+(TEMP|TEMPORARY)?\\s*TRIGGER\\s*.*?\\s+BEGIN\\s*\\n(.*)", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
 
-	private static final Pattern END_PATTERN=Pattern.compile("\\s*END\\s*;?", Pattern.MULTILINE+Pattern.CASE_INSENSITIVE+Pattern.DOTALL);
+	private static final Pattern FUNCTION_PATTERN = Pattern.compile(
+			"\\s*CREATE\\s+(TEMP|TEMPORARY)?\\s*TRIGGER\\s*.*?\\s+BEGIN\\s*\\n(.*)",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+
+	private static final Pattern END_PATTERN = Pattern.compile("\\s*END\\s*;?",
+			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
 
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isStartStatement(String text, StringHolder stringHolder){
-				Matcher matcher=stringHolder.substringMatcher(FUNCTION_PATTERN);
-				if (matcher.matches()){
-					int index=stringHolder.indexOf("BEGIN");
-					if (index>=0){
-						int ePos=stringHolder.searchLineOf(END_PATTERN, index+6);
-						if (ePos>=0){
-							int pos=stringHolder.indexOf(this.getCurrentDelimiter(), ePos+3);
+			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				Matcher matcher = stringHolder.substringMatcher(FUNCTION_PATTERN);
+				if (matcher.matches()) {
+					int index = stringHolder.indexOf("BEGIN");
+					if (index >= 0) {
+						int ePos = stringHolder.searchLineOf(END_PATTERN, index + 6);
+						if (ePos >= 0) {
+							int pos = stringHolder.indexOf(this.getCurrentDelimiter(), ePos + 3);
 							setPosition(pos);
 							return true;
-						} else{
-							stringHolder.throwInvalidTextException("[END] of TRIGGER not found.["+stringHolder.substringAt()+"]");
+						} else {
+							stringHolder.throwInvalidTextException(
+									"[END] of TRIGGER not found.[" + stringHolder.substringAt() + "]");
 						}
-					} else{
-						stringHolder.throwInvalidTextException("[AS] of Function not found.["+stringHolder.substringAt()+"]");
+					} else {
+						stringHolder.throwInvalidTextException(
+								"[AS] of Function not found.[" + stringHolder.substringAt() + "]");
 					}
 				}
 				return false;

@@ -38,31 +38,21 @@ public class DeleteTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.DELETE_FOR_APP);
-		Options option=new Options();
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DELETE_FOR_APP);
+		Options option = new Options();
 		operationfactory.setOptions(option);
 	}
 
 	@Test
 	public void testGetDdlTable() {
 		Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'"));
-		table.getColumns()
-		.add(new Column("lock_version").setDataType(DataType.BIGINT));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		List<SqlOperation> list = operationfactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);

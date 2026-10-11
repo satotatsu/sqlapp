@@ -109,8 +109,8 @@ public class HsqlColumnReader extends ColumnReader {
 
 	protected void setIdentityInfo(ExResultSet rs, Column obj) throws SQLException {
 		String identity_generation = getString(rs, "IDENTITY_GENERATION");
-		obj.setIdentityGenerationType("ALWAYS".equalsIgnoreCase(identity_generation)
-				? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
+		obj.setIdentityGenerationType("ALWAYS".equalsIgnoreCase(identity_generation) ? IdentityGenerationType.Always
+				: IdentityGenerationType.ByDefault);
 		String sequence_name = getString(rs, "SEQUENCE_NAME");
 		if (sequence_name != null) {
 			String sequence_data_type = getString(rs, "SEQUENCE_DATA_TYPE");

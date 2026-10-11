@@ -47,8 +47,7 @@ public class H2SettingReader extends SettingReader {
 	}
 
 	@Override
-	protected List<Setting> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Setting> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Setting> result = list();
@@ -63,8 +62,7 @@ public class H2SettingReader extends SettingReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
 			return getSqlNodeCache().getString("settings_200.sql");
 		}

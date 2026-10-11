@@ -22,8 +22,6 @@ package com.sqlapp.util.iterator;
 import java.io.Closeable;
 import java.util.Iterator;
 
-import com.sqlapp.util.FileUtils;
-
 public class AutoCloseIterator<T> implements Iterator<T>, Closeable, AutoCloseable {
 
 	private final Iterator<T> iterator;
@@ -40,16 +38,26 @@ public class AutoCloseIterator<T> implements Iterator<T>, Closeable, AutoCloseab
 		if (isClosed) {
 			return false;
 		}
-		boolean bool = iterator.hasNext();
-		if (!bool) {
-			close();
+		try {
+			final boolean hasNext = iterator.hasNext();
+			if (!hasNext) {
+				close();
+			}
+			return hasNext;
+		} catch (final RuntimeException | Error e) {
+			closeOnFailure(e);
+			throw e;
 		}
-		return bool;
 	}
 
 	@Override
 	public T next() {
-		return iterator.next();
+		try {
+			return iterator.next();
+		} catch (final RuntimeException | Error e) {
+			closeOnFailure(e);
+			throw e;
+		}
 	}
 
 	@Override
@@ -57,8 +65,16 @@ public class AutoCloseIterator<T> implements Iterator<T>, Closeable, AutoCloseab
 		if (isClosed) {
 			return;
 		}
-		FileUtils.close(iterator);
 		isClosed = true;
+		IteratorCloseUtils.close(null, iterator);
+	}
+
+	private void closeOnFailure(final Throwable failure) {
+		if (isClosed) {
+			return;
+		}
+		isClosed = true;
+		IteratorCloseUtils.close(failure, iterator);
 	}
 
 }

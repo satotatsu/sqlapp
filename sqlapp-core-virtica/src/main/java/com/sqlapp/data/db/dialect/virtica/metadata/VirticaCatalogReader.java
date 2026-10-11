@@ -65,7 +65,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
-		return null;
+		return new VirticaTableSpaceReader(this.getDialect());
 	}
 
 	@Override
@@ -100,7 +100,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected ObjectPrivilegeReader newObjectPrivilegeReader() {
-		return null;
+		return new VirticaObjectPrivilegeReader(this.getDialect());
 	}
 
 	@Override
@@ -120,7 +120,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleMemberReader newRoleMemberReader() {
-		return null;
+		return new VirticaRoleMemberReader(this.getDialect());
 	}
 
 	@Override
@@ -130,7 +130,7 @@ public class VirticaCatalogReader extends CatalogReader {
 
 	@Override
 	protected SettingReader newSettingReader() {
-		return null;
+		return new VirticaSettingReader(this.getDialect());
 	}
 
 	@Override

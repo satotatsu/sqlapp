@@ -4,12 +4,14 @@ SELECT
 , p.proname AS function_name
 , l.lanname
 , p.oid
+, obj_description(p.oid, 'pg_proc') AS remarks
 , CASE when proisagg THEN null
   ELSE pg_get_functiondef(p.oid)
   END AS functiondef
 , pg_get_function_arguments(p.oid) AS function_arguments
 , pg_get_function_identity_arguments(p.oid) AS function_identity_arguments
 , pg_get_function_result(p.oid) AS function_result
+, pg_get_expr(p.proargdefaults, 0) AS argument_defaults
 , p.*
 FROM pg_catalog.pg_proc p
 INNER JOIN pg_catalog.pg_namespace n

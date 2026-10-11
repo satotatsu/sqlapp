@@ -22,6 +22,13 @@ module com.sqlapp.core.saphana {
 	requires java.sql;
 	requires com.sqlapp.core;
 	exports com.sqlapp.data.db.dialect.saphana;
+	exports com.sqlapp.data.db.dialect.saphana.bulk;
 	exports com.sqlapp.data.db.dialect.saphana.metadata;
 	exports com.sqlapp.data.db.dialect.saphana.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+			com.sqlapp.data.db.dialect.saphana.bulk.SapHanaSetBasedMigrationSnapshotProvider;
 }

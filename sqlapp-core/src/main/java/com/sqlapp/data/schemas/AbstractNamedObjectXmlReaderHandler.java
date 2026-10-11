@@ -81,12 +81,12 @@ abstract class AbstractNamedObjectXmlReaderHandler<T extends AbstractNamedObject
 		if (parentObj instanceof AbstractNamedObjectCollection<?>){
 			AbstractNamedObjectCollection<?> parent = (AbstractNamedObjectCollection<?>)parentObj;
 			if (parent != null) {
-				@SuppressWarnings("unchecked")
-				T a = (T) parent.get(specificName);
-				if (a != null) {
-					return a;
-				}
-				if (specificName!=null){
+				if (!isEmpty(specificName)) {
+					@SuppressWarnings("unchecked")
+					T a = (T) parent.get(specificName);
+					if (a != null) {
+						return a;
+					}
 					return obj;
 				}
 				@SuppressWarnings("unchecked")

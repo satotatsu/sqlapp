@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -57,19 +58,12 @@ import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
-import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.function.RowValueConverter;
-import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.TomlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.FileRowIteratorFactory;
 import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.CommitCountHolder;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
@@ -78,6 +72,7 @@ import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -149,7 +144,6 @@ public class ImportDataCommand extends AbstractExportCommand
 				catalog.getSchemas().add(v);
 			});
 			final List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
-			tableFileReader.setTableFilesPairs(tfs);
 			if (this.getSqlType().getTableOrder() != null) {
 				List<TableFilesPair> sorted = this.getSqlType().getTableOrder().sort(tfs, tf -> tf.getTable());
 				tfs.clear();
@@ -211,71 +205,77 @@ public class ImportDataCommand extends AbstractExportCommand
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		sqlFactoryRegistry.setTableOptions(this.getTableOptions());
-		final SqlFactory<Row> factory = sqlFactoryRegistry.getSqlFactory(new Row(), this.getSqlType());
-		final List<File> targets = CommonUtils.list();
-		if (!CommonUtils.isEmpty(files)) {
-			for (final File file : files) {
-				if (file.isDirectory()) {
-					final File[] listFiles = file.listFiles();
-					if (listFiles != null) {
-						for (final File children : listFiles) {
-							targets.add(children);
-						}
-					}
-				} else {
-					targets.add(file);
-				}
-			}
-			readFiles(table, targets);
+		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
+		if (factory == null) {
+			throw new IllegalArgumentException("No row SQL factory for " + getSqlType() + " on " + dialect);
 		}
+		final List<SqlOperation> operations = factory.createSql(table);
+		if (operations.isEmpty() || operations.stream().anyMatch(operation -> !operation.getSqlType().supportRows())) {
+			throw new IllegalArgumentException("Row SQL is not supported for " + getSqlType() + " on " + dialect);
+		}
+		readImportFiles(table, files);
 		final SqlConverter sqlConverter = getSqlConverter();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final List<Row> batchRows = CommonUtils.list(batchSize);
 		long counter = 0;
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(queryCommitInterval, conn -> commit(conn));
+		Iterator<Row> rows = null;
+		Throwable failure = null;
 		try {
-			for (final Row row : table.getRows()) {
+			rows = table.getRows().iterator();
+			while (rows.hasNext()) {
+				final Row row = rows.next();
+				if (CommonUtils.isEmpty(files)) {
+					final Map<String, Object> values = convert(sqlConverter, row, table.getColumns());
+					values.forEach(row::put);
+				}
 				batchRows.add(row);
 				if (batchRows.size() >= batchSize) {
-					final List<SqlOperation> operations = factory.createSql(batchRows);
-					final ParametersContext context = new ParametersContext();
-					context.putAll(this.getContext());
-					context.putAll(convert(sqlConverter, row, table.getColumns()));
-					for (final SqlOperation operation : operations) {
-						final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
-						final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
-						jdbcHandler.execute(connection, context);
-						commitCountHandler.commit(connection);
-					}
+					executeRowBatch(connection, dialect, sqlConverter, operations, batchRows, commitCountHandler);
 					batchRows.clear();
 				}
 				counter++;
 			}
-		} finally {
-			table.setRowIteratorHandler(null);
-		}
-		if (batchRows.size() > 0) {
-			final List<SqlOperation> operations = factory.createSql(batchRows);
-			final ParametersContext context = new ParametersContext();
-			context.putAll(this.getContext());
-			for (final SqlOperation operation : operations) {
-				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
-				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
-				jdbcHandler.execute(connection, context);
-				commitCountHandler.commit(connection);
+			if (!batchRows.isEmpty()) {
+				executeRowBatch(connection, dialect, sqlConverter, operations, batchRows, commitCountHandler);
 			}
-			batchRows.clear();
 			commitCountHandler.finalCommit(connection);
+		} catch (final SQLException | RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
+			try {
+				IteratorCloseUtils.close(failure, rows);
+			} catch (final RuntimeException e) {
+				throw new SQLException("Failed to close imported rows", e);
+			} finally {
+				table.setRowIteratorHandler(null);
+			}
 		}
 		return counter;
 	}
 
+	private void executeRowBatch(final Connection connection, final Dialect dialect, final SqlConverter converter,
+			final List<SqlOperation> operations, final List<Row> rows, final CommitCountHolder commits)
+			throws SQLException {
+		final ParametersContext context = new ParametersContext();
+		context.putAll(getContext());
+		context.put("rows", rows);
+		// Row discovery scans map values, so give the batch priority over caller lists.
+		final Map<String, Object> executionContext = CommonUtils.linkedMap();
+		executionContext.put("rows", rows);
+		executionContext.putAll(context);
+		for (final SqlOperation operation : operations) {
+			final SqlNode node = converter.parseSql(dialect, context, operation.getSqlText());
+			final JdbcHandler handler = new JdbcHandler(node);
+			handler.execute(connection, executionContext);
+			commits.commit(connection);
+		}
+	}
+
 	protected SqlConverter getSqlConverter() {
 		final SqlConverter sqlConverter = new SqlConverter();
-		sqlConverter.getExpressionConverter().setFileDirectory(this.getFileDirectory());
-		sqlConverter.getExpressionConverter().setPlaceholderPrefix(this.getPlaceholderPrefix());
-		sqlConverter.getExpressionConverter().setPlaceholderSuffix(this.getPlaceholderSuffix());
-		sqlConverter.getExpressionConverter().setPlaceholders(this.isPlaceholders());
+		sqlConverter.setExpressionConverter(FileRowValueConverter.createExpressions(getFileDirectory(), this));
 		return sqlConverter;
 	}
 
@@ -292,29 +292,21 @@ public class ImportDataCommand extends AbstractExportCommand
 			final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, c.getSqlText());
 			return sqlNode;
 		}).collect(Collectors.toList());
-		final List<File> targets = CommonUtils.list();
-		if (!CommonUtils.isEmpty(files)) {
-			for (final File file : files) {
-				if (file.isDirectory()) {
-					final File[] listFiles = file.listFiles();
-					if (listFiles != null) {
-						for (final File children : listFiles) {
-							targets.add(children);
-						}
-					}
-				} else {
-					targets.add(file);
-				}
-			}
-			readFiles(table, targets);
-		}
-		try {
-			final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes,
-					this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
+		readImportFiles(table, files);
+		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes,
+				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
+		try (handler) {
 			handler.setValueConverter(r -> {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
-				context.putAll(convert(sqlConverter, (Row) r, table.getColumns()));
+				if (CommonUtils.isEmpty(files)) {
+					context.putAll(convert(sqlConverter, (Row) r, table.getColumns()));
+				} else {
+					// File readers already applied custom conversion and MVEL once.
+					for (final Column column : table.getColumns()) {
+						context.put(column.getName(), ((Row) r).get(column));
+					}
+				}
 				return context;
 			});
 			handler.setBatchUpdateResultHandler(result -> {
@@ -353,59 +345,39 @@ public class ImportDataCommand extends AbstractExportCommand
 	}
 
 	private RowValueConverter createRowValueConverter() {
-		final SqlConverter sqlConverter = getSqlConverter();
-		final ParametersContext context = new ParametersContext();
-		context.putAll(this.getContext());
-		return (r, c, v) -> {
-			if (this.getSqlType().supportRows()) {
-				return v;
-			}
-			Object originalVal;
-			if (this.getRowValueConverter() != null) {
-				originalVal = this.getRowValueConverter().apply(r, c, v);
+		return FileRowValueConverter.create(getSqlConverter().getExpressionConverter(), getContext(),
+				(r, c, v) -> getRowValueConverter() == null ? v : getRowValueConverter().apply(r, c, v));
+	}
+
+	private void readImportFiles(final Table table, final List<File> files)
+			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
+		if (CommonUtils.isEmpty(files)) {
+			return;
+		}
+		final List<File> targets = CommonUtils.list();
+		for (final File file : files) {
+			if (file.isDirectory()) {
+				final File[] children = file.listFiles();
+				if (children == null) {
+					throw new IOException("Cannot list import directory: " + file);
+				}
+				for (final File child : children) {
+					if (child.isFile() && FileRowIteratorFactory.supports(child)) {
+						targets.add(child);
+					}
+				}
 			} else {
-				originalVal = v;
+				targets.add(file);
 			}
-			Object val;
-			try {
-				val = sqlConverter.getExpressionConverter().convert(originalVal, context);
-			} catch (final IOException e) {
-				throw new InvalidValueException(r, c, v, e);
-			}
-			return val;
-		};
+		}
+		readFiles(table, targets);
 	}
 
 	private void readFiles(final Table table, final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
-		if (files.size() == 1) {
-			table.setRowIteratorHandler(createRowIteratorHandler(CommonUtils.first(files)));
-		} else {
-			final List<RowIteratorHandler> handlers = files.stream().map(file -> {
-				return createRowIteratorHandler(file);
-			}).collect(Collectors.toList());
-			table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
-		}
-	}
-
-	private RowIteratorHandler createRowIteratorHandler(final File file) {
-		final DataFormat workbookFileType = DataFormat.parse(file);
-		if (workbookFileType.isTextFile()) {
-			if (workbookFileType.isCsv()) {
-				return new CsvRowIteratorHandler(file, getCsvEncoding(), this.getCsvSkipHeaderRowsSize(),
-						createRowValueConverter());
-			} else if (workbookFileType.isXml()) {
-				return new XmlRowIteratorHandler(file, createRowValueConverter());
-			} else if (workbookFileType.isToml()) {
-				return new TomlRowIteratorHandler(file, this.getTomlConverter(), createRowValueConverter());
-			} else if (workbookFileType.isYaml()) {
-				return new YamlRowIteratorHandler(file, this.getYamlConverter(), createRowValueConverter());
-			} else {
-				return new JsonRowIteratorHandler(file, this.getJsonConverter(), createRowValueConverter());
-			}
-		} else {
-			return new ExcelRowIteratorHandler(file, this.getExcelSkipHeaderRowsSize(), createRowValueConverter());
-		}
+		table.setRowIteratorHandler(FileRowIteratorFactory.create(files, getCsvEncoding(), getCsvSkipHeaderRowsSize(),
+				getExcelSkipHeaderRowsSize(), getJsonConverter(), getYamlConverter(), getTomlConverter(),
+				createRowValueConverter()));
 	}
 
 	protected void readFileAsXml(final Table table, final File file, final DataFormat workbookFileType)

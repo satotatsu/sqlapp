@@ -38,8 +38,8 @@ class SchemaViewpointResolverTest {
 		definitions.getViewpoints().getFirst().getTables().clear();
 		definitions.getViewpoints().getFirst().getTables().add("EMPLOYEE_LIST");
 		assertTrue(assertThrows(IllegalArgumentException.class,
-				() -> new SchemaViewpointResolver().resolve(catalog, definitions, "migration"))
-				.getMessage().contains("Ambiguous"));
+				() -> new SchemaViewpointResolver().resolve(catalog, definitions, "migration")).getMessage()
+				.contains("Ambiguous"));
 	}
 
 	@Test

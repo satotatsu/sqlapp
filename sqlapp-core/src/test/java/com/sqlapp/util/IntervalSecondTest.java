@@ -30,26 +30,26 @@ public class IntervalSecondTest {
 
 	@Test
 	public void testSecondType() {
-		IntervalSecond interval1=IntervalSecond.parse("Interval '529' second");
-		Interval interval2=interval1.toInterval();
+		IntervalSecond interval1 = IntervalSecond.parse("Interval '529' second");
+		Interval interval2 = interval1.toInterval();
 		assertTrue(interval2.equals(interval1));
 	}
 
 	@Test
 	public void testParse() {
-		IntervalSecond interval1=IntervalSecond.parse("Interval '529' second");
-		IntervalSecond interval2=new IntervalSecond(529);
+		IntervalSecond interval1 = IntervalSecond.parse("Interval '529' second");
+		IntervalSecond interval2 = new IntervalSecond(529);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalSecond.parse("'328.5'");
-		interval2=new IntervalSecond(328.5);
+		interval1 = IntervalSecond.parse("'328.5'");
+		interval2 = new IntervalSecond(328.5);
 		assertTrue(interval1.equals(interval2));
 		//
 		interval1.setSeconds(59);
 		interval2.setSeconds(59);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalSecond.parse("Interval '529.5' second");
+		interval1 = IntervalSecond.parse("Interval '529.5' second");
 		assertTrue(interval1.toString().equals("529.5"));
 	}
 

@@ -27,8 +27,7 @@ import com.sqlapp.data.schemas.RoleMember;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2005RoleMemberReader extends
-		SqlServer2000RoleMemberReader {
+public class SqlServer2005RoleMemberReader extends SqlServer2000RoleMemberReader {
 
 	protected SqlServer2005RoleMemberReader(Dialect dialect) {
 		super(dialect);
@@ -36,7 +35,7 @@ public class SqlServer2005RoleMemberReader extends
 
 	@Override
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roleMember2005.sql");
+		return getSqlNodeCache().getString("roleMembers2005.sql");
 	}
 
 	@Override

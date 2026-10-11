@@ -47,11 +47,9 @@ public class OracleUserReader extends UserReader {
 	}
 
 	@Override
-	protected List<User> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_USERS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS", "DBA_USERS");
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		OracleMetadataUtils.setDba(dba, context);
 		final List<User> result = list();

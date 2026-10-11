@@ -42,12 +42,22 @@ import com.sqlapp.util.CommonUtils;
 public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	private final File file;
+	private final DataFormat workbookFormat;
 	private final int skipHeaderRowsSize;
 
 	public ExcelRowIteratorHandler(final File file, final int skipHeaderRowsSize,
 			final RowValueConverter valueConverter) {
+		this(file, null, skipHeaderRowsSize, valueConverter);
+	}
+
+	public ExcelRowIteratorHandler(final File file, final DataFormat workbookFormat,
+			final int skipHeaderRowsSize, final RowValueConverter valueConverter) {
 		super(valueConverter);
 		this.file = file;
+		if (workbookFormat != null && !workbookFormat.isWorkbook()) {
+			throw new IllegalArgumentException("Workbook format is required: " + workbookFormat);
+		}
+		this.workbookFormat = workbookFormat;
 		this.skipHeaderRowsSize = skipHeaderRowsSize;
 	}
 
@@ -56,9 +66,7 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 	}
 
 	public ExcelRowIteratorHandler(final File file, final int skipHeaderRowsSize) {
-		super((r, c, v) -> v);
-		this.file = file;
-		this.skipHeaderRowsSize = skipHeaderRowsSize;
+		this(file, null, skipHeaderRowsSize, (r, c, v) -> v);
 	}
 
 	public ExcelRowIteratorHandler(final File file) {
@@ -67,19 +75,32 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
-		return new ExcelIterator(c, file, 0L, this.getRowValueConverter(), this.skipHeaderRowsSize);
+		return new ExcelIterator(c, file, workbookFormat, 0L, this.getRowValueConverter(),
+				this.skipHeaderRowsSize);
 	}
 
 	public static class ExcelIterator extends AbstractRowIterator<org.apache.poi.ss.usermodel.Row> {
 
 		ExcelIterator(final RowCollection c, final File file, final long index, final RowValueConverter valueConverter,
 				final int skipHeaderRowsSize) {
-			super(c, index, valueConverter);
-			this.file = file;
-			this.filename = file.getAbsolutePath();
+			this(c, file, null, index, valueConverter, skipHeaderRowsSize);
 		}
 
+		ExcelIterator(final RowCollection c, final File file, final DataFormat workbookFormat, final long index,
+				final RowValueConverter valueConverter, final int skipHeaderRowsSize) {
+			super(c, index, valueConverter);
+			this.file = file;
+			this.workbookFormat = workbookFormat;
+			this.filename = file.getAbsolutePath();
+			if (skipHeaderRowsSize < 0) {
+				throw new IllegalArgumentException("skipHeaderRowsSize must not be negative");
+			}
+			this.skipHeaderRowsSize = skipHeaderRowsSize;
+		}
+
+		private final int skipHeaderRowsSize;
 		private final File file;
+		private final DataFormat workbookFormat;
 		private Workbook workbook;
 		private final String filename;
 
@@ -91,7 +112,12 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void preInitialize() throws Exception {
-			this.workbook = DataFormat.parse(file).createWorkBook(file, null, true);
+			if (skipHeaderRowsSize != 1 && CommonUtils.isEmpty(table.getColumns())) {
+				throw new IllegalArgumentException(
+						"Schema columns are required when Excel header rows are not 1: " + filename);
+			}
+			final DataFormat format = workbookFormat != null ? workbookFormat : DataFormat.parse(file);
+			this.workbook = format.createWorkBook(file, null, true);
 		}
 
 		@Override
@@ -108,6 +134,17 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 		protected void initializeColumn() throws IOException {
 			final Sheet sheet = workbook.getSheetAt(0);
 			rowIterator = sheet.rowIterator();
+			if (skipHeaderRowsSize != 1) {
+				for (int i = 0; i < skipHeaderRowsSize && rowIterator.hasNext(); i++) {
+					rowIterator.next();
+				}
+				int position = 0;
+				for (final Column column : table.getColumns()) {
+					columnIndexColumnMap.put(position, column);
+					columnIndexFixedTypeMap.put(position++, column.getDataType() != null);
+				}
+				return;
+			}
 			org.apache.poi.ss.usermodel.Row headerRow;
 			if (hasNextInternal()) {
 				headerRow = read();
@@ -178,10 +215,15 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 		@Override
 		protected void doClose() {
 			try {
-				if (workbook != null) {
-					workbook.close();
-				}
+				closeWorkbook();
 			} catch (final IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		protected void closeWorkbook() throws IOException {
+			if (workbook != null) {
+				workbook.close();
 			}
 		}
 	}

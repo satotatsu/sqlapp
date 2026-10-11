@@ -23,6 +23,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.List;
 
@@ -250,7 +251,7 @@ public class JdbcHandler {
 				resultSet = new ExResultSet(statement.getResultSet());
 				handleResultSet(resultSet);
 			} else {
-				final long updateCount = statement.getLargeUpdateCount();
+				final long updateCount = getUpdateCount(statement);
 				if (updateCount != -1) {
 					handleUpdate(statement, updateCount);
 					handleGeneratedKeys(statement);
@@ -272,7 +273,7 @@ public class JdbcHandler {
 
 	protected void handleMoreResults(final PreparedStatement statement) throws SQLException {
 		boolean moreResults = statement.getMoreResults();
-		long updateCount = statement.getLargeUpdateCount();
+		long updateCount = getUpdateCount(statement);
 		while (moreResults) {
 			if (updateCount != -1) {
 				handleUpdate(statement, updateCount);
@@ -288,6 +289,15 @@ public class JdbcHandler {
 			}
 			moreResults = statement.getMoreResults();
 			updateCount = statement.getUpdateCount();
+		}
+	}
+
+	protected static long getUpdateCount(final Statement statement) throws SQLException {
+		try {
+			return statement.getLargeUpdateCount();
+		} catch (SQLFeatureNotSupportedException | UnsupportedOperationException
+				| AbstractMethodError e) {
+			return statement.getUpdateCount();
 		}
 	}
 

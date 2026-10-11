@@ -44,10 +44,10 @@ public class SqlServer2008TableReader extends SqlServer2005TableReader {
 	@Override
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
-		for(SqlServerIndexOptions enm:SqlServerIndexOptions.values()) {
+		for (SqlServerIndexOptions enm : SqlServerIndexOptions.values()) {
 			enm.setTable(rs, table);
 		}
-		for(SqlServerTableOptions enm:SqlServerTableOptions.values()) {
+		for (SqlServerTableOptions enm : SqlServerTableOptions.values()) {
 			enm.setTable(rs, table);
 		}
 		setSpecifics(rs, "is_track_columns_updated_on", table);

@@ -65,8 +65,7 @@ public class EdgeUtils {
 	}
 
 	private static double caluculateByIndex(int index) {
-		return (TableSvgCreator.HEADER_HEIGHT)
-				+ (index * TableSvgCreator.ROW_HEIGHT)
+		return (TableSvgCreator.HEADER_HEIGHT) + (index * TableSvgCreator.ROW_HEIGHT)
 				+ (TableSvgCreator.ROW_HEIGHT / 2.0);
 	}
 
@@ -81,8 +80,8 @@ public class EdgeUtils {
 				return column;
 			}
 			return tableNode.getColumns().stream()
-					.filter(candidate -> CommonUtils.eqIgnoreCase(candidate.getName(), rc.getName()))
-					.findFirst().orElse(null);
+					.filter(candidate -> CommonUtils.eqIgnoreCase(candidate.getName(), rc.getName())).findFirst()
+					.orElse(null);
 		}).toList();
 		return calulucateY(tableNode, columns);
 	}

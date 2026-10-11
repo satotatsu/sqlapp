@@ -41,8 +41,7 @@ public class SqlServer2005UserPrivilegeReader extends UserPrivilegeReader {
 	}
 
 	@Override
-	protected List<UserPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UserPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UserPrivilege> result = list();

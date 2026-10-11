@@ -16,8 +16,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingOutput;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingOutput;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;

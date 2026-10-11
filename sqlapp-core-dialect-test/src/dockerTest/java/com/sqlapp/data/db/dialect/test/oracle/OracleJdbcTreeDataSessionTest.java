@@ -35,10 +35,8 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /** Oracle Database Free integration coverage for hierarchical JDBC writes. */
 class OracleJdbcTreeDataSessionTest {
-	private static final String IMAGE = "gvenzl/oracle-free:23-slim-faststart";
-
-	private static final OracleContainer ORACLE =
-			ReusableTestcontainers.configure(new OracleContainer(IMAGE));
+	private static final OracleContainer ORACLE = ReusableTestcontainers
+			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
 	@BeforeAll
 	static void startContainer() {
@@ -51,9 +49,19 @@ class OracleJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = ORACLE.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection, "BY DEFAULT");
+			Schema schema = loadSchema(connection);
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("PARENT_TABLE"), schema.getTables().get("CHILD_TABLE"));
+		}
+	}
+
+	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
-		try (Connection writer = ORACLE.createConnection("");
-				Connection observer = ORACLE.createConnection("")) {
+		try (Connection writer = ORACLE.createConnection(""); Connection observer = ORACLE.createConnection("")) {
 			writer.setAutoCommit(false);
 			createTables(writer, "BY DEFAULT");
 			Schema schema = loadSchema(writer);
@@ -61,7 +69,7 @@ class OracleJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 			assertTrue(parent.getColumns().get("ID").getSequenceName().startsWith("ISEQ$$_"));
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
+			new JdbcTreeDataSession(writer, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setCommitEveryRootBatches(1);
 				session.setTableOperationMode(TableOperationMode.INSERT);
@@ -74,7 +82,7 @@ class OracleJdbcTreeDataSessionTest {
 				assertEquals(4, count(observer, "PARENT_TABLE"));
 				assertEquals(2, count(observer, "CHILD_TABLE"));
 				addChild(session, child, "child-5");
-			}
+			});
 
 			assertEquals(5, count(observer, "PARENT_TABLE"));
 			assertEquals(3, count(observer, "CHILD_TABLE"));
@@ -90,12 +98,12 @@ class OracleJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(10);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
 				addChild(session, child, "child-3");
-			}
+			});
 
 			assertEquals(3, count(connection, "PARENT_TABLE"));
 			assertEquals(1, count(connection, "CHILD_TABLE"));
@@ -120,12 +128,12 @@ class OracleJdbcTreeDataSessionTest {
 				try (ResultSet cursor = statement.executeQuery("SELECT id, txt FROM parent_table ORDER BY id")) {
 					assertTrue(cursor.next());
 
-					try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+					new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 						session.setRootBatchSize(1);
 						session.setTableOperationMode(TableOperationMode.INSERT);
 						addParent(session, parent, "parent-3");
 						addChild(session, child, "child-3");
-					}
+					});
 
 					assertTrue(cursor.next(),
 							"The open Oracle SELECT cursor must remain usable after a hierarchical INSERT.");
@@ -145,7 +153,7 @@ class OracleJdbcTreeDataSessionTest {
 			Set<Object> preparedStatements = Collections.newSetFromMap(new IdentityHashMap<>());
 			AtomicInteger executions = new AtomicInteger();
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				session.setPreparedStatementBeforeExecuteHandler(statement -> {
@@ -156,18 +164,17 @@ class OracleJdbcTreeDataSessionTest {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
-			}
+			});
 			assertEquals(6, executions.get());
 			assertEquals(4, preparedStatements.size(),
 					"Two-row batches must reuse their prepared statements; only final one-row shapes differ.");
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 3; i <= 7; i++) {
 					assertParentChild(resultSet, "parent-" + i, "child-" + i);
 				}
@@ -185,7 +192,7 @@ class OracleJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
@@ -194,16 +201,15 @@ class OracleJdbcTreeDataSessionTest {
 				addParent(session, parent, "parent-4");
 				addParent(session, parent, "parent-5");
 				addChild(session, child, "child-5");
-			}
+			});
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							LEFT JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
-							ORDER BY p.id, c.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					LEFT JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+					ORDER BY p.id, c.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3a");
 				assertParentChild(resultSet, "parent-3", "child-3b");
 				assertParentChild(resultSet, "parent-4", null);
@@ -223,13 +229,13 @@ class OracleJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setRootBatchSize(2);
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					addParent(session, parent, "generated-parent");
 					Row explicit = addParent(session, parent, "explicit-parent");
 					explicit.put("ID", 100L);
-				}
+				});
 			});
 
 			assertTrue(exception.getMessage().contains("cannot mix"));
@@ -245,23 +251,22 @@ class OracleJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
 				addChild(session, child, "child-3");
 				addParent(session, parent, "parent-4");
 				addChild(session, child, "child-4");
-			}
+			});
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4')
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4')
+					ORDER BY p.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertFalse(resultSet.next());
@@ -278,7 +283,7 @@ class OracleJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("PARENT_TABLE");
 			Table child = schema.getTables().get("CHILD_TABLE");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				Row first = addParent(session, parent, "parent-100");
@@ -287,16 +292,15 @@ class OracleJdbcTreeDataSessionTest {
 				Row second = addParent(session, parent, "parent-200");
 				second.put("ID", 200L);
 				addChild(session, child, "child-200");
-			}
+			});
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, c.parent_id
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id IN (100, 200)
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, c.parent_id
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.id IN (100, 200)
+					ORDER BY p.id
+					""")) {
 				assertIdentityPair(resultSet, 100L);
 				assertIdentityPair(resultSet, 200L);
 				assertFalse(resultSet.next());
@@ -314,11 +318,11 @@ class OracleJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("CHILD_TABLE");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					Row row = addParent(session, parent, "parent-100");
 					row.put("ID", 100L);
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("GENERATED ALWAYS"));
 		}
@@ -330,7 +334,8 @@ class OracleJdbcTreeDataSessionTest {
 				.orElseThrow(() -> new AssertionError("Oracle test schema was not loaded."));
 	}
 
-	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text) throws SQLException {
+	private Row addParent(final JdbcTreeDataSession session, final Table parent, final String text)
+			throws SQLException {
 		Row row = session.newRow(parent);
 		row.put("TXT", text);
 		return row;

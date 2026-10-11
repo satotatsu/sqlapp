@@ -47,8 +47,7 @@ public class SqlServer2005AssemblyFileReader extends AssemblyFileReader {
 	}
 
 	@Override
-	protected List<AssemblyFile> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<AssemblyFile> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<AssemblyFile> result = list();

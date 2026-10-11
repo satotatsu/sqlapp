@@ -24,20 +24,22 @@ import java.sql.SQLException;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.TableSpace;
 import com.sqlapp.jdbc.ExResultSet;
+
 /**
  * Oracleのテーブルスペース読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class Oracle11gR2TableSpaceReader extends OracleTableSpaceReader{
+public class Oracle11gR2TableSpaceReader extends OracleTableSpaceReader {
 
 	protected Oracle11gR2TableSpaceReader(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
-	protected TableSpace createTableSpace(ExResultSet rs) throws SQLException{
-		TableSpace tableSpace=super.createTableSpace(rs);
+	protected TableSpace createTableSpace(ExResultSet rs) throws SQLException {
+		TableSpace tableSpace = super.createTableSpace(rs);
 		setSpecifics(rs, "PREDICATE_EVALUATION", tableSpace);
 		setSpecifics(rs, "ENCRYPTED", tableSpace);
 		setSpecifics(rs, "COMPRESS_FOR", tableSpace);

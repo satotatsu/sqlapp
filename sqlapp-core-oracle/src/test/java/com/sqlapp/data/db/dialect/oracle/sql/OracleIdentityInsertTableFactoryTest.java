@@ -85,8 +85,8 @@ class OracleIdentityInsertTableFactoryTest extends AbstractOracleSqlFactoryTest 
 	private Table createIdentityTable(final IdentityGenerationType generationType) {
 		Table table = new Table("identity_table");
 		table.setDialect(dialect);
-		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT)
-				.setIdentity(true).setIdentityGenerationType(generationType));
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT).setIdentity(true)
+				.setIdentityGenerationType(generationType));
 		table.getColumns().add(new Column("txt").setDataType(DataType.VARCHAR).setLength(50));
 		table.setPrimaryKey(table.getColumns().get("id"));
 		return table;

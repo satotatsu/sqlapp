@@ -39,58 +39,57 @@ import com.sqlapp.util.CommonUtils;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2005AlterPartitionFunctionFactory extends
-		AbstractAlterPartitionFunctionFactory<SqlServerSqlBuilder> {
-
+public class SqlServer2005AlterPartitionFunctionFactory
+		extends AbstractAlterPartitionFunctionFactory<SqlServerSqlBuilder> {
 
 	@Override
-	public List<SqlOperation> createDiffSql(DbObjectDifference obj){
-		if(!obj.getState().isChanged()){
+	public List<SqlOperation> createDiffSql(DbObjectDifference obj) {
+		if (!obj.getState().isChanged()) {
 			return Collections.emptyList();
 		}
-		if (obj.getState()==State.Added){
-			return createSql((PartitionFunction)obj.getTarget());
+		if (obj.getState() == State.Added) {
+			return createSql((PartitionFunction) obj.getTarget());
 		}
-		if (obj.getState()==State.Deleted){
-			//TODO
+		if (obj.getState() == State.Deleted) {
+			// TODO
 			return Collections.emptyList();
 		}
-		PartitionFunction original=obj.getOriginal(PartitionFunction.class);
-		PartitionFunction target=obj.getTarget(PartitionFunction.class);
-		Set<String> deleted=CommonUtils.linkedSet();
-		Set<String> added=CommonUtils.linkedSet();
-		for(String val:original.getValues()){
-			if (!target.getValues().contains(val)){
+		PartitionFunction original = obj.getOriginal(PartitionFunction.class);
+		PartitionFunction target = obj.getTarget(PartitionFunction.class);
+		Set<String> deleted = CommonUtils.linkedSet();
+		Set<String> added = CommonUtils.linkedSet();
+		for (String val : original.getValues()) {
+			if (!target.getValues().contains(val)) {
 				deleted.add(val);
 			}
 		}
-		for(String val:target.getValues()){
-			if (!original.getValues().contains(val)){
+		for (String val : target.getValues()) {
+			if (!original.getValues().contains(val)) {
 				added.add(val);
 			}
 		}
-		List<SqlOperation> sqlList=CommonUtils.list();
-		for(String val:deleted){
-			SqlServerSqlBuilder builder=this.newSqlBuilder(this.getDialect());
+		List<SqlOperation> sqlList = CommonUtils.list();
+		for (String val : deleted) {
+			SqlServerSqlBuilder builder = this.newSqlBuilder(this.getDialect());
 			builder.alter().partition().function().space().name(original)._add("()");
 			builder.lineBreak().merge().range().space()._add("(")._add(val)._add(")");
-			SqlOperation sqlOperation=this.createOperation(builder.toString(), SqlType.ALTER, original, target);
+			SqlOperation sqlOperation = this.createOperation(builder.toString(), SqlType.ALTER, original, target);
 			this.addSql(sqlList, sqlOperation);
 		}
-		for(String val:added){
-			SqlServerSqlBuilder builder=this.newSqlBuilder(this.getDialect());
+		for (String val : added) {
+			SqlServerSqlBuilder builder = this.newSqlBuilder(this.getDialect());
 			builder.alter().partition().function().space().name(original)._add("()");
 			builder.lineBreak().split().range().space()._add("(")._add(val)._add(")");
-			SqlOperation sqlOperation=this.createOperation(builder.toString(), SqlType.ALTER, original, target);
+			SqlOperation sqlOperation = this.createOperation(builder.toString(), SqlType.ALTER, original, target);
 			this.addSql(sqlList, sqlOperation);
 		}
 		return sqlList;
 	}
-	
+
 	@Override
 	public List<SqlOperation> createSql(PartitionFunction obj) {
-		SqlFactory<PartitionFunction> sqlFactory=this.getSqlFactoryRegistry().getSqlFactory(obj, SqlType.CREATE);
-		if (sqlFactory!=null){
+		SqlFactory<PartitionFunction> sqlFactory = this.getSqlFactoryRegistry().getSqlFactory(obj, SqlType.CREATE);
+		if (sqlFactory != null) {
 			return sqlFactory.createSql(obj);
 		}
 		return Collections.emptyList();

@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.generator.config.strategy.WeightedSelectionFunction;
 import com.sqlapp.util.CommonUtils;
 
 class WeightedSelectionFunctionTest {

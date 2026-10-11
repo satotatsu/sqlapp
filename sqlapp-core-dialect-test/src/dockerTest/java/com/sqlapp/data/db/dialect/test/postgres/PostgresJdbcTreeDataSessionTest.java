@@ -32,8 +32,8 @@ import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 class PostgresJdbcTreeDataSessionTest {
 	private static final String IMAGE = "postgres:18.4";
 
-	private static final PostgreSQLContainer POSTGRES =
-			ReusableTestcontainers.configure(new PostgreSQLContainer(IMAGE));
+	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
+			.configure(new PostgreSQLContainer(IMAGE));
 
 	@BeforeAll
 	static void startContainer() {
@@ -46,6 +46,17 @@ class PostgresJdbcTreeDataSessionTest {
 	}
 
 	@Test
+	void testSessionSelectCursorSurvivesPeriodicCommitsAndFinalPartialBatch() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection("")) {
+			connection.setAutoCommit(false);
+			createTables(connection);
+			Schema schema = loadPublicSchema(connection);
+			com.sqlapp.data.db.dialect.test.JdbcTreeDataCursorAssertions.verifyPeriodicCommitCursor(connection,
+					schema.getTables().get("parent_table"), schema.getTables().get("child_table"));
+		}
+	}
+
+	@Test
 	void testAlwaysIdentityRejectsExplicitValues() throws SQLException {
 		try (Connection connection = POSTGRES.createConnection("")) {
 			connection.setAutoCommit(false);
@@ -55,11 +66,11 @@ class PostgresJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("child_table");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					Row row = addParent(session, parent, "parent-100");
 					row.put("id", 100L);
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("GENERATED ALWAYS"));
 			connection.rollback();
@@ -77,13 +88,13 @@ class PostgresJdbcTreeDataSessionTest {
 			Table child = schema.getTables().get("child_table");
 
 			IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-				try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+				new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 					session.setRootBatchSize(2);
 					session.setTableOperationMode(TableOperationMode.INSERT);
 					addParent(session, parent, "generated-parent");
 					Row explicitParent = addParent(session, parent, "explicit-parent");
 					explicitParent.put("id", 100L);
-				}
+				});
 			});
 			assertTrue(exception.getMessage().contains("cannot mix"));
 			connection.rollback();
@@ -100,7 +111,7 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				Row firstParent = addParent(session, parent, "parent-100");
@@ -109,16 +120,15 @@ class PostgresJdbcTreeDataSessionTest {
 				Row secondParent = addParent(session, parent, "parent-200");
 				secondParent.put("id", 200L);
 				addChild(session, child, "child-200");
-			}
+			});
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.id, c.parent_id, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							WHERE p.id IN (100, 200)
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.id, c.parent_id, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					WHERE p.id IN (100, 200)
+					ORDER BY p.id
+					""")) {
 				assertIdentityChild(resultSet, 100L, "child-100");
 				assertIdentityChild(resultSet, 200L, "child-200");
 				assertFalse(resultSet.next());
@@ -128,15 +138,14 @@ class PostgresJdbcTreeDataSessionTest {
 
 	@Test
 	void testCommitEveryRootBatchControlsCrossConnectionVisibility() throws SQLException {
-		try (Connection writer = POSTGRES.createConnection("");
-				Connection observer = POSTGRES.createConnection("")) {
+		try (Connection writer = POSTGRES.createConnection(""); Connection observer = POSTGRES.createConnection("")) {
 			writer.setAutoCommit(false);
 			createTables(writer);
 			Schema schema = loadPublicSchema(writer);
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(writer, parent, child)) {
+			new JdbcTreeDataSession(writer, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setCommitEveryRootBatches(1);
 				session.setTableOperationMode(TableOperationMode.INSERT);
@@ -152,7 +161,7 @@ class PostgresJdbcTreeDataSessionTest {
 				addChild(session, child, "child-5");
 				assertEquals(4, count(observer, "parent_table"));
 				assertEquals(2, count(observer, "child_table"));
-			}
+			});
 
 			assertEquals(5, count(observer, "parent_table"));
 			assertEquals(3, count(observer, "child_table"));
@@ -168,12 +177,12 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(1);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				addParent(session, parent, "parent-3");
 				addChild(session, child, "child-3");
-			}
+			});
 
 			assertEquals(3, count(connection, "parent_table"));
 			assertEquals(1, count(connection, "child_table"));
@@ -192,24 +201,23 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 				for (int i = 3; i <= 7; i++) {
 					addParent(session, parent, "parent-" + i);
 					addChild(session, child, "child-" + i);
 				}
-			}
+			});
 
 			assertEquals(7, count(connection, "parent_table"));
 			assertEquals(5, count(connection, "child_table"));
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				for (int i = 3; i <= 7; i++) {
 					assertParentChild(resultSet, "parent-" + i, "child-" + i);
 				}
@@ -227,7 +235,7 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(3);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 
@@ -237,16 +245,15 @@ class PostgresJdbcTreeDataSessionTest {
 				addParent(session, parent, "parent-4");
 				addParent(session, parent, "parent-5");
 				addChild(session, child, "child-5");
-			}
+			});
 
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							LEFT JOIN child_table c ON c.parent_id = p.id
-							WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
-							ORDER BY p.id, c.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					LEFT JOIN child_table c ON c.parent_id = p.id
+					WHERE p.txt IN ('parent-3', 'parent-4', 'parent-5')
+					ORDER BY p.id, c.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3a");
 				assertParentChild(resultSet, "parent-3", "child-3b");
 				assertParentChild(resultSet, "parent-4", null);
@@ -265,7 +272,7 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+			new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 				session.setRootBatchSize(2);
 				session.setTableOperationMode(TableOperationMode.INSERT);
 
@@ -278,17 +285,16 @@ class PostgresJdbcTreeDataSessionTest {
 				secondParent.put("txt", "parent-4");
 				Row secondChild = session.newRow(child);
 				secondChild.put("txt", "child-4");
-			}
+			});
 
 			assertEquals(4, count(connection, "parent_table"));
 			assertEquals(2, count(connection, "child_table"));
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT p.txt, c.txt
-							FROM parent_table p
-							JOIN child_table c ON c.parent_id = p.id
-							ORDER BY p.id
-							""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT p.txt, c.txt
+					FROM parent_table p
+					JOIN child_table c ON c.parent_id = p.id
+					ORDER BY p.id
+					""")) {
 				assertParentChild(resultSet, "parent-3", "child-3");
 				assertParentChild(resultSet, "parent-4", "child-4");
 				assertFalse(resultSet.next());
@@ -305,23 +311,20 @@ class PostgresJdbcTreeDataSessionTest {
 			Table parent = schema.getTables().get("parent_table");
 			Table child = schema.getTables().get("child_table");
 
-			try (Statement statement = connection.createStatement(
-					ResultSet.TYPE_FORWARD_ONLY,
-					ResultSet.CONCUR_READ_ONLY,
-					ResultSet.HOLD_CURSORS_OVER_COMMIT)) {
+			try (Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+					ResultSet.CONCUR_READ_ONLY, ResultSet.HOLD_CURSORS_OVER_COMMIT)) {
 				statement.setFetchSize(1);
-				try (ResultSet cursor = statement.executeQuery(
-						"SELECT id, txt FROM parent_table ORDER BY id")) {
+				try (ResultSet cursor = statement.executeQuery("SELECT id, txt FROM parent_table ORDER BY id")) {
 					assertTrue(cursor.next());
 
-					try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection, parent, child)) {
+					new JdbcTreeDataSession(connection, parent, child).execute(session -> {
 						session.setRootBatchSize(1);
 						session.setTableOperationMode(TableOperationMode.INSERT);
 						Row parentRow = session.newRow(parent);
 						parentRow.put("txt", "parent-3");
 						Row childRow = session.newRow(child);
 						childRow.put("txt", "child-3");
-					}
+					});
 
 					assertTrue(cursor.next(),
 							"The open SELECT cursor must remain usable after a hierarchical batch INSERT.");

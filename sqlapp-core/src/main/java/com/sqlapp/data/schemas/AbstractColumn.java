@@ -220,7 +220,7 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
 			return false;
 		}
-		if (this.getDataType() == null || this.getDataType().isFixedSize()) {
+		if (this.getDataType() == null || this.getDataType().isFixedSize() || this.getDataType().isInterval()) {
 			if (!equals(SchemaProperties.LENGTH, val, equalsHandler)) {
 				return false;
 			}
@@ -719,7 +719,7 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 		builder.add(SchemaProperties.DATA_TYPE, this.dataType);
 		builder.add(SchemaProperties.DATA_TYPE_NAME, this.dataTypeName);
 		builder.add(SchemaProperties.NOT_NULL, this.isNotNull());
-		if (this.getDataType() == null || this.getDataType().isFixedSize()) {
+		if (this.getDataType() == null || this.getDataType().isFixedSize() || this.getDataType().isInterval()) {
 			builder.add(SchemaProperties.LENGTH, this.getLength());
 			builder.add(SchemaProperties.OCTET_LENGTH, this.getOctetLength());
 		}
@@ -762,13 +762,13 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
-		if (this.getDataType() == null || this.getDataType().isFixedSize()) {
+		if (this.getDataType() == null || this.getDataType().isFixedSize() || this.getDataType().isInterval()) {
 			stax.writeAttribute(SchemaProperties.LENGTH.getLabel(), getLength());
 			if (!CommonUtils.eq(this.getLength(), getOctetLength())) {
 				stax.writeAttribute(SchemaProperties.OCTET_LENGTH.getLabel(), getOctetLength());
 			}
 		}
-		if (this.getDataType() == null || this.getDataType().isFixedScale()) {
+		if (this.getDataType() == null || this.getDataType().isFixedScale() || this.getDataType().isInterval()) {
 			stax.writeAttribute(SchemaProperties.SCALE.getLabel(), getScale());
 		}
 		if (this.isNotNull()) {

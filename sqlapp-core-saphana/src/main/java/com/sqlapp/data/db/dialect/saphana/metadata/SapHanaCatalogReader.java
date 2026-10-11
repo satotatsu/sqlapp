@@ -55,13 +55,11 @@ public class SapHanaCatalogReader extends CatalogReader {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.DbMetadataReader#doGetAll(java.sql
+	 * @see com.sqlapp.data.db.dialect.metadata.DbMetadataReader#doGetAll(java.sql
 	 * .Connection, com.sqlapp.data.parameter.ParametersContext)
 	 */
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		List<Catalog> result = CommonUtils.list(1);
 		result.add(new Catalog());

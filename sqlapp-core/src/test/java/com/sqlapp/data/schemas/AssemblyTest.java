@@ -52,8 +52,7 @@ public class AssemblyTest extends AbstractDbObjectTest<Assembly> {
 	protected void testDiffString(Assembly obj1, Assembly obj2) {
 		obj2.setName("b");
 		try {
-			obj2.getAssemblyFiles().get(0)
-					.setContent("sourceB".getBytes("utf-8"));
+			obj2.getAssemblyFiles().get(0).setContent("sourceB".getBytes("utf-8"));
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException(e);
 		}

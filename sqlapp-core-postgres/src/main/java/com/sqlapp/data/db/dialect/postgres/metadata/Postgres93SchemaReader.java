@@ -33,7 +33,7 @@ public class Postgres93SchemaReader extends Postgres92SchemaReader {
 	protected MviewReader newMviewReader() {
 		return new Postgres93MviewReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected TableReader newTableReader() {
 		return new Postgres93TableReader(this.getDialect());

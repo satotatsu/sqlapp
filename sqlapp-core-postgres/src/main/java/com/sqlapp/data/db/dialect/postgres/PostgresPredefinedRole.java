@@ -11,8 +11,7 @@ import com.sqlapp.data.db.dialect.Dialect;
  * Versioned PostgreSQL predefined roles.
  */
 public enum PostgresPredefinedRole {
-	SIGNAL_AUTOVACUUM_WORKER("pg_signal_autovacuum_worker",
-			DialectHolder.postgreSQL180);
+	SIGNAL_AUTOVACUUM_WORKER("pg_signal_autovacuum_worker", DialectHolder.postgreSQL180);
 
 	private final String roleName;
 	private final Dialect minimumDialect;

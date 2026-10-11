@@ -36,21 +36,21 @@ import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2008CreateTableFactoryTest extends
-AbstractSqlServer11SqlFactoryTest {
+public class SqlServer2008CreateTableFactoryTest extends AbstractSqlServer11SqlFactoryTest {
 	SqlFactory<Table> operationfactory;
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Added);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), State.Added);
 	}
 
 	@Test
 	public void testGetDdlTable() {
 		final Table table0 = createTable();
 		final Table table = createTable1();
-		table.getConstraints().addForeignKeyConstraint("FK1", table.getColumns().get("colA"), table0.getColumns().get("colA")).setUpdateRule(CascadeRule.Restrict).setDeleteRule(CascadeRule.Cascade);
+		table.getConstraints()
+				.addForeignKeyConstraint("FK1", table.getColumns().get("colA"), table0.getColumns().get("colA"))
+				.setUpdateRule(CascadeRule.Restrict).setDeleteRule(CascadeRule.Cascade);
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
@@ -63,52 +63,40 @@ AbstractSqlServer11SqlFactoryTest {
 		System.out.println(list);
 	}
 
-	protected Table createTable(){
+	protected Table createTable() {
 		final Table table = new Table("tableB");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
 		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		return table;
 	}
-	
-	protected Table createTable1(){
+
+	protected Table createTable1() {
 		final Table table = new Table("tableA");
 		table.setCompression(true);
 		table.setCompressionType("PAGE");
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("colA");
 			c.setDataType(DataType.INT).setNotNull(true).setIdentity(true);
 		});
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
 		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		table.getColumns().add(
-				new Column("colD").setLength(Integer.MAX_VALUE).setDataType(DataType.VARCHAR));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
-		table.getIndexes().get("IDX_tableA1").toPartitioning(p->{
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
+		table.getColumns().add(new Column("colD").setLength(Integer.MAX_VALUE).setDataType(DataType.VARCHAR));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
+		table.getIndexes().get("IDX_tableA1").toPartitioning(p -> {
 			p.setPartitionSchemeName("PF_SCHEME");
-			p.getPartitioningColumns().add(c->{
+			p.getPartitioningColumns().add(c -> {
 				c.setName("colC");
 			});
 		});
-		table.toPartitioning(p->{
+		table.toPartitioning(p -> {
 			p.setPartitionSchemeName("PF_SCHEME");
-			p.getPartitioningColumns().add(c->{
+			p.getPartitioningColumns().add(c -> {
 				c.setName("colA");
 			});
 		});

@@ -40,6 +40,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.NullsOrder;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -62,8 +63,7 @@ public class PostgresIndexReader extends IndexReader {
 	/**
 	 * インデックスのカラムを取得するための正規表現
 	 */
-	private static final Pattern indexPattern = Pattern.compile(
-			"create\\s+.*index.*\\s+on\\s+.*\\((.*)\\).*",
+	private static final Pattern indexPattern = Pattern.compile("create\\s+.*index.*\\s+on\\s+.*\\((.*)\\).*",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
 	/**
@@ -74,10 +74,11 @@ public class PostgresIndexReader extends IndexReader {
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
 
 	@Override
-	protected List<Index> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final boolean catalogDetails = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 11;
 		final List<Index> result = list();
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
 		final Map<String, String> columnsMap = map();
@@ -99,6 +100,7 @@ public class PostgresIndexReader extends IndexReader {
 					String remarks = getString(rs, "remarks");
 					String indexprs = getString(rs, "indexprs");
 					String definition = getString(rs, "definition");
+					readDefinition(index, definition);
 					IndexType indexType = null;
 					if (!isEmpty(indexprs)) {
 						indexType = IndexType.Function;
@@ -108,15 +110,19 @@ public class PostgresIndexReader extends IndexReader {
 					if (indexType != null) {
 						index.setIndexType(indexType);
 					}
-					Matcher matcher = indexWherePattern.matcher(definition);
-					if (matcher.matches()) {
-						columnsMap.put(index.getName(), matcher.group(1));
-						String condition = matcher.group(2);
-						index.setWhere(unwrap(condition, '(', ')'));
+					if (catalogDetails) {
+						index.setWhere(getString(rs, "predicate"));
 					} else {
-						matcher = indexPattern.matcher(definition);
+						Matcher matcher = indexWherePattern.matcher(definition);
 						if (matcher.matches()) {
 							columnsMap.put(index.getName(), matcher.group(1));
+							String condition = matcher.group(2);
+							index.setWhere(unwrap(condition, '(', ')'));
+						} else {
+							matcher = indexPattern.matcher(definition);
+							if (matcher.matches()) {
+								columnsMap.put(index.getName(), matcher.group(1));
+							}
 						}
 					}
 					index.setUnique(isUnique);
@@ -124,6 +130,26 @@ public class PostgresIndexReader extends IndexReader {
 						index.getSpecifics().put(PostgresCreateIndexFactory.NULLS_NOT_DISTINCT, "true");
 					}
 					index.setRemarks(remarks);
+					index.setTableSpaceName(getString(rs, "index_tablespace"));
+					index.getSpecifics().put(PostgresCreateIndexFactory.METHOD, type);
+					java.sql.Array options = rs.getArray("index_options");
+					if (options != null) {
+						try {
+							var optionSql = new java.util.ArrayList<String>();
+							for (Object option : (Object[]) options.getArray()) {
+								String text = option.toString();
+								int equal = text.indexOf('=');
+								if (equal < 1)
+									throw new SQLException("Malformed PostgreSQL index option: " + text);
+								index.getSpecifics().put(text.substring(0, equal), text.substring(equal + 1));
+								optionSql.add(getDialect().quote(text.substring(0, equal)) + "='"
+										+ text.substring(equal + 1).replace("'", "''") + "'");
+							}
+							index.getSpecifics().put(PostgresCreateIndexFactory.OPTIONS, String.join(", ", optionSql));
+						} finally {
+							options.free();
+						}
+					}
 					map.put(schema_name, table_name, index_name, index);
 					result.add(index);
 				}
@@ -132,10 +158,21 @@ public class PostgresIndexReader extends IndexReader {
 					index.getIncludes().add(columnName);
 					return;
 				}
+				String keySql = getString(rs, "key_sql");
+				String previousKeys = index.getSpecifics().get(PostgresCreateIndexFactory.KEYS);
+				index.getSpecifics().put(PostgresCreateIndexFactory.KEYS,
+						previousKeys == null ? keySql : previousKeys + ", " + keySql);
+				if (catalogDetails) {
+					index.getColumns().add(columnName, rs.getBoolean("is_desc") ? Order.Desc : Order.Asc);
+					boolean nullsFirst = rs.getBoolean("nulls_first");
+					if (!rs.wasNull()) {
+						index.getColumns().get(index.getColumns().size() - 1)
+								.setNullsOrder(nullsFirst ? NullsOrder.NullsFirst : NullsOrder.NullsLast);
+					}
+					return;
+				}
 				String columns = columnsMap.get(index.getName());
-				int pos = min(
-						columnName.length() + columns.indexOf(columnName),
-						columns.length());
+				int pos = min(columnName.length() + columns.indexOf(columnName), columns.length());
 				String sub = trim(columns.substring(pos).toUpperCase());
 				if (sub.startsWith("DESC")) {
 					index.getColumns().add(columnName, Order.Desc);
@@ -147,6 +184,12 @@ public class PostgresIndexReader extends IndexReader {
 		return result;
 	}
 
+	/**
+	 * Optional vendor hook using the definition already returned by the bulk query.
+	 */
+	protected void readDefinition(Index index, String definition) {
+	}
+
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 15) {
@@ -156,6 +199,10 @@ public class PostgresIndexReader extends IndexReader {
 				&& productVersionInfo.getMajorVersion() >= 11) {
 			return getSqlNodeCache().getString("indexes110.sql");
 		}
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 9 || productVersionInfo.getMajorVersion() == 9
+						&& productVersionInfo.getMinorVersion() != null && productVersionInfo.getMinorVersion() >= 1))
+			return getSqlNodeCache().getString("indexes91.sql");
 		return getSqlNodeCache().getString("indexes.sql");
 	}
 

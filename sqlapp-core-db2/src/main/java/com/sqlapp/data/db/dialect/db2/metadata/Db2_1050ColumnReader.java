@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.db2.metadata;
 
-
 import com.sqlapp.jdbc.ExResultSet;
 import java.sql.SQLException;
 
@@ -38,14 +37,13 @@ public class Db2_1050ColumnReader extends Db2_1010ColumnReader {
 		super(dialect);
 	}
 
-
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column obj = super.createColumn(rs);
-		String stringUnits=getString(rs, "TYPESTRINGUNITS");
-		if (stringUnits!=null){
+		String stringUnits = getString(rs, "TYPESTRINGUNITS");
+		if (stringUnits != null) {
 			obj.setStringUnits(stringUnits);
-			Integer stringunitLength=getInteger(rs, "STRINGUNITSLENGTH");
-			if (stringunitLength!=null){
+			Integer stringunitLength = getInteger(rs, "STRINGUNITSLENGTH");
+			if (stringunitLength != null) {
 				obj.setLength(stringunitLength);
 				this.getDialect().setDbType(getString(rs, "TYPENAME"), stringunitLength.longValue(), null, obj);
 			}

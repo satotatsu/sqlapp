@@ -24,6 +24,12 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.resolver.PostgresDialectResolver.PostgresVersionResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.FunctionReturning;
+import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.Routine;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.jdbc.sql.ParameterDirection;
+import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -49,6 +55,73 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 
 	private Dialect postgres92 = postgresVersionResolver.getDialect(9, 2, 0);
 
+	@Override
+	public PostgresSqlBuilder specificName(Routine<?> routine, boolean withSchemaName) {
+		if (!(routine instanceof Function function))
+			return super.specificName(routine, withSchemaName);
+		String specificName = function.getSpecificName();
+		if (function.getArguments().isEmpty() && specificName != null
+				&& specificName.startsWith(function.getName() + "(") && specificName.endsWith(")")) {
+			return name(routine, withSchemaName)._add(specificName.substring(function.getName().length()));
+		}
+		name(routine, withSchemaName)._add("(");
+		boolean first = true;
+		for (NamedArgument argument : function.getArguments()) {
+			if (argument.getDirection() == ParameterDirection.Output)
+				continue;
+			if (!first)
+				_add(", ");
+			first = false;
+			typeDefinition(argument);
+		}
+		return _add(")");
+	}
+
+	@Override
+	public PostgresSqlBuilder argument(NamedArgument argument) {
+		if (Boolean.parseBoolean(argument.getSpecifics().get("VARIADIC")))
+			_add("VARIADIC").space();
+		else
+			argumentDirection(argument);
+		if (argument.getName() != null && !Boolean.parseBoolean(argument.getSpecifics().get("UNNAMED_ARGUMENT"))) {
+			String name = argument.getName();
+			_add(isQuateObjectName() && getDialect().needQuote(name) ? getDialect().quote(name) : name).space();
+		}
+		typeDefinition(argument);
+		if (argument.getDirection() != ParameterDirection.Output && argument.getDefaultValue() != null)
+			space()._add("DEFAULT").space()._add(argument.getDefaultValue());
+		return this;
+	}
+
+	@Override
+	protected PostgresSqlBuilder typeDefinition(FunctionReturning returning) {
+		if (returning.getTable() != null) {
+			_add("TABLE(");
+			boolean first = true;
+			for (Column column : returning.getTable().getColumns()) {
+				if (!first)
+					_add(", ");
+				first = false;
+				name(column.getName()).space();
+				typeDefinition(column);
+			}
+			return _add(")");
+		}
+		return typeDefinition((DataTypeSetProperties<?>) returning);
+	}
+
+	@Override
+	protected PostgresSqlBuilder typeDefinition(AbstractColumn<?> column) {
+		return typeDefinition((DataTypeSetProperties<?>) column);
+	}
+
+	@Override
+	protected PostgresSqlBuilder typeDefinition(DataTypeSetProperties<?> value) {
+		Column column = new Column().setDataType(value.getDataType()).setDataTypeName(value.getDataTypeName())
+				.setLength(value.getLength()).setScale(value.getScale()).setArrayDimension(value.getArrayDimension());
+		return typeDefinition(column);
+	}
+
 	/**
 	 * カラムの型の定義を追加します
 	 * 
@@ -56,13 +129,17 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	 */
 	@Override
 	protected PostgresSqlBuilder typeDefinition(Column column) {
+		if (column.getArrayDimension() > 0) {
+			typeDefinition(column.clone().setArrayDimension(0));
+			_add("[]".repeat(column.getArrayDimension()));
+			return this;
+		}
 		if ((column.getDataType() == DataType.RANGE || column.getDataType() == DataType.MULTIRANGE)
 				&& !CommonUtils.isEmpty(column.getDataTypeName())) {
 			_add(column.getDataTypeName());
 			return this;
 		}
-		if (column.isIdentity() && column.getIdentityGenerationType() == null
-				&& getDialect().supportsIdentity()) {
+		if (column.isIdentity() && column.getIdentityGenerationType() == null && getDialect().supportsIdentity()) {
 			if (column.getDataType() == DataType.SMALLINT && this.getDialect().compareTo(postgres92) >= 0) {
 				_add("smallserial");
 			} else if (column.getDataType() == DataType.INT) {
@@ -77,6 +154,54 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 				return super.typeDefinition(column);
 			}
 		} else {
+			if (column.getDataType() != null && column.getDataType().isInterval()) {
+				String typeName = column.getDataType().getTypeName();
+				_add(typeName);
+				if (column.getLength() != null
+						&& (column.getDataType() == DataType.INTERVAL || typeName.endsWith("SECOND"))) {
+					if (column.getLength() < 0 || column.getLength() > 6) {
+						throw new IllegalArgumentException("PostgreSQL interval fractional precision must be 0..6.");
+					}
+					_add("(" + column.getLength() + ")");
+				}
+				return this;
+			}
+			if (column.getDataType() == DataType.VARBINARY && column.getLength() == null) {
+				_add("VARBIT");
+				return this;
+			}
+			if (column.getDataType() == DataType.NUMERIC || column.getDataType() == DataType.DECIMAL) {
+				Long precision = column.getLength();
+				Integer scale = column.getScale();
+				if (precision == null) {
+					if (scale != null && scale != 0) {
+						throw new IllegalArgumentException("PostgreSQL numeric scale requires an explicit precision.");
+					}
+					_add(column.getDataType().name());
+					return this;
+				}
+				int resolvedScale = scale == null ? 0 : scale;
+				if (precision < 1 || precision > 1000 || resolvedScale < -1000 || resolvedScale > 1000) {
+					throw new IllegalArgumentException(
+							"PostgreSQL numeric precision must be 1..1000 and scale -1000..1000: " + precision + ","
+									+ resolvedScale);
+				}
+				if ((resolvedScale < 0 || resolvedScale > precision)
+						&& getDialect().compareTo(postgresVersionResolver.getDialect(15, 0, 0)) < 0) {
+					throw new IllegalArgumentException(
+							"Negative numeric scale or scale greater than precision requires PostgreSQL 15 or later.");
+				}
+				_add(column.getDataType().name() + "(" + precision + "," + resolvedScale + ")");
+				return this;
+			}
+			if (column.getDataType() == DataType.VARCHAR || column.getDataType() == DataType.LONGVARCHAR) {
+				if ("text".equalsIgnoreCase(column.getDataTypeName())) {
+					return _add("TEXT");
+				}
+				if (column.getLength() == null) {
+					return _add("VARCHAR");
+				}
+			}
 			return super.typeDefinition(column);
 		}
 		return this;
@@ -91,7 +216,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 			throw new IllegalArgumentException("PostgreSQL generated columns require PostgreSQL 12 or later.");
 		}
 		typeDefinition(column);
-		space().generated().always().as().space().brackets(()->_add(column.getFormula()));
+		space().generated().always().as().space().brackets(() -> _add(column.getFormula()));
 		if (column.isFormulaPersisted()) {
 			space()._add("STORED");
 		} else if (getDialect().compareTo(postgresVersionResolver.getDialect(18, 0, 0)) >= 0) {
@@ -270,8 +395,9 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 
 	protected PostgresSqlBuilder autoIncrement(AbstractColumn<?> column) {
 		if (column.getIdentityGenerationType() != null) {
-			generated().space()._add(column.getIdentityGenerationType() == IdentityGenerationType.Always
-					? "ALWAYS" : "BY DEFAULT").space().as().space().identity();
+			generated().space()
+					._add(column.getIdentityGenerationType() == IdentityGenerationType.Always ? "ALWAYS" : "BY DEFAULT")
+					.space().as().space().identity();
 		}
 		return instance();
 	}

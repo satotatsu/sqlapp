@@ -1,0 +1,202 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.jdbc.bulk;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+
+class BulkMigrationJobStatusInspectorTest {
+	@Test
+	void checkpointResetResultsAreImmutableAndStructurallyValidated() {
+		final var ids = new ArrayList<>(List.of("first", "second"));
+		final var result = new BulkMigrationJobCheckpointResetResult("plan", ids);
+		ids.clear();
+
+		assertEquals(List.of("first", "second"), result.getResetTaskIds());
+		assertThrows(UnsupportedOperationException.class, () -> result.getResetTaskIds().clear());
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobCheckpointResetResult(" ", List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult("plan", List.of("task", "task")));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetResult("plan", List.of(" ")));
+		final var firstTask = task("first", null);
+		final var secondTask = task("second", null);
+		final var plan = BulkMigrationJobPlanner.plan(List.of(firstTask, secondTask));
+		final var completed = new BulkMigrationJobCheckpointResetResult(plan.getFingerprint(), List.of("first"));
+		final var cause = new java.sql.SQLException("delete failed");
+		assertEquals(completed,
+				new BulkMigrationJobCheckpointResetException(plan, "second", completed, cause).getCompletedResult());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetException(plan, " ", completed, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobCheckpointResetException(plan, "second", null, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobCheckpointResetException(plan, "second", completed, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobCheckpointResetException(plan, "first", completed, cause));
+	}
+
+	@Test
+	void jobStatusesAreImmutableValidatedAndOverflowSafe() {
+		final long largeRows = Long.MAX_VALUE / 2 + 1;
+		final int chunkSize = Integer.MAX_VALUE;
+		final long completedChunks = (largeRows - 1) / chunkSize + 1;
+		final var firstCheckpoint = BulkMigrationCheckpoint.builder().migrationId("first").processedRows(largeRows)
+				.completedChunks(completedChunks).chunkSize(chunkSize).lastChunkHash("first-hash").build();
+		final var secondCheckpoint = BulkMigrationCheckpoint.builder().migrationId("second").processedRows(largeRows)
+				.completedChunks(completedChunks).chunkSize(chunkSize).lastChunkHash("second-hash").build();
+		final var first = new BulkMigrationJobTaskStatus("first", BulkMigrationJobTaskState.IN_PROGRESS,
+				firstCheckpoint);
+		final var second = new BulkMigrationJobTaskStatus("second", BulkMigrationJobTaskState.IN_PROGRESS,
+				secondCheckpoint);
+		final var tasks = new ArrayList<>(List.of(first));
+		final var status = new BulkMigrationJobStatus("plan", tasks);
+		tasks.clear();
+
+		assertEquals(List.of(first), status.getTasks());
+		assertThrows(UnsupportedOperationException.class, () -> status.getTasks().clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus(" ", BulkMigrationJobTaskState.NOT_STARTED, null));
+		assertThrows(NullPointerException.class, () -> new BulkMigrationJobTaskStatus("task", null, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskStatus("task", BulkMigrationJobTaskState.IN_PROGRESS, null));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskStatus("task",
+				BulkMigrationJobTaskState.COMPLETE, checkpoint("task", "source", false, 1)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskStatus("task",
+				BulkMigrationJobTaskState.IN_PROGRESS, checkpoint("task", "source", true, 1)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskStatus("task",
+				BulkMigrationJobTaskState.NOT_STARTED, checkpoint("task", "source", false, 1)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus(" ", List.of()));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobStatus("plan", List.of(first, first)));
+		assertThrows(ArithmeticException.class,
+				() -> new BulkMigrationJobStatus("plan", List.of(first, second)).getProcessedRows());
+	}
+
+	@Test
+	void reportsNotStartedProgressCompleteAndIncompatible() throws Exception {
+		final var notStartedStore = new InMemoryBulkMigrationCheckpointStore();
+		final var progressStore = new InMemoryBulkMigrationCheckpointStore();
+		final var completeStore = new InMemoryBulkMigrationCheckpointStore();
+		final var incompatibleStore = new InMemoryBulkMigrationCheckpointStore();
+		progressStore.save(checkpoint("progress", "source", false, 12));
+		completeStore.save(checkpoint("complete", "source", true, 20));
+		incompatibleStore.save(checkpoint("incompatible", "old-source", false, 4));
+		final var plan = BulkMigrationJobPlanner
+				.plan(List.of(task("not-started", notStartedStore), task("progress", progressStore),
+						task("complete", completeStore), task("incompatible", incompatibleStore)));
+
+		final var status = BulkMigrationJobStatusInspector.inspect(plan);
+
+		assertEquals(status, status.validateAgainst(plan));
+		assertEquals(
+				List.of(BulkMigrationJobTaskState.COMPLETE, BulkMigrationJobTaskState.INCOMPATIBLE,
+						BulkMigrationJobTaskState.NOT_STARTED, BulkMigrationJobTaskState.IN_PROGRESS),
+				status.getTasks().stream().map(BulkMigrationJobTaskStatus::getState).toList());
+		assertEquals(36, status.getProcessedRows());
+		assertEquals(1, status.getCompletedTasks());
+		assertFalse(status.isCompatible());
+		assertEquals(plan.getFingerprint(), status.getPlanFingerprint());
+	}
+
+	@Test
+	void refusesImplicitCheckpointStoreToRemainReadOnly() {
+		final Table table = table("IMPLICIT");
+		final var task = BulkMigrationJobTask.builder().taskId("implicit").sourceTable(table)
+				.options(options("implicit")).build();
+
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobStatusInspector.inspect(BulkMigrationJobPlanner.plan(List.of(task))));
+	}
+
+	@Test
+	void reportsChangedChunkSizeAsIncompatible() throws Exception {
+		final var store = new InMemoryBulkMigrationCheckpointStore();
+		store.save(checkpoint("changed-size", "source", false, 12).toBuilder().chunkSize(500).build());
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task("changed-size", store)));
+
+		final var status = BulkMigrationJobStatusInspector.inspect(plan);
+
+		assertEquals(BulkMigrationJobTaskState.INCOMPATIBLE, status.getTasks().get(0).getState());
+	}
+
+	@Test
+	void rejectsInvalidCheckpointsReturnedByCustomStores() {
+		final BulkMigrationCheckpoint invalid = BulkMigrationCheckpoint.builder().migrationId("invalid")
+				.processedRows(-1).build();
+		final BulkMigrationCheckpointStore store = new BulkMigrationCheckpointStore() {
+			@Override
+			public Optional<BulkMigrationCheckpoint> load(String migrationId) {
+				return Optional.of(invalid);
+			}
+
+			@Override
+			public void save(BulkMigrationCheckpoint checkpoint) {
+			}
+
+			@Override
+			public void delete(String migrationId) {
+			}
+		};
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task("invalid", store)));
+
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobStatusInspector.inspect(plan));
+	}
+
+	@Test
+	void rejectsPlanMutationWhileReadingCheckpointStatus() {
+		final Table table = table("MUTATING");
+		final BulkMigrationCheckpointStore store = new BulkMigrationCheckpointStore() {
+			@Override
+			public Optional<BulkMigrationCheckpoint> load(String migrationId) {
+				table.getColumns().get("ID").setDefaultValue("1");
+				return Optional.empty();
+			}
+
+			@Override
+			public void save(BulkMigrationCheckpoint checkpoint) {
+			}
+
+			@Override
+			public void delete(String migrationId) {
+			}
+		};
+		final var task = BulkMigrationJobTask.builder().taskId("mutating").sourceTable(table)
+				.options(options("mutating")).checkpointStore(store).build();
+		final var plan = BulkMigrationJobPlanner.plan(List.of(task));
+
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobStatusInspector.inspect(plan));
+	}
+
+	private static BulkMigrationJobTask task(final String id, final BulkMigrationCheckpointStore store) {
+		return BulkMigrationJobTask.builder().taskId(id).sourceTable(table(id)).options(options(id))
+				.checkpointStore(store).build();
+	}
+
+	private static ChunkedBulkMigrationOption options(final String id) {
+		return ChunkedBulkMigrationOption.builder().migrationId(id).sourceFingerprint("source")
+				.targetFingerprint("target").build();
+	}
+
+	private static BulkMigrationCheckpoint checkpoint(final String id, final String sourceFingerprint,
+			final boolean complete, final long rows) {
+		return BulkMigrationCheckpoint.builder().migrationId(id).sourceFingerprint(sourceFingerprint)
+				.targetFingerprint("target").processedRows(rows).completedChunks(1).chunkSize(10_000)
+				.lastChunkHash("checkpoint-hash").complete(complete).build();
+	}
+
+	private static Table table(final String name) {
+		final Table table = new Table(name);
+		table.getColumns().add(new Column("ID"));
+		table.setPrimaryKey("PK_" + name, table.getColumns().get("ID"));
+		return table;
+	}
+}

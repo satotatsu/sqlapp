@@ -36,20 +36,22 @@ public class Postgres84 extends Postgres83 {
 	protected Postgres84(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.Dialect#supportsStandardOffsetFetchRows()
 	 */
 	@Override
-	public boolean supportsStandardOffsetFetchRows(){
+	public boolean supportsStandardOffsetFetchRows() {
 		return true;
 	}
-	
+
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Postgres84CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

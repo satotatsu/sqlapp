@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mariadb.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ServiceLoader;
 
@@ -27,7 +28,9 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.dialect.mariadb.Mariadb10_00;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb10_20;
+import com.sqlapp.data.db.dialect.mariadb.Mariadb10_05;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb10_27;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb10_30;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb10_50;
@@ -41,7 +44,11 @@ public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 0);
+		Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 0, 4);
+		assertTrue(dialect instanceof Mariadb10_00);
+		dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 0, 5);
+		assertTrue(dialect instanceof Mariadb10_05);
+		dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Mariadb10_20);
 		dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 7);
@@ -61,6 +68,42 @@ public class DialectResolverTest {
 		assertTrue(dialect instanceof Mariadb11_80);
 		dialect = DialectResolver.getInstance().getDialect("MariaDB", 12, 1, 2);
 		assertTrue(dialect instanceof Mariadb12_10);
+	}
+
+	@Test
+	public void testMetadataReaderVersionBoundaries() {
+		assertMetadataReaders("MariadbCatalog10_00Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 0, 0);
+		assertMetadataReaders("MariadbCatalog10_00Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 0, 4);
+		assertMetadataReaders("MariadbCatalog10_05Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 0, 5);
+		assertMetadataReaders("MariadbCatalog10_05Reader", "MariadbSchema10_00Reader", "MySqlTable564Reader",
+				"MySqlColumn564Reader", 10, 2, 4);
+		assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader", "MariadbTable10_27Reader",
+				"MariadbColumn10_27Reader", 10, 2, 7);
+		assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader", "MariadbTable10_27Reader",
+				"MariadbColumn10_27Reader", 10, 11, 8);
+		assertMetadataReaders("MariadbCatalog11_40Reader", "MariadbSchema11_40Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 11, 4, 9);
+		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 11, 5, 0);
+		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 11, 8, 0);
+		assertMetadataReaders("MariadbCatalog11_50Reader", "MariadbSchema11_50Reader", "MariadbTable11_40Reader",
+				"MariadbColumn11_40Reader", 12, 1, 0);
+	}
+
+	private void assertMetadataReaders(String catalogClass, String schemaClass, String tableClass, String columnClass,
+			int major, int minor, int revision) {
+		Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", major, minor, revision);
+		var catalogReader = dialect.getCatalogReader();
+		assertEquals(catalogClass, catalogReader.getClass().getSimpleName());
+		var schemaReader = catalogReader.getSchemaReader();
+		assertEquals(schemaClass, schemaReader.getClass().getSimpleName());
+		var tableReader = schemaReader.getTableReader();
+		assertEquals(tableClass, tableReader.getClass().getSimpleName());
+		assertEquals(columnClass, tableReader.getColumnReader().getClass().getSimpleName());
 	}
 
 	@Test

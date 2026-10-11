@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.firebird.metadata;
 
 import static com.sqlapp.util.CommonUtils.abs;
 import static com.sqlapp.util.CommonUtils.list;
+import static com.sqlapp.util.CommonUtils.trim;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -64,9 +65,11 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 	}
 
 	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
-		Procedure routine = new Procedure(getString(rs, ROUTINE_NAME));
+		Procedure routine = new Procedure(trim(getString(rs, ROUTINE_NAME)));
 		routine.setDialect(this.getDialect());
-		NamedArgument obj = createObject(getString(rs, PARAMETER_NAME));
+		routine.setCatalogName(this.getCatalogName());
+		routine.setSchemaName(this.getSchemaName());
+		NamedArgument obj = createObject(trim(getString(rs, PARAMETER_NAME)));
 		SchemaUtils.setRoutine(obj, routine);
 		// int segmentLength = rs.getInt("SEGMENT_LENGTH");
 		int segmentLength = rs.getInt("SEGMENT_LENGTH");

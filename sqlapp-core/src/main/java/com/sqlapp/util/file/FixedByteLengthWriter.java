@@ -31,7 +31,6 @@ import java.util.function.Consumer;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.file.FixedByteLengthFileSetting.FixedByteLengthFieldSetting;
 
 public class FixedByteLengthWriter extends AbstractFixedByteLength implements AutoCloseable {
@@ -144,7 +143,11 @@ public class FixedByteLengthWriter extends AbstractFixedByteLength implements Au
 
 	@Override
 	public void close() {
-		FileUtils.close(bos);
+		try {
+			bos.close();
+		} catch (final IOException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 }

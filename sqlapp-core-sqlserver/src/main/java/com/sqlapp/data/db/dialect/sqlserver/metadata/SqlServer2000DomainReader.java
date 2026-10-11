@@ -34,6 +34,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SQLServer2000のドメイン読み込みクラス
  * 
@@ -47,8 +48,7 @@ public class SqlServer2000DomainReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Domain> result = list();
@@ -71,13 +71,11 @@ public class SqlServer2000DomainReader extends DomainReader {
 		Domain obj = new Domain(name);
 		String productDataType = getString(rs, "base_type_name");
 		Long byteLength = getLong(rs, "length");
-		Long max_length = SqlServerUtils.getMaxLength(productDataType,
-				byteLength);
+		Long max_length = SqlServerUtils.getMaxLength(productDataType, byteLength);
 		Long prec = getLong(rs, "prec");
 		Integer scale = getInteger(rs, "scale");
 		obj.setNullable(rs.getBoolean("allownulls"));
-		getDialect().setDbType(productDataType, notZero(max_length, prec),
-				scale, obj);
+		getDialect().setDbType(productDataType, notZero(max_length, prec), scale, obj);
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		setSpecifics(rs, "collation_name", obj);

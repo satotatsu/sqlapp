@@ -1,0 +1,849 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.jdbc.bulk;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.sql.rowset.serial.SerialBlob;
+
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
+
+class BulkMigrationJobVerifierTest {
+	@Test
+	void verifiesCallerSuppliedOrderedStreamsWithoutMaterializedTableRows() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
+		final Row expectedOne = expected.newRow();
+		expectedOne.put("ID", 1);
+		final Row expectedTwo = expected.newRow();
+		expectedTwo.put("ID", 2);
+		final Row actualOne = actual.newRow();
+		actualOne.put("ID", 1L);
+		final Row actualTwo = actual.newRow();
+		actualTwo.put("ID", 2L);
+
+		final var result = BulkMigrationVerifier.verify(expected, List.of(expectedOne, expectedTwo).iterator(), actual,
+				List.of(actualOne, actualTwo).iterator(), 1);
+
+		assertTrue(result.isMatch());
+		assertEquals(2, result.getExpectedRows());
+		assertEquals(2, result.getChunks().size());
+		assertTrue(expected.getRows().isEmpty());
+		assertTrue(actual.getRows().isEmpty());
+	}
+
+	@Test
+	void verifiesOnlyExplicitColumns() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		expected.getColumns().add(new Column("GENERATED_VALUE").setDataType(DataType.INT));
+		final Table actual = expected.clone().setName("ACTUAL");
+		final Row left = expected.newRow();
+		left.put("ID", 1);
+		left.put("GENERATED_VALUE", 10);
+		final Row right = actual.newRow();
+		right.put("ID", 1);
+		right.put("GENERATED_VALUE", 99);
+
+		final var result = BulkMigrationVerifier.verify(expected, List.of(left).iterator(), actual,
+				List.of(right).iterator(), List.of("ID"), 10);
+		assertTrue(result.isMatch());
+		assertEquals(List.of("ID"), result.getColumns());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationVerifier.verify(expected,
+				List.of(left).iterator(), actual, List.of(right).iterator(), List.of("ID", "ID"), 10));
+	}
+
+	@Test
+	void repairValidationUsesTheSameExplicitVerificationColumns() {
+		final Table expected = table("ITEMS", "source");
+		final Table actual = table("ITEMS", "target");
+		final var result = BulkMigrationVerifier.verify(expected, expected.getRows().iterator(), actual,
+				actual.getRows().iterator(), List.of("ID"), 10);
+		final var chunk = result.getChunks().get(0);
+		final var idColumns = List.of(expected.getColumns().get("ID"));
+
+		BulkMigrationRepairExecutor.validateExpectedChunk(expected.getRows(), chunk, 0, idColumns);
+		expected.getRows().get(0).put("TXT", "changed but not verified");
+		BulkMigrationRepairExecutor.validateExpectedChunk(expected.getRows(), chunk, 0, idColumns);
+		expected.getRows().get(0).put("ID", 2);
+		assertThrows(IllegalStateException.class,
+				() -> BulkMigrationRepairExecutor.validateExpectedChunk(expected.getRows(), chunk, 0, idColumns));
+	}
+
+	@Test
+	void normalizesDriverValueTypesThroughTheExpectedSchema() throws Exception {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
+		expected.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL));
+		expected.getColumns().add(new Column("PAYLOAD").setDataType(DataType.BLOB));
+		expected.getRows().add(row -> {
+			row.put("ID", 1);
+			row.put("AMOUNT", new BigDecimal("1.00"));
+			row.put("PAYLOAD", new byte[] { 1, 2, 3 });
+		});
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		actual.getColumns().add(new Column("AMOUNT").setDataType(DataType.DECIMAL));
+		actual.getColumns().add(new Column("PAYLOAD").setDataType(DataType.BLOB));
+		final SerialBlob payload = new SerialBlob(new byte[] { 1, 2, 3 });
+		actual.getRows().add(row -> {
+			row.put("ID", 1L);
+			row.put("AMOUNT", new BigDecimal("1.0"));
+			row.put("PAYLOAD", payload);
+		});
+
+		assertTrue(BulkMigrationVerifier.verify(expected, actual, 10).isMatch());
+	}
+
+	@Test
+	void numericNormalizationDoesNotWrapValuesToTheExpectedJavaType() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		expected.getRows().add(row -> row.put("ID", Integer.MIN_VALUE));
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("ID").setDataType(DataType.BIGINT));
+		actual.getRows().add(row -> row.put("ID", 2_147_483_648L));
+
+		assertFalse(BulkMigrationVerifier.verify(expected, actual, 10).isMatch());
+	}
+
+	@Test
+	void normalizesEquivalentFloatAndDoubleDriverValues() {
+		final Table expected = new Table("EXPECTED");
+		expected.getColumns().add(new Column("VALUE").setDataType(DataType.REAL));
+		expected.getRows().add(row -> row.put("VALUE", 0.1f));
+		final Table actual = new Table("ACTUAL");
+		actual.getColumns().add(new Column("VALUE").setDataType(DataType.DOUBLE));
+		actual.getRows().add(row -> row.put("VALUE", 0.1d));
+
+		assertTrue(BulkMigrationVerifier.verify(expected, actual, 10).isMatch());
+	}
+
+	@Test
+	void closesEveryStreamWithoutMaskingTheProcessingFailure() {
+		final var processingFailure = new IllegalArgumentException("read failed");
+		final var first = new FailingCloseIterator("first close failed");
+		final var second = new FailingCloseIterator("second close failed");
+
+		BulkMigrationIteratorSupport.close(processingFailure, first, second);
+
+		assertTrue(first.closed);
+		assertTrue(second.closed);
+		assertEquals(2, processingFailure.getSuppressed().length);
+		assertSame(first.failure, processingFailure.getSuppressed()[0]);
+		assertSame(second.failure, processingFailure.getSuppressed()[1]);
+	}
+
+	@Test
+	void closesRemainingStreamsWhenTheFirstCloseFails() {
+		final var first = new FailingCloseIterator("first close failed");
+		final var second = new FailingCloseIterator("second close failed");
+
+		final var failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationIteratorSupport.close(null, first, second));
+
+		assertSame(first.failure, failure);
+		assertTrue(first.closed);
+		assertTrue(second.closed);
+		assertEquals(1, failure.getSuppressed().length);
+		assertSame(second.failure, failure.getSuppressed()[0]);
+	}
+
+	@Test
+	void keysetVerificationClosesTheFirstStreamWhenTheSecondCannotOpen() {
+		final Table table = table("ITEMS", "value");
+		final var expectedRows = new TrackingIterator(table.getRows().iterator());
+		final BulkMigrationKeysetSource expected = keysetSource(table, "expected", expectedRows);
+		final BulkMigrationKeysetSource actual = new BulkMigrationKeysetSource() {
+			@Override
+			public Table getTable() {
+				return table;
+			}
+
+			@Override
+			public String getConfigurationFingerprint() {
+				return "actual";
+			}
+
+			@Override
+			public Iterator<Row> iterator(final String resumeToken) throws SQLException {
+				throw new SQLException("open failed");
+			}
+
+			@Override
+			public String resumeToken(final Row row) {
+				return row.get("ID").toString();
+			}
+		};
+
+		assertThrows(SQLException.class, () -> BulkMigrationVerifier.verify(expected, actual,
+				List.of("ID"), List.of("TARGET_ID"), 10));
+		assertTrue(expectedRows.closed);
+	}
+
+	@Test
+	void keysetVerificationRetainsBothConfigurationFingerprints() throws Exception {
+		final Table expectedTable = table("ITEMS", "value");
+		final Table actualTable = table("ITEMS", "value");
+		final var result = BulkMigrationVerifier.verify(
+				keysetSource(expectedTable, "expected-fingerprint", expectedTable.getRows().iterator()),
+				keysetSource(actualTable, "actual-fingerprint", actualTable.getRows().iterator()), List.of("ID", "TXT"),
+				10);
+
+		assertTrue(result.isMatch());
+		assertEquals("expected-fingerprint", result.getExpectedKeysetFingerprint());
+		assertEquals("actual-fingerprint", result.getActualKeysetFingerprint());
+	}
+
+	@Test
+	void keysetVerificationRejectsAnEmptyFingerprintBeforeOpeningRows() {
+		final var invalid = new RecordingKeysetSource(table("ITEMS", "value"), " ");
+		final var actual = new RecordingKeysetSource(table("ITEMS", "value"), "actual");
+
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationVerifier.verify(invalid, actual, List.of("ID", "TXT"), 10));
+		assertTrue(invalid.resumeTokens.isEmpty());
+		assertTrue(actual.resumeTokens.isEmpty());
+	}
+
+	@Test
+	void keysetRepairRejectsAChangedOrMissingSourceFingerprint() {
+		final Table expectedTable = table("ITEMS", "expected");
+		final var chunk = new BulkMigrationVerificationChunk(0, 1, 1, "expected-hash", "actual-hash", "1", "1", "1",
+				"1");
+		final var verification = new BulkMigrationVerificationResult(10, 1, 1, List.of("ID", "TXT"), "verified",
+				"actual", List.of(chunk));
+		final var changedSource = keysetSource(expectedTable, "changed", expectedTable.getRows().iterator());
+
+		final var changed = assertThrows(IllegalArgumentException.class, () -> BulkMigrationRepairExecutor.execute(null,
+				changedSource, verification, BulkMigrationRepairOption.builder().build()));
+		assertTrue(changed.getMessage().contains("fingerprint differs"));
+
+		final var withoutFingerprint = new BulkMigrationVerificationResult(10, 1, 1, List.of("ID", "TXT"),
+				List.of(chunk));
+		final var missing = assertThrows(IllegalArgumentException.class, () -> BulkMigrationRepairExecutor.execute(null,
+				changedSource, withoutFingerprint, BulkMigrationRepairOption.builder().build()));
+		assertTrue(missing.getMessage().contains("does not contain"));
+	}
+
+	@Test
+	void keysetRepairReadsOnlyMismatchRangesFromTheirPreviousBoundary() throws Exception {
+		final Table expectedTable = numberedTable("ITEMS", "one", "two", "three");
+		final Table actualTable = numberedTable("ITEMS", "one", "changed-two", "changed-three");
+		final var expected = new RecordingKeysetSource(expectedTable, "expected");
+		final var actual = new RecordingKeysetSource(actualTable, "actual");
+		final var verification = BulkMigrationVerifier.verify(expected, actual, List.of("ID", "TXT"), 1);
+		expected.resumeTokens.clear();
+
+		final var replay = BulkMigrationRepairExecutor.readKeysetReplay(expected, verification,
+				BulkMigrationRepairOption.builder().build());
+
+		assertEquals(List.of("1"), expected.resumeTokens);
+		assertEquals(2, replay.chunks().size());
+		assertEquals(2, replay.rows());
+		assertEquals(2, ((Number) replay.chunks().get(0).getRows().get(0).get("ID")).intValue());
+		assertEquals(3, ((Number) replay.chunks().get(1).getRows().get(0).get("ID")).intValue());
+		assertTrue(replay.withoutExpected().isEmpty());
+	}
+
+	@Test
+	void keysetRepairReopensAfterMatchedRanges() throws Exception {
+		final Table expectedTable = numberedTable("ITEMS", "one", "two", "three", "four");
+		final Table actualTable = numberedTable("ITEMS", "one", "changed-two", "three", "changed-four");
+		final var expected = new RecordingKeysetSource(expectedTable, "expected");
+		final var actual = new RecordingKeysetSource(actualTable, "actual");
+		final var verification = BulkMigrationVerifier.verify(expected, actual, List.of("ID", "TXT"), 1);
+		expected.resumeTokens.clear();
+
+		final var replay = BulkMigrationRepairExecutor.readKeysetReplay(expected, verification,
+				BulkMigrationRepairOption.builder().build());
+
+		assertEquals(List.of("1", "3"), expected.resumeTokens);
+		assertEquals(List.of(2, 4),
+				replay.chunks().stream().map(chunk -> ((Number) chunk.getRows().get(0).get("ID")).intValue()).toList());
+	}
+
+	@Test
+	void keysetRepairStopsAtTheConfiguredBufferLimitBeforeWriting() throws Exception {
+		final Table expectedTable = numberedTable("ITEMS", "one", "two");
+		final Table actualTable = numberedTable("ITEMS", "changed-one", "changed-two");
+		final var expected = new RecordingKeysetSource(expectedTable, "expected");
+		final var actual = new RecordingKeysetSource(actualTable, "actual");
+		final var verification = BulkMigrationVerifier.verify(expected, actual, List.of("ID", "TXT"), 1);
+
+		final var failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationRepairExecutor.readKeysetReplay(expected, verification,
+						BulkMigrationRepairOption.builder().maxBufferedRows(1).build()));
+
+		assertTrue(failure.getMessage().contains("maxBufferedRows=1"));
+	}
+
+	@Test
+	void tableRepairStopsAtTheConfiguredBufferLimitBeforeWriting() {
+		final Table expected = numberedTable("ITEMS", "one", "two");
+		final Table actual = numberedTable("ITEMS", "changed-one", "changed-two");
+		final var verification = BulkMigrationVerifier.verify(expected, actual, 1);
+		final var connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+		final var options = BulkMigrationRepairOption.builder().maxBufferedRows(1)
+				.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("ID").build()).build();
+
+		final var failure = assertThrows(IllegalStateException.class,
+				() -> BulkMigrationRepairExecutor.execute(connection, expected, verification, options));
+
+		assertTrue(failure.getMessage().contains("maxBufferedRows=1"));
+		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
+	void repairJobRequiresExactlyOneExpectedSourcePerTask() {
+		final Table table = table("ITEMS", "value");
+		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		final var options = BulkMigrationRepairOption.builder().build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> null);
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairTask.builder().taskId("items").expected(table).expectedKeysetSource(source)
+						.verificationResult(verification).options(options).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobRepairTask.builder().taskId("items")
+				.verificationResult(verification).options(options).build());
+	}
+
+	@Test
+	void repairJobDispatchesAKeysetBackedTask() throws Exception {
+		final Table table = table("ITEMS", "value");
+		final Table target = table.clone().setName("TARGET_ITEMS");
+		final var source = keysetSource(table, "fingerprint", table.getRows().iterator());
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of("ID", "TXT"), "fingerprint",
+				"actual", List.of());
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items").expectedKeysetSource(source)
+				.target(target).verificationResult(verification).build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> null);
+
+		final var result = BulkMigrationJobRepairExecutor.execute(connection, List.of(task));
+
+		assertEquals(1, result.getTasks().size());
+		assertTrue(result.getPlanFingerprint() != null && !result.getPlanFingerprint().isBlank());
+		assertEquals(0, result.getReplayedRows());
+		assertSame(target, task.getTargetTable());
+		assertTrue(task.getOptions().isVerifyExpectedHashes());
+		assertEquals(0, task.getOptions().getMaxBufferedRows());
+	}
+
+	@Test
+	void repairJobReportsKeysetConsistencyFailureWithTaskContext() {
+		final Table table = table("ITEMS", "value");
+		final var source = keysetSource(table, "changed", table.getRows().iterator());
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of("ID", "TXT"), "verified",
+				"actual", List.of());
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items").expectedKeysetSource(source)
+				.verificationResult(verification).options(BulkMigrationRepairOption.builder().build()).build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> null);
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(task)));
+
+		assertEquals("items", failure.getFailedTaskId());
+		assertTrue(failure.getCause() instanceof IllegalArgumentException);
+		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
+	}
+
+	@Test
+	void repairJobExceptionAcceptsSqlFailuresThroughTheThrowableConstructor() {
+		final SQLException cause = new SQLException("write failed");
+		final var completed = new BulkMigrationJobRepairResult(List.of());
+
+		final var failure = new BulkMigrationJobRepairException("items", completed, cause);
+
+		assertSame(cause, failure.getCause());
+		assertSame(completed, failure.getCompletedResult());
+		assertEquals("items", failure.getFailedTaskId());
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobRepairException(" ", completed, cause));
+		assertThrows(NullPointerException.class, () -> new BulkMigrationJobRepairException("items", null, cause));
+		assertThrows(NullPointerException.class,
+				() -> new BulkMigrationJobRepairException("items", completed, (Throwable) null));
+	}
+
+	@Test
+	void plannedRepairFailureRejectsForeignOrNonPrefixResults() {
+		final var firstPlan = repairPlan("FIRST");
+		final var secondPlan = repairPlan("SECOND");
+		final var plan = new BulkMigrationJobRepairPlan(List.of(new BulkMigrationJobRepairPlan.Task("first", firstPlan),
+				new BulkMigrationJobRepairPlan.Task("second", secondPlan)));
+		final var first = new BulkMigrationJobTaskRepairResult("first",
+				new BulkMigrationRepairResult(0, 0, 0, 0, List.of(), List.of()));
+		final var completed = new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of(first));
+		final var cause = new SQLException("failed");
+
+		final var failure = new BulkMigrationJobRepairException(plan, "second", completed, cause);
+
+		assertSame(completed, failure.getCompletedResult());
+		assertEquals(BulkMigrationJobRepairException.Phase.EXECUTION, failure.getPhase());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairException(plan, "first", completed, cause));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobRepairException(plan, "second",
+				new BulkMigrationJobRepairResult("foreign", List.of(first)), cause));
+		final var preflight = BulkMigrationJobRepairException.preflight(plan, "second",
+				new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()), cause);
+		assertEquals(BulkMigrationJobRepairException.Phase.PREFLIGHT, preflight.getPhase());
+		assertTrue(preflight.getCompletedResult().getTasks().isEmpty());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairException.preflight(plan, "second", completed, cause));
+	}
+
+	@Test
+	void repairResultsArePlanBoundImmutableAndStructurallyValidated() {
+		final var manualChunks = new ArrayList<>(List.of(2L));
+		final var repair = new BulkMigrationRepairResult(1, 1, 1, 1, manualChunks, List.of());
+		final var task = new BulkMigrationJobTaskRepairResult("task", repair);
+		final var plan = new BulkMigrationJobRepairPlan(
+				List.of(new BulkMigrationJobRepairPlan.Task("task", repairPlan("ITEMS"))));
+		final var result = new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of(task));
+		manualChunks.clear();
+
+		assertEquals(plan.getFingerprint(), result.getPlanFingerprint());
+		assertSame(result, result.validateAgainst(plan));
+		assertEquals(List.of(2L), repair.getChunksWithExtraActualRows());
+		assertThrows(UnsupportedOperationException.class, () -> result.getTasks().clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationRepairResult(0, 1, 0, 0, List.of(), List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationRepairResult(1, 0, 0, 0, List.of(1L, 1L), List.of()));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobTaskRepairResult(" ", repair));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult("plan-v1", List.of(task, task)));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult("other", List.of(task)).validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of()).validateAgainst(plan));
+		final var partial = new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of());
+		assertSame(partial, partial.validateCompletedPrefixAgainst(plan, "task"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of(task))
+						.validateCompletedPrefixAgainst(plan, "task"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobRepairResult(plan.getFingerprint(), List.of())
+						.validateCompletedPrefixAgainst(plan, "missing"));
+
+		final var max = new BulkMigrationJobTaskRepairResult("max",
+				new BulkMigrationRepairResult(1, 1, Long.MAX_VALUE, Long.MAX_VALUE, List.of(), List.of()));
+		final var one = new BulkMigrationJobTaskRepairResult("one",
+				new BulkMigrationRepairResult(1, 1, 1, 1, List.of(), List.of()));
+		final var overflow = new BulkMigrationJobRepairResult("plan-v1", List.of(max, one));
+		assertThrows(ArithmeticException.class, overflow::getReplayedRows);
+		assertThrows(ArithmeticException.class, overflow::getAffectedRows);
+	}
+
+	@Test
+	void repairJobPreflightsEveryKeysetFingerprintBeforeTargetWrites() {
+		final Table firstTable = table("FIRST", "expected");
+		final var mismatch = new BulkMigrationVerificationChunk(0, 1, 1, "expected", "actual");
+		final var first = BulkMigrationJobRepairTask.builder().taskId("first").expected(firstTable)
+				.verificationResult(new BulkMigrationVerificationResult(1, 1, 1, List.of(mismatch)))
+				.options(BulkMigrationRepairOption.builder()
+						.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("ID").build()).build())
+				.build();
+		final Table secondTable = table("SECOND", "expected");
+		final var second = BulkMigrationJobRepairTask.builder().taskId("second")
+				.expectedKeysetSource(keysetSource(secondTable, "changed", secondTable.getRows().iterator()))
+				.verificationResult(new BulkMigrationVerificationResult(1, 0, 0, List.of("ID", "TXT"), "verified",
+						"actual", List.of()))
+				.options(BulkMigrationRepairOption.builder().build()).build();
+		final var connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(first, second)));
+
+		assertEquals("second", failure.getFailedTaskId());
+		assertEquals(0, connectionCalls.get());
+		assertTrue(failure.getCompletedResult().getTasks().isEmpty());
+	}
+
+	@Test
+	void repairJobPreflightsUpsertColumnsBeforeTargetWrites() {
+		final Table table = table("ITEMS", "expected");
+		final var mismatch = new BulkMigrationVerificationChunk(0, 1, 1, "expected", "actual");
+		final var task = BulkMigrationJobRepairTask.builder().taskId("items").expected(table)
+				.verificationResult(new BulkMigrationVerificationResult(1, 1, 1, List.of(mismatch)))
+				.options(BulkMigrationRepairOption.builder()
+						.bulkUpsertOption(BulkUpsertOption.builder().keyColumn("MISSING").build()).build())
+				.build();
+		final var connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+
+		final var failure = assertThrows(BulkMigrationJobRepairException.class,
+				() -> BulkMigrationJobRepairExecutor.execute(connection, List.of(task)));
+
+		assertEquals("items", failure.getFailedTaskId());
+		assertTrue(failure.getCause().getMessage().contains("Unknown bulk upsert key column"));
+		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
+	void repairPlanDetectsForeignKeyAndDefaultValueMutation() throws Exception {
+		final Table expected = table("ITEMS", "expected");
+		final Table target = table("TARGET_ITEMS", "actual");
+		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> null);
+
+		final BulkMigrationRepairPlan defaultPlan = BulkMigrationRepairPlanner.plan(connection, expected, target,
+				verification, BulkMigrationRepairOption.defaults());
+		target.getColumns().get("TXT").setDefaultValue("changed");
+		assertFalse(defaultPlan.isUnchanged());
+
+		target.getColumns().get("TXT").setDefaultValue(null);
+		final BulkMigrationRepairPlan dependencyPlan = BulkMigrationRepairPlanner.plan(connection, expected, target,
+				verification, BulkMigrationRepairOption.defaults());
+		final Table parent = table("PARENT", "parent");
+		target.getConstraints().addForeignKeyConstraint("FK_TARGET_PARENT", target.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		assertFalse(dependencyPlan.isUnchanged());
+	}
+
+	@Test
+	void repairJobRejectsCyclicSourceDependenciesBeforeDatabaseAccess() {
+		final Table firstTable = table("FIRST", "first");
+		final Table secondTable = table("SECOND", "second");
+		firstTable.getConstraints().addForeignKeyConstraint("FK_FIRST_SECOND", firstTable.getColumns().get("ID"),
+				secondTable.getColumns().get("ID"));
+		secondTable.getConstraints().addForeignKeyConstraint("FK_SECOND_FIRST", secondTable.getColumns().get("ID"),
+				firstTable.getColumns().get("ID"));
+		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		final var first = BulkMigrationJobRepairTask.builder().taskId("first").expected(firstTable)
+				.verificationResult(verification).build();
+		final var second = BulkMigrationJobRepairTask.builder().taskId("second").expected(secondTable)
+				.verificationResult(verification).build();
+		final AtomicInteger connectionCalls = new AtomicInteger();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+					connectionCalls.incrementAndGet();
+					return null;
+				});
+
+		final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobRepairPlanner.plan(connection, List.of(first, second)));
+
+		assertEquals("Migration repair job contains cyclic or cycle-dependent tasks: [first, second]",
+				failure.getMessage());
+		assertEquals(0, connectionCalls.get());
+	}
+
+	@Test
+	void repairJobRetainsSourceDependencyOrderWhenTargetsAreRenamed() throws Exception {
+		final Table parent = table("ACCESS_PARENT", "parent");
+		final Table child = table("ACCESS_CHILD", "child");
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		final Table targetParent = table("PARENT", "parent");
+		final Table targetChild = table("CHILD", "child");
+		final BulkMigrationVerificationResult verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		final var childTask = BulkMigrationJobRepairTask.builder().taskId("child").expected(child)
+				.target(targetChild).verificationResult(verification).build();
+		final var parentTask = BulkMigrationJobRepairTask.builder().taskId("parent").expected(parent)
+				.target(targetParent).verificationResult(verification).build();
+		final Connection connection = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> null);
+
+		final var plan = BulkMigrationJobRepairPlanner.plan(connection, List.of(childTask, parentTask));
+
+		assertEquals(List.of("parent", "child"), plan.getTaskIds());
+	}
+
+	@Test
+	void repairJobRejectsANegativeBufferLimitDuringPreflight() {
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationRepairOption.builder().maxBufferedRows(-1).build());
+		assertThrows(NullPointerException.class,
+				() -> BulkMigrationRepairOption.builder().bulkUpsertOption(null).build());
+	}
+
+	@Test
+	void verificationTasksRejectIncompleteInputWhileBuilding() {
+		final Table table = table("ITEMS", "expected");
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobVerificationTask.builder().taskId(" ")
+				.expected(table).actual(table).chunkSize(1).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobVerificationTask.builder().taskId("items")
+				.expected(table).actual(table).chunkSize(0).build());
+		assertThrows(NullPointerException.class,
+				() -> BulkMigrationJobVerificationTask.builder().taskId("items").actual(table).chunkSize(1).build());
+		assertThrows(NullPointerException.class,
+				() -> BulkMigrationJobVerificationTask.builder().taskId("items").expected(table).chunkSize(1).build());
+	}
+
+	@Test
+	void verificationResultOwnsValidImmutableChunkBoundaries() {
+		final var chunks = new java.util.ArrayList<BulkMigrationVerificationChunk>();
+		final var result = new BulkMigrationVerificationResult(10, 0, 0, chunks);
+		chunks.add(new BulkMigrationVerificationChunk(0, 0, 0, "x", "x"));
+
+		assertEquals(List.of(), result.getChunks());
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationResult(0, 0, 0, List.of()));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationResult(1, -1, 0, List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationVerificationResult(1, 0, 0, List.of("ID"), "expected", null, List.of()));
+	}
+
+	@Test
+	void rejectsInternallyInconsistentVerificationResults() {
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationChunk(-1, 0, 0, "x", "x"));
+		assertThrows(NullPointerException.class, () -> new BulkMigrationVerificationChunk(0, 0, 0, null, "x"));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationResult(2, 1, 1,
+				List.of(new BulkMigrationVerificationChunk(1, 1, 1, "x", "x"))));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationResult(2, 3, 1,
+				List.of(new BulkMigrationVerificationChunk(0, 3, 1, "x", "x"))));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationResult(2, 2, 2,
+				List.of(new BulkMigrationVerificationChunk(0, 1, 1, "x", "x"))));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationVerificationResult(1, 1, 1, List.of("ID"),
+				"expected", "actual", List.of(new BulkMigrationVerificationChunk(0, 1, 1, "x", "x"))));
+		final var verification = new BulkMigrationVerificationResult(1, 0, 0, List.of());
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskVerificationResult("task", List.of(), verification));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobTaskVerificationResult("task", List.of("ID", "ID"), verification));
+		final var task = new BulkMigrationJobTaskVerificationResult("task", List.of("ID"), verification);
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobVerificationResult(List.of(task, task)));
+		assertThrows(IllegalArgumentException.class, () -> new BulkMigrationJobVerificationResult(" ", List.of(task)));
+		assertEquals("plan-v1", new BulkMigrationJobVerificationResult("plan-v1", List.of(task)).getPlanFingerprint());
+	}
+
+	@Test
+	void aggregatesResultsInDependencyOrder() {
+		final Table expectedParent = table("PARENT", "parent");
+		final Table expectedChild = table("CHILD", "child");
+		expectedChild.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", expectedChild.getColumns().get("ID"),
+				expectedParent.getColumns().get("ID"));
+		final Table actualParent = table("PARENT", "parent");
+		final Table actualChild = table("CHILD", "changed");
+		final var parent = BulkMigrationJobVerificationTask.builder().taskId("parent").expected(expectedParent)
+				.actual(actualParent).chunkSize(1).build();
+		final var child = BulkMigrationJobVerificationTask.builder().taskId("child").expected(expectedChild)
+				.actual(actualChild).chunkSize(1).build();
+
+		final var result = BulkMigrationJobVerifier.verify(List.of(child, parent));
+
+		assertEquals(List.of("parent", "child"),
+				result.getTasks().stream().map(BulkMigrationJobTaskVerificationResult::getTaskId).toList());
+		assertFalse(result.isMatch());
+		assertEquals(1, result.getMismatchedTasks());
+		assertEquals(2, result.getExpectedRows());
+		assertEquals(2, result.getActualRows());
+		assertEquals(List.of(1, 1),
+				result.getTasks().stream().map(task -> task.getVerificationResult().getChunkSize()).toList());
+		assertEquals(List.of(List.of("ID", "TXT"), List.of("ID", "TXT")),
+				result.getTasks().stream().map(BulkMigrationJobTaskVerificationResult::getColumns).toList());
+	}
+
+	@Test
+	void bindsCompleteVerificationToItsMigrationPlan() {
+		final Table expectedParent = table("PARENT", "parent");
+		final Table expectedChild = table("CHILD", "child");
+		expectedChild.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", expectedChild.getColumns().get("ID"),
+				expectedParent.getColumns().get("ID"));
+		final var parentPlanTask = tableTask("parent", "parent-copy", expectedParent);
+		final var childPlanTask = tableTask("child", "child-copy", expectedChild);
+		final var plan = BulkMigrationJobPlanner.plan("nightly-copy", List.of(childPlanTask, parentPlanTask));
+		final var parent = BulkMigrationJobVerificationTask.builder().taskId("parent").expected(expectedParent)
+				.actual(table("PARENT", "parent")).chunkSize(1).build();
+		final var child = BulkMigrationJobVerificationTask.builder().taskId("child").expected(expectedChild)
+				.actual(table("CHILD", "child")).chunkSize(1).build();
+
+		final var result = BulkMigrationJobVerifier.verify(plan, List.of(child, parent));
+
+		assertEquals(plan.getFingerprint(), result.getPlanFingerprint());
+		assertEquals(plan.getTaskIds(),
+				result.getTasks().stream().map(BulkMigrationJobTaskVerificationResult::getTaskId).toList());
+		assertSame(result, result.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobVerificationResult("other-plan", result.getTasks()).validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class,
+				() -> new BulkMigrationJobVerificationResult(plan.getFingerprint(), List.of(result.getTasks().get(0)))
+						.validateAgainst(plan));
+		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobVerifier.verify(plan, List.of(parent)));
+		final var wrongTable = BulkMigrationJobVerificationTask.builder().taskId("child")
+				.expected(table("OTHER", "child")).actual(table("OTHER", "child")).chunkSize(1).build();
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobVerifier.verify(plan, List.of(parent, wrongTable)));
+		expectedParent.getColumns().get("TXT").setDefaultValue("changed");
+		assertThrows(IllegalStateException.class, () -> BulkMigrationJobVerifier.verify(plan, List.of(child, parent)));
+	}
+
+	private static Table table(final String name, final String text) {
+		final Table table = new Table(name);
+		table.getColumns().add(new Column("ID"));
+		table.getColumns().add(new Column("TXT"));
+		table.getRows().add(row -> {
+			row.put("ID", 1);
+			row.put("TXT", text);
+		});
+		return table;
+	}
+
+	private static BulkMigrationJobTask tableTask(final String taskId, final String migrationId, final Table table) {
+		return BulkMigrationJobTask.builder().taskId(taskId).sourceTable(table).options(ChunkedBulkMigrationOption
+				.builder().migrationId(migrationId).mode(BulkMigrationMode.INSERT).resume(false).build()).build();
+	}
+
+	private static BulkMigrationRepairPlan repairPlan(final String tableName) {
+		final Table table = table(tableName, "value");
+		return new BulkMigrationRepairPlan(table, null, table, new BulkMigrationVerificationResult(1, 0, 0, List.of()),
+				BulkMigrationRepairOption.builder().build(), null, false, true, "test", "1", "test-executor");
+	}
+
+	private static Table numberedTable(final String name, final String... texts) {
+		final Table table = new Table(name);
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns().add(new Column("TXT"));
+		for (int i = 0; i < texts.length; i++) {
+			final int id = i + 1;
+			final String text = texts[i];
+			table.getRows().add(row -> {
+				row.put("ID", id);
+				row.put("TXT", text);
+			});
+		}
+		return table;
+	}
+
+	private static BulkMigrationKeysetSource keysetSource(final Table table, final String fingerprint,
+			final Iterator<Row> rows) {
+		return new BulkMigrationKeysetSource() {
+			@Override
+			public Table getTable() {
+				return table;
+			}
+
+			@Override
+			public String getConfigurationFingerprint() {
+				return fingerprint;
+			}
+
+			@Override
+			public Iterator<Row> iterator(final String resumeToken) {
+				return rows;
+			}
+
+			@Override
+			public String resumeToken(final Row row) {
+				return row.get("ID").toString();
+			}
+		};
+	}
+
+	private static final class TrackingIterator implements Iterator<Row>, AutoCloseable {
+		private final Iterator<Row> delegate;
+		private boolean closed;
+
+		private TrackingIterator(final Iterator<Row> delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return delegate.hasNext();
+		}
+
+		@Override
+		public Row next() {
+			return delegate.next();
+		}
+
+		@Override
+		public void close() {
+			closed = true;
+		}
+	}
+
+	private static final class RecordingKeysetSource implements BulkMigrationKeysetSource {
+		private final Table table;
+		private final String fingerprint;
+		private final List<String> resumeTokens = new ArrayList<>();
+
+		private RecordingKeysetSource(final Table table, final String fingerprint) {
+			this.table = table;
+			this.fingerprint = fingerprint;
+		}
+
+		@Override
+		public Table getTable() {
+			return table;
+		}
+
+		@Override
+		public String getConfigurationFingerprint() {
+			return fingerprint;
+		}
+
+		@Override
+		public Iterator<Row> iterator(final String resumeToken) {
+			resumeTokens.add(resumeToken);
+			final int after = resumeToken == null ? Integer.MIN_VALUE : Integer.parseInt(resumeToken);
+			return table.getRows().stream().filter(row -> ((Number) row.get("ID")).intValue() > after).iterator();
+		}
+
+		@Override
+		public String resumeToken(final Row row) {
+			return row.get("ID").toString();
+		}
+	}
+
+	private static final class FailingCloseIterator implements Iterator<Row>, AutoCloseable {
+		private final IllegalStateException failure;
+		private boolean closed;
+
+		private FailingCloseIterator(final String message) {
+			this.failure = new IllegalStateException(message);
+		}
+
+		@Override
+		public boolean hasNext() {
+			return false;
+		}
+
+		@Override
+		public Row next() {
+			throw new java.util.NoSuchElementException();
+		}
+
+		@Override
+		public void close() {
+			closed = true;
+			throw failure;
+		}
+	}
+}

@@ -24,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -33,6 +34,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /**
  * IterableなデータでBatch更新をするためのクラス
@@ -107,19 +109,32 @@ public class JdbcBatchIterateHander implements AutoCloseable {
 	 * @throws SQLException
 	 */
 	public long execute(final Connection connection, final Iterable<?> itr) throws SQLException {
-		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+		final Iterator<?> iterator = itr.iterator();
+		Throwable failure = null;
 		try {
 			initialize();
 			if (batchSize > 1) {
-				return handleAsBatch(connection, dialect, itr);
+				return handleAsBatch(connection, dialect, iterator);
 			} else {
-				return handle(connection, dialect, itr);
+				return handle(connection, dialect, iterator);
 			}
-		} catch (SQLException e) {
+		} catch (final SQLException | RuntimeException | Error e) {
+			failure = e;
 			if (rollbackHandler != null) {
-				rollbackHandler.accept(connection);
+				try {
+					rollbackHandler.accept(connection);
+				} catch (final SQLException rollbackFailure) {
+					e.addSuppressed(rollbackFailure);
+				}
 			}
 			throw e;
+		} finally {
+			try {
+				IteratorCloseUtils.close(failure, iterator);
+			} catch (final RuntimeException closeFailure) {
+				throw new SQLException("Failed to close JDBC batch input", closeFailure);
+			}
 		}
 	}
 
@@ -134,12 +149,13 @@ public class JdbcBatchIterateHander implements AutoCloseable {
 		initialized = true;
 	}
 
-	private long handleAsBatch(final Connection connection, final Dialect dialect, final Iterable<?> itr)
+	private long handleAsBatch(final Connection connection, final Dialect dialect, final Iterator<?> iterator)
 			throws SQLException {
 		long i = 0;
 		final List<ValueHolder> values = CommonUtils.list(this.batchSize);
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
-		for (Object obj : itr) {
+		while (iterator.hasNext()) {
+			final Object obj = iterator.next();
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			values.add(valueHolder);
 			if (values.size() >= this.batchSize) {
@@ -198,14 +214,15 @@ public class JdbcBatchIterateHander implements AutoCloseable {
 		holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, values.size()));
 	}
 
-	private long handle(final Connection connection, final Dialect dialect, final Iterable<?> itr) throws SQLException {
+	private long handle(final Connection connection, final Dialect dialect, final Iterator<?> iterator) throws SQLException {
 		long i = 0;
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
 		final int columnSize = 1;
 		final int rowSize = 1;
-		for (final Object obj : itr) {
+		while (iterator.hasNext()) {
+			final Object obj = iterator.next();
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
 				if (holder.getSqlParameters(columnSize, rowSize) == null) {

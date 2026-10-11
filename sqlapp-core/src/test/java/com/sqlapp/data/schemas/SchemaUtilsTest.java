@@ -20,6 +20,7 @@
 package com.sqlapp.data.schemas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
@@ -37,6 +38,39 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
 public class SchemaUtilsTest {
+	@Test
+	public void readsXmlFromReaderWithoutConsumingTheUnderlyingInput() throws Exception {
+		Table table = new Table("日本語 table");
+		table.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		Table restored = SchemaUtils.readXml(new StringReader(table.asXml()));
+		assertEquals(table, restored);
+		Catalog catalog = new Catalog("catalog");
+		Schema schema = new Schema("public");
+		catalog.getSchemas().add(schema);
+		schema.getTables().add(table);
+		Catalog restoredCatalog = SchemaUtils.readXml(new StringReader(catalog.asXml()));
+		assertEquals(catalog, restoredCatalog);
+	}
+
+	@Test
+	public void testIsSameTable() {
+		Catalog firstCatalog = new Catalog("CATALOG");
+		Schema firstSchema = new Schema("PUBLIC");
+		firstCatalog.getSchemas().add(firstSchema);
+		Table first = new Table("MEMBER");
+		firstSchema.getTables().add(first);
+
+		Catalog secondCatalog = new Catalog("catalog");
+		Schema secondSchema = new Schema("public");
+		secondCatalog.getSchemas().add(secondSchema);
+		Table second = new Table("member");
+		secondSchema.getTables().add(second);
+
+		assertTrue(SchemaUtils.isSameTable(first, second));
+		assertFalse(SchemaUtils.isSameTable(first, new Table("OTHER")));
+		assertFalse(SchemaUtils.isSameTable(first, null));
+		assertFalse(SchemaUtils.isSameTable(null, null));
+	}
 
 	protected void testDb() throws XMLStreamException, IOException {
 		final InputStream stream = FileUtils.getInputStream(this.getClass(), "catalog.xml");
@@ -163,5 +197,15 @@ public class SchemaUtilsTest {
 		assertEquals("VARCHAR(MAX)", SchemaUtils.normalizeDataType("VARCHAR   (  MAX  )  "));
 		assertEquals("DECIMAL(2,1)", SchemaUtils.normalizeDataType("Decimal   ( 2, 1  )  "));
 		assertEquals("CHAR", SchemaUtils.normalizeDataType("\"CHAR\""));
+	}
+
+	@Test
+	public void preservesQuotedQualifiedTypeNamesAndLiteralContents() {
+		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"", "public.\"Mixed Case\"[]",
+				"\"Space  Schema\".\"Type  Name\"[][]", "\"O'Brien\".\"Type.Name\"" }) {
+			assertEquals(name, SchemaUtils.normalizeDataType("  " + name + "  "));
+		}
+		assertEquals("ENUM('a.b','\"quoted\"')", SchemaUtils.normalizeDataType("enum('a.b','\"quoted\"')"));
+		assertEquals("DECIMAL(12,3)", SchemaUtils.normalizeDataType("decimal ( 12, 3 )"));
 	}
 }

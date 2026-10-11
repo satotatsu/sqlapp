@@ -52,8 +52,7 @@ public class OracleSequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Sequence> result = list();
@@ -68,8 +67,7 @@ public class OracleSequenceReader extends SequenceReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 18) {
+		if (productVersionInfo.getMajorVersion() != null && productVersionInfo.getMajorVersion() >= 18) {
 			return getSqlNodeCache().getString("sequences18c.sql");
 		}
 		return getSqlNodeCache().getString("sequences.sql");
@@ -86,6 +84,7 @@ public class OracleSequenceReader extends SequenceReader {
 		sequence.setMaxValue(rs.getBigDecimal("MAX_VALUE"));
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT_BY"));
 		sequence.setCacheSize(cacheSize);
+		sequence.setCache(cacheSize != null && cacheSize.signum() > 0);
 		sequence.setLastValue(lastNumber);
 		if ("Y".equalsIgnoreCase(cycle)) {
 			sequence.setCycle(true);
@@ -99,8 +98,7 @@ public class OracleSequenceReader extends SequenceReader {
 		}
 		if ("Y".equalsIgnoreCase(getString(rs, "SCALE_FLAG"))) {
 			sequence.getSpecifics().put(SCALE, Boolean.TRUE);
-			sequence.getSpecifics().put(EXTEND,
-					"Y".equalsIgnoreCase(getString(rs, "EXTEND_FLAG")));
+			sequence.getSpecifics().put(EXTEND, "Y".equalsIgnoreCase(getString(rs, "EXTEND_FLAG")));
 		}
 		if ("Y".equalsIgnoreCase(getString(rs, "SESSION_FLAG"))) {
 			sequence.getSpecifics().put(SESSION, Boolean.TRUE);

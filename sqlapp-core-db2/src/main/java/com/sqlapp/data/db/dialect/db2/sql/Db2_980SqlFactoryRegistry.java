@@ -23,7 +23,6 @@ import com.sqlapp.data.db.dialect.Dialect;
 
 public class Db2_980SqlFactoryRegistry extends Db2_970SqlFactoryRegistry {
 
-
 	public Db2_980SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}

@@ -16,7 +16,7 @@ SELECT
 	, COALESCE(lob.Name,'') AS lob_file_group_name
 	, COALESCE(filestr.Name,'') AS stream_file_group_name
 	, COALESCE(ctt.is_track_columns_updated_on,0) AS is_track_columns_updated_on
-	, COALESCE(ctt.object_id,0) AS has_change_tracking
+	, CAST(CASE WHEN ctt.object_id IS NULL THEN 0 ELSE 1 END AS bit) AS has_change_tracking
 	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 	, ps.name AS partition_scheme
 	, t.is_filetable
@@ -27,7 +27,9 @@ SELECT
 	, t.durability
 	, t.durability_desc
 	, t.is_memory_optimized
-	, t.temporal_type_desc
+	, t.temporal_type_desc AS temporal_type
+	, t.is_node
+	, t.is_edge
 	, idx.optimize_for_sequential_key
 FROM sys.tables t
 INNER JOIN sys.schemas s

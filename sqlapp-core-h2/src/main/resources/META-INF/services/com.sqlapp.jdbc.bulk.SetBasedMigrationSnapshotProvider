@@ -1,0 +1,1 @@
+com.sqlapp.data.db.dialect.h2.bulk.H2SetBasedMigrationSnapshotProvider

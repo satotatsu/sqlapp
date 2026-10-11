@@ -1,0 +1,50 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.jdbc.bulk;
+
+import java.sql.SQLException;
+
+/** Synchronous lifecycle callbacks for a multi-table migration job. */
+public interface BulkMigrationJobListener {
+	BulkMigrationJobListener NO_OP = new BulkMigrationJobListener() {
+	};
+
+	/** Called after the execution fence is acquired and before job start. */
+	default void onLeaseAcquired(final BulkMigrationJobLease lease) {
+	}
+
+	/** Called when the execution fence could not be acquired for this attempt. */
+	default void onLeaseAcquisitionFailed(final String planFingerprint, final Throwable cause) {
+	}
+
+	default void onJobStarted(final String planFingerprint, final int taskCount) {
+	}
+
+	default void onJobRejected(final String planFingerprint, final Throwable cause) {
+	}
+
+	default void onJobCompleted(final BulkMigrationJobResult result) {
+	}
+
+	default void onJobFailed(final String planFingerprint, final Throwable cause) {
+	}
+
+	default void onJobPaused(final String planFingerprint, final String taskId,
+			final ChunkedBulkMigrationProgress progress) {
+	}
+
+	default void onTaskStarted(final String taskId, final int taskIndex, final int taskCount) {
+	}
+
+	default void onTaskCompleted(final String taskId, final ChunkedBulkMigrationResult result,
+			final int taskIndex, final int taskCount) {
+	}
+
+	default void onTaskFailed(final String taskId, final SQLException cause,
+			final int taskIndex, final int taskCount) {
+	}
+
+	default void onTaskPaused(final String taskId,
+			final ChunkedBulkMigrationProgress progress,
+			final int taskIndex, final int taskCount) {
+	}
+}

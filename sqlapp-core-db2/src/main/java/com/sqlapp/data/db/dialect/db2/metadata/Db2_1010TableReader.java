@@ -53,22 +53,21 @@ public class Db2_1010TableReader extends Db2_980TableReader {
 			table.setCompressionType("VALUE");
 		}
 		if ("A".equalsIgnoreCase(compMode)) {
-			//ADAPTIVE
-		} else if("S".equalsIgnoreCase(compMode)){
-			//STATIC
+			// ADAPTIVE
+		} else if ("S".equalsIgnoreCase(compMode)) {
+			// STATIC
 		}
 		return table;
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> tableList) throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> tableList) throws SQLException {
 		super.setMetadataDetail(connection, context, tableList);
 		setTemporalPeriods(connection, SchemaUtils.toDoubleKeyMap(tableList));
 	}
 
-	protected void setTemporalPeriods(final Connection connection,
-			final DoubleKeyMap<String, String, Table> tables) {
+	protected void setTemporalPeriods(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
 		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
 		context.put(TABLE_NAME, tables.secondKeySet());
@@ -99,11 +98,9 @@ public class Db2_1010TableReader extends Db2_980TableReader {
 			if (CommonUtils.isEmpty(historyTableName)) {
 				return;
 			}
-			table.toSystemVersioning()
-				.setPeriodName(period.getName())
-				.setHistoryTableSchemaName(getString(rs, "HISTORY_TABLE_SCHEMA_NAME"))
-				.setHistoryTableName(historyTableName)
-				.setEnable(true);
+			table.toSystemVersioning().setPeriodName(period.getName())
+					.setHistoryTableSchemaName(getString(rs, "HISTORY_TABLE_SCHEMA_NAME"))
+					.setHistoryTableName(historyTableName).setEnable(true);
 			for (final Column column : table.getColumns()) {
 				if ("Y".equalsIgnoreCase(String.valueOf(column.getSpecifics().get("TRANSACTIONSTARTID")))) {
 					table.getSystemVersioning().setTransactionIdColumnName(column.getName());

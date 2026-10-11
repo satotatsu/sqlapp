@@ -21,11 +21,11 @@ package com.sqlapp.data.schemas;
 
 import com.sqlapp.data.db.datatype.DataType;
 
-public class NamedArgumentTest extends AbstractDbObjectTest<NamedArgument>{
+public class NamedArgumentTest extends AbstractDbObjectTest<NamedArgument> {
 
 	@Override
 	protected NamedArgument getObject() {
-		NamedArgument argument=new NamedArgument("A");
+		NamedArgument argument = new NamedArgument("A");
 		argument.setDataType(DataType.VARCHAR).setDataTypeName("VARCHAR");
 		argument.setRemarks("comment");
 		return argument;

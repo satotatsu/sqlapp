@@ -40,8 +40,8 @@ public class Firebird30ColumnReader extends FirebirdColumnReader {
 		Integer identityType = getInteger(rs, "IDENTITY_TYPE");
 		if (identityType != null) {
 			obj.setIdentity(true);
-			obj.setIdentityGenerationType(identityType == 0 ? IdentityGenerationType.Always
-					: IdentityGenerationType.ByDefault);
+			obj.setIdentityGenerationType(
+					identityType == 0 ? IdentityGenerationType.Always : IdentityGenerationType.ByDefault);
 			obj.setSequenceName(CommonUtils.trim(getString(rs, "GENERATOR_NAME")));
 		}
 		return obj;

@@ -41,11 +41,10 @@ public class OracleRoleMemberReader extends RoleMemberReader {
 	}
 
 	@Override
-	protected List<RoleMember> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<RoleMember> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_ROLE_PRIVS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"DBA_ROLE_PRIVS");
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		OracleMetadataUtils.setDbaOrUser(dba, context);
 		final List<RoleMember> result = list();

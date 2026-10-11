@@ -34,21 +34,22 @@ public class AnnotationUtilsTest {
 
 	@Test
 	public void testGetDeclaredFieldByAnnotation() {
-		List<Field> list=AnnotationUtils.getDeclaredFieldByAnnotation(TestClass.class, TestAnnotation.class);
+		List<Field> list = AnnotationUtils.getDeclaredFieldByAnnotation(TestClass.class, TestAnnotation.class);
 		assertEquals(list.size(), 1);
 	}
 
-	class TestClass{
+	class TestClass {
 		@TestAnnotation
-		public String a=null;
+		public String a = null;
 	}
 
 	/**
 	 * タスクソースを表すのアノテーション
+	 * 
 	 * @author SATOH
 	 *
 	 */
-	@Target({ElementType.FIELD, ElementType.METHOD})
+	@Target({ ElementType.FIELD, ElementType.METHOD })
 	@Retention(RetentionPolicy.RUNTIME)
 	public @interface TestAnnotation {
 	}

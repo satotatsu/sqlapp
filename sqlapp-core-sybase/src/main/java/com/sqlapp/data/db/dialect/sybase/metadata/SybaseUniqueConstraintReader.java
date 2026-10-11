@@ -24,7 +24,7 @@ import static com.sqlapp.data.db.dialect.sybase.metadata.SybaseIndexReader.ALLOW
 import static com.sqlapp.data.db.dialect.sybase.metadata.SybaseIndexReader.AUTO_CREATE_STATISTICS;
 import static com.sqlapp.data.db.dialect.sybase.metadata.SybaseIndexReader.FILE_GROUP_NAME;
 import static com.sqlapp.data.db.dialect.sybase.metadata.SybaseIndexReader.PAD_INDEX;
-import static com.sqlapp.util.CommonUtils.tripleKeyMap;
+import static com.sqlapp.util.CommonUtils.quadKeyMap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -40,7 +40,7 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.TripleKeyMap;
+import com.sqlapp.util.QuadKeyMap;
 
 /**
  * SqlServerのユニーク制約読み込み
@@ -59,17 +59,18 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
+		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = quadKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String catalog_name = getString(rs, CATALOG_NAME);
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String name = getString(rs, INDEX_NAME);
-				UniqueConstraint obj = map.get(catalog_name, schema_name, name);
+				String tableName = getString(rs, TABLE_NAME);
+				UniqueConstraint obj = map.get(catalog_name, schema_name, tableName, name);
 				if (obj == null) {
 					obj = createUniqueConstraint(rs);
-					map.put(catalog_name, schema_name, name, obj);
+					map.put(catalog_name, schema_name, tableName, name, obj);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
 				if (rs.getInt("is_descending_key") == 1) {
@@ -83,7 +84,7 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("uniqueConstraints.sql");
+		return getSqlNodeCache().getString("aseUniqueConstraints.sql");
 	}
 
 	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)

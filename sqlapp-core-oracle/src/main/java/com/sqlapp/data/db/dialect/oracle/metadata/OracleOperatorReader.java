@@ -50,8 +50,7 @@ public class OracleOperatorReader extends OperatorReader {
 	}
 
 	@Override
-	protected List<Operator> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Operator> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String, String, Operator> map = CommonUtils.doubleKeyMap();
@@ -67,7 +66,7 @@ public class OracleOperatorReader extends OperatorReader {
 					operator = createOperator(rs);
 					map.put(schema_name, name, operator);
 				}
-				OperatorBinding binding=createOperatorBinding(rs);
+				OperatorBinding binding = createOperatorBinding(rs);
 				operator.getBindings().add(binding);
 				bindingMap.put(operator.getSchemaName(), operator.getName(), bindingNo, binding);
 			}
@@ -81,20 +80,18 @@ public class OracleOperatorReader extends OperatorReader {
 	}
 
 	protected OperatorBinding createOperatorBinding(ExResultSet rs) throws SQLException {
-		OperatorBinding obj=new OperatorBinding();
+		OperatorBinding obj = new OperatorBinding();
 		obj.setDialect(this.getDialect());
 		obj.setTypeSchemaName(getString(rs, "RETURN_SCHEMA"));
 		obj.setDataTypeName(getString(rs, "RETURN_TYPE"));
 		if (obj.getImplementationType() != null) {
-			obj.getImplementationType().setSchemaName(
-					getString(rs, "IMPLEMENTATION_TYPE_SCHEMA"));
+			obj.getImplementationType().setSchemaName(getString(rs, "IMPLEMENTATION_TYPE_SCHEMA"));
 		}
 		obj.setImplementationTypeName(getString(rs, "IMPLEMENTATION_TYPE"));
 		obj.setProperty(getString(rs, "PROPERTY"));
 		return obj;
 	}
-	
-	
+
 	protected Operator createOperator(ExResultSet rs) throws SQLException {
 		Operator obj = new Operator(getString(rs, OPERATOR_NAME));
 		obj.setSchemaName(getString(rs, "OWNER"));
@@ -103,11 +100,10 @@ public class OracleOperatorReader extends OperatorReader {
 		return obj;
 	}
 
-	protected void setArgument(final Connection connection,
-			final ParametersContext context,
+	protected void setArgument(final Connection connection, final ParametersContext context,
 			final TripleKeyMap<String, String, Integer, OperatorBinding> bindingMap) {
 		SqlNode node = getSqlNodeCache().getString("operatorArguments.sql");
-		ParametersContext copyContext=context.clone();
+		ParametersContext copyContext = context.clone();
 		copyContext.put(SCHEMA_NAME, bindingMap.keySet());
 		copyContext.put(OPERATOR_NAME, bindingMap.secondKeySet());
 		execute(connection, node, copyContext, new ResultSetNextHandler() {
@@ -126,8 +122,7 @@ public class OracleOperatorReader extends OperatorReader {
 		});
 	}
 
-	protected OperatorBindingArgument createOperatorBindingArgument(ExResultSet rs)
-			throws SQLException {
+	protected OperatorBindingArgument createOperatorBindingArgument(ExResultSet rs) throws SQLException {
 		OperatorBindingArgument arg = new OperatorBindingArgument();
 		arg.setDialect(this.getDialect());
 		arg.setDataTypeName(getString(rs, "ARGUMENT_TYPE"));

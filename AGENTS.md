@@ -9,7 +9,6 @@ sqlapp is a Java 21 and Gradle multi-project database utility.
 - `sqlapp-gradle-plugin`: Gradle tasks backed by commands
 - `sqlapp-core-{db}`: database-specific dialects
 - `sqlapp-elk-svg`: current ELK-based SVG ER diagrams
-- `sqlapp-graphviz`: legacy Graphviz ER diagrams
 - `sqlapp-core-test`: shared test utilities
 
 Read the nearest module `AGENTS.md` in addition to this file.
@@ -41,7 +40,20 @@ public API risks, the smallest implementation location and required tests.
 
 ## Architecture
 
+- Design every user-facing feature to be simple for the common case and
+  extensible through optional configuration for advanced requirements.
+- Provide one clear high-level entry point with safe defaults before exposing
+  lower-level planners, stores, listeners, dialect hooks or execution phases.
+- Keep advanced controls available without making them mandatory for ordinary
+  use. Prefer progressive disclosure: common settings first, optional
+  per-table or vendor-specific overrides second, and low-level APIs last.
+- Do not duplicate advanced behavior in a facade. Compose the existing shared
+  model, validators, planners and executors so simple and advanced paths retain
+  the same semantics and safety checks.
 - Treat the sqlapp Schema model as the canonical database representation.
+- Prefer the Schema model and sqlapp-core SQL factories for DDL and DML generation.
+  Build SQL strings directly only when the shared generator cannot represent required
+  vendor-specific behavior, and keep that SQL in the owning dialect module where possible.
 - Cross-cutting schema features should consume the shared Schema model.
 - Shared abstractions belong in `sqlapp-core`.
 - Command behavior and YAML/file handling belong in `sqlapp-command`.
@@ -52,6 +64,17 @@ public API risks, the smallest implementation location and required tests.
 
 ## Configuration design
 
+- The minimum valid configuration should express user intent rather than
+  internal execution mechanics. Infer values only when the result is
+  unambiguous and safe.
+- Defaults must be useful and safe. When no honest safe default exists, require
+  the specific value with an actionable error instead of guessing; data
+  fingerprints, destructive behavior and transaction guarantees are examples.
+- Adding an advanced option must not complicate the default path. Group related
+  options and preserve a concise high-level API or configuration example.
+- Results from high-level APIs must retain access to detailed plans, status,
+  verification and failure information so convenience does not hide
+  correctness-relevant facts.
 - Keep user-authored configuration and Schema XML as simple and concise as
   practical.
 - Do not require information that can be resolved unambiguously from the shared
@@ -77,12 +100,32 @@ public API risks, the smallest implementation location and required tests.
 
 For `sqlapp-core-{db}` changes:
 
+- MetadataReader must continue to operate correctly on past supported database
+  versions.
+- Exact compatibility of previously read fields or Schema model representations
+  is not required when improving dialect metadata behavior.
+- Isolate version-specific catalog columns and SQL syntax in the reader for the
+  database version that supports them.
 - State the database product and affected version range.
 - Check `DialectResolver` and preserve older supported behavior.
 - Inherit from the nearest compatible version and override only differences.
 - Keep vendor catalog queries in the dialect module.
+- Avoid N+1 SELECTs in metadata readers across all dialects. Fetch metadata for
+  the requested object set with joins, catalog queries or batched queries;
+  do not issue an additional SELECT per object, column or index. Use per-object
+  queries only when set-based retrieval is exceptionally difficult or the
+  database provides no practical bulk alternative. Document the concrete
+  limitation and reason for the exception, and test query counts where practical.
 - Consider identifiers, quoting, case, data types and version boundaries.
 - Separate metadata-reading changes from SQL-generation changes.
+- Prefer a body or query in `statement` plus separately modeled components such
+  as procedure arguments or view columns when both can be read reliably and can
+  recreate the object together.
+- When that split representation cannot be read reliably, store the complete,
+  executable CREATE DDL in `definition`; components already embedded in that DDL
+  are then optional supplemental metadata rather than mandatory duplicates.
+- Test object recreatability from either `statement` plus modeled components or
+  from `definition`, according to the representation selected by the reader.
 - Add relevant resolution, type, quoting, SQL, metadata and boundary tests.
 - Clearly separate tests requiring a real database.
 

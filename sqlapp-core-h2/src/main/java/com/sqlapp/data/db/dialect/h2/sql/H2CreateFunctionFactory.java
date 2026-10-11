@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.h2.util.H2SqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 
-public class H2CreateFunctionFactory extends
-		AbstractCreateFunctionFactory<H2SqlBuilder> {
+public class H2CreateFunctionFactory extends AbstractCreateFunctionFactory<H2SqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Function obj, H2SqlBuilder builder) {
@@ -38,7 +37,6 @@ public class H2CreateFunctionFactory extends
 			}
 			builder.deterministic();
 		}
-		builder.space()._add("for").space()
-				.sqlChar(obj.getClassName() + "." + obj.getMethodName());
+		builder.space()._add("for").space().sqlChar(obj.getClassName() + "." + obj.getMethodName());
 	}
 }

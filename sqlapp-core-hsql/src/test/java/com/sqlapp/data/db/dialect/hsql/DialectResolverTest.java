@@ -28,15 +28,11 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 
 public class DialectResolverTest {
 
-	
 	@Test
 	public void testCompareTo() {
-		Dialect dialect1 = DialectResolver.getInstance().getDialect("hsql",
-				2, 0);
-		Dialect dialect2 = DialectResolver.getInstance().getDialect("hsql",
-				2, 1);
-		Dialect dialect3 = DialectResolver.getInstance().getDialect("hsql",
-				2, 0);
+		Dialect dialect1 = DialectResolver.getInstance().getDialect("hsql", 2, 0);
+		Dialect dialect2 = DialectResolver.getInstance().getDialect("hsql", 2, 1);
+		Dialect dialect3 = DialectResolver.getInstance().getDialect("hsql", 2, 0);
 		assertEquals(-1, dialect1.compareTo(dialect2));
 		assertEquals(1, dialect2.compareTo(dialect1));
 		assertEquals(0, dialect1.compareTo(dialect3));

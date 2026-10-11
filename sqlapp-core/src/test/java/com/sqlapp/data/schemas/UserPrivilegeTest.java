@@ -19,11 +19,10 @@
 
 package com.sqlapp.data.schemas;
 
+public class UserPrivilegeTest extends AbstractDbObjectTest<UserPrivilege> {
 
-public class UserPrivilegeTest extends AbstractDbObjectTest<UserPrivilege>{
-
-	public static UserPrivilege getPrivilege(){
-		UserPrivilege privilege=new UserPrivilege();
+	public static UserPrivilege getPrivilege() {
+		UserPrivilege privilege = new UserPrivilege();
 		privilege.setGranteeName("grantee").setGrantorName("dbo").setPrivilege("SELECT").setAdmin(true);
 		return privilege;
 	}

@@ -25,6 +25,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.RoutinePrivilege;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Operator;
 import com.sqlapp.data.schemas.OperatorClass;
@@ -32,6 +33,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Type;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.data.schemas.View;
 
@@ -63,10 +65,13 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, PostgresCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, PostgresDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, PostgresCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, PostgresTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, PostgresAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, PostgresLockTableFactory.class);
+		// Composite type
+		registerSqlFactory(Type.class, SqlType.CREATE, PostgresCreateTypeFactory.class);
 		// View
 		registerSqlFactory(View.class, SqlType.CREATE, PostgresCreateViewFactory.class);
 		// Index
@@ -89,6 +94,10 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Sequence.class, SqlType.CREATE, PostgresCreateSequenceFactory.class);
 		//
 		registerSqlFactory(Function.class, SqlType.CREATE, PostgresCreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.DROP, PostgresDropFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.ALTER, PostgresAlterFunctionFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, PostgresGrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, PostgresRevokeRoutinePrivilegeFactory.class);
 		//
 		registerSqlFactory(Table.class, SqlType.DEFRAG, PostgresDefragTableFactory.class);
 		//

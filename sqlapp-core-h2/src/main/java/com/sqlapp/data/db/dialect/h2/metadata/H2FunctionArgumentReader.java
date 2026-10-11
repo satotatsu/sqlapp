@@ -44,12 +44,10 @@ public class H2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<NamedArgument> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -63,44 +61,37 @@ public class H2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
-			return getSqlNodeCache().getString(
-					"functionArguments_200.sql");
+			return getSqlNodeCache().getString("functionArguments_200.sql");
 		}
 		return getSqlNodeCache().getString("functionArguments.sql");
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		return createNamedArgument(rs, false);
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs,
-			final boolean modern) throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs, final boolean modern) throws SQLException {
 		Function routine = new Function();
 		routine.setDialect(this.getDialect());
 		NamedArgument obj = createObject(COLUMN_NAME);
 		routine.setCatalogName(getString(rs, "ALIAS_CATALOG"));
 		routine.setSchemaName(getString(rs, "ALIAS_SCHEMA"));
 		routine.setName(getString(rs, "ALIAS_NAME"));
-		routine.setSpecificName(modern
-				? getString(rs, "SPECIFIC_NAME")
-				: getString(rs, "ALIAS_NAME"));
+		routine.setSpecificName(modern ? getString(rs, "SPECIFIC_NAME") : getString(rs, "ALIAS_NAME"));
 		obj.setCatalogName(getString(rs, "ALIAS_CATALOG"));
 		obj.setSchemaName(getString(rs, "ALIAS_SCHEMA"));
 		obj.setSchemaName(getString(rs, "ALIAS_SCHEMA"));
-		boolean nullable=this.toBoolean(getString(rs, "NULLABLE"));
+		boolean nullable = this.toBoolean(getString(rs, "NULLABLE"));
 		SchemaUtils.setRoutine(obj, routine);
 		Long precision = getLong(rs, "PRECISION");
 		Integer scale = getInteger(rs, "SCALE");
 		obj.setNotNull(!nullable);
 		if (modern) {
-			this.getDialect().setDbType(getString(rs, "TYPE_NAME"),
-					precision, scale, obj);
+			this.getDialect().setDbType(getString(rs, "TYPE_NAME"), precision, scale, obj);
 		} else {
-			DataType type=DataType.valueOf(rs.getInt("DATA_TYPE"));
+			DataType type = DataType.valueOf(rs.getInt("DATA_TYPE"));
 			obj.setDataType(type);
 			obj.setDataTypeName(type.toString());
 			obj.setLength(precision);

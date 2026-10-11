@@ -178,8 +178,7 @@ public class H2 extends Dialect {
 		});
 		// Timestamp WITH TIME ZONE
 		getDbDataTypes().addTimestampWithTimeZone(type -> {
-			type.setDefaultValueLiteral(
-					getCurrentTimestampWithTimeZoneFunction());
+			type.setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction());
 		});
 		// GEOMETRY
 		GeometryUtils.run(new Runnable() {

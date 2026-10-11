@@ -87,6 +87,7 @@ class JdbcTreeDataSessionNormalizationTest extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithCombinedPK() throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection connection = ds.getConnection();) {
+			connection.setAutoCommit(false);
 			System.out.println("---------------------------INSERT------------------------------------");
 			this.dropTables(connection, "ORDER_DETAILS");
 			this.dropTables(connection, "ORDERS");
@@ -135,11 +136,11 @@ class JdbcTreeDataSessionNormalizationTest extends AbstractDbCommandTest {
 			JdbcTreeDataSession flatOrdeSession = new JdbcTreeDataSession(connection, flatOrders);
 			flatOrdeSession.setTableOperationMode(TableOperationMode.INSERT);
 			flatOrdeSession.select(flatOrders, selectForFlatOrders);
-			try (flatOrdeSession) {
+			flatOrdeSession.execute(activeSession -> {
 				flatOrdeSession.readAll((tbl, rowNo, row) -> {
 
 				});
-			}
+			});
 			flatOrders.read(connection);
 			assertTrue(flatOrders.getRows().size() > 0);
 			// Normalization
@@ -169,9 +170,9 @@ class JdbcTreeDataSessionNormalizationTest extends AbstractDbCommandTest {
 					""";
 			session.select(orderDetails, selectForOrderDetails);
 			session.setTableOperationMode(TableOperationMode.INSERT);
-			try (session) {
+			session.execute(activeSession -> {
 				session.readAll();
-			}
+			});
 			orders.read(connection);
 			orderDetails.read(connection);
 			assertEquals(3, orders.getRows().size());
@@ -184,12 +185,12 @@ class JdbcTreeDataSessionNormalizationTest extends AbstractDbCommandTest {
 		JdbcTreeDataSession session = new JdbcTreeDataSession(connection, table);
 		initializeSession(session);
 		sessionHandler.accept(session);
-		try (session) {
+		session.execute(activeSession -> {
 			for (int i = 0; i < 3; i++) {
 				Row row = session.newRow(table);
 				rowHandler.accept(i, row);
 			}
-		}
+		});
 	}
 
 	private void initializeSession(JdbcTreeDataSession session) {

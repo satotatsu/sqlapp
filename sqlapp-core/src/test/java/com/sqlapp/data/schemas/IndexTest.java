@@ -21,11 +21,11 @@ package com.sqlapp.data.schemas;
 
 import static com.sqlapp.util.CommonUtils.newTimestamp;
 
-public class IndexTest extends AbstractDbObjectTest<Index>{
+public class IndexTest extends AbstractDbObjectTest<Index> {
 
 	@Override
 	protected Index getObject() {
-		final Index index=new Index("indexA");
+		final Index index = new Index("indexA");
 		index.getColumns().add("colA", Order.Asc);
 		index.getColumns().add("colB", Order.Desc);
 		index.getIncludes().add("colC", Order.Desc);

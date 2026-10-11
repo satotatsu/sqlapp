@@ -106,7 +106,7 @@ public class StringConverter extends AbstractConverter<String> {
 	}
 
 	private String internString(final String value) {
-		if (this.useIntern) {
+		if (this.useIntern && value != null) {
 			return value.intern();
 		}
 		return value;

@@ -116,7 +116,7 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	public static int toInt(final byte[] bytes) {

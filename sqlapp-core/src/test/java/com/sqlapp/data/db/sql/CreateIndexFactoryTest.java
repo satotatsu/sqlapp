@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.List;
 
@@ -59,4 +61,17 @@ public class CreateIndexFactoryTest extends AbstractStandardFactoryTest {
 		String expected = FileUtils.getResource(this, "create_index1.sql");
 		assertEquals(expected, sqlOperation.getSqlText());
 	}
+	@Test
+	public void respectsSchemaDecorationForIndexTarget() {
+		Table table = new Table("tableA").setSchemaName("schemaA");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT));
+		Index index = table.getIndexes().add("indexA", table.getColumns().get("colA"));
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		String qualified = command.createSql(index).get(0).getSqlText();
+		assertTrue(qualified.contains("schemaA"), qualified);
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(false);
+		String unqualified = command.createSql(index).get(0).getSqlText();
+		assertFalse(unqualified.contains("schemaA"), unqualified);
+	}
+
 }

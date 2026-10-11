@@ -115,3 +115,142 @@ boundaries as the MySQL coverage.
 SQL Server uses the image documented by Testcontainers:
 `mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04`. The container EULA is
 accepted explicitly in the test code.
+
+## YugabyteDB YSQL compatibility
+
+Run both fixed baselines with:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:yugabyteCompatibilityTest
+```
+
+| Task | Disposable image | Expected PostgreSQL engine major |
+|---|---|---|
+| `yugabyte11CompatibilityTest` | `yugabytedb/yugabyte:2024.2.11.0-b36` | 11 |
+| `yugabyte15CompatibilityTest` | `yugabytedb/yugabyte:2026.1.2.0-b137` | 15 |
+
+These opt-in tasks are separate from default unit tests. They assert the actual
+JDBC engine major and use fresh single-node containers with reuse disabled.
+They create tables, checkpoint/lease state and local test roles in the owned
+container, drop their random schemas and stop the container after the suite.
+No external JDBC environment variables or host data volumes are used. The
+configured PostgreSQL JDBC driver is `42.7.11`.
+
+Run one acceptance case on one fixed baseline:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:yugabyte11CompatibilityTest --tests '*YugabyteMetadataReaderTest.roundTripsWholeSchemaAndDataThroughStandardCreateAndBulkPaths'
+```
+
+Substitute `yugabyte15CompatibilityTest` for the PostgreSQL 15 baseline. To
+investigate another explicitly chosen image, use the general docker task:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*YugabyteMetadataReaderTest' -PyugabyteTestImage=yugabytedb/yugabyte:2024.2.11.0-b36
+```
+
+The complete suite covers metadata/XML/DDL recreation, custom and array types,
+constraints/indexes/comments, routine identity/recreation/differences/EXECUTE
+privileges, views/triggers, COPY/UPSERT, transactions, generated parent/child
+keys, checkpoint/resume, verification/repair and lease fencing. The whole-schema
+acceptance test combines metadata and row XML, standard Schema CREATE,
+parent-first COPY, UPSERT and actual dependency/constraint checks. Placement
+coverage also recreates replica-placement Tablespaces, grouped Hash/Range keys,
+table/index splits, independently placed UNIQUE indexes, self-referencing foreign
+keys, colocated tables and explicit Colocation opt-out through XML.
+
+The placement regression passed **64 cases per baseline** (128 real-engine
+passes), plus 10 Yugabyte module passes and one optional external skip.
+PostgreSQL, command and Gradle plugin checks retained 880 passes through
+up-to-date tasks; Yugabyte assembly succeeded. See the
+[placement command and evidence](../docs/compatibility.md#ysql-placement-metadata-and-create-ddl),
+[current support and version boundaries](../sqlapp-core-yugabyte/README.md),
+and the preceding [broader regression](../docs/compatibility.md#whole-schema-and-data-acceptance-on-ysql).
+
+The matrix qualifies these single-node builds and scenarios. It does not
+establish historical PostgreSQL, arbitrary YugabyteDB releases, multi-node
+failover, performance, automatic topology translation, automatic ACL/owner replay
+or transactional-DDL compatibility. Deferred PRIMARY KEY/UNIQUE tests assert
+unsupported SQLSTATE 0A000; deferred foreign keys are covered. The optional
+external test in `sqlapp-core-yugabyte` is separate and must only run against an
+explicitly authorized disposable target.
+
+## CockroachDB compatibility matrix
+
+```shell
+./gradlew :sqlapp-core-dialect-test:cockroachCompatibilityTest
+./gradlew :sqlapp-core-dialect-test:cockroach24CompatibilityTest
+./gradlew :sqlapp-core-dialect-test:cockroach25CompatibilityTest
+```
+
+The tasks use owned disposable single-node containers for
+`cockroachdb/cockroach:v24.3.0` and `cockroachdb/cockroach:v25.4.0`.
+Each baseline passes 31 cases: product resolution, Schema/XML/DDL recreation,
+constraints, STORING/predicate indexes, sharded keys, families, hidden/generated
+columns, enums and quoted identifiers, overloaded SQL/PLpgSQL functions, typed
+COPY/UPSERT, caller rollback and atomic failure, serialization SQLSTATE,
+checkpoint/resume and sustained chunked loads. Twelve module tests cover
+resolution, SQL generation, provider selection and one-attempt retry propagation.
+See the [scope and limits](../sqlapp-core-cockroach/README.md).
+External databases and distributed performance are outside this matrix.
+
+The ALTER/DROP expansion also covers column/table renames with retained values,
+type/default/nullability changes, constraint/index changes, comments and comment
+clearing, exact function overload replacement/drop, enum additions/rename,
+sequence configuration without restart, view replacement with dependents, and
+whole-Schema addition/dependency-ordered deletion followed by metadata checks.
+The PostgreSQL comment regression checks that comment-only changes neither
+recreate objects nor mistake property values for their owners.
+
+Cockroach enum-array coverage includes quoted and built-in-colliding type
+names, references outside search_path, Schema XML, definition-backed and
+modeled table CREATE, COPY, UPSERT updates, empty/NULL arrays and elements,
+and rollback after invalid enum values.
+
+Cockroach placement coverage uses the same owned single-node images with
+`region=sqlapp-region,zone=sqlapp-zone`. It verifies Catalog region/survival
+specifics, GLOBAL / REGIONAL BY TABLE / REGIONAL BY ROW (including a quoted
+custom region column), XML and Catalog/Table DDL recreation, specificity
+override and ordinary database behavior. Additional regions, secondary-region
+execution and regional survival require separate multi-region
+qualification; generation tests cover their SQL and validation.
+
+## Aurora PostgreSQL: upstream compatibility and optional external tests
+
+```shell
+./gradlew :sqlapp-core-dialect-test:auroraPostgresCompatibilityTest
+```
+
+This runs the Aurora dialect against disposable upstream PostgreSQL 14.22,
+15.17, 16.13 and 17.9 containers. These are **not Aurora images** and do not
+establish Aurora service compatibility. Individual tasks are named
+`auroraPostgres14CompatibilityTest` through `auroraPostgres17CompatibilityTest`.
+
+`auroraExternalTest` is a separate opt-in task for an explicitly authorized,
+disposable Aurora database. It is excluded from `dockerTest` and compatibility
+aggregates. It requires target/credential environment variables plus
+`SQLAPP_AURORA_ALLOW_DESTRUCTIVE_TESTS=true`, writes rows, and creates/drops
+UUID schemas with CASCADE. See the [Aurora guide](../sqlapp-core-aurora-postgres/README.md)
+for connection requirements, cleanup and unverified behavior. No external
+Aurora test was run as part of adding this module.
+
+## AlloyDB Omni and managed-service qualification
+
+```shell
+./gradlew :sqlapp-core-dialect-test:alloydbCompatibilityTest
+```
+
+The aggregate runs official `google/alloydbomni:15.17.0`, `16.8.0`, `17.9.0`
+images and an ordinary PostgreSQL 17.9 control. Individual tasks are
+`alloydb15CompatibilityTest`, `alloydb16CompatibilityTest`,
+`alloydb17CompatibilityTest` and `alloydbPostgresControlTest`.
+These exercise local Omni engines; managed Google Cloud AlloyDB is not part
+of this matrix. No columnar engine activation or cloud credentials are needed.
+
+`alloydbExternalTest` is explicitly opt-in, excluded from `dockerTest` and all
+compatibility aggregates, and was not executed. It requires an authorized
+disposable writable target, credential environment variables and
+`SQLAPP_ALLOYDB_ALLOW_DESTRUCTIVE_TESTS=true`. It creates/drops UUID schemas
+with CASCADE and writes test rows/checkpoints. See the
+[AlloyDB guide](../sqlapp-core-alloydb/README.md) for prerequisites and remaining
+cloud qualification work.

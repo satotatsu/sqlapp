@@ -14,8 +14,7 @@ import com.sqlapp.data.schemas.Domain;
 public class Oracle23aiDropDomainFactory extends OracleDropDomainFactory {
 
 	@Override
-	protected void addDropObject(final Domain domain,
-			final OracleSqlBuilder builder) {
+	protected void addDropObject(final Domain domain, final OracleSqlBuilder builder) {
 		builder.drop().space()._add("DOMAIN").space();
 		builder.ifExists(this.getOptions().isDropIfExists()).space();
 		builder.name(domain, this.getOptions().isDecorateSchemaName());

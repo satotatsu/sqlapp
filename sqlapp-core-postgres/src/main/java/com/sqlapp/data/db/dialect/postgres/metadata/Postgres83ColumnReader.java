@@ -38,12 +38,10 @@ public class Postgres83ColumnReader extends PostgresColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Column> result = super.doGetAll(connection, context, productVersionInfo);
-		List<Domain> enumList = getAllEnumInfo(connection, context,
-				productVersionInfo);
+		List<Domain> enumList = getAllEnumInfo(connection, context, productVersionInfo);
 		for (Column column : result) {
 			for (Domain domain : enumList) {
 				if (eq(column.getDataTypeName(), domain.getName())) {
@@ -62,8 +60,7 @@ public class Postgres83ColumnReader extends PostgresColumnReader {
 	 * @param connection
 	 * @param context
 	 */
-	protected List<Domain> getAllEnumInfo(Connection connection,
-			final ParametersContext context,
+	protected List<Domain> getAllEnumInfo(Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		PostgresEnumReader reader = new PostgresEnumReader(this.getDialect());
 		reader.setReaderOptions(this.getReaderOptions());

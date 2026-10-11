@@ -32,22 +32,16 @@ public class SimpleXMLStreamWriterTest {
 	@Test
 	public void testStaxWriterWriter() throws XMLStreamException {
 		StringWriter writer = new StringWriter();
-		SimpleXMLStreamWriter simpleXMLStreamWriter = new SimpleXMLStreamWriter(
-				writer);
+		SimpleXMLStreamWriter simpleXMLStreamWriter = new SimpleXMLStreamWriter(writer);
 		StaxWriter stax = new StaxWriter(simpleXMLStreamWriter);
-		stax.setLineSeparator("\n").writeStartDocument()
-				.writeStartElement("html").newLine().addIndentLevel(+1)
-				.indent().writeStartElement("body").newLine()
-				.addIndentLevel(+1).indent().writeStartElement("span")
-				.writeAttribute("id", "spanId").writeEndElement().newLine()
-				.indent().writeStartElement("div").writeEmptyElement("text")
-				.writeEndElement().newLine().indent().writeStartElement("div")
-				.writeEndElement().newLine().indent()
-				.writeStartElement("table").writeStartElement("tr")
-				.writeStartElement("td").writeEndElement().writeEndElement()
-				.writeEndElement().addIndentLevel(-1).newLine().indent()
-				.writeEndElement().addIndentLevel(-1).newLine().indent()
-				.writeEndElement().writeEndDocument();
+		stax.setLineSeparator("\n").writeStartDocument().writeStartElement("html").newLine().addIndentLevel(+1).indent()
+				.writeStartElement("body").newLine().addIndentLevel(+1).indent().writeStartElement("span")
+				.writeAttribute("id", "spanId").writeEndElement().newLine().indent().writeStartElement("div")
+				.writeEmptyElement("text").writeEndElement().newLine().indent().writeStartElement("div")
+				.writeEndElement().newLine().indent().writeStartElement("table").writeStartElement("tr")
+				.writeStartElement("td").writeEndElement().writeEndElement().writeEndElement().addIndentLevel(-1)
+				.newLine().indent().writeEndElement().addIndentLevel(-1).newLine().indent().writeEndElement()
+				.writeEndDocument();
 		System.out.println(writer.toString());
 	}
 

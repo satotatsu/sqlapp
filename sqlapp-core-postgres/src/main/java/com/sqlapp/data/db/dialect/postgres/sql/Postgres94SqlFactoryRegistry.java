@@ -27,12 +27,22 @@ public class Postgres94SqlFactoryRegistry extends Postgres93SqlFactoryRegistry {
 		super(dialect);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
 	 */
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
+	}
+
+	@Override
+	protected void initializeAllSqls() {
+		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Postgres94CreateViewFactory.class);
 	}
 
 }

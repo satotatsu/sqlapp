@@ -28,7 +28,7 @@ public class TripleKeyMapTest {
 
 	@Test
 	public void testGetST() {
-		TripleKeyMap<String, String, String, Object> map=tripleKeyMap();
+		TripleKeyMap<String, String, String, Object> map = tripleKeyMap();
 		map.put("k1a", "k2a", "k3a", "val1");
 		map.put("k1a", "k2a", "k3b", "val2");
 		map.put("k1a", "k2b", "k3a", "val3");
@@ -41,7 +41,7 @@ public class TripleKeyMapTest {
 		assertEquals("val3", map.get("k1a", "k2b", "k3a"));
 		assertEquals("val4", map.get("k1a", "k2b", "k3b"));
 		assertEquals("val5", map.get("k1b", "k2a", "k3a"));
-		assertEquals("val6", map.get(null,  "k2a", "k3a"));
+		assertEquals("val6", map.get(null, "k2a", "k3a"));
 		assertEquals("val7", map.get(null, null, null));
 	}
 }

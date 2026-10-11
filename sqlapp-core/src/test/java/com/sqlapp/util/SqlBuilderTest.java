@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.DialectResolver;
+
 /**
  * @author satoh
  *
@@ -35,49 +36,49 @@ public class SqlBuilderTest {
 
 	@Test
 	public void _parameterEq() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterEq("cola", "COLB");
 		assertEquals("cola = /*COLB*/'1'", builder.toString());
 	}
 
 	@Test
 	public void _parameterIn() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterIn("cola", "COLB");
 		assertEquals("cola IN /*COLB*/(1)", builder.toString());
 	}
 
 	@Test
 	public void _parameterGt() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterGt("cola", "COLB");
 		assertEquals("cola > /*COLB*/'1'", builder.toString());
 	}
 
 	@Test
 	public void _parameterGte() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterGte("cola", "COLB");
 		assertEquals("cola >= /*COLB*/'1'", builder.toString());
 	}
 
 	@Test
 	public void _parameterLt() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterLt("cola", "COLB");
 		assertEquals("cola < /*COLB*/'1'", builder.toString());
 	}
 
 	@Test
 	public void _parameterLte() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterLte("cola", "COLB");
 		assertEquals("cola <= /*COLB*/'1'", builder.toString());
 	}
 
 	@Test
 	public void _parameterLike() {
-		final SqlBuilder builder=(SqlBuilder)DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
+		final SqlBuilder builder = (SqlBuilder) DialectResolver.getInstance().getDefaultDialect().createSqlBuilder();
 		builder._parameterLike("cola", "COLB");
 		assertEquals("cola LIKE /*COLB*/'1'", builder.toString());
 	}

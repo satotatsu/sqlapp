@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.mariadb;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.mariadb.metadata.MariadbCatalog10_00Reader;
+import com.sqlapp.data.db.dialect.mariadb.metadata.MariadbCatalog10_05Reader;
 import com.sqlapp.data.db.metadata.CatalogReader;
 
 /**
@@ -48,7 +48,7 @@ public class Mariadb10_20 extends Mariadb10_00 {
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
-		return new MariadbCatalog10_00Reader(this);
+		return new MariadbCatalog10_05Reader(this);
 	}
 
 }

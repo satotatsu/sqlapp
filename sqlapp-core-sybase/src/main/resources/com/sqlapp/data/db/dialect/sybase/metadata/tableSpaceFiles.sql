@@ -1,20 +1,20 @@
 SELECT 
   DB_NAME() AS catalog_name
-, df.fileid AS file_id
-, df.size
-, df.maxsize AS max_size
-, df.growth
-, df.groupid
-, df.name
-, df.filename AS physical_name
-, df.status
-, df.perf
-, f.groupname AS file_group_name
-FROM sysfiles df
-INNER JOIN sysfilegroups f
-  ON (df.groupid=f.groupid)
+, d.low AS file_id
+, u.size
+, d.name
+, d.phyname AS physical_name
+, s.name AS file_group_name
+, u.lstart AS logical_start_page
+, u.unreservedpgs AS unreserved_pages
+FROM syssegments s
+INNER JOIN master.dbo.sysusages u
+  ON u.dbid=DB_ID()
+  AND (u.segmap & CONVERT(INT, POWER(2, s.segment))) != 0
+INNER JOIN master.dbo.sysdevices d
+  ON u.vstart BETWEEN d.low AND d.high
 WHERE 1=1
   /*if isNotEmpty(tableSpaceName) */
-  AND f.groupname IN /*tableSpaceName;type=NVARCHAR*/('%')
+  AND s.name IN /*tableSpaceName;type=VARCHAR*/('%')
   /*end*/
-ORDER BY df.fileid
+ORDER BY s.segment, u.lstart

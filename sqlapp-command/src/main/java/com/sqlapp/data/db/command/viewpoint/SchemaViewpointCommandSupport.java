@@ -17,16 +17,16 @@ public class SchemaViewpointCommandSupport {
 			throw new CommandException("Schema viewpoints file does not exist: " + viewpointsFile);
 		}
 		try {
-			return new SchemaViewpointResolver().resolve(catalog,
-					new SchemaViewpointsIO().read(viewpointsFile), viewpointId);
+			return new SchemaViewpointResolver().resolve(catalog, new SchemaViewpointsIO().read(viewpointsFile),
+					viewpointId);
 		} catch (IllegalArgumentException e) {
 			throw new CommandException("Invalid schema viewpoint selection: " + e.getMessage(), e);
 		}
 	}
 
 	public void retainSelectedTables(Catalog catalog, Resolution resolution) {
-		var selected = java.util.Collections.newSetFromMap(
-				new java.util.IdentityHashMap<com.sqlapp.data.schemas.Table, Boolean>());
+		var selected = java.util.Collections
+				.newSetFromMap(new java.util.IdentityHashMap<com.sqlapp.data.schemas.Table, Boolean>());
 		selected.addAll(resolution.tables());
 		catalog.getSchemas().forEach(schema -> schema.getTables().removeIf(table -> !selected.contains(table)));
 	}

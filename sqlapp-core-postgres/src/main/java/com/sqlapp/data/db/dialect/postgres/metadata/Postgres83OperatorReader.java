@@ -47,8 +47,7 @@ public class Postgres83OperatorReader extends OperatorReader {
 	}
 
 	@Override
-	protected List<Operator> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Operator> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		if (!context.containsKey("id")) {
@@ -76,12 +75,13 @@ public class Postgres83OperatorReader extends OperatorReader {
 		obj.setId(getString(rs, "oid"));
 		obj.setLeftArgument(getString(rs, "left_type"));
 		obj.setRightArgument(getString(rs, "right_type"));
-		obj.setFunctionSchemaName(getString(rs, "code_function_schema"));
 		obj.setFunctionName(getString(rs, "code_function_name"));
+		if (obj.getFunction() != null) {
+			obj.getFunction().setSchemaName(getString(rs, "code_function_schema"));
+		}
 		obj.setRestrictFunctionName(getString(rs, "rest_function_name"));
 		if (obj.getRestrictFunction() != null) {
-			obj.getRestrictFunction().setSchemaName(
-					getString(rs, "rest_function_schema"));
+			obj.getRestrictFunction().setSchemaName(getString(rs, "rest_function_schema"));
 		}
 		obj.setJoinFunctionName(getString(rs, "join_function_name"));
 		if (obj.getJoinFunction() != null) {

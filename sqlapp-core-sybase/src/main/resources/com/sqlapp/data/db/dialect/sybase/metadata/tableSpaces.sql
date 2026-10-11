@@ -1,9 +1,9 @@
 SELECT
   DB_NAME() AS catalog_name
-, f.groupname AS file_group_name
-FROM sysfilegroups f
+, s.name AS file_group_name
+FROM syssegments s
 WHERE 1=1
   /*if isNotEmpty(tableSpaceName)*/
-  AND f.groupname IN /*tableSpaceName;type=NVARCHAR*/('%')
+  AND s.name IN /*tableSpaceName;type=VARCHAR*/('%')
   /*end*/
-ORDER BY f.groupname
+ORDER BY s.segment

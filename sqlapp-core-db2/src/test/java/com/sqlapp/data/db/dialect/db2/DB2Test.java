@@ -43,8 +43,7 @@ public class DB2Test {
 
 	@Test
 	public void testIdentityInsertDefaultValue() {
-		Column column = new Column("id").setIdentity(true)
-				.setIdentityGenerationType(IdentityGenerationType.ByDefault);
+		Column column = new Column("id").setIdentity(true).setIdentityGenerationType(IdentityGenerationType.ByDefault);
 		assertEquals("default", dialect.getIdentityInsertDefaultValue(column));
 		column.setIdentityGenerationType(IdentityGenerationType.Always);
 		assertNull(dialect.getIdentityInsertDefaultValue(column));

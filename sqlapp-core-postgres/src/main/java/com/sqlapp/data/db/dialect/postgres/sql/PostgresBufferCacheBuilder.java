@@ -39,8 +39,7 @@ public class PostgresBufferCacheBuilder {
 			relation.append(dialect.quote(schemaName)).append(".");
 		}
 		relation.append(dialect.quote(relationName));
-		return "SELECT * FROM pg_buffercache_evict_relation("
-				+ sqlString(relation.toString()) + "::regclass)";
+		return "SELECT * FROM pg_buffercache_evict_relation(" + sqlString(relation.toString()) + "::regclass)";
 	}
 
 	/**
@@ -53,8 +52,7 @@ public class PostgresBufferCacheBuilder {
 
 	private void checkPostgres18() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException(
-					"Bulk pg_buffercache eviction requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("Bulk pg_buffercache eviction requires PostgreSQL 18 or later.");
 		}
 	}
 

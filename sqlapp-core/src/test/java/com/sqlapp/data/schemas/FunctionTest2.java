@@ -27,7 +27,7 @@ public class FunctionTest2 extends AbstractDbObjectTest<Function> {
 		obj.setOnNullCall(OnNullCall.CalledOnNullInput);
 		obj.setSqlSecurity(SqlSecurity.Definer);
 		obj.getArguments().add(arg);
-		obj.getReturning().toTable().getTable().getColumns().add(c->{
+		obj.getReturning().toTable().getTable().getColumns().add(c -> {
 			c.setName("colA");
 		});
 		obj.setRemarks("コメント");
@@ -41,7 +41,7 @@ public class FunctionTest2 extends AbstractDbObjectTest<Function> {
 
 	@Override
 	protected void testDiffString(Function obj1, Function obj2) {
-		obj2.getReturning().toTable().getTable().getColumns().add(c->{
+		obj2.getReturning().toTable().getTable().getColumns().add(c -> {
 			c.setName("colB");
 		});
 		DbObjectDifference diff = obj1.diff(obj2);

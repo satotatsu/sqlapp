@@ -28,8 +28,7 @@ import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.util.CommonUtils;
 
-public class Db2CreatePartitioningFactory extends
-		AbstractCreatePartitioningFactory<Db2SqlBuilder> {
+public class Db2CreatePartitioningFactory extends AbstractCreatePartitioningFactory<Db2SqlBuilder> {
 
 	@Override
 	public void addObjectDetail(Partitioning obj, Db2SqlBuilder builder) {
@@ -40,17 +39,17 @@ public class Db2CreatePartitioningFactory extends
 		builder._add("(");
 		builder.names(obj.getPartitioningColumns());
 		builder._add(" )");
-		appendPartitionDefinition(obj,
-				obj.getPartitions(), builder);
+		appendPartitionDefinition(obj, obj.getPartitions(), builder);
 	}
 
-	protected void appendPartitionDefinition(Partitioning obj, PartitionCollection partitionCollection, Db2SqlBuilder builder) {
+	protected void appendPartitionDefinition(Partitioning obj, PartitionCollection partitionCollection,
+			Db2SqlBuilder builder) {
 		if (partitionCollection.size() > 0) {
 			builder.lineBreak()._add("(");
 			builder.appendIndent(1);
 			for (int i = 0; i < partitionCollection.size(); i++) {
 				Partition partition = partitionCollection.get(i);
-				builder.lineBreak().comma(i>0);
+				builder.lineBreak().comma(i > 0);
 				appendPartitionDefinition(obj, partition, builder);
 			}
 			builder.appendIndent(-1);
@@ -58,25 +57,24 @@ public class Db2CreatePartitioningFactory extends
 		}
 	}
 
-	protected void appendPartitionDefinition(Partitioning partitionInfo, AbstractPartition<?> partition, Db2SqlBuilder builder) {
+	protected void appendPartitionDefinition(Partitioning partitionInfo, AbstractPartition<?> partition,
+			Db2SqlBuilder builder) {
 		builder.partition();
 		builder.space().name(partition.getName()).space();
 		appendPartitionDefinition(partitionInfo.getPartitioningType(), partition, builder);
 	}
 
-	protected void appendPartitionDefinition(PartitioningType partitioningType,
-			AbstractPartition<?> partition, Db2SqlBuilder builder) {
+	protected void appendPartitionDefinition(PartitioningType partitioningType, AbstractPartition<?> partition,
+			Db2SqlBuilder builder) {
 		if (!CommonUtils.isEmpty(partition.getLowValue())) {
-			builder.starting().from().space()._add("(")._add(partition.getLowValue())
-					._add(")");
-			if (!partition.isLowValueInclusive()){
+			builder.starting().from().space()._add("(")._add(partition.getLowValue())._add(")");
+			if (!partition.isLowValueInclusive()) {
 				builder.inclusive();
 			}
 		}
 		if (!CommonUtils.isEmpty(partition.getHighValue())) {
-			builder.ending().at().space()._add("(")._add(partition.getHighValue())
-					._add(")");
-			if (partition.isHighValueInclusive()){
+			builder.ending().at().space()._add("(")._add(partition.getHighValue())._add(")");
+			if (partition.isHighValueInclusive()) {
 				builder.inclusive();
 			}
 		}

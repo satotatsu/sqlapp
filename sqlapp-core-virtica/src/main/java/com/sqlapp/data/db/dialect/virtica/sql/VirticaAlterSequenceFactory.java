@@ -12,14 +12,11 @@ import com.sqlapp.data.schemas.Sequence;
 /**
  * Alters the behavior of a Vertica named sequence.
  */
-public class VirticaAlterSequenceFactory
-		extends AbstractAlterSequenceFactory<VirticaSqlBuilder> {
+public class VirticaAlterSequenceFactory extends AbstractAlterSequenceFactory<VirticaSqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Sequence obj,
-			final VirticaSqlBuilder builder) {
-		builder.alter().sequence().name(obj,
-				this.getOptions().isDecorateSchemaName());
+	protected void addCreateObject(final Sequence obj, final VirticaSqlBuilder builder) {
+		builder.alter().sequence().name(obj, this.getOptions().isDecorateSchemaName());
 		if (obj.getIncrementBy() != null) {
 			builder.increment().by().space()._add(obj.getIncrementBy());
 		}
@@ -30,11 +27,20 @@ public class VirticaAlterSequenceFactory
 			builder.maxvalue().space()._add(obj.getMaxValue());
 		}
 		if (obj.getStartValue() != null) {
-			builder.space()._add("RESTART").with().space()
-					._add(obj.getStartValue());
+			builder.space()._add("RESTART").with().space()._add(obj.getStartValue());
 		}
 		if (obj.getCacheSize() != null) {
-			builder.cache().space()._add(obj.getCacheSize());
+			if (obj.getCacheSize() < 0) {
+				throw new IllegalArgumentException("Sequence cache size must not be negative");
+			}
+			if (!obj.isCache() || obj.getCacheSize() <= 1) {
+				builder.space()._add("NO CACHE");
+			} else {
+				builder.cache().space()._add(obj.getCacheSize());
+			}
+		}
+		if (!obj.isCache() && obj.getCacheSize() == null) {
+			builder.space()._add("NO CACHE");
 		}
 		if (obj.isCycle()) {
 			builder.cycle();

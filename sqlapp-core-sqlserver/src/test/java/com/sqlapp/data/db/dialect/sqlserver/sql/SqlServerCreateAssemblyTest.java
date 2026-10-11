@@ -40,10 +40,8 @@ public class SqlServerCreateAssemblyTest extends AbstractSqlServerSqlFactoryTest
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Assembly("asm"), SqlType.CREATE);
-		dropOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Assembly("asm"), SqlType.DROP);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Assembly("asm"), SqlType.CREATE);
+		dropOperationFactory = sqlFactoryRegistry.getSqlFactory(new Assembly("asm"), SqlType.DROP);
 	}
 
 	@Test
@@ -60,7 +58,8 @@ public class SqlServerCreateAssemblyTest extends AbstractSqlServerSqlFactoryTest
 		Assembly obj = new Assembly(name);
 		obj.setPermissionSet(PermissionSet.Safe);
 		AssemblyFile asf = obj.newAssemblyFile();
-		asf.setName("c:\\Program Files\\Microsoft SQL Server\\100\\Samples\\HelloWorld\\CS\\HelloWorld\\bin\\debug\\HelloWorld.dll");
+		asf.setName(
+				"c:\\Program Files\\Microsoft SQL Server\\100\\Samples\\HelloWorld\\CS\\HelloWorld\\bin\\debug\\HelloWorld.dll");
 		obj.getAssemblyFiles().add(asf);
 		return obj;
 	}

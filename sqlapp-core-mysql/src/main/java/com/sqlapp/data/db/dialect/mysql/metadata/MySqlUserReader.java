@@ -41,8 +41,7 @@ public class MySqlUserReader extends UserReader {
 	}
 
 	@Override
-	protected List<User> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<User> result = list();

@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropDomainFactory;
 import com.sqlapp.data.schemas.Domain;
 
-public class OracleDropDomainFactory extends
-		AbstractDropDomainFactory<OracleSqlBuilder> {
+public class OracleDropDomainFactory extends AbstractDropDomainFactory<OracleSqlBuilder> {
 
 	@Override
 	protected void addDropObject(Domain obj, OracleSqlBuilder builder) {

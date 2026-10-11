@@ -46,10 +46,8 @@ public class OracleTriggerFactoryTest extends AbstractOracleSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 	}
-
 
 	@Test
 	public void testCreate1() {
@@ -66,7 +64,7 @@ public class OracleTriggerFactoryTest extends AbstractOracleSqlFactoryTest {
 		Trigger obj1 = getTrigger("triggerA");
 		Trigger obj2 = getTrigger("triggerB");
 		obj2.setEnable(false);
-		DbObjectDifference diff=obj1.diff(obj2);
+		DbObjectDifference diff = obj1.diff(obj2);
 		List<SqlOperation> list = sqlFactoryRegistry.createSql(diff);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);

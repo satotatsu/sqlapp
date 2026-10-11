@@ -33,8 +33,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * @author satoh
  * 
  */
-public class SqlServer2005TableSpaceFileReader extends
-		SqlServer2000TableSpaceFileReader {
+public class SqlServer2005TableSpaceFileReader extends SqlServer2000TableSpaceFileReader {
 
 	protected SqlServer2005TableSpaceFileReader(Dialect dialect) {
 		super(dialect);
@@ -46,8 +45,7 @@ public class SqlServer2005TableSpaceFileReader extends
 	}
 
 	@Override
-	protected TableSpaceFile createStorageFile(ExResultSet rs)
-			throws SQLException {
+	protected TableSpaceFile createStorageFile(ExResultSet rs) throws SQLException {
 		TableSpaceFile obj = super.createStorageFile(rs);
 		setStatistics(rs, "type_desc", "type", obj);
 		setStatistics(rs, "state_desc", "state", obj);

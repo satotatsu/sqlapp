@@ -19,17 +19,13 @@ import com.sqlapp.util.CommonUtils;
 public class Oracle19cCreateFunctionFactory extends OracleCreateFunctionFactory {
 
 	@Override
-	protected void addCreateObject(final Function function,
-			final OracleSqlBuilder builder) {
+	protected void addCreateObject(final Function function, final OracleSqlBuilder builder) {
 		if (!isSqlMacro(function) || !isEmpty(function.getDefinition())) {
 			super.addCreateObject(function, builder);
 			return;
 		}
-		if (!supportsScalarSqlMacro()
-				&& function.getFunctionType() != FunctionType.Table) {
-			throw new IllegalArgumentException(
-					"Oracle 19c supports only TABLE SQL macros: "
-							+ function.getName());
+		if (!supportsScalarSqlMacro() && function.getFunctionType() != FunctionType.Table) {
+			throw new IllegalArgumentException("Oracle 19c supports only TABLE SQL macros: " + function.getName());
 		}
 		builder.create().or().replace().function();
 		builder.name(function, this.getOptions().isDecorateSchemaName());
@@ -41,8 +37,7 @@ public class Oracle19cCreateFunctionFactory extends OracleCreateFunctionFactory 
 		builder.lineBreak()._add(function.getStatement());
 	}
 
-	protected void addSqlMacroClause(final Function function,
-			final OracleSqlBuilder builder) {
+	protected void addSqlMacroClause(final Function function, final OracleSqlBuilder builder) {
 		builder.space()._add("SQL_MACRO");
 	}
 
@@ -51,7 +46,6 @@ public class Oracle19cCreateFunctionFactory extends OracleCreateFunctionFactory 
 	}
 
 	private boolean isSqlMacro(final Function function) {
-		return Boolean.parseBoolean(
-				function.getSpecifics().get(OracleFunctionReader.SQL_MACRO));
+		return Boolean.parseBoolean(function.getSpecifics().get(OracleFunctionReader.SQL_MACRO));
 	}
 }

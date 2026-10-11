@@ -29,10 +29,10 @@ public class DimensionLevelTest extends AbstractDbObjectTest<DimensionLevel> {
 
 	public static DimensionLevel getDimensionLevel(String name) {
 		DimensionLevel obj = new DimensionLevel(name);
-		DimensionLevelColumn column=new DimensionLevelColumn("colB");
+		DimensionLevelColumn column = new DimensionLevelColumn("colB");
 		column.setTableName("table1");
 		obj.getColumns().add(column);
-		column=new DimensionLevelColumn("colA");
+		column = new DimensionLevelColumn("colA");
 		obj.getColumns().add(column);
 		return obj;
 	}

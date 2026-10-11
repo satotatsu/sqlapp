@@ -1,0 +1,546 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.bulk;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.sql.Connection;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaCollection;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableCollection;
+import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
+import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
+import com.sqlapp.jdbc.bulk.BulkMigrationCheckpoint;
+import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
+import com.sqlapp.jdbc.bulk.BulkOption;
+import com.sqlapp.jdbc.bulk.BulkUpsertOption;
+import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
+import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
+import com.sqlapp.util.MessageDigests;
+import com.sqlapp.util.YamlConverter;
+
+/** Resolves a portable YAML job definition against a captured Schema model. */
+public class BulkMigrationJobConfigurationResolver {
+	public record Resolution(BulkMigrationJobPlan plan, BulkMigrationJobLeaseConfiguration leaseConfiguration,
+			OperationalReportConfiguration reportConfiguration, VerificationConfiguration verificationConfiguration,
+			BulkMigrationArtifactProvenance provenance) {
+		public Resolution(final BulkMigrationJobPlan plan, final BulkMigrationJobLeaseConfiguration leaseConfiguration,
+				final OperationalReportConfiguration reportConfiguration,
+				final VerificationConfiguration verificationConfiguration) {
+			this(plan, leaseConfiguration, reportConfiguration, verificationConfiguration, null);
+		}
+
+		public Resolution {
+			java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
+		}
+	}
+
+	public record OperationalReportConfiguration(java.nio.file.Path targetFile,
+			BulkMigrationOperationalReportFailurePolicy failurePolicy) {
+		public OperationalReportConfiguration {
+			targetFile = java.util.Objects.requireNonNull(targetFile, "targetFile").toAbsolutePath().normalize();
+			java.util.Objects.requireNonNull(failurePolicy, "failurePolicy");
+		}
+	}
+
+	public record VerificationConfiguration(int chunkSize, boolean failOnMismatch, java.nio.file.Path targetFile,
+			Map<String, List<String>> columnsByTask, BulkMigrationVerificationIsolation isolation,
+			int maxReportedMismatches, java.nio.file.Path repairPlanOnMismatchFile) {
+		public VerificationConfiguration(final int chunkSize, final boolean failOnMismatch,
+				final java.nio.file.Path targetFile, final Map<String, List<String>> columnsByTask,
+				final BulkMigrationVerificationIsolation isolation, final int maxReportedMismatches) {
+			this(chunkSize, failOnMismatch, targetFile, columnsByTask, isolation, maxReportedMismatches, null);
+		}
+
+		public VerificationConfiguration {
+			if (chunkSize <= 0 || maxReportedMismatches <= 0) {
+				throw new IllegalArgumentException("verification sizes must be greater than zero");
+			}
+			java.util.Objects.requireNonNull(isolation, "isolation");
+			targetFile = targetFile == null ? null : targetFile.toAbsolutePath().normalize();
+			repairPlanOnMismatchFile = repairPlanOnMismatchFile == null ? null
+					: repairPlanOnMismatchFile.toAbsolutePath().normalize();
+			java.util.Objects.requireNonNull(columnsByTask, "columnsByTask");
+			final Map<String, List<String>> copy = new LinkedHashMap<>();
+			columnsByTask.forEach((taskId, columns) -> {
+				if (taskId == null || taskId.isBlank() || columns == null || columns.isEmpty()
+						|| columns.stream().anyMatch(name -> name == null || name.isBlank())
+						|| new HashSet<>(columns).size() != columns.size()) {
+					throw new IllegalArgumentException(
+							"verification columns must have non-empty task and column names");
+				}
+				copy.put(taskId, List.copyOf(columns));
+			});
+			columnsByTask = Map.copyOf(copy);
+		}
+	}
+
+	public BulkMigrationJobPlan resolve(final File configurationFile, final Connection sourceConnection) {
+		return resolveJob(configurationFile, sourceConnection).plan();
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection) {
+		return resolveJob(configurationFile, sourceConnection, null, null, null);
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
+			final String expectedConfigurationFingerprint) {
+		return resolveJob(configurationFile, sourceConnection, expectedConfigurationFingerprint, null, null);
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
+			final String expectedConfigurationFingerprint, final Long maxConfigurationFileSizeBytes) {
+		return resolveJob(configurationFile, sourceConnection, expectedConfigurationFingerprint,
+				maxConfigurationFileSizeBytes, null);
+	}
+
+	public Resolution resolveJob(final File configurationFile, final Connection sourceConnection,
+			final String expectedConfigurationFingerprint, final Long maxConfigurationFileSizeBytes,
+			final Long maxSchemaFileSizeBytes) {
+		if (configurationFile == null || !configurationFile.isFile()) {
+			throw new CommandException("Bulk migration configuration file is required.");
+		}
+		if (expectedConfigurationFingerprint != null
+				&& !expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("expectedConfigurationFingerprint must be a lowercase SHA-256 value.");
+		}
+		final byte[] configurationBytes;
+		try {
+			configurationBytes = BoundedMigrationFile.read(configurationFile.toPath(), maxConfigurationFileSizeBytes,
+					"maxConfigurationFileSizeBytes", "Configuration file");
+		} catch (IOException e) {
+			throw new CommandException("Could not read bulk migration configuration file: " + configurationFile, e);
+		}
+		final String configurationFingerprint = "sha256:" + MessageDigests.SHA256.checksumAsString(configurationBytes);
+		if (expectedConfigurationFingerprint != null
+				&& !expectedConfigurationFingerprint.equals(configurationFingerprint)) {
+			throw new CommandException(
+					"configurationFile fingerprint does not match expectedConfigurationFingerprint.");
+		}
+		final BulkMigrationJobConfiguration configuration = new YamlConverter().fromJsonString(
+				new String(configurationBytes, StandardCharsets.UTF_8), BulkMigrationJobConfiguration.class);
+		if (configuration == null || configuration.getSchemaFile() == null || configuration.getSchemaFile().isBlank()) {
+			throw new CommandException("schemaFile is required in bulk migration configuration.");
+		}
+		final File schemaFile = resolve(configurationFile, configuration.getSchemaFile());
+		validateProvenance(configuration.getProvenance());
+		final List<Table> tables = readTables(schemaFile, configuration.getSchemaFingerprint(), maxSchemaFileSizeBytes);
+		final List<BulkMigrationJobTask> tasks = new ArrayList<>();
+		validateTasks(configuration.getTasks());
+		for (final var task : configuration.getTasks()) {
+			final Table table = findTable(tables, task.getTable());
+			final Table targetTable = targetTable(table, task.getTargetTable(), task.getColumnMappings());
+			validateVerificationColumns(configuration.getVerification(), task, table);
+			final BulkOption bulk = bulk(task.getBulk());
+			final BulkMigrationRetryOption retry = retry(task.getRetry());
+			final var upsert = BulkUpsertOption.builder()
+					.keyColumns(targetColumns(table, task.getColumnMappings(), task.getKeyColumns(), "keyColumns",
+							task.getId()))
+					.updateColumns(targetColumns(table, task.getColumnMappings(), task.getUpdateColumns(),
+							"updateColumns", task.getId()))
+					.updateWhenMatched(task.isUpdateWhenMatched()).insertWhenNotMatched(task.isInsertWhenNotMatched())
+					.useTransaction(task.isUseTransaction()).duplicateKeyStrategy(task.getDuplicateKeyStrategy())
+					.stagingTableName(task.getStagingTableName()).bulkOption(bulk).build();
+			final var options = ChunkedBulkMigrationOption.builder()
+					.migrationId(value(task.getMigrationId(), task.getId())).chunkSize(task.getChunkSize())
+					.mode(task.getIncrementalStrategy() == null ? task.getMode() : task.getIncrementalStrategy().mode())
+					.incrementalStrategy(task.getIncrementalStrategy()).resume(task.isResume())
+					.checkpointMode(task.getCheckpointMode()).checkpointTableName(task.getCheckpointTableName())
+					.sourceFingerprint(task.getSourceFingerprint()).targetFingerprint(task.getTargetFingerprint())
+					.bulkOption(bulk).bulkUpsertOption(upsert).retryOption(retry).build();
+			final JdbcBulkMigrationKeysetSource source = task.getKeysetColumns() == null
+					|| task.getKeysetColumns().isEmpty() ? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
+							: new JdbcBulkMigrationKeysetSource(sourceConnection, table, task.getKeysetColumns());
+			final var builder = BulkMigrationJobTask.builder().taskId(task.getId()).keysetSource(source)
+					.targetTable(targetTable).columnMappings(task.getColumnMappings())
+					.requireEmptyTarget(task.isRequireEmptyTarget()).options(options);
+			if (task.getCheckpointMode() == com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.FILE) {
+				if (task.getCheckpointDirectory() == null || task.getCheckpointDirectory().isBlank()) {
+					throw new CommandException(
+							"checkpointDirectory is required for FILE " + "checkpoint mode: " + task.getId());
+				}
+				builder.checkpointStore(new FileBulkMigrationCheckpointStore(
+						resolve(configurationFile, task.getCheckpointDirectory()).toPath()));
+			} else if (task.getCheckpointMode() == com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.CUSTOM) {
+				throw new CommandException(
+						"CUSTOM checkpoint mode is only available for " + "programmatic plans: " + task.getId());
+			} else if (task.getCheckpointDirectory() != null && !task.getCheckpointDirectory().isBlank()) {
+				throw new CommandException("checkpointDirectory requires FILE checkpoint mode: " + task.getId());
+			}
+			tasks.add(builder.build());
+		}
+		final BulkMigrationJobPlan plan;
+		try {
+			plan = configuration.getJobId() == null ? BulkMigrationJobPlanner.plan(tasks)
+					: BulkMigrationJobPlanner.plan(configuration.getJobId(), tasks);
+		} catch (IllegalArgumentException e) {
+			throw new CommandException("Invalid bulk migration jobId: " + e.getMessage(), e);
+		}
+		return new Resolution(plan, lease(configurationFile, configuration.getLease()),
+				report(configurationFile, configuration.getReport()),
+				verification(configurationFile, configuration.getVerification(), configuration.getTasks()),
+				provenance(configurationFingerprint, configuration.getProvenance()));
+	}
+
+	private static List<String> targetColumns(final Table source, final Map<String, String> mappings,
+			final List<String> names, final String property, final String taskId) {
+		if (names == null || names.isEmpty()) {
+			return List.of();
+		}
+		final var resolved = new ArrayList<String>(names.size());
+		final var unique = new HashSet<String>();
+		for (final String name : names) {
+			if (name == null || name.isBlank()) {
+				throw new CommandException(property + " must not contain an empty column name: " + taskId);
+			}
+			final var column = source.getColumns().get(name);
+			if (column == null) {
+				throw new CommandException("Unknown " + property + " column '" + name + "' for task: " + taskId);
+			}
+			final String target = mappedName(mappings, column.getName());
+			if (!unique.add(target.toLowerCase(java.util.Locale.ROOT))) {
+				throw new CommandException("Duplicate " + property + " column '" + name + "' for task: " + taskId);
+			}
+			resolved.add(target);
+		}
+		return List.copyOf(resolved);
+	}
+
+	private static String mappedName(final Map<String, String> mappings, final String sourceName) {
+		if (mappings == null) {
+			return sourceName;
+		}
+		return mappings.entrySet().stream().filter(entry -> entry.getKey().equalsIgnoreCase(sourceName))
+				.map(Map.Entry::getValue).findFirst().orElse(sourceName);
+	}
+
+	private static Table targetTable(final Table source, final String qualifiedName,
+			final Map<String, String> columnMappings) {
+		if ((qualifiedName == null || qualifiedName.isBlank())
+				&& (columnMappings == null || columnMappings.isEmpty())) {
+			return null;
+		}
+		final String effectiveName = qualifiedName == null || qualifiedName.isBlank() ? source.getName()
+				: qualifiedName;
+		final String[] parts = effectiveName.split("\\.", -1);
+		if (parts.length < 1 || parts.length > 3 || java.util.Arrays.stream(parts).anyMatch(String::isBlank)) {
+			throw new CommandException(
+					"targetTable must be table, schema.table, or catalog.schema.table: " + effectiveName);
+		}
+		final Table target = new Table(source.getName()).setCatalogName(source.getCatalogName())
+				.setSchemaName(source.getSchemaName());
+		source.getColumns().forEach(column -> target.getColumns().add(column.clone()));
+		if (source.getPrimaryKeyConstraint() != null) {
+			final var primaryKeyColumns = source.getPrimaryKeyConstraint().getColumns().stream()
+					.map(reference -> target.getColumns().get(reference.getName()))
+					.toArray(com.sqlapp.data.schemas.Column[]::new);
+			target.setPrimaryKey(source.getPrimaryKeyConstraint().getName(), primaryKeyColumns);
+		}
+		target.setName(parts[parts.length - 1]);
+		if (parts.length >= 2) {
+			target.setSchemaName(parts[parts.length - 2]);
+		}
+		if (parts.length == 3) {
+			target.setCatalogName(parts[0]);
+		}
+		if (columnMappings != null) {
+			final var targetNames = new HashSet<String>();
+			for (final var sourceColumn : source.getColumns()) {
+				final String targetName = mappedName(columnMappings, sourceColumn.getName());
+				if (targetName == null || targetName.isBlank()
+						|| !targetNames.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
+					throw new CommandException(
+							"columnMappings must produce unique non-empty target columns: " + targetName);
+				}
+			}
+			for (final var mapping : columnMappings.entrySet()) {
+				final var column = target.getColumns().get(mapping.getKey());
+				if (column == null || mapping.getValue() == null || mapping.getValue().isBlank()) {
+					throw new CommandException("Invalid columnMappings entry: " + mapping);
+				}
+				column.setName(mapping.getValue());
+			}
+		}
+		return target;
+	}
+
+	private static BulkMigrationArtifactProvenance provenance(final String configurationFingerprint,
+			final BulkMigrationJobConfiguration.Provenance provenance) {
+		return new BulkMigrationArtifactProvenance(configurationFingerprint,
+				provenance == null ? null : provenance.getAssessmentReportFingerprint(),
+				provenance == null ? null : provenance.getDdlVerificationReportFingerprint());
+	}
+
+	private static void validateTasks(final List<BulkMigrationJobConfiguration.Task> tasks) {
+		if (tasks == null) {
+			throw new CommandException("tasks must not be null in bulk migration configuration.");
+		}
+		final var taskIds = new HashSet<String>();
+		final var migrationIds = new HashSet<String>();
+		for (int index = 0; index < tasks.size(); index++) {
+			final var task = tasks.get(index);
+			if (task == null) {
+				throw new CommandException("tasks[" + index + "] must not be null.");
+			}
+			if (task.getId() == null || task.getId().isBlank()) {
+				throw new CommandException("tasks[" + index + "].id is required.");
+			}
+			if (!taskIds.add(task.getId())) {
+				throw new CommandException("Duplicate migration task ID: " + task.getId());
+			}
+			if (task.getMode() == null) {
+				throw new CommandException("Task mode is required: " + task.getId());
+			}
+			if (task.getCheckpointMode() == null) {
+				throw new CommandException("Task checkpointMode is required: " + task.getId());
+			}
+			if (task.getDuplicateKeyStrategy() == null) {
+				throw new CommandException("Task duplicateKeyStrategy is required: " + task.getId());
+			}
+			final String migrationId = value(task.getMigrationId(), task.getId());
+			try {
+				BulkMigrationCheckpoint.validateMigrationId(migrationId);
+			} catch (IllegalArgumentException e) {
+				throw new CommandException("Invalid migrationId for task " + task.getId() + ": " + e.getMessage(), e);
+			}
+			if (!migrationIds.add(migrationId)) {
+				throw new CommandException("Duplicate checkpoint migrationId: " + migrationId);
+			}
+		}
+	}
+
+	private static void validateVerificationColumns(final BulkMigrationJobConfiguration.Verification verification,
+			final BulkMigrationJobConfiguration.Task task, final Table table) {
+		if (verification == null || !verification.isEnabled() || task.getVerificationColumns() == null
+				|| task.getVerificationColumns().isEmpty()) {
+			return;
+		}
+		final var resolvedNames = new HashSet<String>();
+		for (final String name : task.getVerificationColumns()) {
+			if (name == null || name.isBlank()) {
+				throw new CommandException(
+						"verificationColumns must not contain an empty " + "column name: " + task.getId());
+			}
+			final var column = table.getColumns().get(name);
+			if (column == null) {
+				throw new CommandException("Unknown verification column '" + name + "' for task: " + task.getId());
+			}
+			if (!resolvedNames.add(column.getName())) {
+				throw new CommandException("Duplicate verification column '" + name + "' for task: " + task.getId());
+			}
+		}
+	}
+
+	private static VerificationConfiguration verification(final File configurationFile,
+			final BulkMigrationJobConfiguration.Verification value,
+			final List<BulkMigrationJobConfiguration.Task> tasks) {
+		if (value == null || !value.isEnabled()) {
+			return null;
+		}
+		if (value.getChunkSize() <= 0) {
+			throw new CommandException("verification.chunkSize must be greater than zero.");
+		}
+		if (value.getIsolation() == null) {
+			throw new CommandException("verification.isolation must not be null.");
+		}
+		if (value.getMaxReportedMismatches() <= 0) {
+			throw new CommandException("verification.maxReportedMismatches must be greater than zero.");
+		}
+		final java.nio.file.Path targetFile = value.getTargetFile() == null || value.getTargetFile().isBlank() ? null
+				: resolve(configurationFile, value.getTargetFile()).toPath().toAbsolutePath().normalize();
+		final java.nio.file.Path repairPlanFile = value.getRepairPlanOnMismatchFile() == null
+				|| value.getRepairPlanOnMismatchFile().isBlank() ? null
+						: resolve(configurationFile, value.getRepairPlanOnMismatchFile()).toPath().toAbsolutePath()
+								.normalize();
+		final Map<String, List<String>> columns = new LinkedHashMap<>();
+		for (final var task : tasks) {
+			if (task.getVerificationColumns() != null && !task.getVerificationColumns().isEmpty()) {
+				columns.put(task.getId(), List.copyOf(task.getVerificationColumns()));
+			}
+		}
+		return new VerificationConfiguration(value.getChunkSize(), value.isFailOnMismatch(), targetFile,
+				Map.copyOf(columns), value.getIsolation(), value.getMaxReportedMismatches(), repairPlanFile);
+	}
+
+	private static OperationalReportConfiguration report(final File configurationFile,
+			final BulkMigrationJobConfiguration.Report value) {
+		if (value == null) {
+			return null;
+		}
+		if (value.getTargetFile() == null || value.getTargetFile().isBlank()) {
+			throw new CommandException("report.targetFile is required in bulk migration configuration.");
+		}
+		if (value.getFailurePolicy() == null) {
+			throw new CommandException("report.failurePolicy must not be null.");
+		}
+		return new OperationalReportConfiguration(
+				resolve(configurationFile, value.getTargetFile()).toPath().toAbsolutePath().normalize(),
+				value.getFailurePolicy());
+	}
+
+	private static BulkMigrationJobLeaseConfiguration lease(final File configurationFile,
+			final BulkMigrationJobConfiguration.Lease value) {
+		if (value == null) {
+			return null;
+		}
+		if (value.getMode() == null) {
+			throw new CommandException("lease.mode is required in bulk migration configuration.");
+		}
+		final Duration duration;
+		try {
+			duration = Duration.ofSeconds(value.getDurationSeconds());
+		} catch (ArithmeticException e) {
+			throw new CommandException("lease.durationSeconds is out of range.", e);
+		}
+		if (value.getMode() == com.sqlapp.jdbc.bulk.BulkMigrationJobLeaseMode.DATABASE) {
+			final String tableName = value.getTableName() == null || value.getTableName().isBlank()
+					? JdbcBulkMigrationJobLeaseStore.DEFAULT_TABLE_NAME
+					: value.getTableName();
+			return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(), duration, tableName,
+					null);
+		}
+		if (value.getDirectory() == null || value.getDirectory().isBlank()) {
+			throw new CommandException("lease.directory is required for FILE lease mode.");
+		}
+		return new BulkMigrationJobLeaseConfiguration(value.getMode(), value.getOwnerId(), duration, null,
+				resolve(configurationFile, value.getDirectory()).toPath());
+	}
+
+	private static BulkOption bulk(final BulkMigrationJobConfiguration.Bulk value) {
+		if (value == null) {
+			return BulkOption.defaults();
+		}
+		return BulkOption.builder().batchSize(value.getBatchSize()).bulkCopyTimeout(value.getBulkCopyTimeout())
+				.checkConstraints(value.isCheckConstraints()).fireTriggers(value.isFireTriggers())
+				.keepIdentity(value.isKeepIdentity()).keepNulls(value.isKeepNulls()).tableLock(value.isTableLock())
+				.useTransaction(value.isUseTransaction())
+				.allowEncryptedValueModifications(value.isAllowEncryptedValueModifications()).build();
+	}
+
+	private static BulkMigrationRetryOption retry(final BulkMigrationJobConfiguration.Retry value) {
+		if (value == null) {
+			return BulkMigrationRetryOption.none();
+		}
+		return BulkMigrationRetryOption.builder().maxRetries(value.getMaxRetries())
+				.initialBackoffMillis(value.getInitialBackoffMillis()).backoffMultiplier(value.getBackoffMultiplier())
+				.maxBackoffMillis(value.getMaxBackoffMillis())
+				.retryTransientExceptions(value.isRetryTransientExceptions())
+				.sqlStates(value.getSqlStates() == null ? List.of() : value.getSqlStates())
+				.errorCodes(value.getErrorCodes() == null ? List.of() : value.getErrorCodes()).build();
+	}
+
+	private static String value(final String value, final String fallback) {
+		return value == null || value.isBlank() ? fallback : value;
+	}
+
+	private static File resolve(final File configurationFile, final String path) {
+		final File file = new File(path);
+		return file.isAbsolute() ? file : new File(configurationFile.getAbsoluteFile().getParentFile(), path);
+	}
+
+	private static List<Table> readTables(final File file, final String expectedFingerprint,
+			final Long maxSchemaFileSizeBytes) {
+		if (!file.isFile()) {
+			throw new CommandException("Schema XML does not exist: " + file);
+		}
+		if (expectedFingerprint != null && !expectedFingerprint.isBlank()
+				&& !expectedFingerprint.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException("schemaFingerprint must be a lowercase SHA-256 value");
+		}
+		try {
+			final byte[] bytes = BoundedMigrationFile.read(file.toPath(), maxSchemaFileSizeBytes,
+					"maxSchemaFileSizeBytes", "Schema XML file");
+			final String actualFingerprint = "sha256:" + MessageDigests.SHA256.checksumAsString(bytes);
+			if (expectedFingerprint != null && !expectedFingerprint.isBlank()
+					&& !expectedFingerprint.equals(actualFingerprint)) {
+				throw new CommandException("schemaFile fingerprint does not match schemaFingerprint: " + file);
+			}
+			return tables(SchemaUtils.readXml(new ByteArrayInputStream(bytes)));
+		} catch (IOException e) {
+			throw new CommandException("Failed to read Schema XML: " + file, e);
+		}
+	}
+
+	private static void validateProvenance(final BulkMigrationJobConfiguration.Provenance provenance) {
+		if (provenance == null) {
+			return;
+		}
+		validateFingerprint("provenance.assessmentReportFingerprint", provenance.getAssessmentReportFingerprint());
+		validateFingerprint("provenance.ddlVerificationReportFingerprint",
+				provenance.getDdlVerificationReportFingerprint());
+	}
+
+	private static void validateFingerprint(final String property, final String value) {
+		if (value != null && !value.isBlank() && !value.matches("sha256:[0-9a-f]{64}")) {
+			throw new CommandException(property + " must be a lowercase SHA-256 value");
+		}
+	}
+
+	private static List<Table> tables(final DbCommonObject<?> root) {
+		if (root instanceof Table table) {
+			return List.of(table);
+		}
+		if (root instanceof TableCollection collection) {
+			return List.copyOf(collection);
+		}
+		if (root instanceof Schema schema) {
+			return List.copyOf(schema.getTables());
+		}
+		if (root instanceof SchemaCollection schemas) {
+			return schemas.stream().flatMap(schema -> schema.getTables().stream()).toList();
+		}
+		if (root instanceof Catalog catalog) {
+			return catalog.getSchemas().stream().flatMap(schema -> schema.getTables().stream()).toList();
+		}
+		throw new CommandException(
+				"Schema XML must contain Catalog, SchemaCollection, Schema, " + "TableCollection, or Table.");
+	}
+
+	private static Table findTable(final List<Table> tables, final String name) {
+		if (name == null || name.isBlank()) {
+			throw new CommandException("Each bulk migration task requires a table.");
+		}
+		final String[] parts = name.split("\\.", -1);
+		if (parts.length > 3) {
+			throw new CommandException("Invalid table name: " + name);
+		}
+		final List<Table> matches = tables.stream().filter(table -> matches(table, parts)).toList();
+		if (matches.isEmpty()) {
+			throw new CommandException("Table was not found in Schema XML: " + name);
+		}
+		if (matches.size() > 1) {
+			throw new CommandException("Ambiguous table name in Schema XML: " + name);
+		}
+		return matches.get(0);
+	}
+
+	private static boolean matches(final Table table, final String[] parts) {
+		if (!equalsName(table.getName(), parts[parts.length - 1])) {
+			return false;
+		}
+		if (parts.length >= 2 && !equalsName(table.getSchemaName(), parts[parts.length - 2])) {
+			return false;
+		}
+		return parts.length < 3 || equalsName(table.getCatalogName(), parts[0]);
+	}
+
+	private static boolean equalsName(final String actual, final String expected) {
+		return actual != null && actual.equalsIgnoreCase(expected);
+	}
+}

@@ -34,9 +34,10 @@ public enum SqlServerTableOptions {
 			}
 			setTable(table, rs.getString(this.toString()));
 		}
+
 		@Override
 		public void setTable(Table table, String value) {
-			if ("AUTO".equals(value)||"TABLE".equals(value)||"DISABLE".equals(value)) {
+			if ("AUTO".equals(value) || "TABLE".equals(value) || "DISABLE".equals(value)) {
 				table.getSpecifics().put(this.toString(), value.toString());
 			} else {
 				table.getSpecifics().put(this.toString(), "TABLE");
@@ -51,6 +52,6 @@ public enum SqlServerTableOptions {
 	public void setTable(Table table, String value) {
 	}
 
-	public void setTable(final ExResultSet rs, Table table) throws SQLException {	
+	public void setTable(final ExResultSet rs, Table table) throws SQLException {
 	}
 }

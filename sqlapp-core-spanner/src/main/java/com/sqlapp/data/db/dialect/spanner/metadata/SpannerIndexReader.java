@@ -27,13 +27,11 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateIndexFactory;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
-import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.VectorDistanceType;
 import com.sqlapp.jdbc.ExResultSet;
@@ -54,8 +52,7 @@ public class SpannerIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
@@ -73,44 +70,47 @@ public class SpannerIndexReader extends IndexReader {
 					index.setCatalogName(catalog_name);
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
-					index.setUnique(rs.getBoolean("IS_UNIQUE"));
-					index.setIndexType(toIndexType(
-							getString(rs, "INDEX_TYPE")));
-					index.setVectorDistanceType(toVectorDistanceType(
-							getString(rs, "DISTANCE_TYPE")));
-					index.getSpecifics().put(
-							SpannerCreateIndexFactory.IS_NULL_FILTERED,
-							rs.getBoolean("IS_NULL_FILTERED"));
-					setSpecifics(rs, SpannerCreateIndexFactory.TREE_DEPTH,
-							index);
-					setSpecifics(rs, SpannerCreateIndexFactory.NUM_LEAVES,
-							index);
-					setSpecifics(rs, SpannerCreateIndexFactory.NUM_BRANCHES,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.DISABLE_SEARCH,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.SORT_ORDER_SHARDING,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.LOCALITY_GROUP,
-							index);
-					setSpecifics(rs,
-							SpannerCreateIndexFactory.COLUMNAR_POLICY,
-							index);
+					index.setUnique(rs.getBoolean("is_unique"));
+					index.setIndexType(toIndexType(getString(rs, "index_type")));
+					setSpecifics(rs, "is_null_filtered", index);
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
 				}
-				if (getLong(rs, "ORDINAL_POSITION") == null) {
+				if (getLong(rs, "ordinal_position") == null) {
 					index.getIncludes().add(new Column(columnName));
 				} else {
 					index.getColumns().add(new Column(columnName),
-							Order.parse(getString(rs, "COLUMN_ORDERING")));
+							SpannerUtils.parseOrder(getString(rs, "column_ordering")));
 				}
 			}
 		});
+		setIndexOptions(connection, context, productVersionInfo, map);
 		return result;
+	}
+
+	private void setIndexOptions(final Connection connection, final ParametersContext context,
+			final ProductVersionInfo productVersionInfo, final TripleKeyMap<String, String, String, Index> map) {
+		final boolean[] supported = new boolean[1];
+		execute(connection, getSqlNodeCache().getString("indexOptionsAvailability.sql"), context,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+						supported[0] = rs.getLong("option_table_count") > 0;
+					}
+				});
+		if (!supported[0]) {
+			return;
+		}
+		execute(connection, getSqlNodeCache().getString("indexOptions.sql"), context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final Index index = map.get(getString(rs, TABLE_CATALOG), getString(rs, TABLE_SCHEMA),
+						getString(rs, INDEX_NAME));
+				if (index != null && "distance_type".equalsIgnoreCase(getString(rs, "option_name"))) {
+					index.setVectorDistanceType(toVectorDistanceType(getString(rs, "option_value")));
+				}
+			}
+		});
 	}
 
 	static IndexType toIndexType(final String productIndexType) {
@@ -123,8 +123,7 @@ public class SpannerIndexReader extends IndexReader {
 		return IndexType.BTree;
 	}
 
-	static VectorDistanceType toVectorDistanceType(
-			final String distanceType) {
+	static VectorDistanceType toVectorDistanceType(final String distanceType) {
 		if ("COSINE".equalsIgnoreCase(distanceType)) {
 			return VectorDistanceType.Cosine;
 		}

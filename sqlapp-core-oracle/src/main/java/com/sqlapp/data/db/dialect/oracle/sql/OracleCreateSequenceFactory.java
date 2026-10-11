@@ -23,10 +23,25 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
-public class OracleCreateSequenceFactory extends
-		AbstractCreateSequenceFactory<OracleSqlBuilder> {
+public class OracleCreateSequenceFactory extends AbstractCreateSequenceFactory<OracleSqlBuilder> {
 
 	@Override
-	protected void addDataType(final Sequence obj, OracleSqlBuilder builder){
+	protected void addDataType(final Sequence obj, OracleSqlBuilder builder) {
+	}
+
+	@Override
+	protected void addCache(final Sequence sequence, OracleSqlBuilder builder) {
+		if (sequence.getCacheSize() == 0)
+			builder.space()._add("NOCACHE");
+		else
+			super.addCache(sequence, builder);
+	}
+
+	@Override
+	protected void addOptions(final Sequence sequence, OracleSqlBuilder builder) {
+		if (!sequence.isCache() && sequence.getCacheSize() == null)
+			builder.space()._add("NOCACHE");
+		if (sequence.isOrder())
+			builder.space()._add("ORDER");
 	}
 }

@@ -15,8 +15,15 @@ SELECT
 , am.amname AS index_type
 , a.attnum AS num
 , pg_get_indexdef(ci.oid) AS definition
-, obj_description(i.indexrelid, current_database())
-  AS remarks
+, obj_description(i.indexrelid, 'pg_class')
+  AS remarks, pg_get_indexdef(ci.oid,a.attnum,false)
+ || COALESCE((SELECT ' ' || quote_ident(ns.nspname) || '.' || quote_ident(op.opcname)
+     FROM pg_catalog.pg_opclass op JOIN pg_catalog.pg_namespace ns ON ns.oid=op.opcnamespace
+     WHERE op.oid=i.indclass[a.attnum-1]),'')
+ || CASE WHEN am.amname IN ('btree','lsm') AND a.attnum <= i.indnatts THEN
+      CASE WHEN (i.indoption[a.attnum-1] & 1)=1 THEN ' DESC' ELSE ' ASC' END
+   || CASE WHEN (i.indoption[a.attnum-1] & 2)=2 THEN ' NULLS FIRST' ELSE ' NULLS LAST' END ELSE '' END AS key_sql, ci.reloptions AS index_options,
+ (SELECT spcname FROM pg_catalog.pg_tablespace WHERE oid=ci.reltablespace) AS index_tablespace
 FROM pg_catalog.pg_index i
 INNER JOIN pg_catalog.pg_class ci
   on (i.indexrelid=ci.oid)

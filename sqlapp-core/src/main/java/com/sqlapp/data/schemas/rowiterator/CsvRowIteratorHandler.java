@@ -36,7 +36,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.file.TextFileReader;
 
 /**
@@ -53,6 +52,12 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler {
 	private final String charset;
 	private final Reader reader;
 	private final int skipHeaderRowsSize;
+	private boolean preserveColumnTypes;
+
+	/** Keep existing Schema types instead of treating all input columns as text. */
+	public void setPreserveColumnTypes(final boolean preserveColumnTypes) {
+		this.preserveColumnTypes = preserveColumnTypes;
+	}
 
 	public CsvRowIteratorHandler(final File file, final String charset) {
 		this(file, charset, 1);
@@ -114,18 +119,22 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
+		final CsvRowIterator iterator;
 		if (file != null) {
-			return new CsvRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, 0L,
+			iterator = new CsvRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, 0L,
 					this.getRowValueConverter());
 		} else if (path != null) {
-			return new CsvRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, 0L,
+			iterator = new CsvRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, 0L,
 					this.getRowValueConverter());
 		} else {
-			return new CsvRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, 0L, this.getRowValueConverter());
+			iterator = new CsvRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, 0L, this.getRowValueConverter());
 		}
+		iterator.preserveColumnTypes = preserveColumnTypes;
+		return iterator;
 	}
 
 	public static class CsvRowIterator extends AbstractTextRowListIterator<List<String>> {
+		private boolean preserveColumnTypes;
 		CsvRowIterator(final RowCollection c, final Path path, final int skipHeaderRowsSize,
 				final DataFormat workbookFileType, final String charset, final long index,
 				final RowValueConverter valueConverter) {
@@ -293,7 +302,9 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler {
 					if (column == null) {
 						continue;
 					}
-					column.setDataType(DataType.VARCHAR);
+					if (!preserveColumnTypes || column.getDataType() == null) {
+						column.setDataType(DataType.VARCHAR);
+					}
 					put(row, column, text);
 				}
 			}
@@ -301,10 +312,28 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void doClose() {
-			FileUtils.close(csvReader);
-			FileUtils.close(reader);
+			final TextFileReader currentCsvReader = this.csvReader;
+			final Reader currentReader = this.reader;
 			this.csvReader = null;
 			this.reader = null;
+			if (currentCsvReader != null) {
+				close(currentCsvReader);
+			} else {
+				close(currentReader);
+			}
+		}
+
+		private void close(final AutoCloseable closeable) {
+			if (closeable == null) {
+				return;
+			}
+			try {
+				closeable.close();
+			} catch (final RuntimeException e) {
+				throw e;
+			} catch (final Exception e) {
+				throw new IllegalStateException(e);
+			}
 		}
 
 	}

@@ -41,8 +41,8 @@ public class SqlServer2014TableReader extends SqlServer2012TableReader {
 
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
-		Boolean bool=this.getBoolean(rs, "is_memory_optimized");
-		if (bool!=null&&bool.booleanValue()) {
+		Boolean bool = this.getBoolean(rs, "is_memory_optimized");
+		if (bool != null && bool.booleanValue()) {
 			table.setTableType(TableType.Memory);
 			setSpecifics(rs, "durability", table);
 		}

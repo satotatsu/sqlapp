@@ -47,8 +47,7 @@ public class SapHanaRoleReader extends RoleReader {
 	}
 
 	@Override
-	protected List<Role> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Role> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Role> result = list();

@@ -42,8 +42,7 @@ public class SapHanaFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Function> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final Dialect dialact = this.getDialect();

@@ -31,10 +31,9 @@ INNER JOIN pg_catalog.pg_namespace ocn
   ON (oc.opcnamespace=ocn.oid)
 INNER JOIN pg_catalog.pg_am am
   ON (oc.opcmethod=am.oid)
-INNER JOIN pg_catalog.pg_type ocdat
-  ON (oc.opckeytype=ocdat.oid)
 INNER JOIN pg_catalog.pg_type datt
- ON (oc.opckeytype = datt.oid)
+ ON (CASE WHEN oc.opckeytype = 0 THEN oc.opcintype
+          ELSE oc.opckeytype END = datt.oid)
 WHERE 1=1
   /*if isNotEmpty(schemaName) */
   AND ocn.nspname IN /*schemaName*/('%')

@@ -36,10 +36,12 @@ import com.sqlapp.util.CommonUtils;
 public class HsqlAlterTableFactory extends AbstractAlterTableFactory<HsqlSqlBuilder> {
 
 	@Override
-	protected void addAlterColumn(Table originalTable, Table table, Column oldColumn, Column column, DbObjectDifference diff,List<SqlOperation> result){
+	protected void addAlterColumn(Table originalTable, Table table, Column oldColumn, Column column,
+			DbObjectDifference diff, List<SqlOperation> result) {
 		HsqlSqlBuilder builder = createSqlBuilder();
-		ExcludeFilterEqualsHandler handler=new ExcludeFilterEqualsHandler("default",SchemaProperties.NOT_NULL.getLabel());
-		if (!oldColumn.equals(column, handler)){
+		ExcludeFilterEqualsHandler handler = new ExcludeFilterEqualsHandler("default",
+				SchemaProperties.NOT_NULL.getLabel());
+		if (!oldColumn.equals(column, handler)) {
 			builder.alter().table();
 			builder.name(table, this.getOptions().isDecorateSchemaName());
 			builder.alterColumn();
@@ -48,7 +50,7 @@ public class HsqlAlterTableFactory extends AbstractAlterTableFactory<HsqlSqlBuil
 			add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 		}
 		//
-		if (!CommonUtils.eq(oldColumn.getDefaultValue(), column.getDefaultValue())){
+		if (!CommonUtils.eq(oldColumn.getDefaultValue(), column.getDefaultValue())) {
 			builder = createSqlBuilder();
 			builder.alter().table();
 			builder.name(table, this.getOptions().isDecorateSchemaName());
@@ -58,24 +60,25 @@ public class HsqlAlterTableFactory extends AbstractAlterTableFactory<HsqlSqlBuil
 			add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 		}
 		//
-		if (!CommonUtils.eq(oldColumn.isNotNull(), column.isNotNull())){
+		if (!CommonUtils.eq(oldColumn.isNotNull(), column.isNotNull())) {
 			builder = createSqlBuilder();
 			builder.alter().table();
 			builder.name(table, this.getOptions().isDecorateSchemaName());
 			builder.alterColumn();
 			builder.name(column);
 			builder.space();
-			if (column.isNotNull()){
+			if (column.isNotNull()) {
 				builder.setNotNull();
-			} else{
+			} else {
 				builder.setNull();
 			}
 			add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 		}
 	}
-	
+
 	@Override
-	protected void addRenameColumn(Table originalTable, Table table, Column oldColumn, Column column, DbObjectDifference diff,List<SqlOperation> result){
+	protected void addRenameColumn(Table originalTable, Table table, Column oldColumn, Column column,
+			DbObjectDifference diff, List<SqlOperation> result) {
 		HsqlSqlBuilder builder = createSqlBuilder();
 		builder.alter().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
@@ -86,17 +89,17 @@ public class HsqlAlterTableFactory extends AbstractAlterTableFactory<HsqlSqlBuil
 		builder.name(column);
 		add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 	}
-	
+
 	@Override
 	protected void addDropIndexDefinition(Index obj, HsqlSqlBuilder builder) {
 		builder.drop().index();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
-	
+
 	@Override
 	protected void addCreateIndexDefinition(Table originalTable, Table table, Index originalIndex, Index index,
 			DbObjectDifference diff, List<SqlOperation> result) {
-		if (index.getName().startsWith("SYS_IDX_")){
+		if (index.getName().startsWith("SYS_IDX_")) {
 			return;
 		}
 		super.addCreateIndexDefinition(originalTable, table, originalIndex, index, diff, result);
@@ -105,7 +108,7 @@ public class HsqlAlterTableFactory extends AbstractAlterTableFactory<HsqlSqlBuil
 	@Override
 	protected void addDropIndexDefinition(Table originalTable, Table table, Index originalIndex, Index index,
 			DbObjectDifference diff, List<SqlOperation> result) {
-		if (originalIndex.getName().startsWith("SYS_IDX_")){
+		if (originalIndex.getName().startsWith("SYS_IDX_")) {
 			return;
 		}
 		super.addDropIndexDefinition(originalTable, table, originalIndex, index, diff, result);

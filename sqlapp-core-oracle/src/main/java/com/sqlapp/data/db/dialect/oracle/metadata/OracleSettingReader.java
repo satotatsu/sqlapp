@@ -47,13 +47,12 @@ public class OracleSettingReader extends SettingReader {
 	}
 
 	@Override
-	protected List<Setting> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Setting> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Setting> result = list();
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "V$SYSTEM_PARAMETER");
-		if (dba){
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS",
+				"V$SYSTEM_PARAMETER");
+		if (dba) {
 			SqlNode node = getSqlSqlNode(productVersionInfo);
 			execute(connection, node, context, new ResultSetNextHandler() {
 				@Override

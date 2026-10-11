@@ -162,9 +162,11 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	@SuppressWarnings("unchecked")
 	@Override
 	public T setColumns(final List<Column> columns) {
-		setParentColumn(columns);
+		// Resolve references without changing the source collection's ownership or ordinals.
+		List<Column> resolved = list(columns);
+		setParentColumn(resolved);
 		this.columns.clear();
-		this.columns.addAll(columns);
+		this.columns.addAll(resolved);
 		return (T) this;
 	}
 

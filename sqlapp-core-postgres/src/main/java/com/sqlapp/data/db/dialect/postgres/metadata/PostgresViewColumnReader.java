@@ -21,13 +21,13 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 
-public class PostgresViewColumnReader extends PostgresColumnReader{
+public class PostgresViewColumnReader extends PostgresColumnReader {
 
 	protected PostgresViewColumnReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	protected String[] getType() {
-		return new String[] {"v"};
+		return new String[] { "v" };
 	}
 }

@@ -34,7 +34,7 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 /**
- * SqlServerのファイルグループ読み込みクラス
+ * Sybase ASEのsegment読み込みクラス
  * 
  * @author satoh
  * 

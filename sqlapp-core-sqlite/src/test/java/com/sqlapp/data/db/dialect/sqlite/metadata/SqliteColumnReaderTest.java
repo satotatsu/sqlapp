@@ -1,0 +1,40 @@
+/*
+ * Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com>
+ *
+ * This file is part of sqlapp-core-sqlite.
+ */
+package com.sqlapp.data.db.dialect.sqlite.metadata;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
+
+class SqliteColumnReaderTest {
+	@Test
+	void ignoresParenthesesInQuotedObjectNames() {
+		assertEquals(java.util.List.of("lower(value) DESC", "id"), SqliteColumnReader.splitColumnDefinitions(
+				"CREATE INDEX \"ix(quoted\" ON \"table(quoted\" (lower(value) DESC, id) WHERE id>0"));
+	}
+
+	@Test
+	void splitsDefinitionsWithoutSplittingExpressionsOrStrings() {
+		var definitions = SqliteColumnReader.splitColumnDefinitions("""
+				CREATE TABLE sample (
+				 id INTEGER PRIMARY KEY,
+				 "display name" TEXT AS (printf('%s,%s', first_name, last_name)) VIRTUAL,
+				 total NUMERIC GENERATED ALWAYS AS ((price + tax) * quantity) STORED
+				) STRICT
+				""");
+
+		assertEquals(3, definitions.size());
+		assertEquals("printf('%s,%s', first_name, last_name)", SqliteColumnReader.extractFormula(definitions.get(1)));
+		assertEquals("(price + tax) * quantity", SqliteColumnReader.extractFormula(definitions.get(2)));
+	}
+
+	@Test
+	void stripsOnlyTheIndexKeyOrder() {
+		assertEquals("lower(code)", SqliteIndexReader.stripOrder("lower(code) DESC"));
+		assertEquals("CASE WHEN score > 0 THEN 'DESC' END",
+				SqliteIndexReader.stripOrder("CASE WHEN score > 0 THEN 'DESC' END ASC"));
+	}
+}

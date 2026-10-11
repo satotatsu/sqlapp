@@ -88,7 +88,7 @@ public class DefaultConverter implements Converter<Object> {
 		if (!(obj instanceof DefaultConverter)) {
 			return false;
 		}
-		DateConverter con = cast(obj);
+		DefaultConverter con = cast(obj);
 		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}

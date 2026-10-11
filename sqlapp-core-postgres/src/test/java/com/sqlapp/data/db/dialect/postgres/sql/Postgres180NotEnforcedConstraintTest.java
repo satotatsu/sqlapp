@@ -12,8 +12,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 
-class Postgres180NotEnforcedConstraintTest
-		extends AbstractPostgresSqlFactoryTest {
+class Postgres180NotEnforcedConstraintTest extends AbstractPostgresSqlFactoryTest {
 	@Override
 	protected int getMajorVersion() {
 		return 18;
@@ -24,10 +23,8 @@ class Postgres180NotEnforcedConstraintTest
 		Table table = table("ORDERS");
 		CheckConstraint check = new CheckConstraint("CK_AMOUNT", "AMOUNT >= 0");
 		table.getConstraints().add(check);
-		check.getSpecifics().put(
-				Postgres180CreateCheckConstraintFactory.NOT_ENFORCED, "true");
-		SqlFactory<CheckConstraint> factory =
-				sqlFactoryRegistry.getSqlFactory(check, SqlType.CREATE);
+		check.getSpecifics().put(Postgres180CreateCheckConstraintFactory.NOT_ENFORCED, "true");
+		SqlFactory<CheckConstraint> factory = sqlFactoryRegistry.getSqlFactory(check, SqlType.CREATE);
 		String sql = factory.createSql(check).get(0).getSqlText();
 		assertTrue(sql.contains("NOT ENFORCED"), sql);
 	}
@@ -36,13 +33,10 @@ class Postgres180NotEnforcedConstraintTest
 	void testForeignKeyNotEnforced() {
 		Table parent = table("PARENT");
 		Table child = table("CHILD");
-		ForeignKeyConstraint fk = child.getConstraints()
-				.addForeignKeyConstraint("FK_CHILD", child.getColumns().get("ID"),
-						parent.getColumns().get("ID"));
-		fk.getSpecifics().put(
-				Postgres180CreateCheckConstraintFactory.NOT_ENFORCED, "true");
-		SqlFactory<ForeignKeyConstraint> factory =
-				sqlFactoryRegistry.getSqlFactory(fk, SqlType.CREATE);
+		ForeignKeyConstraint fk = child.getConstraints().addForeignKeyConstraint("FK_CHILD",
+				child.getColumns().get("ID"), parent.getColumns().get("ID"));
+		fk.getSpecifics().put(Postgres180CreateCheckConstraintFactory.NOT_ENFORCED, "true");
+		SqlFactory<ForeignKeyConstraint> factory = sqlFactoryRegistry.getSqlFactory(fk, SqlType.CREATE);
 		String sql = factory.createSql(fk).get(0).getSqlText();
 		assertTrue(sql.contains("NOT ENFORCED"), sql);
 	}

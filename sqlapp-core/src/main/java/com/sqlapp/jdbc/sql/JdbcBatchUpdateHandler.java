@@ -144,7 +144,7 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 						}
 					}
 				} else {
-					handleUpdate(statement, statement.getLargeUpdateCount());
+					handleUpdate(statement, getUpdateCount(statement));
 				}
 			}
 

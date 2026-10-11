@@ -112,7 +112,13 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand
 			commit(connection, lastCommitHandler);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
-			rollback(connection);
+			try {
+				rollback(connection);
+			} catch (RuntimeException rollbackFailure) {
+				if (e != rollbackFailure) {
+					e.addSuppressed(rollbackFailure);
+				}
+			}
 			getExceptionHandler().handle(e);
 		} finally {
 			execute(() -> {
@@ -125,6 +131,18 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand
 
 	protected void executeNoTran(DataSource dataSource, ExceptionConsumer<Connection> cons) {
 		executeInternal(dataSource, cons, releaseConnectionHandler);
+	}
+
+	/**
+	 * Executes without an outer transaction while retaining the command's normal
+	 * connection and data-source release policy.
+	 */
+	protected void executeNoTranAndClose(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		if (this.isCloseDataSource()) {
+			executeInternal(dataSource, cons, releaseConnectionAndCloseDataSourceHandler);
+		} else {
+			executeInternal(dataSource, cons, releaseConnectionHandler);
+		}
 	}
 
 	/**

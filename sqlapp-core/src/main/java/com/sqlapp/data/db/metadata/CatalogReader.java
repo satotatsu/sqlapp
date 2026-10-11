@@ -114,6 +114,7 @@ public abstract class CatalogReader extends MetadataReader<Catalog, CatalogColle
 		load(connection, this.getTableSpaceReader(), catalog);
 		load(connection, this.getRoleReader(), catalog);
 		load(connection, this.getUserReader(), catalog);
+		load(connection, this.getRoleMemberReader(), catalog);
 		load(connection, this.getObjectPrivilegeReader(), catalog);
 		load(connection, this.getRoutinePrivilegeReader(), catalog);
 		load(connection, this.getColumnPrivilegeReader(), catalog);

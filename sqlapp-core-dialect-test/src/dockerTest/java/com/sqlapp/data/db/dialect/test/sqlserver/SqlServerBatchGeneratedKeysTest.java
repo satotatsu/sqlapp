@@ -29,11 +29,10 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
  * Isolates the Microsoft JDBC driver's generated-key behavior from sqlapp.
  */
 class SqlServerBatchGeneratedKeysTest {
-	private static final String IMAGE =
-			"mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
+	private static final String IMAGE = "mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
 
-	private static final MSSQLServerContainer SQL_SERVER =
-			ReusableTestcontainers.configure(new MSSQLServerContainer(IMAGE).acceptLicense());
+	private static final MSSQLServerContainer SQL_SERVER = ReusableTestcontainers
+			.configure(new MSSQLServerContainer(IMAGE).acceptLicense());
 
 	@BeforeAll
 	static void startContainer() {
@@ -60,8 +59,7 @@ class SqlServerBatchGeneratedKeysTest {
 			}
 
 			try (PreparedStatement statement = connection.prepareStatement(
-					"INSERT INTO BATCH_GENERATED_KEYS(TXT) VALUES (?)",
-					Statement.RETURN_GENERATED_KEYS)) {
+					"INSERT INTO BATCH_GENERATED_KEYS(TXT) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
 				statement.setString(1, "first");
 				statement.addBatch();
 				statement.setString(1, "second");
@@ -104,11 +102,10 @@ class SqlServerBatchGeneratedKeysTest {
 			}
 
 			List<Integer> generatedKeys = new ArrayList<>();
-			try (Statement statement = connection.createStatement();
-					ResultSet resultSet = statement.executeQuery("""
-							SELECT GENERATED_ID
-							FROM #SQLAPP_GENERATED_KEYS
-							ORDER BY ROW_NO""")) {
+			try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("""
+					SELECT GENERATED_ID
+					FROM #SQLAPP_GENERATED_KEYS
+					ORDER BY ROW_NO""")) {
 				while (resultSet.next()) {
 					generatedKeys.add(resultSet.getInt(1));
 				}

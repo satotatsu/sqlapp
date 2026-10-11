@@ -30,22 +30,27 @@ public class Postgres90SqlFactoryRegistry extends PostgresSqlFactoryRegistry {
 		super(dialect);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
 	 */
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
 	}
-	
+
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(ExcludeConstraint.class, SqlType.CREATE,
-				Postgres90CreateExcludeConstraintFactory.class);
-		//Trigger
-		registerSqlFactory(Trigger.class, SqlType.CREATE,
-				Postgres90CreateTriggerFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				PostgresCreateDomainFactory.class);
+		registerSqlFactory(ExcludeConstraint.class, SqlType.CREATE, Postgres90CreateExcludeConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				Postgres90CreateUniqueConstraintFactory.class);
+		// Trigger
+		registerSqlFactory(Trigger.class, SqlType.CREATE, Postgres90CreateTriggerFactory.class);
 	}
 
 }

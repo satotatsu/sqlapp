@@ -55,8 +55,7 @@ public class SqlServer2005ViewReader extends ViewReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();

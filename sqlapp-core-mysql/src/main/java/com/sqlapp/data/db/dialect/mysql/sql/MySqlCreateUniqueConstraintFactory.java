@@ -33,7 +33,7 @@ public class MySqlCreateUniqueConstraintFactory extends AbstractCreateUniqueCons
 
 	@Override
 	protected void addAfter(UniqueConstraint obj, MySqlSqlBuilder builder) {
-		if (obj.getRemarks()!=null){
+		if (obj.getRemarks() != null) {
 			builder.comment().space().sqlChar(obj.getRemarks());
 		}
 	}

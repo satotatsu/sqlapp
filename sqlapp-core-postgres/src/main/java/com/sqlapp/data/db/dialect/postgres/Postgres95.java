@@ -70,7 +70,7 @@ public class Postgres95 extends Postgres94 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres95CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

@@ -21,9 +21,7 @@ package com.sqlapp.data.db.dialect.mariadb.sql;
 
 import org.junit.jupiter.api.BeforeEach;
 
-
-public class MariadbSqlFactoryRegistryTest extends
-AbstractMariadbSqlFactoryTest {
+public class MariadbSqlFactoryRegistryTest extends AbstractMariadbSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {

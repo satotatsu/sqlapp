@@ -28,7 +28,7 @@ public class QuadKeyMapTest {
 
 	@Test
 	public void testGetST() {
-		QuadKeyMap<String, String, String, String, Object> map=quadKeyMap();
+		QuadKeyMap<String, String, String, String, Object> map = quadKeyMap();
 		map.put("k1a", "k2a", "k3a", "k4a", "val1");
 		map.put("k1a", "k2a", "k3a", "k4b", "val2");
 		map.put("k1a", "k2a", "k3b", "k4a", "val3");
@@ -47,7 +47,7 @@ public class QuadKeyMapTest {
 		assertEquals("val6", map.get("k1b", "k2a", "k3a", "k4a"));
 		assertEquals("val7", map.get(null, "k2a", "k3a", "k4a"));
 		assertEquals("val8", map.get(null, null, "k3a", "k4a"));
-		assertEquals("val9", map.get(null,  null, null, "k4a"));
+		assertEquals("val9", map.get(null, null, null, "k4a"));
 		assertEquals("val10", map.get(null, null, null, null));
 	}
 }

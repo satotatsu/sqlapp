@@ -38,8 +38,7 @@ public class SqlServerCreateProcedureTest extends AbstractSqlServerSqlFactoryTes
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Procedure("func"), SqlType.CREATE);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Procedure("func"), SqlType.CREATE);
 	}
 
 	private Procedure getProcedure(String name) {

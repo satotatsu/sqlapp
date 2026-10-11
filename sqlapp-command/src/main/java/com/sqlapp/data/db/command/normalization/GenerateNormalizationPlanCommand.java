@@ -20,7 +20,7 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingValidator;
+import com.sqlapp.data.db.command.migration.legacy.LegacyMigrationMappingValidator;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -43,8 +43,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateNormalizationPlanCommand extends AbstractCommand
-		implements ForeignKeyDefinitionDirectoryProperty {
+public class GenerateNormalizationPlanCommand extends AbstractCommand implements ForeignKeyDefinitionDirectoryProperty {
 
 	private static final Pattern DATE_NAME = Pattern.compile("(?i).*(?:DATE|_YMD|YYYYMMDD)$");
 

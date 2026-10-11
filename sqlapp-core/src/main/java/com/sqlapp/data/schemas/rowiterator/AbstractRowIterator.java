@@ -72,14 +72,19 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 
 	@Override
 	public boolean hasNext() {
+		if (dispose) {
+			return false;
+		}
 		try {
 			initialize();
 			if (count >= limit) {
 				hasNext = false;
+				closeSilent();
 				return hasNext;
 			}
 			hasNext = hasNextInternal();
 		} catch (Exception e) {
+			closeOnFailure(e);
 			throw new RuntimeException(e);
 		}
 		if (!hasNext) {
@@ -102,10 +107,10 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 			set(t, row);
 			return row;
 		} catch (RuntimeException e) {
-			closeSilent();
+			closeOnFailure(e);
 			throw e;
 		} catch (Exception e) {
-			closeSilent();
+			closeOnFailure(e);
 			throw new RuntimeException(e);
 		} finally {
 			if (!hasNext) {
@@ -134,8 +139,8 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 	@Override
 	public void close() throws Exception {
 		if (!dispose) {
-			this.doClose();
 			dispose = true;
+			this.doClose();
 		}
 	}
 

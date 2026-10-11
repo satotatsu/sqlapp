@@ -20,6 +20,8 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +35,9 @@ class DataFormatTest {
 		parseFileTest("aaaa.jsonl", DataFormat.JSONL);
 		parseFileTest("aaaa.yaml", DataFormat.YAML);
 		parseFileTest("aaaa.yml", DataFormat.YAML);
+		parseFileTest("YML", DataFormat.YAML);
+		parseFileTest("NDJSON", DataFormat.JSONL);
+		parseFileTest("TML", DataFormat.TOML);
 		parseFileTest("aaaa.csv", DataFormat.CSV);
 		parseFileTest("aaaa.tsv", DataFormat.TSV);
 		parseFileTest("xls", DataFormat.EXCEL2003);
@@ -40,6 +45,15 @@ class DataFormatTest {
 		parseFileTest("excel", DataFormat.EXCEL);
 		parseFileTest("json", DataFormat.JSON);
 		parseFileTest("tsv", DataFormat.TSV);
+	}
+
+	@Test
+	void matchUsesTheSameAliasesAndNormalizationAsParse() {
+		assertTrue(DataFormat.YAML.match(" YML "));
+		assertTrue(DataFormat.JSONL.match("items.NDJSON"));
+		assertTrue(DataFormat.EXCEL.match(" EXCEL "));
+		assertFalse(DataFormat.JSON.match("items.unknown"));
+		assertFalse(DataFormat.JSON.match(null));
 	}
 
 	private void parseFileTest(String text, DataFormat enm) {

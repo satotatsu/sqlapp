@@ -34,27 +34,25 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class Hsql21AlterTableFactoryTest extends AbstractHsql2_1_0SqlFactoryTest{
+public class Hsql21AlterTableFactoryTest extends AbstractHsql2_1_0SqlFactoryTest {
 
 	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.ALTER);
+		sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.ALTER);
 	}
-	
 
 	@Test
 	public void testCreateTest1() {
-		Table table=new Table("tablea");
-		Column column=new Column();
+		Table table = new Table("tablea");
+		Column column = new Column();
 		column.setName("id").setDataType(DataType.INT);
 		table.getColumns().add(column);
 		table.setDialect(dialect);
-		Table newtable=table.clone();
+		Table newtable = table.clone();
 		newtable.getColumns().get(0).setNotNull(true);
-		List<SqlOperation> operations=sqlFactory.createDiffSql(table.diff(newtable));
+		List<SqlOperation> operations = sqlFactory.createDiffSql(table.diff(newtable));
 		SqlOperation commandText = CommonUtils.first(operations);
 		System.out.println(operations);
 		String expected = getResource("alter_table1.sql");

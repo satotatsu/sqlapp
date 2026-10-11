@@ -3,9 +3,24 @@ SELECT
 , n.nspname AS type_schema
 , t.typname AS type_name
 , CAST(t.oid AS int4) AS oid
-, pg_get_ruledef(t.oid) AS definition
+, 'CREATE TYPE ' || quote_ident(n.nspname) || '.' || quote_ident(t.typname) || ' AS (' ||
+  array_to_string(ARRAY(
+    SELECT quote_ident(a.attname) || ' ' ||
+      CASE WHEN at.typelem <> 0 AND at.typlen = -1 AND en.nspname <> 'pg_catalog'
+           THEN quote_ident(en.nspname) || '.' || quote_ident(et.typname) || repeat('[]', GREATEST(a.attndims, 1))
+           WHEN tn.nspname = 'pg_catalog' THEN pg_catalog.format_type(a.atttypid, a.atttypmod) ||
+             CASE WHEN a.attndims > 1 THEN repeat('[]', a.attndims - 1) ELSE '' END
+           ELSE quote_ident(tn.nspname) || '.' || quote_ident(at.typname) END
+    FROM pg_catalog.pg_attribute a
+    INNER JOIN pg_catalog.pg_type at ON (at.oid = a.atttypid)
+    INNER JOIN pg_catalog.pg_namespace tn ON (tn.oid = at.typnamespace)
+    LEFT JOIN pg_catalog.pg_type et ON (et.oid = at.typelem)
+    LEFT JOIN pg_catalog.pg_namespace en ON (en.oid = et.typnamespace)
+    WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+    ORDER BY a.attnum
+  ), ', ') || ')' AS definition
 , t.typdefault
-, obj_description(t.oid, current_database()) as remarks
+, obj_description(t.oid, 'pg_type') as remarks
 FROM pg_catalog.pg_type t
 INNER JOIN pg_catalog.pg_namespace n
   ON (t.typnamespace = n.oid)

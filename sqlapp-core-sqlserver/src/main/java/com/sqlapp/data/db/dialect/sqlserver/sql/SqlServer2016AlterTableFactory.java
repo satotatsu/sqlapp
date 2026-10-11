@@ -25,6 +25,6 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2016AlterTableFactory extends	SqlServer2014AlterTableFactory {
+public class SqlServer2016AlterTableFactory extends SqlServer2014AlterTableFactory {
 
 }

@@ -73,6 +73,23 @@ public class DialectTest {
 		assertNull(column.getScale());
 	}
 
+	@Test
+	public void preservesQuotedQualifiedNamesInMatchingAndColumnSetters() {
+		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"",
+				"public.\"Mixed Case\"", "\"Space  Schema\".\"Type  Name\"" }) {
+			Column matched = createColumn();
+			dialect.setDbType("  " + name + "  ", null, null, matched);
+			assertEquals(name, matched.getDataTypeName());
+			Column assigned = createColumn();
+			assigned.setDataTypeName(name);
+			assertEquals(name, assigned.getDataTypeName());
+			assertEquals(DataType.OTHER, assigned.getDataType());
+		}
+		Column builtin = createColumn();
+		builtin.setDataTypeName("\"CHAR\"");
+		assertEquals(DataType.CHAR, builtin.getDataType());
+	}
+
 	protected Column createColumn() {
 		Column column = new Column();
 		column.setDialect(dialect);

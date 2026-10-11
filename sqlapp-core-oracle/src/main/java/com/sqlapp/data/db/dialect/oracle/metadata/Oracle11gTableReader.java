@@ -42,7 +42,7 @@ public class Oracle11gTableReader extends OracleTableReader {
 	protected ColumnReader newColumnReader() {
 		return new Oracle11gColumnReader(this.getDialect());
 	}
-	
+
 	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);

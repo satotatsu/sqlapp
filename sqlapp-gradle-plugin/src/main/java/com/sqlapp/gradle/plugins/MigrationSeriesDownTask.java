@@ -21,8 +21,8 @@ package com.sqlapp.gradle.plugins;
 
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.MigrationCommand;
-import com.sqlapp.data.db.command.migration.MigrationSeriesDownCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationSeriesDownCommand;
 
 @DisableCachingByDefault
 public abstract class MigrationSeriesDownTask extends MigrationDownTask {

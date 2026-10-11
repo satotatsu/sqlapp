@@ -28,25 +28,20 @@ public class MdbColumnReader extends JdbcColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final List<Column> columns = super.doGetAll(connection, context,
-				productVersionInfo);
+		final List<Column> columns = super.doGetAll(connection, context, productVersionInfo);
 		try {
 			if (!connection.isWrapperFor(UcanaccessConnection.class)) {
 				return columns;
 			}
-			final UcanaccessConnection ucanaccessConnection = connection
-					.unwrap(UcanaccessConnection.class);
+			final UcanaccessConnection ucanaccessConnection = connection.unwrap(UcanaccessConnection.class);
 			ucanaccessConnection.reloadDbIO();
 			final Database database = ucanaccessConnection.getDbIO();
 			for (final Column column : columns) {
-				final io.github.spannm.jackcess.Table table = database
-						.getTable(column.getTableName());
+				final io.github.spannm.jackcess.Table table = database.getTable(column.getTableName());
 				if (table != null && table.getColumn(column.getName()) != null) {
-					column.setIdentity(
-							table.getColumn(column.getName()).isAutoNumber());
+					column.setIdentity(table.getColumn(column.getName()).isAutoNumber());
 				}
 			}
 			return columns;
@@ -56,13 +51,11 @@ public class MdbColumnReader extends JdbcColumnReader {
 	}
 
 	@Override
-	protected Column createColumn(final ExResultSet resultSet)
-			throws SQLException {
+	protected Column createColumn(final ExResultSet resultSet) throws SQLException {
 		final Column column = super.createColumn(resultSet);
 		final String autoIncrement = getString(resultSet, "IS_AUTOINCREMENT");
 		final String typeName = getString(resultSet, "TYPE_NAME");
-		if ("YES".equalsIgnoreCase(autoIncrement)
-				|| "COUNTER".equalsIgnoreCase(typeName)
+		if ("YES".equalsIgnoreCase(autoIncrement) || "COUNTER".equalsIgnoreCase(typeName)
 				|| "AUTOINCREMENT".equalsIgnoreCase(typeName)) {
 			column.setIdentity(true);
 		}

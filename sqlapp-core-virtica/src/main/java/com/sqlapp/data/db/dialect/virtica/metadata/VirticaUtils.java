@@ -18,8 +18,8 @@
  */
 
 package com.sqlapp.data.db.dialect.virtica.metadata;
-import com.sqlapp.data.db.metadata.ReaderUtils;
 
+import com.sqlapp.data.db.metadata.ReaderUtils;
 
 public class VirticaUtils extends ReaderUtils {
 

@@ -31,8 +31,8 @@ class OnOffTypeTest {
 		assertEquals(OnOffType.ON, OnOffType.parse("on"));
 		assertEquals(OnOffType.OFF, OnOffType.parse(false));
 		assertEquals(OnOffType.OFF, OnOffType.parse("of"));
-		assertEquals("ON", ""+OnOffType.ON);
-		assertEquals("OFF", ""+OnOffType.OFF);
+		assertEquals("ON", "" + OnOffType.ON);
+		assertEquals("OFF", "" + OnOffType.OFF);
 	}
 
 }

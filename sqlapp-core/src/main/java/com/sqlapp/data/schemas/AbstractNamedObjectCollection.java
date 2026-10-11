@@ -288,7 +288,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		} else {
 			org = this.get(e.getSpecificName());
 		}
-		if (org != null && eq(org.getId(), e.getId())) {
+		if (org != null && org.getClass().equals(e.getClass()) && eq(org.getId(), e.getId())) {
 			e.cloneProperties(org);
 		} else {
 			bool = this.inner.add(e);
@@ -307,7 +307,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		} else {
 			org = this.get(e.getSpecificName());
 		}
-		if (org != null) {
+		if (org != null && org.getClass().equals(e.getClass())) {
 			e.cloneProperties(org);
 		} else {
 			this.inner.add(index, e);

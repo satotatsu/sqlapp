@@ -47,12 +47,10 @@ public class H2SequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Sequence> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -66,16 +64,14 @@ public class H2SequenceReader extends SequenceReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
 			return getSqlNodeCache().getString("sequences_200.sql");
 		}
 		return getSqlNodeCache().getString("sequences.sql");
 	}
 
-	protected Sequence createSequence(ExResultSet rs,
-			final boolean modern) throws SQLException {
+	protected Sequence createSequence(ExResultSet rs, final boolean modern) throws SQLException {
 		Sequence obj = new Sequence(getString(rs, SEQUENCE_NAME));
 		obj.setDialect(this.getDialect());
 		obj.setCatalogName(getString(rs, "SEQUENCE_CATALOG"));
@@ -83,13 +79,16 @@ public class H2SequenceReader extends SequenceReader {
 		obj.setLastValue(rs.getBigDecimal("CURRENT_VALUE"));
 		obj.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 		obj.setCacheSize(rs.getBigDecimal("CACHE"));
+		obj.setCache(obj.getCacheSize() != null && obj.getCacheSize() > 1);
 		this.setStatistics(rs, "IS_GENERATED", obj);
 		if (modern) {
+			obj.setDataTypeName(getString(rs, "DATA_TYPE"));
+			obj.setPrecision(getInteger(rs, "NUMERIC_PRECISION"));
+			obj.setScale(getInteger(rs, "NUMERIC_SCALE"));
 			obj.setStartValue(rs.getBigDecimal("START_VALUE"));
 			obj.setMinValue(rs.getBigDecimal("MINIMUM_VALUE"));
 			obj.setMaxValue(rs.getBigDecimal("MAXIMUM_VALUE"));
-			obj.setCycle("YES".equalsIgnoreCase(
-					getString(rs, "CYCLE_OPTION")));
+			obj.setCycle("YES".equalsIgnoreCase(getString(rs, "CYCLE_OPTION")));
 			obj.setRemarks(getString(rs, REMARKS));
 		}
 		return obj;

@@ -23,7 +23,6 @@ import com.sqlapp.data.db.dialect.Dialect;
 
 public class Db2_1110SqlFactoryRegistry extends Db2_1050SqlFactoryRegistry {
 
-
 	public Db2_1110SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
@@ -32,5 +31,5 @@ public class Db2_1110SqlFactoryRegistry extends Db2_1050SqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 	}
-	
+
 }

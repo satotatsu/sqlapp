@@ -50,8 +50,7 @@ public class PostgresEnumReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Domain> result = list();
@@ -63,8 +62,7 @@ public class PostgresEnumReader extends DomainReader {
 				String enumlabel = getString(rs, "enumlabel");
 				Domain obj = null;
 				for (Domain val : result) {
-					if (eqIgnoreCase(val.getSchemaName(), schemaname)
-							&& eq(val.getName(), typname)) {
+					if (eqIgnoreCase(val.getSchemaName(), schemaname) && eq(val.getName(), typname)) {
 						obj = val;
 						break;
 					}
@@ -72,6 +70,7 @@ public class PostgresEnumReader extends DomainReader {
 				if (obj == null) {
 					obj = new Domain(typname);
 					obj.setSchemaName(schemaname);
+					obj.setRemarks(getString(rs, "remarks"));
 					obj.setDataTypeName(typname);
 					obj.setDataType(DataType.ENUM);
 					result.add(obj);
@@ -83,6 +82,12 @@ public class PostgresEnumReader extends DomainReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& (productVersionInfo.getMajorVersion() > 9
+						|| (productVersionInfo.getMajorVersion() == 9 && productVersionInfo.getMinorVersion() != null
+								&& productVersionInfo.getMinorVersion() >= 1))) {
+			return getSqlNodeCache().getString("enums91.sql");
+		}
 		return getSqlNodeCache().getString("enums.sql");
 	}
 

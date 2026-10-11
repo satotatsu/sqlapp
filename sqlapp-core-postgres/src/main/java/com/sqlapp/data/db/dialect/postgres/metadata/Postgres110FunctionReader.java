@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
+import java.sql.SQLException;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -33,6 +36,17 @@ public class Postgres110FunctionReader extends Postgres84FunctionReader {
 
 	protected Postgres110FunctionReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected Function createFunction(ExResultSet rs) throws SQLException {
+		Function function = super.createFunction(rs);
+		// Procedures have no separate model representation in this reader.
+		if ("p".equals(rs.getString("prokind"))) {
+			function.setDefinition(rs.getString("functiondef"));
+			function.getSpecifics().put("ROUTINE_KIND", "PROCEDURE");
+		}
+		return function;
 	}
 
 	@Override

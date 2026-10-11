@@ -48,8 +48,7 @@ public class H2CheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
@@ -61,8 +60,7 @@ public class H2CheckConstraintReader extends CheckConstraintReader {
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				String expression = getString(rs, "check_expression");
-				CheckConstraint c = map.get(catalog_name, schema_name,
-						constraint_name);
+				CheckConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = new CheckConstraint(constraint_name, expression);
 					c.setRemarks(getString(rs, REMARKS));
@@ -77,11 +75,9 @@ public class H2CheckConstraintReader extends CheckConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
-			return getSqlNodeCache().getString(
-					"checkConstraints_200.sql");
+			return getSqlNodeCache().getString("checkConstraints_200.sql");
 		}
 		return getSqlNodeCache().getString("checkConstraints.sql");
 	}

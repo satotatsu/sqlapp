@@ -1081,9 +1081,8 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 				@Override
 				protected ReferenceColumnCollection getInstance(final Object parentObject, final String name,
 						final String schemaName, final ReferenceColumnCollection obj) {
-					if (parentObject instanceof Index) {
-						final Index index = (Index) parentObject;
-						return index.getIncludes();
+					if (parentObject instanceof IncludeColumnsGetter) {
+						return ((IncludeColumnsGetter) parentObject).getIncludes();
 					}
 					return obj;
 				}

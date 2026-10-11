@@ -17,7 +17,10 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Schema;
 
-/** Represents an Access database, which has no JDBC schema hierarchy, as one schema. */
+/**
+ * Represents an Access database, which has no JDBC schema hierarchy, as one
+ * schema.
+ */
 public class MdbSchemaReader extends JdbcSchemaReader {
 
 	public MdbSchemaReader(final Dialect dialect) {
@@ -25,8 +28,7 @@ public class MdbSchemaReader extends JdbcSchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Schema> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		return list(new Schema(""));
 	}

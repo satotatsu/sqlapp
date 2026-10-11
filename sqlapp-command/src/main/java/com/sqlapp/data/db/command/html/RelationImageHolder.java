@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.command.html;
 
 import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import lombok.Data;
 
@@ -29,6 +31,12 @@ public class RelationImageHolder {
 	private String contentText;
 	private String iframeStyle;
 	private File file;
+	private File mermaidFile;
+
+	public String getMermaidFileUrl() {
+		return mermaidFile == null ? null
+				: URLEncoder.encode(mermaidFile.getName(), StandardCharsets.UTF_8).replace("+", "%20");
+	}
 
 	public RelationImageHolder(File file, String contentText, String iframeStyle) {
 		this.file = file;

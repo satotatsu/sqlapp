@@ -64,9 +64,8 @@ public class SybaseRoleReader extends RoleReader {
 		String name = getString(rs, ROLE_NAME);
 		Role obj = new Role(name);
 		obj.setCatalogName(catalog_name);
-		obj.setCreatedAt(rs.getTimestamp("create_date"));
-		obj.setLastAlteredAt(rs.getTimestamp("modify_date"));
 		obj.setId("" + rs.getInt("principal_id"));
+		setSpecifics(rs, "status", obj);
 		return obj;
 	}
 }

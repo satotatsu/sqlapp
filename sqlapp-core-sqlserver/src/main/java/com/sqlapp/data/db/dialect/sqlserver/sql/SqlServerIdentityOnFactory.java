@@ -28,8 +28,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServerIdentityOnFactory extends
-		AbstractTableFactory<SqlServerSqlBuilder> {
+public class SqlServerIdentityOnFactory extends AbstractTableFactory<SqlServerSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(Table obj) {

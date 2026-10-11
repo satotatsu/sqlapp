@@ -92,7 +92,7 @@ public class BigIntegerConverter extends AbstractNumberConverter<BigInteger> {
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return super.format((Number) value);
 	}
 
 	/*

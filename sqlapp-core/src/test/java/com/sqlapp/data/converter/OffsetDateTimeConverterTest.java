@@ -40,47 +40,50 @@ public class OffsetDateTimeConverterTest extends TestCaseBase {
 	public void setUpTestCaseBase() {
 		setTimeZoneJST();
 	}
-	
+
 	@Test
 	public void testDateTime() {
-		final Converter<OffsetDateTime> converter=OffsetDateTimeConverter
-				.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ss", "yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ")
+		final Converter<OffsetDateTime> converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ss", "yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ")
 				.setFormat("yyyy-MM-dd'T'HH:mm:ssxxxxx");
-		final String dateText="2011-01-02T12:30:15";
-		OffsetDateTime dateTime=converter.convertObject(dateText);
+		final String dateText = "2011-01-02T12:30:15";
+		OffsetDateTime dateTime = converter.convertObject(dateText);
 		assertEquals("2011-01-02T12:30:15+09:00", converter.format(dateTime));
 		//
-		final String dateText2="2011/01/02 12:30:15";
-		dateTime=converter.convertObject(dateText2);
+		final String dateText2 = "2011/01/02 12:30:15";
+		dateTime = converter.convertObject(dateText2);
 		assertEquals("2011-01-02T12:30:15+09:00", converter.format(dateTime));
 	}
-	
+
 	@Test
 	public void testDateTime2() {
-		final OffsetDateTimeConverter converter=OffsetDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
-		final String dateText="2011-01-02T12:30:15+02:00";
-		final OffsetDateTime dateTime=converter.convertObject(dateText);
+		final OffsetDateTimeConverter converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
+		final String dateText = "2011-01-02T12:30:15+02:00";
+		final OffsetDateTime dateTime = converter.convertObject(dateText);
 		assertEquals(dateText, converter.format(dateTime));
 		//
 	}
-	
+
 	@Test
 	public void testDateTime3() {
-		final OffsetDateTimeConverter converter=OffsetDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
-		OffsetDateTime dateTime=converter.convertObject("2011-01-02");
+		final OffsetDateTimeConverter converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
+		OffsetDateTime dateTime = converter.convertObject("2011-01-02");
 		assertEquals(dateTime.plusDays(1), converter.convertObject("2011-01-03"));
-		dateTime=converter.convertObject("2011-01-02T12:30:00+01:00");
+		dateTime = converter.convertObject("2011-01-02T12:30:00+01:00");
 		System.out.println(dateTime);
 	}
 
 	@Test
 	public void testDateTime4() {
-		final String format="yyyy-MM-dd'T'HH:mm:ss.SSSxxxxx";
-		final Converter<OffsetDateTime> converter=OffsetDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ss.SSSxxxxx", "yyyy-MM-dd");
-		OffsetDateTime dateTime=converter.convertObject("2011-01-02");
+		final String format = "yyyy-MM-dd'T'HH:mm:ss.SSSxxxxx";
+		final Converter<OffsetDateTime> converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ss.SSSxxxxx", "yyyy-MM-dd");
+		OffsetDateTime dateTime = converter.convertObject("2011-01-02");
 		assertEquals(dateTime.plusDays(1), converter.convertObject("2011-01-03"));
-		final String dateText="2011-01-02T12:30:00.000+01:00";
-		dateTime=converter.convertObject(dateText);
+		final String dateText = "2011-01-02T12:30:00.000+01:00";
+		dateTime = converter.convertObject(dateText);
 		assertEquals(dateText, dateTime.format(DateTimeFormatter.ofPattern(format)));
 		System.out.println(dateTime);
 	}
@@ -90,26 +93,32 @@ public class OffsetDateTimeConverterTest extends TestCaseBase {
 	 */
 	@Test
 	public void testDateTime5() {
-		final Converter<OffsetDateTime> converter=OffsetDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
-		final Date date=new Date();
-		assertEquals(date.getTime(), Converters.getDefault().convertObject(converter.convertObject(date.getTime()), Date.class).getTime());
+		final Converter<OffsetDateTime> converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
+		final Date date = new Date();
+		assertEquals(date.getTime(),
+				Converters.getDefault().convertObject(converter.convertObject(date.getTime()), Date.class).getTime());
 		//
-		assertEquals(date.getTime(), Converters.getDefault().convertObject(converter.convertObject(""+date.getTime()), Date.class).getTime());
+		assertEquals(date.getTime(), Converters.getDefault()
+				.convertObject(converter.convertObject("" + date.getTime()), Date.class).getTime());
 		//
-		assertEquals(date.getTime(), Converters.getDefault().convertObject(converter.convertObject("+"+date.getTime()), Date.class).getTime());
+		assertEquals(date.getTime(), Converters.getDefault()
+				.convertObject(converter.convertObject("+" + date.getTime()), Date.class).getTime());
 	}
-	
+
 	@Test
 	public void testDateTimeUTC1() {
-		final OffsetDateTimeConverter converter=OffsetDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx").setUtc(true);
-		final OffsetDateTime dateTime=converter.convertObject("2011-01-02T12:30:00+01:00");
+		final OffsetDateTimeConverter converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx").setUtc(true);
+		final OffsetDateTime dateTime = converter.convertObject("2011-01-02T12:30:00+01:00");
 		assertEquals("2011-01-02T11:30Z", converter.format(dateTime));
 	}
-	
+
 	@Test
 	public void testDateTimeUTC2() {
-		final OffsetDateTimeConverter converter=OffsetDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
-		final OffsetDateTime dateTime=converter.convertObject("2011-01-02T12:30:00+01:00");
+		final OffsetDateTimeConverter converter = OffsetDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
+		final OffsetDateTime dateTime = converter.convertObject("2011-01-02T12:30:00+01:00");
 		assertEquals("2011-01-02T12:30+01:00", converter.format(dateTime));
 	}
 }

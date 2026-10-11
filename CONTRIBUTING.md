@@ -18,8 +18,6 @@ Main modules:
   Database-specific dialect implementations.
 - sqlapp-elk-svg:
   ELK-based SVG ER diagram generation.
-- sqlapp-graphviz:
-  Legacy Graphviz-based ER diagram generation.
 
 ## General rules
 
@@ -34,6 +32,24 @@ Main modules:
 - Do not access a real database unless explicitly authorized.
 - Never place database credentials or production data in the repository.
 - Clearly distinguish verified behavior from assumptions.
+
+## User-facing design policy
+
+- Make the common use case work through a small, obvious API or configuration.
+- Support complex requirements through optional settings and lower-level
+  extension points rather than making every caller understand internal phases.
+- Apply progressive disclosure: safe defaults and common inputs first,
+  advanced per-object or database-specific controls second, internal execution
+  components last.
+- High-level facades must compose the same Schema model, validation, planning
+  and execution code as advanced APIs; do not create a simpler but behaviorally
+  inconsistent implementation.
+- Infer unambiguous values from the Schema model. If inference would weaken
+  safety or reproducibility, require an explicit value and explain why.
+- Convenience APIs must still return or expose detailed results needed for
+  verification, diagnosis, restart and audit.
+- Documentation for a feature should lead with the shortest safe example, then
+  describe optional advanced controls and finally link to low-level APIs.
 
 ## Before implementing
 

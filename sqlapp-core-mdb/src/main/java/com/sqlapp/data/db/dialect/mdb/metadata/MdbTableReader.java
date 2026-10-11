@@ -17,7 +17,9 @@ import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Table;
 
-/** Reads table details one table at a time as required by UCanAccess metadata. */
+/**
+ * Reads table details one table at a time as required by UCanAccess metadata.
+ */
 public class MdbTableReader extends JdbcTableReader {
 
 	public MdbTableReader(final Dialect dialect) {
@@ -35,9 +37,8 @@ public class MdbTableReader extends JdbcTableReader {
 	}
 
 	@Override
-	protected void setMetadataDetail(final Connection connection,
-			final ParametersContext context, final List<Table> tables)
-			throws SQLException {
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Table> tables) throws SQLException {
 		for (final Table table : tables) {
 			table.setDialect(this.getDialect());
 			loadTableObjects(connection, getColumnReader(), table);
@@ -47,8 +48,7 @@ public class MdbTableReader extends JdbcTableReader {
 		}
 	}
 
-	private void loadTableObjects(final Connection connection,
-			final TableObjectReader<?> reader, final Table table) {
+	private void loadTableObjects(final Connection connection, final TableObjectReader<?> reader, final Table table) {
 		reader.setCatalogName(table.getCatalogName());
 		reader.setSchemaName(table.getSchemaName());
 		reader.setObjectName(table.getName());

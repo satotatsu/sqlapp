@@ -23,11 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-
 public class UpperSetTest {
 	@Test
 	public void testContains() {
-		UpperSet set=new UpperSet();
+		UpperSet set = new UpperSet();
 		set.add("aaaa");
 		assertEquals(true, set.contains("aaaa"));
 		assertEquals(true, set.contains("AAAA"));

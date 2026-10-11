@@ -49,15 +49,12 @@ public class H2TableLinkReader extends TableLinkReader {
 		super(dialect);
 	}
 
-	private static final Pattern tableLinkPattern = Pattern
-			.compile(
-					"CREATE\\s+(FORCE\\s+){0,1}LINKED\\s+TABLE\\s+[^(]+\\s*\\('(.*)'\\s*,\\s*'(.*)'\\s*,\\s*'(.*)'\\s*,\\s*'(.*)'\\s*,\\s*'(.*)'\\)",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern tableLinkPattern = Pattern.compile(
+			"CREATE\\s+(FORCE\\s+){0,1}LINKED\\s+TABLE\\s+[^(]+\\s*\\('(.*)'\\s*,\\s*'(.*)'\\s*,\\s*'(.*)'\\s*,\\s*'(.*)'\\s*,\\s*'(.*)'\\)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	@Override
-	protected List<TableLink> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableLink> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableLink> result = list();
@@ -74,12 +71,10 @@ public class H2TableLinkReader extends TableLinkReader {
 				tableLink.setCatalogName(table_Catalog);
 				tableLink.setSchemaName(table_Schema);
 				// tableLink.setCreated(toTimestamp(lastMod));
-				Matcher matcher = definition == null ? null
-						: tableLinkPattern.matcher(definition);
+				Matcher matcher = definition == null ? null : tableLinkPattern.matcher(definition);
 				if (matcher != null && matcher.matches()) {
 					int i = 2;
-					String driverClassName = StringUtils.getGroupString(
-							matcher, i++);
+					String driverClassName = StringUtils.getGroupString(matcher, i++);
 					String host = StringUtils.getGroupString(matcher, i++);
 					String userId = StringUtils.getGroupString(matcher, i++);
 					String password = StringUtils.getGroupString(matcher, i++);
@@ -97,8 +92,7 @@ public class H2TableLinkReader extends TableLinkReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null
-				&& productVersionInfo.getMajorVersion() != null
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
 			return getSqlNodeCache().getString("tableLinks_200.sql");
 		}

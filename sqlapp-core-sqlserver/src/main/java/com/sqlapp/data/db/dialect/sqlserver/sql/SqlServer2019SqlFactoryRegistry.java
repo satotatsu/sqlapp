@@ -24,8 +24,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 
-public class SqlServer2019SqlFactoryRegistry extends
-		SqlServer2016SqlFactoryRegistry {
+public class SqlServer2019SqlFactoryRegistry extends SqlServer2016SqlFactoryRegistry {
 
 	public SqlServer2019SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
@@ -34,13 +33,10 @@ public class SqlServer2019SqlFactoryRegistry extends
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2019CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2019AlterTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2019CreateIndexFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2019CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2019AlterTableFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2019CreateIndexFactory.class);
 	}
 }

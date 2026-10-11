@@ -42,8 +42,7 @@ public class HsqlFunctionArgumentReader extends RoutineArgumentReader<Function> 
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<NamedArgument> result = list();
@@ -61,8 +60,7 @@ public class HsqlFunctionArgumentReader extends RoutineArgumentReader<Function> 
 		return getSqlNodeCache().getString("functionArguments.sql");
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		Function routine = new Function();
 		routine.setDialect(this.getDialect());
 		NamedArgument obj = createObject(this.getString(rs, "PARAMETER_NAME"));

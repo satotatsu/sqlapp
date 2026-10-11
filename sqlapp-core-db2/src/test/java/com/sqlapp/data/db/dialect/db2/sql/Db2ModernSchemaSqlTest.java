@@ -53,21 +53,16 @@ class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 	void testVector() {
 		final Table table = new Table("DOCUMENTS");
 		table.setDialect(dialect);
-		table.getColumns().add("FLOAT_EMBEDDING", column -> column
-				.setDataType(DataType.VECTOR)
-				.setVectorDimension(768)
+		table.getColumns().add("FLOAT_EMBEDDING", column -> column.setDataType(DataType.VECTOR).setVectorDimension(768)
 				.setVectorElementDataType(DataType.REAL));
-		table.getColumns().add("BYTE_EMBEDDING", column -> column
-				.setDataType(DataType.VECTOR)
-				.setVectorDimension(300)
+		table.getColumns().add("BYTE_EMBEDDING", column -> column.setDataType(DataType.VECTOR).setVectorDimension(300)
 				.setVectorElementDataType(DataType.TINYINT));
 
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
 		final String sql = factory.createSql(table).get(0).getSqlText().replaceAll("\\s+", " ");
 		assertTrue(sql.matches(".*FLOAT_EMBEDDING\\s+VECTOR\\(768,\\s*FLOAT32\\s*\\).*"), sql);
 		assertTrue(sql.matches(".*BYTE_EMBEDDING\\s+VECTOR\\(300,\\s*INT8\\s*\\).*"), sql);
-		assertEquals(DataType.VECTOR,
-				dialect.getDbDataTypes().getDbType(DataType.VECTOR).getDataType());
+		assertEquals(DataType.VECTOR, dialect.getDbDataTypes().getDbType(DataType.VECTOR).getDataType());
 	}
 
 	@Test
@@ -80,17 +75,12 @@ class Db2ModernSchemaSqlTest extends AbstractDb2SqlFactoryTest {
 				column -> column.setDataType(DataType.TIMESTAMP).setLength(12).setNullable(false));
 		table.getColumns().add("ROW_END",
 				column -> column.setDataType(DataType.TIMESTAMP).setLength(12).setNullable(false));
-		table.getColumns().add("TRANSACTION_ID",
-				column -> column.setDataType(DataType.TIMESTAMP).setLength(12));
-		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
-				.setPeriodType(TemporalPeriodType.SYSTEM_TIME)
-				.setStartColumnName("ROW_START")
-				.setEndColumnName("ROW_END"));
-		table.setSystemVersioning(new SystemVersioning()
-				.setPeriodName("SYSTEM_TIME")
-				.setHistoryTableSchemaName("HISTORY")
-				.setHistoryTableName("AUDIT_LOG_HISTORY")
-				.setTransactionIdColumnName("TRANSACTION_ID"));
+		table.getColumns().add("TRANSACTION_ID", column -> column.setDataType(DataType.TIMESTAMP).setLength(12));
+		table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME").setPeriodType(TemporalPeriodType.SYSTEM_TIME)
+				.setStartColumnName("ROW_START").setEndColumnName("ROW_END"));
+		table.setSystemVersioning(
+				new SystemVersioning().setPeriodName("SYSTEM_TIME").setHistoryTableSchemaName("HISTORY")
+						.setHistoryTableName("AUDIT_LOG_HISTORY").setTransactionIdColumnName("TRANSACTION_ID"));
 
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.CREATE);
 		final List<SqlOperation> operations = factory.createSql(table);

@@ -13,7 +13,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.LoadLegacyHierarchyCommand;
+import com.sqlapp.data.db.command.migration.legacy.LoadLegacyHierarchyCommand;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 
 /**

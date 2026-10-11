@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.firebird.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
+import static com.sqlapp.util.CommonUtils.abs;
+import static com.sqlapp.util.CommonUtils.trim;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -58,12 +60,14 @@ public class FirebirdFunctionArgumentReader extends RoutineArgumentReader<Functi
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("functionArguments.sql");
+		return getSqlNodeCache(FirebirdFunctionArgumentReader.class).getString("functionArguments.sql");
 	}
 
 	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
-		Function routine = new Function(getString(rs, ROUTINE_NAME));
+		Function routine = new Function(trim(getString(rs, ROUTINE_NAME)));
 		routine.setDialect(this.getDialect());
+		routine.setCatalogName(this.getCatalogName());
+		routine.setSchemaName(this.getSchemaName());
 		NamedArgument obj = createObject();
 		SchemaUtils.setRoutine(obj, routine);
 		// int segmentLength = rs.getInt("SEGMENT_LENGTH");
@@ -72,7 +76,7 @@ public class FirebirdFunctionArgumentReader extends RoutineArgumentReader<Functi
 		int subType = rs.getInt("FIELD_SUB_TYPE");
 		int length = getInt(rs, "FIELD_LENGTH");
 		int precision = getInt(rs, "FIELD_PRECISION");
-		Integer scale = getInteger(rs, "FIELD_SCALE");
+		int scale = abs(getInt(rs, "FIELD_SCALE"));
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);

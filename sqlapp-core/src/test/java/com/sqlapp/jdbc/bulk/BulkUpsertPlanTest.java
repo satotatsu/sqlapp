@@ -1,0 +1,161 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.jdbc.bulk;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
+
+class BulkUpsertPlanTest {
+	@Test
+	void validatesContextFreeOptionsWhileBuildingThem() {
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertOption.builder().updateWhenMatched(false).insertWhenNotMatched(false).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertOption.builder().keyColumns(List.of("id", "id")).build());
+		assertThrows(IllegalArgumentException.class, () -> BulkUpsertOption.builder().updateColumn(" ").build());
+		assertThrows(NullPointerException.class, () -> BulkUpsertOption.builder().bulkOption(null).build());
+	}
+
+	@Test
+	void rejectsDuplicateSourceKeysByDefault() {
+		final Table table = tableWithDuplicateKeys();
+		final var rows = BulkUpsertPlan.resolve(table, BulkUpsertOption.defaults()).createStagingTable("stage")
+				.getRows().iterator();
+		rows.next();
+		final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, rows::next);
+		assertEquals("Duplicate bulk upsert key at source rows 1 and 2", ex.getMessage());
+	}
+
+	@Test
+	void canKeepFirstDuplicateSourceKeyWhileStreaming() {
+		final Table table = tableWithDuplicateKeys();
+		table.getRows().add(row -> {
+			row.put("id", 2);
+			row.put("name", "two");
+		});
+		final var rows = BulkUpsertPlan
+				.resolve(table, BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST).build())
+				.createStagingTable("stage").getRows().iterator();
+		assertEquals("first", rows.next().get("name"));
+		assertEquals(2, (Integer) rows.next().get("id"));
+		assertEquals(false, rows.hasNext());
+	}
+
+	@Test
+	void canKeepLastDuplicateSourceKey() {
+		final var rows = BulkUpsertPlan
+				.resolve(tableWithDuplicateKeys(), BulkUpsertOption.builder()
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_LAST).build())
+				.createStagingTable("stage").getRows().iterator();
+		assertEquals("second", rows.next().get("name"));
+		assertEquals(false, rows.hasNext());
+	}
+
+	@Test
+	void canSelectDuplicateSourceRowWithCustomCondition() {
+		final var rows = BulkUpsertPlan.resolve(tableWithDuplicateKeys(),
+				BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelectorFingerprint("lexical-name-v1")
+						.duplicateRowSelector((retained,
+								candidate) -> ((String) retained.get("name"))
+										.compareTo((String) candidate.get("name")) <= 0 ? retained : candidate)
+						.build())
+				.createStagingTable("stage").getRows().iterator();
+		assertEquals("first", rows.next().get("name"));
+		assertEquals(false, rows.hasNext());
+	}
+
+	@Test
+	void customSelectorCannotReplaceTheKeyedRow() {
+		final Table table = tableWithDuplicateKeys();
+		final var rows = BulkUpsertPlan
+				.resolve(table, BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelectorFingerprint("invalid-selector-v1")
+						.duplicateRowSelector((retained, candidate) -> new com.sqlapp.data.schemas.Row()).build())
+				.createStagingTable("stage").getRows().iterator();
+		assertThrows(IllegalArgumentException.class, rows::hasNext);
+	}
+
+	@Test
+	void closesSourceAndPreservesFailureWhenDuplicateSelectionFails() throws Exception {
+		final Table table = tableWithDuplicateKeys();
+		final List<Row> sourceRows = List.copyOf(table.getRows());
+		final AtomicInteger closes = new AtomicInteger();
+		final Exception closeFailure = new Exception("close");
+		final class ClosingIterator implements Iterator<Row>, AutoCloseable {
+			private final Iterator<Row> delegate = sourceRows.iterator();
+
+			@Override
+			public boolean hasNext() {
+				return delegate.hasNext();
+			}
+
+			@Override
+			public Row next() {
+				return delegate.next();
+			}
+
+			@Override
+			public void close() throws Exception {
+				closes.incrementAndGet();
+				throw closeFailure;
+			}
+		}
+		table.setRowIteratorHandler(rows -> new ClosingIterator());
+		final Iterator<Row> rows = BulkUpsertPlan.resolve(table,
+				BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+						.duplicateRowSelectorFingerprint("invalid-selector-v1")
+						.duplicateRowSelector((retained, candidate) -> new Row()).build())
+				.createStagingTable("stage").getRows().iterator();
+
+		final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, rows::hasNext);
+		assertEquals(1, closes.get());
+		assertEquals(1, failure.getSuppressed().length);
+		assertSame(closeFailure, failure.getSuppressed()[0]);
+		((AutoCloseable) rows).close();
+		assertEquals(1, closes.get());
+	}
+
+	@Test
+	void customSelectorRequiresAStableFingerprint() {
+		final Table table = tableWithDuplicateKeys();
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertPlan.resolve(table,
+						BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+								.duplicateRowSelector((retained, candidate) -> retained).build()));
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkUpsertPlan.resolve(table,
+						BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST)
+								.duplicateRowSelector((retained, candidate) -> retained)
+								.duplicateRowSelectorFingerprint("ignored-selector").build()));
+	}
+
+	private static Table tableWithDuplicateKeys() {
+		final Table table = new Table("target");
+		final Column id = new Column("id").setDataType(DataType.INT);
+		table.getColumns().add(id);
+		table.getColumns().add(new Column("name").setDataType(DataType.VARCHAR));
+		table.setPrimaryKey("pk_target", id);
+		table.getRows().add(row -> {
+			row.put("id", 1);
+			row.put("name", "first");
+		});
+		table.getRows().add(row -> {
+			row.put("id", 1);
+			row.put("name", "second");
+		});
+		return table;
+	}
+}

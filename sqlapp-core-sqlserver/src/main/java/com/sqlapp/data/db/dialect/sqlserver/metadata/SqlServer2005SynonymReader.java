@@ -48,8 +48,7 @@ public class SqlServer2005SynonymReader extends SynonymReader {
 	 * (java.sql.Connection, com.sqlapp.data.parameter.ParametersContext)
 	 */
 	@Override
-	protected List<Synonym> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Synonym> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Synonym> result = list();

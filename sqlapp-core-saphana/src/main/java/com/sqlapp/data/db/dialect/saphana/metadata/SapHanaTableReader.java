@@ -66,6 +66,9 @@ public class SapHanaTableReader extends TableReader {
 				result.add(table);
 			}
 		});
+		if (result.isEmpty()) {
+			return result;
+		}
 		SqlNode partNode = getPartitionSqlSqlNode(productVersionInfo);
 		ParametersContext ccontext = context.clone();
 		ccontext.put(SCHEMA_NAME, tableMap.keySet());
@@ -76,6 +79,9 @@ public class SapHanaTableReader extends TableReader {
 				String schemaName = this.getString(rs, SCHEMA_NAME);
 				String tableName = this.getString(rs, TABLE_NAME);
 				Table table = tableMap.get(schemaName, tableName);
+				if (table == null) {
+					return;
+				}
 				table.toPartitioning();
 				String level1Expression = this.getString(rs, "LEVEL_1_EXPRESSION");
 				if (table.getPartitioning().getPartitioningColumns().isEmpty()) {
@@ -88,7 +94,8 @@ public class SapHanaTableReader extends TableReader {
 					}
 				}
 				String level2Expression = this.getString(rs, "LEVEL_2_EXPRESSION");
-				if (table.getPartitioning().getSubPartitioningColumns().isEmpty()) {
+				if (!CommonUtils.isEmpty(level2Expression)
+						&& table.getPartitioning().getSubPartitioningColumns().isEmpty()) {
 					String[] args = level2Expression.split("\\s*,\\s*");
 					for (String arg : args) {
 						String col = CommonUtils.unwrap(arg, "\"");
@@ -99,7 +106,7 @@ public class SapHanaTableReader extends TableReader {
 				}
 				if (table.getPartitioning().getPartitioningType() == null) {
 					int level1Count = this.getInteger(rs, "LEVEL_1_COUNT");
-					// int level2Count=this.getInteger(rs, "LEVEL_2_COUNT");
+					int level2Count = this.getInteger(rs, "LEVEL_2_COUNT");
 					String level1Type = this.getString(rs, "LEVEL_1_TYPE");
 					String level2Type = this.getString(rs, "LEVEL_2_TYPE");
 					table.getPartitioning().setPartitioningType(PartitioningType.parse(level1Type));
@@ -109,7 +116,7 @@ public class SapHanaTableReader extends TableReader {
 					}
 					if (table.getPartitioning().getSubPartitioningType() != null
 							&& table.getPartitioning().getSubPartitioningType().isSizePartitioning()) {
-						table.getPartitioning().setSubPartitionSize(level1Count);
+						table.getPartitioning().setSubPartitionSize(level2Count);
 					}
 					setStatistics(rs, "EXTENDED_STORAGE_ENABLE_DELTA", table.getPartitioning());
 				}
@@ -143,7 +150,6 @@ public class SapHanaTableReader extends TableReader {
 				} else {
 					partition.setName(partition.getId());
 				}
-				result.add(table);
 			}
 		});
 		return result;
@@ -224,7 +230,7 @@ public class SapHanaTableReader extends TableReader {
 
 	@Override
 	protected CheckConstraintReader newCheckConstraintReader() {
-		return null;
+		return new SapHanaCheckConstraintReader(this.getDialect());
 	}
 
 	/*

@@ -21,6 +21,9 @@ package com.sqlapp.data.db.dialect.postgres.sql;
 
 import java.util.List;
 
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.Constraint;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -33,8 +36,7 @@ import com.sqlapp.data.schemas.Table;
  * @author satoh
  * 
  */
-public class PostgresCreateTableFactory extends
-		AbstractCreateTableFactory<PostgresSqlBuilder> {
+public class PostgresCreateTableFactory extends AbstractCreateTableFactory<PostgresSqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Table obj, final PostgresSqlBuilder builder) {
@@ -44,27 +46,56 @@ public class PostgresCreateTableFactory extends
 	}
 
 	@Override
-	protected void addOtherDefinitions(Table table, List<SqlOperation> result){
-		if (table.getRemarks()!=null){
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(table.getRemarks());
+	protected void addOtherDefinitions(Table table, List<SqlOperation> result) {
+		for (var constraint : table.getConstraints()) {
+			if (separateNotValid(constraint)) {
+				getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE).stream()
+						.filter(operation -> operation.getSqlType() != SqlType.SET_COMMENT).forEach(result::add);
+			}
+		}
+		if (table.getRemarks() != null) {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().space()
+					.sqlChar(table.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
-		table.getColumns().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
+		table.getColumns().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is()
+					.space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
-		table.getIndexes().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
+		table.getIndexes().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is().space()
+					.sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
-		table.getConstraints().stream().filter(c->c.getRemarks()!=null).forEach(c->{
-			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().constraint().space().name(c, this.getOptions().isDecorateSchemaName()).on().name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
+		table.getConstraints().stream().filter(c -> c.getRemarks() != null).forEach(c -> {
+			PostgresSqlBuilder builder = this.createSqlBuilder();
+			builder.comment().on().constraint().space().name(c, false).on()
+					.name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
 	}
-	
+
+	private boolean separateNotValid(Constraint constraint) {
+		if (!(constraint instanceof CheckConstraint) && !(constraint instanceof ForeignKeyConstraint))
+			return false;
+		if (!PostgresConstraintOptions.isNotValid(constraint))
+			return false;
+		if (!(getSqlFactoryRegistry().getSqlFactory(constraint,
+				SqlType.CREATE) instanceof PostgresConstraintOptions.NotValidFactory)) {
+			throw new IllegalArgumentException(
+					"NOT VALID is unsupported for this constraint on the target PostgreSQL version.");
+		}
+		return true;
+	}
+
+	@Override
+	protected void addConstraintDefinition(Constraint constraint, PostgresSqlBuilder builder) {
+		if (!separateNotValid(constraint))
+			super.addConstraintDefinition(constraint, builder);
+	}
+
 }

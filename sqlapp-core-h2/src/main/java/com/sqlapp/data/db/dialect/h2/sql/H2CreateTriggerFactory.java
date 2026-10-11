@@ -23,8 +23,7 @@ import com.sqlapp.data.db.dialect.h2.util.H2SqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTriggerFactory;
 import com.sqlapp.data.schemas.Trigger;
 
-public class H2CreateTriggerFactory extends
-		AbstractCreateTriggerFactory<H2SqlBuilder> {
+public class H2CreateTriggerFactory extends AbstractCreateTriggerFactory<H2SqlBuilder> {
 
 	@Override
 	protected void addCreateObject(final Trigger obj, H2SqlBuilder builder) {

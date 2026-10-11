@@ -19,8 +19,7 @@ public class SapHanaCloud extends SapHana {
 
 	private static final long serialVersionUID = 1L;
 
-	protected SapHanaCloud(
-			final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SapHanaCloud(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -31,8 +30,7 @@ public class SapHanaCloud extends SapHana {
 		});
 		getDbDataTypes().addVector();
 		getDbDataTypes().getDbTypeStrict(DataType.VECTOR)
-				.addPetternColumnTypeMatcher(
-						"REAL_VECTOR(?:\\s*\\(\\s*\\d+\\s*\\))?");
+				.addPetternColumnTypeMatcher("REAL_VECTOR(?:\\s*\\(\\s*\\d+\\s*\\))?");
 	}
 
 	@Override

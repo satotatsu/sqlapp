@@ -29,7 +29,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.migration.MigrationCommand;
+import com.sqlapp.data.db.command.migration.schema.MigrationCommand;
 
 /**
  * Table用のExtension

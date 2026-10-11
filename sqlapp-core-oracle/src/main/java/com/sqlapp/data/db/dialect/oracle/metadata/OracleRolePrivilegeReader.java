@@ -41,11 +41,9 @@ public class OracleRolePrivilegeReader extends RolePrivilegeReader {
 	}
 
 	@Override
-	protected List<RolePrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<RolePrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_SYS_PRIVS");
+		boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS", "DBA_SYS_PRIVS");
 		OracleMetadataUtils.setDbaOrUser(dba, context);
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<RolePrivilege> result = list();

@@ -22,11 +22,11 @@ package com.sqlapp.data.schemas;
 public class TableTest4 extends AbstractDbObjectTest<Table> {
 
 	public static Table getTable(String tableName) {
-		Table tableParent = TableTest.getTable(tableName+"Parent");
+		Table tableParent = TableTest.getTable(tableName + "Parent");
 		tableParent.setSchemaName("schema1");
 		tableParent.toPartitioning();
 		tableParent.getPartitioning().setPartitioningType(PartitioningType.Range);
-		Table table = TableTest.getTable(tableName+1);
+		Table table = TableTest.getTable(tableName + 1);
 		table.setPartitionParent(tableParent, "1", "2");
 		return table;
 	}

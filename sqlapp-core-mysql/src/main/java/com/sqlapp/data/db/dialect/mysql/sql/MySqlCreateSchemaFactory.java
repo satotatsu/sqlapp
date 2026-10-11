@@ -30,10 +30,10 @@ public class MySqlCreateSchemaFactory extends AbstractCreateSchemaFactory<MySqlS
 	protected void addCreateObject(final Schema schema, MySqlSqlBuilder builder) {
 		builder.create().schema().ifNotExists();
 		builder.name(schema);
-		if (!CommonUtils.isEmpty(schema.getCollation())){
+		if (!CommonUtils.isEmpty(schema.getCollation())) {
 			builder.default_().collate().space()._add(schema.getCollation());
-		} else{
-			if (!CommonUtils.isEmpty(schema.getCharacterSet())){
+		} else {
+			if (!CommonUtils.isEmpty(schema.getCharacterSet())) {
 				builder.default_().characterSet().space()._add(schema.getCharacterSet());
 			}
 		}

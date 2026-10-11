@@ -28,30 +28,28 @@ import com.sqlapp.data.interval.IntervalHourToSecond;
 
 public class IntervalHourToSecondTest {
 
-
-
 	@Test
 	public void testToHourToSecondType() {
-		IntervalHourToSecond interval1=IntervalHourToSecond.parse("Interval '10' hour");
-		Interval interval2=interval1.toInterval();
+		IntervalHourToSecond interval1 = IntervalHourToSecond.parse("Interval '10' hour");
+		Interval interval2 = interval1.toInterval();
 		assertTrue(interval2.equals(interval1));
 	}
 
 	@Test
 	public void testParse() {
-		IntervalHourToSecond interval1=IntervalHourToSecond.parse("Interval '10' hour");
-		IntervalHourToSecond interval2=new IntervalHourToSecond(10, 0, 0, 0);
+		IntervalHourToSecond interval1 = IntervalHourToSecond.parse("Interval '10' hour");
+		IntervalHourToSecond interval2 = new IntervalHourToSecond(10, 0, 0, 0);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalHourToSecond.parse("'11:2:0'");
-		interval2=new IntervalHourToSecond(11,2,0);
+		interval1 = IntervalHourToSecond.parse("'11:2:0'");
+		interval2 = new IntervalHourToSecond(11, 2, 0);
 		assertTrue(interval1.equals(interval2));
 		//
 		interval1.setSeconds(59);
 		interval2.setSeconds(59);
 		assertTrue(interval1.equals(interval2));
 		//
-		interval1=IntervalHourToSecond.parse("Interval '96' hour");
+		interval1 = IntervalHourToSecond.parse("Interval '96' hour");
 		assertTrue(interval1.toString().equals("96:0:0"));
 	}
 

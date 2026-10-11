@@ -47,14 +47,12 @@ public class OracleTableSpaceFileReader extends TableSpaceFileReader {
 	}
 
 	@Override
-	protected List<TableSpaceFile> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpaceFile> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_DATA_FILES");
+		boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS", "DBA_DATA_FILES");
 		final List<TableSpaceFile> result = list();
-		if (!dba){
+		if (!dba) {
 			return result;
 		}
 		OracleMetadataUtils.setDbaOrUser(dba, context);
@@ -73,13 +71,10 @@ public class OracleTableSpaceFileReader extends TableSpaceFileReader {
 		return getSqlNodeCache().getString("tableSpaceFiles.sql");
 	}
 
-	protected TableSpaceFile createStorageFile(ExResultSet rs)
-			throws SQLException {
-		TableSpaceFile obj = new TableSpaceFile(getString(rs, "FILE_NAME"),
-				getString(rs, "FILE_NAME"));
+	protected TableSpaceFile createStorageFile(ExResultSet rs) throws SQLException {
+		TableSpaceFile obj = new TableSpaceFile(getString(rs, "FILE_NAME"), getString(rs, "FILE_NAME"));
 		obj.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
-		obj.setAutoExtensible("YES".equalsIgnoreCase(getString(rs,
-				"AUTOEXTENSIBLE")));
+		obj.setAutoExtensible("YES".equalsIgnoreCase(getString(rs, "AUTOEXTENSIBLE")));
 		setSpecifics(rs, "FILE_ID", obj);
 		setSpecifics(rs, "BYTES", obj);
 		setSpecifics(rs, "BLOCKS", obj);

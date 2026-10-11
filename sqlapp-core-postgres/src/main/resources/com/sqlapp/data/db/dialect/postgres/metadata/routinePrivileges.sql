@@ -9,14 +9,16 @@ SELECT
   , r.privilege_type
   , r.is_grantable
   , null AS with_hierarchy
+  , 'FUNCTION' AS routine_kind
   , p.pronargs
   , p.proargtypes
   , p.proargnames
   , p.oid AS proc_id
 FROM information_schema.routine_privileges r
-INNER JOIN pg_proc p
+INNER JOIN pg_catalog.pg_proc p
   ON (r.routine_name=p.proname
     AND r.specific_name=(p.proname || '_' || CAST(p.oid AS text)))
+INNER JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace AND n.nspname=r.routine_schema
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
   AND r.routine_schema IN /*schemaName*/('%')

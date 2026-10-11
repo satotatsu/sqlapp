@@ -643,7 +643,7 @@ public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> imp
 		return getColumnParameterExpression(column, _default);
 	}
 
-	private String getColumnParameterExpression(final Column column, final String _default) {
+	protected String getColumnParameterExpression(final Column column, final String _default) {
 		if (this.getOptions() != null) {
 			if (this.getTableOptions() != null) {
 				if (this.getTableOptions().getParameterExpression() != null) {

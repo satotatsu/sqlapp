@@ -21,6 +21,7 @@ package com.sqlapp.data.schemas.rowiterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 import com.sqlapp.util.eval.mvel.MvelUtils;
@@ -88,9 +89,6 @@ public class ExpressionConverter {
 	 */
 	public void setFileDirectory(File fileDirectory) {
 		this.fileDirectory = fileDirectory;
-		if (fileDirectory != null) {
-			MvelUtils.setBasePath(fileDirectory.getAbsolutePath());
-		}
 	}
 
 	/**
@@ -125,11 +123,23 @@ public class ExpressionConverter {
 			if (text.endsWith(this.getPlaceholderSuffix())) {
 				String expression = text.substring(this.getPlaceholderPrefix().length(),
 						text.length() - this.getPlaceholderSuffix().length());
-				MvelUtils.setBasePath(fileDirectory.getAbsolutePath());
-				Object obj = cachedMvelEvaluator.eval(expression, context);
+				final String previousBasePath = MvelUtils.getBasePath();
+				final Object obj;
+				try {
+					MvelUtils.setBasePath(fileDirectory == null ? null : fileDirectory.getAbsolutePath());
+					obj = cachedMvelEvaluator.eval(expression, context);
+				} finally {
+					MvelUtils.setBasePath(previousBasePath);
+				}
+				if (obj instanceof File file) {
+					final File resolved = file.isAbsolute() || fileDirectory == null ? file
+							: new File(fileDirectory, file.getPath());
+					return Files.readAllBytes(resolved.toPath());
+				}
 				return obj;
 			}
 		}
 		return value;
 	}
+
 }
