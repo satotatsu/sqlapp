@@ -61,6 +61,24 @@ public abstract class GenerateDataTask extends AbstractDirectoryTask<GenerateDat
 	@org.gradle.api.tasks.Optional
 	public abstract org.gradle.api.provider.Property<String> getBaseTime();
 
+	/** Keep exact progress by default; false avoids count-only source scans. */
+	@org.gradle.api.tasks.Input
+	public abstract org.gradle.api.provider.Property<Boolean> getCountRowsBeforeInsert();
+
+	/** Generate samples without INSERT or lifecycle SQL hooks. */
+	@org.gradle.api.tasks.Input
+	public abstract org.gradle.api.provider.Property<Boolean> getPreview();
+
+	/** Maximum sample rows per table generator configuration. */
+	@org.gradle.api.tasks.Input
+	public abstract org.gradle.api.provider.Property<Integer> getPreviewLimit();
+
+	public GenerateDataTask() {
+		getPreview().convention(false);
+		getPreviewLimit().convention(10);
+		getCountRowsBeforeInsert().convention(true);
+	}
+
 	private TableOptions tableOptions;
 
 	@Internal
@@ -103,6 +121,9 @@ public abstract class GenerateDataTask extends AbstractDirectoryTask<GenerateDat
 	@Override
 	protected void beforeRun(GenerateDataInsertCommand command) {
 		super.beforeRun(command);
+		command.setCountRowsBeforeInsert(getCountRowsBeforeInsert().get());
+		command.setPreview(getPreview().get());
+		command.setPreviewLimit(getPreviewLimit().get());
 		command.setRandomSeed(getRandomSeed().getOrNull());
 		if (getBaseTime().isPresent()) {
 			command.setBaseTime(java.time.LocalDateTime.parse(getBaseTime().get()));

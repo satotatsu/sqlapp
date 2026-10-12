@@ -204,12 +204,18 @@ public class TableGeneratorConfigFactory {
 	 */
 	public String createInsertSql(final Table table, final Dialect dialect, TableOptions tableOptions,
 			SqlType sqlType) {
+		return createInsertSql(table, dialect, tableOptions, sqlType, withSchemaName);
+	}
+
+	/** Generate DML with explicit schema qualification when required by the resolved target. */
+	public String createInsertSql(final Table table, final Dialect dialect, TableOptions tableOptions,
+			SqlType sqlType, boolean withSchemaName) {
 		ForeignKeyConstraint pkfk = getPKFK(table);
 		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		if (tableOptions != null) {
 			sqlFactoryRegistry.setTableOptions(tableOptions.clone());
 		}
-		sqlFactoryRegistry.getOptions().setDecorateSchemaName(false);
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(withSchemaName);
 		boolean hasMulti = hasMultiForeignKeyInPrimaryKeyColumn(table);
 		SqlFactory<Table> factory;
 		if (pkfk == null && hasMulti && sqlType == SqlType.INSERT) {

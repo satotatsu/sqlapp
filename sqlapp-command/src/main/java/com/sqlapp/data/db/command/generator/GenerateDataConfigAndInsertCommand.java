@@ -44,6 +44,11 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 		implements QueryCommitIntervalProperty {
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
+	private boolean countRowsBeforeInsert = true;
+	private boolean preview = false;
+	private int previewLimit = 10;
+	@Setter(lombok.AccessLevel.NONE)
+	private List<GeneratorPreviewRow> previewRows = List.of();
 	private Long randomSeed;
 	private java.time.LocalDateTime baseTime;
 	private boolean isCloseDataSourceInternal;
@@ -66,6 +71,10 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 
 	@Override
 	protected void initialize() {
+		previewRows = List.of();
+		if (preview && previewLimit <= 0) {
+			throw new IllegalArgumentException("previewLimit must be greater than zero");
+		}
 		super.initializeContext();
 		isCloseDataSourceInternal = isCloseDataSource();
 		this.setCloseDataSource(false);
@@ -86,13 +95,20 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 		}
 		command.setTableConfigs(map);
 		command.setDataSource(getDataSource());
+		command.setCountRowsBeforeInsert(countRowsBeforeInsert);
+		command.setPreview(preview);
+		command.setPreviewLimit(previewLimit);
 		command.setRandomSeed(randomSeed);
 		command.setBaseTime(baseTime);
 		command.setQueryCommitInterval(this.getQueryCommitInterval());
 		command.setDmlBatchSize(dmlBatchSize);
 		command.setCommitLogEnabled(this.isCommitLogEnabled());
 		command.setRowMonitor(this.getRowMonitor());
-		command.run();
+		try {
+			command.run();
+		} finally {
+			previewRows = command.getPreviewRows();
+		}
 		after.accept(command, files);
 		this.setCloseDataSource(isCloseDataSourceInternal);
 	}

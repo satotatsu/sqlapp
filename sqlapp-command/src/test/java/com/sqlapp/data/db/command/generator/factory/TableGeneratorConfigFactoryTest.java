@@ -34,6 +34,20 @@ import com.sqlapp.data.schemas.Table;
 class TableGeneratorConfigFactoryTest extends AbstractTest {
 
 	@Test
+	void honorsSchemaQualificationForGeneratedInsertAndTemplates() {
+		Dialect dialect = DialectResolver.getInstance().getDialect("HSQL Database Engine", 2, 7, null);
+		Table table = new Table("TAB").setSchemaName("A");
+		table.getColumns().add("ID", c -> c.setDataType(DataType.INT));
+		TableGeneratorConfigFactory factory = new TableGeneratorConfigFactory();
+		String unqualified = factory.createInsertSql(table, dialect, null, com.sqlapp.data.db.sql.SqlType.INSERT);
+		String qualified = factory.createInsertSql(table, dialect, null, com.sqlapp.data.db.sql.SqlType.INSERT, true);
+		org.junit.jupiter.api.Assertions.assertNotEquals(unqualified, qualified);
+		factory.setWithSchemaName(true);
+		assertEquals(qualified, factory.createInsertSql(table, dialect, null, com.sqlapp.data.db.sql.SqlType.INSERT));
+		assertEquals(qualified, factory.createDefault(table, dialect).getInsertSql());
+	}
+
+	@Test
 	void testSetupFinalizeSql1() {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Microsoft SQLServer", 0, 0, null);
 		TableGeneratorConfigFactory factory = new TableGeneratorConfigFactory();

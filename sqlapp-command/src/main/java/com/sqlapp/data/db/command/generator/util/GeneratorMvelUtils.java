@@ -32,7 +32,21 @@ import com.sqlapp.util.iterator.Iterators;
 public final class GeneratorMvelUtils {
 
 	public static Iterable<Map<String, Object>> iterator(long iterate) {
-		return new MapIterable(Iterators.range(iterate));
+		return new CountedIterable(iterate);
+	}
+
+	/** The built-in finite range can report its size without traversing generated rows. */
+	public static final class CountedIterable extends MapIterable {
+		private final long size;
+
+		private CountedIterable(long size) {
+			super(Iterators.range(size));
+			this.size = size;
+		}
+
+		public long size() {
+			return size;
+		}
 	}
 
 	public static Iterable<Map<String, Object>> fileIterator(Object path) {

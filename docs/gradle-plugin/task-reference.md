@@ -281,7 +281,7 @@ registered by `DbPlugin` under a fixed name:
 | `DropObjectsTask` | Drop selected objects/tables | Mutates target destructively |
 | `ExportDataTask` | Export selected table rows | Read-only database; writes files |
 | `GenerateDataConfigTask` | Generate data-generator configuration from metadata | Read-only database; writes files |
-| `GenerateDataTask` | Generate/load relational test data | Mutates target |
+| `GenerateDataTask` | Generate/load relational test data; optionally preview samples | Mutates target unless `preview=true` |
 | `ImportDataTask` | Import data files | Mutates target |
 | `MigrationDownTask` | Apply down migrations | Mutates target destructively |
 | `MigrationSeriesDownTask` | Apply series-based down migrations | Mutates target destructively |
@@ -307,6 +307,21 @@ another sqlapp task.
 `GenerateDataTask` additionally accepts optional `randomSeed` (`Property<Long>`)
 and `baseTime` (`Property<String>`, ISO local date/time, for example
 `2026-01-02T03:04:00`). Both are `@Input` properties with no default value.
+`countRowsBeforeInsert` (`Property<Boolean>`, `@Input`, convention `true`)
+keeps the exact total/percentage display. Set it to `false` to skip count-only
+source scans and display processed rows, elapsed time and throughput instead.
+It is optional to configure and has no effect on Gradle task caching.
+
+`preview` (`Property<Boolean>`, `@Input`, convention `false`) displays generated
+sample values and runtime Java types without executing INSERT or lifecycle SQL.
+`previewLimit` (`Property<Integer>`, `@Input`, convention `10`) limits samples
+per generator configuration and must be positive in preview mode. Preview skips
+count-only scans regardless of `countRowsBeforeInsert`. StartValueSQL and used
+Query/File lookups still run; row monitors and commit callbacks do not run.
+See [the executable preview example](../examples/generator-preview/preview.init.gradle)
+and [preview behavior and limits](../data/generator-reproducibility.md#preview-generated-values).
+
+
 `randomSeed` controls RANDOM lookup selection, including weighted selection;
 `baseTime` is exposed as `_baseTime` in generator expressions. See
 [generator validation and reproducibility](../data/generator-reproducibility.md).

@@ -508,8 +508,9 @@ public class TableGeneratorConfig {
 		try {
 			value = eval(expression, map);
 		} catch (RuntimeException e) {
-			throw new ExpressionExecutionException("Column nextValue expression is invalid. tablName" + this.getName()
-					+ ", columnName=" + colConfig.getName() + " expression=expression", e);
+			throw new ExpressionExecutionException("Generator table=" + schemaName + "." + name
+					+ ", column=" + colConfig.getName() + ", phase=nextValue, rowNumberArgument=" + map.get(ROW_NO_KEY)
+					+ ", generationIndex=" + map.get(INDEX_KEY) + ", expression=[" + expression + "]", e);
 		}
 		if (colConfig.getMaxValueObject() != null) {
 			int comp = compare(colConfig.getMaxValueObject(), value);
@@ -538,7 +539,14 @@ public class TableGeneratorConfig {
 		}
 		final Map<String, Object> copy = CommonUtils.map(map);
 		copy.put(VALUE, map.get(colConfig.getName()));
-		final Object formatted = this.getEvaluator().eval(colConfig.getFormatExpression(), copy);
+		final Object formatted;
+		try {
+			formatted = this.getEvaluator().eval(colConfig.getFormatExpression(), copy);
+		} catch (RuntimeException e) {
+			throw new ExpressionExecutionException("Generator table=" + schemaName + "." + name
+					+ ", column=" + colConfig.getName() + ", phase=formatExpression, rowNumberArgument=" + map.get(ROW_NO_KEY)
+					+ ", generationIndex=" + map.get(INDEX_KEY) + ", expression=[" + colConfig.getFormatExpression() + "]", e);
+		}
 		return Optional.of(formatted);
 	}
 
@@ -633,24 +641,42 @@ public class TableGeneratorConfig {
 		final Object tmp = this.getEvaluator().eval(this.getDataSourceExpression(), map);
 		checkTypeCheck("Table.dataSourceExpression", this.getDataSourceExpression(), tmp, Iterable.class);
 		final Iterable<?> iterable = CommonUtils.cast(tmp);
-		long i = 0;
-		for (Object obj : iterable) {
-			if (i == 0) {
-				final Object ret = this.getEvaluator().eval(this.getColumnMappingExpression(), obj);
-				checkTypeCheck("Table.columnMappingExpression", this.getColumnMappingExpression(), ret, Map.class);
-			}
-			i++;
+		Long knownSize = iterable instanceof com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils.CountedIterable counted
+				? counted.size() : iterable instanceof java.util.Collection<?> collection ? (long) collection.size() : null;
+		if (knownSize != null && knownSize == 0) {
+			return 0;
 		}
-		return i;
+		java.util.Iterator<?> iterator = iterable.iterator();
+		Throwable failure = null;
+		try {
+			long count = 0;
+			while (iterator.hasNext()) {
+				Object obj = iterator.next();
+				if (count == 0 && !CommonUtils.isBlank(getColumnMappingExpression())) {
+					Object ret = getEvaluator().eval(getColumnMappingExpression(), obj);
+					checkTypeCheck("Table.columnMappingExpression", getColumnMappingExpression(), ret, Map.class);
+				}
+				if (knownSize != null) {
+					return knownSize;
+				}
+				count++;
+			}
+			return count;
+		} catch (RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
+			com.sqlapp.util.iterator.IteratorCloseUtils.close(failure, iterator);
+		}
 	}
 
 	private void checkTypeCheck(final String expressionPath, String expression, final Object obj, Class<?> clazz) {
 		if (obj == null) {
-			throw new InvalidExpressionResultTypeException(expressionPath, expression, null, Iterable.class,
+			throw new InvalidExpressionResultTypeException(expressionPath, expression, null, clazz,
 					"Invalid expression result type.");
 		}
 		if (!(clazz.isAssignableFrom(obj.getClass()))) {
-			throw new InvalidExpressionResultTypeException(expressionPath, expression, obj, Iterable.class,
+			throw new InvalidExpressionResultTypeException(expressionPath, expression, obj, clazz,
 					"Invalid expression result type.");
 		}
 	}
@@ -673,8 +699,12 @@ public class TableGeneratorConfig {
 		if (map == null) {
 			return null;
 		}
-		Map<String, Object> ret = this.getEvaluator().eval(this.getColumnMappingExpression(), map);
-		return ret;
+		try {
+			return this.getEvaluator().eval(this.getColumnMappingExpression(), map);
+		} catch (RuntimeException e) {
+			throw new ExpressionExecutionException("Generator table=" + schemaName + "." + name
+					+ ", phase=columnMappingExpression, expression=[" + getColumnMappingExpression() + "]", e);
+		}
 	}
 
 	@FunctionalInterface
