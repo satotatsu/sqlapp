@@ -88,6 +88,9 @@ The [diagram source](docs/examples/previews/customer-order.mmd),
 [migration summary](docs/examples/previews/migration-summary.txt) are saved as
 text files. Run the tour below to browse the full HTML and JSON reports.
 
+For a larger example, explore the [generated business database reference](docs/getting-started/gradle-html-example.md):
+20 tables with whole-schema and order-viewpoint diagrams, table details, and DDL.
+
 ## Try sqlapp
 
 Run all three customer/order demos from this repository with Java 21:
@@ -116,7 +119,8 @@ needs no database connection.
 | Port parent/child business processing to Java | Record-oriented loops with grouped child reads, buffered writes, and execution results | [Hierarchical processing](docs/getting-started/use-cases.md#process-parent-and-child-records-together) |
 | Evaluate an Access replacement before loading data | Offline assessment, reviewed target mappings, and DDL verification for supported Oracle/SQL Server targets | [Migration assessment](docs/gradle-plugin/database-migration-assessment.md) |
 | Extract and reshape legacy data | Normalization planning, PL/I import, extraction contracts, and hierarchy loading | [Legacy workflows](docs/gradle-plugin/normalization-and-legacy-migration.md) |
-| Exchange data files or prepare test data | Import/export, format conversion, and relational test-data task types | [Data task guide](docs/gradle-plugin/custom-tasks-and-migrations.md) |
+| Generate large relational test datasets | Excel rule templates, SQL/file lookups, and JDBC batch insertion | [Test-data generator](docs/data/test-data-generation.md) |
+| Exchange data files | Import/export and format conversion | [Data task guide](docs/gradle-plugin/custom-tasks-and-migrations.md) |
 | Make a large schema easier to discuss | Logical names, virtual foreign keys, and named table viewpoints | [HTML and ER documentation](docs/schema/html-documentation.md#viewpoints-and-dictionaries) |
 
 See [how the workflows fit together](docs/getting-started/use-cases.md#choose-the-operation-you-actually-need)
