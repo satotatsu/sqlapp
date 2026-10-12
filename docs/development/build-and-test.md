@@ -252,3 +252,28 @@ On Windows, replace `./gradlew` with `.\gradlew.bat`. The refresh script reads
 expected match and deliberate mismatch for the same plan. Missing inputs or
 invalid markers fail before writing any preview. It does not run the demos or
 capture screenshots; review the generated documentation in a browser separately.
+
+## Check the saved Gradle HTML example
+
+After regenerating the approved sample, replace the complete snapshot under
+`docs/examples/gradle-html`, including its `diagrams`, `schemas`, and `tables`
+directories. The [example walkthrough](../getting-started/gradle-html-example.md)
+embeds the order-viewpoint Mermaid source; update that fenced block from
+`diagrams/viewpoint-order.mmd` when the generated source changes. Check the
+walkthrough's table count, generation time, and observations against the new
+output as well.
+
+Run the offline checks from this repository root:
+
+```shell
+python -B docs/development/check_generated_html.py
+python -B -m unittest discover -s docs/development -p test_check_generated_html.py -v
+python -B docs/development/check_documentation.py
+```
+
+The generated-output checker requires `index.html`, parses SVG XML, and checks
+local `href` and `src` file targets in HTML and SVG, including embedded XHTML.
+It reports missing targets and invalid SVG with a nonzero exit status. It does
+not validate fragments, CSS resources, JavaScript behavior, or external CDN
+availability. Open the HTML overview, whole-schema diagram, order viewpoint,
+and ORDERS table in a browser separately to review appearance and navigation.

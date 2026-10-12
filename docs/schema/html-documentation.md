@@ -41,9 +41,14 @@ from catalog product metadata. If the XML does not contain product metadata, the
 default dialect is used. The DDL is generated from the same table model and is
 escaped before insertion into HTML.
 
-Table detail pages deliberately omit relationship and viewpoint diagrams. Use
-the relationship page for navigation across tables, then open a table detail for
-its complete definition and DDL.
+The **Relationships** tab shows an ER diagram centered on the current table.
+The current table uses the detailed display; related tables use the compact
+display. The diagram includes foreign-key parents and children, inheritance
+parents and children, partition ancestors and immediate partitions. Tables
+without relationships still show their own definition. Physical names are always
+available, with a logical-name variant when display names exist. Each diagram
+also has a Mermaid download. Catalog and viewpoint diagrams remain available on
+the relationship page.
 
 If Schema XML contains table rows, those values can appear in the generated
 site. Treat documentation generated from row-bearing XML according to the same

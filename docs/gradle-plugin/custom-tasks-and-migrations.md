@@ -16,6 +16,9 @@ The companion example registers `exportData`, `importData`, `toExcel`,
 and several query tasks. See the [example project map](example-project.md) for
 the source locations and corresponding documentation.
 
+For Excel generation templates, flexible value rules, and JDBC batch loading of
+large test datasets, see the [test-data generator guide](../data/test-data-generation.md).
+
 ## Export table data
 
 ```groovy

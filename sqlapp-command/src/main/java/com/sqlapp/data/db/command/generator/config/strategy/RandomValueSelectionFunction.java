@@ -31,8 +31,12 @@ public class RandomValueSelectionFunction extends AbstractValueSelectionFunction
 	private Random random;
 
 	public RandomValueSelectionFunction(List<Map<String, Object>> values) {
+		this(values, new Random());
+	}
+
+	public RandomValueSelectionFunction(List<Map<String, Object>> values, Random random) {
 		super(values);
-		random = new Random();
+		this.random = java.util.Objects.requireNonNull(random);
 	}
 
 	@Override

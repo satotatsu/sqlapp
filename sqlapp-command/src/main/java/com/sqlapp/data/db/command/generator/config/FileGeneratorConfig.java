@@ -92,9 +92,7 @@ public class FileGeneratorConfig {
 		this.values = CommonUtils.list();
 		long i = 0;
 		final Object objTmp = tableGeneratorConfig.eval(dataSourceExpression);
-		if (objTmp instanceof String) {
-
-		} else if (objTmp instanceof Iterable) {
+		if (objTmp instanceof Iterable) {
 			@SuppressWarnings("unchecked")
 			final Iterable<Map<String, Object>> itr = (Iterable<Map<String, Object>>) objTmp;
 			for (Map<String, Object> obj : itr) {
@@ -108,9 +106,12 @@ public class FileGeneratorConfig {
 				}
 				i++;
 			}
+		} else {
+			throw new IllegalArgumentException("File lookup " + lookupGroup + ": dataSourceExpression must return Iterable");
 		}
 		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
-				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator());
+				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator(),
+				this.tableGeneratorConfig.createSelectionRandom("FileGeneratorConfig:" + lookupGroup));
 	}
 
 	private Map<String, Object> internKeyMap(Map<String, Object> map) {
@@ -126,7 +127,8 @@ public class FileGeneratorConfig {
 	public void copyData(FileGeneratorConfig original) {
 		this.values = original.values;
 		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values,
-				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator());
+				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator(),
+				this.tableGeneratorConfig.createSelectionRandom("FileGeneratorConfig:" + lookupGroup));
 	}
 
 	/**

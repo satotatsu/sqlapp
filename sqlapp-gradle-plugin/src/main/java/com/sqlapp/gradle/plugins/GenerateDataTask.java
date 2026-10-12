@@ -52,6 +52,15 @@ public abstract class GenerateDataTask extends AbstractDirectoryTask<GenerateDat
 		cons.execute(this);
 	}
 
+	@org.gradle.api.tasks.Input
+	@org.gradle.api.tasks.Optional
+	public abstract org.gradle.api.provider.Property<Long> getRandomSeed();
+
+	/** ISO local date/time exposed to generation expressions as _baseTime. */
+	@org.gradle.api.tasks.Input
+	@org.gradle.api.tasks.Optional
+	public abstract org.gradle.api.provider.Property<String> getBaseTime();
+
 	private TableOptions tableOptions;
 
 	@Internal
@@ -94,6 +103,10 @@ public abstract class GenerateDataTask extends AbstractDirectoryTask<GenerateDat
 	@Override
 	protected void beforeRun(GenerateDataInsertCommand command) {
 		super.beforeRun(command);
+		command.setRandomSeed(getRandomSeed().getOrNull());
+		if (getBaseTime().isPresent()) {
+			command.setBaseTime(java.time.LocalDateTime.parse(getBaseTime().get()));
+		}
 		if (getTableOptions() != null) {
 			command.setTableOptions(getTableOptions());
 		}

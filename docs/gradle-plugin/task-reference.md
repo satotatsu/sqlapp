@@ -304,6 +304,14 @@ tasks.register('exportCustomerData', ExportDataTask) {
 Registration alone does not add the task to `build` or make it depend on
 another sqlapp task.
 
+`GenerateDataTask` additionally accepts optional `randomSeed` (`Property<Long>`)
+and `baseTime` (`Property<String>`, ISO local date/time, for example
+`2026-01-02T03:04:00`). Both are `@Input` properties with no default value.
+`randomSeed` controls RANDOM lookup selection, including weighted selection;
+`baseTime` is exposed as `_baseTime` in generator expressions. See
+[generator validation and reproducibility](../data/generator-reproducibility.md).
+
+
 ## Safety and caching
 
 Command-backed task implementations are disabled for Gradle build caching by

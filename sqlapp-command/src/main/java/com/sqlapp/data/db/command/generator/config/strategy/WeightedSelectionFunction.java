@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.generator.config.strategy;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -30,18 +29,24 @@ import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 
-	private static final Random RANDOM = new Random();
+	private final Random random;
 
 	private final long[] cumulativeWeights;
 	private final long totalWeight;
-	private CachedEvaluator evaluator;
+	private final CachedEvaluator evaluator;
 
 	public WeightedSelectionFunction(List<Map<String, Object>> list, String weightExpression,
 			CachedEvaluator evaluator) {
+		this(list, weightExpression, evaluator, new Random());
+	}
+
+	public WeightedSelectionFunction(List<Map<String, Object>> list, String weightExpression,
+			CachedEvaluator evaluator, Random random) {
 		super(list);
+		this.random = java.util.Objects.requireNonNull(random);
 		this.evaluator = evaluator;
 		this.cumulativeWeights = new long[list.size()];
-		int sum = 0;
+		long sum = 0;
 		for (int i = 0; i < list.size(); i++) {
 			final Map<String, Object> map = list.get(i);
 			Object obj = getWeight(map, weightExpression);
@@ -51,8 +56,18 @@ public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 			} else {
 				val = Converters.getDefault().convertObject(obj, long.class);
 			}
-			sum += val;
+			if (val < 0) {
+				throw new IllegalArgumentException("Weight must be non-negative. row=" + i);
+			}
+			try {
+				sum = Math.addExact(sum, val);
+			} catch (ArithmeticException e) {
+				throw new IllegalArgumentException("Total weight exceeds long range", e);
+			}
 			cumulativeWeights[i] = sum;
+		}
+		if (sum == 0) {
+			throw new IllegalArgumentException("At least one positive weight is required");
 		}
 		this.totalWeight = sum;
 	}
@@ -67,14 +82,18 @@ public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 
 	@Override
 	public Map<String, Object> get(int i) {
-		// 0 ～ totalWeight-1
-		long r = RANDOM.nextLong(totalWeight);
-		// 1 ～ totalWeight に変換
-		long key = r + 1;
-		int index = Arrays.binarySearch(cumulativeWeights, key);
-		if (index < 0) {
-			index = -(index + 1);
+		long key = random.nextLong(totalWeight);
+		int low = 0;
+		int high = cumulativeWeights.length;
+		while (low < high) {
+			int mid = (low + high) >>> 1;
+			if (cumulativeWeights[mid] <= key) {
+				low = mid + 1;
+			} else {
+				high = mid;
+			}
 		}
+		int index = low;
 		return this.getValues().get(index);
 	}
 }

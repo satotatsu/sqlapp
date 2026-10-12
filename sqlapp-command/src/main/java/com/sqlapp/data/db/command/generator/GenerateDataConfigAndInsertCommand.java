@@ -44,6 +44,8 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 		implements QueryCommitIntervalProperty {
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
+	private Long randomSeed;
+	private java.time.LocalDateTime baseTime;
 	private boolean isCloseDataSourceInternal;
 	private int dmlBatchSize;
 	private Consumer<TableGeneratorConfig> generatorConfigConsumer = t -> {
@@ -84,6 +86,8 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 		}
 		command.setTableConfigs(map);
 		command.setDataSource(getDataSource());
+		command.setRandomSeed(randomSeed);
+		command.setBaseTime(baseTime);
 		command.setQueryCommitInterval(this.getQueryCommitInterval());
 		command.setDmlBatchSize(dmlBatchSize);
 		command.setCommitLogEnabled(this.isCommitLogEnabled());

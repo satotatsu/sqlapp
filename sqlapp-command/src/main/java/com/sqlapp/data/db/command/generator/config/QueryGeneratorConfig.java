@@ -126,7 +126,8 @@ public class QueryGeneratorConfig {
 				}
 			}
 			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
-					selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator());
+					selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator(),
+				this.tableGeneratorConfig.createSelectionRandom("QueryGeneratorConfig:" + generationGroup));
 		}
 	}
 
@@ -138,7 +139,8 @@ public class QueryGeneratorConfig {
 	public void copyData(QueryGeneratorConfig original) throws SQLException {
 		this.values = original.values;
 		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values,
-				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator());
+				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator(),
+				this.tableGeneratorConfig.createSelectionRandom("QueryGeneratorConfig:" + generationGroup));
 	}
 
 	/**

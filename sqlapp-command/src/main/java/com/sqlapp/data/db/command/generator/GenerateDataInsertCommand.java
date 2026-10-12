@@ -116,6 +116,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 	/** Virtual foreign Key definitions */
 	private File foreignKeyDefinitionDirectory = null;
 	private RowMonitor rowMonitor = new RowMonitor();
+	private Long randomSeed;
+	private LocalDateTime baseTime;
 
 	private Map<String, List<TableGeneratorConfig>> tableConfigs;
 
@@ -189,6 +191,20 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
 						+ Arrays.toString(this.getExcludeTables()));
 			}
+			// Validate selected configurations before executing generation SQL.
+			for (Table table : sorted) {
+				List<TableGeneratorConfig> configs = tableConfigs.get(table.getName());
+				if (configs != null) {
+					for (TableGeneratorConfig config : configs) {
+						if (isUseSchemaNameDirectory() && (config.getFile() == null
+								|| !CommonUtils.eqIgnoreCase(table.getSchemaName(), config.getParentDirectory().getName()))) {
+							continue;
+						}
+						config.check();
+						config.initializeTableColumnData(table);
+					}
+				}
+			}
 			connection.setAutoCommit(false);
 			for (final Table table : sorted) {
 				final List<TableGeneratorConfig> tableConfigList = tableConfigs.get(table.getName());
@@ -216,6 +232,13 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableGeneratorConfig tableConfig) throws SQLException {
+		tableConfig.setEvaluator(evaluator);
+		if (randomSeed != null) {
+			tableConfig.setRandomSeed(randomSeed);
+		}
+		if (baseTime != null) {
+			tableConfig.setBaseTime(baseTime);
+		}
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
@@ -260,6 +283,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			});
 		});
 		tableConfig.setEvaluator(evaluator);
+		tableConfig.validateLoadedData();
 		tableConfig.calculateInitialObjectValues();
 		final SqlConverter sqlConverter = getSqlConverter();
 		final List<SqlNode> insertSqlNodes;

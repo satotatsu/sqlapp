@@ -23,6 +23,7 @@ use a plugin release that contains the tasks you need.
 | [Runnable example project](example-project.md) | How the companion project is organized and which task demonstrates each workflow |
 | [Task reference](task-reference.md) | Registered names, task classes, primary inputs/outputs, database effects, and common properties |
 | [Schema, SQL and HTML](schema-sql-and-html.md) | XML export, comparison, SQL generation, documentation properties and outputs |
+| [Test-data generation](../data/test-data-generation.md) | Excel templates, generation expressions, lookups, JDBC batches, and scale planning |
 | [Custom tasks](custom-tasks-and-migrations.md) | Data export, file conversion, SQL execution and task registration |
 | [Versioned SQL migrations](versioned-migrations.md) | Migration extension, planning, concurrency, recovery, checksums and environment comparison |
 | [Normalization and legacy migration](normalization-and-legacy-migration.md) | Normalization, PL/I import, extraction contracts and hierarchy loading |
