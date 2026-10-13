@@ -318,6 +318,9 @@ sample values and runtime Java types without executing INSERT or lifecycle SQL.
 per generator configuration and must be positive in preview mode. Preview skips
 count-only scans regardless of `countRowsBeforeInsert`. StartValueSQL and used
 Query/File lookups still run; row monitors and commit callbacks do not run.
+Preview also displays advisory column diagnostics for explicit NOT NULL/null
+mismatches, known character lengths and exact DECIMAL/NUMERIC precision/scale.
+Diagnostics do not reject samples or change normal insertion.
 See [the executable preview example](../examples/generator-preview/preview.init.gradle)
 and [preview behavior and limits](../data/generator-reproducibility.md#preview-generated-values).
 

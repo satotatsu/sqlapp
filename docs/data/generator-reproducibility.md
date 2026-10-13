@@ -57,8 +57,12 @@ For each table, loaded lookup data must be nonempty and initial minimum/maximum
 bounds must be ordered before initialization SQL or INSERT is executed.
 File lookup data-source expressions must return an Iterable.
 
-Weighted selection accepts non-negative integral weights whose sum fits in a
-long. At least one weight must be positive. Zero-weight entries are never
+Weighted selection accepts finite weights between zero and `Long.MAX_VALUE`.
+Fractional parts are truncated (`1.9` becomes `1`, `0.5` becomes `0`) without
+requiring an explicit cast in expressions. Negative values (including `-0.5`),
+NaN, infinity and out-of-range values are rejected before conversion. The sum
+of the converted weights must fit in a long, and at least one converted weight
+must be positive. Zero-weight entries are never
 selected; missing/null weights retain the existing default weight of one.
 
 Existing valid settings and constructor signatures remain supported.
@@ -254,9 +258,73 @@ executed as authored, rather than sandboxed.
 
 Samples describe generated table-column values before JDBC conversion, custom
 InsertSQL transformations, row-monitor modifications, constraints, triggers or
-database-generated values. Preview reads each start row and its Iterate
-sequentially; batching-related expression context in insertion (notably the
-existing `generateValue` row-number argument) can differ. It is a value preview,
+database-generated values. `_row_number` is the zero-based position of the
+StartValueSQL row and stays the same for all its Iterate rows. `_index` is the
+zero-based overall generated input position. These expression positions are
+independent of `countRowsBeforeInsert` and batch size, and agree with preview.
+Previously, batched insertion could pass the last read position instead of the
+actual start-row position; expressions relying on that behavior now receive the
+correct position. Preview reads each start row and its Iterate sequentially. It is a value preview,
 not a guarantee of successful INSERT or an exact simulation of batched execution.
-Use a fresh generation configuration when comparing seeded preview and insertion,
-since generation advances random/previous-value state.
+Each command execution reinitializes previous/start values and lookup selection
+state. The same configuration object can be retried with a fixed seed to reproduce
+values when the configuration and input/reference data are unchanged. Custom
+stateful iterators, evaluators and functions must be reset by their owner.
+Failed previews retain samples and diagnostics collected before the failure;
+the next `run()` clears both lists, including when preview-option validation fails.
+This resets in-memory generation state only: committed database rows are retained,
+so it does not make INSERT retries or resumption safe.
+
+AutoCloseable Iterate iterators are closed after pre-counting, preview (including
+the preview limit), and INSERT processing, including the single-row Iterate path.
+If processing and closing both fail, the processing exception is retained and
+the close failure is attached as a suppressed exception. A close failure alone
+is reported as an execution failure.
+
+
+`columnMappingExpression` may return `null` to apply no column mappings, just
+like an empty Map. Generated values are retained in both preview and insertion,
+regardless of whether pre-counting is enabled.
+
+### Preview schema diagnostics
+
+Preview automatically reports advisory mismatches between the final sample
+values and the canonical Schema column definitions. Diagnostics do not change
+values, reject a sample, stop preview generation, or affect ordinary INSERT.
+They include the column, diagnostic code and explanation, together with the
+sample's table identity and zero-based start/Iterate positions.
+
+Java callers can use `getPreviewDiagnostics()` on either generator command.
+Each `GeneratorPreviewDiagnostic` references its existing sample through `row()`
+and exposes `columnName()`, `code()` and `message()`. The list is an unmodifiable
+snapshot, resets on each run, and retains diagnostics collected before a later
+evaluation failure. The existing `GeneratorPreviewRow` constructor and accessors
+are unchanged. Gradle preview displays the diagnostics automatically; no new
+property or configuration-file field is required.
+
+The initial checks are deliberately limited:
+
+- `NULL_FOR_NOT_NULL`: an explicitly present null for a NOT NULL column.
+  Missing values are not treated as explicit null. Identity, computed and array
+  columns are excluded. A default expression alone does not suppress the
+  diagnostic for explicit null; database-specific default-on-null behavior is
+  not simulated.
+- `CHARACTER_LENGTH_EXCEEDED`: String Unicode code-point count exceeds a
+  positive declared length with resolved `CharacterSemantics.Char` (including
+  inherited semantics). Byte lengths, unknown length semantics, non-String
+  conversions and database encoding are not guessed. Supplementary characters
+  count as one code point; a database using code units may reject additional
+  values that this check does not flag.
+- `NUMERIC_INTEGER_DIGITS_EXCEEDED` and `NUMERIC_SCALE_EXCEEDED`: DECIMAL/NUMERIC
+  samples exceed precision minus scale or have nonzero fractional digits beyond
+  the declared scale. Only BigDecimal, BigInteger and integral Java wrappers
+  are checked, with positive declared precision and known nonnegative scale.
+  Trailing fractional zeros are ignored. Values below one, scientific notation
+  and scale greater than precision are handled without constructing powers of
+  ten. Approximate floating-point values, numeric strings, unknown/negative
+  scale and other numeric types are not interpreted.
+
+Scale diagnostics indicate potential database rounding or truncation, not a
+prediction that INSERT will fail. Custom InsertSQL, monitors, JDBC conversion,
+triggers, constraints and vendor behavior can change the outcome. An empty
+list means no mismatch was found by these checks, rather than full validation.

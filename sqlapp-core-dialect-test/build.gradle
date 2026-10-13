@@ -102,6 +102,7 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-aurora-postgres')
+	implementation project(':sqlapp-core-edb-oracle')
 	implementation project(':sqlapp-core-alloydb')
 	implementation project(':sqlapp-core-yugabyte')
 	implementation project(':sqlapp-core-cockroach')
@@ -309,4 +310,32 @@ tasks.register('alloydbExternalTest', Test) {
 			throw new GradleException('Explicit SQLAPP_ALLOYDB_ALLOW_DESTRUCTIVE_TESTS=true is required for an authorized disposable AlloyDB database.')
 		}
 	}
+}
+
+
+def edbControlTasks = []
+['14': 'postgres:14.22', '15': 'postgres:15.17', '16': 'postgres:16.13', '17': 'postgres:17.9', '18': 'postgres:18.4'].each { engine, image ->
+    def controlTask = tasks.register("edbOraclePostgres"+engine+"Test", Test) {
+        description = 'Runs EDB dialect controls on upstream PostgreSQL '+engine+'; does not emulate EPAS.'
+        group = 'verification'
+        testClassesDirs = sourceSets.dockerTest.output.classesDirs
+        classpath = sourceSets.dockerTest.runtimeClasspath
+        useJUnitPlatform()
+        filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.edb.oracle.EdbOraclePostgresCompatibilityTest'
+        systemProperty 'sqlapp.test.edb.postgresImage', image
+        if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+            environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+        }
+        testLogging { events 'passed', 'failed', 'skipped'; exceptionFormat = 'full' }
+    }
+    if (!edbControlTasks.isEmpty()) {
+        def previousControl = edbControlTasks.last()
+        controlTask.configure { mustRunAfter previousControl }
+    }
+    edbControlTasks.add(controlTask)
+}
+tasks.register('edbOracleCompatibilityTest') {
+    description = 'Runs upstream PostgreSQL 14–18 controls for the EDB Oracle dialect; no EPAS execution.'
+    group = 'verification'
+    dependsOn edbControlTasks
 }

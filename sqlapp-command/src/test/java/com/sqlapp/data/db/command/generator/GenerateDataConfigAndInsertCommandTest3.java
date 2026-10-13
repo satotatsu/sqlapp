@@ -86,11 +86,18 @@ class GenerateDataConfigAndInsertCommandTest3 extends AbstractGeneratorCommandTe
 		test(command -> {
 			command.setPreview(true);
 			command.setPreviewLimit(2);
-			command.setGeneratorConfigConsumer(config -> config.setDataSourceExpression("iterator(3)"));
+			command.setGeneratorConfigConsumer(config -> {
+				config.setDataSourceExpression("iterator(3)");
+				config.setColumnMappingExpression("['YM': null]");
+			});
 			command.setAfter((generated, files) -> {
 				org.junit.jupiter.api.Assertions.assertTrue(generated.isPreview());
 				assertEquals(2, generated.getPreviewLimit());
 				assertEquals(2, command.getPreviewRows().size());
+				assertEquals(2, command.getPreviewDiagnostics().size());
+				assertEquals("YM", command.getPreviewDiagnostics().get(0).columnName());
+				assertEquals(GeneratorPreviewDiagnostic.Code.NULL_FOR_NOT_NULL,
+						command.getPreviewDiagnostics().get(0).code());
 				try (var connection = command.getDataSource().getConnection();
 						var statement = connection.createStatement();
 						var rows = statement.executeQuery("SELECT COUNT(*) FROM TAB_TYPE")) {

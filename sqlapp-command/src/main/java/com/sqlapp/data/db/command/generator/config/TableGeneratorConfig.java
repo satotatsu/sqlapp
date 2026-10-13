@@ -265,8 +265,14 @@ public class TableGeneratorConfig {
 		});
 	}
 
-	/** Evaluate initial values and validate bounds. */
+	/** Reset generation state, evaluate initial values and validate bounds. */
 	public synchronized void calculateInitialObjectValues() {
+		previousValues = CommonUtils.map();
+		startValues.clear();
+		minValues.clear();
+		maxValues.clear();
+		selectedRows.clear();
+		generateCount = 0;
 		int i = 1;
 		for (Map.Entry<String, ColumnGeneratorConfig> entry : columns.entrySet()) {
 			final ColumnGeneratorConfig colConfig = entry.getValue();
@@ -654,7 +660,9 @@ public class TableGeneratorConfig {
 				Object obj = iterator.next();
 				if (count == 0 && !CommonUtils.isBlank(getColumnMappingExpression())) {
 					Object ret = getEvaluator().eval(getColumnMappingExpression(), obj);
-					checkTypeCheck("Table.columnMappingExpression", getColumnMappingExpression(), ret, Map.class);
+					if (ret != null) {
+						checkTypeCheck("Table.columnMappingExpression", getColumnMappingExpression(), ret, Map.class);
+					}
 				}
 				if (knownSize != null) {
 					return knownSize;

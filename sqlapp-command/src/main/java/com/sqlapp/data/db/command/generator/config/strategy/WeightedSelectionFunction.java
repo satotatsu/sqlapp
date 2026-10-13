@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.generator.config.strategy;
 
 import java.util.List;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Random;
 
@@ -50,15 +51,7 @@ public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 		for (int i = 0; i < list.size(); i++) {
 			final Map<String, Object> map = list.get(i);
 			Object obj = getWeight(map, weightExpression);
-			long val;
-			if (obj == null) {
-				val = 1;
-			} else {
-				val = Converters.getDefault().convertObject(obj, long.class);
-			}
-			if (val < 0) {
-				throw new IllegalArgumentException("Weight must be non-negative. row=" + i);
-			}
+			long val = toWeight(obj, i, weightExpression);
 			try {
 				sum = Math.addExact(sum, val);
 			} catch (ArithmeticException e) {
@@ -70,6 +63,26 @@ public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 			throw new IllegalArgumentException("At least one positive weight is required");
 		}
 		this.totalWeight = sum;
+	}
+
+	private long toWeight(Object value, int row, String expression) {
+		if (value == null) {
+			return 1;
+		}
+		try {
+			// Convert Numbers without narrowing BigInteger or floating-point values to long first.
+			BigDecimal weight = value instanceof Number ? new BigDecimal(value.toString())
+					: Converters.getDefault().convertObject(value, BigDecimal.class);
+			if (weight == null || weight.signum() < 0
+					|| weight.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) > 0) {
+				throw new IllegalArgumentException("Weight must be finite and between 0 and Long.MAX_VALUE");
+			}
+			return weight.longValue();
+		} catch (RuntimeException e) {
+			throw new IllegalArgumentException("Invalid weight. row=" + row + ", expression=" + expression
+					+ ", value=" + value + ". Expected a finite value between 0 and Long.MAX_VALUE"
+					+ " (fractional parts are truncated)", e);
+		}
 	}
 
 	public WeightedSelectionFunction(List<Map<String, Object>> list, String weightExpression) {

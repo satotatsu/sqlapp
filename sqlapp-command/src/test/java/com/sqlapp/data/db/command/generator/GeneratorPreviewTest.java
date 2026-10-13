@@ -19,8 +19,9 @@ class GeneratorPreviewTest extends AbstractGeneratorCommandTest {
 	private static class Command extends GenerateDataInsertCommand {
 		void sample(Connection connection, TableGeneratorConfig config) throws Exception {
 			config.check();
-			applyFromFileByRow(connection, DialectResolver.getInstance().getDialect(connection), table(), config);
+			applyFromFileByRow(connection, DialectResolver.getInstance().getDialect(connection), targetTable(), config);
 		}
+		protected Table targetTable() { return table(); }
 		@Override protected void info(Object... values) { }
 	}
 
@@ -99,6 +100,92 @@ class GeneratorPreviewTest extends AbstractGeneratorCommandTest {
 	}
 
 	@Test
+	void failedRunRetainsPartialResultsAndRetryRestartsSameConfiguration() throws Exception {
+		url = "jdbc:hsqldb:mem:preview_retry_" + java.util.UUID.randomUUID() + ";shutdown=true";
+		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
+			initializeDb(connection);
+			try (var statement = connection.createStatement()) {
+				statement.execute("ALTER TABLE PREVIEW_OUTPUT ALTER COLUMN NULLABLE SET NOT NULL");
+			}
+			var config = retryConfig();
+			config.getColumns().get("GENERATED").setNextValue(
+					"_index == 2 ? missingRetryFunction() : _previous.GENERATED + 1");
+			var command = command();
+			command.setDataSource(ds); command.setCloseDataSource(false);
+			command.setIncludeSchemas("PUBLIC"); command.setIncludeTables("PREVIEW_OUTPUT");
+			command.setRandomSeed(42L);
+			command.setTableConfigs(Map.of("PREVIEW_OUTPUT", List.of(config)));
+			assertThrows(RuntimeException.class, command::run);
+			var partialRows = command.getPreviewRows();
+			var partialDiagnostics = command.getPreviewDiagnostics();
+			assertEquals(2, partialRows.size()); assertEquals(2, partialDiagnostics.size());
+			config.getColumns().get("GENERATED").setNextValue("_previous.GENERATED + 1");
+			command.run();
+			var fresh = command();
+			fresh.setRandomSeed(42L);
+			fresh.setDataSource(ds); fresh.setCloseDataSource(false);
+			fresh.setIncludeSchemas("PUBLIC"); fresh.setIncludeTables("PREVIEW_OUTPUT");
+			fresh.setTableConfigs(Map.of("PREVIEW_OUTPUT", List.of(retryConfig())));
+			fresh.run();
+			assertEquals(fresh.getPreviewRows(), command.getPreviewRows());
+			assertEquals(fresh.getPreviewDiagnostics(), command.getPreviewDiagnostics());
+			command.run();
+			assertEquals(fresh.getPreviewRows(), command.getPreviewRows());
+			assertEquals(2, partialRows.size()); assertEquals(2, partialDiagnostics.size());
+		}
+	}
+
+	@Test
+	void invalidRetryOptionsClearPreviousResults() throws Exception {
+		url = "jdbc:hsqldb:mem:preview_retry_" + java.util.UUID.randomUUID() + ";shutdown=true";
+		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
+			initializeDb(connection);
+			try (var statement = connection.createStatement()) {
+				statement.execute("ALTER TABLE PREVIEW_OUTPUT ALTER COLUMN NULLABLE SET NOT NULL");
+			}
+			var command = command();
+			command.setDataSource(ds); command.setCloseDataSource(false);
+			command.setIncludeSchemas("PUBLIC"); command.setIncludeTables("PREVIEW_OUTPUT");
+			command.setTableConfigs(Map.of("PREVIEW_OUTPUT", List.of(retryConfig())));
+			command.run(); assertFalse(command.getPreviewRows().isEmpty());
+			assertFalse(command.getPreviewDiagnostics().isEmpty());
+			command.setPreviewLimit(0);
+			assertThrows(IllegalArgumentException.class, command::run);
+			assertTrue(command.getPreviewRows().isEmpty());
+			assertTrue(command.getPreviewDiagnostics().isEmpty());
+		}
+	}
+
+	private TableGeneratorConfig retryConfig() {
+		var config = config(3, new AtomicInteger(), new AtomicInteger());
+		var file = new FileGeneratorConfig();
+		file.setLookupGroup("fileReference");
+		file.setDataSourceExpression("[['FILE_LABEL': 'a'], ['FILE_LABEL': 'b'], ['FILE_LABEL': 'c']]");
+		file.setSelectionStrategy(com.sqlapp.data.db.command.generator.config.strategy.ValueSelectStrategy.RANDOM);
+		config.addFileDefinition(file);
+		return config;
+	}
+
+	@Test
+	void nullMappingPreservesGeneratedPreviewValues() throws Exception {
+		url = "jdbc:hsqldb:mem:preview_" + java.util.UUID.randomUUID() + ";shutdown=true";
+		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
+			initializeDb(connection);
+			var emptyConfig = config(2, new AtomicInteger(), new AtomicInteger());
+			emptyConfig.setColumnMappingExpression("new java.util.HashMap()");
+			var nullConfig = config(2, new AtomicInteger(), new AtomicInteger());
+			nullConfig.setColumnMappingExpression("null");
+			var emptyCommand = command();
+			emptyCommand.sample(connection, emptyConfig);
+			var nullCommand = command();
+			nullCommand.sample(connection, nullConfig);
+			assertEquals(4, nullCommand.getPreviewRows().size());
+			assertEquals(emptyCommand.getPreviewRows().stream().map(GeneratorPreviewRow::values).toList(),
+					nullCommand.getPreviewRows().stream().map(GeneratorPreviewRow::values).toList());
+		}
+	}
+
+	@Test
 	void previewsBoundedMappedFormattedLookupValuesAndTypesWithoutWrites() throws Exception {
 		url = "jdbc:hsqldb:mem:preview_" + java.util.UUID.randomUUID() + ";shutdown=true";
 		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
@@ -131,13 +218,19 @@ class GeneratorPreviewTest extends AbstractGeneratorCommandTest {
 		url = "jdbc:hsqldb:mem:preview_" + java.util.UUID.randomUUID() + ";shutdown=true";
 		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
 			initializeDb(connection);
+			try (var statement = connection.createStatement()) {
+				statement.execute("ALTER TABLE PREVIEW_OUTPUT ALTER COLUMN NULLABLE SET NOT NULL");
+			}
 			var command = command(); command.setDataSource(ds); command.setCloseDataSource(false);
 			command.setIncludeSchemas("PUBLIC"); command.setIncludeTables("PREVIEW_OUTPUT");
 			command.setTableConfigs(Map.of("PREVIEW_OUTPUT", List.of(config(100, new AtomicInteger(), new AtomicInteger()))));
 			assertEquals(10, command.getPreviewLimit()); command.run();
 			var first = command.getPreviewRows(); assertEquals(10, first.size());
+			var firstDiagnostics = command.getPreviewDiagnostics();
+			assertEquals(10, firstDiagnostics.size());
 			command.setTableConfigs(Map.of("PREVIEW_OUTPUT", List.of(config(0, new AtomicInteger(), new AtomicInteger()))));
 			command.run(); assertTrue(command.getPreviewRows().isEmpty()); assertEquals(10, first.size());
+			assertTrue(command.getPreviewDiagnostics().isEmpty()); assertEquals(10, firstDiagnostics.size());
 		}
 	}
 
@@ -159,6 +252,32 @@ class GeneratorPreviewTest extends AbstractGeneratorCommandTest {
 			command.setTableConfigs(Map.of("PREVIEW_OUTPUT", List.of(emptyStart)));
 			command.run(); assertTrue(command.getPreviewRows().isEmpty());
 			assertEquals(0, reads.get()); assertEquals(0, closes.get());
+		}
+	}
+
+	@Test
+	void diagnosticsAreAdvisoryAndUseFinalMappedFormattedValues() throws Exception {
+		url = "jdbc:hsqldb:mem:preview_" + java.util.UUID.randomUUID() + ";shutdown=true";
+		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
+			initializeDb(connection);
+			var command = new Command() {
+				@Override protected Table targetTable() {
+					var table = table();
+					table.getColumns().get("NULLABLE").setNotNull(true);
+					table.getColumns().get("GENERATED").setLength(3).setCharacterSemantics(com.sqlapp.data.schemas.CharacterSemantics.Char);
+					table.getColumns().get("ID").setDataType(DataType.DECIMAL).setLength(2).setScale(0);
+					return table;
+				}
+			};
+			command.setPreview(true); command.setPreviewLimit(2);
+			command.sample(connection, config(2, new AtomicInteger(), new AtomicInteger()));
+			assertEquals(2, command.getPreviewRows().size());
+			assertEquals(6, command.getPreviewDiagnostics().size());
+			assertTrue(command.getPreviewDiagnostics().stream().anyMatch(d -> d.columnName().equals("ID")
+					&& d.code() == GeneratorPreviewDiagnostic.Code.NUMERIC_INTEGER_DIGITS_EXCEEDED));
+			assertTrue(command.getPreviewDiagnostics().stream().anyMatch(d -> d.columnName().equals("GENERATED")
+					&& d.code() == GeneratorPreviewDiagnostic.Code.CHARACTER_LENGTH_EXCEEDED));
+			assertThrows(UnsupportedOperationException.class, () -> command.getPreviewDiagnostics().clear());
 		}
 	}
 

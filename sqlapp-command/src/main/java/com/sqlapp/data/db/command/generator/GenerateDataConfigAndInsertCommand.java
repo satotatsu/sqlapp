@@ -49,6 +49,8 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 	private int previewLimit = 10;
 	@Setter(lombok.AccessLevel.NONE)
 	private List<GeneratorPreviewRow> previewRows = List.of();
+	@Setter(lombok.AccessLevel.NONE)
+	private List<GeneratorPreviewDiagnostic> previewDiagnostics = List.of();
 	private Long randomSeed;
 	private java.time.LocalDateTime baseTime;
 	private boolean isCloseDataSourceInternal;
@@ -72,6 +74,7 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 	@Override
 	protected void initialize() {
 		previewRows = List.of();
+		previewDiagnostics = List.of();
 		if (preview && previewLimit <= 0) {
 			throw new IllegalArgumentException("previewLimit must be greater than zero");
 		}
@@ -108,6 +111,7 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 			command.run();
 		} finally {
 			previewRows = command.getPreviewRows();
+			previewDiagnostics = command.getPreviewDiagnostics();
 		}
 		after.accept(command, files);
 		this.setCloseDataSource(isCloseDataSourceInternal);

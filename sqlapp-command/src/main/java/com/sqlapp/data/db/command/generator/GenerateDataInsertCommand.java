@@ -125,6 +125,13 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 	@Getter(lombok.AccessLevel.NONE)
 	@Setter(lombok.AccessLevel.NONE)
 	private final List<GeneratorPreviewRow> previewRows = CommonUtils.list();
+	@Getter(lombok.AccessLevel.NONE)
+	@Setter(lombok.AccessLevel.NONE)
+	private final List<GeneratorPreviewDiagnostic> previewDiagnostics = CommonUtils.list();
+
+	public List<GeneratorPreviewDiagnostic> getPreviewDiagnostics() {
+		return List.copyOf(previewDiagnostics);
+	}
 
 	public List<GeneratorPreviewRow> getPreviewRows() {
 		return List.copyOf(previewRows);
@@ -146,8 +153,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 
 	@Override
 	protected void doRun() {
-		validatePreviewOptions();
 		previewRows.clear();
+		previewDiagnostics.clear();
+		validatePreviewOptions();
 		if (this.evaluator == null) {
 			this.evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 		} else {
@@ -461,7 +469,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 							List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
 							for (int j = 0; j < resultSetValueMapList.size(); j++) {
 								final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
-								final long diagnosticStartRow = readRowCount[0] - resultSetValueMapList.size() + 1 + j;
+								final long startRowIndex = readRowCount[0] - resultSetValueMapList.size() + 1 + j;
 								final IndexedConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new IndexedConvertIterable<>(
 										() -> {
 											tableConfig.setSqlStartValue(currentResultSetValueMap);
@@ -470,17 +478,19 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 											return dataSourceIterable;
 										}, (i, map) -> {
 											try {
-												final GeneratedRow row = generateRow(tableConfig, map, readRowCount[0], generatedCount[0]);
+												final GeneratedRow row = generateRow(tableConfig, map, startRowIndex, generatedCount[0]);
 												final Map<String, Object> covertedColumnMapping = row.mapping();
 												final Map<String, Object> generatedValue = row.values();
 												getRowMonitor().handle(tableConfig, currentResultSetValueMap,
 														readRowCount[0], i, generatedCount[0], updatedRowCount[0],
 														covertedColumnMapping, generatedValue, startTable, table,
 														insertSqlNodes);
-												generatedValue.putAll(covertedColumnMapping);
+												if (covertedColumnMapping != null) {
+													generatedValue.putAll(covertedColumnMapping);
+												}
 												return generatedValue;
 											} catch (RuntimeException e) {
-												throw rowFailure(table, diagnosticStartRow, i, generatedCount[0], e);
+												throw rowFailure(table, startRowIndex, i, generatedCount[0], e);
 											}
 										});
 								iterableList.add(countConvertIterable);
@@ -497,7 +507,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
 					for (int j = 0; j < resultSetValueMapList.size(); j++) {
 						final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
-						final long diagnosticStartRow = readRowCount[0] - resultSetValueMapList.size() + j;
+						final long startRowIndex = readRowCount[0] - resultSetValueMapList.size() + j;
 						final IndexedConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new IndexedConvertIterable<>(
 								() -> {
 									tableConfig.setSqlStartValue(currentResultSetValueMap);
@@ -506,16 +516,18 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 									return dataSourceIterable;
 								}, (i, map) -> {
 									try {
-										final GeneratedRow row = generateRow(tableConfig, map, readRowCount[0], generatedCount[0]);
+										final GeneratedRow row = generateRow(tableConfig, map, startRowIndex, generatedCount[0]);
 										final Map<String, Object> covertedColumnMapping = row.mapping();
 										final Map<String, Object> generatedValue = row.values();
 										getRowMonitor().handle(tableConfig, currentResultSetValueMap, readRowCount[0], i,
 												generatedCount[0], updatedRowCount[0], covertedColumnMapping,
 												generatedValue, startTable, table, insertSqlNodes);
-										generatedValue.putAll(covertedColumnMapping);
+										if (covertedColumnMapping != null) {
+											generatedValue.putAll(covertedColumnMapping);
+										}
 										return generatedValue;
 									} catch (RuntimeException e) {
-										throw rowFailure(table, diagnosticStartRow, i, generatedCount[0], e);
+										throw rowFailure(table, startRowIndex, i, generatedCount[0], e);
 									}
 								});
 						iterableList.add(countConvertIterable);
@@ -566,9 +578,12 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						resultSetValueMap.put(column.getName(), obj);
 					}
 					final Map<String, Object> generatedValue;
+					java.util.Iterator<Map<String, Object>> iterator = null;
+					Throwable failure = null;
 					try {
 						tableConfig.setSqlStartValue(resultSetValueMap);
-						final Map<String, Object> map = CommonUtils.first(tableConfig.getDataSource());
+						iterator = tableConfig.getDataSource().iterator();
+						final Map<String, Object> map = CommonUtils.first(iterator);
 						final GeneratedRow row = generateRow(tableConfig, map, readRowCount[0], readRowCount[0]);
 						final Map<String, Object> covertedColumnMapping = row.mapping();
 						generatedValue = row.values();
@@ -578,7 +593,13 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 							generatedValue.putAll(covertedColumnMapping);
 						}
 					} catch (RuntimeException e) {
+						failure = e;
 						throw rowFailure(table, readRowCount[0], 0, generatedCount[0], e);
+					} catch (Error e) {
+						failure = e;
+						throw e;
+					} finally {
+						com.sqlapp.util.iterator.IteratorCloseUtils.close(failure, iterator);
 					}
 					valueList.add(generatedValue);
 					if (valueList.size() >= batchSize) {
@@ -650,6 +671,13 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 									table.getSchemaName(), table.getName(), config.getFile(), startIndex, iterateIndex,
 									columnValues);
 							previewRows.add(sample);
+							for (GeneratorPreviewDiagnostic diagnostic : GeneratorPreviewValidator.validate(table, sample)) {
+								previewDiagnostics.add(diagnostic);
+								info("Preview diagnostic table=", table.getSchemaName(), ".", table.getName(),
+										", startRowIndex=", startIndex, ", iterateIndex=", iterateIndex,
+										", column=", diagnostic.columnName(), ", code=", diagnostic.code(),
+										", message=", diagnostic.message());
+							}
 							info("Preview table=", table.getSchemaName(), ".", table.getName(),
 									", startRowIndex=", startIndex, ", iterateIndex=", iterateIndex,
 									", values=", sample.values(), ", types=", sample.valueTypes());

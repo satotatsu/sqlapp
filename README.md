@@ -258,6 +258,9 @@ notes before production use.
 For AlloyDB / AlloyDB Omni 15–17, see the [usage and verification scope](sqlapp-core-alloydb/README.md).
 Managed Google Cloud AlloyDB remains unverified.
 
+For EDB Postgres Advanced Server 14–18 (Oracle-compatible product; experimental),
+see [EDB Oracle dialect scope and validation](sqlapp-core-edb-oracle/README.md).
+
 For Aurora PostgreSQL 14–17 (experimental; Aurora execution unverified), see the
 [usage and verification boundary](sqlapp-core-aurora-postgres/README.md).
 
