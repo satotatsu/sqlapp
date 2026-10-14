@@ -13,14 +13,14 @@ import com.sqlapp.data.db.sql.SqlType;
 
 class PostgresSchemaObjectsTest {
 	@Test
-	void refusesSilentAlterAndStaleSchemaNames() throws Exception {
+	void createsAddedObjectsDuringAlterAndRejectsStaleSchemaNames() throws Exception {
 		var original = new Schema("s");
 		var target = original.clone();
 		var object = new PostgresSchemaObject(Kind.COLLATION,"s","c",null,
 				List.of("CREATE COLLATION s.c (locale='C')"),"DROP COLLATION s.c",Map.of());
 		PostgresSchemaObjects.set(target,List.of(object));
 		SqlFactory<Schema> factory=DialectHolder.postgreSQL180.createSqlFactoryRegistry().getSqlFactory(original,SqlType.ALTER);
-		assertThrows(IllegalArgumentException.class,()->factory.createDiffSql(original.diff(target)));
+		assertTrue(factory.createDiffSql(original.diff(target)).stream().anyMatch(sql->sql.getSqlText().equals(object.definition().getFirst())));
 		assertEquals(List.of("DROP COLLATION s.c"),PostgresSchemaObjects.dropSql(target));
 		target.setName("renamed");
 		assertThrows(IllegalArgumentException.class,()->PostgresSchemaObjects.createSql(target));

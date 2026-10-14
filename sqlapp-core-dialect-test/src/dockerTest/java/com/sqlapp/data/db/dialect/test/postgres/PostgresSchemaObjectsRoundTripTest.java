@@ -52,6 +52,9 @@ class PostgresSchemaObjectsRoundTripTest {
 			statement.execute("GRANT SELECT ON TABLE \"Object Data\".\"Remote Items\" TO PUBLIC");
 			statement.execute("GRANT UPDATE (label) ON TABLE \"Object Data\".\"Remote Items\" TO PUBLIC");
 			statement.execute("CREATE FOREIGN TABLE \"Object Data\".\"Child Items\" (extra text) INHERITS (\"Object Data\".items) SERVER \"Remote Server\"");
+			statement.execute("CREATE TABLE \"Object Data\".partitioned (id integer, label text) PARTITION BY RANGE (id)");
+			statement.execute("CREATE FOREIGN TABLE \"Object Data\".foreign_partition PARTITION OF \"Object Data\".partitioned FOR VALUES FROM (0) TO (10) SERVER \"Remote Server\"");
+			statement.execute("ALTER FOREIGN TABLE \"Object Data\".foreign_partition ALTER COLUMN label OPTIONS (ADD column_name 'old_label')");
 			statement.execute("CREATE VIEW \"Object Data\".\"Remote View\" AS SELECT id,label FROM \"Object Data\".\"Remote Items\"");
 			statement.execute("CREATE POLICY \"Allow Items\" ON \"Object Data\".items AS RESTRICTIVE FOR ALL TO PUBLIC USING (id>0) WITH CHECK (amount>0)");
 			statement.execute("ALTER TABLE \"Object Data\".items ENABLE ROW LEVEL SECURITY");
@@ -134,6 +137,98 @@ class PostgresSchemaObjectsRoundTripTest {
 			for(var operation:plan) statement.execute(operation.getSqlText());
 			assertEquals(PostgresSchemaObjects.get(schema),reader.readSchema(connection,schema.getName()));
 			assertEquals(PostgresSchemaObjects.get(catalog),reader.readCatalog(connection));
+			verifyAlter(connection,reader,dialect);
+			verifyMixedAlter(connection,reader,dialect);
 		} finally { ReusableTestcontainers.stop(postgres); }
+	}
+
+	private void verifyAlter(Connection connection,PostgresSchemaObjectReader reader,com.sqlapp.data.db.dialect.Dialect dialect) throws Exception {
+		var original=snapshot(connection,reader);
+		try(var statement=connection.createStatement()) {
+			for(String sql:List.of(
+					"COMMENT ON EXTENSION hstore IS 'updated extension'",
+					"COMMENT ON COLLATION \"Object Data\".\"Sort C\" IS 'updated collation'",
+					"ALTER FOREIGN DATA WRAPPER \"Custom Wrapper\" OPTIONS (ADD custom 'value, WITH (quoted)')",
+					"ALTER SERVER \"Remote Server\" VERSION '2' OPTIONS (SET host 'changed.invalid', ADD port '9999')",
+					"COMMENT ON SERVER \"Remote Server\" IS NULL",
+					"ALTER USER MAPPING FOR CURRENT_USER SERVER \"Remote Server\" OPTIONS (SET user 'changed')",
+					"ALTER FOREIGN TABLE \"Object Data\".\"Remote Items\" ALTER COLUMN amount TYPE bigint",
+					"ALTER FOREIGN TABLE \"Object Data\".\"Remote Items\" ALTER COLUMN amount SET DEFAULT 9",
+					"ALTER FOREIGN TABLE \"Object Data\".\"Remote Items\" ALTER COLUMN amount SET NOT NULL",
+					"ALTER FOREIGN TABLE \"Object Data\".\"Remote Items\" ALTER COLUMN id OPTIONS (SET column_name 'changed_id')",
+					"ALTER FOREIGN TABLE \"Object Data\".\"Remote Items\" ADD COLUMN extra text DEFAULT 'comma, quote''s'",
+					"ALTER FOREIGN TABLE \"Object Data\".\"Remote Items\" OPTIONS (SET table_name 'changed_items')",
+					"ALTER FOREIGN TABLE \"Object Data\".foreign_partition ALTER COLUMN label OPTIONS (SET column_name 'new_label')",
+					"COMMENT ON COLUMN \"Object Data\".\"Remote Items\".label IS NULL",
+					"REVOKE UPDATE (label) ON TABLE \"Object Data\".\"Remote Items\" FROM PUBLIC",
+					"GRANT INSERT (amount) ON TABLE \"Object Data\".\"Remote Items\" TO PUBLIC",
+					"DROP POLICY \"Allow Items\" ON \"Object Data\".items",
+					"CREATE POLICY \"Allow Items\" ON \"Object Data\".items FOR SELECT USING (id>3)",
+					"CREATE POLICY \"Extra Policy\" ON \"Object Data\".items FOR INSERT WITH CHECK (amount>5)",
+					"ALTER TABLE \"Object Data\".items NO FORCE ROW LEVEL SECURITY",
+					"ALTER TABLE \"Object Data\".items DISABLE ROW LEVEL SECURITY",
+					"ALTER STATISTICS \"Object Data\".\"Item Stats\" SET STATISTICS 321",
+					"ALTER PUBLICATION \"Item Publication\" SET (publish='insert')",
+					"CREATE PUBLICATION \"Extra Publication\" WITH (publish='insert')",
+					"ALTER SUBSCRIPTION \"Offline Sub\" SET PUBLICATION \"Extra Publication\" WITH (refresh=false)",
+					"ALTER SUBSCRIPTION \"Offline Sub\" SET (synchronous_commit='local',binary=true)")) statement.execute(sql);
+			if(dialect.compareTo(com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL180)>=0) {
+				statement.execute("ALTER PUBLICATION \"Filtered Publication\" DROP TABLE ONLY \"Object Data\".items");
+				statement.execute("ALTER PUBLICATION \"Schema Publication\" SET TABLE ONLY \"Object Data\".items");
+			}
+		}
+		var target=snapshot(connection,reader);
+		var registry=dialect.createSqlFactoryRegistry();
+		var factory=(com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterCatalogFactory)registry.getSqlFactory(original,com.sqlapp.data.db.sql.SqlType.ALTER);
+		for(var pair:List.of(List.of(target,original),List.of(original,target))) {
+			var plan=factory.createDiffSql(pair.get(0).diff(pair.get(1)));
+			assertFalse(plan.isEmpty());
+			assertFalse(plan.stream().anyMatch(o->o.getSqlText().contains("DROP FOREIGN TABLE")));
+			try(var statement=connection.createStatement()) {
+				for(var operation:plan) {
+					try { statement.execute(operation.getSqlText()); }
+					catch(java.sql.SQLException exception) { throw new AssertionError(operation.getSqlText(),exception); }
+				}
+			}
+			var actual=snapshot(connection,reader);
+			assertEquals(PostgresSchemaObjects.get(pair.get(1)),PostgresSchemaObjects.get(actual));
+			assertEquals(PostgresSchemaObjects.get(pair.get(1).getSchemas().getFirst()),PostgresSchemaObjects.get(actual.getSchemas().getFirst()));
+			assertTrue(factory.createDiffSql(pair.get(1).diff(actual)).isEmpty());
+		}
+	}
+	private Catalog snapshot(Connection connection,PostgresSchemaObjectReader reader) throws Exception {
+		var catalog=new Catalog(connection.getCatalog());
+		var schema=new Schema("Object Data");
+		PostgresSchemaObjects.set(catalog,reader.readCatalog(connection));
+		PostgresSchemaObjects.set(schema,reader.readSchema(connection,schema.getName()));
+		catalog.getSchemas().add(schema);
+		return catalog;
+	}
+	private void verifyMixedAlter(Connection connection,PostgresSchemaObjectReader reader,com.sqlapp.data.db.dialect.Dialect dialect) throws Exception {
+		var original=snapshot(connection,reader); var target=original.clone();
+		var schema=new Schema("New Schema");
+		var table=new com.sqlapp.data.schemas.Table("base");
+		table.getColumns().add("id",c->c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		schema.getTables().add(table);
+		var view=new com.sqlapp.data.schemas.View("foreign_view");
+		view.setStatement("SELECT id FROM \"New Schema\".remote");
+		schema.getViews().add(view);
+		PostgresSchemaObjects.set(schema,List.of(
+				new PostgresSchemaObject(Kind.COLLATION,schema.getName(),"sort",null,List.of("CREATE COLLATION \"New Schema\".sort (locale='C')"),"DROP COLLATION \"New Schema\".sort",Map.of()),
+				new PostgresSchemaObject(Kind.FOREIGN_TABLE,schema.getName(),"remote",null,List.of("CREATE FOREIGN TABLE \"New Schema\".remote (label text COLLATE \"New Schema\".sort) INHERITS (\"New Schema\".base) SERVER \"Remote Server\""),"DROP FOREIGN TABLE \"New Schema\".remote",Map.of())));
+		target.getSchemas().add(schema);
+		var registry=dialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+		var factory=registry.getSqlFactory(original,com.sqlapp.data.db.sql.SqlType.ALTER);
+		for(var pair:List.of(List.of(original,target),List.of(target,original))) {
+			try(var statement=connection.createStatement()) {
+				for(var operation:factory.createDiffSql(pair.get(0).diff(pair.get(1)))) {
+					try { statement.execute(operation.getSqlText()); }
+					catch(java.sql.SQLException exception) { throw new AssertionError(operation.getSqlText(),exception); }
+				}
+			}
+			try(var statement=connection.createStatement(); var rs=statement.executeQuery("SELECT to_regclass('\"New Schema\".foreign_view') IS NOT NULL")) {
+				assertTrue(rs.next()); assertEquals(pair.get(1)==target,rs.getBoolean(1));
+			}
+		}
 	}
 }

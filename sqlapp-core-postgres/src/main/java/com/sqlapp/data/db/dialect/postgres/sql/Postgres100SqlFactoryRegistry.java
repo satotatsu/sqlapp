@@ -50,5 +50,6 @@ public class Postgres100SqlFactoryRegistry extends Postgres96SqlFactoryRegistry 
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Sequence.class, SqlType.CREATE, Postgres100CreateSequenceFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Table.class, SqlType.CREATE, Postgres100CreateTableFactory.class);
 	}
 }

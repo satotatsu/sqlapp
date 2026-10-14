@@ -20,6 +20,7 @@ class PostgresUnloggedPartitionTest {
 			SqlFactory<Table> factory = registry.getSqlFactory(table, SqlType.CREATE);
 			assertTrue(factory.createSql(table).get(0).getSqlText().contains("UNLOGGED"));
 			table.setPartitioning(new Partitioning().setPartitioningType(PartitioningType.Range));
+			table.getPartitioning().getPartitioningColumns().add("id");
 			assertThrows(IllegalArgumentException.class, () -> factory.createSql(table));
 			assertTrue(table.isUnlogged());
 			table.setUnlogged(false);

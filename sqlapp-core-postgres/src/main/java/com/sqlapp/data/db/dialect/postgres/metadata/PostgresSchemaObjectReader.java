@@ -102,7 +102,7 @@ public class PostgresSchemaObjectReader {
 				 CASE WHEN c.relrowsecurity THEN 'ENABLE' ELSE 'DISABLE' END) || '; ' ||
 				 format('ALTER TABLE %I.%I %s FORCE ROW LEVEL SECURITY', n.nspname,c.relname,
 				 CASE WHEN c.relforcerowsecurity THEN '' ELSE 'NO' END) ddl,
-				 format('ALTER TABLE %I.%I DISABLE ROW LEVEL SECURITY',n.nspname,c.relname) drop_sql,
+				 format('ALTER TABLE %I.%I DISABLE ROW LEVEL SECURITY; ALTER TABLE %I.%I NO FORCE ROW LEVEL SECURITY',n.nspname,c.relname,n.nspname,c.relname) drop_sql,
 				 NULL::text AS owner, NULL::text remarks
 				 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
 				 WHERE n.nspname=? AND (c.relrowsecurity OR c.relforcerowsecurity)

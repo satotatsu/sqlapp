@@ -75,6 +75,7 @@ public class Postgres100TableReader extends Postgres93TableReader {
 		String partitionExpression = getString(rs, "partition_expression");
 		String partitionStrategyColumn = getString(rs, "partition_strategy_column");
 		if (partStrategy != null) {
+			table.getSpecifics().put("postgres.partitionBy", partitionStrategyColumn);
 			table.toPartitioning();
 			table.getPartitioning().setPartitioningType(partStrategy);
 			Matcher matcher = PARTITION_COLUMN_DEF.matcher(partitionStrategyColumn);
