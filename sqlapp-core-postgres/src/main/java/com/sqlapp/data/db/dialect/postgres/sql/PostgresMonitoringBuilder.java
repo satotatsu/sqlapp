@@ -8,8 +8,8 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 
 /**
  * PostgreSQL 18 monitoring SELECT statements. Privileges, extension versions,
- * preload settings and NUMA build support are checked by the server at execution.
- * No query is executed by this builder.
+ * preload settings and NUMA build support are checked by the server at
+ * execution. No query is executed by this builder.
  */
 public class PostgresMonitoringBuilder {
 	private final Dialect dialect;
@@ -30,7 +30,10 @@ public class PostgresMonitoringBuilder {
 		return select("pg_catalog.pg_stat_get_backend_wal(" + processId(processId) + ")");
 	}
 
-	/** Explicitly resets the selected backend's counters; requires EXECUTE privilege. */
+	/**
+	 * Explicitly resets the selected backend's counters; requires EXECUTE
+	 * privilege.
+	 */
 	public String resetBackendStats(int processId) {
 		checkVersion();
 		return "SELECT pg_catalog.pg_stat_reset_backend_stats(" + processId(processId) + ")";
@@ -41,7 +44,10 @@ public class PostgresMonitoringBuilder {
 		return statementStatistics(null);
 	}
 
-	/** @param extensionSchema optional schema in which pg_stat_statements is installed */
+	/**
+	 * @param extensionSchema optional schema in which pg_stat_statements is
+	 *                        installed
+	 */
 	public String statementStatistics(String extensionSchema) {
 		checkVersion();
 		String name = "pg_stat_statements";

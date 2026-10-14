@@ -6,7 +6,10 @@ import java.util.Objects;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 
-/** PostgreSQL 18 pg_logicalinspect SQL; execution requires the extension and server-file privileges. */
+/**
+ * PostgreSQL 18 pg_logicalinspect SQL; execution requires the extension and
+ * server-file privileges.
+ */
 public class PostgresLogicalInspectBuilder {
 	private final Dialect dialect;
 

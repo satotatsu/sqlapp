@@ -14,7 +14,8 @@ class PostgresUnloggedPartitionTest {
 	@Test
 	void rejectsUnloggedParentsWithoutChangingOrdinaryTables() {
 		for (int major : new int[] { 10, 14, 17, 18 }) {
-			var registry = DialectResolver.getInstance().getDialect("postgres", major, 0, null).createSqlFactoryRegistry();
+			var registry = DialectResolver.getInstance().getDialect("postgres", major, 0, null)
+					.createSqlFactoryRegistry();
 			Table table = new Table("events").setUnlogged(true);
 			table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 			SqlFactory<Table> factory = registry.getSqlFactory(table, SqlType.CREATE);

@@ -111,7 +111,8 @@ public class PostgresSchemaReader extends SchemaReader {
 			com.sqlapp.data.db.dialect.postgres.PostgresSchemaObjects.set(schema,
 					new PostgresSchemaObjectReader(getDialect()).readSchema(connection, schema.getName()));
 		} catch (SQLException exception) {
-			throw new IllegalStateException("Failed to read PostgreSQL objects in schema " + schema.getName(), exception);
+			throw new IllegalStateException("Failed to read PostgreSQL objects in schema " + schema.getName(),
+					exception);
 		}
 	}
 

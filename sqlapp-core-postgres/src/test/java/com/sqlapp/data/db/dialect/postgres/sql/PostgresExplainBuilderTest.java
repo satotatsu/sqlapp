@@ -23,6 +23,7 @@ class PostgresExplainBuilderTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> new PostgresExplainBuilder(DialectHolder.postgreSQL170).rangeTable(false));
 	}
+
 	@Test
 	void testExplainAnalyzeWithModernOptions() {
 		assertEquals(

@@ -13,8 +13,8 @@ import java.util.Objects;
 public record PostgresSchemaObject(Kind kind, String schemaName, String name, String parentName,
 		List<String> definition, String dropDefinition, Map<String, String> attributes) {
 	public enum Kind {
-		EXTENSION, COLLATION, FOREIGN_DATA_WRAPPER, SERVER, USER_MAPPING, FOREIGN_TABLE,
-		POLICY, ROW_SECURITY, STATISTICS, PUBLICATION, SUBSCRIPTION
+		EXTENSION, COLLATION, FOREIGN_DATA_WRAPPER, SERVER, USER_MAPPING, FOREIGN_TABLE, POLICY, ROW_SECURITY,
+		STATISTICS, PUBLICATION, SUBSCRIPTION
 	}
 
 	public PostgresSchemaObject {
@@ -22,14 +22,16 @@ public record PostgresSchemaObject(Kind kind, String schemaName, String name, St
 		if (name == null || name.isEmpty() || name.indexOf('\0') >= 0) {
 			throw new IllegalArgumentException("Object name must not be empty or contain NUL.");
 		}
-		if ((schemaName != null && schemaName.indexOf('\0') >= 0) || (parentName != null && parentName.indexOf('\0') >= 0)) {
+		if ((schemaName != null && schemaName.indexOf('\0') >= 0)
+				|| (parentName != null && parentName.indexOf('\0') >= 0)) {
 			throw new IllegalArgumentException("Schema and parent identifiers must not contain NUL.");
 		}
 		if ((kind == Kind.POLICY || kind == Kind.USER_MAPPING) && (parentName == null || parentName.isEmpty())) {
 			throw new IllegalArgumentException("Containing table/server identity is required for " + kind);
 		}
 		definition = List.copyOf(definition);
-		if (definition.isEmpty() || definition.stream().anyMatch(sql -> sql == null || sql.isBlank() || sql.indexOf('\0') >= 0)) {
+		if (definition.isEmpty()
+				|| definition.stream().anyMatch(sql -> sql == null || sql.isBlank() || sql.indexOf('\0') >= 0)) {
 			throw new IllegalArgumentException("Complete object definition is required: " + name);
 		}
 		if (dropDefinition == null || dropDefinition.isBlank()) {
@@ -40,7 +42,7 @@ public record PostgresSchemaObject(Kind kind, String schemaName, String name, St
 
 	/** Stable JSON identity, preserving case and avoiding delimiter collisions. */
 	public String id() {
-		return new com.sqlapp.util.JsonConverter().toJsonString(List.of(kind.name(),
-				schemaName == null ? "" : schemaName, name, parentName == null ? "" : parentName));
+		return new com.sqlapp.util.JsonConverter().toJsonString(
+				List.of(kind.name(), schemaName == null ? "" : schemaName, name, parentName == null ? "" : parentName));
 	}
 }

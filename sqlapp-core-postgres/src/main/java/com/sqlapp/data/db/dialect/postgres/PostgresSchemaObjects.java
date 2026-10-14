@@ -17,9 +17,12 @@ import com.sqlapp.util.JsonConverter;
 public final class PostgresSchemaObjects {
 	public static final String SPECIFICS_KEY = "postgres.schemaObjects.v1";
 	public static final String CONNECTION_TOKEN = "__SQLAPP_SUBSCRIPTION_CONNECTION__";
-	private PostgresSchemaObjects() { }
 
-	public record Manifest(int format, List<PostgresSchemaObject> objects) { }
+	private PostgresSchemaObjects() {
+	}
+
+	public record Manifest(int format, List<PostgresSchemaObject> objects) {
+	}
 
 	public static List<PostgresSchemaObject> get(SpecificsProperty<?> owner) {
 		String json = owner.getSpecifics().get(SPECIFICS_KEY);
@@ -43,7 +46,8 @@ public final class PostgresSchemaObjects {
 		if (objects.isEmpty()) {
 			owner.getSpecifics().remove(SPECIFICS_KEY);
 		} else {
-			owner.getSpecifics().put(SPECIFICS_KEY, new JsonConverter().toJsonString(new Manifest(1, List.copyOf(objects))));
+			owner.getSpecifics().put(SPECIFICS_KEY,
+					new JsonConverter().toJsonString(new Manifest(1, List.copyOf(objects))));
 		}
 	}
 
@@ -64,18 +68,20 @@ public final class PostgresSchemaObjects {
 			};
 			if (owner instanceof com.sqlapp.data.schemas.Schema schema) {
 				if (!schemaScoped || !java.util.Objects.equals(schema.getName(), object.schemaName())) {
-					throw new IllegalArgumentException("Object " + object.id() + " does not belong in schema " + schema.getName());
+					throw new IllegalArgumentException(
+							"Object " + object.id() + " does not belong in schema " + schema.getName());
 				}
 			} else if (!(owner instanceof com.sqlapp.data.schemas.Catalog) || schemaScoped) {
-				throw new IllegalArgumentException("Object " + object.id() + " requires its correct Schema or Catalog owner.");
+				throw new IllegalArgumentException(
+						"Object " + object.id() + " requires its correct Schema or Catalog owner.");
 			}
 		}
 	}
 
 	/**
 	 * Returns complete CREATE statements, failing before returning any SQL when a
-	 * subscription connection is missing. Overrides are keyed by object id and
-	 * are never written back to the Schema model. Subscriptions remain disconnected.
+	 * subscription connection is missing. Overrides are keyed by object id and are
+	 * never written back to the Schema model. Subscriptions remain disconnected.
 	 */
 	public static List<String> createSql(SpecificsProperty<?> owner, Map<String, String> connections) {
 		var result = new ArrayList<String>();
@@ -89,14 +95,20 @@ public final class PostgresSchemaObjects {
 		return createSql(owner, Map.of());
 	}
 
-	/** Explicit DROP definitions, in reverse stored creation order; no CASCADE is added. */
+	/**
+	 * Explicit DROP definitions, in reverse stored creation order; no CASCADE is
+	 * added.
+	 */
 	public static List<String> dropSql(SpecificsProperty<?> owner) {
 		var objects = new ArrayList<>(get(owner));
 		java.util.Collections.reverse(objects);
 		return objects.stream().map(PostgresSchemaObject::dropDefinition).toList();
 	}
 
-	/** Resolves external connection/secret values without modifying stored definitions. */
+	/**
+	 * Resolves external connection/secret values without modifying stored
+	 * definitions.
+	 */
 	public static List<String> createSql(PostgresSchemaObject object, Map<String, String> connections) {
 		var result = new ArrayList<String>();
 		for (String original : object.definition()) {

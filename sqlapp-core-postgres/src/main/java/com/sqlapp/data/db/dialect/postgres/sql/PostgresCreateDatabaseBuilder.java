@@ -11,8 +11,8 @@ import com.sqlapp.data.schemas.Catalog;
 
 /**
  * Explicit database creation from a Schema catalog. Unlike Catalog CREATE,
- * which recreates contained objects, this creates the database itself.
- * Requires CREATEDB privileges and execution outside a transaction block.
+ * which recreates contained objects, this creates the database itself. Requires
+ * CREATEDB privileges and execution outside a transaction block.
  */
 public class PostgresCreateDatabaseBuilder {
 	private final Dialect dialect;

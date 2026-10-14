@@ -12,14 +12,18 @@ import com.sqlapp.data.schemas.AbstractSchemaObject;
 import com.sqlapp.data.db.dialect.postgres.PostgresSchemaObject.Kind;
 import com.sqlapp.data.db.dialect.postgres.PostgresSchemaObjects;
 
-/** Adds PostgreSQL-only definitions at their schema creation dependency boundaries. */
+/**
+ * Adds PostgreSQL-only definitions at their schema creation dependency
+ * boundaries.
+ */
 public class PostgresCreateSchemaFactory extends CreateSchemaFactory {
 	@Override
-	protected void addCreateSortedSchemaObjectCollection(String property, List<? extends AbstractSchemaObject<?>> objects,
-			List<SqlOperation> sql) {
+	protected void addCreateSortedSchemaObjectCollection(String property,
+			List<? extends AbstractSchemaObject<?>> objects, List<SqlOperation> sql) {
 		super.addCreateSortedSchemaObjectCollection(property,
 				objects.stream().filter(o -> !o.getSpecifics().containsKey("postgres.extension")).toList(), sql);
 	}
+
 	@Override
 	protected void addCreateSchema(Schema schema, List<SqlOperation> sql) {
 		super.addCreateSchema(schema, sql);

@@ -40,11 +40,14 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 
 	@Override
 	protected void addCreateObject(final Table obj, final PostgresSqlBuilder builder) {
-		if (obj.getPartitioning() != null && getDialect().compareTo(com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL100) < 0) {
-			throw new IllegalArgumentException("Declarative partitioning requires PostgreSQL 10 or later: " + obj.getName());
+		if (obj.getPartitioning() != null
+				&& getDialect().compareTo(com.sqlapp.data.db.dialect.postgres.DialectHolder.postgreSQL100) < 0) {
+			throw new IllegalArgumentException(
+					"Declarative partitioning requires PostgreSQL 10 or later: " + obj.getName());
 		}
 		if (obj.isUnlogged() && obj.getPartitioning() != null) {
-			throw new IllegalArgumentException("PostgreSQL does not support UNLOGGED partitioned tables: " + obj.getName());
+			throw new IllegalArgumentException(
+					"PostgreSQL does not support UNLOGGED partitioned tables: " + obj.getName());
 		}
 		builder.create().unlogged(obj.isUnlogged()).table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());

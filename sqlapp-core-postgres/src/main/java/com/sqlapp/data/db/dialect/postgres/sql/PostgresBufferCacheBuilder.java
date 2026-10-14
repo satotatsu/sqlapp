@@ -28,7 +28,8 @@ public class PostgresBufferCacheBuilder {
 	 * Intended for developer testing; concurrent activity can change the buffer
 	 * state immediately after execution.
 	 *
-	 * @param bufferId positive buffer identifier from {@code pg_buffercache.bufferid}
+	 * @param bufferId positive buffer identifier from
+	 *                 {@code pg_buffercache.bufferid}
 	 * @return SELECT statement exposing the eviction and flush status columns
 	 */
 	public String evict(int bufferId) {

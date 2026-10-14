@@ -59,8 +59,8 @@ public class PostgresPgcryptoBuilder {
 		if (!Set.of("aes", "bf").contains(normalized)) {
 			throw new IllegalArgumentException("CFB algorithm must be aes or bf.");
 		}
-		return function + "(" + expression(data) + ", " + expression(key) + ", " + expression(iv)
-				+ ", '" + normalized + "-cfb')";
+		return function + "(" + expression(data) + ", " + expression(key) + ", " + expression(iv) + ", '" + normalized
+				+ "-cfb')";
 	}
 
 	private String algorithm(String algorithm) {

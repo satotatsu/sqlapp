@@ -6,7 +6,10 @@ import java.util.Objects;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 
-/** Session-scoped PostgreSQL 18 extension settings; server privileges still apply. */
+/**
+ * Session-scoped PostgreSQL 18 extension settings; server privileges still
+ * apply.
+ */
 public class PostgresExtensionSettingsBuilder {
 	private final Dialect dialect;
 
@@ -14,7 +17,10 @@ public class PostgresExtensionSettingsBuilder {
 		this.dialect = Objects.requireNonNull(dialect, "dialect");
 	}
 
-	/** Requires passwordcheck to be loaded. The length is measured in bytes, not characters. */
+	/**
+	 * Requires passwordcheck to be loaded. The length is measured in bytes, not
+	 * characters.
+	 */
 	public String passwordMinimumLength(int bytes) {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
 			throw new IllegalArgumentException("passwordcheck.min_password_length requires PostgreSQL 18 or later.");

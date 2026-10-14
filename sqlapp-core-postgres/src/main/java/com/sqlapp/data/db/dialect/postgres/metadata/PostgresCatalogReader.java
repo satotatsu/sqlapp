@@ -109,7 +109,8 @@ public class PostgresCatalogReader extends CatalogReader {
 			com.sqlapp.data.db.dialect.postgres.PostgresSchemaObjects.set(catalog,
 					new PostgresSchemaObjectReader(getDialect()).readCatalog(connection));
 		} catch (SQLException exception) {
-			throw new IllegalStateException("Failed to read PostgreSQL database objects in " + catalog.getName(), exception);
+			throw new IllegalStateException("Failed to read PostgreSQL database objects in " + catalog.getName(),
+					exception);
 		}
 	}
 
