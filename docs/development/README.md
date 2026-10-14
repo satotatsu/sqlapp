@@ -11,6 +11,7 @@
 | Check copied HTML and SVG navigation | [Generated example checks](build-and-test.md#check-the-saved-gradle-html-example) |
 | Review planned work | [Roadmap](roadmap.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
+| Read and recreate PostgreSQL-only schema objects | [PostgreSQL schema objects](postgresql-schema-objects.md) |
 | Validate Oracle assessment against a source database | [Oracle assessment verification](oracle-assessment-verification.md) |
 | Review or rerun JDBC tree real-engine tests | [JDBC tree verification](jdbc-tree-data-real-db-verification.md) |
 

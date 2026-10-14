@@ -69,6 +69,7 @@ public class PostgresEnumReader extends DomainReader {
 				}
 				if (obj == null) {
 					obj = new Domain(typname);
+					obj.setId(getString(rs, "type_id"));
 					obj.setSchemaName(schemaname);
 					obj.setRemarks(getString(rs, "remarks"));
 					obj.setDataTypeName(typname);

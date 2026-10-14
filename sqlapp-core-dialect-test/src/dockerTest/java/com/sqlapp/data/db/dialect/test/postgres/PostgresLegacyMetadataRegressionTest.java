@@ -14,6 +14,10 @@ class PostgresLegacyMetadataRegressionTest {
 			db.start();
 			try (var c = db.createConnection("")) {
 				PostgresMetadataRegressionAssertions.verify(c, DialectResolver.getInstance().getDialect(c));
+				var objects = new com.sqlapp.data.db.dialect.postgres.metadata.PostgresSchemaObjectReader(
+						DialectResolver.getInstance().getDialect(c));
+				objects.readSchema(c, "public");
+				objects.readCatalog(c);
 			}
 		}
 	}

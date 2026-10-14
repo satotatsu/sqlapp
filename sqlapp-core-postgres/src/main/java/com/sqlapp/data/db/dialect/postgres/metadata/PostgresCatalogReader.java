@@ -101,6 +101,16 @@ public class PostgresCatalogReader extends CatalogReader {
 		if (setting != null) {
 			catalog.setCollation(setting.getValue());
 		}
+		try {
+			if (!getDialect().getClass().getPackageName().equals("com.sqlapp.data.db.dialect.postgres")
+					|| !catalog.getName().equals(connection.getCatalog())) {
+				return;
+			}
+			com.sqlapp.data.db.dialect.postgres.PostgresSchemaObjects.set(catalog,
+					new PostgresSchemaObjectReader(getDialect()).readCatalog(connection));
+		} catch (SQLException exception) {
+			throw new IllegalStateException("Failed to read PostgreSQL database objects in " + catalog.getName(), exception);
+		}
 	}
 
 	@Override

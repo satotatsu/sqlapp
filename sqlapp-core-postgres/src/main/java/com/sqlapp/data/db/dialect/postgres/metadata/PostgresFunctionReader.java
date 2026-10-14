@@ -75,6 +75,7 @@ public class PostgresFunctionReader extends FunctionReader {
 
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = new Function(getString(rs, FUNCTION_NAME));
+		obj.setId(getString(rs, "oid"));
 		obj.setDialect(this.getDialect());
 		// function.setSpecificName(getString(rs, "oid"));
 		// function.setCatalogName(getString(rs, "function_catalog"));

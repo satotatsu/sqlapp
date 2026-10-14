@@ -24,9 +24,10 @@ workbooks are output-only artifacts or supported inputs.
 
 Columns and catalogs currently retain a collation name, but the shared Schema
 model does not represent a collation definition as an independent object.
-PostgreSQL 18 `PG_UNICODE_FAST` creation and removal is therefore available
-through the PostgreSQL dialect SQL builder, while full metadata/XML/HTML
-round trips remain deferred.
+PostgreSQL retains complete collation definitions through the dialect-local
+[schema-object metadata extension](postgresql-schema-objects.md), including
+metadata/XML/DDL recreation and PostgreSQL 18 `PG_UNICODE_FAST`. A portable
+shared model and dedicated HTML object pages remain deferred.
 
 Before adding a shared collation object, compare provider, locale,
 determinism, rules and version concepts across PostgreSQL, DB2, Oracle,
@@ -60,6 +61,11 @@ the named `NOT NULL` object; a common lifecycle contract for every constraint
 type remains deferred.
 
 ## PostgreSQL modern feature follow-up
+
+PostgreSQL-only object metadata and DDL recreation are documented in
+[PostgreSQL schema objects](postgresql-schema-objects.md). The scope includes
+extensions, collations, FDW/server/user-mapping/foreign-table objects, RLS,
+extended statistics, publications and disconnected subscription recreation.
 
 The PostgreSQL dialect currently has explicit version boundaries through
 PostgreSQL 18. The implemented PostgreSQL 18 scope includes virtual generated

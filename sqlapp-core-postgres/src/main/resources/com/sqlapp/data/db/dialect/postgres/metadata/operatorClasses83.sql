@@ -1,5 +1,6 @@
 SELECT
     current_database() AS catalog_name
+  , oc.oid AS oid
   , ocn.nspname AS schema_name
   , oc.opcname AS operator_class_name
   , oc.opcdefault AS operator_default

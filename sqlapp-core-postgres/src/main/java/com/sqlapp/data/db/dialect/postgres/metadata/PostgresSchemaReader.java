@@ -101,6 +101,21 @@ public class PostgresSchemaReader extends SchemaReader {
 	}
 
 	@Override
+	protected void setSchemaAfter(Connection connection, Schema schema) {
+		super.setSchemaAfter(connection, schema);
+		if (!getDialect().getClass().getPackageName().equals("com.sqlapp.data.db.dialect.postgres")) {
+			return;
+		}
+		try {
+			new PostgresSchemaObjectReader(getDialect()).markExtensionMembers(connection, schema);
+			com.sqlapp.data.db.dialect.postgres.PostgresSchemaObjects.set(schema,
+					new PostgresSchemaObjectReader(getDialect()).readSchema(connection, schema.getName()));
+		} catch (SQLException exception) {
+			throw new IllegalStateException("Failed to read PostgreSQL objects in schema " + schema.getName(), exception);
+		}
+	}
+
+	@Override
 	protected TableReader newTableReader() {
 		return new PostgresTableReader(this.getDialect());
 	}

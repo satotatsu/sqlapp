@@ -63,6 +63,10 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Catalog.class, SqlType.CREATE, PostgresCreateCatalogFactory.class);
+		registerSqlFactory(Schema.class, SqlType.CREATE, PostgresCreateSchemaFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Catalog.class, SqlType.ALTER, PostgresAlterCatalogFactory.class);
+		registerSqlFactory(Schema.class, SqlType.ALTER, PostgresAlterSchemaFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, PostgresCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, PostgresDropTableFactory.class);
