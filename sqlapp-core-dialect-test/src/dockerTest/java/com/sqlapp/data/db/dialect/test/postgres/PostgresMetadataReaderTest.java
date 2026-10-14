@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.test.postgres;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -17,6 +18,7 @@ import java.util.Locale;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
@@ -24,6 +26,15 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.postgres.Postgres180;
+import com.sqlapp.data.db.dialect.postgres.DialectHolder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresPgcryptoBuilder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresMonitoringBuilder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresExplainBuilder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresBufferCacheBuilder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresCreateDatabaseBuilder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresExtensionSettingsBuilder;
+import com.sqlapp.data.db.dialect.postgres.sql.PostgresLogicalInspectBuilder;
+import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.IndexType;
@@ -34,7 +45,8 @@ import com.sqlapp.data.schemas.Table;
 /** PostgreSQL 18 integration coverage for the metadata reader tree. */
 class PostgresMetadataReaderTest {
 	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
-			.configure(new PostgreSQLContainer("postgres:18.4"));
+			.configure(new PostgreSQLContainer("postgres:18.4")
+					.withCommand("postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "wal_level=logical"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -67,6 +79,13 @@ class PostgresMetadataReaderTest {
 			Table child = schema.getTables().get("metadata_child");
 			assertNotNull(child);
 			assertTrue(child.getColumns().get("id").isIdentity());
+			assertNotNull(child.getColumns().get("total").getFormula());
+			assertTrue(child.getColumns().get("total").isFormulaPersisted());
+			assertNotNull(child.getColumns().get("virtual_total").getFormula());
+			assertFalse(child.getColumns().get("virtual_total").isFormulaPersisted());
+			assertNotNull(child.getConstraints().get("nn_metadata_child_amount"));
+			assertNotNull(child.getSpecifics().get("relallfrozen"));
+			assertNotNull(child.getStatistics().get("total_analyze_time"));
 			assertNotNull(child.getConstraints().get("ck_metadata_child_amount"));
 			ForeignKeyConstraint foreignKey = assertInstanceOf(ForeignKeyConstraint.class,
 					child.getConstraints().get("fk_metadata_child_parent"));
@@ -128,6 +147,132 @@ class PostgresMetadataReaderTest {
 		}
 	}
 
+	@Test
+	void testExecutesModernExtensionAndMonitoringSql() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection(""); Statement statement = connection.createStatement()) {
+			statement.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
+			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_buffercache");
+			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_stat_statements");
+			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_logicalinspect");
+			var crypto = new PostgresPgcryptoBuilder(DialectHolder.postgreSQL180);
+			try (var prepared = connection.prepareStatement("SELECT " + crypto.crypt("?", crypto.genSalt("sha512crypt", 1000)))) {
+				prepared.setString(1, "integration-test-input");
+				try (var rs = prepared.executeQuery()) {
+					assertTrue(rs.next());
+					assertTrue(rs.getString(1).startsWith("$6$"));
+				}
+			}
+			String data = "decode('01020304', 'hex')";
+			String key = "decode('000102030405060708090a0b0c0d0e0f', 'hex')";
+			String iv = "decode('101112131415161718191a1b1c1d1e1f', 'hex')";
+			try (var rs = statement.executeQuery("SELECT " + crypto.decryptCfb(crypto.encryptCfb(data, key, iv, "aes"), key, iv, "aes") + " = " + data)) {
+				assertTrue(rs.next());
+				assertTrue(rs.getBoolean(1));
+			}
+			try (var rs = statement.executeQuery("SELECT " + crypto.fipsMode())) {
+				assertTrue(rs.next());
+				assertNotNull(rs.getObject(1));
+			}
+			var monitoring = new PostgresMonitoringBuilder(DialectHolder.postgreSQL180);
+			int pid;
+			try (var rs = statement.executeQuery("SELECT pg_backend_pid()")) {
+				assertTrue(rs.next());
+				pid = rs.getInt(1);
+			}
+			for (String sql : new String[] { monitoring.asynchronousIo(), monitoring.backendIo(pid), monitoring.backendWal(pid),
+					monitoring.loadedModules(), monitoring.numaAvailable(),
+					monitoring.statementStatistics(), monitoring.resetBackendStats(pid) }) {
+				try (var rs = statement.executeQuery(sql)) {
+					assertTrue(rs.getMetaData().getColumnCount() > 0, sql);
+				}
+			}
+			// Eviction is restricted to this disposable test server.
+			try (var rs = statement.executeQuery(new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180).evict(1))) {
+				assertTrue(rs.next());
+				assertNotNull(rs.getObject("buffer_evicted"));
+				assertNotNull(rs.getObject("buffer_flushed"));
+			}
+			var logical = new PostgresLogicalInspectBuilder(DialectHolder.postgreSQL180);
+			// Resolve functions and output columns without requiring a pre-existing snapshot file.
+			for (String sql : new String[] { logical.snapshotMeta("0-0.snap"), logical.snapshotInfo("0-0.snap") }) {
+				try (var rs = statement.executeQuery(sql + " WHERE FALSE")) {
+					assertFalse(rs.next());
+					assertTrue(rs.getMetaData().getColumnCount() >= 3);
+				}
+			}
+			statement.execute("LOAD 'pg_overexplain'");
+			try (var rs = statement.executeQuery(new PostgresExplainBuilder(DialectHolder.postgreSQL180)
+					.debug(true).rangeTable(true).statement("SELECT 1").build())) {
+				assertTrue(rs.next());
+			}
+			statement.execute("LOAD 'passwordcheck'");
+			statement.execute(new PostgresExtensionSettingsBuilder(DialectHolder.postgreSQL180).passwordMinimumLength(12));
+			try (var rs = statement.executeQuery("SELECT setting FROM pg_settings WHERE name = 'passwordcheck.min_password_length'")) {
+				assertTrue(rs.next());
+				assertEquals("12", rs.getString(1));
+			}
+			String database = "modern_feature_database";
+			statement.execute("DROP DATABASE IF EXISTS " + database);
+			try {
+				statement.execute(new PostgresCreateDatabaseBuilder(DialectHolder.postgreSQL180)
+						.template("template0").strategy("FILE_COPY").build(new Catalog(database)));
+			} finally {
+				statement.execute("DROP DATABASE IF EXISTS " + database);
+			}
+		}
+	}
+
+	@Test
+	void testNumaViewsWhenSupportedByHost() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection(""); Statement statement = connection.createStatement()) {
+			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_buffercache");
+			var monitoring = new PostgresMonitoringBuilder(DialectHolder.postgreSQL180);
+			for (String sql : new String[] { monitoring.sharedMemoryNuma(), monitoring.bufferCacheNuma() }) {
+				try (var rs = statement.executeQuery(sql)) {
+					assertTrue(rs.getMetaData().getColumnCount() > 0);
+				} catch (SQLException exception) {
+					if (exception.getMessage().contains("libnuma initialization failed or NUMA is not supported on this platform")) {
+						Assumptions.abort("NUMA view execution requires a NUMA-capable host: " + exception.getMessage());
+					}
+					throw exception;
+				}
+			}
+		}
+	}
+
+	@Test
+	void testInspectsSerializedLogicalSnapshot() throws SQLException {
+		try (Connection connection = POSTGRES.createConnection(""); Statement statement = connection.createStatement()) {
+			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_logicalinspect");
+			statement.execute("CREATE TABLE IF NOT EXISTS logical_snapshot_test (id integer)");
+			statement.execute("SELECT * FROM pg_create_logical_replication_slot('snapshot_inspect_test', 'test_decoding')");
+			try {
+				statement.execute("INSERT INTO logical_snapshot_test VALUES (1)");
+				statement.execute("SELECT pg_log_standby_snapshot()");
+				statement.execute("INSERT INTO logical_snapshot_test VALUES (2)");
+				statement.execute("SELECT pg_switch_wal()");
+				statement.execute("SELECT * FROM pg_logical_slot_get_changes('snapshot_inspect_test', NULL, NULL)");
+				String filename;
+				try (var rs = statement.executeQuery("SELECT name FROM pg_ls_logicalsnapdir() ORDER BY name LIMIT 1")) {
+					assertTrue(rs.next(), "Logical decoding should serialize a snapshot");
+					filename = rs.getString(1);
+				}
+				var logical = new PostgresLogicalInspectBuilder(DialectHolder.postgreSQL180);
+				try (var rs = statement.executeQuery(logical.snapshotMeta(filename))) {
+					assertTrue(rs.next());
+					assertTrue(rs.getInt("version") > 0);
+				}
+				try (var rs = statement.executeQuery(logical.snapshotInfo(filename))) {
+					assertTrue(rs.next());
+					assertNotNull(rs.getString("state"));
+				}
+			} finally {
+				statement.execute("SELECT pg_drop_replication_slot('snapshot_inspect_test')");
+				statement.execute("DROP TABLE logical_snapshot_test");
+			}
+		}
+	}
+
 	private void createObjects(final Statement statement) throws SQLException {
 		statement.execute("DROP SCHEMA IF EXISTS metadata_test CASCADE");
 		statement.execute("CREATE SCHEMA metadata_test");
@@ -162,8 +307,9 @@ class PostgresMetadataReaderTest {
 				 parent_id bigint NOT NULL, parent_region char(2) NOT NULL,
 				 code metadata_test.metadata_code DEFAULT 'unknown' NOT NULL,
 				 status metadata_test.metadata_status DEFAULT 'NEW',
-				 amount numeric(18,2) NOT NULL,
+				 amount numeric(18,2) CONSTRAINT nn_metadata_child_amount NOT NULL,
 				 total numeric(19,2) GENERATED ALWAYS AS (amount * 2) STORED,
+				 virtual_total numeric(19,2) GENERATED ALWAYS AS (amount * 3) VIRTUAL,
 				 CONSTRAINT uk_metadata_child_code UNIQUE (code),
 				 CONSTRAINT ck_metadata_child_amount CHECK (amount >= 0),
 				 CONSTRAINT fk_metadata_child_parent FOREIGN KEY (parent_id, parent_region)

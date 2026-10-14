@@ -22,6 +22,24 @@ public class PostgresBufferCacheBuilder {
 	}
 
 	/**
+	 * Creates a PostgreSQL 18 single-buffer eviction statement returning both
+	 * {@code buffer_evicted} and {@code buffer_flushed}. Requires the
+	 * {@code pg_buffercache} extension and superuser privileges at execution time.
+	 * Intended for developer testing; concurrent activity can change the buffer
+	 * state immediately after execution.
+	 *
+	 * @param bufferId positive buffer identifier from {@code pg_buffercache.bufferid}
+	 * @return SELECT statement exposing the eviction and flush status columns
+	 */
+	public String evict(int bufferId) {
+		checkPostgres18();
+		if (bufferId <= 0) {
+			throw new IllegalArgumentException("bufferId must be positive.");
+		}
+		return "SELECT buffer_evicted, buffer_flushed FROM pg_buffercache_evict(" + bufferId + ")";
+	}
+
+	/**
 	 * Evicts all unpinned buffers belonging to a relation.
 	 */
 	public String evictRelation(String relationName) {
@@ -52,7 +70,7 @@ public class PostgresBufferCacheBuilder {
 
 	private void checkPostgres18() {
 		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
-			throw new IllegalArgumentException("Bulk pg_buffercache eviction requires PostgreSQL 18 or later.");
+			throw new IllegalArgumentException("pg_buffercache eviction requires PostgreSQL 18 or later.");
 		}
 	}
 

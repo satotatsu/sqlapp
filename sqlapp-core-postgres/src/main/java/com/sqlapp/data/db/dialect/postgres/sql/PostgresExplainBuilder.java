@@ -43,6 +43,24 @@ public class PostgresExplainBuilder {
 		return option("VERBOSE", value);
 	}
 
+	/** Requires PostgreSQL 18 and pg_overexplain loaded in the executing session. */
+	public PostgresExplainBuilder debug(boolean value) {
+		checkPostgres18();
+		return option("DEBUG", value);
+	}
+
+	/** Requires PostgreSQL 18 and pg_overexplain loaded in the executing session. */
+	public PostgresExplainBuilder rangeTable(boolean value) {
+		checkPostgres18();
+		return option("RANGE_TABLE", value);
+	}
+
+	private void checkPostgres18() {
+		if (dialect.compareTo(DialectHolder.postgreSQL180) < 0) {
+			throw new IllegalArgumentException("pg_overexplain options require PostgreSQL 18 or later.");
+		}
+	}
+
 	public PostgresExplainBuilder costs(boolean value) {
 		return option("COSTS", value);
 	}

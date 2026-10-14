@@ -14,6 +14,16 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 
 class PostgresExplainBuilderTest {
 	@Test
+	void testOverexplainOptionsAndBoundary() {
+		assertEquals("EXPLAIN (DEBUG TRUE, RANGE_TABLE FALSE) SELECT 1",
+				new PostgresExplainBuilder(DialectHolder.postgreSQL180).debug(true).rangeTable(false)
+						.statement("SELECT 1").build());
+		assertThrows(IllegalArgumentException.class,
+				() -> new PostgresExplainBuilder(DialectHolder.postgreSQL170).debug(true));
+		assertThrows(IllegalArgumentException.class,
+				() -> new PostgresExplainBuilder(DialectHolder.postgreSQL170).rangeTable(false));
+	}
+	@Test
 	void testExplainAnalyzeWithModernOptions() {
 		assertEquals(
 				"EXPLAIN (ANALYZE TRUE, BUFFERS TRUE, SERIALIZE BINARY, WAL TRUE, TIMING FALSE, MEMORY TRUE, FORMAT JSON) SELECT * FROM orders",

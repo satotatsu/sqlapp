@@ -72,25 +72,88 @@ The PostgreSQL 18 table metadata reader retains `pg_class.relallfrozen` and the
 new cumulative vacuum/analyze timing columns. Its catalog SQL does not depend
 on the removed `pg_attribute.attcacheoff` column.
 
-The following enhancements are candidates for future work, not release
-commitments:
+`PostgresBufferCacheBuilder.evict(bufferId)` generates a PostgreSQL 18 SELECT
+that exposes both `buffer_evicted` and `buffer_flushed`, complementing the
+relation/all eviction operations. Buffer IDs must be positive; the server
+checks the actual pool bounds. For example:
 
-- PostgreSQL 18 integration tests against a real server for complete metadata
-  loading, including tables, columns, constraints, indexes, generated columns
-  and statistics
-- `pgcrypto` additions: `sha256crypt`, `sha512crypt`, CFB encryption mode and
-  `fips_mode()`
-- monitoring access for `pg_aios`, `pg_stat_get_backend_io()`,
-  `pg_stat_get_backend_wal()`, `pg_stat_reset_backend_stats()`, and the new
-  `pg_stat_statements` parallel/WAL fields
-- `pg_buffercache_evict()` result handling for the PostgreSQL 18
-  `buffer_flushed` output, complementing the supported relation/all operations
-- optional support for `pg_logicalinspect`, `pg_overexplain`,
-  `pg_get_loaded_modules()`, and NUMA-related functions and views
-- PostgreSQL 18 database-management behavior such as
-  `CREATE DATABASE ... STRATEGY=FILE_COPY` and validation of unsupported
-  unlogged partitioned tables
-- optional extension settings such as `passwordcheck.min_password_length`
+```java
+new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180).evict(1);
+// SELECT buffer_evicted, buffer_flushed FROM pg_buffercache_evict(1)
+```
+
+Execution requires the `pg_buffercache` extension and superuser privileges.
+These operations are intended for developer testing, and concurrent activity
+can change the reported buffer state immediately. PostgreSQL 17's scalar
+eviction result is not supported by this new method.
+
+The modern-feature follow-up now provides these optional SQL entry points:
+
+| Entry point | Scope |
+| --- | --- |
+| `PostgresPgcryptoBuilder` | SHA-256/SHA-512 crypt salts, explicit iteration bounds, `crypt`, CFB encryption/decryption with explicit IV, and `fips_mode()` |
+| `PostgresMonitoringBuilder` | AIO handles, backend I/O/WAL counters, explicit backend-statistics reset, pg_stat_statements 1.12 parallel/WAL fields, loaded modules and NUMA information |
+| `PostgresLogicalInspectBuilder` | Snapshot metadata/information, with escaped filenames and rejection of directory paths |
+| `PostgresExplainBuilder.debug/rangeTable` | Optional pg_overexplain diagnostics |
+| `PostgresCreateDatabaseBuilder` | Explicit database creation from a Schema `Catalog`, with optional template and `FILE_COPY`/`WAL_LOG` strategy |
+| `PostgresExtensionSettingsBuilder` | Session-scoped `passwordcheck.min_password_length`, measured in bytes |
+
+These new operations require PostgreSQL 18, except database creation strategy,
+which is supported from PostgreSQL 15. Database creation without a strategy
+preserves the server default. Catalog CREATE continues to recreate contained
+objects; database creation is an explicit separate operation. For example:
+
+```java
+var dialect = DialectHolder.postgreSQL180;
+var crypto = new PostgresPgcryptoBuilder(dialect);
+String expression = crypto.crypt("?", crypto.genSalt("sha512crypt", 10000));
+// Use expression in a prepared SELECT; bind the password through JDBC.
+String ioSql = new PostgresMonitoringBuilder(dialect).backendIo(1234);
+String databaseSql = new PostgresCreateDatabaseBuilder(dialect)
+    .template("template0").strategy("FILE_COPY").build(new Catalog("reporting"));
+```
+
+Expression arguments are trusted SQL, not string values. Bind passwords, keys
+and IVs through JDBC placeholders. Iteration count omission uses the server
+default, not an application security recommendation. Raw CFB encryption does
+not authenticate ciphertext. pgcrypto requires OpenSSL and the installed
+extension. The server still validates extension availability, runtime settings,
+permissions and actual object/process identities; SQL generation does not
+probe a connection or suppress server errors.
+
+pg_stat_statements must be preloaded and upgraded to version 1.12 for the new
+fields; its optional schema argument supports non-default installation schemas.
+pg_overexplain and passwordcheck must be loaded in the executing session.
+Logical snapshot inspection requires pg_logicalinspect plus superuser or
+server-file privileges. NUMA views require a compatible server build and host.
+Database creation requires CREATEDB privileges and must execute outside a
+transaction block. FILE_COPY can force checkpoints. Backend reset and eviction
+are explicit calls with side effects, never automatic monitoring operations.
+
+Table CREATE now rejects an UNLOGGED partitioned parent rather than generating
+unsupported DDL. Ordinary UNLOGGED tables remain supported. Existing methods,
+configuration formats, shared Schema classes and module dependencies are unchanged.
+
+`PostgresMetadataReaderTest` contains disposable PostgreSQL 18.4 coverage for
+tables, columns, constraints, indexes, stored/virtual generated columns, named
+NOT NULL, table statistics and extension/monitoring SQL. NUMA execution has a
+separate test that explicitly skips on an unsupported host. Logical snapshot
+inspection is exercised against a real serialized snapshot generated through
+a logical replication slot in the disposable server.
+
+Run it with the repository wrapper and a local Docker engine:
+
+```bat
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataReaderTest
+```
+
+Server contracts: [pgcrypto](https://www.postgresql.org/docs/18/pgcrypto.html),
+[statistics](https://www.postgresql.org/docs/18/monitoring-stats.html),
+[pg_logicalinspect](https://www.postgresql.org/docs/18/pglogicalinspect.html),
+[pg_overexplain](https://www.postgresql.org/docs/18/pgoverexplain.html), and
+[CREATE DATABASE](https://www.postgresql.org/docs/18/sql-createdatabase.html).
+The new statement-statistics columns follow the upstream
+[pg_stat_statements 1.12 definition](https://github.com/postgres/postgres/blob/REL_18_STABLE/contrib/pg_stat_statements/pg_stat_statements--1.11--1.12.sql).
 
 Command-line applications such as `pg_dump`, `pg_upgrade`, `vacuumdb`,
 `pg_createsubscriber`, and `pg_recvlogical`, as well as `psql` commands and
