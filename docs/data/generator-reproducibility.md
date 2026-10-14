@@ -48,6 +48,31 @@ using UUIDs, random helpers, current time, external state or side effects must
 be made deterministic separately. It does not guarantee identical generated
 identity values in databases with different starting states.
 
+## Custom Java functions and MVEL overload limitations
+
+Custom public static Java methods can be registered with
+`evaluator.addAllStaticMethodsImport(MyFunctions.class)` or its class-name String
+overload and called from generator MVEL expressions.
+
+With the currently used MVEL 2.5.2.Final, a compiled method call can retain the
+overload selected during its first evaluation. Keep the runtime argument types
+stable for each call site; changing types between generated rows is unsupported.
+For example, given `customValue(int)` and `customValue(String)`, reusing
+`customValue(value)` with an Integer followed by a nonnumeric String can cause a
+numeric conversion error. A numeric String may instead be silently converted to
+the integer overload. Starting with a String can cause subsequent numeric values
+to keep using the String overload. Null transitions can also fail.
+
+This behavior was reproduced in MVEL itself, including class-qualified static
+calls. It also affects calls inside a single expression's loop; it is not limited
+to reuse between rows. The generator does not automatically recompile or retry
+these calls.
+
+When inputs have mixed types, use distinct method names or expose a single
+`Object`-accepting method and perform explicit type dispatch in Java. Otherwise,
+normalize arguments to a consistent type before calling an overloaded method.
+Fixed-type calls, static registration and import changes are covered by tests.
+
 ## Validation and compatibility
 
 Before generation SQL runs, selected configurations are checked for unknown
