@@ -963,6 +963,10 @@ public class SchemaUtils {
 		return getSchemaObjectFromParentInternal(obj, dbObject, (name, schema) -> schema.getSequences().get(name));
 	}
 
+	public static Domain getDomainFromParent(final Domain obj, final DbCommonObject<?> dbObject) {
+		return getSchemaObjectFromParentInternal(obj, dbObject, (name, schema) -> schema.getDomains().get(name));
+	}
+
 	public static Index getIndexFromParent(final Index obj, final DbCommonObject<?> dbObject) {
 		return getTableObjectFromParentInternal(obj, dbObject, (name, table) -> table.getIndexes().get(name));
 	}

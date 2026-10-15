@@ -8,8 +8,21 @@ import com.sqlapp.data.db.dialect.oracle.DialectHolder;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.DomainCheckConstraint;
+import com.sqlapp.data.schemas.DomainColumn;
 
 class OracleDomainCheckTest {
+	@Test
+	void unsupportedComponentTypesRequireCompleteDefinition() {
+		Domain domain = new Domain("PAIR");
+		DomainColumn column = new DomainColumn("X").setDataType(DataType.ENUM);
+		domain.getColumns().add(column);
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(domain, SqlType.CREATE));
+		column.setDataType(DataType.INT).setArrayDimension(1);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(domain, SqlType.CREATE));
+		column.setArrayDimension(0).setArrayDimensionUpperBound(10);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(domain, SqlType.CREATE));
+	}
 	@Test
 	void numberWithoutPrecisionRetainsOptionalScale() {
 		Domain domain = new Domain("NUMERIC_VALUE").setDataType(DataType.DECIMAL);

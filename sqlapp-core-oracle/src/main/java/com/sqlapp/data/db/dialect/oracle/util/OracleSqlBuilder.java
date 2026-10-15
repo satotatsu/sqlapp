@@ -157,6 +157,44 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 
 	@Override
 	protected OracleSqlBuilder typeDefinition(final Column column) {
+		if (column.getDomain() != null && column.getDomainName() == null) {
+			throw new IllegalArgumentException("Column domain reference requires a name: " + column.getName());
+		}
+		if (column.getDomainName() != null) {
+			if (com.sqlapp.data.db.dialect.oracle.sql.OracleDomainAssociationUtils.isFlexible(column.getDomain())
+					&& (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle26ai)
+							|| column.getDomain().getColumns().isEmpty())) {
+				throw new IllegalArgumentException("Flexible domain USING mappings require Oracle26ai and resolved components: "
+						+ column.getDomainSchemaName() + "." + column.getDomainName());
+			}
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle23ai)) {
+				throw new IllegalArgumentException("Data use case domains require Oracle 23ai or later: " + column.getName());
+			}
+			if (column.getDomain().getColumns().isEmpty() && column.getDomain().getParent() == null
+					&& column.getDomainColumnName() != null && !column.getDomainColumnName().equals(column.getDomainName())
+					&& !"VALUE".equals(column.getDomainColumnName())) {
+				throw new IllegalArgumentException("Resolve the domain components from the full Schema before generating this association: " + column.getDomainName());
+			}
+			if (column.getDataType() == null && column.getDataTypeName() == null && column.getDomain().getColumns().isEmpty()) {
+				return name(column.getDomain(), true);
+			}
+			Column physical = column.clone().setDomain(null);
+			if (physical.getDataType() == null && physical.getDataTypeName() == null) {
+				if (com.sqlapp.data.db.dialect.oracle.sql.OracleDomainAssociationUtils.isFlexible(column.getDomain())) {
+					throw new IllegalArgumentException("Flexible domain association requires an explicit table column type: " + column.getName());
+				}
+				String part = column.getDomainColumnName() == null ? column.getName() : column.getDomainColumnName();
+				var component = column.getDomain().getColumns().get(part);
+				if (component == null) throw new IllegalArgumentException("Unknown domain component: " + part);
+				physical.setDataType(component.getDataType()).setDataTypeName(component.getDataTypeName())
+						.setLength(component.getLength()).setScale(component.getScale()).setCharacterSemantics(component.getCharacterSemantics());
+			}
+			typeDefinition(physical);
+			if (column.getDomain().getColumns().isEmpty()) {
+				space()._add("DOMAIN").space().name(column.getDomain(), true);
+			}
+			return instance();
+		}
 		if (column.getDataType() != DataType.VECTOR) {
 			return super.typeDefinition(column);
 		}

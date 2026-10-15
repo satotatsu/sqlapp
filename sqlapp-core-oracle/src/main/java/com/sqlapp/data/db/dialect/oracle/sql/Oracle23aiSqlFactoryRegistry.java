@@ -8,6 +8,8 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.View;
@@ -21,6 +23,8 @@ public class Oracle23aiSqlFactoryRegistry extends Oracle21cSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Catalog.class, SqlType.CREATE, Oracle23aiCreateCatalogFactory.class);
+		registerSqlFactory(Schema.class, SqlType.CREATE, Oracle23aiCreateSchemaFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, Oracle23aiCreateIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, Oracle23aiCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, Oracle23aiDropTableFactory.class);

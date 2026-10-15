@@ -2268,6 +2268,15 @@ public enum DbObjects {
 			return new Row();
 		}
 	},
+	DOMAIN_COLUMNS("columns", DomainColumnCollection.class) {
+		@Override public boolean isCollection() { return true; }
+		@Override public DbObjects getParentType() { return DOMAIN; }
+		@Override public DomainColumnCollection newInstance() { return new DomainColumnCollection(); }
+	},
+	DOMAIN_COLUMN("column", DomainColumn.class) {
+		@Override public DbObjects getCollectionType() { return DOMAIN_COLUMNS; }
+		@Override public DomainColumn newInstance() { return new DomainColumn(); }
+	},
 	DOMAIN_CHECK_CONSTRAINTS("checks", DomainCheckConstraintCollection.class) {
 		@Override public boolean isCollection() { return true; }
 		@Override public DbObjects getParentType() { return DOMAIN; }

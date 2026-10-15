@@ -26,6 +26,13 @@ public class Oracle23aiColumnReader extends Oracle12cColumnReader {
 	@Override
 	protected Column createColumn(final ExResultSet rs) throws SQLException {
 		final Column column = super.createColumn(rs);
+		String domainName = getString(rs, "DOMAIN_NAME");
+		if (domainName != null) {
+			column.setDomainName(domainName).setDomainSchemaName(getString(rs, "DOMAIN_OWNER"));
+			column.setDomainColumnName(getString(rs, "DOMAIN_COLUMN_NAME"));
+			String association = getString(rs, "DOMAIN_ASSOCIATION_ID");
+			if (association != null) column.getSpecifics().put("oracle.domain.associationId", association);
+		}
 		if (column.getDataType() != DataType.VECTOR) {
 			return column;
 		}

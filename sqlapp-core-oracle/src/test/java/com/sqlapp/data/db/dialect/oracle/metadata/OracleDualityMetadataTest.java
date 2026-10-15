@@ -34,7 +34,7 @@ class OracleDualityMetadataTest {
 			@Override public ColumnReader getColumnReader() { return null; }
 			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node,
 					ParametersContext context, ResultSetNextHandler handler) {
-				count.incrementAndGet();
+				if (count.incrementAndGet() != 1) return null;
 				try {
 					handler.handleResultSetNext(row(Map.of("VIEW_OWNER", "App", "VIEW_NAME", "Dv",
 							"LOGICAL_REPLICATION", "ENABLED")));
@@ -51,7 +51,7 @@ class OracleDualityMetadataTest {
 		View otherCase = new View("DV");
 		otherCase.setSchemaName("App");
 		reader.setMetadataDetail(null, new ParametersContext(), List.<Table>of(upper, otherCase, mixed, otherOwner));
-		assertEquals(1, count.get());
+		assertEquals(3, count.get());
 		assertFalse(OracleJsonDualityViewUtils.isJsonRelationalDualityView(upper));
 		assertFalse(OracleJsonDualityViewUtils.isJsonRelationalDualityView(otherOwner));
 		assertFalse(OracleJsonDualityViewUtils.isJsonRelationalDualityView(otherCase));

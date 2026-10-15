@@ -199,15 +199,15 @@ that version.
 
 The following Oracle features are intentionally deferred:
 
-- multiple-column domains
-- flexible domains
+- advanced association forms beyond the implemented flexible-domain USING mappings
+- structured flexible-domain selector editing (26ai retains executable DDL)
 - enumerated domains
-- domain-column annotations
+- domain-column annotations for alternative type specifications
+- complete annotation scope preservation for single-column domains
 - named `NOT NULL` constraints and complete lifecycle state beyond CHECKs
 - alternative data types for a domain column
-- domain association details on table columns
-- complete metadata and XML/DDL round trips for multiple-column, flexible and
-  enumerated domains
+- structured metadata editing for flexible and enumerated domains (26ai retains executable DDL)
+- older 23ai release-update metadata coverage for multiple-column domains
 - domain-specific HTML documentation
 
 ### Required design work
@@ -219,6 +219,36 @@ metadata. PostgreSQL readers retain separate constraint names and expressions
 instead of combining them with AND. Legacy `Domain.check` and its XML attribute
 remain available for a single unnamed expression. See `oracle-dialect-parity.md`
 for API examples, XML compatibility and verification scope.
+
+Regular multi-column domains now use optional `Domain.getColumns()` and
+`DomainColumn` components. Oracle 23ai/26ai CREATE factories generate the row
+form; Oracle23ai and Oracle26ai readers share batched regular-domain components
+and column annotations. The newer domain-kind catalog field stays isolated to
+26ai; the 23ai query uses the existing domain column count.
+`Column.setDomain` and optional `domainColumnName` retain Schema object
+references through XML and cloning. Oracle CREATE TABLE supports ordered
+multi-column associations and explicit groups for repeated associations;
+PostgreSQL accepts the shared scalar-domain reference.
+
+Oracle26ai also retains executable `definition` DDL for flexible/enumerated
+domains and regular domains whose alternatives, NOT NULL constraints or
+annotation scope cannot be reproduced from the structured model. Definitions
+and domain dependencies are retrieved in bulk. Domain collections are created
+in dependency order; prerequisites outside the supplied collection must already
+exist. Oracle23ai/26ai Catalog creation composes the registered Schema factory
+by object kind, placing all domain prerequisites first, then domains in global
+dependency order, then tables. Independent Schema CREATE calls and dependencies
+between other object kinds still require caller ordering.
+Structured editing of these advanced forms remains deferred; identifiers inside
+complete definition SQL do not follow Schema-model renames automatically.
+
+Oracle26ai flexible-domain components are read in one additional bulk query.
+`DomainColumn.specifics.oracle.domain.discriminant=true` identifies USING
+components. CREATE TABLE maps ordinary components to DOMAIN arguments and
+discriminants to USING arguments, preserving each component order through XML.
+Table columns must specify physical data types; a flexible selector still needs
+a complete Domain definition. Oracle23ai and unresolved/incomplete mappings fail
+explicitly rather than emitting a scalar association.
 
 Before implementing the deferred scope:
 
@@ -264,8 +294,6 @@ metadata readers where Oracle exposes suitable catalog views.
 
 The following work is intentionally deferred:
 
-- Oracle 26ai duality-view table and column detail metadata from
-  `ALL_JSON_DUALITY_VIEW_TABS` and related views
 - structured modeling of duality-view GraphQL fields, nested objects,
   generated or hidden fields, flex columns and field-level directives
 - broader schema-annotation coverage beyond the currently supported table,
@@ -289,6 +317,12 @@ Oracle26ai now reads `ALL_JSON_DUALITY_VIEWS.LOGICAL_REPLICATION` and generates
 the default CREATE path. Earlier dialects reject the option rather than ignore
 it; support for earlier 23.x release updates is not inferred from the major
 version alone. See `oracle-dialect-parity.md` for examples and validation limits.
+
+Oracle26ai also reads `ALL_JSON_DUALITY_VIEW_TABS` and
+`ALL_JSON_DUALITY_VIEW_TAB_COLS` once per requested object set. Typed JSON
+catalog rows are retained in View specifics, with helpers for table and column
+details. The original view statement remains the DDL source; discovered flags
+are supplemental metadata rather than a second GraphQL definition.
 
 ## Less-covered database dialects
 

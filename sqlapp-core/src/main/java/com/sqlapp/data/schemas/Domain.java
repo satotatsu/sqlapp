@@ -30,6 +30,7 @@ import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.DeferrabilityProperty;
 import com.sqlapp.data.schemas.properties.OnUpdateProperty;
 import com.sqlapp.data.schemas.properties.object.DomainChecksProperty;
+import com.sqlapp.data.schemas.properties.object.DomainColumnsProperty;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.ToStringBuilder;
 
@@ -39,7 +40,7 @@ import com.sqlapp.util.ToStringBuilder;
  */
 public final class Domain extends AbstractColumn<Domain> implements
 		HasParent<DomainCollection>,OnUpdateProperty<Domain>,DeferrabilityProperty<Domain>
-		,CheckProperty<Domain>, DomainChecksProperty<Domain>{
+		,CheckProperty<Domain>, DomainChecksProperty<Domain>, DomainColumnsProperty<Domain>{
 	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
 
@@ -67,6 +68,13 @@ public final class Domain extends AbstractColumn<Domain> implements
 	/** 制約のチェックの遅延 */
 	private Deferrability deferrability=null;
 	private final DomainCheckConstraintCollection checks = new DomainCheckConstraintCollection(this);
+	private final DomainColumnCollection columns = new DomainColumnCollection(this);
+
+	/** Optional typed components; empty for a scalar domain. */
+	@Override
+	public DomainColumnCollection getColumns() {
+		return columns;
+	}
 
 	/** Named checks for domains requiring more than the legacy single expression. */
 	@Override
@@ -88,6 +96,9 @@ public final class Domain extends AbstractColumn<Domain> implements
 			return false;
 		}
 		Domain val = (Domain) obj;
+		if (!equals(SchemaObjectProperties.DOMAIN_COLUMNS, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaObjectProperties.DOMAIN_CHECKS, val, equalsHandler)) {
 			return false;
 		}
@@ -130,6 +141,9 @@ public final class Domain extends AbstractColumn<Domain> implements
 	protected void writeXmlOptionalValues(StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
+		if (!columns.isEmpty()) {
+			columns.writeXml(stax);
+		}
 		if (!checks.isEmpty()) {
 			checks.writeXml(stax);
 		}

@@ -34,6 +34,22 @@ public abstract class AbstractCreateDomainFactory<S extends AbstractSqlBuilder<?
 		extends AbstractCreateNamedObjectFactory<Domain, S> {
 	@Override
 	public List<SqlOperation> createSql(Domain domain) {
+		if (supportsDomainDefinition() && !CommonUtils.isEmpty(domain.getDefinition())) {
+			return super.createSql(domain);
+		}
+		if (!domain.getColumns().isEmpty()) {
+			if (!supportsDomainColumns()) {
+				throw new IllegalArgumentException("Multi-column domains are not supported by this SQL factory: " + domain.getName());
+			}
+			if (domain.getDataType() != null || domain.getDataTypeName() != null || domain.getDefaultValue() != null || domain.isNotNull()) {
+				throw new IllegalArgumentException("Configure types, defaults and nullability on domain columns: " + domain.getName());
+			}
+			for (var column : domain.getColumns()) {
+				if (column.getDataType() == null && column.getDataTypeName() == null) {
+					throw new IllegalArgumentException("Domain column requires a data type: " + column.getName());
+				}
+			}
+		}
 		if (!domain.getChecks().isEmpty()) {
 			if (!supportsDomainChecks()) {
 				throw new IllegalArgumentException("Named domain checks are not supported by this SQL factory: " + domain.getName());
@@ -51,6 +67,15 @@ public abstract class AbstractCreateDomainFactory<S extends AbstractSqlBuilder<?
 	}
 
 	protected boolean supportsDomainChecks() {
+		return false;
+	}
+
+	/** Whether a complete definition makes separately modeled components optional. */
+	protected boolean supportsDomainDefinition() {
+		return false;
+	}
+
+	protected boolean supportsDomainColumns() {
 		return false;
 	}
 

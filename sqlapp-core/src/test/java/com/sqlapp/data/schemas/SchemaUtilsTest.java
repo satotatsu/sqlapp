@@ -141,7 +141,7 @@ public class SchemaUtilsTest {
 		System.out.println("*****************************************************");
 		System.out.println(classes);
 		System.out.println(builder.toString());
-		assertEquals(61, classes.size());
+		assertEquals(62, classes.size());
 		// assertTrue(classes.size()>=44, "classes.size()="+classes.size());
 	}
 
@@ -160,7 +160,7 @@ public class SchemaUtilsTest {
 		System.out.println("*****************************************************");
 		System.out.println(classes);
 		System.out.println(builder.toString());
-		assertEquals(43, classes.size());
+		assertEquals(44, classes.size());
 		// assertTrue(classes.size() >= 32, "classes.size()=" + classes.size());
 	}
 

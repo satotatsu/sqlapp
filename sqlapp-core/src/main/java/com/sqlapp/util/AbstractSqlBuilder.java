@@ -3606,6 +3606,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @param column カラム
 	 */
 	protected T typeDefinition(final Column column) {
+		if (column.getDomain() != null) {
+			throw new IllegalArgumentException("Column domain references are not supported by this SQL builder: " + column.getName());
+		}
 		DbDataType<?> dbDataType = null;
 		if (column.getLength() != null) {
 			dbDataType = this.getDialect().getDbDataTypes().getDbType(column.getDataType(), column.getLength());

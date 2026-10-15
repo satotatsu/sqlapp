@@ -38,6 +38,18 @@ import com.sqlapp.util.StringUtils;
 import com.sqlapp.util.xml.StaxElementHandler;
 
 public enum SchemaObjectProperties implements ISchemaProperty {
+	DOMAIN_COLUMNS("columns") {
+		@Override public Class<?> getPropertyClass() { return DomainColumnsProperty.class; }
+		@Override public Class<DomainColumnsGetter> getGetterPropertyClass() { return DomainColumnsGetter.class; }
+		@Override public Class<DomainColumnCollection> getValueClass() { return DomainColumnCollection.class; }
+		@Override public DomainColumnCollection getDefaultValue() { return getValueClass().cast(super.getDefaultValue()); }
+		@Override public boolean isInstanceof(Object obj) { return obj instanceof DomainColumnsProperty; }
+		@Override public boolean isGetterInstanceof(Object obj) { return obj instanceof DomainColumnsGetter; }
+		@Override protected boolean setValueInternal(Object obj, Object value) { return super.setValueCollectionInternal(obj, value); }
+		@Override public DomainColumnCollection getValue(Object obj) {
+			return obj instanceof DomainColumnsGetter getter ? getter.getColumns() : null;
+		}
+	},
 	DOMAIN_CHECKS("checks") {
 		@Override public Class<?> getPropertyClass() { return DomainChecksProperty.class; }
 		@Override public Class<DomainChecksGetter> getGetterPropertyClass() { return DomainChecksGetter.class; }

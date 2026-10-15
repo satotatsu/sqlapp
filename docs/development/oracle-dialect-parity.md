@@ -181,7 +181,165 @@ Commandの生成系・Oracle関連とGradleプラグインのOracle関連テス�
 [Oracle ALL_DOMAIN_CONSTRAINTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_CONSTRAINTS.html)、
 [PostgreSQL CREATE DOMAIN](https://www.postgresql.org/docs/18/sql-createdomain.html)。
 
-## 以前のOracle仕様参照
+## 継続対応: 複数列Domain・参照・Duality詳細
+
+共有モデルに任意の`Domain.columns`と`DomainColumn`を追加した。
+従来のscalar Domainの設定やXMLは維持し、列を設定した場合だけ追加のXML要素を出力する。
+Oracle 23ai/26aiのCREATE Factoryは次のモデルを`AS (CITY AS ..., ZIP AS ...)`形式で生成する。
+未対応Factory、型が欠落した列、重複列名、scalar型／default／nullabilityとcolumnsの併用はエラーになる。
+
+```java
+Domain address = new Domain("ADDRESS");
+address.getColumns().add(new DomainColumn("CITY").setDataType(DataType.VARCHAR).setLength(80));
+address.getColumns().add(new DomainColumn("ZIP").setDataType(DataType.INT));
+address.getChecks().add(new DomainCheckConstraint("CK_ZIP", "ZIP > 0"));
+```
+
+Oracle26aiの専用DomainReaderでは通常Domainの列定義を対象集合全体で一括取得する。
+本体とCHECKの取得1回、複数列の場合の列取得1回、注釈取得1回に加え、完全DDLと依存関係を各1回で取得する。
+JDBCでのSELECT回数はDomain数に比例しない。完全DDLのクエリ内では対象ごとにDBMS_METADATAを評価する。
+期待する列数に足りない場合は失敗する。26aiで代替型がある場合は主型の構成列を補助情報として保持し、
+代替型を含む完全DDLをdefinitionの正本として再出力する。
+新しい`ALL_DOMAINS.TYPE`列を使うクエリは26aiに限定する。
+23aiも既存の`COLS`と列カタログを使って複数列Domainを読み、列定義の一括取得処理を26aiと共有する。
+23aiでは本体・CHECK、複数列の列定義、注釈を各1回で取得する。
+既存のCOLUMN_NAMEによる絞り込みを外し、object-level／column-level注釈を別々に保持する。
+古いrelease updateでのカタログ内容は実DB未検証であり、26ai固有列を23aiへ追加したものではない。
+Flexible／Enumerated Domain、代替型、NOT NULL制約、scalar Domainのobject-level注釈など、
+構造化モデルだけでは完全再現できないものは`DBMS_METADATA.GET_DDL('SQL_DOMAIN', ...)`で
+実行可能な定義を保持する。これらの`definition`が正本であり、補助的なcolumns／checksは必須ではない。
+SQL_DOMAINは26aiでも利用可能な互換名称である。メタデータの権限不足やDDL取得失敗は伝播する。
+
+Domain間の参照は`ALL_DEPENDENCIES`から一括取得し、ownerとnameの組をJSONのspecificsへ保持する。
+読取とCREATE集合の生成で参照先を先に並べ、循環参照や不正な依存情報はエラーとする。
+取得対象外の参照先は事前に存在する必要がある。
+Oracle 23ai/26aiのCatalog CREATEは登録済みSchema Factoryを使い、型・シーケンス等を各Schemaで
+生成した後、全SchemaのDomainを依存順に生成してからテーブルを生成する。
+Schema単独のCREATEは従来どおりであり、Catalog入力のSchemaやDomainコレクションの順序を変更しない。
+個々のSchemaを別々に生成する場合や、Domain以外のオブジェクト間のSchema横断依存は呼出側で管理する。
+definition内のSQL識別子は名前変更に自動追従しない。
+
+`Column.setDomain`は共有SchemaモデルのDomainを参照する。XMLには`domainName`と
+必要な`domainSchemaName`、複数列対応には`domainColumnName`を保持し、読取後にSchema内の
+同一Domainへ解決する。型や長さが指定されたOracle列は物理型を保って`DOMAIN`句を生成する。
+型を省略した単一列参照はDomain自体を型名として使用する。
+
+複数列Domainを関連付ける場合:
+
+```java
+table.getColumns().add(new Column("LOCATION").setDomain(address).setDomainColumnName("CITY"));
+table.getColumns().add(new Column("POSTCODE").setDomain(address).setDomainColumnName("ZIP"));
+// DOMAIN ADDRESS(LOCATION, POSTCODE) をDomainの列順で生成する。
+```
+
+同じDomainを複数回関連付ける場合は各グループの列に同じ
+`specifics.oracle.domain.associationId`を指定する。メタデータ読取ではOracleの
+`DOMAIN_ASSOCIATION_ID`を保持する。関連付けの欠落や同一グループ内の重複はエラーとなる。
+Domainと参照先componentの名前変更は参照へ追従し、cloneではコピー先Schemaへ解決する。
+CHECK等のSQL式そのものを名前変更する機能はこの変更には含まない。
+PostgreSQLはこの共有参照からscalar Domain型を生成する。未対応の汎用SQL Builderは参照を黙って落とさず拒否する。
+
+26ai Duality Viewでは概要のほかテーブル／列詳細を各1回の一括クエリで読む。
+親子table number、relationship、WHERE、flex、JSON key、hidden/generated、PK／ETAG／ORDER位置、更新可否を保持する。
+`OracleJsonDualityViewUtils.getTableDetails(view)`と`getColumnDetails(view)`で取り出せる。
+詳細は型を保持したJSONカタログ行として既存の`specifics`へ保存し、XMLでも維持する。
+DDLの正本は従来のView statementであり、詳細行から別のGraphQL本文を合成しない。
+カタログ参照権限／ビュー不在は警告で区別し、SQLの誤り等は伝播する。
+
+検証は共有モデルのXML・clone・差分・名前変更、両Dialectの関連付けSQL、Oracleの
+一括読取→XML→DDL、Dualityの詳細と権限エラーの区別を対象とする。実DBへの接続は行っていない。
+共有変更時のモジュール単体テストはcore 1187件、Oracle 135件、PostgreSQL 300件、H2 49件がすべて成功した。
+その後、23aiの複数列読取とSchema横断Domain順序の変更後にOracle全139件の成功を確認した。
+追加の対象テストは`OracleMultiColumnDomainTest`と`OracleCatalogDomainOrderTest`。
+Schema横断の作成順・循環検出、XML往復、入力順の保持、DomainがないCatalogの従来順序を確認する。
+今回の変更モジュールはsqlapp-core-oracleと開発資料のみ。既存公開API・XML形式・依存関係の破壊的変更はない。
+追加テストの初回はResultSetモックとSQL空白の期待値を修正して再実行した。
+注釈対象の条件式は型推論でコンパイルが長引いたため中断し、明示的な共通型へ変更して再実行した。
+完全DDLの追加テストではコンストラクターとdefinitionのリスト表現に関する期待値を修正して再実行した。
+
+主な実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests 'com.sqlapp.data.schemas.DomainColumnsTest' --tests 'com.sqlapp.data.schemas.ColumnDomainReferenceTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests 'com.sqlapp.data.db.dialect.oracle.metadata.OracleMultiColumnDomainTest' --tests 'com.sqlapp.data.db.dialect.oracle.metadata.Oracle26aiDualityDetailsTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-oracle:test :sqlapp-core-postgres:test :sqlapp-core-h2:test --continue
+.\gradlew.bat :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*'
+```
+
+Flexible／Enumerated Domain、名前付きNOT NULL、single-column Domainの注釈scopeの
+構造化編集APIは引き続き残るが、26aiの完全DDLによる保存・再出力には対応する。
+古い23ai release updateの実DB互換性、実DBでの全DDL実行検証は残る。
+
+仕様参照:
+
+- [Oracle複数列Domain](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/create-domain.html)
+- [ALL_DOMAINS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAINS.html)
+- [DBMS_METADATA](https://docs.oracle.com/en/database/oracle/oracle-database/26/arpls/DBMS_METADATA.html)
+- [Domain依存関係](https://docs.oracle.com/en/error-help/db/oci-11502/index.html)
+- [Duality tables](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_JSON_DUALITY_VIEW_TABS.html)
+- [Duality columns](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_JSON_DUALITY_VIEW_TAB_COLS.html)
+
+## 2026-10-16: Domain型情報の追加確認
+
+Oracle 23ai/26aiのscalar Domainクエリに既存カタログのCOLLATIONを追加し、
+Domainモデル・XML・CREATE DOMAINのCOLLATE句まで保持する。
+複数列Domainのcomponentに未対応のENUMや配列型を設定した場合は、型情報を落としたDDLを
+生成せず、対象名を含むエラーで完全なdefinitionの指定を案内する。
+完全DDLがある場合に補助componentを必須としない既存動作は維持する。
+
+変更はOracleモジュール内に限定し、公開API・XML形式・モジュール依存に変更はない。
+対象テストはOracleDomainCheckTestとOracleMultiColumnDomainTest。
+対象テスト成功後、Gradle WrapperでOracle全141件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。core・PostgreSQL・H2は今回未変更のため再実行していない。
+DISPLAY／ORDERの複数行式は既存specificsのXML属性で改行が正規化されるため制限を維持する。
+この確認の初回テストでは改行保持の期待値が失敗し、その変更を取り下げて対象テストを再実行した。
+実DBへの接続と生成DDLの実行は行っていない。
+
+## 2026-10-16: 完全DDLのDomainとテーブル関連付け
+
+代替型Domainでも主型の構成列を一括取得し、テーブル列との対応順をXML経由で保持する。
+構成列クエリはDATA_TYPE_ID=1に限定する。代替型自体は完全DDLで保持し、補助列から作り直さない。
+DDL取得が成功した後の一時フラグ判定は、Mapの存在判定ではなく実際の値を確認する。
+追加した読取→XML→Domain DDL／テーブルDDLのテストで、この成功経路の誤判定も修正した。
+
+Flexible Domainのテーブル関連付けはUSINGのdiscriminant対応が必須である。
+構成列が解決できていない参照では、不正なscalar形式やUSINGなしのDDLを生成せずエラーを返す。
+以下の継続対応で構成列がある場合のUSING生成を追加した。Domain自体の完全DDL出力は維持する。
+変更はOracleモジュール内で、公開API・XML形式・依存関係に変更はない。実DBテストは未実施。
+対象テスト成功後、Gradle WrapperでOracle全143件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+
+## 2026-10-16: Flexible DomainのUSING対応
+
+Oracle26aiのReaderはFLEXIBLE Domainの構成列を追加の一括SELECTで取得する。
+ALL_DOMAIN_COLS.DISCRIMINANTをDomainColumnのspecifics.oracle.domain.discriminantへ保持し、
+同じDomain.columnsの中で通常構成列と判別列を区別する。通常構成列・判別列の順序はそれぞれカタログ順を保つ。
+Domainの選択式は完全definitionが正本で、関連付けのために同じDDLを解析しない。
+この情報はXML・cloneに維持され、既存のdomainColumnNameとassociationIdでテーブル列へ対応付ける。
+
+例えば次の関連付けを生成できる:
+
+```sql
+CREATE TABLE T (
+    CATEGORY NUMBER,
+    PAYLOAD VARCHAR2(80),
+    DOMAIN APP.CHOICE(PAYLOAD) USING (CATEGORY)
+);
+```
+
+手動モデルではOracleDomainAssociationUtils.KINDにFLEXIBLE、判別用DomainColumnの
+OracleDomainAssociationUtils.DISCRIMINANTにtrueを設定する。各テーブル列は物理型を明示する。
+Oracle23aiへの生成、未解決構成列、欠落した対応、判別列のないFlexible Domainはエラーとする。
+Flexible Domain自体のCREATEには完全definitionが必要である。選択式の構造化編集は未対応。
+Oracle26ai固有カタログ列の参照は26aiのReader内に限定し、共通モデル・公開API・XML形式の破壊的変更はない。
+対象テストはOracleAdvancedDomainDefinitionTestとOracleDomainAssociationTest。実DBテストは未実施。
+対象テスト成功後、Gradle WrapperでOracle全145件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+
+仕様参照: [ALL_DOMAIN_COLS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_COLS.html)、
+[Flexible Domain関連付け](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
 - [ALL_TRIGGERS](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_TRIGGERS.html): DESCRIPTIONは作成文の再構築用、TRIGGER_BODYは本体。
