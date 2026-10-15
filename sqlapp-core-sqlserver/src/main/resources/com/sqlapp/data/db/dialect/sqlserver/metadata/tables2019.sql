@@ -31,7 +31,16 @@ SELECT
 	, t.is_node
 	, t.is_edge
 	, idx.optimize_for_sequential_key
+    , hs.name AS history_schema_name
+    , ht.name AS history_table_name
+    , pc1.name AS period_start_column
+    , pc2.name AS period_end_column
 FROM sys.tables t
+LEFT JOIN sys.tables ht ON ht.object_id = t.history_table_id
+LEFT JOIN sys.schemas hs ON hs.schema_id = ht.schema_id
+LEFT JOIN sys.periods tp ON tp.object_id = t.object_id
+LEFT JOIN sys.columns pc1 ON pc1.object_id = tp.object_id AND pc1.column_id = tp.start_column_id
+LEFT JOIN sys.columns pc2 ON pc2.object_id = tp.object_id AND pc2.column_id = tp.end_column_id
 INNER JOIN sys.schemas s
   ON (s.schema_id = t.schema_id)
 LEFT OUTER JOIN sys.indexes idx

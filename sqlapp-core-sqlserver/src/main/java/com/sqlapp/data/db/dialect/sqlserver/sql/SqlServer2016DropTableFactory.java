@@ -22,12 +22,46 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractDropTableFactory;
 import com.sqlapp.data.schemas.Table;
+import java.util.List;
+import java.util.Collection;
+import java.util.ArrayList;
+import com.sqlapp.data.db.sql.SqlOperation;
 
 /**
  * DROP TABLE
  * 
  */
 public class SqlServer2016DropTableFactory extends AbstractDropTableFactory<SqlServerSqlBuilder> {
+	@Override
+	public List<SqlOperation> createSql(Table table) {
+		List<SqlOperation> result = new ArrayList<>();
+		if (SqlServerTemporalSupport.enabled(table))
+			result.add(disableVersioning(table));
+		result.addAll(super.createSql(table));
+		return result;
+	}
+
+	@Override
+	public List<SqlOperation> createSql(Collection<Table> tables) {
+		List<SqlOperation> result = new ArrayList<>();
+		for (Table table : tables) if (SqlServerTemporalSupport.enabled(table))
+			result.add(disableVersioning(table));
+		for (Table table : sort(new ArrayList<>(tables))) result.addAll(super.createSql(table));
+		return result;
+	}
+
+    private SqlOperation disableVersioning(Table table) {
+        SqlOperation operation = SqlServerTemporalSupport.versioning(table, createSqlBuilder(), false,
+                getOptions().isDecorateSchemaName());
+        if (!getOptions().isDropIfExists()) return operation;
+        SqlServerSqlBuilder name = createSqlBuilder();
+        name.name(table, getOptions().isDecorateSchemaName());
+        String literal = name.toString().trim().replace("'", "''");
+        return createOperation("IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID(N'"
+                + literal + "') AND temporal_type = 2) " + operation.getSqlText(),
+                com.sqlapp.data.db.sql.SqlType.ALTER, table);
+    }
+
 	@Override
 	protected void addDropObject(final Table table, final SqlServerSqlBuilder builder) {
 		builder.drop().table().ifExists(this.getOptions().isDropIfExists());

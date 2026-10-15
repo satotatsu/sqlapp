@@ -12,6 +12,7 @@ import com.sqlapp.data.schemas.*;
 
 final class SqlServerMetadataAuditAssertions {
 	static void verify(Connection connection) throws Exception {
+		verifyTemporal(connection);
 		var dialect = DialectResolver.getInstance().getDialect(connection);
 		String prefix = "AUD_" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
 		try (var sql = connection.createStatement()) {
@@ -117,6 +118,48 @@ final class SqlServerMetadataAuditAssertions {
 				assertEquals(Boolean.TRUE, after.getSpecifics().get("is_track_columns_updated_on", Boolean.class));
 			} finally {
 				sql.execute("DROP TABLE IF EXISTS dbo." + name);
+			}
+		}
+	}
+	private static void verifyTemporal(Connection connection) throws Exception {
+		var dialect = DialectResolver.getInstance().getDialect(connection);
+		String name = "TEMP_" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+		String history = name + "_HISTORY";
+		try (var sql = connection.createStatement()) {
+			sql.execute("CREATE TABLE dbo." + name + " (ID int NOT NULL PRIMARY KEY, VALUE int, "
+					+ "VALID_FROM datetime2 GENERATED ALWAYS AS ROW START HIDDEN NOT NULL, "
+					+ "VALID_TO datetime2 GENERATED ALWAYS AS ROW END HIDDEN NOT NULL, "
+					+ "PERIOD FOR SYSTEM_TIME(VALID_FROM, VALID_TO)) "
+					+ "WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo." + history + "))");
+			try {
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setCatalogName(connection.getCatalog());
+				reader.setSchemaName("dbo");
+				reader.setObjectName(name);
+				Table original = reader.getAllFull(connection).get(0);
+				assertTrue(original.getSystemVersioning().isEnable());
+				assertEquals(history, original.getSystemVersioning().getHistoryTableName());
+				assertTrue(original.getColumns().get("VALID_FROM").isHidden());
+				assertEquals("VALID_TO", original.getTemporalPeriods().get(0).getEndColumnName());
+				Table restored = SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(original, SqlType.DROP)) sql.execute(operation.getSqlText());
+				// Keep the existing history table and reconnect to it during recreation.
+				for (var operation : registry.createSql(restored, SqlType.CREATE)) sql.execute(operation.getSqlText());
+				Table recreated = reader.getAllFull(connection).get(0);
+				assertEquals(restored.getTemporalPeriods(), recreated.getTemporalPeriods());
+				assertEquals(restored.getSystemVersioning(), recreated.getSystemVersioning());
+				sql.execute("INSERT INTO dbo." + name + "(ID, VALUE) VALUES(1, 10)");
+				sql.execute("UPDATE dbo." + name + " SET VALUE = 20 WHERE ID = 1");
+				try (var rows = sql.executeQuery("SELECT COUNT(*) FROM dbo." + history)) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+				}
+			} finally {
+				sql.execute("ALTER TABLE dbo." + name + " SET (SYSTEM_VERSIONING = OFF)");
+				sql.execute("DROP TABLE dbo." + name);
+				sql.execute("DROP TABLE dbo." + history);
 			}
 		}
 	}

@@ -19,12 +19,32 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+
+import java.util.List;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.DbObjectDifference;
+
 /**
- * SQLServer2008 alter table
+ * SQL Server 2016+ temporal table alteration
  * 
  * @author tatsuo satoh
  * 
  */
 public class SqlServer2016AlterTableFactory extends SqlServer2014AlterTableFactory {
+	@Override
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+		Table original = difference.getOriginal(Table.class);
+		Table target = difference.getTarget(Table.class);
+		if (original != null && target != null && (!original.getTemporalPeriods().isEmpty()
+				|| !target.getTemporalPeriods().isEmpty() || SqlServerTemporalSupport.enabled(original)
+				|| SqlServerTemporalSupport.enabled(target))) {
+			if (original.equals(target)) return java.util.Collections.emptyList();
+			throw new IllegalArgumentException("Automatic ALTER of temporal tables is unsupported; disable SYSTEM_VERSIONING, "
+					+ "migrate both current and history tables explicitly, then re-enable it: " + target.getName());
+		}
+		return super.createDiffSql(difference);
+	}
+
 
 }

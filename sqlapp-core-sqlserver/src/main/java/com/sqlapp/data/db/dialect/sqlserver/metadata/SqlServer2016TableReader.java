@@ -26,6 +26,8 @@ import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TemporalPeriod;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
@@ -44,6 +46,15 @@ public class SqlServer2016TableReader extends SqlServer2014TableReader {
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
 		setSpecifics(rs, "temporal_type", table);
+		String start = getString(rs, "period_start_column");
+		String end = getString(rs, "period_end_column");
+		if (start != null && end != null) {
+			table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
+					.setPeriodType(TemporalPeriodType.SYSTEM_TIME).setStartColumnName(start).setEndColumnName(end));
+			table.toSystemVersioning().setEnable("SYSTEM_VERSIONED_TEMPORAL_TABLE".equals(getString(rs, "temporal_type")))
+					.setPeriodName("SYSTEM_TIME").setHistoryTableSchemaName(getString(rs, "history_schema_name"))
+					.setHistoryTableName(getString(rs, "history_table_name"));
+		}
 		return table;
 	}
 

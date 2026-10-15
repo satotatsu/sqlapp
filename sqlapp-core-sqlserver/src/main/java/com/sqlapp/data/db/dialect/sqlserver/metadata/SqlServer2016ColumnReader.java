@@ -49,6 +49,7 @@ public class SqlServer2016ColumnReader extends SqlServer2012ColumnReader {
 		final Column column = super.createColumn(rs);
 		final String maskingFunction = getString(rs, "masking_function");
 		column.setMaskingFunction(maskingFunction);
+		column.setHidden(rs.getBoolean("is_hidden"));
 		return column;
 	}
 }

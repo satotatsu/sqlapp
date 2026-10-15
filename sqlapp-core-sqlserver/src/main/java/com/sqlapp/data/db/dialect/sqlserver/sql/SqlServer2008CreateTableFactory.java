@@ -74,6 +74,10 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
+		if ((!table.getTemporalPeriods().isEmpty() || table.getSystemVersioning() != null)
+				&& getDialect().compareTo(com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver
+						.getInstance().getDialect(13, 0)) < 0)
+			throw new IllegalArgumentException("Temporal tables require SQL Server 2016 or later");
 		List<SqlOperation> result = super.createSql(table);
 		String escalation = table.getSpecifics().get("LOCK_ESCALATION");
 		if (escalation != null) {
@@ -120,7 +124,7 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 		map.forEach((k, v) -> {
 			String key = k.toLowerCase(Locale.ROOT);
 			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v)))
-					|| (key.equals("temporal_type") && ("0".equals(v) || "NON_TEMPORAL_TABLE".equals(v)))
+					|| key.equals("temporal_type")
 					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v))))
 				return;
 			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k) || "LOCK_ESCALATION".equalsIgnoreCase(k)

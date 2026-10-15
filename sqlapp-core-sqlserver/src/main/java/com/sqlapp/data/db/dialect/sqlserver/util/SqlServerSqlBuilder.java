@@ -25,6 +25,7 @@ import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.AbstractNamedObject;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.NamedArgumentCollection;
 import com.sqlapp.data.schemas.Procedure;
@@ -251,6 +252,10 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 	 */
 	@Override
 	public SqlServerSqlBuilder definition(final Column column, final boolean withRemarks) {
+		if (column.getTable() != null && (!column.getTable().getTemporalPeriods().isEmpty()
+				|| column.getTable().getSystemVersioning() != null) && getDialect().compareTo(sqlserver2016) < 0) {
+			throw new IllegalArgumentException("Temporal tables require SQL Server 2016 or later");
+		}
 		if (this.getDialect().compareTo(sqlserver2008) >= 0) {
 			if (!CommonUtils.isEmpty(column.getFormula())) {
 				as().space()._add(column.getFormula());
@@ -266,6 +271,18 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 			typeDefinition(column);
 			characterSetDefinition(column);
 			collateDefinition(column);
+		}
+		if (column.getTable() != null && getDialect().compareTo(sqlserver2016) >= 0) {
+			for (var period : column.getTable().getTemporalPeriods()) {
+				if (period.getPeriodType() != TemporalPeriodType.SYSTEM_TIME) continue;
+				if (column == column.getTable().getColumns().get(period.getStartColumnName())) {
+					space()._add("GENERATED ALWAYS AS ROW START");
+					if (column.isHidden()) space()._add("HIDDEN");
+				} else if (column == column.getTable().getColumns().get(period.getEndColumnName())) {
+					space()._add("GENERATED ALWAYS AS ROW END");
+					if (column.isHidden()) space()._add("HIDDEN");
+				}
+			}
 		}
 		if (!CommonUtils.isEmpty(column.getMaskingFunction())) {
 			if (this.getDialect().compareTo(sqlserver2016) >= 0) {

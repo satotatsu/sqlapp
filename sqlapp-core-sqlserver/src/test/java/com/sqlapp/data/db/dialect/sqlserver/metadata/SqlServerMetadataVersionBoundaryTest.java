@@ -38,4 +38,18 @@ class SqlServerMetadataVersionBoundaryTest {
 		assertTrue(query.contains("LEFT JOIN sys.allocation_units"));
 		assertFalse(query.contains("column_name"));
 	}
+	@Test
+	void temporalCatalogReferencesAreIsolatedTo2016AndLater() throws Exception {
+		for (String version : new String[] { "2008", "2012", "2014" })
+			assertFalse(resource("tables" + version + ".sql").contains("sys.periods"));
+		for (String version : new String[] { "2016", "2019", "2022" }) {
+			String sql = resource("tables" + version + ".sql");
+			assertTrue(sql.contains("sys.periods"));
+			assertTrue(sql.contains("t.history_table_id"));
+			assertTrue(sql.contains("period_start_column"));
+			assertTrue(sql.contains("period_end_column"));
+		}
+		assertTrue(resource("columns2016.sql").contains("c.is_hidden"));
+		assertFalse(resource("columns2008.sql").contains("c.is_hidden"));
+	}
 }

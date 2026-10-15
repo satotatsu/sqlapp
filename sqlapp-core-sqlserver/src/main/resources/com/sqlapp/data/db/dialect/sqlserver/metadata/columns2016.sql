@@ -36,6 +36,7 @@ SELECT
 	, c.default_object_id
 	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 	, mc.masking_function
+    , c.is_hidden
 FROM sys.columns c
 INNER JOIN sys.tables t
   ON (c.object_id = t.object_id)
