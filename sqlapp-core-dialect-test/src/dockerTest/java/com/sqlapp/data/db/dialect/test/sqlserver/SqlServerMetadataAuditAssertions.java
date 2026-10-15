@@ -150,8 +150,61 @@ final class SqlServerMetadataAuditAssertions {
 				Table recreated = reader.getAllFull(connection).get(0);
 				assertEquals(restored.getTemporalPeriods(), recreated.getTemporalPeriods());
 				assertEquals(restored.getSystemVersioning(), recreated.getSystemVersioning());
+				var altered = recreated.clone();
+				altered.getColumns().get("VALID_FROM").setHidden(false);
+				com.sqlapp.data.db.sql.SqlFactory<Table> alterFactory = registry.getSqlFactory(altered, SqlType.ALTER);
+				for (var operation : alterFactory.createDiffSql(recreated.diff(altered))) sql.execute(operation.getSqlText());
+				assertFalse(reader.getAllFull(connection).get(0).getColumns().get("VALID_FROM").isHidden());
+				Table disabled = altered.clone();
+				disabled.toSystemVersioning().setEnable(false);
+				for (var operation : alterFactory.createDiffSql(altered.diff(disabled))) sql.execute(operation.getSqlText());
+				Table readDisabled = reader.getAllFull(connection).get(0);
+				assertFalse(readDisabled.getSystemVersioning().isEnable());
+				Table reenabled = readDisabled.clone();
+				reenabled.toSystemVersioning().setEnable(true).setHistoryTableSchemaName("dbo").setHistoryTableName(history);
+				for (var operation : alterFactory.createDiffSql(readDisabled.diff(reenabled))) sql.execute(operation.getSqlText());
+				assertEquals(history, reader.getAllFull(connection).get(0).getSystemVersioning().getHistoryTableName());
 				sql.execute("INSERT INTO dbo." + name + "(ID, VALUE) VALUES(1, 10)");
 				sql.execute("UPDATE dbo." + name + " SET VALUE = 20 WHERE ID = 1");
+				try (var rows = sql.executeQuery("SELECT COUNT(*) FROM dbo." + history)) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+				}
+				Table beforeAdd = reader.getAllFull(connection).get(0);
+				Table withColumn = beforeAdd.clone();
+				withColumn.getColumns().add(new Column("EXTRA_VALUE").setDataType(com.sqlapp.data.db.datatype.DataType.NVARCHAR).setLength(80));
+				for (var operation : alterFactory.createDiffSql(beforeAdd.diff(withColumn))) sql.execute(operation.getSqlText());
+				assertTrue(reader.getAllFull(connection).get(0).getSystemVersioning().isEnable());
+				try (var rows = sql.executeQuery("SELECT EXTRA_VALUE FROM dbo." + history)) {
+					assertTrue(rows.next());
+					assertNull(rows.getString(1));
+				}
+				try (var rows = sql.executeQuery("SELECT VALUE, EXTRA_VALUE FROM dbo." + name + " WHERE ID=1")) {
+					assertTrue(rows.next());
+					assertEquals(20, rows.getInt(1));
+					assertNull(rows.getString(2));
+				}
+				Table beforeRemoval = reader.getAllFull(connection).get(0);
+				Table ordinary = beforeRemoval.clone();
+				ordinary.getTemporalPeriods().clear();
+				ordinary.setSystemVersioning(null);
+				ordinary.getSpecifics().put("temporal_type", "NON_TEMPORAL_TABLE");
+				ordinary.getColumns().get("VALID_FROM").setHidden(false);
+				ordinary.getColumns().get("VALID_TO").setHidden(false);
+				for (var operation : alterFactory.createDiffSql(beforeRemoval.diff(ordinary))) sql.execute(operation.getSqlText());
+				Table readOrdinary = reader.getAllFull(connection).get(0);
+				assertTrue(readOrdinary.getTemporalPeriods().isEmpty());
+				assertNull(readOrdinary.getSystemVersioning());
+				Table temporalAgain = readOrdinary.clone();
+				temporalAgain.setTemporalPeriods(beforeRemoval.getTemporalPeriods().clone());
+				temporalAgain.setSystemVersioning(beforeRemoval.getSystemVersioning().clone());
+				temporalAgain.getSpecifics().put("temporal_type", "SYSTEM_VERSIONED_TEMPORAL_TABLE");
+				for (var operation : alterFactory.createDiffSql(readOrdinary.diff(temporalAgain))) sql.execute(operation.getSqlText());
+				assertTrue(reader.getAllFull(connection).get(0).getSystemVersioning().isEnable());
+				try (var rows = sql.executeQuery("SELECT VALUE FROM dbo." + name + " WHERE ID=1")) {
+					assertTrue(rows.next());
+					assertEquals(20, rows.getInt(1));
+				}
 				try (var rows = sql.executeQuery("SELECT COUNT(*) FROM dbo." + history)) {
 					assertTrue(rows.next());
 					assertEquals(1, rows.getInt(1));

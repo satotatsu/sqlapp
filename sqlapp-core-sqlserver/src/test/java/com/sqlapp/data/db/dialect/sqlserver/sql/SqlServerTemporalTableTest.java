@@ -108,11 +108,161 @@ class SqlServerTemporalTableTest {
 		assertThrows(IllegalArgumentException.class, () -> registry(13).createSql(noKey, SqlType.CREATE));
 	}
 
-	@Test
-	void temporalAlterFailsExplicitlyInsteadOfLosingChanges() {
-		Table original = table(), target = original.clone();
-		target.toSystemVersioning().setEnable(false);
+	private List<SqlOperation> alter(Table original, Table target) {
 		SqlFactory<Table> factory = registry(13).getSqlFactory(target, SqlType.ALTER);
-		assertThrows(IllegalArgumentException.class, () -> factory.createDiffSql(original.diff(target)));
+		return factory.createDiffSql(original.diff(target));
+	}
+
+	@Test
+	void versioningCanBeDisabledAndReenabledWithoutLosingHistoryIdentity() {
+		Table original = table(), disabled = original.clone();
+		disabled.toSystemVersioning().setEnable(false);
+		var off = alter(original, disabled);
+		assertEquals(1, off.size());
+		assertTrue(off.get(0).getSqlText().contains("SYSTEM_VERSIONING = OFF"));
+		var on = alter(disabled, original);
+		assertEquals(1, on.size());
+		assertTrue(on.get(0).getSqlText().contains("HISTORY_TABLE = [history schema].[Old]]Data]"));
+		assertTrue(on.get(0).getSqlText().contains("DATA_CONSISTENCY_CHECK = ON"));
+		assertTrue(alter(original, original.clone()).isEmpty());
+	}
+
+	@Test
+	void periodHiddenChangesDoNotInterruptVersioning() {
+		Table original = table(), target = original.clone();
+		target.getColumns().get("Valid From").setHidden(false);
+		target.getColumns().get("Valid To").setHidden(true);
+		var sql = alter(original, target);
+		assertEquals(2, sql.size());
+		assertTrue(sql.get(0).getSqlText().contains("DROP HIDDEN"));
+		assertTrue(sql.get(1).getSqlText().contains("ADD HIDDEN"));
+		assertFalse(sql.stream().anyMatch(operation -> operation.getSqlText().contains("SYSTEM_VERSIONING")));
+		target.toSystemVersioning().setEnable(false);
+		var off = alter(original, target);
+		assertTrue(off.get(0).getSqlText().contains("SYSTEM_VERSIONING = OFF"));
+		var on = alter(target, original);
+		assertTrue(on.get(on.size()-1).getSqlText().contains("SYSTEM_VERSIONING = ON"));
+	}
+
+	@Test
+	void reenableRequiresExplicitHistoryAndOtherChangesFailBeforeReturningSql() {
+		Table original = table();
+		original.toSystemVersioning().setHistoryTableName(null).setHistoryTableSchemaName(null).setEnable(false);
+		Table enabled = original.clone();
+		enabled.toSystemVersioning().setEnable(true);
+		assertThrows(IllegalArgumentException.class, () -> alter(original, enabled));
+		Table current = table(), structural = current.clone();
+		structural.getColumns().add(new Column("extra").setDataType(DataType.INT).setNotNull(true));
+		assertThrows(IllegalArgumentException.class, () -> alter(current, structural));
+		Table changedHistory = current.clone();
+		changedHistory.toSystemVersioning().setHistoryTableName("Other");
+		assertThrows(IllegalArgumentException.class, () -> alter(current, changedHistory));
+		Table changedPeriod = current.clone();
+		changedPeriod.getTemporalPeriods().get(0).setName("Other");
+		assertThrows(IllegalArgumentException.class, () -> alter(current, changedPeriod));
+		Table unrelated = current.clone();
+		unrelated.getColumns().get("id").setHidden(true);
+		assertThrows(IllegalArgumentException.class, () -> alter(current, unrelated));
+	}
+	@Test
+	void explicitHistoryCanBeSuppliedAfterReadingADisabledPeriod() {
+		Table original = table();
+		original.toSystemVersioning().setEnable(false).setHistoryTableName(null).setHistoryTableSchemaName(null);
+		original.getSpecifics().put("temporal_type", "NON_TEMPORAL_TABLE");
+		Table target = original.clone();
+		target.toSystemVersioning().setEnable(true).setHistoryTableSchemaName("audit").setHistoryTableName("History");
+		target.getSpecifics().put("temporal_type", "SYSTEM_VERSIONED_TEMPORAL_TABLE");
+		var sql = alter(original, target);
+		assertEquals(1, sql.size());
+		assertTrue(sql.get(0).getSqlText().contains("HISTORY_TABLE = audit.History"));
+	}
+
+	private Table withoutPeriod(Table temporal) {
+		Table ordinary = temporal.clone();
+		ordinary.getTemporalPeriods().clear();
+		ordinary.setSystemVersioning(null);
+		ordinary.getSpecifics().remove("temporal_type");
+		ordinary.getColumns().get("Valid From").setHidden(false);
+		ordinary.getColumns().get("Valid To").setHidden(false);
+		return ordinary;
+	}
+
+	@Test
+	void existingColumnsCanBecomeTemporalWithoutReplacingData() {
+		Table target = table(), original = withoutPeriod(target);
+		var sql = alter(original, target);
+		assertEquals(3, sql.size());
+		assertTrue(sql.get(0).getSqlText().contains("ADD PERIOD FOR SYSTEM_TIME"));
+		assertTrue(sql.get(1).getSqlText().contains("ADD HIDDEN"));
+		assertTrue(sql.get(2).getSqlText().contains("SYSTEM_VERSIONING = ON"));
+		assertFalse(sql.stream().anyMatch(operation -> operation.getSqlText().contains("DROP TABLE")));
+		target.setSystemVersioning(null);
+		target.getSpecifics().remove("temporal_type");
+		assertEquals(2, alter(original, target).size());
+	}
+
+	@Test
+	void removalDisablesVersioningAndRevealsColumnsBeforeDroppingOnlyPeriod() {
+		Table original = table(), target = withoutPeriod(original);
+		var sql = alter(original, target);
+		assertEquals(3, sql.size());
+		assertTrue(sql.get(0).getSqlText().contains("SYSTEM_VERSIONING = OFF"));
+		assertTrue(sql.get(1).getSqlText().contains("DROP HIDDEN"));
+		assertTrue(sql.get(2).getSqlText().contains("DROP PERIOD FOR SYSTEM_TIME"));
+		assertFalse(sql.stream().anyMatch(operation -> operation.getSqlText().contains("DROP TABLE")));
+		original.toSystemVersioning().setEnable(false);
+		original.getSpecifics().put("temporal_type", "NON_TEMPORAL_TABLE");
+		assertEquals(2, alter(original, target).size());
+	}
+
+	@Test
+	void periodTransitionsRejectMixedStructuralChanges() {
+		Table target = table(), original = withoutPeriod(target);
+		target.getColumns().get("id").setDataType(DataType.BIGINT);
+		assertThrows(IllegalArgumentException.class, () -> alter(original, target));
+		Table current = table(), removed = withoutPeriod(current);
+		removed.getColumns().get("Valid From").setHidden(true);
+		assertThrows(IllegalArgumentException.class, () -> alter(current, removed));
+	}
+
+	@Test
+	void nullableColumnsCanBeAppendedWithoutInterruptingHistory() {
+		Table original = table(), target = original.clone();
+		target.getColumns().add(new Column("Extra Value").setDataType(DataType.NVARCHAR).setLength(80));
+		target.getColumns().add(new Column("amount").setDataType(DataType.DECIMAL).setLength(12).setScale(2));
+		for (int version : new int[] {13, 14, 15, 16}) {
+			SqlFactory<Table> factory = registry(version).getSqlFactory(target, SqlType.ALTER);
+			assertEquals(2, factory.createDiffSql(original.diff(target)).size());
+		}
+		var sql = alter(original, target);
+		assertEquals(2, sql.size());
+		assertTrue(sql.get(0).getSqlText().contains("ADD [Extra Value] NVARCHAR(80) NULL"), sql.toString());
+		assertTrue(sql.get(1).getSqlText().contains("DECIMAL(12,2) NULL"), sql.toString());
+		assertFalse(sql.stream().anyMatch(operation -> operation.getSqlText().contains("SYSTEM_VERSIONING")));
+	}
+
+	@Test
+	void columnAdditionsRejectAdvancedPropertiesAndMixedChanges() {
+		Table original = table();
+		for (Column column : List.of(
+				new Column("extra").setDataType(DataType.INT).setNotNull(true),
+				new Column("extra").setDataType(DataType.INT).setIdentity(true),
+				new Column("extra").setDataType(DataType.INT).setDefaultValue("0"),
+				new Column("extra").setDataType(DataType.INT).setFormula("id + 1"),
+				new Column("extra").setDataType(DataType.INT).setHidden(true),
+				new Column("extra").setDataType(DataType.INT).setCheck("extra > 0"))) {
+			Table target = original.clone();
+			target.getColumns().add(column);
+			assertThrows(IllegalArgumentException.class, () -> alter(original, target));
+		}
+		Table mixed = original.clone();
+		mixed.getColumns().add(new Column("extra").setDataType(DataType.INT));
+		mixed.getColumns().get("id").setDataType(DataType.BIGINT);
+		assertThrows(IllegalArgumentException.class, () -> alter(original, mixed));
+		Table disabled = original.clone();
+		disabled.toSystemVersioning().setEnable(false);
+		Table added = disabled.clone();
+		added.getColumns().add(new Column("extra").setDataType(DataType.INT));
+		assertThrows(IllegalArgumentException.class, () -> alter(disabled, added));
 	}
 }

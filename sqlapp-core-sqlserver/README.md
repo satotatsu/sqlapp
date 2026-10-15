@@ -45,8 +45,35 @@ history unless its deletion is explicitly requested. For a DROP table collection
 all versioning disable operations precede the table drops. Generation does not
 execute SQL or start a transaction.
 
-Automatic ALTER of temporal tables is rejected explicitly. Such migrations must
-disable versioning, migrate current and history tables together, then re-enable
+Temporal ALTER supports toggling `SystemVersioning.enable` on an existing
+SYSTEM_TIME period and toggling `Column.hidden` for its start/end columns. Hidden
+changes use `ALTER COLUMN ... ADD/DROP HIDDEN` without interrupting versioning.
+Re-enabling requires an explicit history schema and table name. If the disabled
+model was freshly read, supply the former history identity explicitly; SQL Server
+no longer exposes that relationship after versioning is disabled. An already
+recorded history identity cannot be changed by this automatic ALTER path.
+
+ALTER also supports adding a SYSTEM_TIME period on existing, non-null datetime2
+columns, optionally enabling versioning afterward. Removing the period disables
+versioning first when needed and removes HIDDEN flags before DROP PERIOD. To
+remove a period, clear `temporalPeriods`, set `systemVersioning` to null, and set
+its former period columns to `hidden=false`. The columns, their values, and the
+history table are retained. Existing row values are validated by SQL Server;
+the generator does not backfill or rewrite them. Execute the plan in a transaction
+if the application requires the multi-statement transition to be atomic.
+
+While versioning remains enabled, ALTER can also append ordinary nullable columns
+of these built-in model types: INT, BIGINT, VARCHAR, NVARCHAR, DECIMAL, DATE,
+TIMESTAMP (datetime2), VARBINARY and BOOLEAN (bit). Length and scale settings are
+supported. SQL explicitly includes NULL; SQL Server propagates the addition to the
+history table. Existing current/history values are retained and the new values
+are NULL. This path excludes memory-optimized tables, explicit vendor type names,
+defaults, computed expressions, identity, constraints and other advanced column
+properties. Column additions cannot be combined with other changes.
+
+Replacing a period, changing existing column structure, history identity or
+unrelated table properties is rejected explicitly. Such migrations must disable
+versioning, migrate current and history tables together, then re-enable
 versioning explicitly. History retention settings, Ledger features and restoration
 of historical row data are outside this support. SQL Server versions before 2016
 reject temporal configuration; their metadata queries remain unchanged.
