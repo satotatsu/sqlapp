@@ -184,6 +184,16 @@ final class SqlServerMetadataAuditAssertions {
 					assertEquals(20, rows.getInt(1));
 					assertNull(rows.getString(2));
 				}
+				Table beforeWiden = reader.getAllFull(connection).get(0);
+				Table widened = beforeWiden.clone();
+				widened.getColumns().get("EXTRA_VALUE").setLength(160);
+				for (var operation : alterFactory.createDiffSql(beforeWiden.diff(widened))) sql.execute(operation.getSqlText());
+				assertEquals(160L, reader.getAllFull(connection).get(0).getColumns().get("EXTRA_VALUE").getLength());
+				try (var rows = sql.executeQuery("SELECT max_length FROM sys.columns WHERE object_id = OBJECT_ID('dbo."
+						+ history + "') AND name = 'EXTRA_VALUE'")) {
+					assertTrue(rows.next());
+					assertEquals(320, rows.getInt(1));
+				}
 				Table beforeRemoval = reader.getAllFull(connection).get(0);
 				Table ordinary = beforeRemoval.clone();
 				ordinary.getTemporalPeriods().clear();

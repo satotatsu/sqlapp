@@ -89,7 +89,7 @@ public class SqlServer2016AlterTableFactory extends SqlServer2014AlterTableFacto
 			normalized.getColumns().get(name).setHidden(before.isHidden());
 		}
 		if (!normalized.equals(original))
-			throw unsupported(target, "Changing temporal table structure or unrelated properties");
+			return widenColumns(original, target);
 
 		boolean wasEnabled = SqlServerTemporalSupport.enabled(original);
 		boolean enable = SqlServerTemporalSupport.enabled(target);
@@ -200,6 +200,55 @@ public class SqlServer2016AlterTableFactory extends SqlServer2014AlterTableFacto
 			builder.alter().table().space().name(target, getOptions().isDecorateSchemaName()).add()
 					.name(column).space().definition(column, false)._add(" NULL");
 			result.add(createOperation(builder.toString(), SqlType.ALTER, null, column));
+		}
+		return result;
+	}
+
+	/** Widens bounded variable-length columns using the shared dialect type generator. */
+	private List<SqlOperation> widenColumns(Table original, Table target) {
+		if (!SqlServerTemporalSupport.enabled(original) || !SqlServerTemporalSupport.enabled(target)
+				|| original.getTableType() == Table.TableType.Memory)
+			throw unsupported(target, "Widening columns while versioning is disabled or changing");
+		Table normalized = target.clone();
+		List<Column> widened = new ArrayList<>();
+		for (Column after : target.getColumns()) {
+			Column before = original.getColumns().get(after.getName());
+			if (before == null || java.util.Objects.equals(before.getLength(), after.getLength())) continue;
+			DataType type = before.getDataType();
+			if (type != DataType.VARCHAR && type != DataType.NVARCHAR && type != DataType.VARBINARY)
+				throw unsupported(target, "Widening a non-variable-length column: " + after.getName());
+			long maximum = type == DataType.NVARCHAR ? 4000 : 8000;
+			if (before.getLength() == null || after.getLength() == null || before.getLength() <= 0
+					|| after.getLength() <= before.getLength() || after.getLength() > maximum)
+				throw unsupported(target, "Shrinking or changing a column to/from MAX: " + after.getName());
+			if (before.isIdentity() || before.isHidden()
+					|| before.getFormula() != null && !before.getFormula().isEmpty()
+					|| before.getMaskingFunction() != null && !before.getMaskingFunction().isEmpty()
+					|| before.getDataTypeName() != null && !before.getDataTypeName().equalsIgnoreCase(type.name()))
+				throw unsupported(target, "Widening a column with generated or vendor-specific behavior: " + after.getName());
+			for (var entry : before.getSpecifics().entrySet()) {
+				if (!entry.getKey().equalsIgnoreCase("is_sparse")
+						|| !("false".equalsIgnoreCase(entry.getValue()) || "0".equals(entry.getValue())))
+					throw unsupported(target, "Widening a column with advanced specifics: " + after.getName());
+			}
+			normalized.getColumns().get(after.getName()).setLength(before.getLength());
+			widened.add(after);
+		}
+		if (widened.isEmpty() || !normalized.equals(original))
+			throw unsupported(target, "Combining length expansion with other temporal table changes");
+		List<SqlOperation> result = new ArrayList<>();
+		for (Column column : widened) {
+			// ALTER COLUMN restates type, collation and nullability only. Existing
+			// defaults, checks and comments must not be recreated inline.
+			Column definition = new Column(column.getName()).setDataType(column.getDataType())
+					.setLength(column.getLength());
+			var builder = createSqlBuilder();
+			builder.alter().table().space().name(target, getOptions().isDecorateSchemaName())
+					._add(" ALTER COLUMN ").name(column).space().definitionForAlterColumn(definition);
+			if (column.getCollation() != null && !column.getCollation().isEmpty())
+				builder._add(" COLLATE ").name(column.getCollation());
+			builder._add(column.isNotNull() ? " NOT NULL" : " NULL");
+			result.add(createOperation(builder.toString(), SqlType.ALTER, original.getColumns().get(column.getName()), column));
 		}
 		return result;
 	}

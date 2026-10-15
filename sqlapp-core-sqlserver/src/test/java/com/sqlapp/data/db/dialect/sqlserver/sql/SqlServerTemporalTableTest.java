@@ -265,4 +265,51 @@ class SqlServerTemporalTableTest {
 		added.getColumns().add(new Column("extra").setDataType(DataType.INT));
 		assertThrows(IllegalArgumentException.class, () -> alter(disabled, added));
 	}
+
+	@Test
+	void boundedVariableLengthColumnsCanExpandWhileVersioningRemainsEnabled() {
+		for (DataType type : List.of(DataType.VARCHAR, DataType.NVARCHAR, DataType.VARBINARY)) {
+			Table original = table();
+			original.getColumns().add(new Column("Extra Value").setDataType(type).setLength(40));
+			Table target = original.clone();
+			target.getColumns().get("Extra Value").setLength(80);
+			var sql = alter(original, target);
+			assertEquals(1, sql.size());
+			assertTrue(sql.get(0).getSqlText().contains("ALTER COLUMN [Extra Value] " + type.name() + "(80) NULL"), sql.toString());
+			assertFalse(sql.get(0).getSqlText().contains("SYSTEM_VERSIONING"));
+		}
+	}
+
+	@Test
+	void wideningPreservesNullabilityCollationAndDoesNotRestateDefaultOrCheck() {
+		Table original = table();
+		original.getColumns().add(new Column("note").setDataType(DataType.NVARCHAR).setLength(40)
+				.setNotNull(true).setCollation("Latin1_General_100_CI_AS").setDefaultValue("N''").setCheck("LEN(note)>=0"));
+		Table target = original.clone();
+		target.getColumns().get("note").setLength(80);
+		String sql = alter(original, target).get(0).getSqlText();
+		assertTrue(sql.contains("NOT NULL"), sql);
+		assertTrue(sql.contains("COLLATE"), sql);
+		assertFalse(sql.contains("DEFAULT"), sql);
+		assertFalse(sql.contains("CHECK"), sql);
+	}
+
+	@Test
+	void wideningRejectsShrinkMaxAndMixedChanges() {
+		Table original = table();
+		original.getColumns().add(new Column("note").setDataType(DataType.NVARCHAR).setLength(40));
+		for (long length : new long[] {20, 4001, Integer.MAX_VALUE}) {
+			Table target = original.clone();
+			target.getColumns().get("note").setLength(length);
+			assertThrows(IllegalArgumentException.class, () -> alter(original, target));
+		}
+		Table mixed = original.clone();
+		mixed.getColumns().get("note").setLength(80).setNotNull(true);
+		assertThrows(IllegalArgumentException.class, () -> alter(original, mixed));
+		Table disabled = original.clone();
+		disabled.toSystemVersioning().setEnable(false);
+		Table wider = disabled.clone();
+		wider.getColumns().get("note").setLength(80);
+		assertThrows(IllegalArgumentException.class, () -> alter(disabled, wider));
+	}
 }

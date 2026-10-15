@@ -71,7 +71,14 @@ are NULL. This path excludes memory-optimized tables, explicit vendor type names
 defaults, computed expressions, identity, constraints and other advanced column
 properties. Column additions cannot be combined with other changes.
 
-Replacing a period, changing existing column structure, history identity or
+ALTER also permits length-only expansion of existing bounded VARCHAR, NVARCHAR
+and VARBINARY columns while versioning stays enabled. The upper bound is 4000
+for NVARCHAR and 8000 for VARCHAR/VARBINARY. Nullability and collation are restated
+explicitly; existing defaults and checks are retained without recreation.
+Shrinking, transitions to/from MAX, generated/masked/sparse columns,
+memory-optimized tables, and simultaneous unrelated changes are rejected.
+
+Replacing a period, other existing column structure changes, history identity or
 unrelated table properties is rejected explicitly. Such migrations must disable
 versioning, migrate current and history tables together, then re-enable
 versioning explicitly. History retention settings, Ledger features and restoration
