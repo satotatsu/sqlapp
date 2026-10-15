@@ -2267,7 +2267,16 @@ public enum DbObjects {
 		public Row newInstance() {
 			return new Row();
 		}
-	},;
+	},
+	DOMAIN_CHECK_CONSTRAINTS("checks", DomainCheckConstraintCollection.class) {
+		@Override public boolean isCollection() { return true; }
+		@Override public DbObjects getParentType() { return DOMAIN; }
+		@Override public DomainCheckConstraintCollection newInstance() { return new DomainCheckConstraintCollection(); }
+	},
+	DOMAIN_CHECK_CONSTRAINT(DomainCheckConstraint.class) {
+		@Override public DbObjects getCollectionType() { return DOMAIN_CHECK_CONSTRAINTS; }
+		@Override public DomainCheckConstraint newInstance() { return new DomainCheckConstraint(); }
+	};
 
 	@SuppressWarnings("rawtypes")
 	private final Class<? extends DbCommonObject> type;

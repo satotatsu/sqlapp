@@ -17,7 +17,12 @@ import com.sqlapp.data.schemas.Domain;
  */
 public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<PostgresSqlBuilder> {
 	@Override
+	protected boolean supportsDomainChecks() { return true; }
+	@Override
 	protected void addCreateObject(final Domain obj, final PostgresSqlBuilder builder) {
+		if (obj.getDataType() == DataType.ENUM && !obj.getChecks().isEmpty()) {
+			throw new IllegalArgumentException("PostgreSQL enum types cannot have domain checks: " + obj.getName());
+		}
 		if (!isEmpty(obj.getDefinition())) {
 			builder._add(obj.getDefinition());
 			return;
@@ -49,6 +54,14 @@ public class PostgresCreateDomainFactory extends AbstractCreateDomainFactory<Pos
 				builder.space()._add("NOT NULL");
 			if (!isEmpty(obj.getCheck()))
 				builder.space()._add("CHECK (")._add(obj.getCheck())._add(")");
+			for (var check : obj.getChecks()) {
+				if (!check.isEnable() || check.getDeferrability() != null
+						&& check.getDeferrability() != com.sqlapp.data.schemas.Deferrability.NotDeferrable) {
+					throw new IllegalArgumentException("PostgreSQL domain checks must be enabled and not deferrable: " + check.getName());
+				}
+				if (!isEmpty(check.getName())) builder.space()._add("CONSTRAINT").space().name(check.getName());
+				builder.space()._add("CHECK (")._add(check.getExpression())._add(")");
+			}
 		}
 	}
 

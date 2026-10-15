@@ -182,7 +182,7 @@ The Oracle dialect currently generates:
 - `CREATE DOMAIN` and `DROP DOMAIN`
 - base data type and `STRICT`
 - `DEFAULT` and `DEFAULT ON NULL`
-- `NOT NULL` and one `CHECK` constraint
+- `NOT NULL` and single or multiple named `CHECK` constraints
 - constraint deferrability
 - `DISPLAY` and `ORDER` expressions
 - object-level schema annotations
@@ -203,7 +203,7 @@ The following Oracle features are intentionally deferred:
 - flexible domains
 - enumerated domains
 - domain-column annotations
-- multiple named constraints and complete constraint state
+- named `NOT NULL` constraints and complete lifecycle state beyond CHECKs
 - alternative data types for a domain column
 - domain association details on table columns
 - complete metadata and XML/DDL round trips for multiple-column, flexible and
@@ -211,6 +211,14 @@ The following Oracle features are intentionally deferred:
 - domain-specific HTML documentation
 
 ### Required design work
+
+Named domain CHECKs now use `Domain.getChecks()` and the shared
+`DomainCheckConstraint` model. Oracle 23ai/26ai readers retain all CHECK rows,
+including per-check deferrability, enable state and Oracle validation/rely
+metadata. PostgreSQL readers retain separate constraint names and expressions
+instead of combining them with AND. Legacy `Domain.check` and its XML attribute
+remain available for a single unnamed expression. See `oracle-dialect-parity.md`
+for API examples, XML compatibility and verification scope.
 
 Before implementing the deferred scope:
 
@@ -233,8 +241,9 @@ with references surviving object and column renames.
 
 ## Oracle AI Database 26ai
 
-`Oracle26ai` has a separate dialect and resolver boundary and currently
-inherits the compatible Oracle 23ai behavior. Oracle reports 26ai releases as
+`Oracle26ai` has a separate dialect and resolver boundary and inherits
+compatible Oracle 23ai behavior, with dedicated duality-view readers and CREATE
+factories for logical replication. Oracle reports 26ai releases as
 product version `23.26.x`; the resolver treats `23.26` and later release updates
 as `Oracle26ai` while preserving `Oracle23ai` for earlier `23.x` releases.
 
@@ -255,7 +264,6 @@ metadata readers where Oracle exposes suitable catalog views.
 
 The following work is intentionally deferred:
 
-- JSON relational duality view logical-replication DDL and metadata
 - Oracle 26ai duality-view table and column detail metadata from
   `ALL_JSON_DUALITY_VIEW_TABS` and related views
 - structured modeling of duality-view GraphQL fields, nested objects,
@@ -274,6 +282,13 @@ Duality-view definitions remain in the existing `View.statement` property.
 Oracle-only flags and discovered metadata remain in `View.specifics`. A shared
 structured model should be introduced only if another database exposes an
 equivalent feature or sqlapp needs to transform individual definition nodes.
+
+Oracle26ai now reads `ALL_JSON_DUALITY_VIEWS.LOGICAL_REPLICATION` and generates
+`AS ENABLE LOGICAL REPLICATION` or `AS DISABLE LOGICAL REPLICATION` from
+`View.specifics.LOGICAL_REPLICATION` (Boolean). Omitting the option preserves
+the default CREATE path. Earlier dialects reject the option rather than ignore
+it; support for earlier 23.x release updates is not inferred from the major
+version alone. See `oracle-dialect-parity.md` for examples and validation limits.
 
 ## Less-covered database dialects
 

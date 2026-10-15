@@ -10,14 +10,16 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.sql.Oracle23aiCreateDomainFactory;
 import com.sqlapp.data.db.dialect.oracle.sql.OracleAnnotationUtils;
 import com.sqlapp.data.db.metadata.DomainReader;
 import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.data.schemas.Deferrability;
 import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.DomainCheckConstraint;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -36,12 +38,30 @@ public class Oracle23aiDomainReader extends DomainReader {
 	protected List<Domain> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<Domain> result = list();
+		final Map<List<String>, Domain> domains = new LinkedHashMap<>();
 		final SqlNode node = getSqlNodeCache().getString("useCaseDomains.sql");
 		try {
 			execute(connection, node, context, new ResultSetNextHandler() {
 				@Override
 				public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-					result.add(createDomain(rs));
+					List<String> key = List.of(getString(rs, "OWNER"), getString(rs, "DOMAIN_NAME"));
+					Domain domain = domains.get(key);
+					if (domain == null) {
+						domain = createDomain(rs);
+						domains.put(key, domain);
+						result.add(domain);
+					}
+					String expression = getString(rs, "SEARCH_CONDITION");
+					if (expression != null) {
+						DomainCheckConstraint check = new DomainCheckConstraint(getString(rs, "CONSTRAINT_NAME"), expression);
+						check.setDeferrability(OracleMetadataUtils.getDeferrability(getString(rs, "DEFERRABLE"), getString(rs, "DEFERRED")));
+						check.setEnable(!"DISABLED".equals(getString(rs, "CONSTRAINT_STATUS")));
+						String validated = getString(rs, "VALIDATED");
+						if (validated != null) check.getSpecifics().put(Oracle23aiCreateDomainFactory.VALIDATED, validated);
+						String rely = getString(rs, "RELY");
+						if (rely != null) check.getSpecifics().put(Oracle23aiCreateDomainFactory.RELY, rely);
+						domain.getChecks().add(check);
+					}
 				}
 			});
 		} catch (final RuntimeException e) {
@@ -84,8 +104,8 @@ public class Oracle23aiDomainReader extends DomainReader {
 
 	private Domain findDomain(final List<Domain> domains, final String owner, final String name) {
 		for (Domain domain : domains) {
-			if (name.equalsIgnoreCase(domain.getName())
-					&& (owner == null || owner.equalsIgnoreCase(domain.getSchemaName()))) {
+			if (java.util.Objects.equals(name, domain.getName())
+					&& java.util.Objects.equals(owner, domain.getSchemaName())) {
 				return domain;
 			}
 		}
@@ -101,6 +121,11 @@ public class Oracle23aiDomainReader extends DomainReader {
 		final Integer scale = getInteger(rs, "DATA_SCALE");
 		final Long size = charLength != null && charLength > 0 ? charLength : precision;
 		getDialect().setDbType(productDataType, size, scale, domain);
+		if ("NUMBER".equalsIgnoreCase(productDataType)) {
+			// Absent precision/scale denotes Oracle's unconstrained NUMBER, not NUMBER(0,0).
+			domain.setLength(precision);
+			domain.setScale(scale);
+		}
 		domain.setOctetLength(getLong(rs, "DATA_LENGTH"));
 		domain.setNullable(!"N".equalsIgnoreCase(getString(rs, "NULLABLE")));
 		domain.setDefaultValue(getString(rs, "DATA_DEFAULT"));
@@ -112,16 +137,6 @@ public class Oracle23aiDomainReader extends DomainReader {
 		}
 		putSpecific(domain, Oracle23aiCreateDomainFactory.DISPLAY, getString(rs, "DATA_DISPLAY"));
 		putSpecific(domain, Oracle23aiCreateDomainFactory.ORDER, getString(rs, "DATA_ORDER"));
-		domain.setCheck(getString(rs, "SEARCH_CONDITION"));
-		putSpecific(domain, Oracle23aiCreateDomainFactory.CONSTRAINT_NAME, getString(rs, "CONSTRAINT_NAME"));
-		final String deferrable = getString(rs, "DEFERRABLE");
-		if ("DEFERRABLE".equalsIgnoreCase(deferrable)) {
-			domain.setDeferrability(
-					"DEFERRED".equalsIgnoreCase(getString(rs, "DEFERRED")) ? Deferrability.InitiallyDeferred
-							: Deferrability.InitiallyImmediate);
-		} else if (domain.getCheck() != null) {
-			domain.setDeferrability(Deferrability.NotDeferrable);
-		}
 		return domain;
 	}
 

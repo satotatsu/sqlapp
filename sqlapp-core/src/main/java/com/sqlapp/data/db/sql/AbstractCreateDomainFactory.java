@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.sql;
 
 import com.sqlapp.data.schemas.Domain;
+import java.util.List;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -30,5 +32,26 @@ import com.sqlapp.util.AbstractSqlBuilder;
  */
 public abstract class AbstractCreateDomainFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractCreateNamedObjectFactory<Domain, S> {
+	@Override
+	public List<SqlOperation> createSql(Domain domain) {
+		if (!domain.getChecks().isEmpty()) {
+			if (!supportsDomainChecks()) {
+				throw new IllegalArgumentException("Named domain checks are not supported by this SQL factory: " + domain.getName());
+			}
+			if (!CommonUtils.isEmpty(domain.getCheck())) {
+				throw new IllegalArgumentException("Use either check or checks for domain: " + domain.getName());
+			}
+			for (var check : domain.getChecks()) {
+				if (check.getExpression() == null || check.getExpression().isBlank()) {
+					throw new IllegalArgumentException("Domain check requires an expression: " + domain.getName() + "." + check.getName());
+				}
+			}
+		}
+		return super.createSql(domain);
+	}
+
+	protected boolean supportsDomainChecks() {
+		return false;
+	}
 
 }

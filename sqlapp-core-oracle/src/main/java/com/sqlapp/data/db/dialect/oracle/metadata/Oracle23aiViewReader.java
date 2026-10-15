@@ -11,6 +11,7 @@ import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.sql.OracleJsonDualityViewUtils;
+import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.View;
@@ -28,13 +29,18 @@ public class Oracle23aiViewReader extends OracleViewReader {
 	}
 
 	@Override
+	protected ColumnReader newColumnReader() {
+		return new Oracle23aiColumnReader(getDialect());
+	}
+
+	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
 			final List<Table> views) throws SQLException {
 		super.setMetadataDetail(connection, context, views);
 		if (views.isEmpty()) {
 			return;
 		}
-		final SqlNode node = getSqlNodeCache().getString("jsonRelationalDualityViews.sql");
+		final SqlNode node = getDualitySqlNode();
 		try {
 			execute(connection, node, context, new ResultSetNextHandler() {
 				@Override
@@ -54,17 +60,21 @@ public class Oracle23aiViewReader extends OracleViewReader {
 		}
 	}
 
+	protected SqlNode getDualitySqlNode() {
+		return getSqlNodeCache().getString("jsonRelationalDualityViews.sql");
+	}
+
 	private View findView(final List<Table> views, final String owner, final String name) {
 		for (Table table : views) {
-			if (table instanceof View && name.equalsIgnoreCase(table.getName())
-					&& (owner == null || owner.equalsIgnoreCase(table.getSchemaName()))) {
+			if (table instanceof View && java.util.Objects.equals(name, table.getName())
+					&& java.util.Objects.equals(owner, table.getSchemaName())) {
 				return (View) table;
 			}
 		}
 		return null;
 	}
 
-	private void setDualityMetadata(final View view, final ExResultSet rs) throws SQLException {
+	protected void setDualityMetadata(final View view, final ExResultSet rs) throws SQLException {
 		OracleJsonDualityViewUtils.setJsonRelationalDualityView(view, true);
 		put(view, OracleJsonDualityViewUtils.JSON_COLUMN_NAME, getString(rs, "JSON_COLUMN_NAME"));
 		put(view, OracleJsonDualityViewUtils.ROOT_TABLE_OWNER, getString(rs, "ROOT_TABLE_OWNER"));

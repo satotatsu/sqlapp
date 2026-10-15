@@ -182,7 +182,7 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 		assertTrue(createSql.contains("CREATE DOMAIN IF NOT EXISTS EMAIL_ADDRESS AS VARCHAR2(320) STRICT"), createSql);
 		assertTrue(createSql.contains("DEFAULT ON NULL 'unknown@example.com' NOT NULL"), createSql);
 		assertTrue(createSql.contains(
-				"CONSTRAINT CK_EMAIL_ADDRESS " + "CHECK (REGEXP_LIKE(VALUE, '^[^@]+@[^@]+$')) " + "INITIALLY DEFERRED"),
+				"CONSTRAINT CK_EMAIL_ADDRESS " + "CHECK (REGEXP_LIKE(VALUE, '^[^@]+@[^@]+$')) " + "DEFERRABLE INITIALLY DEFERRED"),
 				createSql);
 		assertTrue(createSql.contains("DISPLAY LOWER(VALUE) ORDER LOWER(VALUE)"), createSql);
 		assertTrue(createSql.contains("ANNOTATIONS ( \"Display\" 'Email address')"), createSql);

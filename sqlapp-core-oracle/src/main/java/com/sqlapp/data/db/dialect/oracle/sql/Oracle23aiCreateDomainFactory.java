@@ -6,7 +6,10 @@
 package com.sqlapp.data.db.dialect.oracle.sql;
 
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.DomainCheckConstraint;
+import com.sqlapp.data.schemas.Deferrability;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -19,6 +22,11 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 	public static final String CONSTRAINT_NAME = "CONSTRAINT_NAME";
 	public static final String DISPLAY = "DISPLAY";
 	public static final String ORDER = "ORDER";
+	public static final String VALIDATED = "VALIDATED";
+	public static final String RELY = "RELY";
+
+	@Override
+	protected boolean supportsDomainChecks() { return true; }
 
 	@Override
 	protected void addCreateObject(final Domain domain, final OracleSqlBuilder builder) {
@@ -27,7 +35,15 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 		builder.ifNotExists(this.getOptions().isCreateIfNotExists()).space();
 		builder.name(domain, this.getOptions().isDecorateSchemaName());
 		builder.space().as().space();
-		builder.typeDefinition(domain.getDataType(), domain.getDataTypeName(), domain.getLength(), domain.getScale());
+		if (domain.getDataType() == DataType.DECIMAL && domain.getLength() == null) {
+			// The generic decimal generator supplies defaults; an unbounded Oracle NUMBER must retain its scale semantics.
+			builder._add("NUMBER");
+			if (domain.getScale() != null) {
+				builder._add("(*,")._add(domain.getScale())._add(")");
+			}
+		} else {
+			builder.typeDefinition(domain.getDataType(), domain.getDataTypeName(), domain.getLength(), domain.getScale());
+		}
 		if (Boolean.TRUE.equals(domain.getSpecifics().get(STRICT, Boolean.class))) {
 			builder.space()._add("STRICT");
 		}
@@ -42,19 +58,44 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 			builder.space()._add("NOT NULL");
 		}
 		if (domain.getCheck() != null) {
-			builder.space()._add("CONSTRAINT");
 			final String constraintName = CommonUtils.trim(domain.getSpecifics().get(CONSTRAINT_NAME));
-			if (constraintName != null) {
-				builder.space().name(constraintName);
+			if (!CommonUtils.isEmpty(constraintName)) {
+				builder.space()._add("CONSTRAINT").space().name(constraintName);
 			}
 			builder.space()._add("CHECK").space()._add("(")._add(domain.getCheck())._add(")");
-			if (domain.getDeferrability() != null) {
-				builder.space()._add(domain.getDeferrability().getSqlValue());
+			addDeferrability(builder, domain.getDeferrability());
+		}
+		for (DomainCheckConstraint check : domain.getChecks()) {
+			if (!CommonUtils.isEmpty(check.getName())) {
+				builder.space()._add("CONSTRAINT").space().name(check.getName());
+			}
+			builder.space()._add("CHECK (")._add(check.getExpression())._add(")");
+			addDeferrability(builder, check.getDeferrability());
+			String rely = check.getSpecifics().get(RELY);
+			if (rely != null) {
+				if (!"RELY".equals(rely) && !"NORELY".equals(rely)) {
+					throw new IllegalArgumentException("Invalid domain check RELY: " + check.getName());
+				}
+				builder.space()._add(rely);
+			}
+			builder.space()._add(check.isEnable() ? "ENABLE" : "DISABLE");
+			String validated = check.getSpecifics().get(VALIDATED);
+			if (validated != null) {
+				if (!"VALIDATED".equals(validated) && !"NOT VALIDATED".equals(validated)) {
+					throw new IllegalArgumentException("Invalid domain check VALIDATED: " + check.getName());
+				}
+				builder.space()._add("VALIDATED".equals(validated) ? "VALIDATE" : "NOVALIDATE");
 			}
 		}
 		addExpression(domain, builder, DISPLAY);
 		addExpression(domain, builder, ORDER);
 		OracleAnnotationUtils.addAnnotations(builder, domain);
+	}
+
+	private void addDeferrability(OracleSqlBuilder builder, Deferrability value) {
+		if (value == null) return;
+		if (value != Deferrability.NotDeferrable) builder.space()._add("DEFERRABLE");
+		builder.space()._add(value.getSqlValue());
 	}
 
 	private void addExpression(final Domain domain, final OracleSqlBuilder builder, final String key) {

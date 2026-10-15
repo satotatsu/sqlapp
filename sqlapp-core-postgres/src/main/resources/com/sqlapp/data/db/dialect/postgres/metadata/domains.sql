@@ -68,6 +68,7 @@ SELECT
 	      ELSE null
 	 END AS interval_type_name
 	 , pg_get_expr(con.conbin, 0) as consrc --ドメイン制約式
+	 , con.conname AS constraint_name
 	 , condeferrable   AS is_deferrable
 	 , condeferred   AS initially_deferred
 FROM pg_catalog.pg_type t

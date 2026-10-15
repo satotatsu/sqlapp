@@ -29,6 +29,7 @@ import javax.xml.stream.XMLStreamException;
 import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.DeferrabilityProperty;
 import com.sqlapp.data.schemas.properties.OnUpdateProperty;
+import com.sqlapp.data.schemas.properties.object.DomainChecksProperty;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.ToStringBuilder;
 
@@ -38,7 +39,7 @@ import com.sqlapp.util.ToStringBuilder;
  */
 public final class Domain extends AbstractColumn<Domain> implements
 		HasParent<DomainCollection>,OnUpdateProperty<Domain>,DeferrabilityProperty<Domain>
-		,CheckProperty<Domain>{
+		,CheckProperty<Domain>, DomainChecksProperty<Domain>{
 	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
 
@@ -65,6 +66,13 @@ public final class Domain extends AbstractColumn<Domain> implements
 	private String check = null;
 	/** 制約のチェックの遅延 */
 	private Deferrability deferrability=null;
+	private final DomainCheckConstraintCollection checks = new DomainCheckConstraintCollection(this);
+
+	/** Named checks for domains requiring more than the legacy single expression. */
+	@Override
+	public DomainCheckConstraintCollection getChecks() {
+		return checks;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -80,6 +88,9 @@ public final class Domain extends AbstractColumn<Domain> implements
 			return false;
 		}
 		Domain val = (Domain) obj;
+		if (!equals(SchemaObjectProperties.DOMAIN_CHECKS, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.CHECK, val, equalsHandler)) {
 			return false;
 		}
@@ -96,6 +107,9 @@ public final class Domain extends AbstractColumn<Domain> implements
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
+		if (!checks.isEmpty()) {
+			builder.add(SchemaObjectProperties.DOMAIN_CHECKS, checks);
+		}
 		if (!isEmpty(getCheck())) {
 			builder.add(SchemaProperties.CHECK, this.getCheck());
 		}
@@ -116,6 +130,9 @@ public final class Domain extends AbstractColumn<Domain> implements
 	protected void writeXmlOptionalValues(StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
+		if (!checks.isEmpty()) {
+			checks.writeXml(stax);
+		}
 	}
 
 	public String getCheck() {
