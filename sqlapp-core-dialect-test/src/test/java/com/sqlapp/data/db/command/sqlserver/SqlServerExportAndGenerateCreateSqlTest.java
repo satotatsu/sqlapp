@@ -24,7 +24,7 @@ import java.io.IOException;
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.jdbc.JdbcUtils;
 
-public class SqlServerExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class SqlServerExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
@@ -32,8 +32,7 @@ public class SqlServerExportAndGenerateCreateSqlTest extends AbstractExportAndGe
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName=JdbcUtils
-			.getDriverClassNameByUrl(url);
+	private String driverClassName = JdbcUtils.getDriverClassNameByUrl(url);
 	/**
 	 * JDBC User Name
 	 */
@@ -42,13 +41,13 @@ public class SqlServerExportAndGenerateCreateSqlTest extends AbstractExportAndGe
 	 * JDBC Password
 	 */
 	private String password;
-	
-	public SqlServerExportAndGenerateCreateSqlTest() throws IOException{
-		this.url=getTestProp("sqlserver.jdbc.url");
-		this.username=getTestProp("sqlserver.jdbc.username");
-		this.password=getTestProp("sqlserver.jdbc.password");
+
+	public SqlServerExportAndGenerateCreateSqlTest() throws IOException {
+		this.url = getTestProp("sqlserver.jdbc.url");
+		this.username = getTestProp("sqlserver.jdbc.username");
+		this.password = getTestProp("sqlserver.jdbc.password");
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -76,6 +75,5 @@ public class SqlServerExportAndGenerateCreateSqlTest extends AbstractExportAndGe
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

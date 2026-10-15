@@ -252,8 +252,10 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 	 */
 	@Override
 	public SqlServerSqlBuilder definition(final Column column, final boolean withRemarks) {
-		if (column.getTable() != null && (!column.getTable().getTemporalPeriods().isEmpty()
-				|| column.getTable().getSystemVersioning() != null) && getDialect().compareTo(sqlserver2016) < 0) {
+		if (column.getTable() != null
+				&& (!column.getTable().getTemporalPeriods().isEmpty()
+						|| column.getTable().getSystemVersioning() != null)
+				&& getDialect().compareTo(sqlserver2016) < 0) {
 			throw new IllegalArgumentException("Temporal tables require SQL Server 2016 or later");
 		}
 		if (this.getDialect().compareTo(sqlserver2008) >= 0) {
@@ -274,13 +276,16 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 		}
 		if (column.getTable() != null && getDialect().compareTo(sqlserver2016) >= 0) {
 			for (var period : column.getTable().getTemporalPeriods()) {
-				if (period.getPeriodType() != TemporalPeriodType.SYSTEM_TIME) continue;
+				if (period.getPeriodType() != TemporalPeriodType.SYSTEM_TIME)
+					continue;
 				if (column == column.getTable().getColumns().get(period.getStartColumnName())) {
 					space()._add("GENERATED ALWAYS AS ROW START");
-					if (column.isHidden()) space()._add("HIDDEN");
+					if (column.isHidden())
+						space()._add("HIDDEN");
 				} else if (column == column.getTable().getColumns().get(period.getEndColumnName())) {
 					space()._add("GENERATED ALWAYS AS ROW END");
-					if (column.isHidden()) space()._add("HIDDEN");
+					if (column.isHidden())
+						space()._add("HIDDEN");
 				}
 			}
 		}
@@ -312,6 +317,14 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 			}
 		}
 		return instance();
+	}
+
+	@Override
+	protected SqlServerSqlBuilder checkConstraintDefinition(final Column column) {
+		if (getDialect().compareTo(com.sqlapp.data.db.dialect.sqlserver.DialectHolder.defaultDialect2005) < 0)
+			return super.checkConstraintDefinition(column);
+		com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2005CreateCheckConstraintFactory.addColumnCheck(column, this);
+		return this;
 	}
 
 	@Override

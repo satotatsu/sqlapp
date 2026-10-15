@@ -23,11 +23,11 @@ import com.sqlapp.data.db.command.AbstractGenerateCreateSqlTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 
-public class FirebirdGenerateCreateSqlTest extends AbstractGenerateCreateSqlTest{
+public class FirebirdGenerateCreateSqlTest extends AbstractGenerateCreateSqlTest {
 
 	@Override
 	protected Dialect getDialect() {
 		return DialectResolver.getInstance().getDialect("firebird", 2, 5);
 	}
-	
+
 }

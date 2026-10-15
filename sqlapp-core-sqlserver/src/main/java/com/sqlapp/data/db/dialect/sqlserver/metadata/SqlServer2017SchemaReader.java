@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.metadata.TableReader;
 
 /**
  * SqlServer2017のスキーマ読み込み
@@ -31,5 +32,10 @@ public class SqlServer2017SchemaReader extends SqlServer2016SchemaReader {
 
 	public SqlServer2017SchemaReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected TableReader newTableReader() {
+		return new SqlServer2017TableReader(getDialect());
 	}
 }

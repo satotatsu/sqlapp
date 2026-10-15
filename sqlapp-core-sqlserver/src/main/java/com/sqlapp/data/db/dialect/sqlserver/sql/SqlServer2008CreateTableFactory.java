@@ -123,8 +123,7 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 		boolean[] first = new boolean[] { true };
 		map.forEach((k, v) -> {
 			String key = k.toLowerCase(Locale.ROOT);
-			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v)))
-					|| key.equals("temporal_type")
+			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v))) || key.equals("temporal_type")
 					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v))))
 				return;
 			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k) || "LOCK_ESCALATION".equalsIgnoreCase(k)

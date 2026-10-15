@@ -22,4 +22,4 @@ WHERE 1=1
   /*if isNotEmpty(tableName)*/
   AND t.name IN /*tableName;type=NVARCHAR*/('%')
   /*end*/
-ORDER BY SCHEMA_NAME(t.schema_id), fk.parent_object_id, fk.name, fkc.parent_column_id
+ORDER BY SCHEMA_NAME(t.schema_id), fk.parent_object_id, fk.name, fkc.constraint_column_id

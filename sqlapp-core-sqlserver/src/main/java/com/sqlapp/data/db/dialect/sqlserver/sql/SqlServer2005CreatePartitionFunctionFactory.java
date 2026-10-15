@@ -32,7 +32,8 @@ public class SqlServer2005CreatePartitionFunctionFactory
 		builder.name(obj);
 		builder.space().brackets(() -> {
 			builder.space();
-			builder.typeDefinition(obj);
+			builder.typeDefinition(obj.getDataType(), obj.getDataTypeName(),
+					obj.getLength() != null ? obj.getLength() : (Number) obj.getPrecision(), obj.getScale());
 			builder.space();
 		});
 		builder.lineBreak();

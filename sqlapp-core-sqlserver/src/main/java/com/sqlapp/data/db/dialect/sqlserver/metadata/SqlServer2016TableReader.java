@@ -51,7 +51,8 @@ public class SqlServer2016TableReader extends SqlServer2014TableReader {
 		if (start != null && end != null) {
 			table.getTemporalPeriods().add(new TemporalPeriod("SYSTEM_TIME")
 					.setPeriodType(TemporalPeriodType.SYSTEM_TIME).setStartColumnName(start).setEndColumnName(end));
-			table.toSystemVersioning().setEnable("SYSTEM_VERSIONED_TEMPORAL_TABLE".equals(getString(rs, "temporal_type")))
+			table.toSystemVersioning()
+					.setEnable("SYSTEM_VERSIONED_TEMPORAL_TABLE".equals(getString(rs, "temporal_type")))
 					.setPeriodName("SYSTEM_TIME").setHistoryTableSchemaName(getString(rs, "history_schema_name"))
 					.setHistoryTableName(getString(rs, "history_table_name"));
 		}

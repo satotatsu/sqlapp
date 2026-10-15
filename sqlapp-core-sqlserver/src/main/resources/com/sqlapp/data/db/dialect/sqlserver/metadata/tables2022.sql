@@ -28,6 +28,8 @@ SELECT
 	, t.durability_desc
 	, t.is_memory_optimized
 	, t.temporal_type_desc AS temporal_type
+    , t.history_retention_period
+    , t.history_retention_period_unit_desc
 	, t.is_node
 	, t.is_edge
 	, t.ledger_type_desc AS ledger_type

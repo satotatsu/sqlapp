@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.text.ParseException;
 import java.util.List;
@@ -31,7 +31,8 @@ import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.PartitionFunction;
-import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.PartitionScheme;
+import com.sqlapp.data.db.datatype.DataType;
 
 /**
  * 
@@ -39,7 +40,7 @@ import com.sqlapp.data.schemas.Table;
  * 
  */
 public class SqlServer2005AlterPartitionFunctionFactoryTest extends AbstractSqlServer11SqlFactoryTest {
-	SqlFactory<Table> sqlFactory;
+	SqlFactory<PartitionFunction> sqlFactory;
 
 	@BeforeEach
 	public void before() {
@@ -51,6 +52,7 @@ public class SqlServer2005AlterPartitionFunctionFactoryTest extends AbstractSqlS
 		PartitionFunction obj1 = getPartitionFunction1("funcA");
 		PartitionFunction obj2 = getPartitionFunction2("funcA");
 		List<SqlOperation> operations = sqlFactory.createDiffSql(obj1.diff(obj2));
+		assertEquals(2, operations.size());
 		for (int i = 0; i < operations.size(); i++) {
 			SqlOperation operation = operations.get(i);
 			String expected = getResource("alter_partition_function" + (i + 1) + ".sql");
@@ -77,5 +79,58 @@ public class SqlServer2005AlterPartitionFunctionFactoryTest extends AbstractSqlS
 	private PartitionFunction getPartitionFunction(String name) {
 		PartitionFunction obj = new PartitionFunction(name);
 		return obj;
+	}
+
+	@Test
+	void deletionDiffUsesDropFactoryAndPreservesQuotedIdentity() {
+		PartitionFunction original = new PartitionFunction("Range O'Brien]");
+		var operations = sqlFactory.createDiffSql(original.diff(null));
+		assertEquals(1, operations.size());
+		assertEquals(SqlType.DROP, operations.get(0).getSqlType());
+		assertTrue(operations.get(0).getSqlText().contains("DROP PARTITION FUNCTION [Range O'Brien]]]"),
+				operations.toString());
+	}
+
+	@Test
+	void dropFactoriesHonorIfExistsOnOldAndNewVersions() {
+		for (int version : new int[] { 9, 10, 11, 12, 13, 14, 15, 16 }) {
+			var registry = com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver.getInstance()
+					.getDialect(version, 0).createSqlFactoryRegistry();
+			registry.getOptions().setDropIfExists(true);
+			String function = registry.createSql(new PartitionFunction("O'Brien"), SqlType.DROP).get(0).getSqlText();
+			String scheme = registry.createSql(new PartitionScheme("O'Brien"), SqlType.DROP).get(0).getSqlText();
+			assertTrue(function.contains("sys.partition_functions WHERE name = N'O''Brien'"), function);
+			assertTrue(scheme.contains("sys.partition_schemes WHERE name = N'O''Brien'"), scheme);
+			assertTrue(scheme.contains("DROP PARTITION SCHEME"));
+			registry.getOptions().setDropIfExists(false);
+			assertFalse(registry.createSql(new PartitionFunction("F"), SqlType.DROP).get(0).getSqlText()
+					.contains("IF EXISTS"));
+		}
+	}
+
+	@Test
+	void unsupportedChangesFailEvenWhenBoundaryChangesAreAlsoRequested() throws Exception {
+		PartitionFunction original = getPartitionFunction1("F");
+		PartitionFunction range = original.clone().setBoundaryValueOnRight(!original.isBoundaryValueOnRight());
+		range.getValues().add("200");
+		assertThrows(IllegalArgumentException.class, () -> sqlFactory.createDiffSql(original.diff(range)));
+		PartitionFunction renamed = original.clone().setName("G");
+		assertThrows(IllegalArgumentException.class, () -> sqlFactory.createDiffSql(original.diff(renamed)));
+		PartitionFunction typed = original.clone().setDataType(DataType.BIGINT);
+		assertThrows(IllegalArgumentException.class, () -> sqlFactory.createDiffSql(original.diff(typed)));
+		assertTrue(sqlFactory.createDiffSql(original.diff(original.clone())).isEmpty());
+	}
+
+	@Test
+	void directCreateAndBoundaryPlansLeaveModelsUnchanged() throws Exception {
+		PartitionFunction original = getPartitionFunction1("F").setDataType(DataType.INT);
+		PartitionFunction target = original.clone();
+		target.getValues().remove("100");
+		target.getValues().add("200");
+		String before = original.asXml(), after = target.asXml();
+		assertTrue(sqlFactory.createSql(target).get(0).getSqlText().contains("CREATE PARTITION FUNCTION"));
+		assertEquals(2, sqlFactory.createDiffSql(original.diff(target)).size());
+		assertEquals(before, original.asXml());
+		assertEquals(after, target.asXml());
 	}
 }

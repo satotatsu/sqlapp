@@ -2,7 +2,8 @@ SELECT
     DB_NAME() AS catalog_name
   , prv.value
   , pf.function_id
-  , prv.parameter_id
+  , pp.parameter_id
+  , prv.boundary_id
   , t.name AS type_name
   , pp.max_length
   , pp.precision
@@ -16,8 +17,8 @@ FROM sys.partition_functions pf
 INNER JOIN sys.partition_parameters pp
   ON (pf.function_id=pp.function_id) 
 INNER JOIN sys.types t
-  ON (pp.system_type_id = t.system_type_id)
-INNER JOIN sys.partition_range_values prv
+  ON (pp.system_type_id = t.user_type_id)
+LEFT JOIN sys.partition_range_values prv
   ON (pp.parameter_id=prv.parameter_id 
   AND prv.function_id = pp.function_id)
 WHERE 1=1

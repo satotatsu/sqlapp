@@ -56,4 +56,20 @@ public class SqlServer2005CreateTableFactory extends AbstractCreateTableFactory<
 		add(result, createOperation(builder.toString(), SqlType.CREATE, index));
 	}
 
+	@Override
+	protected void addOtherDefinitions(Table table, List<SqlOperation> result) {
+		super.addOtherDefinitions(table, result);
+		for (var constraint : table.getConstraints()) {
+			if (constraint instanceof com.sqlapp.data.schemas.CheckConstraint
+					|| constraint instanceof com.sqlapp.data.schemas.ForeignKeyConstraint)
+				SqlServerConstraintSupport.restore(constraint, createSqlBuilder(), getOptions().isDecorateSchemaName(),
+						true, result);
+		}
+		for (var column : table.getColumns()) {
+			if (column.getCheckConstraint() != null)
+				SqlServerConstraintSupport.restore(column.getCheckConstraint(), createSqlBuilder(),
+						getOptions().isDecorateSchemaName(), true, result);
+		}
+	}
+
 }

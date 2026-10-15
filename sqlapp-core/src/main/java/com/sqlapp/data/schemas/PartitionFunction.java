@@ -423,6 +423,11 @@ public final class PartitionFunction extends AbstractNamedObject<PartitionFuncti
 			Collections.sort(this.inner, new Comparator<String>() {
 				@Override
 				public int compare(final String o1, final String o2) {
+					// Boundary values are SQL expressions. SQL NULL must not be
+					// converted to a number/date or confused with the quoted text 'NULL'.
+					boolean null1 = o1 == null || "NULL".equalsIgnoreCase(o1.trim());
+					boolean null2 = o2 == null || "NULL".equalsIgnoreCase(o2.trim());
+					if (null1 || null2) return null1 == null2 ? 0 : null1 ? -1 : 1;
 					if (partitionFunction != null && partitionFunction.getDataType() != null) {
 						final Class<?> clazz = partitionFunction.getDataType().getDefaultClass();
 						final Object conv1 = Converters.getDefault().convertObject(o1, clazz);

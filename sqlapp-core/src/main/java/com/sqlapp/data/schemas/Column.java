@@ -121,6 +121,9 @@ public final class Column extends AbstractColumn<Column>
 		if (!equals(SchemaProperties.CHECK, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals("checkConstraint", val, getCheckConstraint(), val.getCheckConstraint(), equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.MASKING_FUNCTION, val, equalsHandler)) {
 			return false;
 		}
@@ -146,7 +149,7 @@ public final class Column extends AbstractColumn<Column>
 		super.cloneProperties(clone);
 		clone.setConverter(this.getConverter());
 		clone.setExtendedProperties(cloneMap(getExtendedProperties()));
-		clone.setCheckConstraint(this.getCheckConstraint());
+		clone.setCheckConstraint(this.getCheckConstraint() == null ? null : this.getCheckConstraint().clone());
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -384,10 +387,16 @@ public final class Column extends AbstractColumn<Column>
 		return instance();
 	}
 
+	private boolean hasDetailedCheckConstraint() {
+		CheckConstraint check = getCheckConstraint();
+		return check != null && (!isEmpty(check.getName()) || !check.isEnable() || !check.getSpecifics().isEmpty()
+				|| check.getDeferrability() != null || !isEmpty(check.getRemarks()));
+	}
+
 	@Override
 	protected void writeXmlOptionalAttributes(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
-		stax.writeAttribute(SchemaProperties.CHECK, this);
+		if (!hasDetailedCheckConstraint()) stax.writeAttribute(SchemaProperties.CHECK, this);
 		stax.writeAttribute(SchemaProperties.MASKING_FUNCTION, this);
 		stax.writeAttribute(SchemaProperties.ON_UPDATE, this);
 		if (this.isHidden()) {
@@ -398,6 +407,7 @@ public final class Column extends AbstractColumn<Column>
 	@Override
 	protected void writeXmlOptionalValues(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
+		if (hasDetailedCheckConstraint()) getCheckConstraint().writeXml(stax);
 		if (!isEmpty(this.getExtendedProperties())) {
 			stax.newLine();
 			stax.indent();
@@ -411,6 +421,13 @@ public final class Column extends AbstractColumn<Column>
 			@Override
 			protected void initializeSetValue() {
 				super.initializeSetValue();
+				register("checkConstraint", new AbstractSetValue<Column, CheckConstraint>() {
+					@Override
+					public void setValue(Column target, String name, CheckConstraint value) throws XMLStreamException {
+						target.setCheckConstraint(value);
+					}
+				});
+				registerChild(new CheckConstraint().getDbObjectXmlReaderHandler().setSetParent(false));
 				// Other
 				final String keyName = Column.EXTENDED_PROPERTIES;
 				register(keyName, new AbstractSetValue<Column, Map<String, Object>>() {

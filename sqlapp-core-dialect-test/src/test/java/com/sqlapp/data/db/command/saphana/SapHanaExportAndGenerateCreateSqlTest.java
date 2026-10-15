@@ -24,7 +24,7 @@ import java.io.IOException;
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.jdbc.JdbcUtils;
 
-public class SapHanaExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class SapHanaExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
@@ -32,8 +32,7 @@ public class SapHanaExportAndGenerateCreateSqlTest extends AbstractExportAndGene
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName=JdbcUtils
-			.getDriverClassNameByUrl(url);
+	private String driverClassName = JdbcUtils.getDriverClassNameByUrl(url);
 	/**
 	 * JDBC User Name
 	 */
@@ -42,13 +41,13 @@ public class SapHanaExportAndGenerateCreateSqlTest extends AbstractExportAndGene
 	 * JDBC Password
 	 */
 	private String password;
-	
-	public SapHanaExportAndGenerateCreateSqlTest() throws IOException{
-		this.url=getTestProp("saphana.jdbc.url");
-		this.username=getTestProp("saphana.jdbc.username");
-		this.password=getTestProp("saphana.jdbc.password");
+
+	public SapHanaExportAndGenerateCreateSqlTest() throws IOException {
+		this.url = getTestProp("saphana.jdbc.url");
+		this.username = getTestProp("saphana.jdbc.username");
+		this.password = getTestProp("saphana.jdbc.password");
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -76,6 +75,5 @@ public class SapHanaExportAndGenerateCreateSqlTest extends AbstractExportAndGene
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

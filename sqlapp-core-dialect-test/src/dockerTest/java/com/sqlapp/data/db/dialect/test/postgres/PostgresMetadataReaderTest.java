@@ -45,8 +45,8 @@ import com.sqlapp.data.schemas.Table;
 /** PostgreSQL 18 integration coverage for the metadata reader tree. */
 class PostgresMetadataReaderTest {
 	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
-			.configure(new PostgreSQLContainer("postgres:18.4")
-					.withCommand("postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "wal_level=logical"));
+			.configure(new PostgreSQLContainer("postgres:18.4").withCommand("postgres", "-c",
+					"shared_preload_libraries=pg_stat_statements", "-c", "wal_level=logical"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -149,13 +149,15 @@ class PostgresMetadataReaderTest {
 
 	@Test
 	void testExecutesModernExtensionAndMonitoringSql() throws SQLException {
-		try (Connection connection = POSTGRES.createConnection(""); Statement statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection("");
+				Statement statement = connection.createStatement()) {
 			statement.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
 			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_buffercache");
 			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_stat_statements");
 			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_logicalinspect");
 			var crypto = new PostgresPgcryptoBuilder(DialectHolder.postgreSQL180);
-			try (var prepared = connection.prepareStatement("SELECT " + crypto.crypt("?", crypto.genSalt("sha512crypt", 1000)))) {
+			try (var prepared = connection
+					.prepareStatement("SELECT " + crypto.crypt("?", crypto.genSalt("sha512crypt", 1000)))) {
 				prepared.setString(1, "integration-test-input");
 				try (var rs = prepared.executeQuery()) {
 					assertTrue(rs.next());
@@ -165,7 +167,8 @@ class PostgresMetadataReaderTest {
 			String data = "decode('01020304', 'hex')";
 			String key = "decode('000102030405060708090a0b0c0d0e0f', 'hex')";
 			String iv = "decode('101112131415161718191a1b1c1d1e1f', 'hex')";
-			try (var rs = statement.executeQuery("SELECT " + crypto.decryptCfb(crypto.encryptCfb(data, key, iv, "aes"), key, iv, "aes") + " = " + data)) {
+			try (var rs = statement.executeQuery("SELECT "
+					+ crypto.decryptCfb(crypto.encryptCfb(data, key, iv, "aes"), key, iv, "aes") + " = " + data)) {
 				assertTrue(rs.next());
 				assertTrue(rs.getBoolean(1));
 			}
@@ -179,21 +182,23 @@ class PostgresMetadataReaderTest {
 				assertTrue(rs.next());
 				pid = rs.getInt(1);
 			}
-			for (String sql : new String[] { monitoring.asynchronousIo(), monitoring.backendIo(pid), monitoring.backendWal(pid),
-					monitoring.loadedModules(), monitoring.numaAvailable(),
+			for (String sql : new String[] { monitoring.asynchronousIo(), monitoring.backendIo(pid),
+					monitoring.backendWal(pid), monitoring.loadedModules(), monitoring.numaAvailable(),
 					monitoring.statementStatistics(), monitoring.resetBackendStats(pid) }) {
 				try (var rs = statement.executeQuery(sql)) {
 					assertTrue(rs.getMetaData().getColumnCount() > 0, sql);
 				}
 			}
 			// Eviction is restricted to this disposable test server.
-			try (var rs = statement.executeQuery(new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180).evict(1))) {
+			try (var rs = statement
+					.executeQuery(new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180).evict(1))) {
 				assertTrue(rs.next());
 				assertNotNull(rs.getObject("buffer_evicted"));
 				assertNotNull(rs.getObject("buffer_flushed"));
 			}
 			var logical = new PostgresLogicalInspectBuilder(DialectHolder.postgreSQL180);
-			// Resolve functions and output columns without requiring a pre-existing snapshot file.
+			// Resolve functions and output columns without requiring a pre-existing
+			// snapshot file.
 			for (String sql : new String[] { logical.snapshotMeta("0-0.snap"), logical.snapshotInfo("0-0.snap") }) {
 				try (var rs = statement.executeQuery(sql + " WHERE FALSE")) {
 					assertFalse(rs.next());
@@ -201,21 +206,23 @@ class PostgresMetadataReaderTest {
 				}
 			}
 			statement.execute("LOAD 'pg_overexplain'");
-			try (var rs = statement.executeQuery(new PostgresExplainBuilder(DialectHolder.postgreSQL180)
-					.debug(true).rangeTable(true).statement("SELECT 1").build())) {
+			try (var rs = statement.executeQuery(new PostgresExplainBuilder(DialectHolder.postgreSQL180).debug(true)
+					.rangeTable(true).statement("SELECT 1").build())) {
 				assertTrue(rs.next());
 			}
 			statement.execute("LOAD 'passwordcheck'");
-			statement.execute(new PostgresExtensionSettingsBuilder(DialectHolder.postgreSQL180).passwordMinimumLength(12));
-			try (var rs = statement.executeQuery("SELECT setting FROM pg_settings WHERE name = 'passwordcheck.min_password_length'")) {
+			statement.execute(
+					new PostgresExtensionSettingsBuilder(DialectHolder.postgreSQL180).passwordMinimumLength(12));
+			try (var rs = statement
+					.executeQuery("SELECT setting FROM pg_settings WHERE name = 'passwordcheck.min_password_length'")) {
 				assertTrue(rs.next());
 				assertEquals("12", rs.getString(1));
 			}
 			String database = "modern_feature_database";
 			statement.execute("DROP DATABASE IF EXISTS " + database);
 			try {
-				statement.execute(new PostgresCreateDatabaseBuilder(DialectHolder.postgreSQL180)
-						.template("template0").strategy("FILE_COPY").build(new Catalog(database)));
+				statement.execute(new PostgresCreateDatabaseBuilder(DialectHolder.postgreSQL180).template("template0")
+						.strategy("FILE_COPY").build(new Catalog(database)));
 			} finally {
 				statement.execute("DROP DATABASE IF EXISTS " + database);
 			}
@@ -224,15 +231,18 @@ class PostgresMetadataReaderTest {
 
 	@Test
 	void testNumaViewsWhenSupportedByHost() throws SQLException {
-		try (Connection connection = POSTGRES.createConnection(""); Statement statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection("");
+				Statement statement = connection.createStatement()) {
 			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_buffercache");
 			var monitoring = new PostgresMonitoringBuilder(DialectHolder.postgreSQL180);
 			for (String sql : new String[] { monitoring.sharedMemoryNuma(), monitoring.bufferCacheNuma() }) {
 				try (var rs = statement.executeQuery(sql)) {
 					assertTrue(rs.getMetaData().getColumnCount() > 0);
 				} catch (SQLException exception) {
-					if (exception.getMessage().contains("libnuma initialization failed or NUMA is not supported on this platform")) {
-						Assumptions.abort("NUMA view execution requires a NUMA-capable host: " + exception.getMessage());
+					if (exception.getMessage()
+							.contains("libnuma initialization failed or NUMA is not supported on this platform")) {
+						Assumptions
+								.abort("NUMA view execution requires a NUMA-capable host: " + exception.getMessage());
 					}
 					throw exception;
 				}
@@ -242,10 +252,12 @@ class PostgresMetadataReaderTest {
 
 	@Test
 	void testInspectsSerializedLogicalSnapshot() throws SQLException {
-		try (Connection connection = POSTGRES.createConnection(""); Statement statement = connection.createStatement()) {
+		try (Connection connection = POSTGRES.createConnection("");
+				Statement statement = connection.createStatement()) {
 			statement.execute("CREATE EXTENSION IF NOT EXISTS pg_logicalinspect");
 			statement.execute("CREATE TABLE IF NOT EXISTS logical_snapshot_test (id integer)");
-			statement.execute("SELECT * FROM pg_create_logical_replication_slot('snapshot_inspect_test', 'test_decoding')");
+			statement.execute(
+					"SELECT * FROM pg_create_logical_replication_slot('snapshot_inspect_test', 'test_decoding')");
 			try {
 				statement.execute("INSERT INTO logical_snapshot_test VALUES (1)");
 				statement.execute("SELECT pg_log_standby_snapshot()");

@@ -23,11 +23,11 @@ import com.sqlapp.data.db.command.AbstractGenerateCreateSqlTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 
-public class SapHanaGenerateCreateSqlTest extends AbstractGenerateCreateSqlTest{
+public class SapHanaGenerateCreateSqlTest extends AbstractGenerateCreateSqlTest {
 
 	@Override
 	protected Dialect getDialect() {
 		return DialectResolver.getInstance().getDialect("SAP HANA", 2, 0);
 	}
-	
+
 }

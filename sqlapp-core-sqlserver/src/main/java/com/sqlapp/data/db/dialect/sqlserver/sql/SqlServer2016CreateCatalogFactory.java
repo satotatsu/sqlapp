@@ -6,7 +6,10 @@ import com.sqlapp.data.db.sql.CreateCatalogFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Catalog;
 
-/** Enables versioning after all tables, including explicitly modeled history tables, exist. */
+/**
+ * Enables versioning after all tables, including explicitly modeled history
+ * tables, exist.
+ */
 public class SqlServer2016CreateCatalogFactory extends CreateCatalogFactory {
 	@Override
 	public List<SqlOperation> createSql(Catalog object) {
