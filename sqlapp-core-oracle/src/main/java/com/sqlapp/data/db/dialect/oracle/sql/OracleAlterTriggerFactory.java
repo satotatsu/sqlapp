@@ -61,8 +61,12 @@ public class OracleAlterTriggerFactory extends AbstractAlterTriggerFactory<Oracl
 		}).count();
 		List<SqlOperation> list = CommonUtils.list();
 		if (count == 0) {
-			SqlOperation operation = createAlterSql(difference, allDiff, nameDiff, enableDiff);
-			list.add(operation);
+			if (nameDiff != null && enableDiff != null) {
+				list.add(createAlterSql(difference, allDiff, nameDiff, null));
+				list.add(createAlterSql(difference, allDiff, null, enableDiff));
+			} else {
+				list.add(createAlterSql(difference, allDiff, nameDiff, enableDiff));
+			}
 		} else {
 			return super.doCreateDiffSql(difference, allDiff);
 		}
@@ -76,7 +80,7 @@ public class OracleAlterTriggerFactory extends AbstractAlterTriggerFactory<Oracl
 		OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().trigger().space();
 		if (nameDiff != null) {
-			if (this.getOptions().isDecorateSchemaName()) {
+			if (this.getOptions().isDecorateSchemaName() && !CommonUtils.isEmpty(target.getSchemaName())) {
 				builder.name(target.getSchemaName());
 				builder._add(".");
 			}

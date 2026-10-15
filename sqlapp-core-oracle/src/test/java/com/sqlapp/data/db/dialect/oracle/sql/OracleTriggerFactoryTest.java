@@ -68,8 +68,9 @@ public class OracleTriggerFactoryTest extends AbstractOracleSqlFactoryTest {
 		List<SqlOperation> list = sqlFactoryRegistry.createSql(diff);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = getResource("alter_trigger1.sql");
-		assertEquals(expected, operation.getSqlText());
+		assertEquals(2, list.size());
+		assertEquals("ALTER TRIGGER \"triggerA\" RENAME TO \"triggerB\"", operation.getSqlText());
+		assertEquals("ALTER TRIGGER \"triggerB\" DISABLE", list.get(1).getSqlText());
 	}
 
 	private Trigger getTrigger(String name) {

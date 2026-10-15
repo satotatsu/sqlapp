@@ -77,6 +77,8 @@ public class OracleTriggerReader extends TriggerReader {
 		String tableName = getString(rs, TABLE_NAME);
 		String tableOwner = getString(rs, "TABLE_OWNER");
 		Trigger trigger = new Trigger(name);
+		trigger.setDialect(getDialect());
+		trigger.setSchemaName(getString(rs, "OWNER"));
 		trigger.addEventManipulation(getString(rs, "TRIGGERING_EVENT"));
 		if (triggerType.contains("ROW")) {
 			trigger.setActionOrientation("ROW");
@@ -91,6 +93,8 @@ public class OracleTriggerReader extends TriggerReader {
 			trigger.setActionTiming("BEFORE");
 		} else if (triggerType.startsWith("AFTER")) {
 			trigger.setActionTiming("AFTER");
+		} else if (triggerType.startsWith("INSTEAD OF")) {
+			trigger.setActionTiming("INSTEAD OF");
 		}
 		trigger.setActionCondition(actionCondition);
 		trigger.setEnable("ENABLED".equalsIgnoreCase(status));
@@ -99,7 +103,18 @@ public class OracleTriggerReader extends TriggerReader {
 		trigger.setTableSchemaName(tableOwner);
 		trigger.setTableName(tableName);
 		trigger.setStatement(getString(rs, "TRIGGER_BODY"));
-		trigger.addDefinition(getString(rs, "DESCRIPTION"));
+		String description = getString(rs, "DESCRIPTION");
+		String body = getString(rs, "TRIGGER_BODY");
+		if (description != null && !description.isBlank() && body != null) {
+			// DESCRIPTION retains UPDATE OF, REFERENCING and database events.
+			// These cannot all be reconstructed from the generic trigger components.
+			String when = actionCondition == null || actionCondition.isBlank() ? ""
+					: "\nWHEN (" + actionCondition + ")";
+			trigger.setDefinition("CREATE OR REPLACE TRIGGER " + description.stripTrailing() + when + "\n" + body);
+		} else {
+			throw new IllegalStateException("Oracle trigger definition unavailable: " + trigger.getSchemaName()
+					+ "." + trigger.getName());
+		}
 		return trigger;
 	}
 }

@@ -75,12 +75,7 @@ public class OracleProcedureReader extends ProcedureReader {
 				this.getDialect(), cnt, result, OBJECT_TYPE);
 		for (Procedure obj : result) {
 			List<String> source = routines.get(obj.getSchemaName(), obj.getName());
-			String def = OracleMetadataUtils.getProcedureStatement(obj, source);
-			if (def != null) {
-				obj.setStatement(def);
-			} else {
-				obj.setDefinition(source);
-			}
+			OracleMetadataUtils.setRoutineDefinition(obj, source);
 		}
 		return result;
 	}

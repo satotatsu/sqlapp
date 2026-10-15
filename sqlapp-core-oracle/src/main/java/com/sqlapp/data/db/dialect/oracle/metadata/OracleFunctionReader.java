@@ -84,15 +84,7 @@ public class OracleFunctionReader extends FunctionReader {
 				obj.getSpecifics().put(SQL_MACRO, Boolean.TRUE);
 				obj.setFunctionType(FunctionType.Table);
 			}
-			String def = OracleMetadataUtils.getFunctionStatement(obj, source);
-			if (def != null) {
-				if (Boolean.parseBoolean(obj.getSpecifics().get(SQL_MACRO))) {
-					def = def.replaceFirst("(?is)^\\s*SQL_MACRO(?:\\s*\\(\\s*(?:SCALAR|TABLE)\\s*\\))?\\s*", "");
-				}
-				obj.setStatement(def);
-			} else {
-				obj.setDefinition(source);
-			}
+			OracleMetadataUtils.setRoutineDefinition(obj, source);
 		}
 		return result;
 	}
