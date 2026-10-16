@@ -82,6 +82,8 @@ public class OracleIndexReader extends IndexReader {
 					index.setIndexType(dialact.getIndexType(indexType));
 					if ("BITMAP".equalsIgnoreCase(indexType))
 						index.getSpecifics().put("oracle.index.bitmap", true);
+					if ("YES".equalsIgnoreCase(getString(rs, "JOIN_INDEX")))
+						index.getSpecifics().put("oracle.index.join", true);
 					setIndexType(rs, index, indexType);
 					readState(rs, index);
 					if ("UNIQUE".equals(uniqueness)) {

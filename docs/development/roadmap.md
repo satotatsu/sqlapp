@@ -229,7 +229,12 @@ index rebuilds, structural combinations and special-index state changes fail exp
 Isolated physical index partition/subpartition usability transitions now use
 MODIFY ... UNUSABLE or REBUILD ... through Table/Index diffs. Metadata/XML/CREATE
 preserves segment state; composite parent state changes and structural combinations
-fail explicitly. Advanced rebuild options and partition structure changes remain deferred.
+fail explicitly. Ordinary index/physical segment tablespace moves and compression
+changes now use REBUILD; composite compression modifies the parent then rebuilds
+its children. The existing onlineIndex option controls ONLINE with version,
+deferrable-constraint, bitmap/join and local-hash restrictions. Partitioned root
+tablespace changes affect default attributes only. Explicit Index diffs can also
+rename indexes after other operations. Partition structure changes remain deferred.
 Local/global range index partition compression modes and explicit NOCOMPRESS now
 survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
 incompatible overrides and hash partition compression changes fail explicitly.

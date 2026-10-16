@@ -54,7 +54,8 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 	protected void addIndexDefinition(Table originalTable, Table table,
 			com.sqlapp.data.schemas.Index originalIndex, com.sqlapp.data.schemas.Index index,
 			DbObjectDifference diff, List<SqlOperation> result) {
-		if (diff.getState() == State.Modified && OracleAlterIndexFactory.hasStateChange(originalIndex, index)) {
+		if (diff.getState() == State.Modified && (OracleAlterIndexFactory.hasStateChange(originalIndex, index)
+				|| OracleIndexRebuildOptions.physicalChange(originalIndex, index))) {
 			result.addAll(getSqlFactoryRegistry().getSqlFactory(index, SqlType.ALTER).createDiffSql(diff));
 			return;
 		}

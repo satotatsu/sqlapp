@@ -36,6 +36,7 @@ public class OracleRebuildIndexFactory extends SimpleSqlFactory<Index, OracleSql
 		validateRebuild(index);
 		OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().index().space().name(index, getOptions().isDecorateSchemaName()).space()._add("REBUILD");
+		OracleIndexRebuildOptions.online(index, getDialect(), getTableOptions().getOnlineIndex().test(index.getTable(), index), false, false, builder);
 		return List.of(createOperation(builder.toString(), SqlType.REBUILD, index));
 	}
 }

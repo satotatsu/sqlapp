@@ -1111,6 +1111,65 @@ git diff --checkも成功した。意図的な生成ファイル変更はない�
 - [ALL_IND_SUBPARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_IND_SUBPARTITIONS.html)
 - [Oracle 10g Partition Maintenance](https://docs.oracle.com/cd/B12037_01/server.101/b10739/partiti.htm)
 
+## 2026-10-16: IOTを除く索引REBUILDオプションをまとめて対応
+
+sqlapp-core-oracleで、通常索引の表領域移動・prefix/advanced圧縮変更をREBUILDにまとめる。
+CREATE/REBUILDの圧縮構文とバージョン検証はOracleIndexCompressionへ共通化し、
+圧縮無効化はNOCOMPRESSを生成する。表領域削除は移動先を推測せず拒否する。
+状態回復と物理変更を同時指定してもREBUILDは重複しない。
+分割索引本体の表領域はMODIFY DEFAULT ATTRIBUTES TABLESPACEで既定値だけを変更し、
+実際のセグメント移動はpartition/subpartitionの表領域差分から個別REBUILDを生成する。
+
+非複合partitionでは移動・圧縮変更・回復を1回のREBUILDにまとめる。
+複合圧縮は親のMODIFY PARTITIONに続いて全subpartitionをREBUILDする。
+対象モデルの子の圧縮方式は親と一致し、物理再構築後は明示的なUSABLEを求める。
+個別subpartitionの圧縮変更や複合親の物理移動は拒否する。
+直接Index差分のRENAMEにも対応し、同時に再構築する場合は最後にRENAME TOを生成する。
+Tableの索引名対応が解決できないrenameを推測する機能は追加しない。
+
+ONLINEは既存TableOptions.setOnlineIndex(boolean/predicate)で指定し、既定値falseを維持する。
+明示的/差分由来REBUILDに適用し、10gの通常索引と11g以降のsubpartitionを扱う。
+遅延可能な一意制約を支える索引、join index、bitmap index、Local hashセグメントでは拒否する。
+bitmapは本generatorの保守的制限。JOIN_INDEXは既存ALL_INDEXES一括SELECTから保持する。
+Local hash再構築はTABLESPACE以外の追加オプションを拒否する。
+advanced圧縮の既存version制限（LOWは12c以降、HIGHは18c以降）は維持する。
+追加SELECT・実DB接続・DDL実行はなく、IOT実装は変更していない。
+
+表領域参照へのnull代入が無視される共通不具合も修正した。
+当初SimpleBeanWrapper.setFieldを一律変更したところ、core全体で従来のnull無視に依存する
+clone初期化が12件失敗したため、その変更を戻した。
+最終実装ではSimpleBeanWrapper/SimpleBeanUtilsに明示的なsetNullableFieldを追加し、
+TableSpacePropertyだけで使用する。非primitive参照の明示的なクリアを可能にし、
+既存setFieldの動作、構造参照のclone契約、primitive/null拒否を保つ。
+この不具合はTableSpacePropertyを利用する複数の共通モデルに関係するため、
+Dialect内の回避策ではなくsqlapp-coreで修正した。既存API signature・XML形式・依存関係は変更しない。
+新しい補助APIの追加と、表領域setterへのnull指定が実際に反映される動作修正がある。
+
+OracleIndexRebuildOptionsTestは通常/partition/subpartitionの移動・圧縮・ONLINE、
+XML往復、複合操作順、既定表領域、rename、version境界と未対応操作の拒否を検証する。
+SimpleBeanReferenceNullTestは明示的null・不正型拒否・clone独立性とlegacy動作を検証する。
+初回のOracle対象4件の失敗で参照null問題を検出し、最終修正後の対象テストは成功した。
+最終回帰はcore全1191件、PostgreSQL全300件、H2全49件、Oracle全254件、
+command関連149件、Gradle plugin関連1件が成功した（合計1944件、失敗・error・skip 0件）。
+最後の再実行ではcore/PostgreSQL/H2は変更がなくUP-TO-DATEで、直前の成功結果を利用している。
+一時表上のUNUSABLE変更も明示的に拒否する。git diff --checkは成功し、意図的な生成ファイル変更はない。
+IOT、特殊索引専用のライフサイクル、partition境界や個数の変更、実DB再生成検証は対象外。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core:test --tests '*SimpleBeanReferenceNullTest' --tests '*SimpleBeanUtilsTest' --tests '*SimpleBeanWrapperTest' :sqlapp-core-oracle:test --tests '*OracleIndexRebuildOptionsTest' --tests '*OracleIndexPartitionLifecycleTest' --tests '*OracleIndexLifecycleTest'
+.\gradlew.bat :sqlapp-core:test --tests '*SimpleBeanReferenceNullTest' --tests '*UniqueConstraintTest' --tests '*ExcludeConstraintTest' --tests '*CatalogTest' --tests '*TableTest4' :sqlapp-core-oracle:test --tests '*OracleIndexRebuildOptionsTest' --tests '*OracleIndexPartitionLifecycleTest' --tests '*OracleIndexLifecycleTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+- [11g ALTER INDEX](https://docs.oracle.com/cd/B28359_01/server.111/b28286/statements_1009.htm)
+- [10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
