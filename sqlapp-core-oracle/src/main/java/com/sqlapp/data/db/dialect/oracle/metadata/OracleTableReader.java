@@ -93,8 +93,15 @@ public class OracleTableReader extends TableReader {
 		Table table = createTable(getString(rs, TABLE_NAME));
 		table.setSchemaName(getString(rs, "OWNER"));
 		table.setRemarks(comments);
-		if (!"DISABLED".equalsIgnoreCase(compression)) {
+		if ("ENABLED".equalsIgnoreCase(compression)) {
 			table.setCompression(true);
+		}
+		table.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
+		table.setLobTableSpaceName(getString(rs, "LOB_TABLESPACE_NAME"));
+		if ("Y".equals(getString(rs, "TEMPORARY"))) {
+			table.setTableType(Table.TableType.Temporary);
+			String duration = getString(rs, "DURATION");
+			if (duration != null) table.getSpecifics().put("oracle.table.duration", duration);
 		}
 		String partitioned = getString(rs, PARTTITIONED_KEY);
 		if ("YES".equalsIgnoreCase(partitioned)) {

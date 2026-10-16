@@ -36,16 +36,53 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleSqlBuilder> {
+	@Override
+	protected void addCreateObject(final Table table, OracleSqlBuilder builder) {
+		builder.create();
+		if (table.getTableType() == Table.TableType.Temporary) builder.space()._add("GLOBAL TEMPORARY");
+		builder.table().name(table, getOptions().isDecorateSchemaName());
+	}
 
 	@Override
 	protected void addOption(final Table table, OracleSqlBuilder builder) {
+		addTableOptions(table, builder);
+		if (table.getLobTableSpaceName() != null) {
+			if (table.getTableType() == Table.TableType.Temporary) throw new IllegalArgumentException("Temporary table cannot specify a permanent LOB tablespace: " + table.getName());
+			var lobs = table.getColumns().stream().filter(column -> column.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB
+					|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.CLOB || column.getDataType() == com.sqlapp.data.db.datatype.DataType.NCLOB).toList();
+			if (lobs.isEmpty()) throw new IllegalArgumentException("LOB tablespace requires a BLOB/CLOB/NCLOB column: " + table.getName());
+			builder.lineBreak()._add("LOB (");
+			for (int i = 0; i < lobs.size(); i++) builder.comma(i > 0).name(lobs.get(i));
+			builder._add(") STORE AS (TABLESPACE ").name(table.getLobTableSpaceName())._add(")");
+		}
+	}
+
+	private void addTableOptions(final Table table, OracleSqlBuilder builder) {
+		String duration = table.getSpecifics().get("oracle.table.duration");
+		if (table.getTableType() == Table.TableType.Temporary) {
+			if (duration != null && !"SYS$SESSION".equals(duration) && !"SYS$TRANSACTION".equals(duration)) throw new IllegalArgumentException("Invalid temporary table duration: " + table.getName());
+			if (table.getTableSpaceName() != null || table.isCompression()) throw new IllegalArgumentException("Temporary table cannot specify permanent tablespace or compression: " + table.getName());
+			builder.lineBreak()._add("ON COMMIT ")._add("SYS$SESSION".equals(duration) ? "PRESERVE ROWS" : "DELETE ROWS");
+		} else {
+			if (duration != null) throw new IllegalArgumentException("Duration requires a temporary table: " + table.getName());
+			if (table.getTableSpaceName() != null) builder.lineBreak()._add("TABLESPACE ").name(table.getTableSpaceName());
+		}
+		String compressFor = table.getSpecifics().get("COMPRESS_FOR");
+		if (table.isCompression()) {
+			if (compressFor == null || "BASIC".equals(compressFor)) builder.lineBreak()._add("COMPRESS");
+			else if (java.util.List.of("OLTP", "QUERY LOW", "QUERY HIGH", "ARCHIVE LOW", "ARCHIVE HIGH").contains(compressFor)) builder.lineBreak()._add("COMPRESS FOR ")._add(compressFor);
+			else if ("ADVANCED".equals(compressFor)) builder.lineBreak()._add("ROW STORE COMPRESS ADVANCED");
+			else throw new IllegalArgumentException("Unsupported table compression mode: " + table.getName());
+		} else if (compressFor != null) {
+			throw new IllegalArgumentException("COMPRESS_FOR requires compression: " + table.getName());
+		}
 		Map<String, String> map = table.getSpecifics();
 		if (CommonUtils.isEmpty(map)) {
 			return;
 		}
 		boolean hasProperty = false;
 		for (Map.Entry<String, String> entry : map.entrySet()) {
-			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())) {
+			if (isModeledProperty(entry.getKey())) {
 				continue;
 			}
 			if (entry.getValue() != null) {
@@ -57,7 +94,7 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 		}
 		boolean hasStorage = false;
 		for (Map.Entry<String, String> entry : map.entrySet()) {
-			if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())) {
+			if (isModeledProperty(entry.getKey())) {
 				continue;
 			}
 			if (entry.getValue() == null) {
@@ -74,7 +111,7 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 			builder.lineBreak()._add("(");
 			builder.appendIndent(1);
 			for (Map.Entry<String, String> entry : map.entrySet()) {
-				if (OracleAnnotationUtils.isAnnotationKey(entry.getKey())) {
+				if (isModeledProperty(entry.getKey())) {
 					continue;
 				}
 				if (entry.getValue() == null) {
@@ -88,6 +125,10 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 			builder.appendIndent(-1);
 			builder.lineBreak()._add(")");
 		}
+	}
+
+	private boolean isModeledProperty(String key) {
+		return OracleAnnotationUtils.isAnnotationKey(key) || "oracle.table.duration".equals(key) || "COMPRESS_FOR".equals(key);
 	}
 
 	@Override

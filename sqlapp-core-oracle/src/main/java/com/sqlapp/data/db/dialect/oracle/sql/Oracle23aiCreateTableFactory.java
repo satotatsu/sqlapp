@@ -56,7 +56,9 @@ public class Oracle23aiCreateTableFactory extends OracleCreateTableFactory {
 
 	@Override
 	protected void addCreateObject(final Table table, final OracleSqlBuilder builder) {
-		builder.create().table().ifNotExists(this.getOptions().isCreateIfNotExists()).space();
+		builder.create();
+		if (table.getTableType() == Table.TableType.Temporary) builder.space()._add("GLOBAL TEMPORARY");
+		builder.table().ifNotExists(this.getOptions().isCreateIfNotExists()).space();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 	}
 

@@ -9,7 +9,7 @@
 | --- | --- |
 | バージョン解決 | `OracleDialectResolver`に旧版～26aiの分岐がある。26aiの`23.26`境界は既存実装を維持。 |
 | テーブル・列・制約・索引 | 専用ReaderとSQL Factoryがある。11g/12c/23aiの差分Reader、索引・パーティションの一括補完処理を確認。存在確認であり全オプションの同等性を認定するものではない。 |
-| ビュー・マテリアライズドビュー | 専用Readerがある。23aiのduality viewは既存の拡張Readerで補完。高度なduality/domain機能の未対応範囲は既存`roadmap.md`を参照。 |
+| ビュー・マテリアライズドビュー | 23ai/26aiのduality view補完、MviewのCREATE／REFRESHと基本設定、10g以降の完全DDL保持に対応。高度な設定の構造化編集と実DB検証は残る。 |
 | シーケンス | 共通Schemaモデルを使用し、18c以降のscale/session用クエリを分離。既存単体テストあり。 |
 | 関数・プロシージャ | PostgreSQLと同様に再生成情報を保持すべき経路で、Oracleの引数既定値・ヘッダーが失われる問題を修正。 |
 | トリガー | PostgreSQLは所有スキーマと定義を保持。Oracleのスキーマ欠落、ヘッダー消失、不正な文レベルトリガーSQL、条件欠落、無効状態の欠落を修正。 |
@@ -540,6 +540,377 @@ git diff --checkも成功した。意図的な生成ファイルの変更はな�
 .\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePackageTypeRecreationTest' --tests '*OracleRoutineRecreationTest'
 .\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
 ```
+
+## 2026-10-16: Materialized ViewのCREATE／REFRESH
+
+OracleCreateMviewFactoryの構造化生成から不正なOR REPLACEを除去し、
+既存Readerが保持するspecifics.BUILD_MODE（IMMEDIATE／DEFERRED）、
+REFRESH_METHOD（FAST／COMPLETE／FORCE／NEVER）、REFRESH_MODE（COMMIT／DEMAND／NEVER）
+をSQLへ反映する。未指定時はOracleの既定動作を維持する。
+NEVERはNEVER REFRESHとして生成し、矛盾する設定、不正値、クエリ欠落を拒否する。
+PREBUILTとON STATEMENTは追加の前提やオプションを構造化情報だけで再現しきれないため、
+完全definitionを要求する。完全DDLは書き換えず、構造化オプションは補助情報とする。
+
+OracleRefreshMviewFactoryは従来のALTER MATERIALIZED VIEW ... REFRESHの代わりに
+BEGIN DBMS_MVIEW.REFRESH(list => 'schema.name'); END;を生成する。
+識別子の引用と文字列リテラルのエスケープ、decorateSchemaNameを適用する。
+refresh methodは省略し、DB上の既定メソッドを使用する。NEVER REFRESHのモデルは
+無操作で成功したように扱わず、生成時に拒否する。
+
+変更はsqlapp-core-oracleと資料のみ。公開API、設定キー、モデル、XML形式に変更はなく、
+追加クエリもない。基本Oracle Dialectから26aiまでの共通経路を修正した。
+OracleMviewRecreationTestは読取オプションのXML往復、CREATE／REFRESH、
+基本版・11gR2・19c・21c・23ai・26ai、引用識別子、不正値、NEVER、完全DDLを検証する。
+初回はテストの継承setter戻り型とResultSetモック不足で失敗し、修正後に対象5件が成功した。
+
+実DBでの読取・DDL・refreshは実行していない。物理ストレージ、refreshスケジュール、
+query rewrite、ROWID／PRIMARY KEY等の詳細再現はこの対応の範囲外である。
+DBリンクReaderに残るオブジェクト単位のDDL問合せも別途対応が必要。
+Oracle全175件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が
+成功した（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+DialectResolverの既存バージョン境界を確認し、変更していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleMviewRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [CREATE MATERIALIZED VIEW](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-MATERIALIZED-VIEW.html)
+- [ALL_MVIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_MVIEWS.html)
+- [DBMS_MVIEW](https://docs.oracle.com/en/database/oracle/oracle-database/19/arpls/DBMS_MVIEW.html)
+
+## 2026-10-16: 残る一括読取・Materialized View再現性・注釈識別子
+
+Oracle10gMviewReaderの既存一覧クエリにDBMS_METADATA.GET_DDL('MATERIALIZED_VIEW',...)
+を加え、完全なCREATE DDLをdefinitionに保持する。statementのqueryと構造化列は補助情報として
+残す。PREBUILTの精度設定、refreshスケジュール、query rewrite等はDDLから再生成できる。
+JDBC SELECTは件数に関係なく1回で、サーバー側のGET_DDL評価は各行で行われる。
+DDLが空なら対象名付きエラーとし、GET_DDLの権限・取得失敗も伝播する。
+ALL_MVIEWSが見えるだけでは他SchemaのDDLを取得できるとは限らず、DBMS_METADATAの
+必要権限が追加の前提となる。既定Readerが扱う旧8/9系のSQLは変更しない。
+DDL内の識別子・物理設定はモデル変更に自動追従せず、実行環境に合わせた更新が必要。
+
+23ai/26aiは専用Oracle23aiMviewReaderを登録し、23ai用ColumnReader／IndexReaderを使う。
+旧Readerに新カタログ列を追加せず、VECTOR等の補助メタデータの読落としを防ぐ。
+手動の構造化Mviewモデルでは、列コレクション順の引用付き列別名もCREATEへ反映する。
+
+OracleDbLinkReader／OraclePublicDbLinkReaderの個別GET_DDLを除去した。
+ALL_DB_LINKS.USERNAMEがNULLのリンクは固定ユーザーではない場合があり、そこから
+パスワードや認証方式を推定できない。既存一覧の名前・所有者・HOST・USERNAME・作成日時を保持し、
+passwordは未取得のままとする。固定ユーザーの認証情報回復、connected/current userの区別、
+DBリンクCREATE／DROPの新実装は今回含めていない。既存公開Pattern定数は互換性のため残す。
+
+23ai/26aiのTable／Column／Index注釈は所有者と識別子を完全一致で照合する。
+APPとApp、Tとt、Cとc、Iとiを混同しない。不一致の取得行は対象外として扱い、
+追加SELECTは発行しない。
+
+変更モジュールはsqlapp-core-oracleのみ。公開API・モデル・XML形式・モジュール依存は変更しない。
+OracleObjectMetadataBulkTestは25件のMview完全DDL／XML往復、DDL欠落、Readerバージョン境界、
+private/public DBリンクの件数に依存しないクエリ回数を確認する。
+OracleMviewRecreationTestは列別名、OracleTableAnnotationIdentityTestは引用識別子を確認する。
+対象テストで列別名の許容空白と、索引Schema名の親優先規則に合わせたテスト修正後に成功した。
+実DBへの接続、DBリンク接続、DDLやrefreshの実行は行っていない。
+Oracle全182件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が
+成功した（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイルの変更はない。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleObjectMetadataBulkTest' --tests '*OracleMviewRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTableAnnotationIdentityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [DBMS_METADATA](https://docs.oracle.com/en/database/oracle/oracle-database/19/arpls/DBMS_METADATA.html)
+- [ALL_DB_LINKS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_DB_LINKS.html)
+- [Distributed Database Concepts](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/distributed-database-concepts.html)
+
+## 2026-10-16: DBMS_METADATA権限不足時の継続
+
+上記のMview完全DDL取得を、通常一覧とDDL補完の2つの一括SELECTに分離した。
+10g～26aiでDBMS_METADATAが許可されればdefinitionを保持し、
+ORA-01031（権限不足）またはORA-31603（対象が見えない／取得できない）の場合は
+警告を出し、通常一覧のstatement・specifics・列情報の読取を継続する。
+ORA-31603は対象消失でも発生し得るため、警告は権限不足または対象不可視として扱う。
+取得途中で権限エラーになったMviewのDDL補完結果は適用せず、通常メタデータを保持する。
+DDL補完は空一覧なら実行せず、件数に依存しない最大2回のSELECTとなる。
+
+26ai DomainのDBMS_METADATA補完にも同じ警告・継続処理を適用した。
+未取得の高度なDomainを推測して追加することはせず、取得済みの通常メタデータを保持する。
+完全DDLが未取得のDomainにはoracle.domain.definitionRequiredを残し、
+CREATE時は完全definitionを指定するまで明示的に拒否する。
+権限がある場合の通常読取・再生成は維持する。
+構文・接続等のその他エラーや、成功クエリが返す空／欠落DDLは警告扱いにせず伝播する。
+
+対象はsqlapp-core-oracleのみ。公開API・XML形式・設定形式・旧版Readerに変更なし。
+OracleMetadataPermissionTestで原因例外／SQLExceptionチェーン、権限不足時の継続、
+通常エラーの伝播、Domainの不完全再生成拒否を検証する。
+OracleObjectMetadataBulkTestでは権限ありの2回一括読取と完全DDLのXML往復を確認する。
+初回はテストのstatementをStringと比較して失敗し、List形式に修正して対象テストが成功した。
+実DBの権限変更・接続・DDL実行は行っていない。
+Oracle全185件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+対象テストはOracleMetadataPermissionTest、OracleObjectMetadataBulkTest、
+OracleAdvancedDomainDefinitionTestをGradleの--testsで指定して実行した後、
+前節と同じOracle全体・command generator／Oracle assessment・plugin Oracleの
+テストコマンドを実行した。いずれも--gradle-user-home .gradle-user-homeを指定した。
+
+## 2026-10-16: DDL補完途中の権限失敗
+
+26ai Domainの完全DDL補完を一時コレクションへ保存し、補完SELECTが成功してから
+通常読取モデルへ反映するように修正した。途中で権限エラーが発生した場合、
+途中まで取得したFlexible Domain等を追加せず、通常カタログから取得済みのDomainを保持する。
+これにより、権限エラーを警告で継続した後、不完全なFlexible構成列読取で失敗する経路を防ぐ。
+既存のMview補完も同じ方針である。SELECT回数、公開API、XML形式に変更はない。
+
+OracleMetadataPermissionTestに以下を追加した:
+
+- Domain補完で1行取得後に権限エラーとなっても、未完了のFlexible Domainを追加しない。
+- Mview補完で1行取得後に権限エラーとなっても、全対象の通常メタデータを保持する。
+- 権限エラーがないのに対象DDLが欠落している場合は、対象名を含むエラーで失敗する。
+- 空Mview一覧ではDDL補完SELECTを実行しない。
+
+対象モジュールはsqlapp-core-oracleのみ。対象テストと既存の高度Domain・メタデータ整合性テストは成功。
+実DBの権限変更・接続・DDL実行は行っていない。
+Oracle全188件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleMetadataPermissionTest' --tests '*OracleAdvancedDomainDefinitionTest' --tests '*OracleDomainMetadataIntegrityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: GET_DDLなしのMview補助設定
+
+OracleMviewReaderは既存ALL_MVIEWS一覧からREWRITE_ENABLED、USE_NO_INDEX、
+COMPILE_STATEをspecificsに保持し、COMPILE_STATEが取得できた場合はvalidにも反映する。
+OracleCreateMviewFactoryはREWRITE_ENABLED=Y/NをENABLE/DISABLE QUERY REWRITEへ、
+USE_NO_INDEX=YをUSING NO INDEXへ変換する。Nは既定索引動作を維持し、未設定時は句を追加しない。
+Y/N以外の値は生成時に拒否する。完全definitionがあれば従来どおりそのDDLを優先する。
+
+これらは通常カタログから読めるため、DBMS_METADATA権限不足時の継続結果にも残る。
+OracleMetadataPermissionTestで権限エラー後のCREATE再生成、OracleMviewRecreationTestで
+両フラグのY/N、XML往復、コンパイル状態、不正値の拒否を確認した。
+Oracle9iの公式カタログにも存在する列であり、旧Readerには新しい固定カタログ列を追加していない。
+SQLは既存A.*を使い、列がない場合は既存のsetSpecificsの判定で未設定とする。
+変更はsqlapp-core-oracleと資料のみ。公開API・XML形式・SELECT回数は変更しない。
+実DBでの読取・DDL・権限変更は行っていない。
+Oracle全189件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleMviewRecreationTest' --tests '*OracleMetadataPermissionTest' --tests '*OracleObjectMetadataBulkTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [Oracle9i ALL_MVIEWS](https://docs.oracle.com/cd/B10500_01/server.920/a96536/ch286.htm)
+- [Oracle19c ALL_MVIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_MVIEWS.html)
+
+## 2026-10-16: テーブル・列・制約・索引の一括再監査
+
+今回の変更はsqlapp-core-oracle内に限定し、共有Schemaモデルと既存のSQL Factory経路を使用した。
+公開APIの削除、XML／設定形式の変更、モジュール依存追加、追加SELECTはない。
+DialectResolverの既存境界を維持し、生成列の新版構文は生成時に対応版を確認する。
+
+| 領域 | 確認した欠落と修正 |
+| --- | --- |
+| 外部キー | 対象Schema／Tableのフィルタを参照先にも適用し、対象外の親へのFKを落としていた。参照先制約はALL_CONSTRAINTSから所有者・制約名で照合する。CTEは子のR制約のみと必要列に限定し、不要なLONG SEARCH_CONDITIONも除いた。 |
+| 制約状態 | CHECK／UNIQUE／PK／FKの遅延、有効／無効、VALIDATE／NOVALIDATE、RELY／NORELYをCREATE TABLEとALTER TABLE ADDへ反映する。後二者の読取も補った。 |
+| NOT NULLチェック | 全件除外をやめ、名前付き・無効・未検証・遅延のチェックを保持する。通常の有効・検証済み・遅延不可なシステム生成NOT NULLだけは列nullabilityへ任せる。 |
+| NUMBER | JDBC NULL精度を0へ変換せず保持。NUMBERとNUMBER(*,scale)を列CREATEでも再現する。 |
+| 仮想列 | 11g以降のVIRTUAL_COLUMNのDATA_DEFAULTをformulaへ保存し、DEFAULTではなくGENERATED ALWAYS AS (...) VIRTUALを生成する。 |
+| IDENTITY | 12c以降でALWAYS／BY DEFAULT／BY DEFAULT ON NULLと共有Sequenceの開始・増分・範囲・cycle・cache・order設定を再生成する。 |
+| DEFAULT ON NULL | 12c以降の通常列にも読取・生成を追加する。 |
+| テーブル | 表領域、一時表、SYS$SESSION／SYS$TRANSACTIONの行保持期間を保持・生成する。圧縮状態NULLを有効扱いせず、COMPRESS_FORを有効な圧縮句へ変換する。 |
+| 索引 | CREATE INDEXの索引名もdecorateSchemaNameに従ってSchema修飾する。表名だけ修飾して索引を接続先のSchemaに作る問題を防ぐ。 |
+
+手動モデルの一時表はTable.TableType.Temporaryを指定する。行保持期間は任意の
+specifics.oracle.table.duration=SYS$SESSIONまたはSYS$TRANSACTIONで、未指定時は
+Oracle既定のON COMMIT DELETE ROWSを使用する。一時表への永続表領域／圧縮、
+不正な保持期間、不正な圧縮・制約状態、未対応のON UPDATE／ON DELETE動作は明示的に拒否する。
+11g未満の仮想列、12c未満のIDENTITY／DEFAULT ON NULLも拒否する。
+
+生成列のCREATEとALTER TABLE ADDは対応するが、既存IDENTITY／仮想列の構造化変更は
+単純rename以外を拒否する。未対応のMODIFYにCREATE用句を流用したり、黙って属性を捨てない。
+名前付きNOT NULLは補助のCheckConstraintとして保持するため、再生成時は名前付きCHECKになる。
+
+OracleSchemaParityRegressionTestでメタデータ読取、XML往復、CREATE／ALTER ADD、
+基本版・11gR2・19c・23ai・26ai、生成列の版境界、親が取得対象外のFKクエリ構造、
+各制約Readerの1回クエリ、引用Schema／索引名、型NULL、圧縮・一時表を検証する。
+FKのSQLはソース構造と読取モデルを検証したもので、Oracle上でのクエリ実行検証ではない。
+初回のテストはResultSetモックの大小文字／統計値取得、IF NOT EXISTS、
+IDENTITYの暗黙NOT NULLの期待値が原因で失敗し、修正後に対象テストが成功した。
+
+残る範囲は、実DBでの読取→XML→DDL実行、旧RU差分、不可視列や高度な列属性、
+既存生成列のALTER、IOT／外部表／LOBストレージ、索引の高度な圧縮・式・運用状態等。
+今回の検証だけでテーブル・索引の全オプションの同等性を認定しない。
+実DBへの接続・DDL実行・本番データ変更は行っていない。
+手動のDECIMAL／NUMERIC列も精度が未指定の場合はOracleのNUMBERとして生成する。
+圧縮方式の版・エディション・ストレージ要件は実行対象Oracleとの整合を呼出側で確認する必要がある。
+OracleのUNIQUE／PKには降順列を指定できないため拒否する。IDENTITYと独立DEFAULT式の併用も拒否する。
+
+最終実装でOracle全199件、commandのgenerator／Oracle評価関連149件、Gradle plugin関連1件が成功した。
+その後、同じ実装に対する最終テストassertion追加を含むOracleSchemaParityRegressionTest全10件も成功した。
+失敗・skipは最終実行で0件。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest' --tests '*OracleIndexPlacementRegressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest' --tests '*OracleColumnDomainReferenceTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest' --tests '*OracleDomainAlterTableTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest'
+```
+
+仕様参照:
+
+- [Oracle constraint](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/constraint.html)
+- [Oracle Data Types](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Data-Types.html)
+- [ALL_TABLES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_TABLES.html)
+- [CREATE TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/CREATE-TABLE.html)
+
+## 2026-10-16: 不可視列・IDENTITY生成方式ALTER・共通LOB表領域
+
+12c以降の通常列クエリは、HIDDEN_COLUMN=YESかつUSER_GENERATED=YESの不可視列を
+通常のユーザー列と一緒に取得する。システム隠し列の専用取得とは分け、不可視列には
+specifics.oracle.column.invisible=trueを保存する。共有hidden属性はシステム隠し列用に維持する。
+列取得はCOLUMN_IDに加えてINTERNAL_COLUMN_IDで順序を安定させる。11g以前のSQLは変更しない。
+
+CREATE／ADDは通常・IDENTITY・仮想列のいずれもINVISIBLEを一度だけ生成する。
+明示falseはVISIBLEとなり、不正値と12c未満への指定は拒否する。
+ALTERはVISIBLE／INVISIBLEだけの変更を単独のMODIFY句で生成する。
+同時に型・名前・default等を変更する場合は別操作を求め、属性を落とさない。
+
+既存IDENTITY列はALWAYS／BY DEFAULT／BY DEFAULT ON NULLの切替をALTERで生成できる。
+型・Sequence・開始値等は変更せず、START WITHやDROP／CREATEを生成しない。
+Sequenceや物理列属性も変わる場合、不正な生成方式の場合は明示的に拒否する。
+仮想列の式変更やIDENTITYの開始値／増分変更は引き続き未対応である。
+
+LOB表領域は既存のTable.lobTableSpaceNameを使用する。通常テーブル一覧へALL_LOBSの
+所有者・テーブル単位集約をJOINし、全LOBの表領域が非NULLで一意の場合だけ保存する。
+SQLは1回の一覧SELECTのままで、LOBごとの追加SELECTはない。
+列別やpartitioned LOBの配置を単一値に推測してまとめない。
+CREATEではBLOB／CLOB／NCLOB列の順でLOB (...) STORE AS (TABLESPACE ...)を生成する。
+LOB列がない指定、一時表への永続LOB表領域指定は拒否する。
+
+変更モジュールはsqlapp-core-oracleのみ。公開API・共通モデル・XML形式・依存関係は変更しない。
+OracleColumnVisibilityTestで通常／不可視／システム隠し列の区別、XML往復、版境界、
+可視性の両方向ALTER、IDENTITY生成方式の両方向切替、開始値を再設定しないこと、
+共通LOB表領域の読取・生成と不正指定を検証する。
+最初の可視性ALTERテストは括弧内の空白の期待値を修正後に成功した。
+
+IOTは親・overflow・mapping表やPK索引との対応、LOBの詳細は列／partitionごとの
+SecureFile／BasicFile・圧縮・cache等を保持するモデルが必要で、今回の単一LOB表領域対応では
+解決していない。共有Tableは完全definitionを保持する型でもないため、specificsへ完全DDLを
+押し込む回避は行っていない。これらの構造化対応と実DB再実行検証は残る。
+実DBの接続・DDL実行・権限変更は行っていない。
+Oracle全205件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleColumnVisibilityTest' --tests '*OracleSchemaParityRegressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+.\gradlew.bat :sqlapp-core-oracle:test
+```
+
+仕様参照:
+
+- [Managing Tables](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html)
+- [ALTER TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
+- [ALL_LOBS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_LOBS.html)
+- [LOB Storage](https://docs.oracle.com/en/database/oracle/oracle-database/19/adlob/managing-LOBs.html)
+
+## 2026-10-16: IDENTITYオプションALTERとXML属性順
+
+Oracle 12c以降の既存IDENTITY列で、生成方式だけでなくINCREMENT BY、MINVALUE／MAXVALUE、
+CYCLE／NOCYCLE、CACHE／NOCACHE、ORDER／NOORDERの変更をALTER TABLE MODIFYへ反映する。
+変更項目だけを出力し、内部SequenceをALTER SEQUENCEで直接変更しない。
+START WITH・現在値・Sequence識別子・未対応属性の変更、列の型等との同時変更は拒否する。
+OracleではSTART WITH変更時に他オプションの既定値が使われるため、開始位置の再設定は
+自動化せず引き続き未対応とする。MIN／MAXの明示的削除はNOMINVALUE／NOMAXVALUE、
+cache=0またはcache=falseはNOCACHEとなる。増分0、cache=1／負数、不正な最小最大、
+変更後の増分／cacheサイズが曖昧な設定は拒否する。
+
+検証中、共有AbstractColumnのsetIdentityOrder／Cycle／Cacheがidentity=falseの時点では
+値を捨てるため、XMLの属性適用順によりORDERが失われることを確認した。
+数値のIDENTITY setterと同様、Sequenceを必要に応じて作成し、フラグ設定前でも値を保持する。
+identityフラグそのものは変更しない。Oracle固有の分岐をcoreへ追加していない。
+XML形式・公開メソッド・既定値・モジュール依存は維持する。
+変更モジュールはsqlapp-coreとsqlapp-core-oracleで、共有setterの利用者は全Dialectとなる。
+
+IdentityColumnOptionsTestでsetter順、XML往復、cloneの独立性を確認する。
+OracleIdentityOptionsTestでXML往復後の差分SQL、変更項目だけの出力、開始値を出さないこと、
+境界・曖昧な指定・再開始の拒否を検証する。初回のORDERの差分テストが失敗し、
+XML属性の消失を切り分けて共有setterを修正した後に成功した。
+実DBへの接続、IDENTITY値の発行、DDL実行は行っていない。
+対象テスト成功後、core 1189件、PostgreSQL 300件、H2 49件、Oracle 208件、
+command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests '*IdentityColumnOptionsTest' :sqlapp-core-oracle:test --tests '*OracleIdentityOptionsTest' --tests '*OracleColumnVisibilityTest' --tests '*OracleSchemaParityRegressionTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER TABLE identity_options](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
+
+## 2026-10-16: 仮想列の式ALTERとコメント差分
+
+11g以降の既存仮想列は、formulaだけの変更をALTER TABLE MODIFY
+(column GENERATED ALWAYS AS (...) VIRTUAL)で生成する。DROP／ADD、型・DEFAULTの再指定は行わない。
+同時に型・名前等を変える場合、空白式、persisted／identityとの併用は拒否する。
+モデルに索引または制約があるテーブルでは、依存関係の変更を先に別操作で行うようエラーにする。
+対象外の実DB上の依存や式のOracle上での妥当性は生成時には検証できない。
+
+コメントだけの列変更はMODIFYへ流さずCOMMENT ONを生成する。
+OracleAlterTableFactoryで、物理storageの差分がないとコメント処理へ到達しない問題、
+remarks差分のString値をColumnへcastする問題、削除時にIS IS NULLとなる問題を修正した。
+通常・仮想・IDENTITY列とTableのコメント追加／削除、引用符を含む値を対象とする。
+式変更とコメント変更を同時に行う場合は別操作を求める。
+
+変更モジュールはsqlapp-core-oracleのみ。公開API・XML形式・依存関係・SELECT数に変更はない。
+OracleGeneratedColumnAlterTestで式のXML往復、MODIFY生成、DROPしないこと、
+依存／同時変更の拒否、3種類の列とTableのコメント追加・削除を検証する。
+初回のコメントテストで既存cast不具合を検出し、修正後に対象テストが成功した。
+実DBの接続・DDL実行は行っていない。
+Oracle全211件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleGeneratedColumnAlterTest' --tests '*OracleIdentityOptionsTest' --tests '*OracleColumnVisibilityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [Managing Tables](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html)
+- [ALTER TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
+- [modify_virtcol_properties](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlqr/Subclauses.html)
 
 ## 過去のOracle仕様参照
 

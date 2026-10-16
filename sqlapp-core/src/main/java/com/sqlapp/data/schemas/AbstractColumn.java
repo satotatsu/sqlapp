@@ -567,9 +567,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 
 	@Override
 	public T setIdentityCache(boolean value) {
-		if (this.isIdentity()) {
-			this.getSequence().setCache(value);
-		}
+		if (this.getSequence() == null) this.setSequence(new Sequence());
+		this.getSequence().setCache(value);
 		return instance();
 	}
 
@@ -609,9 +608,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 
 	@Override
 	public T setIdentityCycle(boolean value) {
-		if (this.isIdentity()) {
-			this.getSequence().setCycle(value);
-		}
+		if (this.getSequence() == null) this.setSequence(new Sequence());
+		this.getSequence().setCycle(value);
 		return instance();
 	}
 
@@ -625,9 +623,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 
 	@Override
 	public T setIdentityOrder(boolean value) {
-		if (this.isIdentity()) {
-			this.getSequence().setOrder(value);
-		}
+		if (this.getSequence() == null) this.setSequence(new Sequence());
+		this.getSequence().setOrder(value);
 		return instance();
 	}
 

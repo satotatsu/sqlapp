@@ -41,7 +41,10 @@ public class Oracle11gColumnReader extends OracleColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
-		// column.setFormula(getString(rs, "QUALIFIED_COL_NAME"));
+		if ("YES".equalsIgnoreCase(getString(rs, "VIRTUAL_COLUMN"))) {
+			if (column.getDefaultValue() == null || column.getDefaultValue().isBlank()) throw new IllegalStateException("Virtual column expression unavailable: " + column.getTableName() + "." + column.getName());
+			column.setFormula(column.getDefaultValue()).setDefaultValue(null);
+		}
 		column.setHidden("YES".equalsIgnoreCase(getString(rs, "HIDDEN_COLUMN")));
 		return column;
 	}

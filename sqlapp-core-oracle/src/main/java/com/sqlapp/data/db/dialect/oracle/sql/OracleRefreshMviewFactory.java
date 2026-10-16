@@ -21,7 +21,21 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractRefreshMviewFactory;
+import com.sqlapp.data.schemas.Mview;
 
 public class OracleRefreshMviewFactory extends AbstractRefreshMviewFactory<OracleSqlBuilder> {
+	@Override
+	protected void addRefreshObject(final Mview obj, final OracleSqlBuilder builder) {
+		if (obj.getName() == null || obj.getName().isBlank()) {
+			throw new IllegalArgumentException("Materialized view name is required for refresh");
+		}
+		if ("NEVER".equalsIgnoreCase(obj.getSpecifics().get("REFRESH_METHOD"))
+				|| "NEVER".equalsIgnoreCase(obj.getSpecifics().get("REFRESH_MODE"))) {
+			throw new IllegalArgumentException("Cannot refresh a NEVER REFRESH materialized view: " + obj.getName());
+		}
+		OracleSqlBuilder name = createSqlBuilder();
+		name.name(obj, getOptions().isDecorateSchemaName());
+		builder._add("BEGIN DBMS_MVIEW.REFRESH(list => ").sqlChar(name.toString())._add("); END;");
+	}
 
 }

@@ -29,5 +29,11 @@ import com.sqlapp.data.db.sql.AbstractCreateCheckConstraintFactory;
  * 
  */
 public class OracleCreateCheckConstraintFactory extends AbstractCreateCheckConstraintFactory<OracleSqlBuilder> {
+	@Override protected void addDeferrability(com.sqlapp.data.schemas.CheckConstraint constraint, OracleSqlBuilder builder) {
+		OracleConstraintState.deferrability(constraint, builder);
+	}
+	@Override protected void addCheckConstraintAfter(com.sqlapp.data.schemas.CheckConstraint constraint, OracleSqlBuilder builder) {
+		OracleConstraintState.after(constraint, builder);
+	}
 
 }

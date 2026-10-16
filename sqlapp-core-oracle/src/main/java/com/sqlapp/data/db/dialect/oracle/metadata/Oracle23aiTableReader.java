@@ -61,7 +61,7 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 		}
 	}
 
-	private void applyAnnotation(final ExResultSet rs, final List<Table> tables) throws SQLException {
+	void applyAnnotation(final ExResultSet rs, final List<Table> tables) throws SQLException {
 		final String owner = getString(rs, "ANNOTATION_OWNER");
 		final String objectName = getString(rs, "OBJECT_NAME");
 		final String objectType = getString(rs, "OBJECT_TYPE");
@@ -70,13 +70,16 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 		if ("TABLE".equalsIgnoreCase(objectType)) {
 			final Table table = findTable(tables, owner, objectName);
 			if (table != null) {
-				target = columnName == null ? table : table.getColumns().get(columnName);
+				target = columnName == null ? table : table.getColumns().stream()
+						.filter(column -> columnName.equals(column.getName())).findFirst().orElse(null);
 			}
 		} else if ("INDEX".equalsIgnoreCase(objectType)) {
 			for (Table table : tables) {
-				final Index index = table.getIndexes().get(objectName);
-				if (index != null && (owner == null || owner.equalsIgnoreCase(index.getSchemaName())
-						|| owner.equalsIgnoreCase(table.getSchemaName()))) {
+				final Index index = table.getIndexes().stream().filter(candidate ->
+						java.util.Objects.equals(objectName, candidate.getName())
+						&& java.util.Objects.equals(owner, candidate.getSchemaName() == null ? table.getSchemaName() : candidate.getSchemaName()))
+						.findFirst().orElse(null);
+				if (index != null) {
 					target = index;
 					break;
 				}
@@ -90,8 +93,8 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 
 	private Table findTable(final List<Table> tables, final String owner, final String name) {
 		for (Table table : tables) {
-			if (name.equalsIgnoreCase(table.getName())
-					&& (owner == null || owner.equalsIgnoreCase(table.getSchemaName()))) {
+			if (java.util.Objects.equals(name, table.getName())
+					&& java.util.Objects.equals(owner, table.getSchemaName())) {
 				return table;
 			}
 		}

@@ -19,9 +19,7 @@
 
 package com.sqlapp.data.db.dialect.oracle.metadata;
 
-import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.StringUtils.getGroupString;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -37,7 +35,6 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.SqlExecuter;
 
 /**
  * OracleのDBリンク作成クラス
@@ -86,7 +83,7 @@ public class OracleDbLinkReader extends DbLinkReader {
 	public static final Pattern DB_LINK_PATTERN2 = Pattern.compile(".*IDENTIFEID\\s+BY\\s+\"([^\"]*)\".*");
 
 	/**
-	 * DBリンクのパスワード設定
+	 * DBリンクの詳細情報は一覧クエリで取得済み。パスワードは推測しない。
 	 * 
 	 * @param connection
 	 * @param dbLink
@@ -94,22 +91,8 @@ public class OracleDbLinkReader extends DbLinkReader {
 	 */
 	@Override
 	protected void setMetadataDetail(Connection connection, DbLink dbLink) throws SQLException {
-		if (!isEmpty(dbLink.getUserId())) {
-			return;
-		}
-		SqlExecuter sql = new SqlExecuter("SELECT ");
-		sql.addSql("DBMS_METADATA.GET_DDL(");
-		sql.addSqlLine("FROM ALL_DB_LINKS");
-		sql.addSqlLine("WHERE 0=0");
-		String ddl = OracleMetadataUtils.getDdl(connection, "DB_LINK", dbLink.getSchemaName(), dbLink.getName());
-		String val = getGroupString(DB_LINK_PATTERN1, ddl, 1);
-		if (val != null) {
-			dbLink.setPasswordEncrypted(true);
-			dbLink.setPassword(val);
-		} else {
-			val = getGroupString(DB_LINK_PATTERN2, ddl, 1);
-			dbLink.setPassword(val);
-		}
+		// ALL_DB_LINKS does not expose passwords. A null USERNAME also occurs for
+		// non-fixed-user links; it is not a reason to query credentials per object.
 	}
 
 }

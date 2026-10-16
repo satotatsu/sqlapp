@@ -43,10 +43,22 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
+		if ("YES".equals(getString(rs, "USER_GENERATED")) && "YES".equals(getString(rs, "HIDDEN_COLUMN"))) {
+			column.setHidden(false);
+			column.getSpecifics().put("oracle.column.invisible", true);
+		}
 		String generationType = getString(rs, "GENERATION_TYPE");
+		if ("YES".equalsIgnoreCase(getString(rs, "DEFAULT_ON_NULL"))) column.getSpecifics().put("DEFAULT_ON_NULL", true);
 		if (generationType != null) {
 			column.setIdentity(true);
-			column.setIdentityGenerationType(generationType);
+			if ("BY DEFAULT ON NULL".equalsIgnoreCase(generationType)) {
+				column.setIdentityGenerationType(com.sqlapp.data.schemas.IdentityGenerationType.ByDefault);
+				column.getSpecifics().put("DEFAULT_ON_NULL", true);
+			} else {
+				column.setIdentityGenerationType(generationType);
+				if (column.getIdentityGenerationType() == null) throw new IllegalStateException("Unknown identity generation type: " + column.getName());
+			}
+			column.setDefaultValue(null);
 			column.setSequenceSchemaName(getString(rs, "OWNER"));
 			column.setSequenceName(getString(rs, "SEQUENCE_NAME"));
 			String identityOptions = getString(rs, "IDENTITY_OPTIONS");

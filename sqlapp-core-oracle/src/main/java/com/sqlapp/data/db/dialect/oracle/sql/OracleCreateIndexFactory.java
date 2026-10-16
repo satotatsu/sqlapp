@@ -39,7 +39,7 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 		if ((index.getIndexType() != null && index.getIndexType().isBitMap())
 				|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
 			builder.space()._add("BITMAP");
-		builder.index().ifNotExists(table != null && this.getOptions().isCreateIfNotExists()).space().name(index, false)
+		builder.index().ifNotExists(table != null && this.getOptions().isCreateIfNotExists()).space().name(index, this.getOptions().isDecorateSchemaName())
 				.on();
 		builder.name(table, this.getOptions().isDecorateSchemaName()
 				|| (index.getSchemaName() != null && !index.getSchemaName().equals(table.getSchemaName())));

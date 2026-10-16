@@ -33,6 +33,9 @@ public class Oracle26aiDomainReader extends Oracle23aiDomainReader {
 		var required = result.stream().filter(d -> d.getSpecifics().get(DEFINITION_REQUIRED) != null).toList();
 		definitionContext.put("definitionOwner", required.stream().map(Domain::getSchemaName).distinct().toList());
 		definitionContext.put("definitionName", required.stream().map(Domain::getName).distinct().toList());
+		boolean definitionsDenied = false;
+		Map<List<String>, Domain> definitions = new LinkedHashMap<>();
+		try {
 		execute(connection, getSqlNodeCache().getString("domainDefinitions26ai.sql"), definitionContext, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -40,20 +43,35 @@ public class Oracle26aiDomainReader extends Oracle23aiDomainReader {
 				String name = getString(rs, "DOMAIN_NAME");
 				String ddl = getString(rs, "DOMAIN_DEFINITION");
 				if (ddl == null || ddl.isBlank()) throw new IllegalStateException("Oracle domain DDL unavailable: " + owner + "." + name);
-				Domain domain = targets.get(List.of(owner, name));
-				if (domain == null) {
-					domain = new Domain(name).setSchemaName(owner);
-					targets.put(List.of(owner, name), domain);
-					result.add(domain);
-				}
+				Domain domain = new Domain(name).setSchemaName(owner);
 				domain.setDefinition(ddl);
-				domain.getSpecifics().remove(DEFINITION_REQUIRED);
 				String kind = getString(rs, "DOMAIN_KIND");
 				if (kind != null) domain.getSpecifics().put("oracle.domain.kind", kind);
+				definitions.put(List.of(owner, name), domain);
 			}
 		});
+		} catch (RuntimeException error) {
+			if (!OracleMetadataAccess.isDenied(error)) throw error;
+			definitionsDenied = true;
+			for (Domain domain : result) if (com.sqlapp.util.CommonUtils.isEmpty(domain.getDefinition())) domain.getSpecifics().put(DEFINITION_REQUIRED, true);
+			logger.warn("Oracle DBMS_METADATA access denied or object inaccessible; domain definitions are skipped, available catalog metadata retained.");
+		}
+		if (!definitionsDenied) {
+			definitions.forEach((key, definition) -> {
+				Domain domain = targets.get(key);
+				if (domain == null) {
+					domain = definition;
+					targets.put(key, domain);
+					result.add(domain);
+				} else {
+					domain.setDefinition(definition.getDefinition());
+					domain.getSpecifics().putAll(definition.getSpecifics());
+				}
+				domain.getSpecifics().remove(DEFINITION_REQUIRED);
+			});
+		}
 		for (Domain domain : result) {
-			if (domain.getSpecifics().get(DEFINITION_REQUIRED) != null) {
+			if (!definitionsDenied && domain.getSpecifics().get(DEFINITION_REQUIRED) != null) {
 				throw new IllegalStateException("Oracle domain requires a complete definition: " + domain.getSchemaName() + "." + domain.getName());
 			}
 		}

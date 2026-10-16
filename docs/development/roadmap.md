@@ -206,6 +206,46 @@ These paths are verified with unit tests and XML round trips, not a live databas
 
 The following Oracle features are intentionally deferred:
 
+- live-database recreation verification and older release-update boundaries;
+  table/column/constraint/index unit coverage does not certify all Oracle options
+- structured modification of existing identity/virtual columns beyond simple
+  renames (CREATE/ADD preserves formulas and 12c+ identity/default-on-null)
+- advanced invisible-column, IOT/external-table/LOB-storage and index lifecycle
+  options beyond the explicitly tested generation paths
+
+Oracle 12c+ invisible user columns are now retained independently from system
+hidden columns, and support CREATE/ADD plus isolated visibility ALTERs. Existing
+identity columns support isolated ALWAYS/BY DEFAULT/ON NULL mode changes without
+restarting the sequence. Shared table-level LOB tablespaces are read only when
+all LOB segments have one non-null tablespace, and generated for BLOB/CLOB/NCLOB
+columns. Per-column/per-partition LOB storage and IOT overflow/mapping models,
+identity sequence restart and complex virtual-column changes remain deferred.
+
+Identity increment/bounds/cache/cycle/order changes are now generated as changed
+options only through ALTER TABLE MODIFY on Oracle 12c+. Identity sequence restart,
+current-position changes remain deferred. Shared
+identity boolean setters retain values independently of the identity flag's
+assignment order, preserving XML round trips without changing the XML format.
+
+Isolated virtual-expression ALTERs are now generated for Oracle 11g+ tables
+without modeled indexes/constraints; combined physical changes and dependencies
+require separate handling. Plain, virtual and identity column comment changes
+use COMMENT ON without a MODIFY. Identity restart/current-position changes and
+complex virtual-column dependencies remain deferred.
+
+- complete structured materialized-view storage, refresh schedules and advanced
+  options (basic BUILD/REFRESH settings and DBMS_MVIEW refresh are implemented;
+  Oracle 10g+ retains executable DDL for advanced settings; PREBUILT/ON STATEMENT
+  in manually authored models require complete executable definitions)
+- structured DB-link authentication and CREATE/DROP generation; catalog readers
+  no longer query DDL per link or guess credentials from null usernames
+
+DBMS_METADATA enrichment for materialized views and 26ai domains is optional
+when access is denied: ORA-01031 and ORA-31603 produce a warning and retain
+available catalog metadata. Other failures propagate. Materialized-view catalog
+and definition reads use two bulk SELECTs; missing domain definitions prevent
+unsafe CREATE regeneration until a complete definition is supplied.
+
 - advanced association forms beyond the implemented flexible-domain USING mappings
 - structured flexible-domain selector editing (26ai retains executable DDL)
 - structured enumeration values/aliases (26ai retains executable DDL)

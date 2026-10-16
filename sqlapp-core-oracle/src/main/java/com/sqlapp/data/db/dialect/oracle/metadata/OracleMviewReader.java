@@ -85,6 +85,11 @@ public class OracleMviewReader extends MviewReader {
 		setSpecifics(rs, "REFRESH_METHOD", table);
 		setSpecifics(rs, "BUILD_MODE", table);
 		setSpecifics(rs, "FAST_REFRESHABLE", table);
+		setSpecifics(rs, "REWRITE_ENABLED", table);
+		setSpecifics(rs, "USE_NO_INDEX", table);
+		setSpecifics(rs, "COMPILE_STATE", table);
+		String compileState = table.getSpecifics().get("COMPILE_STATE");
+		if (compileState != null) table.setValid("VALID".equals(compileState));
 		return table;
 	}
 

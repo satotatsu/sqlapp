@@ -35,4 +35,23 @@ public class OracleCreateForeignKeyConstraintFactory
 	@Override
 	protected void addMatchOption(ForeignKeyConstraint obj, OracleSqlBuilder builder) {
 	}
+	@Override protected void addDeferrability(ForeignKeyConstraint constraint, OracleSqlBuilder builder) {
+		OracleConstraintState.deferrability(constraint, builder);
+	}
+	@Override protected void addAfter(ForeignKeyConstraint constraint, OracleSqlBuilder builder) {
+		OracleConstraintState.after(constraint, builder);
+	}
+	@Override protected void addCascadeRule(ForeignKeyConstraint constraint, OracleSqlBuilder builder) {
+		var update = constraint.getUpdateRule();
+		var delete = constraint.getDeleteRule();
+		if (update != null && update != com.sqlapp.data.schemas.CascadeRule.None) {
+			throw new IllegalArgumentException("Oracle does not support ON UPDATE actions: " + constraint.getName());
+		}
+		if (delete == com.sqlapp.data.schemas.CascadeRule.SetDefault || delete == com.sqlapp.data.schemas.CascadeRule.Restrict) {
+			throw new IllegalArgumentException("Unsupported Oracle ON DELETE action: " + constraint.getName());
+		}
+		if (delete == com.sqlapp.data.schemas.CascadeRule.Cascade || delete == com.sqlapp.data.schemas.CascadeRule.SetNull) {
+			builder.space()._add("ON DELETE ")._add(delete.getSqlValue());
+		}
+	}
 }

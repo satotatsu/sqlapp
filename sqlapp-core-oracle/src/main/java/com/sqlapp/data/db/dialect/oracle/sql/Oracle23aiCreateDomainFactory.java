@@ -49,6 +49,9 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 			builder._add(domain.getDefinition());
 			return;
 		}
+		if (domain.getSpecifics().containsKey("oracle.domain.definitionRequired")) {
+			throw new IllegalArgumentException("Complete domain definition was unavailable during metadata reading: " + domain.getSchemaName() + "." + domain.getName());
+		}
 		validate(domain);
 		builder.create().space()._add("DOMAIN").space();
 		builder.ifNotExists(this.getOptions().isCreateIfNotExists()).space();

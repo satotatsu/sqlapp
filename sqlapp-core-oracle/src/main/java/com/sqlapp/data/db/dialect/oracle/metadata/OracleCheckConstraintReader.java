@@ -69,7 +69,10 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 				CheckConstraint c = map.get(schema_name, constraint_name);
 				List<Column> columnList = colMap.get(schema_name, constraint_name);
 				if (c == null) {
-					if (isNotNullConstraint(expression)) {
+					if (expression == null || expression.isBlank()) throw new IllegalStateException("Check constraint expression unavailable: " + schema_name + "." + constraint_name);
+					if (isNotNullConstraint(expression) && "GENERATED NAME".equals(getString(rs, "GENERATED"))
+							&& "ENABLED".equals(getString(rs, "STATUS")) && "VALIDATED".equals(getString(rs, "VALIDATED"))
+							&& "NOT DEFERRABLE".equals(getString(rs, "DEFERRABLE"))) {
 						return;
 					}
 					c = new CheckConstraint(constraint_name, expression);
@@ -83,6 +86,8 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 					c.setDeferrability(OracleMetadataUtils.getDeferrability(deferrable, deferred));
 					c.setEnable("ENABLED".equalsIgnoreCase(getString(rs, "STATUS")));
 					c.setValid(!"INVALID".equalsIgnoreCase(getString(rs, "INVALID")));
+					setSpecifics(rs, "VALIDATED", c);
+					setSpecifics(rs, "RELY", c);
 					setSpecifics(rs, "GENERATED", c);
 					result.add(c);
 					map.put(schema_name, constraint_name, c);

@@ -9,6 +9,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.metadata.DomainReader;
 import com.sqlapp.data.db.metadata.ViewReader;
+import com.sqlapp.data.db.metadata.MviewReader;
 
 public class Oracle23aiSchemaReader extends Oracle12cSchemaReader {
 
@@ -29,5 +30,10 @@ public class Oracle23aiSchemaReader extends Oracle12cSchemaReader {
 	@Override
 	protected ViewReader newViewReader() {
 		return new Oracle23aiViewReader(getDialect());
+	}
+
+	@Override
+	protected MviewReader newMviewReader() {
+		return new Oracle23aiMviewReader(getDialect());
 	}
 }
