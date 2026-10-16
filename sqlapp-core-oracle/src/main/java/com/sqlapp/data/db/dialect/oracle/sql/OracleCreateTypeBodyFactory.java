@@ -30,8 +30,9 @@ public class OracleCreateTypeBodyFactory extends AbstractCreateTypeBodyFactory<O
 	@Override
 	protected void addCreateObject(final TypeBody obj, OracleSqlBuilder builder) {
 		if (!isEmpty(obj.getDefinition())) {
-			builder.create().or().replace();
-			builder.space();
+			if (!toString(obj.getDefinition()).stripLeading().matches("(?is)^CREATE\\s+.*")) {
+				builder.create().or().replace().space();
+			}
 			builder._add(obj.getDefinition());
 		} else {
 			builder.create().or().replace().type().body();

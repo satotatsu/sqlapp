@@ -155,6 +155,13 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 		return instance();
 	}
 
+	/** Domain component types retain the character semantics used by table columns. */
+	public OracleSqlBuilder domainTypeDefinition(final AbstractColumn<?> component) {
+		Column physical = new Column().setDataType(component.getDataType()).setDataTypeName(component.getDataTypeName())
+				.setLength(component.getLength()).setScale(component.getScale()).setCharacterSemantics(component.getCharacterSemantics());
+		return typeDefinition(physical);
+	}
+
 	@Override
 	protected OracleSqlBuilder typeDefinition(final Column column) {
 		if (column.getDomain() != null && column.getDomainName() == null) {
@@ -186,6 +193,11 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 				String part = column.getDomainColumnName() == null ? column.getName() : column.getDomainColumnName();
 				var component = column.getDomain().getColumns().get(part);
 				if (component == null) throw new IllegalArgumentException("Unknown domain component: " + part);
+				var dataType = component.getDataType() == null ? null : getDialect().getDbDataTypes().getDbTypeStrict(component.getDataType());
+				if (!com.sqlapp.util.CommonUtils.isEmpty(column.getDomain().getDefinition()) && dataType != null
+						&& dataType.getSupportCharacterSemantics().size() > 1 && component.getCharacterSemantics() == null) {
+					throw new IllegalArgumentException("Cannot infer BYTE/CHAR semantics from a complete domain definition; specify the physical column type and characterSemantics: " + column.getName());
+				}
 				physical.setDataType(component.getDataType()).setDataTypeName(component.getDataTypeName())
 						.setLength(component.getLength()).setScale(component.getScale()).setCharacterSemantics(component.getCharacterSemantics());
 			}

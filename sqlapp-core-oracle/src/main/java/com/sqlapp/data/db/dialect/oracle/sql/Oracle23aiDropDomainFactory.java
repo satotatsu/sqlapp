@@ -14,6 +14,18 @@ import com.sqlapp.data.schemas.Domain;
 public class Oracle23aiDropDomainFactory extends OracleDropDomainFactory {
 
 	@Override
+	protected java.util.List<Domain> sort(java.util.List<Domain> domains) {
+		var sorted = OracleDomainDependencies.sort(domains);
+		java.util.Collections.reverse(sorted);
+		return sorted;
+	}
+	@Override
+	protected java.util.List<com.sqlapp.data.schemas.DbObjectDifference> sortDbObjectDifference(
+			java.util.List<com.sqlapp.data.schemas.DbObjectDifference> differences) {
+		return OracleDomainDependencies.sortDifferences(differences, true);
+	}
+
+	@Override
 	protected void addDropObject(final Domain domain, final OracleSqlBuilder builder) {
 		builder.drop().space()._add("DOMAIN").space();
 		builder.ifExists(this.getOptions().isDropIfExists()).space();

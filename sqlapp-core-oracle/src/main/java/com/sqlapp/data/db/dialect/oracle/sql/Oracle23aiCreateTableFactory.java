@@ -6,8 +6,6 @@
 package com.sqlapp.data.db.dialect.oracle.sql;
 
 import java.util.List;
-import java.util.Map;
-import java.util.LinkedHashMap;
 
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -24,17 +22,7 @@ public class Oracle23aiCreateTableFactory extends OracleCreateTableFactory {
 	@Override
 	protected void addConstraintDefinitions(Table table, OracleSqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
-		Map<List<String>, Map<String, Column>> groups = new LinkedHashMap<>();
-		for (Column column : table.getColumns()) {
-			if (column.getDomain() == null || column.getDomain().getColumns().isEmpty()) continue;
-			String group = column.getSpecifics().get(DOMAIN_ASSOCIATION_ID);
-			var key = java.util.Arrays.asList(column.getDomainSchemaName(), column.getDomainName(), group);
-			var parts = groups.computeIfAbsent(key, k -> new LinkedHashMap<>());
-			String part = column.getDomainColumnName() == null ? column.getName() : column.getDomainColumnName();
-			if (parts.putIfAbsent(part, column) != null) {
-				throw new IllegalArgumentException("Duplicate domain component; set a distinct associationId for repeated associations: " + part);
-			}
-		}
+		var groups = OracleDomainAssociationUtils.groups(table);
 		for (var parts : groups.values()) {
 			var domain = parts.values().iterator().next().getDomain();
 			if (parts.size() != domain.getColumns().size()) {

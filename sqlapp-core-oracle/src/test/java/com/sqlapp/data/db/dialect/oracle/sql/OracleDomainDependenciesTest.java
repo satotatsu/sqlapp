@@ -29,6 +29,20 @@ class OracleDomainDependenciesTest {
 	}
 
 	@Test
+	void diffCreationAndDeletionFollowOppositeDependencyOrders() throws Exception {
+		var dependent = domain("A", "[[\"APP\",\"Z\"]]");
+		var base = domain("Z", null);
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		com.sqlapp.data.db.sql.SqlFactory<Domain> create = registry.getSqlFactory(base, SqlType.CREATE);
+		com.sqlapp.data.db.sql.SqlFactory<Domain> drop = registry.getSqlFactory(base, SqlType.DROP);
+		var added = List.of(dependent.diff(null).reverse(), base.diff(null).reverse());
+		var deleted = List.of(base.diff(null), dependent.diff(null));
+		assertEquals(List.of(base, dependent), create.createDiffSql(added).stream().map(o -> o.getOriginal()).toList());
+		assertEquals(List.of(dependent, base), drop.createDiffSql(deleted).stream().map(o -> o.getOriginal()).toList());
+		assertEquals(List.of(dependent, base), drop.createSql(List.of(base, dependent)).stream().map(o -> o.getOriginal()).toList());
+	}
+
+	@Test
 	void completeDefinitionDoesNotRequireDuplicateComponents() throws Exception {
 		var domain = domain("SOURCE", null);
 		domain.getColumns().add(new DomainColumn("OPTIONAL"));

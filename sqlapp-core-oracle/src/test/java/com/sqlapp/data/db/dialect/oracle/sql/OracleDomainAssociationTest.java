@@ -10,6 +10,25 @@ import com.sqlapp.data.db.sql.SqlType;
 
 class OracleDomainAssociationTest {
 	@Test
+	void opaqueCharacterDomainRequiresExplicitLengthSemanticsForInference() {
+		Schema schema = new Schema("APP");
+		Domain domain = new Domain("ADDRESS").setDefinition("CREATE DOMAIN APP.ADDRESS AS (CITY AS VARCHAR2(80 BYTE), ZIP AS NUMBER)");
+		schema.getDomains().add(domain);
+		DomainColumn city = new DomainColumn("CITY").setDataType(DataType.VARCHAR).setLength(80);
+		domain.getColumns().add(city); domain.getColumns().add(new DomainColumn("ZIP").setDataType(DataType.INT));
+		Table table = new Table("T"); schema.getTables().add(table);
+		table.getColumns().add(new Column("LOCATION").setDomain(domain).setDomainColumnName("CITY"));
+		table.getColumns().add(new Column("POSTCODE").setDomain(domain).setDomainColumnName("ZIP"));
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertTrue(assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE)).getMessage().contains("BYTE/CHAR"));
+		city.setCharacterSemantics(CharacterSemantics.Byte);
+		assertTrue(registry.createSql(table, SqlType.CREATE).get(0).getSqlText().toUpperCase(java.util.Locale.ROOT).contains("VARCHAR2(80 BYTE)"));
+		city.setCharacterSemantics((CharacterSemantics) null);
+		table.getColumns().get("LOCATION").setDataType(DataType.VARCHAR).setLength(80).setCharacterSemantics(CharacterSemantics.Byte);
+		assertTrue(registry.createSql(table, SqlType.CREATE).get(0).getSqlText().toUpperCase(java.util.Locale.ROOT).contains("VARCHAR2(80 BYTE)"));
+	}
+
+	@Test
 	void flexibleUsingMappingsSurviveXmlAndRejectIncompleteGroups() throws Exception {
 		Schema schema = new Schema("APP");
 		Domain domain = new Domain("CHOICE"); schema.getDomains().add(domain);

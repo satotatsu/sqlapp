@@ -74,12 +74,7 @@ public class OraclePackageReader extends PackageReader {
 				this.getDialect(), cnt, result, OBJECT_TYPE);
 		for (Package obj : result) {
 			List<String> source = routines.get(obj.getSchemaName(), obj.getName());
-			String def = OracleMetadataUtils.getPackageStatement(obj, source);
-			if (def != null) {
-				obj.setStatement(def);
-			} else {
-				obj.setDefinition(source);
-			}
+			obj.setDefinition(OracleMetadataUtils.getSourceDefinition(obj, source));
 		}
 		return result;
 	}

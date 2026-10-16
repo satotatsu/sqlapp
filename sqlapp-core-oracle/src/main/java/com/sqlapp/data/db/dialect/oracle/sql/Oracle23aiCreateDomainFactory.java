@@ -22,6 +22,11 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 	protected java.util.List<Domain> sort(java.util.List<Domain> domains) {
 		return OracleDomainDependencies.sort(domains);
 	}
+	@Override
+	protected java.util.List<com.sqlapp.data.schemas.DbObjectDifference> sortDbObjectDifference(
+			java.util.List<com.sqlapp.data.schemas.DbObjectDifference> differences) {
+		return OracleDomainDependencies.sortDifferences(differences, false);
+	}
 
 	public static final String STRICT = "STRICT";
 	public static final String DEFAULT_ON_NULL = "DEFAULT_ON_NULL";
@@ -75,7 +80,7 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 				builder._add("(*,")._add(domain.getScale())._add(")");
 			}
 		} else {
-			builder.typeDefinition(domain.getDataType(), domain.getDataTypeName(), domain.getLength(), domain.getScale());
+			builder.domainTypeDefinition(domain);
 		}
 		if (Boolean.TRUE.equals(domain.getSpecifics().get(STRICT, Boolean.class))) {
 			builder.space()._add("STRICT");

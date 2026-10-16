@@ -209,13 +209,18 @@ public class OracleMetadataUtils {
 	 * @param difinition 定義
 	 */
 	protected static void setRoutineDefinition(Routine<?> routine, List<String> source) {
+		routine.setDefinition(getSourceDefinition(routine, source));
+	}
+
+	/** Preserves the complete ALL_SOURCE header and body without parsing PL/SQL. */
+	protected static String getSourceDefinition(AbstractSchemaObject<?> obj, List<String> source) {
 		if (source == null || source.isEmpty() || source.stream().allMatch(s -> s == null || s.isBlank())) {
-			throw new IllegalStateException("Oracle routine source unavailable: " + routine.getSchemaName() + "."
-					+ routine.getName());
+			throw new IllegalStateException("Oracle object source unavailable: " + obj.getSchemaName() + "."
+					+ obj.getName());
 		}
 		// ALL_ARGUMENTS does not expose default expressions. Preserve the original
 		// signature, AUTHID, compiler clauses and body together rather than guessing.
-		routine.setDefinition("CREATE OR REPLACE " + String.join("\n", source));
+		return "CREATE OR REPLACE " + String.join("\n", source);
 	}
 
 	protected static String getFunctionStatement(AbstractSchemaObject<?> obj, List<String> difinition) {

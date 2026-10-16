@@ -78,10 +78,18 @@ public class Oracle26aiDomainReader extends Oracle23aiDomainReader {
 			Map<List<String>, Domain> targets) {
 		var flexible = domains.stream().filter(OracleDomainAssociationUtils::isFlexible).toList();
 		if (flexible.isEmpty()) return;
+		Map<Domain, List<Integer>> expected = new java.util.IdentityHashMap<>();
 		execute(connection, getSqlNodeCache().getString("flexibleDomainColumns26ai.sql"), context, new ResultSetNextHandler() {
 			@Override public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Domain domain = targets.get(List.of(getString(rs, "OWNER"), getString(rs, "DOMAIN_NAME")));
 				if (domain == null || !OracleDomainAssociationUtils.isFlexible(domain)) return;
+				String values = getString(rs, "EXPECTED_VALUE_COLUMNS"), discriminants = getString(rs, "EXPECTED_DISCRIMINANTS");
+				if (values == null || discriminants == null) throw new IllegalStateException("Flexible domain column counts unavailable: " + domain.getSchemaName() + "." + domain.getName());
+				var counts = List.of(Integer.parseInt(values), Integer.parseInt(discriminants));
+				var previous = expected.putIfAbsent(domain, counts);
+				if (counts.get(0) < 1 || counts.get(1) < 1 || previous != null && !previous.equals(counts)) {
+					throw new IllegalStateException("Inconsistent flexible domain column counts: " + domain.getSchemaName() + "." + domain.getName());
+				}
 				DomainColumn column = new DomainColumn(getString(rs, "COLUMN_NAME"));
 				column.getSpecifics().put(OracleDomainAssociationUtils.DISCRIMINANT, rs.getBoolean("DISCRIMINANT"));
 				domain.getColumns().add(column);
@@ -89,7 +97,8 @@ public class Oracle26aiDomainReader extends Oracle23aiDomainReader {
 		});
 		for (Domain domain : flexible) {
 			long discriminants = domain.getColumns().stream().filter(OracleDomainAssociationUtils::isDiscriminant).count();
-			if (discriminants == 0 || discriminants == domain.getColumns().size()) {
+			var counts = expected.get(domain);
+			if (counts == null || discriminants != counts.get(1) || domain.getColumns().size() - discriminants != counts.get(0)) {
 				throw new IllegalStateException("Incomplete flexible domain components: " + domain.getSchemaName() + "." + domain.getName());
 			}
 		}
@@ -105,7 +114,9 @@ public class Oracle26aiDomainReader extends Oracle23aiDomainReader {
 	@Override
 	protected void setDomainAnnotation(Domain domain, ExResultSet rs) throws SQLException {
 		super.setDomainAnnotation(domain, rs);
-		if (domain.getColumns().isEmpty() && getString(rs, "COLUMN_NAME") == null) {
+		String value = getString(rs, "ANNOTATION_VALUE");
+		if (domain.getColumns().isEmpty() && getString(rs, "COLUMN_NAME") == null
+				|| value != null && (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0)) {
 			domain.getSpecifics().put(DEFINITION_REQUIRED, true);
 		}
 	}
@@ -115,6 +126,12 @@ public class Oracle26aiDomainReader extends Oracle23aiDomainReader {
 		Domain domain = super.createDomain(rs);
 		if (rs.getInt("ALTERNATIVE_TYPE_COUNT") > 0) {
 			domain.getSpecifics().put(DEFINITION_REQUIRED, true);
+		}
+		for (String key : List.of("DATA_DISPLAY", "DATA_ORDER")) {
+			String expression = getString(rs, key);
+			if (expression != null && (expression.indexOf('\n') >= 0 || expression.indexOf('\r') >= 0)) {
+				domain.getSpecifics().put(DEFINITION_REQUIRED, true);
+			}
 		}
 		return domain;
 	}

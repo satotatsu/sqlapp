@@ -13,8 +13,9 @@
 | シーケンス | 共通Schemaモデルを使用し、18c以降のscale/session用クエリを分離。既存単体テストあり。 |
 | 関数・プロシージャ | PostgreSQLと同様に再生成情報を保持すべき経路で、Oracleの引数既定値・ヘッダーが失われる問題を修正。 |
 | トリガー | PostgreSQLは所有スキーマと定義を保持。Oracleのスキーマ欠落、ヘッダー消失、不正な文レベルトリガーSQL、条件欠落、無効状態の欠落を修正。 |
-| Oracle固有オブジェクト | package/type/synonym/db link/dimension等の既存Reader/Factoryあり。PostgreSQL固有のextension/publication等との件数比較は機能不足の判定に使わない。 |
+| Oracle固有オブジェクト | package/type/synonym/db link/dimension等の既存Reader/Factoryあり。PACKAGE／TYPEと各BODYは完全ソースDDLを保持し、ヘッダー・名前付きENDの欠落とCREATEの二重付与を修正。PostgreSQL固有のextension/publication等との件数比較は機能不足の判定に使わない。 |
 | bulk処理 | 既存のinsert/upsert/set-based snapshot providerと単体テストあり。今回変更なし。 |
+| Domain | 23ai/26aiの単一列・複数列、26aiのFlexible関連付け、完全DDL保持、CREATE／ALTER／DROPの依存順に対応。構造化ALTERはDISPLAY／ORDER・object注釈に限定し、型・制約・完全definitionの変更は明示的に拒否する。 |
 
 ## 修正した再生成経路
 
@@ -338,6 +339,207 @@ Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL�
 
 仕様参照: [ALL_DOMAIN_COLS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_COLS.html)、
 [Flexible Domain関連付け](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 2026-10-16: 単一列Domain参照のALTER TABLE
+
+Oracle23ai/26ai用のALTER TABLE Factoryを追加した。単一列のDomain解除・別Domainへの切替では、
+既存の列変更処理より前に専用の`MODIFY (column) DROP DOMAIN`を生成する。
+Domainの解除は他の列変更と同一文に混ぜず、型・default・nullability等の変更は既存Factoryへ委譲する。
+解除後の物理型がない場合は推測せずエラーとする。
+
+```sql
+ALTER TABLE APP.T MODIFY (V) DROP DOMAIN;
+ALTER TABLE APP.T MODIFY (V VARCHAR2(40) DOMAIN APP.NEW_DOMAIN);
+```
+
+Domain由来制約の扱いはOracle標準のDROP DOMAINに従う。PRESERVE CONSTRAINTSの指定は今回追加しない。
+Domain付き列のrenameと他変更を同時に行う差分は、既存処理のDROP/ADDによるデータ消失を避けるため拒否する。
+複数列／Flexible Domainの関連付け変更については、以下の継続対応でグループ単位のALTER生成を追加した。
+Oracle21c以前のFactory登録は維持し、共通モデル・XML・モジュール依存は変更していない。
+対象テストはOracleDomainAlterTableTest。初回は引用識別子の期待値を修正して再実行した。
+対象テスト成功後、Gradle WrapperでOracle全148件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+実DBテストは未実施。
+
+仕様参照: [Domain関連付け解除](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 2026-10-16: 複数列DomainのグループALTER
+
+CREATEとALTERで関連付けグループの解決・構成列検証・通常列／判別列の順序を共有する。
+ALTERは元と先のグループを比較し、変更された旧グループを解除してから列変更処理へ委譲し、
+変更された新グループを最後に関連付ける。関連列の追加・削除にも同じ順序を適用する。
+不完全なグループ、対応しない構成列、重複構成列は生成前に拒否する。
+
+```sql
+ALTER TABLE APP.T MODIFY (CX, CY) DROP DOMAIN;
+-- 必要な物理列変更
+ALTER TABLE APP.T MODIFY (CX, CY) ADD DOMAIN APP.PAIR;
+```
+
+Flexible DomainのALTERでは通常構成列を先に、判別列を後に並べる。
+Oracle公式のALTER構文に従い、CREATEのUSING句とは異なり一つのMODIFY列リストへ列を並べる。
+Oracle23aiへのFlexible関連付けは拒否し、renameと他変更の同時指定に対する既存の安全検証は維持する。
+Domain由来制約はOracle標準のDROP DOMAINの扱いに従う。
+変更はOracleモジュールと資料のみで、共通モデル・XML形式・依存関係は変更していない。
+対象テストはOracleDomainAlterTableTest、OracleDomainAssociationTest。実DBテストは未実施。
+関連列の追加・削除とFlexibleの通常列／判別列順も検証した。
+Gradle WrapperでOracle全149件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+
+仕様参照: [複数列／Flexible Domainの関連付け変更](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 2026-10-16: ライフサイクル・依存順・読取再現性の一括対応
+
+次の経路を一まとまりとして実装・検証した。
+
+- 構造化Domain本体のDISPLAY／ORDERのADD・MODIFY・DROP、object注釈のADD・REPLACE・DROP。
+- Domain集合のCREATE差分では参照先が先、DROP集合・削除差分では参照元が先になる順序。
+- Schema／Catalog差分では、参照元テーブルの変更・関連付け解除後にDomainをDROPする順序。
+- 製品情報のない手動モデルやcloneが汎用Dialectへ戻る場合、明示選択したOracle23ai/26ai Registryを使用する処理。
+- 26aiで複数行DISPLAY／ORDER式を検出した場合の完全DDL保持。specificsのXML属性で改行が変わっても、再生成はdefinitionの正本を使う。
+- 手動Domain・DomainColumnのBYTE／CHAR指定をCREATEへ反映する処理。26aiで読み取った文字型Domainは元の長さ指定を推測せず完全DDLを保持する。
+
+```sql
+ALTER DOMAIN APP.D ADD DISPLAY TO_CHAR(VALUE);
+ALTER DOMAIN APP.D MODIFY ORDER -VALUE;
+ALTER DOMAIN APP.D ANNOTATIONS (REPLACE Label 'New label');
+ALTER DOMAIN APP.D DROP DISPLAY;
+```
+
+Domain／Schema／CatalogのState.Modifiedを対応Factoryへ登録した。
+型、CHECK、名前、Flexible選択式、完全definitionなどの未対応なDomain本体変更はDROP/CREATEへ
+置き換えず、対象名を含むエラーとする。構造化ALTERを使うには完全definitionを正本としないDomainモデルが必要である。
+Domainを参照する別Schemaを含むCatalog差分の削除ではdecorateSchemaName=trueが必要。
+Catalog追加差分のDomain依存順は次の継続対応で解決する。
+個別に生成したSchemaの組合せ、Domain以外のSchema横断依存については引き続き呼出側で順序を管理する。
+
+26aiのALL_DOMAIN_COLSにはCHAR_USED相当の明確な識別列がないため、文字型Domainの
+完全DDL取得も同じ一括クエリへ含める。DBMS_METADATAの権限不足は取得失敗として伝播する。
+旧23aiのメタデータはこの26ai用クエリを使わない。手動の複数行DISPLAY／ORDER式に対する制限は維持する。
+
+変更モジュールはsqlapp-core-oracleと開発資料のみ。共通モデル・XML形式・モジュール依存の破壊的変更はない。
+OracleSqlBuilder.domainTypeDefinitionを追加し、既存の一般的な型出力APIは変更しない。
+対象テストはOracleAlterDomainTest、OracleDomainDependenciesTest、OracleDomainMigrationOrderTest、
+OracleAdvancedDomainDefinitionTest、OracleDomainCheckTest。
+初回の継承・差分API指定によるコンパイル失敗を修正し、Schema／Catalog統合テストで見つかった汎用Dialectへの戻りも修正して再実行した。
+最終検証はOracle全157件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が成功。
+core 1187件、PostgreSQL 300件、H2 49件のtestタスクも成功（この3モジュールはUP-TO-DATEで再実行なし）。
+今回実行した対象の失敗・skipは0件。git diff --checkも成功した。
+実DBへの接続、実DDL実行、生成物の意図的な変更は行っていない。
+
+主な検証コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleAlterDomainTest' --tests '*OracleDomainDependenciesTest' --tests '*OracleDomainMigrationOrderTest' --tests '*OracleAdvancedDomainDefinitionTest' --tests '*OracleDomainCheckTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-oracle:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照: [ALTER DOMAIN](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/alter-domain.html)、
+[Annotations](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/annotations_clause.html)、
+[ALL_DOMAIN_COLS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_COLS.html)。
+
+## 2026-10-16: Catalog追加差分のSchema横断依存順
+
+Oracle23ai/26aiのCatalog ALTERは追加Domainと、その前提・利用側のSQLを依存関係で並べる。
+追加するシーケンス・型・package等やCatalog-level作成オブジェクトを前提にし、Domain間の依存情報を
+使って参照先を先に作成する。既存テーブルへDomainを設定するALTERと、新規テーブルのCREATEの両方を扱う。
+テーブル変更・索引・ビュー等の既存の処理順序は維持し、前提とDomainのSQLを必要に応じて先に実行する。
+通常列と判別列を含むFlexible Domainにも同じ順序を適用する。
+
+検証した代表例は次の順序になる:
+
+```text
+BASE.SEQ / BASE.X → BASE.D → APP.CHOICE → APP.T → APP.Tの索引 → APP.TV
+```
+
+既存Schemaの変更だけでなく、新規Schemaを含むCatalog差分も対象とする。
+元のSchemaモデル・コレクション順は変更しない。Domainの追加・削除を含むCatalog差分には
+decorateSchemaName=trueが必要で、未指定のSchemaを実行時のsearch pathから推測しない。
+Domainのない処理は既存の順序を維持する。循環依存は対象名を含むエラーで拒否する。
+追加Domain間の参照は既存のspecifics.oracle.domain.dependenciesを使い、完全DDL本文からSQL解析で推測しない。
+読取モデルでは一括取得した情報を使用し、手動で完全DDLを作る場合は依存先も指定する。
+Catalog外の参照先や必要なEXECUTE等の権限、Domain以外のSchema横断参照は呼出側の前提として残る。
+
+さらにSchema／Catalogの変更後モデルを検証し、削除DomainへのTable列参照やDomain間参照が
+残っている場合は生成時に拒否する。依存先を先にDROPして実DBで失敗するSQLを返さない。
+Catalogに含まれない実DB上の依存オブジェクトについては未検証である。
+
+変更モジュールはsqlapp-core-oracleと資料のみ。共通モデル・XML形式・公開設定形式は変更しない。
+対象テストはOracleCatalogDomainAdditionOrderTest、OracleDomainMigrationOrderTest。
+XML往復、23ai/26ai、既存テーブル、新規Schema、前提オブジェクト、索引・ビューの順序、
+循環、不完全な削除、非修飾名の拒否、入力コレクション順保持を確認する。
+実DBへの接続・DDL実行は行っていない。
+対象テスト成功後、Oracle全164件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した（失敗・skip 0件）。
+未変更のcore・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+
+主な実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCatalogDomainAdditionOrderTest' --tests '*OracleDomainMigrationOrderTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: Domainメタデータの整合性と文字型推定
+
+対象はOracle 23ai/26ai、変更モジュールはsqlapp-core-oracleのみ。
+公開API・共通モデル・XML形式は変更していない。
+
+- 26aiのFlexible Domain一括クエリで通常構成列の取得件数と
+  ALL_DOMAINS.DISCRIMINANTCOLSを返し、読取後の構成列数を照合する。
+  欠落・不整合はDomain名を含むエラーとし、SELECT数は増やしていない。
+  通常列の件数は取得行集合に基づくため、カタログ自体の欠落の検出を保証しない。
+- 23ai/26aiの構成列注釈は識別子を完全一致で解決し、不明な列への注釈を拒否する。
+- 26aiの改行を含む列注釈は完全DDLを保持し、XML往復で改行が正規化されても
+  CREATE文で元の値を再現する。
+- 完全DDLを持つDomainから物理文字列型を推定する場合、BYTE/CHARを推測しない。
+  Domain構成列のcharacterSemantics、またはテーブル列の物理型を明示する。
+
+OracleDomainMetadataIntegrityTestとOracleDomainAssociationTestで、構成列不足、
+識別子の大小文字、注釈のXML往復、文字型推定の拒否と明示指定を検証する。
+実DBへの接続・DDL実行は行っていない。23aiの改行注釈の完全DDL保存は未対応。
+対象4クラスのテスト成功後、Oracle全168件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+初回のテストコンパイルではnull引数のオーバーロードが曖昧だったため、
+テストのenum型を明示して修正した。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainMetadataIntegrityTest' --tests '*OracleAdvancedDomainDefinitionTest' --tests '*OracleDomainAssociationTest' --tests '*OracleDomainAnnotationIdentityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: PACKAGE／TYPEと各BODYの再生成
+
+OraclePackageReader／OraclePackageBodyReaderは、従来の正規表現による本文抽出をやめ、
+一括ALL_SOURCEのヘッダーと本文を完全なCREATE OR REPLACE DDLとしてdefinitionへ保存する。
+AUTHID、引数既定値、初期化ブロック、名前付きENDを保持する。
+OracleTypeReader／OracleTypeBodyReaderも同じ経路へ揃え、4種類ともソースが取得できない場合は
+所有者・対象名を含むエラーとする。オブジェクトごとの追加SELECTはない。
+
+対応する4種類のCREATE Factoryは完全DDLにCREATEを重複付与せず、既存の
+PACKAGE／TYPEで始まるdefinitionと、statementからの生成も引き続き受け付ける。
+この変更は基本Oracle Dialectから26aiまでの継承範囲が対象。
+変更モジュールはsqlapp-core-oracleのみで、公開API・XML形式・依存関係は変更しない。
+読取結果の主な再生成情報はdefinitionとなり、定義内の識別子を変更する場合は
+DDL自体の更新も必要になる。構造化TYPE列は補助メタデータとして引き続き保持する。
+
+OraclePackageTypeRecreationTestでは基本版、11gR2、19c、21c、23ai、26aiについて、
+4種類の完全DDL・従来形式、XML往復、AUTHID／既定引数／名前付きEND、ソース欠落を検証する。
+関数・プロシージャの既存OracleRoutineRecreationTestも併せて成功した。
+実DBでの読取・DDL実行は未検証。
+Oracle全170件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が
+成功した（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイルの変更はない。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePackageTypeRecreationTest' --tests '*OracleRoutineRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
 
 ## 過去のOracle仕様参照
 

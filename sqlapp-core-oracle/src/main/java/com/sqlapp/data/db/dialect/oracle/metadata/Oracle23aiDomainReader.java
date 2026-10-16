@@ -157,9 +157,10 @@ public class Oracle23aiDomainReader extends DomainReader {
 		if (columnName == null || domain.getColumns().isEmpty()) {
 			target = domain;
 		} else {
-			target = domain.getColumns().get(columnName);
+			target = domain.getColumns().stream().filter(column -> columnName.equals(column.getName())).findFirst().orElse(null);
 		}
-		if (target != null) OracleAnnotationUtils.setAnnotation(target, getString(rs, "ANNOTATION_NAME"), getString(rs, "ANNOTATION_VALUE"));
+		if (target == null) throw new IllegalStateException("Unknown domain annotation column: " + domain.getSchemaName() + "." + domain.getName() + "." + columnName);
+		OracleAnnotationUtils.setAnnotation(target, getString(rs, "ANNOTATION_NAME"), getString(rs, "ANNOTATION_VALUE"));
 	}
 
 	protected SqlNode getAnnotationSqlNode() {

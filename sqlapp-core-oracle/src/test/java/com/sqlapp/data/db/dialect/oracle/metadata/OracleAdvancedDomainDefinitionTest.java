@@ -23,6 +23,9 @@ class OracleAdvancedDomainDefinitionTest {
 		return new ExResultSet(null) {
 			@Override public String getString(String name) { return values.get(name); }
 			@Override public boolean getBoolean(String name) { return Boolean.parseBoolean(values.get(name)); }
+			@Override public int getInt(String name) { return 0; }
+			@Override public long getLong(String name) { return 0; }
+			@Override public boolean wasNull() { return true; }
 		};
 	}
 
@@ -39,7 +42,7 @@ class OracleAdvancedDomainDefinitionTest {
 				if (call == 4) {
 					try {
 						for (String part : java.util.List.of("v", "kind")) h.handleResultSetNext(row(Map.of("OWNER", "APP", "DOMAIN_NAME", "CHOICE",
-								"COLUMN_NAME", part, "DISCRIMINANT", Boolean.toString(part.equals("kind")))));
+								"COLUMN_NAME", part, "DISCRIMINANT", Boolean.toString(part.equals("kind")), "EXPECTED_VALUE_COLUMNS", "1", "EXPECTED_DISCRIMINANTS", "1")));
 					} catch (SQLException e) { throw new RuntimeException(e); }
 					return null;
 				}
@@ -69,6 +72,54 @@ class OracleAdvancedDomainDefinitionTest {
 			assertEquals(definitions.get(domain.getName()), DialectHolder.oracle26aiDialect.createSqlFactoryRegistry()
 					.createSql(restored, SqlType.CREATE).get(0).getSqlText());
 		}
+	}
+
+	@Test
+	void characterDomainKeepsExactLengthSemanticsInDefinition() throws Exception {
+		String ddl = "CREATE DOMAIN APP.D AS VARCHAR2(40 BYTE)";
+		AtomicInteger calls = new AtomicInteger();
+		var reader = new Oracle26aiDomainReader(DialectHolder.oracle26aiDialect) {
+			@Override protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+				try {
+					int call = calls.incrementAndGet();
+					if (call == 1) h.handleResultSetNext(row(Map.of("OWNER", "APP", "DOMAIN_NAME", "D", "DATA_TYPE", "VARCHAR2", "NULLABLE", "Y")));
+					if (call == 3) {
+						assertTrue(n.toString().contains("C.DATA_TYPE IN ('CHAR','VARCHAR2','NCHAR','NVARCHAR2')"));
+						h.handleResultSetNext(row(Map.of("OWNER", "APP", "DOMAIN_NAME", "D", "DOMAIN_DEFINITION", ddl)));
+					}
+				} catch (SQLException e) { throw new RuntimeException(e); }
+				return null;
+			}
+		};
+		Domain domain = reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo()).get(0);
+		Domain restored = SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
+		assertEquals(ddl, DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText());
+		assertEquals(4, calls.get());
+	}
+
+	@Test
+	void multilineExpressionsUseCompleteDefinitionForXmlRecreation() throws Exception {
+		String expression = "CASE\n WHEN VALUE > 0 THEN 'positive'\n ELSE 'other' END";
+		String ddl = "CREATE DOMAIN APP.D AS NUMBER DISPLAY " + expression;
+		AtomicInteger calls = new AtomicInteger();
+		var reader = new Oracle26aiDomainReader(DialectHolder.oracle26aiDialect) {
+			@Override protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+				try {
+					int call = calls.incrementAndGet();
+					if (call == 1) h.handleResultSetNext(row(Map.of("OWNER", "APP", "DOMAIN_NAME", "D", "DATA_TYPE", "NUMBER", "NULLABLE", "Y", "DATA_DISPLAY", expression)));
+					if (call == 3) {
+						assertEquals(java.util.List.of("APP"), p.get("definitionOwner"));
+						assertEquals(java.util.List.of("D"), p.get("definitionName"));
+						h.handleResultSetNext(row(Map.of("OWNER", "APP", "DOMAIN_NAME", "D", "DOMAIN_DEFINITION", ddl)));
+					}
+				} catch (SQLException e) { throw new RuntimeException(e); }
+				return null;
+			}
+		};
+		Domain domain = reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo()).get(0);
+		assertEquals(4, calls.get());
+		Domain restored = SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
+		assertEquals(ddl, DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText());
 	}
 
 	@Test

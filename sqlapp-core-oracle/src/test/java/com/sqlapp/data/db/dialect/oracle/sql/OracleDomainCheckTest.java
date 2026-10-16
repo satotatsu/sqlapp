@@ -12,6 +12,19 @@ import com.sqlapp.data.schemas.DomainColumn;
 
 class OracleDomainCheckTest {
 	@Test
+	void characterSemanticsSurviveScalarAndComponentXml() throws Exception {
+		for (var semantics : com.sqlapp.data.schemas.CharacterSemantics.values()) {
+			Domain scalar = new Domain("TEXT_D").setDataType(DataType.VARCHAR).setLength(40).setCharacterSemantics(semantics);
+			Domain row = new Domain("ROW_D");
+			row.getColumns().add(new DomainColumn("TEXT_VALUE").setDataType(DataType.VARCHAR).setLength(40).setCharacterSemantics(semantics));
+			for (Domain domain : java.util.List.of(scalar, row)) {
+				Domain restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
+				String sql = DialectHolder.oracle23aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText();
+				assertTrue(sql.toUpperCase(java.util.Locale.ROOT).contains("VARCHAR2(40 " + semantics.toString().toUpperCase(java.util.Locale.ROOT) + ")"), sql);
+			}
+		}
+	}
+	@Test
 	void unsupportedComponentTypesRequireCompleteDefinition() {
 		Domain domain = new Domain("PAIR");
 		DomainColumn column = new DomainColumn("X").setDataType(DataType.ENUM);

@@ -195,13 +195,20 @@ On Oracle 23ai, `Domain` represents a data use case domain. The older Oracle
 mapping of `Domain` to `CREATE TYPE ... VARRAY/TABLE OF` is not retained for
 that version.
 
+Oracle package/type specifications and bodies retain complete executable
+ALL_SOURCE definitions, including AUTHID and named END clauses, using the same
+source-preservation approach as functions and procedures. Missing source fails
+with the object identity. CREATE factories accept both complete CREATE DDL and
+legacy definitions without duplicating CREATE; no per-object SELECT was added.
+These paths are verified with unit tests and XML round trips, not a live database.
+
 ### Deferred scope
 
 The following Oracle features are intentionally deferred:
 
 - advanced association forms beyond the implemented flexible-domain USING mappings
 - structured flexible-domain selector editing (26ai retains executable DDL)
-- enumerated domains
+- structured enumeration values/aliases (26ai retains executable DDL)
 - domain-column annotations for alternative type specifications
 - complete annotation scope preservation for single-column domains
 - named `NOT NULL` constraints and complete lifecycle state beyond CHECKs
@@ -243,12 +250,37 @@ Structured editing of these advanced forms remains deferred; identifiers inside
 complete definition SQL do not follow Schema-model renames automatically.
 
 Oracle26ai flexible-domain components are read in one additional bulk query.
+The reader validates the returned value-column count and the declared
+discriminant count, and rejects incomplete mappings. Unknown annotation
+component names are rejected using exact identifier matching on 23ai/26ai.
+On 26ai, multiline annotation values retain complete executable domain DDL
+through XML. Physical character-column inference from a complete domain
+definition requires explicit BYTE/CHAR semantics or an explicit table-column
+type; ambiguous length semantics are not guessed.
 `DomainColumn.specifics.oracle.domain.discriminant=true` identifies USING
 components. CREATE TABLE maps ordinary components to DOMAIN arguments and
 discriminants to USING arguments, preserving each component order through XML.
 Table columns must specify physical data types; a flexible selector still needs
 a complete Domain definition. Oracle23ai and unresolved/incomplete mappings fail
 explicitly rather than emitting a scalar association.
+
+Oracle23ai/26ai ALTER DOMAIN now handles structured DISPLAY/ORDER and
+object annotations without dropping the domain. Unsupported type, constraint,
+name, flexible-selector and complete-definition changes fail explicitly.
+Added domain differences are dependency-sorted; deleted domain collections and
+differences use the reverse order. Schema/Catalog migrations postpone domain
+removals until table detachments and dependent-object changes have completed.
+Cross-schema catalog additions and removals require qualified identifiers.
+Added domains in Catalog differences are dependency-ordered after new sequences,
+types and catalog prerequisites, before consuming table changes. Ordinary
+operation order is preserved for indexes, views and other later operations.
+New schemas and existing-table associations use the same path. Target models
+that retain table/domain references to removed domains fail before returning SQL.
+Dependencies outside the supplied Catalog, privileges and cross-schema
+references unrelated to domains remain caller prerequisites.
+Oracle26ai preserves complete DDL for multiline DISPLAY/ORDER expressions and
+character-domain length semantics; manually authored scalar/component domains
+retain explicit BYTE/CHAR semantics in generated DDL.
 
 Before implementing the deferred scope:
 
