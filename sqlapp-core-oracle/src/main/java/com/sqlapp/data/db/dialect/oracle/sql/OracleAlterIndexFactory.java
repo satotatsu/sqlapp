@@ -22,6 +22,7 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 	static final String STATUS = "oracle.index.status";
 	static boolean hasStateChange(Index before, Index after) {
 		return OracleDomainIndex.isDomain(before) && !Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))
+				|| OracleDomainIndex.isDomain(before) && !Objects.equals(before.getPartitioning(), after.getPartitioning())
 				|| !Objects.equals(before.getName(), after.getName())
 				|| !Objects.equals(before.getSpecifics().get(VISIBILITY), after.getSpecifics().get(VISIBILITY))
 				|| !Objects.equals(before.getSpecifics().get(STATUS), after.getSpecifics().get(STATUS))
@@ -115,13 +116,33 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 	private List<SqlOperation> domainDiff(Index before, Index after, DbObjectDifference difference) {
 		OracleDomainIndex.validate(before); OracleDomainIndex.validate(after);
 		for (String property : difference.toDifference().getChangedProperties(getDialect()).keySet())
-			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64", SchemaProperties.SPECIFICS.getLabel(), SchemaProperties.NAME.getLabel()).contains(property))
+			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64", SchemaProperties.SPECIFICS.getLabel(), SchemaProperties.NAME.getLabel(), SchemaObjectProperties.PARTITIONING.getLabel()).contains(property))
 				throw new IllegalArgumentException("Unsupported domain index alteration: " + property);
 		var keys = new java.util.HashSet<>(before.getSpecifics().keySet()); keys.addAll(after.getSpecifics().keySet());
 		for (String key : keys)
 			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64").contains(key) && !Objects.equals(before.getSpecifics().get(key), after.getSpecifics().get(key)))
 				throw new IllegalArgumentException("Unsupported domain index property change: " + key);
 		List<SqlOperation> result = new ArrayList<>();
+		if (!Objects.equals(before.getPartitioning(), after.getPartitioning())) {
+			for (var change : OracleDomainIndex.partitionChanges(before, after, getDialect())) {
+				boolean rebuild = "REBUILD".equals(change.state());
+				if (rebuild && getTableOptions().getOnlineIndex().test(after.getTable(), after))
+					throw new IllegalArgumentException("Domain partition rebuild does not support ONLINE");
+				if (change.parametersChanged() || rebuild) {
+					OracleSqlBuilder builder = createSqlBuilder();
+					builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()
+						._add(rebuild ? "REBUILD PARTITION " : "MODIFY PARTITION ").name(change.target().getName());
+					if (change.parametersChanged()) OracleDomainIndex.parameters(change.parameters(), builder);
+					result.add(createOperation(builder.toString(), rebuild ? SqlType.REBUILD : SqlType.ALTER, before, after));
+				}
+				if ("UNUSABLE".equals(change.state())) {
+					OracleSqlBuilder builder = createSqlBuilder();
+					builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()
+						._add("MODIFY PARTITION ").name(change.target().getName()).space()._add("UNUSABLE");
+					result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
+				}
+			}
+		}
 		if (!Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))) {
 			String parameters = OracleDomainIndex.parameterValue(after);
 			if (parameters == null) throw new IllegalArgumentException("Domain index parameter changes require an explicit target string");

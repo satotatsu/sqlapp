@@ -8,8 +8,12 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.AbstractSchemaObject;
+import com.sqlapp.data.schemas.Partition;
+import com.sqlapp.data.schemas.Partitioning;
+import com.sqlapp.data.db.dialect.Dialect;
 
-/** Catalog-backed, nonpartitioned domain indexes. */
+/** Catalog-backed domain indexes and simple local partitions. */
 final class OracleDomainIndex {
 	private OracleDomainIndex() { }
 	static boolean isDomain(Index index) {
@@ -17,8 +21,12 @@ final class OracleDomainIndex {
 	}
 	static void validate(Index index) {
 		if (index.getName() == null || index.getName().isBlank()) throw new IllegalArgumentException("Domain index name is required");
-		if (index.getPartitioning() != null || index.getSpecifics().containsKey("oracle.index.locality"))
-			throw new IllegalArgumentException("Partitioned domain indexes require dedicated recreation support: " + index.getName());
+		if (index.getPartitioning() != null) {
+			if (!"LOCAL".equals(index.getSpecifics().get("oracle.index.locality")) || index.getPartitioning().getSubPartitioningType() != null)
+				throw new IllegalArgumentException("Domain indexes support only simple LOCAL partitioning");
+			for (Partition partition : index.getPartitioning().getPartitions()) validatePartition(partition);
+		} else if (index.getSpecifics().containsKey("oracle.index.locality"))
+			throw new IllegalArgumentException("Domain index locality requires a partitioning model");
 		if (index.isUnique() || index.isCompression() || index.getCompressionType() != null || index.getTableSpaceName() != null
 				|| index.getSpecifics().containsKey("oracle.index.prefixLength") || index.getSpecifics().containsKey("oracle.index.reverse")
 				|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap"))
@@ -47,9 +55,32 @@ final class OracleDomainIndex {
 				|| index.getSchemaName() != null && !index.getSchemaName().equals(table.getSchemaName()));
 		builder.space()._add("(").name(index.getColumns().get(0))._add(") INDEXTYPE IS ")
 				.name(index.getSpecifics().get("ITYP_OWNER"))._add(".").name(index.getSpecifics().get("ITYP_NAME"));
+		if (index.getPartitioning() != null) {
+			builder.space()._add("LOCAL");
+			if (!index.getPartitioning().getPartitions().isEmpty()) {
+				builder.space()._add("("); boolean first = true;
+				for (Partition partition : index.getPartitioning().getPartitions()) {
+					String status = partition.getSpecifics().get("oracle.index.status");
+					if (status != null && !"USABLE".equals(status)) throw new IllegalArgumentException("Domain CREATE cannot preserve this partition status: " + status);
+					builder.comma(!first)._add("PARTITION ").name(partition.getName()); first = false;
+					parameters(parameterValue(partition), builder);
+				}
+				builder._add(")");
+			}
+		}
 		parameters(parameterValue(index), builder);
 	}
-	static String parameterValue(Index index) {
+	static void validatePartition(Partition partition) {
+		if (partition.getName() == null || partition.getName().isBlank()) throw new IllegalArgumentException("Domain partition name is required");
+		if (!partition.getSubPartitions().isEmpty() || partition.isCompression() || partition.getTableSpaceName() != null
+				|| partition.getCompressionType() != null && !"DISABLED".equals(partition.getCompressionType()))
+			throw new IllegalArgumentException("Domain partition attributes must be expressed through its parameters: " + partition.getName());
+		String operation = partition.getSpecifics().get("DOMIDX_OPSTATUS");
+		if (operation != null && !"VALID".equals(operation)) throw new IllegalArgumentException("Domain partition operation is not valid: " + operation);
+		String status = partition.getSpecifics().get("oracle.index.status");
+		if (status != null && !Set.of("USABLE", "UNUSABLE").contains(status)) throw new IllegalArgumentException("Invalid Domain partition status: " + status);
+	}
+	static String parameterValue(AbstractSchemaObject<?> index) {
 		String plain = index.getSpecifics().get("PARAMETERS");
 		if (plain != null) return plain;
 		String encoded = index.getSpecifics().get("oracle.index.domain.parametersBase64");
@@ -62,6 +93,38 @@ final class OracleDomainIndex {
 		} catch (IllegalArgumentException | java.nio.charset.CharacterCodingException error) {
 			throw new IllegalArgumentException("Invalid oracle.index.domain.parametersBase64: " + index.getName(), error);
 		}
+	}
+	record PartitionChange(Partition target, String parameters, boolean parametersChanged, String state) { }
+	private static Partitioning normalized(Partitioning info) {
+		Partitioning copy = info.clone();
+		for (Partition partition : copy.getPartitions()) {
+			partition.getSpecifics().remove("PARAMETERS");
+			partition.getSpecifics().remove("oracle.index.domain.parametersBase64");
+			partition.getSpecifics().remove("oracle.index.status");
+		}
+		return copy;
+	}
+	static List<PartitionChange> partitionChanges(Index before, Index after, Dialect dialect) {
+		Partitioning oldInfo = before.getPartitioning(), newInfo = after.getPartitioning();
+		if (oldInfo == null || newInfo == null || !normalized(oldInfo).diff(normalized(newInfo))
+				.toDifference().getChangedProperties(dialect).isEmpty())
+			throw new IllegalArgumentException("Domain partition alteration requires unchanged structure and physical attributes");
+		List<PartitionChange> result = new java.util.ArrayList<>();
+		for (Partition target : newInfo.getPartitions()) {
+			Partition original = oldInfo.getPartitions().get(target.getName());
+			String parameters = parameterValue(target);
+			boolean changed = !java.util.Objects.equals(parameterValue(original), parameters);
+			if (changed && parameters == null) throw new IllegalArgumentException("Domain partition parameter changes require an explicit target string");
+			String oldStatus = original.getSpecifics().get("oracle.index.status"), status = target.getSpecifics().get("oracle.index.status");
+			String state = null;
+			if (!java.util.Objects.equals(oldStatus, status)) {
+				if ("UNUSABLE".equals(status) && (oldStatus == null || "USABLE".equals(oldStatus))) state = "UNUSABLE";
+				else if ("USABLE".equals(status) && "UNUSABLE".equals(oldStatus)) state = "REBUILD";
+				else throw new IllegalArgumentException("Unsupported Domain partition status transition: " + oldStatus + " -> " + status);
+			}
+			if (changed || state != null) result.add(new PartitionChange(target, parameters, changed, state));
+		}
+		return result;
 	}
 	static void parameters(String value, OracleSqlBuilder builder) {
 		if (value == null) return;

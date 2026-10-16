@@ -1224,6 +1224,51 @@ custom indextype自体の作成・依存解決、partition構造変更は未対�
 - [Building Domain Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/addci/building-domain-indexes.html)
 - [Oracle 10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
 
+## 2026-10-16: Local Domain索引のpartition対応
+
+sqlapp-core-oracleで、既存のALL_IND_PARTITIONS一括取得からDomain/FunctionDomain索引の
+partitionごとのPARAMETERSとDOMIDX_OPSTATUSを保持する。改行等を含む値は索引本体と同じ
+任意のUTF-8/Base64 specificへ保持し、通常値はPARAMETERSを使う。SELECT数は増やさない。
+Oracle 10g以降のsimple Local Domain索引を対象に、
+INDEXTYPE IS ... LOCAL (PARTITION name PARAMETERS (...)) PARAMETERS (...)を生成する。
+Local partitionは表から境界を継承するため、索引CREATEでVALUES LESS THANなどは生成しない。
+
+Table/Index差分でpartition固有のPARAMETERS変更はMODIFY PARTITION ... PARAMETERSを生成する。
+UNUSABLE→USABLEはREBUILD PARTITION、USABLE/未指定→UNUSABLEはMODIFY PARTITION ... UNUSABLEを生成する。
+回復と明示的パラメータ変更を組み合わせる場合は1回のREBUILD PARTITION ... PARAMETERSへまとめる。
+回復だけならCREATE用PARAMETERSを再送しない。索引本体のパラメータ変更とrenameは別SQLで生成する。
+
+構造・境界・物理属性を同時に変更する操作、Global/composite Domain索引、異常な操作状態、
+ONLINEとLocal索引全体のREBUILDは拒否する。Domain CREATEのpartition句ではUNUSABLE状態を
+直接表現できないため、その状態でのCREATEは明示的に拒否し、既存索引への差分操作だけを扱う。
+通常索引用TABLESPACE/圧縮属性もPARAMETERSへ勝手に変換せず拒否する。
+indextypeがpartition操作を実装していることとODCI固有パラメータの妥当性は実DBでの確認が必要。
+IOT・共通Schema形式・依存関係は変更せず、公開APIにはprotected metadata hookの追加のみ。
+実DB接続・DDL実行は行っていない。
+
+OracleDomainIndexPartitionTestでmetadata→XML→CREATE、引用符/改行/末尾空白の保持、
+XML往復のno-op、partitionのパラメータ変更・状態変更・回復、同時変更のSQL統合と拒否境界を検証する。
+対象15件が成功した。
+Oracle全269件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexPartitionTest' --tests '*OracleDomainIndexRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALL_IND_PARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_IND_PARTITIONS.html)
+- [11g ALL_IND_PARTITIONS](https://docs.oracle.com/cd/B28359_01/server.111/b28320/statviews_1092.htm)
+- [10g ALL_IND_PARTITIONS](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_1058.htm)
+- [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

@@ -35,6 +35,7 @@ public class OracleRebuildIndexFactory extends SimpleSqlFactory<Index, OracleSql
 	@Override public List<SqlOperation> createSql(Index index) {
 		if (OracleDomainIndex.isDomain(index)) {
 			OracleDomainIndex.validate(index);
+			if (index.getPartitioning() != null) throw new IllegalArgumentException("Rebuild individual domain index partitions through an Index/Table diff");
 			if (getTableOptions().getOnlineIndex().test(index.getTable(), index))
 				throw new IllegalArgumentException("Domain index rebuild does not support ONLINE");
 			OracleSqlBuilder builder = createSqlBuilder();

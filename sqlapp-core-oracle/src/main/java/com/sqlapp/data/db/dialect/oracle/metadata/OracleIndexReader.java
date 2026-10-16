@@ -236,8 +236,22 @@ public class OracleIndexReader extends IndexReader {
 		readPartitionCompression(rs, partition);
 		readPartitionState(rs, partition);
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
+		if (partitionInfo.getIndex() != null && (partitionInfo.getIndex().getIndexType() == com.sqlapp.data.schemas.IndexType.Domain
+				|| partitionInfo.getIndex().getIndexType() == com.sqlapp.data.schemas.IndexType.FunctionDomain))
+			readDomainPartitionDetails(rs, partition);
 		partitionInfo.getPartitions().add(partition);
 		return partition;
+	}
+
+	protected void readDomainPartitionDetails(ExResultSet rs, Partition partition) throws SQLException {
+		String parameters = rs.getString("PARAMETERS");
+		if (parameters != null) {
+			if (parameters.indexOf('\n') >= 0 || parameters.indexOf('\r') >= 0 || parameters.indexOf('\t') >= 0)
+				partition.getSpecifics().put("oracle.index.domain.parametersBase64", java.util.Base64.getEncoder().encodeToString(parameters.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+			else partition.getSpecifics().put("PARAMETERS", parameters);
+		}
+		String status = getString(rs, "DOMIDX_OPSTATUS");
+		if (status != null) partition.getSpecifics().put("DOMIDX_OPSTATUS", status);
 	}
 
 	protected void readPartitionState(ExResultSet rs, com.sqlapp.data.schemas.AbstractPartition<?> partition)

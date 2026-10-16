@@ -239,8 +239,11 @@ Nonpartitioned Domain/FunctionDomain indexes now retain qualified indextype and
 opaque parameters for recreation, parameter ALTER and explicit REBUILD. Multiline
 catalog parameters survive XML via an optional encoded specific. Reverse-key
 BTree recreation preserves REVERSE. Join/unknown index CREATE fails explicitly
-when the model lacks the required definition; Domain partition lifecycle and
-custom indextype dependencies remain deferred.
+when the model lacks the required definition. Simple Local Domain partitions now
+preserve opaque parameters and support CREATE, parameter ALTER and usability
+transitions through individual REBUILD/MODIFY PARTITION. Global/composite Domain
+indexes, CREATE of unusable Domain partitions and custom indextype dependencies
+remain deferred.
 Local/global range index partition compression modes and explicit NOCOMPRESS now
 survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
 incompatible overrides and hash partition compression changes fail explicitly.
