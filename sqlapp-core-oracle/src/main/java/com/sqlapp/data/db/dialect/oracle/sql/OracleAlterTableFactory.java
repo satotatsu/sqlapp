@@ -51,11 +51,61 @@ import com.sqlapp.util.CommonUtils;
 public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSqlBuilder> {
 
 	@Override
-	protected void addIndexDefinition(Table originalTable, Table table,
-			com.sqlapp.data.schemas.Index originalIndex, com.sqlapp.data.schemas.Index index,
-			DbObjectDifference diff, List<SqlOperation> result) {
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
+		if (before != null && after != null) {
+			// An opaque table definition cannot silently become inconsistent after ALTER.
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(after);
+			if (before.getSpecifics()
+					.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)
+					|| after.getSpecifics()
+							.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)) {
+				if (!com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(before)
+						.equals(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(after)))
+					throw new IllegalArgumentException(
+							"Structural ALTER of a complete Oracle IOT definition requires an explicit migration plan");
+			}
+		}
+		if (before != null && after != null && "INDEX".equals(before.getSpecifics().get("oracle.table.organization"))
+				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName())) {
+			var changes = before.diff(after).toDifference().getChangedProperties(getDialect());
+			if (changes.size() != 1 || !changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
+					|| before.getPartitioning() != null || before.getSpecifics().containsKey("oracle.table.iotComplex")
+					|| "true".equals(before.getSpecifics().get("oracle.table.iot.mapping"))
+					|| after.getTableSpaceName() == null)
+				throw new IllegalArgumentException(
+						"IOT tablespace MOVE requires an isolated simple nonpartitioned table change");
+			for (var index : after.getIndexes()) {
+				OracleRebuildIndexFactory.validateOrdinaryIndex(index);
+				if (getTableOptions().getOnlineIndex().test(after, index))
+					throw new IllegalArgumentException("ONLINE IOT MOVE requires a dedicated table option");
+			}
+			OracleSqlBuilder builder = createSqlBuilder();
+			builder.alter().table().space().name(before, getOptions().isDecorateSchemaName()).space()
+					._add("MOVE TABLESPACE ").name(after.getTableSpaceName());
+			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
+		}
+		if (before != null && after != null
+				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
+				&& (OracleLocalPartitionSplit.hasLocalIndexes(before)
+						|| OracleLocalPartitionSplit.hasLocalIndexes(after))) {
+			OracleSqlBuilder builder = createSqlBuilder();
+			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
+				throw new IllegalArgumentException(
+						"ONLINE index maintenance is not supported by the table partition split planner");
+			OracleLocalPartitionSplit.add(before, after, getDialect(), getOptions().isDecorateSchemaName(), builder);
+			return java.util.List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
+		}
+		return super.createDiffSql(difference);
+	}
+
+	@Override
+	protected void addIndexDefinition(Table originalTable, Table table, com.sqlapp.data.schemas.Index originalIndex,
+			com.sqlapp.data.schemas.Index index, DbObjectDifference diff, List<SqlOperation> result) {
 		if (diff.getState() == State.Modified && (OracleAlterIndexFactory.hasStateChange(originalIndex, index)
-				|| OracleIndexRebuildOptions.physicalChange(originalIndex, index))) {
+				|| OracleIndexRebuildOptions.physicalChange(originalIndex, index)
+				|| OracleIndexPartitionLifecycle.structureChanged(originalIndex, index, getDialect()))) {
 			result.addAll(getSqlFactoryRegistry().getSqlFactory(index, SqlType.ALTER).createDiffSql(diff));
 			return;
 		}
@@ -125,8 +175,8 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		final Difference<?> tableProp = allDiff.get(SchemaProperties.REMARKS.getLabel());
 		if (tableProp != null && tableProp.getState().isChanged()) {
 			final OracleSqlBuilder builder = this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().$if(
-					table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.null_());
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
+					.$if(table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		final DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
@@ -134,11 +184,12 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		if (colsDiff != null) {
 			for (final DbObjectDifference diff : colsDiff.getList(State.Modified)) {
 				final Column obj = diff.getTarget(Column.class);
-				if (CommonUtils.eq(diff.getOriginal(Column.class).getRemarks(), obj.getRemarks())) continue;
+				if (CommonUtils.eq(diff.getOriginal(Column.class).getRemarks(), obj.getRemarks()))
+					continue;
 				final OracleSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName())
-						.is().$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()),
-								() -> builder.null_());
+						.is()
+						.$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -221,54 +272,91 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		for (final DbObjectDifference diff : diffs) {
 			final Column oldColumn = diff.getOriginal(Column.class);
 			final Column column = diff.getTarget(Column.class);
-			boolean generated = oldColumn.isIdentity() || column.isIdentity() || !CommonUtils.isEmpty(oldColumn.getFormula()) || !CommonUtils.isEmpty(column.getFormula());
+			boolean generated = oldColumn.isIdentity() || column.isIdentity()
+					|| !CommonUtils.isEmpty(oldColumn.getFormula()) || !CommonUtils.isEmpty(column.getFormula());
 			Column commentOnly = oldColumn.clone().setRemarks(column.getRemarks());
-			if (commentOnly.equals(column)) continue;
-			if (!CommonUtils.isEmpty(oldColumn.getFormula()) && !CommonUtils.isEmpty(column.getFormula()) && !CommonUtils.eq(oldColumn.getFormula(), column.getFormula())) {
-				if (column.getFormula().isBlank() || column.isIdentity() || column.isFormulaPersisted()) throw new IllegalArgumentException("Invalid Oracle virtual column expression settings: " + column.getName());
+			if (commentOnly.equals(column))
+				continue;
+			if (!CommonUtils.isEmpty(oldColumn.getFormula()) && !CommonUtils.isEmpty(column.getFormula())
+					&& !CommonUtils.eq(oldColumn.getFormula(), column.getFormula())) {
+				if (column.getFormula().isBlank() || column.isIdentity() || column.isFormulaPersisted())
+					throw new IllegalArgumentException(
+							"Invalid Oracle virtual column expression settings: " + column.getName());
 				Column expressionOnly = oldColumn.clone().setFormula(column.getFormula());
-				if (!expressionOnly.equals(column)) throw new IllegalArgumentException("Change virtual column expression separately from other properties: " + column.getName());
-				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g) && !(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2)) throw new IllegalArgumentException("Virtual columns require Oracle 11g or later");
-				if (!originalTable.getIndexes().isEmpty() || !originalTable.getConstraints().isEmpty()) throw new IllegalArgumentException("Remove modeled indexes/constraints before changing a virtual column expression: " + column.getName());
+				if (!expressionOnly.equals(column))
+					throw new IllegalArgumentException(
+							"Change virtual column expression separately from other properties: " + column.getName());
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g)
+						&& !(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2))
+					throw new IllegalArgumentException("Virtual columns require Oracle 11g or later");
+				if (!originalTable.getIndexes().isEmpty() || !originalTable.getConstraints().isEmpty())
+					throw new IllegalArgumentException(
+							"Remove modeled indexes/constraints before changing a virtual column expression: "
+									+ column.getName());
 				OracleSqlBuilder expression = createSqlBuilder();
-				expression.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(").name(column).space()._add("GENERATED ALWAYS AS (")._add(column.getFormula())._add(") VIRTUAL)");
+				expression.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(")
+						.name(column).space()._add("GENERATED ALWAYS AS (")._add(column.getFormula())
+						._add(") VIRTUAL)");
 				addSql(result, expression, SqlType.ALTER, column);
 				continue;
 			}
-			if (!CommonUtils.eq(oldColumn.getSpecifics().get("oracle.column.invisible"), column.getSpecifics().get("oracle.column.invisible"))) {
+			if (!CommonUtils.eq(oldColumn.getSpecifics().get("oracle.column.invisible"),
+					column.getSpecifics().get("oracle.column.invisible"))) {
 				Column oldVisible = oldColumn.clone(), newVisible = column.clone();
-				oldVisible.getSpecifics().remove("oracle.column.invisible"); newVisible.getSpecifics().remove("oracle.column.invisible");
-				if (!oldVisible.equals(newVisible)) throw new IllegalArgumentException("Change column visibility separately from other column properties: " + column.getName());
-				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c)) throw new IllegalArgumentException("Invisible columns require Oracle 12c or later");
+				oldVisible.getSpecifics().remove("oracle.column.invisible");
+				newVisible.getSpecifics().remove("oracle.column.invisible");
+				if (!oldVisible.equals(newVisible))
+					throw new IllegalArgumentException(
+							"Change column visibility separately from other column properties: " + column.getName());
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+					throw new IllegalArgumentException("Invisible columns require Oracle 12c or later");
 				String value = column.getSpecifics().get("oracle.column.invisible");
-				if (value != null && !"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value)) throw new IllegalArgumentException("Invalid column visibility: " + column.getName());
+				if (value != null && !"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
+					throw new IllegalArgumentException("Invalid column visibility: " + column.getName());
 				OracleSqlBuilder visibility = createSqlBuilder();
-				visibility.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(").name(column).space()._add(Boolean.parseBoolean(value) ? "INVISIBLE" : "VISIBLE")._add(")");
+				visibility.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(")
+						.name(column).space()._add(Boolean.parseBoolean(value) ? "INVISIBLE" : "VISIBLE")._add(")");
 				addSql(result, visibility, SqlType.ALTER, column);
 				continue;
 			}
-			boolean renameOnly = !CommonUtils.eq(oldColumn.getName(), column.getName()) && diff.getProperties().size() == 1;
+			boolean renameOnly = !CommonUtils.eq(oldColumn.getName(), column.getName())
+					&& diff.getProperties().size() == 1;
 			if (oldColumn.isIdentity() && column.isIdentity() && !renameOnly) {
 				Column modeOnly = oldColumn.clone().setIdentityGenerationType(column.getIdentityGenerationType());
 				var identityOptions = OracleIdentityOptions.changes(oldColumn.getSequence(), column.getSequence());
 				modeOnly.setSequence(column.getSequence() == null ? null : column.getSequence().clone());
 				modeOnly.getSpecifics().remove("DEFAULT_ON_NULL");
-				if (column.getSpecifics().containsKey("DEFAULT_ON_NULL")) modeOnly.getSpecifics().put("DEFAULT_ON_NULL", column.getSpecifics().get("DEFAULT_ON_NULL"));
-				if (!modeOnly.equals(column)) throw new IllegalArgumentException("Change identity generation mode separately; identity sequence and physical column changes are not supported: " + column.getName());
-				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c)) throw new IllegalArgumentException("Identity columns require Oracle 12c or later");
+				if (column.getSpecifics().containsKey("DEFAULT_ON_NULL"))
+					modeOnly.getSpecifics().put("DEFAULT_ON_NULL", column.getSpecifics().get("DEFAULT_ON_NULL"));
+				if (!modeOnly.equals(column))
+					throw new IllegalArgumentException(
+							"Change identity generation mode separately; identity sequence and physical column changes are not supported: "
+									+ column.getName());
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+					throw new IllegalArgumentException("Identity columns require Oracle 12c or later");
 				String onNull = column.getSpecifics().get("DEFAULT_ON_NULL");
-				if (onNull != null && !"true".equalsIgnoreCase(onNull) && !"false".equalsIgnoreCase(onNull)) throw new IllegalArgumentException("Invalid DEFAULT_ON_NULL: " + column.getName());
-				if (column.getIdentityGenerationType() == null || column.getIdentityGenerationType() == com.sqlapp.data.schemas.IdentityGenerationType.Always && Boolean.parseBoolean(onNull)) throw new IllegalArgumentException("Invalid identity generation mode: " + column.getName());
+				if (onNull != null && !"true".equalsIgnoreCase(onNull) && !"false".equalsIgnoreCase(onNull))
+					throw new IllegalArgumentException("Invalid DEFAULT_ON_NULL: " + column.getName());
+				if (column.getIdentityGenerationType() == null
+						|| column.getIdentityGenerationType() == com.sqlapp.data.schemas.IdentityGenerationType.Always
+								&& Boolean.parseBoolean(onNull))
+					throw new IllegalArgumentException("Invalid identity generation mode: " + column.getName());
 				OracleSqlBuilder identity = createSqlBuilder();
-				identity.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(").name(column).space()._add("GENERATED ")._add(column.getIdentityGenerationType().getSqlValue());
-				if (Boolean.parseBoolean(onNull)) identity.space()._add("ON NULL");
+				identity.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(")
+						.name(column).space()._add("GENERATED ")._add(column.getIdentityGenerationType().getSqlValue());
+				if (Boolean.parseBoolean(onNull))
+					identity.space()._add("ON NULL");
 				identity.space()._add("AS IDENTITY");
-				if (!identityOptions.isEmpty()) identity.space()._add("(")._add(String.join(" ", identityOptions))._add(")");
+				if (!identityOptions.isEmpty())
+					identity.space()._add("(")._add(String.join(" ", identityOptions))._add(")");
 				identity._add(")");
 				addSql(result, identity, SqlType.ALTER, column);
 				continue;
 			}
-			if (generated && !renameOnly) throw new IllegalArgumentException("Structured modification of Oracle identity/virtual columns is not supported: " + column.getName());
+			if (generated && !renameOnly)
+				throw new IllegalArgumentException(
+						"Structured modification of Oracle identity/virtual columns is not supported: "
+								+ column.getName());
 			if (!CommonUtils.eq(oldColumn.getName(), column.getName())) {
 				if (diff.getProperties().size() == 1) {
 					renameList.add(diff);

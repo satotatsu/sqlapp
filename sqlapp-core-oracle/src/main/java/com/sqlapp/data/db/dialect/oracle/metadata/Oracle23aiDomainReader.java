@@ -55,13 +55,17 @@ public class Oracle23aiDomainReader extends DomainReader {
 					}
 					String expression = getString(rs, "SEARCH_CONDITION");
 					if (expression != null) {
-						DomainCheckConstraint check = new DomainCheckConstraint(getString(rs, "CONSTRAINT_NAME"), expression);
-						check.setDeferrability(OracleMetadataUtils.getDeferrability(getString(rs, "DEFERRABLE"), getString(rs, "DEFERRED")));
+						DomainCheckConstraint check = new DomainCheckConstraint(getString(rs, "CONSTRAINT_NAME"),
+								expression);
+						check.setDeferrability(OracleMetadataUtils.getDeferrability(getString(rs, "DEFERRABLE"),
+								getString(rs, "DEFERRED")));
 						check.setEnable(!"DISABLED".equals(getString(rs, "CONSTRAINT_STATUS")));
 						String validated = getString(rs, "VALIDATED");
-						if (validated != null) check.getSpecifics().put(Oracle23aiCreateDomainFactory.VALIDATED, validated);
+						if (validated != null)
+							check.getSpecifics().put(Oracle23aiCreateDomainFactory.VALIDATED, validated);
 						String rely = getString(rs, "RELY");
-						if (rely != null) check.getSpecifics().put(Oracle23aiCreateDomainFactory.RELY, rely);
+						if (rely != null)
+							check.getSpecifics().put(Oracle23aiCreateDomainFactory.RELY, rely);
 						domain.getChecks().add(check);
 					}
 				}
@@ -89,7 +93,8 @@ public class Oracle23aiDomainReader extends DomainReader {
 				targets.put(List.of(domain.getSchemaName(), domain.getName()), domain);
 			}
 		}
-		if (targets.isEmpty()) return;
+		if (targets.isEmpty())
+			return;
 		ParametersContext context = new ParametersContext();
 		context.put("schemaName", targets.keySet().stream().map(k -> k.get(0)).distinct().toList());
 		context.put("domainName", targets.keySet().stream().map(k -> k.get(1)).distinct().toList());
@@ -97,9 +102,11 @@ public class Oracle23aiDomainReader extends DomainReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Domain domain = targets.get(List.of(getString(rs, "OWNER"), getString(rs, "DOMAIN_NAME")));
-				if (domain == null) return;
+				if (domain == null)
+					return;
 				if (rs.getInt("DATA_TYPE_ID") != 1) {
-					throw new IllegalStateException("Alternative domain column types are not supported: " + domain.getName());
+					throw new IllegalStateException(
+							"Alternative domain column types are not supported: " + domain.getName());
 				}
 				DomainColumn column = new DomainColumn(getString(rs, "COLUMN_NAME"));
 				Long precision = getLong(rs, "DATA_PRECISION");
@@ -107,19 +114,23 @@ public class Oracle23aiDomainReader extends DomainReader {
 				Integer scale = getInteger(rs, "DATA_SCALE");
 				String type = getString(rs, "DATA_TYPE");
 				getDialect().setDbType(type, length != null && length > 0 ? length : precision, scale, column);
-				if ("NUMBER".equalsIgnoreCase(type)) column.setLength(precision).setScale(scale);
+				if ("NUMBER".equalsIgnoreCase(type))
+					column.setLength(precision).setScale(scale);
 				column.setNullable(!"N".equals(getString(rs, "NULLABLE")));
 				column.setDefaultValue(getString(rs, "DATA_DEFAULT"));
 				column.setCollation(getString(rs, "COLLATION"));
-				if ("YES".equals(getString(rs, "DEFAULT_ON_NULL"))) column.getSpecifics().put(Oracle23aiCreateDomainFactory.DEFAULT_ON_NULL, true);
-				if (rs.getBoolean("EXACT")) column.getSpecifics().put(Oracle23aiCreateDomainFactory.STRICT, true);
+				if ("YES".equals(getString(rs, "DEFAULT_ON_NULL")))
+					column.getSpecifics().put(Oracle23aiCreateDomainFactory.DEFAULT_ON_NULL, true);
+				if (rs.getBoolean("EXACT"))
+					column.getSpecifics().put(Oracle23aiCreateDomainFactory.STRICT, true);
 				domain.getColumns().add(column);
 			}
 		});
 		for (Domain domain : targets.values()) {
 			int expected = Integer.parseInt(domain.getSpecifics().get(EXPECTED_COLUMNS));
 			if (domain.getColumns().size() != expected) {
-				throw new IllegalStateException("Incomplete multi-column domain metadata: " + domain.getSchemaName() + "." + domain.getName());
+				throw new IllegalStateException(
+						"Incomplete multi-column domain metadata: " + domain.getSchemaName() + "." + domain.getName());
 			}
 			domain.getSpecifics().remove(EXPECTED_COLUMNS);
 		}
@@ -157,10 +168,14 @@ public class Oracle23aiDomainReader extends DomainReader {
 		if (columnName == null || domain.getColumns().isEmpty()) {
 			target = domain;
 		} else {
-			target = domain.getColumns().stream().filter(column -> columnName.equals(column.getName())).findFirst().orElse(null);
+			target = domain.getColumns().stream().filter(column -> columnName.equals(column.getName())).findFirst()
+					.orElse(null);
 		}
-		if (target == null) throw new IllegalStateException("Unknown domain annotation column: " + domain.getSchemaName() + "." + domain.getName() + "." + columnName);
-		OracleAnnotationUtils.setAnnotation(target, getString(rs, "ANNOTATION_NAME"), getString(rs, "ANNOTATION_VALUE"));
+		if (target == null)
+			throw new IllegalStateException("Unknown domain annotation column: " + domain.getSchemaName() + "."
+					+ domain.getName() + "." + columnName);
+		OracleAnnotationUtils.setAnnotation(target, getString(rs, "ANNOTATION_NAME"),
+				getString(rs, "ANNOTATION_VALUE"));
 	}
 
 	protected SqlNode getAnnotationSqlNode() {
@@ -193,7 +208,8 @@ public class Oracle23aiDomainReader extends DomainReader {
 		final Long size = charLength != null && charLength > 0 ? charLength : precision;
 		getDialect().setDbType(productDataType, size, scale, domain);
 		if ("NUMBER".equalsIgnoreCase(productDataType)) {
-			// Absent precision/scale denotes Oracle's unconstrained NUMBER, not NUMBER(0,0).
+			// Absent precision/scale denotes Oracle's unconstrained NUMBER, not
+			// NUMBER(0,0).
 			domain.setLength(precision);
 			domain.setScale(scale);
 		}

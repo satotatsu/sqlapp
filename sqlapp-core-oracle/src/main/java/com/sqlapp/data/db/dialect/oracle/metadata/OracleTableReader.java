@@ -100,13 +100,28 @@ public class OracleTableReader extends TableReader {
 		table.setLobTableSpaceName(getString(rs, "LOB_TABLESPACE_NAME"));
 		if ("IOT".equals(getString(rs, "IOT_TYPE"))) {
 			table.getSpecifics().put("oracle.table.organization", "INDEX");
-			if (table.getTableSpaceName() == null) table.setTableSpaceName(getString(rs, "IOT_TABLESPACE_NAME"));
-			if ("YES".equals(getString(rs, "IOT_COMPLEX"))) table.getSpecifics().put("oracle.table.iotComplex", true);
+			if (table.getTableSpaceName() == null)
+				table.setTableSpaceName(getString(rs, "IOT_TABLESPACE_NAME"));
+			if ("YES".equals(getString(rs, "IOT_COMPLEX")))
+				table.getSpecifics().put("oracle.table.iotComplex", true);
+			String threshold = getString(rs, "IOT_PCT_THRESHOLD");
+			if (threshold != null)
+				table.getSpecifics().put("oracle.table.iot.pctThreshold", threshold);
+			String iotCompression = getString(rs, "IOT_COMPRESSION");
+			if ("ENABLED".equals(iotCompression)) {
+				String prefix = getString(rs, "IOT_PREFIX_LENGTH");
+				if (prefix == null)
+					throw new IllegalStateException("Compressed IOT is missing its prefix length: " + table.getName());
+				table.getSpecifics().put("oracle.table.iot.compressionPrefixLength", prefix);
+			} else if (iotCompression != null && !"DISABLED".equals(iotCompression)) {
+				table.getSpecifics().put("oracle.table.iotComplex", true);
+			}
 		}
 		if ("Y".equals(getString(rs, "TEMPORARY"))) {
 			table.setTableType(Table.TableType.Temporary);
 			String duration = getString(rs, "DURATION");
-			if (duration != null) table.getSpecifics().put("oracle.table.duration", duration);
+			if (duration != null)
+				table.getSpecifics().put("oracle.table.duration", duration);
 		}
 		String partitioned = getString(rs, PARTTITIONED_KEY);
 		if ("YES".equalsIgnoreCase(partitioned)) {
@@ -132,6 +147,49 @@ public class OracleTableReader extends TableReader {
 		}
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitioning(connection, tables);
+		if (!deferTableDefinitions())
+			readTableDefinitions(connection, tableList);
+	}
+
+	protected boolean deferTableDefinitions() {
+		return false;
+	}
+
+	protected void readTableDefinitions(Connection connection, List<Table> tables) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g))
+			return;
+		var targets = new java.util.LinkedHashMap<List<String>, Table>();
+		for (Table table : tables)
+			if ("INDEX".equals(table.getSpecifics().get("oracle.table.organization")))
+				targets.put(List.of(table.getSchemaName(), table.getName()), table);
+		if (targets.isEmpty())
+			return;
+		ParametersContext context = new ParametersContext();
+		context.put("schemaName", targets.keySet().stream().map(key -> key.get(0)).distinct().toList());
+		context.put("tableName", targets.keySet().stream().map(key -> key.get(1)).distinct().toList());
+		var definitions = new java.util.LinkedHashMap<List<String>, String>();
+		try {
+			execute(connection, getSqlNodeCache().getString("iotDefinitions.sql"), context, new ResultSetNextHandler() {
+				@Override
+				public void handleResultSetNext(ExResultSet rs) throws SQLException {
+					var key = List.of(getString(rs, "OWNER"), getString(rs, "TABLE_NAME"));
+					if (targets.containsKey(key))
+						definitions.put(key, rs.getString("TABLE_DEFINITION"));
+				}
+			});
+		} catch (RuntimeException error) {
+			if (!OracleMetadataAccess.isDenied(error))
+				throw error;
+			logger.warn(
+					"Oracle DBMS_METADATA access denied or object inaccessible; IOT definitions skipped, catalog metadata retained.");
+			return;
+		}
+		for (var entry : targets.entrySet()) {
+			String ddl = definitions.get(entry.getKey());
+			if (ddl == null || ddl.isBlank())
+				throw new IllegalStateException("Oracle IOT DDL unavailable: " + entry.getKey());
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(entry.getValue(), ddl);
+		}
 	}
 
 	/**

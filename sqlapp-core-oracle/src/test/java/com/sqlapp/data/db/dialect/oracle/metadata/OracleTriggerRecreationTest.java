@@ -25,24 +25,29 @@ class OracleTriggerRecreationTest {
 			String body = type.equals("COMPOUND")
 					? "COMPOUND TRIGGER\nAFTER STATEMENT IS BEGIN NULL; END AFTER STATEMENT;\nEND TRG;"
 					: "BEGIN NULL; END;";
-			Map<String, String> values = Map.of("OWNER", "APP", "TRIGGER_NAME", "TRG",
-					"TRIGGER_TYPE", type, "STATUS", "DISABLED", "TABLE_OWNER", "APP",
-					"TABLE_NAME", "T", "TRIGGERING_EVENT", "UPDATE", "DESCRIPTION", header,
-					"TRIGGER_BODY", body, "WHEN_CLAUSE", condition);
-			Trigger trigger = new OracleTriggerReader(DialectHolder.oracle19cDialect).createTrigger(new ExResultSet(null) {
-				@Override
-				public String getString(String column) { return values.get(column); }
-			});
+			Map<String, String> values = Map.of("OWNER", "APP", "TRIGGER_NAME", "TRG", "TRIGGER_TYPE", type, "STATUS",
+					"DISABLED", "TABLE_OWNER", "APP", "TABLE_NAME", "T", "TRIGGERING_EVENT", "UPDATE", "DESCRIPTION",
+					header, "TRIGGER_BODY", body, "WHEN_CLAUSE", condition);
+			Trigger trigger = new OracleTriggerReader(DialectHolder.oracle19cDialect)
+					.createTrigger(new ExResultSet(null) {
+						@Override
+						public String getString(String column) {
+							return values.get(column);
+						}
+					});
 			assertEquals("APP", trigger.getSchemaName());
 			assertFalse(trigger.isEnable());
-			if (type.equals("INSTEAD OF")) assertEquals("INSTEAD OF", trigger.getActionTiming());
-			var operations = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(trigger, SqlType.CREATE);
+			if (type.equals("INSTEAD OF"))
+				assertEquals("INSTEAD OF", trigger.getActionTiming());
+			var operations = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(trigger,
+					SqlType.CREATE);
 			assertEquals(2, operations.size());
 			String when = condition.isEmpty() ? "" : "\nWHEN (" + condition + ")";
 			assertEquals("CREATE OR REPLACE TRIGGER " + header + when + "\n" + body, operations.get(0).getSqlText());
 			assertTrue(operations.get(1).getSqlText().contains("DISABLE"));
 			Trigger restored = SchemaUtils.readXml(new java.io.StringReader(trigger.asXml()));
-			var restoredSql = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE);
+			var restoredSql = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(restored,
+					SqlType.CREATE);
 			assertEquals(operations.get(0).getSqlText(), restoredSql.get(0).getSqlText());
 			assertEquals(operations.get(1).getSqlText(), restoredSql.get(1).getSqlText());
 		}
@@ -56,7 +61,8 @@ class OracleTriggerRecreationTest {
 		trigger.setActionOrientation("STATEMENT");
 		trigger.addEventManipulation("UPDATE");
 		trigger.setStatement("BEGIN NULL; END;");
-		String sql = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(trigger, SqlType.CREATE).get(0).getSqlText();
+		String sql = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(trigger, SqlType.CREATE).get(0)
+				.getSqlText();
 		assertFalse(sql.contains("FOR EACH"));
 		assertTrue(sql.contains("AFTER"));
 	}
@@ -70,7 +76,8 @@ class OracleTriggerRecreationTest {
 		trigger.addEventManipulation("INSERT");
 		trigger.setActionCondition("NEW.AMOUNT > 0");
 		trigger.setStatement("BEGIN NULL; END;");
-		String sql = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(trigger, SqlType.CREATE).get(0).getSqlText();
+		String sql = DialectHolder.oracle19cDialect.createSqlFactoryRegistry().createSql(trigger, SqlType.CREATE).get(0)
+				.getSqlText();
 		assertTrue(sql.contains("FOR EACH ROW"));
 		assertTrue(sql.contains("WHEN (NEW.AMOUNT > 0)"));
 	}

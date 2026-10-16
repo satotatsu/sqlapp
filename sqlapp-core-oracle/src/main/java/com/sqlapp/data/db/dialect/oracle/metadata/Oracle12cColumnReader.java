@@ -48,7 +48,8 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 			column.getSpecifics().put("oracle.column.invisible", true);
 		}
 		String generationType = getString(rs, "GENERATION_TYPE");
-		if ("YES".equalsIgnoreCase(getString(rs, "DEFAULT_ON_NULL"))) column.getSpecifics().put("DEFAULT_ON_NULL", true);
+		if ("YES".equalsIgnoreCase(getString(rs, "DEFAULT_ON_NULL")))
+			column.getSpecifics().put("DEFAULT_ON_NULL", true);
 		if (generationType != null) {
 			column.setIdentity(true);
 			if ("BY DEFAULT ON NULL".equalsIgnoreCase(generationType)) {
@@ -56,7 +57,8 @@ public class Oracle12cColumnReader extends Oracle11gColumnReader {
 				column.getSpecifics().put("DEFAULT_ON_NULL", true);
 			} else {
 				column.setIdentityGenerationType(generationType);
-				if (column.getIdentityGenerationType() == null) throw new IllegalStateException("Unknown identity generation type: " + column.getName());
+				if (column.getIdentityGenerationType() == null)
+					throw new IllegalStateException("Unknown identity generation type: " + column.getName());
 			}
 			column.setDefaultValue(null);
 			column.setSequenceSchemaName(getString(rs, "OWNER"));

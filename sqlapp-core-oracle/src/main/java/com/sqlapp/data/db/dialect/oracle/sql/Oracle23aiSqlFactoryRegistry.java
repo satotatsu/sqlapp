@@ -40,6 +40,7 @@ public class Oracle23aiSqlFactoryRegistry extends Oracle21cSqlFactoryRegistry {
 		registerSqlFactory(View.class, SqlType.CREATE, Oracle23aiCreateViewFactory.class);
 		registerSqlFactory(View.class, SqlType.DROP, Oracle23aiDropViewFactory.class);
 	}
+
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
@@ -47,6 +48,7 @@ public class Oracle23aiSqlFactoryRegistry extends Oracle21cSqlFactoryRegistry {
 		registerSqlFactory(Schema.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(Catalog.class, State.Modified, SqlType.ALTER);
 	}
+
 	@Override
 	protected void setDialect(SqlFactory<?> factory, Object original) {
 		Dialect inferred = original == null ? null : SimpleBeanUtils.getValue(original, "dialect");

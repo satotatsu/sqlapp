@@ -14,7 +14,8 @@ import com.sqlapp.data.db.sql.SqlType;
 class OracleDomainDependenciesTest {
 	private Domain domain(String name, String dependencies) throws Exception {
 		Domain domain = new Domain(name).setSchemaName("APP").setDefinition("CREATE DOMAIN APP." + name + " AS NUMBER");
-		if (dependencies != null) domain.getSpecifics().put(OracleDomainDependencies.DEPENDENCIES, dependencies);
+		if (dependencies != null)
+			domain.getSpecifics().put(OracleDomainDependencies.DEPENDENCIES, dependencies);
 		return SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
 	}
 
@@ -23,7 +24,8 @@ class OracleDomainDependenciesTest {
 		var dependent = domain("A", "[[\"APP\",\"Z\"],[\"EXTERNAL\",\"D\"]]");
 		var base = domain("Z", null);
 		var differentCase = domain("z", null);
-		assertEquals(List.of(differentCase, base, dependent), OracleDomainDependencies.sort(List.of(dependent, differentCase, base)));
+		assertEquals(List.of(differentCase, base, dependent),
+				OracleDomainDependencies.sort(List.of(dependent, differentCase, base)));
 		var factory = new Oracle23aiCreateDomainFactory();
 		assertEquals(List.of(base, dependent), factory.sort(List.of(dependent, base)));
 	}
@@ -39,7 +41,8 @@ class OracleDomainDependenciesTest {
 		var deleted = List.of(base.diff(null), dependent.diff(null));
 		assertEquals(List.of(base, dependent), create.createDiffSql(added).stream().map(o -> o.getOriginal()).toList());
 		assertEquals(List.of(dependent, base), drop.createDiffSql(deleted).stream().map(o -> o.getOriginal()).toList());
-		assertEquals(List.of(dependent, base), drop.createSql(List.of(base, dependent)).stream().map(o -> o.getOriginal()).toList());
+		assertEquals(List.of(dependent, base),
+				drop.createSql(List.of(base, dependent)).stream().map(o -> o.getOriginal()).toList());
 	}
 
 	@Test
@@ -55,8 +58,8 @@ class OracleDomainDependenciesTest {
 	void rejectsCyclesAndMalformedReferences() throws Exception {
 		var a = domain("A", "[[\"APP\",\"B\"]]");
 		var b = domain("B", "[[\"APP\",\"A\"]]");
-		assertTrue(assertThrows(IllegalArgumentException.class,
-				() -> OracleDomainDependencies.sort(List.of(a, b))).getMessage().contains("Cyclic"));
+		assertTrue(assertThrows(IllegalArgumentException.class, () -> OracleDomainDependencies.sort(List.of(a, b)))
+				.getMessage().contains("Cyclic"));
 		var invalid = domain("BROKEN", "[[\"APP\"]]");
 		assertThrows(IllegalArgumentException.class, () -> OracleDomainDependencies.sort(List.of(invalid)));
 	}

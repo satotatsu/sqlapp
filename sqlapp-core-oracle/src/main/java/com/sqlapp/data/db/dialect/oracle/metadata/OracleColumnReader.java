@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.oracle.metadata;
 
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -108,8 +107,10 @@ public class OracleColumnReader extends ColumnReader {
 		boolean nullable = "Y".equalsIgnoreCase(getString(rs, "NULLABLE"));
 		Column column = new Column(column_name);
 		column.setNullable(nullable);
-		this.getDialect().setDbType(productDataType, max_length != null && max_length > 0 ? max_length : precision, scale, column);
-		if ("NUMBER".equalsIgnoreCase(productDataType)) column.setLength(precision).setScale(scale);
+		this.getDialect().setDbType(productDataType, max_length != null && max_length > 0 ? max_length : precision,
+				scale, column);
+		if ("NUMBER".equalsIgnoreCase(productDataType))
+			column.setLength(precision).setScale(scale);
 		column.setDefaultValue(dataDefault);
 		column.setOctetLength(rs.getLong("DATA_LENGTH"));
 		column.setSchemaName(getString(rs, "OWNER"));

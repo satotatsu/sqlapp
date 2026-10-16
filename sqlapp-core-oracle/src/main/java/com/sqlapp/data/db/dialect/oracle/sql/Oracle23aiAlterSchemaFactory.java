@@ -7,9 +7,12 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.Schema;
 
-/** Removes domains after table detachments and other dependent-object changes. */
+/**
+ * Removes domains after table detachments and other dependent-object changes.
+ */
 public class Oracle23aiAlterSchemaFactory extends AlterSchemaFactory {
-	@Override public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+	@Override
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
 		var operations = super.createDiffSql(difference);
 		OracleDomainDependencies.validateRemovals(List.of(difference.getTarget(Schema.class)), operations);
 		return OracleDomainDependencies.postponeDrops(operations);

@@ -66,7 +66,8 @@ public class OracleTypeReader extends TypeReader {
 		DoubleKeyMap<String, String, List<String>> routines = OracleMetadataUtils.getRoutineSources(connection,
 				this.getDialect(), cnt, result, OBJECT_TYPE);
 		for (Type obj : result) {
-			obj.setDefinition(OracleMetadataUtils.getSourceDefinition(obj, routines.get(obj.getSchemaName(), obj.getName())));
+			obj.setDefinition(
+					OracleMetadataUtils.getSourceDefinition(obj, routines.get(obj.getSchemaName(), obj.getName())));
 		}
 		return result;
 	}

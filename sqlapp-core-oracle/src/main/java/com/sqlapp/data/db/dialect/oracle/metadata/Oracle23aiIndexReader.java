@@ -62,9 +62,10 @@ public class Oracle23aiIndexReader extends Oracle11gIndexReader {
 	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext originalContext,
 			final List<Index> indexes) throws SQLException {
-		super.setMetadataDetail(connection, originalContext, indexes);
+		readPartitionDetails(connection, originalContext, indexes);
 		readVectorDetails(connection, indexes, false);
 		readVectorDetails(connection, indexes, true);
+		readIndexDefinitions(connection, indexes);
 	}
 
 	@Override

@@ -20,12 +20,35 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 class OracleDomainAnnotationIdentityTest {
 	private ExResultSet row(Map<String, String> values) {
 		return new ExResultSet(null) {
-			@Override public String getString(String column) { return values.get(column); }
-			@Override public Object getObject(String column) { return values.get(column); }
-			@Override public long getLong(String column) { return 0L; }
-			@Override public int getInt(String column) { return 0; }
-			@Override public boolean wasNull() { return true; }
-			@Override public boolean getBoolean(String column) { return false; }
+			@Override
+			public String getString(String column) {
+				return values.get(column);
+			}
+
+			@Override
+			public Object getObject(String column) {
+				return values.get(column);
+			}
+
+			@Override
+			public long getLong(String column) {
+				return 0L;
+			}
+
+			@Override
+			public int getInt(String column) {
+				return 0;
+			}
+
+			@Override
+			public boolean wasNull() {
+				return true;
+			}
+
+			@Override
+			public boolean getBoolean(String column) {
+				return false;
+			}
 		};
 	}
 
@@ -33,21 +56,24 @@ class OracleDomainAnnotationIdentityTest {
 	void annotationsUseExactOwnerAndNameWithOneBulkQuery() {
 		AtomicInteger count = new AtomicInteger();
 		var reader = new Oracle23aiDomainReader(DialectHolder.oracle23aiDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node,
-					ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				try {
 					if (count.incrementAndGet() == 1) {
 						for (String owner : List.of("APP", "App", "Other")) {
-							handler.handleResultSetNext(row(Map.of("OWNER", owner, "DOMAIN_NAME", "MONEY",
-									"DATA_TYPE", "NUMBER", "NULLABLE", "Y")));
-							handler.handleResultSetNext(row(Map.of("OWNER", owner, "DOMAIN_NAME", "Money",
-									"DATA_TYPE", "NUMBER", "NULLABLE", "Y")));
+							handler.handleResultSetNext(row(Map.of("OWNER", owner, "DOMAIN_NAME", "MONEY", "DATA_TYPE",
+									"NUMBER", "NULLABLE", "Y")));
+							handler.handleResultSetNext(row(Map.of("OWNER", owner, "DOMAIN_NAME", "Money", "DATA_TYPE",
+									"NUMBER", "NULLABLE", "Y")));
 						}
 					} else {
 						handler.handleResultSetNext(row(Map.of("ANNOTATION_OWNER", "App", "OBJECT_NAME", "Money",
 								"ANNOTATION_NAME", "purpose", "ANNOTATION_VALUE", "mixed-case")));
 					}
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};
@@ -56,8 +82,8 @@ class OracleDomainAnnotationIdentityTest {
 		assertEquals(6, domains.size());
 		for (var domain : domains) {
 			assertEquals(domain.getSchemaName().equals("App") && domain.getName().equals("Money")
-					? Map.of("purpose", "mixed-case") : Map.of(),
-					OracleAnnotationUtils.getAnnotations(domain));
+					? Map.of("purpose", "mixed-case")
+					: Map.of(), OracleAnnotationUtils.getAnnotations(domain));
 		}
 	}
 }

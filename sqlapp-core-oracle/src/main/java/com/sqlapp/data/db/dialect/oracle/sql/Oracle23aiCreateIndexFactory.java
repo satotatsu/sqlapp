@@ -42,6 +42,10 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 
 	@Override
 	public void addObjectDetail(final Index index, final Table table, final OracleSqlBuilder builder) {
+		if (index.getSpecifics().containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleIndexDefinition.DEFINITION)) {
+			super.addObjectDetail(index, table, builder);
+			return;
+		}
 		if (index.getIndexType() != IndexType.Vector) {
 			super.addObjectDetail(index, table, builder);
 			OracleAnnotationUtils.addAnnotations(builder, index);
@@ -91,7 +95,8 @@ public class Oracle23aiCreateIndexFactory extends OracleCreateIndexFactory {
 		String status = index.getSpecifics().get("oracle.index.status");
 		if (visibility != null && !"VISIBLE".equals(visibility)
 				|| status != null && !"VALID".equals(status) && !"N/A".equals(status))
-			throw new IllegalArgumentException("Vector index state requires dedicated lifecycle support: " + index.getName());
+			throw new IllegalArgumentException(
+					"Vector index state requires dedicated lifecycle support: " + index.getName());
 	}
 
 	private boolean isHybrid(final Index index) {

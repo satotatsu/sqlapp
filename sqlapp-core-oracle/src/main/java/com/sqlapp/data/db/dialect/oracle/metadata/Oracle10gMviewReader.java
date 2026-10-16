@@ -52,30 +52,39 @@ public class Oracle10gMviewReader extends OracleMviewReader {
 	@Override
 	protected List<Table> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
 		List<Table> views = super.doGetAll(connection, context, version);
-		if (views.isEmpty()) return views;
+		if (views.isEmpty())
+			return views;
 		Map<List<String>, Table> targets = new LinkedHashMap<>();
-		for (Table view : views) targets.put(List.of(view.getSchemaName(), view.getName()), view);
+		for (Table view : views)
+			targets.put(List.of(view.getSchemaName(), view.getName()), view);
 		ParametersContext parameters = new ParametersContext();
 		parameters.put("schemaName", views.stream().map(Table::getSchemaName).distinct().toList());
 		parameters.put("tableName", views.stream().map(Table::getName).distinct().toList());
 		Map<List<String>, String> definitions = new LinkedHashMap<>();
 		try {
-			execute(connection, getSqlNodeCache().getString("mviewDefinitions10g.sql"), parameters, new ResultSetNextHandler() {
-				@Override public void handleResultSetNext(ExResultSet rs) throws SQLException {
-					var key = List.of(getString(rs, "OWNER"), getString(rs, "MVIEW_NAME"));
-					if (!targets.containsKey(key)) return;
-					String ddl = getString(rs, "MVIEW_DEFINITION");
-					if (ddl == null || ddl.isBlank()) throw new IllegalStateException("Oracle materialized view DDL unavailable: " + key);
-					definitions.put(key, ddl);
-				}
-			});
+			execute(connection, getSqlNodeCache().getString("mviewDefinitions10g.sql"), parameters,
+					new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rs) throws SQLException {
+							var key = List.of(getString(rs, "OWNER"), getString(rs, "MVIEW_NAME"));
+							if (!targets.containsKey(key))
+								return;
+							String ddl = getString(rs, "MVIEW_DEFINITION");
+							if (ddl == null || ddl.isBlank())
+								throw new IllegalStateException("Oracle materialized view DDL unavailable: " + key);
+							definitions.put(key, ddl);
+						}
+					});
 		} catch (RuntimeException error) {
-			if (!OracleMetadataAccess.isDenied(error)) throw error;
-			logger.warn("Oracle DBMS_METADATA access denied or object inaccessible; materialized view definitions are skipped, catalog metadata retained.");
+			if (!OracleMetadataAccess.isDenied(error))
+				throw error;
+			logger.warn(
+					"Oracle DBMS_METADATA access denied or object inaccessible; materialized view definitions are skipped, catalog metadata retained.");
 			return views;
 		}
 		for (var entry : targets.entrySet()) {
-			if (!definitions.containsKey(entry.getKey())) throw new IllegalStateException("Oracle materialized view DDL unavailable: " + entry.getKey());
+			if (!definitions.containsKey(entry.getKey()))
+				throw new IllegalStateException("Oracle materialized view DDL unavailable: " + entry.getKey());
 			entry.getValue().setDefinition(definitions.get(entry.getKey()));
 		}
 		return views;

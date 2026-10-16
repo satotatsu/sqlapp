@@ -20,37 +20,70 @@ import com.sqlapp.data.schemas.SchemaObjectProperties;
 public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBuilder> {
 	static final String VISIBILITY = "oracle.index.visibility";
 	static final String STATUS = "oracle.index.status";
+
 	static boolean hasStateChange(Index before, Index after) {
-		return OracleDomainIndex.isDomain(before) && !Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))
-				|| OracleDomainIndex.isDomain(before) && !Objects.equals(before.getPartitioning(), after.getPartitioning())
+		return OracleDomainIndex.isDomain(before)
+				&& !Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))
+				|| OracleDomainIndex.isDomain(before)
+						&& !Objects.equals(before.getPartitioning(), after.getPartitioning())
 				|| !Objects.equals(before.getName(), after.getName())
 				|| !Objects.equals(before.getSpecifics().get(VISIBILITY), after.getSpecifics().get(VISIBILITY))
 				|| !Objects.equals(before.getSpecifics().get(STATUS), after.getSpecifics().get(STATUS))
 				|| OracleIndexPartitionLifecycle.changed(before, after);
 	}
 
-	@Override public List<SqlOperation> createSql(Index index) {
+	@Override
+	public List<SqlOperation> createSql(Index index) {
 		throw new IllegalArgumentException("ALTER INDEX requires original and target models; use createDiffSql");
 	}
 
-	@Override public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+	@Override
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
 		Index before = difference.getOriginal(Index.class), after = difference.getTarget(Index.class);
-		if (before == null || after == null) throw new IllegalArgumentException("ALTER INDEX requires original and target models");
-		if (OracleDomainIndex.isDomain(before)) return domainDiff(before, after, difference);
+		if (before == null || after == null)
+			throw new IllegalArgumentException("ALTER INDEX requires original and target models");
+		if (!OracleDomainIndex.isDomain(before)
+				&& OracleIndexPartitionLifecycle.structureChanged(before, after, getDialect())) {
+			if (getTableOptions().getOnlineIndex().test(after.getTable(), after))
+				throw new IllegalArgumentException(
+						"Partition structure replacement requires DROP/CREATE and cannot be ONLINE");
+			var properties = difference.toDifference().getChangedProperties(getDialect());
+			if (properties.size() != 1 || !properties.containsKey(SchemaObjectProperties.PARTITIONING.getLabel()))
+				throw new IllegalArgumentException("Index partition structure changes must be isolated");
+			OracleRebuildIndexFactory.validateOrdinaryIndex(before);
+			OracleIndexPartitionLifecycle.validateRecreation(before, after);
+			var create = getSqlFactoryRegistry().createSql(after, SqlType.CREATE);
+			if (create.isEmpty())
+				throw new IllegalArgumentException("Target index cannot be recreated");
+			OracleSqlBuilder builder = createSqlBuilder();
+			builder.drop().index().space().name(before, getOptions().isDecorateSchemaName());
+			List<SqlOperation> result = new ArrayList<>();
+			result.add(createOperation(builder.toString(), SqlType.DROP, before, after));
+			result.addAll(create);
+			return result;
+		}
+		if (OracleDomainIndex.isDomain(before))
+			return domainDiff(before, after, difference);
 		var changes = difference.toDifference().getChangedProperties(getDialect());
 		for (String property : changes.keySet()) {
-			if (!Set.of(SchemaProperties.SPECIFICS.getLabel(), SchemaObjectProperties.PARTITIONING.getLabel(), VISIBILITY, STATUS,
-					SchemaProperties.NAME.getLabel(), SchemaProperties.TABLE_SPACE_NAME.getLabel(), SchemaProperties.COMPRESSION.getLabel(), SchemaProperties.COMPRESSION_TYPE.getLabel(), "oracle.index.prefixLength").contains(property))
-				throw new IllegalArgumentException("Index state changes cannot be combined with structural changes: " + property);
+			if (!Set.of(SchemaProperties.SPECIFICS.getLabel(), SchemaObjectProperties.PARTITIONING.getLabel(),
+					VISIBILITY, STATUS, SchemaProperties.NAME.getLabel(), SchemaProperties.TABLE_SPACE_NAME.getLabel(),
+					SchemaProperties.COMPRESSION.getLabel(), SchemaProperties.COMPRESSION_TYPE.getLabel(),
+					"oracle.index.prefixLength").contains(property))
+				throw new IllegalArgumentException(
+						"Index state changes cannot be combined with structural changes: " + property);
 		}
-		var keys = new java.util.HashSet<>(before.getSpecifics().keySet()); keys.addAll(after.getSpecifics().keySet());
+		var keys = new java.util.HashSet<>(before.getSpecifics().keySet());
+		keys.addAll(after.getSpecifics().keySet());
 		for (String key : keys) {
-			if (!Set.of(VISIBILITY, STATUS, "oracle.index.prefixLength").contains(key) && !Objects.equals(before.getSpecifics().get(key), after.getSpecifics().get(key)))
+			if (!Set.of(VISIBILITY, STATUS, "oracle.index.prefixLength").contains(key)
+					&& !Objects.equals(before.getSpecifics().get(key), after.getSpecifics().get(key)))
 				throw new IllegalArgumentException("Unsupported simultaneous index property change: " + key);
 		}
 		List<SqlOperation> result = new ArrayList<>();
 		boolean physical = OracleIndexRebuildOptions.physicalChange(before, after);
-		if (!hasStateChange(before, after) && !physical) return result;
+		if (!hasStateChange(before, after) && !physical)
+			return result;
 		OracleRebuildIndexFactory.validateOrdinaryIndex(before);
 		if (physical || changes.containsKey(SchemaObjectProperties.PARTITIONING.getLabel())
 				|| !Objects.equals(before.getSpecifics().get(STATUS), after.getSpecifics().get(STATUS)))
@@ -58,9 +91,11 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 		if (physical) {
 			if (before.getPartitioning() != null) {
 				if (OracleIndexRebuildOptions.compressionChange(before, after))
-					throw new IllegalArgumentException("Change partition compression individually instead of rebuilding the entire index");
+					throw new IllegalArgumentException(
+							"Change partition compression individually instead of rebuilding the entire index");
 				OracleSqlBuilder builder = createSqlBuilder();
-				builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("MODIFY DEFAULT ATTRIBUTES");
+				builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()
+						._add("MODIFY DEFAULT ATTRIBUTES");
 				OracleIndexRebuildOptions.tablespace(after.getTableSpaceName(), builder);
 				result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
 			} else {
@@ -72,29 +107,42 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 		}
 		if (changes.containsKey(SchemaObjectProperties.PARTITIONING.getLabel())) {
 			for (var change : OracleIndexPartitionLifecycle.changes(before, after, getDialect())) {
-				if (change.rebuild()) OracleRebuildIndexFactory.validateNonTemporary(before);
+				if (change.rebuild())
+					OracleRebuildIndexFactory.validateNonTemporary(before);
 				OracleSqlBuilder builder = createSqlBuilder();
 				builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()
-					._add(change.rebuild() ? "REBUILD " : "MODIFY ")
-					._add(change.subpartition() ? "SUBPARTITION " : "PARTITION ").name(change.name());
-				if (change.modifyCompression()) OracleIndexPartitionCompression.add(after, change.target(), getDialect(), builder);
-				else if (!change.rebuild()) builder.space()._add("UNUSABLE");
-				if (change.tablespace()) OracleIndexRebuildOptions.tablespace(change.target().getTableSpaceName(), builder);
-				if (change.compression() && !change.modifyCompression()) OracleIndexPartitionCompression.add(after, change.target(), getDialect(), builder);
-				if (change.rebuild()) OracleIndexRebuildOptions.online(before, getDialect(),
-						getTableOptions().getOnlineIndex().test(after.getTable(), after), change.subpartition(), change.localHash(), builder);
-				result.add(createOperation(builder.toString(), change.rebuild() ? SqlType.REBUILD : SqlType.ALTER, before, after));
+						._add(change.rebuild() ? "REBUILD " : "MODIFY ")
+						._add(change.subpartition() ? "SUBPARTITION " : "PARTITION ").name(change.name());
+				if (change.modifyCompression())
+					OracleIndexPartitionCompression.add(after, change.target(), getDialect(), builder);
+				else if (!change.rebuild())
+					builder.space()._add("UNUSABLE");
+				if (change.tablespace())
+					OracleIndexRebuildOptions.tablespace(change.target().getTableSpaceName(), builder);
+				if (change.compression() && !change.modifyCompression())
+					OracleIndexPartitionCompression.add(after, change.target(), getDialect(), builder);
+				if (change.rebuild())
+					OracleIndexRebuildOptions.online(before, getDialect(),
+							getTableOptions().getOnlineIndex().test(after.getTable(), after), change.subpartition(),
+							change.localHash(), builder);
+				result.add(createOperation(builder.toString(), change.rebuild() ? SqlType.REBUILD : SqlType.ALTER,
+						before, after));
 			}
 		}
 		if (!Objects.equals(before.getSpecifics().get(STATUS), after.getSpecifics().get(STATUS))) {
 			String oldStatus = before.getSpecifics().get(STATUS), newStatus = after.getSpecifics().get(STATUS);
-			if (before.getPartitioning() != null) throw new IllegalArgumentException("Partitioned index state requires partition operations: " + before.getName());
+			if (before.getPartitioning() != null)
+				throw new IllegalArgumentException(
+						"Partitioned index state requires partition operations: " + before.getName());
 			if ("UNUSABLE".equals(newStatus) && (oldStatus == null || "VALID".equals(oldStatus)))
 				result.add(operation(before, after, "UNUSABLE", SqlType.ALTER));
 			else if ("VALID".equals(newStatus) && ("UNUSABLE".equals(oldStatus) || physical && oldStatus == null)) {
 				OracleRebuildIndexFactory.validateRebuild(before);
-				if (!physical) result.add(rebuild(before, after));
-			} else throw new IllegalArgumentException("Unsupported index status transition: " + oldStatus + " -> " + newStatus);
+				if (!physical)
+					result.add(rebuild(before, after));
+			} else
+				throw new IllegalArgumentException(
+						"Unsupported index status transition: " + oldStatus + " -> " + newStatus);
 		}
 		if (!Objects.equals(before.getSpecifics().get(VISIBILITY), after.getSpecifics().get(VISIBILITY))) {
 			if (!(getDialect() instanceof Oracle11g) && !(getDialect() instanceof Oracle11gR2))
@@ -105,22 +153,29 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 			result.add(operation(before, after, visibility, SqlType.ALTER));
 		}
 		if (!Objects.equals(before.getName(), after.getName())) {
-			if (after.getName() == null || after.getName().isBlank()) throw new IllegalArgumentException("Target index name is required");
+			if (after.getName() == null || after.getName().isBlank())
+				throw new IllegalArgumentException("Target index name is required");
 			OracleSqlBuilder builder = createSqlBuilder();
-			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("RENAME TO").space().name(after, false);
+			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("RENAME TO")
+					.space().name(after, false);
 			result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}
 		return result;
 	}
 
 	private List<SqlOperation> domainDiff(Index before, Index after, DbObjectDifference difference) {
-		OracleDomainIndex.validate(before); OracleDomainIndex.validate(after);
+		OracleDomainIndex.validate(before);
+		OracleDomainIndex.validate(after);
 		for (String property : difference.toDifference().getChangedProperties(getDialect()).keySet())
-			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64", SchemaProperties.SPECIFICS.getLabel(), SchemaProperties.NAME.getLabel(), SchemaObjectProperties.PARTITIONING.getLabel()).contains(property))
+			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64", SchemaProperties.SPECIFICS.getLabel(),
+					SchemaProperties.NAME.getLabel(), SchemaObjectProperties.PARTITIONING.getLabel())
+					.contains(property))
 				throw new IllegalArgumentException("Unsupported domain index alteration: " + property);
-		var keys = new java.util.HashSet<>(before.getSpecifics().keySet()); keys.addAll(after.getSpecifics().keySet());
+		var keys = new java.util.HashSet<>(before.getSpecifics().keySet());
+		keys.addAll(after.getSpecifics().keySet());
 		for (String key : keys)
-			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64").contains(key) && !Objects.equals(before.getSpecifics().get(key), after.getSpecifics().get(key)))
+			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64").contains(key)
+					&& !Objects.equals(before.getSpecifics().get(key), after.getSpecifics().get(key)))
 				throw new IllegalArgumentException("Unsupported domain index property change: " + key);
 		List<SqlOperation> result = new ArrayList<>();
 		if (!Objects.equals(before.getPartitioning(), after.getPartitioning())) {
@@ -131,30 +186,35 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 				if (change.parametersChanged() || rebuild) {
 					OracleSqlBuilder builder = createSqlBuilder();
 					builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()
-						._add(rebuild ? "REBUILD PARTITION " : "MODIFY PARTITION ").name(change.target().getName());
-					if (change.parametersChanged()) OracleDomainIndex.parameters(change.parameters(), builder);
-					result.add(createOperation(builder.toString(), rebuild ? SqlType.REBUILD : SqlType.ALTER, before, after));
+							._add(rebuild ? "REBUILD PARTITION " : "MODIFY PARTITION ").name(change.target().getName());
+					if (change.parametersChanged())
+						OracleDomainIndex.parameters(change.parameters(), builder);
+					result.add(createOperation(builder.toString(), rebuild ? SqlType.REBUILD : SqlType.ALTER, before,
+							after));
 				}
 				if ("UNUSABLE".equals(change.state())) {
 					OracleSqlBuilder builder = createSqlBuilder();
 					builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()
-						._add("MODIFY PARTITION ").name(change.target().getName()).space()._add("UNUSABLE");
+							._add("MODIFY PARTITION ").name(change.target().getName()).space()._add("UNUSABLE");
 					result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
 				}
 			}
 		}
 		if (!Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))) {
 			String parameters = OracleDomainIndex.parameterValue(after);
-			if (parameters == null) throw new IllegalArgumentException("Domain index parameter changes require an explicit target string");
+			if (parameters == null)
+				throw new IllegalArgumentException("Domain index parameter changes require an explicit target string");
 			OracleSqlBuilder builder = createSqlBuilder();
 			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName());
 			OracleDomainIndex.parameters(parameters, builder);
 			result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}
 		if (!Objects.equals(before.getName(), after.getName())) {
-			if (after.getName() == null || after.getName().isBlank()) throw new IllegalArgumentException("Target index name is required");
+			if (after.getName() == null || after.getName().isBlank())
+				throw new IllegalArgumentException("Target index name is required");
 			OracleSqlBuilder builder = createSqlBuilder();
-			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("RENAME TO").space().name(after, false);
+			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("RENAME TO")
+					.space().name(after, false);
 			result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}
 		return result;
@@ -163,9 +223,12 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 	private SqlOperation rebuild(Index before, Index after) {
 		OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("REBUILD");
-		if (!Objects.equals(before.getTableSpaceName(), after.getTableSpaceName())) OracleIndexRebuildOptions.tablespace(after.getTableSpaceName(), builder);
-		if (OracleIndexRebuildOptions.compressionChange(before, after)) OracleIndexRebuildOptions.compression(after, getDialect(), builder);
-		OracleIndexRebuildOptions.online(before, getDialect(), getTableOptions().getOnlineIndex().test(after.getTable(), after), false, false, builder);
+		if (!Objects.equals(before.getTableSpaceName(), after.getTableSpaceName()))
+			OracleIndexRebuildOptions.tablespace(after.getTableSpaceName(), builder);
+		if (OracleIndexRebuildOptions.compressionChange(before, after))
+			OracleIndexRebuildOptions.compression(after, getDialect(), builder);
+		OracleIndexRebuildOptions.online(before, getDialect(),
+				getTableOptions().getOnlineIndex().test(after.getTable(), after), false, false, builder);
 		return createOperation(builder.toString(), SqlType.REBUILD, before, after);
 	}
 

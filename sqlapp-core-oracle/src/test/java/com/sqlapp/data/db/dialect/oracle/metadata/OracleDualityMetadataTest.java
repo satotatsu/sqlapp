@@ -22,8 +22,15 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 class OracleDualityMetadataTest {
 	private ExResultSet row(Map<String, String> values) {
 		return new ExResultSet(null) {
-			@Override public String getString(String column) { return values.get(column); }
-			@Override public boolean getBoolean(String column) { return false; }
+			@Override
+			public String getString(String column) {
+				return values.get(column);
+			}
+
+			@Override
+			public boolean getBoolean(String column) {
+				return false;
+			}
 		};
 	}
 
@@ -31,14 +38,22 @@ class OracleDualityMetadataTest {
 	void collectionIsReadOnceAndQuotedIdentitiesRemainDistinct() throws Exception {
 		AtomicInteger count = new AtomicInteger();
 		Oracle26aiViewReader reader = new Oracle26aiViewReader(DialectHolder.oracle26aiDialect) {
-			@Override public ColumnReader getColumnReader() { return null; }
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node,
-					ParametersContext context, ResultSetNextHandler handler) {
-				if (count.incrementAndGet() != 1) return null;
+			@Override
+			public ColumnReader getColumnReader() {
+				return null;
+			}
+
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				if (count.incrementAndGet() != 1)
+					return null;
 				try {
-					handler.handleResultSetNext(row(Map.of("VIEW_OWNER", "App", "VIEW_NAME", "Dv",
-							"LOGICAL_REPLICATION", "ENABLED")));
-				} catch (SQLException e) { throw new RuntimeException(e); }
+					handler.handleResultSetNext(
+							row(Map.of("VIEW_OWNER", "App", "VIEW_NAME", "Dv", "LOGICAL_REPLICATION", "ENABLED")));
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};
@@ -68,20 +83,24 @@ class OracleDualityMetadataTest {
 			assertEquals(Boolean.toString(state.equals("ENABLED")),
 					view.getSpecifics().get(OracleJsonDualityViewUtils.LOGICAL_REPLICATION));
 		}
-		assertThrows(IllegalStateException.class, () -> reader.setDualityMetadata(new View("DV"),
-				row(Map.of("LOGICAL_REPLICATION", "UNKNOWN"))));
-		assertInstanceOf(Oracle26aiViewReader.class, DialectHolder.oracle26aiDialect.getCatalogReader().getSchemaReader().getViewReader());
-		assertEquals(Oracle23aiViewReader.class, DialectHolder.oracle23aiDialect.getCatalogReader().getSchemaReader().getViewReader().getClass());
-		assertInstanceOf(Oracle23aiColumnReader.class, DialectHolder.oracle26aiDialect.getCatalogReader()
-				.getSchemaReader().getViewReader().getColumnReader());
-		assertInstanceOf(Oracle23aiColumnReader.class, DialectHolder.oracle23aiDialect.getCatalogReader()
-				.getSchemaReader().getViewReader().getColumnReader());
-		assertEquals(OracleColumnReader.class, DialectHolder.oracle21cDialect.getCatalogReader()
-				.getSchemaReader().getViewReader().getColumnReader().getClass());
+		assertThrows(IllegalStateException.class,
+				() -> reader.setDualityMetadata(new View("DV"), row(Map.of("LOGICAL_REPLICATION", "UNKNOWN"))));
+		assertInstanceOf(Oracle26aiViewReader.class,
+				DialectHolder.oracle26aiDialect.getCatalogReader().getSchemaReader().getViewReader());
+		assertEquals(Oracle23aiViewReader.class,
+				DialectHolder.oracle23aiDialect.getCatalogReader().getSchemaReader().getViewReader().getClass());
+		assertInstanceOf(Oracle23aiColumnReader.class,
+				DialectHolder.oracle26aiDialect.getCatalogReader().getSchemaReader().getViewReader().getColumnReader());
+		assertInstanceOf(Oracle23aiColumnReader.class,
+				DialectHolder.oracle23aiDialect.getCatalogReader().getSchemaReader().getViewReader().getColumnReader());
+		assertEquals(OracleColumnReader.class, DialectHolder.oracle21cDialect.getCatalogReader().getSchemaReader()
+				.getViewReader().getColumnReader().getClass());
 		try (var legacy = Oracle23aiViewReader.class.getResourceAsStream("jsonRelationalDualityViews.sql");
 				var modern = Oracle26aiViewReader.class.getResourceAsStream("jsonRelationalDualityViews26ai.sql")) {
-			assertFalse(new String(legacy.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).contains("LOGICAL_REPLICATION"));
-			assertTrue(new String(modern.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).contains("LOGICAL_REPLICATION"));
+			assertFalse(new String(legacy.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+					.contains("LOGICAL_REPLICATION"));
+			assertTrue(new String(modern.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+					.contains("LOGICAL_REPLICATION"));
 		}
 	}
 }

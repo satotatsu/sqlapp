@@ -69,9 +69,12 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 				CheckConstraint c = map.get(schema_name, constraint_name);
 				List<Column> columnList = colMap.get(schema_name, constraint_name);
 				if (c == null) {
-					if (expression == null || expression.isBlank()) throw new IllegalStateException("Check constraint expression unavailable: " + schema_name + "." + constraint_name);
+					if (expression == null || expression.isBlank())
+						throw new IllegalStateException(
+								"Check constraint expression unavailable: " + schema_name + "." + constraint_name);
 					if (isNotNullConstraint(expression) && "GENERATED NAME".equals(getString(rs, "GENERATED"))
-							&& "ENABLED".equals(getString(rs, "STATUS")) && "VALIDATED".equals(getString(rs, "VALIDATED"))
+							&& "ENABLED".equals(getString(rs, "STATUS"))
+							&& "VALIDATED".equals(getString(rs, "VALIDATED"))
 							&& "NOT DEFERRABLE".equals(getString(rs, "DEFERRABLE"))) {
 						return;
 					}

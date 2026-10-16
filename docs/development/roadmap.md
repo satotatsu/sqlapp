@@ -244,6 +244,25 @@ preserve opaque parameters and support CREATE, parameter ALTER and usability
 transitions through individual REBUILD/MODIFY PARTITION. Global/composite Domain
 indexes, CREATE of unusable Domain partitions and custom indextype dependencies
 remain deferred.
+Complete DBMS_METADATA index DDL now enables JOIN/unknown and advanced Domain
+recreation when available, with batched reads, permission-denial fallback and a
+fingerprint guard against stale DDL. Global RANGE/HASH index structure changes
+use validated DROP/CREATE; Local structure follows the base table and independent
+changes are rejected. Constraint-backed indexes and ONLINE replacement are guarded.
+Structured editing of opaque DDL and custom indextype prerequisites remain deferred.
+An isolated simple RANGE table partition split or adjacent two-partition merge now maintains ordinary Local/global
+indexes with UPDATE INDEXES and explicit Local segment names/tablespaces. Other
+Local table partition structure changes and ONLINE splitting remain deferred.
+IOT metadata now reads root prefix compression and PCTTHRESHOLD in the existing
+catalog query. Oracle 10g+ IOTs additionally retain batched DBMS_METADATA CREATE
+TABLE DDL, allowing overflow/mapping/compressed/partitioned forms to be recreated
+without losing unmodeled attributes. Permission-denial logs a warning and retains
+catalog metadata. Opaque table DDL has a model fingerprint and cannot be silently
+replayed after structural edits. Simple authored IOTs support PCTTHRESHOLD,
+INCLUDING, OVERFLOW tablespace, MAPPING TABLE and prefix compression options;
+isolated nonpartitioned root tablespace changes use ALTER TABLE MOVE TABLESPACE.
+Opaque IOT structural ALTER, complex IOT MOVE and custom indextype/Text preference
+prerequisite creation remain deferred.
 Local/global range index partition compression modes and explicit NOCOMPRESS now
 survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
 incompatible overrides and hash partition compression changes fail explicitly.

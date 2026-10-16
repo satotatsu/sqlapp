@@ -29,13 +29,21 @@ import com.sqlapp.data.db.sql.AbstractCreateUniqueConstraintFactory;
  * 
  */
 public class OracleCreateUniqueConstraintFactory extends AbstractCreateUniqueConstraintFactory<OracleSqlBuilder> {
-	@Override protected void addOption(com.sqlapp.data.schemas.UniqueConstraint constraint, OracleSqlBuilder builder) {
-		for (var column : constraint.getColumns()) if (column.getOrder() != null && column.getOrder() != com.sqlapp.data.schemas.Order.Asc) throw new IllegalArgumentException("Oracle unique constraints cannot specify descending columns: " + constraint.getName());
+	@Override
+	protected void addOption(com.sqlapp.data.schemas.UniqueConstraint constraint, OracleSqlBuilder builder) {
+		for (var column : constraint.getColumns())
+			if (column.getOrder() != null && column.getOrder() != com.sqlapp.data.schemas.Order.Asc)
+				throw new IllegalArgumentException(
+						"Oracle unique constraints cannot specify descending columns: " + constraint.getName());
 	}
-	@Override protected void addDeferrability(com.sqlapp.data.schemas.UniqueConstraint constraint, OracleSqlBuilder builder) {
+
+	@Override
+	protected void addDeferrability(com.sqlapp.data.schemas.UniqueConstraint constraint, OracleSqlBuilder builder) {
 		OracleConstraintState.deferrability(constraint, builder);
 	}
-	@Override protected void addAfter(com.sqlapp.data.schemas.UniqueConstraint constraint, OracleSqlBuilder builder) {
+
+	@Override
+	protected void addAfter(com.sqlapp.data.schemas.UniqueConstraint constraint, OracleSqlBuilder builder) {
 		OracleConstraintState.after(constraint, builder);
 	}
 

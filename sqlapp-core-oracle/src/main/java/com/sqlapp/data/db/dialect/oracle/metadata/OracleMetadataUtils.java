@@ -215,8 +215,8 @@ public class OracleMetadataUtils {
 	/** Preserves the complete ALL_SOURCE header and body without parsing PL/SQL. */
 	protected static String getSourceDefinition(AbstractSchemaObject<?> obj, List<String> source) {
 		if (source == null || source.isEmpty() || source.stream().allMatch(s -> s == null || s.isBlank())) {
-			throw new IllegalStateException("Oracle object source unavailable: " + obj.getSchemaName() + "."
-					+ obj.getName());
+			throw new IllegalStateException(
+					"Oracle object source unavailable: " + obj.getSchemaName() + "." + obj.getName());
 		}
 		// ALL_ARGUMENTS does not expose default expressions. Preserve the original
 		// signature, AUTHID, compiler clauses and body together rather than guessing.

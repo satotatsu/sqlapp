@@ -14,28 +14,37 @@ import com.sqlapp.data.schemas.Table;
 public class OracleRebuildIndexFactory extends SimpleSqlFactory<Index, OracleSqlBuilder> {
 	static void validateOrdinaryIndex(Index index) {
 		IndexType type = index.getIndexType();
-		if (index.getName() == null || index.getName().isBlank()) throw new IllegalArgumentException("Index name is required");
-		if (type != null && type != IndexType.BTree && type != IndexType.BitMap
-				&& type != IndexType.Function && type != IndexType.FunctionBitmap)
+		if (index.getName() == null || index.getName().isBlank())
+			throw new IllegalArgumentException("Index name is required");
+		if (type != null && type != IndexType.BTree && type != IndexType.BitMap && type != IndexType.Function
+				&& type != IndexType.FunctionBitmap)
 			throw new IllegalArgumentException("Index lifecycle requires dedicated support for type: " + type);
 	}
+
 	static void validateRebuild(Index index) {
 		validateOrdinaryIndex(index);
-		if (index.getPartitioning() != null || "LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
-			throw new IllegalArgumentException("Rebuild each index partition or subpartition separately: " + index.getName());
+		if (index.getPartitioning() != null
+				|| "LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
+			throw new IllegalArgumentException(
+					"Rebuild each index partition or subpartition separately: " + index.getName());
 		validateNonTemporary(index);
 		String status = index.getSpecifics().get(OracleAlterIndexFactory.STATUS);
 		if (status != null && !"VALID".equals(status) && !"UNUSABLE".equals(status))
 			throw new IllegalArgumentException("Unsupported index status for rebuild: " + status);
 	}
+
 	static void validateNonTemporary(Index index) {
 		if (index.getTable() != null && index.getTable().getTableType() == Table.TableType.Temporary)
 			throw new IllegalArgumentException("Cannot rebuild an index on a temporary table: " + index.getName());
 	}
-	@Override public List<SqlOperation> createSql(Index index) {
+
+	@Override
+	public List<SqlOperation> createSql(Index index) {
 		if (OracleDomainIndex.isDomain(index)) {
 			OracleDomainIndex.validate(index);
-			if (index.getPartitioning() != null) throw new IllegalArgumentException("Rebuild individual domain index partitions through an Index/Table diff");
+			if (index.getPartitioning() != null)
+				throw new IllegalArgumentException(
+						"Rebuild individual domain index partitions through an Index/Table diff");
 			if (getTableOptions().getOnlineIndex().test(index.getTable(), index))
 				throw new IllegalArgumentException("Domain index rebuild does not support ONLINE");
 			OracleSqlBuilder builder = createSqlBuilder();
@@ -45,7 +54,8 @@ public class OracleRebuildIndexFactory extends SimpleSqlFactory<Index, OracleSql
 		validateRebuild(index);
 		OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().index().space().name(index, getOptions().isDecorateSchemaName()).space()._add("REBUILD");
-		OracleIndexRebuildOptions.online(index, getDialect(), getTableOptions().getOnlineIndex().test(index.getTable(), index), false, false, builder);
+		OracleIndexRebuildOptions.online(index, getDialect(),
+				getTableOptions().getOnlineIndex().test(index.getTable(), index), false, false, builder);
 		return List.of(createOperation(builder.toString(), SqlType.REBUILD, index));
 	}
 }

@@ -33,6 +33,11 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 	}
 
 	@Override
+	protected boolean deferTableDefinitions() {
+		return true;
+	}
+
+	@Override
 	protected IndexReader newIndexReader() {
 		return new Oracle23aiIndexReader(getDialect());
 	}
@@ -59,6 +64,7 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 			logger.warn("Oracle schema annotation metadata is unavailable or "
 					+ "not permitted; annotations are skipped. " + e.getMessage());
 		}
+		readTableDefinitions(connection, tables);
 	}
 
 	void applyAnnotation(final ExResultSet rs, final List<Table> tables) throws SQLException {
@@ -70,14 +76,16 @@ public class Oracle23aiTableReader extends Oracle12cTableReader {
 		if ("TABLE".equalsIgnoreCase(objectType)) {
 			final Table table = findTable(tables, owner, objectName);
 			if (table != null) {
-				target = columnName == null ? table : table.getColumns().stream()
-						.filter(column -> columnName.equals(column.getName())).findFirst().orElse(null);
+				target = columnName == null ? table
+						: table.getColumns().stream().filter(column -> columnName.equals(column.getName())).findFirst()
+								.orElse(null);
 			}
 		} else if ("INDEX".equalsIgnoreCase(objectType)) {
 			for (Table table : tables) {
-				final Index index = table.getIndexes().stream().filter(candidate ->
-						java.util.Objects.equals(objectName, candidate.getName())
-						&& java.util.Objects.equals(owner, candidate.getSchemaName() == null ? table.getSchemaName() : candidate.getSchemaName()))
+				final Index index = table.getIndexes().stream().filter(candidate -> java.util.Objects.equals(objectName,
+						candidate.getName())
+						&& java.util.Objects.equals(owner,
+								candidate.getSchemaName() == null ? table.getSchemaName() : candidate.getSchemaName()))
 						.findFirst().orElse(null);
 				if (index != null) {
 					target = index;

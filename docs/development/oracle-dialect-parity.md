@@ -1269,6 +1269,152 @@ git diff --checkも成功した。意図的な生成ファイル変更はない�
 - [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
 - [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
 
+## 2026-10-16: 特殊索引の完全DDLとGlobal partition構造変更
+
+IOTを除き、sqlapp-core-oracleの残項目をまとめて対応した。
+JOIN・未対応catalog種別・Domain索引の完全DDLをDBMS_METADATA.GET_DDL('INDEX', name, owner)で
+追加の一括SELECTから取得する。個々の索引ごとのSELECTは発行しない。
+10g以降で取得し、古いbase Dialectでは補助SQLを発行しない。resolver変更なし。
+23aiではVector/Hybrid判定後に取得し、専用生成経路を維持する。
+
+ORA-1031/31603は警告してcatalog metadataを維持し、途中までの定義を適用しない。
+他のエラー・成功時の欠落定義は例外とする。完全DDLが必須のJOIN・未対応種別・複合Domain等は
+definitionRequiredを保持し、取得不能なら生成時に拒否する。単純Domainは従来の構造化情報へfallbackできる。
+Indexには共通definition属性がないため、完全DDLをoracle.index.definitionBase64へ保持し、
+definitionFingerprintで取得時のモデルsnapshotを検証する。列や名前を変更した後の古いDDL再利用は拒否する。
+XML往復・Table CREATEも同じ生成経路を使用し、23ai annotationsを重複付与しない。
+完全DDLのschema自動変換・下位バージョンへの変換は行わない。
+公開補助utilityとprotected reader hookを追加したが、既存API・XML形式・依存関係は変更しない。
+
+通常のGlobal RANGE/HASH索引のpartition境界・個数・方式の変更は、targetのCREATEを先に検証し、
+DROP INDEXとCREATE INDEXへまとめる。表や行をDROPする操作ではない。
+ONLINE、制約を支える索引、状態/物理属性との同時変更は拒否する。
+Local索引の構造は基表に従うため、索引だけの境界変更は拒否して基表の変更を求める。
+Globalの方式はRANGE/HASHに限定し、明示的なHASH一覧がある場合はPARTITIONS数を重複生成しない。
+一覧がないHASHでは正のpartition数を必須とする。
+
+旧OracleにもCREATE INDEX IF NOT EXISTSを生成していた不具合も修正した。
+23ai以降だけで生成し、RUを識別しない19cでは19.28以降の機能を推測しない。
+11g用の手書き期待SQL fixtureを更新した。IOT実装・実DB接続・DDL実行の変更はない。
+
+OracleIndexDefinitionTestで一括1クエリ、通常索引0クエリ、権限不足後の途中結果破棄、
+XML/Table CREATE、古いDDLの拒否、その他エラーの伝播を検証する。
+OracleIndexStructureChangeTestで境界/個数変更、HASH構文、Local/同時変更/制約/ONLINEの拒否と
+CREATE IF NOT EXISTSのversion境界を検証し、対象25件が成功した。
+最終再実行の初回要求は利用上限で自動承認レビューが完了せず未実行だったが、続行指示後に同じ承認経路で再試行した。
+再試行は成功し、Oracle全281件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexDefinitionTest' --tests '*Oracle23aiIndexReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexStructureChangeTest' --tests '*OracleIndexDefinitionTest' --tests '*OracleIndexPartitionLifecycleTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexStructureChangeTest' --tests '*OracleIndexDefinitionTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [DBMS_METADATA for dependent indexes](https://docs.oracle.com/en/database/oracle/oracle-database/26/adjsn/handling-dependent-objects.html)
+- [23ai CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/img_text/create_index.html)
+- [19c CREATE INDEX: 19.28 boundary](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
+
+実DB往復検証、custom indextype/Text preference等の前提オブジェクト作成、完全DDL内部の構造編集、
+Local索引の基表と一体のpartition構造変更は残る。
+
+## 2026-10-16: Local索引と基表のRANGE partition SPLIT
+
+Oracle 10g以降のheap表について、単一の単純RANGE partitionを二分する差分を
+`ALTER TABLE ... SPLIT PARTITION ... AT (...) INTO (...) UPDATE INDEXES (...)`に変換する。
+Local索引の新partition名と表領域を明示し、変更のないGlobal索引も同じ文で保守する。
+元partitionの上限と前後のpartitionを保持し、DROP/ADDによる行削除を避ける。
+
+索引partitionの対応は位置で検証する。対象Local索引は単純・非圧縮・明示的USABLEに限定する。
+列や索引属性の同時変更、partitionキー変更、複合partition、特殊索引、ONLINE、IOT、
+ADD/DROP/MERGEなどはこの経路では明示的に拒否する。境界式の順序・妥当性はOracleの実行時検証に委ねる。
+公開APIや設定項目の追加はない。metadata readerは変更しない。
+
+`OracleLocalPartitionSplitTest`でSQL、後続partitionの維持、Global索引との共存、
+上限・設定変更・UNUSABLE・列変更・ONLINE・IOTの拒否を検証する。
+実DBへの接続とDDL実行は未実施。custom indextype/Text preferenceの前提作成と、
+SPLIT以外のLocal partition構造変更は残る。
+
+検証はJava 21とGradle Wrapperで実施。Oracle全288件、関連command 149件、plugin 1件が成功。
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleLocalPartitionSplitTest' --tests '*OracleIndexStructureChangeTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+.\gradlew.bat :sqlapp-core-oracle:test
+```
+
+仕様: [Oracle ALTER TABLEのSPLITとUPDATE INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-16: IOT再生成・明示オプション・MOVEとLocal索引MERGE
+
+IOTを対象に追加した。Oracle 10g以降のIOTはDBMS_METADATA.GET_DDL('TABLE',...)を
+対象集合で一括取得し、完全CREATE TABLE DDLをUTF-8/Base64の
+`oracle.table.definitionBase64`に保存する。Tableには共通definitionプロパティがないため、
+既存のspecifics形式を使用する。overflow/mapping、partition、圧縮、内部segmentの詳細は
+完全DDLを再出力し、埋め込み済みの列・主キー・制約は重複生成しない。
+secondary indexとコメントは別の既存経路で生成する。
+
+権限不足・対象の不可視（ORA-01031/31603）は警告してカタログ情報の読取を継続し、
+途中まで読んだDDLは適用しない。他のエラーやDDL欠落は伝播する。
+旧8/9系Dialectにはこの追加問合せを行わない。23ai以降は注釈取得後にsnapshotを確定する。
+カタログの既存問合せからIOT rootのPCTTHRESHOLDとprefix圧縮長も読む。
+
+完全DDLは変更検知用fingerprintと組にし、所有者や列・制約などを変更したモデルへの
+古いDDL再適用を拒否する。secondary indexは完全TABLE DDLに含まれないので別管理できる。
+識別子の書換えや別バージョンへのSQL変換はしない。opaque IOTの構造ALTERも明示的に拒否する。
+
+手書きモデルの単純IOTは、既存`oracle.table.organization=INDEX`に次のoptional specificsを指定できる。
+
+| キー（`oracle.table.iot.`接頭辞） | 内容 |
+| --- | --- |
+| `pctThreshold` | 1～50 |
+| `compressionPrefixLength` | 1～主キー列数-1 |
+| `mapping` | `true`/`false`。trueはMAPPING TABLE |
+| `overflow` | `true`/`false`。trueはOVERFLOW |
+| `including` | overflow=true時の既存非主キー列 |
+| `overflowTableSpace` | overflow=true時の表領域 |
+
+未知キー、不正値、heap表へのIOTオプション、欠落列・主キー列のINCLUDING指定は拒否する。
+単純・非partition IOTの孤立したroot表領域変更は`ALTER TABLE ... MOVE TABLESPACE`を生成する。
+mapping、複雑なIOT、表領域の曖昧な削除、同時変更は専用の移行計画が必要。
+
+Local索引を伴うheap表の単純RANGE partitionについて、隣接する二つを一つにするMERGEも追加した。
+上限境界と変更外partitionを保持し、`UPDATE INDEXES`でLocal/global索引を保守する。
+Local索引の結果partition名・表領域を指定する。SPLITと同じ範囲・状態の検証を適用する。
+
+変更はsqlapp-core-oracleと本ドキュメント/roadmap。共通モデル、既存公開API、依存関係、
+DialectResolverは変更しない。新しいOracleTableDefinitionユーティリティを追加した。
+実DB接続・DDL実行・生成ファイルの意図的な変更はない。
+
+残る範囲はcustom indextype/Text preference等の前提オブジェクト作成、opaque DDL内部の構造編集、
+Local索引を伴うADD/DROP等、IOTのpartition操作・複雑なMOVE、実DB往復検証。
+これらを含む全Oracle機能への対応完了を意味しない。
+
+Java 21とGradle WrapperでOracle全306件、関連command 149件、plugin 1件が成功。
+失敗・エラー・skipはいずれも0。実DBテストは未実施。
+今回の変更はOracleモジュール内なのでcore/PostgreSQL/H2の全体テストは再実行していない。
+実行コマンド（すべて`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotDefinitionTest' --tests '*OracleIotIndexRecreationTest' --tests '*Oracle23aiTableReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleLocalPartitionSplitTest' --tests '*OracleIotDefinitionTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotOptionsTest' --tests '*OracleIotIndexRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotDefinitionTest' --tests '*Oracle23aiCreateTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様: [IOT CREATE options](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/CREATE-TABLE.html)、
+[IOT ALTERとpartition索引保守の制限](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、
+[MERGE partition](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

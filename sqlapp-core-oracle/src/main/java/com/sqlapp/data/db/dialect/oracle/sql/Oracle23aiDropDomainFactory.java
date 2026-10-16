@@ -19,6 +19,7 @@ public class Oracle23aiDropDomainFactory extends OracleDropDomainFactory {
 		java.util.Collections.reverse(sorted);
 		return sorted;
 	}
+
 	@Override
 	protected java.util.List<com.sqlapp.data.schemas.DbObjectDifference> sortDbObjectDifference(
 			java.util.List<com.sqlapp.data.schemas.DbObjectDifference> differences) {

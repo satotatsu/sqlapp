@@ -24,12 +24,15 @@ class OracleRoutineRecreationTest {
 						: "PROCEDURE P(p NUMBER DEFAULT 42) AUTHID CURRENT_USER\nIS BEGIN NULL; END P;";
 				OracleMetadataUtils.setRoutineDefinition(routine, List.of(source));
 				String expected = "CREATE OR REPLACE " + source;
-				assertEquals(expected, dialect.createSqlFactoryRegistry().createSql(routine, SqlType.CREATE).get(0).getSqlText());
+				assertEquals(expected,
+						dialect.createSqlFactoryRegistry().createSql(routine, SqlType.CREATE).get(0).getSqlText());
 				Routine<?> restored = SchemaUtils.readXml(new java.io.StringReader(routine.asXml()));
-				assertEquals(expected, dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText());
+				assertEquals(expected,
+						dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText());
 				// Existing user-authored definitions without CREATE remain supported.
 				routine.setDefinition(source);
-				assertEquals(expected, dialect.createSqlFactoryRegistry().createSql(routine, SqlType.CREATE).get(0).getSqlText());
+				assertEquals(expected,
+						dialect.createSqlFactoryRegistry().createSql(routine, SqlType.CREATE).get(0).getSqlText());
 			}
 		}
 	}

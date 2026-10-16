@@ -24,9 +24,11 @@ class OracleDomainNamedChecksTest {
 	void allChecksSurviveReadXmlAndCreateWithConstantQueryCount() throws Exception {
 		AtomicInteger count = new AtomicInteger();
 		var reader = new Oracle23aiDomainReader(DialectHolder.oracle23aiDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node,
-					ParametersContext context, ResultSetNextHandler handler) {
-				if (count.incrementAndGet() != 1) return null;
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				if (count.incrementAndGet() != 1)
+					return null;
 				for (String owner : List.of("APP", "OTHER")) {
 					for (String name : List.of("LOWER", "UPPER")) {
 						Map<String, String> values = Map.ofEntries(Map.entry("OWNER", owner),
@@ -34,16 +36,38 @@ class OracleDomainNamedChecksTest {
 								Map.entry("NULLABLE", "Y"), Map.entry("CONSTRAINT_NAME", name),
 								Map.entry("SEARCH_CONDITION", name.equals("LOWER") ? "VALUE > 0" : "VALUE < 100"),
 								Map.entry("CONSTRAINT_STATUS", "DISABLED"), Map.entry("VALIDATED", "NOT VALIDATED"),
-								Map.entry("RELY", "RELY"), Map.entry("DEFERRABLE", "DEFERRABLE"), Map.entry("DEFERRED", "DEFERRED"));
+								Map.entry("RELY", "RELY"), Map.entry("DEFERRABLE", "DEFERRABLE"),
+								Map.entry("DEFERRED", "DEFERRED"));
 						try {
 							handler.handleResultSetNext(new ExResultSet(null) {
-								@Override public String getString(String column) { return values.get(column); }
-								@Override public long getLong(String column) { return 0; }
-								@Override public int getInt(String column) { return 0; }
-								@Override public boolean wasNull() { return true; }
-								@Override public boolean getBoolean(String column) { return false; }
+								@Override
+								public String getString(String column) {
+									return values.get(column);
+								}
+
+								@Override
+								public long getLong(String column) {
+									return 0;
+								}
+
+								@Override
+								public int getInt(String column) {
+									return 0;
+								}
+
+								@Override
+								public boolean wasNull() {
+									return true;
+								}
+
+								@Override
+								public boolean getBoolean(String column) {
+									return false;
+								}
 							});
-						} catch (SQLException e) { throw new RuntimeException(e); }
+						} catch (SQLException e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 				return null;
@@ -56,10 +80,14 @@ class OracleDomainNamedChecksTest {
 			assertEquals(2, domain.getChecks().size());
 			assertNull(domain.getCheck());
 			Domain restored = SchemaUtils.readXml(new java.io.StringReader(domain.asXml()));
-			String sql = DialectHolder.oracle23aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText();
+			String sql = DialectHolder.oracle23aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE)
+					.get(0).getSqlText();
 			assertTrue(sql.contains(" AS NUMBER CONSTRAINT"), sql);
 			assertFalse(sql.contains("NUMBER(0,0)"), sql);
-			assertTrue(sql.contains("CONSTRAINT LOWER CHECK (VALUE > 0) DEFERRABLE INITIALLY DEFERRED RELY DISABLE NOVALIDATE"), sql);
+			assertTrue(
+					sql.contains(
+							"CONSTRAINT LOWER CHECK (VALUE > 0) DEFERRABLE INITIALLY DEFERRED RELY DISABLE NOVALIDATE"),
+					sql);
 			assertTrue(sql.contains("CONSTRAINT UPPER CHECK (VALUE < 100)"), sql);
 		}
 	}

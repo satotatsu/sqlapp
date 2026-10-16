@@ -112,8 +112,8 @@ public class OracleTriggerReader extends TriggerReader {
 					: "\nWHEN (" + actionCondition + ")";
 			trigger.setDefinition("CREATE OR REPLACE TRIGGER " + description.stripTrailing() + when + "\n" + body);
 		} else {
-			throw new IllegalStateException("Oracle trigger definition unavailable: " + trigger.getSchemaName()
-					+ "." + trigger.getName());
+			throw new IllegalStateException(
+					"Oracle trigger definition unavailable: " + trigger.getSchemaName() + "." + trigger.getName());
 		}
 		return trigger;
 	}

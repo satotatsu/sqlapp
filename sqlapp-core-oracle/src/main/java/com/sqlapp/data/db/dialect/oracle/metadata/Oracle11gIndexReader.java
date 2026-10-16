@@ -16,6 +16,7 @@ public class Oracle11gIndexReader extends OracleIndexReader {
 	protected void readState(ExResultSet rs, Index index) throws SQLException {
 		super.readState(rs, index);
 		String visibility = getString(rs, "VISIBILITY");
-		if (visibility != null) index.getSpecifics().put("oracle.index.visibility", visibility);
+		if (visibility != null)
+			index.getSpecifics().put("oracle.index.visibility", visibility);
 	}
 }

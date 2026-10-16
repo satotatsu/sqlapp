@@ -21,9 +21,12 @@ class OraclePackageTypeRecreationTest {
 	}
 
 	private String source(AbstractSchemaObject<?> obj) {
-		if (obj instanceof Package) return "PACKAGE P AUTHID CURRENT_USER\nAS PROCEDURE run(p NUMBER DEFAULT 42); END P;";
-		if (obj instanceof PackageBody) return "PACKAGE BODY P\nAS PROCEDURE run(p NUMBER DEFAULT 42) IS BEGIN NULL; END run;\nBEGIN NULL; END P;";
-		if (obj instanceof Type) return "TYPE T AUTHID CURRENT_USER AS OBJECT (n NUMBER, MEMBER FUNCTION value RETURN NUMBER) NOT FINAL";
+		if (obj instanceof Package)
+			return "PACKAGE P AUTHID CURRENT_USER\nAS PROCEDURE run(p NUMBER DEFAULT 42); END P;";
+		if (obj instanceof PackageBody)
+			return "PACKAGE BODY P\nAS PROCEDURE run(p NUMBER DEFAULT 42) IS BEGIN NULL; END run;\nBEGIN NULL; END P;";
+		if (obj instanceof Type)
+			return "TYPE T AUTHID CURRENT_USER AS OBJECT (n NUMBER, MEMBER FUNCTION value RETURN NUMBER) NOT FINAL";
 		return "TYPE BODY T AS MEMBER FUNCTION value RETURN NUMBER IS BEGIN RETURN SELF.n; END value; END T;";
 	}
 
@@ -37,11 +40,14 @@ class OraclePackageTypeRecreationTest {
 				String ddl = OracleMetadataUtils.getSourceDefinition(obj, List.of(source.split("\n", -1)));
 				assertEquals("CREATE OR REPLACE " + source, ddl);
 				((DefinitionProperty<?>) obj).setDefinition(ddl);
-				assertEquals(ddl, dialect.createSqlFactoryRegistry().createSql(obj, SqlType.CREATE).get(0).getSqlText());
+				assertEquals(ddl,
+						dialect.createSqlFactoryRegistry().createSql(obj, SqlType.CREATE).get(0).getSqlText());
 				AbstractSchemaObject<?> restored = SchemaUtils.readXml(new java.io.StringReader(obj.asXml()));
-				assertEquals(ddl, dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText());
+				assertEquals(ddl,
+						dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE).get(0).getSqlText());
 				((DefinitionProperty<?>) obj).setDefinition(source);
-				assertEquals(ddl, dialect.createSqlFactoryRegistry().createSql(obj, SqlType.CREATE).get(0).getSqlText());
+				assertEquals(ddl,
+						dialect.createSqlFactoryRegistry().createSql(obj, SqlType.CREATE).get(0).getSqlText());
 			}
 		}
 	}
@@ -51,8 +57,9 @@ class OraclePackageTypeRecreationTest {
 		for (var obj : objects()) {
 			obj.setSchemaName("APP");
 			for (List<String> source : List.<List<String>>of(List.of(), List.of(" "))) {
-				assertTrue(assertThrows(IllegalStateException.class, () -> OracleMetadataUtils.getSourceDefinition(obj, source))
-						.getMessage().contains("APP." + obj.getName()));
+				assertTrue(assertThrows(IllegalStateException.class,
+						() -> OracleMetadataUtils.getSourceDefinition(obj, source)).getMessage()
+						.contains("APP." + obj.getName()));
 			}
 			assertThrows(IllegalStateException.class, () -> OracleMetadataUtils.getSourceDefinition(obj, null));
 		}

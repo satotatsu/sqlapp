@@ -64,27 +64,34 @@ public class OracleCreateMviewFactory extends AbstractCreateMviewFactory<OracleS
 		String rewrite = option(obj, "REWRITE_ENABLED", "Y", "N");
 		String noIndex = option(obj, "USE_NO_INDEX", "Y", "N");
 		if ("PREBUILT".equals(build) || "STATEMENT".equals(mode)) {
-			throw new IllegalArgumentException("Materialized view PREBUILT/ON STATEMENT requires a complete definition: " + obj.getName());
+			throw new IllegalArgumentException(
+					"Materialized view PREBUILT/ON STATEMENT requires a complete definition: " + obj.getName());
 		}
 		boolean never = "NEVER".equals(method) || "NEVER".equals(mode);
 		if (never && (method != null && !"NEVER".equals(method) || mode != null && !"NEVER".equals(mode))) {
 			throw new IllegalArgumentException("Conflicting materialized view refresh options: " + obj.getName());
 		}
-		if (build != null) builder.lineBreak()._add("BUILD ")._add(build);
-		if ("Y".equals(noIndex)) builder.lineBreak()._add("USING NO INDEX");
+		if (build != null)
+			builder.lineBreak()._add("BUILD ")._add(build);
+		if ("Y".equals(noIndex))
+			builder.lineBreak()._add("USING NO INDEX");
 		if (never) {
 			builder.lineBreak()._add("NEVER REFRESH");
 		} else if (method != null || mode != null) {
 			builder.lineBreak().refresh();
-			if (method != null) builder.space()._add(method);
-			if (mode != null) builder.space().on().space()._add(mode);
+			if (method != null)
+				builder.space()._add(method);
+			if (mode != null)
+				builder.space().on().space()._add(mode);
 		}
-		if (rewrite != null) builder.lineBreak()._add("Y".equals(rewrite) ? "ENABLE QUERY REWRITE" : "DISABLE QUERY REWRITE");
+		if (rewrite != null)
+			builder.lineBreak()._add("Y".equals(rewrite) ? "ENABLE QUERY REWRITE" : "DISABLE QUERY REWRITE");
 	}
 
 	private String option(Mview obj, String key, String... supported) {
 		String value = obj.getSpecifics().get(key);
-		if (value == null) return null;
+		if (value == null)
+			return null;
 		String normalized = value.trim().toUpperCase(java.util.Locale.ROOT);
 		if (!java.util.Arrays.asList(supported).contains(normalized)) {
 			throw new IllegalArgumentException("Invalid materialized view " + key + ": " + obj.getName());

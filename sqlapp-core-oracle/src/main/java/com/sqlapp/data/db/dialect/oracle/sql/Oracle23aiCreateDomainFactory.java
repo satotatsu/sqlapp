@@ -22,6 +22,7 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 	protected java.util.List<Domain> sort(java.util.List<Domain> domains) {
 		return OracleDomainDependencies.sort(domains);
 	}
+
 	@Override
 	protected java.util.List<com.sqlapp.data.schemas.DbObjectDifference> sortDbObjectDifference(
 			java.util.List<com.sqlapp.data.schemas.DbObjectDifference> differences) {
@@ -37,11 +38,19 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 	public static final String RELY = "RELY";
 
 	@Override
-	protected boolean supportsDomainChecks() { return true; }
+	protected boolean supportsDomainChecks() {
+		return true;
+	}
+
 	@Override
-	protected boolean supportsDomainDefinition() { return true; }
+	protected boolean supportsDomainDefinition() {
+		return true;
+	}
+
 	@Override
-	protected boolean supportsDomainColumns() { return true; }
+	protected boolean supportsDomainColumns() {
+		return true;
+	}
 
 	@Override
 	protected void addCreateObject(final Domain domain, final OracleSqlBuilder builder) {
@@ -50,7 +59,8 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 			return;
 		}
 		if (domain.getSpecifics().containsKey("oracle.domain.definitionRequired")) {
-			throw new IllegalArgumentException("Complete domain definition was unavailable during metadata reading: " + domain.getSchemaName() + "." + domain.getName());
+			throw new IllegalArgumentException("Complete domain definition was unavailable during metadata reading: "
+					+ domain.getSchemaName() + "." + domain.getName());
 		}
 		validate(domain);
 		builder.create().space()._add("DOMAIN").space();
@@ -77,7 +87,8 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 
 	private void addColumnDefinition(AbstractColumn<?> domain, OracleSqlBuilder builder) {
 		if (domain.getDataType() == DataType.DECIMAL && domain.getLength() == null) {
-			// The generic decimal generator supplies defaults; an unbounded Oracle NUMBER must retain its scale semantics.
+			// The generic decimal generator supplies defaults; an unbounded Oracle NUMBER
+			// must retain its scale semantics.
 			builder._add("NUMBER");
 			if (domain.getScale() != null) {
 				builder._add("(*,")._add(domain.getScale())._add(")");
@@ -137,8 +148,10 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 	}
 
 	private void addDeferrability(OracleSqlBuilder builder, Deferrability value) {
-		if (value == null) return;
-		if (value != Deferrability.NotDeferrable) builder.space()._add("DEFERRABLE");
+		if (value == null)
+			return;
+		if (value != Deferrability.NotDeferrable)
+			builder.space()._add("DEFERRABLE");
 		builder.space()._add(value.getSqlValue());
 	}
 
@@ -151,17 +164,20 @@ public class Oracle23aiCreateDomainFactory extends OracleCreateDomainFactory {
 
 	private void validate(final Domain domain) {
 		if (OracleDomainAssociationUtils.isFlexible(domain)) {
-			throw new IllegalArgumentException("Flexible domain selector requires a complete CREATE DOMAIN definition: " + domain.getName());
+			throw new IllegalArgumentException(
+					"Flexible domain selector requires a complete CREATE DOMAIN definition: " + domain.getName());
 		}
 		for (var column : domain.getColumns()) {
 			if (column.getDataType() == DataType.ENUM || column.getArrayDimension() != 0
 					|| column.getArrayDimensionUpperBound() != 0) {
-				throw new IllegalArgumentException("Use a complete CREATE DOMAIN definition for unsupported domain column type: "
-						+ domain.getName() + "." + column.getName());
+				throw new IllegalArgumentException(
+						"Use a complete CREATE DOMAIN definition for unsupported domain column type: "
+								+ domain.getName() + "." + column.getName());
 			}
 		}
 		if (domain.getDataType() == DataType.ENUM) {
-			throw new IllegalArgumentException("Use a complete CREATE DOMAIN definition for Oracle enumerated domains: " + domain.getName());
+			throw new IllegalArgumentException(
+					"Use a complete CREATE DOMAIN definition for Oracle enumerated domains: " + domain.getName());
 		}
 		if (domain.getColumns().isEmpty() && domain.getDataType() == null && domain.getDataTypeName() == null) {
 			throw new IllegalArgumentException("Oracle data use case domain requires a data type: " + domain.getName());

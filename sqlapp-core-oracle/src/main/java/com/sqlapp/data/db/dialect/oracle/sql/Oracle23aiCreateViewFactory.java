@@ -19,10 +19,10 @@ public class Oracle23aiCreateViewFactory extends CreateViewFactory {
 	@Override
 	protected void addCreateObject(final View view, final AbstractSqlBuilder<?> builder) {
 		final Boolean replication = logicalReplication(view);
-		if (replication != null && (!supportsLogicalReplication()
-				|| !OracleJsonDualityViewUtils.isJsonRelationalDualityView(view))) {
-			throw new IllegalArgumentException("LOGICAL_REPLICATION requires an Oracle 26ai JSON relational duality view: "
-					+ view.getName());
+		if (replication != null
+				&& (!supportsLogicalReplication() || !OracleJsonDualityViewUtils.isJsonRelationalDualityView(view))) {
+			throw new IllegalArgumentException(
+					"LOGICAL_REPLICATION requires an Oracle 26ai JSON relational duality view: " + view.getName());
 		}
 		if (!OracleJsonDualityViewUtils.isJsonRelationalDualityView(view)) {
 			super.addCreateObject(view, builder);
@@ -30,8 +30,8 @@ public class Oracle23aiCreateViewFactory extends CreateViewFactory {
 		}
 		if (!isEmpty(view.getDefinition())) {
 			if (replication != null) {
-				throw new IllegalArgumentException("Use statement with LOGICAL_REPLICATION instead of a complete definition: "
-						+ view.getName());
+				throw new IllegalArgumentException(
+						"Use statement with LOGICAL_REPLICATION instead of a complete definition: " + view.getName());
 			}
 			builder._add(view.getDefinition());
 			return;

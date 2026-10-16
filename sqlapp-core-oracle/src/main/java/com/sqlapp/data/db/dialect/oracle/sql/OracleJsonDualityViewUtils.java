@@ -26,7 +26,10 @@ public final class OracleJsonDualityViewUtils {
 	public static final String TABLE_DETAILS = "DUALITY_TABLE_DETAILS";
 	public static final String COLUMN_DETAILS = "DUALITY_COLUMN_DETAILS";
 
-	/** Catalog rows keyed by catalog column names; returned data is detached from the view. */
+	/**
+	 * Catalog rows keyed by catalog column names; returned data is detached from
+	 * the view.
+	 */
 	public static List<Map<String, Object>> getTableDetails(View view) {
 		return details(view, TABLE_DETAILS);
 	}
@@ -38,7 +41,8 @@ public final class OracleJsonDualityViewUtils {
 	@SuppressWarnings("unchecked")
 	private static List<Map<String, Object>> details(View view, String key) {
 		String value = view.getSpecifics().get(key);
-		if (value == null) return List.of();
+		if (value == null)
+			return List.of();
 		List<?> rows = JsonUtils.fromJsonString(value, List.class);
 		if (rows == null || rows.stream().anyMatch(row -> !(row instanceof Map))) {
 			throw new IllegalArgumentException("Invalid duality detail metadata: " + key);

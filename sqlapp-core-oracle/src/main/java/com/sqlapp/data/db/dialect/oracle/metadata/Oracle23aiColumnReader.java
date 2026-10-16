@@ -31,7 +31,8 @@ public class Oracle23aiColumnReader extends Oracle12cColumnReader {
 			column.setDomainName(domainName).setDomainSchemaName(getString(rs, "DOMAIN_OWNER"));
 			column.setDomainColumnName(getString(rs, "DOMAIN_COLUMN_NAME"));
 			String association = getString(rs, "DOMAIN_ASSOCIATION_ID");
-			if (association != null) column.getSpecifics().put("oracle.domain.associationId", association);
+			if (association != null)
+				column.getSpecifics().put("oracle.domain.associationId", association);
 		}
 		if (column.getDataType() != DataType.VECTOR) {
 			return column;

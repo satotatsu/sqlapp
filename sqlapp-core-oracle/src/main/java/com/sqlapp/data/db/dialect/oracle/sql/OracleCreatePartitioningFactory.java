@@ -41,7 +41,10 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 		builder._add("(");
 		builder.names(obj.getPartitioningColumns());
 		builder._add(" )");
-		if (obj.getPartitioningType().isSizePartitioning()) {
+		if (obj.getPartitioningType().isSizePartitioning() && obj.getPartitions().isEmpty()) {
+			if (obj.getPartitionSize() <= 0)
+				throw new IllegalArgumentException(
+						"Hash partitioning requires a positive partition count or explicit partitions");
 			builder.space().partitions().space()._add(obj.getPartitionSize());
 		}
 		if (obj.getSubPartitioningType() != null) {

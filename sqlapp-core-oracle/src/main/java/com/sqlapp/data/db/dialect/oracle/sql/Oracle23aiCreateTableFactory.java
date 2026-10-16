@@ -32,21 +32,28 @@ public class Oracle23aiCreateTableFactory extends OracleCreateTableFactory {
 			int i = 0;
 			boolean flexible = OracleDomainAssociationUtils.isFlexible(domain);
 			for (var component : domain.getColumns()) {
-				if (flexible && OracleDomainAssociationUtils.isDiscriminant(component)) continue;
+				if (flexible && OracleDomainAssociationUtils.isDiscriminant(component))
+					continue;
 				Column column = parts.get(component.getName());
-				if (column == null) throw new IllegalArgumentException("Missing domain component: " + component.getName());
+				if (column == null)
+					throw new IllegalArgumentException("Missing domain component: " + component.getName());
 				builder.comma(i++ > 0).name(column.getName());
 			}
 			builder._add(")");
 			if (flexible) {
-				long discriminants = domain.getColumns().stream().filter(OracleDomainAssociationUtils::isDiscriminant).count();
-				if (discriminants == 0 || i == 0) throw new IllegalArgumentException("Flexible domain requires value and USING components: " + domain.getName());
+				long discriminants = domain.getColumns().stream().filter(OracleDomainAssociationUtils::isDiscriminant)
+						.count();
+				if (discriminants == 0 || i == 0)
+					throw new IllegalArgumentException(
+							"Flexible domain requires value and USING components: " + domain.getName());
 				builder.space()._add("USING (");
 				i = 0;
 				for (var component : domain.getColumns()) {
-					if (!OracleDomainAssociationUtils.isDiscriminant(component)) continue;
+					if (!OracleDomainAssociationUtils.isDiscriminant(component))
+						continue;
 					Column column = parts.get(component.getName());
-					if (column == null) throw new IllegalArgumentException("Missing domain discriminant: " + component.getName());
+					if (column == null)
+						throw new IllegalArgumentException("Missing domain discriminant: " + component.getName());
 					builder.comma(i++ > 0).name(column.getName());
 				}
 				builder._add(")");
@@ -57,7 +64,8 @@ public class Oracle23aiCreateTableFactory extends OracleCreateTableFactory {
 	@Override
 	protected void addCreateObject(final Table table, final OracleSqlBuilder builder) {
 		builder.create();
-		if (table.getTableType() == Table.TableType.Temporary) builder.space()._add("GLOBAL TEMPORARY");
+		if (table.getTableType() == Table.TableType.Temporary)
+			builder.space()._add("GLOBAL TEMPORARY");
 		builder.table().ifNotExists(this.getOptions().isCreateIfNotExists()).space();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 	}

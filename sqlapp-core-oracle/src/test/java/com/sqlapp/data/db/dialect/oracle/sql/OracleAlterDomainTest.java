@@ -33,19 +33,23 @@ class OracleAlterDomainTest {
 			assertTrue(sql.stream().anyMatch(s -> s.contains("DROP \"Removed\"")), sql.toString());
 			assertTrue(sql.stream().anyMatch(s -> s.contains("ADD \"New Label\"")), sql.toString());
 			Domain empty = new Domain("Label Domain").setSchemaName("APP").setDataType(DataType.INT);
-			assertTrue(factory.createDiffSql(original.diff(empty)).stream().anyMatch(o -> o.getSqlText().contains("DROP DISPLAY")));
+			assertTrue(factory.createDiffSql(original.diff(empty)).stream()
+					.anyMatch(o -> o.getSqlText().contains("DROP DISPLAY")));
 			assertTrue(factory.createDiffSql(original.diff(original.clone())).isEmpty());
 		}
 	}
+
 	@Test
 	void unsupportedChangesFailRatherThanRecreateOrIgnore() {
 		Domain original = new Domain("D").setDataType(DataType.INT);
-		SqlFactory<Domain> factory = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().getSqlFactory(original, SqlType.ALTER);
+		SqlFactory<Domain> factory = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().getSqlFactory(original,
+				SqlType.ALTER);
 		Domain typed = original.clone().setDataType(DataType.VARCHAR).setLength(40);
 		assertThrows(IllegalArgumentException.class, () -> factory.createDiffSql(original.diff(typed)));
 		Domain renamed = original.clone().setName("NEW_D");
 		assertThrows(IllegalArgumentException.class, () -> factory.createDiffSql(original.diff(renamed)));
-		Domain flexible = original.clone(); flexible.getSpecifics().put(OracleDomainAssociationUtils.KIND, "FLEXIBLE");
+		Domain flexible = original.clone();
+		flexible.getSpecifics().put(OracleDomainAssociationUtils.KIND, "FLEXIBLE");
 		assertThrows(IllegalArgumentException.class, () -> factory.createDiffSql(original.diff(flexible)));
 		Domain defined = original.clone().setDefinition("CREATE DOMAIN D AS NUMBER");
 		assertThrows(IllegalArgumentException.class, () -> factory.createDiffSql(original.diff(defined)));

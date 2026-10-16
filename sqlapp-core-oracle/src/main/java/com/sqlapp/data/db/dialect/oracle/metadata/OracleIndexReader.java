@@ -106,12 +106,14 @@ public class OracleIndexReader extends IndexReader {
 						index.getSpecifics().put(PARTTITIONED_KEY, Boolean.TRUE.toString());
 					}
 					String compression = getString(rs, "COMPRESSION");
-					index.setCompression("ENABLED".equals(compression) || "ADVANCED LOW".equals(compression) || "ADVANCED HIGH".equals(compression));
+					index.setCompression("ENABLED".equals(compression) || "ADVANCED LOW".equals(compression)
+							|| "ADVANCED HIGH".equals(compression));
 					if (index.isCompression()) {
 						index.setCompressionType(compression);
 						if ("ENABLED".equals(compression)) {
 							Integer prefix = getInteger(rs, "PREFIX_LENGTH");
-							if (prefix != null) index.getSpecifics().put("oracle.index.prefixLength", prefix);
+							if (prefix != null)
+								index.getSpecifics().put("oracle.index.prefixLength", prefix);
 						}
 					}
 					index.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
@@ -143,20 +145,26 @@ public class OracleIndexReader extends IndexReader {
 
 	protected void readDomainDetails(ExResultSet rs, Index index) throws SQLException {
 		if (index.getIndexType() != com.sqlapp.data.schemas.IndexType.Domain
-				&& index.getIndexType() != com.sqlapp.data.schemas.IndexType.FunctionDomain) return;
-		for (String key : new String[] {"ITYP_OWNER", "ITYP_NAME", "PARAMETERS", "DOMIDX_STATUS", "DOMIDX_OPSTATUS"}) {
+				&& index.getIndexType() != com.sqlapp.data.schemas.IndexType.FunctionDomain)
+			return;
+		for (String key : new String[] { "ITYP_OWNER", "ITYP_NAME", "PARAMETERS", "DOMIDX_STATUS",
+				"DOMIDX_OPSTATUS" }) {
 			String value = "PARAMETERS".equals(key) ? rs.getString(key) : getString(rs, key);
 			if (value != null) {
-				if ("PARAMETERS".equals(key) && (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0 || value.indexOf('\t') >= 0))
-					index.getSpecifics().put("oracle.index.domain.parametersBase64", java.util.Base64.getEncoder().encodeToString(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-				else index.getSpecifics().put(key, value);
+				if ("PARAMETERS".equals(key)
+						&& (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0 || value.indexOf('\t') >= 0))
+					index.getSpecifics().put("oracle.index.domain.parametersBase64", java.util.Base64.getEncoder()
+							.encodeToString(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+				else
+					index.getSpecifics().put(key, value);
 			}
 		}
 	}
 
 	protected void readState(ExResultSet rs, Index index) throws SQLException {
 		String status = getString(rs, "STATUS");
-		if (status != null) index.getSpecifics().put("oracle.index.status", status);
+		if (status != null)
+			index.getSpecifics().put("oracle.index.status", status);
 	}
 
 	protected void setIndexType(final ExResultSet rs, final Index index, final String productIndexType)
@@ -171,6 +179,12 @@ public class OracleIndexReader extends IndexReader {
 
 	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext originalContext,
+			final List<Index> indexes) throws SQLException {
+		readPartitionDetails(connection, originalContext, indexes);
+		readIndexDefinitions(connection, indexes);
+	}
+
+	protected void readPartitionDetails(final Connection connection, final ParametersContext originalContext,
 			final List<Index> indexes) throws SQLException {
 		final DoubleKeyMap<String, String, Index> objects = doubleKeyMap();
 		for (Index index : indexes) {
@@ -228,6 +242,53 @@ public class OracleIndexReader extends IndexReader {
 		});
 	}
 
+	protected void readIndexDefinitions(Connection connection, List<Index> indexes) {
+		var targets = new java.util.LinkedHashMap<List<String>, Index>();
+		for (Index index : indexes) {
+			boolean domain = index.getIndexType() == com.sqlapp.data.schemas.IndexType.Domain
+					|| index.getIndexType() == com.sqlapp.data.schemas.IndexType.FunctionDomain;
+			boolean required = "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.join"))
+					|| index.getSpecifics().containsKey("oracle.index.unmodeledType")
+					|| domain && (index.getColumns().size() != 1 || index.getPartitioning() != null
+							&& index.getPartitioning().getSubPartitioningType() != null);
+			if (required)
+				index.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.util.OracleIndexDefinition.REQUIRED, true);
+			if (required || domain)
+				targets.put(List.of(index.getSchemaName(), index.getName()), index);
+		}
+		if (targets.isEmpty())
+			return;
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g))
+			return;
+		ParametersContext context = new ParametersContext();
+		context.put("schemaName", targets.keySet().stream().map(key -> key.get(0)).distinct().toList());
+		context.put("indexName", targets.keySet().stream().map(key -> key.get(1)).distinct().toList());
+		var definitions = new java.util.LinkedHashMap<List<String>, String>();
+		try {
+			execute(connection, getSqlNodeCache().getString("indexDefinitions.sql"), context,
+					new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rs) throws SQLException {
+							var key = List.of(getString(rs, "OWNER"), getString(rs, "INDEX_NAME"));
+							if (targets.containsKey(key))
+								definitions.put(key, rs.getString("INDEX_DEFINITION"));
+						}
+					});
+		} catch (RuntimeException error) {
+			if (!OracleMetadataAccess.isDenied(error))
+				throw error;
+			logger.warn(
+					"Oracle DBMS_METADATA access denied or object inaccessible; index definitions are skipped, catalog metadata retained.");
+			return;
+		}
+		for (var entry : targets.entrySet()) {
+			String ddl = definitions.get(entry.getKey());
+			if (ddl == null || ddl.isBlank())
+				throw new IllegalStateException("Oracle index DDL unavailable: " + entry.getKey());
+			com.sqlapp.data.db.dialect.oracle.util.OracleIndexDefinition.set(entry.getValue(), ddl);
+		}
+	}
+
 	private Partition addIndexPartition(ExResultSet rs, Partitioning partitionInfo) throws SQLException {
 		String partitionName = getString(rs, "PARTITION_NAME");
 		String highValue = getString(rs, "HIGH_VALUE");
@@ -236,8 +297,9 @@ public class OracleIndexReader extends IndexReader {
 		readPartitionCompression(rs, partition);
 		readPartitionState(rs, partition);
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
-		if (partitionInfo.getIndex() != null && (partitionInfo.getIndex().getIndexType() == com.sqlapp.data.schemas.IndexType.Domain
-				|| partitionInfo.getIndex().getIndexType() == com.sqlapp.data.schemas.IndexType.FunctionDomain))
+		if (partitionInfo.getIndex() != null
+				&& (partitionInfo.getIndex().getIndexType() == com.sqlapp.data.schemas.IndexType.Domain
+						|| partitionInfo.getIndex().getIndexType() == com.sqlapp.data.schemas.IndexType.FunctionDomain))
 			readDomainPartitionDetails(rs, partition);
 		partitionInfo.getPartitions().add(partition);
 		return partition;
@@ -247,17 +309,21 @@ public class OracleIndexReader extends IndexReader {
 		String parameters = rs.getString("PARAMETERS");
 		if (parameters != null) {
 			if (parameters.indexOf('\n') >= 0 || parameters.indexOf('\r') >= 0 || parameters.indexOf('\t') >= 0)
-				partition.getSpecifics().put("oracle.index.domain.parametersBase64", java.util.Base64.getEncoder().encodeToString(parameters.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-			else partition.getSpecifics().put("PARAMETERS", parameters);
+				partition.getSpecifics().put("oracle.index.domain.parametersBase64", java.util.Base64.getEncoder()
+						.encodeToString(parameters.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+			else
+				partition.getSpecifics().put("PARAMETERS", parameters);
 		}
 		String status = getString(rs, "DOMIDX_OPSTATUS");
-		if (status != null) partition.getSpecifics().put("DOMIDX_OPSTATUS", status);
+		if (status != null)
+			partition.getSpecifics().put("DOMIDX_OPSTATUS", status);
 	}
 
 	protected void readPartitionState(ExResultSet rs, com.sqlapp.data.schemas.AbstractPartition<?> partition)
 			throws SQLException {
 		String status = getString(rs, "STATUS");
-		if (status != null) partition.getSpecifics().put("oracle.index.status", status);
+		if (status != null)
+			partition.getSpecifics().put("oracle.index.status", status);
 	}
 
 	protected void readPartitionCompression(ExResultSet rs, com.sqlapp.data.schemas.AbstractPartition<?> partition)
@@ -266,8 +332,10 @@ public class OracleIndexReader extends IndexReader {
 		if (mode != null) {
 			partition.setCompression(!"DISABLED".equals(mode));
 			partition.setCompressionType(mode);
-			if ("DISABLED".equals(mode)) partition.getSpecifics().put("oracle.index.compression", mode);
-			else partition.getSpecifics().remove("oracle.index.compression");
+			if ("DISABLED".equals(mode))
+				partition.getSpecifics().put("oracle.index.compression", mode);
+			else
+				partition.getSpecifics().remove("oracle.index.compression");
 		}
 	}
 

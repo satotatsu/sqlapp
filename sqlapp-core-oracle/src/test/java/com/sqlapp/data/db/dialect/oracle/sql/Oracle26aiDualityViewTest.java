@@ -19,12 +19,12 @@ class Oracle26aiDualityViewTest {
 
 	@Test
 	void replicationSurvivesXmlAndCreatesAt26ai() throws Exception {
-		for (boolean enabled : new boolean[] {true, false}) {
+		for (boolean enabled : new boolean[] { true, false }) {
 			View view = view();
 			view.getSpecifics().put(OracleJsonDualityViewUtils.LOGICAL_REPLICATION, enabled);
 			View restored = SchemaUtils.readXml(new StringReader(view.asXml()));
-			String sql = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry()
-					.createSql(restored, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+", " ");
+			String sql = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE)
+					.get(0).getSqlText().replaceAll("\\s+", " ");
 			assertTrue(sql.contains("AS " + (enabled ? "ENABLE" : "DISABLE") + " LOGICAL REPLICATION SELECT"), sql);
 			assertTrue(sql.contains("APP.DV"), sql);
 			assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle23aiDialect
@@ -40,15 +40,15 @@ class Oracle26aiDualityViewTest {
 		assertEquals(definition, DialectHolder.oracle26aiDialect.createSqlFactoryRegistry()
 				.createSql(view, SqlType.CREATE).get(0).getSqlText());
 		view.getSpecifics().put(OracleJsonDualityViewUtils.LOGICAL_REPLICATION, true);
-		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect
-				.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
 		view.setDefinition((String) null);
 		view.getSpecifics().put(OracleJsonDualityViewUtils.LOGICAL_REPLICATION, "invalid");
-		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect
-				.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
 		view.getSpecifics().put(OracleJsonDualityViewUtils.LOGICAL_REPLICATION, false);
 		OracleJsonDualityViewUtils.setJsonRelationalDualityView(view, false);
-		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect
-				.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
 	}
 }

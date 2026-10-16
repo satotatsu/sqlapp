@@ -23,9 +23,21 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 class Oracle26aiDualityDetailsTest {
 	private ExResultSet row(Map<String, Object> values) {
 		return new ExResultSet(null) {
-			@Override public String getString(String column) { Object value = values.get(column); return value == null ? null : value.toString(); }
-			@Override public Object getObject(String column) { return values.get(column); }
-			@Override public boolean getBoolean(String column) { return Boolean.TRUE.equals(values.get(column)); }
+			@Override
+			public String getString(String column) {
+				Object value = values.get(column);
+				return value == null ? null : value.toString();
+			}
+
+			@Override
+			public Object getObject(String column) {
+				return values.get(column);
+			}
+
+			@Override
+			public boolean getBoolean(String column) {
+				return Boolean.TRUE.equals(values.get(column));
+			}
 		};
 	}
 
@@ -33,30 +45,41 @@ class Oracle26aiDualityDetailsTest {
 	void hierarchyAndColumnFlagsSurviveThreeBulkQueriesAndXml() throws Exception {
 		AtomicInteger queries = new AtomicInteger();
 		var reader = new Oracle26aiViewReader(DialectHolder.oracle26aiDialect) {
-			@Override public ColumnReader getColumnReader() { return null; }
-			@Override protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+			@Override
+			public ColumnReader getColumnReader() {
+				return null;
+			}
+
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 				int query = queries.incrementAndGet();
 				try {
 					for (String owner : List.of("App", "OTHER", "UNREQUESTED")) {
 						if (query == 1) {
-							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "LOGICAL_REPLICATION", "DISABLED")));
+							h.handleResultSetNext(row(
+									Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "LOGICAL_REPLICATION", "DISABLED")));
 						} else if (query == 2) {
-							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "TABLE_OWNER", owner,
-									"TABLE_NAME", "PARENT", "TABLE_NUMBER", 1, "ROOT_TABLE", true)));
-							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "TABLE_OWNER", owner,
-									"TABLE_NAME", "CHILD", "TABLE_NUMBER", 2, "PARENT_TABLE_NUMBER", 1, "RELATIONSHIP", "nested")));
+							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "TABLE_OWNER",
+									owner, "TABLE_NAME", "PARENT", "TABLE_NUMBER", 1, "ROOT_TABLE", true)));
+							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "TABLE_OWNER",
+									owner, "TABLE_NAME", "CHILD", "TABLE_NUMBER", 2, "PARENT_TABLE_NUMBER", 1,
+									"RELATIONSHIP", "nested")));
 						} else {
-							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "TABLE_OWNER", owner,
-									"TABLE_NAME", "CHILD", "TABLE_NUMBER", 2, "COLUMN_NAME", "AMOUNT", "JSON_KEY_NAME", "total",
-									"IS_HIDDEN", true, "IS_GENERATED", true, "ETAG_POS", 1)));
+							h.handleResultSetNext(row(Map.of("VIEW_OWNER", owner, "VIEW_NAME", "Dv", "TABLE_OWNER",
+									owner, "TABLE_NAME", "CHILD", "TABLE_NUMBER", 2, "COLUMN_NAME", "AMOUNT",
+									"JSON_KEY_NAME", "total", "IS_HIDDEN", true, "IS_GENERATED", true, "ETAG_POS", 1)));
 						}
 					}
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};
-		View first = new View("Dv"); first.setSchemaName("App");
-		View second = new View("Dv"); second.setSchemaName("OTHER");
+		View first = new View("Dv");
+		first.setSchemaName("App");
+		View second = new View("Dv");
+		second.setSchemaName("OTHER");
 		reader.setMetadataDetail(null, new ParametersContext(), List.<Table>of(first, second));
 		assertEquals(3, queries.get());
 		for (View view : List.of(first, second)) {
@@ -76,17 +99,23 @@ class Oracle26aiDualityDetailsTest {
 
 	@Test
 	void optionalCatalogErrorsAreDistinguishedFromBrokenSql() {
-		View view = new View("DV"); view.setSchemaName("APP");
+		View view = new View("DV");
+		view.setSchemaName("APP");
 		OracleJsonDualityViewUtils.setJsonRelationalDualityView(view, true);
 		for (int code : List.of(942, 904)) {
 			var reader = new Oracle26aiViewReader(DialectHolder.oracle26aiDialect) {
-				@Override protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+				@Override
+				protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p,
+						ResultSetNextHandler h) {
 					throw new RuntimeException(new SQLException("catalog error", "42000", code));
 				}
 			};
 			Runnable read = () -> reader.loadDualityDetails(null, List.of(view), "jsonDualityTables26ai.sql",
 					OracleJsonDualityViewUtils.TABLE_DETAILS, List.of("TABLE_NAME"));
-			if (code == 942) assertDoesNotThrow(read::run); else assertThrows(RuntimeException.class, read::run);
+			if (code == 942)
+				assertDoesNotThrow(read::run);
+			else
+				assertThrows(RuntimeException.class, read::run);
 		}
 	}
 }
