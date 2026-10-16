@@ -235,6 +235,12 @@ its children. The existing onlineIndex option controls ONLINE with version,
 deferrable-constraint, bitmap/join and local-hash restrictions. Partitioned root
 tablespace changes affect default attributes only. Explicit Index diffs can also
 rename indexes after other operations. Partition structure changes remain deferred.
+Nonpartitioned Domain/FunctionDomain indexes now retain qualified indextype and
+opaque parameters for recreation, parameter ALTER and explicit REBUILD. Multiline
+catalog parameters survive XML via an optional encoded specific. Reverse-key
+BTree recreation preserves REVERSE. Join/unknown index CREATE fails explicitly
+when the model lacks the required definition; Domain partition lifecycle and
+custom indextype dependencies remain deferred.
 Local/global range index partition compression modes and explicit NOCOMPRESS now
 survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
 incompatible overrides and hash partition compression changes fail explicitly.

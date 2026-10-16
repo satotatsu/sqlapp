@@ -1170,6 +1170,60 @@ IOT、特殊索引専用のライフサイクル、partition境界や個数の�
 - [11g ALTER INDEX](https://docs.oracle.com/cd/B28359_01/server.111/b28286/statements_1009.htm)
 - [10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
 
+## 2026-10-16: Domain索引の再生成とパラメータALTER
+
+sqlapp-core-oracleの既存ALL_INDEXES一括取得で、Domain/FunctionDomain索引の
+ITYP_OWNER・ITYP_NAME・PARAMETERS・DOMIDX_STATUS・DOMIDX_OPSTATUSを保持する。
+通常のSchema Domainとは別の、Oracle Text/Spatial等のindextypeを使う索引が対象。
+10g以降の非partition Domain索引を、1カラムまたは式とINDEXTYPE IS owner.name、
+PARAMETERS文字列から再生成する。Schemaモデルのspecificsを利用し、公開API・XML形式・依存関係は変更しない。
+
+パラメータ文字列はODCIへ渡す不透明な文字列として扱う。末尾空白・引用符を保持し、
+SQL literalの引用符だけをescapeする。改行・CR・TABを含むcatalog値はXML属性の正規化を避けるため
+oracle.index.domain.parametersBase64へUTF-8/Base64で保持する。通常の値はPARAMETERSに保持し、
+両方ある場合は明示的なPARAMETERS値を優先する。不正なBase64/UTF-8は拒否する。
+ODCI固有のパラメータ構文とデータベース文字集合による長さ制約は実DBでの検証が必要。
+
+Table/Index差分のPARAMETERS変更はDROP/CREATEではなくALTER INDEX ... PARAMETERSを生成し、
+同時renameは別のRENAME TOとする。パラメータ削除は推測せず、明示的なtarget文字列を求める。
+明示的REBUILDも登録済みの共通入口から利用できるが、CREATE用PARAMETERSを再送しない。
+CREATE用設定がREBUILD用のODCI命令としても有効とは限らないためである。
+Domain索引のONLINE・partition構成・一意/圧縮/表領域等の通常索引用属性・異常状態は明示的に拒否する。
+type未指定や不足する定義を通常索引として生成しない。
+
+NORMAL/REVのメタデータをBTreeとoracle.index.reverseへ保持し、非partition BTreeのCREATEで
+REVERSEを再現する。Join索引はFROM/join述語が共通モデルにないためCREATEを拒否し、
+未対応のcatalog索引種別もoracle.index.unmodeledTypeを保持してCREATEを拒否する。
+既存23ai Vector/Hybrid Vectorの専用生成経路は維持する。IOT実装は変更していない。
+
+OracleDomainIndexRecreationTestでmetadata→XML→CREATE、パラメータALTER、REBUILD、
+reverse-key、引用符・改行・末尾空白、不正設定と不足定義の拒否、一括取得1クエリを検証する。
+最初の対象テストでXML属性による改行消失を検出し、保存形式を修正した。
+テストmockの大文字カラム名処理とschema装飾の期待値も修正し、対象12件が成功した。
+Oracle全体の初回実行では、FullTextを通常BTreeとして生成する旧期待により1件が失敗した。
+旧テストをindextype不足の拒否検証に更新し、対象22件が成功した。
+最終的にOracle全263件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。最後の再実行のcommand/pluginはUP-TO-DATEで直前の成功結果を利用した。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkは成功し、意図的な生成ファイル変更はない。
+追加SELECT・実DB接続・DDL実行はない。Domain partition/特殊状態の回復、Join索引の完全DDL、
+custom indextype自体の作成・依存解決、partition構造変更は未対応。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexRecreationTest' --tests '*Oracle23aiIndexReaderTest' --tests '*Oracle23aiCreateIndexFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexRecreationTest' --tests '*Oracle23aiIndexReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexRecreationTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALL_INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_INDEXES.html)
+- [Building Domain Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/addci/building-domain-indexes.html)
+- [Oracle 10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

@@ -80,11 +80,18 @@ public class OracleIndexReader extends IndexReader {
 					index.setSchemaName(getString(rs, "OWNER"));
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setIndexType(dialact.getIndexType(indexType));
+					if ("NORMAL/REV".equals(indexType)) {
+						index.setIndexType(com.sqlapp.data.schemas.IndexType.BTree);
+						index.getSpecifics().put("oracle.index.reverse", true);
+					}
+					readDomainDetails(rs, index);
 					if ("BITMAP".equalsIgnoreCase(indexType))
 						index.getSpecifics().put("oracle.index.bitmap", true);
 					if ("YES".equalsIgnoreCase(getString(rs, "JOIN_INDEX")))
 						index.getSpecifics().put("oracle.index.join", true);
 					setIndexType(rs, index, indexType);
+					if (index.getIndexType() == null && indexType != null)
+						index.getSpecifics().put("oracle.index.unmodeledType", indexType);
 					readState(rs, index);
 					if ("UNIQUE".equals(uniqueness)) {
 						index.setUnique(true);
@@ -132,6 +139,19 @@ public class OracleIndexReader extends IndexReader {
 			}
 		});
 		return result;
+	}
+
+	protected void readDomainDetails(ExResultSet rs, Index index) throws SQLException {
+		if (index.getIndexType() != com.sqlapp.data.schemas.IndexType.Domain
+				&& index.getIndexType() != com.sqlapp.data.schemas.IndexType.FunctionDomain) return;
+		for (String key : new String[] {"ITYP_OWNER", "ITYP_NAME", "PARAMETERS", "DOMIDX_STATUS", "DOMIDX_OPSTATUS"}) {
+			String value = "PARAMETERS".equals(key) ? rs.getString(key) : getString(rs, key);
+			if (value != null) {
+				if ("PARAMETERS".equals(key) && (value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0 || value.indexOf('\t') >= 0))
+					index.getSpecifics().put("oracle.index.domain.parametersBase64", java.util.Base64.getEncoder().encodeToString(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+				else index.getSpecifics().put(key, value);
+			}
+		}
 	}
 
 	protected void readState(ExResultSet rs, Index index) throws SQLException {

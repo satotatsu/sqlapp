@@ -215,12 +215,8 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table1 = getTable1("tableA");
 		Table table2 = getTable1("tableA");
 		table2.getIndexes().add("index1", table1.getColumns().get("cola")).setIndexType(IndexType.FullText);
-		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		int i = 0;
-		SqlOperation operation = list.get(i++);
-		String expected = getResource("alter_table_add_index2.sql");
-		assertEquals(expected, operation.getSqlText());
-		System.out.println(list);
+		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+				() -> operation.createDiffSql(table1.diff(table2)));
 	}
 
 	/**

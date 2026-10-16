@@ -33,6 +33,14 @@ public class OracleRebuildIndexFactory extends SimpleSqlFactory<Index, OracleSql
 			throw new IllegalArgumentException("Cannot rebuild an index on a temporary table: " + index.getName());
 	}
 	@Override public List<SqlOperation> createSql(Index index) {
+		if (OracleDomainIndex.isDomain(index)) {
+			OracleDomainIndex.validate(index);
+			if (getTableOptions().getOnlineIndex().test(index.getTable(), index))
+				throw new IllegalArgumentException("Domain index rebuild does not support ONLINE");
+			OracleSqlBuilder builder = createSqlBuilder();
+			builder.alter().index().space().name(index, getOptions().isDecorateSchemaName()).space()._add("REBUILD");
+			return List.of(createOperation(builder.toString(), SqlType.REBUILD, index));
+		}
 		validateRebuild(index);
 		OracleSqlBuilder builder = createSqlBuilder();
 		builder.alter().index().space().name(index, getOptions().isDecorateSchemaName()).space()._add("REBUILD");

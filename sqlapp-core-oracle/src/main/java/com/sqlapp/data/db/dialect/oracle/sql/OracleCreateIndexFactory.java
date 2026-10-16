@@ -35,6 +35,15 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 
 	@Override
 	public void addObjectDetail(Index index, Table table, OracleSqlBuilder builder) {
+		if (index.getSpecifics().containsKey("oracle.index.unmodeledType"))
+			throw new IllegalArgumentException("Unmodeled Oracle index type: " + index.getSpecifics().get("oracle.index.unmodeledType"));
+		if (OracleDomainIndex.isDomain(index)) {
+			OracleDomainIndex.create(index, table, getOptions().isDecorateSchemaName(), builder);
+			return;
+		}
+		if ("true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.join")))
+			throw new IllegalArgumentException("Join index recreation requires its FROM and join predicates: " + index.getName());
+		OracleRebuildIndexFactory.validateOrdinaryIndex(index);
 		builder.unique(index.isUnique());
 		if ((index.getIndexType() != null && index.getIndexType().isBitMap())
 				|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
@@ -89,6 +98,15 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 		if (index.getTableSpaceName() != null)
 			builder.space()._add("TABLESPACE").space().name(index.getTableSpaceName());
 		OracleIndexCompression.add(index, getDialect(), builder);
+		String reverse = index.getSpecifics().get("oracle.index.reverse");
+		if (reverse != null) {
+			if (!"true".equals(reverse) && !"false".equals(reverse)) throw new IllegalArgumentException("Invalid reverse index flag");
+			if ("true".equals(reverse)) {
+				if (index.getPartitioning() != null || index.getIndexType() != com.sqlapp.data.schemas.IndexType.BTree)
+					throw new IllegalArgumentException("Reverse index generation requires a nonpartitioned BTree index");
+				builder.space()._add("REVERSE");
+			}
+		}
 		String visibility = index.getSpecifics().get("oracle.index.visibility");
 		if (visibility != null) {
 			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g)

@@ -21,7 +21,8 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 	static final String VISIBILITY = "oracle.index.visibility";
 	static final String STATUS = "oracle.index.status";
 	static boolean hasStateChange(Index before, Index after) {
-		return !Objects.equals(before.getName(), after.getName())
+		return OracleDomainIndex.isDomain(before) && !Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))
+				|| !Objects.equals(before.getName(), after.getName())
 				|| !Objects.equals(before.getSpecifics().get(VISIBILITY), after.getSpecifics().get(VISIBILITY))
 				|| !Objects.equals(before.getSpecifics().get(STATUS), after.getSpecifics().get(STATUS))
 				|| OracleIndexPartitionLifecycle.changed(before, after);
@@ -34,6 +35,7 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 	@Override public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
 		Index before = difference.getOriginal(Index.class), after = difference.getTarget(Index.class);
 		if (before == null || after == null) throw new IllegalArgumentException("ALTER INDEX requires original and target models");
+		if (OracleDomainIndex.isDomain(before)) return domainDiff(before, after, difference);
 		var changes = difference.toDifference().getChangedProperties(getDialect());
 		for (String property : changes.keySet()) {
 			if (!Set.of(SchemaProperties.SPECIFICS.getLabel(), SchemaObjectProperties.PARTITIONING.getLabel(), VISIBILITY, STATUS,
@@ -100,6 +102,33 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 			if (!"VISIBLE".equals(visibility) && !"INVISIBLE".equals(visibility))
 				throw new IllegalArgumentException("Target index visibility must be VISIBLE or INVISIBLE");
 			result.add(operation(before, after, visibility, SqlType.ALTER));
+		}
+		if (!Objects.equals(before.getName(), after.getName())) {
+			if (after.getName() == null || after.getName().isBlank()) throw new IllegalArgumentException("Target index name is required");
+			OracleSqlBuilder builder = createSqlBuilder();
+			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName()).space()._add("RENAME TO").space().name(after, false);
+			result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
+		}
+		return result;
+	}
+
+	private List<SqlOperation> domainDiff(Index before, Index after, DbObjectDifference difference) {
+		OracleDomainIndex.validate(before); OracleDomainIndex.validate(after);
+		for (String property : difference.toDifference().getChangedProperties(getDialect()).keySet())
+			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64", SchemaProperties.SPECIFICS.getLabel(), SchemaProperties.NAME.getLabel()).contains(property))
+				throw new IllegalArgumentException("Unsupported domain index alteration: " + property);
+		var keys = new java.util.HashSet<>(before.getSpecifics().keySet()); keys.addAll(after.getSpecifics().keySet());
+		for (String key : keys)
+			if (!Set.of("PARAMETERS", "oracle.index.domain.parametersBase64").contains(key) && !Objects.equals(before.getSpecifics().get(key), after.getSpecifics().get(key)))
+				throw new IllegalArgumentException("Unsupported domain index property change: " + key);
+		List<SqlOperation> result = new ArrayList<>();
+		if (!Objects.equals(OracleDomainIndex.parameterValue(before), OracleDomainIndex.parameterValue(after))) {
+			String parameters = OracleDomainIndex.parameterValue(after);
+			if (parameters == null) throw new IllegalArgumentException("Domain index parameter changes require an explicit target string");
+			OracleSqlBuilder builder = createSqlBuilder();
+			builder.alter().index().space().name(before, getOptions().isDecorateSchemaName());
+			OracleDomainIndex.parameters(parameters, builder);
+			result.add(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}
 		if (!Objects.equals(before.getName(), after.getName())) {
 			if (after.getName() == null || after.getName().isBlank()) throw new IllegalArgumentException("Target index name is required");
