@@ -912,6 +912,38 @@ core・PostgreSQL・H2は今回再実行していない。git diff --checkも成
 - [ALTER TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
 - [modify_virtcol_properties](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlqr/Subclauses.html)
 
+## 2026-10-16: 単純IOTと索引圧縮の再生成
+
+sqlapp-core-oracleで、単純な索引構成表をORGANIZATION INDEXとして再生成する。
+ALL_TABLESとALL_INDEXESを一括参照してIOTの表領域を保持し、overflow/mapping用の内部表と
+IOT - TOP索引を独立オブジェクトとして生成しない。主キーがない構成、無効・遅延可能な主キー、
+overflow/mapping・partitioning・compression・temporaryの複合構成は明示的に拒否する。
+Oracle 10g以降の既存readerに適用し、追加のSELECT往復は行わない。
+
+索引のENABLED圧縮とPREFIX_LENGTH、ADVANCED LOW/HIGHを共通compressionTypeと
+specificsで保持する。CREATE INDEXはCOMPRESS nまたはCOMPRESS ADVANCED LOW/HIGHを生成する。
+LOWは12c以降、HIGHはこのプロジェクトのバージョン区分では18c以降に限定する
+（12.2専用Dialectがないため12cではHIGHを拒否する）。不正なprefix長やbitmapとの組合せも拒否する。
+partition/subpartition単位の詳細な圧縮と索引状態のライフサイクルは引き続き未対応。
+
+公開API・XML形式・依存関係の変更なし。OracleIotIndexRecreationTestでmetadata→Table XML→DDL、
+バージョン境界と未対応構成の拒否を検証する。実DB接続・DDL実行は行っていない。
+対象6件、Oracle全215件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功し、意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotIndexRecreationTest' --tests '*OracleIndexPlacementRegressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALL_TABLES](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/ALL_TABLES.html)
+- [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/23/admin/managing-indexes.html)
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

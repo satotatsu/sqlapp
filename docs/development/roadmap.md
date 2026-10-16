@@ -218,7 +218,11 @@ hidden columns, and support CREATE/ADD plus isolated visibility ALTERs. Existing
 identity columns support isolated ALWAYS/BY DEFAULT/ON NULL mode changes without
 restarting the sequence. Shared table-level LOB tablespaces are read only when
 all LOB segments have one non-null tablespace, and generated for BLOB/CLOB/NCLOB
-columns. Per-column/per-partition LOB storage and IOT overflow/mapping models,
+columns. Simple IOT metadata and ORGANIZATION INDEX generation now preserve the
+root tablespace and primary key; overflow/mapping and other complex IOT variants
+fail explicitly. Index prefix compression and advanced LOW/HIGH compression now
+survive metadata/XML/CREATE generation with dialect version checks.
+Per-column/per-partition LOB storage and IOT overflow/mapping models,
 identity sequence restart and complex virtual-column changes remain deferred.
 
 Identity increment/bounds/cache/cycle/order changes are now generated as changed

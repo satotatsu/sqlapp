@@ -98,6 +98,11 @@ public class OracleTableReader extends TableReader {
 		}
 		table.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
 		table.setLobTableSpaceName(getString(rs, "LOB_TABLESPACE_NAME"));
+		if ("IOT".equals(getString(rs, "IOT_TYPE"))) {
+			table.getSpecifics().put("oracle.table.organization", "INDEX");
+			if (table.getTableSpaceName() == null) table.setTableSpaceName(getString(rs, "IOT_TABLESPACE_NAME"));
+			if ("YES".equals(getString(rs, "IOT_COMPLEX"))) table.getSpecifics().put("oracle.table.iotComplex", true);
+		}
 		if ("Y".equals(getString(rs, "TEMPORARY"))) {
 			table.setTableType(Table.TableType.Temporary);
 			String duration = getString(rs, "DURATION");

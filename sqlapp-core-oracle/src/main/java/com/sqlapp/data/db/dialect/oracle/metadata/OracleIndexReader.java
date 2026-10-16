@@ -95,7 +95,15 @@ public class OracleIndexReader extends IndexReader {
 					if ("YES".equalsIgnoreCase(partitioned)) {
 						index.getSpecifics().put(PARTTITIONED_KEY, Boolean.TRUE.toString());
 					}
-					index.setCompression("ENABLED".equalsIgnoreCase(getString(rs, "COMPRESSION")));
+					String compression = getString(rs, "COMPRESSION");
+					index.setCompression("ENABLED".equals(compression) || "ADVANCED LOW".equals(compression) || "ADVANCED HIGH".equals(compression));
+					if (index.isCompression()) {
+						index.setCompressionType(compression);
+						if ("ENABLED".equals(compression)) {
+							Integer prefix = getInteger(rs, "PREFIX_LENGTH");
+							if (prefix != null) index.getSpecifics().put("oracle.index.prefixLength", prefix);
+						}
+					}
 					index.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
 					//
 					setStatistics(rs, "BLEVEL", index);

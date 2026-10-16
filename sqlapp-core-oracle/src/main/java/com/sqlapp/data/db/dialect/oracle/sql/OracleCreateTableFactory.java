@@ -58,6 +58,15 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 	}
 
 	private void addTableOptions(final Table table, OracleSqlBuilder builder) {
+		String organization = table.getSpecifics().get("oracle.table.organization");
+		if (organization != null) {
+			if (!"INDEX".equals(organization)) throw new IllegalArgumentException("Unsupported Oracle table organization: " + table.getName());
+			if (table.getSpecifics().containsKey("oracle.table.iotComplex") || table.getPartitioning() != null || table.isCompression() || table.getTableType() == Table.TableType.Temporary) throw new IllegalArgumentException("IOT overflow/mapping, partitioning, compression and temporary variants require additional structural support: " + table.getName());
+			if (table.getConstraints().getPrimaryKeyConstraint() == null) throw new IllegalArgumentException("Index-organized table requires a primary key: " + table.getName());
+			var primary = table.getConstraints().getPrimaryKeyConstraint();
+			if (!primary.isEnable() || primary.getDeferrability() != null && primary.getDeferrability() != com.sqlapp.data.schemas.Deferrability.NotDeferrable) throw new IllegalArgumentException("IOT requires an enabled, nondeferrable primary key: " + table.getName());
+			builder.lineBreak()._add("ORGANIZATION INDEX");
+		}
 		String duration = table.getSpecifics().get("oracle.table.duration");
 		if (table.getTableType() == Table.TableType.Temporary) {
 			if (duration != null && !"SYS$SESSION".equals(duration) && !"SYS$TRANSACTION".equals(duration)) throw new IllegalArgumentException("Invalid temporary table duration: " + table.getName());
@@ -128,7 +137,8 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 	}
 
 	private boolean isModeledProperty(String key) {
-		return OracleAnnotationUtils.isAnnotationKey(key) || "oracle.table.duration".equals(key) || "COMPRESS_FOR".equals(key);
+		return OracleAnnotationUtils.isAnnotationKey(key) || "oracle.table.duration".equals(key) || "COMPRESS_FOR".equals(key)
+				|| "oracle.table.organization".equals(key) || "oracle.table.iotComplex".equals(key);
 	}
 
 	@Override
