@@ -65,6 +65,8 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, OracleTruncateTemporaryTableFactory.class);
 		// Index
 		registerSqlFactory(Index.class, SqlType.CREATE, OracleCreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.ALTER, OracleAlterIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.REBUILD, OracleRebuildIndexFactory.class);
 		// ForeignKeyConstraint
 		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE, OracleCreateForeignKeyConstraintFactory.class);
 		// UniqueConstraint

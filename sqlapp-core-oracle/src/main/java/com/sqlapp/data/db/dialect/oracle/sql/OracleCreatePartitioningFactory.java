@@ -78,6 +78,12 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 		} else {
 			appendPartitionDefinition(partitionInfo.getPartitioningType(), partition, builder);
 		}
+		if (partitionInfo.getIndex() != null) {
+			if (subpartition)
+				throw new IllegalArgumentException("Global composite index partitioning is not supported");
+			OracleIndexPartitionCompression.add(partitionInfo.getIndex(), partition, getDialect(), builder);
+			OracleIndexPartitionLifecycle.addCreateState(partition, false, builder);
+		}
 		if (partitionInfo.getSubPartitioningType() == null || subpartition) {
 			return;
 		}
@@ -97,16 +103,12 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 	protected void appendPartitionDefinition(PartitioningType partitioningType, AbstractPartition<?> partition,
 			OracleSqlBuilder builder) {
 		if (partitioningType == PartitioningType.Range || partitioningType == PartitioningType.RangeColumns) {
-			if ("MAXVALUE".equalsIgnoreCase(partition.getHighValue())) {
-				builder.values().lessThan().space()._add(partition.getHighValue());
-			} else {
-				builder.values().lessThan().space()._add("(")._add(partition.getHighValue())._add(")");
-			}
+			builder.values().lessThan().space()._add("(")._add(partition.getHighValue())._add(")");
 		} else if (partitioningType == PartitioningType.List) {
 			builder.values().in()._add("(")._add(partition.getHighValue())._add(")");
 		}
 		if (!CommonUtils.isEmpty(partition.getTableSpaceName())) {
-			builder.tablespace().eq().name(partition.getTableSpaceName());
+			builder.tablespace().space().name(partition.getTableSpaceName());
 		}
 		if (!CommonUtils.isEmpty(partition.getRemarks())) {
 			builder.comment().eq().sqlChar(partition.getRemarks());

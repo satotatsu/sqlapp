@@ -222,6 +222,17 @@ columns. Simple IOT metadata and ORGANIZATION INDEX generation now preserve the
 root tablespace and primary key; overflow/mapping and other complex IOT variants
 fail explicitly. Index prefix compression and advanced LOW/HIGH compression now
 survive metadata/XML/CREATE generation with dialect version checks.
+Index visibility (11g+) and nonpartitioned UNUSABLE state also survive recreation;
+Isolated ordinary-index visibility/usability ALTER and nonpartitioned REBUILD now
+use ALTER INDEX through Table diffs and the SQL factory registry. Whole partitioned
+index rebuilds, structural combinations and special-index state changes fail explicitly.
+Isolated physical index partition/subpartition usability transitions now use
+MODIFY ... UNUSABLE or REBUILD ... through Table/Index diffs. Metadata/XML/CREATE
+preserves segment state; composite parent state changes and structural combinations
+fail explicitly. Advanced rebuild options and partition structure changes remain deferred.
+Local/global range index partition compression modes and explicit NOCOMPRESS now
+survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
+incompatible overrides and hash partition compression changes fail explicitly.
 Per-column/per-partition LOB storage and IOT overflow/mapping models,
 identity sequence restart and complex virtual-column changes remain deferred.
 

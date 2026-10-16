@@ -23,7 +23,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.JsonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
-public class Oracle23aiIndexReader extends OracleIndexReader {
+public class Oracle23aiIndexReader extends Oracle11gIndexReader {
 
 	public static final String ORGANIZATION = "ORGANIZATION";
 	public static final String TARGET_ACCURACY = "TARGET_ACCURACY";

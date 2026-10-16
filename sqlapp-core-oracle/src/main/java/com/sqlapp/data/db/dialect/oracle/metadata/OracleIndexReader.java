@@ -83,6 +83,7 @@ public class OracleIndexReader extends IndexReader {
 					if ("BITMAP".equalsIgnoreCase(indexType))
 						index.getSpecifics().put("oracle.index.bitmap", true);
 					setIndexType(rs, index, indexType);
+					readState(rs, index);
 					if ("UNIQUE".equals(uniqueness)) {
 						index.setUnique(true);
 					} else {
@@ -129,6 +130,11 @@ public class OracleIndexReader extends IndexReader {
 			}
 		});
 		return result;
+	}
+
+	protected void readState(ExResultSet rs, Index index) throws SQLException {
+		String status = getString(rs, "STATUS");
+		if (status != null) index.getSpecifics().put("oracle.index.status", status);
 	}
 
 	protected void setIndexType(final ExResultSet rs, final Index index, final String productIndexType)
@@ -192,7 +198,8 @@ public class OracleIndexReader extends IndexReader {
 					return;
 				SubPartition sub = new SubPartition(rs.getString("SUBPARTITION_NAME"));
 				sub.setHighValue(rs.getString("HIGH_VALUE"));
-				sub.setCompression("ENABLED".equalsIgnoreCase(rs.getString("COMPRESSION")));
+				readPartitionCompression(rs, sub);
+				readPartitionState(rs, sub);
 				sub.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
 				parent.getSubPartitions().add(sub);
 			}
@@ -202,15 +209,30 @@ public class OracleIndexReader extends IndexReader {
 	private Partition addIndexPartition(ExResultSet rs, Partitioning partitionInfo) throws SQLException {
 		String partitionName = getString(rs, "PARTITION_NAME");
 		String highValue = getString(rs, "HIGH_VALUE");
-		String compression = getString(rs, "COMPRESSION");
 		Partition partition = new Partition(partitionName);
 		partition.setHighValue(highValue);
-		if (!"DISABLED".equalsIgnoreCase(compression)) {
-			partition.setCompression(true);
-		}
+		readPartitionCompression(rs, partition);
+		readPartitionState(rs, partition);
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
 		partitionInfo.getPartitions().add(partition);
 		return partition;
+	}
+
+	protected void readPartitionState(ExResultSet rs, com.sqlapp.data.schemas.AbstractPartition<?> partition)
+			throws SQLException {
+		String status = getString(rs, "STATUS");
+		if (status != null) partition.getSpecifics().put("oracle.index.status", status);
+	}
+
+	protected void readPartitionCompression(ExResultSet rs, com.sqlapp.data.schemas.AbstractPartition<?> partition)
+			throws SQLException {
+		String mode = getString(rs, "COMPRESSION");
+		if (mode != null) {
+			partition.setCompression(!"DISABLED".equals(mode));
+			partition.setCompressionType(mode);
+			if ("DISABLED".equals(mode)) partition.getSpecifics().put("oracle.index.compression", mode);
+			else partition.getSpecifics().remove("oracle.index.compression");
+		}
 	}
 
 	/**
@@ -265,12 +287,10 @@ public class OracleIndexReader extends IndexReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String partitionName = getString(rs, "SUBPARTITION_NAME");
 				String highValue = getString(rs, "HIGH_VALUE");
-				String compression = getString(rs, "COMPRESSION");
 				SubPartition subPartition = new SubPartition(partitionName);
 				subPartition.setHighValue(highValue);
-				if (!"DISABLED".equalsIgnoreCase(compression)) {
-					subPartition.setCompression(true);
-				}
+				readPartitionCompression(rs, subPartition);
+				readPartitionState(rs, subPartition);
 				partition.getSubPartitions().add(subPartition);
 			}
 		});

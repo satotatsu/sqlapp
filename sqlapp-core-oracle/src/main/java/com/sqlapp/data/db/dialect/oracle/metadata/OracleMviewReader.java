@@ -105,6 +105,9 @@ public class OracleMviewReader extends MviewReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g
+				|| getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2)
+			return new Oracle11gIndexReader(getDialect());
 		return new OracleIndexReader(this.getDialect());
 	}
 

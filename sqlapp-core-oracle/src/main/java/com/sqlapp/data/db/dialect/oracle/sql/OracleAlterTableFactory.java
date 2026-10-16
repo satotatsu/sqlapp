@@ -51,6 +51,17 @@ import com.sqlapp.util.CommonUtils;
 public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSqlBuilder> {
 
 	@Override
+	protected void addIndexDefinition(Table originalTable, Table table,
+			com.sqlapp.data.schemas.Index originalIndex, com.sqlapp.data.schemas.Index index,
+			DbObjectDifference diff, List<SqlOperation> result) {
+		if (diff.getState() == State.Modified && OracleAlterIndexFactory.hasStateChange(originalIndex, index)) {
+			result.addAll(getSqlFactoryRegistry().getSqlFactory(index, SqlType.ALTER).createDiffSql(diff));
+			return;
+		}
+		super.addIndexDefinition(originalTable, table, originalIndex, index, diff, result);
+	}
+
+	@Override
 	protected void addOtherDefinitions(final Map<String, Difference<?>> allDiff, final Table originalTable,
 			final Table table, final List<SqlOperation> result) {
 		final Map<String, Difference<?>> diff = this.getAll(allDiff, OracleUtils.getTableStatisticsKeys());

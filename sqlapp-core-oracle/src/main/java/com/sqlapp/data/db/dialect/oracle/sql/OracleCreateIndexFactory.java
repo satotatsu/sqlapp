@@ -60,13 +60,18 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 					builder.comma(!first)._add("PARTITION").space().name(partition.getName());
 					first = false;
 					addStorage(partition, builder);
+					OracleIndexPartitionCompression.add(index, partition, getDialect(), builder);
+					OracleIndexPartitionLifecycle.addCreateState(partition,
+							index.getPartitioning().getSubPartitioningType() != null || !partition.getSubPartitions().isEmpty(), builder);
 					if (!partition.getSubPartitions().isEmpty()) {
 						builder.space()._add("(");
 						boolean firstSub = true;
 						for (var sub : partition.getSubPartitions()) {
+							OracleIndexPartitionCompression.validateSubpartition(index, partition, sub);
 							builder.comma(!firstSub)._add("SUBPARTITION").space().name(sub.getName());
 							firstSub = false;
 							addStorage(sub, builder);
+							OracleIndexPartitionLifecycle.addCreateState(sub, false, builder);
 						}
 						builder._add(")");
 					}
@@ -74,6 +79,8 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 				builder._add(")");
 			}
 		} else if (index.getPartitioning() != null) {
+			if (index.getPartitioning().getSubPartitioningType() != null)
+				throw new IllegalArgumentException("Global composite index partitioning is not supported: " + index.getName());
 			builder.space()._add("GLOBAL");
 			var detail = this.getAddObjectDetail(index.getPartitioning(), SqlType.CREATE);
 			if (detail != null)
@@ -101,12 +108,28 @@ public class OracleCreateIndexFactory extends AbstractCreateIndexFactory<OracleS
 		} else if (index.getCompressionType() != null || index.getSpecifics().containsKey("oracle.index.prefixLength")) {
 			throw new IllegalArgumentException("Index compression options require compression=true: " + index.getName());
 		}
+		String visibility = index.getSpecifics().get("oracle.index.visibility");
+		if (visibility != null) {
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g)
+					&& !(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2))
+				throw new IllegalArgumentException("Index visibility requires Oracle 11g or later: " + index.getName());
+			if (!"VISIBLE".equals(visibility) && !"INVISIBLE".equals(visibility))
+				throw new IllegalArgumentException("Invalid index visibility: " + index.getName());
+			builder.space()._add(visibility);
+		}
+		String status = index.getSpecifics().get("oracle.index.status");
+		if ("UNUSABLE".equals(status)) {
+			if (index.getPartitioning() != null)
+				throw new IllegalArgumentException("Partitioned index status requires per-partition state: " + index.getName());
+			builder.space()._add("UNUSABLE");
+		} else if (status != null && !"VALID".equals(status)
+				&& !("N/A".equals(status) && index.getPartitioning() != null)) {
+			throw new IllegalArgumentException("Unsupported index status: " + index.getName());
+		}
 	}
 
 	private void addStorage(com.sqlapp.data.schemas.AbstractPartition<?> partition, OracleSqlBuilder builder) {
 		if (partition.getTableSpaceName() != null)
 			builder.space()._add("TABLESPACE").space().name(partition.getTableSpaceName());
-		if (partition.isCompression())
-			builder.space()._add("COMPRESS");
 	}
 }

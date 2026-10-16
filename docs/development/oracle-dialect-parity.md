@@ -944,6 +944,173 @@ git diff --checkも成功し、意図的な生成ファイル変更はない。
 - [ALL_TABLES](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/ALL_TABLES.html)
 - [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/23/admin/managing-indexes.html)
 
+## 2026-10-16: 索引の可視性と使用可否の再生成
+
+sqlapp-core-oracleでALL_INDEXES.STATUSをoracle.index.statusに保持し、通常の非partition索引の
+UNUSABLEをCREATE INDEXへ反映する。制約のenableとは別の情報として扱う。
+11g以降は専用Oracle11gIndexReaderでVISIBILITYをoracle.index.visibilityに保持し、
+CREATE時にVISIBLE/INVISIBLEを生成する。Table・Mviewのreader選択と23ai reader継承を更新した。
+10g以前のreaderはVISIBILITYを参照しない。既存の一括SELECTを使用し、SELECT数は増えない。
+
+不正なvisibility/status、旧Dialectへのvisibility指定、partitioned索引のUNUSABLE指定は拒否する。
+Vector索引の非標準状態も無視せず拒否する。既存索引のALTER/REBUILD、partition別状態、
+関数索引のFUNCIDX_STATUSなど追加の状態管理は未対応。公開設定形式・依存関係は変更せず、
+既存specificsのXML表現を利用する。追加readerとprotected hookは既存APIへの追加のみ。
+実DB接続・DDL実行は行っていない。
+
+OracleIndexStateTestでXML→DDL、旧バージョンのカラム非参照、reader選択、
+未対応値・構成の拒否を検証する。最初のテストで不完全なpartitionモデルに由来する失敗を検出し、
+テストモデルを修正後、対象12件が成功した。
+Oracle全220件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+意図的な生成ファイル変更はなく、git diff --checkも成功した。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexStateTest' --tests '*OracleIotIndexRecreationTest' --tests '*Oracle23aiIndexReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [11g Managing Indexes](https://docs.oracle.com/cd/E11882_01/server.112/e25494/indexes.htm)
+- [ALL_INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_INDEXES.html)
+- [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/CREATE-INDEX.html)
+
+## 2026-10-16: 索引partitionの圧縮と継承
+
+sqlapp-core-oracleで、既存のALL_IND_PARTITIONS/ALL_IND_SUBPARTITIONS一括取得から
+ENABLED・ADVANCED LOW/HIGH・DISABLEDを保持する。nullを圧縮有効と誤認しない。
+有効な圧縮方式は共通compressionTypeを利用し、明示的なDISABLEDはXML往復で失われないよう
+oracle.index.compression specificも保持する。共通XML形式・依存関係は変更しない。
+
+Localおよびglobal range索引のpartitionにCOMPRESS・COMPRESS ADVANCED LOW/HIGH・NOCOMPRESSを
+生成する。prefix長は索引本体の設定を利用し、partitionでprefix圧縮を使うには索引本体の
+prefix圧縮を必須とする。subpartitionには圧縮句を直接生成せず、partitionからの継承を検証する。
+Hash partitionの個別変更は拒否し、同じ設定は継承させる。ADVANCEDのバージョン制限は
+通常索引と同じくLOWが12c以降、HIGHが18c以降。不正値・bitmapの圧縮・継承矛盾は拒否する。
+
+Global partition生成でTABLESPACEに不要な等号が入る問題と、VALUES LESS THAN (MAXVALUE)の
+括弧が欠落する問題も修正した。共通のOracle partition factoryを使用する表の同じ構文にも適用する。
+Global composite index指定は明示的に拒否する。変更モジュールはsqlapp-core-oracleのみで、
+公開APIにはprotected metadata hookの追加のみ。追加SELECTや実DBアクセス・DDL実行はない。
+
+OracleIndexPartitionCompressionTestでmetadata→XML→DDL、圧縮無効の上書き、
+subpartition継承、バージョン境界、hash制限、global境界構文を検証する。
+最初のテストでXML往復時のDISABLED消失を検出し、修正後に対象13件が成功した。
+Oracle全体の初回実行では旧構文を期待する3件が失敗したため、対応する手書きSQL fixtureを
+正しい構文に更新し、ALTERと圧縮の対象20件が成功した。
+最終的にOracle全227件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。最後の再実行ではcommand/pluginは変更がなくUP-TO-DATEで、
+直前の実行結果を利用している。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+索引ALTER/REBUILD、partition別の状態管理や追加の高度な物理属性は引き続き未対応。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexPartitionCompressionTest' --tests '*OracleIndexPlacementRegressionTest' --tests '*OracleIotIndexRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleAlterTableFactoryTest' --tests '*OracleIndexPartitionCompressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [Using Key Compression with Partitioned Indexes](https://docs.oracle.com/database/121/VLDBG/GUID-0C13E8A8-568B-4A60-8A46-F1120D193EFE.htm)
+- [ALL_IND_PARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_IND_PARTITIONS.html)
+- [ALL_IND_SUBPARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_IND_SUBPARTITIONS.html)
+- [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
+
+## 2026-10-16: 既存索引の状態ALTERとREBUILD
+
+sqlapp-core-oracleでIndexのALTER/REBUILD factoryを登録した。
+Table差分でも、既存索引の可視性・使用可否だけの変更はDROP/CREATEではなくALTER INDEXを生成する。
+11g以降のVISIBLE/INVISIBLE変更、VALID（または未指定）からUNUSABLEへの変更、
+UNUSABLEから明示的なVALIDへのREBUILDに対応する。可視性と状態を同時に変更する場合は
+別々のSQLに分ける。REBUILD後の可視性も明示的に変更できる。
+Schema modelに存在しない状態を推測しないため、targetの状態削除・不正な遷移は拒否する。
+
+通常のBTree・bitmap・関数索引が対象で、構造や他のspecificsとの同時変更は拒否する。
+Partition索引の全体可視性は変更できるが、全体REBUILD/状態変更は拒否する。
+Temporary table上の索引REBUILD、特殊索引（Domain/Vector/Clustered等）の状態操作も拒否する。
+明示的なREBUILDは既存のregistry.createSql(index, SqlType.REBUILD)を利用し、
+ALTERはcreateDiffSql(original.diff(target))を利用する。直接ALTERだけを指定する操作は拒否する。
+10gの従来registryにもREBUILDを登録し、11gのvisibility制限を保つ。resolver変更なし。
+
+新規の公開factoryを追加するが、既存API・設定形式・依存関係の変更はない。
+状態変更を含まないTable内の索引構造変更は既存の差分経路を維持する。
+SELECT数に変更はなく、実DB接続・DDL実行は行っていない。
+Partition/subpartition単位のALTER/REBUILD、ONLINE・tablespace移動や圧縮変更、renameは引き続き未対応。
+
+OracleIndexLifecycleTestでTable差分経由、XML往復、引用符付きschema/index名、
+状態回復・別SQL生成、旧/新Dialectの登録、未対応操作の拒否とno-opを検証する。
+初回はspecificsがflattenされた差分の扱いとテストモデルの組み立てで失敗し、修正後に対象テストが成功した。
+対象21件、Oracle全235件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexLifecycleTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexLifecycleTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+- [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-indexes.html)
+- [Oracle 10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
+
+## 2026-10-16: 索引partition/subpartitionの状態と回復
+
+sqlapp-core-oracleで既存のALL_IND_PARTITIONS/ALL_IND_SUBPARTITIONS一括取得から
+STATUSを各partition/subpartitionのoracle.index.statusへ保持する。
+10g以降の既存readerで利用でき、追加SELECTはない。XML形式・依存関係は変更しない。
+通常索引本体のVALIDとは区別し、物理セグメントの状態にはUSABLE/UNUSABLEを使う。
+
+Table差分またはIndexのALTER factoryで、USABLE（または未指定）→UNUSABLEは
+ALTER INDEX MODIFY PARTITION/SUBPARTITION name UNUSABLEを生成し、
+UNUSABLE→USABLEはALTER INDEX REBUILD PARTITION/SUBPARTITION nameを生成する。
+名前は既存builderで引用し、schema装飾オプションも適用する。
+Local/globalの単純partitionとLocal複合索引のsubpartitionを扱う。
+構造・表領域・圧縮・その他の属性を同時に変更した場合や状態値の削除・不正な遷移は拒否する。
+複合索引の親partitionは物理セグメントではないため、親の状態変更を拒否してsubpartition操作を求める。
+Temporary table上のREBUILDと特殊索引の状態操作も従来同様に拒否する。
+
+CREATE INDEXにも各物理セグメントのUNUSABLEを反映する。
+USABLEは既定状態とし、複合親のN/AはDDLへ出力しない。再生成と差分生成を同じ状態表現に揃えた。
+公開APIはprotected metadata hookの追加のみで、利用者は既存のTable/Index差分生成を使用する。
+明示的な索引全体のREBUILDはpartition索引では引き続き拒否する。
+ONLINE・表領域移動・圧縮ALTER・partition構造変更・複雑なIOTは未対応。
+実DB接続・DDL実行は行っていない。
+
+OracleIndexPartitionLifecycleTestとOracleIndexStateTestで、metadata/XML/CREATE、
+Table差分の個別状態変更と回復、global索引、引用符付き識別子、未対応構成の拒否を検証する。
+最初のコンパイルでSchemaPropertiesとSchemaObjectPropertiesの参照を修正し、対象20件が成功した。
+Oracle全242件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexPartitionLifecycleTest' --tests '*OracleIndexLifecycleTest' --tests '*OracleIndexStateTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+- [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/26/admin/managing-indexes.html)
+- [ALL_IND_SUBPARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_IND_SUBPARTITIONS.html)
+- [Oracle 10g Partition Maintenance](https://docs.oracle.com/cd/B12037_01/server.101/b10739/partiti.htm)
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
