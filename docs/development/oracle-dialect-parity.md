@@ -1580,6 +1580,145 @@ opaque DDL内部の構造編集と実DB往復検証は残る。
 仕様: [ALTER INDEXとpartition圧縮](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/ALTER-INDEX.html)、
 [IOT MOVEとoverflow/mapping制約](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
 
+## 2026-10-17: 単純LIST表とLocal索引のADD/DROP PARTITION
+
+Oracle 10g以降のheap表で、単純LIST partitionを一つ末尾に追加、または一つ削除する
+変更をLocal索引保守プランナーで扱う。ADDは`VALUES (...)`を生成し、自動生成される
+Local索引partitionのrenameと表領域変更を既存のRANGE経路と同じ検証で扱う。
+DROPは対応するLocal索引partitionの削除を検証し、`UPDATE INDEXES`を生成する。
+DROPは行の削除を伴う。既存のallowAddPartition/allowDropPartitionを尊重する。
+
+既存DEFAULT partitionがある場合のADDは拒否する。文字列値`'DEFAULT'`は
+DEFAULTキーワードとして扱わない。値リストの重複や型の妥当性はOracleが検証する。
+IOTのLIST構成、複合partition、LISTのSPLIT/MERGE・値編集、索引の同時変更は未対応。
+新規Local segmentの圧縮やUNUSABLE指定も従来どおり拒否する。
+MetadataReader、DialectResolver、共通モデル、公開API、依存関係は変更しない。
+
+`OracleTablePartitionMaintenanceTest`に4件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全350件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+追加の版境界テストで存在しないDialectHolder定数を参照した初回compile失敗は、
+既存defaultDialectへの修正後に再実行して解消した。
+実DBへの接続・実行は未実施。共通コードの変更はなく、core/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。前提オブジェクトの自動再生成、複合/HASH partition、
+LISTのSPLIT/MERGE、複雑なIOT MOVE、実DB往復検証は残る。
+仕様: [Oracle ALTER TABLE・LIST partitionの制限](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: Local索引を伴うLIST SPLIT/MERGE
+
+Oracle 10g以降のheap表で、単純LIST partitionの二分割と隣接位置の二partition結合を
+既存RANGEプランナーに統合した。`SPLIT PARTITION ... VALUES (...)`と
+`MERGE PARTITIONS ... INTO PARTITION ... UPDATE INDEXES (...)`を生成し、通常Local索引の
+segment名・表領域を明示する。Global索引は変更を許可せず、同じUPDATE INDEXESで保守する。
+
+単一partitionキーの通常文字列・national文字列・数値・NULL literalのみ比較する。
+引用文字列内のcommaと二重apostropheを保持し、値順序と外側空白は無視する。
+数値表記の同値性、collation、式評価は推測しない。分割結果に重複がなく、元の値集合を
+過不足なく保持することを検証し、Local索引の値集合と表partitionの対応も検証する。
+DEFAULTの分割では右側DEFAULTを必須とし、逆の結合でもDEFAULTを保持する。
+型・collationに依存する妥当性や他partitionとの値衝突はOracleの検証が必要。
+
+結合は配列上で隣接する二partitionが対象。生存partitionを完全に変更せず一つ除去するdiffは
+従来どおり行削除を伴うDROPと解釈する。DEFAULTへの行保持結合には、結果partitionへ新しい名前を
+指定するなど、DROPと区別できるdiffが必要。複数キー・tuple・式・日時literal・複合partition、
+特殊索引、圧縮segment・UNUSABLE・ONLINE指定はこの経路では未対応。
+変更はsqlapp-core-oracleと文書のみ。公開API、モデル、設定形式、MetadataReader、
+DialectResolver、依存関係は変更しない。既存オプションを反映するbuilderを使い、
+RANGE/LISTのpartition操作で識別子の引用設定を保持する。
+
+`OracleListPartitionSplitTest`に9件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleListPartitionSplitTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全359件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・SQL実行は未実施。共通コードの変更はなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合/HASH partition、複雑なIOT MOVE、
+前提オブジェクト自動再生成、LISTの複数キー・式・非隣接結合、実DB往復検証は残る。
+仕様: [Oracle 10g ALTER TABLE](https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_3001.htm)、
+[LIST SPLIT/MERGEとDEFAULT](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
+
+## 2026-10-17: 単純HASH表のADD/COALESCEとLocal索引保守
+
+Oracle 10g以降の単純HASH heap表で、末尾partitionを一つ追加、または一つ減らすdiffを扱う。
+ADDは`ADD PARTITION name [TABLESPACE name] UPDATE INDEXES`を生成し、再hashに伴う
+Local索引UNUSABLE化を防ぐ。新Local segmentの自動名との衝突を拒否し、必要なら
+renameと表領域変更のREBUILDを続ける。明示的な表領域変更がなければ索引defaultを継承する。
+
+末尾の削減は`COALESCE PARTITION UPDATE INDEXES`を生成する。Oracleが末尾partitionの行を
+残存partitionへ再分配するため、行削除を伴うDROP PARTITIONに変換しない。
+操作種別はALTERとし、残る表partition・Local segmentが変更されないことを検証する。
+Local索引のない表、Global索引のみの表もこの経路を使う。Global索引の同時変更は拒否する。
+
+既存のallowAddPartition/allowDropPartitionでADD/COALESCEをそれぞれ制御する。
+COALESCEは行を保持するがpartition数を減らすので、保守的にallowDropPartitionの対象とする。
+明示的なpartition一覧を必要とし、途中のpartition除去、全partition除去、複数同時変更、
+境界値、IOT、複合partition、表/Local索引圧縮、UNUSABLEなLocal segment、特殊索引、
+ONLINE、列などの同時変更はこの経路では未対応として拒否する。
+
+変更はsqlapp-core-oracleと文書のみ。共通モデル、公開API、設定形式、依存関係、
+MetadataReaderとDialectResolverは変更しない。8/9用defaultDialectではこの生成を拒否し、
+10g以降は継承した同じ実装を使う。メタデータの追加SELECTはない。
+`OracleHashPartitionMaintenanceTest`に10件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleHashPartitionMaintenanceTest' --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全369件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コードの変更はなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合partition、HASHの圧縮/高度な物理属性、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [Oracle 10g ALTER TABLE](https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_3001.htm)、
+[Oracle ALTER TABLE・HASH ADD/COALESCE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: 複合partitionのDROPとHASH COALESCE
+
+複合heap表の変更を専用プランナーで検証する。RANGE-HASH/RANGE-LISTはOracle 10g以降、
+それ以外のRANGE/LIST/HASHの組合せは保守的に12c以降を対象とする。
+MetadataReaderとDialectResolverは変更せず、古いDialectでは未対応操作として拒否する。
+
+対応操作は親partitionを一つ除去、または一つの親からsubpartitionを一つ除去するdiff。
+RANGE/LISTは`DROP PARTITION`/`DROP SUBPARTITION ... UPDATE INDEXES`を生成し、行削除を伴う。
+HASHは末尾のみ許可し、行を再分配する`COALESCE PARTITION`または
+`MODIFY PARTITION parent COALESCE SUBPARTITION ... UPDATE INDEXES`を生成する。
+DROPは操作種別DROP、COALESCEはALTER。すべてallowDropPartitionを尊重する。
+
+残存要素、親属性、partitionキー・型・template/default、Global索引を変更しないことを検証する。
+Local索引は親/子の数と除去位置の対応を検証し、対応するsegmentだけが除去されるdiffを要求する。
+HASH COALESCEではLocal subpartitionの明示的USABLE状態を必須とし、状態変化を隠さない。
+DROP SUBPARTITIONの名前は表全体で一意に解決できる必要がある。
+Local索引のない表もこのプランナーを通す。追加SELECT・依存関係・公開API・共通モデル・
+設定形式の変更はない。変更モジュールはsqlapp-core-oracleと文書のみ。
+
+全partition/全subpartition除去、複数箇所編集、IOT、特殊索引、ONLINE、
+ADD/SPLIT/MERGE、template変更と同時編集はこの経路では未対応として拒否する。
+DROPで行を保持したい場合に自動でMERGEへ読み替えることはしない。
+
+`OracleCompositePartitionMaintenanceTest`に12件を追加。初回の型比較compile失敗と、
+テストfixtureのpartitioning置換時のNPEは修正し、対象テストを再実行した。
+実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleHashPartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全381件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コードの変更はなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合ADD/SPLIT/MERGE、高度な物理属性編集、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [Oracle DROP PARTITION/SUBPARTITION](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/ALTER-TABLE.html)、
+[HASH COALESCE SUBPARTITION](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

@@ -55,7 +55,9 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
 		if (before != null && after != null
 				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
-				&& (OracleTablePartitionMaintenance.iot(before) || OracleLocalPartitionSplit.hasLocalIndexes(before)
+				&& (before.getPartitioning() != null && (before.getPartitioning().getPartitioningType() == com.sqlapp.data.schemas.PartitioningType.Hash
+						|| before.getPartitioning().getSubPartitioningType() != null)
+						|| OracleTablePartitionMaintenance.iot(before) || OracleLocalPartitionSplit.hasLocalIndexes(before)
 						|| OracleLocalPartitionSplit.hasLocalIndexes(after))) {
 			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
 			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
@@ -69,7 +71,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 							: createOperation(statement, SqlType.DROP, plan.removed(), null));
 				return operations;
 			}
-			OracleSqlBuilder builder = createSqlBuilder();
+			OracleSqlBuilder builder = createSqlBuilder(getDialect());
 			OracleLocalPartitionSplit.add(before, after, getDialect(), getOptions().isDecorateSchemaName(), builder);
 			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}

@@ -48,6 +48,46 @@ class OracleTablePartitionMaintenanceTest {
 		assertEquals(List.of("ALTER TABLE APP.T ADD PARTITION P3 VALUES LESS THAN (300) TABLESPACE DATA", "ALTER INDEX APP.IX RENAME PARTITION P3 TO IP3", "ALTER INDEX APP.IX REBUILD PARTITION IP3 TABLESPACE INDEX_DATA"), sql(before, after, DialectHolder.oracle10gDialect));
 		assertEquals(2, before.getPartitioning().getPartitions().size());
 	}
+	private Table listTable() {
+		Table table = table(false, true);
+		table.getPartitioning().setPartitioningType(PartitioningType.List);
+		table.getIndexes().get(0).getPartitioning().setPartitioningType(PartitioningType.List);
+		for (Partitioning info : List.of(table.getPartitioning(), table.getIndexes().get(0).getPartitioning())) {
+			info.getPartitions().get(0).setHighValue("'JP', 'US'");
+			info.getPartitions().get(1).setHighValue("'DEFAULT'");
+		}
+		return table;
+	}
+	@Test void listAppendMaintainsLocalSegmentsAndDropMaintainsGlobalIndexes() {
+		Table before = listTable(), after = append(before);
+		assertEquals(List.of("ALTER TABLE APP.T ADD PARTITION P3 VALUES (300) TABLESPACE DATA", "ALTER INDEX APP.IX RENAME PARTITION P3 TO IP3", "ALTER INDEX APP.IX REBUILD PARTITION IP3 TABLESPACE INDEX_DATA"), sql(before, after, DialectHolder.oracle10gDialect));
+		assertEquals(List.of("ALTER TABLE APP.T DROP PARTITION P1 UPDATE INDEXES"), sql(before, drop(before, 0), DialectHolder.oracle10gDialect));
+	}
+	@Test void listDefaultBlocksAppendButAllowsDrop() {
+		Table before = listTable(); before.getPartitioning().getPartitions().get(0).setHighValue(" default ");
+		before.getIndexes().get(0).getPartitioning().getPartitions().get(0).setHighValue(" default ");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, append(before), DialectHolder.oracle26aiDialect));
+		assertEquals(1, sql(before, drop(before, 0), DialectHolder.oracle26aiDialect).size());
+	}
+	@Test void listIotAndUncoordinatedListChangesAreRejected() {
+		Table before = listTable(); before.getSpecifics().put("oracle.table.organization", "INDEX");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, append(before), DialectHolder.oracle26aiDialect));
+		Table heap = listTable(), changed = heap.clone(); changed.getPartitioning().getPartitions().get(0).setHighValue("'GB'");
+		assertThrows(IllegalArgumentException.class, () -> sql(heap, changed, DialectHolder.oracle26aiDialect));
+	}
+	@Test void listMaintenanceKeepsVersionCompositeAndOperationGuards() {
+		Table before = listTable(), after = append(before);
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.defaultDialect));
+		before.getPartitioning().setSubPartitioningType(PartitioningType.Hash);
+		assertThrows(IllegalArgumentException.class, () -> sql(before, append(before), DialectHolder.oracle26aiDialect));
+		Table source = listTable(), target = append(source);
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		registry.getTableOptions().setAllowAddPartition(false);
+		registry.getTableOptions().setAllowDropPartition(false);
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(target, SqlType.ALTER).createDiffSql(source.diff(target)));
+		Table deleted = drop(source, 0);
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(deleted, SqlType.ALTER).createDiffSql(source.diff(deleted)));
+	}
 	@Test void appendCanInheritTheLocalIndexDefaultTablespace() {
 		Table before = table(false, true); before.getIndexes().get(0).setTableSpaceName("DEFAULT_INDEX_SPACE"); Table after = append(before);
 		after.getIndexes().get(0).getPartitioning().getPartitions().get(2).setTableSpaceName(null);

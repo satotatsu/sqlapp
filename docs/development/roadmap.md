@@ -255,7 +255,20 @@ indexes with UPDATE INDEXES and explicit Local segment names/tablespaces. Other
 Appending or explicitly deleting one simple RANGE partition now coordinates Local
 index partitions, including deterministic automatic names, optional rename/rebuild
 and global-index maintenance on DROP. Existing allowAddPartition/allowDropPartition
-options are honored. Composite/hash/list operations and ONLINE maintenance remain deferred.
+options are honored. Oracle 10g+ heap tables also support appending or deleting one
+simple LIST partition with coordinated Local segments; ADD with an existing DEFAULT
+partition is rejected. Two-way LIST SPLIT/MERGE also maintains ordinary Local
+indexes using UPDATE INDEXES on Oracle 10g+ heap tables. Single-key literal value
+sets are validated for preservation, including DEFAULT; expressions and tuple
+keys are rejected. Simple HASH heap tables support appending one partition or
+coalescing the last partition with UPDATE INDEXES, including Local segment
+rename/tablespace handling after ADD. Middle-partition removal is rejected;
+COALESCE preserves rows and is classified as ALTER. Composite heap tables support
+one parent partition DROP, one RANGE/LIST subpartition DROP, or last HASH
+partition/subpartition COALESCE, with corresponding Local segments and UPDATE
+INDEXES. RANGE-HASH/LIST uses Oracle 10g+; other supported combinations use a
+conservative Oracle 12c+ boundary. Composite ADD/SPLIT/MERGE and ONLINE maintenance
+remain deferred.
 IOT metadata now reads root prefix compression and PCTTHRESHOLD in the existing
 catalog query. Oracle 10g+ IOTs additionally retain batched DBMS_METADATA CREATE
 TABLE DDL, allowing overflow/mapping/compressed/partitioned forms to be recreated

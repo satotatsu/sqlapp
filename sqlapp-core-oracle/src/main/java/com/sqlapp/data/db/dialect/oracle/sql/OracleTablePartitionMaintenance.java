@@ -21,7 +21,7 @@ import com.sqlapp.data.schemas.Table;
 
 /** Coordinated table/local-index maintenance plans. These generate SQL, never execute it. */
 final class OracleTablePartitionMaintenance {
-	record Plan(List<String> statements, Partition removed) { }
+	record Plan(List<String> statements, com.sqlapp.data.schemas.AbstractPartition<?> removed) { }
 	private OracleTablePartitionMaintenance() { }
 	static boolean iot(Table table) { return "INDEX".equals(table.getSpecifics().get("oracle.table.organization")); }
 	private static boolean local(Index index) { return "LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")); }
@@ -31,9 +31,9 @@ final class OracleTablePartitionMaintenance {
 		return left.diff(right).toDifference().getChangedProperties(dialect).isEmpty();
 	}
 	private static void shape(Partitioning a, Partitioning b, Dialect dialect) {
-		require(a != null && b != null && a.getPartitioningType() == PartitioningType.Range
-				&& b.getPartitioningType() == PartitioningType.Range && a.getSubPartitioningType() == null
-				&& b.getSubPartitioningType() == null, "Partition maintenance requires simple RANGE partitioning");
+		require(a != null && b != null && (a.getPartitioningType() == PartitioningType.Range || a.getPartitioningType() == PartitioningType.List || a.getPartitioningType() == PartitioningType.Hash)
+				&& b.getPartitioningType() == a.getPartitioningType() && a.getSubPartitioningType() == null
+				&& b.getSubPartitioningType() == null, "Partition maintenance requires simple RANGE, LIST or HASH partitioning");
 		Partitioning left = a.clone(), right = b.clone(); left.getPartitions().clear(); right.getPartitions().clear();
 		left.setPartitionSize(0); right.setPartitionSize(0);
 		require(left.diff(right).toDifference().getChangedProperties(dialect).isEmpty(), "Partition keys and defaults must remain unchanged");
@@ -46,6 +46,7 @@ final class OracleTablePartitionMaintenance {
 			require(Set.of(SchemaObjectProperties.PARTITIONING.getLabel(), SchemaObjectProperties.INDEXES.getLabel()).contains(property),
 					"Partition maintenance must be isolated from other table changes: " + property);
 		shape(a.getPartitioning(), b.getPartitioning(), dialect);
+		if (iot(a)) require(a.getPartitioning().getPartitioningType() == PartitioningType.Range, "IOT maintenance requires RANGE partitioning");
 		require(a.getIndexes().size() == b.getIndexes().size(), "Index additions/removals must be separate from partition maintenance");
 	}
 	static void ordinary(Index index) {
@@ -75,14 +76,26 @@ final class OracleTablePartitionMaintenance {
 		return -1;
 	}
 	static Plan create(Table before, Table after, Dialect dialect, boolean decorate, boolean allowAdd, boolean allowDrop, Supplier<OracleSqlBuilder> builders) {
+		if (before.getPartitioning() != null && before.getPartitioning().getSubPartitioningType() != null)
+			return OracleCompositePartitionMaintenance.create(before, after, dialect, decorate, allowDrop, builders);
 		isolated(before, after, dialect);
 		Partitioning oldInfo = before.getPartitioning(), info = after.getPartitioning();
 		int oldCount = oldInfo.getPartitions().size(), newCount = info.getPartitions().size();
+		boolean hash = oldInfo.getPartitioningType() == PartitioningType.Hash;
+		if (hash) {
+			require(!before.isCompression(), "HASH maintenance requires an uncompressed table");
+			for (Partition part : oldInfo.getPartitions()) newPartition(part, false, dialect, true);
+		}
 		if (newCount == oldCount + 1 && prefix(oldInfo, info, oldCount, dialect)) {
 			require(allowAdd, "Table options prohibit adding partitions"); return append(before, after, dialect, decorate, builders);
 		}
 		int position = removed(oldInfo, info, dialect);
-		if (position >= 0) { require(allowDrop, "Table options prohibit dropping partitions"); return drop(before, after, position, dialect, decorate, builders); }
+		if (position >= 0) {
+			require(allowDrop, "Table options prohibit dropping/coalescing partitions");
+			if (hash) require(position == oldCount - 1, "HASH COALESCE removes only the last partition");
+			return drop(before, after, position, dialect, decorate, builders);
+		}
+		if (hash) throw new IllegalArgumentException("HASH maintenance requires one appended or last coalesced partition");
 		if (iot(before)) {
 			if (oldCount == newCount) return moveIot(before, after, dialect, decorate, builders);
 			return splitOrMergeIot(before, after, dialect, decorate, builders);
@@ -90,9 +103,12 @@ final class OracleTablePartitionMaintenance {
 		return null; // Existing heap SPLIT/MERGE planner owns the remaining supported shapes.
 	}
 	private static void newPartition(Partition part, boolean index, Dialect dialect) {
+		newPartition(part, index, dialect, false);
+	}
+	private static void newPartition(Partition part, boolean index, Dialect dialect, boolean hash) {
 		Partition expected = new Partition(part.getName()).setHighValue(part.getHighValue()).setTableSpaceName(part.getTableSpaceName());
 		if (index) expected.getSpecifics().put("oracle.index.status", "USABLE");
-		require(part.getName() != null && !part.getName().isBlank() && part.getHighValue() != null && !part.getHighValue().isBlank(), "New range partition requires a name and boundary");
+		require(part.getName() != null && !part.getName().isBlank() && (hash ? part.getHighValue() == null : part.getHighValue() != null && !part.getHighValue().isBlank()), "Partition requires a name and a boundary only for RANGE/LIST");
 		require(same(expected, part, dialect), "New partition supports only boundary, tablespace and explicitly USABLE index state");
 	}
 	private static OracleSqlBuilder table(Table before, boolean decorate, Supplier<OracleSqlBuilder> builders) {
@@ -100,23 +116,31 @@ final class OracleTablePartitionMaintenance {
 	}
 	private static Plan append(Table before, Table after, Dialect dialect, boolean decorate, Supplier<OracleSqlBuilder> builders) {
 		int position = before.getPartitioning().getPartitions().size();
+		boolean hash = before.getPartitioning().getPartitioningType() == PartitioningType.Hash;
 		require(position > 0 && !before.isCompression(), "Appending requires an existing uncompressed range table");
 		String oldBound = before.getPartitioning().getPartitions().get(position - 1).getHighValue();
-		require(oldBound != null && !oldBound.isBlank(), "Existing highest range partition boundary is required");
-		require(!oldBound.toUpperCase(java.util.Locale.ROOT).contains("MAXVALUE"), "Cannot append after MAXVALUE; split that partition instead");
-		Partition added = after.getPartitioning().getPartitions().get(position); newPartition(added, false, dialect);
+		require(hash || oldBound != null && !oldBound.isBlank(), "Existing highest range partition boundary is required");
+		boolean list = before.getPartitioning().getPartitioningType() == PartitioningType.List;
+		if (list) {
+			for (Partition existing : before.getPartitioning().getPartitions())
+				require(existing.getHighValue() != null && !"DEFAULT".equalsIgnoreCase(existing.getHighValue().trim()), "Cannot add a LIST partition with an existing DEFAULT partition");
+		} else if (!hash) require(!oldBound.toUpperCase(java.util.Locale.ROOT).contains("MAXVALUE"), "Cannot append after MAXVALUE; split that partition instead");
+		Partition added = after.getPartitioning().getPartitions().get(position); newPartition(added, false, dialect, hash);
 		List<String> statements = new ArrayList<>();
-		OracleSqlBuilder sql = table(before, decorate, builders); sql._add("ADD PARTITION ").name(added.getName())._add(" VALUES LESS THAN (")._add(added.getHighValue())._add(")");
+		OracleSqlBuilder sql = table(before, decorate, builders); sql._add("ADD PARTITION ").name(added.getName());
+		if (!hash) sql._add(list ? " VALUES (" : " VALUES LESS THAN (")._add(added.getHighValue())._add(")");
 		if (added.getTableSpaceName() != null) sql._add(" TABLESPACE ").name(added.getTableSpaceName());
+		if (hash) sql._add(" UPDATE INDEXES");
 		statements.add(sql.toString());
 		for (Index index : before.getIndexes()) {
 			Index target = after.getIndexes().get(index.getName()); require(target != null, "Index identity must remain unchanged"); ordinary(index);
 			if (!local(index)) { require(index.diff(target).toDifference().getChangedProperties(dialect).isEmpty(), "Global indexes must remain unchanged"); continue; }
 			indexShape(index, target, dialect);
+			if (hash) hashIndex(index, dialect);
 			require(!index.isCompression() && index.getPartitioning().getPartitions().size() == position
 					&& target.getPartitioning().getPartitions().size() == position + 1
 					&& prefix(index.getPartitioning(), target.getPartitioning(), position, dialect), "Local index partitions must match the appended table partition");
-			Partition segment = target.getPartitioning().getPartitions().get(position); newPartition(segment, true, dialect);
+			Partition segment = target.getPartitioning().getPartitions().get(position); newPartition(segment, true, dialect, hash);
 			require(Objects.equals(segment.getHighValue(), added.getHighValue()), "Local index boundary must match its table partition");
 			require(index.getPartitioning().getPartitions().get(added.getName()) == null, "Automatic local index partition name would collide; choose another table partition name");
 			if (!added.getName().equals(segment.getName())) {
@@ -129,16 +153,23 @@ final class OracleTablePartitionMaintenance {
 		return new Plan(statements, null);
 	}
 	private static Plan drop(Table before, Table after, int position, Dialect dialect, boolean decorate, Supplier<OracleSqlBuilder> builders) {
+		boolean hash = before.getPartitioning().getPartitioningType() == PartitioningType.Hash;
 		for (Index index : before.getIndexes()) {
 			Index target = after.getIndexes().get(index.getName()); require(target != null, "Index identity must remain unchanged"); ordinary(index);
 			if (!local(index)) { require(index.diff(target).toDifference().getChangedProperties(dialect).isEmpty(), "Global indexes must remain unchanged"); continue; }
 			indexShape(index, target, dialect);
+			if (hash) hashIndex(index, dialect);
 			require(index.getPartitioning().getPartitions().size() == before.getPartitioning().getPartitions().size()
 					&& removed(index.getPartitioning(), target.getPartitioning(), dialect) == position, "Remove exactly the corresponding local index partition");
 		}
 		Partition deleted = before.getPartitioning().getPartitions().get(position);
+		if (hash) return new Plan(List.of(table(before, decorate, builders)._add("COALESCE PARTITION UPDATE INDEXES").toString()), null);
 		OracleSqlBuilder sql = table(before, decorate, builders); sql._add("DROP PARTITION ").name(deleted.getName())._add(iot(before) ? " UPDATE GLOBAL INDEXES" : " UPDATE INDEXES");
 		return new Plan(List.of(sql.toString()), deleted);
+	}
+	private static void hashIndex(Index index, Dialect dialect) {
+		require(index.getPartitioning().getPartitioningType() == PartitioningType.Hash && !index.isCompression(), "HASH table requires an uncompressed HASH Local index");
+		for (Partition part : index.getPartitioning().getPartitions()) newPartition(part, true, dialect, true);
 	}
 	private static Plan splitOrMergeIot(Table before, Table after, Dialect dialect, boolean decorate, Supplier<OracleSqlBuilder> builders) {
 		for (Index index : before.getIndexes()) {

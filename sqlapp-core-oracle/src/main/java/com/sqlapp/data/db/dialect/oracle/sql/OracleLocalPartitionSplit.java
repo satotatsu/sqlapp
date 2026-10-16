@@ -14,7 +14,7 @@ import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.SchemaObjectProperties;
 import com.sqlapp.data.schemas.Table;
 
-/** A single range split with explicit, usable local index segments. */
+/** A single range/list split with explicit, usable local index segments. */
 final class OracleLocalPartitionSplit {
 	private OracleLocalPartitionSplit() {
 	}
@@ -54,12 +54,15 @@ final class OracleLocalPartitionSplit {
 				throw new IllegalArgumentException(
 						"Table partition split must be isolated from other table changes: " + property);
 		Partitioning oldInfo = before.getPartitioning(), newInfo = after.getPartitioning();
-		if (oldInfo == null || newInfo == null || oldInfo.getPartitioningType() != PartitioningType.Range
-				|| newInfo.getPartitioningType() != PartitioningType.Range || oldInfo.getSubPartitioningType() != null
+		if (oldInfo == null || newInfo == null || (oldInfo.getPartitioningType() != PartitioningType.Range && oldInfo.getPartitioningType() != PartitioningType.List)
+				|| newInfo.getPartitioningType() != oldInfo.getPartitioningType() || oldInfo.getSubPartitioningType() != null
 				|| newInfo.getSubPartitioningType() != null
 				|| newInfo.getPartitions().size() != oldInfo.getPartitions().size() + 1)
 			throw new IllegalArgumentException(
-					"Local index maintenance currently requires one simple RANGE partition split");
+					"Local index maintenance requires one simple RANGE or LIST partition split");
+		boolean list = oldInfo.getPartitioningType() == PartitioningType.List;
+		if (list && oldInfo.getPartitioningColumns().size() != 1)
+			throw new IllegalArgumentException("LIST split/merge requires one partition key column");
 		Partitioning oldShape = oldInfo.clone(), newShape = newInfo.clone();
 		oldShape.getPartitions().clear();
 		newShape.getPartitions().clear();
@@ -78,7 +81,8 @@ final class OracleLocalPartitionSplit {
 				right = newInfo.getPartitions().get(position + 1);
 		if (original.getHighValue() == null || original.getHighValue().isBlank())
 			throw new IllegalArgumentException("Original partition upper boundary is required");
-		if (left.getHighValue() == null || left.getHighValue().isBlank()
+		if (list) OracleListPartitionValues.split(original.getHighValue(), left.getHighValue(), right.getHighValue());
+		else if (left.getHighValue() == null || left.getHighValue().isBlank()
 				|| "MAXVALUE".equalsIgnoreCase(left.getHighValue())
 				|| Objects.equals(left.getHighValue(), original.getHighValue())
 				|| !Objects.equals(right.getHighValue(), original.getHighValue()))
@@ -90,7 +94,7 @@ final class OracleLocalPartitionSplit {
 		if (before.getIndexes().size() != after.getIndexes().size())
 			throw new IllegalArgumentException("Index additions/removals must be separate from a split");
 		builder.alter().table().space().name(before, decorate).space()._add("SPLIT PARTITION ").name(original.getName())
-				.space()._add("AT (")._add(left.getHighValue())._add(") INTO (");
+				.space()._add(list ? "VALUES (" : "AT (")._add(left.getHighValue())._add(") INTO (");
 		partition(left, builder);
 		builder.comma();
 		partition(right, builder);
@@ -134,6 +138,13 @@ final class OracleLocalPartitionSplit {
 				same(oldParts.getPartitions().get(i), parts.getPartitions().get(i + 1), dialect);
 			Partition source = oldParts.getPartitions().get(position), a = parts.getPartitions().get(position),
 					b = parts.getPartitions().get(position + 1);
+			if (list) {
+				if (oldParts.getPartitioningType() != PartitioningType.List)
+					throw new IllegalArgumentException("Local index partition type must match the LIST table");
+				OracleListPartitionValues.same(original.getHighValue(), source.getHighValue());
+				OracleListPartitionValues.same(left.getHighValue(), a.getHighValue());
+				OracleListPartitionValues.same(right.getHighValue(), b.getHighValue());
+			}
 			for (Partition part : java.util.List.of(source, a, b)) {
 				if (!"USABLE".equals(part.getSpecifics().get("oracle.index.status")) || part.isCompression()
 						|| !part.getSubPartitions().isEmpty())
