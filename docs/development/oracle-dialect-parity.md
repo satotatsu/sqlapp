@@ -1415,6 +1415,171 @@ Java 21とGradle WrapperでOracle全306件、関連command 149件、plugin 1件�
 [IOT ALTERとpartition索引保守の制限](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、
 [MERGE partition](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
 
+## 2026-10-16: Local索引ADD/DROPとIOT partition保守
+
+Table ALTERの高水準入口に専用plannerを追加した。共通モデル、設定形式、公開API、
+依存関係、MetadataReader、DialectResolverは変更しない。
+対象は単純RANGEで、heap表はOracle 10g以降、IOTはOracle 12c以降に限定する。
+旧版のReaderと今回の対象外の通常表ALTERは既存経路を維持する。
+
+- ADD: 既存partitionを維持して末尾に一つ追加する差分を`ADD PARTITION ... VALUES LESS THAN`にする。
+  Local索引はOracleが表partitionと同名で追加する仕様を使い、必要なら後続でRENAME PARTITIONと
+  REBUILD PARTITION TABLESPACEを出す。表領域の省略時は索引のdefaultを継承する。
+  自動名の衝突、MAXVALUE後の追加、新segmentのUNUSABLE/圧縮/余分な属性は拒否する。
+- DROP: 既存partitionを一つ削除し、残りが同一の差分を明示的なDROPとして返す。
+  対応するLocal索引partitionの削除も検証する。heap表はUPDATE INDEXES、IOTはUPDATE GLOBAL INDEXES。
+  SqlOperationの型はDROPで、削除partitionをoriginalに保持する。このSQLは当該partitionの行も削除する。
+  行を保持するMERGEを意図する場合は、統合後のpartitionを新しい名前でモデル化する。
+  最後のpartitionの削除や、他のpartition・Local segmentの同時変更は拒否する。
+- 既存`TableOptions.allowAddPartition`/`allowDropPartition`がfalseなら、該当SQLの生成を明示的に拒否する。
+- IOT SPLIT/MERGE: 通常のGlobal secondary indexが変更されない場合に、一つを二分・隣接二つを統合できる。
+  上限境界を保持し、IOTには使用できないUPDATE INDEXESを付けない。
+- IOT MOVE PARTITION: 一つのpartitionの表領域変更を生成する。通常のLocal/global secondary indexは
+  変更しない。Oracleのlogical ROWIDにより索引のUSABLE状態を維持する。
+  移動後のsecondary indexのROWID guess更新による性能調整は、この処理では実施しない。
+
+partitionキー・型・default、表の列・制約、索引属性、複合partitionや特殊索引の同時変更は拒否する。
+ONLINEも専用計画が必要。境界式の大小関係・実DBの権限や参照制約はOracleが実行時に検証する。
+
+完全IOT DDLを持つモデルでも、検証済みの上記partition差分は古いCREATE文を使わず生成できる。
+生成処理はbefore/afterモデルを変更しない。afterの保存CREATE DDLは古いsnapshotのままなので、
+後でCREATEを生成するにはメタデータを再取得して定義を更新する必要がある。
+before自体のsnapshotが古い場合や、別の構造変更を混在させる場合は拒否する。
+
+`OracleTablePartitionMaintenanceTest`でSQL・Local対応・DROP操作種別・設定・版境界・
+名前衝突・上限・未知の変更・IOT snapshotを検証する。既存のLocal SPLIT/MERGEとIOT定義テストも実行。
+検証中に追加テストのnull引数のoverload曖昧性でcompileTestJavaが一度失敗し、String型指定で修正した。
+識別子引用設定の追加テストでも継承不足を検出し、設定を適用する共通builder生成経路へ修正した。
+実DB・外部DBテストは未実施。生成ファイルの意図的な変更はない。
+最終検証はOracle全321件、関連command 149件、plugin 1件が成功し、失敗・エラー・skipは0。
+変更がOracle内に閉じているため、core/PostgreSQL/H2の全体テストは今回再実行していない。
+
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleIotDefinitionTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTablePartitionMaintenanceTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+残る範囲はcustom indextype/Text preferenceの前提作成、IOT Local secondary indexを伴うSPLIT/MERGE、
+複合/hash/list partition、複雑なroot MOVE、opaque DDL内部の構造編集と実DB往復検証。
+
+仕様: [Oracle 11g ADDのLocal索引自動名](https://docs.oracle.com/html/E26088_01/statements_3001.htm)、
+[Oracle 12.2 IOT ALTER制約](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、
+[Oracle partition保守](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
+
+## 2026-10-16: IOT Local索引のSPLIT/MERGEと匿名PL/SQLのSQL往復
+
+Oracle 12c以降の単純RANGE IOTについて、通常・非圧縮Local secondary indexを伴う
+SPLIT/MERGEを追加した。主処理のALTER TABLEにはUPDATE INDEXESを付けず、
+後続のSqlOperationで対象Local segmentを保守する。Global secondary indexは従来どおり変更しない。
+
+IOTのSPLIT/MERGEでLocal索引partitionがUNUSABLEになり得ることと、名前をOracleが割り当てることを
+前提に、対象をowner/index/partition positionで一括解決する。全Local索引を一つの
+`SELECT ... BULK COLLECT`にまとめる。これは生成DDLの実行時に必要な解決であり、
+MetadataReaderの追加SELECTやオブジェクト単位の読取を増やすものではない。
+
+対象件数、索引partition総数、対象外segmentとの名前衝突と一時名衝突を、rename前に検証する。
+Oracleから返された実名を一旦決定的な一時名へ変更してから、モデル上の結果名へ変更する。
+これによりOracleが自動名を割り当てる場合や、対象内で名前が入れ替わる場合に対応する。
+状態がUSABLEならREBUILDする。UNUSABLEが要求された場合は明示的にMODIFY PARTITION UNUSABLEを生成し、
+表領域変更も要求されていれば先にREBUILDで表領域を反映する。
+識別子は実行時にも二重引用符をescapeし、カタログ検索の文字列literalは単一引用符をescapeする。
+Schema省略時はCURRENT_SCHEMAで解決し、既存の識別子引用設定も反映する。
+segment表領域が省略され、索引の既定表領域をモデルから解決できる場合はその値を用いる。
+テンプレートの予約文字列を識別子に含む場合も、データとして保持する。
+
+Local索引の変更外partition、root属性、partition keyを維持する。
+対象segmentは明示的USABLE/UNUSABLEと境界・名前・表領域・非圧縮属性に限定する。
+圧縮、複合partition、未知の物理属性・状態、曖昧な対応、ONLINEは引き続き拒否する。
+before/afterモデルと完全DDL snapshotは変更せず、古いCREATE DDLの再利用拒否も維持する。
+
+主な追加テストは`OracleIotLocalIndexMaintenanceTest`の13件と`OracleSqlSplitterTest`の3件。
+生成SQL、単一のbulk解決、複数Local索引、名前衝突検証、状態と表領域、XML、既定値・引用設定、
+literal中の予約文字列、生成SQLファイル往復、未対応属性の拒否を検証する。
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotLocalIndexMaintenanceTest' --tests '*OracleSqlSplitterTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleTablePartitionMaintenanceTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+最終検証: Oracle全337件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+共通コードの変更はないため、core/PostgreSQL/H2の全体テストは今回再実行していない。
+
+OracleSqlSplitterは匿名DECLARE/BEGINを、literal/comment外の独立した`/`行まで一文として読む。
+JDBC実行に必要な末尾のセミコロンを保持し、slash欠落は明確なエラーにする。
+既存のCREATE PROCEDURE等の分割処理は維持する。新しいPL/SQLを含む生成SQLファイルが
+主ALTER TABLEと後続匿名ブロックの二文へ往復することをテストした。
+
+変更はsqlapp-core-oracleとドキュメントのみ。新しい公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverの変更はない。実DBに接続していないため、PL/SQLのOracle上での
+compile/実行は未検証。Oracle DDLはcommitを伴うので、後続処理に失敗すれば主partition操作や
+一部renameが完了している可能性がある。このSQL生成器はatomic実行や自動resumeを保証しない。
+
+custom indextype/Text preferenceの調査で確認した点:
+
+- `OracleSchemaReader.newOperatorClassReader()`はnullで、Oracle INDEXTYPEのSchema collectionはない。
+  `Type`は実際のCREATE TYPE、`OperatorClass`はPostgreSQLのoperator classなので代用しない。
+- custom indextypeの`ODCIIndexGetMetadata`は、辞書にない実装固有情報をExport/Import用に返す拡張点。
+  GET_DDL('INDEX')だけで、任意のcustom実装の設定まで取得できるとは仮定しない。
+- Oracle Textの`CTX_REPORT.CREATE_INDEX_SCRIPT`はpreference込みのSQL*Plusスクリプトを返すが、
+  preference名を変更する。元のPARAMETERSを参照する既存CREATE INDEX DDLと単純結合できない。
+  前提情報と対応する索引DDLを一体で表現し、共有前提の依存順・重複・ライフサイクルを扱う設計が残る。
+
+この調査を前提情報の自動再生成の実装完了とは扱わない。残件はこの前提モデル、圧縮Local索引、
+複合/hash/list partition、複雑なroot MOVE・opaque DDL編集、実DB往復検証。
+
+仕様: [IOT SPLITのLocal索引状態](https://docs.oracle.com/en/database/oracle/oracle-database/18/vldbg/maintenance-partition-tables-indexes.html)、
+[ODCIIndexGetMetadata](https://docs.oracle.com/en/database/oracle/oracle-database/19/addci/extensible-indexing-interface.html)、
+[CTX_REPORT.CREATE_INDEX_SCRIPT](https://docs.oracle.com/en/database/oracle/oracle-database/19/ccref/CTX_REPORT-package.html)。
+
+## 2026-10-16: 圧縮Local secondary indexと保存DDLを持つ単純IOTのroot MOVE
+
+IOT SPLIT/MERGE後のLocal索引保守に、prefix圧縮、ADVANCED LOW/HIGH、明示的NOCOMPRESSを追加した。
+既存の`OracleIndexCompression`と`OracleIndexPartitionCompression`を使って生成・検証する。
+rootでprefix/advanced圧縮が有効になっていること、prefix長、Bitmap制約、既存のDialect境界を検証する。
+対応範囲は単純RANGE IOTの通常Local secondary index。既存境界に従いLOWは12c以降、HIGHは18c以降。
+
+結果segmentの有効な圧縮設定を親索引のdefaultからも解決し、REBUILDに圧縮句を明示する。
+source segmentや親defaultが圧縮されている場合には、結果状態がUNUSABLEでもREBUILDを行って
+圧縮・表領域を反映した後にUNUSABLEへ変更する。すべて非圧縮で物理変更のないUNUSABLE指定には
+不要なREBUILDを追加しない。一括catalog解決と二段階renameの構造は維持し、追加SELECTはない。
+
+単純・非partition IOTの孤立したroot表領域変更は、保存CREATE DDLを持つモデルでも生成できる。
+beforeのsnapshotを検証し、古いCREATE DDLを再実行せず`ALTER TABLE ... MOVE TABLESPACE`を出す。
+既知の主キーprefix圧縮はCOMPRESS nで保持する。完全DDLに主キーが埋め込まれている場合には、
+重複するPKモデルを必須にしない。保存DDL自体の同時編集、列・制約などの同時変更、
+不明な移動先、partitioned/complex/mapping構成とBitmap secondary indexは拒否する。
+afterの古いDDLはそのまま保持し、再CREATEにはメタデータ再取得が必要という既存の保護を維持する。
+
+変更はsqlapp-core-oracleと文書のみ。公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverは変更しない。
+`OracleIotLocalIndexMaintenanceTest`に5件、`OracleIotOptionsTest`に4件を追加し、
+圧縮の継承・解除・版境界・UNUSABLE・不正prefix、opaque root MOVE、定義編集・移動先の拒否、
+完全DDL内の主キーを重複入力しない経路を検証する。以前のopaque構造ALTER拒否テストは
+単純な表領域変更ではなく未対応の列追加を検証するよう更新した。
+
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotOptionsTest' --tests '*OracleIotLocalIndexMaintenanceTest' --tests '*OracleIotDefinitionTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+最終検証: Oracle全346件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+共通コードの変更はないため、core/PostgreSQL/H2の全体テストは今回再実行していない。
+
+実DBへの接続・PL/SQLのOracle上でのcompile/実行は未実施。生成ファイルの意図的な変更はない。
+前提オブジェクトの自動再生成、複合/hash/list partition、complex/mapping root MOVE、
+opaque DDL内部の構造編集と実DB往復検証は残る。
+
+仕様: [ALTER INDEXとpartition圧縮](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/ALTER-INDEX.html)、
+[IOT MOVEとoverflow/mapping制約](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

@@ -47,4 +47,12 @@ final class OracleIotOptions {
 			if (space != null) builder.space()._add("TABLESPACE ").name(space);
 		}
 	}
+	static void addPreservedPrefix(Table table, OracleSqlBuilder builder) {
+		String prefix = table.getSpecifics().get(PREFIX + "compressionPrefixLength");
+		if (prefix == null) return;
+		var primary = table.getConstraints().getPrimaryKeyConstraint();
+		// Complete DDL may carry the PK without duplicated supplemental components.
+		number(table, "compressionPrefixLength", 1, primary == null ? Integer.MAX_VALUE : primary.getColumns().size() - 1);
+		builder._add(" COMPRESS ")._add(prefix);
+	}
 }

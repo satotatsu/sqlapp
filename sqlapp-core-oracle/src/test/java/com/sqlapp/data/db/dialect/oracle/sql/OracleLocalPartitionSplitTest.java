@@ -137,14 +137,11 @@ class OracleLocalPartitionSplitTest {
 	}
 
 	@Test
-	void onlineAndIotAreRejected() {
+	void onlineMaintenanceIsRejected() {
 		Table before = source(), after = split(before);
 		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
 		registry.getTableOptions().setOnlineIndex(true);
 		assertThrows(IllegalArgumentException.class,
 				() -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
-		before.getSpecifics().put("oracle.table.organization", "INDEX");
-		Table iot = split(before);
-		assertThrows(IllegalArgumentException.class, () -> sql(before, iot));
 	}
 }

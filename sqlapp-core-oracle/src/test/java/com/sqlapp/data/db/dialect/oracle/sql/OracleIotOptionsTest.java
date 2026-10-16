@@ -44,9 +44,39 @@ class OracleIotOptionsTest {
 		var statements = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
 		assertEquals(1, statements.size()); assertEquals("ALTER TABLE T MOVE TABLESPACE \"New Space\"", statements.get(0).getSqlText());
 	}
-	@Test void mappingOrCombinedChangesCannotUseSimpleMove() {
+	@Test void combinedChangesCannotUseRootMove() {
 		Table before = table(); before.setTableSpaceName("OLD"); before.getSpecifics().put(OracleIotOptions.PREFIX + "mapping", true);
-		Table after = before.clone(); after.setTableSpaceName("NEW");
+		Table after = before.clone(); after.setTableSpaceName("NEW"); after.getColumns().add("EXTRA");
 		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+	}
+	@Test void opaqueSimpleIotRootMovePreservesPrefixAndDefinitionGuard() {
+		Table before = table(); before.setTableSpaceName("OLD"); before.getSpecifics().put(OracleIotOptions.PREFIX + "compressionPrefixLength", "1");
+		String ddl = "CREATE TABLE T (ID NUMBER, SEQ NUMBER, BODY NUMBER, PRIMARY KEY(ID,SEQ)) ORGANIZATION INDEX TABLESPACE OLD COMPRESS 1";
+		com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(before, ddl);
+		Table after = before.clone(); after.setTableSpaceName("NEW");
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry(); var operations = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
+		assertEquals(1, operations.size()); assertEquals("ALTER TABLE T MOVE TABLESPACE NEW COMPRESS 1", operations.get(0).getSqlText());
+		assertEquals(ddl, com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before)); assertEquals("OLD", before.getTableSpaceName());
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(after, SqlType.CREATE));
+	}
+	@Test void bitmapIndexesAndAmbiguousRootTablespacesAreRejected() {
+		Table before = table(); before.setTableSpaceName("OLD"); before.getIndexes().add(new Index("BIX").setIndexType(IndexType.BitMap));
+		Table after = before.clone(); after.setTableSpaceName("NEW");
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry(); assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+		Table plain = table(); plain.setTableSpaceName("OLD"); Table blank = plain.clone(); blank.setTableSpaceName(" ");
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(blank, SqlType.ALTER).createDiffSql(plain.diff(blank)));
+		Table complex = table(); complex.setTableSpaceName("OLD"); complex.getSpecifics().put("oracle.table.iotComplex", true); Table complexTarget = complex.clone(); complexTarget.setTableSpaceName("NEW");
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(complexTarget, SqlType.ALTER).createDiffSql(complex.diff(complexTarget)));
+	}
+	@Test void rootMoveCannotHideAnOpaqueDefinitionEdit() {
+		Table before = table(); before.setTableSpaceName("OLD"); com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(before, "CREATE TABLE T (ID NUMBER PRIMARY KEY) ORGANIZATION INDEX");
+		Table after = before.clone(); after.setTableSpaceName("NEW"); com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(after, "CREATE TABLE T (ID NUMBER PRIMARY KEY, EXTRA NUMBER) ORGANIZATION INDEX");
+		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+	}
+	@Test void completeDdlRootMoveDoesNotRequireDuplicatePrimaryKeyComponents() {
+		Table before = table(); before.getConstraints().clear(); before.setTableSpaceName("OLD"); before.getSpecifics().put(OracleIotOptions.PREFIX + "compressionPrefixLength", "1");
+		com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(before, "CREATE TABLE T (ID NUMBER, SEQ NUMBER, PRIMARY KEY(ID,SEQ)) ORGANIZATION INDEX COMPRESS 1");
+		Table after = before.clone(); after.setTableSpaceName("NEW"); var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertTrue(registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)).get(0).getSqlText().endsWith("TABLESPACE NEW COMPRESS 1"));
 	}
 }

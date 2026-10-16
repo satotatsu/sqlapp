@@ -53,49 +53,66 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 	@Override
 	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
 		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
+		if (before != null && after != null
+				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
+				&& (OracleTablePartitionMaintenance.iot(before) || OracleLocalPartitionSplit.hasLocalIndexes(before)
+						|| OracleLocalPartitionSplit.hasLocalIndexes(after))) {
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
+			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
+				throw new IllegalArgumentException("ONLINE index maintenance is not supported by the table partition planner");
+			var plan = OracleTablePartitionMaintenance.create(before, after, getDialect(), getOptions().isDecorateSchemaName(),
+					getTableOptions().getAllowAddPartition().test(after), getTableOptions().getAllowDropPartition().test(after), () -> createSqlBuilder(getDialect()));
+			if (plan != null) {
+				List<SqlOperation> operations = new java.util.ArrayList<>();
+				for (String statement : plan.statements())
+					operations.add(plan.removed() == null ? createOperation(statement, SqlType.ALTER, before, after)
+							: createOperation(statement, SqlType.DROP, plan.removed(), null));
+				return operations;
+			}
+			OracleSqlBuilder builder = createSqlBuilder();
+			OracleLocalPartitionSplit.add(before, after, getDialect(), getOptions().isDecorateSchemaName(), builder);
+			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
+		}
+		boolean rootMove = before != null && after != null && OracleTablePartitionMaintenance.iot(before)
+				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName());
 		if (before != null && after != null) {
 			// An opaque table definition cannot silently become inconsistent after ALTER.
 			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
-			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(after);
-			if (before.getSpecifics()
-					.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)
-					|| after.getSpecifics()
-							.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)) {
-				if (!com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(before)
-						.equals(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(after)))
-					throw new IllegalArgumentException(
-							"Structural ALTER of a complete Oracle IOT definition requires an explicit migration plan");
+			if (!rootMove) {
+				com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(after);
+				if (before.getSpecifics()
+						.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)
+						|| after.getSpecifics()
+								.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)) {
+					if (!com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(before)
+							.equals(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(after)))
+						throw new IllegalArgumentException(
+								"Structural ALTER of a complete Oracle IOT definition requires an explicit migration plan");
+				}
 			}
 		}
-		if (before != null && after != null && "INDEX".equals(before.getSpecifics().get("oracle.table.organization"))
-				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName())) {
+		if (rootMove) {
 			var changes = before.diff(after).toDifference().getChangedProperties(getDialect());
 			if (changes.size() != 1 || !changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
-					|| before.getPartitioning() != null || before.getSpecifics().containsKey("oracle.table.iotComplex")
+					|| before.getPartitioning() != null || before.getTableType() == Table.TableType.Temporary
+					|| before.getSpecifics().containsKey("oracle.table.iotComplex")
 					|| "true".equals(before.getSpecifics().get("oracle.table.iot.mapping"))
-					|| after.getTableSpaceName() == null)
+					|| after.getTableSpaceName() == null || after.getTableSpaceName().isBlank())
 				throw new IllegalArgumentException(
-						"IOT tablespace MOVE requires an isolated simple nonpartitioned table change");
+						"IOT root MOVE requires one isolated nonpartitioned tablespace change");
 			for (var index : after.getIndexes()) {
-				OracleRebuildIndexFactory.validateOrdinaryIndex(index);
+				OracleTablePartitionMaintenance.ordinary(index);
+				if (index.getIndexType() != null && index.getIndexType().isBitMap()
+						|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
+					throw new IllegalArgumentException("IOT root MOVE with bitmap indexes requires explicit index-state handling");
 				if (getTableOptions().getOnlineIndex().test(after, index))
 					throw new IllegalArgumentException("ONLINE IOT MOVE requires a dedicated table option");
 			}
-			OracleSqlBuilder builder = createSqlBuilder();
+			OracleSqlBuilder builder = createSqlBuilder(getDialect());
 			builder.alter().table().space().name(before, getOptions().isDecorateSchemaName()).space()
 					._add("MOVE TABLESPACE ").name(after.getTableSpaceName());
+			OracleIotOptions.addPreservedPrefix(before, builder);
 			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
-		}
-		if (before != null && after != null
-				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
-				&& (OracleLocalPartitionSplit.hasLocalIndexes(before)
-						|| OracleLocalPartitionSplit.hasLocalIndexes(after))) {
-			OracleSqlBuilder builder = createSqlBuilder();
-			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
-				throw new IllegalArgumentException(
-						"ONLINE index maintenance is not supported by the table partition split planner");
-			OracleLocalPartitionSplit.add(before, after, getDialect(), getOptions().isDecorateSchemaName(), builder);
-			return java.util.List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}
 		return super.createDiffSql(difference);
 	}

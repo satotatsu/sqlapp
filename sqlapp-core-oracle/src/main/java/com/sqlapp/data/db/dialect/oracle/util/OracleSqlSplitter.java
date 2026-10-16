@@ -39,6 +39,17 @@ public class OracleSqlSplitter extends SqlSplitter {
 
 	private static final Pattern BEGIN_PATTERN = Pattern.compile("\\s*(BEGIN|DECLARE)\\s*",
 			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+	private static final Pattern ANONYMOUS_PATTERN = Pattern.compile("\\s*(BEGIN|DECLARE)\\b.*",
+			Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+	private static final Pattern SLASH_LINE = Pattern.compile("(?m)^[\\t ]*/[\\t ]*\\r?$");
+
+	@Override
+	protected String getResult(SqlTokenizer tokenizer) {
+		String result = super.getResult(tokenizer);
+		if (result != null && ANONYMOUS_PATTERN.matcher(result).matches() && !result.endsWith(";"))
+			return result + ";";
+		return result;
+	}
 
 	private static final Pattern END_PATTERN = Pattern.compile("\\s*END\\s*(?<term>[^\\s;])?\\s*;\\s*/\\s*.*",
 			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
@@ -48,6 +59,18 @@ public class OracleSqlSplitter extends SqlSplitter {
 		return new SqlTokenizer(input) {
 			@Override
 			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				if (ANONYMOUS_PATTERN.matcher(text).matches()) {
+					String remainder = stringHolder.substringAt();
+					Matcher slash = SLASH_LINE.matcher(remainder);
+					while (slash.find()) {
+						int position = stringHolder.getPosition() + slash.start() + slash.group().indexOf('/');
+						if (getTextMarker(position) == null) {
+							setPosition(position);
+							return true;
+						}
+					}
+					stringHolder.throwInvalidTextException("Delimiter[/] not found for anonymous PL/SQL block");
+				}
 				Matcher matcher = CREATE_PATTERN.matcher(text);
 				if (matcher.matches()) {
 					int delPos = stringHolder.indexOf(this.getCurrentDelimiter(), stringHolder.getPosition() + 10);

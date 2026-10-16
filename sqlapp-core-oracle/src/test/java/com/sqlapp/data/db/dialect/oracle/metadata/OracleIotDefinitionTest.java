@@ -67,7 +67,7 @@ class OracleIotDefinitionTest {
 		assertEquals(2, operations.size()); assertEquals(ddl("T1"), operations.get(0).getSqlText()); assertTrue(operations.get(1).getSqlText().contains("INDEX"));
 	}
 	@Test void structuralAlterAndOwnerRemappingCannotUseOpaqueDefinitions() {
-		Table before = table("T1"); OracleTableDefinition.set(before, ddl("T1")); Table after = before.clone(); after.setTableSpaceName("OTHER");
+		Table before = table("T1"); OracleTableDefinition.set(before, ddl("T1")); Table after = before.clone(); after.getColumns().add("EXTRA");
 		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
 		Table renamed = before.clone(); renamed.setSchemaName("OTHER");
 		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(renamed, SqlType.CREATE));

@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.oracle.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
@@ -45,6 +45,26 @@ public class OracleSqlSplitterTest extends AbstractTest {
 		assertEquals(
 				"CREATE TABLE employee (id INT, \n                       name VARCHAR(10), \n                       salary DECIMAL(9,2))",
 				splits.get(i++).getText());
+	}
+
+	@Test
+	void anonymousBlocksRetainTheirRequiredSemicolon() {
+		String block = "DECLARE\n n NUMBER;\nBEGIN\n n := 1;\n IF n=1 THEN NULL; END IF;\nEND;";
+		var statements = dialect.createSqlSplitter().parse(block + "\n/\nSELECT 1 FROM DUAL;");
+		assertEquals(2, statements.size()); assertEquals(block, statements.get(0).getText());
+		assertEquals("SELECT 1 FROM DUAL", statements.get(1).getText());
+	}
+
+	@Test
+	void slashLinesInsideLiteralsAndCommentsAreNotTerminators() {
+		String block = "BEGIN\n DBMS_OUTPUT.PUT_LINE('line\n/\ntext');\n /* comment\n/\n */\n NULL;\nEND;";
+		var statements = dialect.createSqlSplitter().parse(block + "\n/\n");
+		assertEquals(1, statements.size()); assertEquals(block, statements.get(0).getText());
+	}
+
+	@Test
+	void missingAnonymousBlockTerminatorFailsClearly() {
+		assertThrows(com.sqlapp.exceptions.InvalidTextException.class, () -> dialect.createSqlSplitter().parse("BEGIN NULL; END;"));
 	}
 
 }

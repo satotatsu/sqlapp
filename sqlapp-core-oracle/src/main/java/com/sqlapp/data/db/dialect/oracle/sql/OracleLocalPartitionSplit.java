@@ -76,6 +76,8 @@ final class OracleLocalPartitionSplit {
 					"Appending a partition is not a split; use an explicit table partition ADD plan");
 		Partition original = oldInfo.getPartitions().get(position), left = newInfo.getPartitions().get(position),
 				right = newInfo.getPartitions().get(position + 1);
+		if (original.getHighValue() == null || original.getHighValue().isBlank())
+			throw new IllegalArgumentException("Original partition upper boundary is required");
 		if (left.getHighValue() == null || left.getHighValue().isBlank()
 				|| "MAXVALUE".equalsIgnoreCase(left.getHighValue())
 				|| Objects.equals(left.getHighValue(), original.getHighValue())
@@ -100,6 +102,8 @@ final class OracleLocalPartitionSplit {
 				throw new IllegalArgumentException("Index identity must remain unchanged");
 			OracleRebuildIndexFactory.validateOrdinaryIndex(oldIndex);
 			if (oldIndex.getSpecifics().containsKey(OracleIndexDefinition.DEFINITION)
+					|| oldIndex.getSpecifics().containsKey(OracleIndexDefinition.REQUIRED)
+					|| oldIndex.getSpecifics().containsKey("oracle.index.unmodeledType")
 					|| "true".equalsIgnoreCase(oldIndex.getSpecifics().get("oracle.index.join")))
 				throw new IllegalArgumentException(
 						"Special index partition maintenance requires its dedicated planner");

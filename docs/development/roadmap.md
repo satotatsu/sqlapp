@@ -252,7 +252,10 @@ changes are rejected. Constraint-backed indexes and ONLINE replacement are guard
 Structured editing of opaque DDL and custom indextype prerequisites remain deferred.
 An isolated simple RANGE table partition split or adjacent two-partition merge now maintains ordinary Local/global
 indexes with UPDATE INDEXES and explicit Local segment names/tablespaces. Other
-Local table partition structure changes and ONLINE splitting remain deferred.
+Appending or explicitly deleting one simple RANGE partition now coordinates Local
+index partitions, including deterministic automatic names, optional rename/rebuild
+and global-index maintenance on DROP. Existing allowAddPartition/allowDropPartition
+options are honored. Composite/hash/list operations and ONLINE maintenance remain deferred.
 IOT metadata now reads root prefix compression and PCTTHRESHOLD in the existing
 catalog query. Oracle 10g+ IOTs additionally retain batched DBMS_METADATA CREATE
 TABLE DDL, allowing overflow/mapping/compressed/partitioned forms to be recreated
@@ -261,8 +264,30 @@ catalog metadata. Opaque table DDL has a model fingerprint and cannot be silentl
 replayed after structural edits. Simple authored IOTs support PCTTHRESHOLD,
 INCLUDING, OVERFLOW tablespace, MAPPING TABLE and prefix compression options;
 isolated nonpartitioned root tablespace changes use ALTER TABLE MOVE TABLESPACE.
-Opaque IOT structural ALTER, complex IOT MOVE and custom indextype/Text preference
-prerequisite creation remain deferred.
+Oracle 12c+ IOTs support simple RANGE partition ADD/DROP, SPLIT/MERGE with unchanged
+ordinary global secondary indexes, and a single partition tablespace MOVE with
+unchanged ordinary secondary indexes. DROP uses UPDATE GLOBAL INDEXES; IOT
+SPLIT/MERGE/MOVE omit the unsupported UPDATE INDEXES clause. Supported plans do
+not replay opaque CREATE DDL; it must be refreshed before later CREATE generation.
+Simple RANGE IOT SPLIT/MERGE now also handles ordinary Local secondary indexes,
+including prefix compression, ADVANCED LOW/HIGH and explicit NOCOMPRESS under
+the existing root-compression and dialect guards. A following PL/SQL operation resolves all affected Oracle-assigned segment
+names in one bulk catalog query, checks counts/name conflicts, renames through
+deterministic temporary names and rebuilds or explicitly marks the desired segments
+UNUSABLE. Requested tablespace/compression changes are applied before the final
+unusable state, including a rebuild when compressed source/default attributes
+would otherwise survive incorrectly. The existing CREATE/REBUILD compression
+helpers validate root prefixes, modes, bitmap restrictions and version boundaries.
+Oracle script parsing now preserves anonymous BEGIN/DECLARE blocks and their final
+semicolon using standalone slash delimiters outside literals/comments. The PL/SQL
+has unit-level SQL generation/script round-trip coverage; real Oracle execution
+and atomic/restart guarantees are not verified or provided by this generator.
+An isolated simple nonpartitioned IOT root tablespace MOVE now accepts an unchanged
+saved CREATE definition without replaying it, preserves a known primary-key prefix
+explicitly, and leaves the stale after-definition guarded until metadata refresh.
+Complex/mapping/partitioned root moves, bitmap secondary indexes, concurrent edits
+and blank/removed destination tablespaces remain rejected. Other opaque IOT structural ALTER, complex root IOT MOVE and custom indextype/Text
+preference prerequisite creation remain deferred.
 Local/global range index partition compression modes and explicit NOCOMPRESS now
 survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
 incompatible overrides and hash partition compression changes fail explicitly.
