@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.Oracle10g;
 import com.sqlapp.data.db.dialect.oracle.Oracle12c;
@@ -158,10 +159,6 @@ final class OracleTablePartitionMaintenance {
 			return splitOrMergeIot(before, after, dialect, decorate, builders);
 		}
 		return null; // Existing heap SPLIT/MERGE planner owns the remaining supported shapes.
-	}
-
-	private static void newPartition(Partition part, boolean index, Dialect dialect) {
-		newPartition(part, index, dialect, false);
 	}
 
 	private static void newPartition(Partition part, boolean index, Dialect dialect, boolean hash) {

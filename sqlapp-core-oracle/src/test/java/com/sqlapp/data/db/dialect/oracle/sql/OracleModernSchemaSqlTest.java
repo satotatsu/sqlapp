@@ -283,9 +283,8 @@ class OracleModernSchemaSqlTest extends AbstractOracleSqlFactoryTest {
 
 		final var oracle12 = DialectResolver.getInstance().getDialect("Oracle", 12, 2, 0);
 		scalable.setDialect(oracle12);
-		final String oracle12Sql = oracle12.createSqlFactoryRegistry().createSql(scalable, SqlType.CREATE).get(0)
-				.getSqlText();
-		assertTrue(!oracle12Sql.contains("SCALE"), oracle12Sql);
+		assertThrows(IllegalArgumentException.class,
+				() -> oracle12.createSqlFactoryRegistry().createSql(scalable, SqlType.CREATE));
 
 		final var oracle18 = DialectResolver.getInstance().getDialect("Oracle", 18, 0, 0);
 		scalable.setDialect(oracle18);

@@ -3,9 +3,7 @@ package com.sqlapp.data.db.dialect.oracle.bulk;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -111,12 +109,6 @@ public class OracleBulkUpsertExecutor implements BulkUpsertExecutor {
 			throw new IllegalArgumentException("Invalid Oracle stagingTableName: " + name);
 		}
 		return name;
-	}
-
-	private Set<String> names(final List<Column> columns) {
-		final Set<String> names = new HashSet<>();
-		columns.forEach(column -> names.add(column.getName()));
-		return names;
 	}
 
 	private String columnList(final List<Column> columns, final String alias) {
