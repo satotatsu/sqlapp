@@ -101,7 +101,7 @@ final class OracleLocalPartitionSplit {
 		partition(left, builder);
 		builder.comma();
 		partition(right, builder);
-		builder._add(") UPDATE INDEXES (");
+		builder._add(") UPDATE INDEXES");
 		boolean first = true;
 		for (Index oldIndex : before.getIndexes()) {
 			Index target = after.getIndexes().get(oldIndex.getName());
@@ -158,6 +158,7 @@ final class OracleLocalPartitionSplit {
 			same(normalized(source), normalized(b), dialect);
 			if (!Objects.equals(oldIndex.getSchemaName(), before.getSchemaName()))
 				throw new IllegalArgumentException("Cross-schema local index split requires explicit owner handling");
+			if (first) builder._add(" (");
 			builder.comma(!first).name(oldIndex, false).space()._add("(");
 			first = false;
 			partition(a, builder);
@@ -165,9 +166,7 @@ final class OracleLocalPartitionSplit {
 			partition(b, builder);
 			builder._add(")");
 		}
-		if (first)
-			throw new IllegalArgumentException("A split plan requires at least one local index");
-		builder._add(")");
+		if (!first) builder._add(")");
 	}
 
 	private static void merge(Table before, Table after, Dialect dialect, boolean decorate, OracleSqlBuilder builder) {
@@ -182,17 +181,18 @@ final class OracleLocalPartitionSplit {
 		builder.alter().table().space().name(before, decorate).space()._add("MERGE PARTITIONS ").name(first.getName())
 				.comma().name(second.getName()).space()._add("INTO ");
 		partition(after.getPartitioning().getPartitions().get(position), builder);
-		builder._add(" UPDATE INDEXES (");
+		builder._add(" UPDATE INDEXES");
 		boolean comma = false;
 		for (Index index : after.getIndexes()) {
 			if (!"LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
 				continue;
+			if (!comma) builder._add(" (");
 			builder.comma(comma).name(index, false).space()._add("(");
 			comma = true;
 			partition(index.getPartitioning().getPartitions().get(position), builder);
 			builder._add(")");
 		}
-		builder._add(")");
+		if (comma) builder._add(")");
 	}
 
 	private static void partition(Partition partition, OracleSqlBuilder builder) {

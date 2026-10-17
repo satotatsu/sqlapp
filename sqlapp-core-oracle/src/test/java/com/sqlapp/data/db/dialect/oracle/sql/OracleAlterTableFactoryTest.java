@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.oracle.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -231,11 +232,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		partitionInfo.getPartitioningColumns().add(table1.getColumns().get("cola"));
 		partitionInfo.setPartitionSize(10);
 		table2.setPartitioning(partitionInfo);
-		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		SqlOperation operation = CommonUtils.first(list);
-		String expected = getResource("alter_table_partition1.sql");
-		System.out.println(operation.getSqlText());
-		assertEquals(expected, operation.getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> operation.createDiffSql(table1.diff(table2)));
 	}
 
 	/**
@@ -247,11 +244,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table2 = getTable1("tableA");
 		Partitioning partitionInfo = getPartitionInfo1(table2);
 		table2.setPartitioning(partitionInfo);
-		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		SqlOperation operation = CommonUtils.first(list);
-		String expected = getResource("alter_table_partition2.sql");
-		System.out.println(operation.getSqlText());
-		assertEquals(expected, operation.getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> operation.createDiffSql(table1.diff(table2)));
 	}
 
 	private List<Partition> getPartitions(String baseName, int start, int size) {
@@ -293,11 +286,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		Table table2 = getTable1("tableA");
 		Partitioning partitionInfo = getPartitionInfo2(table2);
 		table2.setPartitioning(partitionInfo);
-		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		SqlOperation operation = CommonUtils.first(list);
-		String expected = getResource("alter_table_partition3.sql");
-		System.out.println(operation.getSqlText());
-		assertEquals(expected, operation.getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> operation.createDiffSql(table1.diff(table2)));
 	}
 
 	/**
@@ -313,11 +302,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		partitionInfo1.getPartitions().remove(0);
 		Partitioning partitionInfo2 = getPartitionInfo1(table2);
 		table2.setPartitioning(partitionInfo2);
-		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
-		SqlOperation operation = CommonUtils.first(list);
-		String expected = getResource("alter_table_partition4.sql");
-		System.out.println(operation.getSqlText());
-		assertEquals(expected, operation.getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> operation.createDiffSql(table1.diff(table2)));
 	}
 
 	/**
@@ -334,7 +319,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		partitionInfo2.getPartitions().remove(0);
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		SqlOperation commandText = CommonUtils.first(list);
-		String[] expected = new String[] { "ALTER TABLE \"tableA\" DROP PARTITION \"p0\"" };
+		String[] expected = new String[] { "ALTER TABLE \"tableA\" DROP PARTITION \"p0\" UPDATE INDEXES" };
 		String[] result = commandText.getSqlText().split("\n");
 		System.out.println(list);
 		for (int i = 0; i < expected.length; i++) {

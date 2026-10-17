@@ -1996,6 +1996,58 @@ identity拒否、無変更、private/public DROPを検証した。初回のDROP�
 生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅監査と実DB往復は未完了。
 仕様: [Oracle CREATE SYNONYM・OR REPLACEの制約](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-SYNONYM.html)。
 
+## 2026-10-17: sequenceオプションと複数語DROPの監査
+
+PACKAGE BODY/TYPE BODYは既存専用Factoryで正しく生成されていることをregistry経由で確認し、
+旧Dialect/10g/26aiを通す回帰テストを追加した。誤りを確認していないDROP実装は変更しない。
+
+SequenceのSCALE/EXTEND/SESSIONは、旧Dialectでは黙って落ち、不正な真偽値もfalseと扱われていた。
+基本CREATE Factoryで検証し、有効指定は既存の18c以降のFactoryだけに許可する。
+不正な真偽値とSCALEなしEXTENDを明示的に拒否する。未指定と明示falseは旧版互換を維持する。
+既存の18c側句生成・Reader・Resolverを変更せず、追加SELECTはない。
+既存API、共通モデル、設定形式、依存関係に変更なし。Oracleモジュールと文書のみ変更した。
+
+Sequenceテスト3件、複数語DROPテスト1件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSequenceOptionsTest' --tests '*OracleMultiwordDropTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全428件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+初回全体実行では旧版のSCALEを無視する期待の既存テスト1件が失敗したため、
+明示拒否を期待するよう更新し、対象テストと全体を再実行して成功した。
+旧版の有効指定・不正値がエラーになる点は意図的な動作変更である。
+実DB未実施。共有コードを変更せずcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅監査と実DB往復は未完了。
+
+## 2026-10-17: Local索引なしのheap partition変更経路
+
+単純RANGE/LIST表でLocal索引がない場合、旧ALTER経路が不正なADD構文や
+UPDATE INDEXESなしのDROPを生成していた。同じ検証済みプランナーへ統一し、
+10g以降で一つのADD/DROP、二分割/二partition結合を扱う。
+Global索引のみ・索引なしの場合も行を保持するSPLIT/MERGEを生成する。
+Local索引句がない場合はUPDATE INDEXESのみを出し、空の括弧を追加しない。
+Local索引がある場合のsegment名・表領域指定と既存の検証は維持する。
+
+partitioning null↔nonnullの変換は、旧経路の不正なALTER TABLE PARTITION BY等を出さず
+明示的なOracle移行計画を要求する。Oracleの新しい版で可能な変換も自動実装済みとは扱わない。
+末尾以外の複数追加などもサポート範囲外として拒否する。旧8/9共通Dialectはこの保守経路を拒否する。
+古いテスト4件は不正SQLを期待していたため明示拒否へ変更し、DROP期待にはUPDATE INDEXESを追加した。
+未使用の過去fixtureは削除していない。
+
+変更はsqlapp-core-oracleと文書のみ。既存公開API・共有モデル・設定形式・Reader・Resolver・
+依存関係に変更なし。追加SELECTなし。OracleHeapPartitionMaintenanceTestを4件追加した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleHeapPartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleAlterTableFactoryTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全432件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コードを変更せずcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。高度な変換・全操作経路の網羅確認と実DB往復は未完了。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
