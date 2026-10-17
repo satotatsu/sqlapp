@@ -143,13 +143,18 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 			if (entry.getValue() == null) continue;
 			String key = entry.getKey(), value = entry.getValue();
 			if (!physical.contains(key) && !storage.contains(key)) throw new IllegalArgumentException("Unsupported Oracle partition attribute: " + key);
-			if (type == PartitioningType.Hash || partition instanceof SubPartition) throw new IllegalArgumentException("HASH/subpartition physical attributes must be inherited: " + key);
 			if ("LOGGING".equals(key)) {
 				if (!java.util.Set.of("YES", "NO", "TRUE", "FALSE").contains(value.toUpperCase(java.util.Locale.ROOT))) throw new IllegalArgumentException("Invalid partition LOGGING: " + value);
 			} else if ("BUFFER_POOL".equals(key)) {
 				if (!java.util.Set.of("DEFAULT", "KEEP", "RECYCLE").contains(value)) throw new IllegalArgumentException("Invalid partition BUFFER_POOL: " + value);
 			} else if (!("MAX_EXTENTS".equals(key) && "UNLIMITED".equals(value)) && !value.matches("[0-9]+")) throw new IllegalArgumentException("Invalid numeric partition attribute: " + key);
+			if (type == PartitioningType.Hash || partition instanceof SubPartition) {
+				String inherited = inheritedAttribute(partition, key);
+				if (inherited == null || !attributeValue(key, value).equals(attributeValue(key, inherited)))
+					throw new IllegalArgumentException("Cannot preserve non-inherited HASH/subpartition attribute " + key + " on " + partition.getName());
+			}
 		}
+		if (type == PartitioningType.Hash || partition instanceof SubPartition) return;
 		for (var entry : partition.getSpecifics().entrySet()) if (entry.getValue() != null && physical.contains(entry.getKey())) builder.space().oracleProperty(entry.getKey(), entry.getValue());
 		boolean first = true;
 		for (var entry : partition.getSpecifics().entrySet()) if (entry.getValue() != null && storage.contains(entry.getKey())) {
@@ -157,6 +162,21 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 			first = false; builder.oracleProperty(entry.getKey(), entry.getValue());
 		}
 		if (!first) builder._add(")");
+	}
+	private String inheritedAttribute(AbstractPartition<?> partition, String key) {
+		if (partition instanceof SubPartition sub && sub.getParent() != null && sub.getParent().getParent() != null) {
+			String value = sub.getParent().getParent().getSpecifics().get(key);
+			if (value != null) return value;
+		}
+		var info = partition.getPartitioning();
+		return info == null || info.getTable() == null ? null : info.getTable().getSpecifics().get(key);
+	}
+	private String attributeValue(String key, String value) {
+		if ("LOGGING".equals(key)) {
+			if ("YES".equalsIgnoreCase(value) || "TRUE".equalsIgnoreCase(value)) return "TRUE";
+			if ("NO".equalsIgnoreCase(value) || "FALSE".equalsIgnoreCase(value)) return "FALSE";
+		}
+		return value.matches("[0-9]+") ? new java.math.BigInteger(value).toString() : value;
 	}
 
 }

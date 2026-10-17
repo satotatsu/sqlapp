@@ -1905,6 +1905,68 @@ Oracle用fixtureと期待SQLからその不正指定を除去し、対象テス�
 仕様: [physical_attributes_clause](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/physical_attributes_clause.html)、
 [HASH/subpartitionの属性制限](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)。
 
+## 2026-10-17: HASH/subpartitionの継承物理属性を解決
+
+カタログ由来のHASH/subpartition物理属性が、表または親からの継承値と一致する場合に
+再CREATEできるようにした。subpartitionは親の明示値を優先し、なければ表の値を使う。
+HASH親は表の値を使う。数値は先頭ゼロを正規化し、LOGGINGのYES/TRUE・NO/FALSEを同値とする。
+一致した継承値はHASH/subpartitionのDDLへ重複出力しない。表・親の既定値を生成して保持する。
+継承元が不明、値が不一致、不正な属性は明示的に拒否し、データベース既定値を推測しない。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共有モデル・設定形式・Reader・Resolver・
+依存関係の変更と追加SELECTはない。既存CREATE Factoryの内部処理を拡張した。
+OraclePartitionRecreationTestへ3件追加し、HASHの表既定値、親優先、STORAGE継承と不一致を検証する。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+実DB未実施。core/PostgreSQL/H2全体は共有コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。
+
+最終検証: Oracle全412件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+
+### この監査で確認した範囲と保留事項
+
+今回のpartition再生成監査で確認した呼出し欠落・LIST構文・既定子・HASH個数・版境界・
+物理属性保持/継承の不具合は修正した。通常CREATEのテストを通し、detail単体だけで判定しない。
+これをOracle全体の完全互換性や全ALTER構文の実行可能性の認定とは扱わない。
+基本オブジェクトの取得・再CREATEについても実Oracleの往復検証は未実施。
+
+未対応を固定して扱う範囲は、複合HASH親ADD、複合SPLIT/MERGE、高度な圧縮・INTERVAL等の
+構造化編集、複雑なIOT MOVE、opaque DDL内部編集、LIST複数キー・式、
+custom indextype/Text preference等の前提オブジェクト自動再生成。
+これらを新しい必須構文として自動的に追加し続けず、現状は明示的な制限として記録する。
+
+## 2026-10-17: NULL圧縮値とリモートsynonymの再生成
+
+OracleTableReaderのpartition/subpartition共通処理が、COMPRESSION=NULLを圧縮ありと
+扱っていた。NULLから圧縮を推測しないよう修正し、DISABLED/ENABLEDの既存解釈を維持した。
+新しいcatalog列やSQLは追加せず、対象版とクエリ数は変わらない。
+カタログ行のmockからReaderを通し、通常CREATE TABLEまで圧縮句なしで再生成するテストを追加した。
+
+private/public synonym ReaderはDB_LINKを保持していたが、CREATE Factoryが出力していなかった。
+両Factoryで共有する内部target生成器を追加し、`FOR schema.object@dblink`を生成する。
+所有者なしのtargetも許可し、ローカル参照は従来どおり。DB linkのdomainをschemaと誤解して
+分割引用しない。標準ASCIIの識別子/domain形式を検証し、空・空白・引用符・SQL断片等を拒否する。
+この検証範囲外の特殊なlink形式を対応済みとは扱わない。接続・linkの作成・資格情報処理はしない。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共通モデル・設定形式・依存関係・Resolverに変更なし。
+既存の基本Dialectから継承するので新しい版固有構文はない。
+Readerテスト2件、synonym生成テスト5件を追加。初回はResultSet mockのcontainsとFactoryの
+wildcard型で失敗したが、テスト補助を修正して再実行した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSynonymRecreationTest' --tests '*OracleTablePartitionCompressionTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全419件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。core/PostgreSQL/H2全体は共有コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅確認・実DB往復は未完了。
+仕様: [CREATE SYNONYMのremote target](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-SYNONYM.html)。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

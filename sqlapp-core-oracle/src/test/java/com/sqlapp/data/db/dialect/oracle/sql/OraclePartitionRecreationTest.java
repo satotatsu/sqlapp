@@ -120,4 +120,30 @@ class OraclePartitionRecreationTest {
 		assertThrows(IllegalArgumentException.class, () -> sql(table, DialectHolder.defaultDialect));
 		assertTrue(sql(table, DialectHolder.oracle10gDialect).contains("SUBPARTITION BY LIST"));
 	}
+	@Test void hashPhysicalValuesMayInheritFromTheTable() {
+		Table table = table(PartitioningType.Hash, null); var part = table.getPartitioning().getPartitions().get(0); part.setHighValue((String) null);
+		table.getSpecifics().put("PCT_FREE", "10"); table.getSpecifics().put("LOGGING", "TRUE");
+		part.getSpecifics().put("PCT_FREE", "010"); part.getSpecifics().put("LOGGING", "YES");
+		String ddl = sql(table, DialectHolder.oracle10gDialect);
+		assertEquals(1, ddl.split("PCTFREE", -1).length - 1, ddl);
+		assertFalse(ddl.substring(ddl.indexOf("PARTITION BY")).contains("PCTFREE"), ddl);
+		part.getSpecifics().put("PCT_FREE", "20");
+		assertThrows(IllegalArgumentException.class, () -> sql(table, DialectHolder.oracle26aiDialect));
+	}
+	@Test void subpartitionUsesParentOverrideBeforeTableDefault() {
+		Table table = table(PartitioningType.Range, PartitioningType.List); table.getSpecifics().put("PCT_FREE", "10");
+		var parent = table.getPartitioning().getPartitions().get(0); parent.getSpecifics().put("PCT_FREE", "20");
+		SubPartition child = new SubPartition("C").setHighValue("1"); child.getSpecifics().put("PCT_FREE", "20"); parent.getSubPartitions().add(child);
+		String ddl = sql(table, DialectHolder.oracle10gDialect);
+		assertFalse(ddl.substring(ddl.indexOf("SUBPARTITION C")).contains("PCTFREE"), ddl);
+		child.getSpecifics().put("PCT_FREE", "10");
+		assertThrows(IllegalArgumentException.class, () -> sql(table, DialectHolder.oracle26aiDialect));
+	}
+	@Test void subpartitionMayInheritStorageFromTheTableWithoutDuplicatingIt() {
+		Table table = table(PartitioningType.Range, PartitioningType.Hash); table.getSpecifics().put("INITIAL_EXTENT", "65536");
+		SubPartition child = new SubPartition("C"); child.getSpecifics().put("INITIAL_EXTENT", "65536");
+		table.getPartitioning().getPartitions().get(0).getSubPartitions().add(child);
+		String ddl = sql(table, DialectHolder.oracle10gDialect);
+		assertEquals(1, ddl.split("INITIAL 65536", -1).length - 1, ddl);
+	}
 }

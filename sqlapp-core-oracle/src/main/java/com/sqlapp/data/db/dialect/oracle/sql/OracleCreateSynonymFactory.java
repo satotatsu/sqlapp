@@ -30,6 +30,6 @@ public class OracleCreateSynonymFactory extends AbstractCreateSynonymFactory<Ora
 		builder.create().or().replace().synonym();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.space().for_();
-		builder.space().names(obj.getObjectSchemaName(), obj.getObjectName());
+		OracleSynonymTarget.add(obj.getObjectSchemaName(), obj.getObjectName(), obj.getDbLinkName(), builder);
 	}
 }

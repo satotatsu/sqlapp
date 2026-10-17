@@ -266,7 +266,7 @@ public class OracleTableReader extends TableReader {
 		String highValue = getString(rs, "HIGH_VALUE");
 		String compression = getString(rs, "COMPRESSION");
 		partition.setHighValue(highValue);
-		if (!"DISABLED".equalsIgnoreCase(compression)) {
+		if (compression != null && !"DISABLED".equalsIgnoreCase(compression)) {
 			partition.setCompression(true);
 		}
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
