@@ -70,6 +70,9 @@ public class OracleViewReader extends ViewReader {
 		View table = createTable(getString(rs, "VIEW_NAME"));
 		table.setSchemaName(getString(rs, "OWNER"));
 		table.setStatement(text);
+		String check = getString(rs, "ORACLE_CHECK_CONSTRAINT"), readOnly = getString(rs, "ORACLE_READ_ONLY_CONSTRAINT");
+		if (check != null) table.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.sql.OracleCreateViewFactory.CHECK_CONSTRAINT, check);
+		if (readOnly != null) table.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.sql.OracleCreateViewFactory.READ_ONLY_CONSTRAINT, readOnly);
 		OracleMetadataUtils.setCommonInfo(rs, table);
 		return table;
 	}

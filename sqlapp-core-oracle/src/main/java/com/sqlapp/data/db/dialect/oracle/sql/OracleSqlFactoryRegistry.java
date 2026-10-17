@@ -54,6 +54,8 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, OracleCreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.ALTER, OracleCreateViewFactory.class);
 		// Schema
 		registerSqlFactory(Schema.class, SqlType.CREATE, OracleCreateSchemaFactory.class);
 		// Table
@@ -89,8 +91,10 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Dimension.class, SqlType.CREATE, OracleCreateDimensionFactory.class);
 		// Function
 		registerSqlFactory(Function.class, SqlType.CREATE, OracleCreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.ALTER, OracleAlterRoutineFactory.class);
 		// Procedure
 		registerSqlFactory(Procedure.class, SqlType.CREATE, OracleCreateProcedureFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.ALTER, OracleAlterRoutineFactory.class);
 		// Trigger
 		registerSqlFactory(Trigger.class, SqlType.CREATE, OracleCreateTriggerFactory.class);
 		// Trigger

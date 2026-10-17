@@ -2048,6 +2048,75 @@ partitioning null↔nonnullの変換は、旧経路の不正なALTER TABLE PARTI
 実DB未実施。共有コードを変更せずcore/PostgreSQL/H2全体は再実行していない。
 生成ファイルの意図的な変更はない。高度な変換・全操作経路の網羅確認と実DB往復は未完了。
 
+## 2026-10-17: 通常ビューの列・制限・コメントと差分変更
+
+通常ビューが汎用Factoryを使い、モデルの列名一覧とCHECK OPTION/READ ONLYを再生成していなかった。
+OracleCreateViewFactoryを追加・登録し、`CREATE VIEW name (columns) AS statement`と
+`WITH CHECK OPTION/READ ONLY [CONSTRAINT name]`を生成する。新しいspecificsは
+`oracle.view.checkConstraint`/`oracle.view.readOnlyConstraint`で、値は制約名、空文字なら無名。
+両制限の併用、本文欠落、完全definitionと別制限の併用を拒否する。完全definitionは単独で保持する。
+表/列コメントはOracleのCOMMENT ON TABLE/COLUMNを別操作で生成する。
+
+既存views.sqlへALL_CONSTRAINTSのV/O制約を集約JOINし、所有者とビュー名で照合する。
+一つの一覧クエリのままでN+1を追加しない。旧Oracleでも使えるDECODEと既存辞書列だけを使う。
+Oracle8の辞書にもV/O制約があり、版固有Readerは追加しない。
+
+通常ビューのALTERを登録し、本文・列名・制限の変更はCREATE OR REPLACE VIEWで生成する。
+操作種別はALTER、無変更はSQLなし。所有者/名前変更、未対応属性、duality view差分を拒否する。
+本文を変えずに列数・型等のメタデータだけを変えるケースも拒否する。
+単純な列名変更は再CREATEで扱う。コメント変更のみならCOMMENT操作だけを生成し、
+削除はIS NULLを明示する。完全definitionが変わらないまま本文・列名だけを変更することは拒否する。
+Oracleの依存先再検証・OR REPLACE制約は実行時に適用される。権限や依存先を自動変更しない。
+
+23ai Factoryの通常ビュー経路はこのFactoryを継承し、duality専用CREATEは既存のまま。
+変更はsqlapp-core-oracleと文書のみ。既存API・共有モデル・依存関係・Resolverの変更はない。
+専用Factoryとspecificsを追加した。ReaderテストとSQLテストを合わせて8件追加し、
+2ビュー1クエリ、XML往復、列名/制約名の引用、コメント、ALTER種別、identity拒否と型変更拒否を検証。
+初回テストではViewの継承戻り型、SQL空白、specifics差分ラベルの扱いを修正して再実行した。
+通常ビューの共通IF NOT EXISTSオプションは従来どおり句を生成しない。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleViewRecreationTest' --tests '*Oracle26aiDualityViewTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全440件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅確認と実DB往復は未完了。
+仕様: [Oracle8のV/O制約](https://docs.oracle.com/cd/A58617_01/server.804/a58242/ch2.htm)、
+[ALL_VIEWSだけではCHECK OPTIONを判定できない理由](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/Oracle-Compliance-To-Core-SQL2011.html)。
+
+## 2026-10-17: function/procedureの完全定義置換とdirectory入力検証
+
+PostgreSQLはfunction ALTERを登録しているが、Oracleはfunction/procedureの変更経路がなかった。
+OracleAlterRoutineFactoryを両型に登録し、更新した完全definitionをCREATE OR REPLACEで出す。
+操作種別はALTERで、DROPは生成しない。既定引数・AUTHID・本体・名前付きENDをそのまま保持する。
+DDLヘッダーの種別・名前・所有者をモデルと照合し、所有者がモデルにあれば明示的に修飾する。
+引用名と名前中のperiodも単一識別子として扱う。元モデルとtarget definitionは変更しない。
+
+元と対象が揃ったdiffを必須とし、identity変更、更新されないdefinition、モデル本文だけの
+編集、ヘッダー不一致を拒否する。CREATE付き/なしの従来形式を扱うが、EDITIONABLEや
+先行comment等のこのヘッダー検証が解釈しない形式は未対応として拒否する。
+SQL/PLSQL本文の版互換性・signature変更時の依存先再検証はOracleでの実行検証が必要。
+このFactoryが任意のPLSQLを解析・書き換えたり依存先・権限を自動変更することはない。
+
+directoryのパスは既存sqlCharで正しく引用されていた。NULL/空白パスから不正DDLを作らず
+明示的なエラーにした。パス中apostropheとDROPのテストを追加し、実際のfilesystemや
+DB directory objectは変更しない。
+
+変更はsqlapp-core-oracleと文書のみ。既存API・共有モデル・設定形式・Reader・Resolver・
+依存関係は変更せず、専用ALTER Factoryを追加した。旧Dialectにも同じ基本構文を継承する。
+Routine置換4件、directory2件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleRoutineReplacementTest' --tests '*OracleRoutineRecreationTest' --tests '*OracleDirectoryRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全446件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全操作経路の網羅確認と実DB往復は未完了。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

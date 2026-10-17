@@ -7,14 +7,13 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import com.sqlapp.data.db.sql.CreateViewFactory;
 import com.sqlapp.data.schemas.View;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
  * Oracle Database 23ai CREATE VIEW extensions.
  */
-public class Oracle23aiCreateViewFactory extends CreateViewFactory {
+public class Oracle23aiCreateViewFactory extends OracleCreateViewFactory {
 
 	@Override
 	protected void addCreateObject(final View view, final AbstractSqlBuilder<?> builder) {
