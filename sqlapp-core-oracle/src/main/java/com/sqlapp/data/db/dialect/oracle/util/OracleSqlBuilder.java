@@ -702,17 +702,24 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	 */
 	@Override
 	public OracleSqlBuilder argument(NamedArgument obj) {
-		argumentBefore(obj);
-		if (obj.getName() != null) {
-			this._add(obj.getName());
-			this.space();
+		if (obj.getName() == null || obj.getName().isBlank()) {
+			throw new IllegalArgumentException("Oracle routine arguments require a name");
+		}
+		boolean hasDefault = obj.getDefaultValue() != null && !obj.getDefaultValue().isBlank();
+		if (hasDefault && obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
+			throw new IllegalArgumentException("Oracle argument defaults require IN mode: " + obj.getName());
+		}
+		this.name(obj.getName()).space();
+		if (obj.getDirection() == ParameterDirection.Output) {
+			this._add("OUT").space();
+		} else if (obj.getDirection() == ParameterDirection.Inout) {
+			this._add("IN OUT").space();
 		}
 		argumentTypeDefinition(obj.getDataType(), obj.getDataTypeName(),
 				CommonUtils.notZero(obj.getLength(), obj.getOctetLength()), obj.getScale());
-		if (obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
-			this.space()._add(obj.getDirection());
+		if (hasDefault) {
+			this.space()._add("DEFAULT").space()._add(obj.getDefaultValue());
 		}
-		argumentAfter(obj);
 		return instance();
 	}
 
@@ -752,6 +759,9 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("[0-9]+");
 
 	private String removeLength(String val) {
+		if (val == null || val.isBlank()) {
+			throw new IllegalArgumentException("Oracle routine arguments and return values require a data type");
+		}
 		if (!val.contains("(")) {
 			return val;
 		}

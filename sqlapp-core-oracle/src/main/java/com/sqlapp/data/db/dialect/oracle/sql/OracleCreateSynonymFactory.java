@@ -25,13 +25,19 @@ import com.sqlapp.data.schemas.Synonym;
 
 public class OracleCreateSynonymFactory extends AbstractCreateSynonymFactory<OracleSqlBuilder> {
 	@Override
-	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createDiffSql(com.sqlapp.data.schemas.DbObjectDifference difference) {
-		if (difference.getState() == com.sqlapp.data.schemas.State.Unchanged) return java.util.List.of();
-		if (difference.getState() != com.sqlapp.data.schemas.State.Modified) return super.createDiffSql(difference);
-		if (!OracleSynonymTarget.validateChange(difference, getDialect())) return java.util.List.of();
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createDiffSql(
+			com.sqlapp.data.schemas.DbObjectDifference difference) {
+		if (difference.getState() == com.sqlapp.data.schemas.State.Unchanged)
+			return java.util.List.of();
+		if (difference.getState() != com.sqlapp.data.schemas.State.Modified)
+			return super.createDiffSql(difference);
+		if (!OracleSynonymTarget.validateChange(difference, getDialect()))
+			return java.util.List.of();
 		Synonym before = difference.getOriginal(Synonym.class), after = difference.getTarget(Synonym.class);
-		OracleSqlBuilder builder = createSqlBuilder(getDialect()); addCreateObject(after, builder);
-		return java.util.List.of(createOperation(builder.toString(), com.sqlapp.data.db.sql.SqlType.ALTER, before, after));
+		OracleSqlBuilder builder = createSqlBuilder(getDialect());
+		addCreateObject(after, builder);
+		return java.util.List
+				.of(createOperation(builder.toString(), com.sqlapp.data.db.sql.SqlType.ALTER, before, after));
 	}
 
 	@Override

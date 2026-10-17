@@ -70,11 +70,70 @@ public class OracleViewReader extends ViewReader {
 		View table = createTable(getString(rs, "VIEW_NAME"));
 		table.setSchemaName(getString(rs, "OWNER"));
 		table.setStatement(text);
-		String check = getString(rs, "ORACLE_CHECK_CONSTRAINT"), readOnly = getString(rs, "ORACLE_READ_ONLY_CONSTRAINT");
-		if (check != null) table.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.sql.OracleCreateViewFactory.CHECK_CONSTRAINT, check);
-		if (readOnly != null) table.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.sql.OracleCreateViewFactory.READ_ONLY_CONSTRAINT, readOnly);
+		String check = getString(rs, "ORACLE_CHECK_CONSTRAINT"),
+				readOnly = getString(rs, "ORACLE_READ_ONLY_CONSTRAINT");
+		if (check != null || readOnly != null) {
+			table.setStatement(withoutRestriction(text, readOnly != null));
+		}
+		if (check != null)
+			table.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.sql.OracleCreateViewFactory.CHECK_CONSTRAINT,
+					check);
+		if (readOnly != null)
+			table.getSpecifics().put(com.sqlapp.data.db.dialect.oracle.sql.OracleCreateViewFactory.READ_ONLY_CONSTRAINT,
+					readOnly);
 		OracleMetadataUtils.setCommonInfo(rs, table);
 		return table;
+	}
+
+	/** ALL_VIEWS.TEXT includes the restriction, but omits its constraint name. */
+	static String withoutRestriction(String text, boolean readOnly) {
+		if (text == null)
+			return null;
+		char[] code = text.toCharArray();
+		for (int i = 0; i < text.length();) {
+			int start = i, end = i;
+			char c = text.charAt(i);
+			if (text.startsWith("--", i)) {
+				end = text.indexOf('\n', i + 2);
+				if (end < 0)
+					end = text.length();
+			} else if (text.startsWith("/*", i)) {
+				end = text.indexOf("*/", i + 2);
+				end = end < 0 ? text.length() : end + 2;
+			} else if ((c == 'q' || c == 'Q') && i + 2 < text.length() && text.charAt(i + 1) == '\'') {
+				char close = switch (text.charAt(i + 2)) {
+				case '[' -> ']';
+				case '(' -> ')';
+				case '{' -> '}';
+				case '<' -> '>';
+				default -> text.charAt(i + 2);
+				};
+				end = text.indexOf("" + close + '\'', i + 3);
+				end = end < 0 ? text.length() : end + 2;
+			} else if (c == '\'' || c == '"') {
+				end = i + 1;
+				while (end < text.length()) {
+					if (text.charAt(end++) == c) {
+						if (end < text.length() && text.charAt(end) == c)
+							end++;
+						else
+							break;
+					}
+				}
+			}
+			if (end == i) {
+				i++;
+				continue;
+			}
+			java.util.Arrays.fill(code, start, end, ' ');
+			i = end;
+		}
+		var suffix = java.util.regex.Pattern
+				.compile("(?is)\\bWITH\\s+" + (readOnly ? "READ\\s+ONLY" : "CHECK\\s+OPTION") + "\\b(?=\\s*$)")
+				.matcher(new String(code));
+		if (!suffix.find())
+			return text;
+		return text.substring(0, suffix.start()).stripTrailing() + text.substring(suffix.end());
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {

@@ -46,7 +46,8 @@ public class OracleCreateSequenceFactory extends AbstractCreateSequenceFactory<O
 			if (Boolean.parseBoolean(value) && !(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c))
 				throw new IllegalArgumentException("Sequence " + key + " requires Oracle 18c or later");
 		}
-		if (Boolean.parseBoolean(sequence.getSpecifics().get("EXTEND")) && !Boolean.parseBoolean(sequence.getSpecifics().get("SCALE")))
+		if (Boolean.parseBoolean(sequence.getSpecifics().get("EXTEND"))
+				&& !Boolean.parseBoolean(sequence.getSpecifics().get("SCALE")))
 			throw new IllegalArgumentException("Sequence EXTEND requires SCALE");
 		if (!sequence.isCache() && sequence.getCacheSize() == null)
 			builder.space()._add("NOCACHE");

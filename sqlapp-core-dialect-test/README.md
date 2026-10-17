@@ -99,6 +99,55 @@ batches, uneven child counts, and an open SELECT cursor during hierarchical
 inserts. It also covers intermediate commit visibility and the final partial
 batch committed when the session closes.
 
+Run the Oracle metadata and recreation acceptance cases with:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest'
+```
+
+The suite reads representative schema objects, checks constant partition query
+counts and recreates local indexes. It also creates modeled routines with quoted
+argument names, defaults and OUT/IN OUT parameters, reads them through metadata
+and Schema XML, recreates them and verifies their results by invoking them.
+IOT coverage recreates an overflow segment and a named READ ONLY view restriction
+through metadata and XML. These tests create and drop objects only in the owned
+Testcontainers database; container reuse is disabled by default.
+The materialized-view permission case creates disposable SYSTEM-owned fixtures
+inside that container, grants SELECT to the test user and verifies the warning
+fallback without SELECT_CATALOG_ROLE. It then temporarily grants that role on a
+new connection to verify full DDL retrieval, revokes it and drops the fixtures.
+
+Run the same metadata cases against the Oracle 26ai compatibility baseline:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest' \
+  -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart \
+  -PoracleExpectedDialect=26ai
+```
+
+This explicitly checks that JDBC product metadata resolves to the expected
+Oracle dialect as well as running the metadata and recreation assertions.
+
+Partition maintenance has a separate acceptance test:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OraclePartitionMaintenanceTest'
+```
+
+It reads heap and index-organized RANGE tables from the real catalog, generates
+ADD, DROP, SPLIT and MERGE operations from model differences and executes them.
+It verifies the original rows, requested local index partition names and USABLE states after
+each operation. The IOT case also executes the generated PL/SQL name-resolution,
+rename and rebuild block. ADD/DROP cases insert a row into the new partition,
+drop that partition and verify that the original rows remain while that row is
+deleted; global indexes must also retain valid states. The same Oracle image/dialect
+properties shown above select the 26ai baseline. Full DBMS_METADATA retrieval for partitioned IOTs may
+take several minutes in a fresh container. These cases do not cover partition
+MOVE, composite partition changes or recovery after partial DDL failure.
+
 MySQL coverage uses MySQL 8.4 and verifies generic one-column generated-key
 result sets from Connector/J, parent-key propagation across multiple root
 batches, uneven child counts, explicit AUTO_INCREMENT values, and rejection of

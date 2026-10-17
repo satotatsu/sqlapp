@@ -58,6 +58,74 @@ class OracleMetadataReaderTest {
 	}
 
 	@Test
+	void generatedRoutineArgumentsSurviveMetadataXmlAndRecreation() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			var registry = dialect.createSqlFactoryRegistry();
+			var procedure = new com.sqlapp.data.schemas.Procedure("ROUNDTRIP_ARGUMENTS");
+			procedure.setStatement("IS BEGIN RESULT := \"input value\"; STATE := STATE + 1; END;");
+			procedure.getArguments().add(new com.sqlapp.data.schemas.NamedArgument("input value")
+					.setDataType(DataType.INT).setDefaultValue("42"));
+			var output = new com.sqlapp.data.schemas.NamedArgument("RESULT").setDataType(DataType.INT);
+			output.setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Output);
+			procedure.getArguments().add(output);
+			var inout = new com.sqlapp.data.schemas.NamedArgument("STATE").setDataType(DataType.INT);
+			inout.setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Inout);
+			procedure.getArguments().add(inout);
+			var function = new com.sqlapp.data.schemas.Function("ROUNDTRIP_DEFAULT");
+			function.getReturning().setDataType(DataType.INT);
+			function.getArguments().add(new com.sqlapp.data.schemas.NamedArgument("N")
+					.setDataType(DataType.INT).setDefaultValue("1 + 2"));
+			function.setStatement("IS BEGIN RETURN N * 2; END;");
+			try (Statement sql = connection.createStatement()) {
+				for (var operation : registry.createSql(procedure, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				for (var operation : registry.createSql(function, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				var procedureReader = schemaReader.getProcedureReader();
+				procedureReader.setSchemaName(connection.getMetaData().getUserName().toUpperCase(Locale.ROOT));
+				procedureReader.setObjectName(procedure.getName());
+				var savedProcedure = procedureReader.getAllFull(connection).get(0);
+				assertEquals(3, savedProcedure.getArguments().size());
+				assertNotNull(savedProcedure.getDefinition());
+				com.sqlapp.data.schemas.Procedure restoredProcedure = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(savedProcedure.asXml()));
+				var functionReader = schemaReader.getFunctionReader();
+				functionReader.setSchemaName(savedProcedure.getSchemaName());
+				functionReader.setObjectName(function.getName());
+				var savedFunction = functionReader.getAllFull(connection).get(0);
+				assertNotNull(savedFunction.getDefinition());
+				com.sqlapp.data.schemas.Function restoredFunction = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(savedFunction.asXml()));
+				sql.execute("DROP PROCEDURE ROUNDTRIP_ARGUMENTS");
+				sql.execute("DROP FUNCTION ROUNDTRIP_DEFAULT");
+				for (var operation : registry.createSql(restoredProcedure, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				for (var operation : registry.createSql(restoredFunction, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				try (var call = connection.prepareCall("BEGIN ROUNDTRIP_ARGUMENTS(RESULT => ?, STATE => ?); END;")) {
+					call.registerOutParameter(1, java.sql.Types.NUMERIC);
+					call.setInt(2, 9);
+					call.registerOutParameter(2, java.sql.Types.NUMERIC);
+					call.execute();
+					assertEquals(42, call.getInt(1));
+					assertEquals(10, call.getInt(2));
+				}
+				try (var result = sql.executeQuery("SELECT ROUNDTRIP_DEFAULT() FROM DUAL")) {
+					assertTrue(result.next());
+					assertEquals(6, result.getInt(1));
+				}
+			} finally {
+				try (Statement sql = connection.createStatement()) {
+					drop(sql, "DROP PROCEDURE ROUNDTRIP_ARGUMENTS", 4043);
+					drop(sql, "DROP FUNCTION ROUNDTRIP_DEFAULT", 4043);
+				}
+			}
+		}
+	}
+
+	@Test
 	void testReadsRepresentativeSchemaObjectsFromLatestOracle() throws SQLException {
 		try (Connection connection = ORACLE.createConnection("")) {
 			grantDirectoryAccess();
@@ -171,12 +239,12 @@ class OracleMetadataReaderTest {
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			assertTrue(String.join("\n", procedure.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
-			assertTrue(String.join("\n", function.getStatement()).toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
+			assertTrue(String.join("\n", function.getDefinition()).toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_CHILD", trigger.getTableName());
@@ -186,12 +254,96 @@ class OracleMetadataReaderTest {
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_SYNONYM"));
 			var metadataPackage = schema.getPackages().get("METADATA_PACKAGE");
 			assertNotNull(metadataPackage);
-			assertNotNull(metadataPackage.getStatement());
-			assertTrue(metadataPackage.getStatement().stream().anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
+			assertNotNull(metadataPackage.getDefinition());
+			assertTrue(metadataPackage.getDefinition().stream().anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
 			assertNotNull(metadataPackage.getBody());
-			assertNotNull(metadataPackage.getBody().getStatement());
-			assertTrue(metadataPackage.getBody().getStatement().stream()
+			assertNotNull(metadataPackage.getBody().getDefinition());
+			assertTrue(metadataPackage.getBody().getDefinition().stream()
 					.anyMatch(line -> line.contains("RETURN P_AMOUNT * 2")));
+		}
+	}
+
+	@Test
+	void recreatesIotAndReadOnlyViewThroughMetadataXml() throws Exception {
+		try (Connection connection = ORACLE.createConnection(""); Statement sql = connection.createStatement()) {
+			try {
+				sql.execute("CREATE TABLE ROUNDTRIP_IOT (ID NUMBER PRIMARY KEY, VALUE VARCHAR2(4000)) ORGANIZATION INDEX OVERFLOW");
+				sql.execute("CREATE VIEW ROUNDTRIP_VIEW (ITEM_ID, ITEM_VALUE) AS SELECT ID, VALUE FROM ROUNDTRIP_IOT WITH READ ONLY CONSTRAINT ROUNDTRIP_RO");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				String owner = connection.getMetaData().getUserName().toUpperCase(Locale.ROOT);
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				var tableReader = schemaReader.getTableReader();
+				tableReader.setSchemaName(owner);
+				tableReader.setObjectName("ROUNDTRIP_IOT");
+				Table table = com.sqlapp.data.schemas.SchemaUtils.readXml(
+						new java.io.StringReader(tableReader.getAllFull(connection).get(0).asXml()));
+				var viewReader = schemaReader.getViewReader();
+				viewReader.setSchemaName(owner);
+				viewReader.setObjectName("ROUNDTRIP_VIEW");
+				com.sqlapp.data.schemas.View view = com.sqlapp.data.schemas.SchemaUtils.readXml(
+						new java.io.StringReader(viewReader.getAllFull(connection).get(0).asXml()));
+				assertEquals("ROUNDTRIP_RO", view.getSpecifics().get("oracle.view.readOnlyConstraint"));
+				sql.execute("DROP VIEW ROUNDTRIP_VIEW");
+				sql.execute("DROP TABLE ROUNDTRIP_IOT PURGE");
+				var registry = dialect.createSqlFactoryRegistry();
+				for (var operation : registry.createSql(table, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				for (var operation : registry.createSql(view, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				sql.execute("INSERT INTO ROUNDTRIP_IOT VALUES (1, 'restored')");
+				try (var result = sql.executeQuery("SELECT ITEM_VALUE FROM ROUNDTRIP_VIEW WHERE ITEM_ID = 1")) {
+					assertTrue(result.next());
+					assertEquals("restored", result.getString(1));
+				}
+				assertEquals("ROUNDTRIP_RO", viewReader.getAllFull(connection).get(0).getSpecifics()
+						.get("oracle.view.readOnlyConstraint"));
+				try (var result = sql.executeQuery("SELECT IOT_TYPE, IOT_NAME FROM USER_TABLES WHERE TABLE_NAME = 'ROUNDTRIP_IOT' OR IOT_NAME = 'ROUNDTRIP_IOT'")) {
+					int count = 0;
+					while (result.next()) {
+						assertTrue("IOT".equals(result.getString(1)) || "IOT_OVERFLOW".equals(result.getString(1)));
+						count++;
+					}
+					assertEquals(2, count);
+				}
+			} finally {
+				drop(sql, "DROP VIEW ROUNDTRIP_VIEW", 942);
+				drop(sql, "DROP TABLE ROUNDTRIP_IOT PURGE", 942);
+			}
+		}
+	}
+
+	@Test
+	void retainsMviewQueryWithoutCatalogRoleAndReadsDdlAfterGrant() throws Exception {
+		try (Connection admin = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+				Statement sql = admin.createStatement(); Connection connection = ORACLE.createConnection("")) {
+			String user = ORACLE.getUsername().toUpperCase(Locale.ROOT);
+			boolean roleGranted = false;
+			try {
+				sql.execute("CREATE TABLE SYSTEM.ROUNDTRIP_MV_BASE (ID NUMBER)");
+				sql.execute("CREATE MATERIALIZED VIEW SYSTEM.ROUNDTRIP_MV AS SELECT ID FROM SYSTEM.ROUNDTRIP_MV_BASE");
+				sql.execute("GRANT SELECT ON SYSTEM.ROUNDTRIP_MV TO " + user);
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getMviewReader();
+				reader.setSchemaName("SYSTEM");
+				reader.setObjectName("ROUNDTRIP_MV");
+				var limited = reader.getAll(connection);
+				assertEquals(1, limited.size());
+				assertTrue(limited.get(0).getDefinition() == null || limited.get(0).getDefinition().isEmpty());
+				assertTrue(String.join("\n", limited.get(0).getStatement()).contains("ROUNDTRIP_MV_BASE"));
+				sql.execute("GRANT SELECT_CATALOG_ROLE TO " + user);
+				roleGranted = true;
+				try (Connection privileged = ORACLE.createConnection("")) {
+					var complete = reader.getAll(privileged);
+					assertEquals(1, complete.size());
+					assertNotNull(complete.get(0).getDefinition());
+					assertTrue(String.join("\n", complete.get(0).getDefinition()).contains("CREATE MATERIALIZED VIEW"));
+				}
+			} finally {
+				if (roleGranted)
+					sql.execute("REVOKE SELECT_CATALOG_ROLE FROM " + user);
+				drop(sql, "DROP MATERIALIZED VIEW SYSTEM.ROUNDTRIP_MV", 12003);
+				drop(sql, "DROP TABLE SYSTEM.ROUNDTRIP_MV_BASE PURGE", 942);
+			}
 		}
 	}
 

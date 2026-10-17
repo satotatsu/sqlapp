@@ -57,7 +57,8 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
 				&& (before.getPartitioning() != null || after.getPartitioning() != null)) {
 			if (before.getPartitioning() == null || after.getPartitioning() == null)
-				throw new IllegalArgumentException("Converting between partitioned and nonpartitioned tables requires an explicit Oracle migration plan");
+				throw new IllegalArgumentException(
+						"Converting between partitioned and nonpartitioned tables requires an explicit Oracle migration plan");
 			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
 			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
 				throw new IllegalArgumentException(

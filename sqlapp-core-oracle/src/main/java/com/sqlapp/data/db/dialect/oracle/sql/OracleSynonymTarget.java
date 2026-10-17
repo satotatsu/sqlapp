@@ -7,7 +7,8 @@ final class OracleSynonymTarget {
 	private OracleSynonymTarget() {
 	}
 
-	static boolean validateChange(com.sqlapp.data.schemas.DbObjectDifference difference, com.sqlapp.data.db.dialect.Dialect dialect) {
+	static boolean validateChange(com.sqlapp.data.schemas.DbObjectDifference difference,
+			com.sqlapp.data.db.dialect.Dialect dialect) {
 		var properties = difference.toDifference().getChangedProperties(dialect);
 		for (String property : properties.keySet())
 			if (!java.util.Set.of(com.sqlapp.data.schemas.SchemaProperties.OBJECT_SCHEMA_NAME.getLabel(),
@@ -16,6 +17,7 @@ final class OracleSynonymTarget {
 				throw new IllegalArgumentException("Synonym replacement supports only target changes: " + property);
 		return !properties.isEmpty();
 	}
+
 	static void add(String schema, String object, String link, OracleSqlBuilder builder) {
 		if (object == null || object.isBlank())
 			throw new IllegalArgumentException("Synonym target object is required");

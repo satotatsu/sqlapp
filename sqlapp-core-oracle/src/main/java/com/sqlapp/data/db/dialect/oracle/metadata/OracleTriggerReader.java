@@ -102,9 +102,10 @@ public class OracleTriggerReader extends TriggerReader {
 		trigger.setActionReferenceNewRow(":NEW");
 		trigger.setTableSchemaName(tableOwner);
 		trigger.setTableName(tableName);
-		trigger.setStatement(getString(rs, "TRIGGER_BODY"));
 		String description = getString(rs, "DESCRIPTION");
+		// Oracle LONG streams cannot be read twice from the same result row.
 		String body = getString(rs, "TRIGGER_BODY");
+		trigger.setStatement(body);
 		if (description != null && !description.isBlank() && body != null) {
 			// DESCRIPTION retains UPDATE OF, REFERENCING and database events.
 			// These cannot all be reconstructed from the generic trigger components.

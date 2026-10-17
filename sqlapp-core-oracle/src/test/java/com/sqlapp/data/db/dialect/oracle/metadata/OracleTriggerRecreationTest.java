@@ -30,8 +30,14 @@ class OracleTriggerRecreationTest {
 					header, "TRIGGER_BODY", body, "WHEN_CLAUSE", condition);
 			Trigger trigger = new OracleTriggerReader(DialectHolder.oracle19cDialect)
 					.createTrigger(new ExResultSet(null) {
+						private boolean bodyRead;
+
 						@Override
 						public String getString(String column) {
+							if ("TRIGGER_BODY".equals(column)) {
+								assertFalse(bodyRead, "Oracle LONG streams must only be consumed once");
+								bodyRead = true;
+							}
 							return values.get(column);
 						}
 					});

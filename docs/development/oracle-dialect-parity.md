@@ -2117,6 +2117,61 @@ Routine置換4件、directory2件を追加。実行コマンド:
 実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
 生成ファイルの意図的な変更はない。全操作経路の網羅確認と実DB往復は未完了。
 
+## 2026-10-17: モデルから生成するルーチン引数
+
+- 対象はOracleの既存基底Dialectから26aiまでのFUNCTION／PROCEDURE生成。完全DDLを使用する経路は維持する。
+- `OracleSqlBuilder.argument`で引数名、モード、型の順に生成する。従来のOUT重複と型の後への出力、INOUT表記を修正し、IN OUTとして生成する。
+- 引数名を識別子として引用し、IN引数の`defaultValue`をDEFAULT式として保持する。OUT／IN OUTの既定値、名前や型が欠落した引数は明示的にエラーにする。
+- 公開API、Schema XML、メタデータSQLは変更しない。追加SELECT、外部DBへのアクセスはない。
+- `OracleRoutineArgumentsTest`で旧基底／10g／26ai、引用識別子、文字列・数式の既定値、モード、型制約省略、不正入力を検証する。完全DDLの再生成・置換の既存テストも実行する。
+- 構文参照: [Oracle PL/SQL Subprograms](https://docs.oracle.com/en/database/oracle/oracle-database/18/lnpls/plsql-subprograms.html)。実Oracle上のコンパイル・実行は未検証。
+- 検証結果: Oracleモジュール449件、関連Command149件、Gradle Plugin1件が成功（失敗・エラー・スキップ0件）。対象クラスのテスト後、モジュール全体と関連テストを実行した。
+
+## 2026-10-17: Docker実DBでの再生成・権限検証
+
+- 使用環境: ローカルTestcontainersのOracle Free 23（`gvenzl/oracle-free:23-slim-faststart`）。コンテナ再利用を無効にし、既存コンテナ・外部DB・本番データは変更しない。
+- `OracleMetadataReaderTest`に、モデルから生成したFUNCTION／PROCEDUREの読取→Schema XML→DROP／再CREATE→呼出しを追加。引用引数名、DEFAULT式、OUT／IN OUTの値を実際に検証する。
+- IOT（OVERFLOWあり）と名前付きREAD ONLYビューも読取→XML→再CREATEし、ビュー経由のデータ取得、制約名、IOT／OVERFLOWのカタログ状態を確認する。
+- 別所有者のマテリアライズドビューにSELECTだけを付与したケースでは、DBMS_METADATAによるDDL取得が拒否されてもQUERYを保持して継続する。SELECT_CATALOG_ROLE付与後の新規接続では完全DDLを取得できる。ロールを取り消し、テスト用オブジェクトを削除する。
+- 実DBで検出した不具合を修正: トリガーのLONG列TRIGGER_BODYを二度読むとORA-17027になるため、一度の読取結果を再利用する。ALL_VIEWS.TEXTにはWITH READ ONLY／CHECK OPTIONが既に含まれるため、別途モデル化した制限句と重複しないよう読取時に分離する。文字列・引用識別子・コメント・Oracleのq引用を区別する回帰テストを追加する。
+- 既存統合テストのFUNCTION／PROCEDURE／PACKAGEの検証先を、現在の完全DDL表現であるdefinitionに更新する。公開API、XML形式、依存関係、メタデータクエリ数の変更はない。
+- 実行結果: Oracle単体450件成功。Oracle 23の全統合22件を実行し21件成功・READ ONLY再生成1件失敗を確認した後、修正と権限ケース追加後のメタデータ5件はすべて成功。全統合で成功したメタデータ以外の18件と合わせ、Oracle 23で異なる23件の成功を確認した（単一の全件再実行ではない）。
+- Oracle 26aiの固定イメージ`gvenzl/oracle-free:23.26.3-slim-faststart`でも、Dialect解決、ルーチン／IOT／ビュー再生成、マテリアライズドビュー権限切替、代表スキーマ読取、一定クエリ数の5件がすべて成功した。失敗・エラー・スキップは0件。終了後に稼働中のDockerコンテナがないことを確認した。
+- 関連Command149件・Gradle Plugin1件も修正後に実行し、失敗・エラー・スキップ0件で成功した。追跡対象の生成物・依存バージョン・公開設定の変更はない。
+- 再実行手順と固定26aiイメージの指定は`sqlapp-core-dialect-test/README.md`に記載する。旧版Oracleの実DB互換性と、未対応の高度なDDL操作全般の保証は今回の検証には含まない。
+
+主な実行コマンド（Windowsでは`./gradlew`を`.\gradlew.bat`に置き換え）:
+
+```shell
+# 全Oracle統合テスト。初回はREAD ONLY重複生成で1件失敗。
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.oracle.*' --gradle-user-home .gradle-user-home
+# 修正・権限ケース追加後。単体450件とメタデータ5件が成功。
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest' --gradle-user-home .gradle-user-home
+# 26aiのメタデータ5件が成功。
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+# 関連Command149件・Gradle Plugin1件が成功。
+./gradlew :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-17: RANGEパーティション保守の実DB実行
+
+- `sqlapp-core-dialect-test`に`OraclePartitionMaintenanceTest`を追加した。既存のSQL文字列検証に加え、ヒープ表とIOTそれぞれで、実カタログから取得したTableモデルの差分を標準ALTER Factoryに渡してSPLIT／MERGEを実行する。
+- SPLIT後に再取得したモデルからMERGE差分を作る。各操作後、元の3行のキー・値が保持されること、ローカル索引パーティションの名前・順序とUSABLE状態を確認する。IOTでは生成されたPL/SQLの名前解決・二段階RENAME・REBUILDも実行する。
+- Oracle Free 23の2件は成功した。初回は追加テスト自身の不要な自動コミット中のcommit呼出しで2件失敗し、呼出しを除去して再実行した結果、2件とも失敗・エラー・スキップ0件で成功した。本体の実装修正は必要なかった。
+- 同じSPLIT／MERGEの2件は固定26aiイメージでも成功した。追加で、通常表／IOTのADD／DROPを検証する2ケースを用意し、P3への追加行220がDROP後に消え、元の3行が保持されることとローカル索引状態・グローバル索引のVALID／N/A状態を確認する。Oracle 23ではこの追加2件も成功した（SPLIT／MERGEと分けて実行し、計4種類のケースが成功）。
+- 26aiのADD／DROPの追加2件も成功。最終結果はOracle 23／26aiそれぞれ異なる4ケース、計8件が成功（各版でSPLIT／MERGEとADD／DROPの2件ずつに分けて実行）。失敗・エラー・スキップ0件で、各Gradle呼出しはBUILD SUCCESSFUL。実装コードに変更がないため、前回成功した単体・Command・Pluginテストは今回再実行していない。テスト終了後、稼働中のDockerコンテナがないことも確認した。
+- 初回のパーティション付きIOT読取には時間がかかり、テスト接続の状態を確認した時点ではOracle内部の`SYS.KU$_PIOTABLE_VIEW`に対するDBMS_METADATAのXML取得SQLが実行中だった。ロック待ちによる停止ではなく、最終的にテストは終了した。根拠なしにDDL取得を省略したりセッション設定を変更したりしていない。
+- 変更はDockerテストと文書のみ。公開API・Schema表現・DDL生成・依存バージョンは変更しない。通常のtest/check/buildはDockerテストを起動しない。テスト用コンテナの再利用は無効で、既存コンテナ・外部DB・本番データは対象外。
+- 今回の範囲は単一キーRANGE、通常索引、基本的なヒープ表／IOTのADD／DROP／SPLIT／MERGEである。MOVE、複合パーティション、圧縮、異常終了後のDDL再開、旧版Oracleの実DB互換性を網羅したものではない。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+# ADD／DROPの2ケースを追加後、個別に実行。
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest.*AddAndDrop*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest.*AddAndDrop*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
