@@ -84,7 +84,8 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 			if (table.getTableType() == Table.TableType.Temporary)
 				throw new IllegalArgumentException("Temporary tables cannot be partitioned: " + table.getName());
 			var detail = getAddObjectDetail(table.getPartitioning(), com.sqlapp.data.db.sql.SqlType.CREATE);
-			if (detail == null) throw new IllegalArgumentException("No Oracle partition CREATE generator is registered");
+			if (detail == null)
+				throw new IllegalArgumentException("No Oracle partition CREATE generator is registered");
 			detail.addObjectDetail(table.getPartitioning(), builder);
 		}
 	}

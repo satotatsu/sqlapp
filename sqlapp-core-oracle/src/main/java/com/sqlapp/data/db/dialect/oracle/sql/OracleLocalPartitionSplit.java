@@ -54,9 +54,11 @@ final class OracleLocalPartitionSplit {
 				throw new IllegalArgumentException(
 						"Table partition split must be isolated from other table changes: " + property);
 		Partitioning oldInfo = before.getPartitioning(), newInfo = after.getPartitioning();
-		if (oldInfo == null || newInfo == null || (oldInfo.getPartitioningType() != PartitioningType.Range && oldInfo.getPartitioningType() != PartitioningType.List)
-				|| newInfo.getPartitioningType() != oldInfo.getPartitioningType() || oldInfo.getSubPartitioningType() != null
-				|| newInfo.getSubPartitioningType() != null
+		if (oldInfo == null || newInfo == null
+				|| (oldInfo.getPartitioningType() != PartitioningType.Range
+						&& oldInfo.getPartitioningType() != PartitioningType.List)
+				|| newInfo.getPartitioningType() != oldInfo.getPartitioningType()
+				|| oldInfo.getSubPartitioningType() != null || newInfo.getSubPartitioningType() != null
 				|| newInfo.getPartitions().size() != oldInfo.getPartitions().size() + 1)
 			throw new IllegalArgumentException(
 					"Local index maintenance requires one simple RANGE or LIST partition split");
@@ -81,7 +83,8 @@ final class OracleLocalPartitionSplit {
 				right = newInfo.getPartitions().get(position + 1);
 		if (original.getHighValue() == null || original.getHighValue().isBlank())
 			throw new IllegalArgumentException("Original partition upper boundary is required");
-		if (list) OracleListPartitionValues.split(original.getHighValue(), left.getHighValue(), right.getHighValue());
+		if (list)
+			OracleListPartitionValues.split(original.getHighValue(), left.getHighValue(), right.getHighValue());
 		else if (left.getHighValue() == null || left.getHighValue().isBlank()
 				|| "MAXVALUE".equalsIgnoreCase(left.getHighValue())
 				|| Objects.equals(left.getHighValue(), original.getHighValue())

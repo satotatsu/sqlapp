@@ -51,7 +51,8 @@ public class OracleSqlSplitterTest extends AbstractTest {
 	void anonymousBlocksRetainTheirRequiredSemicolon() {
 		String block = "DECLARE\n n NUMBER;\nBEGIN\n n := 1;\n IF n=1 THEN NULL; END IF;\nEND;";
 		var statements = dialect.createSqlSplitter().parse(block + "\n/\nSELECT 1 FROM DUAL;");
-		assertEquals(2, statements.size()); assertEquals(block, statements.get(0).getText());
+		assertEquals(2, statements.size());
+		assertEquals(block, statements.get(0).getText());
 		assertEquals("SELECT 1 FROM DUAL", statements.get(1).getText());
 	}
 
@@ -59,12 +60,14 @@ public class OracleSqlSplitterTest extends AbstractTest {
 	void slashLinesInsideLiteralsAndCommentsAreNotTerminators() {
 		String block = "BEGIN\n DBMS_OUTPUT.PUT_LINE('line\n/\ntext');\n /* comment\n/\n */\n NULL;\nEND;";
 		var statements = dialect.createSqlSplitter().parse(block + "\n/\n");
-		assertEquals(1, statements.size()); assertEquals(block, statements.get(0).getText());
+		assertEquals(1, statements.size());
+		assertEquals(block, statements.get(0).getText());
 	}
 
 	@Test
 	void missingAnonymousBlockTerminatorFailsClearly() {
-		assertThrows(com.sqlapp.exceptions.InvalidTextException.class, () -> dialect.createSqlSplitter().parse("BEGIN NULL; END;"));
+		assertThrows(com.sqlapp.exceptions.InvalidTextException.class,
+				() -> dialect.createSqlSplitter().parse("BEGIN NULL; END;"));
 	}
 
 }

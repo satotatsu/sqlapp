@@ -55,15 +55,20 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
 		if (before != null && after != null
 				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
-				&& (before.getPartitioning() != null && (before.getPartitioning().getPartitioningType() == com.sqlapp.data.schemas.PartitioningType.Hash
-						|| before.getPartitioning().getSubPartitioningType() != null)
-						|| OracleTablePartitionMaintenance.iot(before) || OracleLocalPartitionSplit.hasLocalIndexes(before)
+				&& (before.getPartitioning() != null
+						&& (before.getPartitioning()
+								.getPartitioningType() == com.sqlapp.data.schemas.PartitioningType.Hash
+								|| before.getPartitioning().getSubPartitioningType() != null)
+						|| OracleTablePartitionMaintenance.iot(before)
+						|| OracleLocalPartitionSplit.hasLocalIndexes(before)
 						|| OracleLocalPartitionSplit.hasLocalIndexes(after))) {
 			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
 			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
-				throw new IllegalArgumentException("ONLINE index maintenance is not supported by the table partition planner");
-			var plan = OracleTablePartitionMaintenance.create(before, after, getDialect(), getOptions().isDecorateSchemaName(),
-					getTableOptions().getAllowAddPartition().test(after), getTableOptions().getAllowDropPartition().test(after), () -> createSqlBuilder(getDialect()));
+				throw new IllegalArgumentException(
+						"ONLINE index maintenance is not supported by the table partition planner");
+			var plan = OracleTablePartitionMaintenance.create(before, after, getDialect(),
+					getOptions().isDecorateSchemaName(), getTableOptions().getAllowAddPartition().test(after),
+					getTableOptions().getAllowDropPartition().test(after), () -> createSqlBuilder(getDialect()));
 			if (plan != null) {
 				List<SqlOperation> operations = new java.util.ArrayList<>();
 				for (String statement : plan.statements())
@@ -106,7 +111,8 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 				OracleTablePartitionMaintenance.ordinary(index);
 				if (index.getIndexType() != null && index.getIndexType().isBitMap()
 						|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
-					throw new IllegalArgumentException("IOT root MOVE with bitmap indexes requires explicit index-state handling");
+					throw new IllegalArgumentException(
+							"IOT root MOVE with bitmap indexes requires explicit index-state handling");
 				if (getTableOptions().getOnlineIndex().test(after, index))
 					throw new IllegalArgumentException("ONLINE IOT MOVE requires a dedicated table option");
 			}
