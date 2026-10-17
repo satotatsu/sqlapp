@@ -9,6 +9,40 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class OracleSynonymRecreationTest {
+	@Test void privateReplacementChangesTheTargetWithoutDroppingTheSynonym() {
+		Synonym before = new Synonym("S").setSchemaName("APP").setObjectSchemaName("HR").setObjectName("EMP"), after = before.clone();
+		after.setObjectSchemaName("OTHER").setObjectName("NEW_EMP").setDbLinkName("REMOTE");
+		var registry = DialectHolder.oracle10gDialect.createSqlFactoryRegistry(); registry.getOptions().setDecorateSchemaName(true);
+		var operations = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
+		assertEquals(1, operations.size()); assertEquals(SqlType.ALTER, operations.get(0).getSqlType());
+		assertEquals("CREATE OR REPLACE SYNONYM APP.S FOR OTHER.NEW_EMP@REMOTE", operations.get(0).getSqlText());
+		assertNull(before.getDbLinkName());
+	}
+	@Test void publicReplacementMayRemoveTheRemoteLink() {
+		PublicSynonym before = new PublicSynonym("S").setObjectSchemaName("HR").setObjectName("EMP").setDbLinkName("REMOTE"), after = before.clone(); after.setDbLinkName(null);
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertEquals("CREATE OR REPLACE PUBLIC SYNONYM S FOR HR.EMP", registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)).get(0).getSqlText());
+	}
+	@Test void replacementRejectsIdentityAndUnmodeledChanges() {
+		Synonym before = new Synonym("S").setObjectName("EMP"), after = before.clone(); after.setSchemaName("OTHER");
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+		PublicSynonym original = new PublicSynonym("S").setObjectName("EMP"), renamed = original.clone(); renamed.setName("NEW_NAME");
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(renamed, SqlType.ALTER).createDiffSql(original.diff(renamed)));
+	}
+	@Test void privateAndPublicDropFactoriesRemainAvailable() {
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertEquals("DROP SYNONYM S", registry.createSql(new Synonym("S"), SqlType.DROP).get(0).getSqlText());
+		assertEquals("DROP PUBLIC SYNONYM S", registry.createSql(new PublicSynonym("S"), SqlType.DROP).get(0).getSqlText());
+	}
+	@Test void modifiedStateResolvesReplacementAndUnchangedDiffProducesNothing() {
+		Synonym before = new Synonym("S").setObjectName("EMP"), after = before.clone(); after.setDbLinkName("REMOTE");
+		var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry(); var difference = before.diff(after);
+		assertTrue(registry.getSqlFactory(difference).createDiffSql(difference).get(0).getSqlText().contains("EMP@REMOTE"));
+		assertTrue(registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(after.diff(after.clone())).isEmpty());
+		PublicSynonym publicSynonym = new PublicSynonym("S").setObjectName("EMP");
+		assertTrue(registry.getSqlFactory(publicSynonym, SqlType.ALTER).createDiffSql(publicSynonym.diff(publicSynonym.clone())).isEmpty());
+	}
 	@Test
 	void privateRemoteSynonymKeepsItsLinkAcrossXml() throws Exception {
 		Synonym synonym = new Synonym("S").setSchemaName("APP").setObjectSchemaName("HR").setObjectName("EMP")

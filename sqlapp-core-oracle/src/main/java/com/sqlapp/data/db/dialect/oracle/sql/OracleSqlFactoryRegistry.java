@@ -80,8 +80,11 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, OracleSequenceNextValuesFactory.class);
 		// Synonym
 		registerSqlFactory(Synonym.class, SqlType.CREATE, OracleCreateSynonymFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.ALTER, OracleCreateSynonymFactory.class);
 		// Public Synonym
 		registerSqlFactory(PublicSynonym.class, SqlType.CREATE, OracleCreatePublicSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.ALTER, OracleCreatePublicSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.DROP, OracleDropPublicSynonymFactory.class);
 		// Dimension
 		registerSqlFactory(Dimension.class, SqlType.CREATE, OracleCreateDimensionFactory.class);
 		// Function

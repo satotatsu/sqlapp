@@ -24,6 +24,15 @@ import com.sqlapp.data.db.sql.AbstractCreatePublicSynonymFactory;
 import com.sqlapp.data.schemas.PublicSynonym;
 
 public class OracleCreatePublicSynonymFactory extends AbstractCreatePublicSynonymFactory<OracleSqlBuilder> {
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createDiffSql(com.sqlapp.data.schemas.DbObjectDifference difference) {
+		if (difference.getState() == com.sqlapp.data.schemas.State.Unchanged) return java.util.List.of();
+		if (difference.getState() != com.sqlapp.data.schemas.State.Modified) return super.createDiffSql(difference);
+		if (!OracleSynonymTarget.validateChange(difference, getDialect())) return java.util.List.of();
+		PublicSynonym before = difference.getOriginal(PublicSynonym.class), after = difference.getTarget(PublicSynonym.class);
+		OracleSqlBuilder builder = createSqlBuilder(getDialect()); addCreateObject(after, builder);
+		return java.util.List.of(createOperation(builder.toString(), com.sqlapp.data.db.sql.SqlType.ALTER, before, after));
+	}
 
 	@Override
 	protected void addCreateObject(final PublicSynonym obj, OracleSqlBuilder builder) {

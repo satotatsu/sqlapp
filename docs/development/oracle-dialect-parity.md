@@ -1967,6 +1967,35 @@ wildcard型で失敗したが、テスト補助を修正して再実行した。
 生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅確認・実DB往復は未完了。
 仕様: [CREATE SYNONYMのremote target](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-SYNONYM.html)。
 
+## 2026-10-17: synonymの差分変更とPUBLIC DROP
+
+private/public synonymのALTER Factory登録がなかったため、CREATE Factoryを差分変更にも登録した。
+変更状態から通常のregistry経路で解決し、参照先所有者・オブジェクト名・DB linkだけの変更を
+CREATE OR REPLACE SYNONYMとして生成する。SQL操作種別はALTER、無変更はSQLを返さない。
+既存CREATE経路と同じtarget生成・検証を使う。名前・所有者・他の属性変更は拒否し、
+無条件のDROP/CREATEへ読み替えない。型synonymの依存先等でOracle側がOR REPLACEを
+許可しない場合は実行時に失敗する。依存先や権限を自動変更する機能は追加しない。
+
+DROPの監査で、汎用FactoryがPUBLICSYNONYMという不正なkeywordを生成する問題も確認した。
+OracleDropPublicSynonymFactoryを登録し、DROP PUBLIC SYNONYMを生成する。
+private DROPは既存の正しい汎用Factoryを維持する。
+
+変更はsqlapp-core-oracleと文書のみ。既存公開API・共有モデル・設定形式・Reader・Resolver・
+依存関係に変更なし。専用DROP Factoryクラスを追加した。基本Dialectから旧版にも継承する。
+既存synonymテストに5件を追加し、通常のModified状態解決、ALTER種別、remote→local、
+identity拒否、無変更、private/public DROPを検証した。初回のDROPテストが不正keywordを検出し、
+専用Factory追加後の対象テストは成功した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSynonymRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全424件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅監査と実DB往復は未完了。
+仕様: [Oracle CREATE SYNONYM・OR REPLACEの制約](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-SYNONYM.html)。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
