@@ -35,7 +35,110 @@ class OracleCompositePartitionMaintenanceTest {
 	private String sql(Table before, Table after, Dialect dialect) {
 		var factory = dialect.createSqlFactoryRegistry().getSqlFactory(after, SqlType.ALTER); factory.getOptions().setDecorateSchemaName(true);
 		var operations = factory.createDiffSql(before.diff(after)); assertEquals(1, operations.size());
-		return operations.get(0).getSqlText().replaceAll("\\s+", " ").trim();
+		return operations.get(0).getSqlText().replaceAll("\\s+", " ").replace("( ", "(").trim();
+	}
+	private Table append(Table before, String boundary) {
+		Table after = before.clone();
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().add(new SubPartition("S13").setHighValue(boundary).setTableSpaceName("DATA"));
+		SubPartition segment = new SubPartition("IS13").setHighValue(boundary).setTableSpaceName("INDEX_DATA"); segment.getSpecifics().put("oracle.index.status", "USABLE");
+		after.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().add(segment);
+		return after;
+	}
+	private Table appendParent(Table before) {
+		Table after = before.clone();
+		for (Partitioning info : List.of(after.getPartitioning(), after.getIndexes().get("IX").getPartitioning())) {
+			Partition added = info.getPartitions().get(1).clone(); added.setName(info.getIndex() == null ? "P3" : "IP3"); added.setHighValue("300");
+			for (SubPartition child : added.getSubPartitions()) child.setName("NEW_" + child.getName() + (info.getIndex() == null ? "" : "_I"));
+			info.getPartitions().add(added);
+		}
+		return after;
+	}
+	@Test void parentAddNamesEveryLocalChildAndPreservesExistingPartitions() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = appendParent(before);
+		assertEquals("ALTER TABLE APP.T ADD PARTITION P3 VALUES LESS THAN (300) (SUBPARTITION NEW_S21, SUBPARTITION NEW_S22) UPDATE INDEXES (IX (PARTITION IP3 (SUBPARTITION NEW_S21_I, SUBPARTITION NEW_S22_I)))", sql(before, after, DialectHolder.oracle10gDialect));
+		assertEquals(2, before.getPartitioning().getPartitions().size());
+	}
+	@Test void parentAddHandlesListRangeChildrenAndExplicitStorage() {
+		for (PartitioningType type : List.of(PartitioningType.List, PartitioningType.Range)) {
+			Table before = source(PartitioningType.Range, type), after = appendParent(before);
+			after.getPartitioning().getPartitions().get(2).getSubPartitions().get(0).setTableSpaceName("Data Space");
+			after.getIndexes().get("IX").getPartitioning().getPartitions().get(2).getSubPartitions().get(0).setTableSpaceName("Index Space");
+			String statement = sql(before, after, DialectHolder.oracle12cDialect);
+			assertTrue(statement.contains(type == PartitioningType.List ? "VALUES (10)" : "VALUES LESS THAN (10)"));
+			assertTrue(statement.contains("TABLESPACE \"Data Space\"")); assertTrue(statement.contains("TABLESPACE \"Index Space\""));
+		}
+	}
+	@Test void parentAddRejectsMissingChildrenAndMismatchedLocalBounds() {
+		Table before = source(PartitioningType.Range, PartitioningType.List), after = appendParent(before);
+		after.getPartitioning().getPartitions().get(2).getSubPartitions().clear();
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table mismatch = appendParent(before); mismatch.getIndexes().get("IX").getPartitioning().getPartitions().get(2).getSubPartitions().get(0).setHighValue("999");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, mismatch, DialectHolder.oracle26aiDialect));
+	}
+	@Test void parentAddRejectsBoundariesAndConcurrentChanges() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash); before.getPartitioning().getPartitions().get(1).setHighValue("MAXVALUE");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, appendParent(before), DialectHolder.oracle26aiDialect));
+		Table list = source(PartitioningType.List, PartitioningType.List); list.getPartitioning().getPartitions().get(0).setHighValue("DEFAULT");
+		assertThrows(IllegalArgumentException.class, () -> sql(list, appendParent(list), DialectHolder.oracle26aiDialect));
+		Table source = source(PartitioningType.Range, PartitioningType.Hash), changed = appendParent(source); changed.getIndexes().get("GIX").setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(source, changed, DialectHolder.oracle26aiDialect));
+	}
+	@Test void parentAddValidatesExistingSegmentsAndNewNames() {
+		Table before = source(PartitioningType.Range, PartitioningType.List), after = appendParent(before);
+		after.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table collision = appendParent(before); collision.getPartitioning().getPartitions().get(2).getSubPartitions().get(0).setName("S11");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, collision, DialectHolder.oracle26aiDialect));
+	}
+	@Test void parentAddSupportsNoLocalIndexesAndHonorsAddOption() {
+		Table before = source(PartitioningType.List, PartitioningType.List), after = appendParent(before);
+		var registry = DialectHolder.oracle12cDialect.createSqlFactoryRegistry(); registry.getTableOptions().setAllowAddPartition(false);
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+		before.getIndexes().remove("IX"); after.getIndexes().remove("IX");
+		assertTrue(sql(before, after, DialectHolder.oracle12cDialect).endsWith("UPDATE INDEXES"));
+	}
+	@Test void appendRangeListAndHashSubpartitionsWithExplicitLocalStorage() {
+		for (PartitioningType type : List.of(PartitioningType.Range, PartitioningType.List, PartitioningType.Hash)) {
+			Table before = source(PartitioningType.Range, type), after = append(before, type == PartitioningType.Hash ? null : "30");
+			String values = type == PartitioningType.Hash ? "" : type == PartitioningType.Range ? " VALUES LESS THAN (30)" : " VALUES (30)";
+			assertEquals("ALTER TABLE APP.T MODIFY PARTITION P1 ADD SUBPARTITION S13" + values + " TABLESPACE DATA UPDATE INDEXES (IX (SUBPARTITION IS13 TABLESPACE INDEX_DATA))", sql(before, after, DialectHolder.oracle12cDialect));
+			assertEquals(2, before.getPartitioning().getPartitions().get(0).getSubPartitions().size());
+		}
+	}
+	@Test void appendRespectsDefaultAndMaxvalueBoundaries() {
+		for (PartitioningType type : List.of(PartitioningType.Range, PartitioningType.List)) {
+			Table before = source(PartitioningType.Range, type);
+			before.getPartitioning().getPartitions().get(0).getSubPartitions().get(1).setHighValue(type == PartitioningType.List ? "DEFAULT" : "MAXVALUE");
+			assertThrows(IllegalArgumentException.class, () -> sql(before, append(before, "30"), DialectHolder.oracle26aiDialect));
+		}
+	}
+	@Test void appendHonorsAddOptionIndependentlyOfDropOption() {
+		Table before = source(PartitioningType.Range, PartitioningType.List), after = append(before, "30");
+		var registry = DialectHolder.oracle10gDialect.createSqlFactoryRegistry(); registry.getTableOptions().setAllowDropPartition(false);
+		assertEquals(1, registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)).size());
+		registry.getTableOptions().setAllowAddPartition(false);
+		assertThrows(IllegalArgumentException.class, () -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+	}
+	@Test void appendCannotHideExistingSegmentOrGlobalIndexChanges() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = append(before, null);
+		after.getIndexes().get("GIX").setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table changed = append(before, null); changed.getPartitioning().getPartitions().get(1).getSubPartitions().get(0).setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, changed, DialectHolder.oracle26aiDialect));
+	}
+	@Test void appendValidatesLocalStateBoundsAndNames() {
+		Table before = source(PartitioningType.Range, PartitioningType.List), after = append(before, "30");
+		after.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(2).setHighValue("40");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table unusable = append(before, "30"); unusable.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(2).getSpecifics().put("oracle.index.status", "UNUSABLE");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, unusable, DialectHolder.oracle26aiDialect));
+		Table collision = append(before, "30"); collision.getPartitioning().getPartitions().get(0).getSubPartitions().get(2).setName("S21");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, collision, DialectHolder.oracle26aiDialect));
+	}
+	@Test void appendWithoutLocalIndexesAndListListUseTheSamePath() {
+		Table before = source(PartitioningType.List, PartitioningType.List), after = append(before, "30");
+		before.getIndexes().remove("IX"); after.getIndexes().remove("IX");
+		assertEquals("ALTER TABLE APP.T MODIFY PARTITION P1 ADD SUBPARTITION S13 VALUES (30) TABLESPACE DATA UPDATE INDEXES", sql(before, after, DialectHolder.oracle12cDialect));
 	}
 	@Test void rootDropAlsoRemovesCorrespondingLocalSubpartitions() {
 		for (PartitioningType sub : List.of(PartitioningType.Hash, PartitioningType.List)) {
@@ -61,7 +164,8 @@ class OracleCompositePartitionMaintenanceTest {
 	}
 	@Test void compositeHashRootCoalescesOnlyTheLastPartition() {
 		Table before = source(PartitioningType.Hash, PartitioningType.List);
-		assertEquals("ALTER TABLE APP.T COALESCE PARTITION UPDATE INDEXES", sql(before, remove(before, 1, null), DialectHolder.oracle12cDialect));
+		assertEquals("ALTER TABLE APP.T COALESCE PARTITION UPDATE INDEXES", sql(before, remove(before, 1, null), DialectHolder.oracle18cDialect));
+		assertThrows(IllegalArgumentException.class, () -> sql(before, remove(before, 1, null), DialectHolder.oracle12cDialect));
 		assertThrows(IllegalArgumentException.class, () -> sql(before, remove(before, 0, null), DialectHolder.oracle26aiDialect));
 	}
 	@Test void localIndexRemovalMustMatchTheTablePosition() {

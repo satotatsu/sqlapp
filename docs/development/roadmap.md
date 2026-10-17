@@ -266,9 +266,19 @@ rename/tablespace handling after ADD. Middle-partition removal is rejected;
 COALESCE preserves rows and is classified as ALTER. Composite heap tables support
 one parent partition DROP, one RANGE/LIST subpartition DROP, or last HASH
 partition/subpartition COALESCE, with corresponding Local segments and UPDATE
-INDEXES. RANGE-HASH/LIST uses Oracle 10g+; other supported combinations use a
-conservative Oracle 12c+ boundary. Composite ADD/SPLIT/MERGE and ONLINE maintenance
-remain deferred.
+INDEXES. RANGE-HASH/LIST uses Oracle 10g+; LIST-* and RANGE-RANGE use 11g+,
+and composite HASH uses a conservative 18c+ boundary because Oracle12c also
+represents 12.1. Existing RANGE-* and LIST-LIST parents also
+support one appended subpartition, with explicit Local segment names/tablespaces
+in UPDATE INDEXES and validation of all existing segments. RANGE/LIST composite
+parents support one appended parent with explicit child descriptions and Local
+parent/child names and tablespaces. Composite HASH parent ADD, SPLIT/MERGE and
+ONLINE maintenance remain deferred.
+Normal Oracle CREATE TABLE now invokes the partition detail factory: partition
+metadata is retained, LIST uses VALUES rather than VALUES IN, omitted child lists
+use Oracle defaults without empty parentheses, and HASH child counts are emitted.
+The parity audit separates these basic recreation fixes from optional advanced
+Oracle syntax and unexecuted real-database verification; see oracle-dialect-parity.md.
 IOT metadata now reads root prefix compression and PCTTHRESHOLD in the existing
 catalog query. Oracle 10g+ IOTs additionally retain batched DBMS_METADATA CREATE
 TABLE DDL, allowing overflow/mapping/compressed/partitioned forms to be recreated

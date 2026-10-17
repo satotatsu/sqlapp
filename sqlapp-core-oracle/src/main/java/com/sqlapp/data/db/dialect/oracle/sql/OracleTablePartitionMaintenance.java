@@ -77,7 +77,7 @@ final class OracleTablePartitionMaintenance {
 	}
 	static Plan create(Table before, Table after, Dialect dialect, boolean decorate, boolean allowAdd, boolean allowDrop, Supplier<OracleSqlBuilder> builders) {
 		if (before.getPartitioning() != null && before.getPartitioning().getSubPartitioningType() != null)
-			return OracleCompositePartitionMaintenance.create(before, after, dialect, decorate, allowDrop, builders);
+			return OracleCompositePartitionMaintenance.create(before, after, dialect, decorate, allowAdd, allowDrop, builders);
 		isolated(before, after, dialect);
 		Partitioning oldInfo = before.getPartitioning(), info = after.getPartitioning();
 		int oldCount = oldInfo.getPartitions().size(), newCount = info.getPartitions().size();

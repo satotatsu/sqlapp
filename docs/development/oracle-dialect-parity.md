@@ -5,6 +5,24 @@
 
 ## 比較結果
 
+### 2026-10-17時点の完了判定と残件の区分
+
+比較の完了条件は、共有Schemaで扱う基本オブジェクトについて読取・再CREATE・基本ALTER・
+版境界・取得権限不足時の挙動を確認し、確認された欠落を修正すること。
+Oracle固有構文をすべて構造化して編集可能にすることを、PostgreSQLとの基本比較の
+完了条件に追加し続けない。過去の「残件」はOracle固有の高度な拡張も含んでいる。
+
+- 基本経路の確定不具合: 今回、通常CREATE TABLEのpartition生成呼出し欠落、
+  LISTのVALUES IN、空のsubpartition括弧、HASH子個数の欠落を修正した。
+- 高度な拡張として未対応: 複合HASH親ADD、複合SPLIT/MERGE、高度な物理属性編集、
+  複雑なIOT MOVE、opaque DDL内部の構造化編集、LISTの複数キー・式の差分保守。
+- 前提モデルの設計が必要: custom indextype/Text preference等の自動再生成。
+  INDEXTYPE等の共通表現・依存順・共有前提の重複処理を含むため、通常の索引DDL再生成とは区別する。
+- 検証上の残件: 実Oracleでの取得→CREATE/ALTER往復。外部DB接続は未承認であり実施していない。
+
+単体テスト成功だけで全体同等性を認定しない。追加する構文数ではなく、基本経路の
+確認結果と具体的な未対応範囲を完了報告の基準とする。
+
 | 領域 | Oracleの実装状況と今回の確認 |
 | --- | --- |
 | バージョン解決 | `OracleDialectResolver`に旧版～26aiの分岐がある。26aiの`23.26`境界は既存実装を維持。 |
@@ -1718,6 +1736,174 @@ DROPで行を保持したい場合に自動でMERGEへ読み替えることは�
 複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
 仕様: [Oracle DROP PARTITION/SUBPARTITION](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/ALTER-TABLE.html)、
 [HASH COALESCE SUBPARTITION](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: 既存親へのsubpartition ADD
+
+複合heap表の既存親へ、RANGE/LIST/HASH subpartitionを一つ末尾追加するdiffに対応した。
+RANGE-HASH/RANGE-LISTはOracle 10g以降、RANGE-RANGEとLIST-LISTは保守的に12c以降。
+`ALTER TABLE ... MODIFY PARTITION ... ADD SUBPARTITION ... UPDATE INDEXES`を生成する。
+Local索引がある場合は`(index (SUBPARTITION name [TABLESPACE name]))`を明示し、
+Oracleが割り当てる名前を推測しない。Global索引・既存Local segment・他の親/子の変更を拒否する。
+
+追加要素は名前・境界・表領域のみ、Local側はさらに明示的USABLE状態を必要とする。
+Local/表の型・数・新規境界の対応、名前衝突、既存親属性・キー・template/defaultの保持を検証する。
+HASHでは既存の影響対象Local segmentもUSABLEを必要とし、UPDATE INDEXESで再hash時に保守する。
+LISTの既存DEFAULT、RANGEのMAXVALUE/境界欠落、圧縮root/親/索引、IOT、ONLINE、
+複数同時追加や同時編集はこの経路では拒否する。値の重複・大小・型はOracleが検証する。
+allowAddPartitionを使い、allowDropPartitionとは独立して制御する。
+
+変更はsqlapp-core-oracleと文書のみ。公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverは変更せず、追加SELECTもない。
+既存テストクラスへ6件追加。初回テストでGlobal索引変更の検証不足を検出し、索引ごとの
+明示的検証で修正した。SQLの空白差は比較時に正規化する。
+実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全387件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。core/PostgreSQL/H2全体は共通コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。複合親ADD、複合SPLIT/MERGE、高度な物理属性編集、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [Oracle ADD SUBPARTITION](https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_3001.htm)、
+[UPDATE INDEXES構文](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/update_all_indexes_clause.html)、
+[Local subpartition指定](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/update_index_subpartition.html)。
+
+## 2026-10-17: 複合RANGE/LIST親partitionのADD
+
+複合heap表のRANGE/LIST親partitionを一つ末尾追加するdiffに対応した。
+新しい親はsubpartition一覧を明示し、templateから生成される名前を推測しない。
+RANGE-HASH/RANGE-LISTは10g以降、それ以外は既存の保守的な12c以降の境界を維持する。
+`ADD PARTITION ... (SUBPARTITION ...) UPDATE INDEXES`を生成し、Local索引については
+`index (PARTITION name (SUBPARTITION name ...))`に親・子segment名と任意の表領域を明示する。
+
+新しい表/Local親の境界と子の数・順序・境界が一致すること、既存親・子・索引属性・
+Global索引・キー・template/defaultが変わらないことを検証する。追加子名の既存要素との衝突、
+DEFAULT/MAXVALUE後の追加、subpartition一覧欠落、圧縮root/索引・新規物理属性・
+UNUSABLEな追加Local segment、IOT、ONLINE、複数追加・同時編集は拒否する。
+新規Local親の状態は未指定・N/A・USABLE、子は明示的USABLEのみを受け付ける。
+HASH親のADDは未対応のまま。値の型・大小・重複はOracleの検証を必要とする。
+allowAddPartitionを尊重し、Local索引のない表も同じプランナーを使う。
+
+変更はsqlapp-core-oracleと文書のみ。公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverの変更と追加SELECTはない。
+既存テストクラスへ6件追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全393件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コード変更がないためcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合HASH親ADD、複合SPLIT/MERGE、高度な物理属性編集、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [複合親ADDとLocal索引](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/ALTER-TABLE.html)、
+[UPDATE INDEXES親・子指定](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/update_index_partition.html)。
+
+## 2026-10-17: 通常CREATE TABLEのpartition再生成を修正
+
+OracleCreateTableFactoryからOracleCreatePartitioningFactoryへの呼出しがなく、
+通常CREATE TABLEのSQLからSchemaのpartition情報が欠落していた。addOptionの末尾で
+登録済みの共通detail経路を呼び、列・制約・table/LOBオプションの後へpartition句を追加する。
+完全DDLを使うIOTの再生成経路は引き続きその完全DDLを使用する。
+
+LISTの不正なVALUES INをVALUESへ修正した。子一覧を省略した複合親では空括弧を生成せず、
+Oracle既定のHASH子1個・DEFAULT LIST子・MAXVALUE RANGE子へ委ねる。
+HASH subPartitionSizeをSUBPARTITIONS nとして出力し、明示子一覧はその親で既定個数を上書きする。
+0/負数や非HASH用の子個数、temporary tableのpartitioningは明示的に拒否する。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共通モデル・設定形式・依存関係・
+MetadataReader・DialectResolverの変更はない。既存の基本CREATE経路から継承し、
+10g/12c/26aiでLIST生成を検証する。新しい版専用構文は追加しない。
+OraclePartitionRecreationTestを8件追加し、detail単独ではなく実際のCREATE TABLEから検証する。
+初回テストで呼出し欠落を確認し、接続後の空白差を修正して再実行した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --tests '*OracleCreateTableFactoryTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全401件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コードを変更しないためcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。Oracle固有の高度な拡張と実DB検証は冒頭の区分を参照。
+仕様: [CREATE TABLEのpartition・既定subpartition](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)。
+
+## 2026-10-17: partition CREATEの入力検証
+
+通常CREATE TABLEへpartition生成を接続した経路で、キー欠落、RANGE/LISTの一覧欠落、
+境界欠落、HASHへの境界指定、未対応の親partition型を明示的なエラーにした。
+構造化生成で出力できない表partition/subpartitionの圧縮も黙って落とさず拒否する。
+既存の索引partition圧縮は専用生成器へ委ね、拒否対象に含めない。
+変更はOracleモジュールと文書のみ。公開API・共通モデル・読取・版解決の変更はない。
+OraclePartitionRecreationTestへ2件追加。初回compileのnull overload曖昧性はString castで修正した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全403件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+初回の全体実行ではHASH索引テストfixtureにRANGE用境界が残る1件が失敗した。
+境界を持たない正しいHASHモデルへ修正し、対象テストと全体を再実行して成功した。
+実DB未実施。共通コードを変更しないためcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。構文ごとのCREATE版境界と高度な属性の網羅監査は未完了。
+
+## 2026-10-17: 複合partitionのCREATE/ALTER版境界
+
+OraclePartitionVersionsでCREATEと複合ALTERの判定を共通化した。
+RANGE-LISTは8/9共通Dialectへ漏らさず保守的に10g以降、LIST-*とRANGE-RANGEは11g以降。
+11gと11gR2は別継承系統なので双方を許可する。HASH-*は12.2の資料で対応を確認できるが、
+現在のOracle12cは12.1も表すため18c以降に限定する。以前の12c一律許可を修正した。
+基本RANGE/HASHと既存RANGE-HASHの旧Dialect動作は維持する。
+メタデータReaderとDialectResolver、公開API、共通モデル、設定形式、依存関係は変更しない。
+変更はsqlapp-core-oracleと文書のみ。実DBの12.2まで対応済みと推測しない。
+
+CREATEの境界テストを3件追加し、複合HASH COALESCEの12c拒否/18c成功も検証する。
+初回テストで11gR2の継承系統の見落としを検出し、修正して再実行した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全406件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共通コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。高度な属性の網羅監査と実DB往復検証は未完了。
+仕様: [11gのpartition方式](https://docs.oracle.com/cd/E24693_01/server.11203/e16541/partition.htm)、
+[12.2の複合HASH方式](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/vldbg/partition-concepts.html)。
+
+## 2026-10-17: RANGE/LIST親partitionの物理属性再生成
+
+OracleTableReaderがspecificsへ保持する物理属性とCREATE出力を照合した。
+RANGE/LIST親partitionのPCT_FREE/PCT_USED/INI_TRANS/MAX_TRANS/LOGGINGと、
+extent・freelist・PCT_INCREASE・BUFFER_POOLのSTORAGE属性を既存OracleSqlBuilderで出力する。
+数値以外の入力、LOGGING/BUFFER_POOLの不正値、不明な非null属性は明示的に拒否する。
+数値の範囲やtablespace管理方式による実効性はOracleでの検証が必要。
+
+HASH親・subpartitionでは物理属性を直接指定できないため、この構造化経路で指定されれば拒否する。
+カタログから取得した継承済み属性も該当し、継承元との等価性を自動判定する機能は未対応。
+表partitionのremarksから不正なCOMMENT=を出す処理も止め、明示的にエラーとする。
+圧縮とINTERVAL等の未対応属性は既存の専用表現または今後の実装を必要とし、無視しない。
+索引partitionの既存圧縮・状態生成には手を加えない。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共通モデル・設定形式・読取・版解決・依存関係に
+変更はなく、追加SELECTもない。テスト3件を追加。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全409件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+初回全体実行では旧ALTERテスト3件がinline COMMENT=指定のため失敗した。
+Oracle用fixtureと期待SQLからその不正指定を除去し、対象テストと全体を再実行して成功した。
+実DB未実施。core/PostgreSQL/H2全体は共通コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。継承済み物理属性の解決を含む網羅監査と実DB往復検証は残る。
+仕様: [physical_attributes_clause](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/physical_attributes_clause.html)、
+[HASH/subpartitionの属性制限](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)。
 
 ## 過去のOracle仕様参照
 

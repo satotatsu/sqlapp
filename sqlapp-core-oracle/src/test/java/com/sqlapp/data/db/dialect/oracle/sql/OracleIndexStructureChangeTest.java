@@ -46,7 +46,9 @@ class OracleIndexStructureChangeTest {
 
 	@Test
 	void hashPartitionCountUsesExplicitNamesWithoutDuplicateCountClause() {
-		Table before = table(PartitioningType.Hash), after = before.clone();
+		Table before = table(PartitioningType.Hash);
+		for (Partition part : before.getIndexes().get(0).getPartitioning().getPartitions()) part.setHighValue((String) null);
+		Table after = before.clone();
 		Partitioning info = after.getIndexes().get(0).getPartitioning();
 		info.setPartitionSize(3);
 		info.getPartitions().add(new Partition("P3").setTableSpaceName("USERS"));

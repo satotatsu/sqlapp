@@ -37,6 +37,15 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 		if (obj == null) {
 			return;
 		}
+		OraclePartitionVersions.validate(obj.getPartitioningType(), obj.getSubPartitioningType(), getDialect());
+		if (obj.getPartitioningType() != PartitioningType.Range && obj.getPartitioningType() != PartitioningType.List && obj.getPartitioningType() != PartitioningType.Hash)
+			throw new IllegalArgumentException("Oracle partition CREATE supports RANGE, LIST and HASH");
+		if (obj.getPartitioningColumns().isEmpty() || obj.getSubPartitioningType() != null && obj.getSubPartitioningColumns().isEmpty())
+			throw new IllegalArgumentException("Partition and subpartition keys must be specified");
+		if (obj.getPartitioningType() != PartitioningType.Hash && obj.getPartitions().isEmpty())
+			throw new IllegalArgumentException("RANGE/LIST partition CREATE requires explicit partitions");
+		if (obj.getSubPartitionSize() != null && (obj.getSubPartitionSize() <= 0 || obj.getSubPartitioningType() != PartitioningType.Hash))
+			throw new IllegalArgumentException("Subpartition count requires HASH subpartitioning and a positive value");
 		builder.lineBreak().partitionBy().space()._add(obj.getPartitioningType());
 		builder._add("(");
 		builder.names(obj.getPartitioningColumns());
@@ -52,6 +61,7 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 			builder._add("(");
 			builder.names(obj.getSubPartitioningColumns());
 			builder._add(" )");
+			if (obj.getSubPartitionSize() != null) builder._add(" SUBPARTITIONS ")._add(obj.getSubPartitionSize());
 		}
 		appendPartitionDefinition(false, obj, obj.getPartitions(), builder);
 	}
@@ -90,6 +100,7 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 		if (partitionInfo.getSubPartitioningType() == null || subpartition) {
 			return;
 		}
+		if (partition.toPartition().getSubPartitions().isEmpty()) return;
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
 		if (partition instanceof Partition) {
@@ -105,17 +116,47 @@ public class OracleCreatePartitioningFactory extends AbstractCreatePartitioningF
 
 	protected void appendPartitionDefinition(PartitioningType partitioningType, AbstractPartition<?> partition,
 			OracleSqlBuilder builder) {
+		if (partitioningType != PartitioningType.Range && partitioningType != PartitioningType.List && partitioningType != PartitioningType.Hash)
+			throw new IllegalArgumentException("Unsupported Oracle partition type: " + partitioningType);
+		if (partitioningType != PartitioningType.Hash && (partition.getHighValue() == null || partition.getHighValue().isBlank()))
+			throw new IllegalArgumentException("Partition boundary is required: " + partition.getName());
+		if (partitioningType == PartitioningType.Hash && partition.getHighValue() != null)
+			throw new IllegalArgumentException("HASH partition cannot specify a boundary: " + partition.getName());
+		if ((partition.isCompression() || partition.getCompressionType() != null) && (partition.getPartitioning() == null || partition.getPartitioning().getIndex() == null))
+			throw new IllegalArgumentException("Partition compression requires a dedicated CREATE representation: " + partition.getName());
 		if (partitioningType == PartitioningType.Range || partitioningType == PartitioningType.RangeColumns) {
 			builder.values().lessThan().space()._add("(")._add(partition.getHighValue())._add(")");
 		} else if (partitioningType == PartitioningType.List) {
-			builder.values().in()._add("(")._add(partition.getHighValue())._add(")");
+			builder.values().space()._add("(")._add(partition.getHighValue())._add(")");
 		}
 		if (!CommonUtils.isEmpty(partition.getTableSpaceName())) {
 			builder.tablespace().space().name(partition.getTableSpaceName());
 		}
-		if (!CommonUtils.isEmpty(partition.getRemarks())) {
-			builder.comment().eq().sqlChar(partition.getRemarks());
+		if (partition.getPartitioning() == null || partition.getPartitioning().getIndex() == null)
+			addTablePartitionAttributes(partitioningType, partition, builder);
+	}
+	private void addTablePartitionAttributes(PartitioningType type, AbstractPartition<?> partition, OracleSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(partition.getRemarks())) throw new IllegalArgumentException("Oracle does not support inline partition comments: " + partition.getName());
+		java.util.Set<String> physical = java.util.Set.of("PCT_FREE", "PCT_USED", "INI_TRANS", "MAX_TRANS", "LOGGING");
+		java.util.Set<String> storage = java.util.Set.of("INITIAL_EXTENT", "NEXT_EXTENT", "MIN_EXTENTS", "MAX_EXTENTS", "PCT_INCREASE", "FREELISTS", "FREELIST_GROUPS", "BUFFER_POOL");
+		for (var entry : partition.getSpecifics().entrySet()) {
+			if (entry.getValue() == null) continue;
+			String key = entry.getKey(), value = entry.getValue();
+			if (!physical.contains(key) && !storage.contains(key)) throw new IllegalArgumentException("Unsupported Oracle partition attribute: " + key);
+			if (type == PartitioningType.Hash || partition instanceof SubPartition) throw new IllegalArgumentException("HASH/subpartition physical attributes must be inherited: " + key);
+			if ("LOGGING".equals(key)) {
+				if (!java.util.Set.of("YES", "NO", "TRUE", "FALSE").contains(value.toUpperCase(java.util.Locale.ROOT))) throw new IllegalArgumentException("Invalid partition LOGGING: " + value);
+			} else if ("BUFFER_POOL".equals(key)) {
+				if (!java.util.Set.of("DEFAULT", "KEEP", "RECYCLE").contains(value)) throw new IllegalArgumentException("Invalid partition BUFFER_POOL: " + value);
+			} else if (!("MAX_EXTENTS".equals(key) && "UNLIMITED".equals(value)) && !value.matches("[0-9]+")) throw new IllegalArgumentException("Invalid numeric partition attribute: " + key);
 		}
+		for (var entry : partition.getSpecifics().entrySet()) if (entry.getValue() != null && physical.contains(entry.getKey())) builder.space().oracleProperty(entry.getKey(), entry.getValue());
+		boolean first = true;
+		for (var entry : partition.getSpecifics().entrySet()) if (entry.getValue() != null && storage.contains(entry.getKey())) {
+			if (first) builder._add(" STORAGE ("); else builder.space();
+			first = false; builder.oracleProperty(entry.getKey(), entry.getValue());
+		}
+		if (!first) builder._add(")");
 	}
 
 }

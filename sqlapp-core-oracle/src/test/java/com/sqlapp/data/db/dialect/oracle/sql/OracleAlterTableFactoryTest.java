@@ -347,6 +347,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		partitionInfo.setPartitioningType(PartitioningType.Range);
 		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
 		List<Partition> partitions = getPartitions("p", 0, 3);
+		partitions.forEach(partition -> partition.setRemarks(null));
 		partitionInfo.getPartitions().addAll(partitions);
 		return partitionInfo;
 	}
@@ -358,8 +359,10 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
 		partitionInfo.getSubPartitioningColumns().add(table.getColumns().get("colb"));
 		List<Partition> partitions = getPartitions("p", 0, 1);
+		partitions.forEach(partition -> partition.setRemarks(null));
 		partitionInfo.getPartitions().addAll(partitions);
 		List<SubPartition> subpartitions = getSubPartitions("s", 0, 3);
+		subpartitions.forEach(partition -> partition.setRemarks(null));
 		CommonUtils.first(partitions).getSubPartitions().addAll(subpartitions);
 		return partitionInfo;
 	}
