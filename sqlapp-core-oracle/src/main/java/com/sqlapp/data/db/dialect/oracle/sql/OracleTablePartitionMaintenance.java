@@ -153,9 +153,9 @@ final class OracleTablePartitionMaintenance {
 		}
 		if (hash)
 			throw new IllegalArgumentException("HASH maintenance requires one appended or last coalesced partition");
+		if (oldCount == newCount)
+			return movePartition(before, after, dialect, decorate, builders);
 		if (iot(before)) {
-			if (oldCount == newCount)
-				return moveIot(before, after, dialect, decorate, builders);
 			return splitOrMergeIot(before, after, dialect, decorate, builders);
 		}
 		return null; // Existing heap SPLIT/MERGE planner owns the remaining supported shapes.
@@ -344,13 +344,13 @@ final class OracleTablePartitionMaintenance {
 		return new Plan(statements, null);
 	}
 
-	private static Plan moveIot(Table before, Table after, Dialect dialect, boolean decorate,
+	private static Plan movePartition(Table before, Table after, Dialect dialect, boolean decorate,
 			Supplier<OracleSqlBuilder> builders) {
 		for (Index index : before.getIndexes()) {
 			ordinary(index);
 			Index target = after.getIndexes().get(index.getName());
 			require(target != null && index.diff(target).toDifference().getChangedProperties(dialect).isEmpty(),
-					"IOT partition MOVE requires unchanged secondary indexes");
+					"Partition MOVE requires unchanged indexes");
 		}
 		Partition moved = null;
 		for (int i = 0; i < before.getPartitioning().getPartitions().size(); i++) {
@@ -365,12 +365,13 @@ final class OracleTablePartitionMaintenance {
 			require(moved == null && changes.size() == 1
 					&& changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
 					&& part.getTableSpaceName() != null && !part.getTableSpaceName().isBlank(),
-					"IOT MOVE supports one isolated partition tablespace change");
+					"MOVE supports one isolated partition tablespace change");
 			moved = part;
 		}
-		require(moved != null, "No IOT partition tablespace change to apply");
+		require(moved != null, "No partition tablespace change to apply");
 		OracleSqlBuilder sql = table(before, decorate, builders);
 		sql._add("MOVE PARTITION ").name(moved.getName())._add(" TABLESPACE ").name(moved.getTableSpaceName());
+		if (!iot(before)) sql._add(" UPDATE INDEXES");
 		return new Plan(List.of(sql.toString()), null);
 	}
 

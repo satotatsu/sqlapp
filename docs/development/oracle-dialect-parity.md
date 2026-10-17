@@ -2172,6 +2172,27 @@ Routine置換4件、directory2件を追加。実行コマンド:
 ./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest.*AddAndDrop*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
 ```
 
+## 2026-10-17: 通常表MOVE実装とIOTパーティション表領域読取
+
+- 通常表の非パーティション表領域変更は従来の共通ALTER経路では反映されなかった。OracleAlterTableFactoryで、単一の表領域変更を`MOVE TABLESPACE ... UPDATE INDEXES`に変換する。12c Dialectは12.1／12.2を区別できないため、安全に構文を使える18c以降を対象とし、それより前、複数変更、空の移動先、一時表、特殊索引、ONLINE指定は明示的に拒否する。
+- 単純RANGE／LIST通常表の単一パーティションMOVEにも対応する。既存プランナーのIOT MOVEと検証を共用し、索引変更を伴わない表領域変更だけを扱う。通常表ではUPDATE INDEXESを付け、IOTでは従来どおりネイティブMOVEと論理ROWIDによる索引維持を使う。通常表は10g以降、IOTパーティションは従来どおり12c以降に限定する。HASH／複合パーティションMOVEはこの変更の対象外。
+- 実DBテストで、IOTのALL_TAB_PARTITIONS.TABLESPACE_NAMEがNULLになることを確認した。既存の一括tablePartitions.sqlにIOT - TOP索引とALL_IND_PARTITIONSをLEFT JOINし、パーティション位置に対応する実体の表領域を取得する。通常のTABLESPACE_NAMEがNULLのIOTだけを補完する。追加SELECTはなく、既存カタログ列だけを使う。Schema XML形式・公開API・依存関係は変更しないが、IOTパーティションの表領域値は従来より完全になる。
+- OracleHeapMoveTestで引用、18c／12c境界、10g／旧基底境界、複数変更、特殊索引の拒否を検証し、OracleTablePartitionCompressionTestにIOT表領域補完／通常表と既存値の維持を追加した。
+- OracleTableMoveTestは専用128MB表領域とテストユーザーの割当て枠を使い、通常表・IOTのルート／RANGEパーティションMOVEを検証する。実カタログからのモデル差分を使い、移動先と非対象パーティション、索引名・表領域・VALID／USABLE、索引経由の3行のデータ、IOTのCOMPRESS 1を確認する。表領域とデータファイルはコンテナ内で作成・削除し、外部DB・既存コンテナは対象にしない。
+- 初回のOracle 23では通常表ルート・圧縮IOTルートが成功し、通常表パーティションは試験用10MB表領域の容量不足、IOTパーティションは表領域メタデータ欠落で失敗した。容量と割当て枠を128MBへ修正し、読取も補完した。容量修正後の通常表2件は成功し、索引配置の維持も確認した。
+- 修正後のOracle単体454件は失敗・エラー・スキップ0件で成功した。IOT表領域メタデータの改善による影響を確認するため、Oracle 23で既存のADD／DROP／SPLIT／MERGEの4ケースも再実行し、すべて成功した。
+- 修正後のOracle 23ではMOVEの4ケースも成功し、同じGradle呼出しで単体454件・Docker8件がすべて成功した。通常表全体、通常表パーティション、圧縮IOT全体、IOTパーティションの移動先を確認できた。
+- 固定26aiイメージ`gvenzl/oracle-free:23.26.3-slim-faststart`でもMOVE全4件が成功した。索引経由のデータ取得、索引状態・配置、IOT圧縮、移動先表領域を両版で確認した。
+- 関連Command149件・Gradle Plugin1件も成功した。Oracle 23の既存`partitionMetadataUsesConstantQueryCounts`を追加実行し、単一表／複数表で関連SELECTが8回のまま一定であることを確認した。最終的に単体454件、関連150件、Oracle 23のDocker9件（8件とクエリ数1件は別実行）、26aiのDocker4件が成功。失敗・エラー・スキップ0件。テスト用表領域・データファイル・コンテナは後片付け済みで、追跡対象の生成物や依存バージョンの変更はない。共有実装を変更していないためcore／PostgreSQL等の全体テストは再実行していない。
+- 仕様参照: [Oracle 12.2 ALTER TABLEのMOVEとUPDATE INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、[Oracle 10gのMOVE PARTITIONと索引維持](https://docs.oracle.com/cd/B19306_01/server.102/b14231/partiti.htm)。旧版Oracleの実DB、HASH／複合MOVE、ONLINE、LOB／ネスト表の個別再配置、DDL途中失敗後の再開は今回の実DB検証範囲外。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleHeapMoveTest' --tests '*OracleTablePartitionCompressionTest' --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleTableMoveTest' --tests '*oracle.OraclePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleTableMoveTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleMetadataReaderTest.partitionMetadataUsesConstantQueryCounts' --gradle-user-home .gradle-user-home
+```
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

@@ -249,6 +249,10 @@ public class OracleTableReader extends TableReader {
 			partitioning.setPartitioningType(partitioningType);
 		}
 		Partition partition = addPartition(rs, partitioning);
+		if (partition.getTableSpaceName() == null
+				&& "INDEX".equals(table.getSpecifics().get("oracle.table.organization"))) {
+			partition.setTableSpaceName(getString(rs, "IOT_TABLESPACE_NAME"));
+		}
 		if (initializePartitioning && !"NONE".equalsIgnoreCase(subPartitioningType)) {
 			partitioning.setSubPartitioningType(subPartitioningType);
 		}

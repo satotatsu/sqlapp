@@ -148,6 +148,21 @@ properties shown above select the 26ai baseline. Full DBMS_METADATA retrieval fo
 take several minutes in a fresh container. These cases do not cover partition
 MOVE, composite partition changes or recovery after partial DDL failure.
 
+MOVE has separate acceptance cases:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleTableMoveTest'
+```
+
+These cases create a disposable 128 MB tablespace in the container's database
+data-file directory and grant the test user a quota there. They move heap and
+index-organized tables, or one RANGE partition, through the standard table diff
+factory. They verify the actual target tablespace, unchanged rows and index
+locations, valid/usable indexes, and preservation of IOT prefix compression.
+The tablespace and its data file are dropped before the container is stopped.
+The same image/dialect properties select the 26ai baseline.
+
 MySQL coverage uses MySQL 8.4 and verifies generic one-column generated-key
 result sets from Connector/J, parent-key propagation across multiple root
 batches, uneven child counts, explicit AUTO_INCREMENT values, and rejection of

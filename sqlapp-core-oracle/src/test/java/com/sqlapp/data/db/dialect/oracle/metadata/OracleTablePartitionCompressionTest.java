@@ -13,14 +13,18 @@ import com.sqlapp.jdbc.ExResultSet;
 
 class OracleTablePartitionCompressionTest {
 	private Table read(String compression) throws SQLException {
+		return read(compression, false, null, null);
+	}
+	private Table read(String compression, boolean iot, String tableSpace, String iotSpace) throws SQLException {
 		Table table = new Table("T");
+		if (iot) table.getSpecifics().put("oracle.table.organization", "INDEX");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
 		OracleTableReader reader = new OracleTableReader(DialectHolder.oracle10gDialect);
 		reader.setPartition(null, new ExResultSet(null) {
 			@Override
 			public boolean contains(String key) {
 				return java.util.Set
-						.of("PARTITIONING_TYPE", "SUBPARTITIONING_TYPE", "PARTITION_NAME", "HIGH_VALUE", "COMPRESSION")
+						.of("PARTITIONING_TYPE", "SUBPARTITIONING_TYPE", "PARTITION_NAME", "HIGH_VALUE", "COMPRESSION", "TABLESPACE_NAME", "IOT_TABLESPACE_NAME")
 						.contains(key);
 			}
 
@@ -32,6 +36,8 @@ class OracleTablePartitionCompressionTest {
 				case "PARTITION_NAME" -> "P1";
 				case "HIGH_VALUE" -> "100";
 				case "COMPRESSION" -> compression;
+				case "TABLESPACE_NAME" -> tableSpace;
+				case "IOT_TABLESPACE_NAME" -> iotSpace;
 				default -> null;
 				};
 			}
@@ -45,6 +51,12 @@ class OracleTablePartitionCompressionTest {
 		return table;
 	}
 
+	@Test
+	void iotPartitionUsesItsPrimaryIndexTablespaceOnlyAsFallback() throws SQLException {
+		assertEquals("IOT_SPACE", read(null, true, null, "IOT_SPACE").getPartitioning().getPartitions().get(0).getTableSpaceName());
+		assertNull(read(null, false, null, "IOT_SPACE").getPartitioning().getPartitions().get(0).getTableSpaceName());
+		assertEquals("TABLE_SPACE", read(null, true, "TABLE_SPACE", "IOT_SPACE").getPartitioning().getPartitions().get(0).getTableSpaceName());
+	}
 	@Test
 	void nullCompressionDoesNotInventACompressedPartition() throws SQLException {
 		Table table = read(null);
