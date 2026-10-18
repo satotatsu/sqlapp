@@ -33,6 +33,57 @@ class SqlServerTemporalMetadataTest {
 	}
 
 	@Test
+	void fractionalSecondPrecisionComesFromScaleRatherThanStorageBytes() throws Exception {
+		for (String type : new String[] { "datetime2", "datetimeoffset", "time" }) {
+			for (int precision : new int[] { 0, 3, 7 }) {
+				var values = Map.<String, Object>of("type_name", type, "column_name", "Moment", "max_length", 8L,
+						"precision", 27, "scale", precision);
+				Object[] last = { null };
+				ResultSet nativeRow = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
+						new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
+							if (method.getName().equals("wasNull"))
+								return last[0] == null;
+							Object value = args != null && args.length > 0 ? values.get(args[0]) : null;
+							last[0] = value;
+							return switch (method.getName()) {
+							case "getString", "getNString" -> value == null ? null : value.toString();
+							case "getObject" -> value;
+							case "getLong" -> value == null ? 0L : ((Number) value).longValue();
+							case "getInt" -> value == null ? 0 : ((Number) value).intValue();
+							case "getBoolean" -> Boolean.TRUE.equals(value);
+							default -> null;
+							};
+						});
+				var column = new SqlServer2016ColumnReader(DialectHolder.defaultDialect2016)
+						.createColumn(new ExResultSet(nativeRow) {
+							@Override
+							public boolean contains(String label) {
+								return values.containsKey(label);
+							}
+						});
+				assertEquals((long) precision, column.getLength());
+				assertNull(column.getScale());
+			}
+		}
+	}
+
+	@Test
+	void fullTableCheckMetadataIsNotDuplicatedInColumnDefinitions() {
+		Table table = new Table("T");
+		Column column = new Column("X").setDataType(com.sqlapp.data.db.datatype.DataType.INT)
+				.setCheckConstraint(new CheckConstraint("CK_X", "X > 0"));
+		table.getColumns().add(column);
+		CheckConstraint complete = new CheckConstraint("CK_X", "X > 0").setEnable(false);
+		complete.getSpecifics().put("is_not_trusted", "true");
+		complete.getSpecifics().put("is_not_for_replication", "true");
+		table.getConstraints().add(complete);
+		new SqlServer2005TableReader(DialectHolder.defaultDialect2005).retainTableCheckConstraints(table);
+		assertNull(column.getCheckConstraint());
+		assertSame(complete, table.getConstraints().get("CK_X"));
+		assertFalse(complete.isEnable());
+	}
+
+	@Test
 	void readerPopulatesSharedModelAndXmlPreservesHistoryIdentity() throws Exception {
 		var reader = new SqlServer2016TableReader(DialectHolder.defaultDialect2016);
 		Table table = reader.createTable(row(Map.of("table_name", "Current", "schema_name", "dbo", "temporal_type",

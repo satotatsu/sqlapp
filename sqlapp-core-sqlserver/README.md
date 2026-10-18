@@ -280,3 +280,16 @@ to preserve the full model. Existing XML remains readable. Differences can now r
 previously missed column CHECK state/name changes. Unit tests cover resolver
 versions 2005 through 2022. Opt-in database tests check metadata/XML/recreation,
 constraint enforcement, composite key order, and constant metadata query counts.
+
+### Metadata recreation safeguards
+
+Temporal catalog self-joins qualify current-table storage columns, avoiding
+ambiguous-column errors on SQL Server 2016 and later. SQL Server 2008 and later
+readers use catalog `scale` for the fractional-second precision of `time`,
+`datetime2`, and `datetimeoffset`; storage byte length is not SQL type precision.
+Partition scheme reference collections preserve repeated filegroup destinations
+in order during bulk addition, cloning, and Schema XML round trips.
+Full table metadata reads retain CHECK constraints in the table constraint
+collection, using its complete enabled/trust/replication state; duplicate column
+projections are removed. Foreign key `None` and `Restrict` actions generate SQL
+Server's `NO ACTION` syntax.

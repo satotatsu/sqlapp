@@ -20,6 +20,8 @@
 package com.sqlapp.data.schemas;
 
 import java.util.function.Supplier;
+import java.util.Collection;
+import java.util.ArrayList;
 
 public final class ReferenceTableSpaceCollection extends
 	AbstractDbObjectCollection<TableSpace> implements HasParent<PartitionScheme>
@@ -89,6 +91,22 @@ public final class ReferenceTableSpaceCollection extends
 		};
 	}
 	
+	/** Partition destinations are ordered references and may repeat the same filegroup. */
+	@Override
+	public boolean addAll(Collection<? extends TableSpace> values) {
+		boolean changed = false;
+		for (TableSpace value : new ArrayList<>(values)) changed |= add(value);
+		return changed;
+	}
+
+	@Override
+	public boolean addAll(int index, Collection<? extends TableSpace> values) {
+		if (index < 0 || index > size()) throw new IndexOutOfBoundsException(index);
+		var copy = new ArrayList<>(values);
+		for (TableSpace value : copy) add(index++, value);
+		return !copy.isEmpty();
+	}
+
 	@Override
 	protected void setElementParent(TableSpace e) {
 	}

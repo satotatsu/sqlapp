@@ -55,6 +55,15 @@ class SqlServerMetadataVersionBoundaryTest {
 	}
 
 	@Test
+	void temporalSelfJoinsQualifyTableStorageColumns() throws Exception {
+		for (String version : new String[] { "2016", "2017", "2019", "2022" }) {
+			String sql = resource("tables" + version + ".sql");
+			assertTrue(sql.contains(", t.text_in_row_limit"));
+			assertTrue(sql.contains(", t.large_value_types_out_of_row"));
+		}
+	}
+
+	@Test
 	void retentionColumnsAndReaderAreIntroducedOnlyIn2017() throws Exception {
 		assertFalse(resource("tables2016.sql").contains("history_retention_period"));
 		for (String version : new String[] { "2017", "2019", "2022" }) {

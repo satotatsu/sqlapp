@@ -86,9 +86,23 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 		}
 		final DoubleKeyMap<String, String, Table> tableMap = new DoubleKeyMap<String, String, Table>();
 		for (final Table table : obj) {
+			retainTableCheckConstraints(table);
 			tableMap.put(table.getSchemaName(), table.getName(), table);
 		}
 		setPartitioning(connection, tableMap);
+	}
+
+	/**
+	 * Full table reads use the CHECK reader's complete state instead of duplicating
+	 * the column projection.
+	 */
+	protected void retainTableCheckConstraints(Table table) {
+		for (Column column : table.getColumns()) {
+			var check = column.getCheckConstraint();
+			if (check != null && check.getName() != null
+					&& table.getConstraints().get(check.getName()) instanceof com.sqlapp.data.schemas.CheckConstraint)
+				column.setCheckConstraint(null);
+		}
 	}
 
 	protected void setPartitioning(final Connection connection, final DoubleKeyMap<String, String, Table> tableMap) {

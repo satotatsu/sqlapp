@@ -71,11 +71,14 @@ class SqlServerConstraintStateTest {
 		ForeignKeyConstraint fk = new ForeignKeyConstraint("FK Data", child.getColumns().get(0),
 				parent.getColumns().get(0));
 		fk.setDeleteRule(CascadeRule.Cascade);
+		fk.setUpdateRule(CascadeRule.None);
 		fk.setEnable(false);
 		fk.getSpecifics().put("is_not_for_replication", "true");
 		child.getConstraints().add(fk);
 		String sql = text(registry.createSql(fk, SqlType.CREATE));
 		assertTrue(sql.contains("WITH NOCHECK ADD"), sql);
+		assertTrue(sql.contains("ON UPDATE NO ACTION"), sql);
+		assertFalse(sql.contains("ON UPDATE NONE"), sql);
 		assertTrue(sql.indexOf("ON DELETE CASCADE") < sql.indexOf("NOT FOR REPLICATION"), sql);
 		assertTrue(sql.contains("NOCHECK CONSTRAINT [FK Data]"), sql);
 	}

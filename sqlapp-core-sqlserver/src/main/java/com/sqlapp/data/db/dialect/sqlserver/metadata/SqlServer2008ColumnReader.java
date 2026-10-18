@@ -46,6 +46,15 @@ public class SqlServer2008ColumnReader extends SqlServer2005ColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
+		String type = getString(rs, "type_name");
+		if ("datetime2".equalsIgnoreCase(type) || "datetimeoffset".equalsIgnoreCase(type)
+				|| "time".equalsIgnoreCase(type)) {
+			// sys.columns.scale is fractional-second precision; max_length is storage
+			// bytes.
+			Integer precision = getInteger(rs, "scale");
+			column.setLength(precision == null ? null : precision.longValue());
+			column.setScale(null);
+		}
 		setSpecifics(rs, "is_sparse", column);
 		return column;
 	}

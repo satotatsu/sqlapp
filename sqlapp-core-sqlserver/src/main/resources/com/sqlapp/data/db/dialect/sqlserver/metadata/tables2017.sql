@@ -7,10 +7,10 @@ SELECT
 	, t.create_date
 	, t.modify_date
 	, t.lock_escalation_desc AS lock_escalation
-	, text_in_row_limit
+	, t.text_in_row_limit
 	, p.data_compression_desc AS data_compression
 	, idx.compression_delay
-	, large_value_types_out_of_row
+	, t.large_value_types_out_of_row
 	, COALESCE(objectproperty(t.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
 	, dsidx.name AS file_group_name
 	, COALESCE(lob.Name,'') AS lob_file_group_name

@@ -18,6 +18,20 @@ public class SqlServer2005CreateForeignKeyConstraintFactory
 	}
 
 	@Override
+	protected void addCascadeRule(ForeignKeyConstraint constraint, SqlServerSqlBuilder builder) {
+		if (constraint.getDeleteRule() != null)
+			builder.space()._add("ON DELETE ")._add(action(constraint.getDeleteRule()));
+		if (constraint.getUpdateRule() != null)
+			builder.space()._add("ON UPDATE ")._add(action(constraint.getUpdateRule()));
+	}
+
+	private String action(com.sqlapp.data.schemas.CascadeRule rule) {
+		return rule == com.sqlapp.data.schemas.CascadeRule.None || rule == com.sqlapp.data.schemas.CascadeRule.Restrict
+				? "NO ACTION"
+				: rule.getDisplayName();
+	}
+
+	@Override
 	protected void addAfter(ForeignKeyConstraint constraint, SqlServerSqlBuilder builder) {
 		SqlServerConstraintSupport.replication(constraint, builder);
 	}

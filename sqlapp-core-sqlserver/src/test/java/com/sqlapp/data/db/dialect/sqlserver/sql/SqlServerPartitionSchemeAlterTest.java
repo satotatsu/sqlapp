@@ -38,6 +38,21 @@ class SqlServerPartitionSchemeAlterTest {
 	}
 
 	@Test
+	void nextUsedChangesPreserveRepeatedCatalogDestinations() {
+		PartitionScheme original = scheme().setCatalogName("METADATA_READER_2017_TEST");
+		original.getTableSpaces().clear();
+		for (int i = 1; i <= 4; i++)
+			original.getTableSpaces().add(new TableSpace("PRIMARY").setId(Integer.toString(i)));
+		SqlServerPartitionOptions.nextUsed(original, "PRIMARY");
+		PartitionScheme target = original.clone();
+		assertEquals(original, target, () -> original.diff(target).toString());
+		SqlServerPartitionOptions.clearNextUsed(target);
+		var registry = SqlServerDialectResolver.getInstance().getDialect(14, 0).createSqlFactoryRegistry();
+		SqlFactory<PartitionScheme> alter = registry.getSqlFactory(target, SqlType.ALTER);
+		assertEquals(1, alter.createDiffSql(original.diff(target)).size());
+	}
+
+	@Test
 	void unsupportedPlacementChangesAndAmbiguousRemovalAreRejected() {
 		var registry = SqlServerDialectResolver.getInstance().getDialect(11, 0).createSqlFactoryRegistry();
 		PartitionScheme original = scheme();

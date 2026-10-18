@@ -357,9 +357,11 @@ final class SqlServerMetadataAuditAssertions {
 					assertEquals(1, rows.getInt(1));
 				}
 			} finally {
-				sql.execute("ALTER TABLE dbo." + name + " SET (SYSTEM_VERSIONING = OFF)");
-				sql.execute("DROP TABLE dbo." + name);
-				sql.execute("DROP TABLE dbo." + history);
+				sql.execute("IF OBJECT_ID(N'dbo." + name + "', N'U') IS NOT NULL BEGIN "
+						+ "IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID(N'dbo." + name
+						+ "') AND temporal_type = 2) ALTER TABLE dbo." + name + " SET (SYSTEM_VERSIONING = OFF); "
+						+ "DROP TABLE dbo." + name + "; END");
+				sql.execute("DROP TABLE IF EXISTS dbo." + history);
 			}
 		}
 	}
