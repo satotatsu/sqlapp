@@ -160,7 +160,8 @@ public class OracleTableReader extends TableReader {
 			return;
 		var targets = new java.util.LinkedHashMap<List<String>, Table>();
 		for (Table table : tables)
-			if ("INDEX".equals(table.getSpecifics().get("oracle.table.organization")))
+			if ("INDEX".equals(table.getSpecifics().get("oracle.table.organization"))
+					|| table.getPartitioning() != null && table.getPartitioning().getSubPartitioningType() != null)
 				targets.put(List.of(table.getSchemaName(), table.getName()), table);
 		if (targets.isEmpty())
 			return;
@@ -181,13 +182,13 @@ public class OracleTableReader extends TableReader {
 			if (!OracleMetadataAccess.isDenied(error))
 				throw error;
 			logger.warn(
-					"Oracle DBMS_METADATA access denied or object inaccessible; IOT definitions skipped, catalog metadata retained.");
+					"Oracle DBMS_METADATA access denied or object inaccessible; IOT/composite table definitions skipped, catalog metadata retained.");
 			return;
 		}
 		for (var entry : targets.entrySet()) {
 			String ddl = definitions.get(entry.getKey());
 			if (ddl == null || ddl.isBlank())
-				throw new IllegalStateException("Oracle IOT DDL unavailable: " + entry.getKey());
+				throw new IllegalStateException("Oracle table DDL unavailable: " + entry.getKey());
 			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(entry.getValue(), ddl);
 		}
 	}
@@ -270,11 +271,13 @@ public class OracleTableReader extends TableReader {
 		String highValue = getString(rs, "HIGH_VALUE");
 		String compression = getString(rs, "COMPRESSION");
 		partition.setHighValue(highValue);
-		if (compression != null && !"DISABLED".equalsIgnoreCase(compression)) {
-			partition.setCompression(true);
-		}
+		// Composite parents may report NONE when no compression default is set.
+		partition.setCompression("ENABLED".equalsIgnoreCase(compression));
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
 		for (String key : OracleUtils.getTableStatisticsKeys()) {
+			if ("LOGGING".equals(key) && "NONE".equalsIgnoreCase(getString(rs, key))) {
+				continue; // Composite parent has no logging default.
+			}
 			this.setSpecifics(rs, key, partition);
 		}
 		//

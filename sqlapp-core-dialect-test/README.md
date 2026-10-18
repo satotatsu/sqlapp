@@ -163,6 +163,69 @@ locations, valid/usable indexes, and preservation of IOT prefix compression.
 The tablespace and its data file are dropped before the container is stopped.
 The same image/dialect properties select the 26ai baseline.
 
+Composite partition acceptance cases run separately:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleCompositePartitionTest'
+```
+
+They exercise RANGE-HASH parent ADD/DROP, RANGE-LIST child ADD/DROP and HASH
+child COALESCE using metadata-derived model diffs. They verify local index
+segment names and usable states, global index validity, and the exact rows
+removed by DROP. COALESCE starts with a populated removed bucket and must retain
+all 33 rows. Each maintenance case reads the resulting complete CREATE DDL,
+round-trips Schema XML, drops and recreates the table and indexes, reinserts
+the expected rows, and verifies child storage attributes and tablespaces.
+Complete DDL uses the existing guarded table-definition representation;
+changed models cannot replay stale CREATE SQL. The LIST case checks that catalog
+COMPRESSION=NONE is read as uncompressed. Another case reads a SYSTEM-owned
+composite table with SELECT alone, then with SELECT_CATALOG_ROLE: denied complete
+DDL must retain catalog metadata, and the role must enable complete DDL retrieval.
+The role and test table are removed afterwards.
+Use the same image/dialect properties for 26ai. These tests use
+owned disposable containers with reuse disabled by default and drop their tables;
+they do not qualify composite SPLIT/MERGE/MOVE or HASH parent ADD.
+
+The metadata query-count case also checks that complete table DDL uses one
+batched SELECT for either one or multiple composite tables. Its partition-related
+count is now nine SELECTs (eight catalog queries plus one complete-DDL query).
+Oracle 10g and later use this optional DDL retrieval; older dialects keep catalog
+reading. Without DBMS_METADATA access a warning is logged and catalog metadata
+remains available, but unsupported child storage attributes still prevent
+structured CREATE rather than being silently discarded.
+
+Composite SPLIT/MERGE and MOVE have a separate acceptance suite:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleCompositeAlterTest'
+```
+
+It covers RANGE and LIST child SPLIT/MERGE, RANGE/LIST/HASH child MOVE,
+simple HASH partition MOVE, and RANGE-HASH parent SPLIT/MERGE. Model diffs come
+from actual metadata. Parent cases cover table defaults smaller and larger than
+the requested HASH child count, exercising both ADD and COALESCE restoration.
+SPLIT cases gather parent/child/index statistics before reading and merging.
+Each operation verifies exact rows, named table and Local
+index segments, target and unaffected tablespaces, root index placement, and
+valid/usable Global and Local indexes. Moved segments contain rows. Parent
+splitting/merging restores the requested HASH child count with row-preserving
+ADD/COALESCE when Oracle uses table defaults, then restores Oracle-assigned child
+names. Two bulk catalog queries cover parent counts and child names, with
+preflight name/count checks and two-phase renames. This is a sequence of
+committing DDL statements; recovery after a partial failure is not automatic.
+
+The suite creates a disposable 128 MB tablespace and quota in its owned Oracle
+container, drops tables, then drops the tablespace and data file before stopping
+the container. Use the same image/dialect properties for 26ai. Current planners
+support isolated uncompressed changes with inherited physical defaults, ordinary indexes, and explicitly usable
+affected Local segments. Parent SPLIT/MERGE retains the child hash count and
+attributes. Other composite parent families, parent MOVE, compressed variants,
+ONLINE changes, LOB-specific placement and automatic failure recovery are outside
+this suite. Version guards retain RANGE-LIST at 10g, RANGE-RANGE/LIST-* at 11g,
+and HASH-* at 18c because the shared 12c dialect also represents 12.1.
+
 MySQL coverage uses MySQL 8.4 and verifies generic one-column generated-key
 result sets from Connector/J, parent-key propagation across multiple root
 batches, uneven child counts, explicit AUTO_INCREMENT values, and rejection of
