@@ -32,6 +32,23 @@ class OracleIotDefinitionTest {
 	}
 
 	private OracleTableReader reader(int[] calls, int failure) {
+		return reader(calls, failure, false);
+	}
+
+	private Table composite(String name) {
+		Table table = table(name);
+		table.getSpecifics().clear();
+		table.toPartitioning().getPartitioning().setPartitioningType(com.sqlapp.data.schemas.PartitioningType.Range)
+				.setSubPartitioningType(com.sqlapp.data.schemas.PartitioningType.Hash);
+		return table;
+	}
+
+	private String compositeDdl(String name) {
+		return "CREATE TABLE APP." + name + " (ID NUMBER) PARTITION BY RANGE(ID) SUBPARTITION BY HASH(ID) "
+				+ "(PARTITION P1 VALUES LESS THAN(100) (SUBPARTITION S11, SUBPARTITION S12))";
+	}
+
+	private OracleTableReader reader(int[] calls, int failure, boolean composite) {
 		return new OracleTableReader(DialectHolder.oracle26aiDialect) {
 			@Override
 			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
@@ -47,7 +64,7 @@ class OracleIotDefinitionTest {
 								return switch (key) {
 								case "OWNER" -> "APP";
 								case "TABLE_NAME" -> name;
-								case "TABLE_DEFINITION" -> ddl(name);
+								case "TABLE_DEFINITION" -> composite ? compositeDdl(name) : ddl(name);
 								default -> null;
 								};
 							}
@@ -64,6 +81,38 @@ class OracleIotDefinitionTest {
 				return null;
 			}
 		};
+	}
+
+	@Test
+	void compositeDefinitionsAreBatchedAndRecreatedAfterXml() throws Exception {
+		Table first = composite("T1"), second = composite("T2");
+		int[] calls = { 0 };
+		reader(calls, 0, true).readTableDefinitions(null, List.of(first, second, new Table("HEAP")));
+		assertEquals(1, calls[0]);
+		Table restored = SchemaUtils.readXml(new java.io.StringReader(first.asXml()));
+		var operations = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE);
+		assertEquals(compositeDdl("T1"), operations.get(0).getSqlText());
+		restored.setSchemaName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> OracleTableDefinition.get(restored));
+	}
+
+	@Test
+	void compositePermissionDenialRetainsCatalogAndDiscardsPartialDdl() {
+		for (int code : new int[] { 1031, 31603 }) {
+			Table first = composite("T1");
+			int[] calls = { 0 };
+			reader(calls, code, true).readTableDefinitions(null, List.of(first, composite("T2")));
+			assertEquals(1, calls[0]);
+			assertFalse(first.getSpecifics().containsKey(OracleTableDefinition.DEFINITION));
+			assertEquals(com.sqlapp.data.schemas.PartitioningType.Hash,
+					first.getPartitioning().getSubPartitioningType());
+		}
+	}
+
+	@Test
+	void compositeFailuresOtherThanAccessDenialPropagate() {
+		assertThrows(RuntimeException.class, () -> reader(new int[] { 0 }, 942, true).readTableDefinitions(null,
+				List.of(composite("T1"), composite("T2"))));
 	}
 
 	@Test
@@ -155,7 +204,7 @@ class OracleIotDefinitionTest {
 				return null;
 			}
 		};
-		reader.readTableDefinitions(null, List.of(table("T1")));
+		reader.readTableDefinitions(null, List.of(table("T1"), composite("T2")));
 	}
 
 	@Test

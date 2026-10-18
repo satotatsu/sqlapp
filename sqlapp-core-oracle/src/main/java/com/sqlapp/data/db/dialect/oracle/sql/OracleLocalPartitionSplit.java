@@ -40,9 +40,14 @@ final class OracleLocalPartitionSplit {
 	}
 
 	static void add(Table before, Table after, Dialect dialect, boolean decorate, OracleSqlBuilder builder) {
+		add(before, after, dialect, decorate, builder, false);
+	}
+
+	static void add(Table before, Table after, Dialect dialect, boolean decorate, OracleSqlBuilder builder,
+			boolean subpartition) {
 		if (before.getPartitioning() != null && after.getPartitioning() != null && before.getPartitioning()
 				.getPartitions().size() == after.getPartitioning().getPartitions().size() + 1) {
-			merge(before, after, dialect, decorate, builder);
+			merge(before, after, dialect, decorate, builder, subpartition);
 			return;
 		}
 		if (!(dialect instanceof Oracle10g) || "INDEX".equals(before.getSpecifics().get("oracle.table.organization")))
@@ -96,11 +101,12 @@ final class OracleLocalPartitionSplit {
 			same(oldInfo.getPartitions().get(i), newInfo.getPartitions().get(i + 1), dialect);
 		if (before.getIndexes().size() != after.getIndexes().size())
 			throw new IllegalArgumentException("Index additions/removals must be separate from a split");
-		builder.alter().table().space().name(before, decorate).space()._add("SPLIT PARTITION ").name(original.getName())
-				.space()._add(list ? "VALUES (" : "AT (")._add(left.getHighValue())._add(") INTO (");
-		partition(left, builder);
+		builder.alter().table().space().name(before, decorate).space()
+				._add(subpartition ? "SPLIT SUBPARTITION " : "SPLIT PARTITION ").name(original.getName()).space()
+				._add(list ? "VALUES (" : "AT (")._add(left.getHighValue())._add(") INTO (");
+		partition(left, builder, subpartition);
 		builder.comma();
-		partition(right, builder);
+		partition(right, builder, subpartition);
 		builder._add(") UPDATE INDEXES");
 		boolean first = true;
 		for (Index oldIndex : before.getIndexes()) {
@@ -162,27 +168,29 @@ final class OracleLocalPartitionSplit {
 				builder._add(" (");
 			builder.comma(!first).name(oldIndex, false).space()._add("(");
 			first = false;
-			partition(a, builder);
+			partition(a, builder, subpartition);
 			builder.comma();
-			partition(b, builder);
+			partition(b, builder, subpartition);
 			builder._add(")");
 		}
 		if (!first)
 			builder._add(")");
 	}
 
-	private static void merge(Table before, Table after, Dialect dialect, boolean decorate, OracleSqlBuilder builder) {
+	private static void merge(Table before, Table after, Dialect dialect, boolean decorate, OracleSqlBuilder builder,
+			boolean subpartition) {
 		// A merge has the same boundary/storage invariants as its inverse split.
-		add(after, before, dialect, decorate, new OracleSqlBuilder(dialect));
+		add(after, before, dialect, decorate, new OracleSqlBuilder(dialect), subpartition);
 		int position = 0;
 		while (position < after.getPartitioning().getPartitions().size() && before.getPartitioning().getPartitions()
 				.get(position).equals(after.getPartitioning().getPartitions().get(position)))
 			position++;
 		Partition first = before.getPartitioning().getPartitions().get(position),
 				second = before.getPartitioning().getPartitions().get(position + 1);
-		builder.alter().table().space().name(before, decorate).space()._add("MERGE PARTITIONS ").name(first.getName())
-				.comma().name(second.getName()).space()._add("INTO ");
-		partition(after.getPartitioning().getPartitions().get(position), builder);
+		builder.alter().table().space().name(before, decorate).space()
+				._add(subpartition ? "MERGE SUBPARTITIONS " : "MERGE PARTITIONS ").name(first.getName()).comma()
+				.name(second.getName()).space()._add("INTO ");
+		partition(after.getPartitioning().getPartitions().get(position), builder, subpartition);
 		builder._add(" UPDATE INDEXES");
 		boolean comma = false;
 		for (Index index : after.getIndexes()) {
@@ -192,17 +200,17 @@ final class OracleLocalPartitionSplit {
 				builder._add(" (");
 			builder.comma(comma).name(index, false).space()._add("(");
 			comma = true;
-			partition(index.getPartitioning().getPartitions().get(position), builder);
+			partition(index.getPartitioning().getPartitions().get(position), builder, subpartition);
 			builder._add(")");
 		}
 		if (comma)
 			builder._add(")");
 	}
 
-	private static void partition(Partition partition, OracleSqlBuilder builder) {
+	private static void partition(Partition partition, OracleSqlBuilder builder, boolean subpartition) {
 		if (partition.getName() == null || partition.getName().isBlank())
 			throw new IllegalArgumentException("Partition name is required");
-		builder._add("PARTITION ").name(partition.getName());
+		builder._add(subpartition ? "SUBPARTITION " : "PARTITION ").name(partition.getName());
 		if (partition.getTableSpaceName() != null)
 			builder.space()._add("TABLESPACE ").name(partition.getTableSpaceName());
 	}

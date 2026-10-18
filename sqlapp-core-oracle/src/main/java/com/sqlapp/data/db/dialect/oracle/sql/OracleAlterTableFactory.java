@@ -91,7 +91,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 					if (!com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(before)
 							.equals(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(after)))
 						throw new IllegalArgumentException(
-								"Structural ALTER of a complete Oracle IOT definition requires an explicit migration plan");
+								"Structural ALTER of a complete Oracle table definition requires an explicit migration plan");
 				}
 			}
 		}
@@ -122,19 +122,20 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		if (before != null && after != null
 				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName())) {
 			var changes = before.diff(after).toDifference().getChangedProperties(getDialect());
-			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c)
-					|| changes.size() != 1 || !changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c) || changes.size() != 1
+					|| !changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
 					|| before.getPartitioning() != null || before.getTableType() == Table.TableType.Temporary
 					|| after.getTableSpaceName() == null || after.getTableSpaceName().isBlank())
-				throw new IllegalArgumentException("Heap MOVE requires Oracle 18c or later and one isolated nonpartitioned tablespace change");
+				throw new IllegalArgumentException(
+						"Heap MOVE requires Oracle 18c or later and one isolated nonpartitioned tablespace change");
 			for (var index : after.getIndexes()) {
 				OracleTablePartitionMaintenance.ordinary(index);
 				if (getTableOptions().getOnlineIndex().test(after, index))
 					throw new IllegalArgumentException("ONLINE heap MOVE requires a dedicated table option");
 			}
 			OracleSqlBuilder builder = createSqlBuilder(getDialect());
-			builder.alter().table().space().name(before, getOptions().isDecorateSchemaName())
-					._add(" MOVE TABLESPACE ").name(after.getTableSpaceName())._add(" UPDATE INDEXES");
+			builder.alter().table().space().name(before, getOptions().isDecorateSchemaName())._add(" MOVE TABLESPACE ")
+					.name(after.getTableSpaceName())._add(" UPDATE INDEXES");
 			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
 		}
 		return super.createDiffSql(difference);

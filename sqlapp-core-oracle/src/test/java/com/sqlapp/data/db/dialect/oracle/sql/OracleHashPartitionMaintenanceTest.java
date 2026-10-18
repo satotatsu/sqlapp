@@ -62,6 +62,29 @@ class OracleHashPartitionMaintenanceTest {
 	}
 
 	@Test
+	void hashMovePreservesMetadataAndIndexesAtTheTenGBoundary() {
+		Table before = source(true), after = before.clone();
+		before.getPartitioning().getPartitions().get(0).getSpecifics().put("INITIAL_EXTENT", "65536");
+		after = before.clone();
+		after.getPartitioning().getPartitions().get(0).setTableSpaceName("Data Space");
+		assertEquals(List.of("ALTER TABLE APP.T MOVE PARTITION P1 TABLESPACE \"Data Space\" UPDATE INDEXES"),
+				sql(before, after, DialectHolder.oracle10gDialect));
+		Table target = after;
+		assertThrows(IllegalArgumentException.class, () -> sql(before, target, DialectHolder.defaultDialect));
+	}
+
+	@Test
+	void hashMoveRejectsCompressionAndOtherPartitionChanges() {
+		Table before = source(true), after = before.clone();
+		after.getPartitioning().getPartitions().get(0).setTableSpaceName("DATA").setHighValue("100");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		before.setCompression(true);
+		Table compressed = before.clone();
+		compressed.getPartitioning().getPartitions().get(0).setTableSpaceName("DATA");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, compressed, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
 	void addRehashesAndMaintainsAllIndexesBeforeLocalRenameAndMove() {
 		Table before = source(true);
 		assertEquals(

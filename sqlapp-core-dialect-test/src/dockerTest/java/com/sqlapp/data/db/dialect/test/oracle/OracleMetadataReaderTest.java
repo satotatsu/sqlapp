@@ -74,8 +74,8 @@ class OracleMetadataReaderTest {
 			procedure.getArguments().add(inout);
 			var function = new com.sqlapp.data.schemas.Function("ROUNDTRIP_DEFAULT");
 			function.getReturning().setDataType(DataType.INT);
-			function.getArguments().add(new com.sqlapp.data.schemas.NamedArgument("N")
-					.setDataType(DataType.INT).setDefaultValue("1 + 2"));
+			function.getArguments().add(
+					new com.sqlapp.data.schemas.NamedArgument("N").setDataType(DataType.INT).setDefaultValue("1 + 2"));
 			function.setStatement("IS BEGIN RETURN N * 2; END;");
 			try (Statement sql = connection.createStatement()) {
 				for (var operation : registry.createSql(procedure, com.sqlapp.data.db.sql.SqlType.CREATE))
@@ -239,7 +239,8 @@ class OracleMetadataReaderTest {
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertTrue(String.join("\n", procedure.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			assertTrue(
+					String.join("\n", procedure.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
@@ -267,21 +268,23 @@ class OracleMetadataReaderTest {
 	void recreatesIotAndReadOnlyViewThroughMetadataXml() throws Exception {
 		try (Connection connection = ORACLE.createConnection(""); Statement sql = connection.createStatement()) {
 			try {
-				sql.execute("CREATE TABLE ROUNDTRIP_IOT (ID NUMBER PRIMARY KEY, VALUE VARCHAR2(4000)) ORGANIZATION INDEX OVERFLOW");
-				sql.execute("CREATE VIEW ROUNDTRIP_VIEW (ITEM_ID, ITEM_VALUE) AS SELECT ID, VALUE FROM ROUNDTRIP_IOT WITH READ ONLY CONSTRAINT ROUNDTRIP_RO");
+				sql.execute(
+						"CREATE TABLE ROUNDTRIP_IOT (ID NUMBER PRIMARY KEY, VALUE VARCHAR2(4000)) ORGANIZATION INDEX OVERFLOW");
+				sql.execute(
+						"CREATE VIEW ROUNDTRIP_VIEW (ITEM_ID, ITEM_VALUE) AS SELECT ID, VALUE FROM ROUNDTRIP_IOT WITH READ ONLY CONSTRAINT ROUNDTRIP_RO");
 				var dialect = DialectResolver.getInstance().getDialect(connection);
 				String owner = connection.getMetaData().getUserName().toUpperCase(Locale.ROOT);
 				var schemaReader = dialect.getCatalogReader().getSchemaReader();
 				var tableReader = schemaReader.getTableReader();
 				tableReader.setSchemaName(owner);
 				tableReader.setObjectName("ROUNDTRIP_IOT");
-				Table table = com.sqlapp.data.schemas.SchemaUtils.readXml(
-						new java.io.StringReader(tableReader.getAllFull(connection).get(0).asXml()));
+				Table table = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(tableReader.getAllFull(connection).get(0).asXml()));
 				var viewReader = schemaReader.getViewReader();
 				viewReader.setSchemaName(owner);
 				viewReader.setObjectName("ROUNDTRIP_VIEW");
-				com.sqlapp.data.schemas.View view = com.sqlapp.data.schemas.SchemaUtils.readXml(
-						new java.io.StringReader(viewReader.getAllFull(connection).get(0).asXml()));
+				com.sqlapp.data.schemas.View view = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(viewReader.getAllFull(connection).get(0).asXml()));
 				assertEquals("ROUNDTRIP_RO", view.getSpecifics().get("oracle.view.readOnlyConstraint"));
 				sql.execute("DROP VIEW ROUNDTRIP_VIEW");
 				sql.execute("DROP TABLE ROUNDTRIP_IOT PURGE");
@@ -295,9 +298,10 @@ class OracleMetadataReaderTest {
 					assertTrue(result.next());
 					assertEquals("restored", result.getString(1));
 				}
-				assertEquals("ROUNDTRIP_RO", viewReader.getAllFull(connection).get(0).getSpecifics()
-						.get("oracle.view.readOnlyConstraint"));
-				try (var result = sql.executeQuery("SELECT IOT_TYPE, IOT_NAME FROM USER_TABLES WHERE TABLE_NAME = 'ROUNDTRIP_IOT' OR IOT_NAME = 'ROUNDTRIP_IOT'")) {
+				assertEquals("ROUNDTRIP_RO",
+						viewReader.getAllFull(connection).get(0).getSpecifics().get("oracle.view.readOnlyConstraint"));
+				try (var result = sql.executeQuery(
+						"SELECT IOT_TYPE, IOT_NAME FROM USER_TABLES WHERE TABLE_NAME = 'ROUNDTRIP_IOT' OR IOT_NAME = 'ROUNDTRIP_IOT'")) {
 					int count = 0;
 					while (result.next()) {
 						assertTrue("IOT".equals(result.getString(1)) || "IOT_OVERFLOW".equals(result.getString(1)));
@@ -315,7 +319,8 @@ class OracleMetadataReaderTest {
 	@Test
 	void retainsMviewQueryWithoutCatalogRoleAndReadsDdlAfterGrant() throws Exception {
 		try (Connection admin = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
-				Statement sql = admin.createStatement(); Connection connection = ORACLE.createConnection("")) {
+				Statement sql = admin.createStatement();
+				Connection connection = ORACLE.createConnection("")) {
 			String user = ORACLE.getUsername().toUpperCase(Locale.ROOT);
 			boolean roleGranted = false;
 			try {

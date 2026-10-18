@@ -203,7 +203,7 @@ Composite SPLIT/MERGE and MOVE have a separate acceptance suite:
 ```
 
 It covers RANGE and LIST child SPLIT/MERGE, RANGE/LIST/HASH child MOVE,
-simple HASH partition MOVE, and RANGE-HASH parent SPLIT/MERGE. Model diffs come
+simple HASH partition MOVE, and RANGE-HASH / LIST-HASH parent SPLIT/MERGE. Model diffs come
 from actual metadata. Parent cases cover table defaults smaller and larger than
 the requested HASH child count, exercising both ADD and COALESCE restoration.
 SPLIT cases gather parent/child/index statistics before reading and merging.

@@ -83,6 +83,244 @@ class OracleCompositePartitionMaintenanceTest {
 	}
 
 	@Test
+	void observedChildStatisticsDoNotConstrainMergeOrMutateTheCanonicalModel() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), split = splitParent(before);
+		for (Partitioning info : List.of(split.getPartitioning(), split.getIndexes().get("IX").getPartitioning())) {
+			info.getPartitions().get(1).getStatistics().put("NUM_ROWS", "1");
+			info.getPartitions().get(2).getStatistics().put("NUM_ROWS", "2");
+			info.getPartitions().get(1).getSubPartitions().get(0).getStatistics().put("NUM_ROWS", "1");
+			info.getPartitions().get(2).getSubPartitions().get(0).getStatistics().put("NUM_ROWS", "2");
+		}
+		Table snapshot = split.clone();
+		var registry = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		assertEquals(2, registry.getSqlFactory(before, SqlType.ALTER).createDiffSql(split.diff(before)).size());
+		assertEquals(snapshot, split);
+	}
+
+	@Test
+	void parentRangeHashSplitAndMergeUseBatchedCountAndNameRestoration() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash);
+		for (Partition part : before.getIndexes().get("IX").getPartitioning().getPartitions())
+			for (SubPartition child : part.getSubPartitions())
+				child.setCompressionType("DISABLED");
+		Table after = splitParent(before);
+		var registry = DialectHolder.oracle10gDialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		var split = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
+		assertEquals(2, split.size());
+		assertTrue(split.get(0).getSqlText().contains("SPLIT PARTITION P2 AT (150)"));
+		String block = split.get(1).getSqlText();
+		assertTrue(block.contains("BULK COLLECT INTO segments"));
+		assertEquals(2, block.split("BULK COLLECT", -1).length - 1);
+		assertTrue(block.contains("ADD SUBPARTITION UPDATE INDEXES"));
+		assertTrue(block.contains("COALESCE SUBPARTITION UPDATE INDEXES"));
+		assertTrue(block.contains("RENAME SUBPARTITION"));
+		assertTrue(block.contains("ALL_TAB_SUBPARTITIONS"));
+		assertTrue(block.contains("ALL_IND_SUBPARTITIONS"));
+		var merge = registry.getSqlFactory(before, SqlType.ALTER).createDiffSql(after.diff(before));
+		assertEquals(2, merge.size());
+		assertTrue(merge.get(0).getSqlText().contains("MERGE PARTITIONS PL, PR"));
+		before.getIndexes().remove("IX");
+		after.getIndexes().remove("IX");
+		after.getPartitioning().getPartitions().get(1).getSubPartitions().get(0).setName("O'Brien");
+		var globalOnly = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
+		assertEquals(2, globalOnly.size());
+		assertTrue(globalOnly.get(1).getSqlText().toUpperCase(java.util.Locale.ROOT).contains("O''BRIEN"));
+	}
+
+	@Test
+	void parentListHashSplitMergeAndVersionBoundary() {
+		Table before = source(PartitioningType.List, PartitioningType.Hash);
+		for (Partitioning info : List.of(before.getPartitioning(), before.getIndexes().get("IX").getPartitioning()))
+			info.getPartitions().get(1).setHighValue("150,200");
+		Table after = splitParent(before);
+		var registry = DialectHolder.oracle11gDialect.createSqlFactoryRegistry();
+		var split = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
+		assertEquals(2, split.size());
+		assertTrue(split.get(0).getSqlText().contains("SPLIT PARTITION P2 VALUES (150)"));
+		assertEquals(2, registry.getSqlFactory(before, SqlType.ALTER).createDiffSql(after.diff(before)).size());
+		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle10gDialect.createSqlFactoryRegistry()
+				.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+		Table invalid = after.clone();
+		for (Partitioning info : List.of(invalid.getPartitioning(), invalid.getIndexes().get("IX").getPartitioning()))
+			info.getPartitions().get(2).setHighValue("999");
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.getSqlFactory(invalid, SqlType.ALTER).createDiffSql(before.diff(invalid)));
+	}
+
+	@Test
+	void defaultListHashParentUsesSharedListValidationWithoutLocalIndexes() {
+		Table before = source(PartitioningType.List, PartitioningType.Hash);
+		for (Partitioning info : List.of(before.getPartitioning(), before.getIndexes().get("IX").getPartitioning()))
+			info.getPartitions().get(1).setHighValue("DEFAULT");
+		Table after = splitParent(before);
+		for (Partitioning info : List.of(after.getPartitioning(), after.getIndexes().get("IX").getPartitioning()))
+			info.getPartitions().get(2).setHighValue("DEFAULT");
+		before.getIndexes().remove("IX");
+		after.getIndexes().remove("IX");
+		var registry = DialectHolder.oracle11gR2Dialect.createSqlFactoryRegistry();
+		assertEquals(2, registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)).size());
+		assertEquals(2, registry.getSqlFactory(before, SqlType.ALTER).createDiffSql(after.diff(before)).size());
+		assertEquals("DEFAULT", before.getPartitioning().getPartitions().get(1).getHighValue());
+	}
+
+	private Table splitParent(Table before) {
+		Table after = before.clone();
+		for (Partitioning info : List.of(after.getPartitioning(), after.getIndexes().get("IX").getPartitioning())) {
+			Partition original = info.getPartitions().remove(1);
+			boolean index = info.getIndex() != null;
+			for (boolean left : List.of(true, false)) {
+				Partition part = original.clone().setName((index ? "I" : "P") + (left ? "L" : "R"))
+						.setHighValue(left ? "150" : "200");
+				for (int j = 0; j < part.getSubPartitions().size(); j++)
+					part.getSubPartitions().get(j).setName((index ? "IC" : "C") + (left ? "L" : "R") + j);
+				info.getPartitions().add(part);
+			}
+		}
+		return after;
+	}
+
+	@Test
+	void parentSplitCannotDiscardChildRoutingAttributesOrOtherParents() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = splitParent(before);
+		after.getPartitioning().getPartitions().get(1).getSubPartitions().remove(1);
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table space = splitParent(before);
+		space.getPartitioning().getPartitions().get(1).getSubPartitions().get(0).setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, space, DialectHolder.oracle26aiDialect));
+		Table unrelated = splitParent(before);
+		unrelated.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, unrelated, DialectHolder.oracle26aiDialect));
+		Table wrongBoundary = splitParent(before);
+		wrongBoundary.getIndexes().get("IX").getPartitioning().getPartitions().get(1).setHighValue("999");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, wrongBoundary, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void parentSplitRejectsUnsupportedCompressionAndNameCollisions() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = splitParent(before);
+		after.getPartitioning().getPartitions().get(1).getSubPartitions().get(0).setName("S11");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		before.getIndexes().get("IX").setCompression(true);
+		Table compressed = splitParent(before);
+		assertThrows(IllegalArgumentException.class, () -> sql(before, compressed, DialectHolder.oracle26aiDialect));
+		Table list = source(PartitioningType.Range, PartitioningType.List);
+		assertThrows(IllegalArgumentException.class,
+				() -> sql(list, splitParent(list), DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void childRangeSplitAndMergeCoordinateNamedLocalSegments() {
+		Table before = source(PartitioningType.Range, PartitioningType.Range);
+		Table split = splitChild(before, false);
+		assertEquals(
+				"ALTER TABLE APP.T SPLIT SUBPARTITION S12 AT (15) INTO (SUBPARTITION SL, SUBPARTITION SR) UPDATE INDEXES (IX (SUBPARTITION IL, SUBPARTITION IR))",
+				sql(before, split, DialectHolder.oracle11gDialect));
+		assertEquals(
+				"ALTER TABLE APP.T MERGE SUBPARTITIONS SL, SR INTO SUBPARTITION S12 UPDATE INDEXES (IX (SUBPARTITION S12))",
+				sql(split, before, DialectHolder.oracle11gR2Dialect));
+		assertEquals(2, before.getPartitioning().getPartitions().get(0).getSubPartitions().size());
+	}
+
+	private Table splitChild(Table before, boolean list) {
+		if (list)
+			for (Partitioning info : List.of(before.getPartitioning(), before.getIndexes().get("IX").getPartitioning()))
+				info.getPartitions().get(0).getSubPartitions().get(1).setHighValue("20,30");
+		Table after = before.clone();
+		for (Partitioning info : List.of(after.getPartitioning(), after.getIndexes().get("IX").getPartitioning())) {
+			var children = info.getPartitions().get(0).getSubPartitions();
+			SubPartition original = children.remove(1);
+			boolean index = info.getIndex() != null;
+			children.add(original.clone().setName(index ? "IL" : "SL").setHighValue(list ? "20" : "15"));
+			children.add(original.clone().setName(index ? "IR" : "SR").setHighValue(list ? "30" : "20"));
+		}
+		return after;
+	}
+
+	@Test
+	void childListSplitAndMergeUseSetValidation() {
+		Table before = source(PartitioningType.Range, PartitioningType.List), after = splitChild(before, true);
+		assertTrue(sql(before, after, DialectHolder.oracle10gDialect).contains("SPLIT SUBPARTITION S12 VALUES (20)"));
+		assertTrue(sql(after, before, DialectHolder.oracle10gDialect).contains("MERGE SUBPARTITIONS"));
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(2).setHighValue("40");
+		after.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(2)
+				.setHighValue("40");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void childMoveWorksForEverySupportedCompositeFamilyWithoutChangingIndexes() {
+		for (PartitioningType root : List.of(PartitioningType.Range, PartitioningType.List, PartitioningType.Hash))
+			for (PartitioningType sub : List.of(PartitioningType.Range, PartitioningType.List, PartitioningType.Hash)) {
+				Table before = source(root, sub), after = before.clone();
+				after.getPartitioning().getPartitions().get(0).getSubPartitions().get(0)
+						.setTableSpaceName("Data Space");
+				assertEquals("ALTER TABLE APP.T MOVE SUBPARTITION S11 TABLESPACE \"Data Space\" UPDATE INDEXES",
+						sql(before, after, DialectHolder.oracle26aiDialect));
+			}
+	}
+
+	@Test
+	void childSplitNeedsMatchingBoundariesUniqueNamesAndUnchangedOtherParents() {
+		Table before = source(PartitioningType.Range, PartitioningType.Range), after = splitChild(before, false);
+		after.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(1)
+				.setHighValue("16");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table duplicate = splitChild(before, false);
+		duplicate.getPartitioning().getPartitions().get(0).getSubPartitions().get(1).setName("S21");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, duplicate, DialectHolder.oracle26aiDialect));
+		Table concurrent = splitChild(before, false);
+		concurrent.getPartitioning().getPartitions().get(1).getSubPartitions().get(0).setTableSpaceName("OTHER");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, concurrent, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void childSplitAndMoveHonorVersionOnlineAndSpecialIndexBoundaries() {
+		Table before = source(PartitioningType.Range, PartitioningType.Range), after = splitChild(before, false);
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle10gDialect));
+		before.getIndexes().get("IX").setIndexType(IndexType.Domain);
+		after.getIndexes().get("IX").setIndexType(IndexType.Domain);
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table move = source(PartitioningType.Range, PartitioningType.Hash), moved = move.clone();
+		moved.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
+		var online = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry();
+		online.getTableOptions().setOnlineIndex(true);
+		assertThrows(IllegalArgumentException.class,
+				() -> online.getSqlFactory(moved, SqlType.ALTER).createDiffSql(move.diff(moved)));
+		assertThrows(IllegalArgumentException.class, () -> sql(move, moved, DialectHolder.defaultDialect));
+	}
+
+	@Test
+	void childMoveRejectsUnusableAffectedIndexesAndCompressedDefaults() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash);
+		before.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(0).getSpecifics()
+				.put("oracle.index.status", "UNUSABLE");
+		Table after = before.clone();
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table compressed = source(PartitioningType.Range, PartitioningType.Range);
+		compressed.setCompression(true);
+		assertThrows(IllegalArgumentException.class,
+				() -> sql(compressed, splitChild(compressed, false), DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void childMoveRejectsMultipleEditsCompressionAndIndexChanges() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = before.clone();
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(1).setTableSpaceName("DATA");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+		Table changed = before.clone();
+		changed.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
+		changed.getIndexes().get("GIX").setRemarks("changed");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, changed, DialectHolder.oracle26aiDialect));
+		before.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setCompression(true);
+		Table compressed = before.clone();
+		compressed.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, compressed, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
 	void parentAddNamesEveryLocalChildAndPreservesExistingPartitions() {
 		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = appendParent(before);
 		assertEquals(

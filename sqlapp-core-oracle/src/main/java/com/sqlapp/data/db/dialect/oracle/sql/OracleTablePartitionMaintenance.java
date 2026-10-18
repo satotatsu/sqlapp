@@ -135,6 +135,13 @@ final class OracleTablePartitionMaintenance {
 		Partitioning oldInfo = before.getPartitioning(), info = after.getPartitioning();
 		int oldCount = oldInfo.getPartitions().size(), newCount = info.getPartitions().size();
 		boolean hash = oldInfo.getPartitioningType() == PartitioningType.Hash;
+		if (oldCount == newCount) {
+			if (hash)
+				require(!before.isCompression() && oldInfo.getPartitions().stream()
+						.noneMatch(part -> part.isCompression() || part.getCompressionType() != null),
+						"HASH MOVE requires uncompressed partitions");
+			return movePartition(before, after, dialect, decorate, builders);
+		}
 		if (hash) {
 			require(!before.isCompression(), "HASH maintenance requires an uncompressed table");
 			for (Partition part : oldInfo.getPartitions())
@@ -153,8 +160,6 @@ final class OracleTablePartitionMaintenance {
 		}
 		if (hash)
 			throw new IllegalArgumentException("HASH maintenance requires one appended or last coalesced partition");
-		if (oldCount == newCount)
-			return movePartition(before, after, dialect, decorate, builders);
 		if (iot(before)) {
 			return splitOrMergeIot(before, after, dialect, decorate, builders);
 		}
@@ -371,7 +376,8 @@ final class OracleTablePartitionMaintenance {
 		require(moved != null, "No partition tablespace change to apply");
 		OracleSqlBuilder sql = table(before, decorate, builders);
 		sql._add("MOVE PARTITION ").name(moved.getName())._add(" TABLESPACE ").name(moved.getTableSpaceName());
-		if (!iot(before)) sql._add(" UPDATE INDEXES");
+		if (!iot(before))
+			sql._add(" UPDATE INDEXES");
 		return new Plan(List.of(sql.toString()), null);
 	}
 

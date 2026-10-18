@@ -10,8 +10,8 @@ import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.schemas.*;
 
 /**
- * Isolated composite partition removal; no database access or row-discarding
- * HASH DROP.
+ * Isolated composite partition maintenance; no database access or
+ * row-discarding HASH DROP.
  */
 final class OracleCompositePartitionMaintenance {
 	private OracleCompositePartitionMaintenance() {
@@ -91,6 +91,17 @@ final class OracleCompositePartitionMaintenance {
 			require(Set.of(SchemaObjectProperties.PARTITIONING.getLabel(), SchemaObjectProperties.INDEXES.getLabel())
 					.contains(property), "Composite maintenance must be isolated: " + property);
 		require(before.getIndexes().size() == after.getIndexes().size(), "Index additions/removals must be separate");
+		if (oldInfo.getPartitions().size() != info.getPartitions().size()
+				&& removed(oldInfo.getPartitions(), info.getPartitions(), dialect) < 0) {
+			boolean append = info.getPartitions().size() == oldInfo.getPartitions().size() + 1;
+			for (int i = 0; append && i < oldInfo.getPartitions().size(); i++)
+				append = same(oldInfo.getPartitions().get(i), info.getPartitions().get(i), dialect);
+			if (!append)
+				return OracleCompositeParentSplit.create(before, after, dialect, decorate, builders);
+		}
+		var childPlan = changeChild(before, after, dialect, decorate, builders);
+		if (childPlan != null)
+			return childPlan;
 		if (info.getPartitions().size() == oldInfo.getPartitions().size() + 1) {
 			require(allowAdd, "Table options prohibit adding partitions");
 			return appendParent(before, after, dialect, decorate, builders);
@@ -187,6 +198,169 @@ final class OracleCompositePartitionMaintenance {
 		}
 		sql._add(" UPDATE INDEXES");
 		return new OracleTablePartitionMaintenance.Plan(List.of(sql.toString()), coalesce ? null : deleted);
+	}
+
+	private static OracleTablePartitionMaintenance.Plan changeChild(Table before, Table after, Dialect dialect,
+			boolean decorate, Supplier<OracleSqlBuilder> builders) {
+		var a = before.getPartitioning().getPartitions();
+		var b = after.getPartitioning().getPartitions();
+		if (a.size() != b.size())
+			return null;
+		int position = -1;
+		for (int i = 0; i < a.size(); i++) {
+			if (same(a.get(i), b.get(i), dialect))
+				continue;
+			require(position < 0, "Only one parent partition may change");
+			parent(a.get(i), b.get(i), dialect);
+			position = i;
+		}
+		if (position < 0)
+			return null;
+		var oldChildren = a.get(position).getSubPartitions();
+		var children = b.get(position).getSubPartitions();
+		require(!children.isEmpty(), "A parent must retain at least one subpartition");
+		if (removed(oldChildren, children, dialect) >= 0)
+			return null;
+		boolean append = children.size() == oldChildren.size() + 1;
+		for (int i = 0; append && i < oldChildren.size(); i++)
+			append = same(oldChildren.get(i), children.get(i), dialect);
+		if (append)
+			return null;
+		require(!before.isCompression() && !a.get(position).isCompression()
+				&& oldChildren.stream().noneMatch(part -> part.isCompression() || part.getCompressionType() != null)
+				&& children.stream().noneMatch(part -> part.isCompression() || part.getCompressionType() != null),
+				"Child SPLIT/MERGE/MOVE requires uncompressed table, parent and children");
+		validateChildIndexes(before, after, position, dialect);
+		uniqueChildren(after);
+		if (children.size() == oldChildren.size()) {
+			SubPartition moved = null;
+			int movedPosition = -1;
+			for (int i = 0; i < children.size(); i++) {
+				SubPartition old = oldChildren.get(i), next = children.get(i);
+				if (same(old, next, dialect))
+					continue;
+				SubPartition copy = next.clone();
+				copy.setTableSpaceName(old.getTableSpaceName());
+				require(moved == null && same(old, copy, dialect) && next.getTableSpaceName() != null
+						&& !next.getTableSpaceName().isBlank() && !old.isCompression()
+						&& old.getCompressionType() == null,
+						"Subpartition MOVE requires one isolated uncompressed tablespace change");
+				moved = next;
+				movedPosition = i;
+			}
+			require(moved != null, "No subpartition MOVE found");
+			for (Index index : before.getIndexes()) {
+				require(index.diff(after.getIndexes().get(index.getName())).toDifference().getChangedProperties(dialect)
+						.isEmpty(), "Subpartition MOVE requires unchanged indexes");
+				if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
+					require("USABLE".equals(index.getPartitioning().getPartitions().get(position).getSubPartitions()
+							.get(movedPosition).getSpecifics().get("oracle.index.status")),
+							"Subpartition MOVE requires an explicitly USABLE affected Local segment");
+			}
+			OracleSqlBuilder sql = builders.get().alter().table().space().name(before, decorate)
+					._add(" MOVE SUBPARTITION ").name(moved.getName())._add(" TABLESPACE ")
+					.name(moved.getTableSpaceName())._add(" UPDATE INDEXES");
+			return new OracleTablePartitionMaintenance.Plan(List.of(sql.toString()), null);
+		}
+		require(before.getPartitioning().getSubPartitioningType() != PartitioningType.Hash,
+				"HASH subpartitions support ADD/COALESCE/MOVE, not SPLIT/MERGE");
+		OracleSqlBuilder sql = builders.get();
+		OracleLocalPartitionSplit.add(flatten(before, position), flatten(after, position), dialect, decorate, sql,
+				true);
+		return new OracleTablePartitionMaintenance.Plan(List.of(sql.toString()), null);
+	}
+
+	private static void uniqueChildren(Table table) {
+		uniqueChildren(table.getPartitioning());
+		for (Index index : table.getIndexes())
+			if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
+				uniqueChildren(index.getPartitioning());
+	}
+
+	private static void uniqueChildren(Partitioning info) {
+		var names = new java.util.HashSet<String>();
+		for (Partition parent : info.getPartitions())
+			for (SubPartition child : parent.getSubPartitions())
+				require(child.getName() != null && !child.getName().isBlank()
+						&& names.add(child.getName().toUpperCase(java.util.Locale.ROOT)),
+						"Subpartition names must be unique throughout their table/index");
+	}
+
+	private static void validateChildIndexes(Table before, Table after, int position, Dialect dialect) {
+		for (Index index : before.getIndexes()) {
+			OracleTablePartitionMaintenance.ordinary(index);
+			Index next = after.getIndexes().get(index.getName());
+			require(next != null, "Index identity must remain unchanged");
+			if (!"LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality"))) {
+				require(index.diff(next).toDifference().getChangedProperties(dialect).isEmpty(),
+						"Global indexes must remain unchanged");
+				continue;
+			}
+			for (String property : index.diff(next).toDifference().getChangedProperties(dialect).keySet())
+				require(SchemaObjectProperties.PARTITIONING.getLabel().equals(property),
+						"Local index attributes must remain unchanged");
+			shape(index.getPartitioning(), next.getPartitioning(), dialect);
+			localShape(before.getPartitioning(), index.getPartitioning());
+			localShape(after.getPartitioning(), next.getPartitioning());
+			for (int i = 0; i < index.getPartitioning().getPartitions().size(); i++) {
+				Partition old = index.getPartitioning().getPartitions().get(i),
+						target = next.getPartitioning().getPartitions().get(i);
+				if (i == position)
+					parent(old, target, dialect);
+				else
+					require(same(old, target, dialect), "Unaffected Local index parents must remain unchanged");
+			}
+		}
+	}
+
+	private static void localShape(Partitioning table, Partitioning index) {
+		require(index.getPartitioningType() == table.getPartitioningType()
+				&& index.getSubPartitioningType() == table.getSubPartitioningType()
+				&& index.getPartitions().size() == table.getPartitions().size(),
+				"Local composite shape must match its table");
+		for (int i = 0; i < table.getPartitions().size(); i++) {
+			var a = table.getPartitions().get(i).getSubPartitions();
+			var b = index.getPartitions().get(i).getSubPartitions();
+			require(a.size() == b.size(), "Local subpartition counts must match the table");
+			for (int j = 0; j < a.size(); j++) {
+				if (table.getSubPartitioningType() == PartitioningType.List)
+					OracleListPartitionValues.same(a.get(j).getHighValue(), b.get(j).getHighValue());
+				else
+					require(java.util.Objects.equals(a.get(j).getHighValue(), b.get(j).getHighValue()),
+							"Local subpartition boundaries must match the table");
+			}
+		}
+	}
+
+	/**
+	 * Project one parent's canonical child models into the shared simple split
+	 * validator.
+	 */
+	private static Table flatten(Table table, int position) {
+		Table copy = table.clone();
+		flatten(copy.getPartitioning(), position);
+		for (Index index : copy.getIndexes())
+			if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
+				flatten(index.getPartitioning(), position);
+		return copy;
+	}
+
+	private static void flatten(Partitioning info, int position) {
+		var columns = info.getSubPartitioningColumns().stream().map(column -> column.getName()).toList();
+		var leaves = info.getPartitions().get(position).getSubPartitions().stream().map(child -> child.toPartition())
+				.toList();
+		info.setPartitioningType(info.getSubPartitioningType());
+		info.setSubPartitioningType((PartitioningType) null);
+		info.setPartitionSize(0);
+		info.setSubPartitionSize(null);
+		info.getPartitioningColumns().clear();
+		info.getSubPartitioningColumns().clear();
+		for (String column : columns)
+			info.getPartitioningColumns().add(column);
+		info.getPartitions().clear();
+		info.getPartitions().addAll(leaves);
+		for (Partition leaf : info.getPartitions())
+			leaf.getStatistics().clear();
 	}
 
 	private static void simple(SubPartition part, boolean index, PartitioningType type, Dialect dialect) {

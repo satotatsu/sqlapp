@@ -2261,6 +2261,22 @@ Routine置換4件、directory2件を追加。実行コマンド:
 ./gradlew :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
 ```
 
+## 2026-10-18: LIST-HASH親のSPLIT／MERGE
+
+- RANGE-HASH親の既存プランナーをLIST-HASHにも適用した。親の値集合とDEFAULTの検証・SQL生成は共通のLIST保守処理を使い、HASH子の数・属性・名前とLocal索引状態の復元は既存の一括カタログ処理を使う。[Oracleの保守仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)に従う。
+- LIST-*の既存バージョン境界によりOracle11g以降を対象とし、10gでは拒否する。Resolver、公開API、設定形式、共有Schemaモデル、依存バージョンは変更しない。変更モジュールはOracleとdialect-test。
+- 単体テストでは通常値とDEFAULTの分割・結合、Local索引なし、不正な値集合、10g／11g境界を追加した。Dockerケースは実メタデータからの分割・統計収集・再読取・結合を行い、34行のデータ、親子名、表領域、物理属性、Global／Local索引状態を検証する。表の既定子数が要求数より少ない場合と多い場合を分ける。
+- 制限は既存RANGE-HASH経路と同じく、非圧縮・通常索引・固定HASH子数と属性を維持する独立変更。子がRANGE／LISTの複合親、親MOVE、ONLINE、高度な個別物理属性、途中失敗後の自動再開は未対応。DDLは複数回コミットされる。旧版Oracleの実DB検証は行っていない。
+- Oracle単体474件と、Oracle23の追加2件・固定26aiの保守クラス全10件が成功し、失敗・エラー・スキップ0件。26aiでは既存RANGE-HASH親、子SPLIT／MERGE、各MOVEも再検証した。DEFAULTは単体テストでの検証であり、追加Dockerケースは通常の数値LISTを使用する。共有core／PostgreSQL全体は変更がないため再実行していない。
+- 関連Command149件・Gradle Plugin1件も成功。テスト専用表・表領域・データファイルを削除し、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセス、生成物・依存バージョンの意図的な変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.parentListHash*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
