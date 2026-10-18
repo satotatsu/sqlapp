@@ -2277,6 +2277,23 @@ Routine置換4件、directory2件を追加。実行コマンド:
 ./gradlew :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
 ```
 
+## 2026-10-18: 同じ複合親の複数子MOVE
+
+- Oracleは複合親に対する直接の`MOVE PARTITION`を禁止しており、[ORA-14257の対処](https://docs.oracle.com/en/error-help/db/ora-14257/)は子を個別に移動することとなる。既存のSchema差分による子MOVEを拡張し、同じ親の複数の子に対する表領域変更から、子の順序で`MOVE SUBPARTITION ... TABLESPACE ... UPDATE INDEXES`を生成する。子ごとに異なる移動先も指定できる。
+- すべての変更・索引状態を検証してからSQL一覧を返す。親属性・境界・子数・名前・索引配置は変更しない。移動対象Local子は明示的USABLEを必須とし、通常索引、非圧縮、ONLINEなしという既存制限を維持する。親のTABLESPACEは既定属性なので、この操作では自動変更しない。親に属する全子を移動する場合も、Schemaモデルの対象子それぞれのTABLESPACEを設定する。
+- 新しい問い合わせは追加しない。公開API、設定、依存関係、Resolverと旧版の継承は変更しない。対象は既存の子MOVEと同じOracle10g以降で、LIST-*／RANGE-RANGEは11g以降、HASH-*は共有12c Dialectが12.1も表すため18c以降とする。変更はOracle、dialect-test、文書に限定する。
+- 単体テストは9種類の複合方式、別々の移動先、原本不変、最後の子の不正属性／索引状態、親既定属性の混在、Local索引なし、追加／削除禁止オプション、旧版と空の移動先を検証する。Dockerは子RANGE／LIST／HASHの各2個について、データ入りセグメントを専用表領域へ移動し、再読取モデルから元へ戻す。各段階で行、親子属性、表領域、Global／Local索引の配置と有効状態を検証する。
+- 複数の子MOVEはそれぞれコミットされるため、全体のロールバックや途中失敗後の自動再開は保証しない。複数の親の同時変更、親の既定属性変更、圧縮・ONLINE・個別LOB配置、子RANGE／LISTを持つ複合親SPLIT／MERGEは今回の対象外。
+- 対象単体40件とOracle全477件が成功。追加した空移動先テストの初回実行では、元の表領域も未指定だったため空文字の正規化後に変更自体がなくなるというテスト前提の誤りが1件あった。元の表領域をUSERSとして再実行し成功した。Oracle23の追加Docker3件もすべて成功した。
+- 固定26aiでは複数子の往復MOVE3件と既存単一子MOVE3件の計6件が成功した。最終実行の失敗・エラー・スキップは0件。テスト専用表・表領域・データファイルを削除し、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセスや生成物の意図的変更はない。共有core／PostgreSQL全体、旧版Oracle実DB、他の複合保守Dockerケース全体は今回再実行していない。
+- 関連Command149件・Gradle Plugin1件も成功した。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.grouped*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.grouped*' --tests '*OracleCompositeAlterTest.*ChildMove*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

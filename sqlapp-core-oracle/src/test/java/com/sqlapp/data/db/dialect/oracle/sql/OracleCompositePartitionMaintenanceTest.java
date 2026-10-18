@@ -305,10 +305,11 @@ class OracleCompositePartitionMaintenanceTest {
 	}
 
 	@Test
-	void childMoveRejectsMultipleEditsCompressionAndIndexChanges() {
+	void childMovesRejectConcurrentAttributesCompressionAndIndexChanges() {
 		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = before.clone();
 		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
 		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(1).setTableSpaceName("DATA");
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(1).setRemarks("changed");
 		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
 		Table changed = before.clone();
 		changed.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
@@ -318,6 +319,65 @@ class OracleCompositePartitionMaintenanceTest {
 		Table compressed = before.clone();
 		compressed.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
 		assertThrows(IllegalArgumentException.class, () -> sql(before, compressed, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void allChildrenOfOneParentCanMoveWithDifferentDestinations() {
+		for (PartitioningType root : List.of(PartitioningType.Range, PartitioningType.List, PartitioningType.Hash))
+			for (PartitioningType sub : List.of(PartitioningType.Range, PartitioningType.List, PartitioningType.Hash)) {
+				Table before = source(root, sub), after = before.clone(), snapshot = before.clone();
+				after.getPartitioning().getPartitions().get(0).getSubPartitions().get(0).setTableSpaceName("DATA");
+				after.getPartitioning().getPartitions().get(0).getSubPartitions().get(1)
+						.setTableSpaceName("Other Space");
+				var factory = DialectHolder.oracle26aiDialect.createSqlFactoryRegistry().getSqlFactory(after,
+						SqlType.ALTER);
+				factory.getOptions().setDecorateSchemaName(true);
+				var operations = factory.createDiffSql(before.diff(after));
+				assertEquals(
+						List.of("ALTER TABLE APP.T MOVE SUBPARTITION S11 TABLESPACE DATA UPDATE INDEXES",
+								"ALTER TABLE APP.T MOVE SUBPARTITION S12 TABLESPACE \"Other Space\" UPDATE INDEXES"),
+						operations.stream().map(operation -> operation.getSqlText().replaceAll("\\s+", " ").trim())
+								.toList());
+				assertEquals(snapshot, before);
+			}
+	}
+
+	@Test
+	void groupedChildMoveValidatesLastIndexAndParentDefaultsBeforeReturningSql() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash), after = before.clone();
+		for (SubPartition child : after.getPartitioning().getPartitions().get(0).getSubPartitions())
+			child.setTableSpaceName("DATA");
+		before.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(1).getSpecifics()
+				.put("oracle.index.status", "UNUSABLE");
+		after.getIndexes().get("IX").getPartitioning().getPartitions().get(0).getSubPartitions().get(1).getSpecifics()
+				.put("oracle.index.status", "UNUSABLE");
+		assertThrows(IllegalArgumentException.class, () -> DialectHolder.oracle26aiDialect.createSqlFactoryRegistry()
+				.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+		Table defaults = source(PartitioningType.Range, PartitioningType.Hash), changed = defaults.clone();
+		changed.getPartitioning().getPartitions().get(0).setTableSpaceName("DATA");
+		for (SubPartition child : changed.getPartitioning().getPartitions().get(0).getSubPartitions())
+			child.setTableSpaceName("DATA");
+		assertThrows(IllegalArgumentException.class, () -> sql(defaults, changed, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void groupedMoveWithoutLocalIndexesHonorsVersionAndDoesNotRequireAddOrDrop() {
+		Table before = source(PartitioningType.Range, PartitioningType.Hash);
+		before.getIndexes().remove("IX");
+		for (SubPartition child : before.getPartitioning().getPartitions().get(0).getSubPartitions())
+			child.setTableSpaceName("USERS");
+		Table after = before.clone();
+		for (SubPartition child : after.getPartitioning().getPartitions().get(0).getSubPartitions())
+			child.setTableSpaceName("DATA");
+		var registry = DialectHolder.oracle10gDialect.createSqlFactoryRegistry();
+		registry.getTableOptions().setAllowAddPartition(false);
+		registry.getTableOptions().setAllowDropPartition(false);
+		assertEquals(2, registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)).size());
+		assertThrows(IllegalArgumentException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
+		after.getPartitioning().getPartitions().get(0).getSubPartitions().get(1).setTableSpaceName(" ");
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after)));
 	}
 
 	@Test

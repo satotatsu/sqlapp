@@ -106,6 +106,21 @@ class OracleCompositeAlterTest {
 		verify(kind, split, simple, false);
 	}
 
+	@Test
+	void groupedRangeChildrenMoveAndReturnPreserveRowsAndIndexes() throws Exception {
+		verify("RANGE", false, false, false, false, false, true);
+	}
+
+	@Test
+	void groupedListChildrenMoveAndReturnPreserveRowsAndIndexes() throws Exception {
+		verify("LIST", false, false, false, false, false, true);
+	}
+
+	@Test
+	void groupedHashChildrenMoveAndReturnPreserveRowsAndIndexes() throws Exception {
+		verify("HASH", false, false, false, false, false, true);
+	}
+
 	private void verify(String kind, boolean split, boolean simple, boolean parent) throws Exception {
 		verify(kind, split, simple, parent, false);
 	}
@@ -117,8 +132,13 @@ class OracleCompositeAlterTest {
 
 	private void verify(String kind, boolean split, boolean simple, boolean parent, boolean largerDefault,
 			boolean listRoot) throws Exception {
-		String name = "ALTER_" + kind + (listRoot ? "_LIST" : "") + (parent ? largerDefault ? "_PARENT_BIG" : "_PARENT"
-				: split ? "_SPLIT" : simple ? "_SIMPLE" : "_MOVE");
+		verify(kind, split, simple, parent, largerDefault, listRoot, false);
+	}
+
+	private void verify(String kind, boolean split, boolean simple, boolean parent, boolean largerDefault,
+			boolean listRoot, boolean groupedMove) throws Exception {
+		String name = "ALTER_" + kind + (listRoot ? "_LIST" : "") + (groupedMove ? "_GROUP"
+				: parent ? largerDefault ? "_PARENT_BIG" : "_PARENT" : split ? "_SPLIT" : simple ? "_SIMPLE" : "_MOVE");
 		try (Connection connection = ORACLE.createConnection(""); var sql = connection.createStatement()) {
 			boolean created = false;
 			try {
@@ -218,8 +238,25 @@ class OracleCompositeAlterTest {
 						assertTrue(rows.next());
 						assertTrue(rows.getInt(1) > 0, "Moved segment must contain data");
 					}
-					execute(connection, before, after);
+					if (groupedMove) {
+						after.getPartitioning().getPartitions().get(0).getSubPartitions().get(1)
+								.setTableSpaceName(SPACE);
+						try (var rows = sql.executeQuery("SELECT COUNT(*) FROM " + name + " SUBPARTITION(S12)")) {
+							assertTrue(rows.next());
+							assertTrue(rows.getInt(1) > 0, "Second moved child must contain data");
+						}
+					}
+					execute(connection, before, after, groupedMove ? 2 : 1);
 					verifyState(connection, after, kind, ids);
+					if (groupedMove) {
+						Table actual = read(connection, name), restored = actual.clone();
+						for (int i = 0; i < 2; i++)
+							restored.getPartitioning().getPartitions().get(0).getSubPartitions().get(i)
+									.setTableSpaceName(before.getPartitioning().getPartitions().get(0)
+											.getSubPartitions().get(i).getTableSpaceName());
+						execute(connection, actual, restored, 2);
+						verifyState(connection, restored, kind, ids);
+					}
 				}
 			} finally {
 				if (created)
@@ -249,14 +286,17 @@ class OracleCompositeAlterTest {
 	}
 
 	private void execute(Connection connection, Table before, Table after) throws Exception {
+		execute(connection, before, after,
+				before.getPartitioning().getPartitions().size() == after.getPartitioning().getPartitions().size() ? 1
+						: 2);
+	}
+
+	private void execute(Connection connection, Table before, Table after, int expectedStatements) throws Exception {
 		var spaces = indexSpaces(connection, before.getName());
 		var registry = DialectResolver.getInstance().getDialect(connection).createSqlFactoryRegistry();
 		registry.getOptions().setDecorateSchemaName(true);
 		var operations = registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(before.diff(after));
-		assertEquals(
-				before.getPartitioning().getPartitions().size() == after.getPartitioning().getPartitions().size() ? 1
-						: 2,
-				operations.size());
+		assertEquals(expectedStatements, operations.size());
 		try (var sql = connection.createStatement()) {
 			for (int i = 0; i < operations.size(); i++) {
 				sql.execute(operations.get(i).getSqlText());

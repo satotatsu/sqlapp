@@ -233,34 +233,38 @@ final class OracleCompositePartitionMaintenance {
 		validateChildIndexes(before, after, position, dialect);
 		uniqueChildren(after);
 		if (children.size() == oldChildren.size()) {
-			SubPartition moved = null;
-			int movedPosition = -1;
+			var movedPositions = new java.util.ArrayList<Integer>();
 			for (int i = 0; i < children.size(); i++) {
 				SubPartition old = oldChildren.get(i), next = children.get(i);
 				if (same(old, next, dialect))
 					continue;
 				SubPartition copy = next.clone();
 				copy.setTableSpaceName(old.getTableSpaceName());
-				require(moved == null && same(old, copy, dialect) && next.getTableSpaceName() != null
+				require(same(old, copy, dialect) && next.getTableSpaceName() != null
 						&& !next.getTableSpaceName().isBlank() && !old.isCompression()
 						&& old.getCompressionType() == null,
-						"Subpartition MOVE requires one isolated uncompressed tablespace change");
-				moved = next;
-				movedPosition = i;
+						"Subpartition MOVE requires isolated uncompressed tablespace changes");
+				movedPositions.add(i);
 			}
-			require(moved != null, "No subpartition MOVE found");
+			require(!movedPositions.isEmpty(), "No subpartition MOVE found");
 			for (Index index : before.getIndexes()) {
 				require(index.diff(after.getIndexes().get(index.getName())).toDifference().getChangedProperties(dialect)
 						.isEmpty(), "Subpartition MOVE requires unchanged indexes");
 				if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
-					require("USABLE".equals(index.getPartitioning().getPartitions().get(position).getSubPartitions()
-							.get(movedPosition).getSpecifics().get("oracle.index.status")),
-							"Subpartition MOVE requires an explicitly USABLE affected Local segment");
+					for (int movedPosition : movedPositions)
+						require("USABLE".equals(index.getPartitioning().getPartitions().get(position).getSubPartitions()
+								.get(movedPosition).getSpecifics().get("oracle.index.status")),
+								"Subpartition MOVE requires explicitly USABLE affected Local segments");
 			}
-			OracleSqlBuilder sql = builders.get().alter().table().space().name(before, decorate)
-					._add(" MOVE SUBPARTITION ").name(moved.getName())._add(" TABLESPACE ")
-					.name(moved.getTableSpaceName())._add(" UPDATE INDEXES");
-			return new OracleTablePartitionMaintenance.Plan(List.of(sql.toString()), null);
+			var statements = new java.util.ArrayList<String>();
+			for (int movedPosition : movedPositions) {
+				SubPartition moved = children.get(movedPosition);
+				OracleSqlBuilder sql = builders.get().alter().table().space().name(before, decorate)
+						._add(" MOVE SUBPARTITION ").name(moved.getName())._add(" TABLESPACE ")
+						.name(moved.getTableSpaceName())._add(" UPDATE INDEXES");
+				statements.add(sql.toString());
+			}
+			return new OracleTablePartitionMaintenance.Plan(statements, null);
 		}
 		require(before.getPartitioning().getSubPartitioningType() != PartitioningType.Hash,
 				"HASH subpartitions support ADD/COALESCE/MOVE, not SPLIT/MERGE");
