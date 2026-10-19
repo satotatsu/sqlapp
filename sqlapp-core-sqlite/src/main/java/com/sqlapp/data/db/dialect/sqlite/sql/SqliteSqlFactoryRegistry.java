@@ -34,6 +34,26 @@ public class SqliteSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Table.class, SqlType.INSERT, SqliteInsertFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT_ROWS, SqliteInsertFactory.Rows.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, SqliteMergeFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE_ROWS, SqliteMergeFactory.Rows.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, SqliteCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SqliteAlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, SqliteDropTableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.CREATE,
+				SqliteConstraintFactories.CreateCheck.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				SqliteConstraintFactories.CreateUnique.class);
+		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.DROP, SqliteDropObjectFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.DROP, SqliteDropObjectFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, SqlType.DROP,
+				SqliteDropObjectFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.DROP, SqliteDropObjectFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.DROP, SqliteDropObjectFactory.class);
+		registerSqlFactory(Index.class, SqlType.DROP, SqliteDropObjectFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, SqlType.CREATE,
+				SqliteCreateForeignKeyConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, SqliteCreateViewFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.CREATE, SqliteCreateTriggerFactory.class);
 

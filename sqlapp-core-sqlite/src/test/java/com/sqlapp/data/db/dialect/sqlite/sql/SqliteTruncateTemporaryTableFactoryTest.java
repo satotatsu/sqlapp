@@ -59,7 +59,7 @@ public class SqliteTruncateTemporaryTableFactoryTest extends SqliteSqlFactoryTes
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
-				DELETE FROM TABLE [tableA]""";
+				DELETE FROM [temp].[tableA]""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

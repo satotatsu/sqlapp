@@ -9,7 +9,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
@@ -130,11 +130,9 @@ public class SqliteTableReader extends JdbcTableReader {
 	private void setTableOptions(Table table, String definition) {
 		if (definition == null)
 			return;
-		String normalized = definition.toUpperCase(Locale.ROOT);
-		String options = normalized.substring(normalized.lastIndexOf(')') + 1);
-		if (options.matches("(?s).*\\bWITHOUT\\s+ROWID\\b.*"))
+		if (SqliteDdl.hasTableOption(definition, "WITHOUT", "ROWID"))
 			table.getSpecifics().put("without_rowid", "true");
-		if (options.matches("(?s).*\\bSTRICT\\b.*"))
+		if (SqliteDdl.hasTableOption(definition, "STRICT"))
 			table.getSpecifics().put("strict", "true");
 	}
 

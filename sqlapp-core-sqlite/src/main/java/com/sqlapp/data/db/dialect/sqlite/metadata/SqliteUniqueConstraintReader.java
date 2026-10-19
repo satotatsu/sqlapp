@@ -1,19 +1,13 @@
-/*
- * Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com>
- *
- * This file is part of sqlapp-core-sqlite.
- */
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.dialect.sqlite.metadata;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -21,180 +15,50 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
-/** Reads SQLite primary keys and UNIQUE constraints. */
+/**
+ * Reads named keys, collation overrides and conflict policies from catalog DDL.
+ */
 public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
-	public SqliteUniqueConstraintReader(final Dialect dialect) {
+	public SqliteUniqueConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(final Connection connection, final ParametersContext context,
-			final ProductVersionInfo productVersionInfo) {
-		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo))
-			return readBulk(connection, context);
-		final List<UniqueConstraint> result = readPrimaryKeys(connection, context);
-		final String tableName = getTableName(context);
-		if (tableName == null) {
-			return result;
-		}
-		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_list(" + quoteString(tableName) + ")";
-		try (var statement = connection.createStatement(); ResultSet indexes = statement.executeQuery(sql)) {
-			while (indexes.next()) {
-				if (!indexes.getBoolean("unique") || !hasColumn(indexes, "origin")
-						|| !"u".equalsIgnoreCase(indexes.getString("origin"))) {
-					continue;
-				}
-				final String indexName = indexes.getString("name");
-				final UniqueConstraint constraint = new UniqueConstraint(indexName);
-				constraint.setDialect(getDialect());
-				constraint.setCatalogName(getCatalogName(context));
-				constraint.setSchemaName(getSchemaName(context));
-				constraint.setTableName(tableName);
-				loadColumns(connection, schemaName, indexName, constraint);
-				result.add(constraint);
-			}
-			return result;
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private List<UniqueConstraint> readBulk(Connection connection, ParametersContext context) {
-		Map<String, UniqueConstraint> constraints = new java.util.LinkedHashMap<>();
-		try (var statement = SqliteMetadataQueries.prepare(connection, context,
-				"p.name AS column_name, p.pk, il.name AS index_name, il.origin, x.desc AS descending, "
-						+ "NOT EXISTS (SELECT 1 FROM pragma_index_list(m.name, ?) z WHERE z.origin='pk') AS rowid_pk",
-				"JOIN pragma_table_info(m.name, ?) p LEFT JOIN pragma_index_list(m.name, ?) il ON il.origin IN ('pk','u') "
-						+ "LEFT JOIN pragma_index_xinfo(il.name, ?) x ON x.name=p.name AND x.key=1",
-				", il.name, CASE WHEN il.origin='u' THEN x.seqno ELSE p.pk END"); var rs = statement.executeQuery()) {
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
+			ProductVersionInfo version) {
+		List<UniqueConstraint> result = new ArrayList<>();
+		// sqlite_master is available on legacy SQLite; no table-valued PRAGMAs are
+		// needed.
+		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.name", "", "");
+				var rs = statement.executeQuery()) {
 			while (rs.next()) {
 				String table = rs.getString("table_name");
-				String origin = rs.getString("origin");
-				boolean primary = rs.getInt("pk") > 0;
-				boolean matched = rs.getObject("descending") != null;
-				if (primary && (rs.getBoolean("rowid_pk") || "pk".equals(origin) && matched)) {
-					addBulkColumn(constraints, context, table, null, true, rs.getString("column_name"),
-							rs.getBoolean("descending"));
-				}
-				if ("u".equals(origin) && matched) {
-					addBulkColumn(constraints, context, table, rs.getString("index_name"), false,
-							rs.getString("column_name"), rs.getBoolean("descending"));
-				}
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		return List.copyOf(constraints.values());
-	}
-
-	private void addBulkColumn(Map<String, UniqueConstraint> constraints, ParametersContext context, String table,
-			String name, boolean primary, String column, boolean descending) {
-		String key = table + "\u0000" + (primary ? "pk" : name);
-		UniqueConstraint constraint = constraints.computeIfAbsent(key, ignored -> {
-			var value = new UniqueConstraint(name, primary);
-			value.setDialect(getDialect());
-			value.setCatalogName(getCatalogName(context));
-			value.setSchemaName(getSchemaName(context));
-			value.setTableName(table);
-			return value;
-		});
-		if (constraint.getColumns().get(column) == null)
-			constraint.getColumns().add(new Column(column), descending ? Order.Desc : Order.Asc);
-	}
-
-	private List<UniqueConstraint> readPrimaryKeys(final Connection connection, final ParametersContext context) {
-		final List<UniqueConstraint> result = new ArrayList<>();
-		final String tableName = getTableName(context);
-		if (tableName == null) {
-			return result;
-		}
-		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".table_info(" + quoteString(tableName) + ")";
-		final Map<Integer, String> columns = new TreeMap<>();
-		try (var statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(sql)) {
-			while (resultSet.next()) {
-				final int position = resultSet.getInt("pk");
-				if (position > 0) {
-					columns.put(position, resultSet.getString("name"));
-				}
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-		if (!columns.isEmpty()) {
-			final UniqueConstraint primaryKey = new UniqueConstraint(null, true);
-			primaryKey.setDialect(getDialect());
-			primaryKey.setPrimaryKey(true);
-			primaryKey.setCatalogName(getCatalogName(context));
-			primaryKey.setSchemaName(getSchemaName(context));
-			primaryKey.setTableName(tableName);
-			columns.values().forEach(primaryKey.getColumns()::add);
-			loadPrimaryKeyOrders(connection, schemaName, tableName, primaryKey);
-			result.add(primaryKey);
-		}
-		return result;
-	}
-
-	private void loadPrimaryKeyOrders(final Connection connection, final String schemaName, final String tableName,
-			final UniqueConstraint primaryKey) {
-		final String listSql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_list(" + quoteString(tableName) + ")";
-		String primaryKeyIndex = null;
-		try (var statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(listSql)) {
-			final boolean hasOrigin = hasColumn(resultSet, "origin");
-			while (hasOrigin && resultSet.next()) {
-				if ("pk".equalsIgnoreCase(resultSet.getString("origin"))) {
-					primaryKeyIndex = resultSet.getString("name");
-					break;
-				}
-			}
-			if (primaryKeyIndex == null) {
-				return;
-			}
-			final String detailSql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_xinfo("
-					+ quoteString(primaryKeyIndex) + ")";
-			try (var detailStatement = connection.createStatement();
-					ResultSet details = detailStatement.executeQuery(detailSql)) {
-				if (!hasColumn(details, "desc")) {
-					return;
-				}
-				while (details.next()) {
-					final String columnName = details.getString("name");
-					if (columnName != null && primaryKey.getColumns().get(columnName) != null) {
-						primaryKey.getColumns().get(columnName)
-								.setOrder(details.getBoolean("desc") ? Order.Desc : Order.Asc);
+				int sequence = 0;
+				for (String fragment : SqliteColumnReader.splitColumnDefinitions(rs.getString("table_sql"))) {
+					for (var key : SqliteDdl.keys(fragment)) {
+						String name = key.name() != null ? key.name()
+								: key.primary() ? null : "sqlite_unique_" + table + "_" + (++sequence);
+						var constraint = new UniqueConstraint(name, key.primary());
+						constraint.setDialect(getDialect());
+						constraint.setCatalogName(getCatalogName(context));
+						constraint.setSchemaName(getSchemaName(context));
+						constraint.setTableName(table);
+						if (key.conflict() != null)
+							constraint.getSpecifics().put("sqlite.onConflict", key.conflict());
+						for (int i = 0; i < key.columns().size(); i++) {
+							var column = key.columns().get(i);
+							constraint.getColumns().add(new Column(column.name()),
+									column.descending() ? Order.Desc : Order.Asc);
+							if (column.collation() != null)
+								constraint.getSpecifics().put("sqlite.key.collation." + i, column.collation());
+						}
+						result.add(constraint);
 					}
 				}
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	private void loadColumns(final Connection connection, final String schemaName, final String indexName,
-			final UniqueConstraint constraint) throws SQLException {
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_info(" + quoteString(indexName) + ")";
-		try (var statement = connection.createStatement(); ResultSet columns = statement.executeQuery(sql)) {
-			while (columns.next()) {
-				constraint.getColumns().add(new Column(columns.getString("name")));
-			}
-		}
-	}
-
-	private boolean hasColumn(final ResultSet resultSet, final String name) throws SQLException {
-		for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-			if (name.equalsIgnoreCase(resultSet.getMetaData().getColumnLabel(i))) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private String quoteIdentifier(final String value) {
-		return "\"" + value.replace("\"", "\"\"") + "\"";
-	}
-
-	private String quoteString(final String value) {
-		return "'" + value.replace("'", "''") + "'";
+		return result;
 	}
 }

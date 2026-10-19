@@ -22,5 +22,21 @@ package com.sqlapp.data.db.dialect.sqlite;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect defaultDialect = new Sqlite(() -> null);
+	public final static Dialect sqlite337 = new SqliteVersions.Sqlite337(() -> null);
+	public final static Dialect sqlite335 = new SqliteVersions.Sqlite335(() -> sqlite337);
+	public final static Dialect sqlite332 = new SqliteVersions.Sqlite332(() -> sqlite335);
+	public final static Dialect sqlite331 = new SqliteVersions.Sqlite331(() -> sqlite332);
+	public final static Dialect sqlite325 = new SqliteVersions.Sqlite325(() -> sqlite331);
+	public final static Dialect sqlite324 = new SqliteVersions.Sqlite324(() -> sqlite325);
+	public final static Dialect sqlite315 = new SqliteVersions.Sqlite315(() -> sqlite324);
+	public final static Dialect sqlite39 = new SqliteVersions.Sqlite39(() -> sqlite315);
+	public final static Dialect sqlite383 = new SqliteVersions.Sqlite383(() -> sqlite39);
+	public final static Dialect sqlite382 = new SqliteVersions.Sqlite382(() -> sqlite383);
+	public final static Dialect sqlite380 = new SqliteVersions.Sqlite380(() -> sqlite382);
+	public final static Dialect sqliteLegacy = new Sqlite(() -> sqlite380);
+	/**
+	 * Unversioned callers retain modern capabilities. Resolve a connection for a
+	 * concrete target.
+	 */
+	public final static Dialect defaultDialect = sqlite337;
 }

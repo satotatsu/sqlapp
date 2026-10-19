@@ -55,7 +55,11 @@ public class SqliteViewReader extends JdbcViewReader {
 					view.setDefinition(definition);
 				}
 				if (getReaderOptions().isReadStatement()) {
-					view.setStatement(extractStatement(definition));
+					if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite
+							&& !sqlite.supportsViewColumnList())
+						view.setDefinition(definition);
+					else
+						view.setStatement(extractStatement(definition));
 				}
 				result.add(view);
 			}

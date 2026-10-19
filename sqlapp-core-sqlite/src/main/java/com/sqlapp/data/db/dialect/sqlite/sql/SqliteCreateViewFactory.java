@@ -20,6 +20,10 @@ public class SqliteCreateViewFactory extends AbstractCreateViewFactory<SqliteSql
 			throw new IllegalArgumentException("SQLite view requires statement or definition: " + view.getName());
 		builder.create().view().name(view, true);
 		if (!view.getColumns().isEmpty()) {
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite
+					&& !sqlite.supportsViewColumnList())
+				throw new IllegalArgumentException(
+						"SQLite view column lists require SQLite 3.9 or later; provide a complete legacy definition");
 			builder._add(" (");
 			for (int i = 0; i < view.getColumns().size(); i++) {
 				if (i > 0)

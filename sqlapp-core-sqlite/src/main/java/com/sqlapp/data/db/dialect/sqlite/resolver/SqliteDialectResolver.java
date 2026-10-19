@@ -63,7 +63,34 @@ public class SqliteDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
-			return DialectHolder.defaultDialect;
+			if (majorVersion > 3)
+				return DialectHolder.defaultDialect;
+			if (majorVersion < 3)
+				return DialectHolder.sqliteLegacy;
+			if (minorVersion >= 37)
+				return DialectHolder.sqlite337;
+			if (minorVersion >= 35)
+				return DialectHolder.sqlite335;
+			if (minorVersion >= 32)
+				return DialectHolder.sqlite332;
+			if (minorVersion >= 31)
+				return DialectHolder.sqlite331;
+			if (minorVersion >= 25)
+				return DialectHolder.sqlite325;
+			if (minorVersion >= 24)
+				return DialectHolder.sqlite324;
+			if (minorVersion >= 15)
+				return DialectHolder.sqlite315;
+			if (minorVersion >= 9)
+				return DialectHolder.sqlite39;
+			if (minorVersion == 8) {
+				if (revision != null && revision >= 3)
+					return DialectHolder.sqlite383;
+				if (revision != null && revision >= 2)
+					return DialectHolder.sqlite382;
+				return DialectHolder.sqlite380;
+			}
+			return DialectHolder.sqliteLegacy;
 		}
 
 	}

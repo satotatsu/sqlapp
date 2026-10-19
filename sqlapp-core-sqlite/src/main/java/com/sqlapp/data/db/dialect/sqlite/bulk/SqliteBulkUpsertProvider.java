@@ -9,7 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 public class SqliteBulkUpsertProvider implements BulkUpsertProvider {
 	@Override
 	public boolean supports(final Dialect d) {
-		return d != null && "SQLite".equalsIgnoreCase(d.getProductName());
+		return d instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite && sqlite.supportsUpsert();
 	}
 
 	@Override

@@ -63,7 +63,7 @@ public class SqliteCreateTemporaryTableFactoryTest extends SqliteSqlFactoryTest 
 				(
 					  [cola] INTEGER
 					, [colb] INTEGER
-					, [colc] TEXT
+					, [colc] TEXT COLLATE NOCASE
 				)
 												""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
@@ -83,7 +83,7 @@ public class SqliteCreateTemporaryTableFactoryTest extends SqliteSqlFactoryTest 
 		column = new Column("colb").setDataType(DataType.BIGINT);
 		table.getColumns().add(column);
 		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
-				.setCollation("utf8mb4_binary");
+				.setCollation("NOCASE");
 		table.getColumns().add(column);
 		//
 		Index index = new Index("indexa");

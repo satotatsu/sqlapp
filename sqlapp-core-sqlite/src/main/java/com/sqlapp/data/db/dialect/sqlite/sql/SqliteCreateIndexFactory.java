@@ -16,6 +16,14 @@ public class SqliteCreateIndexFactory extends AbstractCreateIndexFactory<SqliteS
 
 	@Override
 	public void addObjectDetail(Index index, Table table, SqliteSqlBuilder builder) {
+		String storedKeys = index.getSpecifics().get("sqlite.index.keys");
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite) {
+			if (index.getWhere() != null && !index.getWhere().isBlank() && !sqlite.supportsPartialIndexes())
+				throw new IllegalArgumentException("SQLite partial indexes require SQLite 3.8.0 or later");
+			if (storedKeys != null && com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.hasIndexExpressions(storedKeys)
+					&& !sqlite.supportsExpressionIndexes())
+				throw new IllegalArgumentException("SQLite expression indexes require SQLite 3.9 or later");
+		}
 		addUnique(index, table, builder);
 		boolean qualify = getOptions().isDecorateSchemaName()
 				|| index.getSchemaName() != null && !index.getSchemaName().equalsIgnoreCase("main");

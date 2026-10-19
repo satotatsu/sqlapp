@@ -60,6 +60,9 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addVarchar("TEXT", LEN_2GB, type -> {
 			type.setCreateFormat("TEXT");
 		});
+		getDbDataTypes().addChar("CHAR", LEN_2GB, type -> {
+			type.setCreateFormat("TEXT");
+		});
 		// Binary
 		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
 			type.setCreateFormat("BLOB").setLiteral("X'", "'");
@@ -85,6 +88,8 @@ public class Sqlite extends Dialect {
 		});
 		// Decimal
 		getDbDataTypes().addNumeric(type -> {
+		});
+		getDbDataTypes().addDecimal(type -> {
 		});
 	}
 
@@ -116,7 +121,58 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public boolean supportsTop() {
+		return false;
+	}
+
+	@Override
+	public boolean supportsLimit() {
 		return true;
+	}
+
+	@Override
+	public boolean supportsLimitOffset() {
+		return true;
+	}
+
+	public boolean supportsViewColumnList() {
+		return false;
+	}
+
+	public boolean supportsUpsert() {
+		return false;
+	}
+
+	public boolean supportsRenameColumn() {
+		return false;
+	}
+
+	public boolean supportsGeneratedColumns() {
+		return false;
+	}
+
+	public boolean supportsDropColumn() {
+		return false;
+	}
+
+	public boolean supportsStrictTables() {
+		return false;
+	}
+
+	public boolean supportsWithoutRowid() {
+		return false;
+	}
+
+	public boolean supportsPartialIndexes() {
+		return false;
+	}
+
+	public boolean supportsExpressionIndexes() {
+		return false;
+	}
+
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 999;
 	}
 
 	@Override
@@ -131,11 +187,13 @@ public class Sqlite extends Dialect {
 
 	@Override
 	public boolean supportsInsertReturningResultSet() {
-		return true;
+		return false;
 	}
 
 	@Override
 	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		if (!supportsInsertReturningResultSet())
+			throw new IllegalArgumentException("SQLite INSERT RETURNING requires SQLite 3.35 or later");
 		return sql + "\nRETURNING " + getObjectFullName(identityColumn.getName());
 	}
 
@@ -154,7 +212,7 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentDateFunction() {
-		return null;
+		return "CURRENT_DATE";
 	}
 
 	/**
@@ -162,7 +220,7 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentDateTimeFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -170,7 +228,7 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimestampFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -186,12 +244,12 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimeFunction() {
-		return null;
+		return "CURRENT_TIME";
 	}
 
 	@Override
 	public boolean supportsDropCascade() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -266,11 +324,11 @@ public class Sqlite extends Dialect {
 
 	@Override
 	public boolean supportsRowValueComparison() {
-		return true;
+		return false;
 	}
 
 	@Override
 	public boolean supportsRowValueComparisonIn() {
-		return true;
+		return false;
 	}
 }
