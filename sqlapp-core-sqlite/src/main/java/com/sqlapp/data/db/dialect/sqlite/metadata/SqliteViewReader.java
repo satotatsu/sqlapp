@@ -10,8 +10,7 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcViewReader;
@@ -23,8 +22,6 @@ import com.sqlapp.data.schemas.View;
 
 /** Reads SQLite views from each database's historical schema-table alias. */
 public class SqliteViewReader extends JdbcViewReader {
-	private static final Pattern STATEMENT_PATTERN = Pattern
-			.compile("(?is)^\\s*CREATE\\s+(?:TEMP(?:ORARY)?\\s+)?VIEW\\s+.*?\\s+AS\\s+(.*)$");
 
 	public SqliteViewReader(final Dialect dialect) {
 		super(dialect);
@@ -69,11 +66,25 @@ public class SqliteViewReader extends JdbcViewReader {
 	}
 
 	static String extractStatement(final String definition) {
-		if (definition == null) {
-			return null;
+		return SqliteDdl.viewStatement(definition);
+	}
+
+	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> views)
+			throws SQLException {
+		if (views.isEmpty())
+			return;
+		var version = new ProductVersionInfo().setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
+				.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion());
+		if (!SqliteIndexReader.supportsBulkIndexes(version)) {
+			super.setMetadataDetail(connection, context, views);
+			return;
 		}
-		final Matcher matcher = STATEMENT_PATTERN.matcher(definition);
-		return matcher.matches() ? matcher.group(1).trim() : definition;
+		var bulkContext = context.clone();
+		bulkContext.put("tableName", views.stream().map(Table::getName).toList());
+		var byName = views.stream().collect(java.util.stream.Collectors.toMap(Table::getName, view -> view));
+		getColumnReader().getAllFull(connection, bulkContext)
+				.forEach(column -> byName.get(column.getTableName()).getColumns().add(column));
 	}
 
 	private String quoteIdentifier(final String value) {

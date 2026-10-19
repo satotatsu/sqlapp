@@ -15,6 +15,122 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 
 class OraclePartitionMaintenanceTest {
+	@Test
+	void finiteTextIotAddAndDrop() throws Exception {
+		verifyFiniteTextIot(true);
+	}
+
+	@Test
+	void finiteTextIotSplitAndMerge() throws Exception {
+		verifyFiniteTextIot(false);
+	}
+
+	@Test
+	void finiteTupleIotAddAndDrop() throws Exception {
+		verifyFiniteTextIot(true, true);
+	}
+
+	@Test
+	void finiteTupleIotSplitAndMerge() throws Exception {
+		verifyFiniteTextIot(false, true);
+	}
+
+	private void verifyFiniteTextIot(boolean add) throws Exception {
+		verifyFiniteTextIot(add, false);
+	}
+
+	private void verifyFiniteTextIot(boolean add, boolean tuple) throws Exception {
+		String name = (add ? "TEXT_IOT_ADD" : "TEXT_IOT_SPLIT") + (tuple ? "_TUPLE" : "");
+		String first = tuple ? "'B', MAXVALUE" : "'B'", max = tuple ? "'MAXVALUE', MAXVALUE" : "'MAXVALUE'",
+				last = tuple ? "'ZZZ', MAXVALUE" : "'ZZZ'";
+		try (Connection connection = ORACLE.createConnection(""); var sql = connection.createStatement()) {
+			boolean created = false;
+			try {
+				sql.execute("CREATE TABLE " + name + " (ID VARCHAR2(30), VALUE NUMBER, PRIMARY KEY("
+						+ (tuple ? "ID, VALUE" : "ID") + ")) ORGANIZATION INDEX PARTITION BY RANGE("
+						+ (tuple ? "ID, VALUE" : "ID") + ") (PARTITION P1 VALUES LESS THAN(" + first
+						+ "), PARTITION P2 VALUES LESS THAN(" + (add ? max : last) + "))");
+				created = true;
+				sql.execute("CREATE INDEX " + name + "_IX ON " + name + "(VALUE) LOCAL (PARTITION IP1, PARTITION IP2)");
+				List<String> ids = add ? List.of("A", "L") : List.of("A", "L", "MAXVALUE", "Z");
+				for (String id : ids)
+					sql.execute("INSERT INTO " + name + " VALUES ('" + id + "', " + id.length() + ")");
+				Table before = read(connection, name), changed = before.clone();
+				if (add) {
+					changed.getPartitioning().getPartitions()
+							.add(new com.sqlapp.data.schemas.Partition("P3").setHighValue(last));
+					var segment = new com.sqlapp.data.schemas.Partition("IP3").setHighValue(last);
+					segment.getSpecifics().put("oracle.index.status", "USABLE");
+					changed.getIndexes().get(name + "_IX").getPartitioning().getPartitions().add(segment);
+				} else {
+					for (var info : List.of(changed.getPartitioning(),
+							changed.getIndexes().get(name + "_IX").getPartitioning())) {
+						var low = info.getPartitions().get(1);
+						var high = low.clone();
+						low.setName(info.getIndex() == null ? "LOW_PART" : "ILOW").setHighValue(max);
+						high.setName(info.getIndex() == null ? "HIGH_PART" : "IHIGH");
+						info.getPartitions().add(high);
+					}
+				}
+				execute(connection, before, changed);
+				if (add)
+					for (String id : List.of("MAXVALUE", "Z"))
+						sql.execute("INSERT INTO " + name + " VALUES ('" + id + "', " + id.length() + ")");
+				verifyFiniteTextIotState(connection, name, List.of("A", "L", "MAXVALUE", "Z"),
+						List.of(first, max, last),
+						add ? List.of("IP1", "IP2", "IP3") : List.of("IP1", "ILOW", "IHIGH"));
+				Table actual = read(connection, name), restored = actual.clone();
+				for (var info : List.of(restored.getPartitioning(),
+						restored.getIndexes().get(name + "_IX").getPartitioning())) {
+					if (add)
+						info.getPartitions().remove(2);
+					else {
+						var merged = info.getPartitions().remove(2);
+						info.getPartitions().remove(1);
+						merged.setName(info.getIndex() == null ? "P2" : "IP2");
+						info.getPartitions().add(merged);
+					}
+				}
+				execute(connection, actual, restored);
+				verifyFiniteTextIotState(connection, name, add && tuple ? List.of("A", "L", "MAXVALUE") : ids,
+						List.of(first, add ? max : last), List.of("IP1", "IP2"));
+			} finally {
+				if (created)
+					sql.execute("DROP TABLE " + name + " PURGE");
+			}
+		}
+	}
+
+	private void verifyFiniteTextIotState(Connection connection, String name, List<String> ids, List<String> bounds,
+			List<String> indexNames) throws Exception {
+		try (var sql = connection.createStatement();
+				var rows = sql.executeQuery("SELECT ID, VALUE FROM " + name + " ORDER BY ID")) {
+			for (String id : ids) {
+				assertTrue(rows.next());
+				assertEquals(id, rows.getString(1));
+				assertEquals(id.length(), rows.getInt(2));
+			}
+			assertFalse(rows.next());
+		}
+		Table actual = read(connection, name);
+		assertEquals(bounds,
+				actual.getPartitioning().getPartitions().stream().map(part -> part.getHighValue()).toList());
+		var segments = actual.getIndexes().get(name + "_IX").getPartitioning().getPartitions();
+		assertEquals(indexNames, segments.stream().map(part -> part.getName()).toList());
+		for (var segment : segments)
+			assertEquals("USABLE", segment.getSpecifics().get("oracle.index.status"));
+		try (var sql = connection.prepareStatement(
+				"SELECT IOT_TYPE, (SELECT COUNT(*) FROM USER_CONSTRAINTS C WHERE C.TABLE_NAME=T.TABLE_NAME AND C.CONSTRAINT_TYPE='P' AND C.STATUS='ENABLED') AS PK_COUNT, (SELECT COUNT(*) FROM USER_INDEXES I WHERE I.TABLE_NAME=T.TABLE_NAME AND I.STATUS NOT IN ('VALID','N/A')) AS BAD_INDEXES FROM USER_TABLES T WHERE T.TABLE_NAME=?")) {
+			sql.setString(1, name);
+			try (var rows = sql.executeQuery()) {
+				assertTrue(rows.next());
+				assertEquals("IOT", rows.getString("IOT_TYPE"));
+				assertEquals(1, rows.getInt("PK_COUNT"));
+				assertEquals(0, rows.getInt("BAD_INDEXES"));
+			}
+		}
+	}
+
 	private static final OracleContainer ORACLE = ReusableTestcontainers
 			.configure(new OracleContainer(OracleTestEnvironment.image()));
 

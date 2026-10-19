@@ -21,11 +21,17 @@ package com.sqlapp.data.db.dialect.oracle.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MviewLogReader;
+import com.sqlapp.data.db.metadata.TableReader;
 
 public class Oracle11gR2SchemaReader extends Oracle11gSchemaReader {
 
 	protected Oracle11gR2SchemaReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected TableReader newTableReader() {
+		return new Oracle11gR2TableReader(this.getDialect());
 	}
 
 	@Override

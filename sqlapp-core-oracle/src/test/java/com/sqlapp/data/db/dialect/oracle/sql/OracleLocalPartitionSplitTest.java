@@ -8,6 +8,27 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class OracleLocalPartitionSplitTest {
+	@Test
+	void multicolumnSplitAcceptsTrailingMaxvalueButRejectsLeadingMarker() {
+		Table before = source();
+		before.getColumns().add("REGION");
+		for (Partitioning info : java.util.List.of(before.getPartitioning(),
+				before.getIndexes().get(0).getPartitioning())) {
+			info.getPartitioningColumns().add("REGION");
+			info.getPartitions().get(0).setHighValue("MAXVALUE, 0");
+		}
+		Table after = split(before);
+		for (Partitioning info : java.util.List.of(after.getPartitioning(),
+				after.getIndexes().get(0).getPartitioning()))
+			info.getPartitions().get(0).setHighValue("100, MAXVALUE");
+		assertTrue(sql(before, after).contains("AT (100, MAXVALUE)"));
+		assertTrue(sql(after, before).contains("MERGE PARTITIONS"));
+		for (Partitioning info : java.util.List.of(after.getPartitioning(),
+				after.getIndexes().get(0).getPartitioning()))
+			info.getPartitions().get(0).setHighValue(" /* bound */ MAXVALUE, MAXVALUE");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after));
+	}
+
 	private Table source() {
 		Table table = new Table("T").setSchemaName("APP");
 		table.getColumns().add("ID");

@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.dialect.oracle.sql;
 
+import static com.sqlapp.data.db.dialect.oracle.sql.OracleCompositeSegmentNames.identifier;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -99,6 +100,31 @@ final class OracleCompositePartitionMaintenance {
 			if (!append)
 				return OracleCompositeParentSplit.create(before, after, dialect, decorate, builders);
 		}
+		if (oldInfo.getPartitions().size() == info.getPartitions().size()) {
+			var positions = new java.util.ArrayList<Integer>();
+			for (int i = 0; i < info.getPartitions().size(); i++)
+				if (!same(oldInfo.getPartitions().get(i), info.getPartitions().get(i), dialect))
+					positions.add(i);
+			if (positions.size() > 1) {
+				for (Index index : before.getIndexes())
+					require(after.getIndexes().get(index.getName()) != null
+							&& index.diff(after.getIndexes().get(index.getName())).toDifference()
+									.getChangedProperties(dialect).isEmpty(),
+							"Grouped MOVE requires unchanged indexes");
+				var statements = new java.util.ArrayList<String>();
+				for (int position : positions) {
+					require(oldInfo.getPartitions().get(position).getSubPartitions().size() == info.getPartitions()
+							.get(position).getSubPartitions().size(),
+							"Multiple parents support only child MOVE/compression changes");
+					Table step = before.clone();
+					step.getPartitioning().getPartitions().set(position, info.getPartitions().get(position).clone());
+					var plan = changeChild(before, step, dialect, decorate, builders);
+					require(plan != null && plan.removed() == null, "Grouped child MOVE is required");
+					statements.addAll(plan.statements());
+				}
+				return new OracleTablePartitionMaintenance.Plan(statements, null);
+			}
+		}
 		var childPlan = changeChild(before, after, dialect, decorate, builders);
 		if (childPlan != null)
 			return childPlan;
@@ -191,7 +217,9 @@ final class OracleCompositePartitionMaintenance {
 		} else {
 			if (root < 0) {
 				long matches = oldInfo.getPartitions().stream().flatMap(part -> part.getSubPartitions().stream())
-						.filter(part -> deleted.getName().equalsIgnoreCase(part.getName())).count();
+						.filter(part -> identifier(deleted.getName(), dialect, builders.get())
+								.equals(identifier(part.getName(), dialect, builders.get())))
+						.count();
 				require(matches == 1, "Subpartition name must resolve uniquely within the table");
 			}
 			sql._add(root >= 0 ? "DROP PARTITION " : "DROP SUBPARTITION ").name(deleted.getName());
@@ -226,12 +254,22 @@ final class OracleCompositePartitionMaintenance {
 			append = same(oldChildren.get(i), children.get(i), dialect);
 		if (append)
 			return null;
-		require(!before.isCompression() && !a.get(position).isCompression()
-				&& oldChildren.stream().noneMatch(part -> part.isCompression() || part.getCompressionType() != null)
-				&& children.stream().noneMatch(part -> part.isCompression() || part.getCompressionType() != null),
-				"Child SPLIT/MERGE/MOVE requires uncompressed table, parent and children");
+		if (children.size() != oldChildren.size()) {
+			String inheritedFree = a.get(position).getSpecifics().get("PCT_FREE");
+			if (inheritedFree == null)
+				inheritedFree = before.getSpecifics().getOrDefault("PCT_FREE", "10");
+			for (var group : List.of(oldChildren, children))
+				for (SubPartition child : group) {
+					String mode = OracleTablePartitionCompression.clause(child, dialect);
+					if ((" COMPRESS FOR OLTP".equals(mode) || " NOCOMPRESS".equals(mode)
+							&& (before.isCompression() || a.get(position).isCompression()))
+							&& child.getSpecifics().get("PCT_FREE") != null)
+						require(inheritedFree.equals(child.getSpecifics().get("PCT_FREE")),
+								"Child SPLIT/MERGE must inherit parent PCT_FREE unless BASIC compression forces zero");
+				}
+		}
 		validateChildIndexes(before, after, position, dialect);
-		uniqueChildren(after);
+		uniqueChildren(after, dialect, builders.get());
 		if (children.size() == oldChildren.size()) {
 			var movedPositions = new java.util.ArrayList<Integer>();
 			for (int i = 0; i < children.size(); i++) {
@@ -240,10 +278,28 @@ final class OracleCompositePartitionMaintenance {
 					continue;
 				SubPartition copy = next.clone();
 				copy.setTableSpaceName(old.getTableSpaceName());
-				require(same(old, copy, dialect) && next.getTableSpaceName() != null
-						&& !next.getTableSpaceName().isBlank() && !old.isCompression()
-						&& old.getCompressionType() == null,
-						"Subpartition MOVE requires isolated uncompressed tablespace changes");
+				copy.setCompression(old.isCompression());
+				copy.setCompressionType(old.getCompressionType());
+				String oldCompression = OracleTablePartitionCompression.clause(old, dialect);
+				String targetCompression = OracleTablePartitionCompression.clause(next, dialect);
+				if (!oldCompression.equals(targetCompression) || old.isCompression() || next.isCompression()
+						|| before.isCompression() || a.get(position).isCompression()) {
+					String pctFree = next.getSpecifics().get("PCT_FREE");
+					String required = " COMPRESS".equals(targetCompression) ? "0" : old.getSpecifics().get("PCT_FREE");
+					require(pctFree == null || java.util.Objects.equals(required, pctFree),
+							"Compression changes require PCT_FREE=" + required
+									+ "; non-BASIC moves retain source PCT_FREE and Oracle cannot modify it individually");
+					copy.getSpecifics().remove("PCT_FREE");
+					if (old.getSpecifics().containsKey("PCT_FREE"))
+						copy.getSpecifics().put("PCT_FREE", old.getSpecifics().get("PCT_FREE"));
+				}
+				copy.getSpecifics().remove("COMPRESS_FOR");
+				if (old.getSpecifics().containsKey("COMPRESS_FOR"))
+					copy.getSpecifics().put("COMPRESS_FOR", old.getSpecifics().get("COMPRESS_FOR"));
+				require(same(old, copy, dialect) && (next.getTableSpaceName() == null ? old.getTableSpaceName() == null
+						: !next.getTableSpaceName().isBlank()),
+						"Subpartition MOVE requires isolated tablespace or compression changes");
+				OracleTablePartitionCompression.clause(next, dialect);
 				movedPositions.add(i);
 			}
 			require(!movedPositions.isEmpty(), "No subpartition MOVE found");
@@ -260,8 +316,20 @@ final class OracleCompositePartitionMaintenance {
 			for (int movedPosition : movedPositions) {
 				SubPartition moved = children.get(movedPosition);
 				OracleSqlBuilder sql = builders.get().alter().table().space().name(before, decorate)
-						._add(" MOVE SUBPARTITION ").name(moved.getName())._add(" TABLESPACE ")
-						.name(moved.getTableSpaceName())._add(" UPDATE INDEXES");
+						._add(" MOVE SUBPARTITION ").name(moved.getName());
+				if (moved.getTableSpaceName() != null)
+					sql._add(" TABLESPACE ").name(moved.getTableSpaceName());
+				SubPartition old = oldChildren.get(movedPosition);
+				if (before.isCompression() || a.get(position).isCompression() || old.isCompression()
+						|| moved.isCompression()
+						|| !java.util.Objects.equals(old.getCompressionType(), moved.getCompressionType())
+						|| old.getSpecifics().containsKey("COMPRESS_FOR")
+						|| moved.getSpecifics().containsKey("COMPRESS_FOR")) {
+					require(dialect instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2,
+							"Explicit subpartition compression clauses require Oracle11gR2+");
+					sql._add(OracleTablePartitionCompression.clause(moved, dialect));
+				}
+				sql._add(" UPDATE INDEXES");
 				statements.add(sql.toString());
 			}
 			return new OracleTablePartitionMaintenance.Plan(statements, null);
@@ -274,19 +342,19 @@ final class OracleCompositePartitionMaintenance {
 		return new OracleTablePartitionMaintenance.Plan(List.of(sql.toString()), null);
 	}
 
-	private static void uniqueChildren(Table table) {
-		uniqueChildren(table.getPartitioning());
+	private static void uniqueChildren(Table table, Dialect dialect, OracleSqlBuilder naming) {
+		uniqueChildren(table.getPartitioning(), dialect, naming);
 		for (Index index : table.getIndexes())
 			if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
-				uniqueChildren(index.getPartitioning());
+				uniqueChildren(index.getPartitioning(), dialect, naming);
 	}
 
-	private static void uniqueChildren(Partitioning info) {
+	private static void uniqueChildren(Partitioning info, Dialect dialect, OracleSqlBuilder naming) {
 		var names = new java.util.HashSet<String>();
 		for (Partition parent : info.getPartitions())
 			for (SubPartition child : parent.getSubPartitions())
 				require(child.getName() != null && !child.getName().isBlank()
-						&& names.add(child.getName().toUpperCase(java.util.Locale.ROOT)),
+						&& names.add(identifier(child.getName(), dialect, naming)),
 						"Subpartition names must be unique throughout their table/index");
 	}
 
@@ -342,6 +410,9 @@ final class OracleCompositePartitionMaintenance {
 	 */
 	private static Table flatten(Table table, int position) {
 		Table copy = table.clone();
+		// Keep the effective compression default when replacing parents with leaves.
+		copy.setCompression(
+				table.isCompression() || table.getPartitioning().getPartitions().get(position).isCompression());
 		flatten(copy.getPartitioning(), position);
 		for (Index index : copy.getIndexes())
 			if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
@@ -374,10 +445,13 @@ final class OracleCompositePartitionMaintenance {
 				"Subpartition boundary must match its partitioning type");
 		SubPartition expected = new SubPartition(part.getName()).setHighValue(part.getHighValue())
 				.setTableSpaceName(part.getTableSpaceName());
-		if (index)
+		if (index) {
 			expected.getSpecifics().put("oracle.index.status", "USABLE");
+			copyIndexCompression(part, expected);
+		} else
+			copyTableCompression(part, expected, dialect);
 		require(same(expected, part, dialect),
-				"Added subpartition supports only name, boundary, tablespace and explicitly USABLE Local state");
+				"Added subpartition supports only name, boundary, tablespace, inherited index compression and explicitly USABLE Local state");
 	}
 
 	private static void simpleParent(Partition part, boolean index, Dialect dialect) {
@@ -391,8 +465,49 @@ final class OracleCompositePartitionMaintenance {
 			expected.getSpecifics().put("oracle.index.status", status);
 		}
 		Partition copy = part.clone();
+		if (index)
+			copyIndexCompression(part, expected);
+		else
+			copyTableCompression(part, expected, dialect);
 		copy.getSubPartitions().clear();
-		require(same(expected, copy, dialect), "Added parent supports only name, boundary and tablespace");
+		require(same(expected, copy, dialect),
+				"Added parent supports only name, boundary, tablespace and inherited index compression");
+	}
+
+	private static void copyIndexCompression(AbstractPartition<?> source, AbstractPartition<?> target) {
+		target.setCompression(source.isCompression());
+		target.setCompressionType(source.getCompressionType());
+		if (source.getSpecifics().containsKey("oracle.index.compression"))
+			target.getSpecifics().put("oracle.index.compression",
+					source.getSpecifics().get("oracle.index.compression"));
+	}
+
+	private static void copyTableCompression(AbstractPartition<?> source, AbstractPartition<?> target,
+			Dialect dialect) {
+		String clause = OracleTablePartitionCompression.clause(source, dialect);
+		// BASIC compression itself establishes PCTFREE=0; no physical override is
+		// needed.
+		if (" COMPRESS".equals(clause) && "0".equals(source.getSpecifics().get("PCT_FREE")))
+			target.getSpecifics().put("PCT_FREE", "0");
+		target.setCompression(source.isCompression());
+		target.setCompressionType(source.getCompressionType());
+		if (source.getSpecifics().containsKey("COMPRESS_FOR"))
+			target.getSpecifics().put("COMPRESS_FOR", source.getSpecifics().get("COMPRESS_FOR"));
+	}
+
+	private static void tableCompression(AbstractPartition<?> part, boolean compressedDefault, OracleSqlBuilder sql) {
+		if (compressedDefault || part.isCompression() || part.getCompressionType() != null
+				|| part.getSpecifics().containsKey("COMPRESS_FOR"))
+			sql._add(OracleTablePartitionCompression.clause(part, sql.getDialect()));
+	}
+
+	private static void inheritedIndexCompression(Index index, Partition parent, Dialect dialect) {
+		OracleIndexCompression.add(index, dialect, new OracleSqlBuilder(dialect));
+		String root = OracleIndexPartitionCompression.rootMode(index);
+		require(root.equals(OracleIndexPartitionCompression.mode(parent, root)),
+				"Added Local segments must inherit index compression");
+		for (SubPartition child : parent.getSubPartitions())
+			OracleIndexPartitionCompression.validateSubpartition(index, parent, child);
 	}
 
 	private static void subpartition(SubPartition part, PartitioningType type, boolean index, OracleSqlBuilder sql) {
@@ -409,8 +524,8 @@ final class OracleCompositePartitionMaintenance {
 		Partitioning oldInfo = before.getPartitioning(), info = after.getPartitioning();
 		PartitioningType type = oldInfo.getPartitioningType(), sub = oldInfo.getSubPartitioningType();
 		int position = oldInfo.getPartitions().size();
-		require(position > 0 && !before.isCompression() && type != PartitioningType.Hash,
-				"Composite parent ADD requires an existing uncompressed RANGE/LIST table");
+		require(position > 0 && type != PartitioningType.Hash,
+				"Composite parent ADD requires an existing RANGE/LIST table");
 		Partition added = info.getPartitions().get(position);
 		simpleParent(added, false, dialect);
 		require(!added.getSubPartitions().isEmpty(), "Composite parent ADD requires explicit subpartitions");
@@ -423,17 +538,17 @@ final class OracleCompositePartitionMaintenance {
 						"Cannot append after a DEFAULT parent");
 		else {
 			String bound = oldInfo.getPartitions().get(position - 1).getHighValue();
-			require(bound != null && !bound.isBlank() && !bound.toUpperCase(java.util.Locale.ROOT).contains("MAXVALUE"),
+			require(bound != null && !bound.isBlank() && !OracleRangePartitionBound.isUnbounded(bound),
 					"Cannot append after a missing boundary or MAXVALUE parent");
 		}
 		java.util.Set<String> names = new java.util.HashSet<>();
 		for (Partition part : oldInfo.getPartitions())
 			for (SubPartition child : part.getSubPartitions())
 				if (child.getName() != null)
-					names.add(child.getName().toUpperCase(java.util.Locale.ROOT));
+					names.add(identifier(child.getName(), dialect, builders.get()));
 		for (SubPartition child : added.getSubPartitions()) {
 			simple(child, false, sub, dialect);
-			require(names.add(child.getName().toUpperCase(java.util.Locale.ROOT)),
+			require(names.add(identifier(child.getName(), dialect, builders.get())),
 					"New table subpartition names must be unique");
 		}
 		OracleSqlBuilder sql = builders.get().alter().table().space().name(before, decorate)._add(" ADD PARTITION ")
@@ -441,11 +556,13 @@ final class OracleCompositePartitionMaintenance {
 				._add(added.getHighValue())._add(")");
 		if (added.getTableSpaceName() != null)
 			sql._add(" TABLESPACE ").name(added.getTableSpaceName());
+		tableCompression(added, before.isCompression(), sql);
 		sql._add(" (");
 		for (int i = 0; i < added.getSubPartitions().size(); i++) {
 			if (i > 0)
 				sql._add(", ");
 			subpartition(added.getSubPartitions().get(i), sub, false, sql);
+			tableCompression(added.getSubPartitions().get(i), added.isCompression(), sql);
 		}
 		sql._add(") UPDATE INDEXES");
 		boolean first = true;
@@ -463,7 +580,7 @@ final class OracleCompositePartitionMaintenance {
 						"Local index attributes must remain unchanged");
 			Partitioning a = index.getPartitioning(), b = next.getPartitioning();
 			shape(a, b, dialect);
-			require(!index.isCompression() && a.getPartitioningType() == type && a.getSubPartitioningType() == sub
+			require(a.getPartitioningType() == type && a.getSubPartitioningType() == sub
 					&& a.getPartitions().size() == position && b.getPartitions().size() == position + 1,
 					"Local composite shape must match its table");
 			for (int i = 0; i < position; i++)
@@ -471,6 +588,7 @@ final class OracleCompositePartitionMaintenance {
 						.getSubPartitions().size() == oldInfo.getPartitions().get(i).getSubPartitions().size(),
 						"Existing Local segments must remain unchanged and match table counts");
 			Partition segment = b.getPartitions().get(position);
+			inheritedIndexCompression(index, segment, dialect);
 			simpleParent(segment, true, dialect);
 			require(java.util.Objects.equals(segment.getHighValue(), added.getHighValue())
 					&& segment.getSubPartitions().size() == added.getSubPartitions().size(),
@@ -481,7 +599,7 @@ final class OracleCompositePartitionMaintenance {
 			for (Partition part : a.getPartitions())
 				for (SubPartition child : part.getSubPartitions())
 					if (child.getName() != null)
-						names.add(child.getName().toUpperCase(java.util.Locale.ROOT));
+						names.add(identifier(child.getName(), dialect, builders.get()));
 			sql._add(first ? " (" : ", ").name(index, false)._add(" (PARTITION ").name(segment.getName());
 			first = false;
 			if (segment.getTableSpaceName() != null)
@@ -491,7 +609,7 @@ final class OracleCompositePartitionMaintenance {
 				SubPartition child = segment.getSubPartitions().get(i);
 				simple(child, true, sub, dialect);
 				require(java.util.Objects.equals(child.getHighValue(), added.getSubPartitions().get(i).getHighValue())
-						&& names.add(child.getName().toUpperCase(java.util.Locale.ROOT)),
+						&& names.add(identifier(child.getName(), dialect, builders.get())),
 						"New Local subpartition boundaries/names must match without collisions");
 				if (i > 0)
 					sql._add(", ");
@@ -512,8 +630,7 @@ final class OracleCompositePartitionMaintenance {
 		require(oldInfo.getPartitioningType() == PartitioningType.Range
 				|| oldInfo.getPartitioningType() == PartitioningType.List && type == PartitioningType.List,
 				"Subpartition ADD supports RANGE-* and LIST-LIST in this planner");
-		require(!before.isCompression() && !source.isCompression() && !source.getSubPartitions().isEmpty(),
-				"Subpartition ADD requires an existing uncompressed parent");
+		require(!source.getSubPartitions().isEmpty(), "Subpartition ADD requires an existing parent");
 		int ordinal = source.getSubPartitions().size();
 		SubPartition added = target.getSubPartitions().get(ordinal);
 		simple(added, false, type, dialect);
@@ -523,12 +640,13 @@ final class OracleCompositePartitionMaintenance {
 						"Cannot append with an existing DEFAULT subpartition");
 		if (type == PartitioningType.Range) {
 			String boundary = source.getSubPartitions().get(ordinal - 1).getHighValue();
-			require(boundary != null && !boundary.isBlank()
-					&& !boundary.toUpperCase(java.util.Locale.ROOT).contains("MAXVALUE"),
+			require(boundary != null && !boundary.isBlank() && !OracleRangePartitionBound.isUnbounded(boundary),
 					"Cannot append after a missing boundary or MAXVALUE");
 		}
 		long collisions = oldInfo.getPartitions().stream().flatMap(part -> part.getSubPartitions().stream())
-				.filter(part -> added.getName().equalsIgnoreCase(part.getName())).count();
+				.filter(part -> identifier(added.getName(), dialect, builders.get())
+						.equals(identifier(part.getName(), dialect, builders.get())))
+				.count();
 		require(collisions == 0, "Added subpartition name must be unique within its table");
 		Table projected = after.clone();
 		projected.getPartitioning().getPartitions().get(position).getSubPartitions().remove(ordinal);
@@ -539,6 +657,7 @@ final class OracleCompositePartitionMaintenance {
 					._add(")");
 		if (added.getTableSpaceName() != null)
 			sql._add(" TABLESPACE ").name(added.getTableSpaceName());
+		tableCompression(added, before.isCompression() || source.isCompression(), sql);
 		sql._add(" UPDATE INDEXES");
 		boolean first = true;
 		for (Index index : before.getIndexes()) {
@@ -555,8 +674,8 @@ final class OracleCompositePartitionMaintenance {
 						"Local index attributes must remain unchanged");
 			Partitioning a = index.getPartitioning(), b = next.getPartitioning();
 			shape(a, b, dialect);
-			require(!index.isCompression() && a.getPartitioningType() == oldInfo.getPartitioningType()
-					&& a.getSubPartitioningType() == type && a.getPartitions().size() == oldInfo.getPartitions().size()
+			require(a.getPartitioningType() == oldInfo.getPartitioningType() && a.getSubPartitioningType() == type
+					&& a.getPartitions().size() == oldInfo.getPartitions().size()
 					&& b.getPartitions().size() == info.getPartitions().size(),
 					"Local composite shape must match its table");
 			for (int i = 0; i < a.getPartitions().size(); i++)
@@ -565,13 +684,15 @@ final class OracleCompositePartitionMaintenance {
 			require(b.getPartitions().get(position).getSubPartitions().size() == ordinal + 1,
 					"Append exactly one corresponding Local subpartition");
 			SubPartition segment = b.getPartitions().get(position).getSubPartitions().get(ordinal);
+			inheritedIndexCompression(index, b.getPartitions().get(position), dialect);
 			simple(segment, true, type, dialect);
 			require(java.util.Objects.equals(added.getHighValue(), segment.getHighValue()),
 					"Local subpartition boundary must match its table");
 			require(java.util.Objects.equals(index.getSchemaName(), before.getSchemaName()),
 					"Cross-schema Local maintenance requires explicit owner handling");
 			require(a.getPartitions().stream().flatMap(part -> part.getSubPartitions().stream())
-					.noneMatch(part -> segment.getName().equalsIgnoreCase(part.getName())),
+					.noneMatch(part -> identifier(segment.getName(), dialect, builders.get())
+							.equals(identifier(part.getName(), dialect, builders.get()))),
 					"Added Local subpartition name would collide");
 			if (type == PartitioningType.Hash)
 				for (SubPartition part : a.getPartitions().get(position).getSubPartitions())

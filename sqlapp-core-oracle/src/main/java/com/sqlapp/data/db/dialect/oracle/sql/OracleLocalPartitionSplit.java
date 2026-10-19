@@ -91,7 +91,7 @@ final class OracleLocalPartitionSplit {
 		if (list)
 			OracleListPartitionValues.split(original.getHighValue(), left.getHighValue(), right.getHighValue());
 		else if (left.getHighValue() == null || left.getHighValue().isBlank()
-				|| "MAXVALUE".equalsIgnoreCase(left.getHighValue())
+				|| OracleRangePartitionBound.isUnbounded(left.getHighValue())
 				|| Objects.equals(left.getHighValue(), original.getHighValue())
 				|| !Objects.equals(right.getHighValue(), original.getHighValue()))
 			throw new IllegalArgumentException("Split must preserve the original upper bound in its right partition");
@@ -155,11 +155,15 @@ final class OracleLocalPartitionSplit {
 				OracleListPartitionValues.same(right.getHighValue(), b.getHighValue());
 			}
 			for (Partition part : java.util.List.of(source, a, b)) {
-				if (!"USABLE".equals(part.getSpecifics().get("oracle.index.status")) || part.isCompression()
+				if (!"USABLE".equals(part.getSpecifics().get("oracle.index.status"))
 						|| !part.getSubPartitions().isEmpty())
 					throw new IllegalArgumentException(
-							"Split local index segments must be simple, uncompressed and explicitly USABLE");
+							"Split local index segments must be simple and explicitly USABLE");
+				String root = OracleIndexPartitionCompression.rootMode(oldIndex);
+				if (!root.equals(OracleIndexPartitionCompression.mode(part, root)))
+					throw new IllegalArgumentException("Local split index compression must inherit the index setting");
 			}
+			OracleIndexCompression.add(oldIndex, dialect, new OracleSqlBuilder(dialect));
 			same(normalized(source), normalized(a), dialect);
 			same(normalized(source), normalized(b), dialect);
 			if (!Objects.equals(oldIndex.getSchemaName(), before.getSchemaName()))
@@ -213,5 +217,10 @@ final class OracleLocalPartitionSplit {
 		builder._add(subpartition ? "SUBPARTITION " : "PARTITION ").name(partition.getName());
 		if (partition.getTableSpaceName() != null)
 			builder.space()._add("TABLESPACE ").name(partition.getTableSpaceName());
+		if ((partition.getPartitioning() == null || partition.getPartitioning().getIndex() == null) && (subpartition
+				&& partition.getPartitioning() != null && partition.getPartitioning().getTable() != null
+				&& partition.getPartitioning().getTable().isCompression() || partition.isCompression()
+				|| partition.getCompressionType() != null || partition.getSpecifics().containsKey("COMPRESS_FOR")))
+			builder._add(OracleTablePartitionCompression.clause(partition, builder.getDialect()));
 	}
 }

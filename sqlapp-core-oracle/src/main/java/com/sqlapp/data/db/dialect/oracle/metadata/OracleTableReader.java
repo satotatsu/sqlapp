@@ -269,10 +269,8 @@ public class OracleTableReader extends TableReader {
 
 	private void setPartitionDetails(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
 		String highValue = getString(rs, "HIGH_VALUE");
-		String compression = getString(rs, "COMPRESSION");
 		partition.setHighValue(highValue);
-		// Composite parents may report NONE when no compression default is set.
-		partition.setCompression("ENABLED".equalsIgnoreCase(compression));
+		readPartitionCompression(rs, partition);
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
 		for (String key : OracleUtils.getTableStatisticsKeys()) {
 			if ("LOGGING".equals(key) && "NONE".equalsIgnoreCase(getString(rs, key))) {
@@ -288,6 +286,13 @@ public class OracleTableReader extends TableReader {
 		this.setStatistics(rs, "AVG_SPACE", partition);
 		this.setStatistics(rs, "CHAIN_CNT", partition);
 		this.setStatistics(rs, "SAMPLE_SIZE", partition);
+	}
+
+	void readPartitionCompression(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
+		// NONE on composite parents means that no compression default was set.
+		partition.setCompression("ENABLED".equalsIgnoreCase(getString(rs, "COMPRESSION")));
+		partition.setCompressionType(
+				partition.isCompression() && rs.contains("COMPRESS_FOR") ? getString(rs, "COMPRESS_FOR") : null);
 	}
 
 	/**

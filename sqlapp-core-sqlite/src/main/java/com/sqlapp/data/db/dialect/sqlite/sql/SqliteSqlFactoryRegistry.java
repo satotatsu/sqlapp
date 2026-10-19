@@ -34,6 +34,8 @@ public class SqliteSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, SqliteCreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.CREATE, SqliteCreateTriggerFactory.class);
 
 		registerSqlFactory(Index.class, SqlType.CREATE, SqliteCreateIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SqliteCreateTemporaryTableFactory.class);

@@ -203,9 +203,12 @@ Composite SPLIT/MERGE and MOVE have a separate acceptance suite:
 ```
 
 It covers RANGE and LIST child SPLIT/MERGE, RANGE/LIST/HASH child MOVE,
-including moving all children of one parent and returning them to their original
+including moving children of one or multiple parents and returning them to their original
 tablespaces while retaining index placement and usable states,
-simple HASH partition MOVE, and RANGE-HASH / LIST-HASH parent SPLIT/MERGE. Model diffs come
+simple HASH partition MOVE, and RANGE/LIST parents with HASH/RANGE/LIST children.
+The routing cases require a single child key and matching child layouts.
+Parent SPLIT also preserves finite terminal child bounds; parent MERGE requires
+a terminal MAXVALUE/DEFAULT child. Model diffs come
 from actual metadata. Parent cases cover table defaults smaller and larger than
 the requested HASH child count, exercising both ADD and COALESCE restoration.
 SPLIT cases gather parent/child/index statistics before reading and merging.
@@ -214,18 +217,76 @@ index segments, target and unaffected tablespaces, root index placement, and
 valid/usable Global and Local indexes. Moved segments contain rows. Parent
 splitting/merging restores the requested HASH child count with row-preserving
 ADD/COALESCE when Oracle uses table defaults, then restores Oracle-assigned child
-names. Two bulk catalog queries cover parent counts and child names, with
+names. Two bulk catalog queries cover HASH parent counts and child names, with
 preflight name/count checks and two-phase renames. This is a sequence of
 committing DDL statements; recovery after a partial failure is not automatic.
 
 The suite creates a disposable 128 MB tablespace and quota in its owned Oracle
 container, drops tables, then drops the tablespace and data file before stopping
 the container. Use the same image/dialect properties for 26ai. Current planners
-support isolated uncompressed changes with inherited physical defaults, ordinary indexes, and explicitly usable
-affected Local segments. Parent SPLIT/MERGE retains the child hash count and
-attributes. Other composite parent families, parent MOVE, compressed variants,
-ONLINE changes, LOB-specific placement and automatic failure recovery are outside
-this suite. Version guards retain RANGE-LIST at 10g, RANGE-RANGE/LIST-* at 11g,
+support isolated changes with inherited physical defaults, ordinary indexes, and explicitly usable
+affected Local segments. RANGE/LIST parent SPLIT uses one additional set-based
+catalog query to check inherited bounds; MERGE uses two to read children and
+validate the actual terminal bound before restoring routing.
+Compression cases exercise BASIC/OLTP MOVE, decompression, multiple parents,
+and BASIC child SPLIT/MERGE with explicit ONLINE opt-in on Oracle18c+.
+Explicit child compression clauses require Oracle11gR2+ in this dialect model.
+Compression changes must specify PCT_FREE=0 for BASIC or retain the source value for OLTP/NOCOMPRESS
+when that attribute is present in the model; incompatible values fail before DDL.
+Parent compression cases cover BASIC/ADVANCED defaults inherited by HASH/RANGE/LIST
+children of RANGE/LIST parents, with both uncompressed and BASIC/ADVANCED table
+defaults. Table defaults must remain unchanged.
+Local compression cases cover prefix compression and ADVANCED LOW/HIGH inherited
+by all affected index segments, for parent SPLIT/MERGE, child SPLIT/MERGE and
+HASH/RANGE/LIST child MOVE. They also cover table compression and finite parent
+SPLIT in combination with compressed Local indexes. Root compression and prefix
+length remain unchanged; per-parent/per-child index compression overrides are
+rejected during parent SPLIT/MERGE. ADD also supports inherited Local compression
+for RANGE/LIST parents and supported child shapes; newly requested compression
+overrides are rejected. ADD/DROP and HASH child COALESCE cases verify all rows,
+index compression and prefix length, and complete recreation through Schema XML.
+Existing advanced-compression version guards
+remain in effect (LOW: 12c; HIGH: 18c).
+Table/parent BASIC and ADVANCED defaults are also covered by parent and child ADD.
+New table segment compression follows the requested model: compressed segments
+emit explicit compression clauses, while compression=false under a compressed
+default emits NOCOMPRESS. BASIC ADD accepts an explicit PCT_FREE=0 because its
+compression clause establishes that value, without emitting a PCTFREE override.
+Other new PCTFREE/storage overrides remain rejected.
+These cases cover Local compression coexistence and full XML recreation; existing
+segment compression and known PCTFREE values must remain unchanged.
+Child RANGE/LIST SPLIT/MERGE also covers BASIC/ADVANCED table or parent defaults,
+including explicitly uncompressed children and prefix-compressed Local indexes.
+Requested modes are emitted explicitly when a compressed default could change
+the result. Known non-BASIC PCTFREE must match the parent default; arbitrary
+physical overrides remain rejected.
+Mixed parent/child compression during parent SPLIT/MERGE, arbitrary child physical
+overrides, finite terminal child routing during parent MERGE, LOB-specific placement
+and automatic failure recovery are outside this suite.
+Multi-step parent restoration cannot request whole-plan ONLINE.
+Composite parent/child ADD and DROP also cover names differing only by case,
+with corresponding Local index segments and XML recreation. Duplicate checks
+follow the same explicit quoting and builder quoting policy as generated SQL.
+Quoted-name coverage also includes parent RANGE-HASH/RANGE-RANGE/RANGE-LIST
+SPLIT/MERGE under BASIC table compression and child RANGE/LIST SPLIT/MERGE under
+ADVANCED table compression, with prefix-compressed Local indexes. Both phases
+compare case-sensitive names, routing, rows, compression, PCTFREE and index state.
+The same quoted-name combinations extend to LIST-HASH/LIST-RANGE/LIST-LIST
+parents and ONLINE RANGE/LIST child SPLIT/MERGE. ONLINE coverage checks generated
+clauses and post-operation state; it does not measure concurrent DML or lock waits.
+Finite RANGE text boundaries containing MAXVALUE also cover simple table ADD,
+composite parent ADD and child ADD. The tests retain the literal boundary,
+insert that exact value plus a later value after ADD, and compare all rows and
+the resulting catalog boundaries. Actual unbounded markers remain rejected.
+IOT text-boundary coverage includes ADD/DROP after a finite 'MAXVALUE' boundary
+and SPLIT/MERGE at that literal value. Each phase checks all rows and values,
+catalog bounds, Local secondary index names/status, IOT identity, enabled primary
+key and usable root indexes. DROP intentionally removes only the added rows.
+Multicolumn RANGE coverage also uses a finite first key followed by MAXVALUE
+for simple/composite ADD and IOT ADD/DROP/SPLIT/MERGE. Rows equal to the finite
+prefix stay in the existing partition; dropping the added partition preserves
+those rows even when inserted after ADD. Leading MAXVALUE remains unbounded.
+Version guards retain RANGE-LIST at 10g, RANGE-RANGE/LIST-* at 11g,
 and HASH-* at 18c because the shared 12c dialect also represents 12.1.
 
 MySQL coverage uses MySQL 8.4 and verifies generic one-column generated-key

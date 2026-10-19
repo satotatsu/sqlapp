@@ -49,10 +49,51 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSqlBuilder> {
+	private boolean onlinePartitionMaintenance;
+
+	/** Requests ONLINE for native heap partition MOVE/SPLIT/MERGE statements. */
+	public void setOnlinePartitionMaintenance(boolean value) {
+		this.onlinePartitionMaintenance = value;
+	}
+
+	public boolean isOnlinePartitionMaintenance() {
+		return onlinePartitionMaintenance;
+	}
+
+	private String partitionStatement(String statement, Table table) {
+		if (!onlinePartitionMaintenance)
+			return statement;
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c)
+				|| OracleTablePartitionMaintenance.iot(table) || "SYS"
+						.equalsIgnoreCase(table.getSchemaName() == null ? null
+								: getDialect().unQuote(table.getSchemaName()))
+				|| table.getColumns().stream().anyMatch(column -> column.getDataType() != null && java.util.Set
+						.of("STRUCT", "JAVA_OBJECT", "ARRAY", "REF", "LONGVARCHAR", "LONGNVARCHAR", "LONGVARBINARY")
+						.contains(column.getDataType().name())))
+			throw new IllegalArgumentException(
+					"ONLINE partition maintenance requires Oracle18c+ heap tables without object or LONG columns");
+		for (var index : table.getIndexes()) {
+			OracleTablePartitionMaintenance.ordinary(index);
+			if (index.getIndexType() != null && index.getIndexType().isBitMap()
+					|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
+				throw new IllegalArgumentException(
+						"ONLINE partition maintenance with bitmap indexes requires a dedicated plan");
+		}
+		if (!statement.startsWith("ALTER TABLE ")
+				|| !(statement.contains(" MOVE PARTITION ") || statement.contains(" MOVE SUBPARTITION ")
+						|| statement.contains(" SPLIT PARTITION ") || statement.contains(" SPLIT SUBPARTITION ")
+						|| statement.contains(" MERGE PARTITIONS ") || statement.contains(" MERGE SUBPARTITIONS ")))
+			throw new IllegalArgumentException(
+					"ONLINE is supported only for native heap MOVE/SPLIT/MERGE; composite routing restoration is a committing multi-step operation");
+		return statement + " ONLINE";
+	}
 
 	@Override
 	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
 		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
+		if (onlinePartitionMaintenance && (before == null || after == null
+				|| java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())))
+			throw new IllegalArgumentException("ONLINE partition maintenance requires a partition change");
 		if (before != null && after != null
 				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
 				&& (before.getPartitioning() != null || after.getPartitioning() != null)) {
@@ -69,13 +110,17 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 			if (plan != null) {
 				List<SqlOperation> operations = new java.util.ArrayList<>();
 				for (String statement : plan.statements())
-					operations.add(plan.removed() == null ? createOperation(statement, SqlType.ALTER, before, after)
+					operations.add(plan.removed() == null
+							? createOperation(partitionStatement(statement, before), SqlType.ALTER, before, after)
 							: createOperation(statement, SqlType.DROP, plan.removed(), null));
+				if (onlinePartitionMaintenance && plan.removed() != null)
+					throw new IllegalArgumentException("ONLINE partition DROP is not supported");
 				return operations;
 			}
 			OracleSqlBuilder builder = createSqlBuilder(getDialect());
 			OracleLocalPartitionSplit.add(before, after, getDialect(), getOptions().isDecorateSchemaName(), builder);
-			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
+			return List
+					.of(createOperation(partitionStatement(builder.toString(), before), SqlType.ALTER, before, after));
 		}
 		boolean rootMove = before != null && after != null && OracleTablePartitionMaintenance.iot(before)
 				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName());

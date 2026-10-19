@@ -196,7 +196,7 @@ final class OracleTablePartitionMaintenance {
 				require(existing.getHighValue() != null && !"DEFAULT".equalsIgnoreCase(existing.getHighValue().trim()),
 						"Cannot add a LIST partition with an existing DEFAULT partition");
 		} else if (!hash)
-			require(!oldBound.toUpperCase(java.util.Locale.ROOT).contains("MAXVALUE"),
+			require(!OracleRangePartitionBound.isUnbounded(oldBound),
 					"Cannot append after MAXVALUE; split that partition instead");
 		Partition added = after.getPartitioning().getPartitions().get(position);
 		newPartition(added, false, dialect, hash);
@@ -313,7 +313,7 @@ final class OracleTablePartitionMaintenance {
 		require(source.getHighValue() != null && !source.getHighValue().isBlank(),
 				"Original IOT partition upper boundary is required");
 		require(left.getHighValue() != null && !left.getHighValue().isBlank()
-				&& !left.getHighValue().toUpperCase(java.util.Locale.ROOT).contains("MAXVALUE")
+				&& !OracleRangePartitionBound.isUnbounded(left.getHighValue())
 				&& !Objects.equals(left.getHighValue(), source.getHighValue())
 				&& Objects.equals(right.getHighValue(), source.getHighValue()),
 				"Split/merge must preserve the upper boundary");

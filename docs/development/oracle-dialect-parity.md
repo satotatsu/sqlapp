@@ -1,9 +1,30 @@
 # Oracle DialectとPostgreSQL Dialectの比較
 
 確認日: 2026-10-15。比較対象はDB固有のSQL構文の数ではなく、共有Schemaモデル、メタデータ読取、DDL再生成、バージョン分離、テストの実装状況。
-ソースコードと単体テストによる確認であり、全Oracleバージョンの実DB互換性を保証する監査ではない。
+ソースコード・単体テストと各節に記載したDocker実DBによる確認であり、全Oracleバージョンの実DB互換性は未検証。
+
+日付別の「残件」「未検証」は記録時点の状態であり、後続の実装・Docker検証結果は末尾の
+2026-10-18／2026-10-19の各節に記載する。基本比較とOracle固有の高度な拡張は区別する。
 
 ## 比較結果
+
+### 現在も残る主な制限（2026-10-19）
+
+下記は現在の実装で明示的に制限しているOracle固有の拡張であり、後続の日付節で実装済みの
+一般的な複合SPLIT／MERGE、圧縮保守や単純IOTまで未対応という意味ではない。
+過去の日付節の「未対応」は、その時点の状態として読む。
+
+- 複合HASH親のADD。子HASHのADD／COALESCEとは別の経路。
+- 複数のRANGE／LIST子キーを持つ親SPLIT／MERGEのルーティング復元と、有限末尾の子を持つ親MERGE。
+  複数列RANGEのADD・単純／IOT SPLIT／MERGEとは別の制限。
+- 保守中の任意の個別物理属性編集、親SPLIT／MERGEの混在圧縮、複雑なIOT全体MOVE。
+  対応済みの圧縮モード・PCTFREE・表領域変更の範囲は各節とREADMEに記載する。
+- 完全DDLとして保存するオブジェクト内部の任意の構造化編集と、custom indextype／Text preference等の
+  前提オブジェクトの自動再生成。
+- 複数DDLを使う保守計画全体のONLINE保証、自動ロールバック・再開。
+
+実DB検証は各節に明示した所有DockerのOracle23／固定26aiのケースに限定する。
+全Oracle版・全オプションの互換性、並行DML負荷・ロック待ち時間を一括して確認したものではない。
 
 ### 2026-10-17時点の完了判定と残件の区分
 
@@ -2292,6 +2313,266 @@ Routine置換4件、directory2件を追加。実行コマンド:
 ./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
 ./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.grouped*' --gradle-user-home .gradle-user-home
 ./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.grouped*' --tests '*OracleCompositeAlterTest.*ChildMove*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 複合親の境界復元、圧縮とONLINE保守
+
+- RANGE-RANGE／RANGE-LIST／LIST-RANGE／LIST-LIST親のSPLIT／MERGEを追加した。既存の親境界・Local索引検証を再利用し、ネイティブ親DDLの後に対象親の子を行を削除せず結合・再分割して境界を復元し、既存の名前・表領域・Local索引状態の復元へつなぐ。[Oracle仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)上、親MERGEに子の境界を直接指定することはできない。
+- この境界復元は単一の子キー、同じ子数・境界・物理属性を維持する変更、末尾MAXVALUE／DEFAULTを対象とする。子ごとの表領域と名前は復元できる。子数や境界変更、個別の異なる物理属性、有限の末尾境界、複数子キーは事前に拒否する。Oracleがテンプレートから有限末尾を生成した場合も、復元前に実カタログを調べ明示的に停止する。親DDLは既にコミットされている可能性があり、自動ロールバックは保証しない。
+- 子の取得と実末尾境界の確認は2回の集合問い合わせを使う。既存の数・名前復元2回と合わせ、対象数によらず計4回であり、子ごとのSELECTは追加しない。HIGH_VALUEはLONGのため、末尾の集合を1つのカーソルで取得してPL/SQL側で比較し、SQLのLONG比較制限を避ける。HASHの既存経路は2回のままとする。
+- 子MOVEでBASIC／OLTP圧縮の指定・維持・解除を追加した。列指向圧縮や不明なモード、矛盾したcompressionTypeとCOMPRESS_FORは拒否する。10gの子MOVEはTABLESPACEだけを許すため、明示的な子圧縮句はこの実装では11gR2以降に限定する。複数の親にまたがる子MOVEも、既存の単一親検証を合成し、すべて検証してからSQL一覧を返す。子RANGE／LISTのSPLIT／MERGEも明示圧縮を保持するが、圧縮された表・親の既定属性や圧縮Local索引を伴う組合せは引き続き対象外。
+- 圧縮MOVEの初回Docker検証3件で、BASIC指定がPCTFREEを10から0へ変えることを検出した。個別MODIFY SUBPARTITION PCTFREEによる補正もORA-14169となり、[実際の構文](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Subclauses.html)では許可されない。専用の一時表でも、BASICが0に設定し、続くOLTP／NOCOMPRESSは0を維持することを確認した。比較テストは緩めず、対象モデルのPCT_FREEがBASICの0、OLTP／圧縮解除の元の子の値と矛盾する場合はSQL生成前に必要値を示して拒否する。呼出側が意図したPCT_FREEも明示して圧縮変更を指定する。未指定の場合はOracleの設定を使用する。圧縮解除してもPCTFREEが圧縮前の10へ戻るとは限らない。単体テストで空の移動先の拒否が1件失敗した点も修正し、事前検証を維持する。
+- Oracle専用`OracleAlterTableFactory#setOnlinePartitionMaintenance(boolean)`を追加した。既定falseの追加APIであり、共有coreやTableOptions、XML形式は変えない。Oracle18c以降のheapのネイティブMOVE／SPLIT／MERGEにONLINEを付ける。SYS、オブジェクト型／LONG、特殊索引・bitmap、DROP／ADD／COALESCEや境界・子名復元PL/SQLを含む親の複数段階計画は拒否する。既存onlineIndexは索引専用のまま維持する。ONLINE指定は無停止・無ロックや計画全体の原子性を意味しない。
+- 変更はOracle、dialect-testと文書。Resolver・旧版継承・依存バージョンは変更しない。旧版実DB、列指向圧縮、高度な個別物理属性・LOB配置、圧縮された親の保守、複数段階全体のONLINE保証、自動再開は未検証または未対応である。
+- ONLINEの実DBテストはDDL実行後のデータ・属性・索引状態を検証する。並行DML負荷やロック待ち時間の検証は行っていない。OLTP圧縮句はOracle23のカタログではADVANCEDと返るため、Dockerの期待モデルはこの実表現を使用する。
+- 最終単体は対象47件、Oracle全484件、関連Command149件・Gradle Plugin1件が成功した。固定26aiは保守クラス全22件が1回の実行で成功し、失敗・エラー・スキップ0件。Oracle23は複合親4方式と圧縮子SPLIT／MERGE2件の成功に、修正後の圧縮MOVE3件の成功を合わせて追加9ケースを確認した。23の9件は複数実行の成功を合計したものであり、試行中のPCTFREE・不正MODIFY・OLTP表現の失敗は上記のとおり修正した。最後の23圧縮MOVE3件も失敗・エラー・スキップ0件。合計31の異なるDB・ケース組合せの成功を確認した。
+- 専用の表・表領域・データファイルと調査用一時表を削除し、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセスはなく、生成物・依存バージョンの意図的変更もない。共有core／PostgreSQL全体や他のOracle Dockerクラスは今回再実行していない。
+
+```java
+var factory = (OracleAlterTableFactory) dialect.createSqlFactoryRegistry().getSqlFactory(after, SqlType.ALTER);
+factory.setOnlinePartitionMaintenance(true);
+var operations = factory.createDiffSql(before.diff(after));
+```
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.*RestoresRoutingAndIndexes' --tests '*OracleCompositeAlterTest.compressedOnline*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.compressedOnline*ChildrenMoveAndReturn' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 圧縮親と有限境界を持つ子のSPLIT
+
+- RANGE／LIST親のSPLITでは、子RANGE／LISTの境界をOracleが既存パーティションから継承するため、再結合・再分割を省く。分割後に名前・順序で子を一括取得し、HIGH_VALUEと件数が要求モデルに一致することを確認してから、既存の名前・表領域・索引状態を復元する。子ごとのSELECTは追加せず、非HASHのSPLITは集合問い合わせ3回、MERGEは従来の4回となる。[Oracleの継承仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)に従う。
+- これにより、単一キーの有限RANGE末尾やDEFAULTなしのLIST子も親SPLITで保持できる。境界を変える同時変更、重複LIST値、異なる個別物理属性、4000 UTF-8バイトを超える比較境界はSQL生成前に拒否する。比較は文字列リテラルの大文字小文字を保持し、引用符をエスケープする。有限末尾の親MERGEは、OracleがMAXVALUE／DEFAULTを生成する場合に余剰の子を安全に削除できないため、引き続き明示的に拒否する。
+- 圧縮されたRANGE／LIST親のSPLIT／MERGEでは、BASIC／ADVANCED（OLTP句）を親から子が継承する組合せを許可した。子数・境界・属性は維持し、親の圧縮句を明示する。圧縮された表全体、親と異なる個別子圧縮、圧縮Local索引は対象外。明示圧縮句は既存の11gR2以降の境界を使い、非圧縮の方式別境界やResolverは変更しない。
+- 変更はOracle、dialect-testと文書で、公開API、設定形式、共有モデル、依存バージョンの追加変更はない。ネイティブ親DDLと後続の確認・復元はそれぞれコミットされるため、途中のメタデータ不一致や失敗に対する自動ロールバック・再開、計画全体のONLINE保証は引き続き行わない。
+- 単体では有限境界のSPLIT／MERGEの区別、圧縮継承、Local圧縮の拒否、引用符と長い境界を追加した。従来の有限LIST子を持つ親SPLITの拒否テスト1件は、新たな対応範囲に合わせて更新した。Dockerケースは有限境界4方式と、RANGE／LIST親×子3方式×圧縮2モードの12方式を追加し、実メタデータからのSQL生成、行、親子の圧縮・PCTFREE・表領域、Global／Local索引状態を比較する。
+- 検証結果は対象単体50件、Oracle全487件、Command149件、Gradle Plugin1件が成功。Oracle23の追加16件、固定26aiの既存22件を含む全38件も成功し、DB・ケースの組合せは計54件、最終XMLの失敗・エラー・スキップはすべて0件。23の最初の一括実行はDocker停止による初期化エラーでテスト本体が未実行だったが、既存設定のRancher Desktopを起動し、16件すべてを再実行して成功した。検証用表領域・データファイルと所有コンテナは終了時に削除し、外部・本番DBには接続していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.finiteParentRangeListSplit*' --tests '*OracleCompositeAlterTest.compressedParentRangeHashBasic' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.finiteParent*' --tests '*OracleCompositeAlterTest.compressedParent*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 表レベル圧縮既定値を持つ複合親の保守
+
+- RANGE／LIST親のSPLIT／MERGEで、表レベルに圧縮既定値がある場合の一律拒否を除いた。既存の親圧縮句と子の属性継承・境界復元を使い、表の設定を変更せずに保守する。Oracleの[パーティション圧縮](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/partition-table-compression.html)と[保守時の継承](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)に従う。
+- 対象はBASIC／ADVANCED（OLTP）で、親と子が同じ圧縮設定を持ち、Local索引が非圧縮の組合せ。表既定値の同時変更、親子で異なる圧縮、圧縮Local索引、有限末尾の親MERGEは引き続き拒否する。明示圧縮句の11gR2以降という判定とResolverは変更しない。過去バージョンの実DB検証は今回の対象外。実DB検証は所有する使い捨てDockerだけで行い、表領域・データファイルとコンテナを終了時に削除した。外部・本番DBには接続していない。
+- 読込側では、分割表の圧縮既定値がALL_TABLESだけでは取得できない点を修正した。11gR2以降の専用SQLでALL_PART_TABLESのDEF_COMPRESSION／DEF_COMPRESS_FORを一括結合し、Tableのcompression／compressionTypeへ取り込む。非分割表はALL_TABLES.COMPRESS_FORを使い、IOTは従来の索引圧縮表現を保持する。[11gR2のカタログ仕様](https://docs.oracle.com/cd/E18283_01/server.112/e17110/statviews_2006.htm)を参照し、旧ReaderのSQLは変更しない。
+- 変更モジュールはOracleとdialect-test。公開API・設定形式・共有モデル・依存関係の変更はなく、カタログ問い合わせ回数の追加もない。読み取る圧縮モードが以前より正確になるため、Schema XMLや差分に従来なかったcompressionTypeが現れる場合がある。親DDLと後続復元がそれぞれコミットされる従来の制限は維持する。READMEとこの対応表を更新した。
+- 単体には親2方式×子3方式×圧縮2モードと、表設定同時変更・旧版拒否を追加。Dockerには同じ12組合せを追加し、表の圧縮既定値、親子の圧縮・PCTFREE・表領域、全行、Global／Local索引の状態を検証する。
+- 最終Oracle単体490件（対象保守51件＋圧縮メタデータ2件を含む）、Command149件、Gradle Plugin1件が成功。Reader修正後のOracle23追加12件と、最終26ai保守全50件も成功し、62のDB・ケース組合せを確認した。最終XMLの失敗・エラー・スキップは0件。最初の単体試行ではLISTの入力値集合とResultSetモックの不足を修正した。また、初期DB試行は圧縮既定値をTableへ読めていなかったため、その成功を修正後の62件には数えていない。修正後は圧縮フラグ・モードを明示検証し、Oracle固有COMPRESS_FORの同期・XML再作成も単体と最終26aiで確認した。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test --tests '*OracleTableCompressionMetadataTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.tableCompressed*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 圧縮Local索引を持つ親子の保守
+
+- 親SPLIT／MERGEで圧縮Local索引を一律拒否していた制約を、索引・親・子が同じモードを継承する場合に緩和した。prefix圧縮とADVANCED LOW／HIGHを既存のOracleIndexCompression／OracleIndexPartitionCompressionで検証し、既存の版境界（LOWは12c、HIGHは18c）を維持する。親・子の圧縮上書きと、保守と同時の索引属性変更は拒否する。古いDBの実DB検証は行わない。
+- 単純パーティションの既存Local索引SPLIT検証も同じ継承条件に揃え、複合子のSPLIT／MERGEから再利用する。子MOVEは既存のUPDATE INDEXES経路を検証する。カタログ問い合わせの追加はなく、親保守は既存の子数・名前・表領域・索引状態の集合取得と復元を使う。[OracleのLocal索引保守](https://docs.oracle.com/en/database/oracle/oracle-database/21/vldbg/maintenance-partition-tables-indexes.html)に従い、索引ルート・prefix長を維持する。Schemaモデル自体は書き換えない。
+- Oracleとdialect-test、READMEとこの対応表のみを変更し、公開API・設定形式・依存関係は変更しない。単体は親2方式×子3方式×圧縮3モード、子SPLIT／MERGE・MOVE、有限境界、旧版とモード変更の拒否を追加した。実DBは親18方式、子SPLIT／MERGE6方式、子MOVE9方式、表圧縮との併用2方式、有限親SPLIT2方式の37ケースを追加し、圧縮を明示的に読み取った上でルート・親・子のモード、prefix長、行、表領域、Global／Local索引状態を比較する。
+- 親子で異なる表圧縮、任意PCTFREE、圧縮Local索引の個別上書き、有限末尾の親MERGE、計画全体のONLINE保証と自動復旧は引き続き対象外。複数DDLがそれぞれコミットされる制限は維持する。
+- 最終単体は対象54件、Oracle全493件、関連Command149件・Gradle Plugin1件が成功。Oracle23の追加35件と、固定26aiの既存50件＋追加37件の全87件も成功し、計122のDB・ケース組合せを確認した。有限境界との併用2件は26aiでの追加検証であり、23の35件には含めない。最終XMLの失敗・エラー・スキップはすべて0件。検証用の表・表領域・データファイル・所有コンテナは終了時に削除し、外部・本番DBには接続していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.compressedLocal*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 圧縮Local索引のADD／COALESCEとXML再作成
+
+- 複合親・子のADDで圧縮Local索引を一律拒否していた制約を緩和し、追加セグメントがルート圧縮設定を継承する場合に対応した。prefix圧縮とADVANCED LOW／HIGHは既存ヘルパーで検証する。追加セグメントの上書き、索引ルートの同時変更、既存セグメントの変更は拒否する。[OracleのLocal索引属性継承](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/index-partitioning.html)に従い、SQLは既存のUPDATE INDEXES経路を使う。カタログ問い合わせと公開API・設定形式・依存関係の追加変更はない。
+- 単体はRANGE／LIST親×子HASH／RANGE／LIST×圧縮3モード、対応する子ADD、モード上書きと旧版拒否を確認する。親ADDは既存の親子を維持し、子ADDはRANGE-*／LIST-LISTという従来の方式制限を維持する。表・親の圧縮、HASH親ADD、任意の物理属性上書きは今回広げない。版境界も従来の圧縮・方式別検証を使う。
+- 実DBにはRANGE-HASH親ADD／DROP、RANGE-LIST子ADD／DROP、RANGE-HASH子COALESCEの圧縮3モード計9件と、LIST-HASH親ADD／DROP・LIST-LIST子ADD／DROPの計6件を追加した。COALESCEは既存経路の追加検証。各操作で全行、名前、索引ルート・親・子の圧縮モード、prefix長、Local／Global索引の使用可能状態を確認し、最新メタデータ→Schema XML→完全CREATE→データ再投入でも同じ状態を確認する。変更モジュールはOracleとdialect-test、文書はREADMEとこの対応表。
+- さらにRANGE-HASH子ADD→COALESCE、RANGE-RANGE子ADD／DROPも3モードずつ計6件を追加し、実DBの追加シナリオは計21件となる。HASH ADDでは既存データを再分配した後、新たに行を追加してCOALESCEし、追加行を含む全行を保持して再作成できることを確認する。
+- 検証は対象単体55件、Oracle全494件、関連Command149件・Gradle Plugin1件が成功。Oracle23は最初の追加9件、固定26aiは既存4件と追加21件の全25件が成功し、計34のDB・ケース組合せを確認した。LIST親、HASH子ADD、RANGE子ADDの追加12件は26aiで検証し、23の9件には含めない。最終XMLの失敗・エラー・スキップはすべて0件。今回はADD経路に絞って実DBを広げ、前節のSPLIT／MERGEクラス87件は再実行していない。検証表と所有コンテナは削除済みで、外部・本番DBには接続していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.compressed*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 表・親の圧縮既定値があるADD
+
+- 圧縮表・親からのADDの一律拒否を除き、新規の表親・子モデルに指定されたBASIC／ADVANCED（OLTP句）を既存ヘルパーで検証・生成する。親ADDはRANGE／LIST、子ADDはRANGE-*／LIST-LISTという方式境界を維持する。既存セグメントや索引ルートは変更せず、新規モデルがcompression=falseの場合は圧縮既定値の場所でもNOCOMPRESSを明示する。[Oracleの圧縮パーティション仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/partition-table-compression.html)に従う。新規PCTFREE・任意物理属性、HCC方式の指定は今回広げない。
+- 読込側では、従来specifics.COMPRESS_FORだけに保持していた親・子の圧縮モードを共通compressionTypeにも設定する。既存結果セットにCOMPRESS_FOR列がある場合だけ読み、NONE／DISABLEDや列のない過去版ではモードを推測しない。問い合わせ・列のSELECT・公開API・依存関係は追加しないが、読み取ったSchema XMLには親・子のcompressionTypeが現れ、過去の保存モデルとの比較で属性差になる場合がある。既存の圧縮子MOVEテストも要求モードを共通フィールドへ設定するように揃え、アサーションは維持する。
+- 単体には親2方式×子3方式×BASIC／ADVANCED、明示NOCOMPRESS、旧版・競合モード・新規物理属性の拒否、親・子と列のない旧版でのモード読込を追加した。実DBは親・各子ADD／DROPとHASH ADD→COALESCE、LIST親・LIST-LIST子、Local索引圧縮との併用、NOCOMPRESSの計16件を追加し、全行・表と索引の圧縮モード・既存PCTFREE・使用可能状態、XML再作成を確認する。変更はOracle、dialect-testとREADME・この文書。
+- 子ADDのNOCOMPRESS生成は、親だけでなく表の圧縮既定値も考慮する。親がNONE／非圧縮でも表の圧縮既定値へ依存して要求モデルと異なる圧縮にならないよう、非圧縮の要求は明示する。この境界を単体と別の実DBケースで確認する。
+- 検証は対象単体60件（保守57件・メタデータ3件）、Oracle全497件、関連Command149件・Gradle Plugin1件が成功。Oracle23の追加16件、固定26aiのADD全41件と既存ONLINE保守5件、最後の非圧縮親の境界1件を合わせ、63の異なるDB・ケース組合せが成功した。26aiの境界1件は表既定値も考慮する最終修正後に別実行し、他の46件に影響しない分岐を検証した。最終XMLの失敗・エラー・スキップは0件。最初の23試行では親子の共通compressionTypeが未設定だったため14件が失敗し、Readerを修正して16件すべてを再実行した。アサーションは緩めていない。
+- 古いOracleの実DB、SPLIT／MERGEクラス全体、共有core・PostgreSQL全体は今回再実行していない。高度な物理属性編集、有限末尾の親MERGE、複数DDLの自動ロールバック・再開と計画全体のONLINE保証は引き続き対象外。
+- 検証は所有する使い捨てDockerだけを使用し、検証表と所有コンテナの削除を確認した。外部・本番DBへの接続、依存バージョンや生成物の意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleTableCompressionMetadataTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.row*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' --tests '*OracleCompositeAlterTest.compressedOnline*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終境界ケースとOracle全単体・関連テストの再確認:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.rowChildNocompressWithUncompressedParent' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 圧縮既定値配下の子SPLIT／MERGE
+
+- 表・親が圧縮されている場合の子SPLIT／MERGEの一律拒否を除いた。対象は既存のRANGE／LIST子とBASIC／ADVANCEDで、境界・圧縮モード・その他属性を維持する既存のLocal索引保守経路を再利用する。内部で親子モデルを平坦化するときも表または親の圧縮既定値を保持し、非圧縮の子にはNOCOMPRESSを明示する。Local索引のDDLへ表圧縮句は付与しない。[Oracle ALTER TABLE仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)に従う。
+- 親や表の同時変更、子の圧縮モード変更、HASH子のSPLIT／MERGE、任意のPCTFREEは広げない。BASICは従来どおり明示PCT_FREE=0を要求し、ADVANCEDと圧縮既定値配下のNOCOMPRESSでは明示PCT_FREEが親の既定値と異なる場合に拒否する。版境界・Resolverは変更せず、明示圧縮は11gR2以降の既存判定を使う。公開API・設定形式・メタデータ問い合わせ・依存関係の追加変更はない。
+- 変更モジュールはOracleとdialect-test。単体は親／表既定値・子2方式・圧縮2モード・非圧縮子・版境界・同時変更・不整合PCTFREEを追加した。Dockerには同じ既定値の8組合せと非圧縮子2ケースを追加し、prefix圧縮Local索引、全行、親子の圧縮・PCTFREE・表領域、索引状態をSPLITとMERGEの双方で比較する。
+- 最終対象単体58件、Oracle全498件、関連Command149件・Gradle Plugin1件が成功。固定26aiでは追加10件と既存ONLINE保守5件の計15件が成功し、失敗・エラー・スキップは0件。最初の単体試行は非圧縮経路のSQLにもNOCOMPRESSを追加したため既存のSQL比較1件が失敗し、圧縮既定値のある場合だけ明示するよう修正した。Docker実行中に不整合PCTFREEの拒否を補強し、SQLを変えない検証追加後の最終単体58件とOracle全498件を再実行した。
+- 今回は26aiの選択15件に実DB検証を限定し、Oracle23・古いOracle・同クラス全体・共有core・PostgreSQL全体は再実行していない。専用表・表領域はテストの後処理で削除し、所有コンテナの削除も確認した。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更はない。複数DDLの自動復旧と計画全体のONLINE保証、親SPLIT／MERGEの混在圧縮、有限末尾の親MERGEは引き続き対象外。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.defaultChild*' --tests '*OracleCompositeAlterTest.compressedOnline*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終PCTFREE検証追加後のOracle全単体:
+
+```shell
+./gradlew :sqlapp-core-oracle:test --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: BASIC ADDの既知PCTFREE
+
+- 親・子ADDでBASIC圧縮とともに指定されたspecifics.PCT_FREE=0を許可した。圧縮句自体がこの値を決めるためPCTFREE句は生成しない。[OracleのBASIC圧縮既定値](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)に従う。従来どおりBASICの非ゼロ値、ADVANCED／非圧縮の個別PCTFREE、その他物理属性は拒否する。
+- 最小変更箇所はOracleのADD属性検証で、共有Schema・公開API・設定形式・生成SQL・版境界・DialectResolver・メタデータ取得は変更しない。対象は既存の11gR2以降のBASIC明示圧縮と、対応済みのRANGE／LIST親・RANGE-*／LIST-LIST子ADD。Oracleとdialect-testを変更し、親2方式×子3方式、個別子ADDと不正モード・値の単体検証を追加した。DockerのBASIC ADDケースは要求モデルにPCT_FREE=0を明示し、親・子の読取値、既存属性、データ、索引状態とXML再作成を検証する。
+- 対象単体59件、Oracle全499件、関連Command149件・Gradle Plugin1件が成功。DockerはOracle23と固定26aiで7件ずつ、計14のDB・ケース組合せが成功し、失敗・エラー・スキップは0件。検証は所有する使い捨てDockerだけで実施し、検証表と所有コンテナの削除を確認した。古いOracleの実DB、他のDockerクラス、共有core・PostgreSQL全体は今回再実行していない。外部・本番DBへの接続、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.row*Basic' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ7ケース:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.row*Basic' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 複合保守の引用識別子
+
+- 複合パーティションの名前重複・DROP対象の一意性チェックが、大文字小文字を一律に無視していた点を修正した。SQL生成・集合カタログ照合で使っている識別子変換を共有し、明示引用名とSQL Builderの引用設定を反映する。`S11`と`"s11"`は区別し、`S11`と`"S11"`は衝突として扱う。[Oracleの識別子規則](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Database-Object-Names-and-Qualifiers.html)に従う。
+- 対象は複合親／子ADD、子DROP、子MOVE・SPLIT／MERGEと親SPLIT／MERGEの名前チェック、Local索引の対応セグメント。SQL構文・版境界・Resolver・公開API・設定形式・メタデータ問い合わせは変更しない。変更はOracleとdialect-test、README・この文書で、既存の方式制限や不正モデルの拒否は維持する。
+- 単体には大小文字を区別する既存子と新規子、DROP・子SPLIT・親SPLIT、同じDB識別子になる引用名の拒否、Builderの引用ON／OFFを追加した。Dockerには大小文字だけが異なる表・Local索引の子名を使う親ADD／DROPと子ADD／DROPを追加し、全行・名前・索引状態とSchema XMLからの再作成を検証する。
+- 対象単体61件、Oracle全501件、Command149件・Gradle Plugin1件が成功。Oracle23と固定26aiの追加2件ずつ、計4のDB・ケース組合せが成功し、最終XMLの失敗・エラー・スキップは0件。最初のDocker試行2件はDDL実行後の比較で、明示引用符を含む要求名と引用符を外して返すメタデータの文字列表現が異なり失敗した。要求モデルを通常のメタデータと同じ小文字名へ揃え、Builder既定の引用ONのまま再実行した。大小文字の比較は緩めていない。
+- 検証表と所有コンテナは削除済み。外部・本番DBに接続せず、生成物・依存バージョンの意図的変更もない。古いOracleの実DB、他のDockerクラス、共有core・PostgreSQL全体は今回再実行していない。SPLIT／MERGEの引用名は単体での検証であり、今回のDocker追加2ケースはADD／DROP・XML再作成に限定する。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.quotedCase*' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ2ケース:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.quotedCase*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 引用名SPLIT／MERGEの実DB検証追加
+
+- 前節で単体確認に留めていた引用名の親・子SPLIT／MERGEを、圧縮表とprefix圧縮Local索引との組合せでDocker検証する。既存親／子の`P1`と`p1`、`S11`と`s11`に加え、分割後も`plow`と`PLOW`、`c0`と`C0`等を区別し、名前・ルーティング・全行・圧縮モード・PCTFREE・表領域・索引状態をSPLITとMERGE双方で比較する。親3方式（RANGE-HASH／RANGE-RANGE／RANGE-LIST）はBASIC、子RANGE／LISTの2方式は表既定値ADVANCEDを使用する。
+- 変更はdialect-testとREADME・この文書。既存の保守テストを拡張し、MERGE直後の診断問い合わせも固定名P2から要求モデルの親名を使うバインド問い合わせへ変更した。公開API・設定形式・製品コード・Reader・版境界・依存関係は変更しない。新たなOracle構文のサポート追加ではなく、前節の引用識別子修正を既存保守経路の実DBで検証する。
+- Oracle23と固定26aiで追加5件ずつ、計10のDB・ケース組合せが成功し、失敗・エラー・スキップは0件。各ケースでSPLITとMERGEの双方を実行した。親3方式ではMERGE直後の1子から要求する2子へ復元されることを確認した。Oracle単体501件と関連Command149件・Gradle Plugin1件のタスクも指定したが、変更がないためUP-TO-DATEで再実行していない。既存結果を今回実行したテスト件数には含めない。
+- 専用表・表領域・データファイルと所有コンテナは後処理で削除済み。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更もない。今回の実DB追加範囲は上記5方式で、LIST親の組合せ、引用名のONLINE・並行DML、古いOracle、全Dockerクラスや共有core・PostgreSQL全体は再実行していない。保守計画全体の自動復旧・ONLINE保証等の制限は引き続き維持する。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedRouting*' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ5ケース:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedRouting*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 引用名LIST親とONLINE子の検証追加
+
+- 引用名・表圧縮・prefix圧縮Local索引を組み合わせた検証を、LIST-HASH／LIST-RANGE／LIST-LIST親のSPLIT→MERGEと、RANGE／LIST子のONLINE SPLIT→MERGEへ広げた。大小文字を区別する名前、親子の境界・圧縮モード・PCTFREE・表領域、全行、Local／Global索引状態を各操作後に比較する。ONLINE子では実行前に生成DDLのONLINE句も検証する。
+- 変更はdialect-test、READMEとこの文書。テスト内部の引用名モードをNONE／OFFLINE／ONLINEで区別し、親の複数DDL計画へONLINEを指定しないようテスト側でも検証する。公開API・設定形式・製品コード・Reader・版境界・依存関係は変更しない。今回のONLINEはDDL実行と事後状態の検証であり、並行DML負荷やロック待ち時間を測定するものではない。
+- Oracle23と固定26aiで5件ずつ、計10のDB・ケース組合せが成功し、失敗・エラー・スキップは0件。各ケースでSPLITとMERGEを実行し、LIST親3方式ではMERGE直後の1子から2子へ境界・名前を復元できることを確認した。今回は追加Dockerケースとコンパイルのみを実行し、既存のOracle単体501件・関連150件は再実行していない。
+- 検証表・専用表領域・データファイルと所有コンテナは削除済み。所有する使い捨てDocker以外のDBには接続せず、生成物・依存バージョンの意図的変更はない。古いOracle、全Dockerクラス、共有core・PostgreSQL全体は今回の検証対象外。複数DDL計画全体のONLINE保証・自動復旧等の制限は維持する。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedList*' --tests '*OracleCompositeAlterTest.quotedOnline*' --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ5ケース:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedList*' --tests '*OracleCompositeAlterTest.quotedOnline*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: RANGEの文字列MAXVALUE誤判定
+
+- RANGE保守で境界文字列にMAXVALUEという部分文字列があるだけで無限境界と扱っていた点を修正した。文字列`'MAXVALUE'`や代替引用の内容、コメント、引用識別子、別の識別子の一部を除き、独立したMAXVALUEトークンだけを検出する。[Oracleのリテラル仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Literals.html)に従い、通常の引用符エスケープ、q／nq代替引用を扱う。ブロック・行コメントにも対応し、閉じていない引用・ブロックコメントはSQL生成前に拒否する。境界式の評価・並び順・全SQL構文の検証を行うものではない。
+- 変更箇所はOracle内の単純表／IOT ADD、IOT SPLIT／MERGE、複合親／子ADDの有限境界チェック。既存のFactory・Schemaモデル・SQL生成を使い、公開API・設定形式・Reader・問い合わせ・依存関係・DialectResolverや方式ごとの版境界は変更しない。対応済みの各Oracle版で誤拒否を修正するもので、新しいDDL構文を追加しない。
+- 単体は通常・国際化文字列・代替引用・コメント・複数キーの無限境界・閉じ忘れと、単純／IOT／複合ADD、IOT SPLITの回帰を追加した。Dockerは単純表、RANGE-HASH複合親、RANGE-RANGE子の3経路で、最後の既存境界が`'MAXVALUE'`でもADDを実行でき、その文字列自体と後続値の行を挿入して全4行・境界を読み戻せることを確認する。
+- 最終対象単体86件、Oracle全507件、Command149件・Gradle Plugin1件が成功。Oracle23と固定26aiの3件ずつ、計6のDB・ケース組合せも成功し、失敗・エラー・スキップは0件。23の後に代替引用のUnicode区切りを補強し、最終単体・Oracle全体・関連テストと26aiを再実行した。古いOracle、今回の文字列境界を持つIOTの実DB、他のDockerクラス、共有core・PostgreSQL全体は今回再実行していない。
+- 検証表と所有コンテナは削除済み。所有する使い捨てDockerのみを使用し、外部・本番DBへの接続、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleRangePartitionBoundTest' --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteMaxvalueText*' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiと最終回帰:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteMaxvalueText*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: IOTの有限文字列境界を実DBで検証
+
+- 前節で単体確認に留めていたIOTの文字列MAXVALUE境界を、Local二次索引付きIOTの実DBケースへ追加した。ADD→DROPでは既存の有限境界`'MAXVALUE'`の後へパーティションを追加し、文字列MAXVALUEと後続値を挿入する。DROP後は追加パーティション内の行だけが削除されることを確認する。SPLIT→MERGEでは`'MAXVALUE'`を分割点に使い、4行すべてを保持する。
+- 各操作後に全行のキー・値、境界、Local二次索引のセグメント名とUSABLE状態、IOT_TYPE、主キーの有効状態、ルート索引の状態を確認する。変更はdialect-test、READMEとこの文書で、公開API・設定形式・製品コード・Reader・版境界・依存関係は変更しない。
+- Oracle23と固定26aiで2件ずつ、計4のDB・ケース組合せが成功し、最終XMLの失敗・エラー・スキップは0件。26aiの最初の試行はDockerバックエンドへの接続がHyper-V socket timeoutで失敗し、テスト本体は未実行だった。Dockerの稼働復帰を読み取り確認した後、設定変更・再起動をせず同じ2ケースを再実行して成功した。初期化失敗は成功件数に含めない。
+- 検証表と所有コンテナは削除済み。今回は追加Dockerケースとコンパイルのみを実行し、既存Oracle単体507件・関連150件や他のDockerクラス、古いOracleは再実行していない。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OraclePartitionMaintenanceTest.finiteTextIot*' --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ2ケース:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OraclePartitionMaintenanceTest.finiteTextIot*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 複数列RANGEの後続MAXVALUE
+
+- 前節のトークン判定をさらに修正し、先頭キーが有限で後続キーがMAXVALUEである境界を有限として扱う。例えば`(10, MAXVALUE)`の後へのADDや、その境界でのSPLITを一律拒否しない。一方、`(MAXVALUE, 0)`や`(MAXVALUE, MAXVALUE)`は全体として無限境界になるため、先頭のMAXVALUEによる拒否を維持する。[Oracleの複数列RANGE規則](https://docs.oracle.com/database/121/VLDBG/GUID-814DE2FF-7147-42DE-9CAF-5E019BAB8C18.htm)に従う。文字列・代替引用・コメントの除外と閉じ忘れ検証は維持する。境界式の評価や並び順の推測は行わない。
+- 変更はOracleの共通境界判定と単純／IOT／複合ADD、IOT SPLIT／MERGEの呼出し。単純・複合保守で再利用するLocal索引SPLITの分割点も同じ判定に揃え、空白やコメント付きの先頭MAXVALUEを拒否する。公開API・設定形式・Reader・問い合わせ・依存関係・Resolver・各保守方式の版境界は変更しない。複数子キーを持つ親SPLIT／MERGEのルーティング復元制限は広げない。
+- 単体は2列キーの単純／IOT／複合ADD、IOTとLocal索引付きSPLIT／MERGE、先頭MAXVALUEの拒否を追加した。Dockerは単純表・複合親・複合子のADDとIOT ADD／DROP・SPLIT／MERGEの5ケースで、後続MAXVALUEを含む境界・データを確認する。先頭キーが境界値に等しい行は既存区画に残り、後続の先頭キー値だけが追加区画へ入ることも検証する。IOT DROPでは後から挿入した行でも既存区画に入った行は保持する。
+- 対象単体98件、Oracle全510件、Command149件・Gradle Plugin1件と、固定26aiの追加5ケースが成功し、最終XMLの失敗・エラー・スキップは0件。最初の単体試行ではIOT用補助関数が分割右境界を単一値200へ戻しており1件が失敗したため、右境界も200, MAXVALUEへ揃えて対象98件を再実行した。上限保持の検証は維持している。
+- 今回の実DBは固定26aiの5ケースに限定し、Oracle23・古いOracle、他のDockerクラスや共有core・PostgreSQL全体は再実行していない。検証表と所有コンテナは削除済み。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleRangePartitionBoundTest' --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteTuple*' --tests '*OraclePartitionMaintenanceTest.finiteTuple*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 複数列RANGEのOracle23追加検証
+
+- 前節で固定26aiに限定していた5ケースを、所有する使い捨てOracle23 Dockerでも実行した。対象は後続キーがMAXVALUEの単純表・複合親・複合子ADDと、Local二次索引付きIOTのADD／DROP・SPLIT／MERGE。前節と同じアサーションで行・境界・索引状態と有限先頭キーに等しい行の格納先を比較した。
+- 追加実装は行わず、製品コード・テストコード・公開API・設定形式・Reader・版境界・依存関係は変更しない。文書冒頭には現在も残る制限を整理し、過去の未対応記録と区別できるようにした。
+- Oracle23の5ケースが成功し、失敗・エラー・スキップは0件。前節の固定26ai成功5ケースと合わせ、10の異なるDB・ケース組合せを確認した。今回実行したのは23の5ケースのみで、既存単体510件・関連150件、他のDockerクラス、古いOracleは再実行していない。検証表と所有コンテナは削除済みで、外部・本番DBへの接続、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteTuple*' --tests '*OraclePartitionMaintenanceTest.finiteTuple*' --gradle-user-home .gradle-user-home
 ```
 
 ## 過去のOracle仕様参照

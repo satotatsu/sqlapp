@@ -20,7 +20,7 @@ final class OracleCompositeSegmentNames {
 		return value == null ? "CAST(NULL AS VARCHAR2(128))" : "'" + value.replace("'", "''") + "'";
 	}
 
-	private static String identifier(String name, Dialect dialect, OracleSqlBuilder builder) {
+	static String identifier(String name, Dialect dialect, OracleSqlBuilder builder) {
 		if (name == null)
 			return null;
 		return dialect.isQuoted(name) ? dialect.unQuote(name)
@@ -36,8 +36,9 @@ final class OracleCompositeSegmentNames {
 			if ("LOCAL".equalsIgnoreCase(index.getSpecifics().get("oracle.index.locality")))
 				add(requests, "I", index.getSchemaName(), index.getName(), index.getPartitioning(), position, count,
 						dialect, naming);
-		return BLOCK.replace("$COUNT", Integer.toString(requests.size())).replace("$REQUESTS",
-				String.join("\nUNION ALL\n", requests));
+		return BLOCK.replace("$COUNT", Integer.toString(requests.size()))
+				.replace("$REQUESTS", String.join("\nUNION ALL\n", requests)).replace("$HASH",
+						table.getPartitioning().getSubPartitioningType() == PartitioningType.Hash ? "1" : "0");
 	}
 
 	private static void add(ArrayList<String> requests, String kind, String owner, String name, Partitioning info,
@@ -96,6 +97,9 @@ final class OracleCompositeSegmentNames {
 			    END IF;
 			    command := 'ALTER TABLE ' || q(parents(i).owner_name) || '.' || q(parents(i).object_name)
 			      || ' MODIFY PARTITION ' || q(parents(i).parent_name);
+			    IF $HASH=0 AND parents(i).actual_count <> parents(i).expected_count THEN
+			      RAISE_APPLICATION_ERROR(-20014, 'Composite routing restoration did not produce the expected child count');
+			    END IF;
 			    WHILE parents(i).actual_count < parents(i).expected_count LOOP
 			      EXECUTE IMMEDIATE command || ' ADD SUBPARTITION UPDATE INDEXES';
 			      parents(i).actual_count := parents(i).actual_count + 1;

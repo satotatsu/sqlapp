@@ -16,6 +16,53 @@ import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Table;
 
 class OracleTablePartitionMaintenanceTest {
+	@Test
+	void trailingMaxvalueKeepsMulticolumnBoundsFinite() {
+		for (boolean iot : List.of(false, true)) {
+			Table before = table(iot, false);
+			before.getColumns().add("REGION");
+			before.getPartitioning().getPartitioningColumns().add("REGION");
+			for (Partition part : before.getPartitioning().getPartitions())
+				part.setHighValue(part.getHighValue() + ", MAXVALUE");
+			Table added = append(before);
+			added.getPartitioning().getPartitions().get(2).setHighValue("300, MAXVALUE");
+			assertFalse(sql(before, added, DialectHolder.oracle26aiDialect).isEmpty());
+			if (iot) {
+				Table split = splitIot(before);
+				split.getPartitioning().getPartitions().get(1).setHighValue("150, MAXVALUE");
+				split.getPartitioning().getPartitions().get(2).setHighValue("200, MAXVALUE");
+				assertFalse(sql(before, split, DialectHolder.oracle26aiDialect).isEmpty());
+				assertFalse(sql(split, before, DialectHolder.oracle26aiDialect).isEmpty());
+			}
+			before.getPartitioning().getPartitions().get(1).setHighValue("MAXVALUE, 0");
+			assertThrows(IllegalArgumentException.class,
+					() -> sql(before, append(before), DialectHolder.oracle26aiDialect));
+		}
+	}
+
+	@Test
+	void iotSplitAcceptsFiniteMaxvalueTextAndRejectsMarker() {
+		Table before = table(true, false), after = splitIot(before);
+		after.getPartitioning().getPartitions().get(1).setHighValue("'MAXVALUE'");
+		assertFalse(sql(before, after, DialectHolder.oracle26aiDialect).isEmpty());
+		after.getPartitioning().getPartitions().get(1).setHighValue("MAXVALUE, 10");
+		assertThrows(IllegalArgumentException.class, () -> sql(before, after, DialectHolder.oracle26aiDialect));
+	}
+
+	@Test
+	void appendAfterFiniteTextContainingMaxvalue() {
+		for (boolean iot : List.of(false, true)) {
+			Table before = table(iot, false);
+			before.getPartitioning().getPartitions().get(1).setHighValue("'MAXVALUE'");
+			Table after = append(before);
+			after.getPartitioning().getPartitions().get(2).setHighValue("'ZZZ'");
+			assertFalse(sql(before, after, DialectHolder.oracle26aiDialect).isEmpty());
+			before.getPartitioning().getPartitions().get(1).setHighValue("MAXVALUE, 10");
+			assertThrows(IllegalArgumentException.class,
+					() -> sql(before, append(before), DialectHolder.oracle26aiDialect));
+		}
+	}
+
 	private Table table(boolean iot, boolean local) {
 		Table table = new Table("T").setSchemaName("APP");
 		table.getColumns().add("ID");
