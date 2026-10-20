@@ -93,7 +93,7 @@ public class JdbcQueryHandler extends JdbcHandler {
 			final Integer limit, final Integer offset) throws SQLException {
 		PreparedStatement statement = null;
 		try {
-			if (offset != null) {
+			if (offset != null && getNode().getOffsetParameter() == null) {
 				statement = createStatementScrollInsensitive(connection, sqlParameters);
 			} else {
 				statement = createStatement(connection, sqlParameters, limit);
@@ -163,6 +163,10 @@ public class JdbcQueryHandler extends JdbcHandler {
 			final Integer limit, final Integer offset) throws SQLException {
 		StatementSqlParametersHolder statementSqlParametersHolder = null;
 		try {
+			final ParameterDefinition rowParameter = getNode().getRowParameter();
+			if (limit != null && rowParameter != null) {
+				parametersContext.put(rowParameter.getName(), limit);
+			}
 			if (offset != null) {
 				final ParameterDefinition def = this.getNode().getOffsetParameter();
 				if (def == null) {

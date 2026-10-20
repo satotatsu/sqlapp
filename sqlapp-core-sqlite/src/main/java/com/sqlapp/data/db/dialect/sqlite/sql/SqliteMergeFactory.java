@@ -20,15 +20,23 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 
 	@Override
 	public List<SqlOperation> createSql(Table table) {
+		validateMergeOptions(table);
+		return super.createSql(table);
+	}
+
+	protected void validateMergeOptions(Table table) {
 		if (!(getDialect() instanceof Sqlite sqlite) || !sqlite.supportsUpsert())
 			throw new IllegalArgumentException("SQLite MERGE requires UPSERT support (SQLite 3.24 or later)");
 		if (getTableOptions().getMergeRowsWithDelete().test(table)
 				|| getTableOptions().getMergeTableWithDelete().test(table))
 			throw new IllegalArgumentException("SQLite UPSERT cannot delete rows absent from the source");
-		if (getTableOptions().getMergeTableWithReturning().test(table))
-			throw new IllegalArgumentException(
-					"SQLite MERGE RETURNING is not implemented; use the INSERT RETURNING API");
-		return super.createSql(table);
+		if (getTableOptions().getMergeTableWithReturning().test(table)) {
+			if (!sqlite.supportsInsertReturningResultSet())
+				throw new IllegalArgumentException("SQLite MERGE RETURNING requires SQLite 3.35 or later");
+			if (!com.sqlapp.util.CommonUtils.isEmpty(getTableOptions().getReturningOldAlias().apply(table))
+					|| !com.sqlapp.util.CommonUtils.isEmpty(getTableOptions().getReturningNewAlias().apply(table)))
+				throw new IllegalArgumentException("SQLite RETURNING does not support old/new row aliases");
+		}
 	}
 
 	private Set<String> names(java.util.Collection<? extends Column> columns) {
@@ -38,6 +46,12 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 	@Override
 	protected void addInsertAfter(Table table, SqliteSqlBuilder builder) {
 		var signature = createSqlSignature(table);
+		addConflictClause(table, signature, writableColumns(table, signature), builder);
+		addReturning(table, builder);
+	}
+
+	protected void addConflictClause(Table table, com.sqlapp.data.db.sql.SqlSignature signature, List<Column> columns,
+			SqliteSqlBuilder builder) {
 		try {
 			signature.setColumnSelectionStrategy(getTableOptions().getMergeKeyColumnsMatchingStrategy().apply(table));
 		} catch (com.sqlapp.exceptions.MissingWhereClauseKeyException e) {
@@ -66,7 +80,6 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 			throw new IllegalArgumentException(
 					"SQLite MERGE requires a modeled primary or unique key matching the selected columns: "
 							+ table.getName());
-		var columns = writableColumns(table, signature);
 		if (!names(columns).containsAll(keyNames))
 			throw new IllegalArgumentException(
 					"SQLite MERGE key columns must be writable input columns: " + table.getName());
@@ -104,6 +117,26 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 			else
 				builder._add("excluded.").name(column);
 		}
+	}
+
+	protected void addReturning(Table table, SqliteSqlBuilder builder) {
+		if (!getTableOptions().getMergeTableWithReturning().test(table))
+			return;
+		var signature = createSqlSignature(table);
+		try {
+			signature.setColumnSelectionStrategy(getTableOptions().getReturningColumnStrategy().apply(table));
+		} catch (com.sqlapp.exceptions.MissingWhereClauseKeyException e) {
+			throw new IllegalArgumentException(
+					"SQLite RETURNING requires a modeled key selected by returningColumnStrategy: " + table.getName(),
+					e);
+		}
+		var columns = signature.getSelectedColumnsHolder().getKeyColumns();
+		if (columns.isEmpty())
+			throw new IllegalArgumentException("SQLite RETURNING selected no columns: " + table.getName());
+		builder.lineBreak()._add("RETURNING ");
+		int i = 0;
+		for (var column : columns)
+			builder.comma(i++ > 0).name(column);
 	}
 
 	/**

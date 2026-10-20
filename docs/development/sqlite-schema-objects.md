@@ -368,10 +368,10 @@ ON DELETE CASCADE children are retained. Other constraint violations still fail;
 nullable unique keys follow SQLite's native NULL uniqueness semantics.
 
 MERGE_ROWS uses the shared SQL parser and parameter binder to expand all input
-rows, appending one conflict clause to the statement. Delete-absent-source and
-MERGE RETURNING options are rejected rather than ignored. MERGE_TABLE from a
-staging table is not implemented by these factories. Streamed bulk execution
-remains available through the existing bulk UPSERT API.
+rows, appending one conflict clause to the statement. Delete-absent-source
+options are rejected rather than ignored. MERGE_TABLE and optional RETURNING
+are described below. Streamed bulk execution remains available through the
+existing bulk UPSERT API.
 
 SQLite 3.31+ now advertises column formula support to shared DML factories, so
 ordinary UPDATE also omits generated columns. CHAR and DECIMAL JDBC type handlers
@@ -385,6 +385,501 @@ collation-aware unique keys, primary-key preservation, child-row preservation,
 generated-column UPDATE and multi-row parser/binder expansion on local in-memory
 SQLite. See SQLite's [INSERT](https://www.sqlite.org/lang_insert.html) and
 [UPSERT](https://www.sqlite.org/lang_upsert.html) syntax documentation.
+
+## Staged MERGE and RETURNING
+
+SQLite 3.24+ supports table-to-table UPSERT through the same registry:
+
+```java
+// target includes its schema, columns and primary/unique key metadata.
+// Populate temp.<target-name>_temp with the corresponding writable columns first.
+var registry = dialect.createSqlFactoryRegistry();
+var operations = registry.createSql(target, SqlType.MERGE_TABLE);
+```
+
+`TableOptions.tempTableName` selects the source name (default: target name plus
+`_temp`). If the target's owning Schema contains that named table, the modeled
+table is the source. Otherwise the source is explicitly in `temp`. A missing
+temporary source fails at execution; it cannot silently read a same-named main
+table. This API generates SQL and does not create, populate or drop staging tables.
+Temporary-table creation's prefix/suffix settings are separate; create the source
+with the name selected by `tempTableName`.
+
+For an attached database or a source model outside the target's owning Schema,
+select the factory and pass both models:
+
+```java
+var factory = (SqliteMergeTableFactory)
+    registry.getSqlFactory(target, SqlType.MERGE_TABLE);
+var operations = factory.createSql(target, stagingTable);
+```
+
+Source and target must have explicit schema/table identities and must refer to
+different tables. Both identities are always qualified, including when general
+schema decoration is disabled. Default column mappings require the source model
+to contain each writable target column. Generated target columns are omitted;
+identity values come from staging and are preserved on conflict. GENERATED ALWAYS
+identity input is rejected. Key validation, collation-aware conflict targets and
+update selection use the same implementation as MERGE and MERGE_ROWS.
+
+`insertTableColumnValue` optionally maps input expressions; the source alias is
+`_source_`. Nullable source expressions are wrapped with COALESCE when the target
+column has a default, matching the shared table-merge convention. SQLite's
+INSERT SELECT ambiguity is avoided with `WHERE 1=1` before ON CONFLICT. The source
+is retained, and target rows missing from the source are retained. Duplicate
+source keys follow native SQLite UPSERT behavior; this SQL generation API does not
+validate or order source data. Use the bulk API when input duplicate validation is
+required.
+
+For SQLite 3.35+, enable RETURNING before obtaining the factory:
+
+```java
+registry.getTableOptions().setMergeTableWithReturning(true);
+var operations = registry.createSql(target, SqlType.MERGE_TABLE);
+```
+
+The existing option applies to MERGE, MERGE_ROWS and MERGE_TABLE. Return columns
+are selected through `returningColumnStrategy` (default: primary key). A missing
+selected key fails clearly. Result sets contain inserted and updated rows; DO
+NOTHING conflicts produce no result row. Result ordering is unspecified and must
+not be used to correlate input rows by position. Old/new row aliases remain
+unsupported and fail explicitly. Targets before 3.35 reject RETURNING; before 3.24
+all three UPSERT forms are rejected.
+
+`SqliteMergeTableFactoryTest` executes temporary, modeled and attached sources,
+empty staging, input expressions, schema shadowing, default handling, identity
+preservation and single/multi-row RETURNING. A constraint-failure test verifies
+that an unsuccessful multi-row statement leaves no partial target updates.
+Version-boundary tests run on the bundled current engine, not historical binaries.
+
+## Appending and conditional inserts
+
+`INSERT_SELECT_TABLE` appends source rows without updating existing target rows:
+
+```java
+var registry = dialect.createSqlFactoryRegistry();
+var operations = registry.createSql(target, SqlType.INSERT_SELECT_TABLE);
+```
+
+It uses the same modeled source resolution, explicit schema identities, generated
+column omission, column expressions and default-value handling as MERGE_TABLE.
+The source defaults to `temp.<target-name>_temp` unless resolved from the target's
+owning Schema. The corresponding factory also accepts an explicit source model:
+
+```java
+var factory = (SqliteInsertSelectTableFactory)
+    registry.getSqlFactory(target, SqlType.INSERT_SELECT_TABLE);
+var operations = factory.createSql(target, stagingTable);
+```
+
+The source need not have a key. Selected identity values are copied; to generate
+new identities, exclude identity columns with `insertableColumn`. A duplicate key
+or another constraint violation fails normally rather than updating or ignoring
+the conflicting row. The factory does not create or remove staging data and does
+not add a RETURNING clause from MERGE-specific options.
+
+`INSERT_SELECT_NOT_EXISTS` is a single-input-row conditional insert:
+
+```java
+var nodes = registry.createSqlNodes(target, SqlType.INSERT_SELECT_NOT_EXISTS);
+// Evaluate a node with the input Row and use the normal JDBC parameter binder.
+```
+
+SQLite SQL is generated directly as INSERT ... SELECT ... WHERE NOT EXISTS,
+without a dummy FROM table. Matching columns use
+`insertSelectNotExistsKeyColumnsMatchingStrategy`; conditions resolve reference
+keys to the canonical Table columns before rendering parameter types. Matching
+columns must be writable input columns. Generated columns are omitted, explicit
+identity input is supported, and an unknown generated identity alone cannot be
+used as a match key. Invalid or empty matching selections fail before returning
+SQL.
+
+If the selected columns match an existing row through SQL equality, that row is
+left unchanged. NULL comparisons retain normal SQLite SQL semantics. This is a
+selected-column existence check, not suppression of all possible unique-key
+conflicts. Other uniqueness, NOT NULL, CHECK and foreign-key violations still
+fail. Both forms are available before SQLite's 3.24 UPSERT boundary; they do not
+emit ON CONFLICT syntax. `SqliteInsertSelectFactoryTest` exercises parameter
+binding, composite and identity keys, existing-row preservation, attached names,
+generated values, constraint failures and explicit source expressions. Historical
+dialect selections are exercised on the bundled current runtime.
+
+## Key-based UPDATE and DELETE
+
+The standard registry UPDATE and DELETE operations resolve selected matching
+references to the canonical Table columns before generating typed parameters.
+The same internal resolver is used by conditional INSERT. This avoids depending
+on complete object equality between a constraint reference and a table column.
+No metadata queries or schema-model mutations are introduced by generation.
+
+UPDATE excludes matching columns by name and omits generated columns, including
+when an older dialect selection is used with a model containing formula metadata.
+Shared value generation still handles identity, created-at, updated-at and
+optimistic-lock columns. Existing `updateableColumn` and parameter-expression
+settings remain available. If no writable non-key assignments remain, generation
+fails with an actionable error instead of producing an empty SET clause. This
+also applies to UPDATE_TABLE and UPDATE_FOR_APP.
+
+Key-based UPDATE and DELETE retain the shared matching-column selection and
+optimistic-lock conditions. Numeric version increments and stale-version checks
+are preserved. Models without a usable key still fail under the default matching
+strategy. Explicitly configured matching strategies retain their existing meaning.
+Schema qualification continues to follow the ordinary SQL options.
+
+UPDATE_TABLE retains its existing whole-table operation semantics: the optional
+`updateAllCondition` callback supplies its filter, and omitting that callback does
+not add a key filter. UPDATE_FOR_APP retains the shared dynamic application
+conditions. These operations are not staging-table updates; use MERGE_TABLE to
+reflect staged input. No new configuration is required. Existing public APIs and
+XML formats are retained; empty-update failure is intentionally stricter.
+
+The changes use traditional SQLite UPDATE/DELETE syntax across supported SQLite
+versions and do not change resolver boundaries. `SqliteUpdateDeleteFactoryTest`
+executes attached composite keys, generated-column exclusion, typed parameter
+binding, stale update/delete checks, explicit whole-table filtering and column
+selection. It also covers keyless and empty-update failures and model preservation.
+Legacy selections run against the bundled current engine rather than old binaries.
+
+## Application SELECT pagination
+
+`SELECT_FOR_APP` now renders SQLite LIMIT/OFFSET using the existing parameters:
+
+```java
+var registry = dialect.createSqlFactoryRegistry();
+var node = registry.createSqlNodes(table, SqlType.SELECT_FOR_APP).get(0);
+var context = new ParametersContext(table);
+context.put("_orderBy", "id");
+context.put("_row", 20);
+context.put("_offset", 40);
+```
+
+Evaluate the node with this context and use the shared JDBC parameter binder.
+LIMIT alone, OFFSET alone, zero rows and omitted paging parameters are supported.
+An offset without a limit generates `LIMIT -1 OFFSET ...`. Existing dynamic filters
+and checked ORDER BY substitution are retained. For predictable pages, supply an
+ORDER BY that resolves ties; the factory does not add a new implicit ordering.
+See SQLite's [SELECT/LIMIT rules](https://www.sqlite.org/lang_select.html#limitoffset).
+
+`context.setCountSqlMode()` returns the complete filtered count. It omits both
+ordering and pagination even when `_row` and `_offset` remain in the context.
+Native SQLite limits and parameter-validation errors are retained rather than
+silently dropping an invalid LIMIT.
+
+The shared `JdbcQueryHandler.execute(connection, context, limit, offset)` now
+passes a non-null limit argument to a declared `_row` SQL parameter, just as it
+already did for `_offset`. The explicit limit overrides an existing context limit;
+a null argument preserves the context value. SQL without a declared row parameter
+retains its client-side limit handling. This shared fix also benefits other
+dialects using the standard paging parameters and introduces no SQLite condition
+into core.
+
+For the overload receiving already evaluated `SqlParameterCollection`, set paging
+values in the context before evaluation. When the SQL declares `_offset`, this
+overload now uses a normal result set rather than requesting a scrollable one.
+The existing scroll fallback is retained for SQL without a native offset parameter.
+This makes both public query-handler entry points usable with SQLite's forward-only
+result sets; already evaluated SQL is not regenerated to change its paging values.
+
+No public signatures, XML formats or resolver boundaries change. Native LIMIT
+generation applies across supported SQLite versions. `JdbcQueryHandlerPagingTest`
+covers common argument transfer and fallback behavior without a database.
+`SqliteSelectForAppFactoryTest` executes filtered/count queries, zero/offset-only
+pages, descending order and both query-handler paths on in-memory SQLite.
+
+## Key SELECT, identifier quoting and lock requests
+
+The normal registry SELECT operation now uses the same canonical matching-column
+resolver as UPDATE, DELETE and conditional INSERT. Composite-key references are
+resolved to actual Table columns before typed parameter generation. Key strategy,
+projection and ordinary schema-decoration options retain their existing meaning.
+Multiple-row and tree-query behavior is described below.
+
+SQLite identifier storage is now reported as preserving mixed case, so
+`nativeCaseString` retains the authored spelling rather than uppercasing names.
+This does not make SQLite identifier comparisons case-sensitive.
+
+Ordinary generated identifiers keep the existing bracket quoting. An identifier
+containing a closing bracket uses double quotes instead, doubling embedded double
+quotes. The generated alternate form is recognized as already quoted, and
+`unQuote` correctly removes brackets or decodes that alternate form. Existing
+handling of literal names enclosed in double quotes or backticks is retained;
+these names are not generally reinterpreted as prequoted input. Already quoted
+bracket names continue to pass through. See SQLite's
+[identifier quoting rules](https://www.sqlite.org/lang_keywords.html).
+
+This quoting is shared by the dialect's DDL, SELECT, other DML and full-name
+helpers, including attached schema names. It does not change the shared SQL
+parameter expression language. For SQL names that are not usable as expression
+variables, the optional `parameterExpression` setting can emit native `?`
+placeholders for direct JDBC binding.
+
+`SqlType.LOCK` now fails with an actionable exception instead of returning an
+empty operation list. SQLite does not provide LOCK TABLE or SELECT FOR UPDATE
+syntax. The caller must choose and begin an appropriate connection transaction;
+the factory does not silently begin a transaction, change its mode or invent a
+row-lock guarantee. SQLite's [transaction modes](https://www.sqlite.org/lang_transaction.html)
+describe the relevant engine behavior.
+
+These changes apply across supported SQLite versions without new resolver
+boundaries, dependencies or XML formats. Concrete SELECT and LOCK factories are
+additive; mixed-case normalization, quoted-name decoding and unsupported-lock
+failure are intentional behavior corrections. `SqliteSelectIdentifiersTest`
+executes typed composite-key lookups in an attached database, metadata/XML/DDL
+recreation with closing brackets and embedded quotes, mixed-case identifier
+storage, quote round trips and old/current dialect lock rejection. Historical
+selections use the bundled current SQLite engine.
+
+### Multiple-row keys and tree queries
+
+`SELECT_BY_ROWS` can now evaluate an ordinary `Table` (including its input rows)
+without manufacturing a `TableRelation`. Existing relation contexts continue to
+resolve current, parent and root key columns as before. Explicit ROOT/PARENT
+targets require an actual, resolvable relation and fail with an actionable error
+when it is missing.
+
+An empty or absent input row set always contributes `AND 1=0`. It cannot remove
+the key restriction from SELECT or DELETE. This is an intentional shared-core
+behavior correction affecting every consumer of the `ROWS` SQL template node,
+including `DELETE_BY_ROOT_ROWS`.
+
+`SELECT_BY_ROOT_ROWS` and `DELETE_BY_ROOT_ROWS` also accept the root relation
+itself: SELECT uses its existing alias, and DELETE directly restricts root keys
+instead of trying to join a nonexistent parent. Descendant queries retain their
+joins and correlated EXISTS predicates. Foreign-key enforcement and transaction
+ownership remain with the connection and caller.
+
+These fixes affect supported SQLite versions without changing resolver
+boundaries, dependencies, public signatures or Schema XML. Tests execute
+single/composite-key selection, empty inputs, related-child selection/deletion
+and root selection/deletion against in-memory SQLite. Historical dialect
+selections (3.7 and 3.15) run against the bundled current SQLite engine; old
+SQLite binaries are not tested.
+
+### Statistics and database maintenance
+
+Use the existing factory registry as the entry point:
+
+```java
+var registry = dialect.createSqlFactoryRegistry();
+var analyze = registry.createSql(new Table("orders").setSchemaName("main"), SqlType.ANALYZE);
+var vacuum = registry.createSql(new Schema("main"), SqlType.DEFRAG);
+```
+
+`ANALYZE` accepts a named Schema, Table or Index. Table/index targets require
+their schema (`main`, `temp` or an attached database); the generator always
+qualifies them, independently of the decoration option. Missing identity fails
+instead of analyzing every database or accidentally targeting a shadowing table.
+SQLite syntax is `ANALYZE schema.object`, without a TABLE keyword. Schema targets
+analyze the selected database. See [ANALYZE](https://www.sqlite.org/lang_analyze.html).
+
+`DEFRAG` and `DEFRAG_FULL` accept a named Schema and both generate SQLite's
+database-wide `VACUUM`. Table/index requests fail: SQLite cannot compact just
+one table. Before SQLite 3.15, only `main` is accepted and emits plain `VACUUM`;
+3.15+ emits the quoted schema name. This prevents old engines from silently
+vacuuming main when another database was requested. `supportsVacuumSchema()`
+exposes that capability through the existing version inheritance chain.
+
+The factory only generates SQL. Callers execute VACUUM outside an active
+transaction after releasing pending statements; it may fail for locks and can
+change implicit rowids. It does not commit, retry, change pragmas or create
+backups. See [VACUUM](https://www.sqlite.org/lang_vacuum.html).
+
+No shared-core changes, dependencies or XML/configuration changes are needed.
+`SqliteMaintenanceTest` checks statistics in attached/temp schemas, missing
+targets, quoted names, transaction failure propagation and 3.14/3.15 resolution.
+Execution uses the bundled current engine and in-memory databases; historical
+SQLite binaries are not tested.
+
+### Index reading on older engines
+
+Before SQLite 3.16, the index reader now obtains catalog-visible indexes and
+their CREATE SQL in one schema-qualified `sqlite_master` query, rather than
+using driver-dependent JDBC index enumeration followed by a SELECT per index.
+Table-name collections/arrays and the index-name filter apply to that query;
+an unspecified schema resolves explicitly to `main`. Same-named indexes in
+attached databases remain separate.
+
+User-defined index keys are parsed from their CREATE SQL without extra queries.
+Internal index key details use `index_info` before 3.8.9 and `index_xinfo` from 3.8.9 onward.
+Unknown versions take the conservative `index_info` path. The boundary follows
+the [3.8.9 release notes](https://www.sqlite.org/releaselog/3_8_9.html).
+CREATE SQL retains explicit key order, collations, expressions and partial-index
+predicates for recreation; trailing comments no longer prevent order parsing.
+Quoted identifiers and collation names such as DESC are not order modifiers.
+Internal indexes without CREATE SQL retain the key details the engine exposes;
+their owning constraints remain the DDL representation, and internal indexes
+are not created independently. WITHOUT ROWID primary storage has no separate
+catalog index entry and remains represented by the table's primary key.
+
+One key-detail PRAGMA per internal index remains necessary on pre-3.16 engines:
+these indexes have no CREATE SQL, and those engines have no table-valued PRAGMAs
+to join for bulk retrieval. Modern engines
+retain the existing single joined query. See
+[PRAGMA functions](https://www.sqlite.org/pragma.html#pragfunc).
+
+Tests assert one catalog SELECT plus PRAGMAs only for internal indexes, cover
+3.7/3.8.8/3.8.9/3.15 branches, attached-name collisions, filters and XML-to-DDL
+recreation with NOCASE uniqueness and a partial predicate. They use the current
+bundled engine, not historical binaries. No shared-core, dependency, resolver
+or XML-format changes are needed; default-schema identity is now explicit in
+both modern and legacy index results.
+
+### Running the complete SQLite verification
+
+SQLite is embedded: the JDBC in-memory and temporary-file tests execute a real
+SQLite engine without a database server or Docker. Use Java 21 and the Gradle
+Wrapper from the repository root:
+
+```powershell
+.\gradlew.bat :sqlapp-core-sqlite:test --console=plain
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-sqlite:test :sqlapp-core-postgres:test :sqlapp-command:test :sqlapp-gradle-plugin:test :sqlapp-core-dialect-test:dockerTest --tests '*sqlite.SqliteMetadataReaderTest' --continue --console=plain
+```
+
+Despite the last task's historical `dockerTest` name, the explicitly selected
+`SqliteMetadataReaderTest` uses only `jdbc:sqlite::memory:` on the host. It does
+not create a container. Do not treat that task name as evidence of Docker
+execution, or the resolver's legacy-version branches as tests of old binaries.
+The module currently uses sqlite-jdbc 3.53.1.0; native runtime compatibility is
+limited to the bundled engine actually executed. No external database,
+production data, Docker image or Compose setup is required for these checks.
+
+The combined verification also covers `JdbcTreeDataSession.select(table)`.
+That explicit root scan uses the registered `SELECT_TABLE` factory and retains
+the configured order columns and optional select-all condition. It does not
+reuse an empty `SELECT_BY_ROWS` key predicate. The latter still evaluates to
+no matches for empty input, including deletion. Shared HSQL and SQLite tests
+cover this distinction; the existing command tests cover copying/deleting
+processed source batches and committing child writes with an unchanged root.
+Root queries request holdable cursors only when the existing Dialect/JDBC
+capability check supports them; SQLite uses close-at-commit cursors. When a
+copy must reopen its root cursor after a commit, it consumes the buffered root
+batch first and flushes its source/target work before reopening. This prevents
+reprocessing loaded roots or losing source-to-target batch correspondence.
+`TableRelation.hasBufferedRows()` adds non-advancing runtime introspection;
+it does not change Schema XML. Existing public signatures and transaction
+ownership are unchanged.
+
+On 2026-10-20, final per-module results were core 1,203, SQLite 155, PostgreSQL
+300, command 604, Gradle plugin 83 and host SQLite metadata integration 1:
+2,346 tests with zero failures, errors or skips. The first broad command run
+exposed four root-selection regressions; the integration test also retained
+the old trigger-statement expectation. These were corrected, and the final
+integration rerun passed. Trigger checks now round-trip the owning Schema XML
+and recreate both main and attached triggers before exercising them. Earlier
+failed development runs are not counted as passing results. The temporary
+Docker experiment was removed; no Docker source changes are retained.
+
+### Executable SQL scripts and trigger boundaries
+
+`SqliteSqlSplitter` now scans SQLite tokens instead of matching a multiline
+uppercase BEGIN/END pattern. It keeps the complete trigger body in one SQL
+result, including lowercase/one-line definitions, TEMP/TEMPORARY, comments in
+the header, nested CASE expressions and multiple trigger steps. Quoted strings
+and double-quoted, bracketed or backtick identifiers keep their embedded
+semicolons and comment markers. Standalone comments remain COMMENT results.
+
+Adjacent statements no longer require whitespace after `;`. Transaction BEGIN
+and END remain separate statements. A UTF-8 BOM at the start is accepted, and a
+complete final SQL statement or trigger can omit its outer delimiter. EXPLAIN
+prefixes preserve trigger grouping as well. Unterminated quoted tokens, block
+comments and CREATE TRIGGER bodies throw `InvalidTextException` with a line and
+position; malformed fragments are not returned as executable trigger steps.
+The SQLite engine remains responsible for complete SQL syntax validation.
+See [CREATE TRIGGER](https://www.sqlite.org/lang_createtrigger.html).
+
+The public splitter API, Schema XML, dependencies and resolver boundaries are
+unchanged across supported SQLite versions. This affects SQL-file execution
+and migration consumers through the existing dialect splitter entry point;
+no shared-core or command implementation changes are needed.
+
+`SqliteSqlSplitterTest` executes split SQL, checks invalid input and round-trips
+metadata through owning Schema XML and generated table/view/trigger SQL into a
+fresh in-memory SQLite database. `SqliteScriptExecutionTest` additionally runs
+the real `SqlExecuteCommand` against temporary UTF-8 SQL and SQLite files. It
+checks trigger effects and confirms that a malformed trigger is rejected during
+file parsing before earlier statements in that file execute. This is a parser
+preflight check, not a general rollback guarantee for execution-time failures.
+Both integration classes in the SQLite package run on the host without Docker:
+
+```powershell
+.\gradlew.bat :sqlapp-core-sqlite:test --console=plain
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*sqlite.*' --console=plain
+```
+
+Historical dialect selections use the bundled current engine; this does not
+qualify old SQLite binaries. External databases and production data are not used.
+
+### Query plans and bytecode diagnostics
+
+`SqliteExplainBuilder` provides the SQLite counterpart to PostgreSQL's EXPLAIN
+builder. Its default is a high-level query plan:
+
+```java
+var explain = new SqliteExplainBuilder(dialect)
+    .statement("SELECT value FROM main.orders WHERE id=?");
+String planSql = explain.build();             // EXPLAIN QUERY PLAN ...
+String bytecodeSql = explain.bytecode().build(); // EXPLAIN ...
+explain.queryPlan();                          // return to the default mode
+```
+
+It generates SQL only. Bind values and execute it with normal JDBC query APIs.
+SQL generated from the Schema model can be supplied using a factory operation's
+`getSqlText()`; existing sqlapp parameter expressions can then be evaluated with
+the normal SQL parser/binder. Tests cover typed keys and attached database
+identity through that path.
+
+The builder reuses the dialect splitter and requires exactly one SELECT, WITH,
+INSERT, UPDATE, DELETE or REPLACE statement. Leading/trailing comments and quoted
+semicolons are accepted. Empty input, multiple SQL statements, an existing
+EXPLAIN prefix, DDL, transaction commands and PRAGMA are rejected before SQL is
+returned. Lexically incomplete input retains the splitter's positioned error.
+SQLite notes that some PRAGMAs take effect while preparing SQL, which is why
+this entry point excludes them. See [EXPLAIN](https://www.sqlite.org/lang_explain.html).
+
+Plan/bytecode rows remain native JDBC results for interactive diagnosis; their
+text and layouts are not converted into a supposedly stable application model.
+SQLite can change diagnostic output across releases. See
+[EXPLAIN QUERY PLAN](https://www.sqlite.org/eqp.html).
+
+This is an additive SQLite API, with no new dependencies, shared-core changes,
+XML/configuration changes or resolver boundaries. It does not validate every
+SQL construct or the payload's version compatibility. Tests execute parameterized
+plans and bytecode, CTEs and DML diagnostics, and check that the explained DML
+does not insert, update or delete the fixture rows. Old/current dialect selections
+retain the same prefix generation; historical engine binaries are not tested.
+
+### Integrity diagnostics
+
+`SqliteIntegrityCheckBuilder` generates a full, schema-wide check by default:
+
+```java
+var check = new SqliteIntegrityCheckBuilder(dialect);
+String sql = check.build(); // PRAGMA main.integrity_check (identifier quoting may vary)
+String attachedSql = check.schema(new Schema("archive")).maxErrors(20).build();
+String quickSql = check.quick().build();
+check.integrity(); // return to full checking, retaining the schema and limit
+```
+
+Execute the generated SQL with JDBC `executeQuery` and inspect every returned
+row. Full/quick checks report `ok` when no errors are found, otherwise diagnostic
+messages. The optional positive `maxErrors` limits reported errors; omission
+retains SQLite's default. Schema names are quoted by the SQLite SQL builder;
+`main` is the default, and `temp` or an attached database can be selected by name
+or by the shared Schema model. Unknown schemas remain execution errors.
+
+The quick check skips UNIQUE and index/table consistency checks. Neither mode
+detects foreign-key violations: those require a separate `foreign_key_check`.
+These methods generate diagnostic SQL only; they neither repair data nor change
+constraint enforcement. They do not offer the newer per-table check syntax.
+See [integrity_check](https://www.sqlite.org/pragma.html#pragma_integrity_check)
+and [quick_check](https://www.sqlite.org/pragma.html#pragma_quick_check).
+
+This additive API is confined to `sqlapp-core-sqlite`, with no dependency,
+resolver, existing API, XML or configuration changes. The schema-wide syntax is
+retained for legacy/current dialect selections; historical engine binaries have
+not been tested. Local embedded-engine tests cover full/quick execution,
+constraint diagnostics, error limits, attached-schema isolation, unusual names,
+injection-shaped names, invalid options and unchanged fixture data.
 
 SQLite syntax references:
 [CREATE VIEW](https://www.sqlite.org/lang_createview.html),

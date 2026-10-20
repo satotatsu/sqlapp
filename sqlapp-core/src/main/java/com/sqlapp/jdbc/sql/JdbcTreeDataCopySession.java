@@ -143,12 +143,19 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 			return source.next(tableRelation);
 		}
 		if (rootCursorCommitted) {
-			rootCursorCommitted = false;
 			boolean useHoldableCursor = holdCursorStrategy.useHoldableRootCursor(source.getConnection(),
 					source.getDialect());
 			if (!useHoldableCursor) {
+				// Finish consuming the buffered source batch before replacing its
+				// cursor. A commit may occur while the next target batch is started.
+				if (tableRelation.hasBufferedRows()) {
+					return source.next(tableRelation);
+				}
+				source.flushRootBatch();
+				target.flushRootBatch();
 				source.reSelectRoot();
 			}
+			rootCursorCommitted = false;
 		}
 		return source.next(tableRelation);
 	}

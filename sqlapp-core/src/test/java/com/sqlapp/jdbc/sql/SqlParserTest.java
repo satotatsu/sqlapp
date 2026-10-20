@@ -312,7 +312,7 @@ public class SqlParserTest extends AbstractTest {
 					  ON (fo.CUSTOMER_NAME=c.CUSTOMER_NAME)
 					INNER JOIN PRODUCTS p
 					  ON (fo.PRODUCT_NAME=p.PRODUCT_NAME)
-					WHERE 1=1
+					WHERE 1=1 AND 1=0
 					ORDER BY c.ID, p.ID
 				""";
 		assertEquals(expected.trim(), sqlParameters.getSql().trim());

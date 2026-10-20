@@ -82,6 +82,11 @@ public final class SqliteVersions {
 		}
 
 		@Override
+		public boolean supportsVacuumSchema() {
+			return true;
+		}
+
+		@Override
 		public boolean supportsRowValueComparison() {
 			return true;
 		}

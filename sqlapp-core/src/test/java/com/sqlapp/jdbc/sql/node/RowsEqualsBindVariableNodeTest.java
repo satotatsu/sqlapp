@@ -44,6 +44,29 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class RowsEqualsBindVariableNodeTest {
+	@Test
+	public void emptyRowsNeverRemoveThePredicate() {
+		Node node = SqlParser.getInstance().parse(dialect, "DELETE FROM t WHERE 1=1 /*ROWS=(target=ROOT)*/");
+		assertEquals("DELETE FROM t WHERE 1=1 AND 1=0", node.eval(List.of()).getSql());
+	}
+
+	@Test
+	public void ordinaryTableUsesItsOwnKeysAndTypes() {
+		Table table = getTable();
+		Node node = SqlParser.getInstance().parse(dialect, "WHERE 1=1 /*ROWS=(columns=colAA)*/");
+		var parameters = node.eval(table);
+		assertEquals(3, parameters.getParameterSize());
+		assertEquals(DataType.INT, parameters.getBindParameters().get(0).getBindParameters().get(0).getDataType());
+	}
+
+	@Test
+	public void relationTargetsRequireAnActualRelation() {
+		for (String target : List.of("ROOT", "PARENT")) {
+			Node node = SqlParser.getInstance().parse(dialect, "/*ROWS=(target=" + target + ")*/");
+			org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> node.eval(getTable()));
+		}
+	}
+
 	private Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
 	/**

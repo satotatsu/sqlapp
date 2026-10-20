@@ -61,6 +61,7 @@ import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLTriConsumer;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SqlBuilder;
 import com.sqlapp.util.DbUtils;
 import com.sqlapp.util.function.TriConsumer;
 import com.sqlapp.util.function.TriFunction;
@@ -246,9 +247,11 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		TableRelation tableRelation = this.tableRelationTreeHolder.getRootTableRelation();
 		tableRelation.setResultSet(() -> {
 			final SqlParameterCollection sqlParameters = tableRelation.getSelectSqlParameters();
+			final ResultSetHoldability holdability = dialect.supportsHoldCursorsOverCommit(connection)
+					? ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT : ResultSetHoldability.CLOSE_CURSORS_AT_COMMIT;
 			final PreparedStatement statement = sqlParameters.createStatementForQuery(connection,
 					ResultSetType.TYPE_FORWARD_ONLY, ResultSetConcurrency.CONCUR_READ_ONLY,
-					ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
+					holdability);
 			statement.setFetchSize(this.getRootBatchSize());
 			tableRelation.setSelectStatement(statement);
 			preparedStatementBeforeExecuteHandler.accept(statement);
@@ -285,8 +288,19 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		tableRelation.setSelectRegistered(true);
 		if (tableRelation.isRoot()) {
-			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(),
-					SqlType.SELECT_BY_ROWS);
+			// This entry point scans the root table; an empty key set must not be
+			// interpreted as an unrestricted SELECT_BY_ROWS predicate.
+			var signature = new SqlSignature(table, table.getRows());
+			var orderColumns = getTableOptions().getSelectOrderByColumnsStrategy().apply(table).getWithoutCheck(signature);
+			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSql(table, SqlType.SELECT_TABLE).stream().map(operation -> {
+				var builder = new SqlBuilder(dialect);
+				builder._add(operation.getSqlText());
+				if (!orderColumns.getKeyColumns().isEmpty()) {
+					builder.lineBreak().orderBy();
+					orderColumns.forEachKeyColumn((i, column) -> builder.comma(i > 0).name(column));
+				}
+				return SqlParser.getInstance().parse(dialect, SqlType.SELECT_TABLE, builder.toString());
+			}).toList();
 			for (final SqlNode sqlNode : sqlNodes) {
 				registerStatementHolder(tableRelation, sqlNode);
 			}
@@ -571,6 +585,14 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		lastRow = null;
 		batchUpdateCounter = 0;
 		rootFinish = true;
+	}
+
+	void flushRootBatch() throws SQLException {
+		requireExecuting();
+		if (!rootFinish) {
+			throw new IllegalStateException("A root batch failed; this execution cannot be committed.");
+		}
+		executeUpdate(tableRelationTreeHolder.getRootTableRelation());
 	}
 
 	void finishExecution() throws SQLException {

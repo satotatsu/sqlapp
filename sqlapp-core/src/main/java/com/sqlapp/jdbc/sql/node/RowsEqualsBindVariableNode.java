@@ -118,10 +118,14 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
 		if (CommonUtils.isEmpty(rows)) {
+			sqlParameters.addSql(" AND 1=0");
 			return;
 		}
 		TableRelation tableRelation = sqlParameters.getTableRelation();
 		final TableRelation parentTableRelation;
+		if (tableRelation == null && ("ROOT".equalsIgnoreCase(getTarget()) || "PARENT".equalsIgnoreCase(getTarget()))) {
+			throw new IllegalArgumentException("ROWS target " + getTarget() + " requires a TableRelation");
+		}
 		if ("ROOT".equalsIgnoreCase(getTarget())) {
 			parentTableRelation = tableRelation.getRootTableRelation();
 		} else if ("PARENT".equalsIgnoreCase(getTarget())) {
@@ -129,16 +133,21 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		} else {
 			parentTableRelation = tableRelation;
 		}
-		final SqlSignature sqlSignature = parentTableRelation.getOrCreateSqlSignature(rows);
+		final var table = parentTableRelation != null ? parentTableRelation.getTable() : sqlParameters.getTable();
+		if (table == null || ("PARENT".equalsIgnoreCase(getTarget()) && parentTableRelation == null)) {
+			throw new IllegalArgumentException("ROWS requires a table and a resolvable target relation");
+		}
+		final SqlSignature sqlSignature = parentTableRelation != null
+				? parentTableRelation.getOrCreateSqlSignature(rows) : new SqlSignature(table, rows);
 		final ColumnsHolder columnsHolder;
 		if (!CommonUtils.isEmpty(getColumns())) {
 			final Set<Column> target = CommonUtils.linkedSet();
 			Map<Column, String> mappingNameMap = CommonUtils.map();
 			for (int i = 0; i < columns.size(); i++) {
 				String name = columns.get(i);
-				Column column = parentTableRelation.getTable().getColumns().get(name);
+				Column column = table.getColumns().get(name);
 				if (column == null) {
-					throw new MissingColumnException(parentTableRelation.getTable(), name, getMatchText());
+					throw new MissingColumnException(table, name, getMatchText());
 				}
 				String mappingName = this.getMapping().get(column.getName());
 				if (mappingName != null) {

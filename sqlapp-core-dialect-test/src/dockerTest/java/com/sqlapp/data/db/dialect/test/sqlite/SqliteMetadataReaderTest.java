@@ -146,7 +146,9 @@ class SqliteMetadataReaderTest {
 			assertEquals("metadata_parent", trigger.getTableName());
 			assertEquals("AFTER", trigger.getActionTiming());
 			assertTrue(trigger.getEventManipulation().contains("INSERT"));
-			assertTrue(trigger.getStatement().get(0).startsWith("INSERT INTO metadata_audit"));
+			assertNotNull(trigger.getDefinition());
+			assertFalse(trigger.getDefinition().isEmpty());
+			assertTrue(trigger.getDefinition().get(0).contains("INSERT INTO metadata_audit"));
 			var attachedSchema = schemas.stream().filter(s -> "analytics".equals(s.getName())).findFirst()
 					.orElseThrow();
 			var attachedTable = attachedSchema.getTables().get("metadata_attached");
@@ -169,7 +171,27 @@ class SqliteMetadataReaderTest {
 			assertEquals("metadata_attached", attachedTrigger.getTableName());
 			assertEquals("AFTER", attachedTrigger.getActionTiming());
 			assertTrue(attachedTrigger.getEventManipulation().contains("UPDATE"));
-			assertTrue(attachedTrigger.getStatement().get(0).startsWith("SELECT NEW.id"));
+			assertNotNull(attachedTrigger.getDefinition());
+			assertFalse(attachedTrigger.getDefinition().isEmpty());
+			assertTrue(attachedTrigger.getDefinition().get(0).contains("SELECT NEW.id"));
+			var registry = dialect.createSqlFactoryRegistry();
+			for (var original : java.util.List.of(trigger, attachedTrigger)) {
+				// Keep owning schema identity: inherited names are omitted in XML.
+				com.sqlapp.data.schemas.Schema restoredSchema = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(original.getSchema().asXml()));
+				var restored = restoredSchema.getTriggers().get(original.getName());
+				for (var operation : registry.createSql(restored, com.sqlapp.data.db.sql.SqlType.DROP))
+					statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+			}
+			statement.execute("INSERT INTO metadata_parent(code,amount) VALUES('trigger-check',1)");
+			try (var audit = statement.executeQuery("SELECT count(*) FROM metadata_audit")) {
+				assertTrue(audit.next());
+				assertEquals(1, audit.getInt(1));
+			}
+			statement.execute("INSERT INTO analytics.metadata_attached(id,code) VALUES(1,'attached-check')");
+			statement.execute("UPDATE analytics.metadata_attached SET status='changed' WHERE id=1");
 			var attachedView = attachedSchema.getViews().get("metadata_attached_view");
 			assertNotNull(attachedView);
 			assertTrue(attachedView.getStatement().get(0).startsWith("SELECT id, code FROM metadata_attached"));

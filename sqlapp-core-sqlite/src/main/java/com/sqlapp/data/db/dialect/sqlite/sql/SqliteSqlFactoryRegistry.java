@@ -34,10 +34,29 @@ public class SqliteSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Table.class, SqlType.ANALYZE, SqliteAnalyzeFactory.class);
+		registerSqlFactory(Index.class, SqlType.ANALYZE, SqliteAnalyzeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.ANALYZE, SqliteAnalyzeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.DEFRAG, SqliteVacuumFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.DEFRAG_FULL, SqliteVacuumFactory.Full.class);
+		registerSqlFactory(Table.class, SqlType.DEFRAG, SqliteVacuumFactory.class);
+		registerSqlFactory(Table.class, SqlType.DEFRAG_FULL, SqliteVacuumFactory.Full.class);
+		registerSqlFactory(Index.class, SqlType.DEFRAG, SqliteVacuumFactory.class);
+		registerSqlFactory(Index.class, SqlType.DEFRAG_FULL, SqliteVacuumFactory.Full.class);
 		registerSqlFactory(Table.class, SqlType.INSERT, SqliteInsertFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT_ROWS, SqliteInsertFactory.Rows.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, SqliteMergeFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE_ROWS, SqliteMergeFactory.Rows.class);
+		registerSqlFactory(Table.class, SqlType.MERGE_TABLE, SqliteMergeTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_TABLE, SqliteInsertSelectTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_NOT_EXISTS, SqliteInsertSelectNotExistsFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE, SqliteUpdateFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_TABLE, SqliteUpdateFactory.All.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_FOR_APP, SqliteUpdateFactory.ForApp.class);
+		registerSqlFactory(Table.class, SqlType.DELETE, SqliteDeleteFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, SqliteSelectForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT, SqliteSelectFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, SqliteLockTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, SqliteCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SqliteAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, SqliteDropTableFactory.class);

@@ -5,6 +5,8 @@
  */
 package com.sqlapp.data.db.dialect.sqlite.metadata;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
@@ -107,6 +109,11 @@ class SqliteColumnReaderTest {
 	@Test
 	void stripsOnlyTheIndexKeyOrder() {
 		assertEquals("lower(code)", SqliteIndexReader.stripOrder("lower(code) DESC"));
+		assertEquals("lower(code)", SqliteIndexReader.stripOrder("lower(code) DESC /* order */"));
+		assertEquals("code COLLATE DESC", SqliteIndexReader.stripOrder("code COLLATE DESC"));
+		assertEquals("\"DESC\"", SqliteIndexReader.stripOrder("\"DESC\""));
+		assertFalse(com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isDescendingIndexKey("DESC"));
+		assertFalse(com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isDescendingIndexKey("code COLLATE DESC"));
 		assertEquals("CASE WHEN score > 0 THEN 'DESC' END",
 				SqliteIndexReader.stripOrder("CASE WHEN score > 0 THEN 'DESC' END ASC"));
 	}

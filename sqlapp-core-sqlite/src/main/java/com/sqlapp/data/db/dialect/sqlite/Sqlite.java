@@ -134,6 +134,11 @@ public class Sqlite extends Dialect {
 		return true;
 	}
 
+	/** Whether VACUUM can target a database other than main. */
+	public boolean supportsVacuumSchema() {
+		return false;
+	}
+
 	public boolean supportsViewColumnList() {
 		return false;
 	}
@@ -205,6 +210,39 @@ public class Sqlite extends Dialect {
 	@Override
 	public char getOpenQuote() {
 		return '[';
+	}
+
+	@Override
+	public boolean isQuoted(final String target) {
+		if (super.isQuoted(target))
+			return true;
+		// Recognize the alternate form emitted by doQuote, preserving existing
+		// handling of literal names delimited by double quotes or backticks.
+		return target != null && target.length() >= 2 && target.indexOf(']') >= 0 && target.charAt(0) == '"'
+				&& target.charAt(target.length() - 1) == '"';
+	}
+
+	@Override
+	protected String doQuote(final String target) {
+		// SQLite's bracket syntax cannot escape an embedded closing bracket.
+		if (target.indexOf(']') >= 0)
+			return "\"" + target.replace("\"", "\"\"") + "\"";
+		return super.doQuote(target);
+	}
+
+	@Override
+	public String unQuote(final String target) {
+		if (!isQuoted(target))
+			return target;
+		String value = target.substring(1, target.length() - 1);
+		if (target.charAt(0) == '"')
+			return value.replace("\"\"", "\"");
+		return value;
+	}
+
+	@Override
+	public boolean storesMixedCaseIdentifiers() {
+		return true;
 	}
 
 	/**

@@ -59,6 +59,10 @@ public abstract class AbstractDeleteByRootRowsFactory<S extends AbstractSqlBuild
 
 	protected void addDeleteConditionColumns(final TableRelation obj, S builder) {
 		List<TableRelation> listParents = obj.getParentTableRelations();
+		if (listParents.isEmpty()) {
+			builder.lineBreak()._add("/*ROWS=(target=ROOT)*/");
+			return;
+		}
 		builder.lineBreak();
 		builder.and().exists().space().brackets(true, () -> {
 			builder.select().space()._add("1");

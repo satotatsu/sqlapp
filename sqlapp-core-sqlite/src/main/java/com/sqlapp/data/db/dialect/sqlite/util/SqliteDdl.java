@@ -8,6 +8,30 @@ import java.util.List;
  * Header handling that keeps quoted identifiers, strings and comments opaque.
  */
 public final class SqliteDdl {
+	/** CREATE INDEX header, with comments and quoted names kept opaque. */
+	public static boolean isUniqueIndex(String definition) {
+		var items = tokens(definition);
+		return items.size() > 2 && items.get(0).is("CREATE") && items.get(1).is("UNIQUE") && items.get(2).is("INDEX");
+	}
+
+	/** Explicit order of an index key, ignoring trailing comments. */
+	public static boolean isDescendingIndexKey(String definition) {
+		var items = tokens(definition);
+		return hasIndexOrder(items) && items.get(items.size() - 1).is("DESC");
+	}
+
+	/** Removes only a final ASC/DESC modifier, including any trailing comments. */
+	public static String stripIndexKeyOrder(String definition) {
+		var items = tokens(definition);
+		return hasIndexOrder(items) ? definition.substring(0, items.get(items.size() - 1).start()).trim()
+				: definition.trim();
+	}
+
+	private static boolean hasIndexOrder(List<Token> items) {
+		return items.size() > 1 && !items.get(items.size() - 2).is("COLLATE")
+				&& (items.get(items.size() - 1).is("ASC") || items.get(items.size() - 1).is("DESC"));
+	}
+
 	/** Distinguishes identifier/COLLATE/order index keys from expression keys. */
 	public static boolean hasIndexExpressions(String keys) {
 		var items = tokens(keys);
