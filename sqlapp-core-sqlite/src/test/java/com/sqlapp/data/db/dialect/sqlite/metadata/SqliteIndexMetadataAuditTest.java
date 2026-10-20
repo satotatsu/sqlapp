@@ -232,7 +232,7 @@ class SqliteIndexMetadataAuditTest {
 			var tables = reader.getAllFull(connection);
 			assertEquals(8, tables.size());
 			assertEquals(one, queries.get());
-			assertEquals(6, one);
+			assertEquals(7, one); // Includes the schema-bound catalog enumeration.
 			for (var table : tables) {
 				assertEquals("lower(b)", table.getColumns().get("c").getFormula());
 				assertEquals(4, table.getConstraints().size());

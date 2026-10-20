@@ -12,7 +12,33 @@ public final class SqliteVersions {
 	private SqliteVersions() {
 	}
 
-	public static class Sqlite380 extends Sqlite {
+	public static class Sqlite376 extends Sqlite {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite376(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsWalCheckpointModes() {
+			return true;
+		}
+	}
+
+	public static class Sqlite3716 extends Sqlite376 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite3716(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsForeignKeyCheck() {
+			return true;
+		}
+	}
+
+	public static class Sqlite380 extends Sqlite3716 {
 		private static final long serialVersionUID = 1L;
 
 		protected Sqlite380(Supplier<Dialect> next) {
@@ -56,7 +82,20 @@ public final class SqliteVersions {
 		}
 	}
 
-	public static class Sqlite39 extends Sqlite383 {
+	public static class Sqlite388 extends Sqlite383 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite388(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsWalCheckpointTruncate() {
+			return true;
+		}
+	}
+
+	public static class Sqlite39 extends Sqlite388 {
 		private static final long serialVersionUID = 1L;
 
 		protected Sqlite39(Supplier<Dialect> next) {
@@ -123,7 +162,20 @@ public final class SqliteVersions {
 		}
 	}
 
-	public static class Sqlite331 extends Sqlite325 {
+	public static class Sqlite327 extends Sqlite325 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite327(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsVacuumInto() {
+			return true;
+		}
+	}
+
+	public static class Sqlite331 extends Sqlite327 {
 		private static final long serialVersionUID = 1L;
 
 		protected Sqlite331(Supplier<Dialect> next) {

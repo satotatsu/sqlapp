@@ -19,6 +19,14 @@ import com.sqlapp.util.CommonUtils;
 public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteSqlBuilder> {
 	@Override
 	public List<SqlOperation> createSql(Table table) {
+		String definition = toString(table.getDefinition());
+		if ("true".equals(table.getSpecifics().get("sqlite.virtual"))
+				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(definition)) {
+			if (!com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(definition))
+				throw new IllegalArgumentException("SQLite virtual table requires a complete CREATE VIRTUAL TABLE definition: " + table.getName());
+			String sql = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.withIdentity(definition,"TABLE",table.getSchemaName(),table.getName());
+			return List.of(createOperation(sql,SqlType.CREATE,table));
+		}
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite) {
 			if ("true".equals(table.getSpecifics().get("strict")) && !sqlite.supportsStrictTables())
 				throw new IllegalArgumentException("SQLite STRICT tables require SQLite 3.37 or later");

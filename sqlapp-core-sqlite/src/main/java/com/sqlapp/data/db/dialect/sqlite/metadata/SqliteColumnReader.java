@@ -68,6 +68,7 @@ public class SqliteColumnReader extends ColumnReader {
 						.filter(item -> Objects.equals(column.getName(), readIdentifier(item))).findFirst()
 						.ifPresent(item -> setColumnDeclaration(column, item));
 				setDataType(column, rs.getString("type"));
+				setVirtualColumnType(column, definition);
 				int pk = rs.getInt("pk");
 				column.setNullable(rs.getInt("notnull") == 0);
 				column.setDefaultValue(rs.getString("dflt_value"));
@@ -170,6 +171,7 @@ public class SqliteColumnReader extends ColumnReader {
 					return;
 				}
 				String createSql = resultSet.getString(1);
+				primaryKeyPositions.keySet().forEach(column -> setVirtualColumnType(column, createSql));
 				final List<String> definitions = splitColumnDefinitions(createSql);
 				long keyCount = primaryKeyPositions.values().stream().filter(position -> position > 0).count();
 				primaryKeyPositions.forEach((column, position) -> {
@@ -284,6 +286,13 @@ public class SqliteColumnReader extends ColumnReader {
 			}
 		}
 		return false;
+	}
+
+	private static void setVirtualColumnType(Column column, String definition) {
+		String module = SqliteDdl.virtualTableModule(definition);
+		if (module != null && java.util.Set.of("fts3", "fts4", "fts5").contains(module.toLowerCase(Locale.ROOT))
+				&& "".equals(column.getSpecifics().get("sqlite.declaredType")))
+			column.setDataType(DataType.VARCHAR).setDataTypeName(null);
 	}
 
 	private void setDataType(final Column column, final String declaredType) {

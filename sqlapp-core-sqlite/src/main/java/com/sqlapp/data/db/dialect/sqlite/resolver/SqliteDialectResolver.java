@@ -75,6 +75,8 @@ public class SqliteDialectResolver extends ProductNameDialectResolver {
 				return DialectHolder.sqlite332;
 			if (minorVersion >= 31)
 				return DialectHolder.sqlite331;
+			if (minorVersion >= 27)
+				return DialectHolder.sqlite327;
 			if (minorVersion >= 25)
 				return DialectHolder.sqlite325;
 			if (minorVersion >= 24)
@@ -84,12 +86,18 @@ public class SqliteDialectResolver extends ProductNameDialectResolver {
 			if (minorVersion >= 9)
 				return DialectHolder.sqlite39;
 			if (minorVersion == 8) {
+				if (revision != null && revision >= 8)
+					return DialectHolder.sqlite388;
 				if (revision != null && revision >= 3)
 					return DialectHolder.sqlite383;
 				if (revision != null && revision >= 2)
 					return DialectHolder.sqlite382;
 				return DialectHolder.sqlite380;
 			}
+			if (minorVersion == 7 && revision != null && revision >= 16)
+				return DialectHolder.sqlite3716;
+			if (minorVersion == 7 && revision != null && revision >= 6)
+				return DialectHolder.sqlite376;
 			return DialectHolder.sqliteLegacy;
 		}
 

@@ -19,6 +19,107 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 class SqliteAlterTableFactoryTest {
 	@Test
+	void insertingColumnsBeforeOrBetweenExistingColumnsFailsBeforeSqlIsReturned() {
+		var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		var original = table();
+		original.getColumns().add(new Column("tail").setDataType(DataType.INT));
+		for (int position : new int[] { 0, 1 }) {
+			var target = original.clone();
+			target.getColumns().add(position, new Column("inserted").setDataType(DataType.INT));
+			var error = assertThrows(IllegalArgumentException.class,
+					() -> registry.createSql(original.diff(target), SqlType.ALTER));
+			assertTrue(error.getMessage().contains("append"));
+		}
+	}
+
+	@Test
+	void multipleAppendedColumnsKeepModelOrderAndExistingData() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("ATTACH ':memory:' AS other");
+			statement.execute("CREATE TABLE other.t(value TEXT)");
+			statement.execute("INSERT INTO other.t VALUES('kept')");
+			var original = table();
+			var target = original.clone();
+			target.getColumns().add(new Column("first_added").setDataType(DataType.INT).setDefaultValue("7"));
+			target.getColumns().add(new Column("second_added").setDataType(DataType.INT).setDefaultValue("9"));
+			execute(statement, DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(original.diff(target),
+					SqlType.ALTER));
+			try (var result = statement.executeQuery("SELECT * FROM other.t")) {
+				assertTrue(result.next());
+				assertEquals("kept", result.getString(1));
+				assertEquals("first_added", result.getMetaData().getColumnName(2));
+				assertEquals(7, result.getInt(2));
+				assertEquals("second_added", result.getMetaData().getColumnName(3));
+				assertEquals(9, result.getInt(3));
+			}
+		}
+	}
+
+	@Test
+	void appendingNotNullVirtualColumnsUsesExistingRowsAndPreservesTheFormula() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("ATTACH ':memory:' AS other");
+			statement.execute("CREATE TABLE other.t(value TEXT)");
+			statement.execute("INSERT INTO other.t VALUES('kept')");
+			var original = table();
+			var target = original.clone();
+			target.getColumns()
+					.add(new Column("computed").setDataType(DataType.INT).setFormula("length(value)").setNotNull(true));
+			execute(statement, DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(original.diff(target),
+					SqlType.ALTER));
+			try (var result = statement.executeQuery("SELECT value,computed FROM other.t")) {
+				assertTrue(result.next());
+				assertEquals("kept", result.getString(1));
+				assertEquals(4, result.getInt(2));
+			}
+			statement.execute("UPDATE other.t SET value='longer'");
+			try (var result = statement.executeQuery("SELECT computed FROM other.t")) {
+				assertTrue(result.next());
+				assertEquals(6, result.getInt(1));
+			}
+		}
+	}
+
+	@Test
+	void virtualNotNullViolationsAreReportedByTheEngineWithoutAddingTheColumn() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("ATTACH ':memory:' AS other");
+			statement.execute("CREATE TABLE other.t(value TEXT)");
+			statement.execute("INSERT INTO other.t VALUES(NULL)");
+			var original = table();
+			var target = original.clone();
+			target.getColumns()
+					.add(new Column("computed").setDataType(DataType.INT).setFormula("length(value)").setNotNull(true));
+			var operations = DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(original.diff(target),
+					SqlType.ALTER);
+			assertEquals(1, operations.size());
+			assertThrows(java.sql.SQLException.class, () -> statement.execute(operations.get(0).getSqlText()));
+			try (var result = statement.executeQuery("SELECT * FROM other.t")) {
+				assertEquals(1, result.getMetaData().getColumnCount());
+				assertTrue(result.next());
+				assertNull(result.getString(1));
+			}
+		}
+	}
+
+	@Test
+	void generatedAdditionsRetainVersionAndStoredColumnGuards() {
+		var original = table();
+		var target = original.clone();
+		var generated = new Column("computed").setDataType(DataType.INT).setFormula("length(value)").setNotNull(true);
+		target.getColumns().add(generated);
+		var old = com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("SQLite", 3, 30, 0)
+				.createSqlFactoryRegistry();
+		assertThrows(IllegalArgumentException.class, () -> old.createSql(original.diff(target), SqlType.ALTER));
+		generated.setFormulaPersisted(true);
+		assertThrows(IllegalArgumentException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.createSql(original.diff(target), SqlType.ALTER));
+	}
+
+	@Test
 	void droppingLeadingColumnPreservesFollowingColumnsAndTheirData() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 				var statement = connection.createStatement()) {

@@ -6,7 +6,10 @@ import java.util.Set;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlite.Sqlite;
 
-/** Generates SQLite diagnostic SQL; execution and result interpretation belong to the caller. */
+/**
+ * Generates SQLite diagnostic SQL; execution and result interpretation belong
+ * to the caller.
+ */
 public class SqliteExplainBuilder {
 	private static final Set<String> STATEMENTS = Set.of("SELECT", "WITH", "INSERT", "UPDATE", "DELETE", "REPLACE");
 	private final Dialect dialect;
@@ -47,10 +50,12 @@ public class SqliteExplainBuilder {
 			throw new IllegalArgumentException("SQLite EXPLAIN requires exactly one SQL statement");
 		String sql = statements.get(0).getText().strip();
 		int end = 0;
-		while (end < sql.length() && Character.isLetter(sql.charAt(end))) end++;
+		while (end < sql.length() && Character.isLetter(sql.charAt(end)))
+			end++;
 		String command = sql.substring(0, end).toUpperCase(java.util.Locale.ROOT);
 		if (!STATEMENTS.contains(command))
-			throw new IllegalArgumentException("SQLite EXPLAIN supports SELECT, WITH, INSERT, UPDATE, DELETE or REPLACE; PRAGMA, DDL and transaction commands are not supported");
+			throw new IllegalArgumentException(
+					"SQLite EXPLAIN supports SELECT, WITH, INSERT, UPDATE, DELETE or REPLACE; PRAGMA, DDL and transaction commands are not supported");
 		return (queryPlan ? "EXPLAIN QUERY PLAN " : "EXPLAIN ") + sql;
 	}
 }

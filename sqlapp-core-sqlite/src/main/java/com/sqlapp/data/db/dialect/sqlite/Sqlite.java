@@ -134,8 +134,28 @@ public class Sqlite extends Dialect {
 		return true;
 	}
 
+	/** Whether WAL checkpoints accept an explicit mode (SQLite 3.7.6+). */
+	public boolean supportsWalCheckpointModes() {
+		return false;
+	}
+
+	/** Whether WAL checkpoints support TRUNCATE (SQLite 3.8.8+). */
+	public boolean supportsWalCheckpointTruncate() {
+		return false;
+	}
+
+	/** Whether PRAGMA foreign_key_check is available (SQLite 3.7.16+). */
+	public boolean supportsForeignKeyCheck() {
+		return false;
+	}
+
 	/** Whether VACUUM can target a database other than main. */
 	public boolean supportsVacuumSchema() {
+		return false;
+	}
+
+	/** Whether VACUUM can write a separate database file (SQLite 3.27+). */
+	public boolean supportsVacuumInto() {
 		return false;
 	}
 

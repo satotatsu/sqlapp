@@ -219,7 +219,8 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	private void addResumeTokenColumn() throws SQLException {
 		final Table original = checkpointTable(false, false);
-		final Table target = checkpointTable(true, false);
+		final Table target = original.clone();
+		target.getColumns().add(checkpointTable(true, false).getColumns().get("RESUME_TOKEN").clone());
 		final var difference = original.diff(target);
 		final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 				.getSqlFactory(target, SqlType.ALTER);
@@ -229,7 +230,8 @@ public class JdbcBulkMigrationCheckpointStore implements TransactionalBulkMigrat
 
 	private void addChunkSizeColumn() throws SQLException {
 		final Table original = checkpointTable(true, false);
-		final Table target = checkpointTable(true, true);
+		final Table target = original.clone();
+		target.getColumns().add(checkpointTable(true, true).getColumns().get("CHUNK_SIZE").clone());
 		final var difference = original.diff(target);
 		final SqlFactory<Table> factory = dialect.createSqlFactoryRegistry()
 				.getSqlFactory(target, SqlType.ALTER);

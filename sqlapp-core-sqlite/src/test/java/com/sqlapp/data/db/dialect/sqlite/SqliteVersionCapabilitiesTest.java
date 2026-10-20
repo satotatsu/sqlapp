@@ -26,6 +26,15 @@ class SqliteVersionCapabilitiesTest {
 
 	@Test
 	void featureBoundariesAreResolvedThroughThePublicResolver() {
+		boundary(7, 6, Sqlite::supportsWalCheckpointModes);
+		boundary(8, 8, Sqlite::supportsWalCheckpointTruncate);
+		assertFalse(version(7, null).supportsWalCheckpointModes());
+		assertFalse(version(8, null).supportsWalCheckpointTruncate());
+		boundary(7, 16, Sqlite::supportsForeignKeyCheck);
+		assertFalse(version(7, null).supportsForeignKeyCheck());
+		assertSame(DialectHolder.sqlite3716, version(7, 16));
+		assertSame(DialectHolder.sqlite376, version(7, 15));
+		assertFalse(version(7, 16).supportsPartialIndexes());
 		boundary(8, 0, Sqlite::supportsPartialIndexes);
 		boundary(8, 2, Sqlite::supportsWithoutRowid);
 		boundary(8, 3, Sqlite::supportsWith);
@@ -36,6 +45,7 @@ class SqliteVersionCapabilitiesTest {
 		boundary(15, 0, Sqlite::supportsRowValueComparisonIn);
 		boundary(24, 0, Sqlite::supportsUpsert);
 		boundary(25, 0, Sqlite::supportsRenameColumn);
+		boundary(27, 0, Sqlite::supportsVacuumInto);
 		boundary(31, 0, Sqlite::supportsGeneratedColumns);
 		boundary(31, 0, Sqlite::supportsColumnFormula);
 		boundary(35, 0, Sqlite::supportsDropColumn);

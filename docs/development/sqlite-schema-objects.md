@@ -189,6 +189,22 @@ index names target the model's database, including ATTACH databases. Dropping a
 leading or middle column does not generate ALTER COLUMN merely because later
 column ordinals change.
 
+New columns must form a suffix of the target model's column list. Inserting a
+column before or between retained columns is rejected before SQL is returned,
+because native ADD COLUMN always appends. Multiple appended columns retain the
+model's order. VIRTUAL generated columns may be appended with NOT NULL and no
+default; the ordinary-column requirement for a non-NULL default does not apply
+to generated values. STORED additions remain rejected. SQLite 3.37+ validates
+the new generated-column NOT NULL constraint against existing rows and can reject
+execution; the factory does not suppress that error. See
+[ADD COLUMN](https://www.sqlite.org/lang_altertable.html#alter_table_add_column).
+Tests cover attached-table data, column ordering, recomputed generated values,
+failed NOT NULL validation and the generated-column version/storage guards.
+The shared checkpoint-store upgrade also appends its new RESUME_TOKEN and
+CHUNK_SIZE columns to the original model instead of requesting insertion into
+the middle of an existing table. Existing checkpoint identifiers, values and
+configuration formats are unchanged.
+
 Column renaming can be requested explicitly without interpreting an ambiguous
 delete/add difference as a rename:
 
@@ -297,13 +313,17 @@ boundaries:
 
 | SQLite version | Added capability |
 | --- | --- |
+| 3.7.6 | Explicit WAL checkpoint modes |
+| 3.7.16 | Foreign-key diagnostics (`foreign_key_check`) |
 | 3.8.0 | Partial indexes |
 | 3.8.2 | WITHOUT ROWID |
 | 3.8.3 | WITH and recursive CTEs |
+| 3.8.8 | WAL checkpoint TRUNCATE |
 | 3.9 | Expression indexes and view column lists |
 | 3.15 | Row value comparisons and IN |
 | 3.24 | Bulk UPSERT |
 | 3.25 | Column rename |
+| 3.27 | VACUUM INTO |
 | 3.31 | Generated columns |
 | 3.32 | Default bind parameter ceiling increases from 999 to 32766 |
 | 3.35 | INSERT RETURNING and DROP COLUMN |
@@ -880,6 +900,233 @@ retained for legacy/current dialect selections; historical engine binaries have
 not been tested. Local embedded-engine tests cover full/quick execution,
 constraint diagnostics, error limits, attached-schema isolation, unusual names,
 injection-shaped names, invalid options and unchanged fixture data.
+
+### Virtual tables and shadow tables
+
+Table metadata now identifies CREATE VIRTUAL TABLE and stores the complete
+executable DDL in `definition`, plus `specifics["sqlite.virtual"]="true"`.
+Module arguments are preserved verbatim, rather than interpreted as ordinary
+table constraints. Available PRAGMA columns, including hidden columns, remain
+supplemental model metadata. Recreating a virtual table through the existing
+CREATE factory emits one complete statement with the model's current schema and
+table name. Supplemental columns/indexes/constraints do not replace the module
+definition. Edit the definition to change module arguments.
+
+As with trigger definitions, either readDefinition or readStatement enabled is
+enough to retain executable DDL. Disabling both preserves the virtual marker but
+omits DDL, so CREATE fails clearly instead of creating an ordinary table.
+Generic ALTER and explicit column rename reject virtual tables because their
+supported operations depend on the module. This does not implement a module
+migration planner or copy virtual-table data.
+
+On SQLite 3.37+, table enumeration excludes objects classified as `shadow` by
+`pragma_table_list`, using one schema-filtered catalog query. It retains ordinary
+tables with similar names; it does not guess from FTS/RTree filename suffixes.
+Full reading batches virtual columns together and avoids treating module
+arguments as constraints. Query-count tests keep the same prepared-query count
+for one and five FTS tables. See
+[table_list](https://www.sqlite.org/pragma.html#pragma_table_list) and
+[CREATE VIRTUAL TABLE](https://www.sqlite.org/lang_createvtab.html).
+
+Older runtimes retain catalog enumeration without table_list. Virtual DDL is
+still retained, but shadow tables can appear as ordinary catalog entries there:
+before 3.37 there is no general public classification covering arbitrary custom
+modules, so schema exports containing virtual tables need an explicit object
+selection or a newer runtime. No per-object classification queries were added.
+The branch uses the connected engine's version, independently of dialect target
+selection; resolver boundaries remain unchanged by this metadata change.
+
+This stays in `sqlapp-core-sqlite` with no dependencies, shared model/API or XML
+format changes; definitions and specifics use existing model fields. Tests cover
+FTS5 search after an attached-schema XML round trip, hidden columns, RTree spatial
+behavior, renamed identities, shadow exclusion, ordinary name collisions,
+constant query counts, old enumeration and missing-DDL rejection. The destination
+must provide the required module/tokenizer. External-content FTS and custom
+modules may require separately managed tables, data, functions or registration;
+their arguments are not rewritten when renaming the table. Historical binaries
+and arbitrary third-party modules are not tested.
+
+#### Virtual-table DML
+
+SQLite INSERT factories now omit `Column.hidden` input columns, including
+single/batch INSERT, conditional INSERT and table-source INSERT. UPDATE omits
+hidden assignments as well. This prevents FTS control columns such as the table's
+name and `rank` from becoming ordinary application inputs. Hidden columns remain
+available as supplemental metadata; module control commands require explicit
+module-aware SQL rather than ordinary generated DML.
+
+FTS3/4/5 columns with no declared PRAGMA type use VARCHAR for row conversion and
+JDBC binding, while retaining the empty `sqlite.declaredType`. This avoids
+treating application text as Base64/BLOB input. Both bulk and legacy column
+readers apply this mapping; ordinary typeless tables retain BLOB affinity, and
+other modules' declared types are unchanged. Module identification parses the
+CREATE header, including IF NOT EXISTS, schema qualification and quoted names.
+See the [FTS5 documentation](https://www.sqlite.org/fts5.html).
+
+MERGE, MERGE_ROWS and MERGE_TABLE reject virtual targets before generating an
+UPSERT, since SQLite does not support UPSERT on virtual tables. The check accepts
+either the metadata marker or a complete virtual-table definition. Normal
+INSERT, UPDATE and table-source transfer retain the existing factory entry points
+and parameter binder. Virtual-table row identity is module-specific: keyed
+updates require an explicitly modeled key, such as SQLite rowid when applicable;
+the reader does not invent one. See [UPSERT limitations](https://www.sqlite.org/lang_upsert.html#limitations).
+
+Tests execute FTS5 text inserts and rowid-keyed updates with supplied hidden
+control values, transfer attached FTS rows from a visible-only staging table,
+reject all MERGE entry points, and verify FTS3/4/5 type mappings across modern and
+legacy metadata branches. Changes stay in SQLite; no shared APIs, dependencies,
+configuration/XML formats or resolver boundaries are changed.
+
+### WAL checkpoints
+
+`SqliteWalCheckpointBuilder` generates one explicitly scoped checkpoint, with
+`main` and nonblocking PASSIVE as defaults:
+
+```java
+var checkpoint = new SqliteWalCheckpointBuilder(dialect);
+String sql = checkpoint.build();
+String attachedSql = checkpoint.schema(new Schema("archive"))
+    .mode(SqliteWalCheckpointBuilder.Mode.TRUNCATE).build();
+```
+
+`schema(String)` also accepts an attached database name. Names are quoted; blank
+or NUL-containing names are rejected. The builder emits SQL only and does not
+enable WAL, change busy timeouts, execute, commit or retry. Unlike an unqualified
+checkpoint PRAGMA, it never expands the request to every attached database.
+The caller controls the connection and inspects the JDBC `executeQuery` result.
+
+The result contains one row with three integers: busy status, log pages and
+checkpointed pages. FULL, RESTART and TRUNCATE may report busy as 1. PASSIVE can
+report 0 while leaving pages uncheckpointed, so compare the page counts as well.
+Counts of -1 indicate no WAL. FULL/RESTART/TRUNCATE may wait according to the
+connection's busy handler; TRUNCATE shrinks the WAL only on successful completion.
+Non-WAL databases retain SQLite's no-op behavior. Native JDBC errors remain
+visible. See [wal_checkpoint](https://www.sqlite.org/pragma.html#pragma_wal_checkpoint).
+
+This API requires SQLite 3.7.6+ for explicit modes; TRUNCATE requires 3.8.8+.
+The resolver adds these boundaries while inheriting prior capabilities. Unknown
+3.7 revisions reject generation, and unknown 3.8 revisions reject TRUNCATE.
+Earlier unparameterized checkpoint syntax and newer NOOP mode are not exposed.
+References: [3.7.6](https://www.sqlite.org/releaselog/3_7_6.html),
+[3.8.8](https://www.sqlite.org/releaselog/3_8_8.html).
+
+Changes are additive and confined to `sqlapp-core-sqlite`, without dependency,
+shared-core, XML or configuration changes. Local file-based tests exercise all
+four modes, WAL truncation, attached isolation, partial PASSIVE progress, busy
+reader status, caller retry after releasing a snapshot, non-WAL counts, invalid
+names and version guards. Historical SQLite binaries are not tested.
+
+### Compact database copies
+
+`SqliteVacuumIntoBuilder` generates SQLite 3.27+ `VACUUM INTO` for a separate,
+compacted copy of one database:
+
+```java
+String sql = new SqliteVacuumIntoBuilder(dialect)
+    .destination("archive-copy.db")
+    .build(); // VACUUM main INTO 'archive-copy.db' (schema quoting may vary)
+```
+
+The default source is `main`. Select `schema(String)` or `schema(Schema)` for
+`temp` or an attached database. Destination is mandatory and is rendered as a
+string literal, never a SQL expression; quotes are escaped and blank/NUL input
+is rejected. The builder neither accesses the filesystem nor executes SQL.
+Relative paths and enabled SQLite URI filenames retain SQLite's own semantics.
+Execute the generated SQL with JDBC after closing active statements/results and
+outside an explicit transaction. The source stays unchanged; the output contains
+the selected database's logical content, including indexes, views and triggers.
+It does not include other attached databases. Tables without an explicit INTEGER
+PRIMARY KEY may have different rowids in the copy.
+
+SQLite requires the destination to be absent or empty; a nonempty destination,
+active transaction, inaccessible path or other execution failure remains a JDBC
+error. This API does not remove destination files or retry/commit automatically.
+An interrupted operation can leave an incomplete output file; completion and
+verification belong to the caller. See
+[VACUUM INTO](https://www.sqlite.org/lang_vacuum.html#vacuuminto).
+
+The resolver adds the [SQLite 3.27 boundary](https://www.sqlite.org/releaselog/3_27_0.html)
+and `supportsVacuumInto()`, inheriting 3.25 behavior and passing it to 3.31+.
+Earlier targets reject SQL generation. Existing VACUUM factory behavior is
+unchanged. This additive API stays in `sqlapp-core-sqlite`, without new
+dependencies, shared-core changes, XML or configuration formats. Embedded tests
+verify copied data, executable views/triggers, source isolation, quoting,
+destination conflicts, transaction failures and version boundaries. Historical
+SQLite binaries are not tested.
+
+### Index rebuilding
+
+The normal SQL factory registry supports SQLite `SqlType.REBUILD` for a Schema
+model `Index` or `Table`:
+
+```java
+var registry = dialect.createSqlFactoryRegistry();
+var index = new Index("orders_by_date").setSchemaName("archive");
+var operations = registry.createSql(index, SqlType.REBUILD);
+// REINDEX archive.orders_by_date (identifier quoting may vary)
+```
+
+For a table, SQLite rebuilds all indexes on that table; for an index, it rebuilds
+only that index. Schema identity can be inherited from the owning model or
+explicitly set. A missing schema/name is rejected. Every target is qualified,
+avoiding SQLite's precedence of a collation name over an unqualified table or
+index name. A Schema-wide REBUILD is rejected rather than expanding the scope
+to every attached database. Collation-wide and SQLite 3.53 `REINDEX EXPRESSIONS`
+operations are not exposed. See [REINDEX](https://www.sqlite.org/lang_reindex.html).
+
+The factory generates SQL only: the caller executes operations and owns the
+transaction. SQLite execution failures, including uniqueness conflicts after
+changing a collation, remain visible. This operation rebuilds indexes; it does
+not rebuild table definitions or provide ALTER TABLE emulation.
+
+This is confined to `sqlapp-core-sqlite`, uses existing `SqlType.REBUILD` and
+Schema APIs, and adds no dependencies, XML/configuration formats or version
+boundaries. Legacy/current selections retain the same native SQL. Tests execute
+against the bundled engine and cover changed collation ordering, isolated
+attached indexes, all indexes on a table, temp objects, quoting, invalid targets,
+uniqueness failures and caller-controlled rollback. Old binaries are not tested.
+
+### Foreign-key diagnostics
+
+`SqliteForeignKeyCheckBuilder` complements full/quick integrity checks, which do
+not detect foreign-key violations. It checks every child table in `main` by
+default, or one explicitly selected schema/table:
+
+```java
+var check = new SqliteForeignKeyCheckBuilder(dialect);
+String schemaSql = check.build();
+String tableSql = check.table(new Table("order_lines").setSchemaName("archive")).build();
+String allArchiveTablesSql = check.allTables().build();
+```
+
+`schema(String)` / `schema(Schema)` select a database; `table(String)` selects a
+child table within it. `table(Table)` selects both identifiers from the model
+and requires its schema name, preventing ambiguous cross-database resolution.
+`allTables()` clears the table restriction and retains the schema. Names are
+quoted with the SQLite builder. This API only generates SQL; it does not change
+`foreign_keys`, commit transactions, repair data or swallow execution failures.
+
+Execute with JDBC `executeQuery`. No result rows means no violations were
+reported; each violation has `table`, `rowid`, `parent`, and `fkid` fields.
+The rowid is SQL NULL for WITHOUT ROWID child tables. The `fkid` identifies the
+constraint by the `id` in `foreign_key_list`; it is not a Schema constraint name.
+A table-specific check inspects outgoing REFERENCES clauses only, rather than
+all children referencing that table. See
+[foreign_key_check](https://www.sqlite.org/pragma.html#pragma_foreign_key_check).
+
+The resolver adds the SQLite 3.7.16 boundary, inheriting the legacy behavior and
+adding only `supportsForeignKeyCheck()`. SQLite 3.8.0 inherits that capability;
+later boundaries and the default dialect retain their prior capabilities.
+Earlier versions and SQLite 3.7 with an unknown revision reject generation,
+instead of issuing an unsupported PRAGMA that could be silently ignored.
+See the [3.7.16 release notes](https://www.sqlite.org/releaselog/3_7_16.html).
+This is additive SQLite API only, with no dependency, shared-core, XML or
+configuration changes. Custom SQLite builds must include foreign-key support.
+
+Embedded-engine tests cover valid and invalid references, enabled/disabled
+enforcement, deferred violations inside a transaction, caller rollback, temp and
+attached databases, composite keys, WITHOUT ROWID, quoted identifiers, model
+identity and version boundaries. Historical engine binaries are not tested.
 
 SQLite syntax references:
 [CREATE VIEW](https://www.sqlite.org/lang_createview.html),

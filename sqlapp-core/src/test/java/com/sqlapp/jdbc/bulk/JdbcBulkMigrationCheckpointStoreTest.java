@@ -41,6 +41,13 @@ class JdbcBulkMigrationCheckpointStoreTest extends AbstractDbTest {
 							+ "LAST_CHUNK_HASH VARCHAR(64), COMPLETE_FLAG CHAR(1) NOT NULL)");
 
 			final var store = new JdbcBulkMigrationCheckpointStore(connection, "SQLAPP_BMC_LEGACY");
+			try (var statement = connection.createStatement();
+					var result = statement.executeQuery("SELECT * FROM SQLAPP_BMC_LEGACY WHERE 1=0")) {
+				assertEquals(9, result.getMetaData().getColumnCount());
+				assertEquals("COMPLETE_FLAG", result.getMetaData().getColumnName(7));
+				assertEquals("RESUME_TOKEN", result.getMetaData().getColumnName(8));
+				assertEquals("CHUNK_SIZE", result.getMetaData().getColumnName(9));
+			}
 			store.save(checkpoint(3, false, "legacy-token"));
 
 			assertEquals("legacy-token", store.load("migration-1").orElseThrow().getResumeToken());

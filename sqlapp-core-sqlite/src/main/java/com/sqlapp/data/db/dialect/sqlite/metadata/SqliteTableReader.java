@@ -35,19 +35,32 @@ public class SqliteTableReader extends JdbcTableReader {
 		final List<Table> tables = new ArrayList<>();
 		final String schemaName = getSchemaName(context) == null ? "main" : getSchemaName(context);
 		final String requestedTable = getObjectName(context);
-		final String sql = "SELECT name FROM " + quoteIdentifier(schemaName) + ".sqlite_master WHERE type='table' "
-				+ "AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY name";
-		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
-			while (resultSet.next()) {
-				final String tableName = resultSet.getString("name");
-				if (requestedTable != null && !requestedTable.equalsIgnoreCase(tableName)) {
-					continue;
+		boolean tableList = productVersionInfo.getMajorVersion() > 3
+				|| productVersionInfo.getMajorVersion() == 3 && productVersionInfo.getMinorVersion() >= 37;
+		final String sql = "SELECT name, sql FROM " + quoteIdentifier(schemaName) + ".sqlite_master WHERE type='table' "
+				+ "AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' "
+				+ (tableList ? "AND name NOT IN (SELECT name FROM pragma_table_list WHERE schema=? COLLATE NOCASE AND type='shadow') " : "")
+				+ "ORDER BY name";
+		try (var statement = connection.prepareStatement(sql)) {
+			if (tableList) statement.setString(1, schemaName);
+			try (var resultSet = statement.executeQuery()) {
+				while (resultSet.next()) {
+					final String tableName = resultSet.getString("name");
+					if (requestedTable != null && !requestedTable.equalsIgnoreCase(tableName)) {
+						continue;
+					}
+					final Table table = new Table(tableName);
+					table.setDialect(getDialect());
+					table.setCatalogName(getCatalogName(context));
+					table.setSchemaName(schemaName);
+					String definition = resultSet.getString("sql");
+					if (SqliteDdl.isVirtualTable(definition)) {
+						table.getSpecifics().put("sqlite.virtual", "true");
+						if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement())
+							table.setDefinition(definition);
+					}
+					tables.add(table);
 				}
-				final Table table = new Table(tableName);
-				table.setDialect(getDialect());
-				table.setCatalogName(getCatalogName(context));
-				table.setSchemaName(schemaName);
-				tables.add(table);
 			}
 			return tables;
 		} catch (SQLException e) {
@@ -91,12 +104,15 @@ public class SqliteTableReader extends JdbcTableReader {
 				new ProductVersionInfo().setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
 						.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion()))) {
 			var columns = getColumnReader().getAllFull(connection, bulkContext);
+			var ordinary = tables.stream().filter(table -> !"true".equals(table.getSpecifics().get("sqlite.virtual"))).toList();
+			var tableMap = tables.stream().collect(java.util.stream.Collectors.toMap(Table::getName, table -> table));
+			columns.forEach(o -> tableMap.get(o.getTableName()).getColumns().add(o));
+			if (ordinary.isEmpty()) return;
+			bulkContext.put("tableName", ordinary.stream().map(Table::getName).toList());
 			var indexes = getIndexReader().getAllFull(connection, bulkContext);
 			var uniques = getUniqueConstraintReader().getAllFull(connection, bulkContext);
 			var checks = getCheckConstraintReader().getAllFull(connection, bulkContext);
 			var foreignKeys = getForeignKeyConstraintReader().getAllFull(connection, bulkContext);
-			var tableMap = tables.stream().collect(java.util.stream.Collectors.toMap(Table::getName, table -> table));
-			columns.forEach(o -> tableMap.get(o.getTableName()).getColumns().add(o));
 			indexes.forEach(o -> tableMap.get(o.getTableName()).getIndexes().add(o));
 			uniques.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
 			checks.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
@@ -117,6 +133,10 @@ public class SqliteTableReader extends JdbcTableReader {
 				: getIndexReader().getAllFull(connection, indexContext);
 		for (Table table : tables) {
 			table.setDialect(getDialect());
+			if ("true".equals(table.getSpecifics().get("sqlite.virtual"))) {
+				load(connection, table, getColumnReader());
+				continue;
+			}
 			indexes.stream().filter(index -> table.getName().equals(index.getTableName()))
 					.forEach(table.getIndexes()::add);
 			load(connection, table, getColumnReader());

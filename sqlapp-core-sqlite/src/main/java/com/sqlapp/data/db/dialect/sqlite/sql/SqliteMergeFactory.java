@@ -25,6 +25,9 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 	}
 
 	protected void validateMergeOptions(Table table) {
+		if ("true".equals(table.getSpecifics().get("sqlite.virtual"))
+				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(toString(table.getDefinition())))
+			throw new IllegalArgumentException("SQLite UPSERT is not supported for virtual tables: " + table.getName());
 		if (!(getDialect() instanceof Sqlite sqlite) || !sqlite.supportsUpsert())
 			throw new IllegalArgumentException("SQLite MERGE requires UPSERT support (SQLite 3.24 or later)");
 		if (getTableOptions().getMergeRowsWithDelete().test(table)

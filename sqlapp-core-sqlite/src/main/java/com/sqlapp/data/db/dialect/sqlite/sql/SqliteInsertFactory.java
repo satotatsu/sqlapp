@@ -13,6 +13,11 @@ import com.sqlapp.data.schemas.Table;
 
 /** SQLite INSERT, including tables with only generated/defaulted columns. */
 public class SqliteInsertFactory extends AbstractInsertFactory<SqliteSqlBuilder> {
+	@Override
+	protected boolean isInsertable(Column column) {
+		return !column.isHidden() && super.isInsertable(column);
+	}
+
 	protected List<Column> writableColumns(Table table, SqlSignature signature) {
 		return table.getColumns().stream().filter(this::isInsertable)
 				.filter(c -> com.sqlapp.util.CommonUtils.isEmpty(c.getFormula())).filter(column -> {

@@ -21,7 +21,7 @@ public class SqliteUpdateFactory extends UpdateFactory {
 				.collect(Collectors.toSet());
 		var assignments = new LinkedHashMap<Column, String>();
 		for (Column column : table.getColumns()) {
-			if (keyNames.contains(column.getName()) || !isUpdateable(column)
+			if (keyNames.contains(column.getName()) || column.isHidden() || !isUpdateable(column)
 					|| !CommonUtils.isEmpty(column.getFormula()))
 				continue;
 			String value = getValueDefinitionForUpdate(column);

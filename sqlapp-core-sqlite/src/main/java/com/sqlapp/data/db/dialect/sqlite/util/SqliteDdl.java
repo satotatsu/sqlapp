@@ -8,6 +8,33 @@ import java.util.List;
  * Header handling that keeps quoted identifiers, strings and comments opaque.
  */
 public final class SqliteDdl {
+	/** Virtual-table module arguments are not ordinary column declarations. */
+	public static boolean isVirtualTable(String definition) {
+		if (definition == null)
+			return false;
+		var items = tokens(definition);
+		return items.size() > 2 && items.get(0).is("CREATE") && items.get(1).is("VIRTUAL") && items.get(2).is("TABLE");
+	}
+
+	/**
+	 * Module name from a CREATE VIRTUAL TABLE header, without interpreting its
+	 * arguments.
+	 */
+	public static String virtualTableModule(String definition) {
+		if (!isVirtualTable(definition))
+			return null;
+		var items = tokens(definition);
+		int first = 3;
+		if (first + 2 < items.size() && items.get(first).is("IF") && items.get(first + 1).is("NOT")
+				&& items.get(first + 2).is("EXISTS"))
+			first += 3;
+		int after = first + 1;
+		if (after + 1 < items.size() && items.get(after).is("."))
+			after += 2;
+		return after + 1 < items.size() && items.get(after).is("USING") ? identifier(items.get(after + 1).text())
+				: null;
+	}
+
 	/** CREATE INDEX header, with comments and quoted names kept opaque. */
 	public static boolean isUniqueIndex(String definition) {
 		var items = tokens(definition);

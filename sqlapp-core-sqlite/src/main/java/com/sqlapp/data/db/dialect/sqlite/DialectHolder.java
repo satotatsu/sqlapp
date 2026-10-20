@@ -26,14 +26,18 @@ public class DialectHolder {
 	public final static Dialect sqlite335 = new SqliteVersions.Sqlite335(() -> sqlite337);
 	public final static Dialect sqlite332 = new SqliteVersions.Sqlite332(() -> sqlite335);
 	public final static Dialect sqlite331 = new SqliteVersions.Sqlite331(() -> sqlite332);
-	public final static Dialect sqlite325 = new SqliteVersions.Sqlite325(() -> sqlite331);
+	public final static Dialect sqlite327 = new SqliteVersions.Sqlite327(() -> sqlite331);
+	public final static Dialect sqlite325 = new SqliteVersions.Sqlite325(() -> sqlite327);
 	public final static Dialect sqlite324 = new SqliteVersions.Sqlite324(() -> sqlite325);
 	public final static Dialect sqlite315 = new SqliteVersions.Sqlite315(() -> sqlite324);
 	public final static Dialect sqlite39 = new SqliteVersions.Sqlite39(() -> sqlite315);
-	public final static Dialect sqlite383 = new SqliteVersions.Sqlite383(() -> sqlite39);
+	public final static Dialect sqlite388 = new SqliteVersions.Sqlite388(() -> sqlite39);
+	public final static Dialect sqlite383 = new SqliteVersions.Sqlite383(() -> sqlite388);
 	public final static Dialect sqlite382 = new SqliteVersions.Sqlite382(() -> sqlite383);
 	public final static Dialect sqlite380 = new SqliteVersions.Sqlite380(() -> sqlite382);
-	public final static Dialect sqliteLegacy = new Sqlite(() -> sqlite380);
+	public final static Dialect sqlite3716 = new SqliteVersions.Sqlite3716(() -> sqlite380);
+	public final static Dialect sqlite376 = new SqliteVersions.Sqlite376(() -> sqlite3716);
+	public final static Dialect sqliteLegacy = new Sqlite(() -> sqlite376);
 	/**
 	 * Unversioned callers retain modern capabilities. Resolve a connection for a
 	 * concrete target.

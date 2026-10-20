@@ -32,6 +32,9 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 		if (original == null || target == null)
 			throw unsupported("ALTER requires both the original and target table");
 		var changes = difference.toDifference().getChangedProperties(getDialect());
+		if (!changes.isEmpty() && ("true".equals(original.getSpecifics().get("sqlite.virtual"))
+				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(toString(original.getDefinition()))))
+			throw unsupported("Virtual table changes require module-specific planning");
 		for (String property : changes.keySet())
 			if (!Set.of("name", "columns", "indexes").contains(property))
 				throw unsupported("Cannot alter table property: " + property);
@@ -44,6 +47,15 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 		}
 		var columns = (DbObjectDifferenceCollection) changes.get("columns");
 		if (columns != null) {
+			var addedNames = columns.getList(State.Added).stream().map(diff -> diff.getTarget(Column.class).getName())
+					.collect(java.util.stream.Collectors.toSet());
+			boolean added = false;
+			for (var column : target.getColumns()) {
+				if (addedNames.contains(column.getName()))
+					added = true;
+				else if (added)
+					throw unsupported("SQLite can only append new columns after existing columns");
+			}
 			var retained = original.getColumns().stream().map(Column::getName)
 					.filter(name -> target.getColumns().get(name) != null).toList();
 			var targetRetained = target.getColumns().stream().map(Column::getName)
@@ -78,6 +90,9 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 	 * replacement. Requires SQLite 3.25+.
 	 */
 	public List<SqlOperation> renameColumn(Table table, String oldName, String newName) {
+		if ("true".equals(table.getSpecifics().get("sqlite.virtual"))
+				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(toString(table.getDefinition())))
+			throw unsupported("Virtual table column rename requires module-specific planning");
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite && !sqlite.supportsRenameColumn())
 			throw new IllegalArgumentException("SQLite column rename requires SQLite 3.25 or later");
 		if (table.getColumns().get(oldName) == null || newName == null || newName.isBlank()
@@ -97,7 +112,8 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 				|| column.getSpecifics().containsKey("sqlite.primaryKey.inlineDesc")
 				|| normalized != null && (normalized.startsWith("(")
 						|| Set.of("CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP").contains(normalized))
-				|| column.isNotNull() && (normalized == null || normalized.equals("NULL")))
+				|| column.isNotNull() && com.sqlapp.util.CommonUtils.isEmpty(column.getFormula())
+						&& (normalized == null || normalized.equals("NULL")))
 			throw unsupported("Column cannot be added directly by SQLite: " + column.getName());
 	}
 
