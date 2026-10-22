@@ -224,7 +224,8 @@ class SapHanaMetadataReaderTest {
 				for (Object object : new Object[] { view, procedure, function, trigger }) {
 					var operations = registry.createSql(object, SqlType.CREATE);
 					assertTrue(!operations.isEmpty(), object.getClass().getSimpleName());
-					for (var operation : operations) statement.execute(operation.getSqlText());
+					for (var operation : operations)
+						statement.execute(operation.getSqlText());
 				}
 				try (var result = statement.executeQuery("SELECT METADATA_TEST.METADATA_FUNCTION(3) FROM DUMMY")) {
 					assertTrue(result.next());
@@ -270,14 +271,16 @@ class SapHanaMetadataReaderTest {
 				var registry = dialect.createSqlFactoryRegistry();
 				registry.getOptions().setDecorateSchemaName(true);
 				Table table = new Table("ITEMS").setSchemaName("HANA_DDL_TEST").setDialect(dialect);
-				table.getColumns().add("ID", c -> c.setDataType(DataType.BIGINT).setIdentity(true)
-						.setIdentityGenerationType(IdentityGenerationType.ByDefault).setIdentityStartValue(10)
-						.setIdentityStep(2).setIdentityCacheSize(20));
+				table.getColumns().add("ID",
+						c -> c.setDataType(DataType.BIGINT).setIdentity(true)
+								.setIdentityGenerationType(IdentityGenerationType.ByDefault).setIdentityStartValue(10)
+								.setIdentityStep(2).setIdentityCacheSize(20));
 				table.getColumns().add("QTY", c -> c.setDataType(DataType.INT));
 				table.getColumns().add("PRICE", c -> c.setDataType(DataType.INT));
 				table.getColumns().add("TOTAL", c -> c.setDataType(DataType.INT).setFormula("QTY * PRICE"));
 				table.getColumns().add("TINYVAL", c -> c.setDataType(DataType.UTINYINT));
-				for (var operation : registry.createSql(table, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(table, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
 				statement.execute("INSERT INTO HANA_DDL_TEST.ITEMS (QTY, PRICE, TINYVAL) VALUES (2, 3, 255)");
 				try (var rs = statement.executeQuery("SELECT ID, TOTAL, TINYVAL FROM HANA_DDL_TEST.ITEMS")) {
 					assertTrue(rs.next());
@@ -295,24 +298,30 @@ class SapHanaMetadataReaderTest {
 
 				Table added = table.clone();
 				added.getColumns().add("LABEL", c -> c.setDataType(DataType.NVARCHAR).setLength(20));
-				for (var operation : registry.createSql(table.diff(added), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(table.diff(added), SqlType.ALTER))
+					statement.execute(operation.getSqlText());
 				Table altered = added.clone();
 				altered.getColumns().get("LABEL").setLength(40).setDefaultValue("'new'").setNullable(false);
 				statement.execute("UPDATE HANA_DDL_TEST.ITEMS SET LABEL = 'old'");
-				for (var operation : registry.createSql(added.diff(altered), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(added.diff(altered), SqlType.ALTER))
+					statement.execute(operation.getSqlText());
 				Table renamed = altered.clone();
 				renamed.getColumns().get("LABEL").setName("NEW_LABEL");
-				for (var operation : registry.createSql(altered.diff(renamed), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(altered.diff(renamed), SqlType.ALTER))
+					statement.execute(operation.getSqlText());
 				Table removed = renamed.clone();
 				removed.getColumns().remove("NEW_LABEL");
-				for (var operation : registry.createSql(renamed.diff(removed), SqlType.ALTER)) statement.execute(operation.getSqlText());
-				Index index = new Index("IX_ITEMS_PRICE", removed.getColumns().get("PRICE"), removed.getColumns().get("QTY"))
-						.setIndexType(IndexType.InvertedValue);
+				for (var operation : registry.createSql(renamed.diff(removed), SqlType.ALTER))
+					statement.execute(operation.getSqlText());
+				Index index = new Index("IX_ITEMS_PRICE", removed.getColumns().get("PRICE"),
+						removed.getColumns().get("QTY")).setIndexType(IndexType.InvertedValue);
 				removed.getIndexes().add(index);
-				for (var operation : registry.createSql(index, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(index, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
 				Synonym synonym = new Synonym("ITEM_ALIAS").setSchemaName("HANA_DDL_TEST")
 						.setObjectSchemaName("HANA_DDL_TEST").setObjectName("ITEMS");
-				for (var operation : registry.createSql(synonym, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(synonym, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
 				try (var rs = statement.executeQuery("SELECT TOTAL FROM HANA_DDL_TEST.ITEM_ALIAS")) {
 					assertTrue(rs.next());
 					assertEquals(6, rs.getInt(1));
