@@ -214,7 +214,7 @@ class SqliteReindexFactoryTest {
 		var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Table("t"), SqlType.REBUILD));
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Index("idx"), SqlType.REBUILD));
-		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Schema("main"), SqlType.REBUILD));
+		assertTrue(registry.createSql(new Schema("main"), SqlType.REBUILD).isEmpty());
 		assertThrows(IllegalArgumentException.class,
 				() -> registry.createSql(new Table("").setSchemaName("main"), SqlType.REBUILD));
 		var target = new Index("idx").setSchemaName("main");

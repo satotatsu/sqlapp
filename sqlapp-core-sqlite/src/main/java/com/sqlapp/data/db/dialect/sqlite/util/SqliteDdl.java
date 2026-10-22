@@ -52,6 +52,23 @@ public final class SqliteDdl {
 		return List.copyOf(result);
 	}
 
+	/**
+	 * One scalar option; unrelated options may repeat or contain tokenizer
+	 * arguments.
+	 */
+	public static String virtualTableOption(String definition, String name) {
+		String result = null;
+		for (var argument : virtualArguments(definition)) {
+			var items = tokens(argument);
+			if (items.size() < 2 || !items.get(1).is("=") || !identifier(items.get(0).text()).equalsIgnoreCase(name))
+				continue;
+			if (items.size() != 3 || result != null)
+				throw new IllegalArgumentException("Expected one scalar virtual-table option: " + name);
+			result = identifier(items.get(2).text());
+		}
+		return result;
+	}
+
 	/** Scalar module options with quoted strings decoded; columns are omitted. */
 	public static java.util.Map<String, String> virtualTableOptions(String definition) {
 		var result = new java.util.LinkedHashMap<String, String>();

@@ -82,6 +82,16 @@ public final class Domain extends AbstractColumn<Domain> implements
 		return checks;
 	}
 
+	@Override
+	protected void cloneProperties(final Domain clone) {
+		if (clone == this)
+			return;
+		// Collection merges also copy into an existing domain, whose old checks
+		// must be replaced before the generic property copier adds the new ones.
+		clone.getChecks().clear();
+		super.cloneProperties(clone);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

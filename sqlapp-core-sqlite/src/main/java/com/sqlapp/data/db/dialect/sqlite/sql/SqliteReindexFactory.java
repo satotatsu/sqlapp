@@ -15,7 +15,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.db.dialect.sqlite.Sqlite;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl;
 
-/** Rebuilds one SQLite index or all indexes belonging to one table. */
+/** Rebuilds indexes selected by an Index, Table or explicit Schema model. */
 public class SqliteReindexFactory extends AbstractSqlFactory<DbCommonObject<?>, SqliteSqlBuilder> {
 	/**
 	 * Rebuilds only expression indexes explicitly represented in one Schema model.
@@ -43,19 +43,35 @@ public class SqliteReindexFactory extends AbstractSqlFactory<DbCommonObject<?>, 
 
 	@Override
 	public List<SqlOperation> createSql(DbCommonObject<?> object) {
+		if (object instanceof Schema schema) {
+			requireName(schema.getName());
+			List<SqlOperation> result = new ArrayList<>();
+			for (Table table : schema.getTables()) {
+				// Module-owned indexes are maintained through the virtual module, not REINDEX.
+				if ("true".equals(table.getSpecifics().get("sqlite.virtual"))
+						|| SqliteDdl.isVirtualTable(String.join("\n", table.getDefinition())))
+					continue;
+				result.addAll(createSql(table));
+			}
+			return result;
+		}
 		if (!(object instanceof Table || object instanceof Index))
-			throw new IllegalArgumentException(
-					"SQLite REBUILD requires a Table or Index; schema-wide rebuilding is not supported");
+			throw new IllegalArgumentException("SQLite REBUILD requires a Schema, Table or Index");
 		var named = (AbstractSchemaObject<?>) object;
-		if (named.getName() == null || named.getName().isBlank())
-			throw new IllegalArgumentException("SQLite REBUILD requires a nonempty object name");
+		requireName(named.getName());
 		if (named.getSchemaName() == null || named.getSchemaName().isBlank())
 			throw new IllegalArgumentException(
 					"SQLite REBUILD requires a schema name (main, temp or an attached database)");
+		requireName(named.getSchemaName());
 		var builder = createSqlBuilder(getDialect());
 		builder._add("REINDEX ").name(named.getSchemaName())._add(".").name(named.getName());
 		List<SqlOperation> result = new ArrayList<>();
 		addSql(result, builder, SqlType.REBUILD, object);
 		return result;
+	}
+
+	private static void requireName(String name) {
+		if (name == null || name.isBlank() || name.indexOf('\0') >= 0)
+			throw new IllegalArgumentException("SQLite REBUILD requires a nonempty object name without NUL");
 	}
 }
