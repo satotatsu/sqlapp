@@ -59,6 +59,13 @@ public final class HsqlTableMigration {
 			String privileges) {
 	}
 
+	public record DependentDomain(String schema, String name, String sourceFingerprint, String createSql,
+			String stagedCreateSql, List<String> deferredChecks) {
+		public DependentDomain {
+			deferredChecks = List.copyOf(deferredChecks);
+		}
+	}
+
 	public record BatchResult(String fingerprint, Phase phase, List<Backup> backups) {
 		public BatchResult {
 			backups = List.copyOf(backups);
@@ -67,7 +74,14 @@ public final class HsqlTableMigration {
 
 	public record BatchPlan(String fingerprint, List<Plan> members, List<Command> replace, List<Command> restore,
 			List<Command> recovery, List<Command> cleanup, List<DependentView> dependentViews,
-			List<DependentRoutine> dependentRoutines) {
+			List<DependentRoutine> dependentRoutines, List<DependentDomain> dependentDomains) {
+		public BatchPlan(String fingerprint, List<Plan> members, List<Command> replace, List<Command> restore,
+				List<Command> recovery, List<Command> cleanup, List<DependentView> dependentViews,
+				List<DependentRoutine> dependentRoutines) {
+			this(fingerprint, members, replace, restore, recovery, cleanup, dependentViews, dependentRoutines,
+					List.of());
+		}
+
 		public BatchPlan(String fingerprint, List<Plan> members, List<Command> replace, List<Command> restore,
 				List<Command> recovery, List<Command> cleanup, List<DependentView> dependentViews) {
 			this(fingerprint, members, replace, restore, recovery, cleanup, dependentViews, List.of());
@@ -89,11 +103,14 @@ public final class HsqlTableMigration {
 				throw new IllegalArgumentException("A batch requires unique existing tables");
 			dependentViews = dependentViews == null ? List.of() : List.copyOf(dependentViews);
 			dependentRoutines = dependentRoutines == null ? List.of() : List.copyOf(dependentRoutines);
+			dependentDomains = dependentDomains == null ? List.of() : List.copyOf(dependentDomains);
 			var content = new ArrayList<Object>(List.of(members, replace, restore, recovery, cleanup));
 			if (!dependentViews.isEmpty())
 				content.add(dependentViews);
 			if (!dependentRoutines.isEmpty())
 				content.add(dependentRoutines);
+			if (!dependentDomains.isEmpty())
+				content.add(dependentDomains);
 			String computed = hash(new com.sqlapp.util.JsonConverter().toJsonString(content));
 			if (fingerprint != null && !fingerprint.equals(computed))
 				throw new IllegalArgumentException("Batch plan fingerprint mismatch");
@@ -235,11 +252,21 @@ public final class HsqlTableMigration {
 	}
 
 	private final SqlFactoryRegistry registry;
+	private final java.util.Map<String, HsqlTextTableSources.Source> textSources;
 
 	public HsqlTableMigration(Dialect dialect) {
+		this(dialect, java.util.Map.of());
+	}
+
+	/**
+	 * Explicit empty target files for TEXT tables; source files are never inferred
+	 * as targets.
+	 */
+	public HsqlTableMigration(Dialect dialect, java.util.Map<String, HsqlTextTableSources.Source> textSources) {
 		if (!(dialect instanceof Hsql))
 			throw new IllegalArgumentException("An HSQLDB dialect is required");
 		registry = dialect.createSqlFactoryRegistry();
+		this.textSources = java.util.Map.copyOf(Objects.requireNonNull(textSources, "TEXT target sources"));
 	}
 
 	/**
@@ -279,6 +306,10 @@ public final class HsqlTableMigration {
 		var dependents = graph.objects();
 		var views = dependents.stream().filter(id -> "RELATION".equals(id.kind())).toList();
 		var routines = dependents.stream().filter(id -> "ROUTINE".equals(id.kind())).toList();
+		var domains = dependentDomains(source, target, routines, changes);
+		var retained = retainedDomainRoutines(source, domains, routines, changes);
+		var detached = new java.util.LinkedHashSet<>(graph.detached());
+		detached.addAll(retained);
 		var generatedRoutines = generatedRoutines(source, target, selected, routines);
 		var relations = new java.util.HashSet<>(selected);
 		views.forEach(v -> relations.add(new TableIdentity(v.schema(), v.name())));
@@ -314,18 +345,20 @@ public final class HsqlTableMigration {
 					hash(schemaXml(source.getSchemas().get(id.schema()))), privileges(source, id.schema(), id.name())));
 		}
 		dropDependentTriggers(replace, source, selected, dependents);
+		for (var domain : domains)
+			domainExpressions(replace, source, domain, routines, false, false);
 		for (var expressions : beforeExpressions.values())
 			dropExpressions(replace, expressions, false);
-		detachRoutines(replace, source, graph.detached(), false);
+		detachRoutines(replace, source, List.copyOf(detached), false);
 		for (var id : dependents.reversed())
-			if (!generatedRoutines.contains(id))
+			if (!generatedRoutines.contains(id) && !retained.contains(id))
 				replace.add(dropDependent(id));
 		for (var key : sourceKeys)
 			replace.add(dropKey(key, false));
 		for (var id : selected)
-			replace.add(new Command("DROP TABLE " + name(table(source, id)), SqlType.DROP));
+			dropTable(replace, table(source, id), false, HsqlTextTableSources.isText(table(source, id)));
 		for (var id : dependents.reversed())
-			if (generatedRoutines.contains(id))
+			if (generatedRoutines.contains(id) && !retained.contains(id))
 				replace.add(dropDependent(id));
 		for (var change : scope.changes()) {
 			replace.add(dropType(change.original(), null));
@@ -334,22 +367,28 @@ public final class HsqlTableMigration {
 		}
 		if (generatedRoutines.isEmpty())
 			for (var id : selected)
-				replace.addAll(createWithoutKeys(afterExpressions.get(id).staged()));
+				replace.addAll(createWithoutKeys(afterExpressions.get(id).staged(), false));
 		else
-			createBatchObjects(replace, target, afterExpressions.values(), dependents);
+			createBatchObjects(replace, target, afterExpressions.values(), dependents, retained, false);
+		for (var id : selected)
+			assertEmptyTextSource(restore, table(target, id));
+		for (var id : selected)
+			enableTextWrites(restore, table(target, id));
 		for (var member : members)
 			restore.add(insert(table(target, new TableIdentity(member.schema(), member.table())), backupTable(member),
-					table(target, new TableIdentity(member.schema(), member.table())).getColumns().stream()
-							.filter(HsqlTableMigration::stored).toList(),
+					copiedColumns(table(source, new TableIdentity(member.schema(), member.table())),
+							table(target, new TableIdentity(member.schema(), member.table()))),
 					target));
 		for (var key : targetKeys)
 			restore.addAll(commands(registry.createSql(key, SqlType.CREATE)));
 		if (generatedRoutines.isEmpty())
-			restoreDependents(restore, target, dependents);
+			restoreDependents(restore, target, dependents, retained);
 		else
 			restoreDependentDetails(restore, target, dependents);
 		for (var expressions : afterExpressions.values())
 			restoreExpressions(restore, expressions);
+		for (var domain : domains)
+			domainExpressions(restore, target, domain, routines, true, false);
 		for (var id : selected)
 			restore.addAll(details(target, target.getSchemas().get(id.schema()), table(target, id)));
 		var allKeys = new java.util.LinkedHashMap<String, com.sqlapp.data.schemas.ForeignKeyConstraint>();
@@ -358,47 +397,136 @@ public final class HsqlTableMigration {
 		for (var key : targetKeys)
 			allKeys.put(keyIdentity(key), key);
 		dropDependentTriggers(recovery, source, selected, dependents);
+		for (var domain : domains)
+			domainExpressions(recovery, source, domain, routines, false, true);
 		var expressionDrops = new ArrayList<Command>();
 		for (var expressions : beforeExpressions.values())
 			dropExpressions(expressionDrops, expressions, true);
 		for (var expressions : afterExpressions.values())
 			dropExpressions(expressionDrops, expressions, true);
 		recovery.addAll(new java.util.LinkedHashSet<>(expressionDrops));
-		detachRoutines(recovery, source, graph.detached(), true);
+		detachRoutines(recovery, source, List.copyOf(detached), true);
 		for (var id : dependents.reversed())
-			if (!generatedRoutines.contains(id))
+			if (!generatedRoutines.contains(id) && !retained.contains(id))
 				recovery.add(dropDependent(id));
 		for (var key : allKeys.values())
 			recovery.add(dropKey(key, true));
 		for (var id : selected)
-			recovery.add(new Command("DROP TABLE " + name(table(source, id)) + " IF EXISTS", SqlType.DROP));
+			dropTable(recovery, table(source, id), true,
+					HsqlTextTableSources.isText(table(source, id)) || HsqlTextTableSources.isText(table(target, id)));
 		for (var id : dependents.reversed())
-			if (generatedRoutines.contains(id))
+			if (generatedRoutines.contains(id) && !retained.contains(id))
 				recovery.add(dropDependent(id));
 		for (var change : scope.changes())
 			addTypeRecovery(recovery, change);
 		if (generatedRoutines.isEmpty())
 			for (var id : selected)
-				recovery.addAll(createWithoutKeys(beforeExpressions.get(id).staged()));
+				recovery.addAll(createWithoutKeys(beforeExpressions.get(id).staged(), true));
 		else
-			createBatchObjects(recovery, source, beforeExpressions.values(), dependents);
+			createBatchObjects(recovery, source, beforeExpressions.values(), dependents, retained, true);
 		for (var member : members) {
 			var original = table(source, new TableIdentity(member.schema(), member.table()));
-			recovery.add(insert(original, backupTable(member),
-					original.getColumns().stream().filter(HsqlTableMigration::stored).toList(), source));
+			if (HsqlTextTableSources.isText(original))
+				recovery.add(assertZero(member.backupVerification(),
+						"Original TEXT source differs from the verified backup"));
+			else
+				recovery.add(insert(original, backupTable(member),
+						original.getColumns().stream().filter(HsqlTableMigration::stored).toList(), source));
 		}
 		for (var key : sourceKeys)
 			recovery.addAll(commands(registry.createSql(key, SqlType.CREATE)));
 		if (generatedRoutines.isEmpty())
-			restoreDependents(recovery, source, dependents);
+			restoreDependents(recovery, source, dependents, retained);
 		else
 			restoreDependentDetails(recovery, source, dependents);
 		for (var expressions : beforeExpressions.values())
 			restoreExpressions(recovery, expressions);
+		for (var domain : domains)
+			domainExpressions(recovery, source, domain, routines, true, false);
 		for (var id : selected)
 			recovery.addAll(details(source, source.getSchemas().get(id.schema()), table(source, id)));
 		return new BatchPlan(null, members, replace, restore, recovery,
-				members.stream().flatMap(m -> m.cleanup().stream()).toList(), snapshots, routineSnapshots);
+				members.stream().flatMap(m -> m.cleanup().stream()).toList(), snapshots, routineSnapshots, domains);
+	}
+
+	private List<DependentDomain> dependentDomains(Catalog source, Catalog target,
+			List<HsqlDdlDependencies.ObjectId> routines, List<TypeReplacement> changes) {
+		var functions = routines.stream().map(id -> routine(source, id)).toList();
+		var result = new ArrayList<DependentDomain>();
+		for (var schema : source.getSchemas())
+			for (var domain : schema.getDomains()) {
+				if (!domain.getChecks().stream()
+						.anyMatch(c -> callsRoutine(c.getExpression(), schema.getName(), functions))
+						&& !callsRoutine(domain.getCheck(), schema.getName(), functions))
+					continue;
+				if (!domain.equals(target.getSchemas().get(schema.getName()).getDomains().get(domain.getName()))
+						|| changes.stream()
+								.anyMatch(c -> "DOMAIN".equals(c.original().kind())
+										&& c.original().schema().equals(schema.getName())
+										&& c.original().name().equals(domain.getName())))
+					throw new IllegalArgumentException(
+							"Migrate dependent domain definition changes separately: " + domain.getName());
+				if (!com.sqlapp.util.CommonUtils.isEmpty(domain.getDefinition())
+						|| !com.sqlapp.util.CommonUtils.isEmpty(domain.getCheck()))
+					throw new IllegalArgumentException(
+							"Read structured named domain checks before migration: " + domain.getName());
+				var staged = domain.clone();
+				var checks = domain.getChecks().stream()
+						.filter(c -> callsRoutine(c.getExpression(), schema.getName(), functions))
+						.map(com.sqlapp.data.schemas.DomainCheckConstraint::getName).toList();
+				checks.forEach(staged.getChecks()::remove);
+				result.add(new DependentDomain(schema.getName(), domain.getName(), hash(schemaXml(schema)),
+						snapshot("DOMAIN", domain).createSql(), snapshot("DOMAIN", staged).createSql(), checks));
+			}
+		return List.copyOf(result);
+	}
+
+	private java.util.Set<HsqlDdlDependencies.ObjectId> retainedDomainRoutines(Catalog catalog,
+			List<DependentDomain> domains, List<HsqlDdlDependencies.ObjectId> routines, List<TypeReplacement> changes) {
+		var retained = new java.util.LinkedHashSet<HsqlDdlDependencies.ObjectId>();
+		for (var domain : domains)
+			for (var check : catalog.getSchemas().get(domain.schema()).getDomains().get(domain.name()).getChecks())
+				for (var id : routines)
+					if (callsRoutine(check.getExpression(), domain.schema(), List.of(routine(catalog, id))))
+						retained.add(id);
+		for (var id : retained) {
+			var routine = routine(catalog, id);
+			var stub = HsqlDdlDependencies.initializationStub(routine);
+			if (stub == null)
+				throw new IllegalArgumentException(
+						"Dependent domain requires a SQL routine with a replaceable body: " + id);
+			String signature = String.join("\n",
+					registry.createSql(stub, SqlType.CREATE).stream().map(SqlOperation::getSqlText).toList());
+			for (var change : changes)
+				if (HsqlExpressionDependencies.mentionsIdentifier(signature, change.original().schema(),
+						change.original().name()))
+					throw new IllegalArgumentException(
+							"Dependent domain routine signature uses a replaced type: " + id);
+		}
+		return java.util.Set.copyOf(retained);
+	}
+
+	private void domainExpressions(List<Command> commands, Catalog catalog, DependentDomain id,
+			List<HsqlDdlDependencies.ObjectId> routines, boolean restore, boolean guarded) {
+		var domain = catalog.getSchemas().get(id.schema()).getDomains().get(id.name());
+		var functions = routines.stream().map(r -> routine(catalog, r)).toList();
+		for (var check : domain.getChecks())
+			if (callsRoutine(check.getExpression(), id.schema(), functions)) {
+				if (check.getName() == null || check.getName().isBlank())
+					throw new IllegalArgumentException("Dependent domain checks require names: " + id.name());
+				var staged = domain.clone();
+				staged.getChecks().remove(check.getName());
+				var factory = registry.getSqlFactory(domain, SqlType.ALTER);
+				factory.setDialect(registry.getDialect());
+				var operations = factory.createDiffSql(restore ? staged.diff(domain) : domain.diff(staged));
+				String guard = guarded
+						? "SELECT COUNT(*) FROM INFORMATION_SCHEMA.DOMAIN_CONSTRAINTS WHERE DOMAIN_SCHEMA="
+								+ literal(id.schema()) + " AND DOMAIN_NAME=" + literal(id.name())
+								+ " AND CONSTRAINT_NAME=" + literal(check.getName())
+						: null;
+				for (var operation : operations)
+					commands.add(new Command(operation.getSqlText(), SqlType.ALTER, guard));
+			}
 	}
 
 	private record Dependents(List<HsqlDdlDependencies.ObjectId> objects, List<HsqlDdlDependencies.ObjectId> detached) {
@@ -527,9 +655,6 @@ public final class HsqlTableMigration {
 			}
 			for (var domain : schema.getDomains()) {
 				expressions.add(domain.getDefaultValue());
-				expressions.add(domain.getCheck());
-				for (var check : domain.getChecks())
-					expressions.add(check.getExpression());
 			}
 			for (var expression : expressions)
 				for (var ref : HsqlExpressionDependencies.references(expression)) {
@@ -585,17 +710,18 @@ public final class HsqlTableMigration {
 	}
 
 	private void createBatchObjects(List<Command> result, Catalog catalog,
-			java.util.Collection<TableExpressions> tables, List<HsqlDdlDependencies.ObjectId> dependents) {
+			java.util.Collection<TableExpressions> tables, List<HsqlDdlDependencies.ObjectId> dependents,
+			java.util.Set<HsqlDdlDependencies.ObjectId> retained, boolean recovering) {
 		var operations = new ArrayList<SqlOperation>();
 		for (var expressions : tables) {
 			var table = expressions.staged().clone();
 			table.getConstraints().removeIf(c -> c instanceof com.sqlapp.data.schemas.ForeignKeyConstraint);
-			operations.addAll(registry.createSql(table, SqlType.CREATE));
+			operations.addAll(createTable(table, recovering));
 		}
 		for (var id : dependents)
 			operations.addAll(registry.createSql("ROUTINE".equals(id.kind()) ? routine(catalog, id)
 					: catalog.getSchemas().get(id.schema()).getViews().get(id.name()), SqlType.CREATE));
-		result.addAll(commands(HsqlDdlDependencies.order(operations, catalog.getSchemas(), registry)));
+		dependentCommands(result, HsqlDdlDependencies.order(operations, catalog.getSchemas(), registry), retained);
 	}
 
 	private record TableExpressions(Table complete, Table staged,
@@ -701,14 +827,30 @@ public final class HsqlTableMigration {
 				}
 	}
 
-	private void restoreDependents(List<Command> result, Catalog catalog,
-			List<HsqlDdlDependencies.ObjectId> dependents) {
+	private void restoreDependents(List<Command> result, Catalog catalog, List<HsqlDdlDependencies.ObjectId> dependents,
+			java.util.Set<HsqlDdlDependencies.ObjectId> retained) {
 		var operations = new ArrayList<SqlOperation>();
 		for (var id : dependents)
 			operations.addAll(registry.createSql("ROUTINE".equals(id.kind()) ? routine(catalog, id)
 					: catalog.getSchemas().get(id.schema()).getViews().get(id.name()), SqlType.CREATE));
-		result.addAll(commands(HsqlDdlDependencies.order(operations, catalog.getSchemas(), registry)));
+		dependentCommands(result, HsqlDdlDependencies.order(operations, catalog.getSchemas(), registry), retained);
 		restoreDependentDetails(result, catalog, dependents);
+	}
+
+	private void dependentCommands(List<Command> result, List<SqlOperation> operations,
+			java.util.Set<HsqlDdlDependencies.ObjectId> retained) {
+		for (var operation : operations) {
+			var object = operation.getOriginal() == null ? operation.getTarget() : operation.getOriginal();
+			if (operation.getSqlType() == SqlType.CREATE
+					&& object instanceof com.sqlapp.data.schemas.ArgumentRoutine<?> routine
+					&& retained.contains(new HsqlDdlDependencies.ObjectId("ROUTINE", routine.getSchemaName(),
+							routine.getSpecificName())))
+				result.add(new Command("ALTER SPECIFIC ROUTINE " + quote(routine.getSchemaName()) + "."
+						+ quote(routine.getSpecificName()) + " BODY " + String.join("\n", routine.getStatement()),
+						SqlType.ALTER));
+			else
+				result.add(new Command(operation.getSqlText(), operation.getSqlType()));
+		}
 	}
 
 	private void restoreDependentDetails(List<Command> result, Catalog catalog,
@@ -766,10 +908,60 @@ public final class HsqlTableMigration {
 		return new Table(names.get(1)).setSchemaName(names.get(0));
 	}
 
-	private List<Command> createWithoutKeys(Table original) {
+	private List<Command> createWithoutKeys(Table original, boolean recovering) {
 		var copy = original.clone().setReadonly(false);
 		copy.getConstraints().removeIf(c -> c instanceof com.sqlapp.data.schemas.ForeignKeyConstraint);
-		return commands(registry.createSql(copy, SqlType.CREATE));
+		return commands(createTable(copy, recovering));
+	}
+
+	private List<SqlOperation> createTable(Table table, boolean recovering) {
+		if (!HsqlTextTableSources.isText(table))
+			return registry.createSql(table, SqlType.CREATE);
+		HsqlTextTableSources.Source source;
+		if (recovering) {
+			var recorded = Objects.requireNonNull(HsqlTextTableSources.get(table),
+					"Read the original TEXT source metadata");
+			source = new HsqlTextTableSources.Source(recorded.definition(), Boolean.TRUE.equals(recorded.descending()));
+		} else {
+			source = textSources.get(HsqlTextTableSources.id(table));
+			if (source == null || source.descending())
+				throw new IllegalArgumentException(
+						"Supply an explicit empty, writable TEXT target source to HsqlTableMigration: "
+								+ HsqlTextTableSources.id(table));
+		}
+		var factory = (com.sqlapp.data.db.dialect.hsql.sql.HsqlCreateTableFactory) registry.getSqlFactory(table,
+				SqlType.CREATE);
+		return factory.createSql(table.clone().setReadonly(true),
+				java.util.Map.of(HsqlTextTableSources.id(table), source));
+	}
+
+	private void assertEmptyTextSource(List<Command> commands, Table table) {
+		if (HsqlTextTableSources.isText(table))
+			commands.add(assertZero("SELECT COUNT(*) FROM " + name(table),
+					"Target TEXT source must be empty before copying data"));
+	}
+
+	private void enableTextWrites(List<Command> commands, Table table) {
+		if (HsqlTextTableSources.isText(table))
+			commands.add(new Command("SET TABLE " + name(table) + " READ WRITE", SqlType.ALTER));
+	}
+
+	private static Command assertZero(String query, String message) {
+		// A guarded conversion error provides an executable assertion without creating
+		// helper routines or extending the persisted Command representation.
+		return new Command("VALUES CAST(" + literal(message) + " AS INTEGER)", SqlType.SELECT, query);
+	}
+
+	private void dropTable(List<Command> commands, Table table, boolean guarded, boolean textPossible) {
+		if (textPossible) {
+			String guard = guarded
+					? "SELECT COUNT(*) FROM INFORMATION_SCHEMA.SYSTEM_TEXTTABLES WHERE TABLE_SCHEM="
+							+ literal(table.getSchemaName()) + " AND TABLE_NAME=" + literal(table.getName())
+					: null;
+			// Detach before DROP: dropping a connected text cache can purge its file.
+			commands.add(new Command("SET TABLE " + name(table) + " SOURCE OFF", SqlType.ALTER, guard));
+		}
+		commands.add(new Command("DROP TABLE " + name(table) + (guarded ? " IF EXISTS" : ""), SqlType.DROP));
 	}
 
 	private List<com.sqlapp.data.schemas.ForeignKeyConstraint> keys(Catalog catalog,
@@ -824,16 +1016,30 @@ public final class HsqlTableMigration {
 		Table desired = Objects.requireNonNull(targetSchema.getTables().get(table.getName()), "target table");
 		if (!table.equals(desired))
 			throw new IllegalArgumentException("Target table must match the target catalog");
-		if (HsqlTextTableSources.isText(original) || HsqlTextTableSources.isText(desired)
-				|| original.getTableType() == Table.TableType.Temporary
-				|| desired.getTableType() == Table.TableType.Temporary) {
-			throw new IllegalArgumentException("TEXT and temporary table replacement requires a separate migration");
+		HsqlTextTableSources.validateBindings(textSources,
+				target.getSchemas().stream().flatMap(s -> s.getTables().stream()).filter(HsqlTextTableSources::isText)
+						.map(HsqlTextTableSources::id).collect(Collectors.toSet()));
+		if (HsqlTextTableSources.isText(original)) {
+			var recorded = HsqlTextTableSources.get(original);
+			if (recorded == null || recorded.definition() == null || recorded.definition().isBlank())
+				throw new IllegalArgumentException("Read a configured original TEXT source before planning migration");
 		}
-		if (original.getColumns().size() != desired.getColumns().size()
-				|| original.getColumns().stream().anyMatch(c -> desired.getColumns().get(c.getName()) == null)) {
+		for (var candidate : List.of(original, desired))
+			if (candidate.getTableType() == Table.TableType.Temporary
+					&& !"PRESERVE".equals(candidate.getSpecifics().get("commit_action")))
+				throw new IllegalArgumentException("Temporary table replacement requires ON COMMIT PRESERVE ROWS");
+		if (original.getColumns().stream().anyMatch(c -> desired.getColumns().get(c.getName()) == null))
 			throw new IllegalArgumentException(
-					"Table replacement requires the same column identities; plan column additions/removals/renames separately");
-		}
+					"Table replacement preserves existing columns; plan removals/renames separately");
+		for (var column : desired.getColumns())
+			if (original.getColumns().get(column.getName()) == null) {
+				if (column.isIdentity())
+					throw new IllegalArgumentException("Plan new identity columns separately: " + column.getName());
+				if (stored(column) && column.isNotNull()
+						&& (column.getDefaultValue() == null || column.getDefaultValue().isBlank()))
+					throw new IllegalArgumentException(
+							"An added NOT NULL column requires a DEFAULT or generated expression: " + column.getName());
+			}
 		for (var column : original.getColumns())
 			storage(column, source);
 		for (var column : desired.getColumns())
@@ -894,24 +1100,35 @@ public final class HsqlTableMigration {
 			Column copy = column.clone().setIdentity(false).setSequence(null).setFormula(null).setDefaultValue(null);
 			Column base = storage(column, source);
 			copy.setDataType(base.getDataType()).setDataTypeName(base.getDataTypeName()).setLength(base.getLength())
-					.setScale(base.getScale());
+					.setScale(base.getScale()).setArrayDimension(base.getArrayDimension())
+					.setArrayDimensionLowerBound(base.getArrayDimensionLowerBound())
+					.setArrayDimensionUpperBound(base.getArrayDimensionUpperBound());
+			if (lobValue(base))
+				copy.setLength(Hsql2_0_0.MAX_LOB_LENGTH);
 			saved.getColumns().add(copy);
 		}
 		String originalName = name(original), backupNameSql = name(saved);
 		String all = names(original.getColumns().stream().toList());
 		var backup = commands(registry.createSql(saved, SqlType.CREATE));
-		String sourceValues = original.getColumns().stream().map(c -> cast(quote(c.getName()), storage(c, source)))
+		String sourceValues = original.getColumns().stream().map(c -> verificationValue(c, source))
 				.collect(Collectors.joining(", "));
 		backup.add(new Command(
 				"INSERT INTO " + backupNameSql + " (" + all + ") SELECT " + sourceValues + " FROM " + originalName,
 				SqlType.INSERT));
 		String backupVerification = difference("SELECT " + sourceValues + " FROM " + originalName,
 				"SELECT " + all + " FROM " + backupNameSql);
-		var physical = desired.getColumns().stream().filter(c -> c.getFormula() == null || c.getFormula().isBlank())
-				.toList();
+		var physical = copiedColumns(original, desired);
 		if (physical.isEmpty())
-			throw new IllegalArgumentException("At least one stored target column is required");
+			throw new IllegalArgumentException("At least one retained stored target column is required");
 		var checks = new ArrayList<String>();
+		for (var column : original.getColumns()) {
+			var base = storage(column, source);
+			if (lobValue(base) && base.getLength() != null)
+				checks.add("SELECT COUNT(*) FROM " + backupNameSql + " WHERE "
+						+ (base.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB ? "OCTET_LENGTH("
+								: "CHARACTER_LENGTH(")
+						+ quote(column.getName()) + ")>" + base.getLength());
+		}
 		if (policy == ConversionPolicy.LOSSLESS) {
 			for (var column : physical) {
 				var old = original.getColumns().get(column.getName());
@@ -920,8 +1137,14 @@ public final class HsqlTableMigration {
 				// The target named definition is not installed yet; validate its modeled base.
 				String converted = changingType ? cast(quote(old.getName()), storage(column, target))
 						: converted(quote(old.getName()), column, target);
-				checks.add("SELECT COUNT(*) FROM " + backupNameSql + " WHERE " + quote(old.getName())
-						+ " IS DISTINCT FROM " + cast(cast(converted, storage(column, target)), storage(old, source)));
+				String left = quote(old.getName());
+				String right = cast(cast(converted, storage(column, target)), storage(old, source));
+				boolean complex = complexValue(storage(old, source)) || complexValue(storage(column, target));
+				checks.add(
+						"SELECT COUNT(*) FROM " + backupNameSql + " WHERE "
+								+ (complex ? "(" + left + " <> " + right + ") OR (" + left + " IS NULL AND " + right
+										+ " IS NOT NULL) OR (" + left + " IS NOT NULL AND " + right + " IS NULL)"
+										: left + " IS DISTINCT FROM " + right));
 			}
 		}
 		for (var column : physical)
@@ -943,14 +1166,16 @@ public final class HsqlTableMigration {
 			}
 		for (var fk : inbound)
 			replace.add(dropKey(fk, false));
-		replace.add(new Command("DROP TABLE " + originalName, SqlType.DROP)); // deliberately no CASCADE
+		dropTable(replace, original, false, HsqlTextTableSources.isText(original)); // deliberately no CASCADE
 		for (var change : typeReplacements) {
 			replace.add(dropType(change.original(), null));
 			replace.add(new Command(change.target().createSql(), SqlType.CREATE));
 			replace.addAll(change.grants());
 		}
-		replace.addAll(commands(registry.createSql(desired.clone().setReadonly(false), SqlType.CREATE)));
+		replace.addAll(commands(createTable(desired.clone().setReadonly(false), false)));
 		var restore = new ArrayList<Command>();
+		assertEmptyTextSource(restore, desired);
+		enableTextWrites(restore, desired);
 		restore.add(insert(desired, saved, physical, target));
 		for (var fk : inbound)
 			restore.addAll(commands(registry.createSql(fk, SqlType.CREATE)));
@@ -958,20 +1183,23 @@ public final class HsqlTableMigration {
 		var recovery = new ArrayList<Command>();
 		for (var fk : inbound)
 			recovery.add(dropKey(fk, true));
-		recovery.add(new Command("DROP TABLE " + originalName + " IF EXISTS", SqlType.DROP));
+		dropTable(recovery, original, true,
+				HsqlTextTableSources.isText(original) || HsqlTextTableSources.isText(desired));
 		for (var change : typeReplacements)
 			addTypeRecovery(recovery, change);
-		recovery.addAll(commands(registry.createSql(original.clone().setReadonly(false), SqlType.CREATE)));
-		recovery.add(insert(original, saved,
-				original.getColumns().stream().filter(c -> c.getFormula() == null || c.getFormula().isBlank()).toList(),
-				source));
+		recovery.addAll(commands(createTable(original.clone().setReadonly(false), true)));
+		if (HsqlTextTableSources.isText(original))
+			recovery.add(assertZero(backupVerification, "Original TEXT source differs from the verified backup"));
+		else
+			recovery.add(insert(original, saved, original.getColumns().stream()
+					.filter(c -> c.getFormula() == null || c.getFormula().isBlank()).toList(), source));
 		for (var fk : inbound)
 			recovery.addAll(commands(registry.createSql(fk, SqlType.CREATE)));
 		recovery.addAll(details(source, originalSchema, original));
 		String projected = physical.stream()
 				.map(c -> cast(converted(quote(c.getName()), c, target), storage(c, target)))
 				.collect(Collectors.joining(", "));
-		String targetValues = physical.stream().map(c -> cast(quote(c.getName()), storage(c, target)))
+		String targetValues = physical.stream().map(c -> verificationValue(c, target))
 				.collect(Collectors.joining(", "));
 		String verification = difference("SELECT " + targetValues + " FROM " + originalName,
 				"SELECT " + projected + " FROM " + backupNameSql);
@@ -982,7 +1210,10 @@ public final class HsqlTableMigration {
 				privileges, foreignKeys(inbound), backup, checks, replace, restore, recovery,
 				List.of(new Command("DROP TABLE " + backupNameSql, SqlType.DROP)), backupVerification, verification,
 				"SELECT COUNT(*) FROM " + originalName, "SELECT COUNT(*) FROM " + backupNameSql,
-				"SELECT COUNT(*) FROM " + originalName, "SELECT " + all + " FROM " + backupNameSql + " ORDER BY " + all,
+				"SELECT COUNT(*) FROM " + originalName,
+				"SELECT " + all + " FROM " + backupNameSql
+						+ (saved.getColumns().stream().anyMatch(HsqlTableMigration::complexValue) ? ""
+								: " ORDER BY " + all),
 				namedTypes, typeReplacements);
 	}
 
@@ -995,7 +1226,8 @@ public final class HsqlTableMigration {
 		var backups = new ArrayList<Backup>();
 		try {
 			requireAccess(connection, access);
-			preflight(connection, plan.members(), plan.dependentViews(), plan.dependentRoutines());
+			preflight(connection, plan.members(), plan.dependentViews(), plan.dependentRoutines(),
+					plan.dependentDomains());
 			verifyBatchDependencies(connection, plan);
 			verifyRoutineTypeUsage(connection, plan.members(), plan.dependentRoutines());
 			verifyExpressionOwners(connection, plan);
@@ -1031,6 +1263,7 @@ public final class HsqlTableMigration {
 					throw new IllegalStateException(
 							"Restored batch data differs from the planned conversion: " + member.table());
 			verifyAllPrivileges(connection, plan.members(), plan.dependentViews(), plan.dependentRoutines());
+			verifyDependentDomains(connection, plan.dependentDomains(), false);
 			verifyNamedTypes(connection,
 					plan.members().stream().flatMap(p -> expectedTypes(p, true, false).stream()).distinct().toList());
 			return new BatchResult(plan.fingerprint(), Phase.COMPLETE, backups);
@@ -1049,6 +1282,7 @@ public final class HsqlTableMigration {
 						"Batch recovery requires all verified backups and replacement to have begun");
 			var backups = failure.getBackups().stream().collect(Collectors.toMap(Backup::table, b -> b));
 			var ownerSchemas = new java.util.LinkedHashSet<String>();
+			plan.dependentDomains().forEach(d -> ownerSchemas.add(d.schema()));
 			for (var member : plan.members()) {
 				ownerSchemas.add(member.schema());
 				member.typeReplacements().forEach(t -> ownerSchemas.add(t.original().schema()));
@@ -1065,14 +1299,19 @@ public final class HsqlTableMigration {
 					.distinct().toList())
 				if (!ownerSchemas.contains(schema))
 					requireSchemaOwner(connection, schema);
+			verifyDependentDomains(connection, plan.dependentDomains(), true);
 			verifyNamedTypes(connection,
-					plan.members().stream().flatMap(p -> expectedTypes(p, false, true).stream()).distinct().toList());
+					plan.members().stream().flatMap(p -> expectedTypes(p, false, true).stream()).distinct()
+							.filter(t -> plan.dependentDomains().stream().noneMatch(d -> "DOMAIN".equals(t.kind())
+									&& d.schema().equals(t.schema()) && d.name().equals(t.name())))
+							.toList());
 			run(connection, plan.recovery());
 			for (var member : plan.members())
 				if (scalar(connection, member.backupVerification()) != 0)
 					throw new IllegalStateException(
 							"Recovered table differs from its original backup: " + member.table());
 			verifyAllPrivileges(connection, plan.members(), plan.dependentViews(), plan.dependentRoutines());
+			verifyDependentDomains(connection, plan.dependentDomains(), false);
 			verifyNamedTypes(connection,
 					plan.members().stream().flatMap(p -> expectedTypes(p, false, false).stream()).distinct().toList());
 			return new BatchResult(plan.fingerprint(), Phase.RECOVERED, failure.getBackups());
@@ -1082,27 +1321,52 @@ public final class HsqlTableMigration {
 	}
 
 	private void preflight(Connection connection, List<Plan> plans) throws SQLException {
-		preflight(connection, plans, List.of(), List.of());
+		preflight(connection, plans, List.of(), List.of(), List.of());
+	}
+
+	private void verifyDependentDomains(Connection connection, List<DependentDomain> domains, boolean staged) {
+		if (domains.isEmpty())
+			return;
+		var actual = registry.getDialect().getCatalogReader().getSchemaReader().getDomainReader().getAll(connection);
+		for (var expected : domains) {
+			var domain = actual.stream()
+					.filter(d -> expected.schema().equals(d.getSchemaName()) && expected.name().equals(d.getName()))
+					.findFirst()
+					.orElseThrow(() -> new IllegalArgumentException("Missing dependent domain: " + expected.name()))
+					.clone();
+			if (staged)
+				expected.deferredChecks().forEach(domain.getChecks()::remove);
+			if (!HsqlDefinitionIdentity.equivalent(snapshot("DOMAIN", domain).createSql(),
+					staged ? expected.stagedCreateSql() : expected.createSql()))
+				throw new IllegalArgumentException("Dependent domain definition changed: " + expected.name());
+		}
 	}
 
 	private void preflight(Connection connection, List<Plan> plans, List<DependentView> views,
-			List<DependentRoutine> routines) throws SQLException {
+			List<DependentRoutine> routines, List<DependentDomain> domains) throws SQLException {
 		verifyNamedTypes(connection,
 				plans.stream().flatMap(p -> expectedTypes(p, false, false).stream()).distinct().toList());
 		var hashes = new java.util.HashMap<String, String>();
+		var textTables = new java.util.HashSet<TableIdentity>();
 		var owners = new java.util.HashMap<String, String>();
 		var reader = registry.getDialect().getCatalogReader().getSchemaReader();
-		for (String schema : java.util.stream.Stream.of(plans.stream().map(Plan::schema),
-				views.stream().map(DependentView::schema), routines.stream().map(DependentRoutine::schema))
+		for (String schema : java.util.stream.Stream
+				.of(plans.stream().map(Plan::schema), views.stream().map(DependentView::schema),
+						routines.stream().map(DependentRoutine::schema), domains.stream().map(DependentDomain::schema))
 				.flatMap(v -> v).distinct().toList()) {
 			reader.setSchemaName(schema);
 			var found = reader.getAllFull(connection);
 			if (found.size() != 1)
 				throw new IllegalArgumentException("Missing migration schema: " + schema);
 			hashes.put(schema, hash(schemaXml(found.getFirst())));
+			found.getFirst().getTables().stream().filter(HsqlTextTableSources::isText).map(HsqlTableMigration::identity)
+					.forEach(textTables::add);
 			owners.put(schema, requireSchemaOwner(connection, schema));
 		}
 		var actual = readPrivileges(connection);
+		for (var domain : domains)
+			if (!Objects.equals(hashes.get(domain.schema()), domain.sourceFingerprint()))
+				throw new IllegalArgumentException("Dependent domain schema changed; rebuild the migration plan");
 		for (var routine : routines) {
 			if (!Objects.equals(hashes.get(routine.schema()), routine.sourceFingerprint()))
 				throw new IllegalArgumentException("Dependent routine schema changed; rebuild the migration plan");
@@ -1162,6 +1426,47 @@ public final class HsqlTableMigration {
 				throw new IllegalArgumentException(
 						"Incoming foreign keys changed or the source catalog was incomplete");
 		}
+		textTables.retainAll(
+				plans.stream().map(p -> new TableIdentity(p.schema(), p.table())).collect(Collectors.toSet()));
+		verifyTextFiles(connection, textTables);
+	}
+
+	private void verifyTextFiles(Connection connection, java.util.Set<TableIdentity> tables) throws SQLException {
+		if (tables.isEmpty())
+			return;
+		if (!connection.getMetaData().getURL().startsWith("jdbc:hsqldb:file:"))
+			throw new IllegalArgumentException(
+					"TEXT source migration requires an embedded file database with locally readable source files");
+		var missing = new java.util.HashSet<>(tables);
+		try (var statement = connection.createStatement();
+				var rs = statement.executeQuery(
+						"SELECT TABLE_SCHEM,TABLE_NAME,FILE_PATH,FILE_ENCODING FROM INFORMATION_SCHEMA.SYSTEM_TEXTTABLES")) {
+			while (rs.next()) {
+				var id = new TableIdentity(rs.getString(1), rs.getString(2));
+				if (!tables.contains(id))
+					continue;
+				missing.remove(id);
+				String encoding = rs.getString(4);
+				int emptyThreshold = System.lineSeparator()
+						.getBytes(encoding != null && encoding.startsWith("UTF-16")
+								? java.nio.charset.StandardCharsets.UTF_16LE
+								: java.nio.charset.Charset.defaultCharset()).length;
+				try {
+					if (rs.getString(3) == null
+							|| !java.nio.file.Files.isRegularFile(java.nio.file.Path.of(rs.getString(3))))
+						throw new IllegalArgumentException(
+								"Read a connected original TEXT source file before migration: " + id);
+					if (java.nio.file.Files.size(java.nio.file.Path.of(rs.getString(3))) <= emptyThreshold)
+						throw new IllegalArgumentException(
+								"HSQLDB may delete a tiny TEXT source when closing its writable cache; migrate it separately: "
+										+ id);
+				} catch (java.io.IOException failure) {
+					throw new SQLException("Cannot verify the original TEXT source file: " + id, failure);
+				}
+			}
+		}
+		if (!missing.isEmpty())
+			throw new IllegalArgumentException("Missing original TEXT source metadata: " + missing);
 	}
 
 	private void verifyBatchDependencies(Connection connection, BatchPlan plan) {
@@ -1232,8 +1537,10 @@ public final class HsqlTableMigration {
 					|| callsRoutineNames(domain.getCheck(), domain.getSchemaName(), functions)
 					|| domain.getChecks().stream()
 							.anyMatch(c -> callsRoutineNames(c.getExpression(), domain.getSchemaName(), functions)))
-				throw new IllegalArgumentException("A domain expression uses an affected routine: "
-						+ domain.getSchemaName() + "." + domain.getName());
+				if (plan.dependentDomains().stream()
+						.noneMatch(d -> d.schema().equals(domain.getSchemaName()) && d.name().equals(domain.getName())))
+					throw new IllegalArgumentException("An unselected domain expression uses an affected routine: "
+							+ domain.getSchemaName() + "." + domain.getName());
 		}
 		plan.dependentViews().forEach(v -> tables.add(new TableIdentity(v.schema(), v.name())));
 		for (var trigger : reader.getTriggerReader().getAll(connection))
@@ -1395,7 +1702,17 @@ public final class HsqlTableMigration {
 				result.addAll(commands(registry.createSql(p, SqlType.GRANT)));
 		if (Boolean.TRUE.equals(table.getReadonly()))
 			result.add(new Command("SET TABLE " + name(table) + " READ ONLY", SqlType.ALTER));
+		else
+			enableTextWrites(result, table);
 		return result;
+	}
+
+	/**
+	 * Omitted added columns receive their engine DEFAULT, NULL or generated value.
+	 */
+	private static List<Column> copiedColumns(Table original, Table desired) {
+		return desired.getColumns().stream().filter(HsqlTableMigration::stored)
+				.filter(c -> original.getColumns().get(c.getName()) != null).toList();
 	}
 
 	private Command insert(Table table, Table backup, List<Column> columns, Catalog catalog) {
@@ -1432,14 +1749,23 @@ public final class HsqlTableMigration {
 	}
 
 	private static void comparable(Column column) {
-		if (column.getArrayDimension() > 0 || column.getDataType() == null
+		if (column.getArrayDimension() > 1 || column.getDataType() == null
 				|| java.util.Set
-						.of(com.sqlapp.data.db.datatype.DataType.BLOB, com.sqlapp.data.db.datatype.DataType.CLOB,
-								com.sqlapp.data.db.datatype.DataType.OTHER, com.sqlapp.data.db.datatype.DataType.DOMAIN)
+						.of(com.sqlapp.data.db.datatype.DataType.OTHER, com.sqlapp.data.db.datatype.DataType.DOMAIN)
 						.contains(column.getDataType())) {
 			throw new IllegalArgumentException(
-					"A scalar comparable built-in type is required for backup verification: " + column.getName());
+					"A comparable built-in scalar or one-dimensional array is required for backup verification: "
+							+ column.getName());
 		}
+	}
+
+	private static boolean complexValue(Column column) {
+		return column.getArrayDimension() > 0 || lobValue(column);
+	}
+
+	private static boolean lobValue(Column column) {
+		return column.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB
+				|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.CLOB;
 	}
 
 	private List<NamedTypeSnapshot> namedTypes(Catalog source, Catalog target, Table original, Table desired) {
@@ -1660,8 +1986,11 @@ public final class HsqlTableMigration {
 	}
 
 	private Column storage(Column column, Catalog catalog) {
-		if (column.getArrayDimension() > 0)
-			throw new IllegalArgumentException("Array replacement requires a separate migration");
+		if (column.getArrayDimension() > 0
+				&& (column.getArrayDimension() != 1 || column.getArrayDimensionUpperBound() <= 0
+						|| column.getArrayDimensionLowerBound() > 1 || namedColumn(column)))
+			throw new IllegalArgumentException(
+					"Array replacement requires a built-in element type and positive cardinality");
 		if (column.getDataType() != com.sqlapp.data.db.datatype.DataType.DOMAIN
 				&& column.getDataType() != com.sqlapp.data.db.datatype.DataType.OTHER) {
 			comparable(column);
@@ -1673,8 +2002,13 @@ public final class HsqlTableMigration {
 				if (typeNameMatches(column, schema.getName(), domain.getName())) {
 					if (!com.sqlapp.util.CommonUtils.isEmpty(domain.getDefinition()))
 						requireMatchingDefinition("DOMAIN", domain, domain.clone().setDefinition((String) null));
-					matches.add(new Column().setDataType(domain.getDataType()).setDataTypeName(domain.getDataTypeName())
-							.setLength(domain.getLength()).setScale(domain.getScale()));
+					Column base = new Column().setDataType(domain.getDataType())
+							.setDataTypeName(domain.getDataTypeName()).setLength(domain.getLength())
+							.setScale(domain.getScale());
+					String sourceType = domain.getDataTypeName();
+					if (sourceType != null && sourceType.toUpperCase(java.util.Locale.ROOT).contains("ARRAY["))
+						base = namedStorage(sourceType);
+					matches.add(base);
 				}
 			if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.OTHER) {
 				for (var type : schema.getTypes())
@@ -1684,10 +2018,8 @@ public final class HsqlTableMigration {
 						if (type.getStatement().size() != 1 || type.getStatement().get(0).isBlank()
 								|| !type.getColumns().isEmpty())
 							throw new IllegalArgumentException(
-									"Distinct type requires a scalar source statement: " + type.getName());
-						Column base = new Column();
-						registry.getDialect().setDbType(type.getStatement().get(0), null, null, base);
-						matches.add(base);
+									"Distinct type requires a built-in source statement: " + type.getName());
+						matches.add(namedStorage(type.getStatement().get(0)));
 					}
 			}
 		}
@@ -1695,6 +2027,25 @@ public final class HsqlTableMigration {
 			throw new IllegalArgumentException("Resolve the named column type uniquely from complete Catalog metadata: "
 					+ column.getDataTypeName());
 		Column base = matches.get(0);
+		comparable(base);
+		return base;
+	}
+
+	/**
+	 * Resolves a named type's built-in storage without changing its public
+	 * identity.
+	 */
+	private Column namedStorage(String definition) {
+		Column base = new Column();
+		var array = java.util.regex.Pattern.compile("(?is)^(.+?)\\s*ARRAY\\[(\\d+)\\]$").matcher(definition);
+		if (array.matches()) {
+			registry.getDialect().setDbType(array.group(1), null, null, base);
+			base.setArrayDimension(1).setArrayDimensionUpperBound(Integer.parseInt(array.group(2)));
+			if (base.getArrayDimensionUpperBound() <= 0)
+				throw new IllegalArgumentException("Named array storage requires positive cardinality");
+		} else {
+			registry.getDialect().setDbType(definition, null, null, base);
+		}
 		comparable(base);
 		return base;
 	}
@@ -1737,9 +2088,18 @@ public final class HsqlTableMigration {
 				|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.OTHER ? cast(value, column) : value;
 	}
 
+	private String verificationValue(Column column, Catalog catalog) {
+		var base = storage(column, catalog);
+		// LOB length limits are not always enforced on HSQLDB inserts. Comparing a
+		// cast of both sides could silently validate an already-truncated backup.
+		return lobValue(base) ? quote(column.getName()) : cast(quote(column.getName()), base);
+	}
+
 	private String cast(String expression, Column column) {
 		var type = registry.getDialect().createSqlBuilder().typeDefinition(column.getDataType(),
 				column.getDataTypeName(), column.getLength(), column.getScale());
+		if (column.getArrayDimension() > 0)
+			type._add(" ARRAY[")._add(column.getArrayDimensionUpperBound())._add("]");
 		return "CAST(" + expression + " AS " + type + ")";
 	}
 
@@ -1829,20 +2189,97 @@ public final class HsqlTableMigration {
 		try {
 			var digest = MessageDigest.getInstance("SHA-256");
 			try (var statement = connection.createStatement(); var rs = statement.executeQuery(query)) {
-				int columns = rs.getMetaData().getColumnCount();
+				boolean unordered = false;
+				for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++)
+					unordered |= java.util.Set
+							.of(java.sql.Types.BLOB, java.sql.Types.CLOB, java.sql.Types.NCLOB, java.sql.Types.ARRAY)
+							.contains(rs.getMetaData().getColumnType(i));
+				var rows = new ArrayList<byte[]>();
+				var row = unordered ? MessageDigest.getInstance("SHA-256") : digest;
 				while (rs.next()) {
-					for (int i = 1; i <= columns; i++) {
-						String value = rs.getString(i);
-						byte[] bytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
-						digest.update(
-								java.nio.ByteBuffer.allocate(4).putInt(value == null ? -1 : bytes.length).array());
-						digest.update(bytes);
-					}
+					for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++)
+						fingerprintValue(row, rs, i);
+					if (unordered)
+						rows.add(row.digest());
+				}
+				if (unordered) {
+					rows.sort(java.util.Arrays::compareUnsigned);
+					rows.forEach(digest::update);
 				}
 			}
 			return HexFormat.of().formatHex(digest.digest());
+		} catch (java.io.IOException problem) {
+			throw new SQLException("Cannot fingerprint retained LOB content", problem);
 		} catch (java.security.NoSuchAlgorithmException problem) {
 			throw new IllegalStateException(problem);
 		}
+	}
+
+	/**
+	 * Length framing distinguishes NULL, empty values and array element boundaries.
+	 */
+	private static void fingerprintValue(MessageDigest digest, java.sql.ResultSet rs, int column)
+			throws SQLException, java.io.IOException {
+		int type = rs.getMetaData().getColumnType(column);
+		if (type == java.sql.Types.ARRAY) {
+			var array = rs.getArray(column);
+			if (array == null)
+				digest.update(java.nio.ByteBuffer.allocate(8).putLong(-1).array());
+			else
+				try {
+					digest.update(
+							java.nio.ByteBuffer.allocate(8).putLong(((Object[]) array.getArray()).length).array());
+					try (var elements = array.getResultSet()) {
+						while (elements.next())
+							fingerprintValue(digest, elements, 2);
+					}
+				} finally {
+					array.free();
+				}
+			return;
+		}
+		if (type == java.sql.Types.BLOB) {
+			var blob = rs.getBlob(column);
+			if (blob == null)
+				digest.update(java.nio.ByteBuffer.allocate(8).putLong(-1).array());
+			else
+				try {
+					digest.update(java.nio.ByteBuffer.allocate(8).putLong(blob.length()).array());
+					try (var input = blob.getBinaryStream()) {
+						byte[] buffer = new byte[8192];
+						int count;
+						while ((count = input.read(buffer)) != -1)
+							digest.update(buffer, 0, count);
+					}
+				} finally {
+					blob.free();
+				}
+			return;
+		}
+		if (type == java.sql.Types.CLOB || type == java.sql.Types.NCLOB) {
+			var clob = rs.getClob(column);
+			if (clob == null)
+				digest.update(java.nio.ByteBuffer.allocate(8).putLong(-1).array());
+			else
+				try {
+					digest.update(java.nio.ByteBuffer.allocate(8).putLong(clob.length()).array());
+					try (var input = clob.getCharacterStream()) {
+						char[] buffer = new char[4096];
+						int count;
+						while ((count = input.read(buffer)) != -1)
+							for (int j = 0; j < count; j++) {
+								digest.update((byte) (buffer[j] >>> 8));
+								digest.update((byte) buffer[j]);
+							}
+					}
+				} finally {
+					clob.free();
+				}
+			return;
+		}
+		String value = rs.getString(column);
+		byte[] bytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+		digest.update(java.nio.ByteBuffer.allocate(4).putInt(value == null ? -1 : bytes.length).array());
+		digest.update(bytes);
 	}
 }

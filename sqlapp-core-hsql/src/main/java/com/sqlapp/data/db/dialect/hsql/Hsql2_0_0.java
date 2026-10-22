@@ -43,6 +43,7 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
 public class Hsql2_0_0 extends Hsql {
+	static final long MAX_LOB_LENGTH = 1024L * 1024 * 1024 * 1024;
 	/**
 	 * serialVersionUID
 	 */
@@ -58,6 +59,8 @@ public class Hsql2_0_0 extends Hsql {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		registerLobTypes(Integer.MAX_VALUE);
+		registerLobTypes(MAX_LOB_LENGTH);
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction()).setMaxPrecision(9)
@@ -124,9 +127,22 @@ public class Hsql2_0_0 extends Hsql {
 		});
 	}
 
+	private void registerLobTypes(long maximum) {
+		getDbDataTypes().addClob(maximum, type -> {
+			type.setDefaultLength(1024L * 1024 * 1024);
+			type.addColumnTypeMatcher("CHARACTER LARGE OBJECT");
+			type.setCreateFormat("CLOB(", ")");
+		});
+		getDbDataTypes().addBlob("BLOB", maximum, type -> {
+			type.setDefaultLength(1024L * 1024 * 1024);
+			type.addColumnTypeMatcher("BINARY LARGE OBJECT");
+			type.setCreateFormat("BLOB(", ")");
+		});
+	}
+
 	/**
 	 * HSQL固有のIntervalMonthDataのコンバータを取得するためのメソッド
-	 * 
+	 *
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getIntervalMonthConverter(final Converter<?> resultSetConveter) {

@@ -236,7 +236,7 @@ because its shadow tables cannot be classified reliably. A metadata-version
 simulation tests that rejection; it is not an older engine binary test.
 
 Remaining exclusions include direct shadow-table reconstruction, unsupported
-virtual-table modules, contentless FTS, cross-database foreign keys and preserving
+virtual-table modules, unverified contentless FTS, cross-database foreign keys and preserving
 inaccessible rowids shadowed by all three aliases. Column mappings do not rewrite
 SQL: supply final view/trigger queries and FK models through the Schema API;
 invalid references cause validation failure and rollback. Other attached databases
@@ -338,22 +338,46 @@ identity does not inherit an unrelated old sequence. No settings or Schema XML
 formats change. Ordinary reconstruction still starts at SQLite 3.7.16; feature
 specific minimum versions, such as WITHOUT ROWID at 3.8.2, remain enforced.
 
-### FTS5 and RTree reconstruction
+### FTS and RTree reconstruction
 
-On SQLite 3.37+, the same APIs reconstruct FTS5 with stored internal or external
-content, RTree and RTree_i32. Keep the complete native CREATE VIRTUAL TABLE DDL
+On SQLite 3.37+, the same APIs reconstruct FTS3, FTS4 and FTS5 with recoverable
+internal content, FTS4/5 with external content, RTree and RTree_i32.
+Keep the complete native CREATE VIRTUAL TABLE DDL
 in `definition` and matching visible columns in the Table model. To rename a
 virtual-table column, change both and supply the copy mapping. Separate ordinary
 constraints/indexes are rejected because the module owns those definitions.
-Module changes are rejected. Raw shadow rows are never copied or edited by the
+Module changes require the explicit conversion option below. Raw shadow rows are never copied or edited by the
 executor; the module creates its own shadow structures from native INSERTs.
 
-FTS5 rowids and RTree key values are preserved by default. RTree auxiliary data
+FTS rowids/docids and RTree key values are preserved by default. RTree auxiliary data
 is copied with SQL, and new columns use module defaults. FTS runtime configuration
 (for example rank and automerge) is read once from each selected FTS index's
 configuration table and restored with native module commands; these settings are
 not represented in CREATE DDL. This execution-time module state retrieval is
 separate from the unchanged batched Schema MetadataReaders.
+
+FTS3/4 use their native `integrity-check` command before and after reconstruction;
+it also detects stale external FTS4 content. FTS4's hidden languageid is copied
+even though ordinary hidden control columns are omitted. Renaming the languageid
+option preserves the original language values automatically; an explicit column
+mapping can override that source. Removing a configured languageid is rejected
+to avoid silently assigning every document to language 0. External FTS4 backing
+tables must retain the configured language column and corresponding rowids.
+Repeated `notindexed` options and tokenizer arguments remain in native DDL;
+scalar content/language options are extracted without flattening the others.
+
+Persistent FTS3/4 automerge is read from the native stat-table setting (id=2,
+an integer) and restored using `automerge=N`, rather than copying stat/index rows.
+FTS3 may have no stat table and FTS4 may have no automerge row; both retain native
+defaults. The stat table's existence and setting are read only for selected
+indexes during execution, outside the batched MetadataReaders. Unknown or invalid
+setting representations fail explicitly. Compression/uncompression functions and
+tokenizers named by the DDL must remain registered on the connection; the native
+module applies them when reading and copying data. Tests exercise reversible
+compression, Unicode tokenizer arguments, quoted names, negative/large docids,
+language-specific MATCH queries, settings, views and rollback in main/temp/attached
+databases. See the [FTS3/4 module documentation](https://www.sqlite.org/fts3.html)
+and [native automerge storage](https://github.com/sqlite/sqlite/blob/master/ext/fts3/fts3_write.c).
 
 The executor runs [FTS5 integrity-check with rank=1](https://www.sqlite.org/fts5.html#the_integrity_check_command)
 before and after reconstruction, including checking external content against its
@@ -363,13 +387,158 @@ meaning. Updated external backing columns must match the final FTS definition.
 use `rtreecheck(schema, name)` before and after copying. Normal row-count,
 dependency, FK and owning-schema integrity checks also apply.
 
-Contentless FTS cannot supply its original indexed column values, so it is
-rejected before reconstruction, including contentless-delete variants. FTS3/4,
-custom modules, direct shadow-table edits and cross-module conversion remain
-outside this API. No older engine binaries are needed for the new tests: native
+Contentless FTS cannot supply its original indexed column values. FTS5 recovery
+requires an explicitly authoritative source as described below; without one it
+is rejected. FTS4 contentless and FTS5 contentless with columnsize=0 remain
+excluded. Custom modules and direct shadow-table edits remain outside this API.
+No older engine binaries are needed for the new tests: native
 tests cover main/temp/quoted attached names, internal/external FTS content,
 FTS settings, RTree searches, dependent objects and full rollback. Historical
 engine binaries remain untested.
+
+### Verified authoritative content for contentless FTS5
+
+The Schema entry point can reconstruct contentless FTS5, including
+contentless-delete and detail=full/column/none, when the caller explicitly
+supplies authoritative content. The source must be an existing ordinary table or
+view. By default its columns use the original FTS visible column names:
+
+```java
+// Retain the original visible columns while choosing a stored-content target.
+desiredSchema.getTables().get("search")
+        .setDefinition("CREATE VIRTUAL TABLE search USING fts5(body)");
+var options = new SqliteTableRebuilder.Options()
+        .tables("search")
+        .recoverContent("search", new Table("documents"));
+var result = new SqliteTableRebuilder().rebuild(connection, desiredSchema, options);
+```
+
+The supplied Table reference contributes its identity; its column metadata is
+resolved inside the owned transaction. An omitted source schema means the target
+database. An explicit schema can select another attached database. Source schemas
+are read in batches, once per distinct source database. Document IDs default to
+an INTEGER PRIMARY KEY identity or an accessible implicit rowid; a single integer
+primary key on WITHOUT ROWID is also unambiguous. For views or other keys, supply
+the document-ID column with `recoverContent("search", source, "document_id")`.
+IDs must be native SQLite integers, unique and exactly match the old index's IDs,
+including empty documents, negative IDs and large 64-bit values.
+
+When authoritative columns have different names, provide an optional mapping
+from original FTS column names to source column names:
+
+```java
+options.recoverContent("search", new Table("documents"), "document_id",
+        Map.of("body", "document_text"));
+```
+
+Unmapped columns keep their original names. Keys must identify visible original
+FTS columns; values must identify real source columns, never SQL expressions.
+Names are resolved against actual metadata and quoted as identifiers. Unknown,
+hidden, repeated or blank column mappings fail explicitly. The mapping is
+snapshotted when configured. This mapping selects authoritative input only;
+`sourceColumns("search", ...)` independently maps destination columns to original
+FTS columns, so recovery and a destination rename can be combined without an
+intermediate view or changes to the content source.
+
+The executor captures the source once into typeless TEMP columns, preventing
+affinity conversion of IDs or values. That same captured data is used for
+verification and reconstruction. Thus a source view in the owning Schema remains
+usable even when dependency views and backing columns are replaced later in the
+batch. It creates a verification index using the original complete native FTS5
+definition and captured content. Bidirectional native EXCEPT queries compare
+document IDs and fts5vocab(instance) term/document/column/offset tuples. Native
+docsize token-count blobs are compared without decoding or copying shadow rows;
+this also detects changed term frequencies with detail=none/column. Native module
+integrity checks still apply. Every comparison must pass before replacement DDL.
+
+The source is authoritative for text spelling, whitespace, case and UNINDEXED
+values: the original contentless index cannot prove byte-for-byte text identity.
+Index equivalence is the validation contract. Equivalent token streams with
+different spelling can be accepted, and the supplied text becomes the recovered
+data. This API never fabricates missing text. See
+[FTS5 contentless behavior](https://www.sqlite.org/fts5.html#contentless_tables)
+and [fts5vocab](https://www.sqlite.org/fts5.html#the_fts5vocab_virtual_table_module).
+
+Normal column mappings, module conversion, runtime setting policies and final
+dependencies compose with recovery. A stored-content FTS can also be rebuilt
+into a contentless FTS5 destination directly from its readable content. Target
+contentless tables retain native document-size storage so final row counts can
+be verified. contentless with columnsize=0 is rejected because document IDs
+cannot be enumerated reliably by a full scan. An option for an unselected or
+non-contentless table, missing columns/IDs, duplicate/non-integer IDs, changed
+terms, offsets, token counts or document sets fails explicitly.
+
+TEMP rollback journaling is required for captured content and vocabulary tables.
+All helper objects are created in the owned transaction and removed on success;
+verification, copy and late dependency failures roll them back with the original
+data and DDL. Their operations are retained in the result. No per-row/column
+metadata queries, new dependencies or XML formats are introduced. FTS5 recovery
+uses the existing SQLite 3.37+ virtual reconstruction boundary, with each native
+table feature retaining its own engine requirements. Older binaries remain
+unexecuted.
+
+`contentless_unindexed=1` reconstruction is currently rejected before DDL. With
+the bundled SQLite 3.53.1, a direct native DROP leaves the content shadow table
+behind, causing a stored-content replacement's rename to fail. A native regression
+test reproduces this separately from the executor. The implementation does not
+delete orphan shadow tables or modify sqlite_schema to work around this limitation.
+The upstream [FTS5 drop implementation](https://github.com/sqlite/sqlite/blob/master/ext/fts5/fts5_storage.c)
+provides relevant module context. No fixed-version boundary is assumed.
+
+### Explicit module conversion
+
+By default a rebuild keeps the existing module. To convert an existing table
+within the FTS3/4/5 family or between RTree and RTree_i32, supply the destination
+module's complete native definition and matching column models, then opt in:
+
+```java
+var options = new SqliteTableRebuilder.Options()
+        .tables("t")
+        .convertModule("t");
+var result = new SqliteTableRebuilder().rebuild(connection, desiredSchema, options);
+```
+
+Column mappings and complete final view/trigger/FK definitions use the same
+Schema entry point as ordinary reconstruction. No SQL references or module
+arguments are automatically translated. In particular, supply destination
+tokenizer, prefix, content and UNINDEXED syntax explicitly. Destination MATCH
+syntax, ranking functions and query semantics may differ; preservation concerns
+the copied data and verified identities, not equivalence of arbitrary searches.
+FTS docids are copied using rowid, including negative and large 64-bit IDs.
+Source and destination module integrity checks, dependency validation, row-count
+checks and the owned transaction still apply. External FTS4/5 content and backing
+column changes can be staged in the same batch before any original is dropped.
+
+The default `ModuleSettings.PRESERVE_COMPATIBLE` transfers the effective automerge
+setting with the destination module's native command. An unset FTS3/4 automerge
+is 0; an unset FTS5 automerge is 4. Other explicitly stored FTS5 settings have no
+general FTS3/4 equivalent and cause rejection. To deliberately discard all runtime
+settings and use the destination module's defaults, choose:
+
+```java
+options.convertModule("t", SqliteTableRebuilder.ModuleSettings.DESTINATION_DEFAULTS);
+```
+
+This reset affects runtime settings, not the supplied CREATE definition or copied
+data. FTS5 automerge=1 is not ported to FTS3/4, where the same command means 8.
+Converting away from FTS4 languageid is allowed only when all rows use language 0;
+nonzero language partitions cannot be represented by FTS3/5 and remain rejected,
+even with a runtime-settings reset. Contentless FTS5 conversion requires the
+verified authoritative-content option above; FTS4 contentless remains excluded.
+
+RTree conversion verifies every copied value with a native EXCEPT query against
+the staged replacement, before any source table is dropped. Fractional coordinates,
+integer overflow or float32 rounding that changes a copied value fail and roll
+back. Auxiliary values and keys are included in the comparison. RowIdentity's
+default preserves keys; explicit REGENERATE still controls intentional identity
+changes. There is no implicit permission for coordinate precision loss.
+
+No-op conversion options, unselected table names, ordinary/virtual conversion,
+FTS/RTree conversion and unknown module families fail explicitly. Supported
+conversions retain the SQLite 3.37+ boundary used for virtual-table reconstruction;
+older ordinary-table behavior, DialectResolver and metadata queries are unchanged.
+See the native [FTS5 automerge](https://www.sqlite.org/fts5.html#the_automerge_configuration_option)
+and [RTree coordinate representations](https://www.sqlite.org/rtree.html#integer_valued_r_trees).
 
 ## Views
 
@@ -1588,7 +1757,7 @@ enough to retain executable DDL. Disabling both preserves the virtual marker but
 omits DDL, so CREATE fails clearly instead of creating an ordinary table.
 Generic ALTER and explicit column rename reject virtual tables because their
 supported operations depend on the module. The generic ALTER path does not copy
-virtual-table data. Use the explicit FTS5/RTree reconstruction API described above
+virtual-table data. Use the explicit FTS/RTree reconstruction API described above
 when changing a supported module's definition and copying its data atomically.
 
 On SQLite 3.37+, table enumeration excludes objects classified as `shadow` by
@@ -1769,7 +1938,7 @@ SQLite binaries are not tested.
 ### Index rebuilding
 
 The normal SQL factory registry supports SQLite `SqlType.REBUILD` for a Schema
-model `Index` or `Table`:
+model `Index`, `Table` or `Schema`:
 
 ```java
 var registry = dialect.createSqlFactoryRegistry();
@@ -1782,9 +1951,25 @@ For a table, SQLite rebuilds all indexes on that table; for an index, it rebuild
 only that index. Schema identity can be inherited from the owning model or
 explicitly set. A missing schema/name is rejected. Every target is qualified,
 avoiding SQLite's precedence of a collation name over an unqualified table or
-index name. A Schema-wide REBUILD is rejected rather than expanding the scope
-to every attached database. Collation-wide and SQLite 3.53 `REINDEX EXPRESSIONS`
+index name. Collation-wide and SQLite 3.53 `REINDEX EXPRESSIONS`
 operations are not exposed. See [REINDEX](https://www.sqlite.org/lang_reindex.html).
+
+Passing a named Schema expands only its modeled ordinary tables into qualified
+table REINDEX operations, in model order:
+
+```java
+var operations = registry.createSql(schema, SqlType.REBUILD);
+```
+
+This rebuilds every index of each selected table, including native UNIQUE and
+primary-key indexes absent from the explicit Index collection. Tables omitted
+from the model and other attached databases are not selected. Canonical Schema
+ownership supplies each table's database identity; the caller's model is not
+modified. An empty named Schema produces no operations. Virtual tables identified
+by metadata or complete CREATE DDL are skipped because their module-owned indexes
+are not native REINDEX targets; this does not issue FTS rebuild commands or touch
+their shadow tables. Use the existing explicit Index/Table path for a narrower
+selection. Blank or NUL-containing schema/object names fail before SQL is returned.
 
 The factory generates SQL only: the caller executes operations and owns the
 transaction. SQLite execution failures, including uniqueness conflicts after
@@ -1797,6 +1982,11 @@ boundaries. Legacy/current selections retain the same native SQL. Tests execute
 against the bundled engine and cover changed collation ordering, isolated
 attached indexes, all indexes on a table, temp objects, quoting, invalid targets,
 uniqueness failures and caller-controlled rollback. Old binaries are not tested.
+Schema selection additionally tests main, TEMP and quoted attached databases,
+unselected tables, native UNIQUE indexes, empty tables, FTS5/RTree exclusion,
+model immutability and rollback of an earlier successful operation when a later
+table fails. Generated Schema REINDEX SQL retains the SQLite 3.7+ syntax; legacy
+resolver generation is tested without executing an older binary.
 
 Expression indexes can also be selected from a Schema model without broadening
 the request to every attached database:

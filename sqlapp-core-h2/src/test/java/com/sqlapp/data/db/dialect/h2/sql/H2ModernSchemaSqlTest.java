@@ -6,7 +6,6 @@
 package com.sqlapp.data.db.dialect.h2.sql;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,10 +16,11 @@ import com.sqlapp.data.schemas.Table;
 
 class H2ModernSchemaSqlTest extends AbstractH2SqlFactoryTest {
 	@Test
-	void explicitDomainReferenceIsRejectedRatherThanDropped() {
+	void explicitDomainReferenceIsGenerated() {
 		Table table = new Table("T");
-		table.getColumns().add(new Column("C").setDataType(DataType.INT).setDomain(new com.sqlapp.data.schemas.Domain("D")));
-		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+		table.getColumns()
+				.add(new Column("C").setDataType(DataType.INT).setDomain(new com.sqlapp.data.schemas.Domain("D")));
+		assertTrue(sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText().contains("C D"));
 	}
 
 	@Test

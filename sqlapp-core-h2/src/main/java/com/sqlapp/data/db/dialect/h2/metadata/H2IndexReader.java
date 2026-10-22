@@ -54,6 +54,8 @@ public class H2IndexReader extends IndexReader {
 	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Index> result = list();
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -78,6 +80,9 @@ public class H2IndexReader extends IndexReader {
 				}
 				String columnName = getString(rs, COLUMN_NAME);
 				index.getColumns().add(new Column(columnName), Order.parse(getString(rs, "ASC_OR_DESC")));
+				if (modern)
+					index.getColumns().get(columnName).setNullsOrder(
+							com.sqlapp.data.schemas.NullsOrder.parse("NULLS " + getString(rs, "NULL_ORDERING")));
 			}
 		});
 		return result;

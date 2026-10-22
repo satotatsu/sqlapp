@@ -88,7 +88,15 @@ public class HsqlColumnReader extends ColumnReader {
 		Long numeric_precision = getLong(rs, "NUMERIC_PRECISION");
 		Integer numeric_scale = getInteger(rs, "NUMERIC_SCALE");
 		Long datetime_scale = getLong(rs, "DATETIME_PRECISION");
-		if (!isEmpty(domainName)) {
+		if ("ARRAY".equalsIgnoreCase(data_type) && isEmpty(domainName) && isEmpty(udtName)) {
+			String definition = getString(rs, "DTD_IDENTIFIER");
+			var array = java.util.regex.Pattern.compile("(?is)^(.+) ARRAY\\[(\\d+)\\]$")
+					.matcher(definition == null ? "" : definition);
+			if (!array.matches())
+				throw new SQLException("Cannot read HSQLDB array element type: " + definition);
+			getDialect().setDbType(array.group(1), null, null, obj);
+			obj.setArrayDimension(1).setArrayDimensionUpperBound(Integer.parseInt(array.group(2)));
+		} else if (!isEmpty(domainName)) {
 			obj.setDataType(DataType.DOMAIN);
 			obj.setDataTypeName(qualifiedType(getString(rs, "DOMAIN_SCHEMA"), domainName));
 		} else if (!isEmpty(udtName)) {

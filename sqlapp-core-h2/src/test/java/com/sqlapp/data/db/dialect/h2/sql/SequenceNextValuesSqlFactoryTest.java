@@ -54,7 +54,7 @@ public class SequenceNextValuesSqlFactoryTest extends AbstractH2SqlFactoryTest {
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				SELECT NEXT VALUE FOR [seqa]
+				SELECT NEXT VALUE FOR "seqa"
 				FROM SYSTEM_RANGE( 1, /*context*/1 )
 				""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());

@@ -27,16 +27,22 @@ public class H2CreateFunctionFactory extends AbstractCreateFunctionFactory<H2Sql
 
 	@Override
 	protected void addCreateObject(final Function obj, H2SqlBuilder builder) {
-		builder.create().alias().ifNotExists(this.getOptions().isCreateIfNotExists());
-		builder.name(obj);
-		if (obj.getDeterministic() != null) {
-			if (obj.getDeterministic().booleanValue()) {
-				builder.lineBreak();
-			} else {
-				builder.lineBreak().not();
-			}
-			builder.deterministic();
+		if (!obj.getDefinition().isEmpty()) {
+			builder._add(obj.getDefinition());
+			return;
 		}
-		builder.space()._add("for").space().sqlChar(obj.getClassName() + "." + obj.getMethodName());
+		builder.create().alias().ifNotExists(this.getOptions().isCreateIfNotExists());
+		builder.name(obj, getOptions().isDecorateSchemaName());
+		if (Boolean.TRUE.equals(obj.getDeterministic()))
+			builder.deterministic();
+		if (!obj.getStatement().isEmpty()) {
+			builder.as().space().sqlChar(toString(obj.getStatement()));
+		} else {
+			if (obj.getClassName() == null || obj.getClassName().isBlank() || obj.getMethodName() == null
+					|| obj.getMethodName().isBlank())
+				throw new IllegalArgumentException(
+						"H2 ALIAS requires Java source or a class and method: " + obj.getName());
+			builder.space()._add("FOR").space().sqlChar(obj.getClassName() + "." + obj.getMethodName());
+		}
 	}
 }

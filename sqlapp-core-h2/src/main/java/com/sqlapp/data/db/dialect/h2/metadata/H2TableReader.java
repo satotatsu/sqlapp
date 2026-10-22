@@ -67,6 +67,11 @@ public class H2TableReader extends TableReader {
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
 		obj.setRemarks(getString(rs, REMARKS));
 		obj.setTableType(getString(rs, "STORAGE_TYPE"));
+		String kind = getString(rs, "TABLE_TYPE");
+		if (kind != null && kind.contains("TEMPORARY")) {
+			obj.setTableType(Table.TableType.Temporary);
+			obj.getSpecifics().put("h2.tableKind", kind);
+		}
 		this.setStatistics(rs, "ROW_COUNT_ESTIMATE", obj);
 		return obj;
 	}

@@ -56,8 +56,7 @@ public class TruncateTemporaryTableFactoryTest extends AbstractH2SqlFactoryTest 
 		Index index = table.getIndexes().get("IDX_tableA1");
 		List<SqlOperation> list = command.createSql(table);
 		SqlOperation commandText = CommonUtils.first(list);
-		String expected = """
-				TRUNCATE TABLE [tableA]""";
+		String expected = "TRUNCATE TABLE \"tableA\"";
 		assertEquals(expected, commandText.getSqlText());
 	}
 

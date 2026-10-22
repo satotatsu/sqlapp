@@ -62,14 +62,15 @@ public class H2ColumnReader extends ColumnReader {
 				String table_name = getString(rs, TABLE_NAME);
 				String column_name = getString(rs, COLUMN_NAME);
 				Column column = new Column(column_name);
+				column.setDialect(getDialect());
 				column.setCatalogName(getString(rs, TABLE_CATALOG));
 				column.setSchemaName(getString(rs, TABLE_SCHEMA));
 				column.setTableName(table_name);
 				column.setNullable(rs.getInt("NULLABLE") == 1);
 				column.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
 				String productDataType = getString(rs, "TYPE_NAME");
-				column.setLength(rs.getInt("CHARACTER_MAXIMUM_LENGTH"));
-				column.setOctetLength(rs.getInt("CHARACTER_OCTET_LENGTH"));
+				column.setLength(getLong(rs, "CHARACTER_MAXIMUM_LENGTH"));
+				column.setOctetLength(getLong(rs, "CHARACTER_OCTET_LENGTH"));
 				column.setScale(rs.getInt("NUMERIC_SCALE"));
 				column.setDataTypeName(productDataType);
 				column.setSequenceName(getString(rs, "SEQUENCE_NAME"));
@@ -93,6 +94,31 @@ public class H2ColumnReader extends ColumnReader {
 	}
 
 	private void setModernProperties(final ExResultSet rs, final Column column) throws SQLException {
+		column.setLength(getLong(rs, "TYPE_PRECISION"));
+		getDialect().setDbType(getString(rs, "TYPE_NAME"), column.getLength(), column.getScale(), column);
+		String typeSql = getString(rs, "TYPE_SQL");
+		if (typeSql != null && (typeSql.contains(" ARRAY") || typeSql.startsWith("INTERVAL ")
+				|| typeSql.startsWith("ROW(") || typeSql.startsWith("GEOMETRY("))) {
+			column.setDataTypeName(typeSql);
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.OTHER);
+		} else if (typeSql != null && typeSql.startsWith("ENUM(")) {
+			column.setDataTypeName(typeSql);
+			var values = column.getValues().stream().map(value -> value.replace("''", "'")).toList();
+			column.getValues().clear();
+			column.getValues().addAll(values);
+		} else if ("JSON".equals(typeSql)) {
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.JSON);
+			column.setLength((Long) null);
+		}
+		String domainName = getString(rs, "DOMAIN_NAME");
+		if (domainName != null) {
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.DOMAIN);
+			column.setDomain(
+					new com.sqlapp.data.schemas.Domain(domainName).setSchemaName(getString(rs, "DOMAIN_SCHEMA")));
+		}
+		column.setHidden(!rs.getBoolean("IS_VISIBLE"));
+		if (rs.getBoolean("DEFAULT_ON_NULL"))
+			column.getSpecifics().put("h2.defaultOnNull", "true");
 		final boolean identity = "YES".equalsIgnoreCase(getString(rs, "IS_IDENTITY"));
 		column.setIdentity(identity);
 		if (identity) {
@@ -104,6 +130,8 @@ public class H2ColumnReader extends ColumnReader {
 			column.setIdentityMaxValue(getLong(rs, "IDENTITY_MAXIMUM"));
 			column.setIdentityMinValue(getLong(rs, "IDENTITY_MINIMUM"));
 			column.setIdentityCycle("YES".equalsIgnoreCase(getString(rs, "IDENTITY_CYCLE")));
+			column.setIdentityLastValue(getLong(rs, "IDENTITY_BASE"));
+			column.getSpecifics().put("h2.identityCache", getString(rs, "IDENTITY_CACHE"));
 		}
 		if ("ALWAYS".equalsIgnoreCase(getString(rs, "IS_GENERATED"))) {
 			column.setFormula(getString(rs, "GENERATION_EXPRESSION"));

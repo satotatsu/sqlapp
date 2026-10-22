@@ -50,6 +50,8 @@ public class H2ConstantReader extends ConstantReader {
 	protected List<Constant> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Constant> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -58,6 +60,13 @@ public class H2ConstantReader extends ConstantReader {
 				obj.setCatalogName(getString(rs, "constant_catalog"));
 				obj.setSchemaName(getString(rs, "constant_schema"));
 				obj.setDefinition(getString(rs, "sql"));
+				if (modern) {
+					String expression = getString(rs, "sql");
+					if (expression == null)
+						throw new SQLException("H2 constant value is unavailable: " + obj.getName());
+					obj.setDefinition(getDialect().createSqlBuilder().create().space()._add("CONSTANT ").name(obj, true)
+							.space()._add("VALUE ")._add(expression).toString());
+				}
 				obj.setRemarks(getString(rs, REMARKS));
 				result.add(obj);
 			}

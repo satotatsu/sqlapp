@@ -57,13 +57,13 @@ public class CreateTemporaryTableFactoryTest extends AbstractH2SqlFactoryTest {
 		List<SqlOperation> list = command.createSql(table);
 		SqlOperation commandText = CommonUtils.first(list);
 		String expected = """
-				DECLARE LOCAL TEMPORARY TABLE [tableA]
+				DECLARE LOCAL TEMPORARY TABLE "tableA"
 				(
-					  [colA] INTEGER NOT NULL
-					, [colB] BIGINT NOT NULL CHECK (colB>0)
-					, [colC] VARCHAR(10) DEFAULT 0
-					, CONSTRAINT PK_TABLEA PRIMARY KEY ( [colA], [colB] )
-					, CONSTRAINT [UK_tableA1] UNIQUE ( [colB] )
+					  "colA" INTEGER NOT NULL
+					, "colB" BIGINT NOT NULL CHECK (colB>0)
+					, "colC" VARCHAR(10) DEFAULT 0
+					, CONSTRAINT PK_TABLEA PRIMARY KEY ( "colA", "colB" )
+					, CONSTRAINT "UK_tableA1" UNIQUE ( "colB" )
 				) ON COMMIT PRESERVE ROWS
 				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());

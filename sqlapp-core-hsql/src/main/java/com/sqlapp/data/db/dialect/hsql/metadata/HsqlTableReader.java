@@ -89,6 +89,8 @@ public class HsqlTableReader extends TableReader {
 		// table.setCreated(rs.getTimestamp("CREATE_TIME"));
 		// table.setLastAltered(rs.getTimestamp("UPDATE_TIME"));
 		table.setTableType(getString(rs, "hsqldb_type"));
+		if ("GLOBAL TEMPORARY".equalsIgnoreCase(getString(rs, "table_type")))
+			table.setTableType(Table.TableType.Temporary);
 		if ("TEXT".equalsIgnoreCase(getString(rs, "hsqldb_type"))) {
 			table.setTableType((Table.TableType) null);
 			table.getSpecifics().put(HsqlTextTableSources.TABLE_TYPE_KEY, "TEXT");

@@ -50,6 +50,8 @@ public class H2DomainReader extends DomainReader {
 	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2;
 		final List<Domain> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -65,9 +67,31 @@ public class H2DomainReader extends DomainReader {
 				domain.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
 				domain.setOnUpdate(getString(rs, "DOMAIN_ON_UPDATE"));
 				String productDataType = getString(rs, "TYPE_NAME");
-				domain.setLength(rs.getInt("PRECISION"));
+				domain.setLength(getLong(rs, "PRECISION"));
 				domain.setScale(rs.getInt("SCALE"));
 				domain.setDataTypeName(productDataType);
+				if (modern) {
+					getDialect().setDbType(productDataType, domain.getLength(), domain.getScale(), domain);
+					String type = getString(rs, "TYPE_SQL");
+					if (type != null && (type.contains(" ARRAY") || type.startsWith("ROW(")
+							|| type.startsWith("INTERVAL ") || type.startsWith("GEOMETRY("))) {
+						domain.setDataTypeName(type);
+						domain.setDataType(com.sqlapp.data.db.datatype.DataType.OTHER);
+					} else if (type != null && type.startsWith("ENUM(")) {
+						domain.setDataTypeName(type);
+						var values = domain.getValues().stream().map(value -> value.replace("''", "'")).toList();
+						domain.getValues().clear();
+						domain.getValues().addAll(values);
+					} else if ("JSON".equals(type)) {
+						domain.setDataType(com.sqlapp.data.db.datatype.DataType.JSON);
+						domain.setLength((Long) null);
+					}
+					String parent = getString(rs, "PARENT_DOMAIN_NAME");
+					if (parent != null) {
+						domain.getSpecifics().put("h2.parentDomainName", parent);
+						domain.getSpecifics().put("h2.parentDomainSchema", getString(rs, "PARENT_DOMAIN_SCHEMA"));
+					}
+				}
 				String checkConstraint = getString(rs, "CHECK_CONSTRAINT");
 				domain.setCheck(checkConstraint);
 				String sqlText = getString(rs, "SQL");
@@ -76,6 +100,26 @@ public class H2DomainReader extends DomainReader {
 				result.add(domain);
 			}
 		});
+		if (modern && !result.isEmpty()) {
+			var domains = new java.util.HashMap<java.util.List<String>, Domain>();
+			for (var domain : result)
+				domains.put(java.util.Arrays.asList(domain.getCatalogName(), domain.getSchemaName(), domain.getName()),
+						domain);
+			execute(connection, getSqlNodeCache().getString("domainChecks_200.sql"), context,
+					new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rows) throws SQLException {
+							var domain = domains.get(java.util.Arrays.asList(getString(rows, "DOMAIN_CATALOG"),
+									getString(rows, "DOMAIN_SCHEMA"), getString(rows, "DOMAIN_NAME")));
+							if (domain != null)
+								domain.getChecks().add(new com.sqlapp.data.schemas.DomainCheckConstraint(
+										getString(rows, "CONSTRAINT_NAME"), getString(rows, "CHECK_CLAUSE")));
+						}
+					});
+			for (var domain : result)
+				if (!domain.getChecks().isEmpty())
+					domain.setCheck(null);
+		}
 		return result;
 	}
 

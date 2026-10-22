@@ -27,7 +27,7 @@ public class H2SequenceNextValuesFactory extends AbstractSequenceNextValuesFacto
 
 	@Override
 	protected void addSequenceNextValues(Sequence obj, H2SqlBuilder builder) {
-		builder.select().next().value().for_().name(obj);
+		builder.select().next().value().for_().name(obj, getOptions().isDecorateSchemaName());
 		builder.lineBreak();
 		builder.from()._add(" SYSTEM_RANGE").brackets(() -> {
 			builder._add(" ");

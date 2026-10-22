@@ -52,16 +52,23 @@ public class HsqlCreateTableFactory extends AbstractCreateTableFactory<HsqlSqlBu
 			throw new IllegalArgumentException("HSQLDB text source binding requires a TEXT table: " + table.getName());
 		}
 		var operations = super.createSql(table);
+		if (table.getTableType() == Table.TableType.Temporary) {
+			String action = table.getSpecifics().getOrDefault("commit_action", "DELETE");
+			if (!java.util.Set.of("DELETE", "PRESERVE").contains(action))
+				throw new IllegalArgumentException("Invalid HSQLDB temporary table commit_action: " + action);
+			var create = operations.stream().filter(o -> o.getSqlType() == SqlType.CREATE).findFirst().orElseThrow();
+			create.setSqlText(create.getSqlText() + " ON COMMIT " + action + " ROWS");
+		}
+		if (Boolean.TRUE.equals(table.getReadonly())) {
+			var builder = createSqlBuilder().set().table().name(table, getOptions().isDecorateSchemaName()).space()
+					._add("READ ONLY");
+			addSql(operations, builder, SqlType.ALTER, table);
+		}
 		if (source != null) {
 			var builder = createSqlBuilder().set().table().name(table, getOptions().isDecorateSchemaName()).space()
 					._add("SOURCE").space().sqlChar(source.definition());
 			if (source.descending())
 				builder.space()._add("DESC");
-			addSql(operations, builder, SqlType.ALTER, table);
-		}
-		if (Boolean.TRUE.equals(table.getReadonly())) {
-			var builder = createSqlBuilder().set().table().name(table, getOptions().isDecorateSchemaName()).space()
-					._add("READ ONLY");
 			addSql(operations, builder, SqlType.ALTER, table);
 		}
 		return operations;
@@ -70,7 +77,9 @@ public class HsqlCreateTableFactory extends AbstractCreateTableFactory<HsqlSqlBu
 	@Override
 	protected void addCreateObject(Table table, HsqlSqlBuilder builder) {
 		builder.create();
-		if (HsqlTextTableSources.isText(table))
+		if (table.getTableType() == Table.TableType.Temporary)
+			builder.space()._add("GLOBAL TEMPORARY");
+		else if (HsqlTextTableSources.isText(table))
 			builder.space()._add("TEXT");
 		else if (table.getTableType() == Table.TableType.Cache)
 			builder.space()._add("CACHED");

@@ -54,6 +54,15 @@ public class H2 extends Dialect {
 	 * システム予約スキーマ
 	 */
 	private final String[] SYSTEM_SCHEMA = new String[] { "INFORMATION_SCHEMA" };
+	// H2 parser keywords; keep identifiers portable across 1.x and 2.x selections.
+	private static final java.util.Set<String> KEYWORDS = java.util.Set
+			.of(("ALL AND ANY ARRAY AS ASYMMETRIC AUTHORIZATION BETWEEN CASE CAST CHECK CONSTRAINT CROSS "
+					+ "CURRENT_CATALOG CURRENT_DATE CURRENT_PATH CURRENT_ROLE CURRENT_SCHEMA CURRENT_TIME CURRENT_TIMESTAMP CURRENT_USER "
+					+ "DAY DEFAULT DISTINCT ELSE END EXCEPT EXISTS FALSE FETCH FOR FOREIGN FROM FULL GROUP HAVING HOUR IF IN INNER "
+					+ "INTERSECT INTERVAL IS JOIN KEY LEFT LIKE LIMIT LOCALTIME LOCALTIMESTAMP MINUS MINUTE MONTH NATURAL NOT NULL "
+					+ "OFFSET ON OR ORDER PRIMARY QUALIFY RIGHT ROW ROWNUM SECOND SELECT SESSION_USER SET SOME SYMMETRIC SYSTEM_USER "
+					+ "TABLE TO TRUE UESCAPE UNION UNIQUE UNKNOWN USER USING VALUE VALUES WHEN WHERE WINDOW WITH YEAR _ROWID_ "
+					+ "BOTH GROUPS ILIKE LEADING OVER PARTITION RANGE REGEXP ROWS TOP TRAILING").split(" "));
 
 	protected H2(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
@@ -102,6 +111,7 @@ public class H2 extends Dialect {
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARBINARY", SIZE_MAX, type -> {
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("BINARY\\s+VARYING", ""));
 			type.setLiteral("X'", "'");
 		});
 		// LONGVARBINARY
@@ -275,12 +285,29 @@ public class H2 extends Dialect {
 
 	@Override
 	public char getCloseQuote() {
-		return ']';
+		return '"';
 	}
 
 	@Override
 	public char getOpenQuote() {
-		return '[';
+		return '"';
+	}
+
+	@Override
+	protected String doQuote(final String target) {
+		return "\"" + target.replace("\"", "\"\"") + "\"";
+	}
+
+	@Override
+	public boolean needQuote(String target) {
+		return super.needQuote(target) || target != null && !target.isEmpty() && !isQuoted(target)
+				&& (!target.matches("[A-Za-z_][A-Za-z0-9_$]*")
+						|| KEYWORDS.contains(target.toUpperCase(java.util.Locale.ROOT)));
+	}
+
+	@Override
+	public String unQuote(String target) {
+		return isQuoted(target) ? target.substring(1, target.length() - 1).replace("\"\"", "\"") : target;
 	}
 
 	/**
@@ -432,5 +459,16 @@ public class H2 extends Dialect {
 	@Override
 	public boolean supportsValues() {
 		return true;
+	}
+
+	@Override
+	public boolean supportsColumnFormula() {
+		return true;
+	}
+
+	@Override
+	public String getIdentityInsertDefaultValue(com.sqlapp.data.schemas.Column column) {
+		return column.getIdentityGenerationType() == com.sqlapp.data.schemas.IdentityGenerationType.Always ? null
+				: "DEFAULT";
 	}
 }

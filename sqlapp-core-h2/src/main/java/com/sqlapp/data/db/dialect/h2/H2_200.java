@@ -23,9 +23,26 @@ public class H2_200 extends H2 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		getDbDataTypes().getDbType(com.sqlapp.data.db.datatype.DataType.JSON)
+				.setJdbcTypeHandler(new H2JsonJdbcTypeHandler());
 		getDbDataTypes().addDecimalFloat("DECFLOAT");
 		getDbDataTypes().addTimeWithTimeZone(type -> {
 			type.setDefaultValueLiteral(getCurrentTimeFunction());
 		});
+	}
+
+	@Override
+	public String getSequenceNextValString(String sequenceName) {
+		return "SELECT NEXT VALUE FOR " + sequenceName;
+	}
+
+	@Override
+	public String getIdentitySelectString() {
+		throw new UnsupportedOperationException("H2 2.x requires JDBC generated keys; CALL IDENTITY() was removed");
+	}
+
+	@Override
+	public boolean supportsMerge() {
+		return true;
 	}
 }

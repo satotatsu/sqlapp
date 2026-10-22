@@ -193,6 +193,19 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	}
 
 	@Override
+	protected HsqlSqlBuilder typeDefinition(Column column) {
+		super.typeDefinition(column);
+		if (column.getArrayDimension() > 0) {
+			if (column.getArrayDimension() != 1 || column.getArrayDimensionUpperBound() <= 0
+					|| column.getArrayDimensionLowerBound() > 1)
+				throw new IllegalArgumentException(
+						"HSQLDB requires a one-dimensional array with a positive cardinality");
+			_add(" ARRAY[")._add(column.getArrayDimensionUpperBound())._add("]");
+		}
+		return this;
+	}
+
+	@Override
 	public HsqlSqlBuilder definition(Column column, boolean withRemarks) {
 		if (column.getDataType() == DataType.DOMAIN
 				|| column.getDataType() == DataType.OTHER && !CommonUtils.isEmpty(column.getDataTypeName())) {

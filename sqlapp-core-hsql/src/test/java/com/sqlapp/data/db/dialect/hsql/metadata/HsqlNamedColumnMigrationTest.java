@@ -163,7 +163,7 @@ class HsqlNamedColumnMigrationTest {
 			target.getSchemas().get("APP").getTypes().clear();
 			assertThrows(IllegalArgumentException.class, () -> migration.plan(source, target, table));
 			var invalidTarget = source.clone();
-			invalidTarget.getSchemas().get("APP").getTypes().get("M").setStatement("BLOB");
+			invalidTarget.getSchemas().get("APP").getTypes().get("M").setStatement("ROW(V INTEGER)");
 			assertThrows(IllegalArgumentException.class, () -> migration.plan(source, invalidTarget,
 					invalidTarget.getSchemas().get("APP").getTables().get("T")));
 		}

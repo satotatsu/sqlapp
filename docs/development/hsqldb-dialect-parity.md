@@ -190,12 +190,100 @@ The backup is retained after success and recovery. Cleanup commands are separate
 and never executed automatically. Low-level consumers must honor each Command's
 optional guard query, executing it only when its COUNT is nonzero.
 
-This entry point requires unchanged column identities/count and complete metadata.
-TEXT/temporary tables, LOBs, arrays, dependent views/routines
-and changes to other schema objects require separate migration. It does not
+This entry point preserves every existing column identity and requires complete
+metadata.
+It also supports adding nullable columns, columns with explicit DEFAULT values,
+and generated columns. Add the Column to the target Table; no additional migration
+option is required. Restoring rows explicitly names only retained stored columns,
+so the engine applies its supported added defaults during insertion and computes
+generated values. Literal and CURRENT_TIMESTAMP defaults are regression-tested.
+Existing-column contents and row multiplicities are verified against the backup. Added values are governed by
+the target defaults, expressions and constraints; verification does not reevaluate
+stateful defaults. Invalid defaults or constraints can fail during restore and
+retain the verified backup for explicit recovery of the original table shape and
+rows. An added NOT NULL stored column requires an explicit DEFAULT. Newly added
+identity columns, column removal/rename, and a target without retained stored columns remain
+planning errors. These rules apply to both single-table and batch entry points.
+Dependent views/routines require the batch entry point below;
+changes to unrelated schema objects require separate migration. It does not
 provision users, roles or passwords.
 
-Columns using an existing scalar DOMAIN or DISTINCT type are supported, including
+BLOB/CLOB columns and one-dimensional arrays of built-in elements are supported.
+Array metadata retains the element type, length and maximum cardinality in the
+shared Column model and through Schema XML. CREATE and conversion CASTs preserve
+those components. LOB metadata accepts both the native large-object names and
+BLOB/CLOB spellings, and CREATE retains the declared length. Modern 2.x type
+registration supports the engine's 1 TiB declaration limit; tests retain a 3 GiB
+declaration with small data, without allocating a multi-gigabyte value. Legacy
+1.8 type registration remains unchanged.
+Omitting a LOB length retains the native engine's 1 GiB default rather than
+shrinking the previous unqualified BLOB/CLOB declaration.
+Array-backed DOMAIN/DISTINCT columns keep their named identity during metadata,
+XML and CREATE. Table migration resolves their built-in element type and maximum
+cardinality into independent array backups. Both single-table and batch paths
+support unchanged named array types, conversion to another existing named array
+type, and recovery after a failed restore. LOSSLESS rejects cardinality reduction
+that would remove elements before replacing the original table. NULL arrays,
+empty arrays and NULL elements are retained. This does not add support for
+multidimensional arrays or unresolved named element types.
+LOSSLESS validates contents after a conversion round trip, including NULL and
+empty values. HSQLDB rejects IS DISTINCT FROM for these types, so validation uses
+equality with explicit NULL handling. Bidirectional EXCEPT ALL verifies restored
+rows, retaining duplicate multiplicity. LOB fingerprints stream bytes/UTF-16 code
+units; array elements are individually framed. Because LOBs cannot be ordered by
+SQL, complex rows use sorted SHA-256 row digests (32 bytes plus Java collection
+overhead per row) before the final digest. Scalar-only plan fingerprints keep
+their existing format. Recovery detects same-length content changes and tolerates
+row reordering without accepting changed values.
+The backup and verification read original LOB values without a length-limiting
+CAST. HSQLDB can accept a BLOB larger than its declared length; casting both sides
+of verification would hide lost bytes. Backup LOB columns use the engine's maximum
+capacity, so a regression retains all 20,000 bytes of a source declared BLOB(10).
+Such inconsistent source data is rejected during validation, before replacement,
+even with ALLOW_LOSSY: recreating the original through SQL cannot reliably retain
+an out-of-bounds value. The complete verified backup and original remain available.
+
+GLOBAL TEMPORARY tables retain their table kind and commit action. Migration
+supports ON COMMIT PRESERVE ROWS on the dedicated execution connection and
+preserves session-local data. The caller's exclusive access must cover other
+sessions using the same global definition. ON COMMIT DELETE ROWS can be recreated,
+but migration rejects it because the required auto-commit connection cannot retain
+its rows across phases.
+
+TEXT migration requires an explicit empty target file when the target is TEXT:
+
+```java
+var table = target.getSchemas().get("APP").getTables().get("T");
+var migration = new HsqlTableMigration(dialect, Map.of(
+    HsqlTextTableSources.id(table),
+    new HsqlTextTableSources.Source("new.csv;fs=|;encoding=UTF-8", false)));
+var plan = migration.planAll(source, target);
+```
+
+The default constructor remains sufficient for ordinary tables. TEXT targets
+must be pre-created empty files and non-descending; bindings for unknown/non-TEXT tables fail
+planning. The engine opens the explicit target and the restore phase checks all
+TEXT targets read-only for existing rows before enabling writes or copying any
+batch data. An occupied file
+fails with retained backups. Recovery reconnects the recorded original source
+and verifies it against the backup instead of overwriting or appending to it;
+missing/changed source data fails explicitly and retains the backups. Caller-held
+exclusive access must also cover these files. Migration detaches a TEXT source
+before dropping its table and never issues file-deletion calls. HSQLDB itself can
+remove an empty writable cache file. The normal CREATE APIs still require their own explicit
+target bindings; migration does not change that rule.
+
+Original TEXT sources currently require an embedded file database and locally
+readable paths reported by the engine. Preflight reads those paths in one bulk
+catalog query and checks file sizes without writing files. HSQLDB 2.7.4 can treat
+a file no larger than its encoded platform line terminator as empty and delete
+it when a writable cache closes, even when it contains a short row. Such original
+files are rejected before backup/modification; migrate them separately. Read-only
+target probing protects occupied tiny files from that engine behavior. Source
+data changed outside the caller's exclusive window also prevents automatic
+recovery. Rebuild old plans after the array/LOB/temporary metadata improvements.
+
+Columns using an existing scalar or built-in-array DOMAIN or DISTINCT type are supported, including
 built-in-to-named, named-to-built-in and named-to-named conversions. The complete
 Catalog must include each referenced definition; unqualified names resolve in
 the owning table's schema and quoted qualified names retain their exact identity.
@@ -267,7 +355,7 @@ normalization such as 8 versus 8.000; emitted SQL is not rewritten.
 
 The single-table path does not rename a type, change unrelated schema objects,
 migrate routine/view dependencies, or support
-LOB/array storage. Native ALTER TYPE remains explicitly unsupported.
+multi-dimensional arrays or unresolved named array element types. Native ALTER TYPE remains explicitly unsupported.
 
 ### Coordinated table and shared-type migration
 
@@ -335,8 +423,8 @@ SPECIFIC ROUTINE BODY with the shared fail-closed initialization body. It raises
 SQLSTATE 45000 if called. CREATE uses the existing temporary declarations and body
 completion mechanism; recovery detaches any surviving cycle members before
 restoring the original graph. View-only cycles and cycles without reliable SQL
-signatures/bodies still require separate handling. Domain expressions and table
-defaults calling affected functions require separate handling.
+signatures/bodies still require separate handling. Table defaults calling affected
+functions require separate handling (the engine boundary is described below).
 Triggers on unselected tables/views calling affected functions or procedures are
 also rejected during planning; include their owning relations or migrate those
 triggers separately.
@@ -350,6 +438,28 @@ successfully added. Recovery conditionally removes checks from either phase and
 restores the original checks after the original data/routines. Unnamed target
 checks receive deterministic names in cloned models; user models are not mutated.
 Opaque table definitions that prevent this component split are rejected.
+
+Named domain CHECKs calling affected routines are also deferred, including domains
+in other supplied schemas and domains used by unselected tables. HSQLDB 2.7.4
+retains the domain-to-routine dependency even after DROP CONSTRAINT. Migration
+therefore keeps those routine declarations, installs fail-closed bodies before
+replacement, and restores executable bodies using ALTER SPECIFIC ROUTINE in the
+same dependency order as recreated routines. Generated columns and mutual routine
+recursion use that same ordering. The domain's identity, base type, defaults and
+USAGE grants remain in place. ADD CHECK validates all existing domain-column rows;
+a failure retains backups and supports recovery after partial check restoration.
+Domain owner schemas are fingerprinted during preflight and domain definitions
+are checked before recovery and after completion using bulk reads. The optional
+`BatchPlan.dependentDomains` snapshot participates in the content fingerprint only
+when nonempty; earlier constructors and JSON plans remain supported.
+
+Changing such a domain's own definition at the same time, opaque/unnamed domain
+checks, non-SQL routines, or retained routine signatures referencing a replaced
+named type require a separate migration and fail during planning. These cases
+require replacing the domain itself and coordinating all its users; they cannot
+use the declaration-preserving path. Copying a shared Domain into an existing
+Schema now replaces its named checks without duplicate or stale entries; this
+does not change XML or public model APIs.
 
 Generated columns can use affected deterministic scalar functions declared
 CONTAINS SQL or NO SQL, with the same restrictions on their routine prerequisites.
@@ -414,6 +524,40 @@ queries. Row verification and data
 copy queries remain per table. Single-table Plan constructors and JSON remain
 compatible, including previously persisted backup names.
 
+## Roles, memberships and settings
+
+HSQLDB 2.x reads visible role definitions from AUTHORIZATIONS and direct role
+memberships from ROLE_AUTHORIZATION_DESCRIPTORS, using one SELECT per object set.
+APPLICABLE_ROLES is not a membership source: for administrators it expands all
+applicable roles, including roles never explicitly granted to that administrator.
+Implicit PUBLIC membership and the internal _SYSTEM grantee are omitted. Nested
+role grants retain their direct edges rather than being flattened into user grants.
+Grantee filters preserve literal quoted names. The common CatalogReader entry
+point loads these collections, and Catalog XML retains identities and edges.
+
+The native membership IS_GRANTABLE describes the grantee's administrator status;
+it is retained in specifics and is not converted into RoleMember.admin. HSQLDB
+2.7.4 rejects WITH ADMIN OPTION and per-grant DEFAULT role settings. The role
+GRANT/REVOKE factories reject these unsupported model flags explicitly. They also
+reject implicit/system memberships and unsupported grantor metadata rather than
+emitting a grant with different semantics. CREATE Role generates quoted custom
+role names and omits engine-provided built-in definitions. Catalog CREATE creates
+custom roles before generating object and membership grants. Users must already
+exist; no passwords are read or generated by this addition. Standalone membership
+SQL requires both principals to exist and the executing principal to have the
+necessary role administration rights.
+
+The settings reader retrieves visible SYSTEM_PROPERTIES in one SELECT and maps
+property names/values to Catalog.settings, retaining scope, namespace and class in
+specifics. It supports property-name filters and XML retention. Administrator and
+nonadministrator visibility follows the engine; a restricted read is not a claim
+of a complete database configuration. Settings are metadata only: Catalog CREATE
+does not automatically apply SET commands or local file properties.
+
+These additions apply to HSQLDB 2.x and are execution-tested on the disposable
+2.7.4 engine. Legacy 1.x keeps its original role query, returns no new memberships
+or properties, and never queries these 2.x catalogs. Older JARs remain unexecuted.
+
 ## Privileges and executable scripts
 
 HSQLDB 2.x uses separate bulk privilege queries; the legacy object query remains
@@ -432,8 +576,8 @@ Routine grants therefore require complete family coverage, recorded as
 TRIGGER grants are rejected because this engine accepts grouped syntax but loses
 the right internally. Grants inherited from ALL can expose this limitation too;
 table replacement refuses such plans before changing data. Unsupported privilege
-scopes fail explicitly. Principals must already exist, and callers executing
-standalone grant SQL are responsible for the intended grantor context.
+scopes fail explicitly. Users must already exist; Catalog CREATE can create custom roles. Callers
+executing standalone grant SQL are responsible for the intended grantor context.
 
 The privilege catalog views omit row filters. For nonempty 2.x object/column
 privilege sets, readers make a fixed number of additional bulk reads: administrator

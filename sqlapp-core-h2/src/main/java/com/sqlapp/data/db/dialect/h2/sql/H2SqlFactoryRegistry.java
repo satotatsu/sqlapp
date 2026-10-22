@@ -39,16 +39,35 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.CREATE, H2CreateTableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE, H2CreateIndexFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, H2AlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, H2CreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, H2TruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, H2DropTableFactory.class);
 		registerSqlFactory(View.class, SqlType.DROP, H2DropViewFactory.class);
+		registerSqlFactory(View.class, SqlType.CREATE, H2CreateViewFactory.class);
 		registerSqlFactory(Trigger.class, SqlType.CREATE, H2CreateTriggerFactory.class);
 		registerSqlFactory(Function.class, SqlType.CREATE, H2CreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.DROP, H2DropFunctionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.CREATE, H2CreateConstantFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, H2CreateSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, H2SequenceNextValuesFactory.class);
 		registerSqlFactory(Domain.class, SqlType.CREATE, H2CreateDomainFactory.class);
 		registerSqlFactory(Domain.class, SqlType.DROP, H2DropDomainFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, H2LockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ANALYZE, H2AnalyzeTableFactory.class);
+		for (Class<?> type : java.util.List.<Class<?>>of(Table.class, View.class, com.sqlapp.data.schemas.Column.class,
+				com.sqlapp.data.schemas.Index.class, Domain.class, Sequence.class, Function.class, Trigger.class,
+				com.sqlapp.data.schemas.Constant.class, com.sqlapp.data.schemas.Schema.class))
+			registerSqlFactory(type, SqlType.SET_COMMENT, H2SetCommentFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT, H2InsertFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT_ROWS, H2InsertFactory.Rows.class);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.h2.H2_200) {
+			registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, SqlType.CREATE, H2CreateSynonymFactory.class);
+			registerSqlFactory(Table.class, SqlType.MERGE, H2MergeFactory.class);
+			registerSqlFactory(Table.class, SqlType.MERGE_ROWS, H2MergeFactory.Rows.class);
+			registerSqlFactory(Table.class, SqlType.MERGE_TABLE, H2MergeFactory.Staged.class);
+		}
 	}
 }
