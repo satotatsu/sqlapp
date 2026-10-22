@@ -75,8 +75,6 @@ public class SapHanaProcedureArgumentReader extends RoutineArgumentReader<Proced
 		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE")).booleanValue();
 		obj.setNullable(nullable);
 		getDialect().setDbType(productDataType, maxLength, numericScale, obj);
-		obj.setCharacterSet(getString(rs, "CHARACTER_SET_NAME"));
-		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_TYPE")));
 		return obj;
 	}

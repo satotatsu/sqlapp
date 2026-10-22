@@ -94,8 +94,10 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
 			type.setLiteral("X'", "'");
 		});
-		// SByte
-		getDbDataTypes().addTinyInt(type -> {
+		// HANA TINYINT is unsigned; signed Java bytes require SMALLINT.
+		getDbDataTypes().addUTinyInt("TINYINT", type -> {
+		});
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
@@ -113,7 +115,11 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addDouble(type -> {
 		});
 		// Decimal
+		getDbDataTypes().addNumeric("DECIMAL", type -> {
+			type.setMaxPrecision(38).setMaxScale(38);
+		});
 		getDbDataTypes().addDecimal(type -> {
+			type.setMaxPrecision(38).setMaxScale(38);
 		});
 		// SmallDecimal
 		getDbDataTypes().addDecimalFloat("SMALLDECIMAL");
@@ -211,6 +217,33 @@ public class SapHana extends Dialect {
 	@Override
 	public char getOpenQuote() {
 		return '"';
+	}
+
+	private static final java.util.Set<String> IDENTIFIER_KEYWORDS = java.util.Set.of("ALL", "ALTER", "ARRAY", "AS",
+			"AT", "AUTHORIZATION", "BEFORE", "BEGIN", "BETWEEN", "BOTH", "BY", "CASE", "CHAR", "COLLATE", "CONDITION",
+			"CONNECT", "CROSS", "CUBE", "CURRENT_CONNECTION", "CURRENT_DATE", "CURRENT_SCHEMA", "CURRENT_TIME",
+			"CURRENT_TIMESTAMP", "CURRENT_TRANSACTION_ISOLATION_LEVEL", "CURRENT_USER", "CURRENT_UTCDATE",
+			"CURRENT_UTCTIME", "CURRENT_UTCTIMESTAMP", "CURRVAL", "CURSOR", "DECLARE", "DISTINCT", "ELSE", "ELSEIF",
+			"EMPTY", "END", "EXCEPT", "EXCEPTION", "EXEC", "FALSE", "FILTER", "FOR", "FROM", "FULL", "GROUP",
+			"GROUPING", "HAVING", "IF", "IN", "INNER", "INOUT", "INTERSECT", "INTO", "IS", "JOIN", "LATERAL", "LEADING",
+			"LEFT", "LIMIT", "LOOP", "MINUS", "NATURAL", "NCHAR", "NEXTVAL", "NO", "NOT", "NULL", "OF", "ON", "ORDER",
+			"OUT", "OVER", "PRIOR", "RECURSIVE", "RETURN", "RETURNS", "REVERSE", "RIGHT", "ROLLUP", "ROW", "ROWID",
+			"SELECT", "SESSION_USER", "SET", "SQL", "START", "SYSUUID", "TABLE", "TABLESAMPLE", "TO", "TOP", "TRAILING",
+			"TRUE", "UNION", "UNKNOWN", "UNNEST", "USING", "UTCTIMESTAMP", "VALUES", "WHEN", "WHERE", "WHILE", "WINDOW",
+			"WITH", "WITHIN");
+
+	@Override
+	public boolean needQuote(final String target) {
+		if (target == null || target.isEmpty() || isQuoted(target)) {
+			return false;
+		}
+		return IDENTIFIER_KEYWORDS.contains(target.toUpperCase(java.util.Locale.ROOT))
+				|| !Character.isLetter(target.charAt(0)) || super.needQuote(target);
+	}
+
+	@Override
+	protected String doQuote(final String target) {
+		return "\"" + target.replace("\"", "\"\"") + "\"";
 	}
 
 	@Override

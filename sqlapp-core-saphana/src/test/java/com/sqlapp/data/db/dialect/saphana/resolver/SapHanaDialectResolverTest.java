@@ -59,4 +59,14 @@ public class SapHanaDialectResolverTest {
 		assertTrue(find);
 	}
 
+	@Test
+	void preservesPlatformAndCloudVersionBoundary() {
+		for (int major = 0; major < 4; major++) {
+			assertTrue(!(DialectResolver.getInstance().getDialect("HDB", major, 0) instanceof SapHanaCloud));
+		}
+		for (int major : new int[] { 4, 5 }) {
+			assertTrue(DialectResolver.getInstance().getDialect("HDB", major, 0) instanceof SapHanaCloud);
+		}
+	}
+
 }

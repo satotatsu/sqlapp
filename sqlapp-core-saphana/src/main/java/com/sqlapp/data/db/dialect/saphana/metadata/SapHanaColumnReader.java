@@ -80,6 +80,9 @@ public class SapHanaColumnReader extends ColumnReader {
 		} else if ("BY DEFAULT AS IDENTITY".equalsIgnoreCase(generationType)) {
 			obj.setIdentity(true);
 			obj.setIdentityGenerationType(IdentityGenerationType.ByDefault);
+		} else if ("ALWAYS AS".equalsIgnoreCase(generationType)) {
+			obj.setFormula(getString(rs, "GENERATED_ALWAYS_AS"));
+			obj.setFormulaPersisted(true);
 		}
 		obj.setRemarks(getString(rs, "COMMENTS"));
 		return obj;

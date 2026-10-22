@@ -44,7 +44,7 @@ import com.sqlapp.util.CommonUtils;
  * @author tatsuo satoh
  * 
  */
-public class SqpHanaCreateTemporaryTableSqlFactoryTest extends AbstractSapHanaSqlFactoryTest {
+public class SapHanaCreateTemporaryTableSqlFactoryTest extends AbstractSapHanaSqlFactoryTest {
 	SqlFactory<Table> operation;
 
 	@BeforeEach
@@ -114,7 +114,7 @@ public class SqpHanaCreateTemporaryTableSqlFactoryTest extends AbstractSapHanaSq
 		});
 		//
 		Index index = new Index("indexa");
-		index.setIndexType(IndexType.Hash);
+		index.setIndexType(IndexType.BTree);
 		table.getIndexes().add(index);
 		index.getColumns().add("colc", col -> {
 			col.setNullsOrder(NullsOrder.NullsLast);

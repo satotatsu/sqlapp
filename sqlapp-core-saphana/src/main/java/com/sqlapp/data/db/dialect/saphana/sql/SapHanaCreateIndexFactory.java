@@ -39,7 +39,7 @@ public class SapHanaCreateIndexFactory extends AbstractCreateIndexFactory<SapHan
 			return;
 		}
 		if (index.getIndexType() != IndexType.Vector) {
-			super.addObjectDetail(index, table, builder);
+			addStandardIndex(index, table, builder);
 			return;
 		}
 		validate(index, table);
@@ -51,6 +51,34 @@ public class SapHanaCreateIndexFactory extends AbstractCreateIndexFactory<SapHan
 		if (Boolean.TRUE.equals(index.getSpecifics().get(ONLINE, Boolean.class))) {
 			builder.space()._add("ONLINE");
 		}
+	}
+
+	private void addStandardIndex(final Index index, final Table table, final SapHanaSqlBuilder builder) {
+		if (table == null || index.getColumns().isEmpty()) {
+			throw new IllegalArgumentException("SAP HANA index requires a table and columns: " + index.getName());
+		}
+		builder.unique(index.isUnique());
+		final IndexType type = index.getIndexType();
+		if (type != null) {
+			if (type != IndexType.BTree && type != IndexType.CPBTree && type != IndexType.InvertedValue
+					&& type != IndexType.InvertedHash && type != IndexType.InvertedIndivisual) {
+				throw new IllegalArgumentException("Unsupported SAP HANA index type: " + type);
+			}
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.saphana.SapHanaCloud
+					&& type == IndexType.InvertedHash && !index.isUnique()) {
+				throw new IllegalArgumentException(
+						"SAP HANA Cloud INVERTED HASH indexes must be unique: " + index.getName());
+			}
+			builder.space()._add(type);
+		}
+		// HANA has no CREATE INDEX IF NOT EXISTS syntax.
+		builder.index().name(index, false).on().name(table, getOptions().isDecorateSchemaName()).space()._add("(");
+		int position = 0;
+		for (var column : index.getColumns()) {
+			builder.comma(position++ > 0);
+			addColumn(column, builder);
+		}
+		builder._add(")");
 	}
 
 	private void addFullTextIndex(final Index index, final Table table, final SapHanaSqlBuilder builder) {

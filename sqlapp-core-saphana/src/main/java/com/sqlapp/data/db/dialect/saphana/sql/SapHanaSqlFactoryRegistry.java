@@ -26,6 +26,12 @@ import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.Procedure;
+import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Synonym;
+import com.sqlapp.data.db.sql.CreateFunctionFactory;
+import com.sqlapp.data.db.sql.CreateProcedureFactory;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -36,7 +42,12 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Function.class, SqlType.CREATE, CreateFunctionFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.CREATE, CreateProcedureFactory.class);
+		registerSqlFactory(Trigger.class, SqlType.CREATE, SapHanaCreateTriggerFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.CREATE, SapHanaCreateSynonymFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, SapHanaCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SapHanaAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SapHahaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SapHanaTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);

@@ -17,8 +17,8 @@ WHERE 1=1
   /*if isNotEmpty(tableName)*/
   AND I.TABLE_NAME IN /*tableName;type=NVARCHAR*/('%')
   /*end*/
-  /*if isNotEmpty(indexName)*/
-  AND I.INDEX_NAME IN /*indexName;type=NVARCHAR*/('%')
+  /*if isNotEmpty(constraintName)*/
+  AND I.INDEX_NAME IN /*constraintName;type=NVARCHAR*/('%')
   /*end*/
   AND I.CONSTRAINT IS NOT NULL
 ORDER BY I.SCHEMA_NAME, I.TABLE_NAME, I.INDEX_NAME, IC.POSITION

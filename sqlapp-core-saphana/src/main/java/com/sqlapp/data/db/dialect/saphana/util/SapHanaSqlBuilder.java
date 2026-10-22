@@ -22,6 +22,8 @@ package com.sqlapp.data.db.dialect.saphana.util;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -47,7 +49,75 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 	}
 
 	@Override
+	public SapHanaSqlBuilder definition(final Column column, final boolean withRemarks) {
+		if (column.getFormula() == null || column.getFormula().isBlank()) {
+			return super.definition(column, withRemarks);
+		}
+		if (column.isIdentity() || column.getDefaultValue() != null) {
+			throw new IllegalArgumentException(
+					"SAP HANA generated column cannot have identity or default: " + column.getName());
+		}
+		super.definition(column, withRemarks);
+		space().generated().always().as().space()._add("(")._add(column.getFormula())._add(")");
+		return instance();
+	}
+
+	@Override
+	protected SapHanaSqlBuilder autoIncrement(final AbstractColumn<?> column) {
+		generated();
+		if (column.getIdentityGenerationType() == IdentityGenerationType.ByDefault) {
+			space()._add("BY DEFAULT");
+		} else {
+			always();
+		}
+		as().identity();
+		if (Long.valueOf(0).equals(column.getIdentityStep())) {
+			throw new IllegalArgumentException("SAP HANA identity increment must not be zero: " + column.getName());
+		}
+		final java.util.List<String> options = new java.util.ArrayList<>();
+		if (column.getIdentityStartValue() != null)
+			options.add("START WITH " + column.getIdentityStartValue());
+		if (column.getIdentityStep() != null)
+			options.add("INCREMENT BY " + column.getIdentityStep());
+		if (column.getIdentityMinValue() != null)
+			options.add("MINVALUE " + column.getIdentityMinValue());
+		if (column.getIdentityMaxValue() != null)
+			options.add("MAXVALUE " + column.getIdentityMaxValue());
+		if (column.isIdentityCycle())
+			options.add("CYCLE");
+		final Integer cacheSize = column.getIdentityCacheSize();
+		if (cacheSize != null && cacheSize < 0) {
+			throw new IllegalArgumentException(
+					"SAP HANA identity cache size must not be negative: " + column.getName());
+		}
+		if (!column.isIdentityCache() || cacheSize != null && cacheSize <= 1) {
+			options.add("NO CACHE");
+		} else if (cacheSize != null) {
+			options.add("CACHE " + cacheSize);
+		}
+		if (column.isIdentityOrder())
+			options.add("ORDER");
+		if (!options.isEmpty()) {
+			space()._add("(")._add(String.join(" ", options))._add(")");
+		}
+		return instance();
+	}
+
+	@Override
 	protected SapHanaSqlBuilder typeDefinition(final Column column) {
+		if (column.getDataType() == DataType.DECIMAL || column.getDataType() == DataType.NUMERIC) {
+			final Long precision = column.getLength();
+			final Integer scale = column.getScale();
+			if (precision != null && (precision < 1 || precision > 38)
+					|| scale != null && (scale < 0 || precision == null || scale > precision)) {
+				throw new IllegalArgumentException(
+						"SAP HANA DECIMAL requires precision 1..38 and scale 0..precision: " + column.getName());
+			}
+			if (precision == null && column.getDomain() == null) {
+				// Unconstrained HANA DECIMAL is a floating decimal, not DECIMAL(0,0).
+				return _add("DECIMAL");
+			}
+		}
 		if (column.getDataType() != DataType.VECTOR) {
 			return super.typeDefinition(column);
 		}

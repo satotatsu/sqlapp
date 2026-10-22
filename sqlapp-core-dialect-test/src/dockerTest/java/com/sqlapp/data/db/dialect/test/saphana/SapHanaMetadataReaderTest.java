@@ -38,6 +38,10 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Table.TableDataStoreType;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** SAP HANA 2.0 integration coverage for the metadata reader tree. */
@@ -58,6 +62,9 @@ class SapHanaMetadataReaderTest {
 
 	@BeforeAll
 	static void startContainer() {
+		// Resolve providers before the expensive HANA startup so classpath
+		// failures are reported immediately.
+		DialectResolver.getInstance();
 		ReusableTestcontainers.start(HANA);
 	}
 
@@ -206,6 +213,23 @@ class SapHanaMetadataReaderTest {
 				assertEquals("METADATA_TEST", trigger.getTableSchemaName());
 				assertEquals("METADATA_CHILD", trigger.getTableName());
 				assertNotNull(trigger.getDefinition());
+				// Replay the catalog definitions through the public registry, rather
+				// than merely checking that the metadata text is nonempty.
+				statement.execute("DROP TRIGGER METADATA_TEST.METADATA_TRIGGER");
+				statement.execute("DROP VIEW METADATA_TEST.METADATA_VIEW");
+				statement.execute("DROP PROCEDURE METADATA_TEST.METADATA_PROCEDURE");
+				statement.execute("DROP FUNCTION METADATA_TEST.METADATA_FUNCTION");
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (Object object : new Object[] { view, procedure, function, trigger }) {
+					var operations = registry.createSql(object, SqlType.CREATE);
+					assertTrue(!operations.isEmpty(), object.getClass().getSimpleName());
+					for (var operation : operations) statement.execute(operation.getSqlText());
+				}
+				try (var result = statement.executeQuery("SELECT METADATA_TEST.METADATA_FUNCTION(3) FROM DUMMY")) {
+					assertTrue(result.next());
+					assertEquals(6, result.getInt(1));
+				}
 				var catalogReader = dialect.getCatalogReader();
 				var roleReader = catalogReader.getRoleReader();
 				roleReader.setObjectName("METADATA_ROLE");
@@ -234,6 +258,69 @@ class SapHanaMetadataReaderTest {
 	private Connection createConnection() throws SQLException {
 		String url = "jdbc:sap://localhost:" + HANA.getMappedPort(39041) + "/?databaseName=HXE";
 		return DriverManager.getConnection(url, "SYSTEM", PASSWORD);
+	}
+
+	@Test
+	void testEnhancedDdlRoundTripsOnHana2() throws Exception {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			drop(statement, "DROP SCHEMA HANA_DDL_TEST CASCADE");
+			statement.execute("CREATE SCHEMA HANA_DDL_TEST");
+			try {
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				Table table = new Table("ITEMS").setSchemaName("HANA_DDL_TEST").setDialect(dialect);
+				table.getColumns().add("ID", c -> c.setDataType(DataType.BIGINT).setIdentity(true)
+						.setIdentityGenerationType(IdentityGenerationType.ByDefault).setIdentityStartValue(10)
+						.setIdentityStep(2).setIdentityCacheSize(20));
+				table.getColumns().add("QTY", c -> c.setDataType(DataType.INT));
+				table.getColumns().add("PRICE", c -> c.setDataType(DataType.INT));
+				table.getColumns().add("TOTAL", c -> c.setDataType(DataType.INT).setFormula("QTY * PRICE"));
+				table.getColumns().add("TINYVAL", c -> c.setDataType(DataType.UTINYINT));
+				for (var operation : registry.createSql(table, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO HANA_DDL_TEST.ITEMS (QTY, PRICE, TINYVAL) VALUES (2, 3, 255)");
+				try (var rs = statement.executeQuery("SELECT ID, TOTAL, TINYVAL FROM HANA_DDL_TEST.ITEMS")) {
+					assertTrue(rs.next());
+					assertEquals(10L, rs.getLong(1));
+					assertEquals(6, rs.getInt(2));
+					assertEquals(255, rs.getInt(3));
+				}
+				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName("HANA_DDL_TEST");
+				reader.setObjectName("ITEMS");
+				var read = reader.getAllFull(connection).getFirst();
+				assertNotNull(read.getColumns().get("TOTAL").getFormula());
+				assertEquals(DataType.UTINYINT, read.getColumns().get("TINYVAL").getDataType());
+				assertEquals(IdentityGenerationType.ByDefault, read.getColumns().get("ID").getIdentityGenerationType());
+
+				Table added = table.clone();
+				added.getColumns().add("LABEL", c -> c.setDataType(DataType.NVARCHAR).setLength(20));
+				for (var operation : registry.createSql(table.diff(added), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				Table altered = added.clone();
+				altered.getColumns().get("LABEL").setLength(40).setDefaultValue("'new'").setNullable(false);
+				statement.execute("UPDATE HANA_DDL_TEST.ITEMS SET LABEL = 'old'");
+				for (var operation : registry.createSql(added.diff(altered), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				Table renamed = altered.clone();
+				renamed.getColumns().get("LABEL").setName("NEW_LABEL");
+				for (var operation : registry.createSql(altered.diff(renamed), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				Table removed = renamed.clone();
+				removed.getColumns().remove("NEW_LABEL");
+				for (var operation : registry.createSql(renamed.diff(removed), SqlType.ALTER)) statement.execute(operation.getSqlText());
+				Index index = new Index("IX_ITEMS_PRICE", removed.getColumns().get("PRICE"), removed.getColumns().get("QTY"))
+						.setIndexType(IndexType.InvertedValue);
+				removed.getIndexes().add(index);
+				for (var operation : registry.createSql(index, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				Synonym synonym = new Synonym("ITEM_ALIAS").setSchemaName("HANA_DDL_TEST")
+						.setObjectSchemaName("HANA_DDL_TEST").setObjectName("ITEMS");
+				for (var operation : registry.createSql(synonym, SqlType.CREATE)) statement.execute(operation.getSqlText());
+				try (var rs = statement.executeQuery("SELECT TOTAL FROM HANA_DDL_TEST.ITEM_ALIAS")) {
+					assertTrue(rs.next());
+					assertEquals(6, rs.getInt(1));
+				}
+			} finally {
+				statement.execute("DROP SCHEMA HANA_DDL_TEST CASCADE");
+			}
+		}
 	}
 
 	private void createObjects(final Statement statement) throws SQLException {
