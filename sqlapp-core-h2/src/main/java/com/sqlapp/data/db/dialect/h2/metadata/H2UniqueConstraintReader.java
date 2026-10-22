@@ -72,6 +72,9 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					c.setRemarks(getString(rs, REMARKS));
+					if (!primary && supportsNullTreatment(productVersionInfo)) {
+						c.getSpecifics().put("h2.nullsDistinct", getString(rs, "NULLS_DISTINCT"));
+					}
 					// String index_name = getString(rs, "unique_index_name");
 					// boolean isGenerated = rs.getBoolean("is_generated");
 					map.put(catalog_name, schema_name, constraint_name, c);
@@ -87,11 +90,20 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (supportsNullTreatment(productVersionInfo)) {
+			return getSqlNodeCache().getString("uniqueConstraints_220.sql");
+		}
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
 				&& productVersionInfo.getMajorVersion() >= 2) {
 			return getSqlNodeCache().getString("uniqueConstraints_200.sql");
 		}
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
+	}
+
+	private boolean supportsNullTreatment(ProductVersionInfo version) {
+		return version != null && version.getMajorVersion() != null
+				&& (version.getMajorVersion() > 2 || version.getMajorVersion() == 2 && version.getMinorVersion() != null
+						&& version.getMinorVersion() >= 2);
 	}
 
 }

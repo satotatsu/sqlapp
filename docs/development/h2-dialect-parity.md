@@ -22,7 +22,8 @@ when those identities change.
 
 ## Version boundaries
 
-The resolver retains `H2` for 1.x and `H2_200` for 2.x. Modern catalog fields and
+The resolver retains `H2` for 1.x, `H2_200` for 2.0/2.1 and selects the compatible
+subclass `H2_220` for 2.2 and later. Modern catalog fields and
 `DATA_TYPE_SQL` remain in the `_200.sql` resources; legacy catalog resources are
 not replaced by 2.x queries. Modern MERGE factories and synonym reading are
 selected only for 2.x. Generated expression syntax retains the legacy `AS (...)`
@@ -123,6 +124,20 @@ caller-controlled commit/rollback; DDL tests verify native execution and retaine
 data, without claiming rollback guarantees. See the native
 [command reference](https://h2database.com/html/commands.html).
 
+## UNIQUE null treatment
+
+H2 2.2 and later retain UNIQUE null treatment in the constraint's existing
+`specifics` map as `h2.nullsDistinct`: `YES` (NULLS DISTINCT), `NO` (NULLS NOT
+DISTINCT), or `ALL` (NULLS ALL DISTINCT). Inline CREATE TABLE and standalone
+constraint creation reproduce the policy explicitly, including defaults read
+from Oracle and MSSQLServer compatibility modes. Older target dialects reject
+this setting. The additional catalog column is queried only on 2.2 and later,
+in the existing bulk constraint query. MERGE, MERGE_ROWS and MERGE_TABLE use
+the selected unique key's null treatment when matching existing rows. ALL permits
+duplicate entirely-null keys, while matching partially-null keys. See the native
+[null treatment syntax](https://h2database.github.io/html/grammar.html#nulls_distinct)
+and [2.2.220 change log](https://h2database.com/html/changelog.html).
+
 ## Remaining limitations
 
 - Source-defined triggers do not expose their original source in the 2.x catalog.
@@ -137,7 +152,8 @@ data, without claiming rollback guarantees. See the native
 - H2's nontransactional DDL prevents promising the same atomic table-rebuild
   behavior as SQLite. No production data migration or table reconstruction is
   performed implicitly.
-- Historical binaries, server mode, compatibility modes and external databases
+- Historical binaries, server mode, compatibility modes beyond the UNIQUE policy
+  checks described above, and external databases
   remain unexecuted in this verification pass.
 
 ## Checks
@@ -152,5 +168,6 @@ Run focused classes first, then the module and its direct consumers:
 The focused classes are `H2DialectRoundTripTest`, `H2CatalogCoverageTest`,
 `H2NativeDmlTest`, `H2JsonBindingTest`, `H2NativeAlterTest` and
 `H2NativeOperationsTest`, `H2StorageMetadataTest`, `H2IndexOrderingTest` and
-`H2ViewDefinitionTest`. Existing metadata, domain/sequence, JDBC tree, cursor,
+`H2ViewDefinitionTest`, `H2UniqueNullTreatmentTest` and `H2MergeNullTreatmentTest`.
+Existing metadata, domain/sequence, JDBC tree, cursor,
 delete, generated-key and bulk snapshot tests remain part of the module suite.

@@ -110,10 +110,21 @@ public class H2MergeFactory extends AbstractMergeTableFactory<H2SqlBuilder> {
 
 	@Override
 	protected void addOn(Table table, SqlSignature signature, String target, String source, H2SqlBuilder builder) {
+		var keys = signature.getSelectedColumnsHolder().getKeyColumns();
+		var names = keys.stream().map(Column::getName).collect(java.util.stream.Collectors.toSet());
+		var policies = table.getConstraints().getUniqueConstraints().stream()
+				.filter(constraint -> constraint.getColumns().size() == keys.size()
+						&& constraint.getColumns().stream().allMatch(column -> names.contains(column.getName())))
+				.map(constraint -> constraint.getSpecifics().get("h2.nullsDistinct")).toList();
+		boolean nullSafe = policies.contains("NO") || policies.contains("ALL");
 		builder.on().space()._add("(");
 		int position = 0;
-		for (var key : signature.getSelectedColumnsHolder().getKeyColumns()) {
+		for (var key : keys) {
 			builder.lineBreak().and(position++ > 0);
+			if (nullSafe) {
+				builder._add("((").name(target + ".", key)._add(" IS NULL AND ").name(source + ".", key)
+						._add(" IS NULL) OR (");
+			}
 			boolean fixedBinary = key.getDataType().getJdbcType() == java.sql.JDBCType.BINARY;
 			if (fixedBinary) {
 				long length = key.getLength() == null ? 1 : key.getLength();
@@ -122,6 +133,20 @@ public class H2MergeFactory extends AbstractMergeTableFactory<H2SqlBuilder> {
 				builder._add("CAST(").name(source + ".", key).as().space().addTypeDefinition(key)._add("))");
 			} else
 				builder.name(target + ".", key).eq().name(source + ".", key);
+			if (nullSafe) {
+				builder._add("))");
+			}
+		}
+		if (nullSafe && !policies.contains("NO")) {
+			builder._add(" AND (");
+			int index = 0;
+			for (var key : keys) {
+				if (index++ > 0) {
+					builder._add(" OR ");
+				}
+				builder.name(source + ".", key)._add(" IS NOT NULL");
+			}
+			builder._add(")");
 		}
 		builder.lineBreak()._add(")");
 	}

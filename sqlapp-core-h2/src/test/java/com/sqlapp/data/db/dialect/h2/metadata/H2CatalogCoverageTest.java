@@ -109,7 +109,8 @@ class H2CatalogCoverageTest {
 				var statement = connection.createStatement()) {
 			for (int i = 0; i < count; i++) {
 				statement.execute("CREATE DOMAIN D" + i + " AS INT CHECK(VALUE>=0)");
-				statement.execute("CREATE TABLE T" + i + "(ID INT PRIMARY KEY,C D" + i + ")");
+				statement.execute(
+						"CREATE TABLE T" + i + "(ID INT PRIMARY KEY,C D" + i + ",UNIQUE NULLS NOT DISTINCT(C))");
 				statement.execute("CREATE INDEX IX" + i + " ON T" + i + "(C)");
 				statement.execute("CREATE VIEW V" + i + " AS SELECT * FROM T" + i);
 				statement.execute("CREATE SYNONYM S" + i + " FOR T" + i);

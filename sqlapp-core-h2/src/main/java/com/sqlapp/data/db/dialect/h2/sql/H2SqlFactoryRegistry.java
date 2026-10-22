@@ -39,6 +39,8 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.CREATE, H2CreateTableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				H2CreateUniqueConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE, H2CreateIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, H2AlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, H2CreateTemporaryTableFactory.class);
