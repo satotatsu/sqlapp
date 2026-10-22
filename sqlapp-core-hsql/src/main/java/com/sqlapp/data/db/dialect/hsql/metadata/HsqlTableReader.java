@@ -36,6 +36,7 @@ import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.db.dialect.hsql.HsqlTextTableSources;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -66,6 +67,13 @@ public class HsqlTableReader extends TableReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Table table = createTable(rs);
+				if (productVersionInfo.getMajorVersion() >= 2 && HsqlTextTableSources.isText(table)) {
+					if (getString(rs, "TEXT_TABLE_NAME") == null) {
+						throw new IllegalArgumentException(
+								"HSQLDB TEXT table source metadata requires administrator access: " + table.getName());
+					}
+					HsqlTextTableSources.record(table, getString(rs, "TEXT_SOURCE"), getBoolean(rs, "TEXT_DESC"));
+				}
 				result.add(table);
 			}
 		});
@@ -81,12 +89,18 @@ public class HsqlTableReader extends TableReader {
 		// table.setCreated(rs.getTimestamp("CREATE_TIME"));
 		// table.setLastAltered(rs.getTimestamp("UPDATE_TIME"));
 		table.setTableType(getString(rs, "hsqldb_type"));
+		if ("TEXT".equalsIgnoreCase(getString(rs, "hsqldb_type"))) {
+			table.setTableType((Table.TableType) null);
+			table.getSpecifics().put(HsqlTextTableSources.TABLE_TYPE_KEY, "TEXT");
+		}
 		table.setReadonly(rs.getBoolean("read_only"));
 		setSpecifics(rs, "commit_action", table);
 		return table;
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo.getMajorVersion() >= 2)
+			return getSqlNodeCache().getString("tables2.sql");
 		return getSqlNodeCache().getString("tables.sql");
 	}
 

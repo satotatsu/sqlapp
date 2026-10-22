@@ -60,7 +60,11 @@ abstract class AbstractNamedObjectXmlReaderHandler<T extends AbstractNamedObject
 							schemaName, obj);
 				}
 				for (Map.Entry<String, String> entry : map.entrySet()) {
-					setValue(obj, entry.getKey(), entry.getValue());
+					if (obj instanceof Routine<?> routine && SchemaProperties.SPECIFIC_NAME.getLabel().equals(entry.getKey())) {
+						routine.setSpecificNameLiteral(entry.getValue());
+					} else {
+						setValue(obj, entry.getKey(), entry.getValue());
+					}
 				}
 				reader.next();
 			}

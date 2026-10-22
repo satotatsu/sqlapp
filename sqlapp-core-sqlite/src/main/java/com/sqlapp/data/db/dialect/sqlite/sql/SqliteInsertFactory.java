@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.sqlite.sql;
 
 import java.util.List;
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.AbstractInsertFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlSignature;
@@ -13,6 +14,11 @@ import com.sqlapp.data.schemas.Table;
 
 /** SQLite INSERT, including tables with only generated/defaulted columns. */
 public class SqliteInsertFactory extends AbstractInsertFactory<SqliteSqlBuilder> {
+	@Override
+	protected SqliteSqlBuilder newSqlBuilder(Dialect dialect) {
+		return new SqliteDmlSqlBuilder(dialect);
+	}
+
 	@Override
 	protected boolean isInsertable(Column column) {
 		return !column.isHidden() && super.isInsertable(column);

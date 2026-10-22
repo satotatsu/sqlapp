@@ -27,6 +27,14 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 
 public class DialectResolverTest {
+	@Test
+	public void testVersionBoundaries() {
+		var resolver = DialectResolver.getInstance();
+		assertEquals(resolver.getDialect("hsql", 2, 4), resolver.getDialect("hsql", 3, 0));
+		assertEquals(resolver.getDialect("hsql", 2, 4), resolver.getDialect("hsql", 2, 7));
+		org.junit.jupiter.api.Assertions.assertFalse(resolver.getDialect("hsql", 1, 8).supportsColumnFormula());
+		org.junit.jupiter.api.Assertions.assertTrue(resolver.getDialect("hsql", 2, 0).supportsColumnFormula());
+	}
 
 	@Test
 	public void testCompareTo() {

@@ -9,6 +9,368 @@ var registry = dialect.createSqlFactoryRegistry();
 var operations = registry.createSql(view, SqlType.CREATE);
 ```
 
+## Whole-Schema recreation and changes
+
+Use the normal registry entry point to create the contents of a modeled SQLite
+database after XML import:
+
+```java
+Schema restored = SchemaUtils.readXml(new StringReader(schema.asXml()));
+var operations = registry.createSql(restored, SqlType.CREATE);
+```
+
+The SQLite Schema factory creates the contained objects using the existing
+table/index/view/trigger factories and shared dependency ordering. It emits no
+CREATE SCHEMA: main and temp belong to the connection, and any other named
+database must already be attached by the caller. The factory does not infer a
+filename, open a database, change foreign_keys or control transactions. A missing
+attachment remains an execution error. Schema names must be explicit and valid;
+an empty, named Schema produces an empty operation list.
+
+Whole-Schema tests export metadata to XML, close the source connection, and
+recreate it in another connection for main, temp and a quoted attached name.
+The fixture combines FK dependencies, deferred/cascade rules, INTEGER identity
+and ordinary INT primary keys, STRICT ANY, a generated column, a CHECK, an
+expression/partial index, dependent views, a trigger, WITHOUT ROWID and FTS5.
+They execute generated DML and native behavior checks while same-named tables
+in other databases remain unchanged. The tests intentionally verify schema
+recreation, not export of rows, virtual-table contents or sequence high-water
+marks; fixture rows are inserted separately.
+
+Existing Schema ALTER differences are also tested across two migration phases
+inside a caller-owned transaction: replacing a CHECK/index and dropping their
+old column, then appending a defaulted column and replacing the CHECK again.
+Successful phases commit together. A failing second phase rolls both back,
+restoring rows, the original column, CHECK and index; views and trigger behavior
+remain usable. A CREATE failure at an existing view likewise rolls back objects
+created earlier without removing that existing view. This adds no automatic
+table-rebuild fallback or implicit rollback behavior in Schema ALTER.
+
+## View and trigger differences
+
+The normal registry also accepts `registry.createSql(original.diff(target), SqlType.ALTER)`
+for views and triggers, including modifications inside a Schema difference.
+Modified objects produce DROP followed by CREATE using the existing factories;
+SQLite has no native ALTER VIEW or ALTER TRIGGER. Explicit database names are
+required on both objects. This applies to supported SQLite versions without
+adding a new engine syntax requirement or metadata query.
+
+View changes use `statement` and modeled columns, or the complete `definition`.
+When a definition is present, editing only statement/columns is rejected: edit
+the definition or clear it first. Trigger body changes require the complete
+CREATE TRIGGER definition; supplemental timing/event fields alone cannot replace
+it. Identity changes preserve the body. Missing definitions and unsupported
+catalog/enabled changes fail before operations are returned.
+
+Execute the operations in a caller-owned transaction when atomic replacement is
+required. Engine errors remain execution errors, and callers must roll back.
+Tests execute replacements and renames in embedded SQLite, including quoted
+attached names and rollback after an invalid trigger body.
+
+DROP VIEW also deletes its INSTEAD OF triggers. When both objects belong to
+modeled Schemas and retain the same identity, the factory appends CREATE for
+each unchanged owned trigger after CREATE VIEW. Complete trigger definitions
+must be present before any operations are returned. This also works for Schema
+differences, with no extra metadata queries or new SQLite version requirement.
+Tests cover multiple INSERT/DELETE triggers in main, temp and a quoted attached
+database, including rollback after one trigger has already been recreated.
+
+For a complete Schema difference, the SQLite Schema ALTER factory also coordinates
+changes to owned triggers. It omits DROP for triggers implicitly removed by DROP
+VIEW and recreates only those present in the target Schema. Added triggers use
+the normal CREATE path, modified triggers still require a complete definition,
+and unchanged triggers are restored once. Deleting a view together with its
+owned triggers emits only DROP VIEW; retaining a trigger on that deleted view
+is rejected. Caller models are not mutated, and coordination is local to each
+invocation. Tests combine view replacement with trigger addition, modification,
+deletion and preservation after Schema XML import, then verify native behavior
+and rollback in main, temp and a quoted attached database.
+
+For a same-database view rename, both direct view and complete Schema differences
+accept explicitly rebound triggers in the target owning Schema. Change the view
+name, set each retained trigger's modeled table/view identity to that new name,
+and edit its complete CREATE TRIGGER definition to use that ON target. For
+example, after cloning the owning Schema:
+
+```java
+var renamed = target.getViews().get("old_view");
+renamed.setName("new_view");
+var writer = target.getTriggers().get("view_write");
+writer.setTable(new Table("new_view").setSchemaName(target.getName()));
+writer.setDefinition("CREATE TRIGGER view_write INSTEAD OF INSERT ON new_view "
+    + "BEGIN INSERT INTO source VALUES(NEW.val); END");
+var operations = registry.createSql(original.diff(target), SqlType.ALTER);
+```
+
+A direct view difference requires both owning Schemas and all original owned
+triggers to remain under their existing names with explicitly rebound complete
+definitions. A complete Schema difference can additionally add/remove triggers.
+A stale ON target or an explicit ON database inconsistent with the modeled
+binding is rejected before returning operations. Identifier validation uses the
+existing SQLite DDL lexer, including quoted names and comments. Trigger bodies
+and literals are retained exactly; their references are not rewritten.
+
+When keeping a view's identity, direct view differences still require unchanged
+owned triggers; simultaneous changes belong in a complete Schema difference.
+Cross-database moves with owned triggers require an explicit recreation plan.
+The factories cannot discover dependencies omitted from the model, including
+TEMP triggers in another Schema. Callers must explicitly update dependent view
+queries and any references inside trigger bodies; use a complete Schema
+difference to recreate those changed dependencies together. Tests cover this
+path and caller rollback in main, temp and a quoted attached database. This is
+DROP/CREATE composition, not native ALTER VIEW or a general SQL-reference rewrite.
+Engine validation and transaction rollback remain the caller's responsibility.
+No metadata queries or newer engine syntax are introduced; older SQLite dialect
+resolution remains unchanged.
+## Explicit table reconstruction
+
+SQLite's [generalized ALTER procedure](https://www.sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes)
+can now be invoked explicitly for an ordinary table:
+
+```java
+// target is the desired Table model with an explicit database and existing name.
+var result = new SqliteTableRebuilder().rebuild(connection, target);
+long retainedRows = result.rowCount();
+var executedOperations = result.operations();
+```
+
+The connection must be an exclusively used SQLite JDBC connection in auto-commit
+mode, with no caller transaction, active cursors or concurrently issued SQL.
+The API resolves the actual dialect and requires SQLite 3.7.16+ for schema-wide
+foreign-key verification. It does not replace or weaken normal ALTER validation
+and is never an automatic fallback. Target XML/configuration formats and existing
+public entry points are unchanged. This is an additive SQLite execution API,
+not a persisted or externally replayable migration artifact.
+
+It reads the current owning Schema inside its transaction, creates a uniquely
+named replacement with the shared CREATE TABLE factory, copies same-named physical
+columns with INSERT OR ABORT, drops the original, renames the replacement and
+recreates target indexes with the existing factories. New columns use native
+defaults; generated columns are recomputed. Column renames and custom copy
+expressions are not inferred. Explicit column renames use the optional target-name
+to source-name map:
+
+```java
+var result = new SqliteTableRebuilder().rebuild(connection, target,
+        Map.of("new_name", "old_name"));
+```
+
+Map entries are column identifiers, not SQL expressions. Missing source/target
+columns, duplicate resolved target names and generated target columns are
+rejected. Unmapped columns retain same-name copying or native defaults. This
+also supports explicitly mapped identity-column renames and composite keys;
+dependent SQL definitions are not automatically rewritten. Tests preserve native
+TEXT/BLOB/INTEGER storage values and roll back invalid STRICT conversions.
+For type edits to read metadata, keep
+`sqlite.declaredType` consistent with the intended type, since it preserves the
+original native declaration. The vendor copy statement includes rowid handling
+and OR ABORT, which are not represented by the shared staging INSERT path.
+
+Explicit identity values and accessible implicit rowids are retained, including
+when a real column shadows the name rowid. An AUTOINCREMENT high-water mark is
+retained even for an empty table or after deletion of the largest ID. By default, rowid mode
+must remain unchanged, and the identity column must retain its source identity
+through either its unchanged name or the explicit mapping. WITHOUT ROWID tables are
+supported when that mode is retained. Tests change column order, drop columns,
+add defaults, UNIQUE/composite primary/FK constraints and STORED generated columns,
+and apply native STRICT affinity conversion. No data export or Java value
+conversion is involved.
+
+Self-referencing foreign keys are supported, including multiple self keys,
+implicit primary-key parent columns and composite keys on WITHOUT ROWID tables.
+The scratch model's self-FK parent name and referenced-column models are explicitly
+bound to the final table identity. They never point to the scratch name. Thus the
+rebuild does not rely on SQLite automatically rewriting FK references when the
+replacement is renamed. Other FK parent identities, actions and deferrability
+remain modeled and are recreated by the existing FK generator. Self references
+need no extra option or SQL-version boundary.
+
+Tests rebuild self-reference trees, mutual cycles and self loops with deferred
+constraints. They verify ON UPDATE CASCADE, ON DELETE CASCADE/SET NULL, incoming
+child rows, views/triggers, mixed external/self parents and caller-model
+immutability. Invalid replacement self keys fail the final foreign_key_check
+and roll back data and DDL together. The matrix covers main, temp and a quoted
+attached database, and both legacy_alter_table settings on the current engine;
+this does not substitute for testing older engine binaries. Existing support
+starts at SQLite 3.7.16, with individual table features retaining their existing
+version requirements. Metadata readers and their query counts are unchanged.
+The owning Schema's views and triggers and external TEMP views/triggers are
+preserved. TEMP triggers retain their database-qualified owner even when main,
+temp and attached databases contain same-named tables. Source and TEMP metadata
+are fetched once per schema, with additional trigger-owner schemas read only
+when required. Before copying, the API drops all involved triggers and then all
+involved views, so DROP VIEW cannot implicitly
+delete a trigger scheduled for a later DROP. This also prevents copy-time trigger
+side effects. It recreates all those views and triggers after the table and
+indexes, using the normal factories and retaining their queries/bodies. This
+schema-wide treatment includes unrelated objects rather than guessing which SQL
+fragments depend on the rebuilt table. No references are rewritten.
+
+CREATE VIEW/TRIGGER alone does not validate every reference. Before commit, each
+restored view is prepared with SELECT ... LIMIT 0, and each trigger-owner/event
+pair is compiled with EXPLAIN INSERT, UPDATE or DELETE. Only events actually
+present are compiled, allowing views with just one INSTEAD OF event. These
+checks execute no DML or trigger bodies. UPDATE OF column names are separately
+checked against the final owner model, since SQLite accepts nonexistent names
+there. A deleted column still used by a view, trigger body or UPDATE OF list
+therefore rolls the entire rebuild back. The Table overload preserves existing
+dependencies; use the Schema entry point below to replace their definitions in
+the same transaction. All validation completes before commit.
+
+Validation prepares each view and distinct trigger-owner/event separately
+because SQLite compiles one program per statement. These are validation queries,
+not extra per-object catalog reads in a MetadataReader. Existing version-aware
+bulk metadata retrieval remains in use. Tests exercise dependent views, ordinary
+and INSTEAD OF INSERT/UPDATE/DELETE triggers, unrelated objects and copy-time
+side-effect suppression in main, temp and a quoted attached database. They also
+verify rollback for broken views, bodies, UPDATE OF lists and early/late failures.
+
+On SQLite 3.37+, ordinary tables can be rebuilt in schemas containing virtual
+tables. The existing table reader excludes shadow tables using PRAGMA table_list;
+the additive `Sqlite.supportsTableList()` capability records this version
+boundary. Unselected virtual tables and their shadows remain untouched.
+Tests cover FTS5 and RTree data, native searches, dependent views/triggers,
+AUTOINCREMENT and rollback in main, temp and quoted attached databases.
+Before 3.37, a schema containing virtual tables remains conservatively rejected
+because its shadow tables cannot be classified reliably. A metadata-version
+simulation tests that rejection; it is not an older engine binary test.
+
+Remaining exclusions include direct shadow-table reconstruction, unsupported
+virtual-table modules, contentless FTS, cross-database foreign keys and preserving
+inaccessible rowids shadowed by all three aliases. Column mappings do not rewrite
+SQL: supply final view/trigger queries and FK models through the Schema API;
+invalid references cause validation failure and rollback. Other attached databases
+are not rebuilt.
+The API requires CHECK enforcement, writable_schema=OFF and rollback journaling
+(journal_mode=OFF is rejected, including TEMP when its dependencies are involved).
+It disables foreign
+keys before beginning its owned transaction, checks existing and final schema
+foreign keys even when enforcement was initially off, verifies row counts and
+runs integrity_check before committing. The foreign_keys flag and JDBC auto-commit
+are restored after success or successful rollback. Transaction-scoped settings
+such as defer_foreign_keys follow SQLite's normal commit/rollback reset behavior.
+Copy failures, invalid data, FK violations and late index-name collisions roll
+back both data and DDL. IF NOT EXISTS is disabled so collisions cannot silently
+omit a target object. Cleanup failures remain exceptions or suppressed exceptions;
+a post-commit restoration failure explicitly reports that the rebuild committed;
+a failed rollback never triggers an implicit commit, and that connection must
+be discarded rather than reused.
+
+The result retains the successfully executed replacement statements and verified
+row count. It is not a data fingerprint, dry-run authorization or promise of
+nonblocking execution. In-memory tests cover main, temp and quoted attached
+names, same-named-table isolation, incoming FK children, sequence/rowid retention,
+STRICT and WITHOUT ROWID behavior, new-FK validation and early/late rollback.
+Older engine binaries are not executed by these tests; existing metadata version
+resolution is retained.
+
+### Coordinated Schema reconstruction
+
+Pass a final Schema model to reconstruct its existing tables and replace its
+views/triggers in one transaction:
+
+```java
+var result = new SqliteTableRebuilder().rebuild(connection, desiredSchema);
+var retainedRowsByTable = result.rowCounts();
+var executedOperations = result.operations();
+```
+
+The Schema's view and trigger lists are authoritative: omitted definitions are
+removed, and new or changed definitions are created after reconstruction. Table
+omission does not delete a table. This entry point requires existing table names;
+it is not a general table-create/drop/rename migration. It supports one owning
+database per transaction, including main, temp or an attached database. Tables,
+views and triggers are cloned; the caller's model is unchanged. The actual
+connection dialect is used even for Schema models without a dialect property.
+
+Optional controls select a subset of tables and describe renamed source columns:
+
+```java
+var options = new SqliteTableRebuilder.Options()
+        .tables("parent", "child")
+        .sourceColumns("parent", Map.of("new_id", "id"));
+var result = new SqliteTableRebuilder().rebuild(connection, desiredSchema, options);
+```
+
+Update the incoming child FK's referenced-column model and dependent queries in
+`desiredSchema` along with the parent. A complete final TEMP view/trigger list
+can be supplied using `options.temporaryDependencies(desiredTempSchema)` when
+the owning database is not temp; otherwise the existing TEMP definitions are
+preserved. TEMP table models in that option are not reconstructed. Missing or
+duplicate selected tables, options for unselected tables and invalid TEMP schema
+identities fail explicitly.
+
+The executor stages and copies every selected table before dropping any original
+table, then renames the replacements and creates indexes and final dependencies.
+This supports incoming FKs, self references, mutually referencing tables and
+external-content FTS whose backing table is changed in the same batch. Copy,
+index, FK, view, trigger and integrity failures roll back the entire batch,
+including TEMP dependencies. Triggers stay disabled throughout data copying.
+Native view result metadata from the existing LIMIT 0 validation supplies inferred
+column names for final INSTEAD OF trigger compilation; no per-view metadata
+SELECT is added. The immutable result retains executed operations and verified
+row counts for each selected table, after one successful commit.
+
+### Explicit row identity changes
+
+The default preserves physical row identity and rejects mode or identity-column
+changes. For an intentional change, opt in per table:
+
+```java
+var options = new SqliteTableRebuilder.Options()
+        .rowIdentity("t", SqliteTableRebuilder.RowIdentity.REGENERATE);
+var result = new SqliteTableRebuilder().rebuild(connection, desiredSchema, options);
+```
+
+This permits rowid/WITHOUT ROWID conversion, INTEGER PRIMARY KEY identity
+addition/removal/replacement and native assignment of new IDs. Existing mapped
+or same-named column values are still copied; implicit rowids are not copied.
+New INTEGER PRIMARY KEY columns use SQLite's native ID assignment. Old-to-new
+ID correspondence and ordering are not promised. Update dependent keys explicitly;
+remaining inconsistencies fail the schema-wide FK check. WITHOUT ROWID primary
+keys must satisfy native NOT NULL/uniqueness constraints, and view/trigger queries
+that still require rowid fail validation when rowid is removed.
+
+AUTOINCREMENT high-water history is retained when its underlying copied identity
+is retained. Adding AUTOINCREMENT initializes it from copied IDs; removing it
+deliberately removes the AUTOINCREMENT allocation guarantee. A newly generated
+identity does not inherit an unrelated old sequence. No settings or Schema XML
+formats change. Ordinary reconstruction still starts at SQLite 3.7.16; feature
+specific minimum versions, such as WITHOUT ROWID at 3.8.2, remain enforced.
+
+### FTS5 and RTree reconstruction
+
+On SQLite 3.37+, the same APIs reconstruct FTS5 with stored internal or external
+content, RTree and RTree_i32. Keep the complete native CREATE VIRTUAL TABLE DDL
+in `definition` and matching visible columns in the Table model. To rename a
+virtual-table column, change both and supply the copy mapping. Separate ordinary
+constraints/indexes are rejected because the module owns those definitions.
+Module changes are rejected. Raw shadow rows are never copied or edited by the
+executor; the module creates its own shadow structures from native INSERTs.
+
+FTS5 rowids and RTree key values are preserved by default. RTree auxiliary data
+is copied with SQL, and new columns use module defaults. FTS runtime configuration
+(for example rank and automerge) is read once from each selected FTS index's
+configuration table and restored with native module commands; these settings are
+not represented in CREATE DDL. This execution-time module state retrieval is
+separate from the unchanged batched Schema MetadataReaders.
+
+The executor runs [FTS5 integrity-check with rank=1](https://www.sqlite.org/fts5.html#the_integrity_check_command)
+before and after reconstruction, including checking external content against its
+index. An already stale external index fails rather than silently changing its
+meaning. Updated external backing columns must match the final FTS definition.
+[RTree integrity checks](https://www.sqlite.org/rtree.html#integrity_check_using_the_rtreecheck_sql_function)
+use `rtreecheck(schema, name)` before and after copying. Normal row-count,
+dependency, FK and owning-schema integrity checks also apply.
+
+Contentless FTS cannot supply its original indexed column values, so it is
+rejected before reconstruction, including contentless-delete variants. FTS3/4,
+custom modules, direct shadow-table edits and cross-module conversion remain
+outside this API. No older engine binaries are needed for the new tests: native
+tests cover main/temp/quoted attached names, internal/external FTS content,
+FTS settings, RTree searches, dependent objects and full rollback. Historical
+engine binaries remain untested.
+
 ## Views
 
 The default reader stores the SELECT in `statement` and reads the view columns.
@@ -49,9 +411,43 @@ CREATE generation retains UPDATE OF, WHEN, multiple statements and BEGIN/END
 blocks, while qualifying the declaration with the model's schema/name. Trigger
 definitions must contain the complete CREATE TRIGGER, including BEGIN/END.
 A missing definition fails with an actionable error rather than producing an
-incomplete operation. Changing table references inside a definition is outside
-this factory's scope. TEMP triggers on tables in a different database require
-the original definition to qualify the target table explicitly.
+incomplete operation. For a TEMP trigger with a resolved `tableSchemaName`,
+CREATE generation qualifies an unqualified ON target using that schema. An
+explicitly qualified ON target remains authoritative. References within the
+trigger body retain their original SQL and SQLite name-resolution semantics.
+Ordinary triggers and definition-only models without a resolved target retain
+their original ON clause.
+
+Trigger metadata distinguishes the trigger's owning schema (`temp` for a TEMP
+trigger) from the schema of its ON target. Explicitly qualified targets retain
+their schema even when main, temp and attached databases contain same-named
+tables. Quoted target names, UPDATE OF columns and header comments are supported.
+For unqualified TEMP targets, the reader resolves a unique table or view across
+the connection's catalogs using database_list and one combined catalog query.
+Reading one or many such triggers uses three queries in total; qualified and
+ordinary triggers need only the original catalog query. An ambiguous unqualified
+target fails with an instruction to recreate the trigger with ON schema.table,
+because the catalog does not expose its bound database reliably after schema
+changes. Metadata definitions retain the original ON clause; the CREATE factory
+adds the resolved qualifier during SQL generation. This preserves the target
+when XML is exported to a connection with additional same-named tables in main,
+temp or attached databases. The destination must still attach the resolved
+database under the same name. These queries use historical
+sqlite_master and database_list interfaces and do not require a newer SQLite
+version. Older engine binaries were not executed for this change.
+
+The shared table-reference setters used by triggers and partition parents now
+preserve the other identifier when changing a table name or schema. This also
+preserves both identifiers when reading existing XML, without changing its
+format or public method signatures.
+
+Binding tests read an unqualified TEMP UPDATE OF trigger, export it through XML,
+and recreate it in a different connection containing same-named tables in all
+three database scopes. They verify that only the resolved table fires the
+trigger, WHEN filtering and the body remain effective, and schema names
+containing quotes are escaped correctly. SQL-generation tests also cover an
+INSTEAD OF header, comments, an already qualified target and definition-only
+models. No extra database queries are added by CREATE generation.
 
 ## Tables
 
@@ -74,11 +470,15 @@ Table option and primary-key keyword detection ignores quoted strings and commen
 
 Column specifics preserve SQLite syntax that affects behavior:
 
-- `sqlite.declaredType`: original PRAGMA type declaration, including an empty
-  declaration or dimensions. It prevents INT or INTEGER(8) from becoming an
+- `sqlite.declaredType`: original nonempty PRAGMA type declaration, including
+  dimensions. It prevents INT or INTEGER(8) from becoming an
   INTEGER rowid alias, and preserves STRICT ANY storage behavior. The table
   factory uses this declaration preferentially; remove or update it when
   intentionally changing a read column's type.
+- `sqlite.declaredType.empty=true`: an explicitly absent type declaration.
+  A nonempty marker survives XML, unlike the previous empty-string map value.
+  This prevents false ALTER differences after XML import, including unchanged
+  FTS tables. Remove this marker when intentionally assigning a type.
 - `sqlite.autoincrement=true`: retain AUTOINCREMENT on an identity column.
 - `sqlite.primaryKey.inlineDesc=true`: retain the inline PRIMARY KEY DESC exception.
 - `sqlite.notNull.onConflict`: retain a column NOT NULL conflict algorithm
@@ -92,6 +492,77 @@ Index creation delegates to the dialect index factory, preserving partial and
 expression keys and avoiding CREATE operations for SQLite's internal autoindexes.
 The table declaration is qualified with its model schema so attached databases
 are recreated in the intended database.
+
+### STRICT ANY values
+
+On SQLite 3.37+, an `ANY` column in a STRICT table preserves the value's storage
+class instead of coercing it to a numeric value. The column reader maps this
+case to the existing `DataType.ANY_DATA`, and the SQLite dialect supplies an
+`ANY` handler using the existing pass-through JDBC converter. For example,
+putting the string `"000123"` in a modeled Row and inserting it through generated
+DML keeps both the leading zeroes and SQLite's `text` storage class. Integers,
+real values, byte arrays and NULL retain their respective native storage
+classes. See [SQLite STRICT tables](https://www.sqlite.org/stricttables.html).
+
+The original `sqlite.declaredType` remains available for DDL, and XML preserves
+the generic type through the existing model format. Both bulk and legacy
+column-reading paths inspect the table definition without extra queries.
+Ordinary non-STRICT `ANY` columns retain their existing NUMERIC metadata and
+SQLite numeric affinity. A STRICT keyword inside a string or comment does not
+enable this behavior. Existing STRICT version validation and DialectResolver
+boundaries are unchanged; no shared-core code or public signatures change.
+
+Tests cover XML/DDL recreation followed by generated INSERT for all five SQLite
+storage classes, ordinary ANY coercion, and generated UPDATE/SELECT/DELETE that
+distinguish a text ANY primary key `"0001"` from an integer key `1`. Legacy-reader
+SQL is tested on the bundled engine, not historical SQLite binaries.
+
+### Dynamic view column values
+
+The SQLite column reader uses `DataType.ANY_DATA` for view columns reported with
+an empty type, ANY or BLOB. An expression can return different storage classes
+per row, and the bundled SQLite engine reports a projected STRICT ANY column
+as BLOB. Catalog metadata alone cannot reliably distinguish that projection
+from an actual binary column. Pass-through conversion preserves text (including
+leading zeroes), integers, real values, byte arrays and NULL in both cases.
+The original reported type remains in `sqlite.declaredType`; this intentionally
+changes the model type of view BLOB columns, while ordinary table BLOB columns
+and known view TEXT/integer types keep their existing mappings.
+
+For empty declarations the `sqlite.declaredType.empty=true` marker is used
+instead. The SQL builder renders stored declarations directly, including the
+empty case, rather than letting a Schema-inherited dialect normalize INT to
+INTEGER. Common identity semantics remain in `Column.isIdentity()`: an INTEGER
+rowid alias reads as true and an ordinary INT primary key reads as false.
+This is metadata/SQL-generation behavior within the existing XML format;
+historical SQLite engine binaries are not required or executed by these tests.
+
+Both bulk and legacy column paths use the object kind from their existing
+catalog query. No query is added and view definitions are not parsed to guess
+source identities. Reading one or eight views on the bulk path uses one view
+catalog query and one column query. XML and public signatures remain unchanged.
+Tests round-trip a view through XML, recreate it, read its mixed direct/CASE
+values into modeled Rows, and insert them into another STRICT ANY table with
+generated parameterized SQL, verifying both storage classes and values. Legacy
+reader SQL is executed on the bundled engine; old binaries are not tested.
+
+### Index database identity
+
+An index with a resolved model schema always qualifies its index name, including
+`main`, even when `decorateSchemaName=false`. SQLite uses the index-name
+qualifier to select the database; the ON table name must stay unqualified.
+Without `main` qualification an existing TEMP table of the same name can receive
+the index instead, leaving the intended main table without UNIQUE enforcement.
+This rule applies to standalone CREATE INDEX, table CREATE/XML recreation and
+ALTER index creation through the shared SQLite index factory. A model without
+a schema retains SQLite's native resolution; no schema is guessed. No metadata
+queries, API signatures, XML formats or version boundaries change.
+
+Embedded-engine tests cover both schema-decoration settings, main/temp/quoted
+attached names, partial expression UNIQUE indexes after XML round-trip, and
+unchanged enforcement in the other databases. SQL selected by a legacy 3.7.16
+dialect is also executed on the bundled engine; historical binaries themselves
+are not tested.
 
 ## Foreign keys and column collations
 
@@ -220,23 +691,23 @@ operations unavailable on the target. Tests execute
 against the bundled current SQLite, not historical binaries. SQLite itself
 validates live schema dependencies when operations execute.
 
-Changes to column types/defaults/nullability, constraints, table options or existing
-column order are rejected with a rebuild instruction. New columns are appended
-by SQLite regardless of their position among existing columns in the target
-model; this retains compatibility with existing command/checkpoint upgrades.
+Changes to column types/defaults, non-CHECK constraints, table options or existing
+column order are rejected with a rebuild instruction. New columns must form a
+suffix of the target column list, matching SQLite's append-only behavior.
 Unsupported ADD forms (identity, STORED generation,
 NOT NULL without a non-NULL default, parenthesized defaults and CURRENT_* defaults)
 are also rejected. Table rename must be separate from other changes. Ambiguous
 column delete/add combinations are rejected rather than risking data loss.
-The factory conservatively does not expose SQLite 3.53's ALTER COLUMN NOT NULL
-extensions yet. Calling ALTER with only a target table fails instead of returning
+Nullability-only changes use native ALTER COLUMN on SQLite 3.53+ and are rejected
+on earlier targets. Calling ALTER with only a target table fails instead of returning
 an empty result. Errors occur before an operation list is returned.
 
 DROP TABLE/VIEW/INDEX/TRIGGER targets the model's schema even with default
 decoration options. DROP TABLE does not emit unsupported CASCADE CONSTRAINTS,
 and `supportsDropCascade()` now returns false. Shared table dependency sorting
-is retained. SQLite internal index drops and standalone constraint CREATE/DROP
-requests fail explicitly; inline CREATE TABLE constraint details still work.
+is retained. SQLite internal index drops and unsupported constraint CREATE/DROP
+requests fail explicitly; named CHECK changes are available on 3.53.1+ and inline
+CREATE TABLE constraint details still work.
 
 These APIs return SQL operations; they do not execute statements, start
 transactions, disable foreign keys or perform an automatic table rebuild.
@@ -301,8 +772,8 @@ substitute for testing against a historical SQLite binary.
 The implementation stays in `sqlapp-core-sqlite`; dependencies and shared model
 APIs are unchanged. Resolver mappings now distinguish SQLite feature boundaries.
 New native ALTER and explicit rename APIs
-are additive. Automatic table-rebuild execution and SQLite extensions remain
-outside this change. PostgreSQL-only objects
+are additive. Automatic rebuild fallback from ALTER and SQLite extensions remain
+outside this native SQL path; explicit reconstruction is described above. PostgreSQL-only objects
 such as stored procedures and sequences are not added to SQLite.
 
 ## Version capabilities and DML
@@ -321,6 +792,7 @@ boundaries:
 | 3.8.8 | WAL checkpoint TRUNCATE |
 | 3.9 | Expression indexes and view column lists |
 | 3.15 | Row value comparisons and IN |
+| 3.18 | PRAGMA optimize |
 | 3.24 | Bulk UPSERT |
 | 3.25 | Column rename |
 | 3.27 | VACUUM INTO |
@@ -328,6 +800,9 @@ boundaries:
 | 3.32 | Default bind parameter ceiling increases from 999 to 32766 |
 | 3.35 | INSERT RETURNING and DROP COLUMN |
 | 3.37 | STRICT tables |
+| 3.46 | Optimize checks for unused tables with temporary analysis limits |
+| 3.53 | ALTER COLUMN SET/DROP NOT NULL |
+| 3.53.1 | Native named CHECK changes with corrected quoted-name removal |
 
 `DialectHolder.defaultDialect` retains modern capabilities. An explicitly unknown
 version resolves conservatively; SQLite 3.8 without a patch version enables only
@@ -353,6 +828,33 @@ These tests run on the bundled SQLite runtime, not historical engine binaries.
 
 ## INSERT and MERGE SQL generation
 
+### Explicit database identity for DML
+
+SQLite DML always qualifies a modeled table with its explicit schema, even with
+`decorateSchemaName=false`. Otherwise a same-named TEMP table can shadow the
+intended main/attached table, causing reads and writes to reach the wrong data.
+This covers INSERT/INSERT_ROWS, MERGE/MERGE_ROWS, keyed and application/whole-table
+UPDATE, keyed/whole-table/application DELETE, keyed/whole-table/application SELECT, SELECT_BY_ROWS and
+SELECT_BY_ROOT_ROWS/DELETE_BY_ROOT_ROWS. Modeled source-table INSERT and MERGE
+already require explicit source/target identities and retain that behavior.
+
+A DML-only SQLite builder applies this rule to table names and preserves column
+names and aliases. DDL builders remain separate because, for example, CREATE
+INDEX requires an unqualified ON table name. Shared factories still provide the
+key predicates, empty-row guards, relation traversal, conditions and pagination;
+SQLite supplies only the name-rendering policy. Registry options and input
+models are not mutated. A model without a schema retains native SQLite name
+resolution; the factory does not invent a database identity.
+
+Embedded-engine tests exercise both decoration settings with same-named tables
+in main, temp and an attached database containing a quote in its name. They
+verify writes and untouched shadow tables, row-set/root-relation reads and
+deletes, empty-key deletion guards, paginated and count queries, and application
+and whole-table update conditions. Additional tests select legacy 3.7/3.15
+dialects and execute their generated SQL on the bundled engine. Historical
+binaries are not tested. This changes generated qualification, with no existing
+method-signature, XML/configuration-format, dependency or version-boundary change.
+
 Use the normal SQL factory registry with the shared Table model:
 
 ```java
@@ -375,8 +877,8 @@ than unsupported MERGE INTO. Key selection uses the existing
 `TableOptions.mergeKeyColumnsMatchingStrategy`. The selected columns must match a
 modeled primary key, unique constraint or ordinary non-partial unique index, and
 must be writable input columns. Constraint and index collations are retained in
-the conflict target. Expression and partial unique indexes alone are not supported
-as merge keys. If a generated identity is the only key, explicit identity input
+the conflict target. Expression and partial unique indexes require explicit
+selection as described below. If a generated identity is the only key, explicit identity input
 is required to identify an existing row.
 
 On conflict, writable non-key columns are updated through `excluded`, preserving
@@ -406,6 +908,46 @@ generated-column UPDATE and multi-row parser/binder expansion on local in-memory
 SQLite. See SQLite's [INSERT](https://www.sqlite.org/lang_insert.html) and
 [UPSERT](https://www.sqlite.org/lang_upsert.html) syntax documentation.
 
+## Explicit SQLite UPSERT index targets
+
+For a partial or expression unique index, select its modeled name explicitly.
+The shared Schema remains the source of its key SQL, collations, ordering and
+partial-index predicate:
+
+```java
+var registry = (SqliteSqlFactoryRegistry) dialect.createSqlFactoryRegistry();
+registry.setMergeConflictIndexName("active_email_unique");
+var operations = registry.createSql(table, SqlType.MERGE);
+// The same setting applies to MERGE_ROWS, MERGE_TABLE and createSqlNodes.
+```
+
+For several tables, use `setMergeConflictIndexSelector(table -> ...)`, returning
+the modeled index name for each table or null to retain the shared key strategy.
+`setMergeConflictIndexName(null)` restores shared selection. This is optional
+SQLite SQL-generation configuration; Schema XML and common TableOptions formats
+are unchanged. Direct factory users can use `SqliteMergeFactory.setConflictIndexName`
+or `setConflictIndexSelector` before calling that factory's `createSql`. Registry
+lookups create fresh factories, so configure the registry when using its normal
+SQL/node entry points.
+
+The selected index must exist on the model and be unique. Invalid, blank or
+nonunique selections fail without falling back to another key. Expression keys
+require the retained `sqlite.index.keys` SQL; partial targets append the modeled
+`where` after the conflict key. Metadata readers already preserve both through
+XML. Ordinary modeled indexes can also use their physical column list when no
+retained key SQL is present. Physical index key columns must be writable inputs;
+expression inputs are evaluated by SQLite from the inserted values and defaults.
+The factory does not parse expressions to infer their source columns. Writable
+expression input columns may be updated through `excluded`, while physical key
+columns, primary keys and identity columns remain excluded from assignments.
+
+This requires SQLite 3.24+ like the existing UPSERT implementation. There is no
+metadata query, newer syntax requirement or automatic index selection change.
+Other uniqueness/FK/check violations still fail, and ordinary transaction rules
+apply. In-memory tests cover partial, expression and combined targets for all
+three MERGE forms in main, temp and a quoted attached database after XML import.
+They verify insert/update behavior, partial-predicate exclusion, preserved IDs
+and FK children, multi-row statement atomicity, DO NOTHING and NULL uniqueness.
 ## Staged MERGE and RETURNING
 
 SQLite 3.24+ supports table-to-table UPSERT through the same registry:
@@ -901,6 +1443,135 @@ not been tested. Local embedded-engine tests cover full/quick execution,
 constraint diagnostics, error limits, attached-schema isolation, unusual names,
 injection-shaped names, invalid options and unchanged fixture data.
 
+### Native named CHECK changes
+
+SQLite table differences execute dependency drops first, column changes second,
+and constraint/index creation last, preserving the order within each phase.
+In particular, replacing an existing index while dropping one of its old key
+columns removes the old index before DROP COLUMN. This also covers expression
+keys and partial-index predicates, including when a CHECK is replaced in the
+same difference. The factory still generates the complete plan before returning
+it and performs no database queries, execution or transaction management.
+Use a caller-owned transaction to roll back all phases if recreation fails.
+Tests cover attached-schema isolation, retained row values, replacement CHECK
+enforcement, and rollback after both successful and failed combined changes.
+DROP COLUMN retains its SQLite 3.35+ requirement; named CHECK changes retain the
+3.53.1+ requirement below. Unchanged dependent objects and external view/trigger
+dependencies are not automatically rewritten or removed; SQLite execution
+errors remain visible. No new API or XML/configuration format is introduced.
+
+SQLite 3.53.1+ supports named CHECK changes through both existing entry points:
+
+```java
+var target = original.clone();
+target.getConstraints().add(new CheckConstraint("positive", "value>0"));
+var operations = registry.createSql(original.diff(target), SqlType.ALTER);
+// Or supply a CheckConstraint with schema/table/name identity directly:
+var standalone = registry.createSql(target.getConstraints().get("positive"), SqlType.CREATE);
+```
+
+CREATE adds a named CHECK, DROP removes it, and a Table difference can add,
+remove or replace a CHECK expression. Replacement emits DROP then ADD. Execute
+multi-statement changes in a caller-owned transaction if atomicity is needed;
+the factory does not commit or roll back. Existing rows are validated by SQLite,
+and failure is a native JDBC error. Tests show caller rollback restores the
+original CHECK when the replacement fails. Table/constraint names retain attached
+schema identity and use the SQLite identifier renderer.
+
+Other constraint types still require rebuilding. Native operations require
+explicit schema/table/constraint names and reject virtual targets or deferred
+CHECK configuration. Metadata marks anonymous CHECK names with
+`specifics["sqlite.check.unnamed"]="true"`; the existing synthetic name remains
+available for documentation/XML, but native DROP rejects it because it is not
+an actual declared constraint name. Recreating such a CHECK as a named constraint
+requires rereading metadata before dropping it by name.
+
+Although CHECK ALTER syntax arrived in 3.53.0, this API conservatively requires
+3.53.1 for both directions because quoted DROP names were fixed after 3.53.0.
+Unknown 3.53 patch levels remain conservative. The resolver adds 3.53.1 and
+`supportsAlterCheckConstraints()`, and defaultDialect now selects that version.
+References: [3.53 release](https://www.sqlite.org/releaselog/3_53_0.html),
+[quoted-name fix discussion](https://sqlite.org/forum/forumpost/058870f83a?t=h),
+[3.53.1](https://www.sqlite.org/releaselog/3_53_1.html).
+
+Tests execute standalone and difference-based changes, quoted attached identities,
+failed replacement plus rollback, anonymous-name XML retention and old/unknown
+target rejection. This uses existing CheckConstraint fields and SQL types;
+there are no shared API, dependency or XML/configuration format changes.
+
+### Native column nullability changes
+
+SQLite 3.53+ table differences support changing a column's `notNull` property
+without rebuilding the table. Use the existing Schema model and ALTER entry point:
+
+```java
+var target = original.clone();
+target.getColumns().get("value").setNotNull(true);
+var sql = registry.createSql(original.diff(target), SqlType.ALTER);
+```
+
+Setting NOT NULL emits ALTER COLUMN SET NOT NULL; clearing it emits DROP NOT
+NULL. Existing `sqlite.notNull.onConflict` policies are rendered and validated
+when setting NOT NULL. Only nullability may change in that column operation;
+combined type/default/name changes still fail before a SQL list is returned.
+Virtual tables retain their module-specific ALTER rejection.
+
+The target schema/table/column identities are quoted through the SQLite builder,
+including attached databases. Existing NULL values can make SET NOT NULL fail at
+execution; native JDBC errors remain visible and the caller controls transactions.
+No data replacement, implicit commit or automatic fallback rebuild is performed.
+SQLite can retain redundant NOT NULL constraints after one DROP operation; native
+ALTER does not guarantee removal of every duplicate declaration. See
+[ALTER COLUMN](https://www.sqlite.org/lang_altertable.html#altertabaltcol).
+
+The resolver adds the [3.53 boundary](https://www.sqlite.org/releaselog/3_53_0.html),
+inheriting 3.46 capabilities. `supportsAlterColumnNullability()` gates generation
+on older targets; defaultDialect now selects 3.53.1. When working from metadata,
+the model's attached dialect participates in factory selection, so assign the
+intended target dialect to models when targeting an older engine. No dependencies,
+shared APIs, XML or configuration formats change.
+
+Tests execute against the bundled SQLite 3.53.1 engine and verify SET/DROP,
+metadata after changes, attached isolation, existing NULL failures, conflict
+behavior, rollback and rejection of older/combined requests. Historical binaries
+are not tested.
+
+### Database attachment
+
+`SqliteAttachmentBuilder` generates connection-local ATTACH and DETACH SQL:
+
+```java
+var attachments = new SqliteAttachmentBuilder(dialect);
+var archive = new Schema("archive");
+String attachSql = attachments.attach("archive.db", archive);
+String detachSql = attachments.detach(archive);
+```
+
+Both methods also accept a schema name directly. File and schema names are
+required; blank/NUL input and the reserved names main/temp are rejected. Filename
+is escaped as a string literal, schema as an identifier. The builder performs no
+filesystem or database operations. Execute with JDBC on the connection that will
+read or write the attached schema. Attachment does not apply to other connections.
+Reusing that Schema name lets the existing metadata readers and SQL factories
+target the attachment.
+
+`:memory:` creates a connection-local memory attachment. Relative paths and
+enabled SQLite URI filenames retain native SQLite semantics. This entry point
+does not expose the empty-filename temporary-database form. It does not manage
+files, delete them on detach, configure URI/open flags or change transaction
+settings. Duplicate aliases, missing attachments, access errors and locked
+attachments remain native JDBC failures. Finish active work before detaching;
+the caller controls commit/rollback. Atomicity across multiple database files
+retains SQLite's documented restrictions for WAL and in-memory main databases.
+See [ATTACH](https://www.sqlite.org/lang_attach.html) and
+[DETACH](https://www.sqlite.org/lang_detach.html).
+
+This additive SQLite API uses existing Schema identities, without new
+dependencies, XML/configuration changes or resolver boundaries. Tests execute
+quoted file/schema names, metadata plus typed SELECT, persistent detach/reattach,
+connection isolation, duplicate/missing aliases and caller-controlled rollback.
+Legacy selections generate the same SQL; historical engine binaries are not tested.
+
 ### Virtual tables and shadow tables
 
 Table metadata now identifies CREATE VIRTUAL TABLE and stores the complete
@@ -916,8 +1587,9 @@ As with trigger definitions, either readDefinition or readStatement enabled is
 enough to retain executable DDL. Disabling both preserves the virtual marker but
 omits DDL, so CREATE fails clearly instead of creating an ordinary table.
 Generic ALTER and explicit column rename reject virtual tables because their
-supported operations depend on the module. This does not implement a module
-migration planner or copy virtual-table data.
+supported operations depend on the module. The generic ALTER path does not copy
+virtual-table data. Use the explicit FTS5/RTree reconstruction API described above
+when changing a supported module's definition and copying its data atomically.
 
 On SQLite 3.37+, table enumeration excludes objects classified as `shadow` by
 `pragma_table_list`, using one schema-filtered catalog query. It retains ordinary
@@ -976,6 +1648,46 @@ control values, transfer attached FTS rows from a visible-only staging table,
 reject all MERGE entry points, and verify FTS3/4/5 type mappings across modern and
 legacy metadata branches. Changes stay in SQLite; no shared APIs, dependencies,
 configuration/XML formats or resolver boundaries are changed.
+
+### Statistics optimization
+
+`SqliteOptimizeBuilder` generates `PRAGMA optimize` for one database. The default
+schema is `main`; use a name or the shared Schema model for an attached database:
+
+```java
+var optimize = new SqliteOptimizeBuilder(dialect);
+String sql = optimize.build();
+String startupSql = optimize.schema(new Schema("archive"))
+    .includeAllTables(true).build();
+```
+
+The default retains SQLite's native optimization decisions. Optional
+`includeAllTables(true)` considers tables unused by the current connection; it
+does not unconditionally re-analyze every table. Its mask is `0x10012`: ANALYZE,
+a temporary analysis limit, and consideration of all tables. This retains the
+runtime limit when expanding consideration beyond recent query history.
+`includeAllTables(false)` returns to native defaults. Schema names are quoted;
+blank/NUL names are rejected, and the SQL never implicitly expands to all
+attached databases. See [optimize](https://www.sqlite.org/pragma.html#pragma_optimize).
+
+The builder only generates SQL. Execute it with JDBC and retain native errors;
+the caller owns execution, transaction boundaries and scheduling. It neither
+changes connection settings itself nor promises that a particular index will
+receive fresh statistics. SQLite's heuristics and defaults vary by version.
+This complements the existing ANALYZE factory rather than replacing explicit
+ANALYZE requests.
+
+The resolver adds [3.18](https://www.sqlite.org/releaselog/3_18_0.html) for optimize
+and [3.46](https://www.sqlite.org/releaselog/3_46_0.html) for all-table consideration
+with temporary limits. Earlier targets reject the unsupported operation.
+`DialectHolder.defaultDialect` includes 3.46 optimize capabilities and now selects
+3.53.1 as described above. Use a dialect resolved from the connection for older engines.
+Changes stay in `sqlapp-core-sqlite`; no dependencies, shared APIs, XML or
+configuration formats change.
+
+Embedded tests verify attached-only statistics, unchanged table data, restored
+analysis_limit, caller-controlled rollback, native schema errors, quoting and
+both version boundaries. Historical engine binaries are not tested.
 
 ### WAL checkpoints
 
@@ -1085,6 +1797,23 @@ boundaries. Legacy/current selections retain the same native SQL. Tests execute
 against the bundled engine and cover changed collation ordering, isolated
 attached indexes, all indexes on a table, temp objects, quoting, invalid targets,
 uniqueness failures and caller-controlled rollback. Old binaries are not tested.
+
+Expression indexes can also be selected from a Schema model without broadening
+the request to every attached database:
+
+```java
+var reindex = (SqliteReindexFactory)registry.getSqlFactory(schema, SqlType.REBUILD);
+var operations = reindex.createExpressionIndexSql(schema);
+```
+
+This emits one qualified REINDEX per modeled expression index, identified from
+`sqlite.index.keys`; ordinary indexes are excluded. A selected subset of Schema
+tables/indexes stays a subset. Empty selections produce no operations. It requires
+SQLite 3.9+ expression-index support, reuses the existing per-index generator,
+and adds no metadata queries. Tests change a deterministic function's behavior
+and verify stored expression keys are rebuilt in the selected attached database
+while the main database's same-named index remains untouched. Native global
+REINDEX EXPRESSIONS remains unexposed, including its name-precedence ambiguity.
 
 ### Foreign-key diagnostics
 

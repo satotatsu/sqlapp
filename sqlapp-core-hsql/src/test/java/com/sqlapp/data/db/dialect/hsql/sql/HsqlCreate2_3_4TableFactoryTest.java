@@ -50,7 +50,6 @@ public class HsqlCreate2_3_4TableFactoryTest extends AbstractHsql2_3_4SqlFactory
 		Column column = table.newColumn();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);
-		column.setSequenceName("seq1");
 		column.setIdentityStartValue(1);
 		table.getColumns().add(column);
 		//

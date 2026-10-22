@@ -14,7 +14,11 @@ public class SqliteCreateTriggerFactory extends AbstractCreateTriggerFactory<Sql
 		if (CommonUtils.isEmpty(trigger.getDefinition()))
 			throw new IllegalArgumentException(
 					"SQLite trigger requires complete CREATE TRIGGER definition: " + trigger.getName());
-		builder._add(SqliteDdl.withIdentity(toString(trigger.getDefinition()), "TRIGGER", trigger.getSchemaName(),
-				trigger.getName()));
+		String definition = toString(trigger.getDefinition());
+		// TEMP triggers may target any attached database. Preserve a resolved
+		// binding even when the destination connection has same-named tables.
+		if ("temp".equalsIgnoreCase(trigger.getSchemaName()) && trigger.getTableSchemaName() != null)
+			definition = SqliteDdl.qualifyTriggerTarget(definition, trigger.getTableSchemaName());
+		builder._add(SqliteDdl.withIdentity(definition, "TRIGGER", trigger.getSchemaName(), trigger.getName()));
 	}
 }

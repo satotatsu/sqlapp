@@ -13,6 +13,79 @@ import com.sqlapp.data.schemas.View;
 
 class SqliteSchemaObjectsRoundTripTest {
 	@Test
+	void temporaryTriggersRetainQualifiedTargetsThroughXmlAndRecreation() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute("ATTACH ':memory:' AS \"other' db\"");
+			statement.execute("CREATE TEMP TABLE audit(value TEXT)");
+			for (String schema : java.util.List.of("main", "other' db", "temp")) {
+				String quoted = "\"" + schema + "\"";
+				statement.execute("CREATE TABLE " + quoted + ".\"ON target\"(\"ON\" TEXT)");
+				statement.execute("CREATE TEMP TRIGGER \"tr " + schema + "\" AFTER UPDATE OF \"ON\" /* ON fake */ ON "
+						+ quoted + ".\"ON target\" WHEN NEW.\"ON\" <> 'ON' BEGIN INSERT INTO audit VALUES ('"
+						+ schema.replace("'", "''") + "'); END");
+			}
+			var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTriggerReader();
+			reader.setSchemaName("temp");
+			var triggers = reader.getAllFull(connection);
+			assertEquals(3, triggers.size());
+			for (Trigger trigger : triggers) {
+				assertEquals("temp", trigger.getSchemaName());
+				assertEquals(trigger.getName().substring(3), trigger.getTableSchemaName());
+				assertEquals("ON target", trigger.getTableName());
+				Trigger restored = SchemaUtils.readXml(new java.io.StringReader(trigger.asXml()));
+				assertEquals(trigger.getTableSchemaName(), restored.getTableSchemaName());
+				statement.execute("DROP TRIGGER temp.\"" + trigger.getName() + "\"");
+				for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(restored,
+						SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+			}
+			for (String schema : java.util.List.of("main", "other' db", "temp")) {
+				statement.execute("INSERT INTO \"" + schema + "\".\"ON target\" VALUES ('before')");
+				statement.execute("UPDATE \"" + schema + "\".\"ON target\" SET \"ON\"='after'");
+			}
+			try (var rows = statement.executeQuery("SELECT group_concat(value, ',') FROM temp.audit")) {
+				assertTrue(rows.next());
+				assertEquals("main,other' db,temp", rows.getString(1));
+			}
+		}
+	}
+
+	@Test
+	void unqualifiedTemporaryTargetsResolveInBulkAndRejectAmbiguity() throws Exception {
+		try (var raw = DriverManager.getConnection("jdbc:sqlite::memory:"); var statement = raw.createStatement()) {
+			statement.execute("ATTACH ':memory:' AS other");
+			statement.execute("CREATE TABLE other.source(value TEXT)");
+			for (int i = 0; i < 8; i++)
+				statement.execute("CREATE TEMP TRIGGER tr" + i + " AFTER INSERT ON source BEGIN SELECT 1; END");
+			var queries = new java.util.concurrent.atomic.AtomicInteger();
+			var connection = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+					new Class<?>[] { java.sql.Connection.class }, (proxy, method, args) -> {
+						if (method.getName().equals("createStatement"))
+							queries.incrementAndGet();
+						try {
+							return method.invoke(raw, args);
+						} catch (java.lang.reflect.InvocationTargetException e) {
+							throw e.getCause();
+						}
+					});
+			var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTriggerReader();
+			reader.setSchemaName("temp");
+			var triggers = reader.getAllFull(connection);
+			assertEquals(8, triggers.size());
+			assertTrue(triggers.stream().allMatch(trigger -> "other".equals(trigger.getTableSchemaName())));
+			assertEquals(3, queries.get());
+			reader.setObjectName("tr0");
+			queries.set(0);
+			assertEquals(1, reader.getAllFull(connection).size());
+			assertEquals(3, queries.get());
+			statement.execute("CREATE TABLE main.source(value TEXT)");
+			assertTrue(assertThrows(IllegalArgumentException.class, () -> reader.getAllFull(connection)).getMessage()
+					.contains("ON schema.table"));
+		}
+	}
+
+	@Test
 	void triggerHeaderHandlesDefaultTimingCommentsAndQuotedNames() {
 		var ddl = "CREATE TRIGGER \"AFTER UPDATE\" /* BEFORE DELETE */ INSERT ON t BEGIN SELECT 1; END";
 		assertEquals(java.util.List.of("BEFORE", "INSERT"),

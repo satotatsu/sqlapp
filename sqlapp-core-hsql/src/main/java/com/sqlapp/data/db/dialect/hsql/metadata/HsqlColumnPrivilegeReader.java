@@ -52,6 +52,10 @@ public class HsqlColumnPrivilegeReader extends ColumnPrivilegeReader {
 				result.add(obj);
 			}
 		});
+		if (productVersionInfo.getMajorVersion() >= 2 && !result.isEmpty()) {
+			String scope = HsqlPrivilegeFilters.scope(connection);
+			result.forEach(p -> p.getSpecifics().put("hsql.privilegeFilterScope.v1", scope));
+		}
 		return result;
 	}
 

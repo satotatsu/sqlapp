@@ -36,8 +36,24 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(toString(original.getDefinition()))))
 			throw unsupported("Virtual table changes require module-specific planning");
 		for (String property : changes.keySet())
-			if (!Set.of("name", "columns", "indexes").contains(property))
+			if (!Set.of("name", "columns", "indexes", "constraints").contains(property))
 				throw unsupported("Cannot alter table property: " + property);
+		var constraints = (DbObjectDifferenceCollection) changes.get("constraints");
+		if (constraints != null) {
+			for (var diff : constraints.getList(State.Added, State.Modified, State.Deleted)) {
+				if ((diff.getOriginal() != null
+						&& !(diff.getOriginal() instanceof com.sqlapp.data.schemas.CheckConstraint))
+						|| (diff.getTarget() != null
+								&& !(diff.getTarget() instanceof com.sqlapp.data.schemas.CheckConstraint)))
+					throw unsupported("Only named CHECK constraints can be changed natively");
+				if (diff.getOriginal() != null)
+					getSqlFactoryRegistry().createSql((com.sqlapp.data.schemas.CheckConstraint) diff.getOriginal(),
+							SqlType.DROP);
+				if (diff.getTarget() != null)
+					getSqlFactoryRegistry().createSql((com.sqlapp.data.schemas.CheckConstraint) diff.getTarget(),
+							SqlType.CREATE);
+			}
+		}
 		if (changes.containsKey("name")) {
 			if (changes.size() != 1)
 				throw unsupported("Apply table rename separately from other changes");
@@ -70,11 +86,23 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 				var properties = new java.util.HashSet<>(
 						diff.toDifference().getChangedProperties(getDialect()).keySet());
 				properties.remove("ordinal");
+				if (properties.equals(Set.of("notNull"))) {
+					if (!((com.sqlapp.data.db.dialect.sqlite.Sqlite) getDialect()).supportsAlterColumnNullability())
+						throw new IllegalArgumentException(
+								"SQLite ALTER COLUMN nullability requires SQLite 3.53 or later");
+					continue;
+				}
 				if (!properties.isEmpty() && !properties.equals(Set.of("name")))
 					throw unsupported("Cannot change column definition: " + diff.getTarget(Column.class).getName());
 			}
 		}
-		return super.createDiffSql(difference);
+		var operations = super.createDiffSql(difference);
+		// A modified index is normally dropped and recreated after column changes.
+		// SQLite refuses DROP COLUMN while that old index still references it.
+		// Keep each phase stable, including column order and constraint validation.
+		operations.sort(java.util.Comparator.comparingInt(operation -> operation.getSqlType() == SqlType.DROP ? 0
+				: operation.getSqlType() == SqlType.CREATE ? 2 : 1));
+		return operations;
 	}
 
 	@Override
@@ -83,6 +111,20 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 		if (diff.toDifference().getChangedProperties(getDialect()).containsKey("name"))
 			addRenameColumn(original, target, diff.getOriginal(Column.class), diff.getTarget(Column.class), diff,
 					result);
+		else if (diff.toDifference().getChangedProperties(getDialect()).containsKey("notNull")) {
+			var column = diff.getTarget(Column.class);
+			var builder = createSqlBuilder();
+			builder.alter().table().name(target, target.getSchemaName() != null).space()._add("ALTER COLUMN ")
+					.name(column).space()._add(column.isNotNull() ? "SET NOT NULL" : "DROP NOT NULL");
+			if (column.isNotNull() && column.getSpecifics().containsKey("sqlite.notNull.onConflict")) {
+				String policy = column.getSpecifics().get("sqlite.notNull.onConflict")
+						.toUpperCase(java.util.Locale.ROOT);
+				if (!Set.of("ROLLBACK", "ABORT", "FAIL", "IGNORE", "REPLACE").contains(policy))
+					throw new IllegalArgumentException("Invalid SQLite NOT NULL conflict policy: " + policy);
+				builder._add(" ON CONFLICT ")._add(policy);
+			}
+			result.add(createOperation(builder.toString(), SqlType.ALTER, diff.getOriginal(Column.class), column));
+		}
 	}
 
 	/**
@@ -151,6 +193,20 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 		builder.alter().table().name(target, target.getSchemaName() != null).rename().column().name(oldColumn).to()
 				.name(column);
 		result.add(createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
+	}
+
+	@Override
+	protected void addCreateConstraintDefinition(Table original, Table target,
+			com.sqlapp.data.schemas.Constraint oldConstraint, com.sqlapp.data.schemas.Constraint constraint,
+			DbObjectDifference diff, List<SqlOperation> result) {
+		result.addAll(getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE));
+	}
+
+	@Override
+	protected void addDropConstraintDefinition(Table original, Table target,
+			com.sqlapp.data.schemas.Constraint oldConstraint, com.sqlapp.data.schemas.Constraint constraint,
+			DbObjectDifference diff, List<SqlOperation> result) {
+		result.addAll(getSqlFactoryRegistry().createSql(oldConstraint, SqlType.DROP));
 	}
 
 	@Override

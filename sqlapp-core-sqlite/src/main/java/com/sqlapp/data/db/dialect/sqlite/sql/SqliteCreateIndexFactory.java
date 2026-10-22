@@ -25,8 +25,9 @@ public class SqliteCreateIndexFactory extends AbstractCreateIndexFactory<SqliteS
 				throw new IllegalArgumentException("SQLite expression indexes require SQLite 3.9 or later");
 		}
 		addUnique(index, table, builder);
-		boolean qualify = getOptions().isDecorateSchemaName()
-				|| index.getSchemaName() != null && !index.getSchemaName().equalsIgnoreCase("main");
+		// An unqualified index can bind to a TEMP table shadowing main. The
+		// index qualifier selects the database; ON must remain unqualified.
+		boolean qualify = getOptions().isDecorateSchemaName() || index.getSchemaName() != null;
 		builder.name(index, qualify).on().name(table, false).space()._add("(");
 		String keys = index.getSpecifics().get("sqlite.index.keys");
 		if (keys != null && !keys.isBlank()) {

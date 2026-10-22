@@ -3,6 +3,7 @@ package com.sqlapp.data.db.dialect.sqlite.sql;
 
 import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.UpdateFactory;
@@ -15,6 +16,11 @@ import com.sqlapp.util.CommonUtils;
  * SQLite UPDATE with canonical key matching and explicit empty-update errors.
  */
 public class SqliteUpdateFactory extends UpdateFactory {
+	@Override
+	protected AbstractSqlBuilder<?> newSqlBuilder(Dialect dialect) {
+		return new SqliteDmlSqlBuilder(dialect);
+	}
+
 	@Override
 	protected void addUpdateTable(Table table, SqlSignature signature, AbstractSqlBuilder<?> builder) {
 		var keyNames = SqliteKeyColumns.resolve(table, signature).stream().map(Column::getName)

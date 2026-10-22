@@ -63,6 +63,9 @@ public class HsqlDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion > 2) {
+				return DialectHolder.defaultDialect2_4_0;
+			}
 			if (majorVersion >= 2) {
 				if (minorVersion >= 4) {
 					return DialectHolder.defaultDialect2_4_0;

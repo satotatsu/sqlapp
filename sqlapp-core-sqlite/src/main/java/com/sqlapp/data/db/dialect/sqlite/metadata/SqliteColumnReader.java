@@ -53,7 +53,7 @@ public class SqliteColumnReader extends ColumnReader {
 		String pragma = version.getMajorVersion() > 3 || version.getMinorVersion() >= 26 ? "table_xinfo" : "table_info";
 		Map<String, List<Column>> primaryKeys = new java.util.LinkedHashMap<>();
 		Map<String, String> definitions = new java.util.LinkedHashMap<>();
-		try (var statement = SqliteMetadataQueries.prepare(connection, context, "p.*",
+		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.type AS object_type, p.*",
 				"JOIN pragma_" + pragma + "(m.name, ?) p", ", p.cid", true); var rs = statement.executeQuery()) {
 			while (rs.next()) {
 				String table = rs.getString("table_name");
@@ -68,6 +68,8 @@ public class SqliteColumnReader extends ColumnReader {
 						.filter(item -> Objects.equals(column.getName(), readIdentifier(item))).findFirst()
 						.ifPresent(item -> setColumnDeclaration(column, item));
 				setDataType(column, rs.getString("type"));
+				setViewColumnType(column, "view".equals(rs.getString("object_type")));
+				setStrictAnyType(column, definition);
 				setVirtualColumnType(column, definition);
 				int pk = rs.getInt("pk");
 				column.setNullable(rs.getInt("notnull") == 0);
@@ -89,8 +91,8 @@ public class SqliteColumnReader extends ColumnReader {
 			throw new RuntimeException(e);
 		}
 		primaryKeys.forEach((table, keys) -> {
-			if (keys.size() == 1
-					&& "INTEGER".equalsIgnoreCase(keys.get(0).getSpecifics().get("sqlite.declaredType").trim()))
+			if (keys.size() == 1 && "INTEGER"
+					.equalsIgnoreCase(keys.get(0).getSpecifics().getOrDefault("sqlite.declaredType", "").trim()))
 				setPrimaryKeyDetails(keys.get(0), definitions.get(table));
 		});
 		return result;
@@ -162,7 +164,7 @@ public class SqliteColumnReader extends ColumnReader {
 
 	private void loadColumnDetails(final Connection connection, final String schemaName, final String tableName,
 			final Map<Column, Integer> hiddenKinds, final Map<Column, Integer> primaryKeyPositions) {
-		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
+		final String sql = "SELECT sql, type FROM " + quoteIdentifier(schemaName)
 				+ ".sqlite_master WHERE type IN ('table','view') AND name=?";
 		try (var statement = connection.prepareStatement(sql)) {
 			statement.setString(1, tableName);
@@ -171,14 +173,17 @@ public class SqliteColumnReader extends ColumnReader {
 					return;
 				}
 				String createSql = resultSet.getString(1);
+				boolean view = "view".equals(resultSet.getString(2));
+				primaryKeyPositions.keySet().forEach(column -> setViewColumnType(column, view));
+				primaryKeyPositions.keySet().forEach(column -> setStrictAnyType(column, createSql));
 				primaryKeyPositions.keySet().forEach(column -> setVirtualColumnType(column, createSql));
 				final List<String> definitions = splitColumnDefinitions(createSql);
 				long keyCount = primaryKeyPositions.values().stream().filter(position -> position > 0).count();
 				primaryKeyPositions.forEach((column, position) -> {
 					definitions.stream().filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
 							.findFirst().ifPresent(item -> setColumnDeclaration(column, item));
-					if (keyCount == 1 && position > 0
-							&& "INTEGER".equalsIgnoreCase(column.getSpecifics().get("sqlite.declaredType").trim()))
+					if (keyCount == 1 && position > 0 && "INTEGER"
+							.equalsIgnoreCase(column.getSpecifics().getOrDefault("sqlite.declaredType", "").trim()))
 						setPrimaryKeyDetails(column, createSql);
 				});
 				hiddenKinds.forEach((column, kind) -> {
@@ -291,19 +296,45 @@ public class SqliteColumnReader extends ColumnReader {
 	private static void setVirtualColumnType(Column column, String definition) {
 		String module = SqliteDdl.virtualTableModule(definition);
 		if (module != null && java.util.Set.of("fts3", "fts4", "fts5").contains(module.toLowerCase(Locale.ROOT))
-				&& "".equals(column.getSpecifics().get("sqlite.declaredType")))
+				&& hasEmptyDeclaredType(column))
 			column.setDataType(DataType.VARCHAR).setDataTypeName(null);
+	}
+
+	private static void setStrictAnyType(Column column, String definition) {
+		if ("ANY".equalsIgnoreCase(column.getSpecifics().get("sqlite.declaredType"))
+				&& SqliteDdl.hasTableOption(definition, "STRICT"))
+			column.setDataType(DataType.ANY_DATA).setDataTypeName(null);
+	}
+
+	private static void setViewColumnType(Column column, boolean view) {
+		String declared = column.getSpecifics().get("sqlite.declaredType");
+		// A view's undeclared expression can yield any storage class per row.
+		// SQLite may report a projected STRICT ANY as BLOB, so BLOB views also
+		// need pass-through conversion; genuine binary values remain byte[].
+		if (view && (hasEmptyDeclaredType(column) || "ANY".equalsIgnoreCase(declared)
+				|| "BLOB".equalsIgnoreCase(declared)))
+			column.setDataType(DataType.ANY_DATA).setDataTypeName(null).setLength(null).setScale(null);
+	}
+
+	private static boolean hasEmptyDeclaredType(Column column) {
+		return "true".equals(column.getSpecifics().get("sqlite.declaredType.empty"))
+				|| "".equals(column.getSpecifics().get("sqlite.declaredType"));
 	}
 
 	private void setDataType(final Column column, final String declaredType) {
 		final String typeName = declaredType == null ? "" : declaredType;
-		column.getSpecifics().put("sqlite.declaredType", typeName);
+		if (typeName.isEmpty())
+			column.getSpecifics().put("sqlite.declaredType.empty", "true");
+		else
+			column.getSpecifics().put("sqlite.declaredType", typeName);
 		final Matcher matcher = SIZE_PATTERN.matcher(typeName);
 		final String baseType = matcher.matches() ? matcher.group(1).trim() : typeName;
 		final Long precision = matcher.matches() && matcher.group(2) != null ? Long.valueOf(matcher.group(2)) : null;
 		final Integer scale = matcher.matches() && matcher.group(3) != null ? Integer.valueOf(matcher.group(3)) : null;
 		int sqlType = toSqlType(baseType);
-		getDialect().setDbType(sqlType, baseType, precision, scale, column);
+		// Ordinary ANY retains NUMERIC affinity; only STRICT ANY is dynamic.
+		getDialect().setDbType(sqlType, "ANY".equalsIgnoreCase(baseType) ? "NUMERIC" : baseType, precision, scale,
+				column);
 		// SQLite accepts arbitrary declarations; map unregistered names by affinity
 		// for JDBC binding while sqlite.declaredType preserves executable source DDL.
 		if (column.getDataType() == null || column.getDataType().isOther()) {

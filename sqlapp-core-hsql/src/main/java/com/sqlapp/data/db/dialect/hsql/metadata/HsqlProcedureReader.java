@@ -82,12 +82,17 @@ public class HsqlProcedureReader extends ProcedureReader {
 			}
 		}
 		String routine_definition = HsqlUtils.normalizeStatement(obj, getString(rs, "ROUTINE_DEFINITION"));
-		if (this.getReaderOptions().isReadDefinition()) {
+		// 2.x routine signature columns can erase named types; native DDL is
+		// authoritative.
+		if (this.getReaderOptions().isReadDefinition()
+				|| getDialect() instanceof com.sqlapp.data.db.dialect.hsql.Hsql2_0_0) {
 			obj.setDefinition(routine_definition);
 		}
-		if (this.getReaderOptions().isReadStatement()) {
-			Pattern pattern = Pattern.compile("CREATE\\s*PROCEDURE.*" + obj.getSavepointLevel().getSqlValue()
-					+ "\\s*(DYNAMIC\\s+RESULT\\s+SETS\\s+[0-9]+){0,1}\\s*(.*)", Pattern.CASE_INSENSITIVE);
+		if (this.getReaderOptions().isReadStatement() && "SQL".equals(obj.getLanguage())) {
+			Pattern pattern = Pattern.compile(
+					"CREATE\\s*PROCEDURE.*?" + obj.getSavepointLevel().getSqlValue()
+							+ "\\s*(DYNAMIC\\s+RESULT\\s+SETS\\s+[0-9]+){0,1}\\s*(.*)",
+					Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 			Matcher matcher = pattern.matcher(routine_definition);
 			if (matcher.matches()) {
 				String dynamic = matcher.group(1);

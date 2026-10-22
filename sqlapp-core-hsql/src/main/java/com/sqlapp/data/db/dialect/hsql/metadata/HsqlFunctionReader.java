@@ -64,7 +64,7 @@ public class HsqlFunctionReader extends FunctionReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Function function = createFunction(rs);
-				map.put(function.getSchemaName(), function.getSchemaName(), function.getSpecificName(), function);
+				map.put(function.getCatalogName(), function.getSchemaName(), function.getSpecificName(), function);
 			}
 		});
 		return map.toList();
@@ -81,13 +81,16 @@ public class HsqlFunctionReader extends FunctionReader {
 		}
 		setReturning(rs, obj);
 		String routine_definition = HsqlUtils.normalizeStatement(obj, getString(rs, "ROUTINE_DEFINITION"));
-		if (this.getReaderOptions().isReadDefinition()) {
+		// 2.x routine signature columns can erase named types; native DDL is
+		// authoritative.
+		if (this.getReaderOptions().isReadDefinition()
+				|| getDialect() instanceof com.sqlapp.data.db.dialect.hsql.Hsql2_0_0) {
 			obj.setDefinition(routine_definition);
 		}
 		if (this.getReaderOptions().isReadStatement() && "SQL".equals(obj.getLanguage())) {
 			Pattern pattern = Pattern.compile(
-					"CREATE\\s*(.*)\\s*FUNCTION.*" + obj.getOnNullCall().getSqlValue() + "\\s*(.*)",
-					Pattern.CASE_INSENSITIVE);
+					"CREATE\\s*(.*?)\\s*FUNCTION.*?" + obj.getOnNullCall().getSqlValue() + "\\s*(.*)",
+					Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 			Matcher matcher = pattern.matcher(routine_definition);
 			if (matcher.matches()) {
 				int count = matcher.groupCount();
@@ -114,9 +117,10 @@ public class HsqlFunctionReader extends FunctionReader {
 		Integer numeric_scale = getInteger(rs, "NUMERIC_SCALE");
 		Integer datetime_scale = getInteger(rs, "DATETIME_PRECISION");
 		FunctionReturning ret = obj.getReturning();
-		ret.setDataTypeName(getString(rs, "IS_NULL_CALL"));
 		if (!isEmpty(domainName)) {
-			ret.setDataTypeName(domainName);
+			ret.setDataTypeName(getDialect() instanceof com.sqlapp.data.db.dialect.hsql.Hsql2_0_0
+					? HsqlUtils.qualifiedType(getDialect(), getString(rs, "UDT_SCHEMA"), domainName)
+					: domainName);
 			ret.setDataType(DataType.DOMAIN);
 		} else if (!isEmpty(interval_type)) {
 			Long interval_precision = this.getLong(rs, "INTERVAL_PRECISION");

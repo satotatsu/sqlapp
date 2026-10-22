@@ -24,6 +24,8 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -31,6 +33,7 @@ import com.sqlapp.data.db.metadata.DomainReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Deferrability;
 import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.DomainCheckConstraint;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -53,11 +56,24 @@ public class HsqlDomainReader extends DomainReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Domain> result = list();
+		final var domains = new LinkedHashMap<List<String>, Domain>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Domain obj = createDomain(rs);
-				result.add(obj);
+				var key = Arrays.asList(obj.getCatalogName(), obj.getSchemaName(), obj.getName());
+				Domain existing = domains.get(key);
+				if (existing == null) {
+					domains.put(key, obj);
+					result.add(obj);
+					existing = obj;
+				}
+				String expression = getString(rs, "check_clause");
+				if (expression != null) {
+					var check = new DomainCheckConstraint(getString(rs, "constraint_name"), expression);
+					check.setDeferrability(obj.getDeferrability());
+					existing.getChecks().add(check);
+				}
 			}
 		});
 		return result;
@@ -81,6 +97,8 @@ public class HsqlDomainReader extends DomainReader {
 		if (dtdIdentifier != null) {
 			productDataType = dtdIdentifier;
 		}
+		if (productDataType != null)
+			domain.getSpecifics().put("hsql.domainSourceType.v1", productDataType);
 		domain.setDataTypeName(productDataType);
 		// Column column=getDialect().getDbDataTypes().parse(productDataType);
 		// domain.setDbType(column.getDbType());
@@ -91,10 +109,6 @@ public class HsqlDomainReader extends DomainReader {
 			domain.setDeferrability(Deferrability.getDeferrability("YES".equalsIgnoreCase(is_deferrable),
 					"YES".equalsIgnoreCase(initially_deferred)));
 		}
-		// TODO チェック制約が取れない？
-		// String checkConstraint=getString(rs, "CHECK_CONSTRAINT");
-		// domain.setCheckConstraint(checkConstraint);
-		// domain.setRemarks(getString(rs, "REMARKS"));
 		return domain;
 	}
 

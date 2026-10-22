@@ -43,18 +43,25 @@ class SqliteVersionCapabilitiesTest {
 		boundary(9, 0, Sqlite::supportsExpressionIndexes);
 		boundary(15, 0, Sqlite::supportsRowValueComparison);
 		boundary(15, 0, Sqlite::supportsRowValueComparisonIn);
+		boundary(18, 0, Sqlite::supportsOptimize);
+		boundary(46, 0, Sqlite::supportsOptimizeAllTables);
 		boundary(24, 0, Sqlite::supportsUpsert);
 		boundary(25, 0, Sqlite::supportsRenameColumn);
 		boundary(27, 0, Sqlite::supportsVacuumInto);
 		boundary(31, 0, Sqlite::supportsGeneratedColumns);
 		boundary(31, 0, Sqlite::supportsColumnFormula);
 		boundary(35, 0, Sqlite::supportsDropColumn);
+		boundary(53, 0, Sqlite::supportsAlterColumnNullability);
+		boundary(53, 1, Sqlite::supportsAlterCheckConstraints);
+		assertFalse(version(53, null).supportsAlterCheckConstraints());
 		boundary(35, 0, Sqlite::supportsInsertReturningResultSet);
 		boundary(37, 0, Sqlite::supportsStrictTables);
+		boundary(37, 0, Sqlite::supportsTableList);
 		assertEquals(999, version(31, 0).getMaxStatementParameterCount());
 		assertEquals(32766, version(32, 0).getMaxStatementParameterCount());
 		assertFalse(version(8, null).supportsWithoutRowid());
 		assertTrue(DialectHolder.defaultDialect instanceof SqliteVersions.Sqlite337);
+		assertSame(DialectHolder.sqlite3531, DialectHolder.defaultDialect);
 	}
 
 	@Test

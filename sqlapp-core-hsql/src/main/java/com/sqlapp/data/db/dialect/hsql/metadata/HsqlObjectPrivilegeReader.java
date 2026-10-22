@@ -49,14 +49,21 @@ public class HsqlObjectPrivilegeReader extends ObjectPrivilegeReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				ObjectPrivilege obj = createPrivilege(rs);
+				if (productVersionInfo.getMajorVersion() >= 2)
+					setSpecifics(rs, "OBJECT_TYPE", obj);
 				result.add(obj);
 			}
 		});
+		if (productVersionInfo.getMajorVersion() >= 2 && !result.isEmpty()) {
+			String scope = HsqlPrivilegeFilters.scope(connection);
+			result.forEach(p -> p.getSpecifics().put("hsql.privilegeFilterScope.v1", scope));
+		}
 		return result;
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("objectPrivileges.sql");
+		return getSqlNodeCache().getString(
+				productVersionInfo.getMajorVersion() >= 2 ? "objectPrivileges2.sql" : "objectPrivileges.sql");
 	}
 
 	protected ObjectPrivilege createPrivilege(ExResultSet rs) throws SQLException {

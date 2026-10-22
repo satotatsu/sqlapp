@@ -7,7 +7,10 @@ import com.sqlapp.data.db.dialect.sqlite.Sqlite;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.schemas.Schema;
 
-/** Generates VACUUM INTO SQL; filesystem access and execution belong to the caller. */
+/**
+ * Generates VACUUM INTO SQL; filesystem access and execution belong to the
+ * caller.
+ */
 public class SqliteVacuumIntoBuilder {
 	private final Sqlite dialect;
 	private String schema = "main";
@@ -49,6 +52,7 @@ public class SqliteVacuumIntoBuilder {
 
 	private void requireText(String value, String kind) {
 		if (value == null || value.isBlank() || value.indexOf('\0') >= 0)
-			throw new IllegalArgumentException("SQLite VACUUM INTO requires a nonempty " + kind + " without NUL characters");
+			throw new IllegalArgumentException(
+					"SQLite VACUUM INTO requires a nonempty " + kind + " without NUL characters");
 	}
 }

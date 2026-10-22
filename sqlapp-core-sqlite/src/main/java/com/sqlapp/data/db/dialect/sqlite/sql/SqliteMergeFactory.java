@@ -13,6 +13,20 @@ import com.sqlapp.data.schemas.Table;
 
 /** SQLite 3.24+ implementation of single-row MERGE using ON CONFLICT. */
 public class SqliteMergeFactory extends SqliteInsertFactory {
+	private java.util.function.Function<Table, String> conflictIndexName = table -> null;
+
+	/**
+	 * Selects an explicit modeled unique index; null restores shared key selection.
+	 */
+	public void setConflictIndexName(String name) {
+		conflictIndexName = table -> name;
+	}
+
+	/** Optional per-table selection for registries serving several tables. */
+	public void setConflictIndexSelector(java.util.function.Function<Table, String> selector) {
+		conflictIndexName = java.util.Objects.requireNonNull(selector, "conflictIndexName selector");
+	}
+
 	@Override
 	protected SqlType getSqlType() {
 		return SqlType.MERGE;
@@ -55,6 +69,11 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 
 	protected void addConflictClause(Table table, com.sqlapp.data.db.sql.SqlSignature signature, List<Column> columns,
 			SqliteSqlBuilder builder) {
+		String explicitIndex = conflictIndexName.apply(table);
+		if (explicitIndex != null) {
+			addIndexConflictClause(table, explicitIndex, columns, builder);
+			return;
+		}
 		try {
 			signature.setColumnSelectionStrategy(getTableOptions().getMergeKeyColumnsMatchingStrategy().apply(table));
 		} catch (com.sqlapp.exceptions.MissingWhereClauseKeyException e) {
@@ -101,6 +120,40 @@ public class SqliteMergeFactory extends SqliteInsertFactory {
 				i++;
 			}
 		});
+		addConflictUpdate(table, columns, keyNames, builder);
+	}
+
+	private void addIndexConflictClause(Table table, String name, List<Column> columns, SqliteSqlBuilder builder) {
+		var index = table.getIndexes().get(name);
+		if (name.isBlank() || index == null || !index.isUnique())
+			throw new IllegalArgumentException(
+					"SQLite UPSERT conflict index must name a modeled unique index: " + name);
+		String storedKeys = index.getSpecifics().get("sqlite.index.keys");
+		boolean hasKeys = storedKeys != null && !storedKeys.isBlank();
+		if (!hasKeys && (index.getColumns().isEmpty()
+				|| index.getColumns().stream().anyMatch(column -> table.getColumns().get(column.getName()) == null)))
+			throw new IllegalArgumentException(
+					"SQLite expression conflict index requires retained sqlite.index.keys: " + name);
+		var keyNames = index.getColumns().stream().map(column -> column.getName())
+				.filter(column -> table.getColumns().get(column) != null).collect(Collectors.toSet());
+		if (!names(columns).containsAll(keyNames))
+			throw new IllegalArgumentException(
+					"SQLite MERGE index key columns must be writable input columns: " + name);
+		builder.lineBreak()._add("ON CONFLICT ").brackets(() -> {
+			if (hasKeys)
+				builder._add(storedKeys);
+			else {
+				int position = 0;
+				for (var column : index.getColumns())
+					builder.comma(position++ > 0).name(column);
+			}
+		});
+		if (index.getWhere() != null && !index.getWhere().isBlank())
+			builder._add(" WHERE ")._add(index.getWhere());
+		addConflictUpdate(table, columns, keyNames, builder);
+	}
+
+	private void addConflictUpdate(Table table, List<Column> columns, Set<String> keyNames, SqliteSqlBuilder builder) {
 		var primary = table.getPrimaryKeyConstraint();
 		var primaryNames = primary == null ? Set.<String>of()
 				: primary.getColumns().stream().map(c -> c.getName()).collect(Collectors.toSet());

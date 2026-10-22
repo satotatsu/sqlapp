@@ -136,7 +136,20 @@ public final class SqliteVersions {
 		}
 	}
 
-	public static class Sqlite324 extends Sqlite315 {
+	public static class Sqlite318 extends Sqlite315 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite318(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsOptimize() {
+			return true;
+		}
+	}
+
+	public static class Sqlite324 extends Sqlite318 {
 		private static final long serialVersionUID = 1L;
 
 		protected Sqlite324(Supplier<Dialect> next) {
@@ -233,6 +246,50 @@ public final class SqliteVersions {
 
 		@Override
 		public boolean supportsStrictTables() {
+			return true;
+		}
+
+		@Override
+		public boolean supportsTableList() {
+			return true;
+		}
+	}
+
+	public static class Sqlite346 extends Sqlite337 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite346(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsOptimizeAllTables() {
+			return true;
+		}
+	}
+
+	public static class Sqlite353 extends Sqlite346 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite353(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsAlterColumnNullability() {
+			return true;
+		}
+	}
+
+	public static class Sqlite3531 extends Sqlite353 {
+		private static final long serialVersionUID = 1L;
+
+		protected Sqlite3531(Supplier<Dialect> next) {
+			super(next);
+		}
+
+		@Override
+		public boolean supportsAlterCheckConstraints() {
 			return true;
 		}
 	}

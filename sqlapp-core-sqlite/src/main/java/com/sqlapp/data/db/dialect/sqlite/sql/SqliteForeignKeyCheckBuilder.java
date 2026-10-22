@@ -38,7 +38,10 @@ public class SqliteForeignKeyCheckBuilder {
 		return this;
 	}
 
-	/** Selects the model's complete schema/table identity; an absent schema is ambiguous. */
+	/**
+	 * Selects the model's complete schema/table identity; an absent schema is
+	 * ambiguous.
+	 */
 	public SqliteForeignKeyCheckBuilder table(Table value) {
 		Objects.requireNonNull(value, "table");
 		requireName(value.getName(), "table");
@@ -55,7 +58,8 @@ public class SqliteForeignKeyCheckBuilder {
 
 	public String build() {
 		if (!dialect.supportsForeignKeyCheck())
-			throw new IllegalArgumentException("SQLite foreign_key_check requires SQLite 3.7.16 or later; resolve a dialect with a known revision");
+			throw new IllegalArgumentException(
+					"SQLite foreign_key_check requires SQLite 3.7.16 or later; resolve a dialect with a known revision");
 		var builder = new SqliteSqlBuilder(dialect);
 		builder._add("PRAGMA ").name(schema)._add(".foreign_key_check");
 		if (table != null)

@@ -4,7 +4,6 @@ package com.sqlapp.data.db.dialect.sqlite.sql;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
@@ -23,9 +22,11 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 		if ("true".equals(table.getSpecifics().get("sqlite.virtual"))
 				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(definition)) {
 			if (!com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(definition))
-				throw new IllegalArgumentException("SQLite virtual table requires a complete CREATE VIRTUAL TABLE definition: " + table.getName());
-			String sql = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.withIdentity(definition,"TABLE",table.getSchemaName(),table.getName());
-			return List.of(createOperation(sql,SqlType.CREATE,table));
+				throw new IllegalArgumentException(
+						"SQLite virtual table requires a complete CREATE VIRTUAL TABLE definition: " + table.getName());
+			String sql = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.withIdentity(definition, "TABLE",
+					table.getSchemaName(), table.getName());
+			return List.of(createOperation(sql, SqlType.CREATE, table));
 		}
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite) {
 			if ("true".equals(table.getSpecifics().get("strict")) && !sqlite.supportsStrictTables())
@@ -61,8 +62,6 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 			definition.setNotNull(false);
 		}
 		String declaredType = column.getSpecifics().get("sqlite.declaredType");
-		if (declaredType != null)
-			definition.setDataType(DataType.OTHER).setDataTypeName(declaredType);
 		builder.name(column).space().definition(definition, false);
 		if (notNullConflict != null && column.isNotNull())
 			builder.space()._add("NOT NULL ON CONFLICT ")._add(notNullConflict);

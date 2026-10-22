@@ -26,6 +26,12 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.Type;
+import com.sqlapp.data.schemas.Synonym;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Catalog;
 
 public class HsqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -36,6 +42,21 @@ public class HsqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Schema.class, SqlType.CREATE, HsqlCreateSchemaFactory.class);
+		registerSqlFactory(Catalog.class, SqlType.CREATE, HsqlCreateCatalogFactory.class);
+		for (Class<?> privilege : java.util.List.of(com.sqlapp.data.schemas.ObjectPrivilege.class,
+				com.sqlapp.data.schemas.ColumnPrivilege.class, com.sqlapp.data.schemas.RoutinePrivilege.class)) {
+			registerSqlFactory(privilege, SqlType.CREATE, HsqlGrantPrivilegeFactory.class);
+			registerSqlFactory(privilege, SqlType.GRANT, HsqlGrantPrivilegeFactory.class);
+			registerSqlFactory(privilege, SqlType.REVOKE, HsqlRevokePrivilegeFactory.class);
+		}
+		registerSqlFactory(Trigger.class, SqlType.CREATE, HsqlCreateTriggerFactory.class);
+		registerSqlFactory(Domain.class, SqlType.CREATE, HsqlCreateDomainFactory.class);
+		registerSqlFactory(Domain.class, SqlType.ALTER, HsqlAlterDomainFactory.class);
+		registerSqlFactory(Type.class, SqlType.CREATE, HsqlCreateTypeFactory.class);
+		registerSqlFactory(Type.class, SqlType.ALTER, HsqlAlterTypeFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.CREATE, HsqlCreateSynonymFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.ALTER, HsqlAlterSynonymFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, HsqlCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, HsqlCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, HsqlTruncateTemporaryTableFactory.class);

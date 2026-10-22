@@ -789,13 +789,12 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 			if (this.isIdentityOrder() != DEFAULT_VALUE_SEQUENCE.isOrder()) {
 				stax.writeAttribute(SchemaProperties.IDENTITY_ORDER.getLabel(), this.isIdentityOrder());
 			}
-		} else {
-			if (this.getSequenceName() != null) {
-				if (!CommonUtils.eq(this.getSchemaName(), this.getSequenceSchemaName())) {
-					stax.writeAttribute(SchemaProperties.SEQUENCE_SCHEMA_NAME.getLabel(), this.getSequenceSchemaName());
-				}
-				stax.writeAttribute(SchemaProperties.SEQUENCE_NAME.getLabel(), this.getSequenceName());
+		}
+		if (this.getSequenceName() != null) {
+			if (!CommonUtils.eq(this.getSchemaName(), this.getSequenceSchemaName())) {
+				stax.writeAttribute(SchemaProperties.SEQUENCE_SCHEMA_NAME.getLabel(), this.getSequenceSchemaName());
 			}
+			stax.writeAttribute(SchemaProperties.SEQUENCE_NAME.getLabel(), this.getSequenceName());
 		}
 		writeCharacterSemantics(stax);
 		writeCharacterSet(stax);

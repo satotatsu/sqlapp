@@ -39,10 +39,13 @@ public class SqliteTableReader extends JdbcTableReader {
 				|| productVersionInfo.getMajorVersion() == 3 && productVersionInfo.getMinorVersion() >= 37;
 		final String sql = "SELECT name, sql FROM " + quoteIdentifier(schemaName) + ".sqlite_master WHERE type='table' "
 				+ "AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' "
-				+ (tableList ? "AND name NOT IN (SELECT name FROM pragma_table_list WHERE schema=? COLLATE NOCASE AND type='shadow') " : "")
+				+ (tableList
+						? "AND name NOT IN (SELECT name FROM pragma_table_list WHERE schema=? COLLATE NOCASE AND type='shadow') "
+						: "")
 				+ "ORDER BY name";
 		try (var statement = connection.prepareStatement(sql)) {
-			if (tableList) statement.setString(1, schemaName);
+			if (tableList)
+				statement.setString(1, schemaName);
 			try (var resultSet = statement.executeQuery()) {
 				while (resultSet.next()) {
 					final String tableName = resultSet.getString("name");
@@ -104,10 +107,12 @@ public class SqliteTableReader extends JdbcTableReader {
 				new ProductVersionInfo().setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
 						.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion()))) {
 			var columns = getColumnReader().getAllFull(connection, bulkContext);
-			var ordinary = tables.stream().filter(table -> !"true".equals(table.getSpecifics().get("sqlite.virtual"))).toList();
+			var ordinary = tables.stream().filter(table -> !"true".equals(table.getSpecifics().get("sqlite.virtual")))
+					.toList();
 			var tableMap = tables.stream().collect(java.util.stream.Collectors.toMap(Table::getName, table -> table));
 			columns.forEach(o -> tableMap.get(o.getTableName()).getColumns().add(o));
-			if (ordinary.isEmpty()) return;
+			if (ordinary.isEmpty())
+				return;
 			bulkContext.put("tableName", ordinary.stream().map(Table::getName).toList());
 			var indexes = getIndexReader().getAllFull(connection, bulkContext);
 			var uniques = getUniqueConstraintReader().getAllFull(connection, bulkContext);

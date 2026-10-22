@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.dialect.sqlite.sql;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SelectForAppFactory;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.schemas.Table;
@@ -11,6 +12,11 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * ordering.
  */
 public class SqliteSelectForAppFactory extends SelectForAppFactory {
+	@Override
+	protected AbstractSqlBuilder<?> newSqlBuilder(Dialect dialect) {
+		return new SqliteDmlSqlBuilder(dialect);
+	}
+
 	@Override
 	protected void addOffsetRowsOnly(Table table, AbstractSqlBuilder<?> builder) {
 		String rows = toIsNotEmptyExpression(ParameterDefinition.ROW_KEY_PARANETER_NAME);

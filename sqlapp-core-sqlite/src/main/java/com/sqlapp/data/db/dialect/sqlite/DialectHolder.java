@@ -22,14 +22,18 @@ package com.sqlapp.data.db.dialect.sqlite;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect sqlite337 = new SqliteVersions.Sqlite337(() -> null);
+	public final static Dialect sqlite3531 = new SqliteVersions.Sqlite3531(() -> null);
+	public final static Dialect sqlite353 = new SqliteVersions.Sqlite353(() -> sqlite3531);
+	public final static Dialect sqlite346 = new SqliteVersions.Sqlite346(() -> sqlite353);
+	public final static Dialect sqlite337 = new SqliteVersions.Sqlite337(() -> sqlite346);
 	public final static Dialect sqlite335 = new SqliteVersions.Sqlite335(() -> sqlite337);
 	public final static Dialect sqlite332 = new SqliteVersions.Sqlite332(() -> sqlite335);
 	public final static Dialect sqlite331 = new SqliteVersions.Sqlite331(() -> sqlite332);
 	public final static Dialect sqlite327 = new SqliteVersions.Sqlite327(() -> sqlite331);
 	public final static Dialect sqlite325 = new SqliteVersions.Sqlite325(() -> sqlite327);
 	public final static Dialect sqlite324 = new SqliteVersions.Sqlite324(() -> sqlite325);
-	public final static Dialect sqlite315 = new SqliteVersions.Sqlite315(() -> sqlite324);
+	public final static Dialect sqlite318 = new SqliteVersions.Sqlite318(() -> sqlite324);
+	public final static Dialect sqlite315 = new SqliteVersions.Sqlite315(() -> sqlite318);
 	public final static Dialect sqlite39 = new SqliteVersions.Sqlite39(() -> sqlite315);
 	public final static Dialect sqlite388 = new SqliteVersions.Sqlite388(() -> sqlite39);
 	public final static Dialect sqlite383 = new SqliteVersions.Sqlite383(() -> sqlite388);
@@ -42,5 +46,5 @@ public class DialectHolder {
 	 * Unversioned callers retain modern capabilities. Resolve a connection for a
 	 * concrete target.
 	 */
-	public final static Dialect defaultDialect = sqlite337;
+	public final static Dialect defaultDialect = sqlite3531;
 }

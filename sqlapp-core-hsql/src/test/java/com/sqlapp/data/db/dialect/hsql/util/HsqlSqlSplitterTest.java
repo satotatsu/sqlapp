@@ -36,6 +36,31 @@ public class HsqlSqlSplitterTest extends AbstractTest {
 	Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
+	void compoundBodiesRetainNestedBlocksCursorDeclarationsAndQuotedSemicolons() throws Exception {
+		String text = """
+				CREATE PROCEDURE P() READS SQL DATA
+				BEGIN ATOMIC
+				 DECLARE V INTEGER;
+				 DECLARE C CURSOR FOR SELECT 'BEGIN; END; IF' AS TXT FROM (VALUES(0));
+				 IF 1=1 THEN BEGIN ATOMIC SET V=CASE WHEN 1=1 THEN 2 ELSE 3 END; END; END IF;
+				 /* END; IF */
+				END;
+				CALL P();
+				""";
+		var parts = dialect.createSqlSplitter().parse(text);
+		assertEquals(2, parts.size());
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:splitter-compound", "SA", "");
+				var statement = connection.createStatement()) {
+			for (var part : parts)
+				statement.execute(part.getText());
+		}
+		org.junit.jupiter.api.Assertions.assertThrows(com.sqlapp.exceptions.InvalidTextException.class,
+				() -> dialect.createSqlSplitter().parse("CREATE PROCEDURE BROKEN() BEGIN ATOMIC BEGIN ATOMIC END;"));
+		assertEquals(1, dialect.createSqlSplitter()
+				.parse("CREATE FUNCTION F() RETURNS INTEGER BEGIN ATOMIC RETURN 1; END").size());
+	}
+
+	@Test
 	public void test1() {
 		String text = this.getResource("test1.sql");
 		SqlSplitter sqlSplitter = dialect.createSqlSplitter();

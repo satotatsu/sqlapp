@@ -21,6 +21,13 @@ package com.sqlapp.data.db.dialect.hsql.sql;
 
 import com.sqlapp.data.db.dialect.hsql.util.HsqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.dialect.hsql.HsqlTextTableSources;
+import com.sqlapp.data.db.dialect.hsql.HsqlTextTableSources.Source;
+import java.util.List;
+import java.util.Map;
 
 /**
  * CREATE TABLE
@@ -29,5 +36,47 @@ import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
  * 
  */
 public class HsqlCreateTableFactory extends AbstractCreateTableFactory<HsqlSqlBuilder> {
+	@Override
+	public List<SqlOperation> createSql(Table table) {
+		return createSql(table, Map.of());
+	}
+
+	public List<SqlOperation> createSql(Table table, Map<String, Source> bindings) {
+		HsqlTextTableSources.validateBindings(bindings,
+				HsqlTextTableSources.isText(table) ? java.util.Set.of(HsqlTextTableSources.id(table))
+						: java.util.Set.of());
+		Source source = null;
+		if (HsqlTextTableSources.isText(table)) {
+			source = HsqlTextTableSources.resolve(table, bindings);
+		} else if (bindings.containsKey(HsqlTextTableSources.id(table))) {
+			throw new IllegalArgumentException("HSQLDB text source binding requires a TEXT table: " + table.getName());
+		}
+		var operations = super.createSql(table);
+		if (source != null) {
+			var builder = createSqlBuilder().set().table().name(table, getOptions().isDecorateSchemaName()).space()
+					._add("SOURCE").space().sqlChar(source.definition());
+			if (source.descending())
+				builder.space()._add("DESC");
+			addSql(operations, builder, SqlType.ALTER, table);
+		}
+		if (Boolean.TRUE.equals(table.getReadonly())) {
+			var builder = createSqlBuilder().set().table().name(table, getOptions().isDecorateSchemaName()).space()
+					._add("READ ONLY");
+			addSql(operations, builder, SqlType.ALTER, table);
+		}
+		return operations;
+	}
+
+	@Override
+	protected void addCreateObject(Table table, HsqlSqlBuilder builder) {
+		builder.create();
+		if (HsqlTextTableSources.isText(table))
+			builder.space()._add("TEXT");
+		else if (table.getTableType() == Table.TableType.Cache)
+			builder.space()._add("CACHED");
+		else if (table.getTableType() == Table.TableType.Memory)
+			builder.space()._add("MEMORY");
+		builder.table().name(table, getOptions().isDecorateSchemaName());
+	}
 
 }

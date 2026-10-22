@@ -7,9 +7,14 @@ import com.sqlapp.data.db.dialect.sqlite.Sqlite;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.schemas.Schema;
 
-/** Generates a single-database WAL checkpoint; execution and status handling belong to the caller. */
+/**
+ * Generates a single-database WAL checkpoint; execution and status handling
+ * belong to the caller.
+ */
 public class SqliteWalCheckpointBuilder {
-	public enum Mode { PASSIVE, FULL, RESTART, TRUNCATE }
+	public enum Mode {
+		PASSIVE, FULL, RESTART, TRUNCATE
+	}
 
 	private final Sqlite dialect;
 	private String schema = "main";
@@ -40,7 +45,8 @@ public class SqliteWalCheckpointBuilder {
 
 	public String build() {
 		if (!dialect.supportsWalCheckpointModes())
-			throw new IllegalArgumentException("WAL checkpoint modes require SQLite 3.7.6 or later; resolve a known revision");
+			throw new IllegalArgumentException(
+					"WAL checkpoint modes require SQLite 3.7.6 or later; resolve a known revision");
 		if (mode == Mode.TRUNCATE && !dialect.supportsWalCheckpointTruncate())
 			throw new IllegalArgumentException("WAL checkpoint TRUNCATE requires SQLite 3.8.8 or later");
 		var builder = new SqliteSqlBuilder(dialect);

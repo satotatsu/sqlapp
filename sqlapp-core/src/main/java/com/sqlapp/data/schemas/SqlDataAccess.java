@@ -47,7 +47,7 @@ public enum SqlDataAccess implements EnumProperties {
 	/**
 	 * データを書くするステートメントを含む
 	 */
-	,ModifiesSqlData("MODIFIES SQL DATA", "MODIFIES SQL DATA");
+	,ModifiesSqlData("MODIFIES SQL DATA", "MODIFIES\\s*SQL\\s*DATA");
 
 	private final Pattern pattern;
 	private final String text;

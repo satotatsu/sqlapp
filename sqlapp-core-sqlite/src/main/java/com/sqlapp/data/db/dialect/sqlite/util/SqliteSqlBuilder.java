@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sqlite.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -32,6 +33,18 @@ public class SqliteSqlBuilder extends AbstractSqlBuilder<SqliteSqlBuilder> {
 
 	public SqliteSqlBuilder(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected SqliteSqlBuilder typeDefinition(Column column) {
+		if ("true".equals(column.getSpecifics().get("sqlite.declaredType.empty")) && column.getDomain() == null)
+			return this;
+		String declared = column.getSpecifics().get("sqlite.declaredType");
+		if (declared == null || column.getDomain() != null)
+			return super.typeDefinition(column);
+		// INT and INTEGER PRIMARY KEY have different rowid semantics. Do not
+		// normalize catalog declarations through an inherited Schema dialect.
+		return _add(declared);
 	}
 
 	/**

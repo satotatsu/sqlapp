@@ -25,6 +25,9 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.TableLockMode;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -35,6 +38,32 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
+	@Override
+	public HsqlSqlBuilder argument(com.sqlapp.data.schemas.NamedArgument argument) {
+		if (argument.getDirection() != null && argument.getDirection() != com.sqlapp.jdbc.sql.ParameterDirection.Input)
+			_add(argument.getDirection()).space();
+		if (argument.getName() != null) {
+			if ("true".equals(argument.getSpecifics().get("hsql.argumentNameLiteral.v1")))
+				name(argument.getName());
+			else
+				_add(argument.getName());
+			space();
+		}
+		return typeDefinition(argument);
+	}
+
+	@Override
+	public HsqlSqlBuilder cascadeRule(ForeignKeyConstraint constraint) {
+		if (constraint.getDeleteRule() != null) {
+			space().on().delete().space()._add(constraint.getDeleteRule() == CascadeRule.None ? "NO ACTION"
+					: constraint.getDeleteRule().getSqlValue());
+		}
+		if (constraint.getUpdateRule() != null) {
+			space().on().update().space()._add(constraint.getUpdateRule() == CascadeRule.None ? "NO ACTION"
+					: constraint.getUpdateRule().getSqlValue());
+		}
+		return instance();
+	}
 
 	public HsqlSqlBuilder(Dialect dialect) {
 		super(dialect);
@@ -144,6 +173,8 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 		} else {
 			if (column.getDefaultValue() != null) {
 				space().setDefault()._add(column.getDefaultValue());
+			} else {
+				space()._add("DROP DEFAULT");
 			}
 		}
 		return instance();
@@ -158,22 +189,33 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	 */
 	@Override
 	public HsqlSqlBuilder definition(Column column) {
-		if (column.getDataType() == DataType.DOMAIN) {
+		return definition(column, true);
+	}
+
+	@Override
+	public HsqlSqlBuilder definition(Column column, boolean withRemarks) {
+		if (column.getDataType() == DataType.DOMAIN
+				|| column.getDataType() == DataType.OTHER && !CommonUtils.isEmpty(column.getDataTypeName())) {
 			this._add(column.getDataTypeName());
 		} else {
 			typeDefinition(column);
 			characterSetDefinition(column);
 			collateDefinition(column);
 		}
-		if (!CommonUtils.isEmpty(column.getDefaultValue()) || column.isIdentity()) {
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			space().generated().always().as().space()._add("(")._add(column.getFormula())._add(")");
+		} else if (!CommonUtils.isEmpty(column.getDefaultValue()) && !column.isIdentity()) {
 			defaultDefinition(column);
 		}
 		notNullDefinition(column);
+		if (column.isIdentity()) {
+			autoIncrement(column);
+		}
 		this.onUpdateDefinition(column);
 		if (column.getCheck() != null) {
 			checkConstraintDefinition(column);
 		}
-		if (!CommonUtils.isEmpty(column.getRemarks())) {
+		if (withRemarks && !CommonUtils.isEmpty(column.getRemarks())) {
 			comment(column);
 		}
 		return instance();
@@ -225,10 +267,30 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 
 	@Override
 	protected HsqlSqlBuilder autoIncrement(final AbstractColumn<?> column) {
-		generated().by().default_().as().identity();
+		if (column instanceof Column tableColumn && !CommonUtils.isEmpty(tableColumn.getSequenceName())) {
+			if (column.getIdentityGenerationType() == IdentityGenerationType.Always
+					|| getDialect().compareTo(DialectResolver.getInstance().getDialect("hsql", 2, 1)) < 0) {
+				throw new IllegalArgumentException(
+						"HSQLDB named sequence columns require 2.1+ and BY DEFAULT: " + column.getName());
+			}
+			generated().by().default_().as().sequence().space();
+			var sequence = tableColumn.getSequence();
+			if (sequence != null && sequence.getSchemaName() != null)
+				name(sequence.getSchemaName())._add(".");
+			name(tableColumn.getSequenceName());
+			return instance();
+		}
+		generated();
+		if (column.getIdentityGenerationType() == IdentityGenerationType.Always) {
+			always();
+		} else {
+			by().default_();
+		}
+		as().identity();
 		Long start = column.getIdentityLastValue() != null ? column.getIdentityLastValue()
 				: column.getIdentityStartValue();
-		if (start != null || column.getIdentityStep() != null) {
+		if (start != null || column.getIdentityStep() != null || column.getIdentityMinValue() != null
+				|| column.getIdentityMaxValue() != null || column.isIdentityCycle()) {
 			if (start == null) {
 				start = 1L;
 			}
@@ -237,6 +299,15 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 				start().with().space()._add(identityStart);
 				if (column.getIdentityStep() != null) {
 					comma().incrementBy().space()._add(column.getIdentityStep());
+				}
+				if (column.getIdentityMinValue() != null) {
+					space()._add("MINVALUE ")._add(column.getIdentityMinValue());
+				}
+				if (column.getIdentityMaxValue() != null) {
+					space()._add("MAXVALUE ")._add(column.getIdentityMaxValue());
+				}
+				if (column.isIdentityCycle()) {
+					space()._add("CYCLE");
 				}
 			});
 		}

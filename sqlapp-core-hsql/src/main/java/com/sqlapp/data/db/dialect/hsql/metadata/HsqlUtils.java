@@ -41,12 +41,12 @@ import com.sqlapp.util.CommonUtils;
 public class HsqlUtils extends ReaderUtils {
 
 	private static final Pattern EXTERNAL_PATTERN = Pattern.compile(".*\\s+EXTERNAL\\s+NAME\\s*'(.*)'.*",
-			Pattern.CASE_INSENSITIVE);
+			Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
 	protected static void setRoutineInfo(ResultSet rs, ArgumentRoutine<?> obj) throws SQLException {
 		obj.setCatalogName(getString(rs, "ROUTINE_CATALOG"));
 		obj.setSchemaName(getString(rs, "ROUTINE_SCHEMA"));
-		obj.setSpecificName(getString(rs, MetadataReader.SPECIFIC_NAME));
+		obj.setSpecificNameLiteral(getString(rs, MetadataReader.SPECIFIC_NAME));
 		obj.setLanguage(getString(rs, "ROUTINE_BODY"));
 		obj.setDeterministic(toBoolean(getString(rs, "IS_DETERMINISTIC")));
 		obj.setSqlDataAccess(getString(rs, MetadataReader.SQL_DATA_ACCESS));
@@ -56,8 +56,7 @@ public class HsqlUtils extends ReaderUtils {
 		if (!CommonUtils.isEmpty(externalName)) {
 			String routine_definition = getString(rs, "ROUTINE_DEFINITION");
 			Matcher matcher = EXTERNAL_PATTERN.matcher(routine_definition);
-			matcher.matches();
-			String fullExternal = matcher.group(1);
+			String fullExternal = matcher.matches() ? matcher.group(1) : externalName;
 			int pos = fullExternal.indexOf(":");
 			String prefix = null;
 			if (pos > 0) {
@@ -80,7 +79,6 @@ public class HsqlUtils extends ReaderUtils {
 		if (statement == null) {
 			return null;
 		}
-		statement = statement.replace(obj.getSchemaName() + ".", "");
 		return statement;
 	}
 
@@ -96,14 +94,22 @@ public class HsqlUtils extends ReaderUtils {
 	}
 
 	protected static void setNamedArgument(ResultSet rs, NamedArgument obj, Routine<?> routine) throws SQLException {
+		routine.setName(getString(rs, MetadataReader.ROUTINE_NAME));
 		routine.setCatalogName(getString(rs, MetadataReader.SPECIFIC_CATALOG));
 		routine.setSchemaName(getString(rs, MetadataReader.SPECIFIC_SCHEMA));
-		routine.setName(getString(rs, MetadataReader.ROUTINE_NAME));
-		routine.setSpecificName(getString(rs, MetadataReader.SPECIFIC_NAME));
+		routine.setSpecificNameLiteral(getString(rs, MetadataReader.SPECIFIC_NAME));
 		String productDataType = getString(rs, "DATA_TYPE");
 		obj.setCatalogName(getString(rs, MetadataReader.SPECIFIC_CATALOG));
 		obj.setSchemaName(getString(rs, MetadataReader.SPECIFIC_SCHEMA));
 		SchemaUtils.setRoutine(obj, routine);
+		obj.getSpecifics().put("hsql.argumentNameLiteral.v1", "true");
+		if (routine.getDialect() instanceof com.sqlapp.data.db.dialect.hsql.Hsql2_0_0) {
+			String mode = getString(rs, "PARAMETER_MODE");
+			if (mode != null && !java.util.Set.of("IN", "OUT", "INOUT").contains(mode))
+				throw new SQLException("Unknown HSQLDB parameter mode: " + mode);
+			if (mode != null)
+				obj.setDirection(com.sqlapp.jdbc.sql.ParameterDirection.parse(mode));
+		}
 		String interval_type = getString(rs, "INTERVAL_TYPE");
 		String domainName = getString(rs, "UDT_NAME");
 		// String domain_name=getString(rs, "DOMAIN_NAME");
@@ -113,7 +119,9 @@ public class HsqlUtils extends ReaderUtils {
 		Integer numeric_scale = getInteger(rs, "NUMERIC_SCALE");
 		Integer datetime_scale = getInteger(rs, "DATETIME_PRECISION");
 		if (!isEmpty(domainName)) {
-			obj.setDataTypeName(domainName);
+			obj.setDataTypeName(routine.getDialect() instanceof com.sqlapp.data.db.dialect.hsql.Hsql2_0_0
+					? qualifiedType(routine.getDialect(), getString(rs, "UDT_SCHEMA"), domainName)
+					: domainName);
 			obj.setDataType(DataType.DOMAIN);
 		} else if (!isEmpty(interval_type)) {
 			Long interval_precision = getLong(rs, "INTERVAL_PRECISION");
@@ -124,12 +132,14 @@ public class HsqlUtils extends ReaderUtils {
 		}
 	}
 
+	protected static String qualifiedType(com.sqlapp.data.db.dialect.Dialect dialect, String schema, String name) {
+		var sql = dialect.createSqlBuilder();
+		if (schema != null)
+			sql.name(schema)._add(".");
+		return sql.name(name).toString();
+	}
+
 	public static String formatStatement(String sql) {
-		if (sql.startsWith("BEGIN ATOMIC ")) {
-			sql = sql.replace("BEGIN ATOMIC ", "BEGIN ATOMIC\n");
-		} else if (sql.startsWith("BEGIN ")) {
-			sql = sql.replace("BEGIN ", "BEGIN\n");
-		}
-		return sql.replace(";", ";\n");
+		return sql;
 	}
 }

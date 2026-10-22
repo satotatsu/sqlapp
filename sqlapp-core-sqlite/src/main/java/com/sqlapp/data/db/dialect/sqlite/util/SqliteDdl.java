@@ -35,6 +35,68 @@ public final class SqliteDdl {
 				: null;
 	}
 
+	/** Native module column names, excluding key=value module options. */
+	public static List<String> virtualTableColumns(String definition) {
+		var result = new ArrayList<String>();
+		for (var argument : virtualArguments(definition)) {
+			var items = tokens(argument);
+			if (items.size() > 1 && items.get(1).is("="))
+				continue;
+			if (items.isEmpty())
+				throw new IllegalArgumentException("Empty virtual-table argument");
+			int name = items.get(0).is("+") ? 1 : 0;
+			if (name >= items.size())
+				throw new IllegalArgumentException("Missing virtual-table column name");
+			result.add(identifier(items.get(name).text()));
+		}
+		return List.copyOf(result);
+	}
+
+	/** Scalar module options with quoted strings decoded; columns are omitted. */
+	public static java.util.Map<String, String> virtualTableOptions(String definition) {
+		var result = new java.util.LinkedHashMap<String, String>();
+		for (var argument : virtualArguments(definition)) {
+			var items = tokens(argument);
+			if (items.size() < 2 || !items.get(1).is("="))
+				continue;
+			if (items.size() != 3)
+				throw new IllegalArgumentException("Expected a scalar virtual-table option: " + argument);
+			String key = identifier(items.get(0).text()).toLowerCase(java.util.Locale.ROOT);
+			if (result.putIfAbsent(key, identifier(items.get(2).text())) != null)
+				throw new IllegalArgumentException("Duplicate virtual-table option: " + key);
+		}
+		return java.util.Map.copyOf(result);
+	}
+
+	private static List<String> virtualArguments(String definition) {
+		if (!isVirtualTable(definition))
+			throw new IllegalArgumentException("Expected CREATE VIRTUAL TABLE definition");
+		var items = tokens(definition);
+		int open = 0;
+		while (open < items.size() && !items.get(open).is("USING"))
+			open++;
+		open += 2;
+		if (open >= items.size() || !items.get(open).is("("))
+			throw new IllegalArgumentException("Expected virtual-table module arguments");
+		var result = new ArrayList<String>();
+		int start = items.get(open).end(), depth = 0;
+		for (int i = open + 1; i < items.size(); i++) {
+			var item = items.get(i);
+			if (item.is(")") && depth == 0) {
+				result.add(definition.substring(start, item.start()));
+				return result;
+			}
+			if (item.is(",") && depth == 0) {
+				result.add(definition.substring(start, item.start()));
+				start = item.end();
+			} else if (item.is("("))
+				depth++;
+			else if (item.is(")"))
+				depth--;
+		}
+		throw new IllegalArgumentException("Unclosed virtual-table module arguments");
+	}
+
 	/** CREATE INDEX header, with comments and quoted names kept opaque. */
 	public static boolean isUniqueIndex(String definition) {
 		var items = tokens(definition);
@@ -391,6 +453,71 @@ public final class SqliteDdl {
 	}
 
 	/**
+	 * Returns an explicitly qualified ON schema, or null for an unqualified target.
+	 */
+	public static String triggerTargetSchema(String definition) {
+		List<Token> items = tokens(definition);
+		int target = triggerTargetPosition(items);
+		return target + 2 < items.size() && items.get(target + 1).is(".") ? identifier(items.get(target).text()) : null;
+	}
+
+	/** Returns the decoded table/view name from the trigger's ON declaration. */
+	public static String triggerTargetName(String definition) {
+		List<Token> items = tokens(definition);
+		int target = triggerTargetPosition(items);
+		if (target + 2 < items.size() && items.get(target + 1).is("."))
+			target += 2;
+		return identifier(items.get(target).text());
+	}
+
+	/**
+	 * Returns modeled UPDATE OF identifiers; SQLite itself permits nonexistent
+	 * names.
+	 */
+	public static List<String> triggerUpdateColumns(String definition) {
+		List<Token> items = tokens(definition);
+		int on = triggerTargetPosition(items) - 1;
+		for (int position = 0; position + 1 < on; position++) {
+			if (items.get(position).is("UPDATE") && items.get(position + 1).is("OF"))
+				return items.subList(position + 2, on).stream().filter(token -> !token.is(","))
+						.map(token -> identifier(token.text())).toList();
+		}
+		return List.of();
+	}
+
+	/**
+	 * Qualifies an unqualified ON target without changing an explicit target or
+	 * body.
+	 */
+	public static String qualifyTriggerTarget(String definition, String schema) {
+		if (schema == null || schema.isBlank() || schema.indexOf('\0') >= 0)
+			throw new IllegalArgumentException("SQLite trigger target schema is required and must not contain NUL");
+		List<Token> items = tokens(definition);
+		int target = triggerTargetPosition(items);
+		if (target + 2 < items.size() && items.get(target + 1).is("."))
+			return definition;
+		int position = items.get(target).start();
+		return definition.substring(0, position) + quote(schema) + "." + definition.substring(position);
+	}
+
+	private static int triggerTargetPosition(List<Token> items) {
+		int start = 0;
+		while (start < items.size() && !items.get(start).is("TRIGGER"))
+			start++;
+		start += 2;
+		if (start < items.size() && items.get(start - 1).is("IF"))
+			start += 3;
+		if (start < items.size() && items.get(start).is("."))
+			start += 2;
+		for (int i = start; i < items.size(); i++) {
+			if (items.get(i).is("ON") && i + 1 < items.size()) {
+				return i + 1;
+			}
+		}
+		throw new IllegalArgumentException("SQLite trigger ON target is missing");
+	}
+
+	/**
 	 * Replaces only the declared object identity, preserving the executable DDL.
 	 */
 	public static String withIdentity(String definition, String kind, String schema, String name) {
@@ -408,8 +535,14 @@ public final class SqliteDdl {
 			if (first + 2 < tokens.size() && tokens.get(first + 1).is("."))
 				last += 2;
 			String identity = (schema == null ? "" : quote(schema) + ".") + quote(name);
-			return definition.substring(0, tokens.get(first).start()) + identity
-					+ definition.substring(tokens.get(last).end());
+			String prefix = definition.substring(0, tokens.get(first).start());
+			// A qualified name already selects the owning database. SQLite rejects
+			// CREATE TEMP TRIGGER temp.name (and the equivalent TEMP VIEW spelling).
+			if (schema != null && tokens.size() > 1 && tokens.get(0).is("CREATE")
+					&& (tokens.get(1).is("TEMP") || tokens.get(1).is("TEMPORARY")))
+				prefix = definition.substring(0, tokens.get(1).start())
+						+ definition.substring(tokens.get(1).end(), tokens.get(first).start());
+			return prefix + identity + definition.substring(tokens.get(last).end());
 		}
 		throw new IllegalArgumentException("SQLite CREATE " + kind + " header is missing");
 	}

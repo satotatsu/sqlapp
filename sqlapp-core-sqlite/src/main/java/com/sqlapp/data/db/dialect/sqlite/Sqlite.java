@@ -91,6 +91,8 @@ public class Sqlite extends Dialect {
 		});
 		getDbDataTypes().addDecimal(type -> {
 		});
+		// Values in STRICT ANY columns must reach JDBC without coercion.
+		getDbDataTypes().addAnyData("ANY");
 	}
 
 	/**
@@ -159,6 +161,19 @@ public class Sqlite extends Dialect {
 		return false;
 	}
 
+	/** Whether PRAGMA optimize is available (SQLite 3.18+). */
+	public boolean supportsOptimize() {
+		return false;
+	}
+
+	/**
+	 * Whether optimize can consider unused tables with a temporary analysis limit
+	 * (SQLite 3.46+).
+	 */
+	public boolean supportsOptimizeAllTables() {
+		return false;
+	}
+
 	public boolean supportsViewColumnList() {
 		return false;
 	}
@@ -179,7 +194,25 @@ public class Sqlite extends Dialect {
 		return false;
 	}
 
+	/** Whether ALTER COLUMN can SET/DROP NOT NULL (SQLite 3.53+). */
+	public boolean supportsAlterColumnNullability() {
+		return false;
+	}
+
+	/**
+	 * Native named CHECK changes with reliable quoted-name removal (SQLite
+	 * 3.53.1+).
+	 */
+	public boolean supportsAlterCheckConstraints() {
+		return false;
+	}
+
 	public boolean supportsStrictTables() {
+		return false;
+	}
+
+	/** PRAGMA table_list identifies virtual-table shadow tables (SQLite 3.37+). */
+	public boolean supportsTableList() {
 		return false;
 	}
 

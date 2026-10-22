@@ -35,6 +35,18 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.StaxWriter;
 
 public class ColumnTest extends AbstractDbObjectTest<Column> {
+	@Test
+	void namedIdentitySequenceSurvivesXml() throws Exception {
+		var column = new Column("ID").setDataType(DataType.INT).setIdentity(true);
+		column.setSequence(new Sequence("Named.Sequence").setSchemaName("Other.Schema"));
+		column.setIdentityStartValue(17L).setIdentityStep(3L);
+		Column restored = SchemaUtils.readXml(new StringReader(column.asXml()));
+		assertEquals("Named.Sequence", restored.getSequenceName());
+		assertEquals("Other.Schema", restored.getSequenceSchemaName());
+		assertEquals(17L, restored.getIdentityStartValue());
+		assertEquals(3L, restored.getIdentityStep());
+		assertEquals(true, restored.isIdentity());
+	}
 
 	@Override
 	protected Column getObject() {
