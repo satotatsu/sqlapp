@@ -28,6 +28,10 @@ public class MySqlCreateFunctionFactory extends AbstractCreateFunctionFactory<My
 
 	@Override
 	protected void addCreateObject(final Function obj, MySqlSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
 		builder.create().function();
 		builder.name(obj);
 		builder.space().arguments(obj.getArguments());
@@ -38,15 +42,14 @@ public class MySqlCreateFunctionFactory extends AbstractCreateFunctionFactory<My
 			} else {
 				builder.lineBreak().not();
 			}
-			builder.lineBreak().not().deterministic();
+			builder.deterministic();
 		}
 		if (obj.getSqlDataAccess() != null) {
 			builder.lineBreak()._add(obj.getSqlDataAccess());
 		}
 		if (obj.getSqlSecurity() != null) {
-			builder.lineBreak()._add(obj.getSqlSecurity());
+			builder.lineBreak()._add("SQL ")._add(obj.getSqlSecurity());
 		}
-		builder.lineBreak()._add(obj.getStatement());
 		if (!CommonUtils.isEmpty(obj.getRemarks())) {
 			builder.lineBreak().comment().space();
 			builder.sqlChar(obj.getRemarks());

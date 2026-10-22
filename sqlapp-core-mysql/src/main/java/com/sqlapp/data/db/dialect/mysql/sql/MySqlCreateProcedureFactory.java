@@ -28,6 +28,10 @@ public class MySqlCreateProcedureFactory extends AbstractCreateProcedureFactory<
 
 	@Override
 	protected void addCreateObject(final Procedure obj, MySqlSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
 		builder.create().procedure();
 		builder.name(obj);
 		builder.space().arguments(obj.getArguments());
@@ -43,7 +47,7 @@ public class MySqlCreateProcedureFactory extends AbstractCreateProcedureFactory<
 			builder.lineBreak()._add(obj.getSqlDataAccess());
 		}
 		if (obj.getSqlSecurity() != null) {
-			builder.lineBreak()._add(obj.getSqlSecurity());
+			builder.lineBreak()._add("SQL ")._add(obj.getSqlSecurity());
 		}
 		if (!CommonUtils.isEmpty(obj.getRemarks())) {
 			builder.lineBreak().comment().space();

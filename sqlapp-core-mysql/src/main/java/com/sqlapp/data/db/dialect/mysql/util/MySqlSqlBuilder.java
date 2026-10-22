@@ -23,10 +23,12 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.ReferenceColumnCollection;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -257,11 +259,54 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 			this._add(" ");
 		}
 		if (argument.getName() != null) {
-			this._add(argument.getName());
+			this.name(argument.getName());
 			this._add(" ");
 		}
-		this.typeDefinition(argument);
+		if (argument.getDataType() == DataType.ENUM || argument.getDataType() == DataType.SET) {
+			if (argument.getValues().isEmpty()) {
+				throw new IllegalArgumentException(
+						"MySQL ENUM/SET routine argument requires a nonempty value list: " + argument.getName());
+			}
+			_add(argument.getDataType())._add("(");
+			int index = 0;
+			for (String value : argument.getValues()) {
+				comma(index++ > 0);
+				if (value.startsWith("'") && value.endsWith("'")) {
+					_add(value);
+				} else {
+					sqlChar(value);
+				}
+			}
+			_add(")");
+		} else {
+			this.typeDefinition(argument);
+		}
+		addRoutineCharacterAttributes(argument);
 		return instance();
+	}
+
+	@Override
+	protected MySqlSqlBuilder typeDefinition(FunctionReturning returning) {
+		if (!CommonUtils.isEmpty(returning.getDefinition())) {
+			_add(returning.getDefinition());
+		} else {
+			super.typeDefinition(returning);
+		}
+		addRoutineCharacterAttributes(returning);
+		return instance();
+	}
+
+	private void addRoutineCharacterAttributes(DataTypeSetProperties<?> type) {
+		if (type.getDataType() == null || (!type.getDataType().isCharacter() && type.getDataType() != DataType.ENUM
+				&& type.getDataType() != DataType.SET)) {
+			return;
+		}
+		if (!CommonUtils.isEmpty(type.getCharacterSet())) {
+			space().characterSet().space().name(type.getCharacterSet());
+		}
+		if (!CommonUtils.isEmpty(type.getCollation())) {
+			space().collate().space().name(type.getCollation());
+		}
 	}
 
 	/**

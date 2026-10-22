@@ -28,7 +28,18 @@ public class MySqlCreateTriggerFactory extends AbstractCreateTriggerFactory<MySq
 
 	@Override
 	protected void addEventManipulationText(final Trigger obj, MySqlSqlBuilder builder) {
-		builder._add(obj.getActionTiming());
-		builder._add(CommonUtils.first(obj.getEventManipulation()));
+		if (obj.getEventManipulation().size() != 1) {
+			throw new IllegalArgumentException("MySQL trigger requires exactly one INSERT, UPDATE or DELETE event");
+		}
+		String event = CommonUtils.first(obj.getEventManipulation());
+		if (!"INSERT".equalsIgnoreCase(event) && !"UPDATE".equalsIgnoreCase(event)
+				&& !"DELETE".equalsIgnoreCase(event)) {
+			throw new IllegalArgumentException("Unsupported MySQL trigger event: " + event);
+		}
+		if (!"BEFORE".equalsIgnoreCase(obj.getActionTiming()) && !"AFTER".equalsIgnoreCase(obj.getActionTiming())) {
+			throw new IllegalArgumentException("MySQL trigger requires BEFORE or AFTER timing");
+		}
+		builder.lineBreak()._add(obj.getActionTiming());
+		builder.space()._add(event);
 	}
 }
