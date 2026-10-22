@@ -30,8 +30,6 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.Synonym;
-import com.sqlapp.data.db.sql.CreateFunctionFactory;
-import com.sqlapp.data.db.sql.CreateProcedureFactory;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -42,8 +40,9 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Function.class, SqlType.CREATE, CreateFunctionFactory.class);
-		registerSqlFactory(Procedure.class, SqlType.CREATE, CreateProcedureFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, SqlType.CREATE, SapHanaCreateTypeFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, SapHanaCreateFunctionFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.CREATE, SapHanaCreateProcedureFactory.class);
 		registerSqlFactory(Trigger.class, SqlType.CREATE, SapHanaCreateTriggerFactory.class);
 		registerSqlFactory(Synonym.class, SqlType.CREATE, SapHanaCreateSynonymFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, SapHanaCreateTableFactory.class);

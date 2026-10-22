@@ -41,8 +41,21 @@ public class MySqlUserReader extends UserReader {
 	}
 
 	@Override
+	protected String nativeCaseString(Connection connection, String value) {
+		// Account names must not inherit table-name case folding from JDBC metadata.
+		return value;
+	}
+
+	@Override
 	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		context = context.clone();
+		context.putIfAbsent("accountHost", null);
+		Object filter = context.get("userName");
+		if (filter instanceof String name && (name.startsWith("'") || name.startsWith("`"))) {
+			context.put("userName", com.sqlapp.data.db.dialect.mysql.util.MySqlAccount.user(name));
+			context.put("accountHost", com.sqlapp.data.db.dialect.mysql.util.MySqlAccount.host(name));
+		}
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<User> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -61,7 +74,9 @@ public class MySqlUserReader extends UserReader {
 
 	protected User createUser(ExResultSet rs) throws SQLException {
 		String name = getString(rs, "User");
-		User obj = new User(name);
+		User obj = new User("MySQL".equalsIgnoreCase(getDialect().getProductName())
+				? com.sqlapp.data.db.dialect.mysql.util.MySqlAccount.name(name, getString(rs, "Host"))
+				: name);
 		obj.setPassword(rs.getString("Password"));
 		setSpecifics(rs, "host", obj);
 		return obj;

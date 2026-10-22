@@ -37,6 +37,8 @@ access still requires the database privileges needed by each existing reader.
 | Column attributes | ON UPDATE extraction tolerates other EXTRA flags, NULL EXTRA is accepted, and invisible/generated flags are independent of the process locale |
 | Column character attributes | Standalone column definitions emit an explicitly configured character set/collation instead of omitting it |
 | Existing object/global/column privileges | Existing readers remain; column privilege queries now honor schemaName to avoid mixing grants on identically named tables in different schemas |
+| Account and routine-grant identity | Complete user@host identity, routine kind and grant option; native routine GRANT/REVOKE generation; see [privilege metadata](mysql-privileges.md) |
+| MySQL 8+ roles | Known role accounts and direct memberships, including admin/default flags, retrieved in batches; no lock-state guessing |
 | Maintenance | OPTIMIZE resolves to OPTIMIZE TABLE instead of ANALYZE TABLE |
 | ALTER with multiple index drops | Dropping an index already covered by a deleted constraint no longer skips subsequent unrelated index changes |
 
@@ -107,7 +109,7 @@ UPDATE, MERGE, OPTIMIZE, identifier quoting and Turkish-locale metadata flags.
 MariaDB tests check inherited views/generated columns and its IGNORED and DROP
 CONSTRAINT syntax. Existing module suites are also run.
 
-The final full-module run passed **133 MySQL tests and 37 MariaDB tests**, with
+The earlier schema-focused run passed **133 MySQL tests and 37 MariaDB tests**, with
 zero failures or skipped tests. `git diff --check` passed for the affected paths.
 Generated build/test reports are ordinary local Gradle output, not intentional
 source or checked-in generated-file changes. The command/Gradle-plugin suites
@@ -126,11 +128,12 @@ not a claim of complete database backup or every PostgreSQL feature on MySQL.
   INFORMATION_SCHEMA view query. SQL SECURITY is retained; recreation without a
   complete definition uses the executing account as definer. Supply a complete
   definition when preserving that identity or algorithm is required.
-- Role memberships, default/mandatory roles, dynamic privileges and routine
-  privilege metadata are not added. The MySQL catalog reader still has no
-  RoleReader, RoleMemberReader or RoutinePrivilegeReader. These are concrete
-  MySQL gaps relative to PostgreSQL, not PostgreSQL-only concepts. User@host
-  identity and account authentication metadata require separate coordinated work.
+- [Privilege metadata](mysql-privileges.md) now covers complete user@host identities,
+  explicit routine grants, known MySQL 8+ roles and direct memberships. Mandatory
+  roles, runtime activation, role/default-role restoration, partial revokes and
+  complete authentication metadata remain outside the implementation. Dynamic
+  global privilege names already flow through USER_PRIVILEGES; no duplicate
+  global-grant query is required.
 - Spatial SRID metadata, FULLTEXT parser options and all physical storage options
   are not made complete by this change.
 - The resolver's coarse 8.0 dialect family does not distinguish every SQL feature's

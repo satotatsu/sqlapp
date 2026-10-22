@@ -24,6 +24,9 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.IdentityGenerationType;
+import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.FunctionReturning;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -46,6 +49,51 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 	@Override
 	public SapHanaSqlBuilder clone() {
 		return (SapHanaSqlBuilder) super.clone();
+	}
+
+	@Override
+	public SapHanaSqlBuilder argument(final NamedArgument argument) {
+		final ParameterDirection direction = argument.getDirection() == null ? ParameterDirection.Input
+				: argument.getDirection();
+		_add(direction).space().name(argument.getName()).space();
+		typeDefinition(argument);
+		if (argument.getDefaultValue() != null) {
+			if (direction != ParameterDirection.Input) {
+				throw new IllegalArgumentException("SAP HANA defaults require an IN argument: " + argument.getName());
+			}
+			space().default_().space()._add(argument.getDefaultValue());
+		}
+		return instance();
+	}
+
+	@Override
+	public SapHanaSqlBuilder _add(final FunctionReturning returning) {
+		if (returning == null) {
+			throw new IllegalArgumentException("SAP HANA function requires a return type");
+		}
+		if (returning.getTable() != null) {
+			if (returning.getTable().getColumns().isEmpty()) {
+				throw new IllegalArgumentException("SAP HANA table function requires return columns");
+			}
+			_add("TABLE (");
+			int position = 0;
+			for (Column column : returning.getTable().getColumns()) {
+				if (column.isIdentity() || column.getFormula() != null || column.getDefaultValue() != null) {
+					throw new IllegalArgumentException(
+							"SAP HANA table return columns support names and types: " + column.getName());
+				}
+				comma(position++ > 0).name(column).space().addTypeDefinition(column);
+			}
+			return _add(")");
+		}
+		if (returning.getName() != null) {
+			name(returning.getName()).space();
+		}
+		if (returning.getDataType() == null && returning.getDataTypeName() == null) {
+			throw new IllegalArgumentException("SAP HANA function requires a scalar type or table return columns");
+		}
+		typeDefinition(returning);
+		return instance();
 	}
 
 	@Override

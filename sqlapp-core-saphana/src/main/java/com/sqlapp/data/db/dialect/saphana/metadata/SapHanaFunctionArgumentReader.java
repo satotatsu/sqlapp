@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.saphana.metadata;
 
-import static com.sqlapp.util.CommonUtils.list;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -47,15 +45,15 @@ public class SapHanaFunctionArgumentReader extends RoutineArgumentReader<Functio
 	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final List<NamedArgument> result = list();
+		final SapHanaRoutineArguments result = new SapHanaRoutineArguments(getDialect());
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				NamedArgument column = createNamedArgument(rs);
-				result.add(column);
+				result.add(column, rs);
 			}
 		});
-		return result;
+		return result.finish();
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
@@ -75,7 +73,9 @@ public class SapHanaFunctionArgumentReader extends RoutineArgumentReader<Functio
 		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE")).booleanValue();
 		obj.setNullable(nullable);
 		getDialect().setDbType(productDataType, maxLength, numericScale, obj);
-		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_TYPE")));
+		String direction = getString(rs, "PARAMETER_TYPE");
+		obj.setDirection(
+				"RETURN".equalsIgnoreCase(direction) ? ParameterDirection.Output : ParameterDirection.parse(direction));
 		return obj;
 	}
 

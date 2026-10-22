@@ -34,6 +34,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.data.schemas.View;
+import com.sqlapp.data.schemas.RoutinePrivilege;
 
 public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -47,6 +48,8 @@ public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, MySqlGrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, MySqlRevokeRoutinePrivilegeFactory.class);
 		// Schema
 		registerSqlFactory(Schema.class, SqlType.CREATE, MySqlCreateSchemaFactory.class);
 		registerSqlFactory(Schema.class, SqlType.ALTER, MySqlAlterSchemaFactory.class);

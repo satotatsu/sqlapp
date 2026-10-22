@@ -21,6 +21,24 @@ class MariadbInheritedSchemaSqlTest {
 	private final Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 11, 0);
 
 	@Test
+	void userAccountRoutineSqlDoesNotEnableMySqlRoleMetadata() {
+		var catalog = dialect.getCatalogReader();
+		assertFalse(catalog.getRoleReader() instanceof com.sqlapp.data.db.dialect.mysql.metadata.MySqlRole800Reader);
+		assertNull(catalog.getRoleMemberReader());
+		assertNull(catalog.getRoutinePrivilegeReader());
+		var privilege = new com.sqlapp.data.schemas.RoutinePrivilege();
+		privilege.setSchemaName("app");
+		privilege.setObjectName("f");
+		privilege.getSpecifics().put("ROUTINE_KIND", "FUNCTION");
+		privilege.setGranteeName("'reader'@'localhost'");
+		privilege.setPrivilege("EXECUTE");
+		SqlFactory<com.sqlapp.data.schemas.RoutinePrivilege> factory = dialect.createSqlFactoryRegistry()
+				.getSqlFactory(privilege, SqlType.GRANT);
+		assertEquals("GRANT EXECUTE ON FUNCTION `app`.`f` TO `reader`@`localhost`",
+				factory.createSql(privilege).get(0).getSqlText());
+	}
+
+	@Test
 	void inheritedIndexesKeepPrefixAndMariaDbIgnoredSyntax() {
 		Table table = table();
 		Index index = new Index("uq_code");

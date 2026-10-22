@@ -262,6 +262,116 @@ class SapHanaMetadataReaderTest {
 	}
 
 	@Test
+	void testTableTypesRoundTripThroughSchemaModel() throws Exception {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			drop(statement, "DROP SCHEMA HANA_TYPE_TEST CASCADE");
+			statement.execute("CREATE SCHEMA HANA_TYPE_TEST");
+			try {
+				statement.execute(
+						"CREATE TYPE HANA_TYPE_TEST.\"Table Type\" AS TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20))");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader();
+				reader.setSchemaName("HANA_TYPE_TEST");
+				var schema = reader.getAllFull(connection).stream().filter(s -> s.getName().equals("HANA_TYPE_TEST"))
+						.findFirst().orElseThrow();
+				org.junit.jupiter.api.Assertions.assertNull(schema.getTables().get("Table Type"));
+				var type = schema.getTypes().get("Table Type");
+				assertNotNull(type);
+				assertEquals(2, type.getColumns().size());
+				var restored = (com.sqlapp.data.schemas.Type) com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(type.asXml()));
+				statement.execute("DROP TYPE HANA_TYPE_TEST.\"Table Type\"");
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(restored, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				assertTrue(statement.execute(
+						"DO BEGIN DECLARE ROWS HANA_TYPE_TEST.\"Table Type\"; ROWS = SELECT 9 AS \"A B\", 'type' AS LABEL FROM DUMMY; SELECT * FROM :ROWS; END"));
+				try (var rs = statement.getResultSet()) {
+					assertTrue(rs.next());
+					assertEquals(9, rs.getInt(1));
+				}
+			} finally {
+				drop(statement, "DROP SCHEMA HANA_TYPE_TEST CASCADE");
+			}
+		}
+	}
+
+	@Test
+	void testTableRoutineModelsRecreateWithoutFullDefinitions() throws Exception {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			drop(statement, "DROP SCHEMA HANA_ROUTINE_TEST CASCADE");
+			statement.execute("CREATE SCHEMA HANA_ROUTINE_TEST");
+			try {
+				statement.execute(
+						"CREATE FUNCTION HANA_ROUTINE_TEST.TABLE_FN (IN SRC TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20))) "
+								+ "RETURNS TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20)) LANGUAGE SQLSCRIPT AS BEGIN RETURN SELECT * FROM :SRC; END");
+				statement.execute(
+						"CREATE PROCEDURE HANA_ROUTINE_TEST.TABLE_PROC (IN SRC TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20)), "
+								+ "OUT DEST TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20))) LANGUAGE SQLSCRIPT AS BEGIN DEST = SELECT * FROM :SRC; END");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				schemaReader.setSchemaName("HANA_ROUTINE_TEST");
+				var schema = schemaReader.getAllFull(connection).stream()
+						.filter(s -> s.getName().equals("HANA_ROUTINE_TEST")).findFirst().orElseThrow();
+				var function = schema.getFunctions().get("TABLE_FN");
+				assertNotNull(function.getReturning().getTable());
+				assertEquals(2, function.getReturning().getTable().getColumns().size());
+				assertEquals("A B", function.getReturning().getTable().getColumns().get(0).getName());
+				assertTrue(function.getArguments().get("SRC").getDataTypeName().startsWith("TABLE("));
+				var procedure = schema.getProcedures().get("TABLE_PROC");
+				assertEquals(2, procedure.getArguments().size());
+				assertTrue(procedure.getArguments().get("DEST").getDataTypeName().contains("NVARCHAR(20)"));
+				function.setDefinition((String) null);
+				function.setStatement("BEGIN RETURN SELECT * FROM :SRC; END");
+				procedure.setDefinition((String) null);
+				procedure.setStatement("BEGIN DEST = SELECT * FROM :SRC; END");
+				statement.execute("DROP FUNCTION HANA_ROUTINE_TEST.TABLE_FN");
+				statement.execute("DROP PROCEDURE HANA_ROUTINE_TEST.TABLE_PROC");
+				var registry = dialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(function, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				for (var operation : registry.createSql(procedure, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				assertTrue(statement.execute("DO BEGIN DECLARE SRC TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20)); "
+						+ "SRC = SELECT 7 AS \"A B\", 'ok' AS LABEL FROM DUMMY; SELECT * FROM HANA_ROUTINE_TEST.TABLE_FN(:SRC); END"));
+				try (var rs = statement.getResultSet()) {
+					assertTrue(rs.next());
+					assertEquals(7, rs.getInt(1));
+					assertEquals("ok", rs.getString(2));
+				}
+				assertTrue(statement.execute("DO BEGIN DECLARE SRC TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20)); "
+						+ "DECLARE DEST TABLE (\"A B\" INTEGER, LABEL NVARCHAR(20)); SRC = SELECT 8 AS \"A B\", 'out' AS LABEL FROM DUMMY; "
+						+ "CALL HANA_ROUTINE_TEST.TABLE_PROC(:SRC, DEST); SELECT * FROM :DEST; END"));
+				try (var rs = statement.getResultSet()) {
+					assertTrue(rs.next());
+					assertEquals(8, rs.getInt(1));
+				}
+			} finally {
+				statement.execute("DROP SCHEMA HANA_ROUTINE_TEST CASCADE");
+			}
+		}
+	}
+
+	@Test
+	void testNativeIdentityAndGeneratedColumnAlterBoundaries() throws Exception {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			drop(statement, "DROP TABLE HANA_ALTER_BOUNDARY");
+			statement.execute("CREATE COLUMN TABLE HANA_ALTER_BOUNDARY (ID BIGINT GENERATED ALWAYS AS IDENTITY, "
+					+ "N INTEGER, TOTAL INTEGER GENERATED ALWAYS AS (N * 2))");
+			try {
+				org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> statement.execute(
+						"ALTER TABLE HANA_ALTER_BOUNDARY ALTER (ID BIGINT GENERATED ALWAYS AS IDENTITY (INCREMENT BY 2))"));
+				org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> statement
+						.execute("ALTER TABLE HANA_ALTER_BOUNDARY ALTER (TOTAL INTEGER GENERATED ALWAYS AS (N * 3))"));
+			} finally {
+				statement.execute("DROP TABLE HANA_ALTER_BOUNDARY");
+			}
+		}
+	}
+
+	@Test
 	void testEnhancedDdlRoundTripsOnHana2() throws Exception {
 		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
 			drop(statement, "DROP SCHEMA HANA_DDL_TEST CASCADE");

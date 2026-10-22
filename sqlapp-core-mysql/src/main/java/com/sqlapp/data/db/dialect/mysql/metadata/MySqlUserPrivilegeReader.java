@@ -65,7 +65,9 @@ public class MySqlUserPrivilegeReader extends UserPrivilegeReader {
 	protected UserPrivilege createPrivilege(ExResultSet rs) throws SQLException {
 		UserPrivilege obj = new UserPrivilege();
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
-		obj.setGrantee(new User(getString(rs, "GRANTEE")));
+		obj.setGrantee(new User("MySQL".equalsIgnoreCase(getDialect().getProductName())
+				? com.sqlapp.data.db.dialect.mysql.util.MySqlAccount.fromGrantee(getString(rs, "GRANTEE"))
+				: getString(rs, "GRANTEE")));
 		obj.setPrivilege(getString(rs, "PRIVILEGE_TYPE"));
 		obj.setGrantable("YES".equals(getString(rs, "IS_GRANTABLE")));
 		return obj;

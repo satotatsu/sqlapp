@@ -139,7 +139,8 @@ public class MySqlCatalogReader extends AbstractISCatalogReader {
 
 	@Override
 	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
-		return null;
+		return "MySQL".equalsIgnoreCase(getDialect().getProductName()) ? new MySqlRoutinePrivilegeReader(getDialect())
+				: null;
 	}
 
 	@Override

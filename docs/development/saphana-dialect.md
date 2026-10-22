@@ -25,6 +25,9 @@ have not been exercised during this enhancement.
 | Column changes | ADD, DROP and ALTER use HANA parenthesized syntax. Nullability/default changes and standalone RENAME COLUMN are supported. |
 | Table names | RENAME TABLE precedes subsequent column changes. Cross-schema plans require `decorateSchemaName=true` so every subsequent operation addresses the destination schema. |
 | Routines and triggers | CREATE factories now replay complete executable catalog `definition` DDL. Supplemental arguments do not have to duplicate information already in that DDL. |
+| Modeled SQLScript routines | Quoted IN/OUT/INOUT signatures and scalar/table function returns. A `BEGIN ... END` statement gets `LANGUAGE SQLSCRIPT AS`; explicit language/security/schema suffixes can be preserved in `statement`. Complete `definition` takes precedence. |
+| Table parameters and returns | Parameter columns are joined in bulk and rendered as native TABLE types. Table function return columns use the existing `FunctionReturning` table model. |
+| User-defined table types | TABLES/TABLE_COLUMNS are read in one joined query into `Type`/`TypeColumn`. Types are excluded from physical tables; CREATE TYPE uses the same model after XML round trips. |
 | Foreign keys | Composite columns retain order and referenced owner identity. Equal constraint names on separate tables remain separate, using one catalog query. |
 | Metadata filters | Trigger name and subject table filters are independent; unique constraints use the constraint-name filter. |
 | Catalog compatibility | Foreign keys do not read nonexistent MATCH_OPTION; procedure arguments do not read nonexistent character-set/collation catalog fields. |
@@ -79,9 +82,33 @@ HANA equivalents.
 The initial unit tests use synthetic catalog rows, SQL rendering and resolver
 boundaries. The Docker follow-up below additionally executes representative
 DDL and catalog-definition round trips on HANA Express 2.0. HANA Cloud,
-older Platform revisions, table-valued routine argument reconstruction and
+older Platform revisions and
 features outside the exercised objects remain unverified. No production or
 externally hosted database was accessed.
+
+## PostgreSQL comparison and remaining scope
+
+This inventory compares registered readers and factories. A shared factory is
+an implementation path, not proof that every advanced vendor option works.
+
+| Area | HANA implementation | Remaining scope |
+| --- | --- | --- |
+| Resolution, quoting, numeric types | Platform/Cloud resolver tests, SQL tests and Platform Docker round trips | Actual older Platform and Cloud engines |
+| Tables, columns, keys, checks, indexes | Native readers and HANA CREATE/ALTER table/index paths | Exhaustive partition, storage, full-text and Cloud vector option combinations |
+| Views, routines, triggers | Catalog DDL replay and modeled SQLScript signatures | Every language/security mode and advanced routine option |
+| User-defined types | HANA table types use shared Type columns and native CREATE TYPE | PostgreSQL enum/range/domain types have no automatic HANA conversion |
+| Sequences and synonyms | Native readers and CREATE factories, shared DROP paths | Sequence ALTER combinations and remote synonym target reconstruction |
+| Users, roles and privileges | User/role/member, object and column privilege readers | Dedicated RoutinePrivilege reader/GRANT factory and comprehensive privilege round trips |
+| PostgreSQL extensions and special objects | PostgreSQL-specific extension/domain/rule/operator paths have no direct mapping here | Requires a defined HANA feature and representation, not reuse of PostgreSQL SQL |
+| Operational settings | Shared operations and HANA lock, temporary-table and sequence batching paths | PostgreSQL catalog settings/maintenance operations do not establish HANA equivalents |
+
+The tested native ALTER COLUMN forms reject replacement identity settings and
+generated expressions. The dialect rejects these changes instead of dropping
+columns or losing data. A deliberate data migration is a separate task.
+
+No public Schema API, XML format, configuration field or module dependency was
+added for table types or table-valued routines. Saved full definitions continue
+to take precedence over supplemental modeled metadata.
 
 ## Verification on 2026-10-22
 
@@ -170,3 +197,6 @@ The isolated runs used temporary Gradle initialization scripts:
 - [Platform RENAME TABLE](https://help.sap.com/docs/SAP_HANA_PLATFORM/4fe29514fd584807ac9f2a04f6754767/20fbadb2751910148b24d8d93aff01d4.html)
 - [HANA CREATE SYNONYM](https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-database-sql-reference-guide/create-synonym-statement-data-definition)
 - [Cloud non-unique INVERTED HASH restrictions](https://help.sap.com/docs/hana-cloud/sap-hana-cloud-migration-guide/non-unique-inverted-hash-index)
+- [Platform FUNCTION_PARAMETERS](https://help.sap.com/docs/SAP_HANA_PLATFORM/4fe29514fd584807ac9f2a04f6754767/20a4c5c17519101481f89740396d2e7d.html)
+- [Platform CREATE TYPE](https://help.sap.com/docs/SAP_HANA_PLATFORM/de2486ee947e43e684d39702027f8a94/c4338e0143c14e46bf751437769cc81b.html)
+- [Platform ALTER TABLE](https://help.sap.com/docs/SAP_HANA_PLATFORM/4fe29514fd584807ac9f2a04f6754767/20d329a6751910149d5fdbc4800f92ff.html)

@@ -65,7 +65,9 @@ public class MySqlObjectPrivilegeReader extends ObjectPrivilegeReader {
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
 		obj.setObjectName(getString(rs, TABLE_NAME));
 		obj.setPrivilege(getString(rs, PRIVILEGE_TYPE));
-		obj.setGranteeName(getString(rs, GRANTEE));
+		obj.setGranteeName("MySQL".equalsIgnoreCase(getDialect().getProductName())
+				? com.sqlapp.data.db.dialect.mysql.util.MySqlAccount.fromGrantee(getString(rs, GRANTEE))
+				: getString(rs, GRANTEE));
 		obj.setGrantable("YES".equals(getString(rs, "IS_GRANTABLE")));
 		return obj;
 	}

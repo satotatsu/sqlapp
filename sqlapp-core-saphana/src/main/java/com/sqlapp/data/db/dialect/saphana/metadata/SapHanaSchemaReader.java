@@ -151,7 +151,7 @@ public class SapHanaSchemaReader extends SchemaReader {
 
 	@Override
 	protected TypeReader newTypeReader() {
-		return null;
+		return new SapHanaTypeReader(getDialect());
 	}
 
 	@Override
