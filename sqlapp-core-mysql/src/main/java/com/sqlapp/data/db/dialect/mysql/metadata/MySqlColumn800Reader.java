@@ -25,7 +25,14 @@ public class MySqlColumn800Reader extends MySqlColumn570Reader {
 	protected Column createColumn(Connection connection, ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(connection, rs);
 		String extra = getString(rs, "EXTRA");
-		column.setHidden(extra != null && extra.toUpperCase().contains("INVISIBLE"));
+		column.setHidden(extra != null && extra.toUpperCase(java.util.Locale.ROOT).contains("INVISIBLE"));
+		if (extra != null && extra.toUpperCase(java.util.Locale.ROOT).contains("DEFAULT_GENERATED")) {
+			String expression = getString(rs, "COLUMN_DEFAULT");
+			if (expression != null && !(column.getDataType().isDateTime()
+					&& expression.matches("(?i)current_timestamp(?:\\(\\d*\\))?"))) {
+				column.setDefaultValue("(" + expression + ")");
+			}
+		}
 		return column;
 	}
 }

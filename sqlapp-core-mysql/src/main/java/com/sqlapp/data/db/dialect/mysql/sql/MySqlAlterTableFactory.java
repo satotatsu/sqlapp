@@ -392,6 +392,10 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 			final ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
 			builder.drop().foreignKey();
 			builder.space().name(fc, false);
+		} else if (constraint instanceof com.sqlapp.data.schemas.CheckConstraint) {
+			builder.drop().space()
+					._add("MariaDB".equalsIgnoreCase(getDialect().getProductName()) ? "CONSTRAINT" : "CHECK");
+			builder.space().name(constraint, false);
 		}
 	}
 
@@ -415,7 +419,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 			final Index originalIndex = diff.getOriginal(Index.class);
 			final DbObjectDifference conDiff = consMap.get(originalIndex.getName());
 			if (conDiff != null && conDiff.getState().isDeleted()) {
-				return;
+				continue;
 			}
 			builder.comma(!builder.isFirstElement());
 			addDropIndexDefinition(originalIndex, builder);

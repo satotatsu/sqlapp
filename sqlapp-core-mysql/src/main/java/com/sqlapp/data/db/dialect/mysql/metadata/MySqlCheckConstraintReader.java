@@ -31,6 +31,9 @@ public class MySqlCheckConstraintReader extends CheckConstraintReader {
 	@Override
 	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			ProductVersionInfo productVersionInfo) {
+		if ("MySQL".equalsIgnoreCase(getDialect().getProductName()) && productVersionInfo.lt(8, 0, 16)) {
+			return new ArrayList<>();
+		}
 		SqlNode node = getSqlNodeCache().getString("checkConstraints.sql");
 		List<CheckConstraint> result = new ArrayList<>();
 		execute(connection, node, context, new ResultSetNextHandler() {

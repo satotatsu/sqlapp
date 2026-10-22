@@ -187,7 +187,7 @@ class MySqlRoutineTypeMetadataTest {
 		return rows;
 	}
 
-	private record TypeCase(String baseType, String declaration, DataType expectedType, String expectedSql,
-			Long length, Long precision, Integer scale) {
+	private record TypeCase(String baseType, String declaration, DataType expectedType, String expectedSql, Long length,
+			Long precision, Integer scale) {
 	}
 }

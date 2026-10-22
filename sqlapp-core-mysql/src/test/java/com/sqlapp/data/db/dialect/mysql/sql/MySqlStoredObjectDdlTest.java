@@ -63,7 +63,8 @@ class MySqlStoredObjectDdlTest {
 		procedure.setDialect(dialect);
 		procedure.setSqlSecurity(SqlSecurity.Definer);
 		procedure.setStatement("BEGIN SELECT 1; END");
-		SqlFactory<Procedure> procedureFactory = dialect.createSqlFactoryRegistry().getSqlFactory(procedure, SqlType.CREATE);
+		SqlFactory<Procedure> procedureFactory = dialect.createSqlFactoryRegistry().getSqlFactory(procedure,
+				SqlType.CREATE);
 		String sql = procedureFactory.createSql(procedure).get(0).getSqlText();
 		assertTrue(sql.contains("SQL SECURITY DEFINER"), sql);
 		procedure.setDefinition("CREATE PROCEDURE `do_work`() SELECT 2");
@@ -73,7 +74,8 @@ class MySqlStoredObjectDdlTest {
 		Function function = new Function("constant_value");
 		function.setDialect(dialect);
 		function.setDefinition("CREATE FUNCTION `constant_value`() RETURNS INT RETURN 2");
-		SqlFactory<Function> functionFactory = dialect.createSqlFactoryRegistry().getSqlFactory(function, SqlType.CREATE);
+		SqlFactory<Function> functionFactory = dialect.createSqlFactoryRegistry().getSqlFactory(function,
+				SqlType.CREATE);
 		assertEquals("CREATE FUNCTION `constant_value`() RETURNS INT RETURN 2",
 				functionFactory.createSql(function).get(0).getSqlText());
 	}
@@ -90,7 +92,8 @@ class MySqlStoredObjectDdlTest {
 		trigger.setStatement("SET NEW.id = 1");
 		SqlFactory<Trigger> factory = dialect.createSqlFactoryRegistry().getSqlFactory(trigger, SqlType.CREATE);
 		String sql = factory.createSql(trigger).get(0).getSqlText().replaceAll("\\s+", " ");
-		assertEquals("CREATE TRIGGER `before insert` BEFORE INSERT ON `order details` FOR EACH ROW SET NEW.id = 1", sql);
+		assertEquals("CREATE TRIGGER `before insert` BEFORE INSERT ON `order details` FOR EACH ROW SET NEW.id = 1",
+				sql);
 		trigger.addEventManipulation("UPDATE");
 		assertThrows(IllegalArgumentException.class, () -> factory.createSql(trigger));
 		trigger.getEventManipulation().clear();

@@ -12,6 +12,7 @@
 | Review planned work | [Roadmap](roadmap.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
 | Read and recreate PostgreSQL-only schema objects | [PostgreSQL schema objects](postgresql-schema-objects.md) |
+| Compare MySQL metadata, DDL/DML coverage, and remaining gaps | [MySQL dialect comparison](mysql-dialect-parity.md) |
 | Review Oracle metadata, DDL coverage, and remaining limitations | [Oracle dialect coverage](oracle-dialect-parity.md) |
 | Read and recreate SQLite schema objects | [SQLite schema objects](sqlite-schema-objects.md) |
 | Review H2 metadata, DDL/DML and native execution coverage | [H2 dialect coverage](h2-dialect-parity.md) |

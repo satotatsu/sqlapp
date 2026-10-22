@@ -22,6 +22,8 @@ package com.sqlapp.data.db.dialect.mysql.sql;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateUniqueConstraintFactory;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.IndexType;
 
 /**
  * Unique Constraint生成クラス
@@ -32,9 +34,29 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 public class MySqlCreateUniqueConstraintFactory extends AbstractCreateUniqueConstraintFactory<MySqlSqlBuilder> {
 
 	@Override
+	public void addObjectDetail(UniqueConstraint obj, Table table, MySqlSqlBuilder builder) {
+		builder.constraint().space().name(obj, false);
+		if (obj.isPrimaryKey()) {
+			builder.primaryKey();
+		} else {
+			builder.unique();
+		}
+		if (obj.getIndexType() != null && obj.getIndexType() != IndexType.BTree) {
+			builder.space().using().space()._add(obj.getIndexType());
+		}
+		addOption(obj, builder);
+		builder.space()._add("(").names(obj.getColumns()).space()._add(")");
+		addDeferrability(obj, builder);
+		addAfter(obj, builder);
+	}
+
+	@Override
 	protected void addAfter(UniqueConstraint obj, MySqlSqlBuilder builder) {
 		if (obj.getRemarks() != null) {
 			builder.comment().space().sqlChar(obj.getRemarks());
+		}
+		if (!obj.getIndex().isEnable()) {
+			builder.space()._add("MariaDB".equalsIgnoreCase(getDialect().getProductName()) ? "IGNORED" : "INVISIBLE");
 		}
 	}
 }

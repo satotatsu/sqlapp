@@ -52,7 +52,11 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 
 	@Override
 	public MySqlSqlBuilder definition(Column column, boolean withRemarks) {
-		super.definition(column, withRemarks);
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			generatedDefinition(column, withRemarks);
+		} else {
+			super.definition(column, withRemarks);
+		}
 		if (column.isHidden()) {
 			space()._add("INVISIBLE");
 		}
@@ -61,11 +65,35 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 
 	@Override
 	public MySqlSqlBuilder definitionForAlterColumn(Column column) {
-		super.definitionForAlterColumn(column);
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			generatedDefinition(column, true);
+		} else {
+			super.definitionForAlterColumn(column);
+		}
 		if (column.isHidden()) {
 			space()._add("INVISIBLE");
 		}
 		return instance();
+	}
+
+	private void generatedDefinition(Column column, boolean withRemarks) {
+		if (!getDialect().supportsColumnFormula()) {
+			throw new IllegalArgumentException("Generated columns are not supported by this dialect: " + getDialect());
+		}
+		if (column.isIdentity() || !CommonUtils.isEmpty(column.getDefaultValue())
+				|| !CommonUtils.isEmpty(column.getOnUpdate())) {
+			throw new IllegalArgumentException(
+					"MySQL generated column cannot have AUTO_INCREMENT, DEFAULT or ON UPDATE: " + column.getName());
+		}
+		typeDefinition(column);
+		characterSetDefinition(column);
+		collateDefinition(column);
+		space()._add("GENERATED ALWAYS AS (")._add(column.getFormula())._add(")");
+		space()._add(column.isFormulaPersisted() ? "STORED" : "VIRTUAL");
+		notNullDefinition(column);
+		if (withRemarks) {
+			comment(column);
+		}
 	}
 
 	@Override
@@ -104,7 +132,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 				characterSet().space()._add(column.getCharacterSet());
 			}
 		} else {
-			if (CommonUtils.isEmpty(column.getCharacterSet())) {
+			if (!CommonUtils.isEmpty(column.getCharacterSet())) {
 				characterSet().space()._add(column.getCharacterSet());
 			}
 		}
@@ -138,7 +166,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 				collate().space()._add(column.getCollation());
 			}
 		} else {
-			if (CommonUtils.isEmpty(column.getCollation())) {
+			if (!CommonUtils.isEmpty(column.getCollation())) {
 				collate().space()._add(column.getCollation());
 			}
 		}
@@ -316,17 +344,6 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	 */
 	@Override
 	protected MySqlSqlBuilder defaultDefinition(Column column) {
-		if (column.getDefaultValue() == null) {
-			return instance();
-		}
-		if (column.getDataType() == DataType.DATETIME || column.getDataType() == DataType.TIME) {
-			if (CommonUtils.isEmpty(column.getDefaultValue())) {
-				return instance();
-			}
-			if (!column.getDefaultValue().startsWith("'")) {
-				return instance();
-			}
-		}
 		return super.defaultDefinition(column);
 	}
 

@@ -37,13 +37,10 @@ public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSql
 		} else if (obj.getIndexType() == IndexType.Spatial) {
 			builder.spatial();
 		} else {
+			builder.unique(obj.isUnique());
 		}
 		builder.index().space();
-		if (table != null) {
-			builder.name(obj, this.getOptions().isDecorateSchemaName());
-		} else {
-			builder.name(obj, false);
-		}
+		builder.name(obj, false);
 		if (obj.getIndexType() == IndexType.FullText) {
 		} else if (obj.getIndexType() == IndexType.Spatial) {
 		} else if (obj.getIndexType() == IndexType.BTree) {
@@ -62,7 +59,13 @@ public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSql
 			builder.comma(i > 0);
 			if (column.getColumn() != null
 					|| (indexTable != null && indexTable.getColumns().contains(column.getName()))) {
-				builder.names(column);
+				builder.name(column);
+				if (column.getLength() != null) {
+					builder._add("(")._add(column.getLength())._add(")");
+				}
+				if (column.getOrder() == com.sqlapp.data.schemas.Order.Desc) {
+					builder.space()._add("DESC");
+				}
 			} else {
 				builder._add("(")._add(column.getName())._add(")");
 				if (column.getOrder() == com.sqlapp.data.schemas.Order.Desc) {

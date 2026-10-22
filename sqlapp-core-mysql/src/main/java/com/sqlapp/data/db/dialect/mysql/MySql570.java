@@ -65,6 +65,6 @@ public class MySql570 extends MySql565 {
 
 	@Override
 	public boolean supportsColumnFormula() {
-		return false;
+		return true;
 	}
 }
