@@ -25,7 +25,6 @@ import java.sql.Connection;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.CommonUtils;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -44,9 +43,9 @@ import com.sqlapp.data.schemas.SqlDataAccess;
 
 /**
  * DB2の関数読み込みクラス
- * 
+ *
  * @author satoh
- * 
+ *
  */
 public class Db2FunctionReader extends FunctionReader {
 
@@ -89,6 +88,11 @@ public class Db2FunctionReader extends FunctionReader {
 		} else if ("S".equalsIgnoreCase(type)) {
 			// スカラー
 			obj.setFunctionType(FunctionType.Scalar);
+			String returnType = getString(rs, "RETURN_TYPE_NAME");
+			if (returnType != null) {
+				getDialect().setDbType(returnType, getLong(rs, "RETURN_LENGTH"), getInteger(rs, "RETURN_SCALE"),
+						obj.getReturning());
+			}
 		}
 		String nullCall = this.getString(rs, "NULLCALL");
 		if ("N".equalsIgnoreCase(nullCall)) {
@@ -110,96 +114,86 @@ public class Db2FunctionReader extends FunctionReader {
 		return obj;
 	}
 
-	private static final Pattern TABLE_PATTERN = Pattern.compile(".*\\s+RETURNS\\s+table\\s+\\((?<columnDef>.*)\\).*",
-			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
-
-	private static final Pattern ROW_PATTERN = Pattern.compile(".*\\s+RETURNS\\s+row\\s+\\((?<columnDef>.*)\\).*",
-			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
+	private static final Pattern RETURN_COLUMNS = Pattern.compile("\\bRETURNS\\s+(TABLE|ROW)\\s*\\(",
+			Pattern.CASE_INSENSITIVE);
 
 	protected void setRowTableDefinition(Function obj, String definition) {
-		Matcher matcher = null;
-		if (obj.getFunctionType().isTable()) {
-			matcher = TABLE_PATTERN.matcher(definition);
-		} else if (obj.getFunctionType().isRow()) {
-			matcher = ROW_PATTERN.matcher(definition);
+		if (definition == null || (!obj.getFunctionType().isTable() && !obj.getFunctionType().isRow())) {
+			return;
 		}
-		if (matcher != null && matcher.matches()) {
+		Matcher matcher = RETURN_COLUMNS.matcher(definition);
+		if (matcher.find()) {
 			obj.getReturning().toTable();
-			String columnDef = matcher.group("columnDef");
-			setColumnDefinitions(obj, CommonUtils.trim(columnDef));
+			setColumnDefinitions(obj, definition.substring(matcher.end()));
 		}
 	}
 
 	protected void setColumnDefinitions(Function obj, String columnDefs) {
 		int end = searchEndOfColumns(columnDefs);
-		columnDefs = columnDefs.substring(0, end);
-		String[] splits = columnDefs.split(",");
-		StringBuilder builder = new StringBuilder();
-		int i = 0;
-		boolean needsNext = false;
-		while (i < splits.length) {
-			String value = splits[i++];
-			int startBracketPos = value.indexOf('(');
-			while (startBracketPos < value.length()) {
-				if (startBracketPos < 0) {
-					needsNext = false;
-					break;
+		String columns = columnDefs.substring(0, end);
+		int start = 0;
+		int depth = 0;
+		char quote = 0;
+		for (int i = 0; i < columns.length(); i++) {
+			char c = columns.charAt(i);
+			if (quote != 0) {
+				if (c == quote) {
+					if (i + 1 < columns.length() && columns.charAt(i + 1) == quote)
+						i++;
+					else
+						quote = 0;
 				}
-				int endBracketPos = value.indexOf(')', startBracketPos + 1);
-				if (endBracketPos < 0) {
-					needsNext = true;
-					break;
-				} else {
-					startBracketPos = value.indexOf('(', endBracketPos + 1);
-					int endBracketNextPos = value.indexOf(')', endBracketPos + 1);
-					if (endBracketNextPos >= 0 && (endBracketNextPos < startBracketPos)) {
-						value = value.substring(0, endBracketNextPos);
-						needsNext = false;
-						break;
-					}
-				}
-			}
-			if (builder.length() > 0) {
-				builder.append(",");
-			}
-			builder.append(value);
-			if (!needsNext) {
-				setColumnDefinition(obj, builder.toString().trim());
-				builder = new StringBuilder();
-				needsNext = false;
+			} else if (c == '"' || c == '\'') {
+				quote = c;
+			} else if (c == '(') {
+				depth++;
+			} else if (c == ')') {
+				depth--;
+			} else if (c == ',' && depth == 0) {
+				setColumnDefinition(obj, columns.substring(start, i).trim());
+				start = i + 1;
 			}
 		}
+		if (start < columns.length())
+			setColumnDefinition(obj, columns.substring(start).trim());
 	}
 
-	private static final Pattern COLUMN_PATTERN = Pattern.compile("^(?<name>[\\S]+)\\s+(?<def>.*)",
-			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
+	private static final Pattern COLUMN_PATTERN = Pattern.compile("^(?<name>\"(?:[^\"]|\"\")*\"|\\S+)\\s+(?<def>.*)",
+			Pattern.DOTALL);
 
 	protected int searchEndOfColumns(String columnDefs) {
-		int i = 0;
-		int count = 0;
-		for (i = 0; i < columnDefs.length(); i++) {
+		int depth = 0;
+		char quote = 0;
+		for (int i = 0; i < columnDefs.length(); i++) {
 			char c = columnDefs.charAt(i);
-			if (c == '(') {
-				count++;
-			} else if (c == ')') {
-				count--;
-			}
-			if (count < 0) {
+			if (quote != 0) {
+				if (c == quote) {
+					if (i + 1 < columnDefs.length() && columnDefs.charAt(i + 1) == quote)
+						i++;
+					else
+						quote = 0;
+				}
+			} else if (c == '"' || c == '\'') {
+				quote = c;
+			} else if (c == '(') {
+				depth++;
+			} else if (c == ')' && --depth < 0) {
 				return i;
 			}
 		}
-		return i;
+		return columnDefs.length();
 	}
 
 	protected void setColumnDefinition(Function obj, String columnDef) {
-		Matcher mathcer = COLUMN_PATTERN.matcher(columnDef);
-		if (mathcer.matches()) {
-			String name = CommonUtils.unwrap(mathcer.group("name"), this.getDialect().getOpenQuote());
-			final String def = mathcer.group("def");
-			obj.getReturning().getTable().getColumns().add(name, c -> {
-				c.setDataTypeName(def);
-			});
+		Matcher matcher = COLUMN_PATTERN.matcher(columnDef);
+		if (!matcher.matches()) {
+			throw new IllegalArgumentException("Invalid Db2 function return column: " + columnDef);
 		}
+		String name = matcher.group("name");
+		if (name.startsWith("\""))
+			name = name.substring(1, name.length() - 1).replace("\"\"", "\"");
+		final String definition = matcher.group("def");
+		obj.getReturning().getTable().getColumns().add(name, c -> c.setDataTypeName(definition));
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
@@ -209,7 +203,7 @@ public class Db2FunctionReader extends FunctionReader {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.sqlapp.data.db.metadata.RoutineReader#newRoutineArgumentReader()
 	 */
 	@Override

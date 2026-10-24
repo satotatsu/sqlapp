@@ -27,15 +27,14 @@ import com.sqlapp.data.schemas.SystemVersioning;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TemporalPeriod;
 import com.sqlapp.data.schemas.TemporalPeriodType;
-import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
 /**
  * DB2用のSQLビルダー
- * 
+ *
  * @author tatsuo satoh
- * 
+ *
  */
 public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 
@@ -50,7 +49,7 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.sqlapp.util.AbstractSqlBuilder#count()
 	 */
 	@Override
@@ -81,12 +80,11 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 
 	public Db2SqlBuilder argument(NamedArgument obj) {
 		argumentBefore(obj);
-		if (obj.getName() != null) {
-			this._add(obj.getName());
-			this.space();
+		if (obj.getDirection() != null) {
+			this._add(obj.getDirection()).space();
 		}
-		if (obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
-			this._add(obj.getDirection());
+		if (obj.getName() != null) {
+			this.name(obj.getName());
 			this.space();
 		}
 		this.typeDefinition(obj);

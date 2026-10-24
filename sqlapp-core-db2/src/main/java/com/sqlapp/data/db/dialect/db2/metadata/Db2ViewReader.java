@@ -75,12 +75,12 @@ public class Db2ViewReader extends ViewReader {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see com.sqlapp.data.db.dialect.metadata.TableReader#newColumnReader()
 	 */
 	@Override
 	protected ColumnReader newColumnReader() {
-		return null;
+		return getDialect().getCatalogReader().getSchemaReader().getTableReader().getColumnReader();
 	}
 
 	@Override
@@ -90,7 +90,7 @@ public class Db2ViewReader extends ViewReader {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */

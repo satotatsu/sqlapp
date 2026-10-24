@@ -105,20 +105,17 @@ public class Db2CatalogReader extends CatalogReader {
 
 	@Override
 	protected ObjectPrivilegeReader newObjectPrivilegeReader() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Db2ObjectPrivilegeReader(getDialect());
 	}
 
 	@Override
 	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Db2RoutinePrivilegeReader(getDialect());
 	}
 
 	@Override
 	protected ColumnPrivilegeReader newColumnPrivilegeReader() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Db2ColumnPrivilegeReader(getDialect());
 	}
 
 	@Override

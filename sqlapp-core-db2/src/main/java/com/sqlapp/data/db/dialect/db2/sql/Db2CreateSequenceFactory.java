@@ -47,7 +47,8 @@ public class Db2CreateSequenceFactory extends AbstractCreateSequenceFactory<Db2S
 
 	@Override
 	protected void addCache(final Sequence obj, Db2SqlBuilder builder) {
-		if (obj.getCacheSize() < 0) throw new IllegalArgumentException("Db2 sequence cache size must not be negative");
+		if (obj.getCacheSize() < 0)
+			throw new IllegalArgumentException("Db2 sequence cache size must not be negative");
 		if (!obj.isCache() || obj.getCacheSize() <= 1) {
 			builder.no().cache();
 		} else {

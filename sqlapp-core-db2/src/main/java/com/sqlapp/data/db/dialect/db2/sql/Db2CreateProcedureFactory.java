@@ -27,9 +27,42 @@ public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db
 
 	@Override
 	protected void addCreateObject(final Procedure obj, Db2SqlBuilder builder) {
+		if (!com.sqlapp.util.CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
+		if (com.sqlapp.util.CommonUtils.isEmpty(obj.getStatement())) {
+			throw new IllegalArgumentException("Db2 procedure requires a definition or statement: " + obj.getName());
+		}
+		// Retain the existing PL/SQL path for compatibility-mode callers.
+		if (obj.getLanguage() == null || "SQL".equalsIgnoreCase(obj.getLanguage())) {
+			builder.create().procedure().name(obj, getOptions().isDecorateSchemaName());
+			builder.space().arguments(obj.getArguments());
+			if (obj.getSpecificName() != null) {
+				builder.lineBreak().specific().space().name(obj.getSpecificName());
+			}
+			builder.lineBreak().language().space()._add("SQL");
+			builder.lineBreak()._add(obj.getStatement());
+			return;
+		}
+		if (!"PLSQL".equalsIgnoreCase(obj.getLanguage())) {
+			throw new IllegalArgumentException("External Db2 procedure requires complete definition: " + obj.getName());
+		}
 		builder.create().or().replace().procedure();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		builder.space().arguments(obj.getArguments());
+		builder.space()._add("(");
+		int count = 0;
+		for (com.sqlapp.data.schemas.NamedArgument argument : obj.getArguments()) {
+			builder.comma(count++ > 0);
+			builder._add(argument.getName()).space();
+			if (argument.getDirection() != null
+					&& argument.getDirection() != com.sqlapp.jdbc.sql.ParameterDirection.Input) {
+				builder._add(argument.getDirection()).space();
+			}
+			builder.typeDefinition(argument.getDataType(), argument.getDataTypeName(), argument.getLength(),
+					argument.getScale());
+		}
+		builder._add(")");
 		builder.lineBreak().as();
 		builder.lineBreak().begin();
 		builder.appendIndent(1);

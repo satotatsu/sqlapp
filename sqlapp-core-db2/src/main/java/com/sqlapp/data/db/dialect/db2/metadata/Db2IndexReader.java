@@ -40,9 +40,9 @@ import com.sqlapp.util.TripleKeyMap;
 
 /**
  * DB2のインデックス読み込みクラス
- * 
+ *
  * @author satoh
- * 
+ *
  */
 public class Db2IndexReader extends IndexReader {
 
@@ -67,7 +67,8 @@ public class Db2IndexReader extends IndexReader {
 				if (index == null) {
 					index = new Index(name);
 					index.setCatalogName(catalogName);
-					index.setSchemaName(schemaName);
+					index.setSchemaName(getString(rs, "table_schema"));
+					index.getSpecifics().put("INDEX_SCHEMA", schemaName);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(uniqueness);
 					index.setCompression("Y".equalsIgnoreCase(getString(rs, "COMPRESSION")));

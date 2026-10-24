@@ -16,7 +16,7 @@ LEFT OUTER JOIN SYSCAT.TABLESPACES ts
   ON (i.TBSPACEID=ts.TBSPACEID)
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(ic.INDSCHEMA) IN /*schemaName*/('%')
+  AND rtrim(i.TABSCHEMA) IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
   AND rtrim(i.TABNAME) IN /*tableName*/('%')

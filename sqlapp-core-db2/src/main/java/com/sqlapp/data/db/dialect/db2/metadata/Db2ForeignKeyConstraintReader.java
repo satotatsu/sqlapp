@@ -56,8 +56,8 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
-		final TripleKeyMap<String, String, String, ForeignKeyConstraint> tCMap = tripleKeyMap();
-		final TripleKeyMap<String, String, String, FlexList<ColumnPair>> tColMap = tripleKeyMap();
+		final java.util.Map<List<String>, ForeignKeyConstraint> tCMap = new java.util.LinkedHashMap<>();
+		final java.util.Map<ForeignKeyConstraint, FlexList<ColumnPair>> tColMap = new java.util.IdentityHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -71,8 +71,8 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 				String columnName = getString(rs, COLUMN_NAME);
 				String fk_name = getString(rs, CONSTRAINT_NAME);
 				// String pk_name = getString(rs, "PK_NAME");
-				ForeignKeyConstraint c = tCMap.get(fk_table_catalog, fk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog, fk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(List.of(fk_table_schema, fk_table_name, fk_name));
+				FlexList<ColumnPair> colList = tColMap.get(c);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setSchemaName(fk_table_schema);
@@ -85,8 +85,8 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 					// String check=getString(rs, "CHECKEXISTINGDATA");
 					// c.setDeferrability(Deferrability.parse(rs.getInt("DEFERRABILITY")));
 					colList = new FlexList<ColumnPair>();
-					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
-					tColMap.put(fk_table_catalog, fk_table_schema, fk_name, colList);
+					tCMap.put(List.of(fk_table_schema, fk_table_name, fk_name), c);
+					tColMap.put(c, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();
@@ -98,7 +98,12 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 				colList.add(cPair);
 			}
 		});
-		setForeignKeyConstraintColumns(tColMap, list);
+		for (ForeignKeyConstraint constraint : list) {
+			TripleKeyMap<String, String, String, FlexList<ColumnPair>> columns = tripleKeyMap();
+			columns.put(constraint.getCatalogName(), constraint.getSchemaName(), constraint.getName(),
+					tColMap.get(constraint));
+			setForeignKeyConstraintColumns(columns, List.of(constraint));
+		}
 		return list;
 	}
 

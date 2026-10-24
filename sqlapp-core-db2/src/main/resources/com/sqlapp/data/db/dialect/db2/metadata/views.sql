@@ -3,7 +3,8 @@ SELECT
   , v.VIEWNAME AS table_name
   , v.*
 FROM SYSCAT.VIEWS v
-WHERE 1=1 
+JOIN SYSCAT.TABLES t ON t.TABSCHEMA=v.VIEWSCHEMA AND t.TABNAME=v.VIEWNAME
+WHERE t.TYPE IN ('V', 'W')
   /*if isNotEmpty(schemaName)*/
   AND rtrim(v.VIEWSCHEMA) IN /*schemaName*/('%')
   /*end*/

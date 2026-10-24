@@ -44,7 +44,7 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 
 	/**
 	 * オプションを追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
@@ -56,64 +56,77 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 
 	protected void addTableOption(final Table table, final Db2SqlBuilder builder) {
 		addCollateDefinition(table, builder);
-		addAutoIncrementDefinition(table, builder);
-		addRemarkDefinition(table, builder);
+		if (table.getTableSpaceName() != null)
+			builder.space()._add("IN").space().name(table.getTableSpaceName());
+		if (table.getIndexTableSpaceName() != null)
+			builder.space()._add("INDEX IN").space().name(table.getIndexTableSpaceName());
+		if (table.getLobTableSpaceName() != null)
+			builder.space()._add("LONG IN").space().name(table.getLobTableSpaceName());
 	}
 
 	@Override
 	protected void addIndexDefinitions(final Table table, final List<SqlOperation> result) {
+		for (Index index : table.getIndexes()) {
+			com.sqlapp.data.db.sql.SqlFactory<Index> factory = getSqlFactoryRegistry().getSqlFactory(index,
+					SqlType.CREATE);
+			result.addAll(factory.createSql(index));
+		}
+	}
+
+	@Override
+	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
+		super.addOtherDefinitions(table, result);
+		if (!CommonUtils.isEmpty(table.getRemarks())) {
+			Db2SqlBuilder builder = createSqlBuilder();
+			builder.comment().on().table().name(table, getOptions().isDecorateSchemaName()).is().space()
+					.sqlChar(table.getRemarks());
+			addSql(result, builder, SqlType.SET_COMMENT, table);
+		}
+		for (Column column : table.getColumns()) {
+			if (CommonUtils.isEmpty(column.getRemarks()))
+				continue;
+			Db2SqlBuilder builder = createSqlBuilder();
+			builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName());
+			builder._add(".").name(column.getName()).is().space().sqlChar(column.getRemarks());
+			addSql(result, builder, SqlType.SET_COMMENT, column);
+		}
 	}
 
 	/**
 	 * Collate定義を追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
 	protected void addCollateDefinition(final Table table, final Db2SqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getCollation())) {
-			builder.collate().eq()._add(table.getCollation());
+			throw new IllegalArgumentException("Db2 does not support a table-level COLLATE clause");
 		}
 	}
 
 	/**
 	 * COMMENT定義を追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
 	protected void addRemarkDefinition(final Table table, final Db2SqlBuilder builder) {
-		if (!CommonUtils.isEmpty(table.getRemarks())) {
-			builder.comment().eq().space().sqlChar(table.getRemarks());
-		}
+		// Comments are emitted by addOtherDefinitions as COMMENT ON statements.
 	}
 
 	/**
 	 * AUTO_INCREMENTの初期値を設定DDLを取得します
-	 * 
+	 *
 	 * @param colDiff
 	 * @param builder
 	 */
 	protected void addAutoIncrementDefinition(final Table table, final Db2SqlBuilder builder) {
-		for (final Column column : table.getColumns()) {
-			if (!column.isIdentity()) {
-				continue;
-			} else {
-				Long current = column.getIdentityLastValue();
-				if (current == null) {
-					current = column.getIdentityStartValue();
-				}
-				if (current != null && !CommonUtils.eq(current, Long.valueOf(1))) {
-					builder.space().property("AUTO_INCREMENT", current);
-				}
-				return;
-			}
-		}
+		// Db2 identity start/increment belong to each column's identity clause.
 	}
 
 	/**
 	 * Partition定義を追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
@@ -128,27 +141,23 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 	@Override
 	protected void addConstraintDefinitions(final Table table, final Db2SqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
-		addIndexDefinitions(table, builder);
 	}
 
 	/**
 	 * インデックスを追加します
-	 * 
+	 *
 	 * @param index
 	 * @param builder
 	 */
 	@Override
 	protected void addIndexDefinitions(final Table table, final Db2SqlBuilder builder) {
-		for (final Index index : table.getIndexes()) {
-			if (!table.getConstraints().contains(index.getName())) {
-				addIndexDefinition(index, builder);
-			}
-		}
+		// Db2 indexes are separate CREATE INDEX statements, never inline table
+		// elements.
 	}
 
 	/**
 	 * インデックスを追加します
-	 * 
+	 *
 	 * @param index
 	 * @param builder
 	 */

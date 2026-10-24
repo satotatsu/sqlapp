@@ -53,7 +53,7 @@ public class Db2Utils {
 			throws SQLException {
 		obj.setName(getString(rs, ROUTINE_NAME));
 		obj.setDialect(dialect);
-		obj.setSpecificName(getString(rs, SPECIFIC_NAME));
+		obj.setSpecificNameLiteral(getString(rs, SPECIFIC_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setLanguage(getString(rs, "LANGUAGE"));
 		String definition = getString(rs, "ROUTINE_DEFINITION");

@@ -104,8 +104,7 @@ public class Db2SchemaReader extends SchemaReader {
 
 	@Override
 	protected MviewReader newMviewReader() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Db2MviewReader(getDialect());
 	}
 
 	@Override

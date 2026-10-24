@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.db2.metadata;
 
-import static com.sqlapp.util.CommonUtils.tripleKeyMap;
-
 import java.sql.Connection;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -37,7 +35,6 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
-import com.sqlapp.util.TripleKeyMap;
 
 /**
  * DB2のユニーク制約読み込みクラス
@@ -55,7 +52,7 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
-		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
+		final java.util.Map<List<String>, UniqueConstraint> map = new java.util.LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -65,20 +62,28 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 				String constraintName = getString(rs, CONSTRAINT_NAME);
 				// String expression=getString(rs, "filter_condition");
 				boolean primary = "P".equalsIgnoreCase(getString(rs, "TYPE"));
-				UniqueConstraint c = map.get(catalogName, schemaName, constraintName);
+				UniqueConstraint c = map.get(List.of(schemaName, tableName, constraintName));
 				if (c == null) {
 					c = new UniqueConstraint(constraintName, primary);
 					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
+					c.setEnable("Y".equalsIgnoreCase(getString(rs, "ENFORCED")));
+					c.setRemarks(getString(rs, REMARKS));
 					Index index = c.getIndex();
+					String indexName = getString(rs, "backing_index_name");
+					if (indexName != null)
+						index.setName(indexName);
+					String indexSchema = getString(rs, "backing_index_schema");
+					if (indexSchema != null)
+						index.getSpecifics().put("INDEX_SCHEMA", indexSchema);
 					index.setIndexType(Db2Utils.getIndexType(getString(rs, "INDEXTYPE")));
 					index.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					index.setRemarks(getString(rs, REMARKS));
 					index.setCompression("Y".equalsIgnoreCase(getString(rs, "COMPRESSION")));
 					setSpecifics(rs, "MINPCTUSED", index);
 					setSpecifics(rs, "REVERSE_SCANS", index);
-					map.put(catalogName, schemaName, constraintName, c);
+					map.put(List.of(schemaName, tableName, constraintName), c);
 				}
 				String colOrder = getString(rs, "COLORDER");
 				String columnName = getString(rs, COLUMN_NAME);
@@ -89,7 +94,7 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 				}
 			}
 		});
-		return map.toList();
+		return new java.util.ArrayList<>(map.values());
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

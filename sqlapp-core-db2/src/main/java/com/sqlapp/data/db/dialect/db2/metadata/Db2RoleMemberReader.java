@@ -57,13 +57,14 @@ public class Db2RoleMemberReader extends RoleMemberReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roleMember.sql");
+		return getSqlNodeCache().getString("roleMembers.sql");
 	}
 
 	protected RoleMember createRoleMember(ExResultSet rs) throws SQLException {
 		RoleMember obj = new RoleMember();
 		obj.setMemberRoleName(getString(rs, ROLE_NAME));
 		obj.setGranteeName(getString(rs, GRANTEE));
+		obj.getSpecifics().put("GRANTEE_TYPE", getString(rs, "GRANTEETYPE"));
 		obj.setAdmin("Y".equalsIgnoreCase(getString(rs, "ADMIN")));
 		return obj;
 	}

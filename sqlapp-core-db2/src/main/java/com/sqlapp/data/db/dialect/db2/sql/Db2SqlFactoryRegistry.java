@@ -26,6 +26,19 @@ import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Synonym;
+import com.sqlapp.data.schemas.ObjectPrivilege;
+import com.sqlapp.data.schemas.ColumnPrivilege;
+import com.sqlapp.data.schemas.RoutinePrivilege;
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.Role;
+import com.sqlapp.data.schemas.RoleMember;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.Mview;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.schemas.State;
 
 public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -36,6 +49,33 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Catalog.class, SqlType.CREATE, Db2CreateCatalogFactory.class);
+		registerSqlFactory(Catalog.class, SqlType.ALTER, Db2AlterCatalogFactory.class);
+		registerSqlFactory(Schema.class, SqlType.CREATE, Db2CreateSchemaFactory.class);
+		registerSqlFactory(Schema.class, SqlType.ALTER, Db2AlterSchemaFactory.class);
+		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, Db2CreateUniqueConstraintFactory.class);
+		registerSqlFactory(Mview.class, SqlType.CREATE, Db2CreateMviewFactory.class);
+		registerSqlFactory(Mview.class, SqlType.DROP, Db2DropMviewFactory.class);
+		registerSqlFactory(Mview.class, SqlType.ALTER, Db2AlterMviewFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, Db2CreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.DROP, Db2DropFunctionFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.DROP, Db2DropProcedureFactory.class);
+		registerSqlFactory(Role.class, SqlType.CREATE, Db2CreateRoleFactory.class);
+		registerSqlFactory(RoleMember.class, SqlType.CREATE, Db2GrantRoleMemberFactory.class);
+		registerSqlFactory(RoleMember.class, SqlType.GRANT, Db2GrantRoleMemberFactory.class);
+		registerSqlFactory(RoleMember.class, SqlType.REVOKE, Db2RevokeRoleMemberFactory.class);
+		registerSqlFactory(ObjectPrivilege.class, SqlType.CREATE, Db2GrantObjectPrivilegeFactory.class);
+		registerSqlFactory(ColumnPrivilege.class, SqlType.CREATE, Db2GrantColumnPrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.CREATE, Db2GrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE, Db2CreateIndexFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.CREATE, Db2CreateSynonymFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.DROP, Db2DropSynonymFactory.class);
+		registerSqlFactory(ObjectPrivilege.class, SqlType.GRANT, Db2GrantObjectPrivilegeFactory.class);
+		registerSqlFactory(ObjectPrivilege.class, SqlType.REVOKE, Db2RevokeObjectPrivilegeFactory.class);
+		registerSqlFactory(ColumnPrivilege.class, SqlType.GRANT, Db2GrantColumnPrivilegeFactory.class);
+		registerSqlFactory(ColumnPrivilege.class, SqlType.REVOKE, Db2RevokeColumnPrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, Db2GrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, Db2RevokeRoutinePrivilegeFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, Db2CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, DB2CreateTemporaryTableFactory.class);
@@ -49,5 +89,13 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Procedure.class, SqlType.CREATE, Db2CreateProcedureFactory.class);
 		// Partitioning
 		registerSqlFactory(Partitioning.class, SqlType.CREATE, Db2CreatePartitioningFactory.class);
+	}
+
+	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(Schema.class, State.Modified, SqlType.ALTER);
+		registerSqlFactory(Catalog.class, State.Modified, SqlType.ALTER);
+		registerSqlFactory(Mview.class, State.Modified, SqlType.ALTER);
 	}
 }
