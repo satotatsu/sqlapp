@@ -13,7 +13,7 @@ import com.sqlapp.data.schemas.ObjectPrivilege;
 import com.sqlapp.util.JsonConverter;
 
 /**
- * Sequence/index/server grants in the canonical Catalog, without table-name
+ * Typed Db2 object grants in the canonical Catalog, without table-name
  * collisions.
  */
 public final class Db2ObjectPrivileges {
@@ -23,7 +23,7 @@ public final class Db2ObjectPrivileges {
 	}
 
 	public enum Kind {
-		SEQUENCE, INDEX, SERVER
+		SEQUENCE, INDEX, SERVER, TABLESPACE, PACKAGE, MODULE, VARIABLE, WORKLOAD, XSROBJECT
 	}
 
 	public enum GranteeType {
@@ -35,9 +35,9 @@ public final class Db2ObjectPrivileges {
 		public Grant {
 			if (kind == null || granteeType == null || grantable == null)
 				throw new IllegalArgumentException("Db2 object grant requires kind, grantee type and grantability");
-			if (kind == Kind.SERVER) {
+			if (Set.of(Kind.SERVER, Kind.TABLESPACE, Kind.WORKLOAD).contains(kind)) {
 				if (schemaName != null)
-					throw new IllegalArgumentException("Db2 federation servers have no schema");
+					throw new IllegalArgumentException("Db2 " + kind + " objects have no schema");
 				Db2CreationContext.identifier(objectName);
 			} else
 				Db2CreationContext.qualified(schemaName, objectName);
@@ -50,10 +50,16 @@ public final class Db2ObjectPrivileges {
 			case INDEX -> Set.of("CONTROL");
 			case SEQUENCE -> Set.of("ALTER", "USAGE");
 			case SERVER -> Set.of("PASSTHRU");
+			case TABLESPACE -> Set.of("USE");
+			case PACKAGE -> Set.of("CONTROL", "BIND", "EXECUTE");
+			case MODULE -> Set.of("EXECUTE");
+			case VARIABLE -> Set.of("READ", "WRITE");
+			case WORKLOAD, XSROBJECT -> Set.of("USAGE");
 			};
 			if (!allowed.contains(privilege == null ? "" : privilege))
 				throw new IllegalArgumentException("Unsupported Db2 " + kind + " privilege: " + privilege);
-			if (kind != Kind.SEQUENCE && grantable)
+			if (grantable && (Set.of(Kind.INDEX, Kind.SERVER, Kind.WORKLOAD, Kind.XSROBJECT).contains(kind)
+					|| "CONTROL".equals(privilege)))
 				throw new IllegalArgumentException("Db2 " + kind + " privilege cannot have WITH GRANT OPTION");
 		}
 
@@ -160,13 +166,24 @@ public final class Db2ObjectPrivileges {
 	 */
 	public static String revokeSql(Grant grant) {
 		return "REVOKE " + grant.privilege() + target(grant) + " FROM " + grantee(grant)
-				+ (grant.kind() == Kind.SEQUENCE ? " RESTRICT" : "");
+				+ (Set.of(Kind.SEQUENCE, Kind.VARIABLE).contains(grant.kind()) ? " RESTRICT" : "");
 	}
 
 	private static String target(Grant grant) {
-		return " ON " + grant.kind() + " "
-				+ (grant.kind() == Kind.SERVER ? Db2CreationContext.identifier(grant.objectName())
+		return (grant.kind() == Kind.TABLESPACE ? " OF " : " ON ") + grant.kind() + " "
+				+ (Set.of(Kind.SERVER, Kind.TABLESPACE, Kind.WORKLOAD).contains(grant.kind())
+						? Db2CreationContext.identifier(grant.objectName())
 						: Db2CreationContext.qualified(grant.schemaName(), grant.objectName()));
+	}
+
+	/** New catalog scopes use a conservative LUW 11.1 coverage boundary. */
+	public static void validateDialect(Grant grant, com.sqlapp.data.db.dialect.Dialect dialect) {
+		if (!Set.of(Kind.SEQUENCE, Kind.INDEX, Kind.SERVER).contains(grant.kind()) && !(dialect instanceof Db2_1110))
+			throw new IllegalArgumentException("Db2 " + grant.kind() + " privilege support requires LUW 11.1 or later");
+	}
+
+	public static void validateDialect(Catalog catalog, com.sqlapp.data.db.dialect.Dialect dialect) {
+		get(catalog).grants().forEach(grant -> validateDialect(grant, dialect));
 	}
 
 	private static String grantee(Grant grant) {

@@ -197,7 +197,9 @@ public class Db2FunctionReader extends FunctionReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNodeCache().getString("functions.sql");
+		SqlNode node = getSqlNodeCache()
+				.getString(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "functions1110.sql"
+						: "functions.sql");
 		return node;
 	}
 

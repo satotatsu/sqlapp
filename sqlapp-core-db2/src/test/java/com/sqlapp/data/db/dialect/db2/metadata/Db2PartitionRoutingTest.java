@@ -20,7 +20,7 @@ class Db2PartitionRoutingTest {
 	@Test
 	void skipsSchemaTableCrossProductRowsAndEmptySelections() throws Exception {
 		var count = new AtomicInteger();
-		var reader = new Db2TableReader(DialectHolder.defaultDialect) {
+		var reader = new Db2TableReader(DialectHolder.Db2_910Dialect) {
 			@Override
 			protected ParametersContext defaultParametersContext(Connection connection) {
 				return new ParametersContext();

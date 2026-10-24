@@ -19,8 +19,11 @@ import com.sqlapp.data.schemas.AbstractDbObjectCollection;
 public class Db2CreateCatalogFactory extends CreateCatalogFactory {
 	@Override
 	public List<SqlOperation> createSql(Catalog catalog) {
+		Db2ObjectPrivileges.validateDialect(catalog, getDialect());
 		List<String> federation = Db2FederationSql.create(catalog, getDialect());
 		List<String> mappings = Db2UserMappingSql.create(catalog, getDialect());
+		List<String> functionMappings = Db2FunctionMappingSql.create(catalog, getDialect());
+		List<String> typeMappings = Db2TypeMappingSql.create(catalog, getDialect());
 		List<String> objectGrants = Db2ObjectPrivileges.createSql(catalog);
 		for (Schema schema : catalog.getSchemas()) {
 			var snapshot = Db2RowPermissions.get(schema);
@@ -36,7 +39,13 @@ public class Db2CreateCatalogFactory extends CreateCatalogFactory {
 			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, catalog);
 		for (String sql : mappings)
 			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, catalog);
+		for (String sql : typeMappings)
+			addSql(result, createSqlBuilder()._add(sql),
+					sql.startsWith("COMMENT ") ? SqlType.SET_COMMENT : SqlType.CREATE, catalog);
 		result.addAll(super.createSql(catalog));
+		for (String sql : functionMappings)
+			addSql(result, createSqlBuilder()._add(sql),
+					sql.startsWith("COMMENT ") ? SqlType.SET_COMMENT : SqlType.CREATE, catalog);
 		for (String sql : objectGrants)
 			addSql(result, createSqlBuilder()._add(sql), SqlType.GRANT, catalog);
 		// All schemas' permissions precede every table activation, including

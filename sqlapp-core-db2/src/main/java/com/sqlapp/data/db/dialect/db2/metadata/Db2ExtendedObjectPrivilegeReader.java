@@ -16,7 +16,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /**
- * One bulk query for sequence/index/server grants. Results are not table
+ * One versioned bulk query for extended grants. Results are not table
  * privileges.
  */
 public class Db2ExtendedObjectPrivilegeReader extends ObjectPrivilegeReader {
@@ -35,8 +35,11 @@ public class Db2ExtendedObjectPrivilegeReader extends ObjectPrivilegeReader {
 		List<ObjectPrivilege> result = new ArrayList<>();
 		context.put("schemaName", getSchemaName());
 		context.put("objectName", getObjectName());
-		execute(connection, getSqlNodeCache().getString("extendedObjectPrivileges.sql"), context,
-				new ResultSetNextHandler() {
+		execute(connection,
+				getSqlNodeCache().getString(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
+						? "extendedObjectPrivileges1110.sql"
+						: "extendedObjectPrivileges.sql"),
+				context, new ResultSetNextHandler() {
 					@Override
 					public void handleResultSetNext(ExResultSet rs) throws SQLException {
 						result.add(createPrivilege(rs));

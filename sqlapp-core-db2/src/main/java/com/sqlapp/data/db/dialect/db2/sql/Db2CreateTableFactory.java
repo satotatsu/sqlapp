@@ -37,6 +37,19 @@ import com.sqlapp.util.CommonUtils;
 public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuilder> {
 	@Override
 	public List<SqlOperation> createSql(Table table) {
+		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table) && !table.getDefinition().isEmpty()) {
+			List<SqlOperation> result = new java.util.ArrayList<>();
+			for (String statement : table.getDefinition()) {
+				if (statement == null || statement.isBlank() || statement.indexOf('\0') >= 0)
+					throw new IllegalArgumentException("Db2 table definition must contain executable statements");
+				addSql(result, createSqlBuilder()._add(statement), SqlType.CREATE, table);
+			}
+			// A full definition owns its columns, constraints and organization. Indexes
+			// remain separate Schema objects, as on the modeled CREATE TABLE path.
+			addIndexDefinitions(table, result);
+			addOtherDefinitions(table, result);
+			return result;
+		}
 		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table))
 			return super.createSql(table);
 		var sql = Db2NicknameSql.create(table, this::createSqlBuilder);

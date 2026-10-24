@@ -54,8 +54,28 @@ public class Db2CatalogReader extends CatalogReader {
 		load(connection, getSchemaPrivilegeReader(), catalog);
 		load(connection, getExtendedObjectPrivilegeReader(), catalog);
 		federation().loadFull(connection, catalog);
-		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
 			userMappings().loadFull(connection, catalog);
+			functionMappings().loadFull(connection, catalog);
+			typeMappings().loadFull(connection, catalog);
+		}
+	}
+
+	/** Ordered user-defined federation type mappings and native conditions. */
+	public Db2TypeMappingReader typeMappings() {
+		var reader = new Db2TypeMappingReader(getDialect());
+		setReaderParameter(reader.metadataReader());
+		return reader;
+	}
+
+	/**
+	 * Ordered user-defined function mappings, including supplemental parameter
+	 * options.
+	 */
+	public Db2FunctionMappingReader functionMappings() {
+		var reader = new Db2FunctionMappingReader(getDialect());
+		setReaderParameter(reader.metadataReader());
+		return reader;
 	}
 
 	/**

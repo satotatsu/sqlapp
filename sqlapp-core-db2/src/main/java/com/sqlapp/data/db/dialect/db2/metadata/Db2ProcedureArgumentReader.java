@@ -97,7 +97,9 @@ public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Procedure>
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("procedureArguments.sql");
+		return getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "procedureArguments1110.sql"
+						: "procedureArguments.sql");
 	}
 
 }

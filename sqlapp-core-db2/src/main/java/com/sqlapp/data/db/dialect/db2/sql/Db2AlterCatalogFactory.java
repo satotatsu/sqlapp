@@ -21,10 +21,14 @@ public class Db2AlterCatalogFactory extends AlterCatalogFactory {
 		Catalog original = (Catalog) difference.getOriginal(), target = (Catalog) difference.getTarget();
 		if (original == null || target == null)
 			return super.createDiffSql(difference);
+		Db2ObjectPrivileges.validateDialect(original, getDialect());
+		Db2ObjectPrivileges.validateDialect(target, getDialect());
 		var objectGrants = Db2ObjectPrivileges.diff(original, target);
 		var databaseGrants = Db2DatabasePrivilegePlan.diff(original, target, getSqlFactoryRegistry());
 		var federation = Db2FederationSql.diff(original, target, getDialect());
 		var mappings = Db2UserMappingSql.diff(original, target, getDialect());
+		var functionMappings = Db2FunctionMappingSql.diff(original, target, getDialect());
+		var typeMappings = Db2TypeMappingSql.diff(original, target, getDialect());
 		var names = new LinkedHashSet<String>();
 		original.getSchemas().forEach(s -> names.add(s.getName()));
 		target.getSchemas().forEach(s -> names.add(s.getName()));
@@ -47,6 +51,9 @@ public class Db2AlterCatalogFactory extends AlterCatalogFactory {
 			addSql(result, createSqlBuilder(getDialect())._add(sql),
 					sql.startsWith("CREATE ") ? SqlType.CREATE : SqlType.ALTER, target);
 		result.addAll(databaseGrants.before());
+		for (String sql : typeMappings)
+			addSql(result, createSqlBuilder(getDialect())._add(sql),
+					sql.startsWith("COMMENT ") ? SqlType.SET_COMMENT : SqlType.CREATE, target);
 		for (String sql : objectGrants.beforeSql())
 			addSql(result, createSqlBuilder(getDialect())._add(sql), SqlType.REVOKE, original);
 		for (var plan : plans)
@@ -63,11 +70,18 @@ public class Db2AlterCatalogFactory extends AlterCatalogFactory {
 		Db2Federation.set(afterNative, List.of(), List.of(), List.of());
 		com.sqlapp.data.db.dialect.db2.Db2UserMappings.set(beforeNative, List.of());
 		com.sqlapp.data.db.dialect.db2.Db2UserMappings.set(afterNative, List.of());
+		com.sqlapp.data.db.dialect.db2.Db2FunctionMappings.set(beforeNative, List.of());
+		com.sqlapp.data.db.dialect.db2.Db2FunctionMappings.set(afterNative, List.of());
+		com.sqlapp.data.db.dialect.db2.Db2TypeMappings.set(beforeNative, List.of());
+		com.sqlapp.data.db.dialect.db2.Db2TypeMappings.set(afterNative, List.of());
 		for (Schema schema : beforeNative.getSchemas())
 			Db2RowPermissions.set(schema, List.of(), List.of());
 		for (Schema schema : afterNative.getSchemas())
 			Db2RowPermissions.set(schema, List.of(), List.of());
 		result.addAll(super.createDiffSql(beforeNative.diff(afterNative)));
+		for (String sql : functionMappings)
+			addSql(result, createSqlBuilder(getDialect())._add(sql),
+					sql.startsWith("COMMENT ") ? SqlType.SET_COMMENT : SqlType.CREATE, target);
 		result.addAll(databaseGrants.after());
 		for (String sql : objectGrants.afterSql())
 			addSql(result, createSqlBuilder(getDialect())._add(sql), SqlType.GRANT, target);

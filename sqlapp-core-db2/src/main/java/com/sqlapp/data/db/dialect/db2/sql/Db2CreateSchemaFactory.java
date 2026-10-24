@@ -15,7 +15,14 @@ import com.sqlapp.data.schemas.SchemaObjectProperties;
 public class Db2CreateSchemaFactory extends CreateSchemaFactory {
 	@Override
 	protected Set<String> getCreateCollectionOrder() {
-		Set<String> order = new LinkedHashSet<>(super.getCreateCollectionOrder());
+		Set<String> order = new LinkedHashSet<>();
+		for (String collection : super.getCreateCollectionOrder()) {
+			if (collection.equals(SchemaObjectProperties.CONSTANTS.getLabel()))
+				continue;
+			order.add(collection);
+			if (collection.equals(SchemaObjectProperties.PROCEDURES.getLabel()))
+				order.add(SchemaObjectProperties.CONSTANTS.getLabel());
+		}
 		order.add(SchemaObjectProperties.MASKS.getLabel());
 		return order;
 	}

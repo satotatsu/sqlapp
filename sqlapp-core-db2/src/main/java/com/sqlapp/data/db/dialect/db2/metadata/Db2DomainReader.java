@@ -63,7 +63,8 @@ public class Db2DomainReader extends DomainReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("domains.sql");
+		return getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "domains1110.sql" : "domains.sql");
 	}
 
 	protected Domain createDomain(ExResultSet rs) throws SQLException {

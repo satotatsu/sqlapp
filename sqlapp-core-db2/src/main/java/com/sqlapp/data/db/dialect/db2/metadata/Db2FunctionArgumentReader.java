@@ -97,7 +97,9 @@ public class Db2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("functionArguments.sql");
+		return getSqlNodeCache()
+				.getString(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "functionArguments1110.sql"
+						: "functionArguments.sql");
 	}
 
 }

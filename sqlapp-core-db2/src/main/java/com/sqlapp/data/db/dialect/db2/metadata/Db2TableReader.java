@@ -202,6 +202,8 @@ public class Db2TableReader extends TableReader {
 	 */
 	protected void setPartitionExpression(final Connection connection,
 			final DoubleKeyMap<String, String, Table> tables) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_910))
+			return;
 		final SqlNode node = getPartitionExpressionSqlNode();
 		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
@@ -229,18 +231,25 @@ public class Db2TableReader extends TableReader {
 			table.getPartitioning().setPartitioningType(PartitioningType.Range);
 		}
 		final String expression = getString(rs, "DATAPARTITIONEXPRESSION");
-		final boolean nullsFirst = "Y".equalsIgnoreCase(getString(rs, "NULLSFIRST"));
+		if (expression == null || expression.isBlank())
+			throw new SQLException("Missing Db2 range partition expression");
+		final String nullsFlag = getString(rs, "NULLSFIRST");
+		if (!java.util.Set.of("Y", "N").contains(nullsFlag == null ? "" : nullsFlag))
+			throw new SQLException("Invalid Db2 partition NULLSFIRST flag: " + nullsFlag);
+		final boolean nullsFirst = "Y".equals(nullsFlag);
 		NullsOrder nullsOrder;
 		if (nullsFirst) {
 			nullsOrder = NullsOrder.NullsFirst;
 		} else {
 			nullsOrder = NullsOrder.NullsLast;
 		}
-		final Column column = table.getColumns().get(expression);
+		final Column column = table.getColumns().get(getDialect().unQuote(expression));
 		if (column != null) {
 			table.getPartitioning().getPartitioningColumns().add(column, nullsOrder);
 		} else {
-			table.getPartitioning().getPartitioningColumns().add(expression, nullsOrder);
+			var reference = new com.sqlapp.data.schemas.ReferenceColumn(expression).setNullsOrder(nullsOrder);
+			reference.getStatement().add(expression);
+			table.getPartitioning().getPartitioningColumns().add(reference);
 		}
 	}
 
@@ -251,6 +260,8 @@ public class Db2TableReader extends TableReader {
 	 * @param tables
 	 */
 	protected void setPartitioning(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_910))
+			return;
 		final SqlNode node = getPartitionSqlNode();
 		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
@@ -273,11 +284,9 @@ public class Db2TableReader extends TableReader {
 	}
 
 	protected Partition readPartition(final ExResultSet rs, final Table table) throws SQLException {
-		final Dialect dialect = this.getDialect();
 		final String partitionName = getString(rs, "DATAPARTITIONNAME");
 		final String highValue = getString(rs, "HIGHVALUE");
 		final String lowValue = getString(rs, "LOWVALUE");
-		final String partitionExpression = dialect.unQuote(getString(rs, "PARTITION_EXPRESSION"));
 		final String tableSpace = getString(rs, "TABLE_SPACE");
 		final String lobTableSpace = getString(rs, "LOB_TABLE_SPACE");
 		Partitioning partitioning = null;
@@ -288,19 +297,25 @@ public class Db2TableReader extends TableReader {
 		} else {
 			partitioning = table.getPartitioning();
 		}
-		if (!isEmpty(partitionExpression) && !partitioning.getPartitioningColumns().contains(partitionExpression)) {
-			partitioning.getPartitioningColumns().add(partitionExpression);
-		}
 		Partition partition = partitioning.getPartitions().get(partitionName);
 		if (partition == null) {
 			partition = new Partition(partitionName);
 			partition.setLowValue(lowValue);
 			partition.setHighValue(highValue);
+			partition.setLowValueInclusive(readInclusive(rs, "LOWINCLUSIVE"));
+			partition.setHighValueInclusive(readInclusive(rs, "HIGHINCLUSIVE"));
 			partition.setTableSpaceName(tableSpace);
 			partition.setLobTableSpaceName(lobTableSpace);
 			partitioning.getPartitions().add(partition);
 		}
 		return partition;
+	}
+
+	private boolean readInclusive(ExResultSet rs, String key) throws SQLException {
+		String flag = getString(rs, key);
+		if (!"Y".equals(flag) && !"N".equals(flag))
+			throw new SQLException("Invalid Db2 partition " + key + " flag: " + flag);
+		return "Y".equals(flag);
 	}
 
 	@Override

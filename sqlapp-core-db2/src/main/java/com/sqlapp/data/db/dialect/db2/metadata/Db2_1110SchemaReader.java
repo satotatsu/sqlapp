@@ -32,4 +32,14 @@ public class Db2_1110SchemaReader extends Db2_1050SchemaReader {
 	protected TableReader newTableReader() {
 		return new Db2_1110TableReader(this.getDialect());
 	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.ConstantReader newConstantReader() {
+		return new Db2GlobalVariableReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.PackageReader newPackageReader() {
+		return new Db2ModuleReader(getDialect());
+	}
 }

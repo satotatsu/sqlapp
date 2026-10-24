@@ -11,6 +11,72 @@ import com.sqlapp.util.AbstractSqlBuilder;
 /** Db2 LUW indexes, including non-key INCLUDE columns. */
 public class Db2CreateIndexFactory extends CreateIndexFactory {
 	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Index index) {
+		java.util.List<com.sqlapp.data.db.sql.SqlOperation> nativeSql;
+		if (!index.getDefinition().isEmpty()) {
+			if (!createIndex(index))
+				return java.util.List.of();
+			nativeSql = new java.util.ArrayList<>();
+			for (String sql : index.getDefinition()) {
+				if (sql == null || sql.isBlank())
+					throw new IllegalArgumentException("Db2 index definition must be executable SQL");
+				addSql(nativeSql, createSqlBuilder()._add(sql), com.sqlapp.data.db.sql.SqlType.CREATE, index);
+			}
+		} else
+			nativeSql = super.createSql(index);
+		if (nativeSql.isEmpty())
+			return nativeSql;
+		var result = new java.util.ArrayList<com.sqlapp.data.db.sql.SqlOperation>();
+		if (index.getDefinition().isEmpty()
+				&& index.getColumns().stream().anyMatch(column -> !column.getStatement().isEmpty()))
+			for (String sql : com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.sql(null,
+					index.getSpecifics().get("FUNC_PATH")))
+				addSql(result, createSqlBuilder()._add(sql), com.sqlapp.data.db.sql.SqlType.SET_SEARCH_PATH_TO_SCHEMA,
+						index);
+		result.addAll(nativeSql);
+		if (index.getRemarks() != null) {
+			String schema = index.getSpecifics().getOrDefault("INDEX_SCHEMA", index.getSchemaName());
+			String name = schema == null
+					? com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.identifier(index.getName())
+					: com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.qualified(schema, index.getName());
+			addSql(result,
+					createSqlBuilder()
+							._add("COMMENT ON INDEX " + name + " IS '" + index.getRemarks().replace("'", "''") + "'"),
+					com.sqlapp.data.db.sql.SqlType.SET_COMMENT, index);
+		}
+		return result;
+	}
+
+	@Override
+	protected void addColumn(ReferenceColumn column, AbstractSqlBuilder<?> builder) {
+		addKeyValue(column, builder);
+		String rawOrder = column.getSpecifics().get("DB2_COLORDER");
+		if ("R".equals(rawOrder)) {
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))
+				throw new IllegalArgumentException("Db2 RANDOM index recreation requires LUW 11.1 or later");
+			builder.space()._add("RANDOM");
+		} else if (column.getOrder() != null && column.getOrder() != com.sqlapp.data.schemas.Order.Asc)
+			builder.space()._add(column.getOrder());
+	}
+
+	private void addKeyValue(ReferenceColumn column, AbstractSqlBuilder<?> builder) {
+		String order = column.getSpecifics().get("DB2_COLORDER");
+		if (order != null && !java.util.Set.of("A", "D", "I", "R").contains(order))
+			throw new IllegalArgumentException("Invalid Db2 index key order: " + order);
+		if ("S".equals(column.getSpecifics().get("DB2_VIRTUAL")))
+			throw new IllegalArgumentException("Db2 statistical-view index requires a complete native definition");
+		if (column.getStatement().isEmpty())
+			builder.name(column);
+		else {
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) || column.getStatement().size() != 1
+					|| column.getStatement().getFirst() == null || column.getStatement().getFirst().isBlank())
+				throw new IllegalArgumentException(
+						"Db2 expression index requires one expression and LUW 11.1 or later");
+			builder._add("(")._add(column.getStatement().getFirst())._add(")");
+		}
+	}
+
+	@Override
 	protected boolean createIndex(Index index) {
 		Table table = index.getTable();
 		if (table != null) {
@@ -24,6 +90,10 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 
 	@Override
 	public void addObjectDetail(Index index, Table table, AbstractSqlBuilder<?> builder) {
+		String nativeType = index.getSpecifics().get("INDEXTYPE");
+		if (nativeType != null && !java.util.Set.of("REG", "CLUS").contains(nativeType))
+			throw new IllegalArgumentException(
+					"Db2 specialized index requires a complete native definition: " + nativeType);
 		if (index.getIndexType() != null && index.getIndexType() != IndexType.BTree
 				&& index.getIndexType() != IndexType.Clustered) {
 			throw new IllegalArgumentException("Unsupported Db2 index type: " + index.getIndexType());
@@ -60,13 +130,42 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 			count = 0;
 			for (ReferenceColumn column : index.getColumns()) {
 				if (column.isIncludedColumn()) {
-					builder.comma(count++ > 0).name(column);
+					builder.comma(count++ > 0);
+					addKeyValue(column, builder);
 				}
 			}
 			builder.space()._add(")");
 		}
 		if (index.getIndexType() == IndexType.Clustered) {
 			builder.space()._add("CLUSTER");
+		}
+		for (String option : new String[] { "PCTFREE", "MINPCTUSED" }) {
+			String value = index.getSpecifics().get(option);
+			if (value != null) {
+				int number = Integer.parseInt(value);
+				if (number < 0 || number > 99)
+					throw new IllegalArgumentException("Db2 " + option + " must be between 0 and 99");
+				builder.space()._add(option).space()._add(number);
+			}
+		}
+		String reverse = index.getSpecifics().get("REVERSE_SCANS");
+		if (reverse != null) {
+			if (!java.util.Set.of("Y", "N").contains(reverse))
+				throw new IllegalArgumentException("Invalid Db2 reverse scan flag");
+			builder.space()._add("Y".equals(reverse) ? "ALLOW REVERSE SCANS" : "DISALLOW REVERSE SCANS");
+		}
+		String compression = index.getSpecifics().get("COMPRESSION");
+		if (compression != null || index.isCompression()) {
+			if (compression != null && !java.util.Set.of("Y", "N").contains(compression))
+				throw new IllegalArgumentException("Invalid Db2 index compression flag");
+			builder.space()._add(index.isCompression() ? "COMPRESS YES" : "COMPRESS NO");
+		}
+		String nullKeys = index.getSpecifics().get("NULLKEYS");
+		if (nullKeys != null) {
+			if (!java.util.Set.of("Y", "N").contains(nullKeys))
+				throw new IllegalArgumentException("Invalid Db2 index null-key flag");
+			if ("N".equals(nullKeys))
+				builder.space()._add("EXCLUDE NULL KEYS");
 		}
 	}
 }

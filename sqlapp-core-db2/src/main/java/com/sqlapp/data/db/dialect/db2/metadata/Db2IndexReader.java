@@ -76,6 +76,12 @@ public class Db2IndexReader extends IndexReader {
 					index.setIndexType(Db2Utils.getIndexType(getString(rs, "INDEXTYPE")));
 					index.setTableSpaceName(this.getString(rs, "table_space"));
 					index.setRemarks(getString(rs, REMARKS));
+					setSpecifics(rs, "INDEXTYPE", index);
+					setSpecifics(rs, "COMPRESSION", index);
+					if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+						setSpecifics(rs, "FUNC_PATH", index);
+						setSpecifics(rs, "NULLKEYS", index);
+					}
 					setSpecifics(rs, "PCTFREE", index);
 					//
 					setSpecifics(rs, "MINPCTUSED", index);
@@ -86,18 +92,33 @@ public class Db2IndexReader extends IndexReader {
 				}
 				String colOrder = getString(rs, "COLORDER");
 				String columnName = getString(rs, COLUMN_NAME);
-				if ("I".equalsIgnoreCase(colOrder)) {
-					index.getColumns().add(new Column(columnName), true);
-				} else {
-					index.getColumns().add(new Column(columnName), Order.parse(colOrder));
+				if (!java.util.Set.of("A", "D", "I", "R").contains(colOrder == null ? "" : colOrder))
+					throw new SQLException("Unsupported Db2 index column order: " + colOrder);
+				var reference = new com.sqlapp.data.schemas.ReferenceColumn(columnName);
+				reference.setIncludedColumn("I".equals(colOrder));
+				reference.setOrder(Order.parse(colOrder));
+				reference.getSpecifics().put("DB2_COLORDER", colOrder);
+				if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+					String expression = rs.getString("key_expression"), virtual = getString(rs, "key_virtual");
+					if (virtual != null)
+						reference.getSpecifics().put("DB2_VIRTUAL", virtual);
+					if (expression != null) {
+						if (expression.isBlank())
+							throw new SQLException("Blank Db2 index key expression");
+						reference.getStatement().add(expression);
+					} else if ("Y".equals(virtual) || "S".equals(virtual)) {
+						throw new SQLException("Db2 virtual index column is missing its expression: " + columnName);
+					}
 				}
+				index.getColumns().add(reference);
 			}
 		});
 		return result;
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("indexes.sql");
+		return getSqlNodeCache(Db2IndexReader.class).getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "indexes1110.sql" : "indexes.sql");
 	}
 
 }

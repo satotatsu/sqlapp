@@ -15,7 +15,13 @@ public class Db2DropSynonymFactory extends AbstractDropNamedObjectFactory<Synony
 		if (!java.util.Set.of("TABLE", "SEQUENCE", "MODULE").contains(type)) {
 			throw new IllegalArgumentException("Unsupported Db2 alias target type: " + type);
 		}
-		builder.drop().space()._add("ALIAS").name(obj, getOptions().isDecorateSchemaName());
+		builder.drop().space();
+		if ("SYSPUBLIC".equals(obj.getSchemaName())) {
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_970))
+				throw new IllegalArgumentException("Db2 public aliases require LUW 9.7 or later");
+			builder._add("PUBLIC").space();
+		}
+		builder._add("ALIAS").name(obj, getOptions().isDecorateSchemaName());
 		builder.for_().space()._add(type);
 	}
 }

@@ -70,7 +70,8 @@ public class Db2TypeReader extends TypeReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("types.sql");
+		return getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "types1110.sql" : "types.sql");
 	}
 
 	protected Type createType(ExResultSet rs) throws SQLException {

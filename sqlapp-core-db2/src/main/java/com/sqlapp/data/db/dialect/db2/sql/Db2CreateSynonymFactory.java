@@ -26,7 +26,13 @@ public class Db2CreateSynonymFactory extends AbstractCreateSynonymFactory<Db2Sql
 		if (!java.util.Set.of("TABLE", "SEQUENCE", "MODULE").contains(type)) {
 			throw new IllegalArgumentException("Unsupported Db2 alias target type: " + type);
 		}
-		builder.create().space()._add("ALIAS").name(obj, getOptions().isDecorateSchemaName());
+		builder.create().space();
+		if ("SYSPUBLIC".equals(obj.getSchemaName())) {
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_970))
+				throw new IllegalArgumentException("Db2 public aliases require LUW 9.7 or later");
+			builder._add("PUBLIC").space();
+		}
+		builder._add("ALIAS").name(obj, getOptions().isDecorateSchemaName());
 		builder.for_().space()._add(type).space();
 		if (obj.getObjectSchemaName() != null) {
 			builder.name(obj.getObjectSchemaName())._add(".");

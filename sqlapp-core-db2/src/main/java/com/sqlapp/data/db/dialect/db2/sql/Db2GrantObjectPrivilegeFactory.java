@@ -25,6 +25,7 @@ public class Db2GrantObjectPrivilegeFactory extends SimpleSqlFactory<ObjectPrivi
 			if (privilege.isHierachy())
 				throw new IllegalArgumentException("Db2 sequence/index/server grants do not support hierarchy");
 			var grant = Db2ObjectPrivileges.fromModel(privilege);
+			Db2ObjectPrivileges.validateDialect(grant, getDialect());
 			List<SqlOperation> result = new ArrayList<>();
 			addSql(result,
 					createSqlBuilder()._add(

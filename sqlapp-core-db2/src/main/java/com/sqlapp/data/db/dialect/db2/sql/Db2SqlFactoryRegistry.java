@@ -51,7 +51,14 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Package.class, SqlType.CREATE, Db2CreateModuleFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Package.class, SqlType.DROP, Db2DropModuleFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Package.class, SqlType.ALTER, Db2AlterModuleFactory.class);
 		registerSqlFactory(Catalog.class, SqlType.CREATE, Db2CreateCatalogFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.CREATE,
+				Db2CreateGlobalVariableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.DROP, Db2DropGlobalVariableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.ALTER, Db2AlterGlobalVariableFactory.class);
 		registerSqlFactory(Catalog.class, SqlType.ALTER, Db2AlterCatalogFactory.class);
 		registerSqlFactory(Schema.class, SqlType.CREATE, Db2CreateSchemaFactory.class);
 		registerSqlFactory(Schema.class, SqlType.ALTER, Db2AlterSchemaFactory.class);
@@ -106,6 +113,8 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Package.class, State.Deleted, SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Package.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(Schema.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(Catalog.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(Mview.class, State.Modified, SqlType.ALTER);

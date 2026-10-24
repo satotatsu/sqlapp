@@ -72,7 +72,9 @@ public class Db2ProcedureReader extends ProcedureReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNodeCache().getString("procedures.sql");
+		SqlNode node = getSqlNodeCache()
+				.getString(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "procedures1110.sql"
+						: "procedures.sql");
 		return node;
 	}
 
