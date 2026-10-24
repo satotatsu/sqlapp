@@ -49,6 +49,13 @@ class Db2MetadataReaderTest {
 	}
 
 	@Test
+	void schemaObjectsSurviveXmlAndDdlRecreation() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2RecreationAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void sequenceConfigurationSurvivesXmlAndDdl() throws Exception {
 		try (Connection connection = DB2.createConnection("")) {
 			com.sqlapp.data.db.dialect.test.Db2HanaSequenceAuditAssertions.verify(connection, true);
