@@ -19,51 +19,12 @@
 
 package com.sqlapp.data.db.dialect.firebird.sql;
 
-import java.util.List;
-
 import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Sequence;
 
-public class Firebird20CreateSequenceFactory extends AbstractCreateSequenceFactory<FirebirdSqlBuilder> {
+public class Firebird20CreateSequenceFactory extends FirebirdCreateSequenceFactory {
 	@Override
-	protected void addOtherDefinitions(Sequence obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
-		if (obj.getRemarks() != null)
-			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
-	}
-
-	@Override
-	public List<SqlOperation> createSql(final Sequence obj) {
-		List<SqlOperation> sqlList = super.createSql(obj);
-		return sqlList;
-	}
-
-	@Override
-	protected void addStartWith(final Sequence obj, FirebirdSqlBuilder builder) {
-	}
-
-	@Override
-	protected void addIncrementBy(final Sequence obj, FirebirdSqlBuilder builder) {
-	}
-
-	@Override
-	protected void addMaxValue(final Sequence obj, FirebirdSqlBuilder builder) {
-	}
-
-	@Override
-	protected void addMinValue(final Sequence obj, FirebirdSqlBuilder builder) {
-	}
-
-	@Override
-	protected void addCycle(final Sequence obj, FirebirdSqlBuilder builder) {
-	}
-
-	@Override
-	protected void addCache(final Sequence obj, FirebirdSqlBuilder builder) {
-	}
-
-	@Override
-	protected void addOrder(final Sequence obj, FirebirdSqlBuilder builder) {
+	protected void addCreateSequence(Sequence obj, FirebirdSqlBuilder builder) {
+		builder.create().sequence();
 	}
 }

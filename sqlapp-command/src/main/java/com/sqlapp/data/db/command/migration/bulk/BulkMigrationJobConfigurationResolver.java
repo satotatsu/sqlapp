@@ -492,7 +492,7 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 	}
 
-	private static List<Table> tables(final DbCommonObject<?> root) {
+	static List<Table> tables(final DbCommonObject<?> root) {
 		if (root instanceof Table table) {
 			return List.of(table);
 		}
@@ -512,7 +512,7 @@ public class BulkMigrationJobConfigurationResolver {
 				"Schema XML must contain Catalog, SchemaCollection, Schema, " + "TableCollection, or Table.");
 	}
 
-	private static Table findTable(final List<Table> tables, final String name) {
+	static Table findTable(final List<Table> tables, final String name) {
 		if (name == null || name.isBlank()) {
 			throw new CommandException("Each bulk migration task requires a table.");
 		}

@@ -40,7 +40,9 @@ public class Firebird30SqlRegistryFactory extends Firebird25SqlFactoryRegistry {
 		registerSqlFactory(Sequence.class, SqlType.CREATE, Firebird30CreateSequenceFactory.class);
 		//
 		registerSqlFactory(Package.class, SqlType.CREATE, Firebird30CreatePackageFactory.class);
+		registerSqlFactory(Package.class, SqlType.ALTER, Firebird30AlterPackageFactory.class);
 		//
 		registerSqlFactory(PackageBody.class, SqlType.CREATE, Firebird30CreatePackageBodyFactory.class);
+		registerSqlFactory(PackageBody.class, SqlType.ALTER, Firebird30AlterPackageBodyFactory.class);
 	}
 }

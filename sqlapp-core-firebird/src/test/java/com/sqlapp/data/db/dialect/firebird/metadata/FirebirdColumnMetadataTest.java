@@ -39,8 +39,32 @@ class FirebirdColumnMetadataTest {
 		assertEquals("'unknown'", column.getDefaultValue());
 	}
 
+	@Test
+	void keepsNamedDomainInheritanceSeparateFromColumnOverrides() throws Exception {
+		var values = values();
+		values.put("DOMAIN_NAME", "positive_int");
+		values.put("SOURCE_NULL_FLAG", 1);
+		values.put("DOMAIN_DEFAULT_SOURCE", "DEFAULT 3");
+		values.put("DEFAULT_SOURCE", "DEFAULT 3");
+		values.put("CHECK_CONDITION", "CHECK (VALUE>0)");
+		Column inherited = read(values);
+		assertEquals("positive_int", inherited.getDomainName());
+		assertNull(inherited.getDefaultValue());
+		assertFalse(inherited.isNotNull());
+		assertTrue(inherited.getDomain().isNotNull());
+		assertEquals("3", inherited.getDomain().getDefaultValue());
+		assertNull(inherited.getCheckConstraint());
+		values.put("NULL_FLAG", 1);
+		values.put("COLUMN_DEFAULT_SOURCE", "DEFAULT 9");
+		Column overridden = read(values);
+		assertTrue(overridden.isNotNull());
+		assertEquals("9", overridden.getDefaultValue());
+		values.put("DOMAIN_NAME", "RDB$123");
+		assertNull(read(values).getDomain());
+	}
+
 	private Map<String, Object> values() {
-		var values = new HashMap<String, Object>();
+		var values = new java.util.TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
 		values.put("COLUMN_NAME", "value");
 		values.put("TABLE_NAME", "orders");
 		values.put("FIELD_TYPE", 8);

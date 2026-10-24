@@ -75,6 +75,11 @@ public class FirebirdTableReader extends TableReader {
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table obj = createTable(trim(getString(rs, "RDB$RELATION_NAME")));
 		obj.setRemarks(trim(getString(rs, "RDB$DESCRIPTION")));
+		String externalFile = trim(getString(rs, "RDB$EXTERNAL_FILE"));
+		if (externalFile != null) {
+			obj.setTableType(Table.TableType.File);
+			obj.getSpecifics().put("firebird.external.file", externalFile);
+		}
 		return obj;
 	}
 

@@ -10,6 +10,33 @@ import com.sqlapp.data.schemas.*;
 
 class FirebirdObjectRecreationSqlTest {
 	@Test
+	void domainReferencesRenderNamesWithoutRepeatingTypesOrArrayBounds() {
+		Table table = new Table("domain_table");
+		table.getColumns()
+				.add(new Column("value").setDomainName("named domain").setDataType(DataType.INT).setDefaultValue("9"));
+		table.getColumns().add(new Column("array").setDomainName("array domain").setArrayDimension(2));
+		var registry = DialectHolder.defaultDialect25.createSqlFactoryRegistry();
+		String sql = registry.createSql(table, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("\"named domain\" DEFAULT 9"), sql);
+		assertTrue(sql.contains("\"array domain\""), sql);
+		table.getColumns().get(0).setDataType(DataType.VARCHAR).setCharacterSet("UTF8");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE));
+	}
+
+	@Test
+	void externalTablesPreserveQuotedFileNamesAndRejectMissingOrInvalidOptions() {
+		Table table = new Table("external").setTableType(Table.TableType.File);
+		table.getColumns().add(new Column("value").setDataType(DataType.CHAR).setLength(8));
+		var registry = DialectHolder.defaultDialect25.createSqlFactoryRegistry();
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE));
+		table.getSpecifics().put("firebird.external.file", "/data/it's.dat");
+		assertTrue(registry.createSql(table, SqlType.CREATE).get(0).getSqlText()
+				.contains("EXTERNAL FILE '/data/it''s.dat'"));
+		table.getColumns().get(0).setDataType(DataType.BLOB);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(table, SqlType.CREATE));
+	}
+
+	@Test
 	void recreatesCharacterDomainsWithTheirConstraintsAndComments() {
 		Domain domain = new Domain("text domain").setDataType(DataType.VARCHAR).setLength(12).setCharacterSet("UTF8")
 				.setCollation("UNICODE_CI").setDefaultValue("'initial'").setNotNull(true)

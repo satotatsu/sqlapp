@@ -92,6 +92,17 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 
 	@Override
 	protected FirebirdSqlBuilder typeDefinition(final Column column) {
+		if (column.getDomain() != null) {
+			if (column.getDomainName() == null || column.getDomainSchemaName() != null
+					|| column.getDomainColumnName() != null || !column.getDomain().getColumns().isEmpty())
+				throw new IllegalArgumentException("Firebird column domain requires an unqualified domain name");
+			if (column.getCharacterSet() != null)
+				throw new IllegalArgumentException(
+						"Firebird domain column inherits CHARACTER SET; configure it on the domain, or override column COLLATE");
+			if (column.isIdentity() || column.getFormula() != null)
+				throw new IllegalArgumentException("Firebird domain column cannot also be identity or computed");
+			return name(column.getDomainName());
+		}
 		if ("INT128".equalsIgnoreCase(column.getDataTypeName())) {
 			if (getDialect().compareTo(DialectHolder.defaultDialect40) < 0) {
 				throw new IllegalArgumentException("INT128 requires Firebird 4.0 or later");
@@ -122,9 +133,13 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 		return instance();
 	}
 
+	public FirebirdSqlBuilder columnType(Column column) {
+		return typeDefinition(column);
+	}
+
 	@Override
 	protected FirebirdSqlBuilder characterSetDefinition(Column column) {
-		if (column.getCharacterSet() != null)
+		if (column.getDomain() == null && column.getCharacterSet() != null)
 			space()._add("CHARACTER SET ").name(column.getCharacterSet());
 		return instance();
 	}

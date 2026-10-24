@@ -93,11 +93,19 @@ public class FirebirdColumnReader extends ColumnReader {
 				throw new IllegalStateException("Incomplete Firebird array dimensions for " + column.getName());
 			column.getSpecifics().put(com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder.ARRAY_BOUNDS,
 					String.join(",", dimensions));
+			if (column.getDomain() != null) {
+				column.getDomain().setArrayDimensionLowerBound(column.getArrayDimensionLowerBound())
+						.setArrayDimensionUpperBound(column.getArrayDimensionUpperBound());
+				column.getDomain().getSpecifics().put(
+						com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder.ARRAY_BOUNDS,
+						String.join(",", dimensions));
+			}
 		});
 	}
 
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		String tableName = trim(getString(rs, TABLE_NAME));
+		String domainName = trim(getString(rs, "DOMAIN_NAME"));
 		String defaultSource = trim(getString(rs, "DEFAULT_SOURCE"));
 		Column obj = new Column(trim(getString(rs, COLUMN_NAME)));
 		obj.setTableName(tableName);
@@ -115,15 +123,34 @@ public class FirebirdColumnReader extends ColumnReader {
 		obj.setArrayDimension(rs.getInt("ARRAY_DIMENSIONS"));
 		obj.setCharacterSet(trim(getString(rs, CHARACTER_SET_NAME)));
 		obj.setCollation(trim(getString(rs, COLLATION_NAME)));
+		if (obj.getCollation() != null)
+			obj.getSpecifics().put("firebird.column.collationId", String.valueOf(rs.getInt("EFFECTIVE_COLLATION_ID")));
 		obj.setFormula(computed);
 		FirebirdUtils.setDefaultConstraint(obj, trim(defaultSource));
-		setCheckConstraint(obj, tableName, trim(checkCondition));
+		if (domainName == null || domainName.startsWith("RDB$"))
+			setCheckConstraint(obj, tableName, trim(checkCondition));
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
 		if (type == 14 || type == 37) {
 			Integer characterLength = getInteger(rs, "CHAR_LEN");
 			if (characterLength != null) {
 				obj.setLength(characterLength);
 			}
+		}
+		if (domainName != null && !domainName.startsWith("RDB$")) {
+			var domain = new com.sqlapp.data.schemas.Domain(domainName).setDataType(obj.getDataType())
+					.setDataTypeName(obj.getDataTypeName()).setLength(obj.getLength()).setScale(obj.getScale())
+					.setNotNull(rs.getShort("SOURCE_NULL_FLAG") == 1).setCharacterSet(obj.getCharacterSet())
+					.setArrayDimension(obj.getArrayDimension());
+			FirebirdUtils.setDefaultConstraint(domain, trim(getString(rs, "DOMAIN_DEFAULT_SOURCE")));
+			domain.setCollation(trim(getString(rs, "DOMAIN_COLLATION_NAME")));
+			String condition = trim(getString(rs, "CHECK_CONDITION"));
+			if (condition != null)
+				domain.setCheck(FirebirdUtils.convertCheckConstraint(condition));
+			obj.setDomain(domain).setNullable(nullFlag != 1).setCheckConstraint(null).setCharacterSet(null);
+			obj.setDefaultValue(null);
+			FirebirdUtils.setDefaultConstraint(obj, trim(getString(rs, "COLUMN_DEFAULT_SOURCE")));
+			if (rs.getObject("LOCAL_COLLATION_ID") == null)
+				obj.setCollation(null);
 		}
 		return obj;
 

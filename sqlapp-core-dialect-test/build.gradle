@@ -339,3 +339,19 @@ tasks.register('edbOracleCompatibilityTest') {
     group = 'verification'
     dependsOn edbControlTasks
 }
+
+tasks.register('firebirdCompatibilityTest', Test) {
+	description = 'Runs Firebird unit tests and disposable 2.5/3/4/5 schema, bulk and JDBC-tree integration tests.'
+	group = 'verification'
+	dependsOn ':sqlapp-core-firebird:test'
+	testClassesDirs = sourceSets.dockerTest.output.classesDirs
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	useJUnitPlatform()
+	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.firebird.*'
+	outputs.upToDateWhen { false }
+	if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+		environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+	}
+	jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+	testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+}

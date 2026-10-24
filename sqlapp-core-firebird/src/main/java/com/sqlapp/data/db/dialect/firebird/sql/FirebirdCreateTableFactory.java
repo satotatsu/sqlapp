@@ -54,6 +54,24 @@ public class FirebirdCreateTableFactory extends AbstractCreateTableFactory<Fireb
 
 	@Override
 	protected void addCreateObject(com.sqlapp.data.schemas.Table table, FirebirdSqlBuilder builder) {
+		String externalFile = table.getSpecifics().get("firebird.external.file");
+		if (externalFile != null || table.getTableType() == com.sqlapp.data.schemas.Table.TableType.File) {
+			if (externalFile == null || externalFile.isBlank())
+				throw new IllegalArgumentException("Firebird external table requires firebird.external.file");
+			if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary
+					|| table.getSpecifics().containsKey("firebird.onCommit"))
+				throw new IllegalArgumentException("Firebird external table cannot be temporary");
+			if (!table.getConstraints().isEmpty() || !table.getIndexes().isEmpty())
+				throw new IllegalArgumentException("Firebird external tables cannot have constraints or indexes");
+			for (var column : table.getColumns())
+				if (column.getArrayDimension() > 0 || column.isIdentity() || column.getFormula() != null
+						|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB
+						|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.CLOB)
+					throw new IllegalArgumentException(
+							"Firebird external table cannot contain arrays, blobs, computed or identity columns");
+			builder._add("CREATE TABLE ").name(table.getName())._add(" EXTERNAL FILE ").sqlChar(externalFile);
+			return;
+		}
 		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary) {
 			FirebirdTemporaryTableSql.requireSupportedDialect(builder);
 			builder.create().global().temporary().table().name(table, getOptions().isDecorateSchemaName());

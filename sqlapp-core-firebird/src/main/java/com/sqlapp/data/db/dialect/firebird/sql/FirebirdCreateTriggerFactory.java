@@ -59,7 +59,7 @@ public class FirebirdCreateTriggerFactory extends AbstractCreateTriggerFactory<F
 		}
 		addEventManipulationText(obj, builder);
 		String position = obj.getSpecifics().get("POSITION");
-		if (!"0".equals(position) && !CommonUtils.isEmpty(position)) {
+		if (!CommonUtils.isEmpty(position)) {
 			builder.lineBreak();
 			int value;
 			try {

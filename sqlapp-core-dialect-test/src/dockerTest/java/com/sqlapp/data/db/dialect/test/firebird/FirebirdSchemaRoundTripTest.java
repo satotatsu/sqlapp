@@ -39,6 +39,16 @@ class FirebirdSchemaRoundTripTest {
 		try (var container = new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:" + tag))
 				.withEnv("ISC_PASSWORD", "masterkey").withEnv("FIREBIRD_DATABASE", "test.fdb").withExposedPorts(3050)
 				.waitingFor(Wait.forListeningPort()).withStartupTimeout(Duration.ofMinutes(2))) {
+			// Restrict external-file tests to the data directory of this disposable
+			// container.
+			String entrypoint = "#!/bin/sh\nset -e\nconfig=/usr/local/firebird/skel/etc/firebird.conf\n"
+					+ "sed -i '/^[[:space:]]*ExternalFileAccess[[:space:]]*=/d' \"$config\"\n"
+					+ "printf '\\nExternalFileAccess = Restrict /firebird/data\\n' >> \"$config\"\n"
+					+ "exec /usr/local/firebird/docker-entrypoint.sh \"$@\"\n";
+			container.withCopyToContainer(
+					Transferable.of(entrypoint.getBytes(java.nio.charset.StandardCharsets.UTF_8), 0755),
+					"/tmp/sqlapp-firebird-entrypoint").withCreateContainerCmdModifier(
+							command -> command.withEntrypoint("/tmp/sqlapp-firebird-entrypoint"));
 			if (version.equals("2.5")) {
 				// The 2.5 entrypoint opens a temporary server, creates the DB, then restarts
 				// it.
@@ -52,6 +62,8 @@ class FirebirdSchemaRoundTripTest {
 						.waitingFor(new WaitAllStrategy()
 								.withStrategy(Wait.forSuccessfulCommand("test -f /tmp/sqlapp-firebird-initialized"))
 								.withStrategy(Wait.forListeningPort()));
+			} else {
+				container.withCommand("firebird");
 			}
 			container.start();
 			String url = "jdbc:firebirdsql://" + container.getHost() + ":" + container.getMappedPort(3050)
@@ -74,6 +86,11 @@ class FirebirdSchemaRoundTripTest {
 				alterSignatures(connection, statement, dialect, major);
 				parameterComments(connection, statement, dialect, major);
 				objectRecreation(connection, statement, dialect, major);
+				alterObjects(connection, statement, dialect, major);
+				domainReferencesAndExternalTables(connection, statement, dialect);
+				tableColumnAlter(connection, statement, dialect, major);
+				sequenceAlter(connection, statement, dialect, major);
+				sequenceRecreation(connection, statement, dialect, major);
 				textRoutines(connection, statement, dialect, major);
 				externalRoutines(connection, statement, dialect, major);
 				privileges(connection, statement, dialect, major);
@@ -81,6 +98,94 @@ class FirebirdSchemaRoundTripTest {
 				ddlPrivileges(connection, statement, dialect, major);
 				objectSecurity(connection, statement, dialect, major);
 				packages(connection, statement, dialect, major);
+				packageAlter(connection, statement, dialect, major);
+			}
+		}
+	}
+
+	private void sequenceRecreation(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		for (int increment : major >= 3 ? new int[] { 5, -5 } : new int[] { 1 }) {
+			String name = "sequence resume " + (increment > 0 ? "up" : "down");
+			Sequence sequence = new Sequence(name).setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT)
+					.setStartValue(50).setLastValue(100).setIncrementBy(increment).setRemarks("resume 日本語 ' comment");
+			execute(statement, dialect, sequence, SqlType.CREATE);
+			var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
+			reader.setObjectName(name);
+			Sequence original = reader.getAllFull(connection).get(0);
+			assertEquals(java.math.BigInteger.valueOf(100), original.getLastValue());
+			assertEquals(sequence.getRemarks(), original.getRemarks());
+			try (var rows = statement.executeQuery("SELECT NEXT VALUE FOR \"" + name + "\" FROM RDB$DATABASE")) {
+				assertTrue(rows.next());
+				assertEquals(100 + increment, rows.getLong(1));
+			}
+			Sequence advanced = reader.getAllFull(connection).get(0);
+			statement.execute("DROP SEQUENCE \"" + name + "\"");
+			execute(statement, dialect, advanced, SqlType.CREATE);
+			Sequence restored = reader.getAllFull(connection).get(0);
+			assertEquals(advanced.getLastValue(), restored.getLastValue());
+			assertEquals(advanced.getStartValue(), restored.getStartValue());
+			assertEquals(advanced.getIncrementBy(), restored.getIncrementBy());
+			assertEquals(advanced.getRemarks(), restored.getRemarks());
+			try (var rows = statement.executeQuery("SELECT NEXT VALUE FOR \"" + name + "\" FROM RDB$DATABASE")) {
+				assertTrue(rows.next());
+				assertEquals(100 + 2 * increment, rows.getLong(1));
+			}
+			statement.execute("DROP SEQUENCE \"" + name + "\"");
+			execute(statement, dialect, sequence.clone().setLastValue(0), SqlType.CREATE);
+			assertEquals(java.math.BigInteger.ZERO, reader.getAllFull(connection).get(0).getLastValue());
+		}
+	}
+
+	private void sequenceAlter(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		String name = "sequence alter";
+		statement.execute("CREATE SEQUENCE \"sequence alter\"");
+		statement.execute("SET GENERATOR \"sequence alter\" TO 90");
+		statement.execute(
+				"CREATE PROCEDURE FB_SEQUENCE_DEP RETURNS (V BIGINT) AS BEGIN V=GEN_ID(\"sequence alter\",1); SUSPEND; END");
+		if (major >= 3)
+			statement.execute("GRANT USAGE ON SEQUENCE \"sequence alter\" TO ROLE FB_SIGNATURE_READER");
+		var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
+		reader.setObjectName(name);
+		Sequence original = reader.getAllFull(connection).get(0);
+		assertEquals(java.math.BigInteger.valueOf(90), original.getLastValue());
+		Sequence target = original.clone().setLastValue(0).setRemarks("sequence 日本語");
+		if (major >= 3)
+			target.setIncrementBy(-3);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(original.diff(target), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Sequence restored = reader.getAllFull(connection).get(0);
+		assertEquals(java.math.BigInteger.ZERO, restored.getLastValue());
+		assertEquals(original.getStartValue(), restored.getStartValue());
+		assertEquals("sequence 日本語", restored.getRemarks());
+		if (major >= 3)
+			assertEquals(java.math.BigInteger.valueOf(-3), restored.getIncrementBy());
+		long next = major >= 3 ? -3 : 1;
+		try (var rows = statement.executeQuery("SELECT NEXT VALUE FOR \"sequence alter\" FROM RDB$DATABASE")) {
+			assertTrue(rows.next());
+			assertEquals(next, rows.getLong(1));
+		}
+		// A stale metadata snapshot must not reset the now-advanced sequence on a
+		// comment-only diff.
+		for (var operation : dialect.createSqlFactoryRegistry()
+				.createSql(restored.diff(restored.clone().setRemarks(null)), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Sequence uncommented = reader.getAllFull(connection).get(0);
+		assertNull(uncommented.getRemarks());
+		assertEquals(java.math.BigInteger.valueOf(next), uncommented.getLastValue());
+		Sequence negative = uncommented.clone().setLastValue(-20);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(uncommented.diff(negative), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		try (var rows = statement.executeQuery("SELECT V FROM FB_SEQUENCE_DEP")) {
+			assertTrue(rows.next());
+			assertEquals(-19, rows.getLong(1));
+		}
+		if (major >= 3) {
+			try (var rows = statement.executeQuery(
+					"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='sequence alter' AND RDB$USER='FB_SIGNATURE_READER' AND RDB$PRIVILEGE='G'")) {
+				assertTrue(rows.next());
+				assertEquals(1, rows.getInt(1));
 			}
 		}
 	}
@@ -194,11 +299,13 @@ class FirebirdSchemaRoundTripTest {
 		reader.setObjectName("FB_TYPES");
 		Table original = reader.getAllFull(connection).get(0);
 		assertTrue(original.getColumns().get("ID").isNotNull());
-		assertTrue(original.getColumns().get("LABEL").isNotNull());
+		assertFalse(original.getColumns().get("LABEL").isNotNull());
+		assertTrue(original.getColumns().get("LABEL").getDomain().isNotNull());
 		assertFalse(original.getColumns().get("OPTIONAL_VALUE").isNotNull());
 		assertEquals(12L, original.getColumns().get("LABEL").getLength());
 		assertEquals(48L, original.getColumns().get("LABEL").getOctetLength());
-		assertEquals("'fallback'", original.getColumns().get("LABEL").getDefaultValue());
+		assertNull(original.getColumns().get("LABEL").getDefaultValue());
+		assertEquals("'fallback'", original.getColumns().get("LABEL").getDomain().getDefaultValue());
 		statement.execute("DROP TABLE FB_TYPES");
 		execute(statement, dialect, original, SqlType.CREATE);
 		Table recreated = reader.getAllFull(connection).get(0);
@@ -313,6 +420,85 @@ class FirebirdSchemaRoundTripTest {
 		try (var rows = statement.executeQuery("SELECT QTY FROM FB_INDEXED WHERE ID=1")) {
 			assertTrue(rows.next());
 			assertEquals(42, rows.getInt(1));
+		}
+	}
+
+	private void packageAlter(Connection connection, Statement statement, Dialect dialect, int major) throws Exception {
+		if (major < 3)
+			return;
+		statement.execute(
+				"CREATE PACKAGE \"package alter\" AS BEGIN FUNCTION V(P INTEGER DEFAULT 3) RETURNS INTEGER; END");
+		statement.execute(
+				"CREATE PACKAGE BODY \"package alter\" AS BEGIN FUNCTION V(P INTEGER) RETURNS INTEGER AS BEGIN RETURN P+1; END END");
+		statement.execute("GRANT EXECUTE ON PACKAGE \"package alter\" TO ROLE FB_SIGNATURE_READER");
+		statement.execute("CREATE VIEW FB_PACKAGE_DEP AS SELECT \"package alter\".V(10) AS V FROM RDB$DATABASE");
+		var schema = dialect.getCatalogReader().getSchemaReader();
+		var headers = schema.getPackageReader();
+		headers.setObjectName("package alter");
+		var bodies = schema.getPackageBodyReader();
+		bodies.setObjectName("package alter");
+		var original = headers.getAll(connection).get(0);
+		var originalBody = bodies.getAll(connection).get(0);
+		var target = original.clone().setStatement("BEGIN FUNCTION V(P INTEGER DEFAULT 5) RETURNS INTEGER; END")
+				.setRemarks("package 日本語");
+		if (major >= 4)
+			target.getSpecifics().put("firebird.sqlSecurity", "DEFINER");
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(original.diff(target), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		var restored = headers.getAll(connection).get(0);
+		assertEquals("package 日本語", restored.getRemarks());
+		assertEquals(originalBody.getStatement(), bodies.getAll(connection).get(0).getStatement());
+		// Header ALTER retains the source but the engine requires recompiling its body.
+		execute(statement, dialect, originalBody, SqlType.ALTER);
+		try (var rows = statement.executeQuery("SELECT \"package alter\".V() FROM RDB$DATABASE")) {
+			assertTrue(rows.next());
+			assertEquals(6, rows.getInt(1));
+		}
+		var changedBody = originalBody.clone()
+				.setStatement("BEGIN FUNCTION V(P INTEGER) RETURNS INTEGER AS BEGIN RETURN P+2; END END");
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(originalBody.diff(changedBody),
+				SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		try (var rows = statement.executeQuery("SELECT V FROM FB_PACKAGE_DEP")) {
+			assertTrue(rows.next());
+			assertEquals(12, rows.getInt(1));
+		}
+		assertEquals(changedBody.getStatement(), bodies.getAll(connection).get(0).getStatement());
+		for (var operation : dialect.createSqlFactoryRegistry()
+				.createSql(restored.diff(restored.clone().setRemarks(null)), SqlType.ALTER)) {
+			assertTrue(operation.getSqlText().startsWith("COMMENT ON"));
+			statement.execute(operation.getSqlText());
+		}
+		var uncommented = headers.getAll(connection).get(0);
+		assertNull(uncommented.getRemarks());
+		if (major >= 4) {
+			assertEquals("DEFINER", uncommented.getSpecifics().get("firebird.sqlSecurity"));
+			var invoker = uncommented.clone();
+			invoker.getSpecifics().put("firebird.sqlSecurity", "INVOKER");
+			for (var operation : dialect.createSqlFactoryRegistry().createSql(uncommented.diff(invoker), SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			execute(statement, dialect, changedBody, SqlType.ALTER);
+			var invokerRead = headers.getAll(connection).get(0);
+			assertEquals("INVOKER", invokerRead.getSpecifics().get("firebird.sqlSecurity"));
+			var cleared = invokerRead.clone();
+			DbInfo specifics = new DbInfo();
+			for (var entry : cleared.getSpecifics().entrySet())
+				if (!entry.getKey().equalsIgnoreCase("firebird.sqlSecurity"))
+					specifics.put(entry.getKey(), entry.getValue());
+			cleared.setSpecifics(specifics);
+			for (var operation : dialect.createSqlFactoryRegistry().createSql(invokerRead.diff(cleared), SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			execute(statement, dialect, changedBody, SqlType.ALTER);
+			assertNull(headers.getAll(connection).get(0).getSpecifics().get("firebird.sqlSecurity"));
+		}
+		try (var rows = statement.executeQuery("SELECT V FROM FB_PACKAGE_DEP")) {
+			assertTrue(rows.next());
+			assertEquals(12, rows.getInt(1));
+		}
+		try (var rows = statement.executeQuery(
+				"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='package alter' AND RDB$USER='FB_SIGNATURE_READER' AND RDB$PRIVILEGE='X'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
 		}
 	}
 
@@ -686,6 +872,348 @@ class FirebirdSchemaRoundTripTest {
 		original.setRemarks(null);
 		execute(statement, dialect, original, SqlType.SET_COMMENT);
 		assertNull(reread.get().getRemarks());
+	}
+
+	private void alterObjects(Connection connection, Statement statement, Dialect dialect, int major) throws Exception {
+		var schema = dialect.getCatalogReader().getSchemaReader();
+		statement.execute("CREATE DOMAIN FB_ALTER_DOMAIN AS INTEGER DEFAULT 3 NOT NULL CHECK (VALUE>0)");
+		statement.execute("CREATE TABLE FB_ALTER_TABLE (ID INTEGER, V FB_ALTER_DOMAIN)");
+		statement.execute("INSERT INTO FB_ALTER_TABLE(ID) VALUES (1)");
+		var domains = schema.getDomainReader();
+		domains.setObjectName("FB_ALTER_DOMAIN");
+		Domain domain = domains.getAll(connection).get(0);
+		Domain changedDomain = domain.clone().setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT)
+				.setDataTypeName("BIGINT").setDefaultValue("7").setCheck("VALUE>=2").setRemarks("domain changed");
+		if (major >= 3)
+			changedDomain.setNotNull(false);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(domain.diff(changedDomain), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Domain restored = domains.getAll(connection).get(0);
+		assertEquals(com.sqlapp.data.db.datatype.DataType.BIGINT, restored.getDataType());
+		assertEquals("7", restored.getDefaultValue());
+		assertEquals("domain changed", restored.getRemarks());
+		assertEquals(major < 3, restored.isNotNull());
+		statement.execute("INSERT INTO FB_ALTER_TABLE(ID) VALUES (2)");
+		try (var rows = statement.executeQuery("SELECT V FROM FB_ALTER_TABLE WHERE ID=2")) {
+			assertTrue(rows.next());
+			assertEquals(7L, rows.getLong(1));
+		}
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO FB_ALTER_TABLE VALUES(3,1)"));
+		Domain cleared = restored.clone().setDefaultValue(null).setCheck(null);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(restored.diff(cleared), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		assertNull(domains.getAll(connection).get(0).getDefaultValue());
+		assertNull(domains.getAll(connection).get(0).getCheck());
+		if (major >= 3) {
+			Domain before = domains.getAll(connection).get(0);
+			Domain required = before.clone().setNotNull(true);
+			for (var operation : dialect.createSqlFactoryRegistry().createSql(before.diff(required), SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			assertTrue(domains.getAll(connection).get(0).isNotNull());
+		}
+		domains.setObjectName("FB text domain");
+		Domain characterDomain = domains.getAll(connection).get(0);
+		Domain longer = characterDomain.clone().setLength(20);
+		assertThrows(IllegalArgumentException.class,
+				() -> dialect.createSqlFactoryRegistry().createSql(characterDomain.diff(longer), SqlType.ALTER));
+		assertEquals(12L, domains.getAll(connection).get(0).getLength());
+		assertEquals("UTF8", domains.getAll(connection).get(0).getCharacterSet());
+		assertEquals("UNICODE_CI", domains.getAll(connection).get(0).getCollation());
+		statement.execute("CREATE DOMAIN FB_DEFAULT_TEXT_DOMAIN AS VARCHAR(12) CHARACTER SET UTF8");
+		domains.setObjectName("FB_DEFAULT_TEXT_DOMAIN");
+		Domain defaultText = domains.getAll(connection).get(0);
+		Domain extendedText = defaultText.clone().setLength(20);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(defaultText.diff(extendedText),
+				SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		assertEquals(20L, domains.getAll(connection).get(0).getLength());
+		assertEquals("UTF8", domains.getAll(connection).get(0).getCollation());
+		// Keep domain nullability from masking CHECK OPTION failures on view INSERT.
+		statement.execute("ALTER DOMAIN FB_ALTER_DOMAIN SET DEFAULT 7");
+		statement
+				.execute("CREATE VIEW FB_ALTER_VIEW (N) AS SELECT ID FROM FB_ALTER_TABLE WHERE ID>0 WITH CHECK OPTION");
+		statement.execute("COMMENT ON COLUMN FB_ALTER_VIEW.N IS 'old column'");
+		statement.execute("GRANT SELECT ON FB_ALTER_VIEW TO ROLE FB_SIGNATURE_READER");
+		var views = schema.getViewReader();
+		views.setObjectName("FB_ALTER_VIEW");
+		Table view = views.getAllFull(connection).get(0);
+		Table changedView = view.clone().setStatement("SELECT ID FROM FB_ALTER_TABLE WHERE ID>=5 WITH CHECK OPTION")
+				.setRemarks("view changed");
+		changedView.getColumns().get(0).setRemarks(null);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(view.diff(changedView), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Table rereadView = views.getAllFull(connection).get(0);
+		assertEquals("view changed", rereadView.getRemarks());
+		assertNull(rereadView.getColumns().get(0).getRemarks());
+		try (var rows = statement.executeQuery("SELECT COUNT(*) FROM FB_ALTER_VIEW")) {
+			assertTrue(rows.next());
+			assertEquals(0, rows.getInt(1));
+		}
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO FB_ALTER_VIEW VALUES(4)"));
+		statement.execute("INSERT INTO FB_ALTER_VIEW VALUES(6)");
+		try (var rows = statement.executeQuery("SELECT COUNT(*) FROM FB_ALTER_VIEW")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		try (var rows = statement.executeQuery(
+				"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='FB_ALTER_VIEW' AND RDB$USER='FB_SIGNATURE_READER' AND RDB$PRIVILEGE='S'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		Table checkedAlias = rereadView.clone();
+		checkedAlias.getColumns().get(0).setName("checked n");
+		if (major < 3)
+			assertThrows(UnsupportedOperationException.class,
+					() -> dialect.createSqlFactoryRegistry().createSql(rereadView.diff(checkedAlias), SqlType.ALTER));
+		else {
+			for (var operation : dialect.createSqlFactoryRegistry().createSql(rereadView.diff(checkedAlias),
+					SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			assertEquals("checked n", views.getAllFull(connection).get(0).getColumns().get(0).getName());
+		}
+		statement.execute("CREATE VIEW FB_ALIAS_ALTER_VIEW (N) AS SELECT ID FROM FB_ALTER_TABLE");
+		statement.execute("GRANT SELECT ON FB_ALIAS_ALTER_VIEW TO ROLE FB_SIGNATURE_READER");
+		views.setObjectName("FB_ALIAS_ALTER_VIEW");
+		Table aliasView = views.getAllFull(connection).get(0);
+		Table renamedView = aliasView.clone();
+		renamedView.getColumns().get(0).setName("renamed n").setRemarks("renamed column");
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(aliasView.diff(renamedView), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		assertEquals("renamed n", views.getAllFull(connection).get(0).getColumns().get(0).getName());
+		assertEquals("renamed column", views.getAllFull(connection).get(0).getColumns().get(0).getRemarks());
+		try (var rows = statement.executeQuery(
+				"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='FB_ALIAS_ALTER_VIEW' AND RDB$USER='FB_SIGNATURE_READER' AND RDB$PRIVILEGE='S'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		statement.execute("CREATE INDEX FB_ALTER_INDEX ON FB_ALTER_TABLE(ID)");
+		var tables = schema.getTableReader();
+		tables.setObjectName("FB_ALTER_TABLE");
+		Index index = tables.getAllFull(connection).get(0).getIndexes().get("FB_ALTER_INDEX");
+		Index inactive = index.clone().setEnable(false).setRemarks("index changed");
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(index.diff(inactive), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Index rereadIndex = tables.getAllFull(connection).get(0).getIndexes().get("FB_ALTER_INDEX");
+		assertFalse(rereadIndex.isEnable());
+		assertEquals("index changed", rereadIndex.getRemarks());
+		Index active = rereadIndex.clone().setEnable(true);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(rereadIndex.diff(active), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		assertTrue(tables.getAllFull(connection).get(0).getIndexes().get("FB_ALTER_INDEX").isEnable());
+		statement.execute("CREATE TRIGGER FB_ALTER_TRIGGER FOR FB_ALTER_TABLE ACTIVE BEFORE INSERT POSITION 7 "
+				+ (major >= 4 ? "SQL SECURITY DEFINER " : "") + "AS BEGIN NEW.ID=NEW.ID+1; END");
+		statement.execute("GRANT SELECT ON FB_ALTER_TABLE TO TRIGGER FB_ALTER_TRIGGER");
+		var triggers = schema.getTriggerReader();
+		triggers.setObjectName("FB_ALTER_TRIGGER");
+		Trigger trigger = triggers.getAll(connection).get(0);
+		Trigger changedTrigger = trigger.clone().setEnable(false).setStatement("BEGIN NEW.ID=NEW.ID+2; END")
+				.setRemarks("trigger changed");
+		changedTrigger.getSpecifics().put("POSITION", "0");
+		if (major >= 4) {
+			DbInfo specifics = new DbInfo();
+			for (var entry : changedTrigger.getSpecifics().entrySet())
+				if (!entry.getKey().equalsIgnoreCase("firebird.sqlSecurity"))
+					specifics.put(entry.getKey(), entry.getValue());
+			changedTrigger.setSpecifics(specifics);
+		}
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(trigger.diff(changedTrigger), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Trigger rereadTrigger = triggers.getAll(connection).get(0);
+		assertFalse(rereadTrigger.isEnable());
+		assertEquals("0", rereadTrigger.getSpecifics().get("POSITION"));
+		assertEquals("trigger changed", rereadTrigger.getRemarks());
+		if (major >= 4)
+			assertNull(rereadTrigger.getSpecifics().get("firebird.sqlSecurity"));
+		statement.execute("INSERT INTO FB_ALTER_TABLE VALUES(20,7)");
+		Trigger enabled = rereadTrigger.clone().setEnable(true);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(rereadTrigger.diff(enabled), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		statement.execute("INSERT INTO FB_ALTER_TABLE VALUES(30,7)");
+		try (var rows = statement.executeQuery("SELECT COUNT(*) FROM FB_ALTER_TABLE WHERE ID IN (20,32)")) {
+			assertTrue(rows.next());
+			assertEquals(2, rows.getInt(1));
+		}
+		try (var rows = statement.executeQuery(
+				"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='FB_ALTER_TABLE' AND RDB$USER='FB_ALTER_TRIGGER' AND RDB$PRIVILEGE='S'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+	}
+
+	private void domainReferencesAndExternalTables(Connection connection, Statement statement, Dialect dialect)
+			throws Exception {
+		statement.execute("CREATE DOMAIN FB_REF_INT AS INTEGER DEFAULT 3 NOT NULL CHECK (VALUE>0)");
+		statement.execute(
+				"CREATE DOMAIN FB_REF_TEXT AS VARCHAR(20) CHARACTER SET UTF8 DEFAULT 'VALUE' CHECK (VALUE<>'INVALID VALUE') COLLATE UNICODE_CI");
+		statement.execute("CREATE DOMAIN FB_REF_ARRAY AS INTEGER[-2:2,3:4]");
+		statement.execute(
+				"CREATE TABLE FB_DOMAIN_REFERENCES (A FB_REF_INT, B FB_REF_INT DEFAULT 9 NOT NULL, TXT FB_REF_TEXT DEFAULT NULL COLLATE UNICODE, ARR FB_REF_ARRAY)");
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setObjectName("FB_DOMAIN_REFERENCES");
+		Table table = reader.getAllFull(connection).get(0);
+		assertEquals("FB_REF_INT", table.getColumns().get("A").getDomainName());
+		assertNull(table.getColumns().get("A").getDefaultValue());
+		assertFalse(table.getColumns().get("A").isNotNull(),
+				"column-local nullability must remain distinct from domain nullability");
+		assertTrue(table.getColumns().get("A").getDomain().isNotNull());
+		assertEquals("3", table.getColumns().get("A").getDomain().getDefaultValue());
+		assertEquals("9", table.getColumns().get("B").getDefaultValue());
+		assertTrue(table.getColumns().get("B").isNotNull());
+		assertEquals("NULL", table.getColumns().get("TXT").getDefaultValue());
+		assertEquals("UNICODE", table.getColumns().get("TXT").getCollation());
+		assertEquals("UNICODE_CI", table.getColumns().get("TXT").getDomain().getCollation());
+		assertEquals("FB_REF_ARRAY", table.getColumns().get("ARR").getDomainName());
+		statement.execute("DROP TABLE FB_DOMAIN_REFERENCES");
+		execute(statement, dialect, table, SqlType.CREATE);
+		Table restored = reader.getAllFull(connection).get(0);
+		assertEquals("FB_REF_ARRAY", restored.getColumns().get("ARR").getDomainName());
+		assertEquals("-2:2,3:4", restored.getColumns().get("ARR").getSpecifics().get("firebird.array.bounds"));
+		try (var rows = statement.executeQuery(
+				"SELECT RDB$DEFAULT_SOURCE,RDB$NULL_FLAG FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME='FB_DOMAIN_REFERENCES' AND RDB$FIELD_NAME='A'")) {
+			assertTrue(rows.next());
+			assertNull(rows.getString(1));
+			assertNull(rows.getObject(2));
+		}
+		statement.execute("ALTER DOMAIN FB_REF_INT SET DEFAULT 7");
+		statement.execute("INSERT INTO FB_DOMAIN_REFERENCES DEFAULT VALUES");
+		try (var rows = statement.executeQuery("SELECT A,B,TXT FROM FB_DOMAIN_REFERENCES")) {
+			assertTrue(rows.next());
+			assertEquals(7, rows.getInt(1));
+			assertEquals(9, rows.getInt(2));
+			assertNull(rows.getString(3));
+		}
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO FB_DOMAIN_REFERENCES(A) VALUES(0)"));
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO FB_DOMAIN_REFERENCES(A) VALUES(NULL)"));
+		assertThrows(SQLException.class,
+				() -> statement.execute("INSERT INTO FB_DOMAIN_REFERENCES(TXT) VALUES('INVALID VALUE')"));
+		statement.execute(
+				"CREATE TABLE FB_EXTERNAL_TABLE EXTERNAL FILE '/firebird/data/sqlapp-external.dat' (V CHAR(8))");
+		statement.execute("INSERT INTO FB_EXTERNAL_TABLE VALUES('persist')");
+		reader.setObjectName("FB_EXTERNAL_TABLE");
+		Table external = reader.getAllFull(connection).get(0);
+		assertEquals(Table.TableType.File, external.getTableType());
+		assertEquals("/firebird/data/sqlapp-external.dat", external.getSpecifics().get("firebird.external.file"));
+		statement.execute("DROP TABLE FB_EXTERNAL_TABLE");
+		execute(statement, dialect, external, SqlType.CREATE);
+		try (var rows = statement.executeQuery("SELECT V FROM FB_EXTERNAL_TABLE")) {
+			assertTrue(rows.next());
+			assertEquals("persist", rows.getString(1).trim());
+		}
+		assertEquals(Table.TableType.File, reader.getAllFull(connection).get(0).getTableType());
+	}
+
+	private void tableColumnAlter(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		statement.execute(
+				"CREATE TABLE FB_COLUMN_ALTER (ID INTEGER NOT NULL, V INTEGER DEFAULT 3, TEXT_VALUE VARCHAR(12) CHARACTER SET UTF8)");
+		statement.execute("INSERT INTO FB_COLUMN_ALTER(ID,TEXT_VALUE) VALUES(1,'before')");
+		statement.execute("GRANT SELECT ON FB_COLUMN_ALTER TO ROLE FB_SIGNATURE_READER");
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setObjectName("FB_COLUMN_ALTER");
+		Table original = reader.getAllFull(connection).get(0);
+		Table renamed = original.clone();
+		renamed.getColumns().get("V").setName("renamed value");
+		var renameSql = dialect.createSqlFactoryRegistry().createSql(original.diff(renamed), SqlType.ALTER);
+		assertTrue(renameSql.stream().noneMatch(op -> op.getSqlText().contains(" DROP ")), renameSql.toString());
+		for (var operation : renameSql)
+			statement.execute(operation.getSqlText());
+		original = reader.getAllFull(connection).get(0);
+		Table target = original.clone().setRemarks("table changed");
+		target.getColumns().get("renamed value").setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT)
+				.setDataTypeName("BIGINT").setDefaultValue("7").setRemarks("column changed");
+		target.getColumns().add(new Column("ADDED").setDataType(com.sqlapp.data.db.datatype.DataType.INT)
+				.setDefaultValue("9").setRemarks("added"));
+		target.getColumns().get("TEXT_VALUE").setLength(20);
+		var check = new CheckConstraint("CK_COLUMN_ALTER", "ID>0");
+		target.getConstraints().add(check);
+		Index index = new Index("IX_COLUMN_ALTER");
+		index.getColumns().add("renamed value");
+		target.getIndexes().add(index);
+		if (major >= 4)
+			target.getSpecifics().put("firebird.sqlSecurity", "INVOKER");
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(original.diff(target), SqlType.ALTER)) {
+			assertFalse(operation.getSqlText().startsWith("DROP TABLE"));
+			statement.execute(operation.getSqlText());
+		}
+		Table restored = reader.getAllFull(connection).get(0);
+		assertEquals("table changed", restored.getRemarks());
+		assertEquals("column changed", restored.getColumns().get("renamed value").getRemarks());
+		assertEquals("added", restored.getColumns().get("ADDED").getRemarks());
+		assertEquals(20L, restored.getColumns().get("TEXT_VALUE").getLength());
+		assertEquals("UTF8", restored.getColumns().get("TEXT_VALUE").getCharacterSet());
+		assertEquals("UTF8", restored.getColumns().get("TEXT_VALUE").getCollation());
+		assertEquals(com.sqlapp.data.db.datatype.DataType.BIGINT,
+				restored.getColumns().get("renamed value").getDataType());
+		statement.execute("INSERT INTO FB_COLUMN_ALTER(ID) VALUES(2)");
+		try (var rows = statement
+				.executeQuery("SELECT \"renamed value\",ADDED,TEXT_VALUE FROM FB_COLUMN_ALTER WHERE ID=1")) {
+			assertTrue(rows.next());
+			assertEquals(3L, rows.getLong(1));
+			rows.getInt(2);
+			assertTrue(rows.wasNull());
+			assertEquals("before", rows.getString(3));
+		}
+		try (var rows = statement.executeQuery("SELECT \"renamed value\",ADDED FROM FB_COLUMN_ALTER WHERE ID=2")) {
+			assertTrue(rows.next());
+			assertEquals(7L, rows.getLong(1));
+			assertEquals(9, rows.getInt(2));
+		}
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO FB_COLUMN_ALTER(ID) VALUES(-1)"));
+		assertNotNull(restored.getIndexes().get("IX_COLUMN_ALTER"));
+		statement.execute("CREATE DOMAIN FB_COLUMN_DOMAIN AS BIGINT DEFAULT 11 CHECK (VALUE>0)");
+		Table domainTarget = restored.clone();
+		domainTarget.getColumns().get("renamed value").setDomainName("FB_COLUMN_DOMAIN").setDefaultValue(null);
+		domainTarget.getIndexes().get("IX_COLUMN_ALTER").setEnable(false);
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(restored.diff(domainTarget), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Table domainRestored = reader.getAllFull(connection).get(0);
+		assertEquals("FB_COLUMN_DOMAIN", domainRestored.getColumns().get("renamed value").getDomainName());
+		assertNull(domainRestored.getColumns().get("renamed value").getDefaultValue());
+		assertFalse(domainRestored.getIndexes().get("IX_COLUMN_ALTER").isEnable());
+		statement.execute("INSERT INTO FB_COLUMN_ALTER(ID) VALUES(3)");
+		try (var rows = statement.executeQuery("SELECT \"renamed value\" FROM FB_COLUMN_ALTER WHERE ID=3")) {
+			assertTrue(rows.next());
+			assertEquals(11L, rows.getLong(1));
+		}
+		Table removed = domainRestored.clone();
+		removed.getColumns().remove("ADDED");
+		if (major >= 4) {
+			DbInfo specifics = new DbInfo();
+			for (var entry : removed.getSpecifics().entrySet())
+				if (!entry.getKey().equalsIgnoreCase("firebird.sqlSecurity"))
+					specifics.put(entry.getKey(), entry.getValue());
+			removed.setSpecifics(specifics);
+		}
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(domainRestored.diff(removed), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		Table withoutAdded = reader.getAllFull(connection).get(0);
+		assertNull(withoutAdded.getColumns().get("ADDED"));
+		if (major >= 4)
+			assertNull(withoutAdded.getSpecifics().get("firebird.sqlSecurity"));
+		if (major >= 3) {
+			Table required = withoutAdded.clone();
+			required.getColumns().get("renamed value").setNotNull(true);
+			for (var operation : dialect.createSqlFactoryRegistry().createSql(withoutAdded.diff(required),
+					SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			Table requiredRead = reader.getAllFull(connection).get(0);
+			assertTrue(requiredRead.getColumns().get("renamed value").isNotNull());
+			Table optional = requiredRead.clone();
+			optional.getColumns().get("renamed value").setNotNull(false);
+			for (var operation : dialect.createSqlFactoryRegistry().createSql(requiredRead.diff(optional),
+					SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			assertFalse(reader.getAllFull(connection).get(0).getColumns().get("renamed value").isNotNull());
+		}
+		try (var rows = statement.executeQuery("SELECT COUNT(*) FROM FB_COLUMN_ALTER")) {
+			assertTrue(rows.next());
+			assertEquals(3, rows.getInt(1));
+		}
+		try (var rows = statement.executeQuery(
+				"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='FB_COLUMN_ALTER' AND RDB$USER='FB_SIGNATURE_READER' AND RDB$PRIVILEGE='S'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
 	}
 
 	private void routines(Connection connection, Statement statement, Dialect dialect, int major) throws Exception {

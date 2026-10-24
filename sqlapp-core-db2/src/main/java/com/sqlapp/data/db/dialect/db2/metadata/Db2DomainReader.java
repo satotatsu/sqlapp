@@ -69,6 +69,7 @@ public class Db2DomainReader extends DomainReader {
 
 	protected Domain createDomain(ExResultSet rs) throws SQLException {
 		Domain obj = new Domain(getString(rs, DOMAIN_NAME));
+		obj.setDialect(getDialect());
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		obj.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
@@ -94,6 +95,27 @@ public class Db2DomainReader extends DomainReader {
 		obj.setDataTypeName(productDataType);
 		obj.setRemarks(getString(rs, REMARKS));
 		setSpecifics(rs, "CLASS", obj);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			obj.getSpecifics().put("DB2_OBJECT_TYPE", "DATA_TYPE");
+			for (String key : List.of("METATYPE", "SOURCESCHEMA", "SOURCENAME", "SOURCEMODULENAME", "TYPERULES",
+					"NULLS", "CODEPAGE", "TYPESTRINGUNITS", "STRINGUNITSLENGTH", "ARRAY_LENGTH", "ARRAYINDEXTYPESCHEMA",
+					"ARRAYINDEXTYPENAME", "ARRAYINDEXTYPELENGTH", "ARRAYINDEXTYPE_STRINGUNITS",
+					"ARRAYINDEXTYPE_STRINGUNITSLENGTH", "FUNC_PATH")) {
+				String value = getString(rs, key);
+				if (value != null)
+					obj.getSpecifics().put(key, value);
+			}
+			if (scale != null && scale >= 0)
+				obj.setScale(scale);
+			if ("L".equals(metaType))
+				obj.setArrayDimensionUpperBound(0); // Index type length is not array cardinality.
+			String nulls = getString(rs, "NULLS");
+			if ("N".equals(nulls))
+				obj.setNotNull(true);
+			else if (!"Y".equals(nulls))
+				throw new SQLException("Invalid Db2 data type NULLS flag: " + nulls);
+			obj.setCheck(rs.getString("CONSTRAINT_TEXT"));
+		}
 		return obj;
 	}
 

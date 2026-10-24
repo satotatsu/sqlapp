@@ -104,6 +104,8 @@ public class FirebirdDomainReader extends DomainReader {
 		obj.setRemarks(getString(rs, "RDB$DESCRIPTION"));
 		obj.setCharacterSet(trim(getString(rs, "CHARACTER_SET_NAME")));
 		obj.setCollation(trim(getString(rs, "COLLATION_NAME")));
+		if (obj.getCollation() != null)
+			obj.getSpecifics().put("firebird.domain.collationId", String.valueOf(rs.getInt("RDB$COLLATION_ID")));
 		obj.setArrayDimension(rs.getInt("RDB$DIMENSIONS"));
 		int nullFlag = rs.getInt("RDB$NULL_FLAG");
 		obj.setNullable(1 != nullFlag);
