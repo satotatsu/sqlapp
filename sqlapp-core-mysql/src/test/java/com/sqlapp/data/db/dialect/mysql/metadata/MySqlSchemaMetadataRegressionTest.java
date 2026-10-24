@@ -37,6 +37,59 @@ import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
 class MySqlSchemaMetadataRegressionTest {
 
+	@ParameterizedTest
+	@CsvSource({ "5,1", "5,7", "8,4", "9,0" })
+	void tableCharacterSetsUseOneCatalogJoinForAllTables(int major, int minor) {
+		Dialect dialect = dialect(major, minor, 0);
+		int[] queries = { 0 };
+		var metadata = values("TABLE_NAME", "orders", "TABLE_CATALOG", "def", "TABLE_SCHEMA", "app", "TABLE_COMMENT",
+				"", "CREATE_TIME", null, "UPDATE_TIME", null, "TABLE_COLLATION", "utf8mb4_bin", "TABLE_CHARACTER_SET",
+				"utf8mb4", "ENGINE", "InnoDB", "TABLE_ROWS", 0L, "AVG_ROW_LENGTH", 0L, "DATA_LENGTH", 0L,
+				"MAX_DATA_LENGTH", 0L, "INDEX_LENGTH", 0L, "DATA_FREE", 0L, "ROW_FORMAT", "Dynamic", "CREATE_OPTIONS",
+				"");
+		var records = new java.util.ArrayList<Map<String, Object>>();
+		for (int i = 0; i < 12; i++) {
+			var row = new LinkedHashMap<>(metadata);
+			row.put("TABLE_NAME", "orders_" + i);
+			records.add(row);
+		}
+		records.get(11).put("TABLE_CHARACTER_SET", null);
+		records.get(11).put("TABLE_COLLATION", null);
+		records.get(11).put("ROW_FORMAT", null);
+		records.get(1).put("ROW_FORMAT", "Compressed");
+		var reader = new MySqlTableReader(dialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode sql, ParametersContext context,
+					ResultSetNextHandler handler) {
+				queries[0]++;
+				assertTrue(sql.toString().contains("LEFT JOIN information_schema.collations"));
+				var parameters = new SqlParameterCollection();
+				sql.eval(context, parameters);
+				assertTrue(parameters.getSql().contains("t.table_schema IN"));
+				assertTrue(parameters.getSql().contains("t.table_name IN"));
+				feed(handler, records);
+				return null;
+			}
+		};
+		var context = new ParametersContext();
+		context.put("schemaName", "app");
+		context.put("tableName", "orders_0");
+		var tables = reader.doGetAll(null, context, version(major, minor, 0));
+		assertEquals(1, queries[0]);
+		assertEquals(12, tables.size());
+		assertEquals("utf8mb4", tables.get(0).getCharacterSet());
+		assertEquals("utf8mb4_bin", tables.get(0).getCollation());
+		assertNull(tables.get(11).getCharacterSet());
+		assertEquals("Dynamic", tables.get(0).getSpecifics().get("ROW_FORMAT"));
+		assertEquals("Compressed", tables.get(1).getSpecifics().get("ROW_FORMAT"));
+		assertTrue(tables.get(1).isCompression());
+		assertFalse(tables.get(11).getSpecifics().containsKey("ROW_FORMAT"));
+		tables.get(0).getColumns().add("id", c -> c.setDataType(DataType.INT));
+		String sql = create(dialect, tables.get(0));
+		assertTrue(sql.contains("DEFAULT CHARACTER SET =utf8mb4 COLLATE =utf8mb4_bin"), sql);
+		assertTrue(sql.contains("ROW_FORMAT =DYNAMIC"), sql);
+	}
+
 	@Test
 	void columnPrivilegesAreFilteredBySchema() {
 		MySqlColumnPrivilegeReader reader = new MySqlColumnPrivilegeReader(dialect(8, 4, 0));
@@ -96,7 +149,7 @@ class MySqlSchemaMetadataRegressionTest {
 		for (String check : new String[] { "NONE", "LOCAL", "CASCADED" }) {
 			try (var rows = rows(List.of(values("TABLE_NAME", "order view", "TABLE_SCHEMA", "app", "TABLE_CATALOG",
 					"def", "IS_UPDATABLE", "YES", "VIEW_DEFINITION", "SELECT id FROM orders", "CHECK_OPTION", check,
-					"SECURITY_TYPE", "INVOKER")))) {
+					"SECURITY_TYPE", "INVOKER", "ALGORITHM", "MERGE")))) {
 				rows.next();
 				View view = (View) reader.createTable(new ExResultSet(rows));
 				view.getColumns().add("order id", column -> column.setDataType(DataType.INT));
@@ -109,6 +162,8 @@ class MySqlSchemaMetadataRegressionTest {
 					assertTrue(sql.contains("WITH " + check + " CHECK OPTION"), sql);
 				}
 				assertFalse(view.getReadonly());
+				assertFalse(view.getSpecifics()
+						.containsKey(com.sqlapp.data.db.dialect.mysql.sql.MySqlCreateViewFactory.ALGORITHM));
 			}
 		}
 		try (var rows = rows(List.of(values("TABLE_NAME", "v", "TABLE_SCHEMA", "app", "TABLE_CATALOG", "def",

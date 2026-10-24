@@ -19,11 +19,16 @@ class MySqlRoutinePrivilegeSqlTest {
 		for (String kind : new String[] { "FUNCTION", "PROCEDURE" }) {
 			for (String privilege : new String[] { "EXECUTE", "ALTER ROUTINE", "GRANT OPTION" }) {
 				RoutinePrivilege obj = privilege(kind, privilege);
-				SqlFactory<RoutinePrivilege> grant = dialect.createSqlFactoryRegistry().getSqlFactory(obj, SqlType.GRANT);
-				SqlFactory<RoutinePrivilege> revoke = dialect.createSqlFactoryRegistry().getSqlFactory(obj, SqlType.REVOKE);
-				assertEquals("GRANT " + privilege + " ON " + kind + " `other app`.`select` TO `O'Reilly``reader`@`10.0.%`",
+				SqlFactory<RoutinePrivilege> grant = dialect.createSqlFactoryRegistry().getSqlFactory(obj,
+						SqlType.GRANT);
+				SqlFactory<RoutinePrivilege> revoke = dialect.createSqlFactoryRegistry().getSqlFactory(obj,
+						SqlType.REVOKE);
+				assertEquals(
+						"GRANT " + privilege + " ON " + kind + " `other app`.`select` TO `O'Reilly``reader`@`10.0.%`",
 						grant.createSql(obj).get(0).getSqlText());
-				assertEquals("REVOKE " + privilege + " ON " + kind + " `other app`.`select` FROM `O'Reilly``reader`@`10.0.%`",
+				assertEquals(
+						"REVOKE " + privilege + " ON " + kind
+								+ " `other app`.`select` FROM `O'Reilly``reader`@`10.0.%`",
 						revoke.createSql(obj).get(0).getSqlText());
 				obj.setGrantable(true);
 				assertTrue(grant.createSql(obj).get(0).getSqlText().endsWith(" WITH GRANT OPTION"));

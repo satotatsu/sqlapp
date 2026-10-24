@@ -30,13 +30,23 @@ public class MySqlCreateSchemaFactory extends AbstractCreateSchemaFactory<MySqlS
 	protected void addCreateObject(final Schema schema, MySqlSqlBuilder builder) {
 		builder.create().schema().ifNotExists();
 		builder.name(schema);
-		if (!CommonUtils.isEmpty(schema.getCollation())) {
-			builder.default_().collate().space()._add(schema.getCollation());
-		} else {
-			if (!CommonUtils.isEmpty(schema.getCharacterSet())) {
-				builder.default_().characterSet().space()._add(schema.getCharacterSet());
-			}
+		appendDefaults(schema, builder);
+	}
+
+	static void appendDefaults(Schema schema, MySqlSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(schema.getCharacterSet())) {
+			builder.default_().characterSet().space()._add(option(schema.getCharacterSet(), "character set"));
 		}
+		if (!CommonUtils.isEmpty(schema.getCollation())) {
+			builder.default_().collate().space()._add(option(schema.getCollation(), "collation"));
+		}
+	}
+
+	static String option(String value, String description) {
+		if (!value.matches("[A-Za-z0-9_]+")) {
+			throw new IllegalArgumentException("Invalid MySQL " + description + ": " + value);
+		}
+		return value;
 	}
 
 }

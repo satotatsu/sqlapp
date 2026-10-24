@@ -29,12 +29,16 @@ import com.sqlapp.data.schemas.Table;
 
 public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSqlBuilder>
 		implements AddTableObjectDetailFactory<Index, MySqlSqlBuilder> {
+	/** Optional installed FULLTEXT parser plugin identifier. */
+	public static final String PARSER = "mysql_parser";
 
 	@Override
 	public void addObjectDetail(final Index obj, Table table, MySqlSqlBuilder builder) {
+		Table indexTable = table == null ? obj.getTable() : table;
+		MySqlIndexValidation.validate(obj, indexTable, getDialect(), false, false);
 		if (obj.getIndexType() == IndexType.FullText) {
 			builder.fulltext();
-		} else if (obj.getIndexType() == IndexType.Spatial) {
+		} else if (MySqlIndexValidation.isSpatial(obj.getIndexType())) {
 			builder.spatial();
 		} else {
 			builder.unique(obj.isUnique());
@@ -42,7 +46,7 @@ public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSql
 		builder.index().space();
 		builder.name(obj, false);
 		if (obj.getIndexType() == IndexType.FullText) {
-		} else if (obj.getIndexType() == IndexType.Spatial) {
+		} else if (MySqlIndexValidation.isSpatial(obj.getIndexType())) {
 		} else if (obj.getIndexType() == IndexType.BTree) {
 		} else if (obj.getIndexType() != null) {
 			builder.space().using().space()._add(obj.getIndexType());
@@ -53,12 +57,10 @@ public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSql
 			builder.name(table);
 		}
 		builder.space()._add("(");
-		Table indexTable = table == null ? obj.getTable() : table;
 		for (int i = 0; i < obj.getColumns().size(); i++) {
 			ReferenceColumn column = obj.getColumns().get(i);
 			builder.comma(i > 0);
-			if (column.getColumn() != null
-					|| (indexTable != null && indexTable.getColumns().contains(column.getName()))) {
+			if (MySqlIndexValidation.isColumn(column, indexTable)) {
 				builder.name(column);
 				if (column.getLength() != null) {
 					builder._add("(")._add(column.getLength())._add(")");
@@ -74,6 +76,10 @@ public class MySqlCreateIndexFactory extends AbstractCreateIndexFactory<MySqlSql
 			}
 		}
 		builder.space()._add(")");
+		String parser = obj.getSpecifics().get(PARSER);
+		if (parser != null) {
+			builder.space()._add("WITH PARSER `")._add(parser.replace("`", "``"))._add("`");
+		}
 		if (obj.getRemarks() != null) {
 			builder.comment().space().sqlChar(obj.getRemarks());
 		}

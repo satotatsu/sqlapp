@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.mysql.MySql800;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Event;
@@ -35,6 +36,8 @@ import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.data.schemas.View;
 import com.sqlapp.data.schemas.RoutinePrivilege;
+import com.sqlapp.data.schemas.Role;
+import com.sqlapp.data.schemas.RoleMember;
 
 public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -48,6 +51,30 @@ public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		if ("MySQL".equalsIgnoreCase(getDialect().getProductName())) {
+			registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.GRANT,
+					MySqlGrantSchemaPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.REVOKE,
+					MySqlRevokeSchemaPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.GRANT,
+					MySqlGrantObjectPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.REVOKE,
+					MySqlRevokeObjectPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.GRANT,
+					MySqlGrantColumnPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.REVOKE,
+					MySqlRevokeColumnPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.GRANT,
+					MySqlGrantUserPrivilegeFactory.class);
+			registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.REVOKE,
+					MySqlRevokeUserPrivilegeFactory.class);
+		}
+		if (getDialect() instanceof MySql800 && "MySQL".equalsIgnoreCase(getDialect().getProductName())) {
+			registerSqlFactory(Role.class, SqlType.CREATE, MySqlCreateRoleFactory.class);
+			registerSqlFactory(Role.class, SqlType.DROP, MySqlDropRoleFactory.class);
+			registerSqlFactory(RoleMember.class, SqlType.GRANT, MySqlGrantRoleMemberFactory.class);
+			registerSqlFactory(RoleMember.class, SqlType.REVOKE, MySqlRevokeRoleMemberFactory.class);
+		}
 		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, MySqlGrantRoutinePrivilegeFactory.class);
 		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, MySqlRevokeRoutinePrivilegeFactory.class);
 		// Schema

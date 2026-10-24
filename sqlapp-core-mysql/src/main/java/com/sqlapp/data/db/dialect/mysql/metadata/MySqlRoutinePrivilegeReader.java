@@ -17,18 +17,26 @@ import com.sqlapp.data.schemas.RoutinePrivilege;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
-/** Explicit routine grants fetched in one query without authentication fields. */
+/**
+ * Explicit routine grants fetched in one query without authentication fields.
+ */
 public class MySqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
-	protected MySqlRoutinePrivilegeReader(Dialect dialect) { super(dialect); }
+	protected MySqlRoutinePrivilegeReader(Dialect dialect) {
+		super(dialect);
+	}
 
 	@Override
-	protected List<RoutinePrivilege> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
-		if (version.lt(5, 0, 3)) return List.of();
+	protected List<RoutinePrivilege> doGetAll(Connection connection, ParametersContext context,
+			ProductVersionInfo version) {
+		if (version.lt(5, 0, 3))
+			return List.of();
 		List<RoutinePrivilege> result = new ArrayList<>();
-		execute(connection, getSqlNodeCache(MySqlRoutinePrivilegeReader.class).getString("routinePrivileges.sql"), context,
-				new ResultSetNextHandler() {
+		execute(connection, getSqlNodeCache(MySqlRoutinePrivilegeReader.class).getString("routinePrivileges.sql"),
+				context, new ResultSetNextHandler() {
 					@Override
-					public void handleResultSetNext(ExResultSet rs) throws SQLException { result.addAll(createPrivileges(rs)); }
+					public void handleResultSetNext(ExResultSet rs) throws SQLException {
+						result.addAll(createPrivileges(rs));
+					}
 				});
 		return result;
 	}
@@ -39,7 +47,8 @@ public class MySqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
 			throw new IllegalArgumentException("Unsupported MySQL routine kind: " + kind);
 		Set<String> privileges = new LinkedHashSet<>();
 		String raw = getString(rs, "Proc_priv");
-		if (raw == null || raw.isBlank()) return List.of();
+		if (raw == null || raw.isBlank())
+			return List.of();
 		for (String privilege : raw.split(",")) {
 			String value = privilege.trim().toUpperCase(Locale.ROOT);
 			if (!Set.of("EXECUTE", "ALTER ROUTINE", "GRANT").contains(value))
@@ -48,13 +57,15 @@ public class MySqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
 		}
 		List<RoutinePrivilege> result = new ArrayList<>();
 		for (String privilege : privileges) {
-			if ("GRANT".equals(privilege) && privileges.size() > 1) continue;
+			if ("GRANT".equals(privilege) && privileges.size() > 1)
+				continue;
 			RoutinePrivilege obj = new RoutinePrivilege();
 			obj.setHierachy(false);
 			obj.setCatalogName("def");
 			obj.setSchemaName(getString(rs, "Db"));
 			obj.setObjectName(getString(rs, "Routine_name"));
-			// Kind participates in identity: MySQL permits a function and procedure with the same name.
+			// Kind participates in identity: MySQL permits a function and procedure with
+			// the same name.
 			obj.setSpecificName(kind.toUpperCase(Locale.ROOT) + ":" + obj.getObjectName());
 			obj.getSpecifics().put("ROUTINE_KIND", kind.toUpperCase(Locale.ROOT));
 			obj.setGranteeName(MySqlAccount.name(getString(rs, "User"), getString(rs, "Host")));

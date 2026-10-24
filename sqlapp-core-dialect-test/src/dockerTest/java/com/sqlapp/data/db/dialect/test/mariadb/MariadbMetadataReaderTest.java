@@ -253,4 +253,11 @@ class MariadbMetadataReaderTest {
 				 DO DELETE FROM metadata_audit WHERE parent_id < 0
 				""");
 	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
+		}
+	}
 }

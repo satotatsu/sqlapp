@@ -29,7 +29,8 @@ import com.sqlapp.data.schemas.UniqueConstraint;
  * MySQL 8.0 compatibility coverage for its version-specific metadata reader.
  */
 class MySql80MetadataReaderTest {
-	private static final MySQLContainer MYSQL = ReusableTestcontainers.configure(new MySQLContainer("mysql:8.0"));
+	private static final MySQLContainer MYSQL = ReusableTestcontainers
+			.configure(new MySQLContainer("mysql:8.0").withCommand("--log-bin-trust-function-creators=1"));
 
 	@BeforeAll
 	static void startContainer() {
@@ -76,6 +77,13 @@ class MySql80MetadataReaderTest {
 			assertNotNull(view);
 			assertTrue(String.join("\n", view.getStatement()).toLowerCase().contains("metadata80_table"));
 			assertEquals(2, view.getColumns().size());
+		}
+	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
 		}
 	}
 }

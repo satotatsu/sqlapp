@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.sql;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
 import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.util.CommonUtils;
@@ -32,7 +33,9 @@ public class MySqlCreateFunctionFactory extends AbstractCreateFunctionFactory<My
 			builder._add(obj.getDefinition());
 			return;
 		}
-		builder.create().function();
+		builder.create();
+		MySqlDefiner.append(builder, obj.getSpecifics());
+		builder.function();
 		builder.name(obj);
 		builder.space().arguments(obj.getArguments());
 		builder.space().returns().space()._add(obj.getReturning());

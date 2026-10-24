@@ -14,12 +14,19 @@ import com.sqlapp.data.schemas.Role;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
-/** Accounts known to be used as roles in MySQL 8+, without guessing from account locks. */
+/**
+ * Accounts known to be used as roles in MySQL 8+, without guessing from account
+ * locks.
+ */
 public class MySqlRole800Reader extends RoleReader {
-	protected MySqlRole800Reader(Dialect dialect) { super(dialect); }
+	protected MySqlRole800Reader(Dialect dialect) {
+		super(dialect);
+	}
 
 	@Override
-	protected String nativeCaseString(Connection connection, String value) { return value; }
+	protected String nativeCaseString(Connection connection, String value) {
+		return value;
+	}
 
 	@Override
 	protected List<Role> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {

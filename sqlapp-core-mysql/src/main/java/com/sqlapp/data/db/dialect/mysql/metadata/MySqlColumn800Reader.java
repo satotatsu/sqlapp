@@ -10,6 +10,8 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlSpatialReference;
 import com.sqlapp.jdbc.ExResultSet;
 
 /**
@@ -19,6 +21,18 @@ public class MySqlColumn800Reader extends MySqlColumn570Reader {
 
 	protected MySqlColumn800Reader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected Column createColumn(Connection connection, ExResultSet rs, ProductVersionInfo productVersionInfo)
+			throws SQLException {
+		Column column = super.createColumn(connection, rs, productVersionInfo);
+		if ("MySQL".equalsIgnoreCase(getDialect().getProductName()) && productVersionInfo.gte(8, 0, 3)) {
+			String srid = rs.getString("SRS_ID");
+			if (srid != null)
+				column.getSpecifics().put(MySqlSpatialReference.SRID, MySqlSpatialReference.normalize(srid));
+		}
+		return column;
 	}
 
 	@Override

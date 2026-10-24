@@ -51,12 +51,24 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	}
 
 	@Override
+	protected MySqlSqlBuilder typeDefinition(Column column) {
+		String type = column.getDataTypeName();
+		if (type == null && column.getDataType() != null)
+			type = column.getDataType().getTypeName();
+		if (column.getDomain() == null && MySqlSpatialReference.isSpatialType(type)) {
+			return _add(MySqlSpatialReference.sqlTypeName(type));
+		}
+		return super.typeDefinition(column);
+	}
+
+	@Override
 	public MySqlSqlBuilder definition(Column column, boolean withRemarks) {
 		if (!CommonUtils.isEmpty(column.getFormula())) {
 			generatedDefinition(column, withRemarks);
 		} else {
 			super.definition(column, withRemarks);
 		}
+		MySqlSpatialReference.append(this, column);
 		if (column.isHidden()) {
 			space()._add("INVISIBLE");
 		}
@@ -70,6 +82,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 		} else {
 			super.definitionForAlterColumn(column);
 		}
+		MySqlSpatialReference.append(this, column);
 		if (column.isHidden()) {
 			space()._add("INVISIBLE");
 		}

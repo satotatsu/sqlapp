@@ -16,10 +16,14 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /** Direct role edges, admin option and default-role flags in a single batch. */
 public class MySqlRoleMember800Reader extends RoleMemberReader {
-	protected MySqlRoleMember800Reader(Dialect dialect) { super(dialect); }
+	protected MySqlRoleMember800Reader(Dialect dialect) {
+		super(dialect);
+	}
 
 	@Override
-	protected String nativeCaseString(Connection connection, String value) { return value; }
+	protected String nativeCaseString(Connection connection, String value) {
+		return value;
+	}
 
 	@Override
 	protected List<RoleMember> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
@@ -34,7 +38,8 @@ public class MySqlRoleMember800Reader extends RoleMemberReader {
 					@Override
 					public void handleResultSetNext(ExResultSet rs) throws SQLException {
 						RoleMember member = new RoleMember();
-						member.setMemberRoleName(MySqlAccount.name(getString(rs, "FROM_USER"), getString(rs, "FROM_HOST")));
+						member.setMemberRoleName(
+								MySqlAccount.name(getString(rs, "FROM_USER"), getString(rs, "FROM_HOST")));
 						member.setGranteeName(MySqlAccount.name(getString(rs, "TO_USER"), getString(rs, "TO_HOST")));
 						member.setAdmin("Y".equalsIgnoreCase(getString(rs, "WITH_ADMIN_OPTION")));
 						member.setDefault("Y".equalsIgnoreCase(getString(rs, "IS_DEFAULT")));

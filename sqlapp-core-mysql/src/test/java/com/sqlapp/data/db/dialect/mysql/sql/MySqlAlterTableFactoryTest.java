@@ -56,7 +56,9 @@ public class MySqlAlterTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 		Table table1 = getTable("tableA");
 		Table table2 = getTable("tableA");
 		table1.setCharacterSet("UTF8");
+		table1.setCollation("UTF8_GENERAL_CI");
 		table2.getSpecifics().put("ENGINE", "myisam");
+		table2.setCharacterSet("UTF8MB4");
 		table2.setCollation("UTF8MB4_GENERAL_CI");
 		DbObjectDifference diff = table1.diff(table2);
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));

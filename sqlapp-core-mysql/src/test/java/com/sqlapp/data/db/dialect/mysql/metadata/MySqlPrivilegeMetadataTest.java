@@ -49,11 +49,13 @@ class MySqlPrivilegeMetadataTest {
 				assertEquals(name, MySqlAccount.fromGrantee("'" + user + "'@'" + host + "'"));
 				assertEquals(user, MySqlAccount.user(name));
 				assertEquals(host, MySqlAccount.host(name));
-				assertEquals("`" + user.replace("`", "``") + "`@`" + host.replace("`", "``") + "`", MySqlAccount.sql(name));
+				assertEquals("`" + user.replace("`", "``") + "`@`" + host.replace("`", "``") + "`",
+						MySqlAccount.sql(name));
 			}
 		}
 		assertEquals("'O''Reilly'@'%'", MySqlAccount.normalize("'O\\'Reilly'@'%'"));
-		for (String invalid : new String[] { "reader", "reader@localhost", "'reader'", "'r'@'h'; DROP USER x", "'r'@'h" })
+		for (String invalid : new String[] { "reader", "reader@localhost", "'reader'", "'r'@'h'; DROP USER x",
+				"'r'@'h" })
 			assertThrows(IllegalArgumentException.class, () -> MySqlAccount.sql(invalid));
 		assertThrows(IllegalArgumentException.class, () -> MySqlAccount.fromGrantee("'a'@'b'@'host'"));
 	}
@@ -67,8 +69,9 @@ class MySqlPrivilegeMetadataTest {
 				var user = new MySqlUserReader(dialect).createUser(new ExResultSet(rows));
 				catalog.getUsers().add(user);
 			}
-			try (var rows = rows(List.of(values("GRANTEE", MySqlAccount.name("reader", host), "TABLE_CATALOG", "def",
-					"TABLE_SCHEMA", "app", "TABLE_NAME", "orders", "PRIVILEGE_TYPE", "SELECT", "IS_GRANTABLE", "YES")))) {
+			try (var rows = rows(
+					List.of(values("GRANTEE", MySqlAccount.name("reader", host), "TABLE_CATALOG", "def", "TABLE_SCHEMA",
+							"app", "TABLE_NAME", "orders", "PRIVILEGE_TYPE", "SELECT", "IS_GRANTABLE", "YES")))) {
 				rows.next();
 				var privilege = new MySqlObjectPrivilegeReader(dialect).createPrivilege(new ExResultSet(rows));
 				catalog.getObjectPrivileges().add(privilege);
@@ -120,7 +123,8 @@ class MySqlPrivilegeMetadataTest {
 		int[] queries = { 0 };
 		var reader = new MySqlRoutinePrivilegeReader(dialect) {
 			@Override
-			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries[0]++;
 				assertTrue(node.toString().contains("mysql.procs_priv"));
 				assertFalse(node.toString().contains("SELECT *"));
@@ -130,8 +134,8 @@ class MySqlPrivilegeMetadataTest {
 		};
 		assertEquals(12, reader.doGetAll(null, new ParametersContext(), version()).size());
 		assertEquals(1, queries[0]);
-		assertTrue(reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo()
-				.setMajorVersion(5).setMinorVersion(0).setRevision(2)).isEmpty());
+		assertTrue(reader.doGetAll(null, new ParametersContext(),
+				new ProductVersionInfo().setMajorVersion(5).setMinorVersion(0).setRevision(2)).isEmpty());
 		assertEquals(1, queries[0]);
 		var denied = new MySqlRoutinePrivilegeReader(dialect) {
 			@Override
@@ -146,7 +150,8 @@ class MySqlPrivilegeMetadataTest {
 	void knownRolesAndExplicitAccountFiltersUseOneBatch() {
 		assertEquals("'READER'@'host'", new MySqlRole800Reader(dialect).nativeCaseString(null, "'READER'@'host'"));
 		assertEquals("READER", new MySqlUserReader(dialect).nativeCaseString(null, "READER"));
-		assertEquals("'READER'@'host'", new MySqlRoleMember800Reader(dialect).nativeCaseString(null, "'READER'@'host'"));
+		assertEquals("'READER'@'host'",
+				new MySqlRoleMember800Reader(dialect).nativeCaseString(null, "'READER'@'host'"));
 		int[] queries = { 0 };
 		var reader = new MySqlRole800Reader(dialect) {
 			@Override
@@ -170,14 +175,18 @@ class MySqlPrivilegeMetadataTest {
 			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 				assertEquals("a'role", p.get("userName"));
 				assertEquals("%", p.get("accountHost"));
-				SqlParameterCollection sql = new SqlParameterCollection(); n.eval(p, sql);
+				SqlParameterCollection sql = new SqlParameterCollection();
+				n.eval(p, sql);
 				assertTrue(sql.getSql().contains("Host ="), sql.getSql());
 				return null;
 			}
 		};
-		context = new ParametersContext(); context.put("userName", "'a''role'@'%'");
+		context = new ParametersContext();
+		context.put("userName", "'a''role'@'%'");
 		assertTrue(users.doGetAll(null, context, version()).isEmpty());
-		context = new ParametersContext(); context.put("userName", ""); context.put("accountHost", "");
+		context = new ParametersContext();
+		context.put("userName", "");
+		context.put("accountHost", "");
 		SqlParameterCollection anonymous = new SqlParameterCollection();
 		users.getSqlSqlNode(version()).eval(context, anonymous);
 		assertTrue(anonymous.getSql().contains("User IN"), anonymous.getSql());
@@ -186,8 +195,8 @@ class MySqlPrivilegeMetadataTest {
 
 	@Test
 	void existingGlobalPrivilegePathRetainsDynamicNamesAndHostIdentity() throws Exception {
-		try (var rows = rows(List.of(values("GRANTEE", "'reader'@'%'", "TABLE_CATALOG", "def",
-				"PRIVILEGE_TYPE", "BINLOG_ADMIN", "IS_GRANTABLE", "YES")))) {
+		try (var rows = rows(List.of(values("GRANTEE", "'reader'@'%'", "TABLE_CATALOG", "def", "PRIVILEGE_TYPE",
+				"BINLOG_ADMIN", "IS_GRANTABLE", "YES")))) {
 			rows.next();
 			var privilege = new MySqlUserPrivilegeReader(dialect).createPrivilege(new ExResultSet(rows));
 			assertEquals("BINLOG_ADMIN", privilege.getPrivilege());
@@ -210,8 +219,10 @@ class MySqlPrivilegeMetadataTest {
 				n.eval(p, sql);
 				assertTrue(sql.getSql().contains("e.TO_USER ="), sql.getSql());
 				feed(h, List.of(
-						values("FROM_USER", "app_role", "FROM_HOST", "%", "TO_USER", "reader", "TO_HOST", "localhost", "WITH_ADMIN_OPTION", "Y", "IS_DEFAULT", "Y"),
-						values("FROM_USER", "app_role", "FROM_HOST", "localhost", "TO_USER", "reader", "TO_HOST", "%", "WITH_ADMIN_OPTION", "N", "IS_DEFAULT", "N")));
+						values("FROM_USER", "app_role", "FROM_HOST", "%", "TO_USER", "reader", "TO_HOST", "localhost",
+								"WITH_ADMIN_OPTION", "Y", "IS_DEFAULT", "Y"),
+						values("FROM_USER", "app_role", "FROM_HOST", "localhost", "TO_USER", "reader", "TO_HOST", "%",
+								"WITH_ADMIN_OPTION", "N", "IS_DEFAULT", "N")));
 				return null;
 			}
 		};
@@ -230,23 +241,35 @@ class MySqlPrivilegeMetadataTest {
 	}
 
 	private static Map<String, Object> routine(String kind, String privileges) {
-		return values("Db", "app", "Routine_name", "same_name", "Routine_type", kind, "User", "reader", "Host", "%", "Proc_priv", privileges);
+		return values("Db", "app", "Routine_name", "same_name", "Routine_type", kind, "User", "reader", "Host", "%",
+				"Proc_priv", privileges);
 	}
+
 	private static Dialect dialect(int major, int minor, int revision) {
 		return DialectResolver.getInstance().getDialect("MySql", major, minor, revision);
 	}
-	private static ProductVersionInfo version() { return new ProductVersionInfo().setMajorVersion(8).setMinorVersion(4).setRevision(0); }
+
+	private static ProductVersionInfo version() {
+		return new ProductVersionInfo().setMajorVersion(8).setMinorVersion(4).setRevision(0);
+	}
+
 	private static Map<String, Object> values(Object... pairs) {
 		Map<String, Object> map = new LinkedHashMap<>();
-		for (int i = 0; i < pairs.length; i += 2) map.put((String) pairs[i], pairs[i + 1]);
+		for (int i = 0; i < pairs.length; i += 2)
+			map.put((String) pairs[i], pairs[i + 1]);
 		return map;
 	}
+
 	private static void feed(ResultSetNextHandler handler, List<Map<String, Object>> data) {
 		try (var rows = rows(data)) {
 			ExResultSet rs = new ExResultSet(rows);
-			while (rows.next()) handler.handleResultSetNext(rs);
-		} catch (SQLException e) { throw new IllegalStateException(e); }
+			while (rows.next())
+				handler.handleResultSetNext(rs);
+		} catch (SQLException e) {
+			throw new IllegalStateException(e);
+		}
 	}
+
 	private static CachedRowSet rows(List<Map<String, Object>> data) throws SQLException {
 		var first = data.get(0);
 		RowSetMetaDataImpl metadata = new RowSetMetaDataImpl();
@@ -260,10 +283,14 @@ class MySqlPrivilegeMetadataTest {
 		CachedRowSet rows = RowSetProvider.newFactory().createCachedRowSet();
 		rows.setMetaData(metadata);
 		for (int i = data.size() - 1; i >= 0; i--) {
-			rows.moveToInsertRow(); index = 0;
-			for (Object value : data.get(i).values()) rows.updateObject(++index, value);
-			rows.insertRow(); rows.moveToCurrentRow();
+			rows.moveToInsertRow();
+			index = 0;
+			for (Object value : data.get(i).values())
+				rows.updateObject(++index, value);
+			rows.insertRow();
+			rows.moveToCurrentRow();
 		}
-		rows.beforeFirst(); return rows;
+		rows.beforeFirst();
+		return rows;
 	}
 }

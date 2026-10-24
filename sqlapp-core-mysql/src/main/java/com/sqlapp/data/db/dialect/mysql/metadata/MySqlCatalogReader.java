@@ -78,6 +78,24 @@ public class MySqlCatalogReader extends AbstractISCatalogReader {
 	}
 
 	@Override
+	protected void setCommonAfter(Connection connection, Catalog catalog) {
+		super.setCommonAfter(connection, catalog);
+		load(connection, getSchemaPrivilegeReader(), catalog);
+	}
+
+	/**
+	 * Optional direct access; normal full-catalog loading includes these grants
+	 * automatically.
+	 */
+	public MySqlSchemaPrivilegeReader getSchemaPrivilegeReader() {
+		if (!"MySQL".equalsIgnoreCase(getDialect().getProductName()))
+			return null;
+		MySqlSchemaPrivilegeReader reader = new MySqlSchemaPrivilegeReader(getDialect());
+		setReaderParameter(reader);
+		return reader;
+	}
+
+	@Override
 	protected SchemaReader newSchemaReader() {
 		return new MySqlSchemaReader(this.getDialect());
 	}

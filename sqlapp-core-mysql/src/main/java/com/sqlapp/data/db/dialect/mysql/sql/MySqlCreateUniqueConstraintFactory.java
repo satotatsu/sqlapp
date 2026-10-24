@@ -35,6 +35,8 @@ public class MySqlCreateUniqueConstraintFactory extends AbstractCreateUniqueCons
 
 	@Override
 	public void addObjectDetail(UniqueConstraint obj, Table table, MySqlSqlBuilder builder) {
+		MySqlIndexValidation.validate(obj.getIndex(), table == null ? obj.getTable() : table, getDialect(),
+				obj.isPrimaryKey(), true);
 		builder.constraint().space().name(obj, false);
 		if (obj.isPrimaryKey()) {
 			builder.primaryKey();

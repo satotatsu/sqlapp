@@ -102,4 +102,11 @@ class MySql57MetadataReaderTest {
 		statement.execute("CREATE PROCEDURE metadata57_procedure(IN p_id BIGINT) "
 				+ "SELECT code FROM metadata57_parent WHERE id = p_id");
 	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
+		}
+	}
 }

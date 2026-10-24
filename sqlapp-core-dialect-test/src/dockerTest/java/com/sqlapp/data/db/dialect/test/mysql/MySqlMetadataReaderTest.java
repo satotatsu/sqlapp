@@ -225,4 +225,11 @@ class MySqlMetadataReaderTest {
 				 DO DELETE FROM metadata_audit WHERE parent_id < 0
 				""");
 	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
+		}
+	}
 }

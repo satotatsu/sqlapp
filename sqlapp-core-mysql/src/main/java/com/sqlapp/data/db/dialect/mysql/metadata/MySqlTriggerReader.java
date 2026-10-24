@@ -21,6 +21,10 @@ package com.sqlapp.data.db.dialect.mysql.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.ISTriggerReader;
+import java.sql.SQLException;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
+import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.jdbc.ExResultSet;
 
 /**
  * MySqlのトリガー作成クラス
@@ -32,6 +36,19 @@ public class MySqlTriggerReader extends ISTriggerReader {
 
 	protected MySqlTriggerReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected Trigger createTrigger(ExResultSet rs) throws SQLException {
+		Trigger trigger = super.createTrigger(rs);
+		MySqlDefiner.read(trigger.getSpecifics(), rs.getString("DEFINER"));
+		String order = rs.getString("ACTION_ORDER");
+		if (order != null) {
+			trigger.getSpecifics().put(com.sqlapp.data.db.dialect.mysql.util.MySqlTriggerOrder.ACTION_ORDER, order);
+			com.sqlapp.data.db.dialect.mysql.util.MySqlTriggerOrder.order(trigger);
+		}
+		com.sqlapp.data.db.dialect.mysql.util.MySqlStoredObjectContext.read(rs, trigger);
+		return trigger;
 	}
 
 }

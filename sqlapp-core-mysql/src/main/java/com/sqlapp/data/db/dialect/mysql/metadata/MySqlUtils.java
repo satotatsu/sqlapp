@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.ReaderUtils;
@@ -70,6 +71,7 @@ public class MySqlUtils extends ReaderUtils {
 	}
 
 	protected static void setRoutineInfo(ResultSet rs, ArgumentRoutine<?> routine) throws SQLException {
+		com.sqlapp.data.db.dialect.mysql.util.MySqlStoredObjectContext.read(rs, routine);
 		routine.setCatalogName(rs.getString("ROUTINE_CATALOG"));
 		routine.setSchemaName(rs.getString("ROUTINE_SCHEMA"));
 		routine.setRemarks(rs.getString("ROUTINE_COMMENT"));
@@ -80,6 +82,7 @@ public class MySqlUtils extends ReaderUtils {
 		routine.setStatement(rs.getString("ROUTINE_DEFINITION"));
 		routine.setSqlDataAccess(rs.getString(MetadataReader.SQL_DATA_ACCESS));
 		routine.setSqlSecurity(rs.getString(MetadataReader.SECURITY_TYPE));
+		MySqlDefiner.read(routine.getSpecifics(), rs.getString("DEFINER"));
 	}
 
 	/**

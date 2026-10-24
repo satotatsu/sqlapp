@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
 import com.sqlapp.data.db.sql.AbstractCreateViewFactory;
 import com.sqlapp.data.schemas.View;
 import com.sqlapp.util.CommonUtils;
@@ -14,6 +15,7 @@ public class MySqlCreateViewFactory extends AbstractCreateViewFactory<MySqlSqlBu
 
 	public static final String CHECK_OPTION = "check_option";
 	public static final String SECURITY_TYPE = "security_type";
+	public static final String ALGORITHM = "algorithm";
 
 	@Override
 	protected void addCreateObject(View view, MySqlSqlBuilder builder) {
@@ -27,7 +29,15 @@ public class MySqlCreateViewFactory extends AbstractCreateViewFactory<MySqlSqlBu
 		}
 		String security = option(view, SECURITY_TYPE, Set.of("DEFINER", "INVOKER"));
 		String check = option(view, CHECK_OPTION, Set.of("NONE", "LOCAL", "CASCADED"));
+		String algorithm = option(view, ALGORITHM, Set.of("UNDEFINED", "MERGE", "TEMPTABLE"));
+		if ("TEMPTABLE".equals(algorithm) && check != null && !"NONE".equals(check)) {
+			throw new IllegalArgumentException("MySQL TEMPTABLE views cannot have WITH CHECK OPTION");
+		}
 		builder.create();
+		if (algorithm != null) {
+			builder.space()._add("ALGORITHM = ")._add(algorithm);
+		}
+		MySqlDefiner.append(builder, view.getSpecifics());
 		if (security != null) {
 			builder.space()._add("SQL SECURITY ")._add(security);
 		}

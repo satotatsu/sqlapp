@@ -73,6 +73,16 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		}
 		final String sql = builder.toString();
 		addTableOptions(allDiff, builder);
+		if (allDiff.containsKey("ROW_FORMAT") || allDiff.containsKey(SchemaProperties.COMPRESSION.getLabel())) {
+			String rowFormat = MySqlTableOptions.rowFormat(table);
+			if (!allDiff.containsKey("ROW_FORMAT")) {
+				if (rowFormat == null) {
+					throw new IllegalArgumentException("Removing compression requires an explicit target ROW_FORMAT");
+				}
+				builder.comma(!builder.isFirstElement()).property("ROW_FORMAT", rowFormat);
+				builder.setFirstElement(false);
+			}
+		}
 		final DbObjectDifferenceCollection consDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.CONSTRAINTS.getLabel());
 		if (consDiff != null) {
@@ -98,7 +108,10 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		final Difference<?> charSetProp = allDiff.get(SchemaProperties.CHARACTER_SET.getLabel());
 		final Difference<?> collationProp = allDiff.get(SchemaProperties.COLLATION.getLabel());
 		if (charSetProp != null || collationProp != null) {
-			addCharSetDefinition(charSetProp, collationProp, builder);
+			validateDefaultChange(charSetProp, "character set");
+			validateDefaultChange(collationProp, "collation");
+			// Table defaults do not imply a conversion of existing column data.
+			appendDefaults(table.getCharacterSet(), table.getCollation(), builder);
 		}
 		SqlOperation operation = createOperation(builder.toString(), SqlType.ALTER, originalTable, table);
 		if (!CommonUtils.eq(sql, operation.getSqlText())) {
@@ -149,7 +162,10 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		if (tableProp == null) {
 			return;
 		}
-		final String targetProp = tableProp.getTarget(String.class);
+		String targetProp = tableProp.getTarget(String.class);
+		if ("ENGINE".equals(name) || "ROW_FORMAT".equals(name)) {
+			targetProp = MySqlTableOptions.token(name, targetProp);
+		}
 		if (!CommonUtils.isEmpty(targetProp)) {
 			sqlBuilder.comma(!sqlBuilder.isFirstElement());
 			sqlBuilder.property(name, targetProp);
@@ -168,12 +184,10 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 			return;
 		}
 		final String targetProp = tableProp.getTarget(String.class);
-		if (!CommonUtils.isEmpty(targetProp)) {
-			builder.comma(!builder.isFirstElement());
-			builder.comment().space();
-			builder.sqlChar(targetProp);
-			builder.setFirstElement(false);
-		}
+		builder.comma(!builder.isFirstElement());
+		builder.comment().space();
+		builder.sqlChar(targetProp == null ? "" : targetProp);
+		builder.setFirstElement(false);
 	}
 
 	/**
@@ -428,6 +442,16 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		for (final DbObjectDifference diff : indexDiff.getList(State.Modified)) {
 			final Index originalIndex = diff.getOriginal(Index.class);
 			final Index index = diff.getTarget(Index.class);
+			Map<String, Difference<?>> changes = diff.toDifference().getChangedProperties(getDialect());
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.mysql.MySql800
+					&& "MySQL".equalsIgnoreCase(getDialect().getProductName()) && changes.size() == 1
+					&& changes.containsKey(SchemaProperties.ENABLE.getLabel())) {
+				MySqlIndexValidation.validate(index, table, getDialect(), false, false);
+				builder.comma(!builder.isFirstElement()).alter().index().name(index, false).space()
+						._add(index.isEnable() ? "VISIBLE" : "INVISIBLE");
+				builder.setFirstElement(false);
+				continue;
+			}
 			builder.comma(!builder.isFirstElement());
 			addDropIndexDefinition(originalIndex, builder);
 			builder.comma();
@@ -590,25 +614,32 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 */
 	protected void addCharSetDefinition(final Difference<?> charSetProp, final Difference<?> collationProp,
 			final MySqlSqlBuilder builder) {
-		String charsetTarget = null;
-		String collationTarget = null;
-		if (collationProp != null) {
-			collationTarget = collationProp.getTarget(String.class);
+		validateDefaultChange(charSetProp, "character set");
+		validateDefaultChange(collationProp, "collation");
+		appendDefaults(charSetProp == null ? null : charSetProp.getTarget(String.class),
+				collationProp == null ? null : collationProp.getTarget(String.class), builder);
+	}
+
+	private static void validateDefaultChange(Difference<?> difference, String description) {
+		if (difference != null && CommonUtils.isEmpty(difference.getTarget(String.class))) {
+			throw new IllegalArgumentException(
+					"Specify an explicit target table " + description + " instead of removing its default");
 		}
-		if (charSetProp == null) {
-			if (collationTarget != null) {
-				charsetTarget = CommonUtils.first(collationTarget.split("_"));
-			}
-		} else {
-			charsetTarget = charSetProp.getTarget(String.class);
-		}
-		if (charsetTarget != null) {
+	}
+
+	private void appendDefaults(String charsetTarget, String collationTarget, MySqlSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(charsetTarget)) {
 			builder.comma(!builder.isFirstElement());
-			builder.convert().to().characterSet().space()._add(charsetTarget);
-		}
-		if (collationTarget != null) {
+			builder.default_().characterSet().space()
+					._add(MySqlCreateSchemaFactory.option(charsetTarget, "character set"));
 			builder.setFirstElement(false);
-			builder.collate().space()._add(collationTarget);
+		}
+		if (!CommonUtils.isEmpty(collationTarget)) {
+			if (CommonUtils.isEmpty(charsetTarget)) {
+				builder.comma(!builder.isFirstElement());
+			}
+			builder.setFirstElement(false);
+			builder.collate().space()._add(MySqlCreateSchemaFactory.option(collationTarget, "collation"));
 		}
 	}
 }

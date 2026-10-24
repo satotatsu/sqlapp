@@ -35,6 +35,17 @@ import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
 public class MySqlCreateTableFactory extends AbstractCreateTableFactory<MySqlSqlBuilder> {
+	@Override
+	public List<SqlOperation> createSql(Table table) {
+		if (!CommonUtils.isEmpty(table.getDefinition())) {
+			List<SqlOperation> result = new java.util.ArrayList<>();
+			MySqlSqlBuilder builder = createSqlBuilder();
+			builder._add(table.getDefinition());
+			addSql(result, builder, SqlType.CREATE, table);
+			return result;
+		}
+		return super.createSql(table);
+	}
 
 	@Override
 	protected void addCreateObject(final Table table, MySqlSqlBuilder builder) {
@@ -73,8 +84,8 @@ public class MySqlCreateTableFactory extends AbstractCreateTableFactory<MySqlSql
 	 * @param sqlBuilder
 	 */
 	protected void addEnginDefinition(final Table table, MySqlSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(table.getSpecifics().get("ENGINE"))) {
-			builder.engine().eq()._add(table.getSpecifics().get("ENGINE"));
+		if (table.getSpecifics().get("ENGINE") != null) {
+			builder.engine().eq()._add(MySqlTableOptions.token("ENGINE", table.getSpecifics().get("ENGINE")));
 		}
 	}
 
@@ -85,13 +96,9 @@ public class MySqlCreateTableFactory extends AbstractCreateTableFactory<MySqlSql
 	 * @param sqlBuilder
 	 */
 	protected void addRowformatDefinition(final Table table, MySqlSqlBuilder builder) {
-		String rowFormat = (String) table.getSpecifics().get("ROW_FORMAT");
-		if (!CommonUtils.isEmpty(rowFormat)) {
+		String rowFormat = MySqlTableOptions.rowFormat(table);
+		if (rowFormat != null) {
 			builder.rowFormat().eq()._add(rowFormat);
-		} else {
-			if (table.isCompression()) {
-				builder.rowFormat().eq().compressed();
-			}
 		}
 	}
 
@@ -102,8 +109,12 @@ public class MySqlCreateTableFactory extends AbstractCreateTableFactory<MySqlSql
 	 * @param sqlBuilder
 	 */
 	protected void addCollateDefinition(final Table table, MySqlSqlBuilder builder) {
+		if (!CommonUtils.isEmpty(table.getCharacterSet())) {
+			builder.default_().characterSet().eq()
+					._add(MySqlCreateSchemaFactory.option(table.getCharacterSet(), "character set"));
+		}
 		if (!CommonUtils.isEmpty(table.getCollation())) {
-			builder.collate().eq()._add(table.getCollation());
+			builder.collate().eq()._add(MySqlCreateSchemaFactory.option(table.getCollation(), "collation"));
 		}
 	}
 

@@ -29,6 +29,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.Difference;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.State;
 
 /**
@@ -41,21 +42,35 @@ public class MySqlAlterSchemaFactory extends AbstractAlterSchemaFactory<MySqlSql
 
 	@Override
 	protected void addAlterSchema(DbObjectDifference difference, Map<String, Difference<?>> allDiff,
+			List<SqlOperation> sqlList) {
+		if (difference.getState() != State.Modified) {
+			return;
+		}
+		if (allDiff.containsKey(SchemaProperties.NAME.getLabel())) {
+			throw new IllegalArgumentException("MySQL does not support renaming a database with ALTER SCHEMA");
+		}
+		boolean charsetChanged = allDiff.containsKey(SchemaProperties.CHARACTER_SET.getLabel());
+		boolean collationChanged = allDiff.containsKey(SchemaProperties.COLLATION.getLabel());
+		if (!charsetChanged && !collationChanged) {
+			return;
+		}
+		Schema original = difference.getOriginal(Schema.class);
+		Schema target = difference.getTarget(Schema.class);
+		if ((charsetChanged && com.sqlapp.util.CommonUtils.isEmpty(target.getCharacterSet()))
+				|| (collationChanged && com.sqlapp.util.CommonUtils.isEmpty(target.getCollation()))) {
+			throw new IllegalArgumentException(
+					"Specify an explicit target database character set or collation; removing it has no portable default");
+		}
+		MySqlSqlBuilder builder = createSqlBuilder(getDialect());
+		builder.alter().schema().name(original);
+		MySqlCreateSchemaFactory.appendDefaults(target, builder);
+		add(sqlList, createOperation(builder.toString(), SqlType.ALTER, original, target));
+	}
+
+	@Override
+	protected void addAlterSchema(DbObjectDifference difference, Map<String, Difference<?>> allDiff,
 			DbObjectDifference characterSetDiff, DbObjectDifference collationDiff,
 			DbObjectDifference characterSemanticsDiff, List<SqlOperation> sqlList) {
-		Schema orgSchema = difference.getOriginal(Schema.class);
-		Schema schema = difference.getTarget(Schema.class);
-		MySqlSqlBuilder builder = createSqlBuilder(getDialect());
-		if (difference.getState() == State.Modified) {
-			if (characterSetDiff != null || collationDiff != null)
-				builder.alter().schema().name((Schema) difference.getOriginal());
-			if (characterSetDiff != null) {
-				builder.characterSet().space()._add(characterSetDiff.getTarget().toString());
-			}
-			if (collationDiff != null) {
-				builder.collate().space()._add(collationDiff.getTarget().toString());
-			}
-			add(sqlList, this.createOperation(builder.toString(), SqlType.ALTER, orgSchema, schema));
-		}
+		addAlterSchema(difference, allDiff, sqlList);
 	}
 }

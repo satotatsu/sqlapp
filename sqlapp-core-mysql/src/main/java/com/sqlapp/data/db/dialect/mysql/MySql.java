@@ -27,9 +27,14 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.function.Supplier;
+import java.util.Optional;
+import java.util.Locale;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.util.TypeInformation;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlSpatialReference;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.db.datatype.util.MysqlNumberColumnTypeMatcher;
@@ -38,7 +43,6 @@ import com.sqlapp.data.db.dialect.mysql.metadata.MySqlCatalogReader;
 import com.sqlapp.data.db.dialect.mysql.sql.MySqlSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlSplitter;
-import com.sqlapp.data.db.dialect.util.GeometryUtils;
 import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -52,6 +56,18 @@ import com.sqlapp.data.schemas.Column;
  * 
  */
 public class MySql extends Dialect {
+
+	@Override
+	public Optional<TypeInformation> matchDbType(DataType dataType, String productDataType, Long lengthOrPrecision,
+			Integer scale) {
+		Optional<TypeInformation> result = super.matchDbType(dataType, productDataType, lengthOrPrecision, scale);
+		if (MySqlSpatialReference.isSpatialType(productDataType)) {
+			result.filter(info -> info.getDataType().orElse(null) == DataType.GEOMETRY)
+					.ifPresent(info -> info.setDataTypeName(productDataType.trim().toUpperCase(Locale.ROOT)));
+		}
+		return result;
+	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -199,14 +215,10 @@ public class MySql extends Dialect {
 		getDbDataTypes().addNumeric(type -> {
 			type.setMaxPrecision(65).setMaxScale(30);
 		});
-		GeometryUtils.run(new Runnable() {
-			@Override
-			public void run() {
-				// GEOMETRY
-				getDbDataTypes().addGeometry(type -> {
-					type.setJdbcTypeHandler(new MySqlGeometryJdbcTypeHandler()).setJdbcType(java.sql.JDBCType.ARRAY);
-				});
-			}
+		getDbDataTypes().addGeometry(type -> {
+			type.setJdbcTypeHandler(new MySqlGeometryJdbcTypeHandler()).setJdbcType(java.sql.JDBCType.ARRAY);
+			type.addColumnTypeMatcher("POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
+					"GEOMETRYCOLLECTION", "GEOMCOLLECTION");
 		});
 		// ENUM
 		getDbDataTypes().addEnum();

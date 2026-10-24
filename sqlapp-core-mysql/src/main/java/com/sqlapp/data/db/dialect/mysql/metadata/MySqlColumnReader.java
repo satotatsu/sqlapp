@@ -55,7 +55,7 @@ public class MySqlColumnReader extends ColumnReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Column column = createColumn(connection, rs);
+				Column column = createColumn(connection, rs, productVersionInfo);
 				result.add(column);
 			}
 		});
@@ -64,6 +64,15 @@ public class MySqlColumnReader extends ColumnReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("columns.sql");
+	}
+
+	/**
+	 * Version-aware mapping without mutable reader state; legacy overrides remain
+	 * the default path.
+	 */
+	protected Column createColumn(Connection connection, ExResultSet rs, ProductVersionInfo productVersionInfo)
+			throws SQLException {
+		return createColumn(connection, rs);
 	}
 
 	protected Column createColumn(final Connection connection, ExResultSet rs) throws SQLException {
