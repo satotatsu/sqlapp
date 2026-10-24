@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.db2.sql;
 
 import com.sqlapp.data.db.dialect.db2.Db2RowPermissions;
+import com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges;
 import com.sqlapp.data.db.dialect.db2.Db2_1010;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -18,6 +19,9 @@ import com.sqlapp.data.schemas.AbstractDbObjectCollection;
 public class Db2CreateCatalogFactory extends CreateCatalogFactory {
 	@Override
 	public List<SqlOperation> createSql(Catalog catalog) {
+		List<String> federation = Db2FederationSql.create(catalog, getDialect());
+		List<String> mappings = Db2UserMappingSql.create(catalog, getDialect());
+		List<String> objectGrants = Db2ObjectPrivileges.createSql(catalog);
 		for (Schema schema : catalog.getSchemas()) {
 			var snapshot = Db2RowPermissions.get(schema);
 			if ((!snapshot.permissions().isEmpty()
@@ -27,7 +31,14 @@ public class Db2CreateCatalogFactory extends CreateCatalogFactory {
 			}
 			Db2RowPermissions.createSql(schema);
 		}
-		List<SqlOperation> result = super.createSql(catalog);
+		List<SqlOperation> result = new java.util.ArrayList<>();
+		for (String sql : federation)
+			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, catalog);
+		for (String sql : mappings)
+			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, catalog);
+		result.addAll(super.createSql(catalog));
+		for (String sql : objectGrants)
+			addSql(result, createSqlBuilder()._add(sql), SqlType.GRANT, catalog);
 		// All schemas' permissions precede every table activation, including
 		// cross-schema targets.
 		for (boolean activation : new boolean[] { false, true }) {
@@ -44,7 +55,10 @@ public class Db2CreateCatalogFactory extends CreateCatalogFactory {
 	@Override
 	protected void addCreateDbObjectCollection(String propertyName, AbstractDbObjectCollection<?> collection,
 			List<SqlOperation> result) {
-		if (SchemaObjectProperties.SCHEMAS.getLabel().equals(propertyName)) {
+		if (SchemaObjectProperties.USER_PRIVILEGES.getLabel().equals(propertyName)) {
+			result.addAll(Db2DatabasePrivilegePlan.create((com.sqlapp.data.schemas.UserPrivilegeCollection) collection,
+					getSqlFactoryRegistry()));
+		} else if (SchemaObjectProperties.SCHEMAS.getLabel().equals(propertyName)) {
 			for (var object : collection) {
 				Schema schema = (Schema) object;
 				SqlFactory<Schema> factory = getSqlFactoryRegistry().getSqlFactory(schema, SqlType.CREATE);

@@ -8,6 +8,7 @@ import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
 import com.sqlapp.data.db.sql.*;
 import com.sqlapp.data.schemas.ObjectPrivilege;
 import com.sqlapp.data.schemas.PrivilegeState;
+import com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges;
 
 public class Db2GrantObjectPrivilegeFactory extends SimpleSqlFactory<ObjectPrivilege, Db2SqlBuilder> {
 	protected boolean isGrant() {
@@ -16,6 +17,21 @@ public class Db2GrantObjectPrivilegeFactory extends SimpleSqlFactory<ObjectPrivi
 
 	@Override
 	public List<SqlOperation> createSql(ObjectPrivilege privilege) {
+		String kind = privilege.getSpecifics().get("OBJECT_TYPE");
+		if (kind != null && !"TABLE".equals(kind)) {
+			if (privilege.getState() != null
+					&& privilege.getState() != (isGrant() ? PrivilegeState.Grant : PrivilegeState.Revoke))
+				throw new IllegalArgumentException("Privilege state conflicts with requested Db2 GRANT/REVOKE");
+			if (privilege.isHierachy())
+				throw new IllegalArgumentException("Db2 sequence/index/server grants do not support hierarchy");
+			var grant = Db2ObjectPrivileges.fromModel(privilege);
+			List<SqlOperation> result = new ArrayList<>();
+			addSql(result,
+					createSqlBuilder()._add(
+							isGrant() ? Db2ObjectPrivileges.grantSql(grant) : Db2ObjectPrivileges.revokeSql(grant)),
+					isGrant() ? SqlType.GRANT : SqlType.REVOKE, privilege);
+			return result;
+		}
 		String action = privilege.getPrivilege() == null ? ""
 				: privilege.getPrivilege().toUpperCase(java.util.Locale.ROOT);
 		if (!Set.of("CONTROL", "ALTER", "DELETE", "INDEX", "INSERT", "REFERENCES", "SELECT", "UPDATE").contains(action))

@@ -48,6 +48,48 @@ import com.sqlapp.util.CommonUtils;
 
 public class Db2CatalogReader extends CatalogReader {
 
+	@Override
+	protected void setCommonAfter(Connection connection, Catalog catalog) {
+		super.setCommonAfter(connection, catalog);
+		load(connection, getSchemaPrivilegeReader(), catalog);
+		load(connection, getExtendedObjectPrivilegeReader(), catalog);
+		federation().loadFull(connection, catalog);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+			userMappings().loadFull(connection, catalog);
+	}
+
+	/**
+	 * Local catalog user mappings; encrypted passwords are represented by markers.
+	 */
+	public Db2UserMappingReader userMappings() {
+		var reader = new Db2UserMappingReader(getDialect());
+		setReaderParameter(reader.metadataReader());
+		return reader;
+	}
+
+	/**
+	 * Full Catalog loading includes wrapper/server metadata and category defaults.
+	 */
+	public Db2FederationReader federation() {
+		Db2FederationReader reader = new Db2FederationReader(getDialect());
+		setReaderParameter(reader.metadataReader());
+		return reader;
+	}
+
+	/** Sequence/index grants automatically populate the typed Catalog extension. */
+	public Db2ExtendedObjectPrivilegeReader getExtendedObjectPrivilegeReader() {
+		Db2ExtendedObjectPrivilegeReader reader = new Db2ExtendedObjectPrivilegeReader(getDialect());
+		setReaderParameter(reader);
+		return reader;
+	}
+
+	/** Normal full-catalog loading includes schema grants automatically. */
+	public Db2SchemaPrivilegeReader getSchemaPrivilegeReader() {
+		Db2SchemaPrivilegeReader reader = new Db2SchemaPrivilegeReader(getDialect());
+		setReaderParameter(reader);
+		return reader;
+	}
+
 	public Db2CatalogReader(Dialect dialect) {
 		super(dialect);
 	}
@@ -120,8 +162,7 @@ public class Db2CatalogReader extends CatalogReader {
 
 	@Override
 	protected UserPrivilegeReader newUserPrivilegeReader() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Db2UserPrivilegeReader(getDialect());
 	}
 
 	@Override

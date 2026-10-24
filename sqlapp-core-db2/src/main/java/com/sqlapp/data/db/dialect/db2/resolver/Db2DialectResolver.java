@@ -67,6 +67,9 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 				return DialectHolder.Db2_1210Dialect;
 			} else if (majorVersion >= 11) {
 				if (minorVersion >= 5) {
+					if (minorVersion > 5 || (revision != null && revision >= 5)) {
+						return DialectHolder.Db2_1155Dialect;
+					}
 					return DialectHolder.Db2_1150Dialect;
 				}
 				return DialectHolder.Db2_1110Dialect;
@@ -82,6 +85,8 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 					return DialectHolder.Db2_970Dialect;
 				} else if (minorVersion >= 5) {
 					return DialectHolder.Db2_950Dialect;
+				} else if (minorVersion >= 1) {
+					return DialectHolder.Db2_910Dialect;
 				}
 			}
 			return DialectHolder.defaultDialect;

@@ -34,7 +34,7 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  * @author SATOH
  * 
  */
-public class Db2_950 extends Db2 {
+public class Db2_950 extends Db2_910 {
 	/**
 	 * serialVersionUID
 	 */

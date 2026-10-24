@@ -39,6 +39,8 @@ import com.sqlapp.data.schemas.Mview;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.SchemaPrivilege;
+import com.sqlapp.data.schemas.UserPrivilege;
 
 public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -65,6 +67,14 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(RoleMember.class, SqlType.GRANT, Db2GrantRoleMemberFactory.class);
 		registerSqlFactory(RoleMember.class, SqlType.REVOKE, Db2RevokeRoleMemberFactory.class);
 		registerSqlFactory(ObjectPrivilege.class, SqlType.CREATE, Db2GrantObjectPrivilegeFactory.class);
+		registerSqlFactory(UserPrivilege.class, SqlType.CREATE, Db2GrantUserPrivilegeFactory.class);
+		registerSqlFactory(UserPrivilege.class, SqlType.GRANT, Db2GrantUserPrivilegeFactory.class);
+		registerSqlFactory(UserPrivilege.class, SqlType.REVOKE, Db2RevokeUserPrivilegeFactory.class);
+		registerSqlFactory(UserPrivilege.class, SqlType.ALTER, Db2AlterUserPrivilegeFactory.class);
+		registerSqlFactory(SchemaPrivilege.class, SqlType.CREATE, Db2GrantSchemaPrivilegeFactory.class);
+		registerSqlFactory(SchemaPrivilege.class, SqlType.GRANT, Db2GrantSchemaPrivilegeFactory.class);
+		registerSqlFactory(SchemaPrivilege.class, SqlType.REVOKE, Db2RevokeSchemaPrivilegeFactory.class);
+		registerSqlFactory(SchemaPrivilege.class, SqlType.ALTER, Db2AlterSchemaPrivilegeFactory.class);
 		registerSqlFactory(ColumnPrivilege.class, SqlType.CREATE, Db2GrantColumnPrivilegeFactory.class);
 		registerSqlFactory(RoutinePrivilege.class, SqlType.CREATE, Db2GrantRoutinePrivilegeFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, Db2CreateIndexFactory.class);
@@ -78,6 +88,8 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, Db2RevokeRoutinePrivilegeFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, Db2CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, Db2DropTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, Db2AlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, DB2CreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, Db2TruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, DB2TruncateTemporaryTableFactory.class);
@@ -97,5 +109,11 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Schema.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(Catalog.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(Mview.class, State.Modified, SqlType.ALTER);
+		registerSqlFactory(SchemaPrivilege.class, State.Added, SqlType.GRANT);
+		registerSqlFactory(SchemaPrivilege.class, State.Deleted, SqlType.REVOKE);
+		registerSqlFactory(SchemaPrivilege.class, State.Modified, SqlType.ALTER);
+		registerSqlFactory(UserPrivilege.class, State.Added, SqlType.GRANT);
+		registerSqlFactory(UserPrivilege.class, State.Deleted, SqlType.REVOKE);
+		registerSqlFactory(UserPrivilege.class, State.Modified, SqlType.ALTER);
 	}
 }

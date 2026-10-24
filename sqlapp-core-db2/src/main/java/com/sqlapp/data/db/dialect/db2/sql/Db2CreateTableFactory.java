@@ -35,6 +35,18 @@ import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
 public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuilder> {
+	@Override
+	public List<SqlOperation> createSql(Table table) {
+		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table))
+			return super.createSql(table);
+		var sql = Db2NicknameSql.create(table, this::createSqlBuilder);
+		List<SqlOperation> result = new java.util.ArrayList<>();
+		for (String statement : sql)
+			addSql(result, createSqlBuilder()._add(statement),
+					statement.startsWith("ALTER ") ? SqlType.ALTER : SqlType.CREATE, table);
+		addOtherDefinitions(table, result);
+		return result;
+	}
 
 	@Override
 	protected void addCreateObject(final Table table, final Db2SqlBuilder builder) {

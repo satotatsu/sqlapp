@@ -23,12 +23,14 @@ public class DialectHolder {
 	public final static Db2_1215 Db2_1215Dialect = new Db2_1215(() -> null);
 	public final static Db2_1212 Db2_1212Dialect = new Db2_1212(() -> Db2_1215Dialect);
 	public final static Db2_1210 Db2_1210Dialect = new Db2_1210(() -> Db2_1212Dialect);
-	public final static Db2_1150 Db2_1150Dialect = new Db2_1150(() -> Db2_1210Dialect);
+	public final static Db2_1155 Db2_1155Dialect = new Db2_1155(() -> Db2_1210Dialect);
+	public final static Db2_1150 Db2_1150Dialect = new Db2_1150(() -> Db2_1155Dialect);
 	public final static Db2_1110 Db2_1110Dialect = new Db2_1110(() -> Db2_1150Dialect);
 	public final static Db2_1050 Db2_1050Dialect = new Db2_1050(() -> Db2_1110Dialect);
 	public final static Db2_1010 Db2_1010Dialect = new Db2_1010(() -> Db2_1050Dialect);
 	public final static Db2_980 Db2_980Dialect = new Db2_980(() -> Db2_1010Dialect);
 	public final static Db2_970 Db2_970Dialect = new Db2_970(() -> Db2_980Dialect);
 	public final static Db2_950 Db2_950Dialect = new Db2_950(() -> Db2_970Dialect);
-	public final static Db2 defaultDialect = new Db2(() -> Db2_950Dialect);
+	public final static Db2_910 Db2_910Dialect = new Db2_910(() -> Db2_950Dialect);
+	public final static Db2 defaultDialect = new Db2(() -> Db2_910Dialect);
 }

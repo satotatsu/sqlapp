@@ -71,7 +71,8 @@ public class Db2TableReader extends TableReader {
 	}
 
 	protected SqlNode getSqlNode(final ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables.sql");
+		return getSqlNodeCache(Db2TableReader.class).getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "tablesNicknames.sql" : "tables.sql");
 	}
 
 	protected Table createTable(final ExResultSet rs) throws SQLException {
@@ -79,6 +80,13 @@ public class Db2TableReader extends TableReader {
 		table.setDialect(getDialect());
 		table.setSchemaName(getString(rs, SCHEMA_NAME));
 		table.setRemarks(getString(rs, REMARKS));
+		if ("N".equals(getString(rs, "TYPE"))) {
+			com.sqlapp.data.db.dialect.db2.Db2Nickname.set(table,
+					new com.sqlapp.data.db.dialect.db2.Db2Nickname.Snapshot(1, getString(rs, "nickname_server"),
+							getString(rs, "nickname_remote_schema"), getString(rs, "nickname_remote_table"),
+							getString(rs, "nickname_wrapper_type"), getString(rs, "nickname_caching"),
+							java.util.Map.of(), java.util.Map.of()));
+		}
 		table.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		table.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
 		table.setTableSpaceName(getString(rs, TABLESPACE_NAME));
@@ -114,10 +122,51 @@ public class Db2TableReader extends TableReader {
 			return;
 		}
 		super.setMetadataDetail(connection, context, tableList);
+		setNicknameOptions(connection, context, tableList);
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitionExpression(connection, tables);
 		setPartitioning(connection, tables);
 		setDimensionColumns(connection, tables);
+	}
+
+	/** One bulk query for both nickname and column options, never remote data. */
+	protected void setNicknameOptions(Connection connection, ParametersContext context, List<Table> tableList) {
+		var nicknames = tableList.stream().filter(com.sqlapp.data.db.dialect.db2.Db2Nickname::isNickname).toList();
+		if (nicknames.isEmpty())
+			return;
+		var tables = SchemaUtils.toDoubleKeyMap(nicknames);
+		var parameters = new ParametersContext();
+		parameters.putAll(context);
+		parameters.put(SCHEMA_NAME, tables.keySet());
+		parameters.put(TABLE_NAME, tables.secondKeySet());
+		var options = new java.util.IdentityHashMap<Table, java.util.Map<String, String>>();
+		var columns = new java.util.IdentityHashMap<Table, java.util.Map<String, java.util.Map<String, String>>>();
+		for (var table : nicknames) {
+			options.put(table, new java.util.TreeMap<>());
+			columns.put(table, new java.util.TreeMap<>());
+		}
+		execute(connection, getSqlNodeCache(Db2TableReader.class).getString("nicknameOptions.sql"), parameters,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(ExResultSet rs) throws SQLException {
+						var table = tables.get(getString(rs, SCHEMA_NAME), getString(rs, TABLE_NAME));
+						if (table == null)
+							return;
+						String column = rs.getString("column_name");
+						var target = column == null ? options.get(table)
+								: columns.get(table).computeIfAbsent(column, key -> new java.util.TreeMap<>());
+						String option = rs.getString("option_name"), value = rs.getString("SETTING");
+						if (option == null || value == null || target.putIfAbsent(option, value) != null)
+							throw new SQLException("Missing or duplicate Db2 nickname option: " + option);
+					}
+				});
+		for (var table : nicknames) {
+			var previous = com.sqlapp.data.db.dialect.db2.Db2Nickname.get(table);
+			com.sqlapp.data.db.dialect.db2.Db2Nickname.set(table,
+					new com.sqlapp.data.db.dialect.db2.Db2Nickname.Snapshot(1, previous.serverName(),
+							previous.remoteSchema(), previous.remoteTable(), previous.wrapperType(),
+							previous.cachingAllowed(), options.get(table), columns.get(table)));
+		}
 	}
 
 	protected void setDimensionColumns(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {

@@ -38,6 +38,24 @@ import com.sqlapp.data.db.dialect.db2.Db2_980;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
+	@Test
+	public void securityAdministratorVersionBoundary() {
+		var resolver = DialectResolver.getInstance();
+		assertTrue(!(resolver.getDialect("DB2", 9, 0, 0) instanceof com.sqlapp.data.db.dialect.db2.Db2_910));
+		assertTrue(resolver.getDialect("DB2", 9, 1, 0) instanceof com.sqlapp.data.db.dialect.db2.Db2_910);
+		assertTrue(resolver.getDialect("DB2", 9, 4, 0) instanceof com.sqlapp.data.db.dialect.db2.Db2_910);
+		assertTrue(resolver.getDialect("DB2", 9, 5, 0) instanceof com.sqlapp.data.db.dialect.db2.Db2_950);
+	}
+
+	@Test
+	public void schemaAuthorizationVersionBoundary() {
+		var resolver = DialectResolver.getInstance();
+		assertTrue(!(resolver.getDialect("DB2", 11, 5, 4) instanceof com.sqlapp.data.db.dialect.db2.Db2_1155));
+		assertTrue(!(resolver.getDialect("DB2", 11, 5, null) instanceof com.sqlapp.data.db.dialect.db2.Db2_1155));
+		assertTrue(resolver.getDialect("DB2", 11, 5, 5) instanceof com.sqlapp.data.db.dialect.db2.Db2_1155);
+		assertTrue(resolver.getDialect("DB2", 11, 5, 9) instanceof com.sqlapp.data.db.dialect.db2.Db2_1155);
+		assertTrue(resolver.getDialect("DB2", 12, 1, 0) instanceof com.sqlapp.data.db.dialect.db2.Db2_1155);
+	}
 
 	@Test
 	public void testGetDialect() {
