@@ -24,6 +24,11 @@ import com.sqlapp.data.db.sql.AbstractCreateSequenceFactory;
 import com.sqlapp.data.schemas.Sequence;
 
 public class FirebirdCreateSequenceFactory extends AbstractCreateSequenceFactory<FirebirdSqlBuilder> {
+	@Override
+	protected void addOtherDefinitions(Sequence obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+	}
 
 	protected void addCreateSequence(final Sequence obj, FirebirdSqlBuilder builder) {
 		builder.create().generator();

@@ -57,6 +57,8 @@ public class FirebirdCreateIndexFactory extends AbstractCreateIndexFactory<Fireb
 	@Override
 	public List<SqlOperation> createSql(Index obj) {
 		List<SqlOperation> result = super.createSql(obj);
+		if (!result.isEmpty() && obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, SqlType.SET_COMMENT));
 		if (!result.isEmpty() && !obj.isEnable()) {
 			var builder = createSqlBuilder();
 			builder.alter().index().space().name(obj, false).inactive();

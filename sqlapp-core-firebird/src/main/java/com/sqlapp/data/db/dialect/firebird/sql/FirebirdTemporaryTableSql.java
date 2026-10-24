@@ -6,7 +6,8 @@ import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder;
 import com.sqlapp.data.schemas.Table;
 
 final class FirebirdTemporaryTableSql {
-	private FirebirdTemporaryTableSql() { }
+	private FirebirdTemporaryTableSql() {
+	}
 
 	static void requireSupportedDialect(FirebirdSqlBuilder builder) {
 		if (builder.getDialect().compareTo(DialectHolder.defaultDialect20) < 0)
@@ -15,7 +16,8 @@ final class FirebirdTemporaryTableSql {
 
 	static void addOnCommit(Table table, boolean preserveDefault, FirebirdSqlBuilder builder) {
 		String onCommit = table.getSpecifics().get("firebird.onCommit");
-		if (onCommit == null) onCommit = preserveDefault ? "PRESERVE ROWS" : "DELETE ROWS";
+		if (onCommit == null)
+			onCommit = preserveDefault ? "PRESERVE ROWS" : "DELETE ROWS";
 		if (!java.util.Set.of("PRESERVE ROWS", "DELETE ROWS").contains(onCommit))
 			throw new IllegalArgumentException("firebird.onCommit must be PRESERVE ROWS or DELETE ROWS");
 		builder._add(" ON COMMIT ")._add(onCommit);

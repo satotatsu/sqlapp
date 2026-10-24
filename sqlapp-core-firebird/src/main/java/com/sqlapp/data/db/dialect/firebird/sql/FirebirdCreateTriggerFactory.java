@@ -28,6 +28,12 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
 public class FirebirdCreateTriggerFactory extends AbstractCreateTriggerFactory<FirebirdSqlBuilder> {
+	@Override
+	protected void addOtherDefinitions(com.sqlapp.data.schemas.Trigger obj,
+			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+	}
 
 	@Override
 	protected void addCreateObject(final Trigger obj, FirebirdSqlBuilder builder) {

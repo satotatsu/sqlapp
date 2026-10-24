@@ -30,6 +30,16 @@ import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
  */
 public class FirebirdCreateTableFactory extends AbstractCreateTableFactory<FirebirdSqlBuilder> {
 	@Override
+	protected void addOtherDefinitions(com.sqlapp.data.schemas.Table table,
+			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (table.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(table, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+		for (var column : table.getColumns())
+			if (column.getRemarks() != null)
+				result.addAll(getSqlFactoryRegistry().createSql(column, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+	}
+
+	@Override
 	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(com.sqlapp.data.schemas.Table table) {
 		var result = super.createSql(table);
 		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary

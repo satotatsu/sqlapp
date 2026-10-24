@@ -139,7 +139,8 @@ class JobConfigurationEditorPanelTest {
 			});
 			panel.set(view);
 			onFinished(view, finished);
-			view.loadFrom(directory.resolve("job.yaml"));
+			assertTrue(view.requestOpen(directory.resolve("job.yaml")));
+			assertFalse(view.requestOpen(directory.resolve("other.yaml")));
 			view.text.setText("newer edits");
 		});
 		release.countDown();

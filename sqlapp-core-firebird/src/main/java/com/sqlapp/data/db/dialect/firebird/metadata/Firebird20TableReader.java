@@ -9,11 +9,17 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-/** Firebird20 covers both 2.0 and 2.1; only 2.1+ catalogs contain relation types. */
+/**
+ * Firebird20 covers both 2.0 and 2.1; only 2.1+ catalogs contain relation
+ * types.
+ */
 public class Firebird20TableReader extends FirebirdTableReader {
-	protected Firebird20TableReader(Dialect dialect) { super(dialect); }
+	protected Firebird20TableReader(Dialect dialect) {
+		super(dialect);
+	}
 
-	@Override protected SqlNode getSqlSqlNode(ProductVersionInfo version) {
+	@Override
+	protected SqlNode getSqlSqlNode(ProductVersionInfo version) {
 		boolean relationTypes = getDialect().compareTo(DialectHolder.defaultDialect25) >= 0;
 		if (version != null && version.getMajorVersion() != null) {
 			int major = version.getMajorVersion();
@@ -23,7 +29,8 @@ public class Firebird20TableReader extends FirebirdTableReader {
 		return getSqlNodeCache().getString(relationTypes ? "tables21.sql" : "tables.sql");
 	}
 
-	@Override protected Table createTable(ExResultSet rs) throws SQLException {
+	@Override
+	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
 		Object type = rs.getObject("RELATION_TYPE");
 		if (type instanceof Number number && (number.intValue() == 4 || number.intValue() == 5)) {

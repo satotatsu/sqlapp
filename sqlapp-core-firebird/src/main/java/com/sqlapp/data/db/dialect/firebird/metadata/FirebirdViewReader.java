@@ -68,6 +68,7 @@ public class FirebirdViewReader extends ViewReader {
 		String view_name = trim(getString(rs, "RDB$RELATION_NAME"));
 		String text = trim(getString(rs, "RDB$VIEW_SOURCE"));
 		Table table = createTable(view_name);
+		table.setRemarks(getString(rs, "RDB$DESCRIPTION"));
 		if (this.getReaderOptions().isReadStatement()) {
 			table.setStatement(text);
 		}

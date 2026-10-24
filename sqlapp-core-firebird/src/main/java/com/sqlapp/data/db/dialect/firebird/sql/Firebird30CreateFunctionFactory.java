@@ -12,6 +12,8 @@ import com.sqlapp.util.CommonUtils;
 public class Firebird30CreateFunctionFactory extends FirebirdCreateFunctionFactory {
 	@Override
 	protected void addOtherDefinitions(Function obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
 		if (obj.getSpecifics().containsKey("firebird.udf.module"))
 			return;
 		for (var argument : obj.getArguments()) {

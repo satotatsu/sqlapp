@@ -11,6 +11,12 @@ import com.sqlapp.util.CommonUtils;
  */
 public class FirebirdCreateFunctionFactory extends AbstractCreateFunctionFactory<FirebirdSqlBuilder> {
 	@Override
+	protected void addOtherDefinitions(Function obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+	}
+
+	@Override
 	protected void addCreateObject(Function function, FirebirdSqlBuilder builder) {
 		if (!CommonUtils.isEmpty(function.getDefinition())) {
 			builder._add(function.getDefinition());

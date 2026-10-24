@@ -51,4 +51,5 @@ include(
 , 'sqlapp-core-dialect-test'
 , 'sqlapp-core-hsql'
 , 'sqlapp-elk-svg'
+, 'sqlapp-swing'
 )

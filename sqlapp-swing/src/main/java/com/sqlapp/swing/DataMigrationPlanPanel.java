@@ -37,6 +37,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	final JTextField expectedFingerprint = new JTextField();
 	final ConnectionFields source = new ConnectionFields("Source database");
 	final ConnectionFields target = new ConnectionFields("Target database");
+	final JButton editJob = new JButton("Edit job…");
 	final JButton build = new JButton("Connect and inspect plan");
 	final JButton apply = new JButton("Execute reviewed job…");
 	final JButton saveExecution = new JButton("Save last audit…");
@@ -52,6 +53,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	private final Saver saver;
 	private DataMigrationPlanningService.Result result;
 	private long revision;
+	private java.util.function.Predicate<Path> jobEditor;
 	private PlanningJdbc.Spec reviewedSource;
 	private PlanningJdbc.Spec reviewedTarget;
 	private DataMigrationExecutionService.Outcome execution;
@@ -104,7 +106,12 @@ final class DataMigrationPlanPanel extends JPanel {
 		final var browse = new JButton("Browse…");
 		fileRow.add(new JLabel("Job YAML"), BorderLayout.WEST);
 		fileRow.add(configurationFile, BorderLayout.CENTER);
-		fileRow.add(browse, BorderLayout.EAST);
+		final var fileActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		fileActions.add(browse);
+		fileActions.add(editJob);
+		fileRow.add(fileActions, BorderLayout.EAST);
+		editJob.setEnabled(false);
+		editJob.addActionListener(event -> editSelectedJob());
 		settings.add(fileRow, BorderLayout.NORTH);
 		final var connections = new JPanel(new GridLayout(1, 2, 8, 0));
 		connections.add(source);
@@ -196,7 +203,34 @@ final class DataMigrationPlanPanel extends JPanel {
 		});
 	}
 
+	void setJobEditor(final java.util.function.Predicate<Path> jobEditor) {
+		this.jobEditor = jobEditor;
+		refreshEditAction();
+	}
+
+	private void refreshEditAction() {
+		editJob.setEnabled(jobEditor != null && configurationFile.isEnabled() && !configurationFile.getText().isBlank());
+	}
+
+	void editSelectedJob() {
+		if (jobEditor == null || !editJob.isEnabled() || !configurationFile.isEnabled()) return;
+		final Path path;
+		try {
+			path = Path.of(configurationFile.getText().trim()).toAbsolutePath().normalize();
+		} catch (final java.nio.file.InvalidPathException exception) {
+			status.setText("Enter a valid job YAML path before opening the editor.");
+			return;
+		}
+		if (jobEditor.test(path)) {
+			clear();
+			status.setText("Editing job YAML. Save and select the saved job, then inspect a new plan.");
+		} else {
+			status.setText("Job was not opened. The current review is retained.");
+		}
+	}
+
 	private void clear() {
+		refreshEditAction();
 		revision++;
 		result = null;
 		apply.setEnabled(false);
@@ -209,6 +243,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		enable(settings, !busy);
 		advancedToggle.setEnabled(!busy);
 		build.setEnabled(!busy);
+		refreshEditAction();
 		save.setEnabled(!busy && result != null);
 		apply.setEnabled(!busy && result != null && DataMigrationExecutionService.restriction(result) == null);
 		saveExecution.setEnabled(!busy && execution != null && execution.hasAudit());

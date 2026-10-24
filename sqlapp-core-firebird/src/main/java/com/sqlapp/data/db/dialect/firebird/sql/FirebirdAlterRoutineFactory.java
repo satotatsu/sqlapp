@@ -89,7 +89,7 @@ public abstract class FirebirdAlterRoutineFactory<T extends ArgumentRoutine<T>>
 				addSql(result, FirebirdRoutineSql.argumentComment(target, argument, createSqlBuilder()),
 						SqlType.SET_COMMENT, argument);
 		}
-		if (changed.containsKey("remarks")) {
+		if (changed.containsKey("remarks") && (!structural || target.getRemarks() == null)) {
 			var builder = createSqlBuilder();
 			builder._add("COMMENT ON " + kind() + " ").name(target.getName())._add(" IS ");
 			if (target.getRemarks() == null)

@@ -182,6 +182,77 @@ class DataMigrationPlanPanelTest {
 		});
 	}
 
+	@Test
+	void editActionPassesSelectedPathAndInvalidatesReviewOnlyAfterAcceptedOpen() throws Exception {
+		final Path job = Files.writeString(directory.resolve("selected.yaml"), "schemaFile: schema.xml");
+		final var planned = new CountDownLatch(1);
+		final var selected = new AtomicReference<Path>();
+		final var view = new AtomicReference<DataMigrationPlanPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new DataMigrationPlanPanel((request, source, sourcePassword, target, targetPassword) -> result(job),
+					(result, destination) -> {});
+			view.set(panel); configure(panel, job);
+			assertFalse(panel.editJob.isEnabled());
+			panel.setJobEditor(path -> { selected.set(path); return false; });
+			assertTrue(panel.editJob.isEnabled());
+			onEnabled(panel.build, planned); panel.build.doClick();
+		});
+		assertTrue(planned.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = view.get();
+			assertTrue(panel.save.isEnabled());
+			final String details = panel.view.details.getText();
+			panel.editJob.doClick();
+			assertEquals(job.toAbsolutePath().normalize(), selected.get());
+			assertTrue(panel.save.isEnabled());
+			assertEquals(details, panel.view.details.getText());
+			panel.setJobEditor(path -> true);
+			panel.editJob.doClick();
+			assertFalse(panel.save.isEnabled());
+			assertFalse(panel.apply.isEnabled());
+			assertEquals("", panel.view.details.getText());
+			assertEquals(job.toString(), panel.configurationFile.getText());
+			assertEquals("jdbc:source", panel.source.jdbcUrl.getText());
+			assertTrue(panel.status.getText().startsWith("Editing job YAML"));
+		});
+	}
+
+	@Test
+	void editActionIsUnavailableWhilePlanningAndForEmptyOrInvalidPaths() throws Exception {
+		final Path job = Files.writeString(directory.resolve("selected.yaml"), "schemaFile: schema.xml");
+		final var release = new CountDownLatch(1);
+		final var finished = new CountDownLatch(1);
+		final var calls = new AtomicInteger();
+		final var view = new AtomicReference<DataMigrationPlanPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new DataMigrationPlanPanel((request, source, sourcePassword, target, targetPassword) -> {
+				try {
+					if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Timeout");
+				} catch (InterruptedException exception) {
+					Thread.currentThread().interrupt(); throw new IllegalStateException(exception);
+				}
+				return result(job);
+			}, (result, destination) -> {});
+			view.set(panel); panel.setJobEditor(path -> { calls.incrementAndGet(); return true; });
+			assertFalse(panel.editJob.isEnabled());
+			configure(panel, job); onEnabled(panel.build, finished); panel.build.doClick();
+			assertFalse(panel.editJob.isEnabled());
+			panel.editSelectedJob();
+		});
+		release.countDown(); assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = view.get();
+			assertTrue(panel.editJob.isEnabled());
+			assertEquals(0, calls.get());
+			panel.configurationFile.setText("invalid\0path");
+			panel.editSelectedJob();
+			assertEquals(0, calls.get());
+			assertTrue(panel.status.getText().contains("valid job YAML path"));
+			panel.configurationFile.setText("   ");
+			assertFalse(panel.editJob.isEnabled());
+		});
+	}
+
 	private void configure(final DataMigrationPlanPanel panel, final Path job) {
 		panel.configurationFile.setText(job.toString());
 		panel.source.jdbcUrl.setText("jdbc:source");

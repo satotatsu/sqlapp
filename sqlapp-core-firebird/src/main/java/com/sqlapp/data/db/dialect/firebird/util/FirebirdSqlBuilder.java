@@ -129,6 +129,16 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 		return instance();
 	}
 
+	public FirebirdSqlBuilder typeDefinition(com.sqlapp.data.schemas.Domain domain) {
+		Column type = new Column(domain.getName()).setDataType(domain.getDataType())
+				.setDataTypeName(domain.getDataTypeName()).setLength(domain.getLength()).setScale(domain.getScale())
+				.setArrayDimension(domain.getArrayDimension())
+				.setArrayDimensionLowerBound(domain.getArrayDimensionLowerBound())
+				.setArrayDimensionUpperBound(domain.getArrayDimensionUpperBound());
+		type.getSpecifics().putAll(domain.getSpecifics());
+		return typeDefinition(type);
+	}
+
 	@Override
 	protected FirebirdSqlBuilder collateDefinition(Column column) {
 		return instance();

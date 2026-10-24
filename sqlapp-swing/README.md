@@ -9,6 +9,14 @@ Run on a Java 21 graphical desktop from the repository root:
 ## Edit data job YAML
 
 Open **Job YAML editor** to create or edit a job without connecting to a database.
+From **Data migration plan**, **Edit job…** beside the selected job path opens
+that file directly in the editor. This action is disabled during data operations
+and uses the editor's existing unsaved-edit confirmation. Cancelling, or a busy
+editor, retains the current data review. Accepting the open invalidates that
+review immediately, including when the file subsequently fails to load. No
+connection or migration is started, and connection fields are retained. Save
+and use **Use saved job in data plan** to return with the saved fingerprint,
+then inspect a new plan.
 **Open…** loads existing UTF-8 text, including malformed YAML so it can be repaired.
 **New** starts an empty buffer; use the existing
 [bulk migration configuration examples](../docs/gradle-plugin/bulk-migration.md)

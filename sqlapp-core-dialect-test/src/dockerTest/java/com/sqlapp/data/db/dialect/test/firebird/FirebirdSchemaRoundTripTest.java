@@ -73,6 +73,7 @@ class FirebirdSchemaRoundTripTest {
 				routines(connection, statement, dialect, major);
 				alterSignatures(connection, statement, dialect, major);
 				parameterComments(connection, statement, dialect, major);
+				objectRecreation(connection, statement, dialect, major);
 				textRoutines(connection, statement, dialect, major);
 				externalRoutines(connection, statement, dialect, major);
 				privileges(connection, statement, dialect, major);
@@ -573,6 +574,118 @@ class FirebirdSchemaRoundTripTest {
 			assertTrue(rows.next());
 			assertEquals(1, rows.getInt(1));
 		}
+	}
+
+	private void objectRecreation(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		var schema = dialect.getCatalogReader().getSchemaReader();
+		var domains = schema.getDomainReader();
+		statement.execute(
+				"CREATE DOMAIN \"FB text domain\" AS VARCHAR(12) CHARACTER SET UTF8 DEFAULT '初期' NOT NULL CHECK (CHAR_LENGTH(VALUE)>0) COLLATE UNICODE_CI");
+		domains.setObjectName("FB text domain");
+		Domain text = domains.getAll(connection).get(0);
+		assertEquals(12L, text.getLength());
+		assertEquals("UTF8", text.getCharacterSet());
+		assertEquals("UNICODE_CI", text.getCollation());
+		assertTrue(text.isNotNull());
+		recreateCommented(statement, dialect, text, () -> domains.getAll(connection).get(0),
+				"DROP DOMAIN \"FB text domain\"");
+		Domain restoredText = domains.getAll(connection).get(0);
+		assertEquals(text.getDefaultValue(), restoredText.getDefaultValue());
+		assertEquals(text.getCheck(), restoredText.getCheck());
+		assertEquals(text.getCollation(), restoredText.getCollation());
+		statement.execute("CREATE DOMAIN FB_ARRAY_DOMAIN AS INTEGER[-2:2,3:4]");
+		domains.setObjectName("FB_ARRAY_DOMAIN");
+		Domain array = domains.getAll(connection).get(0);
+		assertEquals(2, array.getArrayDimension());
+		assertEquals("-2:2,3:4", array.getSpecifics().get("firebird.array.bounds"));
+		recreateCommented(statement, dialect, array, () -> domains.getAll(connection).get(0),
+				"DROP DOMAIN FB_ARRAY_DOMAIN");
+		assertEquals("-2:2,3:4", domains.getAll(connection).get(0).getSpecifics().get("firebird.array.bounds"));
+		if (major >= 4) {
+			statement.execute("CREATE DOMAIN FB_DECIMAL_DOMAIN AS DECIMAL(38,5)");
+			domains.setObjectName("FB_DECIMAL_DOMAIN");
+			Domain decimal = domains.getAll(connection).get(0);
+			assertEquals(38L, decimal.getLength());
+			recreateCommented(statement, dialect, decimal, () -> domains.getAll(connection).get(0),
+					"DROP DOMAIN FB_DECIMAL_DOMAIN");
+			assertEquals(38L, domains.getAll(connection).get(0).getLength());
+		}
+		statement.execute("CREATE TABLE FB_OBJECT_TABLE (ID INTEGER, TEXT_VALUE VARCHAR(12))");
+		statement.execute("COMMENT ON COLUMN FB_OBJECT_TABLE.TEXT_VALUE IS 'column 日本語'");
+		var tables = schema.getTableReader();
+		tables.setObjectName("FB_OBJECT_TABLE");
+		recreateCommented(statement, dialect, tables.getAllFull(connection).get(0),
+				() -> tables.getAllFull(connection).get(0), "DROP TABLE FB_OBJECT_TABLE");
+		assertEquals("column 日本語", tables.getAllFull(connection).get(0).getColumns().get("TEXT_VALUE").getRemarks());
+		statement.execute(
+				"CREATE VIEW \"FB aliased view\" (\"renamed id\", \"renamed text\") AS SELECT ID,TEXT_VALUE FROM FB_OBJECT_TABLE WHERE ID>0 WITH CHECK OPTION");
+		statement.execute("COMMENT ON COLUMN \"FB aliased view\".\"renamed text\" IS 'view column 日本語'");
+		var views = schema.getViewReader();
+		views.setObjectName("FB aliased view");
+		Table view = views.getAllFull(connection).get(0);
+		recreateCommented(statement, dialect, view, () -> views.getAllFull(connection).get(0),
+				"DROP VIEW \"FB aliased view\"");
+		assertEquals("view column 日本語",
+				views.getAllFull(connection).get(0).getColumns().get("renamed text").getRemarks());
+		statement.execute("INSERT INTO \"FB aliased view\" (\"renamed id\") VALUES (1)");
+		assertThrows(SQLException.class,
+				() -> statement.execute("INSERT INTO \"FB aliased view\" (\"renamed id\") VALUES (-1)"));
+		statement.execute("CREATE INDEX FB_OBJECT_INDEX ON FB_OBJECT_TABLE(ID)");
+		java.util.function.Supplier<Index> index = () -> tables.getAllFull(connection).get(0).getIndexes()
+				.get("FB_OBJECT_INDEX");
+		recreateCommented(statement, dialect, index.get(), index, "DROP INDEX FB_OBJECT_INDEX");
+		statement.execute("CREATE TRIGGER FB_OBJECT_TRIGGER FOR FB_OBJECT_TABLE INACTIVE BEFORE INSERT AS BEGIN END");
+		var triggers = schema.getTriggerReader();
+		triggers.setObjectName("FB_OBJECT_TRIGGER");
+		recreateCommented(statement, dialect, triggers.getAll(connection).get(0),
+				() -> triggers.getAll(connection).get(0), "DROP TRIGGER FB_OBJECT_TRIGGER");
+		statement.execute("CREATE SEQUENCE FB_OBJECT_SEQUENCE");
+		var sequences = schema.getSequenceReader();
+		sequences.setObjectName("FB_OBJECT_SEQUENCE");
+		recreateCommented(statement, dialect, sequences.getAll(connection).get(0),
+				() -> sequences.getAll(connection).get(0), "DROP SEQUENCE FB_OBJECT_SEQUENCE");
+		String quotedSequence = "\"FB sequence \"\"quoted\"";
+		statement.execute("CREATE SEQUENCE " + quotedSequence);
+		statement.execute("SET GENERATOR " + quotedSequence + " TO 41");
+		sequences.setObjectName("FB sequence \"quoted");
+		assertEquals(java.math.BigInteger.valueOf(41), sequences.getAllFull(connection).get(0).getLastValue());
+		try (var rows = statement.executeQuery("SELECT GEN_ID(" + quotedSequence + ",0) FROM RDB$DATABASE")) {
+			assertTrue(rows.next());
+			assertEquals(41L, rows.getLong(1), "metadata extraction must not advance sequence values");
+		}
+		statement.execute("CREATE PROCEDURE FB_OBJECT_PROC AS BEGIN END");
+		var procedures = schema.getProcedureReader();
+		procedures.setObjectName("FB_OBJECT_PROC");
+		recreateCommented(statement, dialect, procedures.getAllFull(connection).get(0),
+				() -> procedures.getAllFull(connection).get(0), "DROP PROCEDURE FB_OBJECT_PROC");
+		if (major >= 3) {
+			statement.execute("CREATE FUNCTION FB_OBJECT_FUNC RETURNS INTEGER AS BEGIN RETURN 1; END");
+			var functions = schema.getFunctionReader();
+			functions.setObjectName("FB_OBJECT_FUNC");
+			recreateCommented(statement, dialect, functions.getAllFull(connection).get(0),
+					() -> functions.getAllFull(connection).get(0), "DROP FUNCTION FB_OBJECT_FUNC");
+			statement.execute("CREATE PACKAGE FB_OBJECT_PACKAGE AS BEGIN END");
+			var packages = schema.getPackageReader();
+			packages.setObjectName("FB_OBJECT_PACKAGE");
+			recreateCommented(statement, dialect, packages.getAll(connection).get(0),
+					() -> packages.getAll(connection).get(0), "DROP PACKAGE FB_OBJECT_PACKAGE");
+		}
+	}
+
+	private <T extends AbstractNamedObject<?>> void recreateCommented(Statement statement, Dialect dialect, T object,
+			java.util.function.Supplier<T> reread, String drop) throws Exception {
+		String comment = "it's 日本語\nsecond line";
+		object.setRemarks(comment);
+		execute(statement, dialect, object, SqlType.SET_COMMENT);
+		T original = reread.get();
+		assertEquals(comment, original.getRemarks());
+		statement.execute(drop);
+		execute(statement, dialect, original, SqlType.CREATE);
+		assertEquals(comment, reread.get().getRemarks());
+		original.setRemarks(null);
+		execute(statement, dialect, original, SqlType.SET_COMMENT);
+		assertNull(reread.get().getRemarks());
 	}
 
 	private void routines(Connection connection, Statement statement, Dialect dialect, int major) throws Exception {

@@ -39,6 +39,11 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(dataPlan);
 			});
 			tabs.addTab("Job YAML editor", jobEditor);
+			dataPlan.setJobEditor(path -> {
+				if (!jobEditor.requestOpen(path)) return false;
+				tabs.setSelectedComponent(jobEditor);
+				return true;
+			});
 			tabs.addTab("Migration reports", new ReportReviewPanel());
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {

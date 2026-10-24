@@ -7,14 +7,23 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 
-/** Firebird applies direction to the backing index, not individual constraint columns. */
+/**
+ * Firebird applies direction to the backing index, not individual constraint
+ * columns.
+ */
 public class FirebirdCreateUniqueConstraintFactory extends AbstractCreateUniqueConstraintFactory<FirebirdSqlBuilder> {
-	@Override public void addObjectDetail(UniqueConstraint constraint, Table table, FirebirdSqlBuilder builder) {
-		if (!constraint.isEnable()) throw new IllegalArgumentException("Firebird primary/unique constraints cannot be disabled");
-		if (constraint.getColumns().isEmpty()) throw new IllegalArgumentException("Firebird primary/unique constraint requires columns");
+	@Override
+	public void addObjectDetail(UniqueConstraint constraint, Table table, FirebirdSqlBuilder builder) {
+		if (!constraint.isEnable())
+			throw new IllegalArgumentException("Firebird primary/unique constraints cannot be disabled");
+		if (constraint.getColumns().isEmpty())
+			throw new IllegalArgumentException("Firebird primary/unique constraint requires columns");
 		boolean descending = constraint.getColumns().get(0).getOrder() == Order.Desc;
 		builder.constraint().space().name(constraint, false);
-		if (constraint.isPrimaryKey()) builder.primaryKey(); else builder.unique();
+		if (constraint.isPrimaryKey())
+			builder.primaryKey();
+		else
+			builder.unique();
 		builder._add(" (");
 		for (int i = 0; i < constraint.getColumns().size(); i++) {
 			var column = constraint.getColumns().get(i);

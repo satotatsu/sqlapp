@@ -13,15 +13,19 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class FirebirdConstraintMetadataTest {
-	@Test void retainsConstantChecksAndAppliesTheConstraintNameFilterInOneQuery() {
+	@Test
+	void retainsConstantChecksAndAppliesTheConstraintNameFilterInOneQuery() {
 		int[] queries = { 0 };
 		var reader = new FirebirdCheckConstraintReader(DialectHolder.defaultDialect25) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries[0]++;
 				for (int i = 0; i < 50; i++) {
 					String name = "constant_check_" + i;
 					var row = new ExResultSet(null) {
-						@Override public String getString(String key) {
+						@Override
+						public String getString(String key) {
 							return switch (key.toLowerCase(java.util.Locale.ROOT)) {
 							case "constraint_name" -> name;
 							case "table_name" -> "orders";
@@ -30,7 +34,11 @@ class FirebirdConstraintMetadataTest {
 							};
 						}
 					};
-					try { handler.handleResultSetNext(row); } catch (SQLException e) { throw new AssertionError(e); }
+					try {
+						handler.handleResultSetNext(row);
+					} catch (SQLException e) {
+						throw new AssertionError(e);
+					}
 				}
 				return null;
 			}

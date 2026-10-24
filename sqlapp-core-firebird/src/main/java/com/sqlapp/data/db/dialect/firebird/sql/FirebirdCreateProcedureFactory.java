@@ -11,6 +11,8 @@ import com.sqlapp.util.CommonUtils;
 public class FirebirdCreateProcedureFactory extends AbstractCreateProcedureFactory<FirebirdSqlBuilder> {
 	@Override
 	protected void addOtherDefinitions(Procedure obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
 		for (var argument : obj.getArguments()) {
 			if (argument.getRemarks() != null)
 				addSql(result, FirebirdRoutineSql.argumentComment(obj, argument, createSqlBuilder()),

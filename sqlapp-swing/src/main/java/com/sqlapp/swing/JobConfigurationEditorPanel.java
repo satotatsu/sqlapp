@@ -103,11 +103,9 @@ final class JobConfigurationEditorPanel extends JPanel {
 			}
 		});
 		open.addActionListener(event -> {
-			if (!canDiscardChanges())
-				return;
 			final var chooser = chooser();
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
-				loadFrom(chooser.getSelectedFile().toPath());
+				requestOpen(chooser.getSelectedFile().toPath());
 		});
 		check.addActionListener(event -> checkSyntax());
 		save.addActionListener(event -> {
@@ -171,6 +169,12 @@ final class JobConfigurationEditorPanel extends JPanel {
 		text.setEditable(!busy);
 		file.setText((snapshot == null ? "New job (unsaved)" : snapshot.file().toString()) + (isDirty() ? " *" : ""));
 		file.setToolTipText(file.getText());
+	}
+
+	boolean requestOpen(final Path path) {
+		if (busy || !canDiscardChanges()) return false;
+		loadFrom(path);
+		return true;
 	}
 
 	void loadFrom(final Path path) {
