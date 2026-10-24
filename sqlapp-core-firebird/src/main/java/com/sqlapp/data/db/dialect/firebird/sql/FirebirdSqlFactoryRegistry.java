@@ -23,8 +23,15 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Role;
+import com.sqlapp.data.schemas.RoleMember;
+import com.sqlapp.data.schemas.ObjectPrivilege;
+import com.sqlapp.data.schemas.ColumnPrivilege;
+import com.sqlapp.data.schemas.RoutinePrivilege;
 
 public class FirebirdSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -35,6 +42,29 @@ public class FirebirdSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				FirebirdCreateUniqueConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, SqlType.CREATE,
+				FirebirdCreateForeignKeyConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.CREATE, FirebirdCreateFunctionFactory.class);
+		registerSqlFactory(Role.class, SqlType.CREATE, FirebirdCreateRoleFactory.class);
+		registerSqlFactory(Role.class, SqlType.ALTER, FirebirdAlterRoleFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.GRANT,
+				FirebirdGrantUserPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.REVOKE,
+				FirebirdRevokeUserPrivilegeFactory.class);
+		registerSqlFactory(Role.class, SqlType.DROP, FirebirdDropRoleFactory.class);
+		registerSqlFactory(RoleMember.class, SqlType.GRANT, FirebirdGrantRoleMemberFactory.class);
+		registerSqlFactory(RoleMember.class, SqlType.REVOKE, FirebirdRevokeRoleMemberFactory.class);
+		registerSqlFactory(ObjectPrivilege.class, SqlType.GRANT, FirebirdGrantObjectPrivilegeFactory.class);
+		registerSqlFactory(ObjectPrivilege.class, SqlType.REVOKE, FirebirdRevokeObjectPrivilegeFactory.class);
+		registerSqlFactory(ColumnPrivilege.class, SqlType.GRANT, FirebirdGrantColumnPrivilegeFactory.class);
+		registerSqlFactory(ColumnPrivilege.class, SqlType.REVOKE, FirebirdRevokeColumnPrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.GRANT, FirebirdGrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(RoutinePrivilege.class, SqlType.REVOKE, FirebirdRevokeRoutinePrivilegeFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE, FirebirdCreateIndexFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.CREATE, FirebirdCreateProcedureFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.ALTER, FirebirdAlterProcedureFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, FirebirdCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, FirebirdTruncateTableFactory.class);

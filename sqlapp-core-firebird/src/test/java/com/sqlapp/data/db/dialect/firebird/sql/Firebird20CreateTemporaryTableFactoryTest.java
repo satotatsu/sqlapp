@@ -63,7 +63,7 @@ public class Firebird20CreateTemporaryTableFactoryTest extends Firebird20SqlFact
 				(
 					  "cola" INTEGER
 					, "colb" BIGINT
-					, "colc" VARCHAR(50)
+					, "colc" VARCHAR(50) CHARACTER SET UTF8 COLLATE UNICODE
 					, "cold" TIMESTAMP
 				) ON COMMIT PRESERVE ROWS""";
 		assertEquals(expected, operation.getSqlText());
@@ -82,8 +82,8 @@ public class Firebird20CreateTemporaryTableFactoryTest extends Firebird20SqlFact
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.BIGINT);
 		table.getColumns().add(column);
-		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
-				.setCollation("utf8mb4_binary");
+		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("UTF8")
+				.setCollation("UNICODE");
 		table.getColumns().add(column);
 		column = new Column("cold").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);

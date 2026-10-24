@@ -32,6 +32,7 @@ import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
@@ -82,6 +83,7 @@ public class FirebirdIndexReader extends IndexReader {
 				}
 				boolean isDesc = rs.getBoolean("IS_DESC");
 				if (columnName == null && expression != null) {
+					index.setIndexType(IndexType.Function);
 					index.getColumns().add(expression, isDesc ? Order.Desc : Order.Asc);
 				} else if (isDesc) {
 					index.getColumns().add(new Column(columnName), Order.Desc);

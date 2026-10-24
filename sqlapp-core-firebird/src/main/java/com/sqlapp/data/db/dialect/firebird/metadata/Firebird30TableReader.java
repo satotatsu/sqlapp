@@ -34,7 +34,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * @author satoh
  * 
  */
-public class Firebird30TableReader extends FirebirdTableReader {
+public class Firebird30TableReader extends Firebird20TableReader {
 
 	protected Firebird30TableReader(Dialect dialect) {
 		super(dialect);

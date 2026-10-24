@@ -65,8 +65,8 @@ public class Firebird30PackageBodyReader extends PackageBodyReader {
 	protected PackageBody createPackageBody(ExResultSet rs) throws SQLException {
 		String name = CommonUtils.trim(getString(rs, "RDB$PACKAGE_NAME"));
 		PackageBody obj = new PackageBody(name);
-		String source = getString(rs, "RDB$PACKAGE_BODY_SOURCE");
-		obj.setStatement(source);
+		if (getReaderOptions().isReadStatement())
+			obj.setStatement(getString(rs, "RDB$PACKAGE_BODY_SOURCE"));
 		obj.setRemarks(CommonUtils.trim(getString(rs, "RDB$DESCRIPTION")));
 		return obj;
 	}

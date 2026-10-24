@@ -48,7 +48,7 @@ public class DialectResolverTest {
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Firebird30);
 		dialect = DialectResolver.getInstance().getDialect("Firebird", 4, 0, 0);
-		assertTrue(dialect instanceof Firebird30);
+		assertEquals(com.sqlapp.data.db.dialect.firebird.Firebird40.class, dialect.getClass());
 		dialect = DialectResolver.getInstance().getDialect("Firebird", 5, 0, 0);
 		assertTrue(dialect instanceof Firebird50);
 		assertTrue(dialect.supportsInsertReturningResultSet());
@@ -56,13 +56,18 @@ public class DialectResolverTest {
 
 	@Test
 	public void testMetadataReaderVersionBoundaries() {
+		for (int major : new int[] { 3, 4, 5 }) {
+			assertEquals(major >= 4 ? "Firebird40ProcedureReader" : "Firebird30ProcedureReader",
+					DialectResolver.getInstance().getDialect("Firebird", major, 0, 0).getCatalogReader()
+							.getSchemaReader().getProcedureReader().getClass().getSimpleName());
+		}
 		assertCatalogReader("FirebirdCatalogReader", 1, 5, 0);
 		assertCatalogReader("Firebird20CatalogReader", 2, 0, 0);
 		assertCatalogReader("Firebird25CatalogReader", 2, 5, 0);
 		assertCatalogReader("Firebird30CatalogReader", 3, 0, 0);
-		assertCatalogReader("Firebird30CatalogReader", 4, 0, 0);
+		assertCatalogReader("Firebird40CatalogReader", 4, 0, 0);
 		assertCatalogReader("Firebird50CatalogReader", 5, 0, 0);
-		assertTableReader("Firebird30TableReader", 4, 0, 0);
+		assertTableReader("Firebird40TableReader", 4, 0, 0);
 		assertTableReader("Firebird50TableReader", 5, 0, 0);
 	}
 

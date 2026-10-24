@@ -20,13 +20,13 @@
 package com.sqlapp.data.db.dialect.firebird.metadata;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
-import static com.sqlapp.util.CommonUtils.set;
 import static com.sqlapp.util.CommonUtils.trim;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,22 +55,31 @@ public class FirebirdTriggerReader extends TriggerReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String name = trim(getString(rs, "RDB$TRIGGER_NAME"));
-				int triggerType = rs.getInt("RDB$TRIGGER_TYPE");
+				long triggerType = rs.getLong("RDB$TRIGGER_TYPE");
 				int inactive = rs.getInt("RDB$TRIGGER_INACTIVE");
 				Trigger trigger = new Trigger(name);
 				trigger.setTableName(trim(getString(rs, "RDB$RELATION_NAME")));
 				trigger.setActionTiming(getActionTimingString(triggerType));
 				trigger.setEventManipulation(getEventManipulationString(triggerType));
-				trigger.setActionOrientation("ROW");
+				if (!isEmpty(trigger.getTableName())) {
+					trigger.setActionOrientation("ROW");
+					trigger.setActionReferenceOldRow("OLD");
+					trigger.setActionReferenceNewRow("NEW");
+				}
 				trigger.setEnable(0 == inactive);
-				trigger.setActionReferenceOldRow("OLD");
-				trigger.setActionReferenceNewRow("NEW");
-				trigger.setStatement(getStatement(rs));
+				if (getReaderOptions().isReadStatement()) {
+					trigger.setStatement(getStatement(rs));
+				}
+				trigger.setRemarks(getString(rs, "RDB$DESCRIPTION"));
 				setSpecifics(rs, "RDB$TRIGGER_SEQUENCE", "POSITION", trigger);
+				readVersionProperties(rs, trigger);
 				result.add(trigger);
 			}
 		});
 		return result;
+	}
+
+	protected void readVersionProperties(ExResultSet rs, Trigger trigger) throws SQLException {
 	}
 
 	private static final Pattern STATEMENT_PATTERN = Pattern.compile("AS\\s+(.*)",
@@ -78,6 +87,9 @@ public class FirebirdTriggerReader extends TriggerReader {
 
 	private String getStatement(ExResultSet rs) throws SQLException {
 		String statement = trim(getString(rs, "RDB$TRIGGER_SOURCE"));
+		if (statement == null) {
+			return null;
+		}
 		Matcher mathcer = STATEMENT_PATTERN.matcher(statement);
 		if (mathcer.matches()) {
 			return mathcer.group(1);
@@ -94,20 +106,39 @@ public class FirebirdTriggerReader extends TriggerReader {
 	 * 
 	 * @param type
 	 */
-	private String getActionTimingString(int type) {
-		if (type <= 0 || type >= 8000)
-			return "";
+	static String getActionTimingString(long type) {
+		if ((type & 0x4000) != 0) {
+			return (type & 1) == 0 ? "BEFORE" : "AFTER";
+		}
+		if (type <= 0 || type >= 8192)
+			return null;
 		if (type % 2 == 0) {
 			return "AFTER";
 		}
 		return "BEFORE";
 	}
 
-	private Set<String> getEventManipulationString(int type) {
+	static Set<String> getEventManipulationString(long type) {
 		if (type <= 0)
-			return set();
-		Set<String> result = set();
-		switch (type) {
+			throw new IllegalArgumentException("Invalid Firebird trigger type: " + type);
+		Set<String> result = new LinkedHashSet<>();
+		if ((type & 0x4000) != 0) {
+			if ((type & ~1L) == 0x7FFFFFFFFFFFDFFEL) {
+				result.add("ANY DDL STATEMENT");
+				return result;
+			}
+			for (int i = 0; i < DDL_EVENTS.length; i++) {
+				int bit = i < 12 ? i + 1 : i + 4;
+				if ((type & (1L << bit)) != 0) {
+					result.add(DDL_EVENTS[i]);
+				}
+			}
+			if (result.isEmpty()) {
+				throw new IllegalArgumentException("Unsupported Firebird DDL trigger type: " + type);
+			}
+			return result;
+		}
+		switch ((int) type) {
 		case 8192:
 			result.add("ON CONNECT");
 			return result;
@@ -124,10 +155,13 @@ public class FirebirdTriggerReader extends TriggerReader {
 			result.add("ON TRANSACTION ROLLBACK");
 			return result;
 		}
-		int tmp = type & 7; // 111 でマスク
+		if (type >= 8192) {
+			throw new IllegalArgumentException("Unsupported Firebird trigger type: " + type);
+		}
+		int tmp = (int) (((type + 1) >> 1) & 3);
 		String action = getTriggerEvent(tmp);
 		result.add(action);
-		tmp = type >> 3;
+		tmp = (int) (type >> 3);
 		if (tmp == 0) {
 			return result;
 		}
@@ -136,7 +170,7 @@ public class FirebirdTriggerReader extends TriggerReader {
 		if (!isEmpty(action)) {
 			result.add(action);
 		}
-		tmp = type >> 5;
+		tmp = (int) (type >> 5);
 		if (tmp == 0) {
 			return result;
 		}
@@ -148,20 +182,26 @@ public class FirebirdTriggerReader extends TriggerReader {
 		return result;
 	}
 
-	private String getTriggerEvent(int tmp) {
+	private static String getTriggerEvent(int tmp) {
 		switch (tmp) {
 		case 1:
-		case 2:
 			return "INSERT";
-		case 3:
-		case 4:
+		case 2:
 			return "UPDATE";
-		case 5:
-		case 6:
+		case 3:
 			return "DELETE";
 		default:
 			return "";
 		}
 	}
+
+	private static final String[] DDL_EVENTS = { "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "CREATE PROCEDURE",
+			"ALTER PROCEDURE", "DROP PROCEDURE", "CREATE FUNCTION", "ALTER FUNCTION", "DROP FUNCTION", "CREATE TRIGGER",
+			"ALTER TRIGGER", "DROP TRIGGER", "CREATE EXCEPTION", "ALTER EXCEPTION", "DROP EXCEPTION", "CREATE VIEW",
+			"ALTER VIEW", "DROP VIEW", "CREATE DOMAIN", "ALTER DOMAIN", "DROP DOMAIN", "CREATE ROLE", "ALTER ROLE",
+			"DROP ROLE", "CREATE INDEX", "ALTER INDEX", "DROP INDEX", "CREATE SEQUENCE", "ALTER SEQUENCE",
+			"DROP SEQUENCE", "CREATE USER", "ALTER USER", "DROP USER", "CREATE COLLATION", "DROP COLLATION",
+			"ALTER CHARACTER SET", "CREATE PACKAGE", "ALTER PACKAGE", "DROP PACKAGE", "CREATE PACKAGE BODY",
+			"DROP PACKAGE BODY", "CREATE MAPPING", "ALTER MAPPING", "DROP MAPPING" };
 
 }

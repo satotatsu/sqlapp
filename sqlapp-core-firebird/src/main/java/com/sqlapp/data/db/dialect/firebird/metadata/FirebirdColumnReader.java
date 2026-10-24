@@ -56,7 +56,44 @@ public class FirebirdColumnReader extends ColumnReader {
 				result.add(column);
 			}
 		});
+		readArrayBounds(connection, context, result);
 		return result;
+	}
+
+	private void readArrayBounds(Connection connection, ParametersContext context, List<Column> columns) {
+		var arrays = new java.util.HashMap<String, Column>();
+		for (Column column : columns) {
+			if (column.getArrayDimension() > 0)
+				arrays.put(column.getTableName() + "\0" + column.getName(), column);
+		}
+		if (arrays.isEmpty())
+			return;
+		var bounds = new java.util.HashMap<String, java.util.List<String>>();
+		execute(connection, getSqlNodeCache(FirebirdColumnReader.class).getString("columnDimensions.sql"), context,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(ExResultSet rs) throws SQLException {
+						String key = trim(getString(rs, TABLE_NAME)) + "\0" + trim(getString(rs, COLUMN_NAME));
+						Column column = arrays.get(key);
+						if (column == null)
+							return;
+						var dimensions = bounds.computeIfAbsent(key, k -> new java.util.ArrayList<>());
+						if (rs.getInt("DIMENSION_NUMBER") != dimensions.size())
+							throw new SQLException("Non-contiguous Firebird array dimensions for " + column.getName());
+						int lower = rs.getInt("LOWER_BOUND");
+						int upper = rs.getInt("UPPER_BOUND");
+						if (dimensions.isEmpty())
+							column.setArrayDimensionLowerBound(lower).setArrayDimensionUpperBound(upper);
+						dimensions.add(lower + ":" + upper);
+					}
+				});
+		arrays.forEach((key, column) -> {
+			var dimensions = bounds.get(key);
+			if (dimensions == null || dimensions.size() != column.getArrayDimension())
+				throw new IllegalStateException("Incomplete Firebird array dimensions for " + column.getName());
+			column.getSpecifics().put(com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder.ARRAY_BOUNDS,
+					String.join(",", dimensions));
+		});
 	}
 
 	protected Column createColumn(ExResultSet rs) throws SQLException {
@@ -71,24 +108,23 @@ public class FirebirdColumnReader extends ColumnReader {
 		short nullFlag = rs.getShort("NULL_FLAG");
 		int type = rs.getInt("FIELD_TYPE");
 		int subType = rs.getInt("FIELD_SUB_TYPE");
-		if (nullFlag == 1) {
-			obj.setNullable(true);
-		} else {
-			obj.setNullable(false);
-		}
+		obj.setNullable(nullFlag != 1 && rs.getShort("SOURCE_NULL_FLAG") != 1);
+		obj.setRemarks(getString(rs, "REMARKS"));
 		String checkCondition = getString(rs, "CHECK_CONDITION");
 		String computed = trim(getString(rs, "COMPUTED_SOURCE"));
-		int lowerBound = rs.getInt("LOWER_BOUND");
-		int upperBound = rs.getInt("UPPER_BOUND");
-		if (upperBound > 0) {
-			obj.setArrayDimension(1);
-			obj.setArrayDimensionLowerBound(lowerBound);
-			obj.setArrayDimensionUpperBound(upperBound);
-		}
+		obj.setArrayDimension(rs.getInt("ARRAY_DIMENSIONS"));
+		obj.setCharacterSet(trim(getString(rs, CHARACTER_SET_NAME)));
+		obj.setCollation(trim(getString(rs, COLLATION_NAME)));
 		obj.setFormula(computed);
 		FirebirdUtils.setDefaultConstraint(obj, trim(defaultSource));
 		setCheckConstraint(obj, tableName, trim(checkCondition));
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
+		if (type == 14 || type == 37) {
+			Integer characterLength = getInteger(rs, "CHAR_LEN");
+			if (characterLength != null) {
+				obj.setLength(characterLength);
+			}
+		}
 		return obj;
 
 	}

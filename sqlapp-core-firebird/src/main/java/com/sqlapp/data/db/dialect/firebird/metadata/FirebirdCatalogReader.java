@@ -103,7 +103,7 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleReader newRoleReader() {
-		return null;
+		return new FirebirdRoleReader(getDialect());
 	}
 
 	@Override
@@ -113,7 +113,7 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
-		return null;
+		return new FirebirdRoutinePrivilegeReader(getDialect());
 	}
 
 	@Override
@@ -128,7 +128,7 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleMemberReader newRoleMemberReader() {
-		return null;
+		return new FirebirdRoleMemberReader(getDialect());
 	}
 
 	@Override

@@ -39,6 +39,12 @@ final class Db2RecreationAssertions {
 				statement.execute("GRANT SELECT ON TABLE " + SCHEMA + ".T TO PUBLIC");
 				statement.execute("GRANT UPDATE (PAYLOAD) ON TABLE " + SCHEMA + ".T TO PUBLIC");
 				statement.execute("GRANT EXECUTE ON FUNCTION " + SCHEMA + ".F TO PUBLIC");
+				statement.execute("CREATE SEQUENCE " + SCHEMA + ".IX AS BIGINT START WITH 41 INCREMENT BY 3");
+				statement.execute("GRANT USAGE ON SEQUENCE " + SCHEMA + ".IX TO PUBLIC");
+				statement.execute("GRANT CONTROL ON INDEX " + SCHEMA + ".IX TO PUBLIC");
+				statement.execute("GRANT ALTERIN ON SCHEMA " + SCHEMA + " TO PUBLIC");
+				if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1155)
+					statement.execute("GRANT SELECTIN ON SCHEMA " + SCHEMA + " TO PUBLIC");
 				statement.execute("CREATE TABLE " + SCHEMA + ".MQ_BASE (ID INTEGER NOT NULL)");
 				statement.execute("CREATE UNIQUE INDEX " + SCHEMA + ".IX_DIFFERENT ON " + SCHEMA + ".MQ_BASE(ID)");
 				statement.execute("ALTER TABLE " + SCHEMA + ".MQ_BASE ADD CONSTRAINT UK_BASE UNIQUE(ID)");
@@ -78,6 +84,23 @@ final class Db2RecreationAssertions {
 				var routinePrivileges = dialect.getCatalogReader().getRoutinePrivilegeReader();
 				routinePrivileges.setObjectName("F");
 				Catalog grants = new Catalog();
+				var extendedPrivileges = ((com.sqlapp.data.db.dialect.db2.metadata.Db2CatalogReader) dialect
+						.getCatalogReader()).getExtendedObjectPrivilegeReader();
+				extendedPrivileges.setSchemaName(SCHEMA);
+				extendedPrivileges.setObjectName("IX");
+				extendedPrivileges.loadFull(connection, grants);
+				assertEquals(2, com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.get(grants).grants().stream().filter(
+						p -> p.granteeType() == com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.GranteeType.PUBLIC)
+						.count());
+				var schemaPrivileges = ((com.sqlapp.data.db.dialect.db2.metadata.Db2CatalogReader) dialect
+						.getCatalogReader()).getSchemaPrivilegeReader();
+				schemaPrivileges.setSchemaName(SCHEMA);
+				grants.getSchemaPrivileges().addAll(schemaPrivileges.getAllFull(connection));
+				assertTrue(grants.getSchemaPrivileges().stream()
+						.anyMatch(p -> "PUBLIC".equals(p.getGranteeName()) && "ALTERIN".equals(p.getPrivilege())));
+				if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1155)
+					assertTrue(grants.getSchemaPrivileges().stream()
+							.anyMatch(p -> "PUBLIC".equals(p.getGranteeName()) && "SELECTIN".equals(p.getPrivilege())));
 				grants.getObjectPrivileges().addAll(tablePrivileges.getAllFull(connection));
 				grants.getColumnPrivileges().addAll(columnPrivileges.getAllFull(connection));
 				routinePrivileges.getAllFull(connection).stream().filter(p -> SCHEMA.equals(p.getSchemaName()))
@@ -100,8 +123,30 @@ final class Db2RecreationAssertions {
 						statement.execute(operation.getSqlText());
 				}
 				SqlFactory<Catalog> grantFactory = registry.getSqlFactory(restoredGrants, SqlType.CREATE);
+				statement.execute("REVOKE ALTERIN ON SCHEMA " + SCHEMA + " FROM PUBLIC");
+				if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1155)
+					statement.execute("REVOKE SELECTIN ON SCHEMA " + SCHEMA + " FROM PUBLIC");
 				for (SqlOperation operation : grantFactory.createSql(restoredGrants))
 					statement.execute(operation.getSqlText());
+				Catalog rereadExtended = new Catalog();
+				extendedPrivileges.loadFull(connection, rereadExtended);
+				assertEquals(2, com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.get(rereadExtended).grants().stream()
+						.filter(p -> p
+								.granteeType() == com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.GranteeType.PUBLIC)
+						.count());
+				Catalog withoutExtended = restoredGrants.clone();
+				com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.set(withoutExtended, List.of());
+				SqlFactory<Catalog> alterGrants = registry.getSqlFactory(restoredGrants, SqlType.ALTER);
+				for (SqlOperation operation : alterGrants.createDiffSql(restoredGrants.diff(withoutExtended)))
+					statement.execute(operation.getSqlText());
+				extendedPrivileges.loadFull(connection, rereadExtended);
+				assertTrue(com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.get(rereadExtended).grants().stream()
+						.noneMatch(p -> p
+								.granteeType() == com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.GranteeType.PUBLIC));
+				for (SqlOperation operation : alterGrants.createDiffSql(withoutExtended.diff(restoredGrants)))
+					statement.execute(operation.getSqlText());
+				assertTrue(schemaPrivileges.getAllFull(connection).stream()
+						.anyMatch(p -> "PUBLIC".equals(p.getGranteeName()) && "ALTERIN".equals(p.getPrivilege())));
 				assertTrue(tablePrivileges.getAllFull(connection).stream()
 						.anyMatch(p -> "PUBLIC".equals(p.getGranteeName()) && "SELECT".equals(p.getPrivilege())));
 				assertTrue(columnPrivileges.getAllFull(connection).stream()
@@ -143,6 +188,7 @@ final class Db2RecreationAssertions {
 					assertTrue(rs.next());
 					assertEquals(1, rs.getInt(1));
 				}
+				verifyDatabaseAuthorities(connection);
 			} finally {
 				// The complete schema is owned exclusively by this container test.
 				for (String ddl : dropSql()) {
@@ -160,8 +206,44 @@ final class Db2RecreationAssertions {
 
 	private static List<String> dropSql() {
 		return List.of("DROP ALIAS " + SCHEMA + ".A FOR TABLE", "DROP VIEW " + SCHEMA + ".V",
-				"DROP PERMISSION " + SCHEMA + ".ALLOW_POSITIVE", "DROP MASK " + SCHEMA + ".HIDE_PAYLOAD",
-				"DROP TABLE " + SCHEMA + ".MQ", "DROP TABLE " + SCHEMA + ".MQ_BASE", "DROP TABLE " + SCHEMA + ".T",
-				"DROP FUNCTION " + SCHEMA + ".F", "DROP PROCEDURE " + SCHEMA + ".P");
+				"DROP SEQUENCE " + SCHEMA + ".IX RESTRICT", "DROP PERMISSION " + SCHEMA + ".ALLOW_POSITIVE",
+				"DROP MASK " + SCHEMA + ".HIDE_PAYLOAD", "DROP TABLE " + SCHEMA + ".MQ",
+				"DROP TABLE " + SCHEMA + ".MQ_BASE", "DROP TABLE " + SCHEMA + ".T", "DROP FUNCTION " + SCHEMA + ".F",
+				"DROP PROCEDURE " + SCHEMA + ".P");
+	}
+
+	private static void verifyDatabaseAuthorities(Connection connection) throws Exception {
+		String role = "SQLAPP_PARITY_DATABASE_AUTH";
+		var dialect = DialectResolver.getInstance().getDialect(connection);
+		var registry = dialect.createSqlFactoryRegistry();
+		try (var statement = connection.createStatement()) {
+			statement.execute("CREATE ROLE " + role);
+			try {
+				statement.execute("GRANT BINDADD ON DATABASE TO ROLE " + role);
+				var reader = dialect.getCatalogReader().getUserPrivilegeReader();
+				reader.setUserName(role);
+				Catalog original = new Catalog();
+				original.getUserPrivileges().addAll(reader.getAllFull(connection));
+				assertTrue(original.getUserPrivileges().stream().anyMatch(
+						p -> "BINDADD".equals(p.getPrivilege()) && "R".equals(p.getSpecifics().get("GRANTEE_TYPE"))));
+				Catalog restored = SchemaUtils.readXml(new StringReader(original.asXml()));
+				statement.execute("REVOKE BINDADD ON DATABASE FROM ROLE " + role);
+				SqlFactory<Catalog> create = registry.getSqlFactory(restored, SqlType.CREATE);
+				for (SqlOperation operation : create.createSql(restored))
+					statement.execute(operation.getSqlText());
+				assertTrue(reader.getAllFull(connection).stream().anyMatch(p -> "BINDADD".equals(p.getPrivilege())));
+				Catalog empty = restored.clone();
+				empty.getUserPrivileges().clear();
+				SqlFactory<Catalog> alter = registry.getSqlFactory(restored, SqlType.ALTER);
+				for (SqlOperation operation : alter.createDiffSql(restored.diff(empty)))
+					statement.execute(operation.getSqlText());
+				assertTrue(reader.getAllFull(connection).stream().noneMatch(p -> "BINDADD".equals(p.getPrivilege())));
+				for (SqlOperation operation : alter.createDiffSql(empty.diff(restored)))
+					statement.execute(operation.getSqlText());
+				assertTrue(reader.getAllFull(connection).stream().anyMatch(p -> "BINDADD".equals(p.getPrivilege())));
+			} finally {
+				statement.execute("DROP ROLE " + role);
+			}
+		}
 	}
 }

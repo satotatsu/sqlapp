@@ -39,4 +39,9 @@ public class Firebird30CatalogReader extends Firebird25CatalogReader {
 		return new Firebird30SchemaReader(this.getDialect());
 	}
 
+	@Override
+	protected com.sqlapp.data.db.metadata.UserPrivilegeReader newUserPrivilegeReader() {
+		return new Firebird30UserPrivilegeReader(getDialect());
+	}
+
 }

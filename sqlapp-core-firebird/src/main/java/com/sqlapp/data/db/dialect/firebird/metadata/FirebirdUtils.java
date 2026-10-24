@@ -46,8 +46,8 @@ public class FirebirdUtils {
 	private FirebirdUtils() {
 	}
 
-	private static final Pattern defaultPattern = Pattern.compile("\\s*DEFAULT\\s+(.*)s*",
-			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
+	private static final Pattern defaultPattern = Pattern.compile("\\s*DEFAULT\\s+(.*?)\\s*",
+			Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
 
 	/**
 	 * Firebirdのデフォルト制約を一般的な式に変換して設定
@@ -91,6 +91,7 @@ public class FirebirdUtils {
 		PRIV_CACHE.put("D", "DELETE");
 		PRIV_CACHE.put("R", "REFERENCES");
 		PRIV_CACHE.put("A", "ALL");
+		PRIV_CACHE.put("G", "USAGE");
 	}
 
 	protected static String getPrivilege(String priv) {
@@ -117,7 +118,43 @@ public class FirebirdUtils {
 		column.setLength(0);
 		column.setOctetLength(0);
 		column.setScale(0);
+		if ((type == 7 || type == 8 || type == 16 || type == 26) && (subType == 1 || subType == 2)) {
+			column.setDataType(subType == 1 ? NUMERIC : DECIMAL);
+			column.setDataTypeName(subType == 1 ? "NUMERIC" : "DECIMAL");
+			column.setLength(precision);
+			column.setScale(Math.abs(scale));
+			column.setOctetLength(length);
+			return;
+		}
 		switch (type) {
+		case 24:// DECFLOAT(16), 4.0+
+		case 25:// DECFLOAT(34), 4.0+
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.DECIMALFLOAT);
+			column.setDataTypeName("DECFLOAT");
+			column.setLength(type == 24 ? 16 : 34);
+			column.setOctetLength(length);
+			break;
+		case 26:// INT128, 4.0+
+			column.setDataType(DECIMAL);
+			column.setDataTypeName("INT128");
+			column.setLength(38);
+			column.setOctetLength(length);
+			break;
+		case 28:// TIME WITH TIME ZONE, 4.0+
+		case 29:// TIMESTAMP WITH TIME ZONE, 4.0+
+			column.setDataType(type == 28 ? com.sqlapp.data.db.datatype.DataType.TIME_WITH_TIMEZONE
+					: com.sqlapp.data.db.datatype.DataType.TIMESTAMP_WITH_TIMEZONE);
+			column.setDataTypeName(type == 28 ? "TIME WITH TIME ZONE" : "TIMESTAMP WITH TIME ZONE");
+			column.setOctetLength(length);
+			break;
+		case 23:// BOOLEAN (3.0+)
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.BOOLEAN);
+			column.setDataTypeName("BOOLEAN");
+			column.setOctetLength(length);
+			break;
+		case 45:// legacy UDF BLOB descriptor
+			column.setDataType(BLOB).setDataTypeName("BLOB");
+			break;
 		case 7:// SHORT
 			column.setDataTypeName("SMALLINT");
 			column.setDataType(SMALLINT);
@@ -206,7 +243,6 @@ public class FirebirdUtils {
 			break;
 		case 9:// QUAD
 		case 40:// CSTRING
-		case 45:// BLOB_ID
 		default:
 		}
 		// column.setDataType(Dialect.getClassByJdbc(column.getSqlType()));

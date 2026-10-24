@@ -41,27 +41,40 @@ public class FirebirdCreateTriggerFactory extends AbstractCreateTriggerFactory<F
 	}
 
 	protected void addCreateObjectDetail(final Trigger obj, FirebirdSqlBuilder builder) {
-		builder.lineBreak();
-		builder.for_().name(obj.getTableName());
+		if (!isEmpty(obj.getTableName())) {
+			builder.lineBreak();
+			builder.for_().name(obj.getTableName());
+		}
 		builder.lineBreak();
 		if (obj.isEnable()) {
 			builder.active();
 		} else {
 			builder.inactive();
 		}
+		addEventManipulationText(obj, builder);
 		String position = obj.getSpecifics().get("POSITION");
 		if (!"0".equals(position) && !CommonUtils.isEmpty(position)) {
 			builder.lineBreak();
-			builder.partition().space()._add(position);
+			int value;
+			try {
+				value = Integer.parseInt(position);
+			} catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Firebird trigger POSITION must be an integer: " + position, e);
+			}
+			if (value < 0 || value > 32767) {
+				throw new IllegalArgumentException("Firebird trigger POSITION must be between 0 and 32767");
+			}
+			builder.position().space()._add(value);
 		}
-		addEventManipulationText(obj, builder);
-		addCreateTriggerBody(obj, builder);
+		FirebirdRoutineSql.addSecurity(obj.getSpecifics(), builder);
+		if (!FirebirdRoutineSql.addExternal(obj.getSpecifics(), builder))
+			addCreateTriggerBody(obj, builder);
 	}
 
 	protected void addEventManipulationText(final Trigger obj, FirebirdSqlBuilder builder) {
 		SeparatedStringBuilder sepBuilder = new SeparatedStringBuilder(" OR ");
 		sepBuilder.add(obj.getEventManipulation());
-		if (obj.getActionTiming() != null) {
+		if (!isEmpty(obj.getActionTiming())) {
 			builder.lineBreak();
 			builder._add(obj.getActionTiming());
 		}
@@ -72,9 +85,12 @@ public class FirebirdCreateTriggerFactory extends AbstractCreateTriggerFactory<F
 	}
 
 	protected void addCreateTriggerBody(final Trigger obj, FirebirdSqlBuilder builder) {
+		if (isEmpty(obj.getStatement()) || toString(obj.getStatement()).isBlank()) {
+			throw new IllegalArgumentException("Firebird trigger requires a statement or complete definition");
+		}
 		builder.lineBreak();
 		String first = CommonUtils.toUpperCase(CommonUtils.first(obj.getStatement()));
-		if (first != null && !first.startsWith("AS")) {
+		if (first != null && !first.stripLeading().matches("(?s)^AS\\b.*")) {
 			builder.as();
 			builder.lineBreak();
 		}

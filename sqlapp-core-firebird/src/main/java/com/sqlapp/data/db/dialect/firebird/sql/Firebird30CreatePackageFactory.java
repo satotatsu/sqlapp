@@ -30,14 +30,12 @@ public class Firebird30CreatePackageFactory extends AbstractCreatePackageFactory
 	@Override
 	protected void addCreateObject(final Package obj, FirebirdSqlBuilder builder) {
 		if (!isEmpty(obj.getDefinition())) {
-			builder.create().or().alter();
-			builder.space();
 			builder._add(obj.getDefinition());
 		} else {
-			builder.create().or().alter().package_();
+			builder.create().package_();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
-			builder.lineBreak().as();
-			builder.lineBreak()._add(obj.getStatement());
+			FirebirdRoutineSql.addSecurity(obj.getSpecifics(), builder);
+			FirebirdRoutineSql.addBody(obj.getStatement(), builder);
 		}
 	}
 }

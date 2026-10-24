@@ -35,7 +35,16 @@ public class Firebird30FunctionArgumentReader extends FirebirdFunctionArgumentRe
 	@Override
 	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		NamedArgument obj = super.createNamedArgument(rs);
+		if (getString(rs, "MODULE_NAME") != null)
+			return obj;
 		obj.setName(trim(getString(rs, "RDB$ARGUMENT_NAME")));
+		obj.setRemarks(getString(rs, "REMARKS"));
+		FirebirdUtils.setDefaultConstraint(obj, trim(getString(rs, "DEFAULT_SOURCE")));
+		obj.setNullable(rs.getInt("NULL_FLAG") != 1);
+		if (obj.getDataType() == com.sqlapp.data.db.datatype.DataType.CHAR
+				|| obj.getDataType() == com.sqlapp.data.db.datatype.DataType.VARCHAR) {
+			obj.setLength(rs.getInt("CHAR_LEN"));
+		}
 		if (rs.getInt("RDB$ARGUMENT_POSITION") > 0) {
 			obj.setDirection(ParameterDirection.Input);
 		}

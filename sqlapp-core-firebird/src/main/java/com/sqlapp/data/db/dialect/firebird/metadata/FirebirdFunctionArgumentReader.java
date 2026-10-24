@@ -80,6 +80,14 @@ public class FirebirdFunctionArgumentReader extends RoutineArgumentReader<Functi
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
+		if (type == 40)
+			obj.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setDataTypeName("CSTRING").setLength(length);
+		if (getString(rs, "MODULE_NAME") != null) {
+			int position = rs.getInt("RDB$ARGUMENT_POSITION");
+			obj.setName(position == 0 ? null : "ARGUMENT_" + position);
+			obj.getSpecifics().put("firebird.udf.position", String.valueOf(position));
+			obj.getSpecifics().put("firebird.udf.mechanism", String.valueOf(rs.getInt("RDB$MECHANISM")));
+		}
 		return obj;
 	}
 

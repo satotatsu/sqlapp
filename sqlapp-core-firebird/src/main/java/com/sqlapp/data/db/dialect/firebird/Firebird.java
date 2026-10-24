@@ -40,6 +40,11 @@ import com.sqlapp.data.schemas.CascadeRule;
  * 
  */
 public class Firebird extends Dialect {
+	@Override
+	protected String doQuote(final String target) {
+		return "\"" + target.replace("\"", "\"\"") + "\"";
+	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -105,6 +110,7 @@ public class Firebird extends Dialect {
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
+			type.setCreateFormat("DOUBLE PRECISION");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {

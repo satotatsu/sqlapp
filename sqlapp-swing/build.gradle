@@ -1,0 +1,19 @@
+plugins {
+    id 'com.sqlapp.java-library-conventions'
+    id 'application'
+}
+
+dependencies {
+    implementation project(':sqlapp-command')
+    // Dialects used by comparison and planning; HSQLDB also supplies an embedded JDBC driver.
+    runtimeOnly project(':sqlapp-core-hsql')
+    runtimeOnly project(':sqlapp-core-postgres')
+    runtimeOnly project(':sqlapp-core-mysql')
+    runtimeOnly project(':sqlapp-core-oracle')
+    runtimeOnly project(':sqlapp-core-sqlserver')
+    runtimeOnly project(':sqlapp-core-sqlite')
+}
+
+application {
+    mainClass = 'com.sqlapp.swing.MigrationApplication'
+}

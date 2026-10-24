@@ -29,5 +29,38 @@ import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
  * 
  */
 public class FirebirdCreateTableFactory extends AbstractCreateTableFactory<FirebirdSqlBuilder> {
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(com.sqlapp.data.schemas.Table table) {
+		var result = super.createSql(table);
+		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary
+				&& table.getSpecifics().containsKey("firebird.sqlSecurity")) {
+			var builder = createSqlBuilder()._add("ALTER TABLE ").name(table, getOptions().isDecorateSchemaName())
+					._add(" ALTER");
+			FirebirdRoutineSql.addSecurity(table.getSpecifics(), builder);
+			addSql(result, builder, com.sqlapp.data.db.sql.SqlType.ALTER, table);
+		}
+		return result;
+	}
+
+	@Override
+	protected void addCreateObject(com.sqlapp.data.schemas.Table table, FirebirdSqlBuilder builder) {
+		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary) {
+			FirebirdTemporaryTableSql.requireSupportedDialect(builder);
+			builder.create().global().temporary().table().name(table, getOptions().isDecorateSchemaName());
+		} else {
+			if (table.getSpecifics().containsKey("firebird.onCommit"))
+				throw new IllegalArgumentException("firebird.onCommit requires a temporary table");
+			super.addCreateObject(table, builder);
+		}
+	}
+
+	@Override
+	protected void addOption(com.sqlapp.data.schemas.Table table, FirebirdSqlBuilder builder) {
+		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary)
+			FirebirdTemporaryTableSql.addOnCommit(table,
+					getTableOptions().getTempTableOnCommitPreserveRows().test(table), builder);
+		else
+			FirebirdRoutineSql.addSecurity(table.getSpecifics(), builder);
+	}
 
 }

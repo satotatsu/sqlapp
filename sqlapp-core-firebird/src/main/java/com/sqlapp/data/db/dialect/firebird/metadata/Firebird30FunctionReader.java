@@ -21,6 +21,10 @@ import com.sqlapp.jdbc.ExResultSet;
 
 /** Firebird 3.0以降のPSQL関数Readerです。 */
 public class Firebird30FunctionReader extends FirebirdFunctionReader {
+	@Override
+	protected com.sqlapp.jdbc.sql.node.SqlNode getSqlSqlNode(com.sqlapp.data.schemas.ProductVersionInfo version) {
+		return getSqlNodeCache().getString("functions30.sql");
+	}
 
 	protected Firebird30FunctionReader(Dialect dialect) {
 		super(dialect);
@@ -29,6 +33,12 @@ public class Firebird30FunctionReader extends FirebirdFunctionReader {
 	@Override
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = super.createFunction(rs);
+		String engine = trim(getString(rs, "RDB$ENGINE_NAME"));
+		if (engine != null) {
+			obj.getSpecifics().put("firebird.external.engine", engine);
+			obj.getSpecifics().put("firebird.external.entrypoint", trim(getString(rs, "RDB$ENTRYPOINT")));
+		}
+		obj.setDeterministic(rs.getInt("RDB$DETERMINISTIC_FLAG") == 1);
 		if (this.getReaderOptions().isReadStatement()) {
 			obj.setStatement(trim(getString(rs, "RDB$FUNCTION_SOURCE")));
 		}

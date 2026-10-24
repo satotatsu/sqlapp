@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.firebird.util.FirebirdPrivilege;
 import com.sqlapp.data.db.metadata.ColumnPrivilegeReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ColumnPrivilege;
@@ -65,8 +66,11 @@ public class FirebirdColumnPrivilegeReader extends ColumnPrivilegeReader {
 		obj.setColumnName(getString(rs, COLUMN_NAME));
 		obj.setPrivilege(FirebirdUtils.getPrivilege(getString(rs, PRIVILEGE_TYPE)));
 		obj.setGrantorName(getString(rs, GRANTOR));
-		obj.setGranteeName(getString(rs, GRANTEE));
+		obj.setGranteeName(
+				FirebirdPrivilege.granteeName(getString(rs, GRANTEE), rs.getInt("grantee_type"), getDialect()));
 		obj.setGrantable("1".equals(getString(rs, IS_GRANTABLE)));
+		obj.getSpecifics().put(FirebirdPrivilege.GRANTEE_TYPE,
+				FirebirdPrivilege.granteeType(rs.getInt("grantee_type")));
 		return obj;
 	}
 }

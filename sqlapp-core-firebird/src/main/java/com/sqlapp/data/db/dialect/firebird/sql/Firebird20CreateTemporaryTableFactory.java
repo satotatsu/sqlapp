@@ -30,9 +30,23 @@ import com.sqlapp.data.schemas.Table;
  * 
  */
 public class Firebird20CreateTemporaryTableFactory extends AbstractCreateTemporaryTableFactory<FirebirdSqlBuilder> {
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Table table) {
+		var result = super.createSql(table);
+		if (table.getSpecifics().containsKey("firebird.sqlSecurity")) {
+			String name = getDialect().getTemporaryTableName(table,
+					getTableOptions().getTemporaryTableNamePrefix().apply(table),
+					getTableOptions().getTemporaryTableNameSuffix().apply(table), getOptions().isDecorateSchemaName());
+			var builder = createSqlBuilder()._add("ALTER TABLE ")._add(name)._add(" ALTER");
+			FirebirdRoutineSql.addSecurity(table.getSpecifics(), builder);
+			addSql(result, builder, com.sqlapp.data.db.sql.SqlType.ALTER, table);
+		}
+		return result;
+	}
 
 	@Override
 	protected void addCreateObject(final Table obj, final FirebirdSqlBuilder builder) {
+		FirebirdTemporaryTableSql.requireSupportedDialect(builder);
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
 		builder.create().global().temporary().table();
@@ -48,11 +62,8 @@ public class Firebird20CreateTemporaryTableFactory extends AbstractCreateTempora
 	 */
 	@Override
 	protected void addOption(final Table table, final FirebirdSqlBuilder builder) {
-		if (this.getTableOptions().getTempTableOnCommitPreserveRows().test(table)) {
-			builder.on().commit().preserve().rows();
-		} else {
-			builder.on().commit().delete().rows();
-		}
+		FirebirdTemporaryTableSql.addOnCommit(table, getTableOptions().getTempTableOnCommitPreserveRows().test(table),
+				builder);
 	}
 
 }

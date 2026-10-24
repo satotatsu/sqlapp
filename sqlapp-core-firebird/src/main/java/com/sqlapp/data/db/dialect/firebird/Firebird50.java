@@ -14,7 +14,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 /** Firebird 5.0 dialect. */
-public class Firebird50 extends Firebird30 {
+public class Firebird50 extends Firebird40 {
 
 	private static final long serialVersionUID = 1L;
 
