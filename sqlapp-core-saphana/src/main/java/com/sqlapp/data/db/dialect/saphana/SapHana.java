@@ -131,6 +131,8 @@ public class SapHana extends Dialect {
 		});
 		// TIMESTAMP
 		getDbDataTypes().addTimestamp(type -> {
+			// HANA's catalog length is a display width, not a DDL precision.
+			type.setCreateFormat("TIMESTAMP");
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {

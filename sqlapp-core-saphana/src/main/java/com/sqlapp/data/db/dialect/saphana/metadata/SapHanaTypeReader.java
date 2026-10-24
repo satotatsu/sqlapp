@@ -24,24 +24,31 @@ public class SapHanaTypeReader extends TypeReader {
 	}
 
 	@Override
-	protected List<Type> doGetAll(final Connection connection, final ParametersContext context, final ProductVersionInfo version) {
+	protected List<Type> doGetAll(final Connection connection, final ParametersContext context,
+			final ProductVersionInfo version) {
 		final Map<List<String>, Type> types = new LinkedHashMap<>();
 		execute(connection, getSqlNodeCache().getString("types.sql"), context, new ResultSetNextHandler() {
-			@Override public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 				final String schema = getString(rs, SCHEMA_NAME);
 				final String name = getString(rs, TYPE_NAME);
-				final Type type = types.computeIfAbsent(List.of(schema, name), ignored -> new Type(name).setSchemaName(schema));
+				final Type type = types.computeIfAbsent(List.of(schema, name),
+						ignored -> new Type(name).setSchemaName(schema));
 				type.setDialect(getDialect());
 				if (rs.getString("TABLE_COLUMN_NAME") != null) {
 					final var column = SapHanaRoutineArguments.readColumn(getDialect(), rs);
-					type.getColumns().add(new TypeColumn(column.getName()).setDataType(column.getDataType())
-							.setDataTypeName(column.getDataTypeName()).setLength(column.getLength()).setScale(column.getScale())
-							.setNullable(!column.isNotNull()));
+					type.getColumns()
+							.add(new TypeColumn(column.getName()).setDataType(column.getDataType())
+									.setDataTypeName(column.getDataTypeName()).setLength(column.getLength())
+									.setScale(column.getScale()).setNullable(!column.isNotNull()));
 				}
 			}
 		});
 		return new ArrayList<>(types.values());
 	}
 
-	@Override protected TypeColumnReader newColumnFactory() { return null; }
+	@Override
+	protected TypeColumnReader newColumnFactory() {
+		return null;
+	}
 }

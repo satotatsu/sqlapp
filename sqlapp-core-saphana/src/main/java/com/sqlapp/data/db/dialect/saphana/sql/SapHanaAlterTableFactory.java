@@ -19,6 +19,25 @@ public class SapHanaAlterTableFactory extends AbstractAlterTableFactory<SapHanaS
 	public List<SqlOperation> createDiffSql(final DbObjectDifference difference) {
 		final Table original = difference.getOriginal(Table.class);
 		final Table target = difference.getTarget(Table.class);
+		if ((!original.getDefinition().isEmpty() || !target.getDefinition().isEmpty()
+				|| "DEFINITION".equals(original.getSpecifics().get("PARTITIONING_REPRESENTATION"))
+				|| "DEFINITION".equals(target.getSpecifics().get("PARTITIONING_REPRESENTATION")))
+				&& !difference.getProperties().isEmpty())
+			throw new IllegalArgumentException(
+					"Definition-backed SAP HANA tables require explicit migration DDL: " + target.getName());
+		for (var column : target.getColumns()) {
+			var previous = original.getColumns().get(column.getName());
+			if ((previous == null && column.getSpecifics().get("LOAD_UNIT") != null) || previous != null && !CommonUtils
+					.eq(previous.getSpecifics().get("LOAD_UNIT"), column.getSpecifics().get("LOAD_UNIT")))
+				throw new IllegalArgumentException(
+						"SAP HANA column load unit changes require explicit migration DDL: " + column.getName());
+		}
+		if (!CommonUtils.eq(original.getPartitioning(), target.getPartitioning())
+				|| !CommonUtils.eq(original.getSpecifics().get("LOAD_UNIT"), target.getSpecifics().get("LOAD_UNIT"))
+				|| original.getTableDataStoreType() != target.getTableDataStoreType()) {
+			throw new IllegalArgumentException(
+					"SAP HANA partitioning/storage changes require explicit migration DDL: " + target.getName());
+		}
 		final boolean renamed = !CommonUtils.eq(original.getName(), target.getName());
 		final boolean moved = !CommonUtils.eq(original.getSchemaName(), target.getSchemaName());
 		if (moved && !getOptions().isDecorateSchemaName()) {

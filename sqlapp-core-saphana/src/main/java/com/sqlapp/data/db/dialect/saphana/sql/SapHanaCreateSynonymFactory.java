@@ -17,12 +17,15 @@ public class SapHanaCreateSynonymFactory extends AbstractCreateSynonymFactory<Sa
 		if (synonym.getObjectName() == null || synonym.getObjectName().isBlank()) {
 			throw new IllegalArgumentException("SAP HANA synonym requires a target object name: " + synonym.getName());
 		}
-		if (synonym.getDbLinkName() != null && !synonym.getDbLinkName().isBlank()) {
+		if (synonym.getDbLinkName() != null && !synonym.getDbLinkName().isBlank()
+				&& (synonym.getObjectSchemaName() == null || synonym.getObjectSchemaName().isBlank())) {
 			throw new IllegalArgumentException(
-					"SAP HANA synonym database-link targets require explicit definition DDL: " + synonym.getName());
+					"SAP HANA remote synonym requires a target schema: " + synonym.getName());
 		}
 		builder.create().space()._add("SYNONYM").name(synonym, getOptions().isDecorateSchemaName()).space()._add("FOR")
 				.space();
+		if (synonym.getDbLinkName() != null && !synonym.getDbLinkName().isBlank())
+			builder.name(synonym.getDbLinkName())._add(".");
 		if (synonym.getObjectSchemaName() != null) {
 			builder.name(synonym.getObjectSchemaName())._add(".");
 		}

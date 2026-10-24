@@ -21,7 +21,8 @@ class SapHanaRoutineSqlTest {
 			var registry = dialect.createSqlFactoryRegistry();
 			registry.getOptions().setDecorateSchemaName(true);
 			String sql = registry.createSql(restored, SqlType.CREATE).getFirst().getSqlText().replaceAll("\\s+", " ");
-			assertTrue(sql.contains("CREATE TYPE APP.\"Table Type\" AS TABLE ( \"A B\" INTEGER, LABEL NVARCHAR(20))"), sql);
+			assertTrue(sql.contains("CREATE TYPE APP.\"Table Type\" AS TABLE ( \"A B\" INTEGER, LABEL NVARCHAR(20))"),
+					sql);
 			assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Type("EMPTY"), SqlType.CREATE));
 		}
 	}
@@ -41,7 +42,8 @@ class SapHanaRoutineSqlTest {
 			assertTrue(sql.contains("RETURNS TABLE ( \"A B\" INTEGER)"), sql);
 			assertTrue(sql.contains("LANGUAGE SQLSCRIPT AS BEGIN RETURN"), sql);
 			var restored = (Function) SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
-			assertEquals(sql, registry.createSql(restored, SqlType.CREATE).getFirst().getSqlText().replaceAll("\\s+", " "));
+			assertEquals(sql,
+					registry.createSql(restored, SqlType.CREATE).getFirst().getSqlText().replaceAll("\\s+", " "));
 		}
 	}
 
@@ -49,19 +51,23 @@ class SapHanaRoutineSqlTest {
 	void emitsDirectionsOnceAndKeepsScalarOutputsOutOfInputList() {
 		for (var dialect : List.of(DialectHolder.defaultDialect, DialectHolder.cloudDialect)) {
 			Procedure procedure = new Procedure("P");
-			procedure.getArguments().add(new NamedArgument("Input Value").setDataType(DataType.INT).setDefaultValue("1"));
+			procedure.getArguments()
+					.add(new NamedArgument("Input Value").setDataType(DataType.INT).setDefaultValue("1"));
 			procedure.getArguments().add(new NamedArgument("RESULT").setDataType(DataType.NVARCHAR).setLength(20)
 					.setDirection(ParameterDirection.Output));
 			procedure.setStatement("BEGIN RESULT = 'ok'; END");
-			String sql = dialect.createSqlFactoryRegistry().createSql(procedure, SqlType.CREATE).getFirst().getSqlText();
+			String sql = dialect.createSqlFactoryRegistry().createSql(procedure, SqlType.CREATE).getFirst()
+					.getSqlText();
 			assertTrue(sql.contains("IN \"Input Value\" INTEGER DEFAULT 1"), sql);
 			assertTrue(sql.contains("OUT RESULT NVARCHAR(20)"), sql);
 			assertFalse(sql.contains("NVARCHAR(20) OUT"), sql);
 			Function function = new Function("F");
 			function.getArguments().add(new NamedArgument("N").setDataType(DataType.INT));
-			function.getArguments().add(new NamedArgument("R").setDataType(DataType.INT).setDirection(ParameterDirection.Output));
+			function.getArguments()
+					.add(new NamedArgument("R").setDataType(DataType.INT).setDirection(ParameterDirection.Output));
 			function.setStatement("BEGIN R = :N + 1; END");
-			sql = dialect.createSqlFactoryRegistry().createSql(function, SqlType.CREATE).getFirst().getSqlText().replaceAll("\\s+", " ");
+			sql = dialect.createSqlFactoryRegistry().createSql(function, SqlType.CREATE).getFirst().getSqlText()
+					.replaceAll("\\s+", " ");
 			assertTrue(sql.contains("F(IN N INTEGER) RETURNS R INTEGER LANGUAGE SQLSCRIPT AS"), sql);
 		}
 	}

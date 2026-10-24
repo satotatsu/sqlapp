@@ -25,6 +25,11 @@ class SapHanaMetadataRegressionTest {
 			private boolean wasNull;
 
 			@Override
+			public Object getObject(String key) {
+				return normalized.get(key);
+			}
+
+			@Override
 			public String getString(String key) throws SQLException {
 				if (Set.of("MATCH_OPTION", "CHARACTER_SET_NAME", "COLLATION_NAME")
 						.contains(key.toUpperCase(Locale.ROOT))) {
@@ -35,7 +40,7 @@ class SapHanaMetadataRegressionTest {
 
 			@Override
 			public long getLong(String key) {
-				return 1L;
+				return Long.parseLong(normalized.getOrDefault(key, "1"));
 			}
 
 			@Override
@@ -73,6 +78,25 @@ class SapHanaMetadataRegressionTest {
 				}
 			}
 		}
+	}
+
+	@Test
+	void doesNotModelTimestampDisplayWidthAsPrecision() throws Exception {
+		var reader = new SapHanaColumnReader(DialectHolder.defaultDialect);
+		var column = reader.createColumn(
+				row(Map.of("COLUMN_NAME", "D", "DATA_TYPE_NAME", "TIMESTAMP", "LENGTH", "27", "IS_NULLABLE", "TRUE")));
+		assertNull(column.getLength());
+		assertFalse(
+				DialectHolder.defaultDialect.createSqlBuilder().definition(column).toString().contains("TIMESTAMP("));
+	}
+
+	@Test
+	void readsOptionalColumnLoadUnitWithoutRequiringNewCatalogFields() throws Exception {
+		var reader = new SapHanaColumnReader(DialectHolder.defaultDialect);
+		var values = new HashMap<>(Map.of("COLUMN_NAME", "ID", "DATA_TYPE_NAME", "INTEGER", "IS_NULLABLE", "TRUE"));
+		assertNull(reader.createColumn(row(values)).getSpecifics().get("LOAD_UNIT"));
+		values.put("LOAD_UNIT", "PAGE");
+		assertEquals("PAGE", reader.createColumn(row(values)).getSpecifics().get("LOAD_UNIT"));
 	}
 
 	@Test

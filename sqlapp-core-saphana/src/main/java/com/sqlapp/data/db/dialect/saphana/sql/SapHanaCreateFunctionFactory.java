@@ -8,7 +8,9 @@ import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.CommonUtils;
 
-/** SQLScript scalar and table-valued functions using the shared routine model. */
+/**
+ * SQLScript scalar and table-valued functions using the shared routine model.
+ */
 public class SapHanaCreateFunctionFactory extends AbstractCreateFunctionFactory<SapHanaSqlBuilder> {
 	@Override
 	protected void addCreateObject(final Function function, final SapHanaSqlBuilder builder) {
@@ -28,7 +30,8 @@ public class SapHanaCreateFunctionFactory extends AbstractCreateFunctionFactory<
 			builder.comma(position++ > 0).argument(argument);
 		}
 		builder._add(")").lineBreak().returns().space();
-		final var outputs = function.getArguments().stream().filter(a -> a.getDirection() == ParameterDirection.Output).toList();
+		final var outputs = function.getArguments().stream().filter(a -> a.getDirection() == ParameterDirection.Output)
+				.toList();
 		if (function.getReturning() != null && function.getReturning().getTable() != null || outputs.isEmpty()) {
 			builder._add(function.getReturning());
 		} else {
@@ -36,7 +39,8 @@ public class SapHanaCreateFunctionFactory extends AbstractCreateFunctionFactory<
 			for (NamedArgument output : outputs) {
 				builder.comma(position++ > 0).name(output.getName()).space()
 						.addTypeDefinition(new com.sqlapp.data.schemas.Column().setDataType(output.getDataType())
-								.setDataTypeName(output.getDataTypeName()).setLength(output.getLength()).setScale(output.getScale()));
+								.setDataTypeName(output.getDataTypeName()).setLength(output.getLength())
+								.setScale(output.getScale()));
 			}
 		}
 		SapHanaRoutineBody.append(toString(function.getStatement()), builder);

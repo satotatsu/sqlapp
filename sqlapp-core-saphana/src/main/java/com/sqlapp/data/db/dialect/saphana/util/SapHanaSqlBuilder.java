@@ -153,6 +153,12 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 
 	@Override
 	protected SapHanaSqlBuilder typeDefinition(final Column column) {
+		if (column.getDataType() == DataType.TIMESTAMP && column.getDomain() == null && column.getLength() != null
+				&& column.getLength() > 0 && column.getLength() != 7 && column.getLength() != 27) {
+			throw new IllegalArgumentException(
+					"SAP HANA TIMESTAMP has fixed fractional precision 7; catalog display width 27 is not a DDL precision: "
+							+ column.getName());
+		}
 		if (column.getDataType() == DataType.DECIMAL || column.getDataType() == DataType.NUMERIC) {
 			final Long precision = column.getLength();
 			final Integer scale = column.getScale();

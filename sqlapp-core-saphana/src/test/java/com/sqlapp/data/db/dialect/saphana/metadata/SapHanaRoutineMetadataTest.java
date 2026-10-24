@@ -18,7 +18,8 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 class SapHanaRoutineMetadataTest {
 	private static ExResultSet row(String routine, String argument, String column, String type) {
 		return new ExResultSet(null) {
-			@Override public String getString(String key) {
+			@Override
+			public String getString(String key) {
 				return switch (key.toUpperCase(Locale.ROOT)) {
 				case "SCHEMA_NAME" -> "APP";
 				case "FUNCTION_NAME", "PROCEDURE_NAME" -> routine;
@@ -31,31 +32,102 @@ class SapHanaRoutineMetadataTest {
 				default -> null;
 				};
 			}
-			@Override public long getLong(String key) { return key.equals("TABLE_COLUMN_LENGTH") ? 20 : 0; }
-			@Override public int getInt(String key) { return 0; }
-			@Override public boolean wasNull() { return true; }
+
+			@Override
+			public long getLong(String key) {
+				return key.equals("TABLE_COLUMN_LENGTH") ? 20 : 0;
+			}
+
+			@Override
+			public int getInt(String key) {
+				return 0;
+			}
+
+			@Override
+			public boolean wasNull() {
+				return true;
+			}
 		};
+	}
+
+	@Test
+	void readsDirectRoutineGrantsInOneQuery() {
+		var queries = new AtomicInteger();
+		var reader = new SapHanaRoutinePrivilegeReader(DialectHolder.defaultDialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				queries.incrementAndGet();
+				try {
+					for (String routine : List.of("P1", "P2")) {
+						handler.handleResultSetNext(new ExResultSet(null) {
+							@Override
+							public String getString(String key) {
+								return switch (key.toUpperCase(Locale.ROOT)) {
+								case "SCHEMA_NAME" -> "APP";
+								case "OBJECT_NAME" -> routine;
+								case "OBJECT_TYPE" -> "PROCEDURE";
+								case "PRIVILEGE" -> "EXECUTE";
+								case "GRANTEE" -> "Some Role";
+								case "GRANTOR" -> "OWNER";
+								case "IS_GRANTABLE" -> "TRUE";
+								default -> null;
+								};
+							}
+						});
+					}
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
+				return null;
+			}
+		};
+		var grants = reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo());
+		assertEquals(1, queries.get());
+		assertEquals(2, grants.size());
+		assertTrue(grants.getFirst().isGrantable());
+		assertEquals("Some Role", grants.getFirst().getGranteeName());
+		assertEquals("PROCEDURE", grants.getFirst().getSpecifics().get("ROUTINE_KIND"));
 	}
 
 	@Test
 	void groupsTableTypesInOneQuery() {
 		var queries = new AtomicInteger();
 		var reader = new SapHanaTypeReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries.incrementAndGet();
 				try {
 					for (String type : List.of("T1", "T2")) {
 						for (String column : List.of("A B", "LABEL")) {
 							var source = row(type, null, column, "INTEGER");
 							handler.handleResultSetNext(new ExResultSet(null) {
-								@Override public String getString(String key) throws SQLException { return key.equalsIgnoreCase("TYPE_NAME") ? type : source.getString(key); }
-								@Override public int getInt(String key) { return 0; }
-								@Override public long getLong(String key) { return 0; }
-								@Override public boolean wasNull() { return true; }
+								@Override
+								public String getString(String key) throws SQLException {
+									return key.equalsIgnoreCase("TYPE_NAME") ? type : source.getString(key);
+								}
+
+								@Override
+								public int getInt(String key) {
+									return 0;
+								}
+
+								@Override
+								public long getLong(String key) {
+									return 0;
+								}
+
+								@Override
+								public boolean wasNull() {
+									return true;
+								}
 							});
 						}
 					}
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};
@@ -70,14 +142,18 @@ class SapHanaRoutineMetadataTest {
 	void groupsTableParametersAcrossRoutinesInOneQuery() {
 		var queries = new AtomicInteger();
 		var reader = new SapHanaProcedureArgumentReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries.incrementAndGet();
 				try {
 					for (String routine : List.of("P1", "P2")) {
 						handler.handleResultSetNext(row(routine, "SRC", "A B", "INTEGER"));
 						handler.handleResultSetNext(row(routine, "SRC", "LABEL", "NVARCHAR"));
 					}
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};
@@ -96,17 +172,23 @@ class SapHanaRoutineMetadataTest {
 	void groupsFunctionReturnColumnsInOneQuery() {
 		var queries = new AtomicInteger();
 		var reader = new SapHanaFunctionReader(DialectHolder.defaultDialect) {
-			@Override protected com.sqlapp.data.schemas.Function createFunction(ExResultSet rs) throws SQLException {
+			@Override
+			protected com.sqlapp.data.schemas.Function createFunction(ExResultSet rs) throws SQLException {
 				return new com.sqlapp.data.schemas.Function(rs.getString("FUNCTION_NAME")).setSchemaName("APP");
 			}
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries.incrementAndGet();
 				try {
 					for (String routine : List.of("F1", "F2")) {
 						handler.handleResultSetNext(row(routine, "RETURN", "A B", "INTEGER"));
 						handler.handleResultSetNext(row(routine, "RETURN", "LABEL", "NVARCHAR"));
 					}
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};

@@ -80,5 +80,6 @@ public class SapHanaObjectPrivilegeReader extends ObjectPrivilegeReader {
 
 	protected void setDbSpecificInfo(ExResultSet rs, ObjectPrivilege obj) throws SQLException {
 		setSpecifics(rs, "IS_VALID", obj);
+		setSpecifics(rs, "OBJECT_TYPE", obj);
 	}
 }

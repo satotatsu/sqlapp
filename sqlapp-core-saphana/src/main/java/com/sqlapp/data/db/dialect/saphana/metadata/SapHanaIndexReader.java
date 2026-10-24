@@ -99,6 +99,8 @@ public class SapHanaIndexReader extends IndexReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (getDialect() instanceof SapHanaCloud)
+			return getSqlNodeCache().getString("indexesCloud.sql");
 		return getSqlNodeCache().getString("indexes.sql");
 	}
 

@@ -43,8 +43,9 @@ public class SapHanaCreateIndexFactory extends AbstractCreateIndexFactory<SapHan
 			return;
 		}
 		validate(index, table);
-		builder.space()._add("HNSW VECTOR INDEX").space().name(index, false).on().name(table, false).space()._add("(")
-				.name(index.getColumns().get(0)).space()._add(")").space()._add("SIMILARITY FUNCTION").space()
+		builder.space()._add("HNSW VECTOR INDEX").space().name(index, false).on()
+				.name(table, getOptions().isDecorateSchemaName()).space()._add("(").name(index.getColumns().get(0))
+				.space()._add(")").space()._add("SIMILARITY FUNCTION").space()
 				._add(similarityFunction(index.getVectorDistanceType()));
 		addConfiguration(index, BUILD_CONFIGURATION, builder);
 		addConfiguration(index, SEARCH_CONFIGURATION, builder);
@@ -85,11 +86,19 @@ public class SapHanaCreateIndexFactory extends AbstractCreateIndexFactory<SapHan
 		if (table == null || index.getColumns().size() != 1) {
 			throw new IllegalArgumentException("SAP HANA FULLTEXT index requires one table column: " + index.getName());
 		}
-		builder.space()._add("FULLTEXT INDEX").space().name(index, false).on().name(table, false).space()._add("(")
-				.name(index.getColumns().get(0))._add(")");
+		if (Boolean.TRUE.equals(index.getSpecifics().get(FAST_PREPROCESS, Boolean.class))
+				&& index.getSpecifics().get(LANGUAGE_COLUMN) != null) {
+			throw new IllegalArgumentException("SAP HANA FAST PREPROCESS ON cannot be combined with LANGUAGE COLUMN");
+		}
+		builder.space()._add("FULLTEXT INDEX").space().name(index, false).on()
+				.name(table, getOptions().isDecorateSchemaName()).space()._add("(").name(index.getColumns().get(0))
+				._add(")");
 		addIdentifierOption(index, LANGUAGE_COLUMN, builder);
 		addIdentifierOption(index, MIME_TYPE_COLUMN, builder);
-		addOnOffOption(index, FAST_PREPROCESS, builder);
+		if (index.getSpecifics().get(FAST_PREPROCESS) == null && index.getSpecifics().get(LANGUAGE_COLUMN) != null)
+			builder._add(" FAST PREPROCESS OFF");
+		else
+			addOnOffOption(index, FAST_PREPROCESS, builder);
 		addOnOffOption(index, FUZZY_SEARCH_INDEX, builder);
 		addOnOffOption(index, SEARCH_ONLY, builder);
 		addFlushOptions(index, builder);
@@ -114,8 +123,18 @@ public class SapHanaCreateIndexFactory extends AbstractCreateIndexFactory<SapHan
 	private void addFlushOptions(final Index index, final SapHanaSqlBuilder builder) {
 		final Integer minutes = index.getSpecifics().get(FLUSH_EVERY_MINUTES, Integer.class);
 		final Integer documents = index.getSpecifics().get(FLUSH_AFTER_DOCUMENTS, Integer.class);
+		final String mode = index.getSpecifics().get("SYNC_MODE");
+		if (mode != null && !"SYNC".equals(mode) && !"ASYNC".equals(mode))
+			throw new IllegalArgumentException("SAP HANA fulltext SYNC_MODE must be SYNC or ASYNC");
 		if (minutes == null && documents == null) {
+			if (mode != null)
+				builder.space()._add(mode);
 			return;
+		}
+		if ("SYNC".equals(mode))
+			throw new IllegalArgumentException("SAP HANA synchronous indexes cannot have async flush thresholds");
+		if (minutes != null && minutes <= 0 || documents != null && documents <= 0) {
+			throw new IllegalArgumentException("SAP HANA fulltext flush thresholds must be positive");
 		}
 		builder.space()._add("ASYNC FLUSH");
 		if (minutes != null) {

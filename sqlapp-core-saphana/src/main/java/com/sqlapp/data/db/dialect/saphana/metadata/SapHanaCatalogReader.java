@@ -118,7 +118,7 @@ public class SapHanaCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
-		return null;
+		return new SapHanaRoutinePrivilegeReader(getDialect());
 	}
 
 	@Override
@@ -128,7 +128,7 @@ public class SapHanaCatalogReader extends CatalogReader {
 
 	@Override
 	protected UserPrivilegeReader newUserPrivilegeReader() {
-		return null;
+		return new SapHanaUserPrivilegeReader(getDialect());
 	}
 
 	@Override
@@ -138,7 +138,7 @@ public class SapHanaCatalogReader extends CatalogReader {
 
 	@Override
 	protected RolePrivilegeReader newRolePrivilegeReader() {
-		return null;
+		return new SapHanaRolePrivilegeReader(getDialect());
 	}
 
 	@Override

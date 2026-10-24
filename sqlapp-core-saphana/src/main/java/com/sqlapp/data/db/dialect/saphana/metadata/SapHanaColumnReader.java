@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -70,6 +71,8 @@ public class SapHanaColumnReader extends ColumnReader {
 		Column obj = new Column(getString(rs, COLUMN_NAME));
 		obj.setNullable(allowDBNull);
 		this.getDialect().setDbType(productDataType, max_length, scale, obj);
+		if (obj.getDataType() == DataType.TIMESTAMP)
+			obj.setLength((Long) null);
 		obj.setTableName(getString(rs, TABLE_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDefaultValue(getString(rs, "DEFAULT_VALUE"));
@@ -85,6 +88,8 @@ public class SapHanaColumnReader extends ColumnReader {
 			obj.setFormulaPersisted(true);
 		}
 		obj.setRemarks(getString(rs, "COMMENTS"));
+		// Optional catalog field: older HANA versions do not expose NSE load units.
+		setSpecifics(rs, "LOAD_UNIT", obj);
 		return obj;
 	}
 

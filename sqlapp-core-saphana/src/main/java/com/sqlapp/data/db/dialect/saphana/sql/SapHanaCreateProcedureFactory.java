@@ -14,7 +14,8 @@ public class SapHanaCreateProcedureFactory extends AbstractCreateProcedureFactor
 			super.addCreateObject(procedure, builder);
 			return;
 		}
-		builder.create().procedure().name(procedure, getOptions().isDecorateSchemaName()).arguments(procedure.getArguments());
+		builder.create().procedure().name(procedure, getOptions().isDecorateSchemaName())
+				.arguments(procedure.getArguments());
 		SapHanaRoutineBody.append(toString(procedure.getStatement()), builder);
 	}
 }

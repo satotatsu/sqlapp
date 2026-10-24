@@ -65,13 +65,20 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 					index = createIndex(connection, rs);
 					map.put(index.getSchemaName(), index.getTableName(), index.getName(), index);
 				}
-				index.getColumns().add(new Column(getString(rs, "INTERNAL_COLUMN_NAME")));
+				String column = getString(rs, "SOURCE_COLUMN_NAME");
+				if (column == null)
+					throw new SQLException(
+							"Cannot resolve source column for SAP HANA fulltext index: " + schemaName + "." + name);
+				if (index.getColumns().get(column) == null)
+					index.getColumns().add(new Column(column));
 			}
 		});
 		return map.toList();
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.saphana.SapHanaCloud)
+			return getSqlNodeCache().getString("fuzzyIndexesCloud.sql");
 		return getSqlNodeCache().getString("fulltextIndexes.sql");
 	}
 
@@ -85,6 +92,12 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 	}
 
 	protected void setDbSpecificInfo(ExResultSet rs, Index obj) throws SQLException {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.saphana.SapHanaCloud) {
+			setSpecifics(rs, "FUZZY_SEARCH_MODE", "SEARCH_MODE", value -> true, obj);
+			setSpecifics(rs, "MIME_TYPE", obj);
+			setSpecifics(rs, "TOKEN_SEPARATORS", obj);
+			return;
+		}
 		setSpecifics(rs, "LANGUAGE_COLUMN", obj);
 		setSpecifics(rs, "MIME_TYPE_COLUMN", obj);
 		setSpecifics(rs, "LANGUAGE_DETECTION", obj);
@@ -92,8 +105,13 @@ public class SapHanaFulltextIndexReader extends IndexReader {
 		setSpecifics(rs, "FUZZY_SEARCH_INDEX", obj);
 		setSpecifics(rs, "SEARCH_ONLY", obj);
 		setSpecifics(rs, "IS_EXPLICIT", obj);
-		setSpecifics(rs, "FLUSH_AFTER_DOCUMENTS", obj);
-		setSpecifics(rs, "FLUSH_EVERY_MINUTES", obj);
+		int minutes = rs.getInt("FLUSH_EVERY_MINUTES");
+		int documents = rs.getInt("FLUSH_AFTER_DOCUMENTS");
+		obj.getSpecifics().put("SYNC_MODE", minutes == 0 && documents == -1 ? "SYNC" : "ASYNC");
+		if (minutes > 0)
+			obj.getSpecifics().put("FLUSH_EVERY_MINUTES", minutes);
+		if (documents > 0)
+			obj.getSpecifics().put("FLUSH_AFTER_DOCUMENTS", documents);
 		setSpecifics(rs, "CONFIGURATION", obj);
 		// setDbSpecificInfo(rs, "INTERNAL_COLUMN_NAME", obj);
 		setSpecifics(rs, "PHRASE_INDEX_RATIO", obj);

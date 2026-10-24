@@ -15,7 +15,9 @@ import com.sqlapp.jdbc.ExResultSet;
 
 /** Folds a bulk parameter/column join without issuing per-parameter queries. */
 final class SapHanaRoutineArguments {
-	private record Key(String schema, String routine, String argument) { }
+	private record Key(String schema, String routine, String argument) {
+	}
+
 	private final Dialect dialect;
 	private final Map<Key, NamedArgument> arguments = new LinkedHashMap<>();
 	private final Map<Key, List<Column>> tableColumns = new LinkedHashMap<>();
@@ -36,7 +38,8 @@ final class SapHanaRoutineArguments {
 		final Column column = new Column(rs.getString("TABLE_COLUMN_NAME"));
 		final int value = rs.getInt("TABLE_COLUMN_SCALE");
 		final Integer scale = rs.wasNull() ? null : value;
-		dialect.setDbType(rs.getString("TABLE_COLUMN_DATA_TYPE_NAME"), rs.getLong("TABLE_COLUMN_LENGTH"), scale, column);
+		dialect.setDbType(rs.getString("TABLE_COLUMN_DATA_TYPE_NAME"), rs.getLong("TABLE_COLUMN_LENGTH"), scale,
+				column);
 		column.setNullable(!"FALSE".equalsIgnoreCase(rs.getString("TABLE_COLUMN_IS_NULLABLE")));
 		return column;
 	}
