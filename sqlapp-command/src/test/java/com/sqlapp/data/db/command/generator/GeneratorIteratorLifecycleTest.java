@@ -16,8 +16,13 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 class GeneratorIteratorLifecycleTest extends AbstractGeneratorCommandTest {
-	private enum Mode { COUNT, PREVIEW, SINGLE, GENERAL }
-	private enum Failure { NONE, HAS_NEXT, NEXT, GENERATE }
+	private enum Mode {
+		COUNT, PREVIEW, SINGLE, GENERAL
+	}
+
+	private enum Failure {
+		NONE, HAS_NEXT, NEXT, GENERATE
+	}
 
 	private static class Source implements Iterable<Map<String, Object>> {
 		final List<Cursor> cursors = new ArrayList<>();
@@ -26,33 +31,57 @@ class GeneratorIteratorLifecycleTest extends AbstractGeneratorCommandTest {
 		final int size;
 		final Failure failure;
 		final boolean failClose;
+
 		Source(int size, Failure failure, boolean failClose) {
-			this.size = size; this.failure = failure; this.failClose = failClose;
+			this.size = size;
+			this.failure = failure;
+			this.failClose = failClose;
 		}
-		@Override public Iterator<Map<String, Object>> iterator() {
-			var cursor = new Cursor(); cursors.add(cursor); return cursor;
+
+		@Override
+		public Iterator<Map<String, Object>> iterator() {
+			var cursor = new Cursor();
+			cursors.add(cursor);
+			return cursor;
 		}
+
 		private class Cursor implements Iterator<Map<String, Object>>, AutoCloseable {
 			int position;
 			int closes;
-			@Override public boolean hasNext() {
-				if (failure == Failure.HAS_NEXT && position == (size == 1 ? 0 : 1)) throw original;
+
+			@Override
+			public boolean hasNext() {
+				if (failure == Failure.HAS_NEXT && position == (size == 1 ? 0 : 1))
+					throw original;
 				return position < size;
 			}
-			@Override public Map<String, Object> next() {
-				if (failure == Failure.NEXT && position == (size == 1 ? 0 : 1)) throw original;
-				position++; return Map.of();
+
+			@Override
+			public Map<String, Object> next() {
+				if (failure == Failure.NEXT && position == (size == 1 ? 0 : 1))
+					throw original;
+				position++;
+				return Map.of();
 			}
-			@Override public void close() throws IOException {
+
+			@Override
+			public void close() throws IOException {
 				closes++;
-				if (failClose) throw closeFailure;
+				if (failClose)
+					throw closeFailure;
 			}
 		}
 	}
 
 	private static class Command extends GenerateDataInsertCommand {
-		@Override protected void info(Object... values) { }
-		@Override protected void info(Object value) { }
+		@Override
+		protected void info(Object... values) {
+		}
+
+		@Override
+		protected void info(Object value) {
+		}
+
 		void generate(Connection connection, TableGeneratorConfig config) throws Exception {
 			config.check();
 			var table = new Table("LIFECYCLE_OUTPUT").setSchemaName("PUBLIC");
@@ -67,7 +96,8 @@ class GeneratorIteratorLifecycleTest extends AbstractGeneratorCommandTest {
 			var source = new Source(mode == Mode.SINGLE ? 1 : 3, Failure.NONE, false);
 			execute(mode, source);
 			assertClosedOnce(source);
-			if (mode == Mode.PREVIEW) assertEquals(1, source.cursors.get(0).position);
+			if (mode == Mode.PREVIEW)
+				assertEquals(1, source.cursors.get(0).position);
 		}
 	}
 
@@ -75,12 +105,13 @@ class GeneratorIteratorLifecycleTest extends AbstractGeneratorCommandTest {
 	void preservesPrimaryFailureAndSuppressesCloseFailureInEveryPath() throws Exception {
 		for (Mode mode : Mode.values()) {
 			for (Failure failure : List.of(Failure.HAS_NEXT, Failure.NEXT, Failure.GENERATE)) {
-				for (boolean failClose : new boolean[] {false, true}) {
+				for (boolean failClose : new boolean[] { false, true }) {
 					var source = new Source(mode == Mode.SINGLE ? 1 : 3, failure, failClose);
 					var thrown = assertThrows(Exception.class, () -> execute(mode, source), mode + "/" + failure);
 					assertTrue(contains(thrown, source.original), mode + "/" + failure);
 					assertClosedOnce(source);
-					if (failClose) assertTrue(contains(thrown, source.closeFailure), mode + "/" + failure);
+					if (failClose)
+						assertTrue(contains(thrown, source.closeFailure), mode + "/" + failure);
 				}
 			}
 		}
@@ -98,50 +129,68 @@ class GeneratorIteratorLifecycleTest extends AbstractGeneratorCommandTest {
 
 	private void execute(Mode mode, Source source) throws Exception {
 		var evaluator = new CachedMvelEvaluator() {
-			@Override @SuppressWarnings("unchecked")
+			@Override
+			@SuppressWarnings("unchecked")
 			public <T> T eval(String expression, Object context) {
 				if (expression.equals("testMapping")) {
-					if (source.failure == Failure.GENERATE) throw source.original;
+					if (source.failure == Failure.GENERATE)
+						throw source.original;
 					return (T) Map.of();
 				}
 				return super.eval(expression, context);
 			}
-			@Override @SuppressWarnings("unchecked")
+
+			@Override
+			@SuppressWarnings("unchecked")
 			public <T> T eval(String expression, Map<?, ?> context) {
-				if (expression.equals("testSource")) return (T) source;
+				if (expression.equals("testSource"))
+					return (T) source;
 				if (expression.equals("testMapping")) {
-					if (source.failure == Failure.GENERATE) throw source.original;
+					if (source.failure == Failure.GENERATE)
+						throw source.original;
 					return (T) Map.of();
 				}
 				return super.eval(expression, context);
 			}
 		};
 		var config = new TableGeneratorConfig() {
-			@Override public long iterateCount() {
-				// Count cleanup is exercised separately; reach the single-row INSERT path even on failure.
+			@Override
+			public long iterateCount() {
+				// Count cleanup is exercised separately; reach the single-row INSERT path even
+				// on failure.
 				return mode == Mode.SINGLE ? 1 : super.iterateCount();
 			}
-			@Override public Map<String, Object> generateValue(long row, long index) {
-				if (source.failure == Failure.GENERATE) throw source.original;
+
+			@Override
+			public Map<String, Object> generateValue(long row, long index) {
+				if (source.failure == Failure.GENERATE)
+					throw source.original;
 				return super.generateValue(row, index);
 			}
 		};
-		config.setName("LIFECYCLE_OUTPUT"); config.setSchemaName("PUBLIC");
+		config.setName("LIFECYCLE_OUTPUT");
+		config.setSchemaName("PUBLIC");
 		config.setStartValueSql("VALUES (0)");
 		config.setDataSourceExpression("testSource");
 		config.setColumnMappingExpression("testMapping");
 		config.setEvaluator(evaluator);
 		var column = new ColumnGeneratorConfig();
-		column.setName("ID"); column.setMinValue("1"); column.setNextValue("_previous.ID + 1");
+		column.setName("ID");
+		column.setMinValue("1");
+		column.setNextValue("_previous.ID + 1");
 		config.addColumn(column);
-		if (mode == Mode.COUNT) { config.iterateCount(); return; }
+		if (mode == Mode.COUNT) {
+			config.iterateCount();
+			return;
+		}
 		url = "jdbc:hsqldb:mem:iterator_lifecycle_" + java.util.UUID.randomUUID() + ";shutdown=true";
 		try (var ds = newInternalDataSource(); var connection = ds.getConnection()) {
 			connection.setAutoCommit(false);
 			try (var statement = connection.createStatement()) {
 				statement.execute("CREATE TABLE LIFECYCLE_OUTPUT (ID INTEGER)");
 			}
-			var command = new Command(); command.setEvaluator(evaluator);
+			var command = new Command();
+			command.setEvaluator(evaluator);
 			command.setPreview(mode == Mode.PREVIEW);
 			command.setPreviewLimit(source.failure == Failure.NONE ? 1 : 10);
 			command.setCountRowsBeforeInsert(mode == Mode.SINGLE);
@@ -152,13 +201,18 @@ class GeneratorIteratorLifecycleTest extends AbstractGeneratorCommandTest {
 
 	private void assertClosedOnce(Source source) {
 		assertFalse(source.cursors.isEmpty());
-		for (var cursor : source.cursors) assertEquals(1, cursor.closes);
+		for (var cursor : source.cursors)
+			assertEquals(1, cursor.closes);
 	}
 
 	private boolean contains(Throwable failure, Throwable expected) {
-		if (failure == expected) return true;
-		if (failure.getCause() != null && contains(failure.getCause(), expected)) return true;
-		for (Throwable suppressed : failure.getSuppressed()) if (contains(suppressed, expected)) return true;
+		if (failure == expected)
+			return true;
+		if (failure.getCause() != null && contains(failure.getCause(), expected))
+			return true;
+		for (Throwable suppressed : failure.getSuppressed())
+			if (contains(suppressed, expected))
+				return true;
 		return false;
 	}
 }

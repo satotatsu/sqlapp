@@ -200,7 +200,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						+ Arrays.toString(this.getExcludeTables()));
 			}
 			final Map<Table, List<TableGeneratorConfig>> resolved = resolveTableConfigs(sorted, tableConfigs);
-			// Resolve and validate every selected configuration before executing generation SQL.
+			// Resolve and validate every selected configuration before executing generation
+			// SQL.
 			for (Table table : sorted) {
 				for (TableGeneratorConfig config : resolved.getOrDefault(table, Collections.emptyList())) {
 					config.check();
@@ -219,7 +220,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		});
 	}
 
-
 	private void validatePreviewOptions() {
 		if (preview && previewLimit <= 0) {
 			throw new IllegalArgumentException("previewLimit must be greater than zero");
@@ -234,7 +234,10 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		}
 	}
 
-	/** Resolve against selected Schema tables without mutating caller-owned configurations. */
+	/**
+	 * Resolve against selected Schema tables without mutating caller-owned
+	 * configurations.
+	 */
 	Map<Table, List<TableGeneratorConfig>> resolveTableConfigs(List<Table> tables,
 			Map<String, List<TableGeneratorConfig>> configs) {
 		final Map<Table, List<TableGeneratorConfig>> resolved = new java.util.IdentityHashMap<>();
@@ -247,16 +250,19 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 				if (isUseSchemaNameDirectory()) {
 					File parent = config.getFile() == null ? null : config.getParentDirectory();
 					if (parent != null) {
-						if (!CommonUtils.isBlank(schemaName) && !CommonUtils.eqIgnoreCase(schemaName, parent.getName())) {
-							throw new IllegalArgumentException("Generator schemaName=" + schemaName
-									+ " conflicts with schema directory=" + parent.getName() + ". file=" + config.getFile());
+						if (!CommonUtils.isBlank(schemaName)
+								&& !CommonUtils.eqIgnoreCase(schemaName, parent.getName())) {
+							throw new IllegalArgumentException(
+									"Generator schemaName=" + schemaName + " conflicts with schema directory="
+											+ parent.getName() + ". file=" + config.getFile());
 						}
 						if (CommonUtils.isBlank(schemaName)) {
 							schemaName = parent.getName();
 						}
 					} else if (CommonUtils.isBlank(schemaName)) {
-						throw new IllegalArgumentException("Generator requires schemaName or a file in a schema directory. table="
-								+ config.getName());
+						throw new IllegalArgumentException(
+								"Generator requires schemaName or a file in a schema directory. table="
+										+ config.getName());
 					}
 				}
 				final String schema = schemaName;
@@ -274,8 +280,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 				if (candidates.isEmpty()) {
 					Table target = new Table(config.getName());
 					target.setSchemaName(schema);
-					if (!getMetadataReaderFilter().test(target, null)
-							|| (!CommonUtils.isBlank(schema) && !getMetadataReaderFilter().test(new Schema(schema), null))) {
+					if (!getMetadataReaderFilter().test(target, null) || (!CommonUtils.isBlank(schema)
+							&& !getMetadataReaderFilter().test(new Schema(schema), null))) {
 						continue;
 					}
 					throw new TableNotFoundException("Generator target not found among selected tables. schemaName="
@@ -283,9 +289,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 							+ ". Check schemaName and table/schema selection filters.");
 				}
 				if (candidates.size() > 1) {
-					String identities = candidates.stream().map(t -> "[catalog=" + t.getCatalogName()
-							+ ", schema=" + t.getSchemaName() + ", table=" + t.getName() + "]")
-							.collect(Collectors.joining(", "));
+					String identities = candidates.stream().map(t -> "[catalog=" + t.getCatalogName() + ", schema="
+							+ t.getSchemaName() + ", table=" + t.getName() + "]").collect(Collectors.joining(", "));
 					throw new MultiTableFoundException("Ambiguous generator target. tableName=" + config.getName()
 							+ ", file=" + config.getFile() + ", candidates=" + identities
 							+ ". Specify schemaName or use schema directories; restrict the catalog if necessary.");
@@ -310,12 +315,14 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final long rowAmplificationFactor = !preview && countRowsBeforeInsert ? tableConfig.iterateCount() : -1;
-		info(LOG_SEPARATOR_START, table.getName(), preview ? " Preview start." : " Insert start.", " batchSize=[", batchSize, "]. start=[",
-				startLocalTime, "].", LOG_SEPARATOR_END);
+		info(LOG_SEPARATOR_START, table.getName(), preview ? " Preview start." : " Insert start.", " batchSize=[",
+				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
 		if (!preview && !CommonUtils.isBlank(tableConfig.getStartCountSql())) {
 			executeSql(connection, dialect, table, "Start Select count", tableConfig.getStartCountSql());
 		}
-		info(MESSAGE_SEPARATOR_START, "rowAmplificationFactor=[" + (rowAmplificationFactor < 0 ? "unknown" : rowAmplificationFactor) + "]", MESSAGE_SEPARATOR_END);
+		info(MESSAGE_SEPARATOR_START,
+				"rowAmplificationFactor=[" + (rowAmplificationFactor < 0 ? "unknown" : rowAmplificationFactor) + "]",
+				MESSAGE_SEPARATOR_END);
 		tableConfig.initializeTableColumnData(table);
 		Map<String, QueryGeneratorConfig> cacheMap = CommonUtils.map();
 		tableConfig.loadData(connection, (index, config) -> {
@@ -393,7 +400,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 				}
 			});
 		}
-		final long total = countRowsBeforeInsert ? Math.multiplyExact(rowAmplificationFactor, startValueCounter[0]) : -1;
+		final long total = countRowsBeforeInsert ? Math.multiplyExact(rowAmplificationFactor, startValueCounter[0])
+				: -1;
 		if (!CommonUtils.isBlank(tableConfig.getInitializeSql())) {
 			executeSql(connection, dialect, table, "Initialize SQL", tableConfig.getInitializeSql());
 		}
@@ -405,8 +413,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					return;
 				}
 				if (rowAmplificationFactor != 1) {
-					processedRows[0] = insertAll(connection, dialect, sqlParameterCollection, startTable, table, rowAmplificationFactor,
-							insertSqlNodes, total, tableConfig);
+					processedRows[0] = insertAll(connection, dialect, sqlParameterCollection, startTable, table,
+							rowAmplificationFactor, insertSqlNodes, total, tableConfig);
 				} else {
 					processedRows[0] = copyInsertAll(connection, dialect, sqlParameterCollection, startTable, table,
 							rowAmplificationFactor, insertSqlNodes, total, tableConfig);
@@ -437,7 +445,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
 			final TableGeneratorConfig tableConfig) throws SQLException {
 		int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		info("rowAmplificationFactor=" + (rowAmplificationFactor < 0 ? "unknown" : rowAmplificationFactor) + ", batchSize=" + batchSize);
+		info("rowAmplificationFactor=" + (rowAmplificationFactor < 0 ? "unknown" : rowAmplificationFactor)
+				+ ", batchSize=" + batchSize);
 		final long[] generatedCount = new long[1];
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			dialect.setFetchSizeForStream(statement, fetchSize);
@@ -478,7 +487,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 											return dataSourceIterable;
 										}, (i, map) -> {
 											try {
-												final GeneratedRow row = generateRow(tableConfig, map, startRowIndex, generatedCount[0]);
+												final GeneratedRow row = generateRow(tableConfig, map, startRowIndex,
+														generatedCount[0]);
 												final Map<String, Object> covertedColumnMapping = row.mapping();
 												final Map<String, Object> generatedValue = row.values();
 												getRowMonitor().handle(tableConfig, currentResultSetValueMap,
@@ -516,11 +526,12 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 									return dataSourceIterable;
 								}, (i, map) -> {
 									try {
-										final GeneratedRow row = generateRow(tableConfig, map, startRowIndex, generatedCount[0]);
+										final GeneratedRow row = generateRow(tableConfig, map, startRowIndex,
+												generatedCount[0]);
 										final Map<String, Object> covertedColumnMapping = row.mapping();
 										final Map<String, Object> generatedValue = row.values();
-										getRowMonitor().handle(tableConfig, currentResultSetValueMap, readRowCount[0], i,
-												generatedCount[0], updatedRowCount[0], covertedColumnMapping,
+										getRowMonitor().handle(tableConfig, currentResultSetValueMap, readRowCount[0],
+												i, generatedCount[0], updatedRowCount[0], covertedColumnMapping,
 												generatedValue, startTable, table, insertSqlNodes);
 										if (covertedColumnMapping != null) {
 											generatedValue.putAll(covertedColumnMapping);
@@ -549,7 +560,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
 			final TableGeneratorConfig tableConfig) throws SQLException {
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		info("rowAmplificationFactor=" + (rowAmplificationFactor < 0 ? "unknown" : rowAmplificationFactor) + ", batchSize=" + batchSize);
+		info("rowAmplificationFactor=" + (rowAmplificationFactor < 0 ? "unknown" : rowAmplificationFactor)
+				+ ", batchSize=" + batchSize);
 		final long[] generatedCount = new long[1];
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			dialect.setFetchSizeForStream(statement, fetchSize);
@@ -587,8 +599,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						final GeneratedRow row = generateRow(tableConfig, map, readRowCount[0], readRowCount[0]);
 						final Map<String, Object> covertedColumnMapping = row.mapping();
 						generatedValue = row.values();
-						getRowMonitor().handle(tableConfig, resultSetValueMap, readRowCount[0], 0, 0, updatedRowCount[0],
-								covertedColumnMapping, generatedValue, startTable, table, insertSqlNodes);
+						getRowMonitor().handle(tableConfig, resultSetValueMap, readRowCount[0], 0, 0,
+								updatedRowCount[0], covertedColumnMapping, generatedValue, startTable, table,
+								insertSqlNodes);
 						if (covertedColumnMapping != null) {
 							generatedValue.putAll(covertedColumnMapping);
 						}
@@ -621,11 +634,11 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		return generatedCount[0];
 	}
 
+	private record GeneratedRow(Map<String, Object> mapping, Map<String, Object> values) {
+	}
 
-	private record GeneratedRow(Map<String, Object> mapping, Map<String, Object> values) { }
-
-	private GeneratedRow generateRow(TableGeneratorConfig config, Map<String, Object> input,
-			long rowNumber, long generationIndex) {
+	private GeneratedRow generateRow(TableGeneratorConfig config, Map<String, Object> input, long rowNumber,
+			long generationIndex) {
 		final Map<String, Object> mapping = config.convertColumnMapping(input);
 		return new GeneratedRow(mapping, config.generateValue(rowNumber, generationIndex));
 	}
@@ -671,16 +684,17 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 									table.getSchemaName(), table.getName(), config.getFile(), startIndex, iterateIndex,
 									columnValues);
 							previewRows.add(sample);
-							for (GeneratorPreviewDiagnostic diagnostic : GeneratorPreviewValidator.validate(table, sample)) {
+							for (GeneratorPreviewDiagnostic diagnostic : GeneratorPreviewValidator.validate(table,
+									sample)) {
 								previewDiagnostics.add(diagnostic);
 								info("Preview diagnostic table=", table.getSchemaName(), ".", table.getName(),
-										", startRowIndex=", startIndex, ", iterateIndex=", iterateIndex,
-										", column=", diagnostic.columnName(), ", code=", diagnostic.code(),
-										", message=", diagnostic.message());
+										", startRowIndex=", startIndex, ", iterateIndex=", iterateIndex, ", column=",
+										diagnostic.columnName(), ", code=", diagnostic.code(), ", message=",
+										diagnostic.message());
 							}
-							info("Preview table=", table.getSchemaName(), ".", table.getName(),
-									", startRowIndex=", startIndex, ", iterateIndex=", iterateIndex,
-									", values=", sample.values(), ", types=", sample.valueTypes());
+							info("Preview table=", table.getSchemaName(), ".", table.getName(), ", startRowIndex=",
+									startIndex, ", iterateIndex=", iterateIndex, ", values=", sample.values(),
+									", types=", sample.valueTypes());
 							generated++;
 							iterateIndex++;
 						}
@@ -700,8 +714,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			throw new SQLException("Generator preview table=" + table.getSchemaName() + "." + table.getName()
 					+ ", sampledRowCount=" + generated + ". " + e.getMessage(), e.getSQLState(), e.getErrorCode(), e);
 		}
-		info("Preview completed. table=", table.getSchemaName(), ".", table.getName(),
-				", sampledRowCount=", generated, ", limit=", previewLimit);
+		info("Preview completed. table=", table.getSchemaName(), ".", table.getName(), ", sampledRowCount=", generated,
+				", limit=", previewLimit);
 	}
 
 	private SQLException sqlFailure(Table table, long convertedCount, SQLException cause) {
@@ -718,8 +732,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 	private RuntimeException rowFailure(Table table, long startRow, long iterateIndex, long convertedCount,
 			RuntimeException cause) {
 		return new IllegalStateException("Generator table=" + table.getSchemaName() + "." + table.getName()
-				+ ", startRowIndex=" + startRow + ", iterateIndex=" + iterateIndex
-				+ ", convertedInputCount=" + convertedCount + " (indexes are zero-based). " + cause.getMessage(), cause);
+				+ ", startRowIndex=" + startRow + ", iterateIndex=" + iterateIndex + ", convertedInputCount="
+				+ convertedCount + " (indexes are zero-based). " + cause.getMessage(), cause);
 	}
 
 	private List<SqlNode> createSqlNode(Dialect dialect, final SqlConverter sqlConverter, String sql) {

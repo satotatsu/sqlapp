@@ -42,8 +42,7 @@ class GeneratorDiagnosticTest {
 		var config = new TableGeneratorConfig();
 		config.setName("OUTPUT");
 		config.setColumnMappingExpression("missingDiagnosticFunction()");
-		var failure = assertThrows(ExpressionExecutionException.class,
-				() -> config.convertColumnMapping(Map.of()));
+		var failure = assertThrows(ExpressionExecutionException.class, () -> config.convertColumnMapping(Map.of()));
 		assertTrue(failure.getMessage().contains("phase=columnMappingExpression"));
 		assertTrue(failure.getMessage().contains("missingDiagnosticFunction()"));
 		assertNotNull(failure.getCause());

@@ -38,7 +38,8 @@ class GeneratorSchemaInsertTest extends AbstractGeneratorCommandTest {
 	}
 
 	private int count(HikariDataSource ds, String schema) throws Exception {
-		try (var connection = ds.getConnection(); var statement = connection.createStatement();
+		try (var connection = ds.getConnection();
+				var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT COUNT(*) FROM " + schema + ".SAME_NAME")) {
 			assertTrue(rows.next());
 			return rows.getInt(1);

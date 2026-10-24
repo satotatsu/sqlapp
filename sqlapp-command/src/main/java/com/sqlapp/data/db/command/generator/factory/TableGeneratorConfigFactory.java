@@ -207,9 +207,12 @@ public class TableGeneratorConfigFactory {
 		return createInsertSql(table, dialect, tableOptions, sqlType, withSchemaName);
 	}
 
-	/** Generate DML with explicit schema qualification when required by the resolved target. */
-	public String createInsertSql(final Table table, final Dialect dialect, TableOptions tableOptions,
-			SqlType sqlType, boolean withSchemaName) {
+	/**
+	 * Generate DML with explicit schema qualification when required by the resolved
+	 * target.
+	 */
+	public String createInsertSql(final Table table, final Dialect dialect, TableOptions tableOptions, SqlType sqlType,
+			boolean withSchemaName) {
 		ForeignKeyConstraint pkfk = getPKFK(table);
 		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		if (tableOptions != null) {

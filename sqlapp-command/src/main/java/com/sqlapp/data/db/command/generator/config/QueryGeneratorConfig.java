@@ -127,7 +127,7 @@ public class QueryGeneratorConfig {
 			}
 			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
 					selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator(),
-				this.tableGeneratorConfig.createSelectionRandom("QueryGeneratorConfig:" + generationGroup));
+					this.tableGeneratorConfig.createSelectionRandom("QueryGeneratorConfig:" + generationGroup));
 		}
 	}
 

@@ -22,19 +22,28 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 
 	private static class Command extends GenerateDataInsertCommand {
 		final List<String> messages = new ArrayList<>();
-		@Override protected void info(Object value) { messages.add(String.valueOf(value)); }
-		@Override protected void info(Object... values) {
-			messages.add(java.util.Arrays.stream(values).map(String::valueOf).collect(java.util.stream.Collectors.joining()));
+
+		@Override
+		protected void info(Object value) {
+			messages.add(String.valueOf(value));
 		}
-		void generate(Connection connection, Dialect dialect, Table table, TableGeneratorConfig config) throws Exception {
+
+		@Override
+		protected void info(Object... values) {
+			messages.add(java.util.Arrays.stream(values).map(String::valueOf)
+					.collect(java.util.stream.Collectors.joining()));
+		}
+
+		void generate(Connection connection, Dialect dialect, Table table, TableGeneratorConfig config)
+				throws Exception {
 			applyFromFileByRow(connection, dialect, table, config);
 		}
 	}
 
 	@Test
 	void streamingSkipsBothCountPassesAndProducesSameRowsAcrossBatchSizes() throws Exception {
-		for (int batch : new int[] {1, 2, 10}) {
-			for (int size : new int[] {0, 1, 3}) {
+		for (int batch : new int[] { 1, 2, 10 }) {
+			for (int size : new int[] { 0, 1, 3 }) {
 				assertEquals(run(true, size, batch, 2), run(false, size, batch, 2));
 			}
 		}
@@ -42,15 +51,15 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	void expressionPositionsAreIndependentOfCountingAndBatchSize() throws Exception {
-		for (int size : new int[] {1, 3}) {
+		for (int size : new int[] { 1, 3 }) {
 			var expected = new ArrayList<Integer>();
 			for (int start = 0; start < 5; start++) {
 				for (int iterate = 0; iterate < size; iterate++) {
 					expected.add(start * 1000 + start * size + iterate + 1);
 				}
 			}
-			for (int batch : new int[] {1, 2, 10}) {
-				for (boolean countFirst : new boolean[] {true, false}) {
+			for (int batch : new int[] { 1, 2, 10 }) {
+				for (boolean countFirst : new boolean[] { true, false }) {
 					assertEquals(expected, run(countFirst, size, batch, 5, -3),
 							"countFirst=" + countFirst + ", size=" + size + ", batch=" + batch);
 				}
@@ -68,8 +77,8 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 					expected.add(start * 1000 + generated++ + 1);
 				}
 			}
-			for (boolean countFirst : new boolean[] {true, false}) {
-				for (int batch : new int[] {1, 2, 10}) {
+			for (boolean countFirst : new boolean[] { true, false }) {
+				for (int batch : new int[] { 1, 2, 10 }) {
 					assertEquals(expected, run(countFirst, 3, batch, sizes.size(), -1, "null", sizes),
 							"sizes=" + sizes + ", countFirst=" + countFirst + ", batch=" + batch);
 				}
@@ -80,9 +89,9 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 	@Test
 	void varyingIterateFailuresReportPositionsAfterEmptyStarts() throws Exception {
 		var sizes = List.of(0, 3, 1, 0, 2, 0);
-		for (boolean countFirst : new boolean[] {true, false}) {
-			for (int batch : new int[] {1, 2, 10}) {
-				for (int failIndex : new int[] {2, 3, 5}) {
+		for (boolean countFirst : new boolean[] { true, false }) {
+			for (int batch : new int[] { 1, 2, 10 }) {
+				for (int failIndex : new int[] { 2, 3, 5 }) {
 					var failure = assertThrows(IllegalStateException.class,
 							() -> run(countFirst, 3, batch, sizes.size(), failIndex, "null", sizes));
 					int start = failIndex == 2 ? 1 : failIndex == 3 ? 2 : 4;
@@ -98,11 +107,10 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	void nullMappingPreservesGeneratedValuesAcrossInsertionPaths() throws Exception {
-		for (boolean countFirst : new boolean[] {true, false}) {
-			for (int size : new int[] {1, 3}) {
-				for (int batch : new int[] {1, 2, 10}) {
-					assertEquals(run(countFirst, size, batch, 5),
-							run(countFirst, size, batch, 5, -1, "null"));
+		for (boolean countFirst : new boolean[] { true, false }) {
+			for (int size : new int[] { 1, 3 }) {
+				for (int batch : new int[] { 1, 2, 10 }) {
+					assertEquals(run(countFirst, size, batch, 5), run(countFirst, size, batch, 5, -1, "null"));
 				}
 			}
 		}
@@ -123,13 +131,11 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 		assertEquals(List.of(), run(false, 3, 2, 0));
 	}
 
-
 	@Test
 	void failuresReportActualDeferredIteratePositionInBothModes() throws Exception {
-		for (boolean countFirst : new boolean[] {true, false}) {
-			for (int batch : new int[] {1, 10}) {
-				var failure = assertThrows(IllegalStateException.class,
-						() -> run(countFirst, 3, batch, 2, 2));
+		for (boolean countFirst : new boolean[] { true, false }) {
+			for (int batch : new int[] { 1, 10 }) {
+				var failure = assertThrows(IllegalStateException.class, () -> run(countFirst, 3, batch, 2, 2));
 				assertTrue(failure.getMessage().contains("table=PUBLIC.GENERATOR_OUTPUT"));
 				assertTrue(failure.getMessage().contains("startRowIndex=0"));
 				assertTrue(failure.getMessage().contains("iterateIndex=2"));
@@ -143,7 +149,7 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	void sqlFailuresRetainJdbcDetailsInBothModes() throws Exception {
-		for (boolean countFirst : new boolean[] {true, false}) {
+		for (boolean countFirst : new boolean[] { true, false }) {
 			var failure = assertThrows(java.sql.SQLException.class, () -> run(countFirst, 1, 10, 2, -2));
 			assertTrue(failure.getMessage().contains("table=PUBLIC.GENERATOR_OUTPUT"));
 			assertTrue(failure.getMessage().contains("convertedInputCount=2"));
@@ -184,41 +190,62 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 				}
 			}
 			var queries = new AtomicInteger();
-			Connection observed = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] {Connection.class},
-					(proxy, method, args) -> {
+			Connection observed = (Connection) Proxy.newProxyInstance(getClass().getClassLoader(),
+					new Class<?>[] { Connection.class }, (proxy, method, args) -> {
 						try {
 							Object result = method.invoke(connection, args);
 							if (method.getName().equals("prepareStatement") && START_SQL.equals(args[0])) {
 								PreparedStatement statement = (PreparedStatement) result;
-								return Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] {PreparedStatement.class},
-										(p, m, a) -> {
-											if (m.getName().equals("executeQuery")) queries.incrementAndGet();
-											try { return m.invoke(statement, a); }
-											catch (InvocationTargetException e) { throw e.getCause(); }
+								return Proxy.newProxyInstance(getClass().getClassLoader(),
+										new Class<?>[] { PreparedStatement.class }, (p, m, a) -> {
+											if (m.getName().equals("executeQuery"))
+												queries.incrementAndGet();
+											try {
+												return m.invoke(statement, a);
+											} catch (InvocationTargetException e) {
+												throw e.getCause();
+											}
 										});
 							}
 							return result;
-						} catch (InvocationTargetException e) { throw e.getCause(); }
+						} catch (InvocationTargetException e) {
+							throw e.getCause();
+						}
 					});
 			var counts = new AtomicInteger();
 			var sources = new AtomicInteger();
 			var config = new TableGeneratorConfig() {
 				private int currentStart;
-				@Override public void setSqlStartValue(Map<String, Object> values) {
+
+				@Override
+				public void setSqlStartValue(Map<String, Object> values) {
 					super.setSqlStartValue(values);
 					currentStart = ((Number) values.get("ID")).intValue() / 10 - 1;
 				}
-				@Override public Map<String, Object> generateValue(long row, long index) {
-					if (index == failIndex) throw new IllegalArgumentException("test generation failure");
+
+				@Override
+				public Map<String, Object> generateValue(long row, long index) {
+					if (index == failIndex)
+						throw new IllegalArgumentException("test generation failure");
 					var values = super.generateValue(row, index);
-					if (failIndex == -2) values.put("ID", 1);
+					if (failIndex == -2)
+						values.put("ID", 1);
 					return values;
 				}
-				@Override public long iterateCount() { counts.incrementAndGet(); return super.iterateCount(); }
-				@Override public Iterable<Map<String, Object>> getDataSource() {
+
+				@Override
+				public long iterateCount() {
+					counts.incrementAndGet();
+					return super.iterateCount();
+				}
+
+				@Override
+				public Iterable<Map<String, Object>> getDataSource() {
 					sources.incrementAndGet();
-					if (sizes == null) return super.getDataSource();
-					// Simulate a source whose Iterate length depends on the current StartValueSQL row.
+					if (sizes == null)
+						return super.getDataSource();
+					// Simulate a source whose Iterate length depends on the current StartValueSQL
+					// row.
 					return java.util.Collections.nCopies(sizes.get(currentStart), Map.of());
 				}
 			};
@@ -231,7 +258,8 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 			column.setName("ID");
 			column.setMinValue("1");
 			column.setNextValue("_previous.ID + 1");
-			if (failIndex == -3 || sizes != null) column.setFormatExpression("_row_number * 1000 + _index + 1");
+			if (failIndex == -3 || sizes != null)
+				column.setFormatExpression("_row_number * 1000 + _index + 1");
 			config.addColumn(column);
 			config.check();
 			var table = new Table("GENERATOR_OUTPUT").setSchemaName("PUBLIC");
@@ -247,14 +275,19 @@ class GeneratorStreamingProgressTest extends AbstractGeneratorCommandTest {
 			assertEquals(countFirst && size == 0 ? 1 : countFirst ? 2 : 1, queries.get());
 			assertEquals(countFirst && size == 0 ? 0 : startRows, sources.get());
 			int expected = sizes == null ? startRows * size : sizes.stream().mapToInt(Integer::intValue).sum();
-			assertTrue(command.messages.stream().anyMatch(m -> m.contains("Insert completed. numberOfRows=[" + expected + "]")));
-			if (!countFirst) assertFalse(command.messages.stream().anyMatch(m -> m.contains("%")));
+			assertTrue(command.messages.stream()
+					.anyMatch(m -> m.contains("Insert completed. numberOfRows=[" + expected + "]")));
+			if (!countFirst)
+				assertFalse(command.messages.stream().anyMatch(m -> m.contains("%")));
 			if (!countFirst && expected > 0) {
-				assertTrue(command.messages.stream().anyMatch(m -> m.contains("total=[unknown]") && m.contains("rowsPerSecond=")));
+				assertTrue(command.messages.stream()
+						.anyMatch(m -> m.contains("total=[unknown]") && m.contains("rowsPerSecond=")));
 			}
 			var rows = new ArrayList<Integer>();
-			try (var statement = connection.createStatement(); var result = statement.executeQuery("SELECT ID FROM GENERATOR_OUTPUT ORDER BY ID")) {
-				while (result.next()) rows.add(result.getInt(1));
+			try (var statement = connection.createStatement();
+					var result = statement.executeQuery("SELECT ID FROM GENERATOR_OUTPUT ORDER BY ID")) {
+				while (result.next())
+					rows.add(result.getInt(1));
 			}
 			assertEquals(expected, rows.size());
 			return rows;

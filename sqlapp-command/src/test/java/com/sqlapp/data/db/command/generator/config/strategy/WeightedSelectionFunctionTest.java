@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-
 class WeightedSelectionFunctionTest {
 	private WeightedSelectionFunction function(List<Map<String, Object>> values, long seed) {
 		return new WeightedSelectionFunction(values, "weight",
@@ -34,8 +33,8 @@ class WeightedSelectionFunctionTest {
 
 	@Test
 	void skipsZeroWeightsIncludingRepeatedCumulativeWeights() {
-		var values = List.<Map<String, Object>>of(Map.of("weight", 0), Map.of("weight", 1),
-				Map.of("weight", 0), Map.of("weight", 0));
+		var values = List.<Map<String, Object>>of(Map.of("weight", 0), Map.of("weight", 1), Map.of("weight", 0),
+				Map.of("weight", 0));
 		var f = function(values, 42);
 		for (int i = 0; i < 100; i++) {
 			org.junit.jupiter.api.Assertions.assertSame(values.get(1), f.get(i));
@@ -64,7 +63,8 @@ class WeightedSelectionFunctionTest {
 		var actual = function(values, 42);
 		var expected = function(integers, 42);
 		for (int i = 0; i < 100; i++) {
-			org.junit.jupiter.api.Assertions.assertEquals(integers.indexOf(expected.get(i)), values.indexOf(actual.get(i)));
+			org.junit.jupiter.api.Assertions.assertEquals(integers.indexOf(expected.get(i)),
+					values.indexOf(actual.get(i)));
 		}
 		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
 				() -> function(List.of(Map.of("weight", 0.9)), 1));
@@ -72,18 +72,18 @@ class WeightedSelectionFunctionTest {
 
 	@Test
 	void validatesOriginalValuesBeforeNarrowing() {
-		for (Object weight : new Object[] {-0.5, new java.math.BigDecimal("-0.01"),
-				Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Float.NaN,
-				Float.POSITIVE_INFINITY, new java.math.BigInteger("18446744073709551617"),
-				new java.math.BigDecimal("9223372036854775807.1"), (double) Long.MAX_VALUE}) {
+		for (Object weight : new Object[] { -0.5, new java.math.BigDecimal("-0.01"), Double.NaN,
+				Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Float.NaN, Float.POSITIVE_INFINITY,
+				new java.math.BigInteger("18446744073709551617"), new java.math.BigDecimal("9223372036854775807.1"),
+				(double) Long.MAX_VALUE }) {
 			var failure = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
 					() -> function(List.of(Map.of("weight", weight)), 1), String.valueOf(weight));
 			org.junit.jupiter.api.Assertions.assertTrue(failure.getMessage().contains("row=0"));
 			org.junit.jupiter.api.Assertions.assertTrue(failure.getMessage().contains("expression=weight"));
 			org.junit.jupiter.api.Assertions.assertTrue(failure.getMessage().contains("value=" + weight));
 		}
-		for (Object weight : new Object[] {Long.MAX_VALUE, java.math.BigInteger.valueOf(Long.MAX_VALUE),
-				new java.math.BigDecimal("9223372036854775807.0")}) {
+		for (Object weight : new Object[] { Long.MAX_VALUE, java.math.BigInteger.valueOf(Long.MAX_VALUE),
+				new java.math.BigDecimal("9223372036854775807.0") }) {
 			var values = List.<Map<String, Object>>of(Map.of("weight", weight));
 			org.junit.jupiter.api.Assertions.assertSame(values.get(0), function(values, 1).get(0));
 		}
@@ -95,7 +95,7 @@ class WeightedSelectionFunctionTest {
 	@Test
 	void rejectsInvalidWeights() {
 		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> function(List.of(), 1));
-		for (long weight : new long[] {0, -1}) {
+		for (long weight : new long[] { 0, -1 }) {
 			org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
 					() -> function(List.of(Map.of("weight", weight)), 1));
 		}

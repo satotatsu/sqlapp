@@ -41,8 +41,8 @@ public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 		this(list, weightExpression, evaluator, new Random());
 	}
 
-	public WeightedSelectionFunction(List<Map<String, Object>> list, String weightExpression,
-			CachedEvaluator evaluator, Random random) {
+	public WeightedSelectionFunction(List<Map<String, Object>> list, String weightExpression, CachedEvaluator evaluator,
+			Random random) {
 		super(list);
 		this.random = java.util.Objects.requireNonNull(random);
 		this.evaluator = evaluator;
@@ -70,17 +70,17 @@ public class WeightedSelectionFunction extends AbstractValueSelectionFunction {
 			return 1;
 		}
 		try {
-			// Convert Numbers without narrowing BigInteger or floating-point values to long first.
+			// Convert Numbers without narrowing BigInteger or floating-point values to long
+			// first.
 			BigDecimal weight = value instanceof Number ? new BigDecimal(value.toString())
 					: Converters.getDefault().convertObject(value, BigDecimal.class);
-			if (weight == null || weight.signum() < 0
-					|| weight.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) > 0) {
+			if (weight == null || weight.signum() < 0 || weight.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) > 0) {
 				throw new IllegalArgumentException("Weight must be finite and between 0 and Long.MAX_VALUE");
 			}
 			return weight.longValue();
 		} catch (RuntimeException e) {
-			throw new IllegalArgumentException("Invalid weight. row=" + row + ", expression=" + expression
-					+ ", value=" + value + ". Expected a finite value between 0 and Long.MAX_VALUE"
+			throw new IllegalArgumentException("Invalid weight. row=" + row + ", expression=" + expression + ", value="
+					+ value + ". Expected a finite value between 0 and Long.MAX_VALUE"
 					+ " (fractional parts are truncated)", e);
 		}
 	}

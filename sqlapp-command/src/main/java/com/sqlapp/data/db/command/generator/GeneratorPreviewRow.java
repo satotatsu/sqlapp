@@ -5,7 +5,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** A generated sample before JDBC conversion or database-generated values. Indexes are zero-based. */
+/**
+ * A generated sample before JDBC conversion or database-generated values.
+ * Indexes are zero-based.
+ */
 public record GeneratorPreviewRow(String catalogName, String schemaName, String tableName, File configFile,
 		long startRowIndex, long iterateIndex, Map<String, Object> values) {
 	public GeneratorPreviewRow {

@@ -76,7 +76,8 @@ class GenerateDataConfigAndInsertCommandTest3 extends AbstractGeneratorCommandTe
 			command.setCountRowsBeforeInsert(false);
 			command.setDmlBatchSize(2);
 			command.setGeneratorConfigConsumer(config -> config.setDataSourceExpression("iterator(3)"));
-			command.setAfter((generated, files) -> org.junit.jupiter.api.Assertions.assertFalse(generated.isCountRowsBeforeInsert()));
+			command.setAfter((generated, files) -> org.junit.jupiter.api.Assertions
+					.assertFalse(generated.isCountRowsBeforeInsert()));
 		});
 	}
 

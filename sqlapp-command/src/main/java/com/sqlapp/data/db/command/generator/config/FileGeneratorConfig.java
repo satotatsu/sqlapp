@@ -107,7 +107,8 @@ public class FileGeneratorConfig {
 				i++;
 			}
 		} else {
-			throw new IllegalArgumentException("File lookup " + lookupGroup + ": dataSourceExpression must return Iterable");
+			throw new IllegalArgumentException(
+					"File lookup " + lookupGroup + ": dataSourceExpression must return Iterable");
 		}
 		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
 				selectionStrategyWeightExpression, this.tableGeneratorConfig.getEvaluator(),

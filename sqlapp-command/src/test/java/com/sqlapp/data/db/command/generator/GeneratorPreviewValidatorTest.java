@@ -26,7 +26,8 @@ class GeneratorPreviewValidatorTest {
 		table.getColumns().add("COMPUTED", c -> c.setNotNull(true).setFormula("1 + 1"));
 		table.getColumns().add("OPTIONAL");
 		var values = new LinkedHashMap<String, Object>();
-		for (String name : List.of("REQUIRED", "IDENTITY", "COMPUTED", "OPTIONAL")) values.put(name, null);
+		for (String name : List.of("REQUIRED", "IDENTITY", "COMPUTED", "OPTIONAL"))
+			values.put(name, null);
 		var sample = row(values);
 		var issues = GeneratorPreviewValidator.validate(table, sample);
 		assertEquals(1, issues.size());
@@ -38,7 +39,8 @@ class GeneratorPreviewValidatorTest {
 
 	@Test
 	void characterBoundariesUseCodePointsAndInheritedSemantics() {
-		var table = new Table("OUTPUT"); table.setCharacterSemantics(CharacterSemantics.Char);
+		var table = new Table("OUTPUT");
+		table.setCharacterSemantics(CharacterSemantics.Char);
 		table.getColumns().add("TEXT", c -> c.setDataType(DataType.VARCHAR).setLength(2));
 		String emoji = new String(Character.toChars(0x1F600));
 		assertTrue(GeneratorPreviewValidator.validate(table, row(Map.of("TEXT", emoji + emoji))).isEmpty());
@@ -51,23 +53,31 @@ class GeneratorPreviewValidatorTest {
 	@Test
 	void doesNotGuessByteLengthsUnknownSemanticsOrConversions() {
 		var table = new Table("OUTPUT");
-		table.getColumns().add("BYTE_TEXT", c -> c.setDataType(DataType.VARCHAR).setLength(1).setCharacterSemantics(CharacterSemantics.Byte));
+		table.getColumns().add("BYTE_TEXT",
+				c -> c.setDataType(DataType.VARCHAR).setLength(1).setCharacterSemantics(CharacterSemantics.Byte));
 		table.getColumns().add("UNKNOWN_TEXT", c -> c.setDataType(DataType.VARCHAR).setLength(1));
-		table.getColumns().add("ARRAY_TEXT", c -> c.setDataType(DataType.VARCHAR).setLength(1).setCharacterSemantics(CharacterSemantics.Char).setArrayDimension(1));
-		table.getColumns().add("CONVERTED", c -> c.setDataType(DataType.VARCHAR).setLength(1).setCharacterSemantics(CharacterSemantics.Char));
-		assertTrue(GeneratorPreviewValidator.validate(table,
-				row(Map.of("BYTE_TEXT", "abc", "UNKNOWN_TEXT", "abc", "ARRAY_TEXT", "abc", "CONVERTED", 12345))).isEmpty());
+		table.getColumns().add("ARRAY_TEXT", c -> c.setDataType(DataType.VARCHAR).setLength(1)
+				.setCharacterSemantics(CharacterSemantics.Char).setArrayDimension(1));
+		table.getColumns().add("CONVERTED",
+				c -> c.setDataType(DataType.VARCHAR).setLength(1).setCharacterSemantics(CharacterSemantics.Char));
+		assertTrue(GeneratorPreviewValidator
+				.validate(table,
+						row(Map.of("BYTE_TEXT", "abc", "UNKNOWN_TEXT", "abc", "ARRAY_TEXT", "abc", "CONVERTED", 12345)))
+				.isEmpty());
 	}
 
 	@Test
 	void exactDecimalsCheckIntegerAndFractionalBoundariesWithoutRounding() {
 		var table = decimalTable(5, 2);
 		for (String text : List.of("999.99", "-999.99", "999.9900", "0.0000", "0.01", "100.00")) {
-			assertTrue(GeneratorPreviewValidator.validate(table, row(Map.of("N", new BigDecimal(text)))).isEmpty(), text);
+			assertTrue(GeneratorPreviewValidator.validate(table, row(Map.of("N", new BigDecimal(text)))).isEmpty(),
+					text);
 		}
-		for (Object value : List.of(new BigDecimal("1000"), new BigDecimal("-1000"), new BigDecimal("1E+3"), new BigInteger("1000"), 1000L)) {
+		for (Object value : List.of(new BigDecimal("1000"), new BigDecimal("-1000"), new BigDecimal("1E+3"),
+				new BigInteger("1000"), 1000L)) {
 			var issues = GeneratorPreviewValidator.validate(table, row(Map.of("N", value)));
-			assertEquals(List.of(NUMERIC_INTEGER_DIGITS_EXCEEDED), issues.stream().map(GeneratorPreviewDiagnostic::code).toList());
+			assertEquals(List.of(NUMERIC_INTEGER_DIGITS_EXCEEDED),
+					issues.stream().map(GeneratorPreviewDiagnostic::code).toList());
 		}
 		var issues = GeneratorPreviewValidator.validate(table, row(Map.of("N", new BigDecimal("1000.001"))));
 		assertEquals(List.of(NUMERIC_INTEGER_DIGITS_EXCEEDED, NUMERIC_SCALE_EXCEEDED),
@@ -82,8 +92,9 @@ class GeneratorPreviewValidatorTest {
 		}
 		assertEquals(NUMERIC_INTEGER_DIGITS_EXCEEDED,
 				GeneratorPreviewValidator.validate(table, row(Map.of("N", new BigDecimal("0.01")))).get(0).code());
-		assertEquals(NUMERIC_INTEGER_DIGITS_EXCEEDED,
-				GeneratorPreviewValidator.validate(decimalTable(5, 2), row(Map.of("N", new BigDecimal(BigInteger.TEN, Integer.MIN_VALUE)))).get(0).code());
+		assertEquals(NUMERIC_INTEGER_DIGITS_EXCEEDED, GeneratorPreviewValidator
+				.validate(decimalTable(5, 2), row(Map.of("N", new BigDecimal(BigInteger.TEN, Integer.MIN_VALUE))))
+				.get(0).code());
 	}
 
 	@Test

@@ -37,9 +37,9 @@ class GeneratorTableResolutionTest {
 
 	@Test
 	void rejectsAmbiguousShortNamesAndListsCandidates() {
-		var error = assertThrows(MultiTableFoundException.class, () -> new GenerateDataInsertCommand()
-				.resolveTableConfigs(List.of(table("C", "A", "T"), table("C", "B", "T")),
-						Map.of("T", List.of(config(null, "T")))));
+		var error = assertThrows(MultiTableFoundException.class,
+				() -> new GenerateDataInsertCommand().resolveTableConfigs(
+						List.of(table("C", "A", "T"), table("C", "B", "T")), Map.of("T", List.of(config(null, "T")))));
 		assertTrue(error.getMessage().contains("schema=A"));
 		assertTrue(error.getMessage().contains("schema=B"));
 		assertTrue(error.getMessage().contains("schemaName"));
@@ -66,8 +66,7 @@ class GeneratorTableResolutionTest {
 	@Test
 	void doesNotConflateCatalogIdentities() {
 		assertThrows(MultiTableFoundException.class, () -> new GenerateDataInsertCommand().resolveTableConfigs(
-				List.of(table("C1", "A", "T"), table("C2", "A", "T")),
-				Map.of("T", List.of(config("A", "T")))));
+				List.of(table("C1", "A", "T"), table("C2", "A", "T")), Map.of("T", List.of(config("A", "T")))));
 	}
 
 	@Test

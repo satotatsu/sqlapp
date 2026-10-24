@@ -35,7 +35,10 @@ public final class GeneratorMvelUtils {
 		return new CountedIterable(iterate);
 	}
 
-	/** The built-in finite range can report its size without traversing generated rows. */
+	/**
+	 * The built-in finite range can report its size without traversing generated
+	 * rows.
+	 */
 	public static final class CountedIterable extends MapIterable {
 		private final long size;
 

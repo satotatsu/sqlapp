@@ -25,9 +25,18 @@ class GeneratorSourceCountTest {
 		var reads = new AtomicInteger();
 		var closes = new AtomicInteger();
 		class SourceIterator implements Iterator<Map<String, Object>>, AutoCloseable {
-			public boolean hasNext() { return reads.get() < 3; }
-			public Map<String, Object> next() { reads.incrementAndGet(); return Map.of(); }
-			public void close() { closes.incrementAndGet(); }
+			public boolean hasNext() {
+				return reads.get() < 3;
+			}
+
+			public Map<String, Object> next() {
+				reads.incrementAndGet();
+				return Map.of();
+			}
+
+			public void close() {
+				closes.incrementAndGet();
+			}
 		}
 		var config = config(() -> new SourceIterator());
 		assertEquals(3, config.iterateCount());

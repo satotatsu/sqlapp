@@ -20,8 +20,7 @@ final class GeneratorProgress {
 
 	String update(long processed) {
 		long now = clock.getAsLong();
-		long percentage = total > 0
-				? processed >= total ? 100 : (long) Math.min(99, processed * 100.0 / total) : -1;
+		long percentage = total > 0 ? processed >= total ? 100 : (long) Math.min(99, processed * 100.0 / total) : -1;
 		if (logged && (total > 0 ? percentage == lastPercentage : now - lastLog < 1_000_000_000L)) {
 			return null;
 		}
