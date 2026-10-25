@@ -65,6 +65,35 @@ public class Db2FunctionReader extends FunctionReader {
 				result.add(function);
 			}
 		});
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			var tables = new java.util.HashMap<List<String>, Function>();
+			for (Function function : result) {
+				if (function.getFunctionType() == FunctionType.Table
+						|| function.getFunctionType() == FunctionType.Row) {
+					function.getReturning().toTable();
+					function.getReturning().getTable().getColumns().clear();
+					tables.put(List.of(function.getSchemaName(), function.getSpecificName()), function);
+				}
+			}
+			if (!tables.isEmpty())
+				execute(connection, getSqlNodeCache().getString("functionReturnColumns1110.sql"), context,
+						new ResultSetNextHandler() {
+							@Override
+							public void handleResultSetNext(ExResultSet rs) throws SQLException {
+								Function function = tables
+										.get(List.of(getString(rs, "schema_name"), getString(rs, "specific_name")));
+								if (function == null)
+									return;
+								String name = getString(rs, "PARMNAME"), type = getString(rs, "TYPENAME");
+								if (name == null || type == null)
+									throw new SQLException("Missing Db2 function return column name or type");
+								var column = new com.sqlapp.data.schemas.Column(name);
+								getDialect().setDbType(type, getLong(rs, "LENGTH"), getInteger(rs, "SCALE"), column);
+								retainReturnType(rs, "", column.getSpecifics());
+								function.getReturning().getTable().getColumns().add(column);
+							}
+						});
+		}
 		return result;
 	}
 
@@ -77,11 +106,13 @@ public class Db2FunctionReader extends FunctionReader {
 		String definition = getString(rs, "ROUTINE_DEFINITION");
 		if ("R".equalsIgnoreCase(type)) {
 			obj.setFunctionType(FunctionType.Row);
-			setRowTableDefinition(obj, definition);
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))
+				setRowTableDefinition(obj, definition);
 		} else if ("T".equalsIgnoreCase(type)) {
 			// テーブル
 			obj.setFunctionType(FunctionType.Table);
-			setRowTableDefinition(obj, definition);
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))
+				setRowTableDefinition(obj, definition);
 		} else if ("C".equalsIgnoreCase(type)) {
 			// 列または集約
 			obj.setFunctionType(FunctionType.Aggregate);
@@ -92,6 +123,10 @@ public class Db2FunctionReader extends FunctionReader {
 			if (returnType != null) {
 				getDialect().setDbType(returnType, getLong(rs, "RETURN_LENGTH"), getInteger(rs, "RETURN_SCALE"),
 						obj.getReturning());
+				if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+					retainReturnType(rs, "RETURN_", obj.getReturning().getSpecifics());
+					obj.getReturning().getSpecifics().put("TYPENAME", returnType);
+				}
 			}
 		}
 		String nullCall = this.getString(rs, "NULLCALL");
@@ -112,6 +147,17 @@ public class Db2FunctionReader extends FunctionReader {
 		}
 		setSpecifics(rs, "DIALECT", obj);
 		return obj;
+	}
+
+	private void retainReturnType(ExResultSet rs, String prefix, java.util.Map<String, String> fields)
+			throws SQLException {
+		for (String key : List.of("TYPENAME", "TYPESCHEMA", "TYPEMODULENAME", "LENGTH", "SCALE", "CODEPAGE",
+				"TYPESTRINGUNITS", "STRINGUNITSLENGTH", "LOCATOR")) {
+			String value = getString(rs,
+					"RETURN_".equals(prefix) && "TYPENAME".equals(key) ? "RETURN_TYPE_NAME" : prefix + key);
+			if (value != null && !value.isBlank())
+				fields.put(key, value);
+		}
 	}
 
 	private static final Pattern RETURN_COLUMNS = Pattern.compile("\\bRETURNS\\s+(TABLE|ROW)\\s*\\(",

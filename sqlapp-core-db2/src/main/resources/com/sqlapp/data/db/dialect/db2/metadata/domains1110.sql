@@ -4,6 +4,7 @@ SELECT
   , d.*
 FROM SYSCAT.DATATYPES d
 WHERE d.TYPEMODULEID IS NULL
+  AND d.OWNERTYPE <> 'S' AND d.OWNER <> 'SYSIBM'
   /*if isNotEmpty(schemaName) */
   AND rtrim(d.TYPESCHEMA) IN /*schemaName*/('%')
   /*end*/

@@ -10,7 +10,6 @@ import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
 import com.sqlapp.data.db.sql.SimpleSqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Constant;
 
 /**
@@ -44,61 +43,7 @@ public class Db2CreateGlobalVariableFactory extends SimpleSqlFactory<Constant, D
 				throw new IllegalArgumentException(
 						"Db2 variable needs a complete CREATE definition for unsupported scope or type: "
 								+ variable.getName());
-			Column column = new Column(variable.getName());
-			String type = fields.get("TYPENAME");
-			Long length = fields.get("LENGTH") == null ? null : Long.valueOf(fields.get("LENGTH"));
-			Integer scale = fields.get("SCALE") == null ? null : Integer.valueOf(fields.get("SCALE"));
-			if (Set.of("CHAR", "CHARACTER", "VARCHAR", "GRAPHIC", "VARGRAPHIC", "BLOB", "CLOB", "DBCLOB", "BINARY",
-					"VARBINARY", "DECIMAL", "NUMERIC").contains(type == null ? "" : type)
-					&& (length == null || length <= 0))
-				throw new IllegalArgumentException(
-						"Db2 variable data type requires its declared length/precision: " + variable.getName());
-			if (Set.of("DECIMAL", "NUMERIC", "TIMESTAMP", "TIMESTAMP WITHOUT TIME ZONE")
-					.contains(type == null ? "" : type) && scale == null)
-				throw new IllegalArgumentException(
-						"Db2 variable data type requires its declared scale/precision: " + variable.getName());
-			if (Set.of("DECIMAL", "NUMERIC").contains(type == null ? "" : type)
-					&& (length > 31 || scale < 0 || scale > length))
-				throw new IllegalArgumentException(
-						"Db2 variable decimal precision/scale is invalid: " + variable.getName());
-			if (type == null || Set.of("CURSOR", "ROW", "VECTOR", "REFERENCE").contains(type)
-					|| !getDialect().setDbType(type, length, scale, column) || column.getDataType() == null
-					|| column.getDataType().isOther() || column.getDataType().isType()
-					|| column.getDataType().isDomain())
-				throw new IllegalArgumentException(
-						"Db2 variable needs a complete CREATE definition for its data type: " + variable.getName());
-			String units = fields.get("TYPESTRINGUNITS");
-			if (Set.of("CHARACTER", "CHAR", "VARCHAR", "GRAPHIC", "VARGRAPHIC", "CLOB", "DBCLOB", "LONG VARCHAR",
-					"LONG VARGRAPHIC").contains(type)) {
-				String codepage = fields.get("CODEPAGE");
-				if (codepage == null || (units == null && (Set.of("1208", "1200").contains(codepage)
-						|| Set.of("GRAPHIC", "VARGRAPHIC", "DBCLOB", "LONG VARGRAPHIC").contains(type))))
-					throw new IllegalArgumentException(
-							"Db2 variable requires explicit string units or a complete CREATE definition: "
-									+ variable.getName());
-			}
-			boolean binary = "0".equals(fields.get("CODEPAGE"))
-					&& Set.of("CHARACTER", "CHAR", "VARCHAR", "LONG VARCHAR").contains(type);
-			Long renderedLength = length;
-			if (units != null && !binary) {
-				if (!Set.of("OCTETS", "CODEUNITS16", "CODEUNITS32").contains(units)
-						|| fields.get("STRINGUNITSLENGTH") == null)
-					throw new IllegalArgumentException(
-							"Db2 variable string units require an explicit declared length: " + variable.getName());
-				renderedLength = Long.valueOf(fields.get("STRINGUNITSLENGTH"));
-				if (renderedLength <= 0)
-					throw new IllegalArgumentException("Db2 variable string unit length must be positive");
-			}
-			Db2SqlBuilder typeBuilder = createSqlBuilder();
-			typeBuilder.typeDefinition(column.getDataType(), null, renderedLength, scale);
-			String renderedType = typeBuilder.toString();
-			if (units != null && !binary) {
-				if (!renderedType.endsWith(")"))
-					throw new IllegalArgumentException("Db2 variable string units require a character type");
-				renderedType = renderedType.substring(0, renderedType.length() - 1) + ", " + units + ")";
-			}
-			if (binary)
-				renderedType += " FOR BIT DATA";
+			String renderedType = Db2NativeTypeSql.render(getDialect(), fields, variable.getName());
 			List<String> statements = variable.getStatement();
 			if (statements.size() > 1 || ("C".equals(fields.get("READONLY")) && statements.isEmpty()))
 				throw new IllegalArgumentException(

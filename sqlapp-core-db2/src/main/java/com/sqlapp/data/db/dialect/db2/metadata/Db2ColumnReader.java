@@ -74,6 +74,20 @@ public class Db2ColumnReader extends ColumnReader {
 		obj.setNullable("Y".equals(getString(rs, "NULLS")));
 		obj.setIdentity("Y".equals(getString(rs, "IDENTITY")));
 		if (obj.isIdentity()) {
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+				String mode = getString(rs, "GENERATED");
+				if (!"A".equals(mode) && !"D".equals(mode))
+					throw new SQLException("Invalid Db2 identity generation mode: " + obj.getName());
+				for (String key : List.of("START", "INCREMENT", "MINVALUE", "MAXVALUE")) {
+					java.math.BigDecimal value = rs.getBigDecimal(key);
+					if (value != null)
+						try {
+							value.longValueExact();
+						} catch (ArithmeticException e) {
+							obj.getSpecifics().put("DB2_IDENTITY_" + key, value.toBigIntegerExact().toString());
+						}
+				}
+			}
 			obj.setIdentityGenerationType(
 					"A".equalsIgnoreCase(getString(rs, "GENERATED")) ? IdentityGenerationType.Always
 							: IdentityGenerationType.ByDefault);
@@ -82,6 +96,16 @@ public class Db2ColumnReader extends ColumnReader {
 			obj.setIdentityStartValue(rs.getBigDecimal("START"));
 			obj.setIdentityMaxValue(rs.getBigDecimal("MAXVALUE"));
 			obj.setIdentityMinValue(rs.getBigDecimal("MINVALUE"));
+			// Long-valued column XML attributes cannot represent DECIMAL(31,0).
+			// Keep those exact values in DB2 specifics rather than exposing wrapped longs.
+			if (obj.getSpecifics().containsKey("DB2_IDENTITY_START"))
+				obj.setIdentityStartValue((Number) null);
+			if (obj.getSpecifics().containsKey("DB2_IDENTITY_INCREMENT"))
+				obj.setIdentityStep((Number) null);
+			if (obj.getSpecifics().containsKey("DB2_IDENTITY_MINVALUE"))
+				obj.setIdentityMinValue((Number) null);
+			if (obj.getSpecifics().containsKey("DB2_IDENTITY_MAXVALUE"))
+				obj.setIdentityMaxValue((Number) null);
 			obj.setIdentityCycle("Y".equalsIgnoreCase(getString(rs, "CYCLE")));
 			long cache = rs.getLong("CACHE");
 			if (cache != -1) {
@@ -95,6 +119,42 @@ public class Db2ColumnReader extends ColumnReader {
 		obj.setRemarks(getString(rs, REMARKS));
 		String productDataType = getString(rs, "TYPENAME");
 		this.getDialect().setDbType(productDataType, length, scale, obj);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			if ("XML".equals(productDataType))
+				obj.setDataType(com.sqlapp.data.db.datatype.DataType.SQLXML);
+			if ("BLOB".equals(productDataType))
+				obj.setDataType(com.sqlapp.data.db.datatype.DataType.BLOB);
+			if ("CLOB".equals(productDataType))
+				obj.setDataType(com.sqlapp.data.db.datatype.DataType.CLOB);
+			if ("DBCLOB".equals(productDataType))
+				obj.setDataType(com.sqlapp.data.db.datatype.DataType.NCLOB);
+			if (obj.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB
+					|| obj.getDataType() == com.sqlapp.data.db.datatype.DataType.CLOB
+					|| obj.getDataType() == com.sqlapp.data.db.datatype.DataType.NCLOB) {
+				obj.setLength(length);
+				if (length != null)
+					obj.getSpecifics().put("DB2_LOB_LENGTH", length.toString());
+				if (length != null)
+					obj.getSpecifics().put("DB2_LOB_OCTET_LENGTH", length.toString());
+			}
+			String typeSchema = getString(rs, "TYPESCHEMA");
+			if (typeSchema != null && !"SYSIBM".equals(typeSchema)) {
+				obj.setDataType(com.sqlapp.data.db.datatype.DataType.OTHER);
+				obj.setDataTypeName(
+						com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.qualified(typeSchema, productDataType));
+				obj.setLength((Long) null).setScale(null);
+			}
+			String codepage = getString(rs, "CODEPAGE");
+			if (codepage != null)
+				obj.getSpecifics().put("CODEPAGE", codepage);
+			if (typeSchema != null)
+				obj.getSpecifics().put("TYPESCHEMA", typeSchema);
+			for (String key : List.of("COMPACT", "INLINE_LENGTH", "COLLATIONSCHEMA")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					obj.getSpecifics().put(key, value);
+			}
+		}
 		String logged = trim(getString(rs, "LOGGED"));
 		if (!isEmpty(logged)) {
 			setSpecifics(rs, "LOGGED", obj);
@@ -103,7 +163,8 @@ public class Db2ColumnReader extends ColumnReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("columns.sql");
+		return getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "columns1110.sql" : "columns.sql");
 	}
 
 }

@@ -74,7 +74,7 @@ public class Db2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 		}
 		Function routine = new Function(getString(rs, "ROUTINE_NAME"));
 		routine.setSchemaName(getString(rs, "SCHEMA_NAME"));
-		routine.setSpecificName(getString(rs, "SPECIFIC_NAME"));
+		routine.setSpecificNameLiteral(getString(rs, "SPECIFIC_NAME"));
 		NamedArgument obj = createObject(argumentName);
 		obj.setSchemaName(routine.getSchemaName());
 		SchemaUtils.setRoutine(obj, routine);
@@ -93,7 +93,19 @@ public class Db2FunctionArgumentReader extends RoutineArgumentReader<Function> {
 		}
 		String productDataType = getString(rs, "TYPENAME");
 		this.getDialect().setDbType(productDataType, length, scale, obj);
+		retainNativeType(rs, obj);
 		return obj;
+	}
+
+	private void retainNativeType(ExResultSet rs, NamedArgument argument) throws SQLException {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))
+			return;
+		for (String key : List.of("TYPENAME", "TYPESCHEMA", "TYPEMODULENAME", "LENGTH", "SCALE", "CODEPAGE",
+				"TYPESTRINGUNITS", "STRINGUNITSLENGTH", "LOCATOR")) {
+			String value = getString(rs, key);
+			if (value != null && !value.isBlank())
+				argument.getSpecifics().put(key, value);
+		}
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

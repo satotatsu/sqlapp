@@ -50,6 +50,8 @@ public class Db2_1010CreateTableFactory extends Db2CreateTableFactory {
 	}
 
 	protected void addCompress(final Table table, final Db2SqlBuilder builder) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+			return;
 		if (table.isCompression()) {
 			builder.compress().yes();
 			if ("VALUE".equalsIgnoreCase(table.getCompressionType())) {

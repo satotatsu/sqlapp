@@ -74,7 +74,7 @@ public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Procedure>
 		}
 		Procedure routine = new Procedure(getString(rs, "ROUTINE_NAME"));
 		routine.setSchemaName(getString(rs, "SCHEMA_NAME"));
-		routine.setSpecificName(getString(rs, "SPECIFIC_NAME"));
+		routine.setSpecificNameLiteral(getString(rs, "SPECIFIC_NAME"));
 		NamedArgument obj = createObject(argumentName);
 		obj.setSchemaName(routine.getSchemaName());
 		SchemaUtils.setRoutine(obj, routine);
@@ -93,6 +93,14 @@ public class Db2ProcedureArgumentReader extends RoutineArgumentReader<Procedure>
 		}
 		String productDataType = getString(rs, "TYPENAME");
 		this.getDialect().setDbType(productDataType, length, scale, obj);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			for (String key : List.of("TYPENAME", "TYPESCHEMA", "TYPEMODULENAME", "LENGTH", "SCALE", "CODEPAGE",
+					"TYPESTRINGUNITS", "STRINGUNITSLENGTH", "LOCATOR")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					obj.getSpecifics().put(key, value);
+			}
+		}
 		return obj;
 	}
 

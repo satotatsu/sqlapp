@@ -28,6 +28,19 @@ public class Db2_1010ColumnReader extends Db2ColumnReader {
 		setSpecifics(rs, "TRANSACTIONSTARTID", column);
 		setSpecifics(rs, "HIDDEN", column);
 		setSpecifics(rs, "GENERATED", column);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			setSpecifics(rs, "ROWCHANGETIMESTAMP", column);
+			String text = getString(rs, "TEXT");
+			if (text != null && !text.isBlank() && !column.isIdentity()) {
+				var expression = java.util.regex.Pattern
+						.compile("^AS\\s*\\((.*)\\)\\s*$",
+								java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL)
+						.matcher(text.trim());
+				if (!expression.matches() || expression.group(1).isBlank())
+					throw new SQLException("Invalid Db2 generated column expression: " + column.getName());
+				column.setFormula(expression.group(1));
+			}
+		}
 		return column;
 	}
 }

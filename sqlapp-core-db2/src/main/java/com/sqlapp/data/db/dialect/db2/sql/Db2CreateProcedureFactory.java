@@ -37,7 +37,13 @@ public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db
 		// Retain the existing PL/SQL path for compatibility-mode callers.
 		if (obj.getLanguage() == null || "SQL".equalsIgnoreCase(obj.getLanguage())) {
 			builder.create().procedure().name(obj, getOptions().isDecorateSchemaName());
-			builder.space().arguments(obj.getArguments());
+			builder.space()._add("(");
+			int argumentCount = 0;
+			for (var argument : obj.getArguments()) {
+				builder.comma(argumentCount++ > 0);
+				Db2RoutineArgumentSql.append(argument, builder);
+			}
+			builder._add(")");
 			if (obj.getSpecificName() != null) {
 				builder.lineBreak().specific().space().name(obj.getSpecificName());
 			}

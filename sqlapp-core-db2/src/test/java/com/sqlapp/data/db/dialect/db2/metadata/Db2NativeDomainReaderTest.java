@@ -16,36 +16,93 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 class Db2NativeDomainReaderTest {
 	private static ExResultSet row(Map<String, String> values) {
 		return new ExResultSet(null) {
-			@Override public String getString(String name) { return values.get(name); }
-			@Override public Object getObject(String name) { return values.get(name); }
-			@Override public Timestamp getTimestamp(String name) { return null; }
-			@Override public Long getLongValue(String name) { return values.get(name) == null ? null : Long.valueOf(values.get(name)); }
-			@Override public Integer getInteger(String name) { return values.get(name) == null ? null : Integer.valueOf(values.get(name)); }
-			@Override public int getInt(String name) { return Integer.parseInt(values.getOrDefault(name, "0")); }
+			@Override
+			public String getString(String name) {
+				return values.get(name);
+			}
+
+			@Override
+			public Object getObject(String name) {
+				return values.get(name);
+			}
+
+			@Override
+			public Timestamp getTimestamp(String name) {
+				return null;
+			}
+
+			@Override
+			public Long getLongValue(String name) {
+				return values.get(name) == null ? null : Long.valueOf(values.get(name));
+			}
+
+			@Override
+			public Integer getInteger(String name) {
+				return values.get(name) == null ? null : Integer.valueOf(values.get(name));
+			}
+
+			@Override
+			public int getInt(String name) {
+				return Integer.parseInt(values.getOrDefault(name, "0"));
+			}
 		};
 	}
-	@Test void twentyTypesUseOneQueryAndPreserveZeroScaleAndWeakTypeConstraints() {
+
+	@Test
+	void twentyTypesUseOneQueryAndPreserveZeroScaleAndWeakTypeConstraints() {
 		AtomicInteger count = new AtomicInteger();
 		var reader = new Db2DomainReader(DialectHolder.Db2_1110Dialect) {
-			@Override protected JdbcQueryHandler execute(Connection c, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
-				count.incrementAndGet(); assertTrue(node.toString().contains("TYPEMODULEID IS NULL")); assertTrue(node.toString().contains("d.OWNERTYPE <> 'S'"));
-				for (int i=0; i<20; i++) try {
-					var values = new HashMap<String,String>(Map.of("domain_name", "D"+i, "schema_name", "APP", "METATYPE", "T", "NULLS", "N", "sourcename", "DECIMAL", "SOURCENAME", "DECIMAL", "LENGTH", "10", "SCALE", "0", "TYPERULES", "W", "CONSTRAINT_TEXT", "VALUE >= 0"));
-					values.put("SOURCESCHEMA", "SYSIBM"); handler.handleResultSetNext(row(values));
-				} catch(SQLException e) { throw new IllegalStateException(e); } return null;
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				count.incrementAndGet();
+				assertTrue(node.toString().contains("TYPEMODULEID IS NULL"));
+				assertTrue(node.toString().contains("d.OWNERTYPE <> 'S'"));
+				for (int i = 0; i < 20; i++)
+					try {
+						var values = new HashMap<String, String>(Map.of("domain_name", "D" + i, "schema_name", "APP",
+								"METATYPE", "T", "NULLS", "N", "sourcename", "DECIMAL", "SOURCENAME", "DECIMAL",
+								"LENGTH", "10", "SCALE", "0", "TYPERULES", "W", "CONSTRAINT_TEXT", "VALUE >= 0"));
+						values.put("SOURCESCHEMA", "SYSIBM");
+						handler.handleResultSetNext(row(values));
+					} catch (SQLException e) {
+						throw new IllegalStateException(e);
+					}
+				return null;
 			}
 		};
 		var types = reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo());
-		assertEquals(1, count.get()); assertEquals(20, types.size()); assertEquals(0, types.getFirst().getScale());
-		assertTrue(types.getFirst().isNotNull()); assertEquals("VALUE >= 0", types.getFirst().getCheck());
+		assertEquals(1, count.get());
+		assertEquals(20, types.size());
+		assertEquals(0, types.getFirst().getScale());
+		assertTrue(types.getFirst().isNotNull());
+		assertEquals("VALUE >= 0", types.getFirst().getCheck());
 		assertEquals("DATA_TYPE", types.getFirst().getSpecifics().get("DB2_OBJECT_TYPE"));
 	}
-	@Test void associativeIndexLengthIsNotMistakenForCardinalityAndLegacyQueriesStaySeparate() throws Exception {
+
+	@Test
+	void associativeIndexLengthIsNotMistakenForCardinalityAndLegacyQueriesStaySeparate() throws Exception {
 		var reader = new Db2DomainReader(DialectHolder.Db2_1110Dialect);
-		var values = Map.of("domain_name", "A", "schema_name", "APP", "METATYPE", "L", "NULLS", "Y", "ARRAYINDEXTYPELENGTH", "12", "ARRAYINDEXTYPENAME", "VARCHAR", "sourcename", "INTEGER");
+		var values = Map.of("domain_name", "A", "schema_name", "APP", "METATYPE", "L", "NULLS", "Y",
+				"ARRAYINDEXTYPELENGTH", "12", "ARRAYINDEXTYPENAME", "VARCHAR", "sourcename", "INTEGER");
 		var type = reader.createDomain(row(values));
-		assertEquals(1, type.getArrayDimension()); assertEquals(0, type.getArrayDimensionUpperBound());
+		assertEquals(1, type.getArrayDimension());
+		assertEquals(0, type.getArrayDimensionUpperBound());
 		assertEquals("12", type.getSpecifics().get("ARRAYINDEXTYPELENGTH"));
-		assertFalse(new Db2DomainReader(DialectHolder.Db2_1050Dialect).getSqlNode(new ProductVersionInfo()).toString().contains("TYPEMODULEID"));
+		assertFalse(new Db2DomainReader(DialectHolder.Db2_1050Dialect).getSqlNode(new ProductVersionInfo()).toString()
+				.contains("TYPEMODULEID"));
+	}
+
+	@Test
+	void unicodeSourceMetadataIsRecreatableAfterReadingAndXml() throws Exception {
+		var fields = new HashMap<String, String>(
+				Map.of("domain_name", "D", "schema_name", "APP", "METATYPE", "T", "NULLS", "Y", "sourcename", "VARCHAR",
+						"SOURCENAME", "VARCHAR", "LENGTH", "20", "CODEPAGE", "1208", "TYPERULES", "S"));
+		fields.putAll(Map.of("SOURCESCHEMA", "SYSIBM", "TYPESTRINGUNITS", "CODEUNITS32", "STRINGUNITSLENGTH", "5"));
+		var type = new Db2DomainReader(DialectHolder.Db2_1110Dialect).createDomain(row(fields));
+		Domain restored = SchemaUtils.readXml(new java.io.StringReader(type.asXml()));
+		com.sqlapp.data.db.sql.SqlFactory<Domain> factory = DialectHolder.Db2_1110Dialect.createSqlFactoryRegistry()
+				.getSqlFactory(restored, com.sqlapp.data.db.sql.SqlType.CREATE);
+		assertTrue(factory.createSql(restored).getFirst().getSqlText().contains("VARCHAR(5 CODEUNITS32)"));
 	}
 }

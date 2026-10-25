@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.Type;
 import com.sqlapp.data.schemas.Type.MetaType;
 
 /**
- * Postgresのタイプ読み込みクラス
+ * Db2のタイプ読み込みクラス
  * 
  * @author satoh
  * 
@@ -87,6 +87,12 @@ public class Db2TypeReader extends TypeReader {
 			obj.setMetaType(MetaType.Cursor);
 		}
 		obj.setRemarks(getString(rs, REMARKS));
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			obj.setDialect(getDialect());
+			obj.getSpecifics().put("METATYPE", metaType);
+			obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
+			obj.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
+		}
 		return obj;
 	}
 }

@@ -28,11 +28,13 @@ public class Db2CreateFunctionFactory extends AbstractCreateFunctionFactory<Db2S
 		builder.create().function().name(function, getOptions().isDecorateSchemaName()).space()._add("(");
 		int count = 0;
 		for (NamedArgument argument : function.getArguments()) {
+			if (function.getFunctionType() == FunctionType.Row && argument.getDefaultValue() != null)
+				throw new IllegalArgumentException("Db2 RETURNS ROW function cannot have parameter defaults");
 			if (argument.getDirection() != null && argument.getDirection() != ParameterDirection.Input) {
 				throw new IllegalArgumentException("Db2 SQL function output parameters require complete definition");
 			}
 			builder.comma(count++ > 0);
-			builder.argument(argument.clone().setDirection((ParameterDirection) null));
+			Db2RoutineArgumentSql.append(argument.clone().setDirection((ParameterDirection) null), builder);
 		}
 		builder._add(")").lineBreak().returns().space();
 		if (function.getFunctionType() == FunctionType.Table || function.getFunctionType() == FunctionType.Row) {
@@ -44,15 +46,22 @@ public class Db2CreateFunctionFactory extends AbstractCreateFunctionFactory<Db2S
 			count = 0;
 			for (Column column : table.getColumns()) {
 				builder.comma(count++ > 0).name(column.getName()).space();
-				builder.typeDefinition(column.getDataType(), column.getDataTypeName(), column.getLength(),
-						column.getScale());
+				if (column.getSpecifics().containsKey("TYPENAME"))
+					builder._add(Db2RoutineArgumentSql.renderType(column.getSpecifics(), column.getName(), builder));
+				else
+					builder.typeDefinition(column.getDataType(), column.getDataTypeName(), column.getLength(),
+							column.getScale());
 			}
 			builder._add(")");
 		} else if (function.getFunctionType() == null || function.getFunctionType() == FunctionType.Scalar) {
 			if (function.getReturning().getDataType() == null && function.getReturning().getDataTypeName() == null) {
 				throw new IllegalArgumentException("Db2 scalar function requires a return type");
 			}
-			builder._add(function.getReturning());
+			if (function.getReturning().getSpecifics().containsKey("TYPENAME"))
+				builder._add(Db2RoutineArgumentSql.renderType(function.getReturning().getSpecifics(),
+						function.getName(), builder));
+			else
+				builder._add(function.getReturning());
 		} else {
 			throw new IllegalArgumentException("Db2 aggregate function requires complete definition");
 		}

@@ -44,7 +44,7 @@ class Db2GlobalVariableSqlTest {
 	void stringUnitsBinaryDataDecimalAndConstantValuesRetainTheirSemantics() {
 		var variable = variable("VARCHAR");
 		variable.getSpecifics().putAll(Map.of("TYPESTRINGUNITS", "CODEUNITS32", "STRINGUNITSLENGTH", "5"));
-		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("VARCHAR(5, CODEUNITS32)"));
+		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("VARCHAR(5 CODEUNITS32)"));
 		variable = variable("VARCHAR");
 		variable.getSpecifics().put("CODEPAGE", "0");
 		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("VARCHAR(20) FOR BIT DATA"));

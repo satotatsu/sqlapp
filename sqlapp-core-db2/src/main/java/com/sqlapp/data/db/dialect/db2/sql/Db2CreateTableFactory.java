@@ -50,8 +50,19 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 			addOtherDefinitions(table, result);
 			return result;
 		}
-		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table))
-			return super.createSql(table);
+		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table)) {
+			List<SqlOperation> result = super.createSql(table);
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+				List<SqlOperation> physical = new java.util.ArrayList<>();
+				for (String option : Db2TableOptionsSql.afterCreate(table)) {
+					Db2SqlBuilder builder = createSqlBuilder()._add("ALTER TABLE ")
+							.name(table, getOptions().isDecorateSchemaName()).space()._add(option);
+					addSql(physical, builder, SqlType.ALTER, table);
+				}
+				result.addAll(1, physical);
+			}
+			return result;
+		}
 		var sql = Db2NicknameSql.create(table, this::createSqlBuilder);
 		List<SqlOperation> result = new java.util.ArrayList<>();
 		for (String statement : sql)
@@ -77,6 +88,8 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 	protected void addOption(final Table table, final Db2SqlBuilder builder) {
 		addTableOption(table, builder);
 		addPartitionByDefinition(table, builder);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+			Db2TableOptionsSql.create(table, builder);
 	}
 
 	protected void addTableOption(final Table table, final Db2SqlBuilder builder) {

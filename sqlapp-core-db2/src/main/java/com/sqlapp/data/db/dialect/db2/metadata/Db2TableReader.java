@@ -107,6 +107,26 @@ public class Db2TableReader extends TableReader {
 			}
 		}
 		this.setSpecifics(rs, "PCTFREE", table);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && !"N".equals(getString(rs, "TYPE"))) {
+			for (String key : List.of("TYPE", "TABLEORG", "CLUSTERED", "APPEND_MODE", "LOCKSIZE", "VOLATILE")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					table.getSpecifics().put(key, value);
+			}
+			if (comp != null && !comp.isBlank()) {
+				table.getSpecifics().put("DB2_COMPRESSION", comp);
+				table.setCompression(java.util.Set.of("B", "V", "R").contains(comp));
+				if ("V".equals(comp))
+					table.setCompressionType("VALUE");
+				else if ("R".equals(comp) || "B".equals(comp)) {
+					String mode = getString(rs, "ROWCOMPMODE");
+					table.setCompressionType("A".equals(mode) || "S".equals(mode)
+							? "ROW " + ("A".equals(mode) ? "ADAPTIVE" : "STATIC") + ("B".equals(comp) ? " VALUE" : "")
+							: "ROW");
+				} else if (!"N".equals(comp))
+					throw new SQLException("Invalid Db2 compression code: " + comp);
+			}
+		}
 		Statistics.ROWS.setValue(rs, "CARD", table);
 		Statistics.AVG_ROW_LENGTH.setValue(rs, "AVGROWSIZE", table);
 		Statistics.AVG_COMPRESSED_ROW_LENGTH.setValue(rs, "AVGCOMPRESSEDROWSIZE", table);

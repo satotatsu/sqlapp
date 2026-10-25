@@ -39,13 +39,19 @@ public class Db2_1050ColumnReader extends Db2_1010ColumnReader {
 
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column obj = super.createColumn(rs);
+		if (obj.getSpecifics().get("TYPESCHEMA") != null && !"SYSIBM".equals(obj.getSpecifics().get("TYPESCHEMA")))
+			return obj;
 		String stringUnits = getString(rs, "TYPESTRINGUNITS");
-		if (stringUnits != null) {
+		if (stringUnits != null && !stringUnits.isBlank()) {
 			obj.setStringUnits(stringUnits);
 			Integer stringunitLength = getInteger(rs, "STRINGUNITSLENGTH");
 			if (stringunitLength != null) {
 				obj.setLength(stringunitLength);
-				this.getDialect().setDbType(getString(rs, "TYPENAME"), stringunitLength.longValue(), null, obj);
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))
+					this.getDialect().setDbType(getString(rs, "TYPENAME"), stringunitLength.longValue(), obj.getScale(),
+							obj);
+				if (obj.getSpecifics().containsKey("DB2_LOB_LENGTH"))
+					obj.getSpecifics().put("DB2_LOB_LENGTH", stringunitLength.toString());
 			}
 		}
 		return obj;

@@ -51,6 +51,9 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, SqlType.CREATE, Db2CreateTypeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, SqlType.DROP, Db2DropTypeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, SqlType.ALTER, Db2AlterTypeFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.CREATE, Db2CreateDomainFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.DROP, Db2DropDomainFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.ALTER, Db2AlterDomainFactory.class);
@@ -116,6 +119,8 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, State.Modified, SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, State.Deleted, SqlType.ALTER);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, State.Modified, SqlType.ALTER);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, State.Deleted, SqlType.ALTER);
 		registerSqlFactory(com.sqlapp.data.schemas.Package.class, State.Deleted, SqlType.ALTER);

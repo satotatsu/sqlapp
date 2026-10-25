@@ -54,6 +54,87 @@ class Db2MetadataParityTest {
 	}
 
 	@Test
+	void modernRoutineArgumentsRetainResolvedTypesAndDeclaredUnits() throws Exception {
+		var values = new java.util.HashMap<String, String>(Map.of("PARMNAME", "P", "ROUTINE_NAME", "R", "SCHEMA_NAME",
+				"APP", "SPECIFIC_NAME", "R_SPEC", "TYPENAME", "VARCHAR", "ROWTYPE", "P"));
+		values.putAll(Map.of("TYPESCHEMA", "Type.Schema", "TYPEMODULENAME", "Module.Name", "LENGTH", "20", "SCALE", "0",
+				"CODEPAGE", "1208", "TYPESTRINGUNITS", "CODEUNITS32", "STRINGUNITSLENGTH", "5", "LOCATOR", "N"));
+		for (var argument : java.util.List.of(
+				new Db2FunctionArgumentReader(DialectHolder.Db2_1110Dialect).createArgument(row(values)),
+				new Db2ProcedureArgumentReader(DialectHolder.Db2_1110Dialect).createArgument(row(values)))) {
+			for (String key : java.util.List.of("TYPESCHEMA", "TYPEMODULENAME", "TYPENAME", "LENGTH", "SCALE",
+					"CODEPAGE", "TYPESTRINGUNITS", "STRINGUNITSLENGTH", "LOCATOR"))
+				assertEquals(values.get(key), argument.getSpecifics().get(key), key);
+			assertEquals(argument.getSpecifics(), argument.clone().getSpecifics());
+		}
+		assertFalse(new Db2FunctionArgumentReader(DialectHolder.defaultDialect).createArgument(row(values))
+				.getSpecifics().containsKey("TYPEMODULENAME"));
+	}
+
+	@Test
+	void routineArgumentsRetainLiteralSpecificIdentityAcrossVersions() throws Exception {
+		for (var dialect : java.util.List.of(DialectHolder.defaultDialect, DialectHolder.Db2_1110Dialect)) {
+			for (String specific : java.util.List.of("specific.with.dot", "specific\"with.dot", "ordinary")) {
+				var values = Map.of("PARMNAME", "P", "ROUTINE_NAME", "R", "SCHEMA_NAME", "APP", "SPECIFIC_NAME",
+						specific, "TYPENAME", "INTEGER", "ROWTYPE", "P");
+				for (var argument : java.util.List.of(
+						new Db2FunctionArgumentReader(dialect).createArgument(row(values)),
+						new Db2ProcedureArgumentReader(dialect).createArgument(row(values)))) {
+					assertEquals("APP", argument.getSchemaName());
+					assertEquals("APP", argument.getRoutine().getSchemaName());
+					assertEquals("R", argument.getRoutineName());
+					assertEquals(specific, argument.getRoutine().getSpecificName());
+				}
+			}
+		}
+	}
+
+	@Test
+	void overloadedRoutineArgumentsAreReadInOneQueryPerKind() {
+		AtomicInteger queries = new AtomicInteger();
+		var functions = new Db2FunctionArgumentReader(DialectHolder.Db2_1110Dialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode sql, ParametersContext p,
+					ResultSetNextHandler handler) {
+				queries.incrementAndGet();
+				emitRoutineArguments(handler);
+				return null;
+			}
+		}.doGetAll(null, new ParametersContext(), new ProductVersionInfo());
+		var procedures = new Db2ProcedureArgumentReader(DialectHolder.Db2_1110Dialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode sql, ParametersContext p,
+					ResultSetNextHandler handler) {
+				queries.incrementAndGet();
+				emitRoutineArguments(handler);
+				return null;
+			}
+		}.doGetAll(null, new ParametersContext(), new ProductVersionInfo());
+		assertEquals(2, queries.get());
+		for (var arguments : java.util.List.of(functions, procedures)) {
+			assertEquals(40, arguments.size());
+			for (int i = 0; i < arguments.size(); i++) {
+				assertEquals("APP", arguments.get(i).getRoutine().getSchemaName());
+				assertEquals("overload." + i / 2, arguments.get(i).getRoutine().getSpecificName());
+				assertEquals(i % 2 == 0 ? com.sqlapp.jdbc.sql.ParameterDirection.Input
+						: com.sqlapp.jdbc.sql.ParameterDirection.Inout, arguments.get(i).getDirection());
+			}
+		}
+	}
+
+	private static void emitRoutineArguments(ResultSetNextHandler handler) {
+		for (int i = 0; i < 40; i++) {
+			try {
+				handler.handleResultSetNext(
+						row(Map.of("PARMNAME", "P" + i % 2, "ROUTINE_NAME", "R", "SCHEMA_NAME", "APP", "SPECIFIC_NAME",
+								"overload." + i / 2, "TYPENAME", "INTEGER", "ROWTYPE", i % 2 == 0 ? "P" : "B")));
+			} catch (SQLException e) {
+				throw new IllegalStateException(e);
+			}
+		}
+	}
+
+	@Test
 	void scalarReturnMetadataAndLiteralSpecificIdentityAreRetained() throws Exception {
 		var reader = new Db2FunctionReader(DialectHolder.defaultDialect);
 		reader.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
