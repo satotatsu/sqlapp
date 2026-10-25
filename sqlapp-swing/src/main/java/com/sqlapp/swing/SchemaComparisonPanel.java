@@ -32,6 +32,8 @@ final class SchemaComparisonPanel extends JPanel {
 	final RSyntaxTextArea sqlPreview = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, false);
 	final JButton saveSql = new JButton("Save SQL draft…");
 	final JButton useDirectory = new JButton("Use saved SQL directory");
+	final JButton editSql = new JButton("Edit saved SQL…");
+	private java.util.function.Predicate<Path> sqlEditor;
 	private Path savedSql;
 	private java.util.function.Predicate<Path> directoryReceiver;
 	private boolean busy;
@@ -79,6 +81,9 @@ final class SchemaComparisonPanel extends JPanel {
 		actions.add(save);
 		actions.add(saveSql);
 		actions.add(useDirectory);
+		actions.add(editSql);
+		editSql.setEnabled(false);
+		editSql.addActionListener(event -> editSavedSql());
 		footer.add(status, BorderLayout.NORTH);
 		footer.add(actions, BorderLayout.SOUTH);
 		add(footer, BorderLayout.SOUTH);
@@ -125,6 +130,7 @@ final class SchemaComparisonPanel extends JPanel {
 		result = null;
 		savedSql = null;
 		useDirectory.setEnabled(false);
+		editSql.setEnabled(false);
 		preview.setText("");
 		sqlPreview.setText("");
 		save.setEnabled(false);
@@ -142,6 +148,7 @@ final class SchemaComparisonPanel extends JPanel {
 		save.setEnabled(!busy && result != null);
 		saveSql.setEnabled(!busy && result != null && result.statements() > 0);
 		useDirectory.setEnabled(!busy && savedSql != null && result != null && directoryReceiver != null);
+		editSql.setEnabled(!busy && savedSql != null && result != null && sqlEditor != null);
 	}
 
 	private void compare() {
@@ -274,6 +281,19 @@ final class SchemaComparisonPanel extends JPanel {
 				}
 			}
 		}.execute();
+	}
+
+	void setSqlEditor(final java.util.function.Predicate<Path> editor) {
+		sqlEditor = editor;
+		busy(busy);
+	}
+
+	void editSavedSql() {
+		if (!editSql.isEnabled())
+			return;
+		status.setText(
+				sqlEditor.test(savedSql) ? "Editing saved SQL. Save it in the editor and build a new migration plan."
+						: "SQL editor did not open the file. Current comparison retained.");
 	}
 
 	private void failure(final Throwable failure) {

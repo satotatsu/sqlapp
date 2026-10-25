@@ -28,6 +28,8 @@ final class EditorNavigationBar extends JPanel {
 	final JButton go = new JButton("Go");
 	final JLabel status = new JLabel(" ");
 	private final JTextArea editor;
+	private Runnable activateEditor = () -> {
+	};
 
 	EditorNavigationBar(final JTextArea editor) {
 		super(new java.awt.BorderLayout(4, 4));
@@ -51,6 +53,8 @@ final class EditorNavigationBar extends JPanel {
 		edits.add(replaceAll);
 		edits.add(history.undo);
 		edits.add(history.redo);
+		history.undo.addActionListener(event -> activateEditor.run());
+		history.redo.addActionListener(event -> activateEditor.run());
 		add(edits, java.awt.BorderLayout.SOUTH);
 		replace.addActionListener(event -> replaceSelected());
 		replaceAll.addActionListener(event -> replaceAllMatches());
@@ -81,6 +85,10 @@ final class EditorNavigationBar extends JPanel {
 		});
 	}
 
+	void setEditorActivation(final Runnable activation) {
+		activateEditor = java.util.Objects.requireNonNull(activation);
+	}
+
 	void setBusy(final boolean busy) {
 		setEnabled(!busy);
 		enableChildren(this, !busy);
@@ -98,6 +106,7 @@ final class EditorNavigationBar extends JPanel {
 	void replaceSelected() {
 		if (!isEnabled() || !editor.isEditable())
 			return;
+		activateEditor.run();
 		final String needle = query.getText();
 		if (needle.isEmpty()) {
 			status.setText("Enter text");
@@ -133,6 +142,7 @@ final class EditorNavigationBar extends JPanel {
 	void replaceAllMatches() {
 		if (!isEnabled() || !editor.isEditable())
 			return;
+		activateEditor.run();
 		final String needle = query.getText(), value = replacement.getText(), source = editor.getText();
 		if (needle.isEmpty()) {
 			status.setText("Enter text");
@@ -183,6 +193,7 @@ final class EditorNavigationBar extends JPanel {
 	void find(final boolean forward) {
 		if (!isEnabled())
 			return;
+		activateEditor.run();
 		final String needle = query.getText();
 		if (needle.isEmpty()) {
 			status.setText("Enter text");
@@ -217,6 +228,7 @@ final class EditorNavigationBar extends JPanel {
 	void goToLine() {
 		if (!isEnabled())
 			return;
+		activateEditor.run();
 		final int number;
 		try {
 			number = Integer.parseInt(line.getText().trim());

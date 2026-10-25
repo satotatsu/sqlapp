@@ -37,12 +37,14 @@ final class JobConfigurationEditorPanel extends JPanel {
 	final JButton fromSchema = new JButton("From Schema…");
 	final JButton fresh = new JButton("New");
 	final JButton open = new JButton("Open…");
+	final JButton reload = new JButton("Reload from disk");
 	final JButton check = new JButton("Check syntax / types");
 	final JButton save = new JButton("Save");
 	final JButton saveAs = new JButton("Save as…");
 	final JButton use = new JButton("Use saved job in data plan");
 	final JLabel file = new JLabel("New job (unsaved)");
 	final JLabel status = new JLabel("Open or enter job YAML. Live validation is performed in Data migration plan.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	private final BulkMigrationJobConfigurationEditorIO io;
 	private final Consumer<Snapshot> useJob;
 	private Snapshot snapshot;
@@ -60,16 +62,22 @@ final class JobConfigurationEditorPanel extends JPanel {
 		this.useJob = useJob;
 		setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		for (final var button : new JButton[] { fresh, open, fromSchema, check, save, saveAs, use })
+		for (final var button : new JButton[] { fresh, open, reload, save, saveAs })
 			actions.add(button);
+		final var jobActions = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		for (final var button : new JButton[] { fromSchema, check, use })
+			jobActions.add(button);
+		final var tools = new JPanel(new BorderLayout(4, 4));
+		tools.add(jobActions, BorderLayout.NORTH);
+		tools.add(navigation, BorderLayout.CENTER);
 		final var top = new JPanel(new BorderLayout(4, 4));
 		top.add(actions, BorderLayout.NORTH);
-		top.add(navigation, BorderLayout.CENTER);
+		top.add(tools, BorderLayout.CENTER);
 		top.add(file, BorderLayout.SOUTH);
 		add(top, BorderLayout.NORTH);
 		add(editorScroll, BorderLayout.CENTER);
 		final var bottom = new JPanel(new BorderLayout(8, 0));
-		bottom.add(status, BorderLayout.CENTER);
+		bottom.add(statusPanel, BorderLayout.CENTER);
 		bottom.add(position, BorderLayout.EAST);
 		add(bottom, BorderLayout.SOUTH);
 		text.addCaretListener(event -> updatePosition());
@@ -99,6 +107,8 @@ final class JobConfigurationEditorPanel extends JPanel {
 				requestOpen(chooser.getSelectedFile().toPath());
 		});
 		fromSchema.addActionListener(event -> openDraftBuilder());
+		reload.setToolTipText("Read the current file again; unsaved edits require confirmation. No file is written.");
+		reload.addActionListener(event -> reloadFromDisk());
 		check.addActionListener(event -> checkSyntax());
 		save.addActionListener(event -> {
 			if (snapshot != null)
@@ -115,6 +125,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 			if (!busy && snapshot != null && !isDirty() && validatedRevision == revision)
 				useJob.accept(snapshot);
 		});
+		EditorFileShortcuts.install(this, text, () -> !busy, () -> snapshot != null, fresh, open, save, saveAs);
 		refresh();
 	}
 
@@ -155,6 +166,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 		fromSchema.setEnabled(!busy);
 		navigation.setBusy(busy);
 		open.setEnabled(!busy);
+		reload.setEnabled(!busy && snapshot != null);
 		check.setEnabled(!busy && !text.getText().isBlank());
 		save.setEnabled(!busy && snapshot != null && isDirty());
 		saveAs.setEnabled(!busy && !text.getText().isBlank());
@@ -208,6 +220,12 @@ final class JobConfigurationEditorPanel extends JPanel {
 			return false;
 		loadFrom(path);
 		return true;
+	}
+
+	boolean reloadFromDisk() {
+		if (busy || snapshot == null)
+			return false;
+		return requestOpen(snapshot.file());
 	}
 
 	void loadFrom(final Path path) {
@@ -352,8 +370,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 	}
 
 	private void failed(final Throwable failure, final boolean currentBuffer) {
-		status.setText("Operation failed: " + failure.getMessage());
-		status.setToolTipText(status.getText());
+		status.setText(EditorStatusPanel.failureMessage(failure));
 		if (currentBuffer && failure instanceof BulkMigrationJobConfigurationEditorIO.ValidationException diagnostic) {
 			moveToDiagnostic(diagnostic.getLine(), diagnostic.getColumn());
 		}

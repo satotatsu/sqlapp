@@ -301,4 +301,87 @@ class JobConfigurationEditorPanelTest {
 			throw new IllegalStateException(exception);
 		}
 	}
+
+	@Test
+	void controlSSavesYamlUsingTheExistingValidationAndSnapshotRules() throws Exception {
+		final Path path = Files.writeString(directory.resolve("shortcut.yaml"), yaml);
+		final var ref = new AtomicReference<JobConfigurationEditorPanel>();
+		final var opened = new CountDownLatch(1);
+		final var saved = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new JobConfigurationEditorPanel(snapshot -> {
+			});
+			ref.set(panel);
+			panel.open.addPropertyChangeListener("enabled", event -> {
+				if (Boolean.TRUE.equals(event.getNewValue()))
+					opened.countDown();
+			});
+			panel.loadFrom(path);
+		});
+		assertTrue(opened.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = ref.get();
+			panel.text.append("# keyboard save\n");
+			panel.open.addPropertyChangeListener("enabled", event -> {
+				if (Boolean.TRUE.equals(event.getNewValue()))
+					saved.countDown();
+			});
+			EditorFileShortcutsTest.invoke(panel.text, "control S");
+		});
+		assertTrue(saved.await(5, TimeUnit.SECONDS));
+		assertEquals(yaml + "# keyboard save\n", Files.readString(path));
+		SwingUtilities.invokeAndWait(() -> assertFalse(ref.get().isDirty()));
+	}
+
+	@Test
+	void reloadUsesCurrentFileAndRequiresFreshValidationWithoutWriting() throws Exception {
+		final Path path = Files.writeString(directory.resolve("reload.yaml"), yaml);
+		final var ref = new AtomicReference<JobConfigurationEditorPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new JobConfigurationEditorPanel(ignored -> fail("Reload must not select a plan"));
+			ref.set(panel);
+			assertFalse(panel.reload.isEnabled());
+			assertFalse(panel.reloadFromDisk());
+		});
+		final var panel = ref.get();
+		finishReloadOperation(panel, () -> panel.loadFrom(path));
+		finishReloadOperation(panel, panel::checkSyntax);
+		SwingUtilities.invokeAndWait(() -> assertTrue(panel.use.isEnabled()));
+		Files.writeString(path, yaml + "# external\n");
+		finishReloadOperation(panel, () -> {
+			assertTrue(panel.reloadFromDisk());
+			assertFalse(panel.reload.isEnabled());
+			assertFalse(panel.reloadFromDisk());
+		});
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(yaml + "# external\n", panel.text.getText());
+			assertFalse(panel.isDirty());
+			assertFalse(panel.use.isEnabled());
+			assertFalse(panel.text.canUndo());
+		});
+		Files.delete(path);
+		finishReloadOperation(panel, () -> assertTrue(panel.reloadFromDisk()));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(yaml + "# external\n", panel.text.getText());
+			assertTrue(panel.status.getText().startsWith("Operation failed:"));
+			assertEquals(panel.status.getText(), panel.status.getToolTipText());
+			assertTrue(panel.statusPanel.details.isEnabled());
+			assertTrue(panel.reload.isEnabled());
+			panel.fresh.doClick();
+			assertFalse(panel.reload.isEnabled());
+			assertEquals(panel.status.getText(), panel.status.getToolTipText());
+			assertFalse(panel.status.getToolTipText().startsWith("Operation failed:"));
+		});
+		assertFalse(Files.exists(path));
+	}
+
+	private static void finishReloadOperation(JobConfigurationEditorPanel panel, Runnable action) throws Exception {
+		final var signal = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			onFinished(panel, signal);
+			action.run();
+		});
+		assertTrue(signal.await(5, TimeUnit.SECONDS));
+	}
+
 }

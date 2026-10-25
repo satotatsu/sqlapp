@@ -144,6 +144,46 @@ class SchemaDraftHandoffTest {
 		assertEquals(2, callbacks.get());
 	}
 
+	@Test
+	void opensSavedComparisonInSqlEditorAndClearsEditActionWhenInputsChange() throws Exception {
+		final var snapshot = snapshot();
+		final Path file = directory.resolve("1_customers.sql");
+		final var comparison = new AtomicReference<SchemaComparisonPanel>();
+		final var editor = new AtomicReference<SqlEditorPanel>();
+		final var compared = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var sql = new SqlEditorPanel(path -> true);
+			editor.set(sql);
+			final var view = new SchemaComparisonPanel((before, after) -> snapshot, service::save);
+			comparison.set(view);
+			view.setSqlEditor(sql::requestOpen);
+			view.original.setText(snapshot.original().toString());
+			view.target.setText(snapshot.target().toString());
+			onEnabled(view.compare, compared);
+			view.compare.doClick();
+		});
+		assertTrue(compared.await(5, TimeUnit.SECONDS));
+		final var saved = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			onEnabled(comparison.get().compare, saved);
+			comparison.get().saveTo(file, true);
+		});
+		assertTrue(saved.await(5, TimeUnit.SECONDS));
+		final var opened = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(comparison.get().editSql.isEnabled());
+			onEnabled(editor.get().open, opened);
+			comparison.get().editSql.doClick();
+		});
+		assertTrue(opened.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(snapshot.sqlDraft(), editor.get().text.getText());
+			assertFalse(editor.get().isDirty());
+			comparison.get().target.setText("changed.xml");
+			assertFalse(comparison.get().editSql.isEnabled());
+		});
+	}
+
 	private static void onEnabled(final javax.swing.JButton button, final CountDownLatch latch) {
 		button.addPropertyChangeListener("enabled", event -> {
 			if (Boolean.TRUE.equals(event.getNewValue()))

@@ -34,6 +34,20 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(schemaPlan);
 				return true;
 			});
+			final var sqlEditor = new SqlEditorPanel(directory -> {
+				if (!schemaPlan.selectUpDirectory(directory))
+					return false;
+				tabs.setSelectedComponent(schemaPlan);
+				return true;
+			});
+			tabs.addTab("SQL editor", sqlEditor);
+			comparison.setSqlEditor(path -> {
+				if (!sqlEditor.requestOpen(path))
+					return false;
+				tabs.setSelectedComponent(sqlEditor);
+				return true;
+			});
+
 			final var dataPlan = new DataMigrationPlanPanel();
 			tabs.addTab("Data migration plan", dataPlan);
 			final var jobEditor = new JobConfigurationEditorPanel(snapshot -> {
@@ -59,14 +73,14 @@ public final class MigrationApplication {
 				@Override
 				public void windowClosing(final WindowEvent event) {
 					frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-					if (comparison.isBusy() || schemaPlan.isExecuting() || dataPlan.isExecuting()
-							|| jobEditor.isBusy()) {
+					if (comparison.isBusy() || schemaPlan.isExecuting() || dataPlan.isExecuting() || jobEditor.isBusy()
+							|| sqlEditor.isBusy()) {
 						JOptionPane.showMessageDialog(frame,
 								"An operation is running. Wait for its result before closing.", "Operation running",
 								JOptionPane.INFORMATION_MESSAGE);
 						return;
 					}
-					if (jobEditor.canDiscardChanges())
+					if (sqlEditor.canDiscardChanges() && jobEditor.canDiscardChanges())
 						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 				}
 			});
