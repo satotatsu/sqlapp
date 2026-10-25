@@ -19,9 +19,7 @@ final class Db2NicknameSql {
 	static List<String> create(Table table, java.util.function.Supplier<Db2SqlBuilder> builders) {
 		var metadata = Db2Nickname.get(table);
 		if (!com.sqlapp.util.CommonUtils.isEmpty(table.getDefinition())) {
-			if (table.getDefinition().stream().anyMatch(sql -> sql == null || sql.isBlank()))
-				throw new IllegalArgumentException("Db2 nickname definition statements must not be blank");
-			return List.copyOf(table.getDefinition());
+			return Db2DefinitionSql.statements(table.getDefinition(), builders.get().getDialect());
 		}
 		String message = "Db2 nickname requires a complete executable CREATE definition for complex/nonrelational mappings: "
 				+ table.getName();

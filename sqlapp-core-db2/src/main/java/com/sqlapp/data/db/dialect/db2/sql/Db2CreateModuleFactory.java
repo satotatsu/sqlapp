@@ -30,7 +30,7 @@ public class Db2CreateModuleFactory extends SimpleSqlFactory<Package, Db2SqlBuil
 		List<SqlOperation> result = new ArrayList<>();
 		String name = Db2CreationContext.qualified(module.getSchemaName(), module.getName());
 		if (!module.getDefinition().isEmpty()) {
-			for (String sql : module.getDefinition()) {
+			for (String sql : Db2DefinitionSql.statements(module.getDefinition(), getDialect())) {
 				if (sql == null || sql.isBlank())
 					throw new IllegalArgumentException("Db2 module definition requires executable statements");
 				addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, module);

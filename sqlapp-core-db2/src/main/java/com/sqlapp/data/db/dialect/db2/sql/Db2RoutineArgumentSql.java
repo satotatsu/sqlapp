@@ -22,8 +22,10 @@ final class Db2RoutineArgumentSql {
 		String type = renderType(fields, argument.getName(), builder);
 		if (argument.getDirection() != null)
 			builder._add(argument.getDirection()).space();
-		if (argument.getName() != null)
-			builder.name(argument.getName()).space();
+		if (argument.getName() != null) {
+			Db2RoutineSql.identifier(builder, argument.getName());
+			builder.space();
+		}
 		builder._add(type);
 		appendDefault(argument, builder);
 	}

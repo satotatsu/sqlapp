@@ -20,9 +20,12 @@ public class Db2CreateMviewFactory extends Db2CreateTableFactory {
 				.sql(mview.getSpecifics().get("QUALIFIER"), mview.getSpecifics().get("FUNC_PATH"))) {
 			addSql(result, createSqlBuilder()._add(sql), SqlType.SET_SEARCH_PATH_TO_SCHEMA, mview);
 		}
-		var builder = createSqlBuilder();
-		builder._add(mview.getDefinition());
-		addSql(result, builder, SqlType.CREATE, mview);
+		for (String definition : Db2DefinitionSql.statements(mview.getDefinition(), getDialect())) {
+			if (definition == null || definition.isBlank() || definition.indexOf('\0') >= 0)
+				throw new IllegalArgumentException(
+						"Db2 MQT definition requires executable ordered statements: " + mview.getName());
+			addSql(result, createSqlBuilder()._add(definition), SqlType.CREATE, mview);
+		}
 		addIndexDefinitions(mview, result);
 		addOtherDefinitions(mview, result);
 		return result;

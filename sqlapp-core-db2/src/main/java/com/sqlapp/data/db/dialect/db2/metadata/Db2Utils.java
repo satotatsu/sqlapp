@@ -62,7 +62,13 @@ public class Db2Utils {
 		}
 		if (readerOption.isReadStatement()) {
 			int offset = rs.getInt("TEXT_BODY_OFFSET");
-			if (offset > 0 && definition != null) {
+			if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && definition != null
+					&& (offset <= 0 || offset >= definition.length()
+							|| "PL/SQL".equalsIgnoreCase(getString(rs, "DIALECT"))
+							|| "Y".equals(getString(rs, "AUTONOMOUS")))) {
+				// The requested body cannot safely recreate these native routine forms.
+				obj.setDefinition(definition);
+			} else if (offset > 0 && definition != null) {
 				obj.setStatement(definition.substring(offset));
 			}
 		}
@@ -71,6 +77,14 @@ public class Db2Utils {
 		obj.setClassName(getString(rs, "CLASS"));
 		obj.setValid("Y".equalsIgnoreCase(getString(rs, "VALID")));
 		obj.setRemarks(getString(rs, "REMARKS"));
+		if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			for (String key : java.util.List.of("QUALIFIER", "FUNC_PATH", "RESULT_SETS", "SQL_DATA_ACCESS",
+					"COMMIT_ON_RETURN", "AUTONOMOUS", "DETERMINISTIC")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					obj.getSpecifics().put(key, value);
+			}
+		}
 	}
 
 	protected static String getString(ExResultSet rs, String name) throws SQLException {

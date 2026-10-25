@@ -84,7 +84,10 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 			this._add(obj.getDirection()).space();
 		}
 		if (obj.getName() != null) {
-			this.name(obj.getName());
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && obj.getName().indexOf('"') >= 0)
+				this._add(Db2CreationContext.identifier(obj.getName()));
+			else
+				this.name(obj.getName());
 			this.space();
 		}
 		this.typeDefinition(obj);

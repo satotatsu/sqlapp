@@ -67,7 +67,19 @@ public class Db2TriggerReader extends TriggerReader {
 	protected Trigger createTrigger(ExResultSet rs) throws SQLException {
 		Trigger trigger = new Trigger(getString(rs, TRIGGER_NAME));
 		trigger.setSchemaName(getString(rs, SCHEMA_NAME));
-		trigger.getEventManipulation().add(getString(rs, EVENT_MANIPULATION));
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			for (String event : java.util.List.of("INSERT", "UPDATE", "DELETE"))
+				if ("Y".equals(getString(rs, "EVENT" + event)))
+					trigger.getEventManipulation().add(event);
+			if (trigger.getEventManipulation().isEmpty() && !"M".equals(getString(rs, "TRIGEVENT")))
+				trigger.getEventManipulation().add(getString(rs, EVENT_MANIPULATION));
+			for (String key : java.util.List.of("QUALIFIER", "FUNC_PATH", "TRIGEVENT", "VALID")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					trigger.getSpecifics().put(key, value);
+			}
+		} else
+			trigger.getEventManipulation().add(getString(rs, EVENT_MANIPULATION));
 		trigger.setTableSchemaName(getString(rs, EVENT_OBJECT_SCHEMA));
 		trigger.setTableName(getString(rs, EVENT_OBJECT_TABLE));
 		trigger.setDefinition(getString(rs, ACTION_STATEMENT));
@@ -80,7 +92,8 @@ public class Db2TriggerReader extends TriggerReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNodeCache().getString("triggers.sql");
+		SqlNode node = getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "triggers1110.sql" : "triggers.sql");
 		return node;
 	}
 }

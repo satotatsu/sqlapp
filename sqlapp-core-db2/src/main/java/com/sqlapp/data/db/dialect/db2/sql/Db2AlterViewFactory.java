@@ -1,0 +1,18 @@
+/* Copyright (C) 2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.dialect.db2.sql;
+
+import java.util.List;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.schemas.DbObjectDifference;
+import com.sqlapp.data.schemas.State;
+
+/** View replacement requires an explicit dependency-aware plan. */
+public class Db2AlterViewFactory extends Db2CreateViewFactory {
+	@Override
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+		if (difference.getState() == State.Modified)
+			throw new IllegalArgumentException(
+					"Db2 view changes require an explicit replacement plan for dependent objects and privileges");
+		return super.createDiffSql(difference);
+	}
+}

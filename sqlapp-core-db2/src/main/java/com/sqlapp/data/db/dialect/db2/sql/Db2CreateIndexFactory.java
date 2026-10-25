@@ -17,7 +17,7 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 			if (!createIndex(index))
 				return java.util.List.of();
 			nativeSql = new java.util.ArrayList<>();
-			for (String sql : index.getDefinition()) {
+			for (String sql : Db2DefinitionSql.statements(index.getDefinition(), getDialect())) {
 				if (sql == null || sql.isBlank())
 					throw new IllegalArgumentException("Db2 index definition must be executable SQL");
 				addSql(nativeSql, createSqlBuilder()._add(sql), com.sqlapp.data.db.sql.SqlType.CREATE, index);

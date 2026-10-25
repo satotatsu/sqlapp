@@ -66,11 +66,25 @@ public class Db2ViewReader extends ViewReader {
 		// Timestamp created=rs.getTimestamp("CREATE_TIME");
 		// view.setCreated(created);
 		view.setDefinition(text);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			view.setDialect(getDialect());
+			view.setRemarks(getString(rs, REMARKS));
+			view.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
+			view.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
+			view.setValid("Y".equals(getString(rs, "VALID")));
+			view.setReadonly("Y".equals(getString(rs, "READONLY")));
+			for (String key : List.of("QUALIFIER", "FUNC_PATH", "VIEWCHECK", "READONLY", "VALID", "DB2_VIEW_TYPE")) {
+				String value = getString(rs, key);
+				if (value != null)
+					view.getSpecifics().put(key, value);
+			}
+		}
 		return view;
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("views.sql");
+		return getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "views1110.sql" : "views.sql");
 	}
 
 	/*

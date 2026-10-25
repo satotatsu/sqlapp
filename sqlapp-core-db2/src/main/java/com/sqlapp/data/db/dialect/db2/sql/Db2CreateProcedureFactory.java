@@ -24,6 +24,11 @@ import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 
 public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db2SqlBuilder> {
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Procedure procedure) {
+		return Db2RoutineSql.create(procedure, getDialect(), () -> super.createSql(procedure),
+				(sql, type) -> createOperation(sql, type, procedure), getOptions().isDecorateSchemaName());
+	}
 
 	@Override
 	protected void addCreateObject(final Procedure obj, Db2SqlBuilder builder) {
@@ -36,7 +41,8 @@ public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db
 		}
 		// Retain the existing PL/SQL path for compatibility-mode callers.
 		if (obj.getLanguage() == null || "SQL".equalsIgnoreCase(obj.getLanguage())) {
-			builder.create().procedure().name(obj, getOptions().isDecorateSchemaName());
+			builder.create().procedure().space();
+			Db2RoutineSql.name(builder, obj, false, getOptions().isDecorateSchemaName());
 			builder.space()._add("(");
 			int argumentCount = 0;
 			for (var argument : obj.getArguments()) {
@@ -45,9 +51,11 @@ public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db
 			}
 			builder._add(")");
 			if (obj.getSpecificName() != null) {
-				builder.lineBreak().specific().space().name(obj.getSpecificName());
+				builder.lineBreak().specific().space();
+				Db2RoutineSql.identifier(builder, obj.getSpecificName());
 			}
 			builder.lineBreak().language().space()._add("SQL");
+			Db2RoutineSql.procedureOptions(obj, builder);
 			builder.lineBreak()._add(obj.getStatement());
 			return;
 		}

@@ -9,8 +9,6 @@ public class Db2DropProcedureFactory extends AbstractDropNamedObjectFactory<Proc
 	@Override
 	protected void addDropObject(Procedure routine, Db2SqlBuilder builder) {
 		builder.drop().specific().space()._add("PROCEDURE").space();
-		if (getOptions().isDecorateSchemaName() && routine.getSchemaName() != null)
-			builder.name(routine.getSchemaName())._add(".");
-		builder.name(routine.getSpecificName());
+		Db2RoutineSql.name(builder, routine, true, getOptions().isDecorateSchemaName());
 	}
 }

@@ -9,8 +9,6 @@ public class Db2DropFunctionFactory extends AbstractDropNamedObjectFactory<Funct
 	@Override
 	protected void addDropObject(Function routine, Db2SqlBuilder builder) {
 		builder.drop().specific().space()._add("FUNCTION").space();
-		if (getOptions().isDecorateSchemaName() && routine.getSchemaName() != null)
-			builder.name(routine.getSchemaName())._add(".");
-		builder.name(routine.getSpecificName());
+		Db2RoutineSql.name(builder, routine, true, getOptions().isDecorateSchemaName());
 	}
 }

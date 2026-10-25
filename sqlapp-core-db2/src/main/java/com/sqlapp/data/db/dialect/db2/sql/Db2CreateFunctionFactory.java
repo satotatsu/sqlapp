@@ -12,6 +12,12 @@ import com.sqlapp.util.CommonUtils;
 
 public class Db2CreateFunctionFactory extends AbstractCreateFunctionFactory<Db2SqlBuilder> {
 	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Function function) {
+		return Db2RoutineSql.create(function, getDialect(), () -> super.createSql(function),
+				(sql, type) -> createOperation(sql, type, function), getOptions().isDecorateSchemaName());
+	}
+
+	@Override
 	protected void addCreateObject(Function function, Db2SqlBuilder builder) {
 		if (!CommonUtils.isEmpty(function.getDefinition())) {
 			builder._add(function.getDefinition());
@@ -25,7 +31,9 @@ public class Db2CreateFunctionFactory extends AbstractCreateFunctionFactory<Db2S
 			throw new IllegalArgumentException(
 					"External Db2 function requires complete definition: " + function.getName());
 		}
-		builder.create().function().name(function, getOptions().isDecorateSchemaName()).space()._add("(");
+		builder.create().function().space();
+		Db2RoutineSql.name(builder, function, false, getOptions().isDecorateSchemaName());
+		builder.space()._add("(");
 		int count = 0;
 		for (NamedArgument argument : function.getArguments()) {
 			if (function.getFunctionType() == FunctionType.Row && argument.getDefaultValue() != null)
@@ -45,7 +53,9 @@ public class Db2CreateFunctionFactory extends AbstractCreateFunctionFactory<Db2S
 			builder._add(function.getFunctionType() == FunctionType.Table ? "TABLE (" : "ROW (");
 			count = 0;
 			for (Column column : table.getColumns()) {
-				builder.comma(count++ > 0).name(column.getName()).space();
+				builder.comma(count++ > 0);
+				Db2RoutineSql.identifier(builder, column.getName());
+				builder.space();
 				if (column.getSpecifics().containsKey("TYPENAME"))
 					builder._add(Db2RoutineArgumentSql.renderType(column.getSpecifics(), column.getName(), builder));
 				else
@@ -66,7 +76,8 @@ public class Db2CreateFunctionFactory extends AbstractCreateFunctionFactory<Db2S
 			throw new IllegalArgumentException("Db2 aggregate function requires complete definition");
 		}
 		if (function.getSpecificName() != null) {
-			builder.lineBreak().specific().space().name(function.getSpecificName());
+			builder.lineBreak().specific().space();
+			Db2RoutineSql.identifier(builder, function.getSpecificName());
 		}
 		builder.lineBreak().language().space()._add("SQL");
 		if (function.getDeterministic() != null) {

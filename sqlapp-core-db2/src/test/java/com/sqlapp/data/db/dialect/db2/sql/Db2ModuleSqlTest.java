@@ -46,12 +46,13 @@ class Db2ModuleSqlTest {
 		var module = module("M");
 		module.getSpecifics().put("MEMBER_COUNT", "2");
 		assertThrows(IllegalArgumentException.class, () -> sql(module, SqlType.CREATE));
-		module.getDefinition().add("CREATE MODULE \"A.Schema\".\"M.Name\"");
-		module.getDefinition().add("ALTER MODULE \"A.Schema\".\"M.Name\" PUBLISH PROCEDURE P() BEGIN END");
+		module.setDefinition("--#SET TERMINATOR @\nCREATE MODULE \"A.Schema\".\"M.Name\"@");
+		module.getDefinition().add("ALTER MODULE \"A.Schema\".\"M.Name\" PUBLISH PROCEDURE P() BEGIN END@");
 		Package restored = SchemaUtils.readXml(new java.io.StringReader(module.asXml()));
 		assertEquals(module, restored);
 		assertEquals(module, module.clone());
-		assertEquals(module.getDefinition(), sql(restored, SqlType.CREATE));
+		assertEquals(2, sql(restored, SqlType.CREATE).size());
+		assertTrue(sql(restored, SqlType.CREATE).getLast().endsWith("BEGIN END"));
 	}
 
 	@Test

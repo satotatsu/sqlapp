@@ -31,7 +31,7 @@ public class Db2CreateGlobalVariableFactory extends SimpleSqlFactory<Constant, D
 		List<SqlOperation> result = new ArrayList<>();
 		List<String> definitions = variable.getDefinition();
 		if (!definitions.isEmpty()) {
-			for (String sql : definitions) {
+			for (String sql : Db2DefinitionSql.statements(definitions, getDialect())) {
 				if (sql == null || sql.isBlank())
 					throw new IllegalArgumentException("Db2 variable definition must contain executable statements");
 				addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, variable);
@@ -45,10 +45,10 @@ public class Db2CreateGlobalVariableFactory extends SimpleSqlFactory<Constant, D
 								+ variable.getName());
 			String renderedType = Db2NativeTypeSql.render(getDialect(), fields, variable.getName());
 			List<String> statements = variable.getStatement();
-			if (statements.size() > 1 || ("C".equals(fields.get("READONLY")) && statements.isEmpty()))
+			if ("C".equals(fields.get("READONLY")) && statements.isEmpty())
 				throw new IllegalArgumentException(
 						"Db2 variable requires one DEFAULT/CONSTANT expression: " + variable.getName());
-			String expression = statements.isEmpty() ? null : statements.getFirst();
+			String expression = statements.isEmpty() ? null : Db2DefinitionSql.text(statements);
 			if (expression != null && (expression.isBlank() || expression.indexOf('\0') >= 0))
 				throw new IllegalArgumentException("Invalid Db2 variable expression");
 			for (String sql : Db2CreationContext.sql(fields.get("QUALIFIER"), fields.get("FUNC_PATH")))

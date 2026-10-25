@@ -39,7 +39,7 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 	public List<SqlOperation> createSql(Table table) {
 		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table) && !table.getDefinition().isEmpty()) {
 			List<SqlOperation> result = new java.util.ArrayList<>();
-			for (String statement : table.getDefinition()) {
+			for (String statement : Db2DefinitionSql.statements(table.getDefinition(), getDialect())) {
 				if (statement == null || statement.isBlank() || statement.indexOf('\0') >= 0)
 					throw new IllegalArgumentException("Db2 table definition must contain executable statements");
 				addSql(result, createSqlBuilder()._add(statement), SqlType.CREATE, table);

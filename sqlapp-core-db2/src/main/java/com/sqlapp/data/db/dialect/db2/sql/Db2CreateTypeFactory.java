@@ -23,7 +23,7 @@ public class Db2CreateTypeFactory extends SimpleSqlFactory<Type, Db2SqlBuilder> 
 		List<SqlOperation> result = new ArrayList<>();
 		String name = Db2CreationContext.qualified(type.getSchemaName(), type.getName());
 		if (!type.getDefinition().isEmpty()) {
-			for (String sql : type.getDefinition()) {
+			for (String sql : Db2DefinitionSql.statements(type.getDefinition(), getDialect())) {
 				if (sql == null || sql.isBlank() || sql.indexOf('\0') >= 0)
 					throw new IllegalArgumentException("Db2 type definition requires executable statements");
 				addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, type);

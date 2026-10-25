@@ -41,6 +41,14 @@ class Db2GlobalVariableSqlTest {
 	}
 
 	@Test
+	void defaultExpressionCanSpanLinesAndSurviveXml() throws Exception {
+		var variable = variable("INTEGER");
+		variable.setStatement("(1\n\n + 2)");
+		Constant restored = SchemaUtils.readXml(new java.io.StringReader(variable.asXml()));
+		assertTrue(sql(restored, SqlType.CREATE).getFirst().endsWith("DEFAULT (1\n\n + 2)"));
+	}
+
+	@Test
 	void stringUnitsBinaryDataDecimalAndConstantValuesRetainTheirSemantics() {
 		var variable = variable("VARCHAR");
 		variable.getSpecifics().putAll(Map.of("TYPESTRINGUNITS", "CODEUNITS32", "STRINGUNITSLENGTH", "5"));

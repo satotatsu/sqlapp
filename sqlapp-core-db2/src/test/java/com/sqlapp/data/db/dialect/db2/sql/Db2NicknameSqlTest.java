@@ -73,10 +73,11 @@ class Db2NicknameSqlTest {
 		Db2Nickname.set(table, new Db2Nickname.Snapshot(1, metadata.serverName(), null, null, "N", "N",
 				Map.of("FILE", "data.txt"), Map.of()));
 		assertThrows(IllegalArgumentException.class, () -> sql(table, SqlType.CREATE));
-		table.getDefinition().addAll(List.of(
-				"CREATE NICKNAME \"Local.Schema\".\"Nick.Name\" (ID INTEGER) FOR SERVER F OPTIONS (FILE 'data.txt')",
-				"ALTER NICKNAME \"Local.Schema\".\"Nick.Name\" DISALLOW CACHING"));
-		assertEquals(table.getDefinition(), sql(table, SqlType.CREATE));
+		table.setDefinition("--#SET TERMINATOR @\n"
+				+ "CREATE NICKNAME \"Local.Schema\".\"Nick.Name\" (ID INTEGER) FOR SERVER F OPTIONS (FILE 'data.txt')@\n"
+				+ "ALTER NICKNAME \"Local.Schema\".\"Nick.Name\" DISALLOW CACHING@");
+		assertEquals(2, sql(table, SqlType.CREATE).size());
+		assertTrue(sql(table, SqlType.CREATE).getLast().endsWith("DISALLOW CACHING"));
 		var changed = table.clone().setRemarks("changed");
 		SqlFactory<Table> alter = DialectHolder.Db2_1215Dialect.createSqlFactoryRegistry().getSqlFactory(table,
 				SqlType.ALTER);
