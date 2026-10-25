@@ -61,22 +61,14 @@ public enum RowComparisonOperator {
 		protected void addMultiColumnOperator(ColumnsHolder columnsHolder, final Row row, String prefix,
 				final BindParameterHolder holder, final SqlBuilder builder) {
 			builder.brackets(true, () -> {
-				Column col = CommonUtils.first(columnsHolder.getKeyColumns());
-				columnsHolder.addName(col, prefix, builder);
-				builder.in();
-				builder.space().brackets(() -> {
-					columnsHolder.forEachKeyColumn((i, column) -> {
-						builder.comma(i > 0);
-						if (!CommonUtils.isEmpty(prefix)) {
-							builder.name(prefix, column);
-						} else {
-							builder.name(column, true);
-						}
-						BindParameter dbParameter = new BindParameter();
-						dbParameter.setColumn(column);
-						dbParameter.setValue(row.get(column));
-						holder.getBindParameters().add(dbParameter);
-					});
+				columnsHolder.forEachKeyColumn((i, column) -> {
+					builder.and(i > 0);
+					columnsHolder.addName(column, prefix, builder);
+					builder.eq().space()._add("?");
+					BindParameter dbParameter = new BindParameter();
+					dbParameter.setColumn(column);
+					dbParameter.setValue(row.get(column));
+					holder.getBindParameters().add(dbParameter);
 				});
 			});
 		}
@@ -150,10 +142,14 @@ public enum RowComparisonOperator {
 	protected void addMultiColumnOperator(ColumnsHolder columnsHolder, final Row row, String prefix,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = columnsHolder.getKeyColumns().size();
+		// Non-final components must be strict: (a,b)>=(x,y) means
+		// a>x OR (a=x AND b>=y), not a>=x OR (...).
+		RowComparisonOperator prefixOperator = this == GREATER_THAN_OR_EQUAL ? GREATER_THAN
+				: this == LESS_THAN_OR_EQUAL ? LESS_THAN : this;
 		builder.brackets(true, () -> {
 			Column col = CommonUtils.first(columnsHolder.getKeyColumns());
 			columnsHolder.addName(col, prefix, builder);
-			addOperator(builder);
+			prefixOperator.addOperator(builder);
 			builder.space()._add("?");
 			BindParameter firstParameter = new BindParameter();
 			firstParameter.setColumn(col);
@@ -172,7 +168,8 @@ public enum RowComparisonOperator {
 						}
 						builder.and(!first[0]);
 						columnsHolder.addName(column, prefix, builder);
-						addOperator(j >= cnt[0], builder);
+							RowComparisonOperator operator = cnt[0] < size - 1 ? prefixOperator : this;
+							operator.addOperator(j >= cnt[0], builder);
 						builder.eq(j < cnt[0]).space()._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setColumn(column);

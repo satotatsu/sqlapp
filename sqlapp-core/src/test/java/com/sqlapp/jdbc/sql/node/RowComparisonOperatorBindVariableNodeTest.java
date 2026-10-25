@@ -65,7 +65,7 @@ public class RowComparisonOperatorBindVariableNodeTest {
 				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows().getFirst());
 		String exptected = """
 				AND (
-						a."colBA" >= ?
+						a."colBA" > ?
 						OR ( a."colBA" = ? AND a."colBE" >= ? )
 					)
 								""";
@@ -172,7 +172,7 @@ public class RowComparisonOperatorBindVariableNodeTest {
 				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows().getFirst());
 		String exptected = """
 				AND (
-						a."colBA" <= ?
+						a."colBA" < ?
 						OR ( a."colBA" = ? AND a."colBE" <= ? )
 					)
 								""";
@@ -209,7 +209,7 @@ public class RowComparisonOperatorBindVariableNodeTest {
 				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows().getFirst());
 		String exptected = """
 				AND (
-						a."colBA" >= ?
+						a."colBA" > ?
 						OR ( a."colBA" = ? AND a."colBE" >= ? )
 					)""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
@@ -247,7 +247,7 @@ public class RowComparisonOperatorBindVariableNodeTest {
 				table.getRows().getFirst());
 		String exptected = """
 				AND (
-						"tabB"."colBA" >= ?
+						"tabB"."colBA" > ?
 						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" >= ? )
 					)""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
