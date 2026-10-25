@@ -43,10 +43,13 @@ public class FirebirdSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.ALTER, FirebirdAlterTableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.CREATE,
+				FirebirdCreateCheckConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.ALTER, FirebirdAlterDomainFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.ALTER, FirebirdAlterViewFactory.class);
 		registerSqlFactory(Trigger.class, SqlType.ALTER, FirebirdAlterTriggerFactory.class);
 		registerSqlFactory(Index.class, SqlType.ALTER, FirebirdAlterIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.REBUILD, FirebirdRebuildIndexFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.CREATE, FirebirdCreateDomainFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, FirebirdCreateViewFactory.class);
 		for (Class<?> type : new Class<?>[] { Table.class, com.sqlapp.data.schemas.View.class,

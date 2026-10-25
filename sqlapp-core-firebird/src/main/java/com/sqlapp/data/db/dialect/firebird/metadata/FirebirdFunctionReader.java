@@ -85,10 +85,10 @@ public class FirebirdFunctionReader extends FunctionReader {
 		initializeChild(reader);
 		reader.setObjectName(null);
 		reader.setReadDbObjectPredicate((obj, metadataReader) -> true);
-		List<NamedArgument> arguments = reader.getAllFull(connection);
+		var arguments = FirebirdRoutineArguments.read(connection, context, functions, reader);
 		for (Function function : functions) {
 			function.setDialect(this.getDialect());
-			for (NamedArgument argument : arguments) {
+			for (NamedArgument argument : arguments.getOrDefault(function.getName(), java.util.List.of())) {
 				if (function.getName().equals(argument.getRoutineName())) {
 					boolean legacyReturn = argument.getSpecifics().get("firebird.udf.position") != null
 							&& argument.getSpecifics().get("firebird.udf.position")

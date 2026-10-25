@@ -82,14 +82,10 @@ public class FirebirdProcedureReader extends ProcedureReader {
 		initializeChild(reader);
 		reader.setObjectName(null);
 		reader.setReadDbObjectPredicate((obj, metadataReader) -> true);
-		List<NamedArgument> arguments = reader.getAllFull(connection);
+		var arguments = FirebirdRoutineArguments.read(connection, context, procedures, reader);
 		for (Procedure procedure : procedures) {
 			procedure.setDialect(this.getDialect());
-			for (NamedArgument argument : arguments) {
-				if (procedure.getName().equals(argument.getRoutineName())) {
-					procedure.getArguments().add(argument);
-				}
-			}
+			procedure.getArguments().addAll(arguments.getOrDefault(procedure.getName(), java.util.List.of()));
 		}
 	}
 

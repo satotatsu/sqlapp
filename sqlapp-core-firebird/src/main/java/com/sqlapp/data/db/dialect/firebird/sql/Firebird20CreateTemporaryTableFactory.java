@@ -31,7 +31,57 @@ import com.sqlapp.data.schemas.Table;
  */
 public class Firebird20CreateTemporaryTableFactory extends AbstractCreateTemporaryTableFactory<FirebirdSqlBuilder> {
 	@Override
+	protected void addConstraintDefinitions(Table table, FirebirdSqlBuilder builder) {
+		Table physical = physicalTable(table);
+		for (var foreign : table.getConstraints().getForeignKeyConstraints()) {
+			Table parent = foreign.getRelatedTable();
+			if (parent == null || (parent.getTableType() != Table.TableType.Temporary
+					&& !parent.getSpecifics().containsKey("firebird.onCommit")))
+				throw new IllegalArgumentException("Temporary foreign keys require a resolved temporary parent table");
+			Table physicalParent = physicalTable(parent);
+			var resolved = (com.sqlapp.data.schemas.ForeignKeyConstraint) physical.getConstraints()
+					.get(foreign.getName());
+			java.util.List<com.sqlapp.data.schemas.Column> columns = new java.util.ArrayList<>();
+			for (var column : foreign.getRelatedColumns()) {
+				var target = physicalParent.getColumns().get(column.getName());
+				if (target == null)
+					throw new IllegalArgumentException("Foreign key parent column does not exist: " + column.getName());
+				columns.add(target);
+			}
+			resolved.getRelatedColumns().clear();
+			resolved.getRelatedColumns().addAll(columns.toArray(com.sqlapp.data.schemas.Column[]::new));
+			resolved.setRelatedTableName(physicalParent.getName());
+		}
+		for (var constraint : physical.getConstraints())
+			addConstraintDefinition(constraint, builder);
+	}
+
+	private Table physicalTable(Table table) {
+		String prefix = getTableOptions().getTemporaryTableNamePrefix().apply(table);
+		String suffix = getTableOptions().getTemporaryTableNameSuffix().apply(table);
+		return table.clone().setName((prefix == null ? "" : prefix) + table.getName() + (suffix == null ? "" : suffix));
+	}
+
+	@Override
+	protected void addIndexDefinitions(Table table, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		Table physical = physicalTable(table);
+		for (var index : physical.getIndexes())
+			result.addAll(getSqlFactoryRegistry().createSql(index, com.sqlapp.data.db.sql.SqlType.CREATE));
+	}
+
+	@Override
+	protected void addOtherDefinitions(Table table, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		Table physical = physicalTable(table);
+		if (physical.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(physical, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+		for (var column : physical.getColumns())
+			if (column.getRemarks() != null)
+				result.addAll(getSqlFactoryRegistry().createSql(column, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+	}
+
+	@Override
 	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Table table) {
+		FirebirdConstraintSql.validateTable(table);
 		var result = super.createSql(table);
 		if (table.getSpecifics().containsKey("firebird.sqlSecurity")) {
 			String name = getDialect().getTemporaryTableName(table,

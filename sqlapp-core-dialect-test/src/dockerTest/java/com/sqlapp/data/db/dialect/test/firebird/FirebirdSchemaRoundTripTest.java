@@ -78,11 +78,17 @@ class FirebirdSchemaRoundTripTest {
 				assertEquals("Firebird" + version.replace(".", ""), dialect.getClass().getSimpleName());
 				columns(connection, statement, dialect, major);
 				temporaryTables(connection, statement, dialect, major, url);
+				temporaryIndexCreation(connection, statement, dialect, major, url);
+				temporaryForeignKeys(connection, statement, dialect);
+				numericIdentity(connection, statement, dialect, major);
+				deleteAllRows(connection, statement, dialect, url);
 				constraints(connection, statement, dialect);
 				advancedColumns(connection, statement, dialect, major);
 				indexes(connection, statement, dialect, major);
+				indexMaintenance(connection, statement, dialect);
 				triggers(connection, statement, dialect, major);
 				routines(connection, statement, dialect, major);
+				filteredRoutineArguments(connection, statement, dialect, major);
 				alterSignatures(connection, statement, dialect, major);
 				parameterComments(connection, statement, dialect, major);
 				objectRecreation(connection, statement, dialect, major);
@@ -100,6 +106,313 @@ class FirebirdSchemaRoundTripTest {
 				packages(connection, statement, dialect, major);
 				packageAlter(connection, statement, dialect, major);
 			}
+		}
+	}
+
+	private void filteredRoutineArguments(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		statement.execute("CREATE PROCEDURE \"filtered proc one\" (\"param one\" INTEGER DEFAULT 3) AS BEGIN END");
+		statement.execute("CREATE PROCEDURE \"filtered proc two\" (\"param two\" VARCHAR(5)) AS BEGIN END");
+		if (major >= 3)
+			statement.execute(
+					"CREATE PACKAGE \"filtered package\" AS BEGIN PROCEDURE \"filtered proc two\" (\"package param\" INTEGER); END");
+		var procedures = dialect.getCatalogReader().getSchemaReader().getProcedureReader();
+		procedures.setObjectName("filtered proc one");
+		var selected = procedures.getAllFull(connection);
+		assertEquals(1, selected.size());
+		assertEquals("filtered proc one", selected.get(0).getName());
+		assertEquals(1, selected.get(0).getArguments().size());
+		assertEquals("param one", selected.get(0).getArguments().get(0).getName());
+		assertEquals("3", selected.get(0).getArguments().get(0).getDefaultValue());
+		// The standalone argument API must honor routineName as well as the parent
+		// reader.
+		var arguments = new com.sqlapp.data.db.dialect.firebird.metadata.FirebirdProcedureArgumentReader(dialect) {
+		};
+		arguments.setReaderOptions(procedures.getReaderOptions());
+		arguments.setObjectName("filtered proc two");
+		var direct = arguments.getAllFull(connection);
+		assertEquals(1, direct.size());
+		assertEquals("param two", direct.get(0).getName());
+		assertEquals("filtered proc two", direct.get(0).getRoutineName());
+		procedures.setObjectName("missing filtered procedure");
+		assertTrue(procedures.getAllFull(connection).isEmpty());
+		if (major >= 3) {
+			statement.execute(
+					"CREATE FUNCTION \"filtered func one\" (\"arg one\" INTEGER) RETURNS BIGINT AS BEGIN RETURN \"arg one\"+1; END");
+			statement.execute(
+					"CREATE FUNCTION \"filtered func two\" (\"arg two\" VARCHAR(5)) RETURNS VARCHAR(5) AS BEGIN RETURN \"arg two\"; END");
+			var functions = dialect.getCatalogReader().getSchemaReader().getFunctionReader();
+			functions.setObjectName("filtered func one");
+			var full = functions.getAllFull(connection);
+			assertEquals(1, full.size());
+			assertEquals(1, full.get(0).getArguments().size());
+			assertEquals("arg one", full.get(0).getArguments().get(0).getName());
+			assertEquals(com.sqlapp.data.db.datatype.DataType.BIGINT, full.get(0).getReturning().getDataType());
+			var functionArguments = new com.sqlapp.data.db.dialect.firebird.metadata.Firebird30FunctionArgumentReader(
+					dialect) {
+			};
+			functionArguments.setReaderOptions(functions.getReaderOptions());
+			functionArguments.setObjectName("filtered func two");
+			var filtered = functionArguments.getAllFull(connection);
+			assertEquals(2, filtered.size());
+			assertTrue(filtered.stream().allMatch(a -> "filtered func two".equals(a.getRoutineName())));
+			try (var rows = statement.executeQuery("SELECT \"filtered func one\"(4) FROM RDB$DATABASE")) {
+				assertTrue(rows.next());
+				assertEquals(5, rows.getLong(1));
+			}
+		}
+	}
+
+	private void numericIdentity(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		if (major < 3)
+			return;
+		Table table = new Table("numeric identity");
+		table.getColumns().add(new Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.NUMERIC).setLength(18)
+				.setScale(0).setIdentity(true).setIdentityStartValue(7));
+		execute(statement, dialect, table, SqlType.CREATE);
+		statement.execute("INSERT INTO \"numeric identity\" DEFAULT VALUES");
+		try (var rows = statement.executeQuery("SELECT ID FROM \"numeric identity\"")) {
+			assertTrue(rows.next());
+			assertEquals(major == 3 ? 8 : 7, rows.getLong(1));
+		}
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setObjectName("numeric identity");
+		Table restored = reader.getAllFull(connection).get(0);
+		Column id = restored.getColumns().get("ID");
+		assertTrue(id.isIdentity());
+		assertTrue(id.isNotNull());
+		assertEquals(18L, id.getLength());
+		assertEquals(0, id.getScale());
+		statement.execute("DROP TABLE \"numeric identity\"");
+		execute(statement, dialect, restored, SqlType.CREATE);
+		statement.execute("INSERT INTO \"numeric identity\" DEFAULT VALUES");
+		try (var rows = statement.executeQuery("SELECT ID FROM \"numeric identity\"")) {
+			assertTrue(rows.next());
+			assertEquals(major == 3 ? 8 : 7, rows.getLong(1));
+		}
+	}
+
+	private void temporaryForeignKeys(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		Table parent = new Table("fk parent").setTableType(Table.TableType.Temporary);
+		parent.getColumns()
+				.add(new Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNotNull(true));
+		UniqueConstraint key = new UniqueConstraint("gtt parent pk", true);
+		key.getColumns().add("ID");
+		parent.getConstraints().add(key);
+		Table child = new Table("fk child").setTableType(Table.TableType.Temporary);
+		child.getColumns().add(new Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		parent.getSpecifics().put("firebird.onCommit", "PRESERVE ROWS");
+		child.getSpecifics().put("firebird.onCommit", "PRESERVE ROWS");
+		child.getConstraints().add(new CheckConstraint("gtt positive", "ID>0"));
+		child.getConstraints().add(new CheckConstraint("gtt constant", "1=1"));
+		ForeignKeyConstraint foreign = new ForeignKeyConstraint("gtt fk", child.getColumns().get(0),
+				parent.getColumns().get(0));
+		foreign.setUpdateRule(CascadeRule.Cascade).setDeleteRule(CascadeRule.Cascade);
+		foreign.getSpecifics().put("firebird.indexName", "gtt fk idx");
+		foreign.getSpecifics().put("firebird.indexDescending", "true");
+		child.getConstraints().add(foreign);
+		for (Table model : new Table[] { parent, child }) {
+			com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(model,
+					SqlType.CREATE_TEMPORARY);
+			factory.getTableOptions().setTemporaryTableNamePrefix(t -> "tmp_");
+			factory.getTableOptions().setTemporaryTableNameSuffix(t -> "_x");
+			for (var operation : factory.createSql(model))
+				statement.execute(operation.getSqlText());
+		}
+		assertEquals("fk parent", foreign.getRelatedTable().getName());
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"tmp_fk child_x\" VALUES(1)"));
+		statement.execute("INSERT INTO \"tmp_fk parent_x\" VALUES(1)");
+		statement.execute("INSERT INTO \"tmp_fk child_x\" VALUES(1)");
+		statement.execute("INSERT INTO \"tmp_fk parent_x\" VALUES(0)");
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"tmp_fk child_x\" VALUES(0)"));
+		statement.execute("UPDATE \"tmp_fk parent_x\" SET ID=2 WHERE ID=1");
+		try (var rows = statement.executeQuery("SELECT ID FROM \"tmp_fk child_x\"")) {
+			assertTrue(rows.next());
+			assertEquals(2, rows.getInt(1));
+		}
+		statement.execute("DELETE FROM \"tmp_fk parent_x\" WHERE ID=2");
+		assertRowCount(statement, "\"tmp_fk child_x\"", 0);
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setObjectName("tmp_fk child_x");
+		Table restored = reader.getAllFull(connection).get(0);
+		assertEquals(2, restored.getConstraints().getCheckConstraints().size());
+		var fk = restored.getConstraints().getForeignKeyConstraints().get(0);
+		assertEquals("tmp_fk parent_x", fk.getRelatedTableName());
+		assertEquals("gtt fk idx", fk.getSpecifics().get("firebird.indexName"));
+		statement.execute("DROP TABLE \"tmp_fk child_x\"");
+		execute(statement, dialect, restored, SqlType.CREATE);
+		assertEquals(2, reader.getAllFull(connection).get(0).getConstraints().getCheckConstraints().size());
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"tmp_fk child_x\" VALUES(99)"));
+	}
+
+	private void temporaryIndexCreation(Connection connection, Statement statement, Dialect dialect, int major,
+			String url) throws Exception {
+		Table table = new Table("temp indexed").setRemarks("temporary 日本語 ' table");
+		table.getColumns().add(new Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("column name").setDataType(com.sqlapp.data.db.datatype.DataType.INT)
+				.setRemarks("temporary 日本語 ' column"));
+		table.getSpecifics().put("firebird.onCommit", "PRESERVE ROWS");
+		if (major >= 4)
+			table.getSpecifics().put("firebird.sqlSecurity", "INVOKER");
+		UniqueConstraint key = new UniqueConstraint("temp pk", true);
+		key.getColumns().add("ID");
+		key.getSpecifics().put("firebird.indexName", "temp pk index");
+		table.getConstraints().add(key);
+		Index primary = new Index("temp pk index");
+		primary.getColumns().add("ID");
+		table.getIndexes().add(primary);
+		Index unique = new Index("temp unique index").setUnique(true).setEnable(false)
+				.setRemarks("temporary 日本語 ' index");
+		unique.getColumns().add("column name");
+		table.getIndexes().add(unique);
+		com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.CREATE_TEMPORARY);
+		factory.getTableOptions().setTemporaryTableNamePrefix(t -> "tmp_");
+		factory.getTableOptions().setTemporaryTableNameSuffix(t -> "_suffix");
+		for (var operation : factory.createSql(table))
+			statement.execute(operation.getSqlText());
+		assertEquals("temp indexed", table.getName());
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setObjectName("tmp_temp indexed_suffix");
+		Table restored = reader.getAllFull(connection).get(0);
+		assertEquals(Table.TableType.Temporary, restored.getTableType());
+		assertEquals(table.getRemarks(), restored.getRemarks());
+		assertEquals(table.getColumns().get("column name").getRemarks(),
+				restored.getColumns().get("column name").getRemarks());
+		assertEquals(unique.getRemarks(), restored.getIndexes().get("temp unique index").getRemarks());
+		assertFalse(restored.getIndexes().get("temp unique index").isEnable());
+		if (major >= 4)
+			assertEquals("INVOKER", restored.getSpecifics().get("firebird.sqlSecurity"));
+		execute(statement, dialect, restored.getIndexes().get("temp unique index"), SqlType.REBUILD);
+		statement.execute("INSERT INTO \"tmp_temp indexed_suffix\" VALUES(1,10)");
+		assertThrows(SQLException.class,
+				() -> statement.execute("INSERT INTO \"tmp_temp indexed_suffix\" VALUES(1,20)"));
+		assertThrows(SQLException.class,
+				() -> statement.execute("INSERT INTO \"tmp_temp indexed_suffix\" VALUES(2,10)"));
+		try (Connection other = DriverManager.getConnection(url, "SYSDBA", "masterkey");
+				Statement otherStatement = other.createStatement()) {
+			otherStatement.execute("INSERT INTO \"tmp_temp indexed_suffix\" VALUES(1,10)");
+			assertRowCount(otherStatement, "\"tmp_temp indexed_suffix\"", 1);
+			assertRowCount(statement, "\"tmp_temp indexed_suffix\"", 1);
+		}
+	}
+
+	private void indexMaintenance(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		Table model = new Table("index maintenance");
+		model.getColumns().add(new Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNotNull(true));
+		model.getColumns().add(new Column("V").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		UniqueConstraint key = new UniqueConstraint("maintenance pk", true);
+		key.getColumns().add("ID");
+		key.getSpecifics().put("firebird.indexName", "pk rebuild");
+		model.getConstraints().add(key);
+		Index keyIndex = new Index("pk rebuild");
+		keyIndex.getColumns().add("ID");
+		model.getIndexes().add(keyIndex);
+		Index unique = new Index("unique rebuild").setUnique(true).setEnable(false).setRemarks("maintenance 日本語");
+		unique.getColumns().add("V");
+		model.getIndexes().add(unique);
+		execute(statement, dialect, model, SqlType.CREATE);
+		statement.execute("INSERT INTO \"index maintenance\" VALUES(1,10)");
+		statement.execute("INSERT INTO \"index maintenance\" VALUES(2,20)");
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setObjectName("index maintenance");
+		Table table = reader.getAllFull(connection).get(0);
+		Index primary = new Index("pk rebuild");
+		primary.getColumns().add("ID");
+		table.getIndexes().add(primary);
+		var registry = dialect.createSqlFactoryRegistry();
+		assertTrue(registry.createSql(primary, SqlType.CREATE).isEmpty());
+		execute(statement, dialect, primary, SqlType.REBUILD);
+		execute(statement, dialect, primary, SqlType.ALTER);
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"index maintenance\" VALUES(1,30)"));
+		assertFalse(table.getIndexes().get("unique rebuild").isEnable());
+		assertEquals(unique.getRemarks(), table.getIndexes().get("unique rebuild").getRemarks());
+		statement.execute("INSERT INTO \"index maintenance\" VALUES(3,10)");
+		String rebuild = registry.createSql(unique, SqlType.REBUILD).get(0).getSqlText();
+		assertThrows(SQLException.class, () -> statement.execute(rebuild));
+		assertFalse(reader.getAllFull(connection).get(0).getIndexes().get("unique rebuild").isEnable());
+		statement.execute("DELETE FROM \"index maintenance\" WHERE ID=3");
+		statement.execute(rebuild);
+		statement.execute(rebuild); // Already-active indexes can also be rebuilt.
+		Index restored = reader.getAllFull(connection).get(0).getIndexes().get("unique rebuild");
+		assertTrue(restored.isEnable());
+		assertTrue(restored.isUnique());
+		assertEquals(unique.getRemarks(), restored.getRemarks());
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"index maintenance\" VALUES(3,10)"));
+		assertRowCount(statement, "\"index maintenance\"", 2);
+	}
+
+	private void deleteAllRows(Connection connection, Statement statement, Dialect dialect, String url)
+			throws Exception {
+		statement.execute("CREATE TABLE \"delete target\" (ID INTEGER)");
+		statement.execute("CREATE TABLE \"tmp_delete target_suffix\" (ID INTEGER)");
+		statement.execute("CREATE TABLE FB_DELETE_AUDIT (ID INTEGER)");
+		statement.execute(
+				"CREATE TRIGGER FB_DELETE_TRIGGER FOR \"delete target\" AFTER DELETE AS BEGIN INSERT INTO FB_DELETE_AUDIT VALUES(OLD.ID); END");
+		statement.execute("INSERT INTO \"delete target\" VALUES(1)");
+		statement.execute("INSERT INTO \"tmp_delete target_suffix\" VALUES(2)");
+		com.sqlapp.data.db.sql.SqlFactory<Table> regular = dialect.createSqlFactoryRegistry()
+				.getSqlFactory(new Table("delete target"), SqlType.TRUNCATE);
+		regular.getTableOptions().setTemporaryTableNamePrefix(t -> "tmp_");
+		regular.getTableOptions().setTemporaryTableNameSuffix(t -> "_suffix");
+		String sql = regular.createSql(new Table("delete target")).get(0).getSqlText();
+		connection.setAutoCommit(false);
+		try {
+			statement.execute(sql);
+			assertRowCount(statement, "\"delete target\"", 0);
+			assertRowCount(statement, "\"tmp_delete target_suffix\"", 1);
+			assertRowCount(statement, "FB_DELETE_AUDIT", 1);
+			connection.rollback();
+			assertRowCount(statement, "\"delete target\"", 1);
+			assertRowCount(statement, "FB_DELETE_AUDIT", 0);
+			statement.execute(sql);
+			connection.commit();
+		} finally {
+			connection.rollback();
+			connection.setAutoCommit(true);
+		}
+		assertRowCount(statement, "\"delete target\"", 0);
+		Table temporary = new Table("clear temporary");
+		temporary.getColumns().add(new Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		temporary.getSpecifics().put("firebird.onCommit", "PRESERVE ROWS");
+		com.sqlapp.data.db.sql.SqlFactory<Table> create = dialect.createSqlFactoryRegistry().getSqlFactory(temporary,
+				SqlType.CREATE_TEMPORARY);
+		create.getTableOptions().setTemporaryTableNamePrefix(t -> "tmp_");
+		create.getTableOptions().setTemporaryTableNameSuffix(t -> "_suffix");
+		for (var operation : create.createSql(temporary))
+			statement.execute(operation.getSqlText());
+		com.sqlapp.data.db.sql.SqlFactory<Table> clear = dialect.createSqlFactoryRegistry().getSqlFactory(temporary,
+				SqlType.TRUNCATE_TEMPORARY);
+		clear.getTableOptions().setTemporaryTableNamePrefix(t -> "tmp_");
+		clear.getTableOptions().setTemporaryTableNameSuffix(t -> "_suffix");
+		String clearSql = clear.createSql(temporary).get(0).getSqlText();
+		statement.execute("INSERT INTO \"tmp_clear temporary_suffix\" VALUES(10)");
+		try (Connection other = DriverManager.getConnection(url, "SYSDBA", "masterkey");
+				Statement otherStatement = other.createStatement()) {
+			otherStatement.execute("INSERT INTO \"tmp_clear temporary_suffix\" VALUES(20)");
+			connection.setAutoCommit(false);
+			try {
+				statement.execute(clearSql);
+				assertRowCount(statement, "\"tmp_clear temporary_suffix\"", 0);
+				assertRowCount(otherStatement, "\"tmp_clear temporary_suffix\"", 1);
+				connection.rollback();
+				assertRowCount(statement, "\"tmp_clear temporary_suffix\"", 1);
+				statement.execute(clearSql);
+				connection.commit();
+			} finally {
+				connection.rollback();
+				connection.setAutoCommit(true);
+			}
+			assertRowCount(statement, "\"tmp_clear temporary_suffix\"", 0);
+			assertRowCount(otherStatement, "\"tmp_clear temporary_suffix\"", 1);
+		}
+	}
+
+	private void assertRowCount(Statement statement, String relation, int expected) throws SQLException {
+		try (var rows = statement.executeQuery("SELECT COUNT(*) FROM " + relation)) {
+			assertTrue(rows.next());
+			assertEquals(expected, rows.getInt(1));
 		}
 	}
 

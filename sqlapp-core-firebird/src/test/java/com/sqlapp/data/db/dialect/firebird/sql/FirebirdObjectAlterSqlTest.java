@@ -138,7 +138,7 @@ class FirebirdObjectAlterSqlTest {
 				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 		Table table = new Table("table");
 		table.getConstraints().add(new UniqueConstraint("pk", true));
-		table.getIndexes().add(new Index("pk"));
+		table.getIndexes().add(new Index("pk").setEnable(false));
 		assertThrows(IllegalArgumentException.class,
 				() -> registry.createSql(table.getIndexes().get("pk"), SqlType.ALTER));
 	}

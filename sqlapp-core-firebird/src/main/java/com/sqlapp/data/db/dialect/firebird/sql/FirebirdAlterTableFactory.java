@@ -23,6 +23,7 @@ public class FirebirdAlterTableFactory extends AbstractAlterTableFactory<Firebir
 		if (target instanceof View)
 			throw new IllegalArgumentException("Use the view ALTER factory");
 		Table original = (Table) difference.getOriginal();
+		FirebirdConstraintSql.validateTable(target);
 		var before = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
 		before.putAll(original.getSpecifics());
 		var after = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);

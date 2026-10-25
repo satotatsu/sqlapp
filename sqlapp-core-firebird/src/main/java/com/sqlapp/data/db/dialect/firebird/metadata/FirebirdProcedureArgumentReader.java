@@ -61,13 +61,18 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		boolean packages = getDialect()
+				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect30) >= 0;
 		boolean parameterAttributes = getDialect()
 				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect25) >= 0;
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
 			int major = productVersionInfo.getMajorVersion();
+			packages = major >= 3;
 			Integer minor = productVersionInfo.getMinorVersion();
 			parameterAttributes = major > 2 || major == 2 && minor != null && minor >= 1;
 		}
+		if (packages)
+			return getSqlNodeCache().getString("procedureArguments30.sql");
 		if (parameterAttributes)
 			return getSqlNodeCache().getString("procedureArguments21.sql");
 		return getSqlNodeCache().getString("procedureArguments.sql");

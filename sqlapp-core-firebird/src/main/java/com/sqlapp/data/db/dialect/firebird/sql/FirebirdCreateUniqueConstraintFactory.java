@@ -13,6 +13,13 @@ import com.sqlapp.data.schemas.UniqueConstraint;
  */
 public class FirebirdCreateUniqueConstraintFactory extends AbstractCreateUniqueConstraintFactory<FirebirdSqlBuilder> {
 	@Override
+	public void addCreateObject(UniqueConstraint constraint, FirebirdSqlBuilder builder) {
+		if (constraint.getTable() == null)
+			throw new IllegalArgumentException("Firebird primary/unique constraint requires an owning table");
+		super.addCreateObject(constraint, builder);
+	}
+
+	@Override
 	public void addObjectDetail(UniqueConstraint constraint, Table table, FirebirdSqlBuilder builder) {
 		if (!constraint.isEnable())
 			throw new IllegalArgumentException("Firebird primary/unique constraints cannot be disabled");

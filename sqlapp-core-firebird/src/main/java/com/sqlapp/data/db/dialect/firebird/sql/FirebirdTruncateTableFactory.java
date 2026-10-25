@@ -24,7 +24,8 @@ import com.sqlapp.data.db.sql.AbstractTruncateTableFactory;
 import com.sqlapp.data.schemas.Table;
 
 /**
- * TRUNCATE TABLE
+ * Clears the modeled table using transactional DELETE, including DELETE
+ * triggers.
  * 
  * @author satoh
  * 
@@ -33,10 +34,7 @@ public class FirebirdTruncateTableFactory extends AbstractTruncateTableFactory<F
 
 	@Override
 	protected void addTruncateTable(final Table obj, final FirebirdSqlBuilder builder) {
-		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
-		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
 		builder.delete().from();
-		builder.space()._add(
-				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
+		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 }

@@ -24,7 +24,7 @@ import com.sqlapp.data.db.sql.AbstractTruncateTemporaryTableFactory;
 import com.sqlapp.data.schemas.Table;
 
 /**
- * CREATE TEMPORARY TABLE
+ * Clears the decorated temporary table using transactional DELETE.
  * 
  * @author satoh
  * 
@@ -35,7 +35,7 @@ public class Firebird20TruncateTemporaryTableFactory extends AbstractTruncateTem
 	protected void addTruncateTable(final Table obj, final FirebirdSqlBuilder builder) {
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
-		builder.delete().from().table();
+		builder.delete().from();
 		builder.space()._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
 	}

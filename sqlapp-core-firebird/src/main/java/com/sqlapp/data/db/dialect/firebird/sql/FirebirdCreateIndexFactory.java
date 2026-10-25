@@ -17,10 +17,29 @@ import com.sqlapp.util.CommonUtils;
 /** Firebird indexes have a single direction for all keys. */
 public class FirebirdCreateIndexFactory extends AbstractCreateIndexFactory<FirebirdSqlBuilder> {
 	@Override
+	protected boolean createIndex(Index index) {
+		com.sqlapp.data.db.dialect.firebird.util.FirebirdPrivilege.identifier(index.getName(), "index name");
+		if (index.getTable() == null)
+			throw new IllegalArgumentException("Firebird index requires a table");
+		for (var constraint : index.getTable().getConstraints())
+			if (index.getName().equals(constraint.getName())
+					|| index.getName().equals(constraint.getSpecifics().get("firebird.indexName")))
+				return false;
+		return true;
+	}
+
+	@Override
 	public void addObjectDetail(Index obj, Table table, FirebirdSqlBuilder builder) {
 		if (table == null || obj.getColumns().isEmpty()) {
 			throw new IllegalArgumentException("Firebird index requires a table and at least one key");
 		}
+		if (obj.getIndexType() != null && obj.getIndexType() != IndexType.BTree
+				&& obj.getIndexType() != IndexType.Function)
+			throw new IllegalArgumentException("Firebird supports only BTree and computed indexes");
+		if (obj.isCompression() || obj.getCompressionType() != null || obj.getPartitioning() != null
+				|| obj.getTableSpaceName() != null || obj.getVectorDistanceType() != null)
+			throw new IllegalArgumentException(
+					"Firebird indexes do not support compression, partitioning, tablespaces or vector distance options");
 		boolean descending = obj.getColumns().get(0).getOrder() == Order.Desc;
 		for (var column : obj.getColumns()) {
 			if ((column.getOrder() == Order.Desc) != descending || column.getNullsOrder() != null) {

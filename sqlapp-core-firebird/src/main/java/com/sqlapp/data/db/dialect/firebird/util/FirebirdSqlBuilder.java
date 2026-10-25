@@ -200,6 +200,19 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 
 	@Override
 	protected FirebirdSqlBuilder autoIncrement(AbstractColumn<?> column) {
+		var type = column.getDataType();
+		boolean integral = type == com.sqlapp.data.db.datatype.DataType.SMALLINT
+				|| type == com.sqlapp.data.db.datatype.DataType.INT
+				|| type == com.sqlapp.data.db.datatype.DataType.BIGINT;
+		boolean numeric = type == com.sqlapp.data.db.datatype.DataType.NUMERIC
+				|| type == com.sqlapp.data.db.datatype.DataType.DECIMAL;
+		if ((!integral && !numeric) || (column.getScale() != null && column.getScale() != 0)
+				|| (numeric && column.getLength() != null && column.getLength() > 18) || column.getArrayDimension() > 0
+				|| "INT128".equalsIgnoreCase(column.getDataTypeName()))
+			throw new IllegalArgumentException(
+					"Firebird identity requires a scalar integer or NUMERIC/DECIMAL with precision at most 18 and scale 0");
+		if (column instanceof Column value && value.getDefaultValue() != null)
+			throw new IllegalArgumentException("Firebird identity columns cannot have an explicit DEFAULT");
 		if (getDialect().compareTo(DialectHolder.defaultDialect30) < 0)
 			throw new IllegalArgumentException("Identity columns require Firebird 3.0 or later");
 		boolean always = column.getIdentityGenerationType() == com.sqlapp.data.schemas.IdentityGenerationType.Always;

@@ -30,6 +30,12 @@ import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
  */
 public class FirebirdCreateTableFactory extends AbstractCreateTableFactory<FirebirdSqlBuilder> {
 	@Override
+	protected void addCreateIndexDefinition(com.sqlapp.data.schemas.Table table, com.sqlapp.data.schemas.Index index,
+			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		result.addAll(getSqlFactoryRegistry().createSql(index, com.sqlapp.data.db.sql.SqlType.CREATE));
+	}
+
+	@Override
 	protected void addOtherDefinitions(com.sqlapp.data.schemas.Table table,
 			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
 		if (table.getRemarks() != null)
@@ -41,6 +47,7 @@ public class FirebirdCreateTableFactory extends AbstractCreateTableFactory<Fireb
 
 	@Override
 	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(com.sqlapp.data.schemas.Table table) {
+		FirebirdConstraintSql.validateTable(table);
 		var result = super.createSql(table);
 		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary
 				&& table.getSpecifics().containsKey("firebird.sqlSecurity")) {
