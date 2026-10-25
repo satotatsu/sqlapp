@@ -14,7 +14,8 @@ class PostgresDomainReferenceTest {
 	void explicitSharedDomainReferenceGeneratesQuotedTypeAndArray() {
 		var dialect = DialectResolver.getInstance().getDialect("postgres", 18, 0);
 		Table table = new Table("t");
-		table.getColumns().add(new Column("c").setDomain(new Domain("Email Domain").setSchemaName("Other Schema")).setArrayDimension(1));
+		table.getColumns().add(new Column("c").setDomain(new Domain("Email Domain").setSchemaName("Other Schema"))
+				.setArrayDimension(1));
 		String sql = dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE).get(0).getSqlText();
 		assertTrue(sql.contains("\"Other Schema\".\"Email Domain\"[]"), sql);
 	}

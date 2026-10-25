@@ -25,22 +25,44 @@ class PostgresDomainNamedChecksTest {
 		var dialect = DialectResolver.getInstance().getDialect("postgres", 18, 0);
 		AtomicInteger count = new AtomicInteger();
 		var reader = new PostgresDomainReader(dialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node,
-					ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				count.incrementAndGet();
 				for (String name : List.of("lower", "upper")) {
-					Map<String, String> values = Map.of("domain_name", "range", "domain_schema", "public",
-							"typname", "integer", "oid", "100", "constraint_name", name,
-							"consrc", name.equals("lower") ? "VALUE > 0" : "VALUE < 100");
+					Map<String, String> values = Map.of("domain_name", "range", "domain_schema", "public", "typname",
+							"integer", "oid", "100", "constraint_name", name, "consrc",
+							name.equals("lower") ? "VALUE > 0" : "VALUE < 100");
 					try {
 						handler.handleResultSetNext(new ExResultSet(null) {
-							@Override public String getString(String column) { return values.get(column); }
-							@Override public long getLong(String column) { return 0; }
-							@Override public int getInt(String column) { return 0; }
-							@Override public boolean wasNull() { return true; }
-							@Override public boolean getBoolean(String column) { return false; }
+							@Override
+							public String getString(String column) {
+								return values.get(column);
+							}
+
+							@Override
+							public long getLong(String column) {
+								return 0;
+							}
+
+							@Override
+							public int getInt(String column) {
+								return 0;
+							}
+
+							@Override
+							public boolean wasNull() {
+								return true;
+							}
+
+							@Override
+							public boolean getBoolean(String column) {
+								return false;
+							}
 						});
-					} catch (SQLException e) { throw new RuntimeException(e); }
+					} catch (SQLException e) {
+						throw new RuntimeException(e);
+					}
 				}
 				return null;
 			}
@@ -54,6 +76,7 @@ class PostgresDomainNamedChecksTest {
 		assertTrue(sql.contains("CONSTRAINT lower CHECK (VALUE > 0)"), sql);
 		assertTrue(sql.contains("CONSTRAINT upper CHECK (VALUE < 100)"), sql);
 		restored.getChecks().get(0).setEnable(false);
-		assertThrows(IllegalArgumentException.class, () -> dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE));
 	}
 }

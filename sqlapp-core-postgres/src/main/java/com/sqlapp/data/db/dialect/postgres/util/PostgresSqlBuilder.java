@@ -134,10 +134,12 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		}
 		if (column.getDomainName() != null) {
 			if (!column.getDomain().getColumns().isEmpty()) {
-				throw new IllegalArgumentException("PostgreSQL column domain must be scalar: " + column.getDomainName());
+				throw new IllegalArgumentException(
+						"PostgreSQL column domain must be scalar: " + column.getDomainName());
 			}
 			name(column.getDomain(), true);
-			if (column.getArrayDimension() > 0) _add("[]".repeat(column.getArrayDimension()));
+			if (column.getArrayDimension() > 0)
+				_add("[]".repeat(column.getArrayDimension()));
 			return this;
 		}
 		if (column.getArrayDimension() > 0) {
