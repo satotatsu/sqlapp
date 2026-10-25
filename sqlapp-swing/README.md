@@ -24,6 +24,166 @@ modules and existing artifact formats have no GUI dependency. Both jars are
 included by `installDist`. Modern Docking has been evaluated as an option for
 future simultaneous pane layouts; the current workflow retains its tabs.
 
+## Editor file shortcuts
+
+SQL and YAML editors support **Ctrl+S** (Save), **Ctrl+Shift+S** (Save as),
+**Ctrl+O** (Open) and **Ctrl+N** (New). The same combinations with **Cmd** are
+also available. Shortcuts apply within the focused editor panel and use the
+same checks as its toolbar buttons. Saving a new nonempty document asks for a
+filename; saving an unchanged document does nothing. Busy or disabled actions
+do not run again. Open and New retain the unsaved-change confirmation, and
+saving retains validation and external-file-change checks.
+
+When an action would discard unsaved SQL or YAML, the confirmation offers
+**Save and stay**, **Discard edits** and **Cancel**, with Cancel selected by
+default. Save and stay invokes the usual save operation (or asks for a new
+filename for an unsaved document) and leaves the editor open. After a successful
+save, repeat New, Open, Reload, draft creation or application close. The pending
+action never resumes automatically, so failed or cancelled saves and newer edits
+remain available. When saving is unavailable, only Discard edits and Cancel are
+offered. YAML saves still check syntax/types and all saves retain file-conflict
+protection.
+
+Open and Save as start in the folder of the last file successfully opened or
+saved in that editor. New retains this folder for the next document. SQL and
+YAML editors keep separate locations for the current application session; no
+settings file is written. Cancelled dialogs and failed reads or writes do not
+change the remembered location. Save as keeps its suggested filename inside
+that folder. Moving a YAML job to another folder still changes the base used
+for its relative paths; review them before planning.
+
+**Reload from disk** reads the current SQL or YAML file again, using the same
+unsaved-change confirmation as Open. It is disabled for new documents and while
+an operation is running. A successful reload resets undo history and invalidates
+the YAML syntax check or SQL boundary preview; check or inspect again before
+using those results. A failed read retains the existing buffer and file identity.
+Reload does not write the file or select or execute a migration plan. After an
+external-change conflict, use Save as to preserve local edits before reloading
+if both versions are needed.
+
+The SQL and YAML status bars include **Details…**. Open it to read the complete
+current message in a scrollable, read-only text view, select text and copy it
+with the usual keyboard shortcut. Long and multiline validation or file errors
+are retained in full. The status tooltip follows the latest message, including
+after recovery from an error. Viewing details does not write files or run a job.
+
+Both source editors show the current line and column and, when text is selected,
+the selected character count. Lines and columns start at 1; tabs count as one
+column. Columns and selection lengths count Unicode code points, with line
+endings included in selected text (CRLF contributes two characters). The SQL
+position indicator is hidden while viewing statement boundaries so it is not
+mistaken for a position in the parser output. Selection and position display do
+not modify the buffer or undo history.
+
+## File dialog locations across migration screens
+
+File dialogs across Schema comparison, Schema/data planning, saved reports,
+Schema-based drafts and connection profiles now use the same in-memory location
+handling. Input browsing starts near the currently entered file or directory;
+when that input is blank it uses the last successfully read location for that
+screen. A malformed browse hint leaves the input untouched and falls back to
+the remembered/default location; actual reads and plans still validate the input.
+For paired Schema XML inputs, an empty input uses the other selected Schema's
+folder. Empty optional migration-directory fields start in the current Up SQL
+directory, so selecting related inputs does not restart from the home folder.
+
+Output dialogs suggest the existing SQL/text/JSON filenames inside the last
+successfully saved output folder. Before the first save they start beside the
+related Schema/job file, or in the Up SQL directory for Schema plans. Profile
+dialogs share their own successful load/save location. These locations are
+separate per screen and are not persisted. Cancelling or failed IO does not
+update them; existing overwrite confirmations and execution guards still apply.
+
+## Status and diagnostics across migration screens
+
+**Details…** is available in Schema comparison, Schema migration plan, Data
+migration plan, saved reports, the Schema-based job builder and connection
+profiles, as well as both source editors. It opens read-only, selectable text
+with the complete current status or error. Failure details include the exception
+and its cause chain; plan/report summaries retain the same diagnostic evidence.
+Completed, failed or paused execution results also expose their summary through
+Details. Reading or copying this text does not inspect or execute a database.
+
+Starting another operation or changing inputs clears the previous extended
+diagnostic when the status changes. Schema/job input changes and connection
+profile edits also replace stale status text. Execution evidence and audit-save
+actions retain their existing rules. Status details are an in-memory view and
+do not replace saved execution, failure or verification reports.
+
+Connection-profile Details includes the successfully loaded or saved file path;
+passwords remain excluded from the profile format. Profile controls use a
+compact layout so Load, Save and Details remain available in the data source
+and target forms.
+
+## Edit migration SQL
+
+Open **SQL editor** to create or repair a SQL file, or choose **Edit saved SQL…**
+after saving a Schema comparison draft. SQL editing uses RSyntaxTextArea and the
+same search, literal replacement, line navigation and native undo history as the
+YAML editor. Opening another file, New and closing the application ask before
+discarding unsaved SQL. Reads and writes run in the background; closing is blocked
+during these operations.
+
+SQL text is saved verbatim as strict UTF-8, including comments and CRLF/LF line
+endings, up to 1 MiB. Files use the lowercase `.sql` extension expected by migration
+planning. **Save as…** creates a new file; existing files must be opened before
+editing. **Save** checks the opened SHA-256 before writing and again immediately
+before atomic replacement. External changes leave the file and editor buffer
+intact. These optimistic checks are not a cross-process file lock.
+
+**Use saved SQL directory** is available only for a clean saved buffer. It
+rechecks the saved bytes and uses the existing migration reader to validate the
+versioned filename and directory version uniqueness, then selects the Up SQL
+directory and invalidates the previous plan. It does not connect or execute SQL.
+Syntax highlighting is not SQL validation: review vendor delimiters and the
+complete directory contents, then build a fresh plan against the intended database.
+Rollback SQL is not generated automatically.
+
+The standalone command-module API is `MigrationSqlEditorIO`: `read` returns the
+exact text and SHA-256 snapshot, `write` accepts that fingerprint (or null to
+create a new file), and `migrationDirectory` checks the saved snapshot against
+the existing version-file reader. It has no JDBC or Swing dependency.
+
+## Preview SQL statement boundaries
+
+In **SQL editor**, select **SQL splitting** product and enter an explicit **DB
+version** (`15`, `15.0` or `15.0.1`), then choose **Inspect boundaries**. Nothing
+is inferred from a JDBC URL, and no connection is opened. The **Statement
+boundaries** tab shows the resolved dialect class, SQL statement/batch and comment
+counts, and each part returned by the shared dialect splitter. Select a row to
+view its complete SQL in a read-only syntax view. **Previous part** / **Next part**
+move through the currently visible rows. **Hide comments** and **Filter parts**
+(case-insensitive literal matching across each part's full text) narrow the list;
+the displayed count distinguishes visible parts from all parser parts. Sorting
+part numbers or character counts is numeric. **Copy part** copies the selected
+parser output unchanged, including comments if selected. The parser may remove
+statement delimiters: this action does not produce an approved executable script.
+Clipboard failures are reported and retain the selected part for retry. The original buffer, saved file
+and undo history are unchanged. Editing SQL or changing the product/version
+invalidates the preview; results completed for older inputs are discarded. Search,
+line navigation and replacement switch back to the source editor; opening a file
+or choosing New also selects that editor tab.
+
+Select a preview part and choose **Find in SQL** to select its text in the SQL
+editor. This uses a case-sensitive literal match, including multiline text; it
+does not infer source positions from the splitter. Only a unique match is
+selected. Multiple matches or changed parser whitespace/delimiters produce an
+explanation and retain the existing source selection. The operation does not
+edit SQL, change the search settings, save a file or approve a migration.
+
+This is the existing parser's interpretation, not a syntax validator or an
+execution approval. SQL Server `GO` batches and repetitions use the shared
+splitter's behavior, so a part is not necessarily one SQL statement. MySQL
+`DELIMITER` changes and PostgreSQL dollar-quoted bodies (including anonymous
+`DO` blocks) use their dialect parsers. See the
+[splitter review](../docs/development/sql-splitter-review.md) for version boundaries
+and dialect-specific limits. Review stored-program
+boundaries manually; this GUI does not patch or hide shared parser limitations.
+
+The additive command-module API is `MigrationSqlInspection.inspect(text, product,
+version)`. Results retain every nonblank parser part and the resolved dialect,
+with no JDBC or Swing dependency. Input is limited to 1 MiB of valid UTF-8 text.
+
 ## Create a job from Schema XML
 
 In **Job YAML editor**, choose **From Schema…**. Select a Schema XML file and
@@ -143,6 +303,21 @@ The editor's search row performs literal forward/backward search with optional
 **Match case**. Searches wrap at either end and report when they wrapped or found
 no match. **Ctrl+F** focuses the search field, **F3** finds the next match and
 **Shift+F3** finds the previous match. Search selects text without changing it.
+**Count matches** counts non-overlapping matches in the source buffer using the
+same literal and case rules as Replace all. Counting preserves the caret,
+selection and current SQL preview tab. Search-result messages have their own
+row and are cleared when the search text, case option or source buffer changes,
+so an old count is not presented as current. Counting does not save or execute
+anything and is disabled while the editor is busy.
+
+**Wrap lines** visually wraps long source lines at the editor width. It starts
+off and is independent in the SQL and YAML editors. The choice lasts for that
+editor's current application session, including New and Open; no settings file
+is written. Wrapping does not insert newlines, change CRLF/LF, logical line and
+column numbers, selection, search results, undo history or the unsaved marker.
+It is a source-editor display option, not formatting or migration validation,
+and is disabled while the editor is busy.
+
 Search and replacement are literal; `$1`, backslashes and other replacement text
 are not interpreted as regex syntax. **Ctrl+H** focuses the replacement field.
 **Replace selected** changes only a selected match using the current case option.
@@ -165,8 +340,13 @@ saved text clears the unsaved-edits marker, but **Use saved job in data plan**
 still requires another syntax check. Undo and redo never modify the saved file.
 
 Enter a one-based **Line** number and click **Go**, or use **Ctrl+L** to focus the
-line field. Out-of-range and malformed numbers show an error instead of silently
-choosing another line. Search, line navigation and edit history are disabled during editor reads, checks
+line field. **Column** is optional: leave it blank to go to the line start, or
+enter a one-based column using the same Unicode character count as the position
+indicator (tabs count as one). Press Enter in either field or click Go. The end
+of the line is a valid position; CR/LF characters are excluded from its column
+range, and an empty line accepts column 1 only. Out-of-range and malformed
+numbers show the allowed range and preserve the selection instead of silently
+choosing another position. Search, line navigation and edit history are disabled during editor reads, checks
 and saves. Search and line navigation do not change the buffer or validation state.
 
 ## Reuse connection profiles
