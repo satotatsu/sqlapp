@@ -54,7 +54,13 @@ final class DataMigrationPlanningService {
 	}
 
 	record Result(Path configurationFile, BulkMigrationOperationalReport report, ReportReviewService.Review review,
-			ExecutionSnapshot executionSnapshot) {
+			ExecutionSnapshot executionSnapshot,
+			BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationConfiguration) {
+		Result(Path configurationFile, BulkMigrationOperationalReport report, ReportReviewService.Review review,
+				ExecutionSnapshot executionSnapshot) {
+			this(configurationFile, report, review, executionSnapshot, null);
+		}
+
 		Result(Path configurationFile, BulkMigrationOperationalReport report, ReportReviewService.Review review) {
 			this(configurationFile, report, review, null);
 		}
@@ -148,10 +154,11 @@ final class DataMigrationPlanningService {
 					+ (pauseRestriction == null ? "available at a committed chunk boundary" : pauseRestriction)
 					+ "\nGUI execution: " + (restriction == null ? "available after confirmation" : restriction);
 			return new Result(request.configurationFile(), report,
-					new ReportReviewService.Review(summary, List.of("Order", "Task", "Source table", "Target table",
-							"Strategy", "Chunk size", "Checkpoint", "Saved state", "Column mappings"), rows,
-							base.details()),
-					snapshot);
+					new ReportReviewService.Review(summary,
+							List.of("Order", "Task", "Source table", "Target table", "Strategy", "Chunk size",
+									"Checkpoint", "Saved state", "Column mappings"),
+							rows, base.details()),
+					snapshot, resolution.verificationConfiguration());
 		} catch (final Exception failure) {
 			String message = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
 			for (final char[] password : new char[][] { sourcePassword, targetPassword }) {

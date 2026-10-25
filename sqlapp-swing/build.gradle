@@ -5,6 +5,9 @@ plugins {
 
 dependencies {
     implementation project(':sqlapp-command')
+    // Desktop-only appearance and syntax editing; do not leak into command/core APIs.
+    implementation 'com.formdev:flatlaf:3.7.2'
+    implementation 'com.fifesoft:rsyntaxtextarea:4.0.1'
     // Dialects used by comparison and planning; HSQLDB also supplies an embedded JDBC driver.
     runtimeOnly project(':sqlapp-core-hsql')
     runtimeOnly project(':sqlapp-core-postgres')

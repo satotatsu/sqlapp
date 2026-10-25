@@ -20,12 +20,20 @@ public final class MigrationApplication {
 			throw new IllegalStateException("sqlapp Swing requires a graphical desktop.");
 		}
 		SwingUtilities.invokeLater(() -> {
+			DesktopAppearance.install();
 			final var frame = new JFrame("sqlapp — Migration review");
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			final var tabs = new JTabbedPane();
-			tabs.addTab("Schema comparison", new SchemaComparisonPanel());
+			final var comparison = new SchemaComparisonPanel();
+			tabs.addTab("Schema comparison", comparison);
 			final var schemaPlan = new SchemaMigrationPlanPanel();
 			tabs.addTab("Schema migration plan", schemaPlan);
+			comparison.setDirectoryReceiver(directory -> {
+				if (!schemaPlan.selectUpDirectory(directory))
+					return false;
+				tabs.setSelectedComponent(schemaPlan);
+				return true;
+			});
 			final var dataPlan = new DataMigrationPlanPanel();
 			tabs.addTab("Data migration plan", dataPlan);
 			final var jobEditor = new JobConfigurationEditorPanel(snapshot -> {
@@ -40,7 +48,8 @@ public final class MigrationApplication {
 			});
 			tabs.addTab("Job YAML editor", jobEditor);
 			dataPlan.setJobEditor(path -> {
-				if (!jobEditor.requestOpen(path)) return false;
+				if (!jobEditor.requestOpen(path))
+					return false;
 				tabs.setSelectedComponent(jobEditor);
 				return true;
 			});
@@ -50,7 +59,8 @@ public final class MigrationApplication {
 				@Override
 				public void windowClosing(final WindowEvent event) {
 					frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-					if (schemaPlan.isExecuting() || dataPlan.isExecuting() || jobEditor.isBusy()) {
+					if (comparison.isBusy() || schemaPlan.isExecuting() || dataPlan.isExecuting()
+							|| jobEditor.isBusy()) {
 						JOptionPane.showMessageDialog(frame,
 								"An operation is running. Wait for its result before closing.", "Operation running",
 								JOptionPane.INFORMATION_MESSAGE);

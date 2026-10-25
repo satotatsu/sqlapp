@@ -210,7 +210,8 @@ class JobConfigurationEditorPanelTest {
 			final var view = new JobConfigurationEditorPanel(snapshot -> {
 			});
 			view.text.setText("first\nsecond\nthird");
-			assertEquals("1\n2\n3", view.lineNumbers.getText());
+			assertEquals(3, view.text.getLineCount());
+			assertTrue(view.editorScroll.getLineNumbersEnabled());
 			view.text.setCaretPosition(8);
 			assertEquals("Line 2, column 3", view.position.getText());
 			final String original = view.text.getText();
@@ -218,13 +219,14 @@ class JobConfigurationEditorPanelTest {
 			assertEquals("Line 2, column 7", view.position.getText());
 			assertEquals(original, view.text.getText());
 			view.text.setText("one\r\ntwo\r\n");
-			assertEquals("1\n2\n3", view.lineNumbers.getText());
+			assertEquals(3, view.text.getLineCount());
+			assertTrue(view.editorScroll.getLineNumbersEnabled());
 			view.moveToDiagnostic(1, 100);
 			assertEquals(3, view.text.getCaretPosition());
 			view.moveToDiagnostic(999, 999);
 			assertEquals(view.text.getDocument().getLength(), view.text.getCaretPosition());
 			view.text.setText("");
-			assertEquals("1", view.lineNumbers.getText());
+			assertEquals(1, view.text.getLineCount());
 			assertEquals("Line 1, column 1", view.position.getText());
 		});
 	}

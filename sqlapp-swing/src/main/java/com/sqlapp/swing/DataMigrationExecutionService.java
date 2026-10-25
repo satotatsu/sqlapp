@@ -24,10 +24,18 @@ final class DataMigrationExecutionService {
 	record Outcome(BulkMigrationJobExecutionReport execution, BulkMigrationJobFailureReport failure,
 			ReportReviewService.Review review, String operationFailure,
 			com.sqlapp.jdbc.bulk.BulkMigrationJobResult result,
-			com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult verificationResult) {
+			com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult verificationResult,
+			com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReport verificationReport) {
 		Outcome(BulkMigrationJobExecutionReport execution, BulkMigrationJobFailureReport failure,
 				ReportReviewService.Review review, String operationFailure) {
-			this(execution, failure, review, operationFailure, null, null);
+			this(execution, failure, review, operationFailure, null, null, null);
+		}
+
+		Outcome(BulkMigrationJobExecutionReport execution, BulkMigrationJobFailureReport failure,
+				ReportReviewService.Review review, String operationFailure,
+				com.sqlapp.jdbc.bulk.BulkMigrationJobResult result,
+				com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult verificationResult) {
+			this(execution, failure, review, operationFailure, result, verificationResult, null);
 		}
 
 		boolean successful() {
@@ -74,6 +82,7 @@ final class DataMigrationExecutionService {
 		Path directory = null;
 		Throwable problem = null;
 		ReportReviewService.Review review = null;
+		com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationPolicy = null;
 		try {
 			final String blocked = restriction(reviewed);
 			if (blocked != null) {
@@ -87,6 +96,7 @@ final class DataMigrationExecutionService {
 					|| !Objects.equals(reviewed.report().planFingerprint(), current.report().planFingerprint())) {
 				throw new IllegalArgumentException("Plan or database identity changed. Inspect and confirm again.");
 			}
+			verificationPolicy = current.verificationConfiguration();
 			control.configurePause(current.executionSnapshot().pauseRestriction() == null);
 			command.setListener(control.jobListener());
 			command.setChunkListener(control.chunkListener());
@@ -144,6 +154,21 @@ final class DataMigrationExecutionService {
 				}
 			}
 		}
+		com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReport verificationReport = null;
+		if (command.getVerificationResult() != null) {
+			try {
+				Objects.requireNonNull(verificationPolicy, "Resolved verification settings are unavailable.");
+				verificationReport = new com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReportIO()
+						.fromResult(command.getResult().getPlanFingerprint(), verificationPolicy.isolation(),
+								verificationPolicy.maxReportedMismatches(), command.getVerificationResult(),
+								reviewed.report().provenance());
+			} catch (final Exception exception) {
+				if (problem == null)
+					problem = exception;
+				else
+					problem.addSuppressed(exception);
+			}
+		}
 		try {
 			String message = problem == null ? null
 					: problem.toString() + (problem.getSuppressed().length == 0 ? ""
@@ -185,11 +210,23 @@ final class DataMigrationExecutionService {
 											+ "\nCommitted chunks are retained. Inspect target and checkpoints before retrying."),
 					review.columns(), review.rows(), converter.toJsonString(details));
 			return new Outcome(command.getExecutionReport(), command.getExecutionFailureReport(), review, message,
-					command.getResult(), command.getVerificationResult());
+					command.getResult(), command.getVerificationResult(), verificationReport);
 		} finally {
 			Arrays.fill(sourcePassword, '\0');
 			Arrays.fill(targetPassword, '\0');
 		}
+	}
+
+	void saveVerification(final Outcome outcome, final Path destination) {
+		if (outcome == null || outcome.verificationReport() == null) {
+			throw new IllegalArgumentException("No completed verification result is available to save.");
+		}
+		if (destination == null || destination.getFileName() == null
+				|| !destination.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".json")) {
+			throw new IllegalArgumentException("Choose a .json file for the verification report.");
+		}
+		new com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReportIO().writeSnapshot(destination,
+				outcome.verificationReport());
 	}
 
 	void save(final Outcome outcome, final Path destination) {

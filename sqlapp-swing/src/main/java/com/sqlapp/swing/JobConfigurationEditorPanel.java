@@ -1,9 +1,12 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.swing;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
+
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.awt.Font;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -13,8 +16,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -29,10 +30,11 @@ import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEd
  */
 final class JobConfigurationEditorPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
-	final JTextArea text = new JTextArea();
-	final JTextArea lineNumbers = new JTextArea("1");
+	final RSyntaxTextArea text = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_YAML, true);
+	final RTextScrollPane editorScroll = CodeEditors.scroll(text);
 	final JLabel position = new JLabel("Line 1, column 1");
-	private int numberedLines = 1;
+	final EditorNavigationBar navigation = new EditorNavigationBar(text);
+	final JButton fromSchema = new JButton("From Schema…");
 	final JButton fresh = new JButton("New");
 	final JButton open = new JButton("Open…");
 	final JButton check = new JButton("Check syntax / types");
@@ -58,25 +60,14 @@ final class JobConfigurationEditorPanel extends JPanel {
 		this.useJob = useJob;
 		setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		for (final var button : new JButton[] { fresh, open, check, save, saveAs, use })
+		for (final var button : new JButton[] { fresh, open, fromSchema, check, save, saveAs, use })
 			actions.add(button);
 		final var top = new JPanel(new BorderLayout(4, 4));
 		top.add(actions, BorderLayout.NORTH);
+		top.add(navigation, BorderLayout.CENTER);
 		top.add(file, BorderLayout.SOUTH);
 		add(top, BorderLayout.NORTH);
-		text.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-		text.setTabSize(2);
-		lineNumbers.setFont(text.getFont());
-		lineNumbers.setEditable(false);
-		lineNumbers.setFocusable(false);
-		lineNumbers.setColumns(3);
-		lineNumbers.setBackground(new java.awt.Color(240, 240, 240));
-		lineNumbers.setMargin(new java.awt.Insets(text.getMargin().top, 4, text.getMargin().bottom, 4));
-		((javax.swing.text.DefaultCaret) lineNumbers.getCaret())
-				.setUpdatePolicy(javax.swing.text.DefaultCaret.NEVER_UPDATE);
-		final var scroll = new JScrollPane(text);
-		scroll.setRowHeaderView(lineNumbers);
-		add(scroll, BorderLayout.CENTER);
+		add(editorScroll, BorderLayout.CENTER);
 		final var bottom = new JPanel(new BorderLayout(8, 0));
 		bottom.add(status, BorderLayout.CENTER);
 		bottom.add(position, BorderLayout.EAST);
@@ -98,7 +89,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 		fresh.addActionListener(event -> {
 			if (canDiscardChanges()) {
 				snapshot = null;
-				text.setText("");
+				navigation.history.resetWith(() -> text.setText(""));
 				refresh();
 			}
 		});
@@ -107,6 +98,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				requestOpen(chooser.getSelectedFile().toPath());
 		});
+		fromSchema.addActionListener(event -> openDraftBuilder());
 		check.addActionListener(event -> checkSyntax());
 		save.addActionListener(event -> {
 			if (snapshot != null)
@@ -145,7 +137,6 @@ final class JobConfigurationEditorPanel extends JPanel {
 	}
 
 	private void changed() {
-		updateLineNumbers();
 		revision++;
 		validatedRevision = -1;
 		refresh();
@@ -161,6 +152,8 @@ final class JobConfigurationEditorPanel extends JPanel {
 
 	private void refresh() {
 		fresh.setEnabled(!busy);
+		fromSchema.setEnabled(!busy);
+		navigation.setBusy(busy);
 		open.setEnabled(!busy);
 		check.setEnabled(!busy && !text.getText().isBlank());
 		save.setEnabled(!busy && snapshot != null && isDirty());
@@ -171,8 +164,48 @@ final class JobConfigurationEditorPanel extends JPanel {
 		file.setToolTipText(file.getText());
 	}
 
+	private void openDraftBuilder() {
+		if (busy || !canDiscardChanges())
+			return;
+		final long requested = revision;
+		final var dialog = new javax.swing.JDialog(javax.swing.SwingUtilities.getWindowAncestor(this),
+				"Create job from Schema XML", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+		final var draft = new JobDraftPanel(yaml -> {
+			if (requested != revision || busy) {
+				status.setText("Editor changed while creating the draft. Open the builder again.");
+				return;
+			}
+			acceptDraft(yaml);
+			dialog.dispose();
+		});
+		dialog.setContentPane(draft);
+		dialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent event) {
+				if (!draft.isBusy())
+					dialog.dispose();
+			}
+		});
+		dialog.setSize(1000, 620);
+		dialog.setLocationRelativeTo(this);
+		dialog.setVisible(true);
+	}
+
+	void acceptDraft(final String yaml) {
+		if (busy)
+			return;
+		snapshot = null;
+		navigation.history.resetWith(() -> text.setText(yaml));
+		text.setCaretPosition(0);
+		validatedRevision = -1;
+		refresh();
+		status.setText("Unsaved Schema-based draft. Review targets and policies, save, then inspect the live plan.");
+	}
+
 	boolean requestOpen(final Path path) {
-		if (busy || !canDiscardChanges()) return false;
+		if (busy || !canDiscardChanges())
+			return false;
 		loadFrom(path);
 		return true;
 	}
@@ -197,7 +230,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 						return;
 					}
 					snapshot = loaded;
-					text.setText(loaded.text());
+					navigation.history.resetWith(() -> text.setText(loaded.text()));
 					text.setCaretPosition(0);
 					status.setText("Opened. Check syntax/types before selecting this job for live inspection.");
 				} catch (final InterruptedException exception) {
@@ -286,21 +319,6 @@ final class JobConfigurationEditorPanel extends JPanel {
 		}.execute();
 	}
 
-	private void updateLineNumbers() {
-		final int count = text.getLineCount();
-		if (count == numberedLines)
-			return;
-		numberedLines = count;
-		final var numbers = new StringBuilder();
-		for (int line = 1; line <= count; line++) {
-			if (line > 1)
-				numbers.append('\n');
-			numbers.append(line);
-		}
-		lineNumbers.setColumns(Math.max(3, Integer.toString(count).length() + 1));
-		lineNumbers.setText(numbers.toString());
-	}
-
 	private void updatePosition() {
 		try {
 			final int offset = text.getCaretPosition();
@@ -320,7 +338,9 @@ final class JobConfigurationEditorPanel extends JPanel {
 			int end = Math.min(text.getLineEndOffset(index), text.getDocument().getLength());
 			while (end > start && "\r\n".contains(text.getText(end - 1, 1)))
 				end--;
-			text.setCaretPosition(start + Math.min(Math.max(column - 1, 0), end - start));
+			final int offset = start + Math.min(Math.max(column - 1, 0), end - start);
+			CodeEditors.reveal(text, offset);
+			text.setCaretPosition(offset);
 			text.requestFocusInWindow();
 		} catch (final javax.swing.text.BadLocationException exception) {
 			throw new IllegalStateException("Diagnostic cannot be positioned in the editor.", exception);

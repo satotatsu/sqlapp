@@ -83,6 +83,32 @@ class SchemaMigrationPlanPanelTest {
 	}
 
 	@Test
+	void selectingSavedSqlDirectoryClearsPreviouslyReviewedPlanEvenForSameDirectory() throws Exception {
+		final var ready = new CountDownLatch(1);
+		final var view = new AtomicReference<SchemaMigrationPlanPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new SchemaMigrationPlanPanel((request, url, user, password, driver) -> result(),
+					(result, destination) -> {
+					});
+			view.set(panel);
+			configure(panel);
+			onEnabled(panel.build, ready);
+			panel.build.doClick();
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = view.get();
+			assertTrue(panel.save.isEnabled());
+			assertFalse(panel.view.summary.getText().isEmpty());
+			assertTrue(panel.selectUpDirectory(Path.of(panel.upDirectory.getText())));
+			assertFalse(panel.save.isEnabled());
+			assertFalse(panel.apply.isEnabled());
+			assertTrue(panel.view.summary.getText().isEmpty());
+			assertEquals("reviewer", panel.username.getText());
+		});
+	}
+
+	@Test
 	void invalidVersionStopsBeforeCallingPlanner() throws Exception {
 		final var finished = new CountDownLatch(1);
 		final var calls = new AtomicInteger();

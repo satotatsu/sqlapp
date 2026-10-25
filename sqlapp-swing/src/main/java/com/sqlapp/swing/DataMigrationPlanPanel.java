@@ -41,6 +41,9 @@ final class DataMigrationPlanPanel extends JPanel {
 	final JButton build = new JButton("Connect and inspect plan");
 	final JButton apply = new JButton("Execute reviewed job…");
 	final JButton saveExecution = new JButton("Save last audit…");
+	final JButton showExecution = new JButton("Last execution");
+	final JButton showVerification = new JButton("Last verification");
+	final JButton saveVerification = new JButton("Save verification…");
 	final JButton pause = new JButton("Pause after chunk");
 	final javax.swing.JProgressBar activity = new javax.swing.JProgressBar();
 	final JLabel progress = new JLabel("No data execution running.");
@@ -127,7 +130,28 @@ final class DataMigrationPlanPanel extends JPanel {
 		actions.add(build);
 		actions.add(save);
 		actions.add(apply);
-		actions.add(saveExecution);
+		final var results = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		results.add(showExecution);
+		results.add(saveExecution);
+		results.add(showVerification);
+		results.add(saveVerification);
+		showExecution.setEnabled(false);
+		showVerification.setEnabled(false);
+		saveVerification.setEnabled(false);
+		showExecution.addActionListener(event -> view.showReview(execution.review()));
+		showVerification.addActionListener(
+				event -> view.showReview(new ReportReviewService().verification(execution.verificationReport())));
+		saveVerification.addActionListener(event -> {
+			final var chooser = new JFileChooser();
+			chooser.setFileFilter(new FileNameExtensionFilter("Verification report JSON", "json"));
+			chooser.setSelectedFile(new java.io.File("data-verification.json"));
+			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+				final var destination = chooser.getSelectedFile().toPath();
+				if (!Files.exists(destination) || JOptionPane.showConfirmDialog(this, "Replace " + destination + "?",
+						"Replace verification report", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION)
+					saveVerificationTo(destination);
+			}
+		});
 		final var input = new JPanel(new BorderLayout());
 		input.add(new JScrollPane(settings), BorderLayout.CENTER);
 		final var executionRow = new JPanel(new BorderLayout(8, 0));
@@ -137,6 +161,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		executionRow.add(pause, BorderLayout.EAST);
 		final var controls = new JPanel(new BorderLayout(4, 4));
 		controls.add(actions, BorderLayout.NORTH);
+		controls.add(results, BorderLayout.CENTER);
 		controls.add(executionRow, BorderLayout.SOUTH);
 		input.add(controls, BorderLayout.SOUTH);
 		pause.setEnabled(false);
@@ -146,7 +171,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		});
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, input, view);
 		split.setResizeWeight(0.25);
-		split.setDividerLocation(290);
+		split.setDividerLocation(325);
 		add(split, BorderLayout.CENTER);
 		add(status, BorderLayout.SOUTH);
 		advancedToggle.addActionListener(event -> {
@@ -154,7 +179,7 @@ final class DataMigrationPlanPanel extends JPanel {
 			source.showDriver(advancedToggle.isSelected());
 			target.showDriver(advancedToggle.isSelected());
 			settings.revalidate();
-			split.setDividerLocation(advancedToggle.isSelected() ? 360 : 290);
+			split.setDividerLocation(advancedToggle.isSelected() ? 395 : 325);
 		});
 		final DocumentListener changed = new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
@@ -209,11 +234,13 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	private void refreshEditAction() {
-		editJob.setEnabled(jobEditor != null && configurationFile.isEnabled() && !configurationFile.getText().isBlank());
+		editJob.setEnabled(
+				jobEditor != null && configurationFile.isEnabled() && !configurationFile.getText().isBlank());
 	}
 
 	void editSelectedJob() {
-		if (jobEditor == null || !editJob.isEnabled() || !configurationFile.isEnabled()) return;
+		if (jobEditor == null || !editJob.isEnabled() || !configurationFile.isEnabled())
+			return;
 		final Path path;
 		try {
 			path = Path.of(configurationFile.getText().trim()).toAbsolutePath().normalize();
@@ -247,6 +274,9 @@ final class DataMigrationPlanPanel extends JPanel {
 		save.setEnabled(!busy && result != null);
 		apply.setEnabled(!busy && result != null && DataMigrationExecutionService.restriction(result) == null);
 		saveExecution.setEnabled(!busy && execution != null && execution.hasAudit());
+		showExecution.setEnabled(!busy && execution != null);
+		showVerification.setEnabled(!busy && execution != null && execution.verificationReport() != null);
+		saveVerification.setEnabled(showVerification.isEnabled());
 	}
 
 	private static void enable(final Container parent, final boolean enabled) {
@@ -365,6 +395,7 @@ final class DataMigrationPlanPanel extends JPanel {
 			final char[] sourceCopy = sourcePassword.clone();
 			final char[] targetCopy = targetPassword.clone();
 			result = null;
+			execution = null;
 			executing = true;
 			control = new DataMigrationExecutionControl();
 			final var executionControl = control;
@@ -447,6 +478,33 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved execution audit: " + destination);
+				} catch (final InterruptedException exception) {
+					Thread.currentThread().interrupt();
+					failure(exception);
+				} catch (final ExecutionException exception) {
+					failure(exception.getCause());
+				} finally {
+					busy(false);
+				}
+			}
+		}.execute();
+	}
+
+	void saveVerificationTo(final Path destination) {
+		if (execution == null || !saveVerification.isEnabled())
+			return;
+		final var snapshot = execution;
+		busy(true);
+		new SwingWorker<Void, Void>() {
+			protected Void doInBackground() {
+				new DataMigrationExecutionService().saveVerification(snapshot, destination);
+				return null;
+			}
+
+			protected void done() {
+				try {
+					get();
+					status.setText("Saved verification report: " + destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);

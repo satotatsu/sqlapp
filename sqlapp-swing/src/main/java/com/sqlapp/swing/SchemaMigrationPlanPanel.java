@@ -210,6 +210,17 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		return panel;
 	}
 
+	boolean selectUpDirectory(final Path directory) {
+		if (executing || !upDirectory.isEnabled())
+			return false;
+		upDirectory.setText(
+				java.util.Objects.requireNonNull(directory, "directory").toAbsolutePath().normalize().toString());
+		clear();
+		status.setText(
+				"Selected saved SQL directory. Review all SQL files and existing options, then connect and build a new plan.");
+		return true;
+	}
+
 	private void clear() {
 		revision++;
 		result = null;

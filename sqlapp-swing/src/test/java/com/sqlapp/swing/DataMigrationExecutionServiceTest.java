@@ -102,6 +102,47 @@ class DataMigrationExecutionServiceTest {
 		assertTrue(result.review().details().contains("actualRows"));
 		assertTrue(result.review().summary().contains("Operation failed"));
 		assertEquals(2, count(targetUrl, "SELECT COUNT(*) FROM CUSTOMERS"));
+		assertNotNull(result.verificationReport());
+		assertFalse(result.verificationReport().match());
+		final var exported = directory.resolve("mismatch-export.json");
+		executor.saveVerification(result, exported);
+		assertEquals(result.verificationReport(),
+				new com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReportIO().read(exported));
+		final var review = new ReportReviewService().verification(result.verificationReport());
+		assertEquals("MISMATCH", review.rows().getFirst().get(1));
+		assertEquals("1", review.rows().getFirst().get(2));
+		assertEquals("2", review.rows().getFirst().get(3));
+	}
+
+	@Test
+	void exportsVerificationWithoutConfiguredOutputAndRetainsResolvedPolicy() throws Exception {
+		final var verification = new BulkMigrationJobConfiguration.Verification();
+		verification.setMaxReportedMismatches(1);
+		configuration.setVerification(verification);
+		writeJob();
+		final var result = run(plan());
+		assertTrue(result.successful(), result.review().summary());
+		assertNotNull(result.verificationReport());
+		assertEquals(verification.getIsolation().name(), result.verificationReport().isolation());
+		assertTrue(result.verificationReport().match());
+		// Later edits must not change the completed verification snapshot.
+		Files.writeString(job, "changed after execution");
+		final Path exported = directory.resolve("gui-verification.json");
+		executor.saveVerification(result, exported);
+		final var reader = new com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReportIO();
+		assertEquals(result.verificationReport(), reader.read(exported));
+		assertEquals(result.execution().provenance(), result.verificationReport().provenance());
+		assertThrows(IllegalArgumentException.class,
+				() -> executor.saveVerification(result, directory.resolve("report.txt")));
+	}
+
+	@Test
+	void verificationExportIsUnavailableWhenVerificationWasNotRun() {
+		final var result = run(plan());
+		assertTrue(result.successful(), result.review().summary());
+		assertNull(result.verificationReport());
+		assertThrows(IllegalArgumentException.class,
+				() -> executor.saveVerification(result, directory.resolve("verification.json")));
 	}
 
 	@Test

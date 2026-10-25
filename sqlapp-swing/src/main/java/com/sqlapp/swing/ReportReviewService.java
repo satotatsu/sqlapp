@@ -39,12 +39,33 @@ final class ReportReviewService {
 		}
 	}
 
-	record Review(String summary, List<String> columns, List<List<String>> rows, String details) {
+	record DetailTable(String title, String summary, List<String> columns, List<List<String>> rows,
+			List<Integer> numericColumns) {
+		DetailTable(String title, String summary, List<String> columns, List<List<String>> rows) {
+			this(title, summary, columns, rows, List.of());
+		}
+
+		DetailTable {
+			numericColumns = List.copyOf(numericColumns);
+			Objects.requireNonNull(title, "title");
+			Objects.requireNonNull(summary, "summary");
+			columns = List.copyOf(columns);
+			rows = rows.stream().map(List::copyOf).toList();
+		}
+	}
+
+	record Review(String summary, List<String> columns, List<List<String>> rows, String details,
+			List<DetailTable> tables) {
+		Review(String summary, List<String> columns, List<List<String>> rows, String details) {
+			this(summary, columns, rows, details, List.of());
+		}
+
 		Review {
 			Objects.requireNonNull(summary, "summary");
 			columns = List.copyOf(columns);
 			rows = rows.stream().map(List::copyOf).toList();
 			Objects.requireNonNull(details, "details");
+			tables = List.copyOf(tables);
 		}
 	}
 
@@ -168,15 +189,46 @@ final class ReportReviewService {
 	}
 
 	private Review verification(final Path file) {
-		final var report = new BulkMigrationVerificationReportIO().read(file);
-		final var rows = report.tasks().stream().map(task -> row(task.taskId(), task.match() ? "MATCH" : "MISMATCH",
-				task.expectedRows(), task.actualRows(), task.mismatchedChunks())).toList();
-		return review(
-				"Saved verification: " + (report.match() ? "MATCH" : "MISMATCH") + "; mismatched tasks: "
+		return verification(new BulkMigrationVerificationReportIO().read(file));
+	}
+
+	Review verification(final com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReport report) {
+		final var rows = report
+				.tasks().stream().map(task -> row(task.taskId(), task.match() ? "MATCH" : "MISMATCH",
+						task.expectedRows(), task.actualRows(), task.mismatchedChunks(), task.mismatches().size()))
+				.toList();
+		final var chunks = new ArrayList<List<String>>();
+		long total = 0;
+		for (final var task : report.tasks()) {
+			total = Math.addExact(total, task.mismatchedChunks());
+			for (final var chunk : task.mismatches()) {
+				chunks.add(row(task.taskId(), chunk.index(), chunk.expectedRows(), chunk.actualRows(),
+						chunk.expectedHash(), chunk.actualHash(), chunk.expectedFirstKey(), chunk.expectedLastKey(),
+						chunk.actualFirstKey(), chunk.actualLastKey()));
+			}
+		}
+		final long omitted = total - chunks.size();
+		final String evidence = "Recorded mismatch details: " + chunks.size() + " of " + total
+				+ (omitted > 0 ? "; omitted: " + omitted + " (report detail limit)." : "; none omitted.");
+		final String keysets = report.tasks().stream()
+				.anyMatch(task -> !Objects.equals(task.expectedKeysetFingerprint(), task.actualKeysetFingerprint()))
+						? "\nKeyset fingerprints differ. See Parsed report JSON for the expected and actual fingerprints."
+						: "";
+		final var base = review(
+				"Verification: " + (report.match() ? "MATCH" : "MISMATCH") + "; mismatched tasks: "
 						+ report.mismatchedTasks() + "\nExpected rows: " + report.expectedRows() + "; actual rows: "
-						+ report.actualRows() + "; isolation: " + report.isolation() + "\nGenerated: "
-						+ report.generatedAt() + "\nPlan fingerprint: " + report.planFingerprint(),
-				List.of("Task", "Verification", "Expected rows", "Actual rows", "Mismatched chunks"), rows, report);
+						+ report.actualRows() + "; isolation: " + report.isolation() + "\n" + evidence + keysets
+						+ "\nGenerated: " + report.generatedAt() + "\nPlan fingerprint: " + report.planFingerprint(),
+				List.of("Task", "Verification", "Expected rows", "Actual rows", "Mismatched chunks",
+						"Recorded details"),
+				rows, report);
+		final var table = new DetailTable("Mismatch chunks",
+				evidence + "\nChunk indexes are zero-based. Missing hashes or keys are shown as 'not recorded'."
+						+ keysets,
+				List.of("Task", "Chunk index", "Expected rows", "Actual rows", "Expected hash", "Actual hash",
+						"Expected first key", "Expected last key", "Actual first key", "Actual last key"),
+				chunks, List.of(1, 2, 3));
+		return new Review(base.summary(), base.columns(), base.rows(), base.details(), List.of(table));
 	}
 
 	private Review review(final String summary, final List<String> columns, final List<List<String>> rows,

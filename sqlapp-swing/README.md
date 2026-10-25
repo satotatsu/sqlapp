@@ -6,6 +6,66 @@ Run on a Java 21 graphical desktop from the repository root:
 .\gradlew.bat :sqlapp-swing:run
 ```
 
+## Appearance and code views
+
+The desktop installs [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (Light)
+before creating Swing components. SQL comparison previews, the YAML job editor,
+and parsed JSON reports use
+[RSyntaxTextArea](https://github.com/bobbylight/RSyntaxTextArea) 4.0.1 for syntax
+highlighting, line numbers, bracket matching and folding. SQL and JSON previews
+remain read-only; syntax highlighting does not validate or execute SQL. YAML
+validation continues to use the shared command validator. Search, go-to-line and
+error navigation reveal folded text when needed.
+
+The editor toolbar and native right-click Undo/Redo share RSyntaxTextArea's one
+undo history; grouped replacement and the existing save/dirty-buffer protections
+remain in effect. The dependencies are confined to `sqlapp-swing`; command/core
+modules and existing artifact formats have no GUI dependency. Both jars are
+included by `installDist`. Modern Docking has been evaluated as an option for
+future simultaneous pane layouts; the current workflow retains its tabs.
+
+## Create a job from Schema XML
+
+In **Job YAML editor**, choose **From Schema…**. Select a Schema XML file and
+click **Read Schema**. The dialog lists the canonical table identities, primary
+keys and availability reasons, and displays the SHA-256 of the exact XML bytes.
+Choose individual tables or **Select eligible**. No tables are selected silently.
+Set an optional job ID and chunk row count, then choose **Create draft in editor**.
+The builder re-reads the XML and rejects changes made after inspection. Closing
+the dialog leaves the original editor buffer intact; replacing unsaved edits
+uses the editor's existing confirmation. File operations run in the background.
+
+Drafts use `INSERT`, `requireEmptyTarget: true`, `resume: false`, transactional
+chunks and the same target table identities/column names as the source. Ordered
+row/hash verification is enabled by default and can be unchecked. No source or
+target data fingerprints are invented. The XML path is absolute, and its exact
+`schemaFingerprint` is included, so saving the draft in another folder does not
+change that reference. Task IDs are generated deterministically from table
+identity; dependency order comes from the shared job planner. Schema XML is not
+modified, and creating a draft never connects to a database or writes a job file.
+
+The common path supports tables with a complete NOT NULL primary key. Missing
+keys, ambiguous identities and identifiers containing dots are shown with
+reasons and cannot be selected. Catalog, SchemaCollection, Schema, TableCollection
+and Table XML roots use the same table extraction and name resolution as the
+existing job resolver. XML is limited to 16 MiB; malformed XML, DTDs and row data
+are rejected. For explicit unique keysets, table/column mappings, upserts,
+resumable jobs, leases, report paths and other advanced requirements, edit the
+resulting YAML or author a job using the existing configuration API.
+
+Review the unsaved draft, **Save as…** to a new YAML file, then **Use saved job in
+data plan** and inspect the live plan. Existing execution confirmation and safety
+checks apply. Draft creation is not approval, target DDL generation, automatic
+parent-table closure, or a promise of source consistency. Selected foreign-key
+cycles and other planning errors are reported by the existing planner. A completed
+non-resumable draft cannot simply be rerun against a populated target; re-inspect
+and choose the appropriate migration policy explicitly.
+
+The additive `BulkMigrationJobDraftBuilder` API in `sqlapp-command` exposes
+`inspect(path)` and `draft(snapshot, selectedTables, jobId, chunkSize, verify)`.
+It composes the canonical Schema model, shared name resolution and job planner;
+existing resolver behavior and YAML formats are unchanged.
+
 ## Edit data job YAML
 
 Open **Job YAML editor** to create or edit a job without connecting to a database.
@@ -18,10 +78,11 @@ connection or migration is started, and connection fields are retained. Save
 and use **Use saved job in data plan** to return with the saved fingerprint,
 then inspect a new plan.
 **Open…** loads existing UTF-8 text, including malformed YAML so it can be repaired.
-**New** starts an empty buffer; use the existing
+**New** starts an empty buffer, while **From Schema…** creates the safe common
+INSERT draft described above. For advanced jobs, use the existing
 [bulk migration configuration examples](../docs/gradle-plugin/bulk-migration.md)
-to express your tables and policies. No task IDs, data fingerprints or destructive
-policies are guessed by the editor.
+to express your tables and policies. The raw editor does not invent data
+fingerprints or execution policies.
 
 **Check syntax / types** parses the text into the existing
 `BulkMigrationJobConfiguration` model. It rejects unknown fields, duplicate keys,
@@ -75,6 +136,38 @@ are unchanged; no dependency was added. Parser failures expose the additive
 `ValidationException` subtype of `IllegalArgumentException`, with `getLine()` and
 `getColumn()` returning one-based parser coordinates or `-1` when unavailable.
 Messages omit the configuration text and parser exception cause.
+
+## Search and navigate YAML
+
+The editor's search row performs literal forward/backward search with optional
+**Match case**. Searches wrap at either end and report when they wrapped or found
+no match. **Ctrl+F** focuses the search field, **F3** finds the next match and
+**Shift+F3** finds the previous match. Search selects text without changing it.
+Search and replacement are literal; `$1`, backslashes and other replacement text
+are not interpreted as regex syntax. **Ctrl+H** focuses the replacement field.
+**Replace selected** changes only a selected match using the current case option.
+If no matching selection exists, it selects a match first and requires another
+click to change it. **Replace all** scans the original buffer for non-overlapping
+matches, so replacement text containing the search term is not processed again.
+Empty replacement text deletes matches. Empty searches do nothing. Replacement
+results over the editor's 1 MiB UTF-8 limit are rejected without changing text.
+Replacements affect the edit buffer only; they do not save or execute anything.
+
+**Undo** / **Redo**, or **Ctrl+Z** / **Ctrl+Y** (**Ctrl+Shift+Z** also redoes while
+editing YAML), keep up to 200 in-memory edits. A single replacement or an entire
+Replace all operation is one undo step. Saving retains history; New, a successful
+Open and accepting a Schema-generated draft start independent history. Failed or
+stale loads do not erase it. New edits after undo discard the redo branch. History
+is not persisted on disk and is disabled while editor operations are running.
+
+Replacements, undo and redo invalidate syntax-check status. Returning to the exact
+saved text clears the unsaved-edits marker, but **Use saved job in data plan**
+still requires another syntax check. Undo and redo never modify the saved file.
+
+Enter a one-based **Line** number and click **Go**, or use **Ctrl+L** to focus the
+line field. Out-of-range and malformed numbers show an error instead of silently
+choosing another line. Search, line navigation and edit history are disabled during editor reads, checks
+and saves. Search and line navigation do not change the buffer or validation state.
 
 ## Reuse connection profiles
 
@@ -133,7 +226,32 @@ Comparison runs in the background without opening database connections.
 **Save review** writes the displayed text in UTF-8. This is a review artifact,
 not an executable migration script: statement delimiters, destructive changes,
 transaction behavior and rollback must be reviewed before creating migration
-SQL files. Changing either input clears the previous review.
+SQL files.
+
+The **SQL draft** tab renders the shared factory's SQL using the target
+dialect's delimiter policy, including delimiter changes and resets when supplied. **Save SQL draft…** writes that exact UTF-8
+snapshot to a `.sql` file, including SHA-256 fingerprints of the input XML bytes.
+Later file edits do not regenerate the displayed draft during saving. Both
+export actions protect the input XML files, including existing hard-link aliases.
+SQL export is disabled when there are no SQL statements. This is a draft requiring
+review of vendor delimiters, destructive changes, transactions and rollback;
+it is not automatically registered or executed as a migration. Changing either
+input clears both previews and disables their export actions. A failed save keeps
+the comparison result available for retry.
+
+After saving, **Use saved SQL directory** selects the file's parent as **Up SQL
+directory** on the Schema migration plan screen. The default save name is a
+17-digit timestamp followed by `_schema_migration_draft.sql`; choose a version and
+description suitable for your migration history. The shared migration reader must
+recognize the saved name as `<numeric version>_<description>.sql` and must find no
+duplicate versions in that directory. The saved bytes must still match the draft.
+Changing the comparison inputs disables this action until another draft is saved.
+A busy plan screen refuses the handoff and leaves the saved draft available for retry.
+This action clears the previous plan and keeps the existing connection, target
+version, rollback directories and policy settings. Review those settings and all
+SQL files in the selected directory before connecting to build a new plan; the
+handoff performs no database connection or SQL execution. It does not infer a
+next database version or generate rollback SQL.
 
 ## Build a Schema migration plan
 
@@ -342,8 +460,27 @@ window is blocked while execution is active. See the safe-pause control below.
 timestamp and fingerprint, and remains available after editing connection inputs.
 Save it before exiting. These audits describe the copy phase: a successful copy
 can be followed by a verification or report-publication failure. The GUI displays
-that operation failure and verification status separately. For a durable
-verification artifact, configure YAML `verification.targetFile`, then open it in
+that operation failure and verification status separately. Use **Last execution** and **Last verification** to switch between the copy audit
+and per-task verification counts, mismatch counts and JSON details.
+The **Mismatch chunks** tab lists each recorded task/chunk, expected and actual
+row counts, hashes and first/last keys. Chunk indexes are zero-based. Scroll
+horizontally to see all fields. **Find in recorded details** (Ctrl+F) filters all
+columns by case-insensitive literal text, including task names, hashes and keys.
+Its row count refers to recorded details, not omitted mismatches. **Clear** restores
+all recorded rows. Chunk indexes and row counts sort numerically. Select a row to
+read its complete values in the lower detail pane; select text there and copy it
+with Ctrl+C. Changing the filter clears the selection to avoid stale row details. The displayed total mismatch count includes
+omitted details: the report's per-task `maxReportedMismatches` limit can make this
+larger than the recorded rows. Different keyset fingerprints are noted separately; the shared verifier
+remains the authority for the MATCH/MISMATCH outcome. Missing hashes or keys are labeled
+`not recorded`. The same tab is available when opening saved verification JSON
+in **Migration reports**.
+**Save verification…** exports the completed verification snapshot as standard JSON,
+including when a mismatch made the overall operation fail. It uses the resolved
+isolation and mismatch limit from the executed job; later YAML edits do not change
+the saved result. Verification must be enabled and must have completed.
+The snapshot timestamp is generated by the GUI after execution; a configured YAML
+`verification.targetFile` remains a separately generated artifact. Open either in
 **Migration reports**. A completed execution audit alone does not prove that
 verification passed. No audit is fabricated when execution fails before one is
 produced; the GUI explicitly reports its absence.
@@ -399,7 +536,7 @@ fields ignored by existing readers are not displayed.
 | Data migration status / dry run | `BulkMigration.dryRun(path)` (`BulkMigrationOperationalReportIO`) |
 | Data execution result | `executeBulkMigrationJob.executionReportFile` (`BulkMigrationJobExecutionReportIO`) |
 | Data failure / pause result | `executeBulkMigrationJob.executionFailureReportFile` (`BulkMigrationJobFailureReportIO`) |
-| Data verification result | Job YAML `verification.targetFile` (`BulkMigrationVerificationReportIO`) |
+| Data verification result | **Save verification…** or job YAML `verification.targetFile` (`BulkMigrationVerificationReportIO`) |
 
 For creation and configuration, see [versioned migrations](../docs/gradle-plugin/versioned-migrations.md),
 [bulk migration tasks](../docs/gradle-plugin/bulk-migration.md) and
@@ -431,8 +568,9 @@ same settings with `MigrationCommand` and its expected-plan checks. A shared Swi
 generated plans and saved reports. The data execution adapter delegates to `ExecuteBulkMigrationJobCommand`.
 Both planning paths share connection setup.
 HikariCP is already provided by the command
-module. JDBC and migration business logic remain in existing modules. No new
-dependencies or changes to existing public APIs or artifact formats are needed.
+module. JDBC and migration business logic remain in existing modules. The desktop
+adds only the FlatLaf and RSyntaxTextArea dependencies described above; existing
+public APIs and artifact formats are unchanged.
 
 Tests (headless panel state checks and isolated in-memory HSQLDB planning/execution):
 

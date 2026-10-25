@@ -189,13 +189,19 @@ class DataMigrationPlanPanelTest {
 		final var selected = new AtomicReference<Path>();
 		final var view = new AtomicReference<DataMigrationPlanPanel>();
 		SwingUtilities.invokeAndWait(() -> {
-			final var panel = new DataMigrationPlanPanel((request, source, sourcePassword, target, targetPassword) -> result(job),
-					(result, destination) -> {});
-			view.set(panel); configure(panel, job);
+			final var panel = new DataMigrationPlanPanel(
+					(request, source, sourcePassword, target, targetPassword) -> result(job), (result, destination) -> {
+					});
+			view.set(panel);
+			configure(panel, job);
 			assertFalse(panel.editJob.isEnabled());
-			panel.setJobEditor(path -> { selected.set(path); return false; });
+			panel.setJobEditor(path -> {
+				selected.set(path);
+				return false;
+			});
 			assertTrue(panel.editJob.isEnabled());
-			onEnabled(panel.build, planned); panel.build.doClick();
+			onEnabled(panel.build, planned);
+			panel.build.doClick();
 		});
 		assertTrue(planned.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
@@ -227,19 +233,29 @@ class DataMigrationPlanPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = new DataMigrationPlanPanel((request, source, sourcePassword, target, targetPassword) -> {
 				try {
-					if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Timeout");
+					if (!release.await(5, TimeUnit.SECONDS))
+						throw new IllegalStateException("Timeout");
 				} catch (InterruptedException exception) {
-					Thread.currentThread().interrupt(); throw new IllegalStateException(exception);
+					Thread.currentThread().interrupt();
+					throw new IllegalStateException(exception);
 				}
 				return result(job);
-			}, (result, destination) -> {});
-			view.set(panel); panel.setJobEditor(path -> { calls.incrementAndGet(); return true; });
+			}, (result, destination) -> {
+			});
+			view.set(panel);
+			panel.setJobEditor(path -> {
+				calls.incrementAndGet();
+				return true;
+			});
 			assertFalse(panel.editJob.isEnabled());
-			configure(panel, job); onEnabled(panel.build, finished); panel.build.doClick();
+			configure(panel, job);
+			onEnabled(panel.build, finished);
+			panel.build.doClick();
 			assertFalse(panel.editJob.isEnabled());
 			panel.editSelectedJob();
 		});
-		release.countDown(); assertTrue(finished.await(5, TimeUnit.SECONDS));
+		release.countDown();
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = view.get();
 			assertTrue(panel.editJob.isEnabled());

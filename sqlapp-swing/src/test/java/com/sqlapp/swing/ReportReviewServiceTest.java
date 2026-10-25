@@ -126,9 +126,55 @@ class ReportReviewServiceTest {
 		final Path file = json("verification.json", report);
 		final var review = service.read(file, ReportReviewService.Type.BULK_VERIFICATION);
 		assertTrue(review.summary().contains("MISMATCH"));
-		assertEquals(List.of("customer", "MISMATCH", "2", "1", "1"), review.rows().getFirst());
+		assertEquals(List.of("customer", "MISMATCH", "2", "1", "1", "1"), review.rows().getFirst());
 		assertTrue(review.details().contains("expectedHash"));
 		assertTrue(review.details().contains("expected"));
+	}
+
+	@Test
+	void distinguishesTruncatedChunkEvidenceFromTotalMismatchCount() throws Exception {
+		final var chunk = new BulkMigrationVerificationReport.Chunk(12, 2, 1, "expected", "actual", "[21]", "[22]",
+				"[21]", "[21]");
+		final var task = new BulkMigrationVerificationReport.Task("customer", List.of("ID"), null, null, false, 10, 8,
+				3, List.of(chunk));
+		final var report = new BulkMigrationVerificationReport(6, Instant.now(), "plan", "DEFAULT", false, 10, 8, 1,
+				List.of(task));
+		final var direct = service.verification(report);
+		final var saved = service.read(json("truncated.json", report), ReportReviewService.Type.BULK_VERIFICATION);
+		assertEquals(direct, saved);
+		assertTrue(saved.summary().contains("1 of 3; omitted: 2"));
+		assertEquals(List.of("customer", "MISMATCH", "10", "8", "3", "1"), saved.rows().getFirst());
+		final var details = saved.tables().getFirst();
+		assertEquals("Mismatch chunks", details.title());
+		assertEquals(List.of(1, 2, 3), details.numericColumns());
+		assertEquals(List.of("customer", "12", "2", "1", "expected", "actual", "[21]", "[22]", "[21]", "[21]"),
+				details.rows().getFirst());
+		assertTrue(details.summary().contains("zero-based"));
+	}
+
+	@Test
+	void showsDifferentKeysetFingerprintsWithoutOverridingSharedMatchStatus() throws Exception {
+		final var task = new BulkMigrationVerificationReport.Task("customer", List.of("ID"), "expected-keyset",
+				"actual-keyset", true, 2, 2, 0, List.of());
+		final var report = new BulkMigrationVerificationReport(6, Instant.now(), "plan", "DEFAULT", true, 2, 2, 0,
+				List.of(task));
+		final var review = service.read(json("keysets.json", report), ReportReviewService.Type.BULK_VERIFICATION);
+		assertEquals("MATCH", review.rows().getFirst().get(1));
+		assertTrue(review.summary().contains("Keyset fingerprints differ"));
+		assertTrue(review.tables().getFirst().rows().isEmpty());
+		assertTrue(review.tables().getFirst().summary().contains("none omitted"));
+	}
+
+	@Test
+	void matchingReportShowsEmptyEvidenceWithoutMissingDetailsWarning() {
+		final var task = new BulkMigrationVerificationReport.Task("customer", List.of("ID"), null, null, true, 2, 2, 0,
+				List.of());
+		final var report = new BulkMigrationVerificationReport(6, Instant.now(), "plan", "DEFAULT", true, 2, 2, 0,
+				List.of(task));
+		final var review = service.verification(report);
+		assertTrue(review.summary().contains("0 of 0; none omitted"));
+		assertTrue(review.tables().getFirst().rows().isEmpty());
+		assertFalse(review.summary().contains("Keyset fingerprints differ"));
 	}
 
 	@Test
