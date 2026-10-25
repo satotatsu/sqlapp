@@ -72,4 +72,39 @@ public class SqlTokenizerTest extends AbstractTest {
 		assertEquals("GO  \n", value);
 	}
 
+	@Test
+	public void existingWholeLineCommentHookRemainsEffective() {
+		SqlTokenizer tokenizer = new SqlTokenizer("// legacy; comment\nSELECT 1;") {
+			@Override
+			protected boolean isLineComment(String text) {
+				return text.startsWith("//") || super.isLineComment(text);
+			}
+		};
+		assertTrue(tokenizer.hasNext());
+		assertTrue(tokenizer.isComment());
+		assertEquals("// legacy; comment", tokenizer.next());
+		assertTrue(tokenizer.hasNext());
+		assertFalse(tokenizer.isComment());
+		assertEquals("SELECT 1", tokenizer.next());
+	}
+
+	@Test
+	public void lexicalNotificationsPreserveQuotedTextAndMaskComments() {
+		var statements = new java.util.ArrayList<String>();
+		var comments = new java.util.ArrayList<String>();
+		new SqlTokenizer("-- lead;\nSELECT 'a;b' /* ; */;SELECT \"x;y\";") {
+			@Override
+			protected void onStatement(String statement) {
+				if (!statement.isBlank())
+					statements.add(statement.strip());
+			}
+			@Override
+			protected void onComment(String comment) {
+				comments.add(comment);
+			}
+		};
+		assertEquals(java.util.List.of("SELECT 'a;b'", "SELECT \"x;y\""), statements);
+		assertEquals(java.util.List.of("-- lead;", "/* ; */"), comments);
+	}
+
 }

@@ -46,66 +46,142 @@ public class SqlTokenizer {
 
 	private TreeMap<Integer, TextMarker> textMarkers = new TreeMap<>();
 
-	protected void preParse(StringHolder stringHolder) {
-		stringHolder = stringHolder.clone();
-		if (!stringHolder.hasNext()) {
-		}
-		while (stringHolder.hasNext()) {
-			int pos = stringHolder.getLineEnd();
-			String text = stringHolder.getLine();
-			if (isChangeDelimiter(text, stringHolder)) {
-				continue;
-			}
-			if (isLineComment(text)) {
-				TextMarker marker = new TextMarker();
-				marker.setStart(stringHolder.getPosition());
-				marker.setEnd(pos);
-				marker.setValue(text);
-				marker.setType(Type.SINGLE_LINE_COMMENT);
-				addTextMarker(marker);
-				stringHolder.setPosition(pos + 1);
-				continue;
-			}
-			if (isStartMultiLineComment(text, stringHolder)) {
-				int commStart = stringHolder.searchFirstElement("/*");
-				stringHolder.setPosition(commStart);
-				int commEnd = stringHolder.indexOf("*/");
-				if (commEnd >= 0) {
-					commEnd = commEnd + 2;
-					TextMarker marker = new TextMarker();
-					marker.setStart(commStart);
-					marker.setEnd(commEnd);
-					marker.setValue(stringHolder.substringAt(commEnd));
-					marker.setType(Type.MULTI_LINE_COMMENT);
-					addTextMarker(marker);
-					stringHolder.setPosition(commEnd);
-				} else {
-					stringHolder.throwInvalidTextException("[*/] not found.");
+	protected void preParse(StringHolder holder) {
+		String sql = holder.substringAt();
+		StringHolder cursor = holder.clone();
+		StringBuilder statement = new StringBuilder();
+		for (int i = 0; i < sql.length();) {
+			boolean lineComment = false;
+			// Client delimiter directives must be recognized before line comments.
+			if (i == 0 || sql.charAt(i - 1) == '\n') {
+				cursor.setPosition(i);
+				int lineEnd = sql.indexOf('\n', i);
+				String line = sql.substring(i, lineEnd < 0 ? sql.length() : lineEnd);
+				if (isChangeDelimiter(line, cursor)) {
+					i = cursor.getPosition();
+					continue;
 				}
+				// Preserve the existing whole-line comment extension point.
+				lineComment = isLineComment(line);
+			}
+			if (sql.startsWith(getCurrentDelimiter(), i)) {
+				onStatement(statement.toString());
+				statement.setLength(0);
+				i += getCurrentDelimiter().length();
 				continue;
 			}
-			QuoteHolder quoteHolderMax = getQuoteHolder(stringHolder);
-			if (quoteHolderMax.position >= 0) {
-				StringHolder clone = stringHolder.clone();
-				clone.setPosition(quoteHolderMax.position);
-				clone.addPosition(quoteHolderMax.quote.length());
-				int endPos = clone.searchEndQuote("'", "''");
-				if (endPos >= 0) {
-					TextMarker marker = new TextMarker();
-					stringHolder.setPosition(quoteHolderMax.position);
-					marker.setStart(quoteHolderMax.position);
-					marker.setEnd(endPos);
-					marker.setValue(stringHolder.substringAt(endPos + 1));
-					marker.setType(Type.QUOTED_STRING);
-					addTextMarker(marker);
-					stringHolder.setPosition(endPos + 1);
-				} else {
-					stringHolder.throwInvalidTextException("['] end quote not found.");
+			int start = i;
+			Type type = Type.QUOTED_STRING;
+			if (lineComment || isLineCommentStart(sql, i)) {
+				i = sql.indexOf('\n', i);
+				if (i < 0)
+					i = sql.length();
+				type = Type.SINGLE_LINE_COMMENT;
+			} else if (sql.startsWith("/*", i)) {
+				int depth = 1;
+				i += 2;
+				while (i < sql.length() && depth > 0) {
+					if (supportsNestedBlockComments() && sql.startsWith("/*", i)) {
+						depth++;
+						i += 2;
+					} else if (sql.startsWith("*/", i)) {
+						depth--;
+						i += 2;
+					} else {
+						i++;
+					}
 				}
+				if (depth != 0)
+					holder.throwInvalidTextException("Closing block comment [*/] not found");
+				type = Type.MULTI_LINE_COMMENT;
 			} else {
-				stringHolder.nextLine();
+				int end = getQuotedTextEnd(sql, i);
+				if (end < 0) {
+					statement.append(sql.charAt(i));
+					i++;
+					continue;
+				}
+				i = end;
+			}
+			if (type.isComment()) {
+				onComment(sql.substring(start, i));
+				statement.append(' ');
+			} else {
+				statement.append(sql, start, i);
+			}
+			TextMarker marker = new TextMarker();
+			marker.setStart(start);
+			marker.setEnd(i);
+			marker.setValue(sql.substring(start, i));
+			marker.setType(type);
+			addTextMarker(marker);
+		}
+		onStatement(statement.toString());
+	}
+
+	/** Validates a lexical statement with comments replaced by spaces, before scanning the next one. */
+	protected void onStatement(String statement) {
+	}
+
+	/** Dialects may validate executable comments; ordinary comments have no effect by default. */
+	protected void onComment(String comment) {
+	}
+
+	/** Masks literals and complex quoted identifiers for offline statement checks. */
+	protected String maskStringLiterals(String statement, boolean doubleQuotedIdentifiers, boolean backtickIdentifiers) {
+		StringBuilder code = new StringBuilder(statement);
+		for (int i = 0; i < statement.length();) {
+			int end = getQuotedTextEnd(statement, i);
+			if (end < 0) {
+				i++;
+				continue;
+			}
+			char quote = statement.charAt(i);
+			boolean identifier = (doubleQuotedIdentifiers && quote == '"' || backtickIdentifiers && quote == '`')
+					&& statement.substring(i + 1, end - 1).matches("[A-Za-z_][A-Za-z_0-9]*");
+			if (!identifier) {
+				for (int j = i; j < end; j++)
+					code.setCharAt(j, ' ');
+			}
+			i = end;
+		}
+		return code.toString();
+	}
+
+	/** Dialects can add quoted forms; the result is exclusive, or -1 for ordinary SQL. */
+	protected int getQuotedTextEnd(String sql, int start) {
+		char quote = sql.charAt(start);
+		if (quote == '\'' || quote == '"')
+			return findQuotedTextEnd(sql, start, quote, false);
+		return -1;
+	}
+
+	/** Finds a doubled-quote token, with optional backslash escaping. */
+	protected int findQuotedTextEnd(String sql, int start, char quote, boolean backslashEscapes) {
+		for (int i = start + 1; i < sql.length(); i++) {
+			char c = sql.charAt(i);
+			if (backslashEscapes && c == '\\') {
+				i++;
+			} else if (c == quote) {
+				if (i + 1 < sql.length() && sql.charAt(i + 1) == quote)
+					i++;
+				else
+					return i + 1;
 			}
 		}
+		stringHolder.throwInvalidTextException("Closing quote [" + quote + "] not found");
+		return -1;
+	}
+
+	protected boolean isLineCommentStart(String sql, int position) {
+		if (!sql.startsWith("--", position))
+			return false;
+		int end = sql.indexOf('\n', position);
+		return isLineComment(sql.substring(position, end < 0 ? sql.length() : end));
+	}
+
+	protected boolean supportsNestedBlockComments() {
+		return false;
 	}
 
 	protected QuoteHolder getQuoteHolder(StringHolder stringHolder) {
@@ -189,7 +265,8 @@ public class SqlTokenizer {
 		return null;
 	}
 
-	private void addTextMarker(TextMarker marker) {
+	/** Registers a half-open quoted-text or comment range for dialect tokenizers. */
+	protected void addTextMarker(TextMarker marker) {
 		textMarkers.put(marker.getStart(), marker);
 	}
 
@@ -209,7 +286,11 @@ public class SqlTokenizer {
 				stringHolder.nextLine();
 				return this.hasNext();
 			}
-			TextMarker textMarker = this.getTextMarker(stringHolder.getPosition());
+			int contentPosition = stringHolder.getPosition();
+			while (contentPosition < stringHolder.getContextLength()
+					&& Character.isWhitespace(stringHolder.charAt(contentPosition)))
+				contentPosition++;
+			TextMarker textMarker = this.getTextMarker(contentPosition);
 			if (textMarker != null) {
 				if (textMarker.getType().isComment()) {
 					comment = true;
@@ -278,26 +359,12 @@ public class SqlTokenizer {
 
 	protected void handleSimpleStatement(int delPos, StringHolder stringHolder) {
 		String value = stringHolder.substringAt(delPos);
-		stringHolder.setPosition(delPos + this.getCurrentDelimiter().length() + 1);
+		stringHolder.setPosition(delPos + this.getCurrentDelimiter().length());
 		stringHolder.setCurrent(value);
 	}
 
 	protected boolean isLineComment(String text) {
 		if (text.trim().startsWith("--")) {
-			return true;
-		}
-		return false;
-	}
-
-	private boolean isStartMultiLineComment(String text, StringHolder stringHolder) {
-		int pos = stringHolder.searchFirstElement("/*");
-		if (pos >= 0) {
-			StringHolder clone = stringHolder.clone();
-			clone.setPosition(pos);
-			int commEnd = clone.indexOf("*/");
-			if (commEnd >= 0) {
-				return true;
-			}
 			return true;
 		}
 		return false;
@@ -362,7 +429,7 @@ public class SqlTokenizer {
 		}
 	}
 
-	static enum Type {
+	protected static enum Type {
 		QUOTED_STRING, MULTI_LINE_COMMENT() {
 			@Override
 			public boolean isComment() {
