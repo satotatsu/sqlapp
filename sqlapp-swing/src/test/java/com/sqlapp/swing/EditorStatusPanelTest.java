@@ -12,6 +12,39 @@ import org.junit.jupiter.api.Test;
 
 class EditorStatusPanelTest {
 	@Test
+	void extendedDetailsAreSelectableAndExpireWhenStatusChanges() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var label = new JLabel("Failed");
+			final var shown = new AtomicReference<String>();
+			final var panel = new EditorStatusPanel(label, shown::set);
+			final String diagnostic = "Driver failed\nCaused by: missing file\n日本語";
+			panel.setDetails(diagnostic);
+			panel.details.doClick(0);
+			assertEquals(diagnostic, shown.get());
+			assertEquals("Failed", label.getToolTipText());
+			label.setText("Reading again");
+			panel.details.doClick(0);
+			assertEquals("Reading again", shown.get());
+			assertEquals("Reading again", panel.detailsText());
+			panel.setDetails(" ");
+			assertEquals("Reading again", panel.detailsText());
+		});
+	}
+
+	@Test
+	void failureDetailsIncludeNestedCausesAndTerminateOnCauseCycles() {
+		final var root = new IllegalArgumentException("Wrong report", new java.io.IOException("Missing bytes"));
+		final String text = EditorStatusPanel.failureDetails(root);
+		assertTrue(text.contains("IllegalArgumentException: Wrong report"));
+		assertTrue(text.contains("Caused by: java.io.IOException: Missing bytes"));
+		final var first = new IllegalStateException("first");
+		final var second = new IllegalStateException("second");
+		first.initCause(second);
+		second.initCause(first);
+		assertTrue(EditorStatusPanel.failureDetails(first).endsWith("Cause cycle detected."));
+	}
+
+	@Test
 	void detailsPreserveFullMessageAndFollowTheLatestStatusWithoutStaleTooltips() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			final var status = new JLabel("Ready");

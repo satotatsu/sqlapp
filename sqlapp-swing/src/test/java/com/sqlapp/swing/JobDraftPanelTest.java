@@ -131,4 +131,31 @@ class JobDraftPanelTest {
 				done.countDown();
 		});
 	}
+
+	@Test
+	void schemaReadFailureProvidesCompleteCauseAndInputChangesClearOldDetails() throws Exception {
+		final var ref = new AtomicReference<JobDraftPanel>();
+		final var finished = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new JobDraftPanel(new BulkMigrationJobDraftBuilder() {
+				@Override
+				public SchemaSnapshot inspect(Path path) throws java.io.IOException {
+					throw new java.io.IOException("Schema read failed",
+							new IllegalArgumentException("Invalid XML header"));
+				}
+			}, ignored -> fail("No draft from a failed Schema read"));
+			ref.set(panel);
+			panel.schemaFile.setText("invalid.xml");
+			onFinished(panel, finished);
+			panel.inspectSchema();
+		});
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = ref.get();
+			assertFalse(panel.create.isEnabled());
+			assertTrue(panel.statusPanel.detailsText().contains("Invalid XML header"));
+			panel.schemaFile.setText("new.xml");
+			assertEquals(panel.status.getText(), panel.statusPanel.detailsText());
+		});
+	}
 }

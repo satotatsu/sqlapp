@@ -31,9 +31,11 @@ final class ReportReviewPanel extends JPanel {
 	final JTextArea details = view.details;
 	final JTable tasks = view.tasks;
 	final JLabel status = new JLabel("Saved artifacts only. The current database state is not checked.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	private final JButton browse = new JButton("Browse…");
 	private final Loader loader;
 	private long revision;
+	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 
 	@FunctionalInterface
 	interface Loader {
@@ -59,7 +61,7 @@ final class ReportReviewPanel extends JPanel {
 		input.add(browse, BorderLayout.EAST);
 		add(input, BorderLayout.NORTH);
 		add(view, BorderLayout.CENTER);
-		add(status, BorderLayout.SOUTH);
+		add(statusPanel, BorderLayout.SOUTH);
 		file.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
 				clear();
@@ -75,8 +77,7 @@ final class ReportReviewPanel extends JPanel {
 		});
 		type.addActionListener(event -> clear());
 		browse.addActionListener(event -> {
-			final var chooser = new JFileChooser();
-			chooser.setFileFilter(new FileNameExtensionFilter("Migration report JSON", "json"));
+			final var chooser = chooser();
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				file.setText(chooser.getSelectedFile().getAbsolutePath());
 			}
@@ -89,6 +90,10 @@ final class ReportReviewPanel extends JPanel {
 		revision++;
 		view.clear();
 		status.setText("Select a report type and JSON file. Current database state is not checked.");
+	}
+
+	JFileChooser chooser() {
+		return fileDialogs.forFile(new FileNameExtensionFilter("Migration report JSON", "json"), file.getText());
 	}
 
 	private void busy(final boolean busy) {
@@ -122,6 +127,7 @@ final class ReportReviewPanel extends JPanel {
 					}
 					final var review = get();
 					view.showReview(review);
+					fileDialogs.remember(Path.of(path));
 					status.setText("Loaded saved report. No live checks, approval or execution performed.");
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
@@ -136,8 +142,8 @@ final class ReportReviewPanel extends JPanel {
 	}
 
 	private void failure(final Throwable failure) {
-		summary.setText("Unable to load the selected report.\n" + failure
-				+ (failure.getCause() == null ? "" : "\nCause: " + failure.getCause()));
+		summary.setText("Unable to load the selected report.\n" + EditorStatusPanel.failureDetails(failure));
 		status.setText("Load failed. Check the report type, format and file.");
+		statusPanel.setDetails(status.getText() + "\n\n" + summary.getText());
 	}
 }

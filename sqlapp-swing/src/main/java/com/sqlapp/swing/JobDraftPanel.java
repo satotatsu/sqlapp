@@ -44,6 +44,7 @@ final class JobDraftPanel extends JPanel {
 	final JButton clear = new JButton("Clear selection");
 	final JLabel status = new JLabel(
 			"Choose Schema XML. INSERT into empty targets; resume disabled. No database connection.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	final DefaultTableModel model = new DefaultTableModel(
 			new String[] { "Include", "Table", "Primary key", "Availability" }, 0) {
 		@Override
@@ -68,6 +69,7 @@ final class JobDraftPanel extends JPanel {
 	private SchemaSnapshot snapshot;
 	private boolean busy;
 	private long revision;
+	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 	private final JButton browse = new JButton("Browse…");
 
 	JobDraftPanel(final Consumer<String> ready) {
@@ -114,7 +116,7 @@ final class JobDraftPanel extends JPanel {
 		actions.add(create);
 		final var bottom = new JPanel(new BorderLayout());
 		bottom.add(actions, BorderLayout.NORTH);
-		bottom.add(status, BorderLayout.SOUTH);
+		bottom.add(statusPanel, BorderLayout.SOUTH);
 		add(bottom, BorderLayout.SOUTH);
 		schemaFile.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(DocumentEvent event) {
@@ -130,27 +132,26 @@ final class JobDraftPanel extends JPanel {
 			}
 		});
 		model.addTableModelListener(event -> {
-			revision++;
+			draftOptionsChanged();
 			refresh();
 		});
 		jobId.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(DocumentEvent event) {
-				revision++;
+				draftOptionsChanged();
 			}
 
 			public void removeUpdate(DocumentEvent event) {
-				revision++;
+				draftOptionsChanged();
 			}
 
 			public void changedUpdate(DocumentEvent event) {
-				revision++;
+				draftOptionsChanged();
 			}
 		});
-		chunkSize.addChangeListener(event -> revision++);
-		verify.addItemListener(event -> revision++);
+		chunkSize.addChangeListener(event -> draftOptionsChanged());
+		verify.addItemListener(event -> draftOptionsChanged());
 		browse.addActionListener(event -> {
-			final var chooser = new JFileChooser();
-			chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Schema XML", "xml"));
+			final var chooser = chooser();
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				schemaFile.setText(chooser.getSelectedFile().getAbsolutePath());
 		});
@@ -179,7 +180,20 @@ final class JobDraftPanel extends JPanel {
 		snapshot = null;
 		fingerprint.setText("");
 		model.setRowCount(0);
+		if (!busy)
+			status.setText("Schema input changed. Read Schema again before creating a draft.");
 		refresh();
+	}
+
+	private void draftOptionsChanged() {
+		revision++;
+		if (!busy)
+			status.setText("Draft options changed. Review the selection and create the draft again.");
+	}
+
+	JFileChooser chooser() {
+		return fileDialogs.forFile(new javax.swing.filechooser.FileNameExtensionFilter("Schema XML", "xml"),
+				schemaFile.getText());
 	}
 
 	private List<String> selected() {
@@ -229,6 +243,7 @@ final class JobDraftPanel extends JPanel {
 						return;
 					}
 					snapshot = result;
+					fileDialogs.remember(Path.of(path));
 					fingerprint.setText(result.fingerprint());
 					for (final var table : result.tables())
 						model.addRow(new Object[] { false, table.table(), String.join(", ", table.primaryKey()),
@@ -294,7 +309,7 @@ final class JobDraftPanel extends JPanel {
 	}
 
 	private void failed(Throwable failure) {
-		status.setText("Operation failed: " + failure.getMessage());
-		status.setToolTipText(status.getText());
+		status.setText(EditorStatusPanel.failureMessage(failure));
+		statusPanel.setDetails(EditorStatusPanel.failureDetails(failure));
 	}
 }

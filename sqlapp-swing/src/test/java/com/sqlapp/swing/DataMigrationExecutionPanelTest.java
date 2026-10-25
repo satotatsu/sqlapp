@@ -122,6 +122,7 @@ class DataMigrationExecutionPanelTest {
 			assertFalse(view.pause.isEnabled());
 			assertFalse(view.apply.isEnabled());
 			assertEquals("Finished", view.view.summary.getText());
+			assertTrue(view.statusPanel.detailsText().contains("Finished"));
 			assertTrue(view.saveExecution.isEnabled());
 			assertFalse(view.saveVerification.isEnabled());
 			assertFalse(view.showVerification.isEnabled());

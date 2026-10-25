@@ -14,7 +14,6 @@ import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
@@ -141,9 +140,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 			return false;
 		if (!isDirty())
 			return true;
-		final Object[] options = { "Discard edits", "Cancel" };
-		return JOptionPane.showOptionDialog(this, "This job has unsaved edits.", "Unsaved job YAML",
-				JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]) == 0;
+		return EditorUnsavedChanges.confirm(this, "job YAML", snapshot == null ? saveAs : save);
 	}
 
 	private void changed() {
@@ -361,6 +358,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 
 	private void failed(final Throwable failure, final boolean currentBuffer) {
 		status.setText(EditorStatusPanel.failureMessage(failure));
+		statusPanel.setDetails(EditorStatusPanel.failureDetails(failure));
 		if (currentBuffer && failure instanceof BulkMigrationJobConfigurationEditorIO.ValidationException diagnostic) {
 			moveToDiagnostic(diagnostic.getLine(), diagnostic.getColumn());
 		}

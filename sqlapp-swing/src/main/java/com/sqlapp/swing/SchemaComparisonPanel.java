@@ -54,6 +54,9 @@ final class SchemaComparisonPanel extends JPanel {
 	}
 
 	final JLabel status = new JLabel("Select before and after Schema XML. No database connection is used.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
+	private final EditorFileChooser inputDialogs = new EditorFileChooser();
+	private final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JButton beforeBrowse = new JButton("Browse…");
 	private final JButton afterBrowse = new JButton("Browse…");
 
@@ -84,7 +87,7 @@ final class SchemaComparisonPanel extends JPanel {
 		actions.add(editSql);
 		editSql.setEnabled(false);
 		editSql.addActionListener(event -> editSavedSql());
-		footer.add(status, BorderLayout.NORTH);
+		footer.add(statusPanel, BorderLayout.NORTH);
 		footer.add(actions, BorderLayout.SOUTH);
 		add(footer, BorderLayout.SOUTH);
 		save.setEnabled(false);
@@ -117,7 +120,7 @@ final class SchemaComparisonPanel extends JPanel {
 		row.add(field, BorderLayout.CENTER);
 		row.add(browse, BorderLayout.EAST);
 		browse.addActionListener(event -> {
-			final var chooser = new JFileChooser();
+			final var chooser = inputChooser(field.getText());
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				field.setText(chooser.getSelectedFile().getAbsolutePath());
 			}
@@ -136,6 +139,20 @@ final class SchemaComparisonPanel extends JPanel {
 		save.setEnabled(false);
 		saveSql.setEnabled(false);
 		status.setText("Inputs changed. Compare to generate a new review.");
+	}
+
+	JFileChooser inputChooser(final String path) {
+		final String hint = path == null || path.isBlank()
+				? (target.getText().isBlank() ? original.getText() : target.getText())
+				: path;
+		return inputDialogs.forFile(new javax.swing.filechooser.FileNameExtensionFilter("Schema XML", "xml"), hint);
+	}
+
+	JFileChooser outputChooser(final boolean sqlDraft) {
+		return outputDialogs.forOutput(
+				new javax.swing.filechooser.FileNameExtensionFilter(sqlDraft ? "Migration SQL draft" : "Schema review",
+						sqlDraft ? "sql" : "txt"),
+				sqlDraft ? SchemaComparisonService.defaultSqlDraftName() : "schema-review.txt", target.getText());
 	}
 
 	private void busy(final boolean busy) {
@@ -172,6 +189,7 @@ final class SchemaComparisonPanel extends JPanel {
 						return;
 					final var compared = get();
 					result = compared;
+					inputDialogs.remember(compared.target());
 					preview.setText(result.review());
 					sqlPreview.setText(result.sqlDraft());
 					sqlPreview.setCaretPosition(0);
@@ -193,11 +211,7 @@ final class SchemaComparisonPanel extends JPanel {
 	private void chooseSave(final boolean sqlDraft) {
 		if (result == null)
 			return;
-		final var chooser = new JFileChooser();
-		chooser.setSelectedFile(
-				new java.io.File(sqlDraft ? SchemaComparisonService.defaultSqlDraftName() : "schema-review.txt"));
-		chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-				sqlDraft ? "Migration SQL draft" : "Schema review", sqlDraft ? "sql" : "txt"));
+		final var chooser = outputChooser(sqlDraft);
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION)
 			return;
 		final Path destination = chooser.getSelectedFile().toPath();
@@ -224,6 +238,7 @@ final class SchemaComparisonPanel extends JPanel {
 					get();
 					if (sqlDraft && revision == requestedRevision)
 						savedSql = destination.toAbsolutePath().normalize();
+					outputDialogs.remember(destination);
 					status.setText(
 							"Saved " + (sqlDraft ? "SQL draft (review before use): " : "review: ") + destination);
 				} catch (final InterruptedException exception) {
@@ -298,6 +313,6 @@ final class SchemaComparisonPanel extends JPanel {
 
 	private void failure(final Throwable failure) {
 		status.setText("Operation failed: " + failure);
-		status.setToolTipText(status.getText());
+		statusPanel.setDetails(EditorStatusPanel.failureDetails(failure));
 	}
 }

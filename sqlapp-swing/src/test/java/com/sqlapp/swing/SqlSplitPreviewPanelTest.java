@@ -116,4 +116,33 @@ class SqlSplitPreviewPanelTest {
 			assertEquals("0 / 0 parts", panel.count.getText());
 		});
 	}
+
+	@Test
+	void sourceActionUsesSelectedModelPartAndCannotReuseClearedOrFilteredParts() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var located = new AtomicReference<String>();
+			final var panel = new SqlSplitPreviewPanel(text -> {
+			});
+			panel.showResult(result());
+			assertFalse(panel.findSource.isEnabled());
+			panel.setSourceFinder(located::set);
+			assertTrue(panel.findSource.isEnabled());
+			panel.parts.getRowSorter().toggleSortOrder(0);
+			panel.hideComments.doClick();
+			panel.findSource.doClick();
+			assertEquals("SELECT 2", located.get());
+			panel.next.doClick();
+			panel.findSource.doClick();
+			assertEquals("SELECT '[a].*'\n-- body token", located.get());
+			located.set(null);
+			panel.filter.setText("missing");
+			assertFalse(panel.findSource.isEnabled());
+			panel.findSource.doClick();
+			assertNull(located.get());
+			panel.clear();
+			assertFalse(panel.findSource.isEnabled());
+			panel.findSource.doClick();
+			assertNull(located.get());
+		});
+	}
 }

@@ -50,6 +50,9 @@ final class DataMigrationPlanPanel extends JPanel {
 	final JButton save = new JButton("Save status JSON…");
 	final ReportReviewView view = new ReportReviewView();
 	final JLabel status = new JLabel("Select job YAML and connections. Inspection does not migrate rows.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
+	private final EditorFileChooser inputDialogs = new EditorFileChooser();
+	private final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JPanel settings = new JPanel(new BorderLayout(4, 4));
 	private final JToggleButton advancedToggle = new JToggleButton("Advanced options");
 	private final Planner planner;
@@ -142,9 +145,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		showVerification.addActionListener(
 				event -> view.showReview(new ReportReviewService().verification(execution.verificationReport())));
 		saveVerification.addActionListener(event -> {
-			final var chooser = new JFileChooser();
-			chooser.setFileFilter(new FileNameExtensionFilter("Verification report JSON", "json"));
-			chooser.setSelectedFile(new java.io.File("data-verification.json"));
+			final var chooser = outputChooser("data-verification.json");
 			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
 				final var destination = chooser.getSelectedFile().toPath();
 				if (!Files.exists(destination) || JOptionPane.showConfirmDialog(this, "Replace " + destination + "?",
@@ -173,7 +174,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(325);
 		add(split, BorderLayout.CENTER);
-		add(status, BorderLayout.SOUTH);
+		add(statusPanel, BorderLayout.SOUTH);
 		advancedToggle.addActionListener(event -> {
 			advanced.setVisible(advancedToggle.isSelected());
 			source.showDriver(advancedToggle.isSelected());
@@ -203,8 +204,7 @@ final class DataMigrationPlanPanel extends JPanel {
 			}
 		}
 		browse.addActionListener(event -> {
-			final var chooser = new JFileChooser();
-			chooser.setFileFilter(new FileNameExtensionFilter("Migration job YAML", "yaml", "yml", "json"));
+			final var chooser = inputChooser();
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				configurationFile.setText(chooser.getSelectedFile().getAbsolutePath());
 			}
@@ -216,8 +216,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		saveExecution.setEnabled(false);
 		apply.addActionListener(event -> confirmExecution());
 		saveExecution.addActionListener(event -> {
-			final var chooser = new JFileChooser();
-			chooser.setSelectedFile(new java.io.File("data-execution-audit.json"));
+			final var chooser = outputChooser("data-execution-audit.json");
 			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
 				final var destination = chooser.getSelectedFile().toPath();
 				if (!Files.exists(destination) || JOptionPane.showConfirmDialog(this, "Replace " + destination + "?",
@@ -264,6 +263,16 @@ final class DataMigrationPlanPanel extends JPanel {
 		view.clear();
 		save.setEnabled(false);
 		status.setText("Inputs changed. Inspect again to read current target and checkpoint state.");
+	}
+
+	JFileChooser inputChooser() {
+		return inputDialogs.forFile(new FileNameExtensionFilter("Migration job YAML / JSON", "yaml", "yml", "json"),
+				configurationFile.getText());
+	}
+
+	JFileChooser outputChooser(final String filename) {
+		return outputDialogs.forOutput(new FileNameExtensionFilter("Migration report JSON", "json"), filename,
+				configurationFile.getText());
 	}
 
 	private void busy(final boolean busy) {
@@ -323,6 +332,7 @@ final class DataMigrationPlanPanel extends JPanel {
 						return;
 					}
 					result = get();
+					inputDialogs.remember(result.configurationFile());
 					reviewedSource = sourceInput.spec();
 					reviewedTarget = targetInput.spec();
 					view.showReview(result.review());
@@ -424,6 +434,7 @@ final class DataMigrationPlanPanel extends JPanel {
 								: execution.paused()
 										? "Data execution paused. Save the audit, inspect checkpoints and confirm again to resume."
 										: "Data execution failed. Review committed chunks and checkpoints before retrying.");
+						statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
 					} catch (final InterruptedException exception) {
 						Thread.currentThread().interrupt();
 						failure(exception);
@@ -478,6 +489,7 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved execution audit: " + destination);
+					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);
@@ -505,6 +517,7 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved verification report: " + destination);
+					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);
@@ -518,8 +531,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	private void chooseSave() {
-		final var chooser = new JFileChooser();
-		chooser.setSelectedFile(new java.io.File("data-migration-status.json"));
+		final var chooser = outputChooser("data-migration-status.json");
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
@@ -549,6 +561,7 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved status report: " + destination);
+					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);
@@ -562,8 +575,9 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	private void failure(final Throwable failure) {
-		view.summary.setText("Operation failed.\n" + failure);
+		view.summary.setText("Operation failed.\n" + EditorStatusPanel.failureDetails(failure));
 		status.setText("Operation failed. Check job YAML, Schema XML, connections and drivers.");
+		statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
 	}
 
 	static final class ConnectionFields extends JPanel {

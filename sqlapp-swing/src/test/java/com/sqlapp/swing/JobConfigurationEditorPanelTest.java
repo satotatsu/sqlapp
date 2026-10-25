@@ -384,4 +384,32 @@ class JobConfigurationEditorPanelTest {
 		assertTrue(signal.await(5, TimeUnit.SECONDS));
 	}
 
+	@Test
+	void fileDialogsFollowSuccessfulIoAndKeepYamlSuggestionInsideTheCurrentFolder() throws Exception {
+		final Path opened = Files.writeString(directory.resolve("original.yml"), yaml);
+		final Path other = Files.createDirectory(directory.resolve("other"));
+		final var ref = new AtomicReference<JobConfigurationEditorPanel>();
+		SwingUtilities.invokeAndWait(() -> ref.set(new JobConfigurationEditorPanel(ignored -> {
+		})));
+		final var panel = ref.get();
+		finishReloadOperation(panel, () -> panel.loadFrom(opened));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(directory.toFile(), panel.chooser(false).getCurrentDirectory());
+			assertEquals(directory.resolve("job.yaml").toFile(), panel.chooser(true).getSelectedFile());
+		});
+		finishReloadOperation(panel, () -> panel.loadFrom(other.resolve("missing.yaml")));
+		finishReloadOperation(panel, () -> panel.saveTo(other.resolve("invalid.txt")));
+		SwingUtilities
+				.invokeAndWait(() -> assertEquals(directory.toFile(), panel.chooser(false).getCurrentDirectory()));
+		final Path saved = other.resolve("copy.yaml");
+		finishReloadOperation(panel, () -> panel.saveTo(saved));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(other.toFile(), panel.chooser(false).getCurrentDirectory());
+			panel.fresh.doClick();
+			assertEquals(other.resolve("job.yaml").toFile(), panel.chooser(true).getSelectedFile());
+		});
+		assertEquals(yaml, Files.readString(opened));
+		assertEquals(yaml, Files.readString(saved));
+	}
+
 }

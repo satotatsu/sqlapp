@@ -8,6 +8,9 @@ import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 
 class SchemaComparisonPanelTest {
+	@org.junit.jupiter.api.io.TempDir
+	java.nio.file.Path directory;
+
 	@Test
 	void changingEitherInputInvalidatesThePreviousReview() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
@@ -25,6 +28,7 @@ class SchemaComparisonPanelTest {
 
 	@Test
 	void comparesAndSavesOffEdtAndRetainsDraftAfterSaveFailure() throws Exception {
+		final var exported = java.nio.file.Files.createDirectory(directory.resolve("exports"));
 		final var ref = new java.util.concurrent.atomic.AtomicReference<SchemaComparisonPanel>();
 		final var ready = new java.util.concurrent.CountDownLatch(1);
 		final var failed = new java.util.concurrent.CountDownLatch(1);
@@ -62,14 +66,18 @@ class SchemaComparisonPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = ref.get();
 			assertTrue(panel.status.getText().contains("disk full"));
+			assertTrue(panel.statusPanel.detailsText().contains("disk full"));
 			assertEquals(snapshot.sqlDraft(), panel.sqlPreview.getText());
 			onEnabled(panel.compare, saved);
-			panel.saveTo(java.nio.file.Path.of("retry.sql"), true);
+			panel.saveTo(exported.resolve("retry.sql"), true);
 		});
 		assertTrue(saved.await(5, java.util.concurrent.TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = ref.get();
 			assertTrue(panel.status.getText().contains("Saved SQL draft"));
+			assertEquals(exported.toFile(), panel.outputChooser(true).getCurrentDirectory());
+			assertEquals(panel.status.getText(), panel.statusPanel.detailsText());
+			assertEquals(panel.status.getText(), panel.status.getToolTipText());
 			panel.target.setText("new.xml");
 			assertFalse(panel.saveSql.isEnabled());
 			assertTrue(panel.sqlPreview.getText().isEmpty());

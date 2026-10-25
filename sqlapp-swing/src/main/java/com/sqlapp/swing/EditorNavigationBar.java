@@ -19,10 +19,13 @@ final class EditorNavigationBar extends JPanel {
 	final JTextField replacement = new JTextField(18);
 	final JButton replace = new JButton("Replace selected");
 	final JButton replaceAll = new JButton("Replace all");
+	final JButton count = new JButton("Count matches");
 	final EditorEditHistory history;
 	final JTextField query = new JTextField(18);
 	final JCheckBox matchCase = new JCheckBox("Match case");
+	final JCheckBox wrapLines = new JCheckBox("Wrap lines");
 	final JTextField line = new JTextField(5);
+	final JTextField column = new JTextField(4);
 	final JButton next = new JButton("Next");
 	final JButton previous = new JButton("Previous");
 	final JButton go = new JButton("Go");
@@ -43,8 +46,12 @@ final class EditorNavigationBar extends JPanel {
 		search.add(matchCase);
 		search.add(new JLabel("Line"));
 		search.add(line);
+		final var columnLabel = new JLabel("Column");
+		columnLabel.setLabelFor(column);
+		search.add(columnLabel);
+		search.add(column);
+		column.setToolTipText("Optional one-based column; blank means line start. Tabs count as one column.");
 		search.add(go);
-		search.add(status);
 		add(search, java.awt.BorderLayout.NORTH);
 		final var edits = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
 		edits.add(new JLabel("Replace"));
@@ -53,9 +60,44 @@ final class EditorNavigationBar extends JPanel {
 		edits.add(replaceAll);
 		edits.add(history.undo);
 		edits.add(history.redo);
+		edits.add(count);
+		edits.add(wrapLines);
+		wrapLines.setSelected(editor.getLineWrap());
+		wrapLines.setToolTipText("Wrap long lines visually; source line breaks and saved text are unchanged.");
+		wrapLines.addActionListener(event -> {
+			if (!isEnabled())
+				return;
+			editor.setWrapStyleWord(true);
+			editor.setLineWrap(wrapLines.isSelected());
+		});
+		editor.addPropertyChangeListener("lineWrap", event -> wrapLines.setSelected(editor.getLineWrap()));
+		count.setToolTipText("Count literal, non-overlapping matches without moving the caret or changing text.");
 		history.undo.addActionListener(event -> activateEditor.run());
 		history.redo.addActionListener(event -> activateEditor.run());
-		add(edits, java.awt.BorderLayout.SOUTH);
+		add(edits, java.awt.BorderLayout.CENTER);
+		add(status, java.awt.BorderLayout.SOUTH);
+		status.addPropertyChangeListener("text", event -> status.setToolTipText(status.getText()));
+		final var invalidation = new javax.swing.event.DocumentListener() {
+			public void insertUpdate(final javax.swing.event.DocumentEvent event) {
+				clearResult();
+			}
+
+			public void removeUpdate(final javax.swing.event.DocumentEvent event) {
+				clearResult();
+			}
+
+			public void changedUpdate(final javax.swing.event.DocumentEvent event) {
+				clearResult();
+			}
+
+			private void clearResult() {
+				status.setText(" ");
+			}
+		};
+		query.getDocument().addDocumentListener(invalidation);
+		editor.getDocument().addDocumentListener(invalidation);
+		matchCase.addItemListener(event -> status.setText(" "));
+		count.addActionListener(event -> countMatches());
 		replace.addActionListener(event -> replaceSelected());
 		replaceAll.addActionListener(event -> replaceAllMatches());
 		next.addActionListener(event -> find(true));
@@ -63,6 +105,7 @@ final class EditorNavigationBar extends JPanel {
 		query.addActionListener(event -> find(true));
 		go.addActionListener(event -> goToLine());
 		line.addActionListener(event -> goToLine());
+		column.addActionListener(event -> goToLine());
 		bind("control F", "find", () -> {
 			if (isEnabled()) {
 				query.requestFocusInWindow();
@@ -190,6 +233,23 @@ final class EditorNavigationBar extends JPanel {
 		status.setText("Replacement exceeds 1 MiB; no changes made");
 	}
 
+	void countMatches() {
+		if (!isEnabled())
+			return;
+		final String needle = query.getText();
+		if (needle.isEmpty()) {
+			status.setText("Enter text");
+			return;
+		}
+		final String source = editor.getText();
+		int cursor = 0, matches = 0, found;
+		while ((found = search(source, needle, cursor, true)) >= 0) {
+			matches++;
+			cursor = found + needle.length();
+		}
+		status.setText(matches + (matches == 1 ? " match" : " matches") + " (non-overlapping)");
+	}
+
 	void find(final boolean forward) {
 		if (!isEnabled())
 			return;
@@ -241,11 +301,28 @@ final class EditorNavigationBar extends JPanel {
 			return;
 		}
 		try {
-			final int offset = editor.getLineStartOffset(number - 1);
+			final int start = editor.getLineStartOffset(number - 1);
+			final int end = Math.min(editor.getLineEndOffset(number - 1), editor.getDocument().getLength());
+			String content = editor.getText(start, end - start);
+			while (!content.isEmpty() && (content.endsWith("\r") || content.endsWith("\n")))
+				content = content.substring(0, content.length() - 1);
+			final int maximum = content.codePointCount(0, content.length()) + 1;
+			final int requestedColumn;
+			try {
+				requestedColumn = column.getText().isBlank() ? 1 : Integer.parseInt(column.getText().trim());
+			} catch (final NumberFormatException failure) {
+				invalidColumn(maximum);
+				return;
+			}
+			if (requestedColumn < 1 || requestedColumn > maximum) {
+				invalidColumn(maximum);
+				return;
+			}
+			final int offset = start + content.offsetByCodePoints(0, requestedColumn - 1);
 			CodeEditors.reveal(editor, offset);
 			editor.setCaretPosition(offset);
 			editor.requestFocusInWindow();
-			status.setText("Line " + number);
+			status.setText("Line " + number + ", column " + requestedColumn);
 		} catch (final javax.swing.text.BadLocationException failure) {
 			throw new IllegalStateException("Line is outside the editor document.", failure);
 		}
@@ -253,6 +330,10 @@ final class EditorNavigationBar extends JPanel {
 
 	private void invalidLine() {
 		status.setText("Enter 1–" + editor.getLineCount());
+	}
+
+	private void invalidColumn(final int maximum) {
+		status.setText("Enter column 1–" + maximum + " (blank uses 1)");
 	}
 
 	private void bind(final String keys, final String name, final Runnable action) {

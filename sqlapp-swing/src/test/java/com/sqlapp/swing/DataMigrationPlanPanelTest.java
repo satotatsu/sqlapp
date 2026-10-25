@@ -124,7 +124,8 @@ class DataMigrationPlanPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = new DataMigrationPlanPanel((request, source, sourcePassword, target, targetPassword) -> {
 				secrets.set(new char[][] { sourcePassword, targetPassword });
-				throw new IllegalArgumentException("Target table was not found");
+				throw new IllegalArgumentException("Target table was not found",
+						new java.io.IOException("Target metadata missing"));
 			}, (result, destination) -> {
 			});
 			view.set(panel);
@@ -141,9 +142,12 @@ class DataMigrationPlanPanelTest {
 		}
 		SwingUtilities.invokeAndWait(() -> {
 			assertTrue(view.get().view.summary.getText().contains("Target table was not found"));
+			assertTrue(view.get().statusPanel.detailsText().contains("Target metadata missing"));
 			assertEquals("", view.get().view.details.getText());
 			assertFalse(view.get().save.isEnabled());
 			assertTrue(view.get().target.jdbcUrl.isEnabled());
+			view.get().target.jdbcUrl.setText("jdbc:changed");
+			assertEquals(view.get().status.getText(), view.get().statusPanel.detailsText());
 		});
 	}
 

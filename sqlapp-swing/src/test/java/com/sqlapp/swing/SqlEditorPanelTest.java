@@ -271,4 +271,31 @@ class SqlEditorPanelTest {
 				signal.countDown();
 		});
 	}
+
+	@Test
+	void fileDialogsFollowSuccessfulOpenAndSaveAndSurviveNewAndFailedOperations() throws Exception {
+		final Path opened = Files.writeString(directory.resolve("1_original.sql"), "SELECT 1;");
+		final Path other = Files.createDirectory(directory.resolve("other"));
+		final var ref = new AtomicReference<SqlEditorPanel>();
+		SwingUtilities.invokeAndWait(() -> ref.set(new SqlEditorPanel(ignored -> true)));
+		final var panel = ref.get();
+		finish(panel, () -> panel.loadFrom(opened));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(directory.toFile(), panel.chooser(false).getCurrentDirectory());
+			assertEquals(directory.toFile(), panel.chooser(true).getSelectedFile().getParentFile());
+		});
+		finish(panel, () -> panel.loadFrom(other.resolve("missing.sql")));
+		finish(panel, () -> panel.saveTo(other.resolve("invalid.txt")));
+		SwingUtilities
+				.invokeAndWait(() -> assertEquals(directory.toFile(), panel.chooser(false).getCurrentDirectory()));
+		final Path saved = other.resolve("2_copy.sql");
+		finish(panel, () -> panel.saveTo(saved));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(other.toFile(), panel.chooser(false).getCurrentDirectory());
+			panel.fresh.doClick();
+			assertEquals(other.toFile(), panel.chooser(true).getCurrentDirectory());
+		});
+		assertEquals("SELECT 1;", Files.readString(opened));
+		assertEquals("SELECT 1;", Files.readString(saved));
+	}
 }

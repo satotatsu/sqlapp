@@ -24,6 +24,7 @@ final class ConnectionProfilePanel extends JPanel {
 	final JButton load = new JButton("Load…");
 	final JButton save = new JButton("Save…");
 	final JLabel status = new JLabel("Password excluded");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	private final JTextField jdbcUrl;
 	private final JTextField username;
 	private final JTextField driverClass;
@@ -32,6 +33,7 @@ final class ConnectionProfilePanel extends JPanel {
 	private final Writer writer;
 	private long revision;
 	private boolean busy;
+	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 
 	@FunctionalInterface
 	interface Reader {
@@ -51,40 +53,41 @@ final class ConnectionProfilePanel extends JPanel {
 
 	ConnectionProfilePanel(final JTextField jdbcUrl, final JTextField username, final JTextField driverClass,
 			final JPasswordField password, final Reader reader, final Writer writer) {
-		super(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		super(new java.awt.BorderLayout(4, 0));
 		this.jdbcUrl = jdbcUrl;
 		this.username = username;
 		this.driverClass = driverClass;
 		this.password = password;
 		this.reader = reader;
 		this.writer = writer;
-		add(load);
-		add(save);
-		add(status);
+		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		actions.add(load);
+		actions.add(save);
+		add(actions, java.awt.BorderLayout.WEST);
+		add(statusPanel, java.awt.BorderLayout.CENTER);
 		final DocumentListener changed = new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
-				revision++;
+				inputsChanged();
 			}
 
 			public void removeUpdate(final DocumentEvent event) {
-				revision++;
+				inputsChanged();
 			}
 
 			public void changedUpdate(final DocumentEvent event) {
-				revision++;
+				inputsChanged();
 			}
 		};
 		for (final var field : new JTextField[] { jdbcUrl, username, driverClass, password }) {
 			field.getDocument().addDocumentListener(changed);
 		}
 		load.addActionListener(event -> {
-			final var chooser = chooser();
+			final var chooser = chooser(false);
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				loadFrom(chooser.getSelectedFile().toPath());
 		});
 		save.addActionListener(event -> {
-			final var chooser = chooser();
-			chooser.setSelectedFile(new java.io.File("connection.json"));
+			final var chooser = chooser(true);
 			if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION)
 				return;
 			final var file = chooser.getSelectedFile().toPath();
@@ -94,10 +97,15 @@ final class ConnectionProfilePanel extends JPanel {
 		});
 	}
 
-	private JFileChooser chooser() {
-		final var chooser = new JFileChooser();
-		chooser.setFileFilter(new FileNameExtensionFilter("Connection profile JSON", "json"));
-		return chooser;
+	JFileChooser chooser(final boolean saving) {
+		return fileDialogs.create(new FileNameExtensionFilter("Connection profile JSON", "json"),
+				saving ? "connection.json" : null);
+	}
+
+	private void inputsChanged() {
+		revision++;
+		if (!busy)
+			status.setText("Connection inputs changed");
 	}
 
 	void loadFrom(final Path file) {
@@ -122,7 +130,8 @@ final class ConnectionProfilePanel extends JPanel {
 					username.setText(profile.username());
 					driverClass.setText(profile.driverClass());
 					status.setText("Loaded; enter password");
-					status.setToolTipText(file.toString());
+					fileDialogs.remember(file);
+					statusPanel.setDetails(status.getText() + "\nFile: " + file);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failed(exception);
@@ -150,7 +159,8 @@ final class ConnectionProfilePanel extends JPanel {
 				try {
 					get();
 					status.setText("Profile saved");
-					status.setToolTipText(file.toString());
+					fileDialogs.remember(file);
+					statusPanel.setDetails(status.getText() + "\nFile: " + file);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failed(exception);
@@ -173,6 +183,6 @@ final class ConnectionProfilePanel extends JPanel {
 
 	private void failed(final Throwable failure) {
 		status.setText("Profile operation failed");
-		status.setToolTipText(failure.getMessage());
+		statusPanel.setDetails(EditorStatusPanel.failureDetails(failure));
 	}
 }

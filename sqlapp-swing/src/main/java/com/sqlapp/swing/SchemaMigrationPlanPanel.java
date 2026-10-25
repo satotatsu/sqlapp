@@ -59,6 +59,9 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	final JButton saveExecution = new JButton("Save last result JSON…");
 	final ReportReviewView view = new ReportReviewView();
 	final JLabel status = new JLabel("Connect to read migration history. Migration SQL is not executed.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
+	private final EditorFileChooser directoryDialogs = new EditorFileChooser();
+	private final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JPanel form = new JPanel(new BorderLayout(4, 4));
 	private final JToggleButton advancedToggle = new JToggleButton("Advanced options");
 	private final Planner planner;
@@ -149,7 +152,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(240);
 		add(split, BorderLayout.CENTER);
-		add(status, BorderLayout.SOUTH);
+		add(statusPanel, BorderLayout.SOUTH);
 		advancedToggle.addActionListener(event -> {
 			advanced.setVisible(advancedToggle.isSelected());
 			input.revalidate();
@@ -201,8 +204,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		panel.add(field, BorderLayout.CENTER);
 		panel.add(browse, BorderLayout.EAST);
 		browse.addActionListener(event -> {
-			final var chooser = new JFileChooser();
-			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			final var chooser = directoryChooser(field.getText());
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				field.setText(chooser.getSelectedFile().getAbsolutePath());
 			}
@@ -219,6 +221,17 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		status.setText(
 				"Selected saved SQL directory. Review all SQL files and existing options, then connect and build a new plan.");
 		return true;
+	}
+
+	JFileChooser directoryChooser(final String currentPath) {
+		return directoryDialogs
+				.forDirectory(currentPath == null || currentPath.isBlank() ? upDirectory.getText() : currentPath);
+	}
+
+	JFileChooser outputChooser(final String filename) {
+		return outputDialogs.forOutputDirectory(
+				new javax.swing.filechooser.FileNameExtensionFilter("Migration report JSON", "json"), filename,
+				upDirectory.getText());
 	}
 
 	private void clear() {
@@ -299,6 +312,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 					final var prepared = get();
 					result = prepared.result();
 					reviewedRequest = prepared.request();
+					directoryDialogs.rememberDirectory(prepared.request().upDirectory());
 					reviewedConnection = prepared.connection();
 					view.showReview(result.review());
 					status.setText(result.artifact().plan().hasBlockers()
@@ -393,6 +407,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 					status.setText(execution.successful()
 							? "Execution completed. Save the result; build a new plan before applying again."
 							: "Execution did not complete normally. Review the result and actual database before retrying.");
+					statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);
@@ -411,8 +426,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private void chooseExecutionSave() {
-		final var chooser = new JFileChooser();
-		chooser.setSelectedFile(new java.io.File("migration-execution.json"));
+		final var chooser = outputChooser("migration-execution.json");
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
@@ -442,6 +456,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved execution result: " + destination);
+					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);
@@ -466,8 +481,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private void chooseSave() {
-		final var chooser = new JFileChooser();
-		chooser.setSelectedFile(new java.io.File("migration-plan.json"));
+		final var chooser = outputChooser("migration-plan.json");
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
@@ -498,6 +512,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved plan: " + destination);
+					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
 					failure(exception);
@@ -511,7 +526,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private void failure(final Throwable failure) {
-		view.summary.setText("Operation failed.\n" + failure);
+		view.summary.setText("Operation failed.\n" + EditorStatusPanel.failureDetails(failure));
 		status.setText("Operation failed. Check the connection, driver and migration settings.");
+		statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
 	}
 }

@@ -166,6 +166,7 @@ class SchemaMigrationExecutionPanelTest {
 		assertTrue(executed.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			assertTrue(view.get().view.summary.getText().contains("FAILED"));
+			assertTrue(view.get().statusPanel.detailsText().contains(view.get().view.summary.getText()));
 			assertTrue(view.get().saveExecution.isEnabled());
 			assertFalse(view.get().apply.isEnabled());
 			assertFalse(view.get().isExecuting());

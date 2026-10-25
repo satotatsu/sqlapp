@@ -221,7 +221,7 @@ class SchemaMigrationPlanPanelTest {
 		final var view = new AtomicReference<SchemaMigrationPlanPanel>();
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = new SchemaMigrationPlanPanel((request, url, user, password, driver) -> {
-				throw new IllegalArgumentException("Driver not found");
+				throw new IllegalArgumentException("Driver not found", new java.io.IOException("Missing driver file"));
 			}, (result, destination) -> {
 			});
 			view.set(panel);
@@ -232,9 +232,13 @@ class SchemaMigrationPlanPanelTest {
 		assertTrue(finished.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			assertTrue(view.get().view.summary.getText().contains("Driver not found"));
+			assertTrue(view.get().statusPanel.detailsText().contains("Missing driver file"));
+			assertTrue(view.get().statusPanel.details.isEnabled());
 			assertEquals("", view.get().view.details.getText());
 			assertFalse(view.get().save.isEnabled());
 			assertTrue(view.get().upDirectory.isEnabled());
+			view.get().upDirectory.setText("changed-path");
+			assertEquals(view.get().status.getText(), view.get().statusPanel.detailsText());
 		});
 	}
 

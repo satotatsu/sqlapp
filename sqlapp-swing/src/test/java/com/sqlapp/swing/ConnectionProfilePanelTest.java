@@ -40,6 +40,9 @@ class ConnectionProfilePanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var view = panel.get();
 			assertEquals("Loaded; enter password", view.status.getText());
+			assertEquals(directory.toFile(), view.chooser(false).getCurrentDirectory());
+			assertEquals(directory.resolve("connection.json").toFile(), view.chooser(true).getSelectedFile());
+			assertTrue(view.statusPanel.detailsText().contains("profile.json"));
 			// Check all associated inputs after the asynchronous load.
 			assertEquals(loaded.jdbcUrl(), fields[0].getText());
 			assertEquals(loaded.username(), fields[1].getText());
@@ -133,7 +136,8 @@ class ConnectionProfilePanelTest {
 		final var panel = new AtomicReference<ConnectionProfilePanel>();
 		SwingUtilities.invokeAndWait(() -> {
 			final var view = view(file -> {
-				throw new IllegalArgumentException("Invalid profile");
+				throw new IllegalArgumentException("Invalid profile",
+						new java.io.IOException("Unsupported file version"));
 			}, (profile, file) -> {
 			});
 			panel.set(view);
@@ -146,7 +150,12 @@ class ConnectionProfilePanelTest {
 			assertEquals("original-user", fields[1].getText());
 			assertArrayEquals("secret".toCharArray(), ((JPasswordField) fields[3]).getPassword());
 			assertEquals("Profile operation failed", panel.get().status.getText());
+			assertTrue(panel.get().statusPanel.detailsText().contains("Unsupported file version"));
+			assertEquals("Profile operation failed", panel.get().status.getToolTipText());
 			assertTrue(panel.get().save.isEnabled());
+			fields[0].setText("jdbc:edited");
+			assertEquals("Connection inputs changed", panel.get().status.getText());
+			assertEquals(panel.get().status.getText(), panel.get().statusPanel.detailsText());
 		});
 	}
 

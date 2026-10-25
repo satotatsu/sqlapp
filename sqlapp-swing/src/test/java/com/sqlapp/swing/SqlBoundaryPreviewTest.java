@@ -41,11 +41,22 @@ class SqlBoundaryPreviewTest {
 			assertTrue(panel.isDirty());
 			assertFalse(panel.use.isEnabled());
 			assertSame(panel.splitPreview, panel.workspace.getSelectedComponent());
+			assertFalse(panel.position.isVisible());
+			panel.navigation.query.setText("SELECT");
+			panel.navigation.count.doClick(0);
+			assertEquals("2 matches (non-overlapping)", panel.navigation.status.getText());
+			assertSame(panel.splitPreview, panel.workspace.getSelectedComponent());
 			assertEquals(3, panel.splitPreview.parts.getRowCount());
 			panel.splitPreview.parts.setRowSelectionInterval(2, 2);
 			assertTrue(panel.splitPreview.sql.getText().contains("SELECT 2"));
 			assertFalse(panel.splitPreview.sql.isEditable());
 			assertTrue(panel.splitPreview.summary.getText().contains("SQL statements / batches: 2"));
+			panel.splitPreview.findSource.doClick();
+			assertTrue(panel.position.isVisible());
+			assertTrue(panel.position.getText().contains("Selected"));
+			assertEquals(0, panel.workspace.getSelectedIndex());
+			assertEquals(panel.splitPreview.sql.getText(), panel.text.getSelectedText());
+			assertEquals(source, panel.text.getText());
 			panel.navigation.query.setText("SELECT 2");
 			panel.navigation.next.doClick();
 			assertEquals(0, panel.workspace.getSelectedIndex());
@@ -100,6 +111,10 @@ class SqlBoundaryPreviewTest {
 			panel.text.setText("old");
 			onFinished(panel, finished);
 			panel.inspect.doClick();
+			final String busyMessage = panel.status.getText();
+			panel.findPartInSource("old");
+			assertNull(panel.text.getSelectedText());
+			assertEquals(busyMessage, panel.status.getText());
 			panel.text.setText("newer");
 		});
 		release.countDown();
@@ -115,6 +130,36 @@ class SqlBoundaryPreviewTest {
 		panel.open.addPropertyChangeListener("enabled", event -> {
 			if (Boolean.TRUE.equals(event.getNewValue()))
 				signal.countDown();
+		});
+	}
+
+	@Test
+	void sourceLookupPreservesMultilineTextHistoryAndSearchSettingsAndRejectsAmbiguousOrMissingText() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new SqlEditorPanel(path -> fail("Source lookup must not select a plan"));
+			final String source = "-- 顧客\r\nSELECT '[a].*',\r\n  'value';\r\nSELECT 2; SELECT 2;";
+			panel.text.setText(source);
+			panel.navigation.query.setText("existing search");
+			panel.navigation.matchCase.setSelected(false);
+			final boolean undo = panel.text.canUndo();
+			panel.workspace.setSelectedIndex(1);
+			panel.findPartInSource("SELECT '[a].*',\r\n  'value'");
+			assertEquals("SELECT '[a].*',\r\n  'value'", panel.text.getSelectedText());
+			assertEquals(0, panel.workspace.getSelectedIndex());
+			assertEquals("existing search", panel.navigation.query.getText());
+			assertFalse(panel.navigation.matchCase.isSelected());
+			final int start = panel.text.getSelectionStart(), end = panel.text.getSelectionEnd();
+			panel.workspace.setSelectedIndex(1);
+			panel.findPartInSource("SELECT 2");
+			assertTrue(panel.status.getText().contains("multiple places"));
+			assertEquals(1, panel.workspace.getSelectedIndex());
+			panel.findPartInSource("select '[a].*'");
+			assertTrue(panel.status.getText().contains("no exact match"));
+			assertEquals(start, panel.text.getSelectionStart());
+			assertEquals(end, panel.text.getSelectionEnd());
+			assertEquals(source, panel.text.getText());
+			assertEquals(undo, panel.text.canUndo());
+			assertTrue(panel.isDirty());
 		});
 	}
 }

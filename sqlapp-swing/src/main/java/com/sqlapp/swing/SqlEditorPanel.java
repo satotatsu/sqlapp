@@ -10,7 +10,6 @@ import java.util.function.Predicate;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
@@ -177,9 +176,7 @@ final class SqlEditorPanel extends JPanel {
 			return false;
 		if (!isDirty())
 			return true;
-		final Object[] options = { "Discard edits", "Cancel" };
-		return JOptionPane.showOptionDialog(this, "This SQL file has unsaved edits.", "Unsaved SQL",
-				JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]) == 0;
+		return EditorUnsavedChanges.confirm(this, "SQL file", snapshot == null ? saveAs : save);
 	}
 
 	boolean requestOpen(final Path path) {
@@ -381,6 +378,7 @@ final class SqlEditorPanel extends JPanel {
 
 	private void failed(final Throwable failure) {
 		status.setText(EditorStatusPanel.failureMessage(failure));
+		statusPanel.setDetails(EditorStatusPanel.failureDetails(failure));
 	}
 
 	void findPartInSource(final String part) {
