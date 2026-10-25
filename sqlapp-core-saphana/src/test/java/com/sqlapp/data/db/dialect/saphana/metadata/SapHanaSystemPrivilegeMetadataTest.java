@@ -21,7 +21,8 @@ class SapHanaSystemPrivilegeMetadataTest {
 			for (int i = 0; i < 100; i++) {
 				final int position = i;
 				handler.handleResultSetNext(new ExResultSet(null) {
-					@Override public String getString(String key) {
+					@Override
+					public String getString(String key) {
 						return switch (key.toUpperCase(Locale.ROOT)) {
 						case "GRANTEE" -> "Grantee " + position;
 						case "GRANTOR" -> "OWNER";
@@ -30,18 +31,25 @@ class SapHanaSystemPrivilegeMetadataTest {
 						default -> null;
 						};
 					}
-					@Override public Object getObject(String key) {
+
+					@Override
+					public Object getObject(String key) {
 						return key.equalsIgnoreCase("IS_VALID") ? (position % 2 == 0 ? "TRUE" : "FALSE") : null;
 					}
 				});
 			}
-		} catch (SQLException e) { throw new RuntimeException(e); }
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
-	@Test void userSystemPrivilegesAreFetchedInOneQuery() {
+	@Test
+	void userSystemPrivilegesAreFetchedInOneQuery() {
 		var queries = new AtomicInteger();
 		var reader = new SapHanaUserPrivilegeReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries.incrementAndGet();
 				assertTrue(node.toString().contains("SYSTEMPRIVILEGE"));
 				assertTrue(node.toString().contains("GRANTEE_TYPE = 'USER'"));
@@ -60,10 +68,13 @@ class SapHanaSystemPrivilegeMetadataTest {
 		assertEquals("CATALOG READ", grants.getLast().getPrivilege());
 	}
 
-	@Test void roleSystemPrivilegesAreFetchedInOneQuery() {
+	@Test
+	void roleSystemPrivilegesAreFetchedInOneQuery() {
 		var queries = new AtomicInteger();
 		var reader = new SapHanaRolePrivilegeReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				queries.incrementAndGet();
 				assertTrue(node.toString().contains("SYSTEMPRIVILEGE"));
 				assertTrue(node.toString().contains("GRANTEE_TYPE = 'ROLE'"));
