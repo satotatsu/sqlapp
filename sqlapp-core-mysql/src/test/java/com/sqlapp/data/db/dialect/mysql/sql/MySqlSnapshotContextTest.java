@@ -34,7 +34,8 @@ class MySqlSnapshotContextTest {
 		assertTrue(sql.get(0).getSqlText().contains("z_first"));
 		assertTrue(sql.get(1).getSqlText().contains("a_second"));
 		Schema schema = new Schema("app");
-		schema.getTriggers().add(second); schema.getTriggers().add(first);
+		schema.getTriggers().add(second);
+		schema.getTriggers().add(first);
 		SqlFactory<Schema> schemaFactory = registry.getSqlFactory(schema, SqlType.CREATE);
 		var operations = schemaFactory.createSql(schema);
 		assertTrue(operations.get(1).getSqlText().contains("z_first"));
@@ -53,7 +54,8 @@ class MySqlSnapshotContextTest {
 	@Test
 	void triggerOrderGroupsSqlKeywordsWithoutCaseSensitivity() {
 		Trigger first = trigger("z_first", "1"), second = trigger("a_second", "2");
-		first.getEventManipulation().clear(); first.addEventManipulation("insert");
+		first.getEventManipulation().clear();
+		first.addEventManipulation("insert");
 		first.setActionTiming("before");
 		assertEquals(List.of(first, second), MySqlTriggerOrder.sort(List.of(second, first)));
 		first.getSpecifics().put(MySqlTriggerOrder.ACTION_ORDER, "2");
@@ -65,11 +67,18 @@ class MySqlSnapshotContextTest {
 		try (var rows = javax.sql.rowset.RowSetProvider.newFactory().createCachedRowSet()) {
 			var metadata = new javax.sql.rowset.RowSetMetaDataImpl();
 			metadata.setColumnCount(2);
-			metadata.setColumnName(1, "SQL_MODE"); metadata.setColumnType(1, java.sql.Types.VARCHAR);
-			metadata.setColumnName(2, "TIME_ZONE"); metadata.setColumnType(2, java.sql.Types.VARCHAR);
-			rows.setMetaData(metadata); rows.moveToInsertRow();
-			rows.updateString(1, ""); rows.updateString(2, "+09:00"); rows.insertRow();
-			rows.moveToCurrentRow(); rows.beforeFirst(); assertTrue(rows.next());
+			metadata.setColumnName(1, "SQL_MODE");
+			metadata.setColumnType(1, java.sql.Types.VARCHAR);
+			metadata.setColumnName(2, "TIME_ZONE");
+			metadata.setColumnType(2, java.sql.Types.VARCHAR);
+			rows.setMetaData(metadata);
+			rows.moveToInsertRow();
+			rows.updateString(1, "");
+			rows.updateString(2, "+09:00");
+			rows.insertRow();
+			rows.moveToCurrentRow();
+			rows.beforeFirst();
+			assertTrue(rows.next());
 			Trigger trigger = trigger("t", "1");
 			MySqlStoredObjectContext.read(rows, trigger);
 			assertEquals("", trigger.getSpecifics().get(MySqlStoredObjectContext.SQL_MODE));
@@ -79,8 +88,10 @@ class MySqlSnapshotContextTest {
 
 	private Trigger trigger(String name, String rank) {
 		Trigger trigger = new Trigger(name);
-		trigger.setTableName("t"); trigger.setActionTiming("BEFORE");
-		trigger.addEventManipulation("INSERT"); trigger.setStatement("SET NEW.id=1");
+		trigger.setTableName("t");
+		trigger.setActionTiming("BEFORE");
+		trigger.addEventManipulation("INSERT");
+		trigger.setStatement("SET NEW.id=1");
 		trigger.getSpecifics().put(MySqlTriggerOrder.ACTION_ORDER, rank);
 		return trigger;
 	}

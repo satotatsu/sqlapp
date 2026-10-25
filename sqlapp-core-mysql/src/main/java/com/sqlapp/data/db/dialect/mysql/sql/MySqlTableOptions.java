@@ -6,7 +6,8 @@ import com.sqlapp.data.schemas.Table;
 
 /** Native table options shared by CREATE and ALTER. */
 final class MySqlTableOptions {
-	private MySqlTableOptions() { }
+	private MySqlTableOptions() {
+	}
 
 	static String token(String name, String value) {
 		if (value == null || !value.matches("[A-Za-z0-9_]+")) {

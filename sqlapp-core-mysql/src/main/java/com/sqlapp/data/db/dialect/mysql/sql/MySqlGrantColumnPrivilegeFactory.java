@@ -7,14 +7,18 @@ import com.sqlapp.data.schemas.ColumnPrivilege;
 
 public class MySqlGrantColumnPrivilegeFactory extends MySqlPrivilegeFactory<ColumnPrivilege> {
 	@Override
-	protected boolean supportsPrivilege(String privilege) { return Set.of("INSERT", "REFERENCES", "SELECT", "UPDATE").contains(privilege); }
+	protected boolean supportsPrivilege(String privilege) {
+		return Set.of("INSERT", "REFERENCES", "SELECT", "UPDATE").contains(privilege);
+	}
+
 	@Override
 	protected void appendColumns(ColumnPrivilege object, MySqlSqlBuilder builder) {
 		builder._add(" (")._add(identifier(object.getColumnName(), "column name"))._add(")");
 	}
+
 	@Override
 	protected void appendTarget(ColumnPrivilege object, MySqlSqlBuilder builder) {
 		builder._add(identifier(object.getSchemaName(), "schema name"))._add(".")
-			._add(identifier(object.getObjectName(), "table or view name"));
+				._add(identifier(object.getObjectName(), "table or view name"));
 	}
 }

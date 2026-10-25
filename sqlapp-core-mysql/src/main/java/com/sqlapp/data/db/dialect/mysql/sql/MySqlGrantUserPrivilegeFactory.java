@@ -11,16 +11,23 @@ public class MySqlGrantUserPrivilegeFactory extends MySqlPrivilegeFactory<UserPr
 	private static final Set<String> GLOBAL_ONLY = Set.of("ALTER ROUTINE", "CREATE ROUTINE", "CREATE TABLESPACE",
 			"CREATE TEMPORARY TABLES", "CREATE USER", "EVENT", "EXECUTE", "FILE", "LOCK TABLES", "PROCESS", "RELOAD",
 			"REPLICATION CLIENT", "REPLICATION SLAVE", "SHOW DATABASES", "SHUTDOWN", "SUPER", "USAGE");
+
 	@Override
 	protected boolean supportsPrivilege(String privilege) {
-		if (TABLE_PRIVILEGES.contains(privilege) || GLOBAL_ONLY.contains(privilege)) return true;
+		if (TABLE_PRIVILEGES.contains(privilege) || GLOBAL_ONLY.contains(privilege))
+			return true;
 		return getDialect() instanceof MySql800 && (Set.of("CREATE ROLE", "DROP ROLE").contains(privilege)
 				|| (!Set.of("ALL", "PROXY").contains(privilege) && privilege.matches("[A-Z][A-Z0-9_]*")));
 	}
+
 	@Override
 	protected void validate(UserPrivilege object) {
-		if (object.isAdmin()) throw new IllegalArgumentException("MySQL global privileges use grantable (WITH GRANT OPTION), not admin");
+		if (object.isAdmin())
+			throw new IllegalArgumentException("MySQL global privileges use grantable (WITH GRANT OPTION), not admin");
 	}
+
 	@Override
-	protected void appendTarget(UserPrivilege object, MySqlSqlBuilder builder) { builder._add("*.*"); }
+	protected void appendTarget(UserPrivilege object, MySqlSqlBuilder builder) {
+		builder._add("*.*");
+	}
 }

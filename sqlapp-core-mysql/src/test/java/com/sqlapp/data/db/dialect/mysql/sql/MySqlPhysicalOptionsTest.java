@@ -15,7 +15,7 @@ import com.sqlapp.data.schemas.Table;
 
 class MySqlPhysicalOptionsTest {
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,7", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,7", "8,4", "9,0" })
 	void rowFormatAndEngineSurviveCreateAndAlter(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table original = table();
@@ -34,7 +34,7 @@ class MySqlPhysicalOptionsTest {
 		target.getSpecifics().put("ENGINE", "InnoDB");
 		target.getSpecifics().remove("ROW_FORMAT");
 		assertThrows(IllegalArgumentException.class, () -> alter(dialect, original, target));
-		for (String key : new String[] {"ENGINE", "ROW_FORMAT"}) {
+		for (String key : new String[] { "ENGINE", "ROW_FORMAT" }) {
 			target.getSpecifics().put(key, "invalid; DROP TABLE t");
 			assertThrows(IllegalArgumentException.class, () -> create(dialect, target));
 			assertThrows(IllegalArgumentException.class, () -> alter(dialect, original, target));
@@ -43,7 +43,7 @@ class MySqlPhysicalOptionsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,7", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,7", "8,4", "9,0" })
 	void compressionRequiresConsistentExplicitRemoval(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table original = table();
@@ -61,7 +61,7 @@ class MySqlPhysicalOptionsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,7", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,7", "8,4", "9,0" })
 	void clearsCommentsAndComposesWithColumnChanges(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table original = table();
@@ -79,7 +79,7 @@ class MySqlPhysicalOptionsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,7", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,7", "8,4", "9,0" })
 	void fulltextParserComposesAcrossAllCreatePaths(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table original = table();
@@ -99,7 +99,7 @@ class MySqlPhysicalOptionsTest {
 		String sql = alter(dialect, target, changed);
 		assertTrue(sql.contains("DROP INDEX ft_code, ADD FULLTEXT INDEX ft_code"), sql);
 		assertTrue(sql.contains("WITH PARSER `other_parser`"), sql);
-		for (String invalid : new String[] {"", " ", "bad\nparser", "bad\u0000parser"}) {
+		for (String invalid : new String[] { "", " ", "bad\nparser", "bad\u0000parser" }) {
 			index.getSpecifics().put(MySqlCreateIndexFactory.PARSER, invalid);
 			assertThrows(IllegalArgumentException.class, () -> create(dialect, target));
 		}
@@ -109,7 +109,7 @@ class MySqlPhysicalOptionsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"8,0", "8,4", "9,0"})
+	@CsvSource({ "8,0", "8,4", "9,0" })
 	void visibilityOnlyChangesDoNotRebuildIndexes(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table original = table();
@@ -130,15 +130,18 @@ class MySqlPhysicalOptionsTest {
 		SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
 		return factory.createSql(table).get(0).getSqlText();
 	}
+
 	private String alter(Dialect dialect, Table original, Table target) {
 		SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(target, SqlType.ALTER);
 		return factory.createDiffSql(original.diff(target)).get(0).getSqlText();
 	}
+
 	private Table table() {
 		Table table = new Table("t");
 		table.getColumns().add("code", c -> c.setDataType(DataType.VARCHAR).setLength(30));
 		return table;
 	}
+
 	private Dialect dialect(int major, int minor) {
 		return DialectResolver.getInstance().getDialect("MySql", major, minor, 0);
 	}

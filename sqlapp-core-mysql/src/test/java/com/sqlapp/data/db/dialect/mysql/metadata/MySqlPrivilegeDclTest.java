@@ -25,7 +25,7 @@ import com.sqlapp.jdbc.ExResultSet;
 
 class MySqlPrivilegeDclTest {
 	@ParameterizedTest
-	@CsvSource({"5,5", "5,7", "8,0", "8,4", "9,0"})
+	@CsvSource({ "5,5", "5,7", "8,0", "8,4", "9,0" })
 	void metadataRoundTripsThroughAllThreeNativeScopes(int major, int minor) throws Exception {
 		var dialect = dialect(major, minor);
 		try (var rows = rows()) {
@@ -33,11 +33,17 @@ class MySqlPrivilegeDclTest {
 			var table = new MySqlObjectPrivilegeReader(dialect).createPrivilege(rs);
 			var column = new MySqlColumnPrivilegeReader(dialect).createColumnPrivilege(rs);
 			var global = new MySqlUserPrivilegeReader(dialect).createPrivilege(rs);
-			assertEquals("GRANT SELECT ON `app``db`.`select` TO `O'Reilly``reader`@`10.0.%` WITH GRANT OPTION", sql(dialect, table, SqlType.GRANT));
-			assertEquals("REVOKE SELECT ON `app``db`.`select` FROM `O'Reilly``reader`@`10.0.%`", sql(dialect, table, SqlType.REVOKE));
-			assertEquals("GRANT SELECT (`order``id`) ON `app``db`.`select` TO `O'Reilly``reader`@`10.0.%` WITH GRANT OPTION", sql(dialect, column, SqlType.GRANT));
-			assertEquals("REVOKE SELECT (`order``id`) ON `app``db`.`select` FROM `O'Reilly``reader`@`10.0.%`", sql(dialect, column, SqlType.REVOKE));
-			assertEquals("GRANT SELECT ON *.* TO `O'Reilly``reader`@`10.0.%` WITH GRANT OPTION", sql(dialect, global, SqlType.GRANT));
+			assertEquals("GRANT SELECT ON `app``db`.`select` TO `O'Reilly``reader`@`10.0.%` WITH GRANT OPTION",
+					sql(dialect, table, SqlType.GRANT));
+			assertEquals("REVOKE SELECT ON `app``db`.`select` FROM `O'Reilly``reader`@`10.0.%`",
+					sql(dialect, table, SqlType.REVOKE));
+			assertEquals(
+					"GRANT SELECT (`order``id`) ON `app``db`.`select` TO `O'Reilly``reader`@`10.0.%` WITH GRANT OPTION",
+					sql(dialect, column, SqlType.GRANT));
+			assertEquals("REVOKE SELECT (`order``id`) ON `app``db`.`select` FROM `O'Reilly``reader`@`10.0.%`",
+					sql(dialect, column, SqlType.REVOKE));
+			assertEquals("GRANT SELECT ON *.* TO `O'Reilly``reader`@`10.0.%` WITH GRANT OPTION",
+					sql(dialect, global, SqlType.GRANT));
 			assertEquals("REVOKE SELECT ON *.* FROM `O'Reilly``reader`@`10.0.%`", sql(dialect, global, SqlType.REVOKE));
 		}
 	}
@@ -46,7 +52,8 @@ class MySqlPrivilegeDclTest {
 	void validatesScopeAndRequiresCompleteIdentifiersAndAccounts() {
 		var dialect = dialect(8, 4);
 		var object = object();
-		for (String privilege : List.of("ALTER", "CREATE", "CREATE VIEW", "DELETE", "DROP", "GRANT OPTION", "INDEX", "INSERT", "REFERENCES", "SELECT", "SHOW VIEW", "TRIGGER", "UPDATE")) {
+		for (String privilege : List.of("ALTER", "CREATE", "CREATE VIEW", "DELETE", "DROP", "GRANT OPTION", "INDEX",
+				"INSERT", "REFERENCES", "SELECT", "SHOW VIEW", "TRIGGER", "UPDATE")) {
 			object.setPrivilege(privilege);
 			assertTrue(sql(dialect, object, SqlType.GRANT).startsWith("GRANT " + privilege + " ON"));
 		}
@@ -69,7 +76,9 @@ class MySqlPrivilegeDclTest {
 		object.setObjectName("*");
 		assertTrue(sql(dialect, object, SqlType.GRANT).contains("ON `app`.`*`"));
 		var column = new ColumnPrivilege();
-		column.setSchemaName("app"); column.setObjectName("t"); column.setGranteeName("'reader'@'%'");
+		column.setSchemaName("app");
+		column.setObjectName("t");
+		column.setGranteeName("'reader'@'%'");
 		column.setColumnName("col");
 		for (String privilege : List.of("SELECT", "INSERT", "UPDATE", "REFERENCES")) {
 			column.setPrivilege(privilege);
@@ -77,7 +86,8 @@ class MySqlPrivilegeDclTest {
 		}
 		column.setPrivilege("DELETE");
 		assertThrows(IllegalArgumentException.class, () -> sql(dialect, column, SqlType.GRANT));
-		column.setPrivilege("SELECT"); column.setColumnName(null);
+		column.setPrivilege("SELECT");
+		column.setColumnName(null);
 		assertThrows(IllegalArgumentException.class, () -> sql(dialect, column, SqlType.GRANT));
 	}
 
@@ -97,33 +107,53 @@ class MySqlPrivilegeDclTest {
 			global.setPrivilege(invalid);
 			assertThrows(IllegalArgumentException.class, () -> sql(dialect(8, 4), global, SqlType.GRANT));
 		}
-		global.setPrivilege("SELECT"); global.setAdmin(true);
+		global.setPrivilege("SELECT");
+		global.setAdmin(true);
 		assertThrows(IllegalArgumentException.class, () -> sql(dialect(8, 4), global, SqlType.GRANT));
 	}
 
 	private ObjectPrivilege object() {
 		var object = new ObjectPrivilege();
-		object.setSchemaName("app"); object.setObjectName("t");
-		object.setGranteeName("'reader'@'localhost'"); object.setPrivilege("SELECT");
+		object.setSchemaName("app");
+		object.setObjectName("t");
+		object.setGranteeName("'reader'@'localhost'");
+		object.setPrivilege("SELECT");
 		return object;
 	}
-	private Dialect dialect(int major, int minor) { return DialectResolver.getInstance().getDialect("MySql", major, minor, 0); }
+
+	private Dialect dialect(int major, int minor) {
+		return DialectResolver.getInstance().getDialect("MySql", major, minor, 0);
+	}
+
 	private <T> String sql(Dialect dialect, T object, SqlType type) {
 		SqlFactory<T> factory = dialect.createSqlFactoryRegistry().getSqlFactory(object, type);
 		return factory.createSql(object).get(0).getSqlText();
 	}
+
 	private CachedRowSet rows() throws SQLException {
 		Map<String, Object> values = new LinkedHashMap<>();
-		String[] pairs = {"TABLE_CATALOG", "def", "TABLE_SCHEMA", "app`db", "TABLE_NAME", "select", "COLUMN_NAME", "order`id",
-			"GRANTEE", "'O'Reilly`reader'@'10.0.%'", "PRIVILEGE_TYPE", "SELECT", "IS_GRANTABLE", "YES"};
-		for (int i = 0; i < pairs.length; i += 2) values.put(pairs[i], pairs[i + 1]);
-		RowSetMetaDataImpl metadata = new RowSetMetaDataImpl(); metadata.setColumnCount(values.size());
+		String[] pairs = { "TABLE_CATALOG", "def", "TABLE_SCHEMA", "app`db", "TABLE_NAME", "select", "COLUMN_NAME",
+				"order`id", "GRANTEE", "'O'Reilly`reader'@'10.0.%'", "PRIVILEGE_TYPE", "SELECT", "IS_GRANTABLE",
+				"YES" };
+		for (int i = 0; i < pairs.length; i += 2)
+			values.put(pairs[i], pairs[i + 1]);
+		RowSetMetaDataImpl metadata = new RowSetMetaDataImpl();
+		metadata.setColumnCount(values.size());
 		int i = 0;
-		for (String key : values.keySet()) { metadata.setColumnName(++i, key); metadata.setColumnType(i, Types.VARCHAR); }
-		CachedRowSet rows = RowSetProvider.newFactory().createCachedRowSet(); rows.setMetaData(metadata);
-		rows.moveToInsertRow(); i = 0;
-		for (Object value : values.values()) rows.updateObject(++i, value);
-		rows.insertRow(); rows.moveToCurrentRow(); rows.beforeFirst(); rows.next();
+		for (String key : values.keySet()) {
+			metadata.setColumnName(++i, key);
+			metadata.setColumnType(i, Types.VARCHAR);
+		}
+		CachedRowSet rows = RowSetProvider.newFactory().createCachedRowSet();
+		rows.setMetaData(metadata);
+		rows.moveToInsertRow();
+		i = 0;
+		for (Object value : values.values())
+			rows.updateObject(++i, value);
+		rows.insertRow();
+		rows.moveToCurrentRow();
+		rows.beforeFirst();
+		rows.next();
 		return rows;
 	}
 }

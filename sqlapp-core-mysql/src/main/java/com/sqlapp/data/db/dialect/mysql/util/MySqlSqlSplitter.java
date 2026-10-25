@@ -33,12 +33,70 @@ public class MySqlSqlSplitter extends SqlSplitter {
 		super(dialect);
 	}
 
+	private boolean noBackslashEscapes;
+	private boolean ansiQuotes;
+
+	/** Initial session policy. No server state or SET expressions are evaluated. */
+	public boolean isNoBackslashEscapes() {
+		return noBackslashEscapes;
+	}
+
+	public void setNoBackslashEscapes(boolean noBackslashEscapes) {
+		this.noBackslashEscapes = noBackslashEscapes;
+	}
+
+	public boolean isAnsiQuotes() {
+		return ansiQuotes;
+	}
+
+	public void setAnsiQuotes(boolean ansiQuotes) {
+		this.ansiQuotes = ansiQuotes;
+	}
+
+	private static final Pattern SQL_MODE_ASSIGNMENT = Pattern
+			.compile("(?is)(?:^\\s*SET\\s+(?:(?:SESSION|LOCAL|GLOBAL|PERSIST|PERSIST_ONLY)\\s+)?|,\\s*)"
+					+ "(?:@@\\s*(?:(?:SESSION|LOCAL|GLOBAL)\\s*\\.\\s*)?)?"
+					+ "(?:`sql_mode`|\"sql_mode\"|sql_mode)\\s*(?::=|=)");
+
 	private static final Pattern CHANGE_DELIMITER = Pattern.compile("\\s*delimiter\\s+(?<delimiter>[^\\s]+)\\s*",
 			Pattern.CASE_INSENSITIVE);
 
 	@Override
 	protected SqlTokenizer createSqlTokenizer(String input) {
 		return new SqlTokenizer(input) {
+			@Override
+			protected int getQuotedTextEnd(String sql, int start) {
+				char quote = sql.charAt(start);
+				if (quote == '\'' || quote == '"' || quote == '`')
+					return findQuotedTextEnd(sql, start, quote,
+							quote != '`' && !noBackslashEscapes && !(quote == '"' && ansiQuotes));
+				return -1;
+			}
+
+			@Override
+			protected void onStatement(String statement) {
+				String code = maskStringLiterals(statement, ansiQuotes, true);
+				if (code.stripLeading().matches("(?is)SET\\b.*") && SQL_MODE_ASSIGNMENT.matcher(code).find())
+					stringHolder.throwInvalidTextException("Offline SQL splitting requires a fixed sql_mode. "
+							+ "Split the script at sql_mode assignments and configure setNoBackslashEscapes "
+							+ "and setAnsiQuotes for each segment; SET expressions are not evaluated.");
+			}
+
+			@Override
+			protected void onComment(String comment) {
+				int prefix = comment.startsWith("/*!") ? 3 : comment.startsWith("/*M!") ? 4 : 0;
+				if (prefix != 0) {
+					String body = comment.substring(prefix, comment.length() - 2).replaceFirst("^\\d+", "");
+					onStatement(body);
+				}
+			}
+
+			@Override
+			protected boolean isLineCommentStart(String sql, int position) {
+				return sql.charAt(position) == '#' || sql.startsWith("--", position)
+						&& (position + 2 == sql.length() || Character.isWhitespace(sql.charAt(position + 2)));
+			}
+
 			@Override
 			protected boolean isChangeDelimiter(String text, StringHolder stringHolder) {
 				Matcher matcher = CHANGE_DELIMITER.matcher(text);
@@ -53,14 +111,10 @@ public class MySqlSqlSplitter extends SqlSplitter {
 
 			@Override
 			protected boolean isLineComment(String value) {
-				if (value.startsWith("#")) {
-					return true;
-				}
-				if (value.trim().startsWith("--")) {
-					return true;
-				}
-				return false;
+				String text = value.stripLeading();
+				return !text.isEmpty() && isLineCommentStart(text, 0);
 			}
+
 		};
 	}
 

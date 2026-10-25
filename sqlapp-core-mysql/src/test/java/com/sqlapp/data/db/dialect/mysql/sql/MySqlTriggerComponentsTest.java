@@ -13,7 +13,7 @@ import com.sqlapp.data.schemas.Trigger;
 
 class MySqlTriggerComponentsTest {
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,5", "5,7", "8,0", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,5", "5,7", "8,0", "8,4", "9,0" })
 	void qualifiesTargetAndInfersOnlyTheKnownSchemaWithoutMutatingModel(int major, int minor) {
 		var registry = DialectResolver.getInstance().getDialect("MySql", major, minor, 0).createSqlFactoryRegistry();
 		Trigger trigger = trigger();
@@ -44,20 +44,23 @@ class MySqlTriggerComponentsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,5", "5,7", "8,0", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,5", "5,7", "8,0", "8,4", "9,0" })
 	void invalidComponentsFailAndCompleteDefinitionKeepsPrecedence(int major, int minor) {
 		var registry = DialectResolver.getInstance().getDialect("MySql", major, minor, 0).createSqlFactoryRegistry();
 		List<Consumer<Trigger>> invalid = List.of(t -> t.getTable().setName(null), t -> t.setTableName(" "),
 				t -> t.setName(" "), t -> t.setStatement(List.of()), t -> t.setStatement(" \n\t"),
 				t -> t.setActionOrientation("STATEMENT"), t -> t.setWhen("NEW.id > 0"),
 				t -> t.setActionCondition("NEW.id > 0"), t -> t.setEnable(false),
-				t -> t.setActionReferenceOldRow("old_row"), t -> t.setActionReferenceNewRow("new_row"),
-				t -> {t.setSchemaName("app"); t.setTableSchemaName("other");});
+				t -> t.setActionReferenceOldRow("old_row"), t -> t.setActionReferenceNewRow("new_row"), t -> {
+					t.setSchemaName("app");
+					t.setTableSchemaName("other");
+				});
 		for (Consumer<Trigger> change : invalid) {
 			Trigger trigger = trigger();
 			change.accept(trigger);
 			SqlFactory<Trigger> factory = registry.getSqlFactory(trigger, SqlType.CREATE);
-			assertThrows(IllegalArgumentException.class, () -> factory.createSql(trigger), "invalid case " + invalid.indexOf(change));
+			assertThrows(IllegalArgumentException.class, () -> factory.createSql(trigger),
+					"invalid case " + invalid.indexOf(change));
 			trigger.setDefinition("CREATE TRIGGER complete_definition");
 			assertEquals("CREATE TRIGGER complete_definition", factory.createSql(trigger).get(0).getSqlText());
 		}

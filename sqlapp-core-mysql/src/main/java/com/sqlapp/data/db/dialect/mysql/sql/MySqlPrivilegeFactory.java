@@ -18,15 +18,24 @@ import com.sqlapp.data.schemas.properties.GrantableProperty;
 import com.sqlapp.data.schemas.properties.PrivilegeStateProperty;
 
 /** Common account quoting and scope validation for native privilege SQL. */
-abstract class MySqlPrivilegeFactory<T extends AbstractDbObject<T> & PrivilegeProperty<T> & GranteeNameProperty<T>
-		& GrantableProperty<T> & PrivilegeStateProperty<T>> extends SimpleSqlFactory<T, MySqlSqlBuilder> {
+abstract class MySqlPrivilegeFactory<T extends AbstractDbObject<T> & PrivilegeProperty<T> & GranteeNameProperty<T> & GrantableProperty<T> & PrivilegeStateProperty<T>>
+		extends SimpleSqlFactory<T, MySqlSqlBuilder> {
 	protected static final Set<String> TABLE_PRIVILEGES = Set.of("ALTER", "CREATE", "CREATE VIEW", "DELETE", "DROP",
 			"GRANT OPTION", "INDEX", "INSERT", "REFERENCES", "SELECT", "SHOW VIEW", "TRIGGER", "UPDATE");
-	protected boolean isGrant() { return true; }
+
+	protected boolean isGrant() {
+		return true;
+	}
+
 	protected abstract boolean supportsPrivilege(String privilege);
+
 	protected abstract void appendTarget(T object, MySqlSqlBuilder builder);
-	protected void validate(T object) { }
-	protected void appendColumns(T object, MySqlSqlBuilder builder) { }
+
+	protected void validate(T object) {
+	}
+
+	protected void appendColumns(T object, MySqlSqlBuilder builder) {
+	}
 
 	@Override
 	public List<SqlOperation> createSql(T object) {
@@ -34,7 +43,8 @@ abstract class MySqlPrivilegeFactory<T extends AbstractDbObject<T> & PrivilegePr
 		privilege = privilege == null ? "" : privilege.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+", " ");
 		if (!supportsPrivilege(privilege))
 			throw new IllegalArgumentException("Unsupported MySQL privilege for this scope: " + privilege);
-		if (object.getState() != null && object.getState() != (isGrant() ? PrivilegeState.Grant : PrivilegeState.Revoke))
+		if (object.getState() != null
+				&& object.getState() != (isGrant() ? PrivilegeState.Grant : PrivilegeState.Revoke))
 			throw new IllegalArgumentException("Privilege state conflicts with requested GRANT/REVOKE");
 		validate(object);
 		String account = MySqlAccount.sql(object.getGranteeName());
@@ -44,14 +54,16 @@ abstract class MySqlPrivilegeFactory<T extends AbstractDbObject<T> & PrivilegePr
 		builder._add(" ON ");
 		appendTarget(object, builder);
 		builder._add(isGrant() ? " TO " : " FROM ")._add(account);
-		if (isGrant() && object.isGrantable()) builder._add(" WITH GRANT OPTION");
+		if (isGrant() && object.isGrantable())
+			builder._add(" WITH GRANT OPTION");
 		List<SqlOperation> result = new ArrayList<>();
 		addSql(result, builder, isGrant() ? SqlType.GRANT : SqlType.REVOKE, object);
 		return result;
 	}
 
 	protected String identifier(String value, String field) {
-		if (value == null || value.isBlank()) throw new IllegalArgumentException("MySQL privilege requires " + field);
+		if (value == null || value.isBlank())
+			throw new IllegalArgumentException("MySQL privilege requires " + field);
 		return "`" + value.replace("`", "``") + "`";
 	}
 }

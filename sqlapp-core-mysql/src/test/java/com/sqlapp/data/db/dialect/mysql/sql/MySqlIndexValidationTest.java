@@ -13,7 +13,7 @@ import com.sqlapp.data.schemas.*;
 
 class MySqlIndexValidationTest {
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,7", "8,4", "9,0"})
+	@CsvSource({ "5,1", "5,7", "8,4", "9,0" })
 	void catalogRtreeTypeRecreatesAsNativeSpatialIndex(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table table = new Table("places");
@@ -28,8 +28,9 @@ class MySqlIndexValidationTest {
 		SqlFactory<Index> factory = dialect.createSqlFactoryRegistry().getSqlFactory(index, SqlType.CREATE);
 		assertTrue(factory.createSql(index).get(0).getSqlText().startsWith("CREATE SPATIAL INDEX"));
 	}
+
 	@ParameterizedTest
-	@CsvSource({"5,1", "5,5", "5,7"})
+	@CsvSource({ "5,1", "5,5", "5,7" })
 	void oldFamiliesRejectFunctionalAndInvisibleIndexes(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table table = table();
@@ -51,7 +52,7 @@ class MySqlIndexValidationTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"8,0", "8,4", "9,0"})
+	@CsvSource({ "8,0", "8,4", "9,0" })
 	void modernFamiliesKeepFunctionalAndInvisibleIndexes(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table table = table();
@@ -68,7 +69,7 @@ class MySqlIndexValidationTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"5,7", "8,4"})
+	@CsvSource({ "5,7", "8,4" })
 	void rejectsUnsupportedAttributesInsteadOfDroppingThem(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table table = table();
@@ -106,7 +107,7 @@ class MySqlIndexValidationTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"8,0", "8,4", "9,0"})
+	@CsvSource({ "8,0", "8,4", "9,0" })
 	void functionalPrefixAndSpecialIndexCombinationsFail(int major, int minor) {
 		Dialect dialect = dialect(major, minor);
 		Table table = table();
@@ -140,12 +141,14 @@ class MySqlIndexValidationTest {
 		SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
 		return factory.createSql(table).get(0).getSqlText();
 	}
+
 	private Table table() {
 		Table table = new Table("t");
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 		table.getColumns().add("code", c -> c.setDataType(DataType.VARCHAR).setLength(30));
 		return table;
 	}
+
 	private Dialect dialect(int major, int minor) {
 		return DialectResolver.getInstance().getDialect("MySql", major, minor, 0);
 	}

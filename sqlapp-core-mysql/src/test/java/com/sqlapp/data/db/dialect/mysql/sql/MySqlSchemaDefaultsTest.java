@@ -23,22 +23,28 @@ class MySqlSchemaDefaultsTest {
 		alter.getOptions().setSetSearchPathToSchema(false);
 		Schema target = original.clone();
 		target.setCharacterSet("latin1");
-		assertEquals(List.of("ALTER SCHEMA app DEFAULT CHARACTER SET latin1"), texts(alter.createDiffSql(original.diff(target))));
-		assertEquals("CREATE SCHEMA IF NOT EXISTS app DEFAULT CHARACTER SET latin1", create.createSql(target).get(0).getSqlText());
+		assertEquals(List.of("ALTER SCHEMA app DEFAULT CHARACTER SET latin1"),
+				texts(alter.createDiffSql(original.diff(target))));
+		assertEquals("CREATE SCHEMA IF NOT EXISTS app DEFAULT CHARACTER SET latin1",
+				create.createSql(target).get(0).getSqlText());
 		target.setCharacterSet(null);
 		target.setCollation("latin1_bin");
-		assertEquals(List.of("ALTER SCHEMA app DEFAULT COLLATE latin1_bin"), texts(alter.createDiffSql(original.diff(target))));
-		assertEquals("CREATE SCHEMA IF NOT EXISTS app DEFAULT COLLATE latin1_bin", create.createSql(target).get(0).getSqlText());
+		assertEquals(List.of("ALTER SCHEMA app DEFAULT COLLATE latin1_bin"),
+				texts(alter.createDiffSql(original.diff(target))));
+		assertEquals("CREATE SCHEMA IF NOT EXISTS app DEFAULT COLLATE latin1_bin",
+				create.createSql(target).get(0).getSqlText());
 	}
+
 	@ParameterizedTest
-	@CsvSource({"MySql,5,5", "MySql,5,7", "MySql,8,0", "MySql,8,4"})
+	@CsvSource({ "MySql,5,5", "MySql,5,7", "MySql,8,0", "MySql,8,4" })
 	void createsAndAltersBothDefaultsWithoutLosingUnchangedOptions(String product, int major, int minor) {
 		var registry = DialectResolver.getInstance().getDialect(product, major, minor, 0).createSqlFactoryRegistry();
 		Schema original = new Schema("app data");
 		original.setCharacterSet("utf8mb4");
 		original.setCollation("utf8mb4_general_ci");
 		SqlFactory<Schema> create = registry.getSqlFactory(original, SqlType.CREATE);
-		assertEquals("CREATE SCHEMA IF NOT EXISTS `app data` DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci",
+		assertEquals(
+				"CREATE SCHEMA IF NOT EXISTS `app data` DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci",
 				create.createSql(original).get(0).getSqlText());
 		SqlFactory<Schema> alter = registry.getSqlFactory(original, SqlType.ALTER);
 		alter.getOptions().setSetSearchPathToSchema(false);
@@ -56,7 +62,8 @@ class MySqlSchemaDefaultsTest {
 		assertTrue(alter.createDiffSql(original.diff(target)).isEmpty());
 		target = original.clone();
 		var table = new com.sqlapp.data.schemas.Table("new_table");
-		table.getColumns().add(new com.sqlapp.data.schemas.Column("id").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		table.getColumns()
+				.add(new com.sqlapp.data.schemas.Column("id").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
 		target.getTables().add(table);
 		var childSql = texts(alter.createDiffSql(original.diff(target)));
 		assertFalse(childSql.isEmpty());
@@ -65,7 +72,7 @@ class MySqlSchemaDefaultsTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"MySql,5,7", "MySql,8,4"})
+	@CsvSource({ "MySql,5,7", "MySql,8,4" })
 	void invalidOptionsAndUnsupportedRemovalOrRenameFailClearly(String product, int major, int minor) {
 		var registry = DialectResolver.getInstance().getDialect(product, major, minor, 0).createSqlFactoryRegistry();
 		Schema original = new Schema("app");

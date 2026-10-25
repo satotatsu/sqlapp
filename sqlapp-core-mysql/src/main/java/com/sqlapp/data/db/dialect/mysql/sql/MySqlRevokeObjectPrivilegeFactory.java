@@ -3,5 +3,7 @@ package com.sqlapp.data.db.dialect.mysql.sql;
 
 public class MySqlRevokeObjectPrivilegeFactory extends MySqlGrantObjectPrivilegeFactory {
 	@Override
-	protected boolean isGrant() { return false; }
+	protected boolean isGrant() {
+		return false;
+	}
 }
