@@ -30,16 +30,14 @@ public class SybaseTriggerReader extends TriggerReader {
 	private static final Pattern EVENT_PATTERN = Pattern.compile(
 			"\\b(?:FOR|INSTEAD\\s+OF)\\s+((?:INSERT|UPDATE|DELETE)(?:\\s*,\\s*(?:INSERT|UPDATE|DELETE))*)",
 			Pattern.CASE_INSENSITIVE);
-	private static final Pattern INSTEAD_OF_PATTERN = Pattern.compile(
-			"\\bINSTEAD\\s+OF\\b", Pattern.CASE_INSENSITIVE);
+	private static final Pattern INSTEAD_OF_PATTERN = Pattern.compile("\\bINSTEAD\\s+OF\\b", Pattern.CASE_INSENSITIVE);
 
 	protected SybaseTriggerReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<Trigger> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<Trigger> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("triggers.sql");
 		Map<Integer, TriggerSource> sources = new LinkedHashMap<>();
@@ -72,8 +70,7 @@ public class SybaseTriggerReader extends TriggerReader {
 			if (getReaderOptions().isReadStatement()) {
 				trigger.setStatement(definition);
 			}
-			trigger.setActionTiming(INSTEAD_OF_PATTERN.matcher(definition).find()
-					? "INSTEAD OF" : "AFTER");
+			trigger.setActionTiming(INSTEAD_OF_PATTERN.matcher(definition).find() ? "INSTEAD OF" : "AFTER");
 			Matcher events = EVENT_PATTERN.matcher(definition);
 			if (events.find()) {
 				for (String event : events.group(1).split("\\s*,\\s*")) {

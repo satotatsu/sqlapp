@@ -33,6 +33,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+
 /**
  * Sybase ASEのsegment読み込みクラス
  * 
@@ -46,8 +47,7 @@ public class SybaseTableSpaceReader extends TableSpaceReader {
 	}
 
 	@Override
-	protected List<TableSpace> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpace> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableSpace> result = CommonUtils.list();

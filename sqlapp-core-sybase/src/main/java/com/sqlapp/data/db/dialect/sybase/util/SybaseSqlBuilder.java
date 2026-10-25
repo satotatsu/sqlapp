@@ -26,8 +26,7 @@ import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
-public class SybaseSqlBuilder extends
-		AbstractSqlBuilder<SybaseSqlBuilder> {
+public class SybaseSqlBuilder extends AbstractSqlBuilder<SybaseSqlBuilder> {
 
 	/**
 	 * serialVersionUID
@@ -91,8 +90,7 @@ public class SybaseSqlBuilder extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.util.AbstractSqlBuilder#appendArgumentBefore(com.sqlapp.data
+	 * @see com.sqlapp.util.AbstractSqlBuilder#appendArgumentBefore(com.sqlapp.data
 	 * .schemas.NamedArgument)
 	 */
 	@Override
@@ -102,8 +100,7 @@ public class SybaseSqlBuilder extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.util.AbstractSqlBuilder#appendArgumentAfter(com.sqlapp.data
+	 * @see com.sqlapp.util.AbstractSqlBuilder#appendArgumentAfter(com.sqlapp.data
 	 * .schemas.NamedArgument)
 	 */
 	@Override
@@ -118,8 +115,7 @@ public class SybaseSqlBuilder extends
 	}
 
 	@Override
-	public SybaseSqlBuilder arguments(
-			NamedArgumentCollection<?> arguments) {
+	public SybaseSqlBuilder arguments(NamedArgumentCollection<?> arguments) {
 		if (arguments.getParent() instanceof Procedure) {
 			return arguments("\n\t", arguments, "", "\n\t, ");
 		} else {
@@ -128,7 +124,7 @@ public class SybaseSqlBuilder extends
 	}
 
 	@Override
-	public SybaseSqlBuilder clone(){
-		return (SybaseSqlBuilder)super.clone();
+	public SybaseSqlBuilder clone() {
+		return (SybaseSqlBuilder) super.clone();
 	}
 }

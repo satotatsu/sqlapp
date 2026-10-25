@@ -28,15 +28,14 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SybaseIdentityOnFactory extends
-		AbstractTableFactory<SybaseSqlBuilder> {
+public class SybaseIdentityOnFactory extends AbstractTableFactory<SybaseSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(Table obj) {
 		SybaseSqlBuilder builder = createSqlBuilder();
 		builder.set().identityInsert().name(obj).on();
 		List<SqlOperation> list = CommonUtils.list();
-		list.add(this.createOperation(builder.toString(),SqlType.IDENTITY_ON, obj));
+		list.add(this.createOperation(builder.toString(), SqlType.IDENTITY_ON, obj));
 		return list;
 	}
 }

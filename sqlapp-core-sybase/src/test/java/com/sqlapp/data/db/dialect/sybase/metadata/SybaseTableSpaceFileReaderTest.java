@@ -14,18 +14,10 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 
 class SybaseTableSpaceFileReaderTest {
 	@ParameterizedTest
-	@CsvSource({
-			"12,5,tableSpaceFiles.sql",
-			"14,0,tableSpaceFiles.sql",
-			"15,0,tableSpaceFiles15.sql",
-			"16,0,tableSpaceFiles15.sql"
-	})
-	void selectsVersionCompatibleCatalogQuery(final int major,
-			final int minor, final String expected) {
-		var version = new ProductVersionInfo()
-				.setMajorVersion(major)
-				.setMinorVersion(minor);
-		assertEquals(expected,
-				SybaseTableSpaceFileReader.getTableSpaceFileSqlResource(version));
+	@CsvSource({ "12,5,tableSpaceFiles.sql", "14,0,tableSpaceFiles.sql", "15,0,tableSpaceFiles15.sql",
+			"16,0,tableSpaceFiles15.sql" })
+	void selectsVersionCompatibleCatalogQuery(final int major, final int minor, final String expected) {
+		var version = new ProductVersionInfo().setMajorVersion(major).setMinorVersion(minor);
+		assertEquals(expected, SybaseTableSpaceFileReader.getTableSpaceFileSqlResource(version));
 	}
 }

@@ -14,14 +14,13 @@ import com.sqlapp.util.AbstractSqlBuilder;
 /** Generates ASE's {@code ALTER TABLE ... ADD column definition} syntax. */
 public class SybaseAlterTableFactory extends AlterTableFactory {
 	@Override
-	protected void addAddColumn(final Table originalTable, final Table table,
-			final DbObjectDifference difference, final List<SqlOperation> result) {
+	protected void addAddColumn(final Table originalTable, final Table table, final DbObjectDifference difference,
+			final List<SqlOperation> result) {
 		final Column column = difference.getTarget(Column.class);
 		final AbstractSqlBuilder<?> builder = createSqlBuilder();
 		builder.alter().table().name(table, this.getOptions().isDecorateSchemaName());
 		builder.add();
-		builder.name(column).space()
-				.definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
+		builder.name(column).space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 		if (!column.isNotNull()) {
 			builder.space().null_();
 		}

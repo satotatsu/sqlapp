@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.Role;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 public class SybaseRoleReader extends RoleReader {
 
 	protected SybaseRoleReader(Dialect dialect) {
@@ -40,8 +41,7 @@ public class SybaseRoleReader extends RoleReader {
 	}
 
 	@Override
-	protected List<Role> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Role> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Role> result = list();

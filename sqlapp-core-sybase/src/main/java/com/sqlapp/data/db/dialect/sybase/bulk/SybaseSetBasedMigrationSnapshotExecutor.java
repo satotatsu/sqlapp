@@ -49,7 +49,7 @@ public final class SybaseSetBasedMigrationSnapshotExecutor extends AbstractStagi
 
 	@Override
 	protected String valuesDifferent(final String left, final String right) {
-		return "(" + left + " <> " + right + " OR (" + left + " IS NULL AND " + right + " IS NOT NULL) OR ("
-				+ left + " IS NOT NULL AND " + right + " IS NULL))";
+		return "(" + left + " <> " + right + " OR (" + left + " IS NULL AND " + right + " IS NOT NULL) OR (" + left
+				+ " IS NOT NULL AND " + right + " IS NULL))";
 	}
 }

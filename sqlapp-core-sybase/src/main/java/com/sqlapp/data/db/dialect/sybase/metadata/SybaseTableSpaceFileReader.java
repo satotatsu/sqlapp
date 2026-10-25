@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.TableSpaceFile;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * Sybase ASEのdatabase device読み込み
  * 
@@ -46,8 +47,7 @@ public class SybaseTableSpaceFileReader extends TableSpaceFileReader {
 	}
 
 	@Override
-	protected List<TableSpaceFile> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<TableSpaceFile> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<TableSpaceFile> result = list();
@@ -72,8 +72,7 @@ public class SybaseTableSpaceFileReader extends TableSpaceFileReader {
 		return "tableSpaceFiles.sql";
 	}
 
-	protected TableSpaceFile createStorageFile(ExResultSet rs)
-			throws SQLException {
+	protected TableSpaceFile createStorageFile(ExResultSet rs) throws SQLException {
 		String filePath = getString(rs, "physical_name");
 		TableSpaceFile obj = new TableSpaceFile(getString(rs, "name"), filePath);
 		obj.setCatalogName(getString(rs, CATALOG_NAME));

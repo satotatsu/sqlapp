@@ -119,8 +119,7 @@ public class SybaseViewReader extends AbstractISViewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

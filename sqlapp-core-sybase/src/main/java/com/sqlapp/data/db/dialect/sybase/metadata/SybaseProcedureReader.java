@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SqlServerのプロシージャ作成クラス
  * 
@@ -50,8 +51,7 @@ public class SybaseProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Procedure> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Procedure> result = list();
@@ -88,16 +88,14 @@ public class SybaseProcedureReader extends ProcedureReader {
 		obj.setCreatedAt(created);
 		obj.setLastAlteredAt(lastAltered);
 		String difinition = getString(rs, "routine_definition");
-		if (this.getReaderOptions().isReadDefinition()
-				|| this.getReaderOptions().isReadStatement()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(difinition);
 		}
 		return obj;
 	}
 
 	private void setDefinition(Procedure obj, String definition) {
-		if (this.getReaderOptions().isReadDefinition()
-				|| this.getReaderOptions().isReadStatement()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(definition);
 		}
 	}

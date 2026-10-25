@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.User;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 public class SybaseUserReader extends UserReader {
 
 	protected SybaseUserReader(Dialect dialect) {
@@ -40,8 +41,7 @@ public class SybaseUserReader extends UserReader {
 	}
 
 	@Override
-	protected List<User> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<User> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<User> result = list();

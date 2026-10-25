@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * Sybase Function Reader
  * 
@@ -50,8 +51,7 @@ public class SybaseFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Function> result = list();
@@ -88,8 +88,7 @@ public class SybaseFunctionReader extends FunctionReader {
 		obj.setCreatedAt(created);
 		obj.setLastAlteredAt(lastAltered);
 		String definition = getString(rs, "routine_definition");
-		if (this.getReaderOptions().isReadDefinition()
-				|| this.getReaderOptions().isReadStatement()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(definition);
 		}
 		return obj;
@@ -97,8 +96,7 @@ public class SybaseFunctionReader extends FunctionReader {
 
 	private void setDefinition(Function function, StringBuilder definitionBuilder) {
 		String definition = definitionBuilder.toString();
-		if (this.getReaderOptions().isReadDefinition()
-				|| this.getReaderOptions().isReadStatement()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
 			function.setDefinition(definition);
 		}
 		String productDataType = SybaseUtils.getFunctionReturnName(definition);
