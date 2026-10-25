@@ -1,5 +1,334 @@
 # Db2 LUW metadata and DDL recreation
 
+Trigger recreation follow-up (LUW 11.1+): the versioned bulk catalog query now
+includes valid, invalid and inoperative triggers, retaining the raw VALID state
+as well as the model validity flag. EVENTINSERT/EVENTUPDATE/EVENTDELETE preserve
+multiple-event triggers instead of a blank event label. Creation-time QUALIFIER
+and FUNC_PATH are restored before authoritative full CREATE TRIGGER replay.
+Multiline bodies and internal semicolons use the shared DB2 definition replay
+path. Trigger remarks are recreated with COMMENT ON TRIGGER, and DROP/comment
+names quote schema and trigger identifiers separately, including literal dots
+and embedded quotes. No per-trigger query is added. Older readers and factory
+registries retain their prior behavior; DialectResolver mappings are unchanged.
+
+Native TEXT remains the complete definition; REFERENCING/WHEN/transition table
+and compound SQL syntax are not inferred from partial modeled bodies. A missing
+complete definition fails with an actionable error. Modified triggers require
+an explicit replacement plan because replacing them can change activation order.
+The modern reader retrieves triggers in creation-time order; collection/Schema
+CREATE sorts by creation timestamp when every timestamp is present, retaining
+input order for ties or when timestamps are missing. Manual snapshots without
+timestamps must supply their desired activation order. Cross-schema activation
+order and arbitrary dependencies are not globally inferred by Catalog CREATE.
+Restoring invalid objects recreates their DDL; it does not force a successfully
+recreated trigger back into its original invalid state. Default string-unit
+settings and definer/authorization environments are not restored here.
+
+Public API signatures, Schema XML format and dependencies are unchanged. Changes
+are confined to `sqlapp-core-db2` and this document. Focused tests cover reader,
+XML/clone, CREATE/DROP/comments, invalid and multiple-event objects, historical
+query selection, one query for 20 triggers, explicit replacement errors, and
+creation-order replay. An initial focused failure was a mock result-set column
+case mismatch for remarks; the corrected five focused tests pass on Java 21.
+No external database or Docker execution was performed.
+
+Final validation: Java 21, `:sqlapp-core-db2:test` passed all 257 tests with
+zero failures/errors/skips. The dependent
+`:sqlapp-core-dialect-test:compileDockerTestJava` check was UP-TO-DATE.
+`git diff --check` passed for the affected files. No generated files were
+intentionally edited.
+
+References: IBM [SYSCAT.TRIGGERS](https://www.ibm.com/docs/ja/db2/11.1.0?topic=views-syscattriggers),
+[CREATE TRIGGER](https://www.ibm.com/docs/ja/db2/11.1?topic=statements-create-trigger),
+and [trigger activation order](https://www.ibm.com/docs/en/db2/11.1.0?topic=objects-triggers).
+
+Routine replay and multiline-definition follow-up (LUW 11.1+): function and
+procedure readers retain QUALIFIER/FUNC_PATH and procedure execution attributes
+from the existing bulk routine query. CREATE restores schema/path before replay;
+COMMENT uses SPECIFIC identity. Native names, SPECIFIC names, argument names and
+table-return field names escape embedded quotes. SQL procedure body generation
+preserves DYNAMIC RESULT SETS, SQL data access, determinism and COMMIT ON RETURN.
+Invalid catalog values fail explicitly. For requested bodies whose offset is
+unavailable/out of range, PL/SQL dialects, or autonomous routines, the reader
+retains complete catalog CREATE text instead. Disabling both statement and
+definition reading still suppresses both. Earlier dialects retain the original
+routine metadata/generation path; DialectResolver mappings are unchanged.
+
+Schema `definition` and `statement` collections contain **lines**, not statements.
+The DB2 factories now join these lines before validating/replaying native DDL,
+preserving blank lines and internal semicolons. This corrects earlier per-line
+replay for tables, views, MQTs, indexes, types, domains, variables, modules and
+nicknames. A variable DEFAULT/CONSTANT expression may also span multiple lines.
+A multi-operation definition must start with an explicit Db2 CLP terminator
+directive, for example:
+
+```sql
+--#SET TERMINATOR @
+CREATE MODULE APP.M@
+ALTER MODULE APP.M PUBLISH PROCEDURE P() LANGUAGE SQL
+BEGIN
+  VALUES 'semicolon;inside';
+END@
+```
+
+The existing Db2 splitter handles such scripts. Without this explicit directive,
+the entire definition remains one operation, so a SQL routine body is never split
+on its internal semicolons. Line boundaries alone never designate operations.
+This clarifies earlier references below to "ordered definitions": they mean
+explicitly delimited scripts, not one SQL operation per collection element.
+The Schema XML format and public APIs are unchanged; scripts previously supplied
+as independent unterminated list elements need explicit terminators. No query per
+routine/argument was added. External routines and unsupported SQL forms still
+require complete executable definitions; this is not general dependency planning.
+
+Validation for this follow-up: Java 21, `:sqlapp-core-db2:test` passed all
+252 tests (zero failures/errors/skips). The dependent
+`:sqlapp-core-dialect-test:compileDockerTestJava` task also completed successfully
+(compilation only). Focused testing first exposed two invalid
+test fixtures (NUL text cannot be XML serialized; multiline text must be set as
+lines), which were corrected. One compilation run was interrupted after excessive
+inference of heterogeneous recursive Schema types; explicitly targeting the
+common named-object type allowed the test compilation to finish. No external
+Db2 connection, Docker execution or intentional generated-file edits occurred.
+
+References: IBM [SYSCAT.ROUTINES](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatroutines),
+[SQL procedures](https://www.ibm.com/docs/en/db2/12.1.x?topic=statements-create-procedure-sql),
+and [COMMENT](https://www.ibm.com/docs/en/db2/11.1?topic=statements-comment).
+
+View creation-context follow-up (LUW 11.1+): the versioned view reader preserves
+the creation-time default schema and function path, remarks, timestamps, validity,
+read-only state and VIEWCHECK alongside authoritative full CREATE text. The
+DB2_VIEW_TYPE marker distinguishes ordinary and typed views; typed views require
+complete definitions on recreation. Modern view CREATE/DROP and comment targets
+quote identifiers individually, including embedded quotes and literal dots.
+The ordinary view factory restores that context before replay, preventing unqualified
+source tables/functions from being resolved against a different schema/path.
+Manually modeled query views can supply ordered column names and LOCAL/CASCADED
+CHECK OPTION through VIEWCHECK L/C (N means none); column data types are not
+duplicated in the view column list. View and column comments are emitted
+separately. Full definitions own their embedded CHECK OPTION and column clauses.
+View/MQT definition collections hold lines of complete native DDL. Multiline
+DDL is replayed as one operation. Scripts beginning with an explicit
+`--#SET TERMINATOR @` directive are split into ordered SQL operations. MQT definitions and
+view bodies are validated for empty/NUL text. Modified views require an explicit
+replacement plan for dependent objects and privileges rather than an implicit
+replacement. Earlier view SQL/registry paths remain unchanged; metadata queries
+are set-based with no added per-view SELECTs.
+Tests cover reader/XML/CREATE context replay, literal identifiers, comments,
+modeled checks, ordered view/MQT definitions, invalid inputs, replacement guards
+and 20 views in one query. This does not add arbitrary dependency ordering,
+typed-view reconstruction, default string-unit environment restoration, MQT
+refresh execution or modeled query-only MQT creation.
+References: IBM [view catalog](https://public.dhe.ibm.com/ps/products/db2/info/vr6/htm/db2d0/db2d0341.htm)
+and [CREATE VIEW](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-create-view).
+Validation: Java 21, the five focused Db2ViewRecreationTest tests passed, followed
+by all 240 tests in `:sqlapp-core-db2:test` with zero failures. The combined
+invocation's dependent `:sqlapp-core-dialect-test:compileDockerTestJava` task
+initially failed to read shared-core class files; rerunning that task separately
+then compiled successfully. Earlier focused failures exposed embedded-quote
+handling and a mock remarks-column label; both were corrected. No real database
+or Docker tests ran. Existing API/configuration contracts were retained and no
+generated files were manually edited.
+
+Row-table physical options follow-up (LUW 11.1+): table metadata retains the
+resolved organization/type, clustering kind, append mode, lock granularity and
+volatile cardinality without additional catalog queries. Canonical compression
+types distinguish VALUE, ROW STATIC, ROW ADAPTIVE and their VALUE combinations.
+For a manually modeled table, `setCompression(true)` alone selects ADAPTIVE,
+matching Db2's explicit COMPRESS YES default; optional compression type strings
+are case-insensitive. A catalog row with an unresolved mode is not guessed.
+CREATE emits explicit row organization and compression mode; the prior 10.1
+compression hook is bypassed on modern dialects to prevent duplicate clauses.
+PCTFREE (0..99), APPEND ON/OFF, LOCKSIZE ROW/TABLE and VOLATILE CARDINALITY are
+emitted as separate ALTER statements immediately after CREATE and before indexes
+and comments. Catalog PCTFREE -1 remains unspecified. These are creation replay
+operations, not an automatic physical-options migration planner.
+Complete table definitions own their options and receive no inferred duplicate
+ALTERs. Column organization, typed tables, MDC/insert-time clustering and block
+insert locking need complete DDL; they cannot silently become ordinary row
+tables. Unknown compression modes and malformed physical flags fail clearly
+when generating SQL. Older dialects and nickname generation retain their
+previous paths. Tablespace, index-tablespace and LOB-tablespace names remain
+separate canonical model properties.
+Tests cover reader/XML/SQL recreation, all compression combinations, option
+ordering, validation, full DDL precedence and 20 table headers with one query.
+References: IBM [SYSCAT.TABLES](https://www.ibm.com/docs/en/db2/11.5.x?topic=views-syscattables),
+[compression](https://www.ibm.com/docs/en/db2/11.1.0?topic=compression-creating-table-that-uses)
+and [ALTER TABLE](https://www.ibm.com/docs/en/db2/12.1.x?topic=statements-alter-table).
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` succeeded on the
+final run: 235 DB2 tests, zero failures; dependent Docker compilation was
+up-to-date after a successful retry. An earlier dependent compilation failed
+because MySQL/SQL Server classes were unavailable; it was not fixed by changing
+those modules. The first focused run also required a correction to the mock
+ResultSet's statistics metadata. All five physical-options tests now pass.
+No external database or Docker tests ran, public APIs changed, or generated
+files were manually edited.
+
+IDENTITY recreation follow-up (LUW 11.1+): column CREATE SQL now honors ALWAYS
+versus BY DEFAULT, START WITH, INCREMENT BY, MINVALUE/MAXVALUE, CYCLE/NO CYCLE,
+CACHE/NO CACHE and ORDER/NO ORDER. Missing generation mode in manually modeled
+columns retains the prior ALWAYS default. Invalid bounds, zero increments,
+cache size 1/negative sizes, DEFAULT conflicts, fractional decimal identity
+types and bounds outside the column's numeric range fail explicitly. The normal
+path supports SMALLINT/INTEGER/BIGINT and DECIMAL/NUMERIC precision 1..31 with
+scale zero; distinct numeric identity types need complete table DDL.
+Reader values outside Long range are retained exactly in DB2_IDENTITY_START,
+DB2_IDENTITY_INCREMENT, DB2_IDENTITY_MINVALUE or DB2_IDENTITY_MAXVALUE specifics.
+The corresponding common Long-valued identity property is left unspecified,
+avoiding wrapped values in Schema XML. SQL uses a modeled Sequence value when
+present, otherwise the exact Db2 specific, so ordinary explicit overrides still
+take precedence. This exact-value XML preservation covers reader-produced
+snapshots; callers authoring large values should use the exact specifics or
+complete DDL rather than common Long-valued XML attributes. Existing older
+reader/SQL behavior remains unchanged. No catalog queries or public APIs were
+added. Current allocation state is not used as START WITH, and identity RESTART
+or automatic ALTER planning is not implemented by this change.
+Tests cover reader/XML/CREATE replay, descending sequences, all option flags,
+31-digit bounds, invalid combinations and 20 identities with one bulk query.
+References: IBM [COLIDENTATTRIBUTES](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatcolidentattributes)
+and [CREATE TABLE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-table).
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` succeeded:
+230 DB2 tests, zero failures; dependent Docker test sources compiled.
+All five focused identity tests passed. No external database or Docker tests
+ran, public APIs changed, or generated files were manually edited.
+
+LOB/XML storage follow-up (LUW 11.1+): modern column readers retain COMPACT,
+INLINE_LENGTH and COLLATIONSCHEMA alongside existing LOGGED and collation-name
+metadata. DB2_LOB_OCTET_LENGTH preserves the catalog byte length independently
+of declared Unicode string units through Schema XML. Column type SQL emits
+LOGGED/NOT LOGGED, COMPACT/NOT COMPACT and nonzero INLINE LENGTH before nullability
+and generation clauses. Modern XML columns retain the native SQLXML model type
+and render as XML rather than a length-selected XMLVARCHAR compatibility type.
+Native LOB inline lengths are checked against their
+byte-size descriptor minimum; XML requires at least 292 bytes; both are bounded
+by 32673. Zero means no explicit inline clause. Invalid flags, malformed lengths
+and incompatible types fail clearly. A complete table definition remains the
+escape hatch for structured types and distinct-LOB storage whose base type
+cannot be resolved safely. Old readers retain their previous LOGGED behavior;
+explicit modeled replay is limited to 11.1+. No catalog queries were added.
+Collation schema is supplemental read metadata here; this change does not emit
+a per-column COLLATE clause or recreate database collation settings.
+Tests cover reader/XML/CREATE recreation, Unicode byte versus unit lengths,
+LOB/XML boundaries and one query for 20 tables.
+References: IBM [CREATE TABLE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-table)
+and [SYSCAT.COLUMNS](https://www.ibm.com/docs/en/db2/12.1.x?topic=views-syscatcolumns).
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` succeeded:
+225 DB2 tests, zero failures; dependent Docker test sources compiled.
+The initial focused XML test exposed native XML type loss and compatibility
+type rendering; both were fixed and all five focused tests then passed.
+No external database or Docker tests ran, public APIs changed, or generated
+files were manually edited. Storage-option ALTER planning is not added here.
+
+Generated-column/default follow-up (LUW 11.1+): the versioned columns1110 query
+uses the current catalog DEFAULT instead of preferring IMPLICITVALUE (the value
+recorded when an existing column was added). Earlier readers retain columns.sql.
+Generated expression TEXT is mapped from its catalog `AS (...)` wrapper into the
+canonical Column.formula and recreates as GENERATED ALWAYS AS (...). Native SQL
+also replays IMPLICITLY HIDDEN and GENERATED ALWAYS/BY DEFAULT FOR EACH ROW ON
+UPDATE AS ROW CHANGE TIMESTAMP. Row-change columns require TIMESTAMP(6) NOT NULL.
+Generated expressions cannot silently coexist with DEFAULT, IDENTITY, temporal
+generation or a conflicting generation mode. Missing expressions, system-managed
+hidden columns and unknown hidden attributes require complete table DDL rather
+than falling back to an ordinary column. The existing temporal model still owns
+row-begin/end and transaction-start generation. No per-object queries were added.
+Tests cover reader/XML/CREATE recreation, old versus modern default queries,
+generation modes, invalid combinations, authoritative complete definitions and
+20 generated columns across 20 tables with a single query.
+References: IBM [SYSCAT.COLUMNS](https://www.ibm.com/docs/en/db2/11.5.x?topic=views-syscatcolumns)
+and [CREATE TABLE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-table).
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` succeeded:
+219 DB2 tests, zero failures, and dependent Docker test sources compiled.
+No external database or Docker tests ran, public APIs changed, or generated
+files were manually edited. This implements CREATE recreation; arbitrary ALTER
+of generated-column expressions remains outside the supported modeled path.
+
+Table-column type follow-up: LUW 11.1+ readers preserve resolved user-defined
+type identity as a qualified, individually quoted OTHER type instead of
+reclassifying a same-named built-in type. The 10.5+ string-unit reader no longer
+overwrites this identity. Native LOB types are retained even at small lengths;
+their declared lengths survive Schema XML through the DB2_LOB_LENGTH specific
+because the shared XML model omits ordinary length attributes for LOBs. The
+specific is updated to the declared unit length for Unicode LOBs.
+Db2 column SQL now emits canonical string units (10.5+), FOR BIT DATA for modern
+catalog character columns with code page zero, and explicit known LOB lengths.
+Incompatible units, missing lengths and unsupported version combinations fail
+clearly. Existing VECTOR handling and full table definitions remain available.
+No SQL catalog columns or per-column queries were added. Tests exercise reader
+to XML to CREATE TABLE recreation, quoted user types, Unicode VARCHAR/VARGRAPHIC,
+binary character columns, BLOB/CLOB lengths and one query for 20 tables.
+Reference: IBM [SYSCAT.COLUMNS, LUW 11.1](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatcolumns).
+The older reader representation is retained; automatic structured/reference
+table reconstruction and arbitrary dependency ordering remain limitations.
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` executed
+214 DB2 unit tests, zero failures. The combined invocation failed later during
+dependent Docker test compilation with unrelated Firebird class-file errors;
+the DB2 test task itself succeeded. A separate rerun of
+`./gradlew.bat :sqlapp-core-dialect-test:compileDockerTestJava --console=plain`
+then compiled successfully without source changes for the Firebird error.
+Initial focused failures exposed LOB length omission in XML and small CLOB
+reclassification; both were fixed before the successful focused/full runs.
+No external database or Docker tests ran, no public API changed, and no
+generated files were manually edited.
+
+Function return-type follow-up (LUW 11.1 and later): scalar return metadata now
+retains type schema/module, code page, declared string units and locator status
+alongside length and scale. Table/row return columns are read in one additional
+set-based ROUTINEPARMS query, ordered by schema, SPECIFIC identity and ordinal.
+The ordinary modern reader no longer parses CREATE text to discover return
+columns; legacy readers and explicit parser calls retain their previous path.
+SQL generation shares the argument renderer for qualified user types and native
+string units, with complete function definitions still authoritative. Locator
+or otherwise unsupported return types require complete DDL. Missing catalog
+return columns cannot be reconstructed from a body alone. PL/SQL compatibility
+and specialized return types remain outside this modeled path.
+Tests cover scalar metadata, native units and qualified types after XML, legacy
+parser compatibility, and 20 overloads across two schemas with 40 return columns
+using two queries total (function headers plus all return columns).
+Reference: IBM [SYSCAT.ROUTINEPARMS](https://www.ibm.com/docs/en/db2/12.1.0?topic=views-syscatroutineparms).
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` succeeded:
+210 DB2 tests, zero failures; Docker test source compilation was up-to-date.
+The first focused run exposed two explicit-parser regressions; both were fixed
+and the nine focused tests and full module subsequently passed. No external
+database or Docker test execution, public API change, or manual generated-file
+change was performed.
+
+Routine argument type recreation (LUW 11.1 and later): both argument readers
+retain the resolved type schema/module/name, length/scale, code page, declared
+string units and locator flag in Schema specifics. Native SQL function and
+procedure creation reuses the distinct-type/variable type renderer for built-in
+arguments, and quotes each resolved user-type identifier separately. For example,
+catalog byte length 20 with declared length 5 CODEUNITS32 recreates as
+`VARCHAR(5 CODEUNITS32)`, while a user type named VARCHAR remains qualified.
+Schema XML retains these details. No catalog queries were added and legacy
+reader resources are unchanged. This change covers input/output arguments;
+return-type support is described above. The compatibility-mode PL/SQL renderer
+remains separate follow-up work. Locator arguments require complete routine definitions.
+SQL input argument DEFAULT expressions are now emitted; output/inout defaults
+and defaults on RETURNS ROW functions are rejected instead of being omitted.
+The modeled DEFAULT path is enabled on LUW 11.1 and later; use complete DDL for
+older versions. Complete routine definitions remain authoritative.
+References: IBM [routine parameter catalog](https://www.ibm.com/docs/ja/db2/12.1.x?topic=views-syscatroutineparms)
+and [CREATE PROCEDURE SQL](https://www.ibm.com/docs/en/db2/11.1?topic=statements-create-procedure-sql).
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test
+:sqlapp-core-dialect-test:compileDockerTestJava --console=plain` succeeded:
+207 DB2 unit tests, zero failures; Docker test compilation was up-to-date.
+An initial test compilation used an incorrect registry accessor, which was fixed
+before the focused and complete test runs. No real database or Docker tests ran.
+
+Routine argument identity follow-up: function and procedure argument readers
+retain catalog SPECIFIC names literally, including dots and embedded quotes,
+without changing the owning schema. This applies to legacy and modern Db2 LUW
+readers without changing catalog SQL or public APIs. Regression coverage also
+checks 20 overloads with 40 arguments using one query per routine kind.
+Validation: Java 21, `./gradlew.bat :sqlapp-core-db2:test --console=plain`:
+202 tests, zero failures. No external database was accessed.
+
 This work strengthens the ordinary Schema-model path in `sqlapp-core-db2`.
 It targets Db2 LUW, not Db2 for z/OS or Db2 for i. Existing version resolution
 from the legacy dialect through 9.1/9.5/9.7/9.8, 10.1/10.5, 11.1/11.5/11.5.5 and
@@ -63,6 +392,7 @@ Schema name does not rewrite arbitrary stored SQL.
 | Type mappings (11.1+) | One bulk query retains forward/reverse mappings and native type conditions in `db2.typeMappings.v1`. Numeric/date/time mappings, forward remote decimal ranges and comments support native generation before nicknames; ambiguous conditions require full definitions. |
 | Range partitions (9.1+) | Metadata preserves low/high inclusivity, quoted keys, SQL expressions and NULL ordering with two bulk queries. CREATE TABLE emits explicit finite EXCLUSIVE bounds where modeled and retains per-partition data/index/LOB placement. |
 | Distinct/array types (11.1+) | `Schema.domains` retains native type kind, strong/weak rules, checks, nullability, source and array metadata. Native CREATE/DROP TYPE and complete-definition replay replace generic domain syntax; index-type length is no longer mistaken for associative-array cardinality. |
+| Row types (11.1+) | `Schema.types` and TypeColumn retain native field identity, order and dimensions/units. CREATE TYPE AS ROW and DROP TYPE are registered; cursor/structured definitions can be replayed verbatim, with unsupported automatic reconstruction rejected. |
 | Extended privilege DDL | Catalog CREATE grants after native object creation. Catalog ALTER revokes removals before native changes and grants additions/upgrades afterward. Sequence REVOKE includes RESTRICT; index CONTROL rejects GRANT OPTION. Grant-option reductions require an explicit revoke/regrant plan. |
 | Database authorities | One query reads supported SYSCAT.DBAUTH columns into `Catalog.userPrivileges`. Separate legacy/9.1/9.7/10.1 query resources retain old catalog compatibility. Database-level authorities include DBADM, SECADM, ACCESSCTRL, DATAACCESS, SQLADM, WLMADM, EXPLAIN and CREATE_SECURE_OBJECT at their supported version boundaries. |
 | Database authority DDL | Native GRANT/REVOKE ON DATABASE preserves principal types. DBADM on 9.7+ explicitly uses WITHOUT DATAACCESS WITHOUT ACCESSCTRL; separately captured authorities are replayed separately. PUBLIC restrictions, unsupported ADMIN/GRANT OPTION and cross-9.7 DBADM representation changes fail clearly. |
@@ -842,15 +1172,19 @@ CREATE TYPE "APP"."BY_ID" AS INTEGER ARRAY[INTEGER]
 ```
 
 Automatic reconstruction supports built-in integer, REAL/DOUBLE, BOOLEAN, DATE/TIME,
-explicit TIMESTAMP precision and DECIMAL/NUMERIC source types. Local source spelling
-and dimensions use the shared dialect type generator. Strong types retain STRONG
+explicit TIMESTAMP precision, DECIMAL/NUMERIC, character/graphic, binary and LOB source
+types when their declared dimensions and units are known. Local source spelling
+and dimensions use the shared dialect type generator, with explicit Db2 LOB lengths
+where the shared mapping omits them. Strong types retain STRONG
 TYPE RULES; data-type constraints are generated only for weak types. Ordinary arrays
-require explicit positive cardinality; associative arrays currently support INTEGER
-indexes. Catalog CREATE creates these native types before tables that reference them.
+require explicit positive cardinality; associative arrays support INTEGER and VARCHAR
+indexes. VARCHAR index lengths use the separately declared index string units when
+present, independently of the element type and array cardinality. Catalog CREATE
+creates these native types before tables that reference them.
 Comments use COMMENT ON TYPE, and explicit direct drops use DROP TYPE.
 
-Character/graphic string units, LOBs, DECFLOAT, VARCHAR indexes, nested/user-defined
-element types and other unsupported or ambiguous components require complete ordered
+Missing or ambiguous character/graphic string units, DECFLOAT, nested/user-defined
+element types and other unsupported components require complete ordered
 `Domain.definition` statements. Complete definitions are authoritative and do not
 require duplicate components. Unmarked generic domains fail clearly instead of
 becoming unsupported CREATE DOMAIN syntax. Direct use of these new factories on
@@ -873,6 +1207,80 @@ Docker test execution occurred, and no generated files were intentionally edited
 References: [CREATE TYPE distinct](https://www.ibm.com/docs/en/db2/11.1?topic=statements-create-type-distinct),
 [CREATE TYPE array](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-create-type-array),
 [DATATYPES](https://www.ibm.com/docs/en/db2-big-sql/7.1.0?topic=views-syscatdatatypes).
+
+### Character, LOB and associative-index extensions
+
+The type and variable factories now compose the same package-private
+`Db2NativeTypeSql` renderer. Unicode declarations use STRINGUNITSLENGTH instead
+of byte LENGTH, with OCTETS/CODEUNITS16/CODEUNITS32 checked against the type family.
+FOR BIT DATA requires OCTETS; incompatible units fail rather than being ignored.
+LOB declarations retain their catalog length on both the variable and native-type
+paths. Type declarations use a space before string units, for example
+`VARCHAR(5 CODEUNITS32)`, as in the native CREATE TABLE grammar; the earlier
+comma-separated output and its unit-test expectation were corrected.
+Associative VARCHAR indexes use ARRAYINDEXTYPE_STRINGUNITS and
+ARRAYINDEXTYPE_STRINGUNITSLENGTH when available; null index units retain the
+catalog's non-Unicode length semantics. Unknown or missing dimensions fail clearly.
+
+Five additional tests cover catalog-to-XML-to-DDL character types, graphic units,
+binary/LOB sources on both factories, VARCHAR index units and invalid combinations.
+No queries, public APIs, shared model formats or dependency changes were added.
+This remains Db2 LUW 11.1+ coverage; no type USAGE grant syntax from Db2 for z/OS
+or Db2 for i is introduced into the LUW dialect.
+
+The native grammar reference is [CREATE TABLE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-table).
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` (194 tests, zero failures).
+The selected command tests passed 10 tests earlier in this batch and were confirmed
+UP-TO-DATE on the final run; Docker test compilation was also confirmed UP-TO-DATE.
+An intermediate LOB assertion exposed the shared mapping's omitted length and passed
+after the Db2-native correction. No external database or Docker tests were executed,
+and no generated files were intentionally edited.
+
+## Row, cursor and structured type recreation (LUW 11.1+)
+
+`Schema.types` now has registered Db2 CREATE/DROP/ALTER factories. Row types generate
+`CREATE TYPE ... AS ROW (...)` from ordered TypeColumn fields. Fields use the same
+native type renderer as distinct types, arrays and global variables, preserving
+numeric dimensions, declared character/graphic string units and binary/LOB lengths.
+Names and comments use native identifier/literal quoting. A simple shared-model
+row type with integer fields requires no vendor-specific field properties.
+
+The 11.1+ Type reader retains native METATYPE, creation/alteration times and excludes
+module-member/system-owned objects. Its version-specific column query unions
+ATTRIBUTES and ROWFIELDS in one bulk query, preserving field schema/module identity,
+ordinal, dimensions, code page, string units and collation metadata. Module members
+are excluded in both branches. Twenty types and forty fields require one type query
+and one field query; there is no per-type SELECT. Legacy resources remain unchanged.
+The ROWFIELDS NULLS and DEFAULT columns are reserved by Db2 and are not interpreted
+as independently restorable constraints or defaults.
+
+Row field SQL uses `DB2_TYPE_SCHEMA`/`DB2_TYPE_MODULE` specifics to prevent a nested
+or module-owned type from accidentally becoming an unqualified built-in type.
+User-defined/nested fields, field defaults/checks/NOT NULL, array dimensions and
+unsupported field storage options require a complete parent `Type.definition`.
+Cursor and structured types also require complete ordered CREATE TYPE statements;
+their member metadata alone does not represent all native options and dependencies.
+Definitions are authoritative, so optional fields are not required to duplicate them.
+Direct DROP emits DROP TYPE; automatic replacement/removal requires an explicit
+native dependency plan. Catalog CREATE places types before routines that use them.
+
+Six focused tests cover bulk query counts, row field identity/order/units, module
+isolation, historical query selection, XML/clone, native SQL/comments, full-definition
+fallback, change guards and Catalog routine ordering. Public API signatures, shared
+Schema XML formats and dependencies are unchanged. The implementation coverage starts
+at 11.1; this is not a claim about the product introduction version of these types.
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` (200 tests, zero failures).
+All six focused row-type tests passed before the module-wide run. Docker test
+compilation and the selected HTML-documentation/schema-drift command tests were
+confirmed UP-TO-DATE. No external database or Docker tests were executed, and no
+generated files were intentionally edited.
+
+References: [ROWFIELDS](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatrowfields),
+[ATTRIBUTES](https://www.ibm.com/docs/en/db2/11.1?topic=views-syscatattributes),
+[CREATE TYPE row](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-type-row),
+[CREATE TYPE cursor](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-create-type-cursor).
 
 ## Remaining parity gaps
 
