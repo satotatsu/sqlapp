@@ -101,18 +101,18 @@ class FirebirdTableAlterSqlTest {
 	}
 
 	@Test
-	void tableOptionsAndComputedTypeChangesAreRejected() {
+	void tableOptionsAreRejectedAndComputedTypeChangesKeepTheExpression() {
 		Table original = table();
 		Table target = original.clone();
 		target.getSpecifics().put("firebird.external.file", "/tmp/file");
 		var registry = DialectHolder.defaultDialect40.createSqlFactoryRegistry();
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(target), SqlType.ALTER));
-		original.getColumns().get(0).setFormula("1+2");
+		original.getColumns().get(0).setDefaultValue(null).setFormula("1+2");
 		Table computed = original.clone();
 		computed.getColumns().get(0).setDataType(DataType.BIGINT);
-		assertThrows(UnsupportedOperationException.class,
-				() -> registry.createSql(original.diff(computed), SqlType.ALTER));
+		assertEquals("ALTER TABLE \"table name\" ALTER COLUMN \"value\" TYPE BIGINT COMPUTED BY (1+2)",
+				registry.createSql(original.diff(computed), SqlType.ALTER).get(0).getSqlText());
 	}
 
 	@Test

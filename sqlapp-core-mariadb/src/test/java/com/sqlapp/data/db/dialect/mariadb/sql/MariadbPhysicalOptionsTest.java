@@ -15,7 +15,7 @@ import com.sqlapp.data.schemas.IndexType;
 
 class MariadbPhysicalOptionsTest {
 	@ParameterizedTest
-	@CsvSource({"10,2", "10,11", "11,4"})
+	@CsvSource({ "10,2", "10,11", "11,4" })
 	void inheritedTableAndFulltextOptionsRemainNative(int major, int minor) {
 		var registry = DialectResolver.getInstance().getDialect("MariaDB", major, minor, 0).createSqlFactoryRegistry();
 		Table original = new Table("t");

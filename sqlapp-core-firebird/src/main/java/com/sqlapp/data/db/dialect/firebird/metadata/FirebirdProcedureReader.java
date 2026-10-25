@@ -67,6 +67,10 @@ public class FirebirdProcedureReader extends ProcedureReader {
 		String source = trim(getString(rs, "RDB$PROCEDURE_SOURCE"));
 		Procedure procedure = new Procedure(name);
 		procedure.setRemarks(getString(rs, "RDB$DESCRIPTION"));
+		String owner = trim(getString(rs, "RDB$OWNER_NAME"));
+		if (owner != null) {
+			procedure.getSpecifics().put("firebird.owner", owner);
+		}
 		if (this.getReaderOptions().isReadStatement()) {
 			procedure.setStatement(source);
 		}

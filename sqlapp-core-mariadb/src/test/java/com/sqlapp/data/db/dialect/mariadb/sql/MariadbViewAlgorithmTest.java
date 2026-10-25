@@ -24,23 +24,25 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class MariadbViewAlgorithmTest {
 	@ParameterizedTest
-	@ValueSource(booleans = {true, false})
+	@ValueSource(booleans = { true, false })
 	void readsAvailableAlgorithmInOneBatchAndRecreates(boolean hasAlgorithm) {
 		var dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 11, 0);
 		assertInstanceOf(MySqlViewReader.class, dialect.getCatalogReader().getSchemaReader().getViewReader());
-		int[] queries = {0};
+		int[] queries = { 0 };
 		var reader = new MySqlViewReader(dialect) {
 			java.util.List<com.sqlapp.data.schemas.Table> read() {
-				return doGetAll(null, new ParametersContext(), new ProductVersionInfo()
-						.setMajorVersion(10).setMinorVersion(11).setRevision(0));
+				return doGetAll(null, new ParametersContext(),
+						new ProductVersionInfo().setMajorVersion(10).setMinorVersion(11).setRevision(0));
 			}
+
 			@Override
 			protected JdbcQueryHandler execute(Connection connection, SqlNode sql, ParametersContext context,
 					ResultSetNextHandler handler) {
 				queries[0]++;
 				assertTrue(sql.toString().contains("information_schema.views"));
 				try (var rows = RowSetProvider.newFactory().createCachedRowSet()) {
-					String[] columns = {"TABLE_NAME", "TABLE_SCHEMA", "TABLE_CATALOG", "VIEW_DEFINITION", "ALGORITHM"};
+					String[] columns = { "TABLE_NAME", "TABLE_SCHEMA", "TABLE_CATALOG", "VIEW_DEFINITION",
+							"ALGORITHM" };
 					var metadata = new RowSetMetaDataImpl();
 					metadata.setColumnCount(hasAlgorithm ? 5 : 4);
 					for (int i = 1; i <= metadata.getColumnCount(); i++) {
@@ -49,19 +51,21 @@ class MariadbViewAlgorithmTest {
 						metadata.setColumnType(i, Types.VARCHAR);
 					}
 					rows.setMetaData(metadata);
-					for (String algorithm : new String[] {"MERGE", "TEMPTABLE", "UNDEFINED"}) {
+					for (String algorithm : new String[] { "MERGE", "TEMPTABLE", "UNDEFINED" }) {
 						rows.moveToInsertRow();
 						rows.updateString(1, "v_" + algorithm);
 						rows.updateString(2, "app");
 						rows.updateString(3, "def");
 						rows.updateString(4, "SELECT 1");
-						if (hasAlgorithm) rows.updateString(5, algorithm);
+						if (hasAlgorithm)
+							rows.updateString(5, algorithm);
 						rows.insertRow();
 						rows.moveToCurrentRow();
 					}
 					rows.beforeFirst();
 					var result = new ExResultSet(rows);
-					while (rows.next()) handler.handleResultSetNext(result);
+					while (rows.next())
+						handler.handleResultSetNext(result);
 				} catch (SQLException e) {
 					throw new IllegalStateException(e);
 				}

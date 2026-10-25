@@ -7,13 +7,14 @@ import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.jdbc.ExResultSet;
 
 /** External trigger engines became available in Firebird 3.0. */
-public class Firebird30TriggerReader extends FirebirdTriggerReader {
+public class Firebird30TriggerReader extends Firebird25TriggerReader {
 	protected Firebird30TriggerReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
 	protected void readVersionProperties(ExResultSet rs, Trigger trigger) throws SQLException {
+		super.readVersionProperties(rs, trigger);
 		String engine = com.sqlapp.util.CommonUtils.trim(getString(rs, "RDB$ENGINE_NAME"));
 		if (engine != null) {
 			trigger.getSpecifics().put("firebird.external.engine", engine);

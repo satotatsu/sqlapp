@@ -40,6 +40,11 @@ public class HsqlSqlSplitter extends SqlSplitter {
 	protected SqlTokenizer createSqlTokenizer(String input) {
 		return new SqlTokenizer(input) {
 			@Override
+			protected boolean supportsNestedBlockComments() {
+				return true;
+			}
+
+			@Override
 			protected boolean isStartStatement(String text, StringHolder stringHolder) {
 				if (stringHolder.substringMatcher(FUNCTION_PATTERN).matches()) {
 					int delimiter = routineDelimiter(stringHolder, getCurrentDelimiter());

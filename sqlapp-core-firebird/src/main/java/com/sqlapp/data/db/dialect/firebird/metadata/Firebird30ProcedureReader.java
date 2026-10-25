@@ -10,7 +10,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * Package members are recreated through their package, not as standalone
  * routines.
  */
-public class Firebird30ProcedureReader extends FirebirdProcedureReader {
+public class Firebird30ProcedureReader extends Firebird25ProcedureReader {
 	@Override
 	protected com.sqlapp.data.schemas.Procedure createProcedure(com.sqlapp.jdbc.ExResultSet rs)
 			throws java.sql.SQLException {

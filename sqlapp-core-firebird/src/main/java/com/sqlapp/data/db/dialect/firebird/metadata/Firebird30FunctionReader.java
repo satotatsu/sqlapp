@@ -33,6 +33,11 @@ public class Firebird30FunctionReader extends FirebirdFunctionReader {
 	@Override
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = super.createFunction(rs);
+		FirebirdCompilationState.blr(rs, obj);
+		String owner = trim(getString(rs, "RDB$OWNER_NAME"));
+		if (owner != null) {
+			obj.getSpecifics().put("firebird.owner", owner);
+		}
 		String engine = trim(getString(rs, "RDB$ENGINE_NAME"));
 		if (engine != null) {
 			obj.getSpecifics().put("firebird.external.engine", engine);

@@ -19,13 +19,9 @@
 
 package com.sqlapp.data.db.dialect.h2.util;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
-import com.sqlapp.data.db.dialect.util.StringHolder;
 
 public class H2SqlSplitter extends SqlSplitter {
 
@@ -33,22 +29,19 @@ public class H2SqlSplitter extends SqlSplitter {
 		super(dialect);
 	}
 
-	private static final Pattern FUNCTION_PATTERN = Pattern.compile(
-			"(?<all>\\s*(CREATE|ALTER)\\s+(?<type>ALIAS)[^;]*?\\s+AS\\s+\\$\\$(.*?)\\$\\$).*",
-			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
-
 	@Override
 	protected SqlTokenizer createSqlTokenizer(String input) {
 		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isStartStatement(String text, StringHolder stringHolder) {
-				Matcher matcher = stringHolder.substringMatcher(FUNCTION_PATTERN);
-				if (matcher.matches()) {
-					String all = matcher.group("all");
-					setPosition(stringHolder.getPosition() + all.length());
-					return true;
+			protected int getQuotedTextEnd(String sql, int start) {
+				if (sql.startsWith("$$", start)
+						&& (start == 0 || !Character.isJavaIdentifierPart(sql.charAt(start - 1)))) {
+					int end = sql.indexOf("$$", start + 2);
+					if (end < 0)
+						stringHolder.throwInvalidTextException("Closing dollar quote [$$] not found");
+					return end + 2;
 				}
-				return false;
+				return super.getQuotedTextEnd(sql, start);
 			}
 		};
 	}

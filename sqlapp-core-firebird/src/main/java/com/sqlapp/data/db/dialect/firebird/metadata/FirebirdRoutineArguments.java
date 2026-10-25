@@ -8,7 +8,10 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ArgumentRoutine;
 import com.sqlapp.data.schemas.NamedArgument;
 
-/** Bounds catalog predicates and groups arguments without scanning unrelated routines. */
+/**
+ * Bounds catalog predicates and groups arguments without scanning unrelated
+ * routines.
+ */
 final class FirebirdRoutineArguments {
 	static Map<String, List<NamedArgument>> read(Connection connection, ParametersContext context,
 			List<? extends ArgumentRoutine<?>> routines, RoutineArgumentReader<?> reader) {
@@ -22,5 +25,7 @@ final class FirebirdRoutineArguments {
 		}
 		return result;
 	}
-	private FirebirdRoutineArguments() { }
+
+	private FirebirdRoutineArguments() {
+	}
 }

@@ -33,6 +33,10 @@ public class Firebird30SequenceReader extends Firebird20SequenceReader {
 
 	protected Sequence createSequence(ExResultSet rs) throws SQLException {
 		Sequence sequence = super.createSequence(rs);
+		String owner = com.sqlapp.util.CommonUtils.trim(getString(rs, "RDB$OWNER_NAME"));
+		if (owner != null) {
+			sequence.getSpecifics().put("firebird.owner", owner);
+		}
 		sequence.setStartValue(rs.getLong("RDB$INITIAL_VALUE"));
 		sequence.setIncrementBy(rs.getLong("RDB$GENERATOR_INCREMENT"));
 		return sequence;

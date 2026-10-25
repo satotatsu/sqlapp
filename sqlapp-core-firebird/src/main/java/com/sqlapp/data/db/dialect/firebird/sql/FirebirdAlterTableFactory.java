@@ -94,8 +94,9 @@ public class FirebirdAlterTableFactory extends AbstractAlterTableFactory<Firebir
 	@Override
 	protected void addRenameOrAlterColumn(Table original, Table table, DbObjectDifference difference,
 			List<SqlOperation> result) {
-		Column column = FirebirdAlterSql.target(difference, Column.class, Set.of("name", "dataType", "dataTypeName",
-				"length", "scale", "domainName", "defaultValue", "notNull", "remarks"));
+		Column column = FirebirdAlterSql.target(difference, Column.class,
+				Set.of("name", "dataType", "dataTypeName", "length", "scale", "domainName", "defaultValue", "notNull",
+						"remarks", "formula", "identity", "identityGenerationType", "identityStep"));
 		Column old = (Column) difference.getOriginal();
 		if (!Objects.equals(old.getCharacterSet(), column.getCharacterSet())
 				|| !Objects.equals(old.getCollation(), column.getCollation())
@@ -103,19 +104,48 @@ public class FirebirdAlterTableFactory extends AbstractAlterTableFactory<Firebir
 			throw new UnsupportedOperationException(
 					"Firebird column ALTER cannot change charset, collation or vendor-specific properties");
 		var changed = difference.getChangedProperties();
+		if (column.getFormula() != null && column.getFormula().isBlank())
+			throw new IllegalArgumentException("Computed column expression must not be blank");
+		boolean computed = old.getFormula() != null && !old.getFormula().isBlank();
+		boolean targetComputed = column.getFormula() != null && !column.getFormula().isBlank();
+		if (computed != targetComputed)
+			throw new UnsupportedOperationException("Firebird cannot convert regular and computed columns");
+		if (targetComputed && (column.isIdentity() || column.getArrayDimension() > 0 || column.getDefaultValue() != null
+				|| column.getDomainName() != null))
+			throw new IllegalArgumentException(
+					"Firebird computed columns cannot specify identity, array, domain or default");
+		boolean typeChanged = changed.keySet().stream()
+				.anyMatch(Set.of("dataType", "dataTypeName", "length", "scale", "domainName")::contains);
+		validateIdentityAlter(old, column, changed.keySet());
 		if (changed.containsKey("name"))
 			addSql(result, columnPrefix(table, old.getName())._add(" TO ").name(column.getName()), SqlType.ALTER,
 					column);
-		if (changed.keySet().stream()
-				.anyMatch(Set.of("dataType", "dataTypeName", "length", "scale", "domainName")::contains)) {
-			if (old.getArrayDimension() > 0 || old.isIdentity() || old.getFormula() != null)
+		if (typeChanged || computed && changed.containsKey("formula")) {
+			if (old.getArrayDimension() > 0 || old.isIdentity())
 				throw new UnsupportedOperationException(
-						"Array, identity and computed column type changes require a dedicated migration");
-			if (old.getCollation() != null && !"0".equals(old.getSpecifics().get("firebird.column.collationId")))
+						"Array and identity column type changes require a dedicated migration");
+			if (typeChanged && old.getCollation() != null
+					&& !"0".equals(old.getSpecifics().get("firebird.column.collationId")))
 				throw new IllegalArgumentException(
 						"Column TYPE cannot safely retain a non-default or unverified collation");
-			addSql(result, columnPrefix(table, column.getName())._add(" TYPE ").columnType(column), SqlType.ALTER,
-					column);
+			var builder = columnPrefix(table, column.getName());
+			if (typeChanged)
+				builder._add(" TYPE ").columnType(column);
+			if (computed)
+				builder._add(" COMPUTED BY (")._add(column.getFormula())._add(")");
+			addSql(result, builder, SqlType.ALTER, column);
+		}
+		if (old.isIdentity() && !column.isIdentity())
+			addSql(result, columnPrefix(table, column.getName())._add(" DROP IDENTITY"), SqlType.ALTER, column);
+		else if (old.isIdentity()) {
+			if (changed.containsKey("identityGenerationType"))
+				addSql(result, columnPrefix(table, column.getName())._add(" SET GENERATED ")._add(
+						column.getIdentityGenerationType() == IdentityGenerationType.Always ? "ALWAYS" : "BY DEFAULT"),
+						SqlType.ALTER, column);
+			if (changed.containsKey("identityStep"))
+				addSql(result,
+						columnPrefix(table, column.getName())._add(" SET INCREMENT BY ")._add(column.getIdentityStep()),
+						SqlType.ALTER, column);
 		}
 		if (changed.containsKey("defaultValue")) {
 			if (getDialect().compareTo(DialectHolder.defaultDialect20) < 0)
@@ -134,6 +164,28 @@ public class FirebirdAlterTableFactory extends AbstractAlterTableFactory<Firebir
 		}
 		if (changed.containsKey("remarks"))
 			result.addAll(getSqlFactoryRegistry().createSql(column, SqlType.SET_COMMENT));
+	}
+
+	private void validateIdentityAlter(Column old, Column target, Set<String> changed) {
+		if (!changed.contains("identity") && !changed.contains("identityGenerationType")
+				&& !changed.contains("identityStep"))
+			return;
+		if (!old.isIdentity())
+			throw new UnsupportedOperationException("Firebird cannot convert a regular column to an identity column");
+		if (getDialect().compareTo(DialectHolder.defaultDialect40) < 0)
+			throw new IllegalArgumentException(
+					"Identity generation, increment and DROP IDENTITY ALTER require Firebird 4.0 or later");
+		if (!target.isIdentity()) {
+			if (changed.contains("identityStep") || changed.contains("identityGenerationType"))
+				throw new IllegalArgumentException("Split DROP IDENTITY from changes to identity options");
+			return;
+		}
+		if (target.getIdentityGenerationType() == null)
+			throw new IllegalArgumentException("Identity ALTER requires an explicit generation type");
+		if (changed.contains("identityStep") && (target.getIdentityStep() == null || target.getIdentityStep() == 0))
+			throw new IllegalArgumentException("Identity increment must be explicit and non-zero");
+		if (target.getDefaultValue() != null)
+			throw new IllegalArgumentException("Firebird identity columns cannot have an explicit DEFAULT");
 	}
 
 	@Override

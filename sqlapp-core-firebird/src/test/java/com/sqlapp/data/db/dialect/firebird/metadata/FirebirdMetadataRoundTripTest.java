@@ -18,6 +18,71 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class FirebirdMetadataRoundTripTest {
 	@Test
+	void retainsGeneratedUniqueIndexNamesInOneQueryWithoutReusingThemInDdl() {
+		int[] queries = { 0 };
+		var reader = new FirebirdUniqueConstraintReader(DialectHolder.defaultDialect25) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				queries[0]++;
+				for (int i = 0; i < 50; i++)
+					for (int column = 0; column < 2; column++)
+						emit(handler, Map.of("TABLE_NAME", "orders", "CONSTRAINT_NAME", "key_" + i, "COLUMN_NAME",
+								"ID" + column, "CONSTRAINT_TYPE", "PRIMARY KEY", "INDEX_NAME", "RDB$PRIMARY" + i));
+				return null;
+			}
+		};
+		var constraints = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(1, queries[0]);
+		assertEquals(50, constraints.size());
+		for (var constraint : constraints) {
+			assertEquals(2, constraint.getColumns().size());
+			assertTrue(constraint.getSpecifics().get("firebird.catalog.indexName").startsWith("RDB$PRIMARY"));
+			assertFalse(constraint.getSpecifics().containsKey("firebird.indexName"));
+			Table table = new Table("orders");
+			table.getColumns().add(
+					new com.sqlapp.data.schemas.Column("ID0").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+			table.getColumns().add(
+					new com.sqlapp.data.schemas.Column("ID1").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+			table.getConstraints().add(constraint);
+			String ddl = DialectHolder.defaultDialect25.createSqlFactoryRegistry().createSql(constraint, SqlType.CREATE)
+					.get(0).getSqlText();
+			assertFalse(ddl.contains("RDB$PRIMARY"), ddl);
+			assertTrue(DialectHolder.defaultDialect25.createSqlFactoryRegistry().createSql(table, SqlType.ANALYZE)
+					.get(0).getSqlText().contains("RDB$PRIMARY"));
+		}
+	}
+
+	@Test
+	void retainsGeneratedForeignIndexNamesInOneQuery() {
+		int[] queries = { 0 };
+		var reader = new FirebirdForeignKeyConstraintReader(DialectHolder.defaultDialect25) {
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				queries[0]++;
+				for (int i = 0; i < 50; i++)
+					for (int column = 0; column < 2; column++) {
+						var values = new java.util.HashMap<String, Object>();
+						values.putAll(Map.of("PKTABLE_NAME", "parent", "PKCOLUMN_NAME", "P" + column, "FKTABLE_NAME",
+								"child", "FKCOLUMN_NAME", "C" + column, "FK_NAME", "fk_" + i, "INDEX_NAME",
+								"RDB$FOREIGN" + i, "DEFERRABLE", "NO", "INITIALLY_DEFERRED", "NO"));
+						emit(handler, values);
+					}
+				return null;
+			}
+		};
+		var constraints = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(1, queries[0]);
+		assertEquals(50, constraints.size());
+		for (var constraint : constraints) {
+			assertEquals(2, constraint.getColumns().size());
+			assertTrue(constraint.getSpecifics().get("firebird.catalog.indexName").startsWith("RDB$FOREIGN"));
+			assertFalse(constraint.getSpecifics().containsKey("firebird.indexName"));
+		}
+	}
+
+	@Test
 	void readsAllArrayDimensionsInOneAdditionalBulkQuery() {
 		int[] queries = { 0 };
 		var reader = new FirebirdColumnReader(DialectHolder.defaultDialect25) {

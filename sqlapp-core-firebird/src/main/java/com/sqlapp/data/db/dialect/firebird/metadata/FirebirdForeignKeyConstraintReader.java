@@ -87,6 +87,8 @@ public class FirebirdForeignKeyConstraintReader extends ForeignKeyConstraintRead
 					String indexName = trim(getString(rs, "INDEX_NAME"));
 					if (indexName != null && !indexName.startsWith("RDB$"))
 						c.getSpecifics().put("firebird.indexName", indexName);
+					else if (indexName != null)
+						c.getSpecifics().put("firebird.catalog.indexName", indexName);
 					if (rs.getInt("INDEX_DESCENDING") == 1)
 						c.getSpecifics().put("firebird.indexDescending", "true");
 					c.setUpdateRule(CascadeRule.parse(trim(getString(rs, "UPDATE_RULE"))));
