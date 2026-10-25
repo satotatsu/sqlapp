@@ -35,6 +35,7 @@ final class ReportReviewPanel extends JPanel {
 	private final JButton browse = new JButton("Browse…");
 	private final Loader loader;
 	private long revision;
+	private boolean busy;
 	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 
 	@FunctionalInterface
@@ -97,6 +98,7 @@ final class ReportReviewPanel extends JPanel {
 	}
 
 	private void busy(final boolean busy) {
+		this.busy = busy;
 		file.setEnabled(!busy);
 		type.setEnabled(!busy);
 		browse.setEnabled(!busy);
@@ -104,6 +106,8 @@ final class ReportReviewPanel extends JPanel {
 	}
 
 	private void load() {
+		if (busy)
+			return;
 		final String path = file.getText().trim();
 		final var selectedType = (ReportReviewService.Type) type.getSelectedItem();
 		clear();
@@ -145,5 +149,9 @@ final class ReportReviewPanel extends JPanel {
 		summary.setText("Unable to load the selected report.\n" + EditorStatusPanel.failureDetails(failure));
 		status.setText("Load failed. Check the report type, format and file.");
 		statusPanel.setDetails(status.getText() + "\n\n" + summary.getText());
+	}
+
+	boolean isBusy() {
+		return busy;
 	}
 }

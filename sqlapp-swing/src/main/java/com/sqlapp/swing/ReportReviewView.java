@@ -20,6 +20,8 @@ final class ReportReviewView extends JPanel {
 	final JTextArea summary = readOnlyText();
 	final RSyntaxTextArea details = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_JSON, false);
 	final JTable tasks = new JTable();
+	final ReportDetailTablePanel taskTable = new ReportDetailTablePanel(tasks, null, "Filter tasks / migrations",
+			"rows");
 	final JTabbedPane tabs = new JTabbedPane();
 
 	ReportReviewView() {
@@ -27,11 +29,8 @@ final class ReportReviewView extends JPanel {
 		summary.setLineWrap(true);
 		summary.setWrapStyleWord(true);
 		summary.setRows(7);
-		tasks.setAutoCreateRowSorter(true);
 		tasks.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		final var tableScroll = new JScrollPane(tasks);
-		tableScroll.setColumnHeaderView(tasks.getTableHeader());
-		tabs.addTab("Tasks / migrations", tableScroll);
+		tabs.addTab("Tasks / migrations", taskTable);
 		tabs.addTab("Parsed report JSON", CodeEditors.scroll(details));
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(summary), tabs);
 		split.setResizeWeight(0.3);
@@ -52,6 +51,7 @@ final class ReportReviewView extends JPanel {
 		details.setText(review.details());
 		details.setCaretPosition(0);
 		showTable(tasks, review.columns(), review.rows());
+		taskTable.setNumericColumns(review.numericColumns());
 		for (final var section : review.tables()) {
 			tabs.insertTab(section.title(), null, new ReportDetailTablePanel(section), null, tabs.getTabCount() - 1);
 		}

@@ -158,7 +158,10 @@ final class ConnectionProfilePanel extends JPanel {
 			protected void done() {
 				try {
 					get();
-					status.setText("Profile saved");
+					final boolean unchanged = url.equals(jdbcUrl.getText()) && user.equals(username.getText())
+							&& driver.equals(driverClass.getText());
+					status.setText(
+							unchanged ? "Profile saved" : "Profile saved; newer connection inputs are not saved");
 					fileDialogs.remember(file);
 					statusPanel.setDetails(status.getText() + "\nFile: " + file);
 				} catch (final InterruptedException exception) {
@@ -175,10 +178,26 @@ final class ConnectionProfilePanel extends JPanel {
 
 	private void busy(final boolean busy) {
 		this.busy = busy;
-		load.setEnabled(!busy && isEnabled());
-		save.setEnabled(!busy && isEnabled());
+		refreshActions();
 		if (busy)
 			status.setText("Reading/writing profile…");
+	}
+
+	@Override
+	public void setEnabled(final boolean enabled) {
+		super.setEnabled(enabled);
+		// Swing constructors may call this before the action fields are initialized.
+		if (load != null && save != null)
+			refreshActions();
+	}
+
+	private void refreshActions() {
+		load.setEnabled(!busy && isEnabled());
+		save.setEnabled(!busy && isEnabled());
+	}
+
+	boolean isBusy() {
+		return busy;
 	}
 
 	private void failed(final Throwable failure) {

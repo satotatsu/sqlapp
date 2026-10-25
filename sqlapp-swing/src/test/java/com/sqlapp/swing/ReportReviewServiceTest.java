@@ -48,6 +48,7 @@ class ReportReviewServiceTest {
 		assertTrue(review.summary().contains("require rollback: true"));
 		assertTrue(review.summary().contains("sha256:"));
 		assertEquals(2, review.rows().size());
+		assertEquals(List.of(2), review.numericColumns());
 		assertEquals("false", review.rows().get(0).get(3));
 		assertTrue(review.details().contains("db-fingerprint"));
 		assertEquals(original, Files.readString(file));
@@ -84,6 +85,7 @@ class ReportReviewServiceTest {
 		assertTrue(review.summary().contains("Completed tasks: 0/1"));
 		assertEquals("NOT_STARTED", review.rows().getFirst().get(4));
 		assertEquals("not recorded", review.rows().getFirst().get(6));
+		assertEquals(List.of(6), review.numericColumns());
 	}
 
 	@Test
@@ -96,6 +98,7 @@ class ReportReviewServiceTest {
 		assertTrue(review.summary().contains("COMPLETED"));
 		assertTrue(review.summary().contains("invocation: 15"));
 		assertEquals(List.of("customer", "10", "15", "2", "false"), review.rows().getFirst());
+		assertEquals(List.of(1, 2, 3), review.numericColumns());
 	}
 
 	@Test
@@ -112,6 +115,7 @@ class ReportReviewServiceTest {
 			assertTrue(review.summary().contains("failure detail"));
 			assertTrue(review.summary().contains("committed chunks may exist"));
 			assertEquals("customer", review.rows().getFirst().getFirst());
+			assertEquals(List.of(1, 2, 3), review.numericColumns());
 		}
 	}
 

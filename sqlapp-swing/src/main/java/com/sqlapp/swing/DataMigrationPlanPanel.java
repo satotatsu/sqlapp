@@ -64,6 +64,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	private PlanningJdbc.Spec reviewedTarget;
 	private DataMigrationExecutionService.Outcome execution;
 	private boolean executing;
+	private boolean busy;
 	private DataMigrationExecutionControl control;
 	private final javax.swing.Timer progressTimer = new javax.swing.Timer(250, event -> refreshProgress());
 	private final Executor executor;
@@ -276,6 +277,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	private void busy(final boolean busy) {
+		this.busy = busy;
 		enable(settings, !busy);
 		advancedToggle.setEnabled(!busy);
 		build.setEnabled(!busy);
@@ -298,6 +300,8 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	private void build() {
+		if (busy || blockedByProfile())
+			return;
 		final String path = configurationFile.getText().trim();
 		final String fingerprint = expectedFingerprint.getText().trim();
 		final var sourceInput = source.snapshot();
@@ -359,7 +363,20 @@ final class DataMigrationPlanPanel extends JPanel {
 		return executing;
 	}
 
+	boolean isBusy() {
+		return busy || executing || source.profile.isBusy() || target.profile.isBusy();
+	}
+
+	private boolean blockedByProfile() {
+		if (!source.profile.isBusy() && !target.profile.isBusy())
+			return false;
+		status.setText("Wait for the connection profile operations to finish, then try again.");
+		return true;
+	}
+
 	private void confirmExecution() {
+		if (busy || blockedByProfile())
+			return;
 		final var confirmed = result;
 		if (confirmed == null || !apply.isEnabled())
 			return;
@@ -397,7 +414,7 @@ final class DataMigrationPlanPanel extends JPanel {
 
 	void executeReviewed(final char[] sourcePassword, final char[] targetPassword) {
 		try {
-			if (!apply.isEnabled() || result == null || executing)
+			if (!apply.isEnabled() || result == null || executing || busy || blockedByProfile())
 				return;
 			final var confirmed = result;
 			final var sourceSpec = reviewedSource;
@@ -475,7 +492,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	void saveExecutionTo(final Path destination) {
-		if (execution == null || !saveExecution.isEnabled())
+		if (execution == null || !saveExecution.isEnabled() || busy || blockedByProfile())
 			return;
 		final var snapshot = execution;
 		busy(true);
@@ -503,7 +520,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	void saveVerificationTo(final Path destination) {
-		if (execution == null || !saveVerification.isEnabled())
+		if (execution == null || !saveVerification.isEnabled() || busy || blockedByProfile())
 			return;
 		final var snapshot = execution;
 		busy(true);
@@ -545,7 +562,7 @@ final class DataMigrationPlanPanel extends JPanel {
 
 	void saveTo(final Path destination) {
 		final var snapshot = result;
-		if (snapshot == null) {
+		if (snapshot == null || busy || blockedByProfile()) {
 			return;
 		}
 		busy(true);

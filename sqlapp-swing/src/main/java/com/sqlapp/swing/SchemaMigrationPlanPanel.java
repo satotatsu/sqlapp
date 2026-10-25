@@ -74,6 +74,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	private PlanningJdbc.Spec reviewedConnection;
 	private SchemaMigrationExecutionService.Outcome execution;
 	private boolean executing;
+	private boolean busy;
 	private long revision;
 
 	@FunctionalInterface
@@ -248,6 +249,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private void busy(final boolean busy) {
+		this.busy = busy;
 		enable(form, !busy);
 		advancedToggle.setEnabled(!busy);
 		build.setEnabled(!busy);
@@ -268,6 +270,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private void build() {
+		if (busy || blockedByProfile())
+			return;
 		final String url = jdbcUrl.getText().trim();
 		final String user = username.getText().trim();
 		final String driver = driverClass.getText().trim();
@@ -339,6 +343,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private void confirmApply() {
+		if (busy || blockedByProfile())
+			return;
 		if (!apply.isEnabled()) {
 			return;
 		}
@@ -372,7 +378,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	void applyReviewed(final char[] secret) {
-		if (!apply.isEnabled()) {
+		if (!apply.isEnabled() || busy || blockedByProfile()) {
 			Arrays.fill(secret, '\0');
 			return;
 		}
@@ -425,6 +431,17 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		return executing;
 	}
 
+	boolean isBusy() {
+		return busy || executing || profile.isBusy();
+	}
+
+	private boolean blockedByProfile() {
+		if (!profile.isBusy())
+			return false;
+		status.setText("Wait for the connection profile operation to finish, then try again.");
+		return true;
+	}
+
 	private void chooseExecutionSave() {
 		final var chooser = outputChooser("migration-execution.json");
 		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
@@ -440,7 +457,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 
 	void saveExecutionTo(final Path destination) {
 		final var snapshot = execution;
-		if (snapshot == null || snapshot.report() == null) {
+		if (snapshot == null || snapshot.report() == null || busy || blockedByProfile()) {
 			return;
 		}
 		busy(true);
@@ -495,7 +512,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 
 	void saveTo(final Path destination) {
 		final var snapshot = result;
-		if (snapshot == null) {
+		if (snapshot == null || busy || blockedByProfile()) {
 			return;
 		}
 		busy(true);

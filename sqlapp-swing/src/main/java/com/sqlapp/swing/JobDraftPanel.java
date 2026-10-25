@@ -40,8 +40,12 @@ final class JobDraftPanel extends JPanel {
 	final JCheckBox verify = new JCheckBox("Verify copied data", true);
 	final JButton inspect = new JButton("Read Schema");
 	final JButton create = new JButton("Create draft in editor");
-	final JButton select = new JButton("Select eligible");
-	final JButton clear = new JButton("Clear selection");
+	final JButton select = new JButton("Select visible eligible");
+	final JButton clear = new JButton("Clear visible");
+	final JButton clearAll = new JButton("Clear all selected");
+	final JTextField filter = new JTextField();
+	final JButton clearFilter = new JButton("Clear filter");
+	final JLabel count = new JLabel();
 	final JLabel status = new JLabel(
 			"Choose Schema XML. INSERT into empty targets; resume disabled. No database connection.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
@@ -68,6 +72,9 @@ final class JobDraftPanel extends JPanel {
 	private final Consumer<String> ready;
 	private SchemaSnapshot snapshot;
 	private boolean busy;
+	private boolean selectingBatch;
+	private final javax.swing.table.TableRowSorter<DefaultTableModel> sorter = new javax.swing.table.TableRowSorter<>(
+			model);
 	private long revision;
 	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 	private final JButton browse = new JButton("Browse…");
@@ -103,17 +110,39 @@ final class JobDraftPanel extends JPanel {
 		top.add(identity);
 		top.add(settings);
 		add(top, BorderLayout.NORTH);
-		tables.setAutoCreateRowSorter(true);
+		tables.setRowSorter(sorter);
+		sorter.setSortsOnUpdates(true);
+		sorter.addRowSorterListener(event -> {
+			if (!selectingBatch)
+				refreshCounts();
+		});
 		tables.getColumnModel().getColumn(0).setMaxWidth(70);
 		tables.getColumnModel().getColumn(1).setPreferredWidth(220);
 		tables.getColumnModel().getColumn(3).setPreferredWidth(450);
 		final var tableScroll = new JScrollPane(tables);
 		tableScroll.setColumnHeaderView(tables.getTableHeader());
-		add(tableScroll, BorderLayout.CENTER);
+		final var find = new JPanel(new BorderLayout(6, 0));
+		final var filterLabel = new JLabel("Find tables");
+		filterLabel.setLabelFor(filter);
+		find.add(filterLabel, BorderLayout.WEST);
+		find.add(filter, BorderLayout.CENTER);
+		find.add(clearFilter, BorderLayout.EAST);
+		final var tableHeader = new JPanel(new BorderLayout(4, 4));
+		tableHeader.add(find, BorderLayout.NORTH);
+		tableHeader.add(count, BorderLayout.SOUTH);
+		final var tableArea = new JPanel(new BorderLayout(4, 4));
+		tableArea.add(tableHeader, BorderLayout.NORTH);
+		tableArea.add(tableScroll, BorderLayout.CENTER);
+		add(tableArea, BorderLayout.CENTER);
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		actions.add(select);
 		actions.add(clear);
+		actions.add(clearAll);
 		actions.add(create);
+		create.setToolTipText("Create a draft for all selected tables, including selections hidden by the filter.");
+		select.setToolTipText("Select eligible tables in the current filtered view only.");
+		clear.setToolTipText("Clear selections in the current filtered view only.");
+		clearAll.setToolTipText("Clear every selected table, including hidden selections.");
 		final var bottom = new JPanel(new BorderLayout());
 		bottom.add(actions, BorderLayout.NORTH);
 		bottom.add(statusPanel, BorderLayout.SOUTH);
@@ -132,6 +161,8 @@ final class JobDraftPanel extends JPanel {
 			}
 		});
 		model.addTableModelListener(event -> {
+			if (selectingBatch)
+				return;
 			draftOptionsChanged();
 			refresh();
 		});
@@ -157,16 +188,35 @@ final class JobDraftPanel extends JPanel {
 		});
 		inspect.addActionListener(event -> inspectSchema());
 		create.addActionListener(event -> createDraft());
-		select.addActionListener(event -> {
-			if (!busy && snapshot != null)
-				for (int row = 0; row < model.getRowCount(); row++)
-					if (snapshot.tables().get(row).selectable())
-						model.setValueAt(true, row, 0);
+		select.addActionListener(event -> updateSelection(true, false));
+		clear.addActionListener(event -> updateSelection(false, false));
+		clearAll.addActionListener(event -> updateSelection(false, true));
+		clearFilter.addActionListener(event -> filter.setText(""));
+		filter.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent event) {
+				refreshFilter();
+			}
+
+			public void removeUpdate(DocumentEvent event) {
+				refreshFilter();
+			}
+
+			public void changedUpdate(DocumentEvent event) {
+				refreshFilter();
+			}
 		});
-		clear.addActionListener(event -> {
-			if (!busy)
-				for (int row = 0; row < model.getRowCount(); row++)
-					model.setValueAt(false, row, 0);
+		for (final String keys : new String[] { "control F", "meta F" })
+			getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(javax.swing.KeyStroke.getKeyStroke(keys),
+					"find-tables");
+		getActionMap().put("find-tables", new javax.swing.AbstractAction() {
+			private static final long serialVersionUID = 1L;
+
+			public void actionPerformed(java.awt.event.ActionEvent event) {
+				if (!busy) {
+					filter.requestFocusInWindow();
+					filter.selectAll();
+				}
+			}
 		});
 		refresh();
 	}
@@ -180,6 +230,7 @@ final class JobDraftPanel extends JPanel {
 		snapshot = null;
 		fingerprint.setText("");
 		model.setRowCount(0);
+		filter.setText("");
 		if (!busy)
 			status.setText("Schema input changed. Read Schema again before creating a draft.");
 		refresh();
@@ -211,20 +262,73 @@ final class JobDraftPanel extends JPanel {
 		jobId.setEnabled(!busy);
 		chunkSize.setEnabled(!busy);
 		verify.setEnabled(!busy);
-		select.setEnabled(!busy && snapshot != null);
-		clear.setEnabled(!busy && snapshot != null);
+		select.setEnabled(!busy && snapshot != null && tables.getRowCount() > 0);
+		clear.setEnabled(!busy && snapshot != null && tables.getRowCount() > 0);
+		clearAll.setEnabled(!busy && !selected().isEmpty());
+		filter.setEnabled(!busy);
+		clearFilter.setEnabled(!busy && !filter.getText().isEmpty());
 		create.setEnabled(!busy && snapshot != null && !selected().isEmpty());
 		tables.setEnabled(!busy);
+		refreshCounts();
+	}
+
+	private void refreshFilter() {
+		if (tables.isEditing())
+			tables.getCellEditor().stopCellEditing();
+		final String text = filter.getText().toLowerCase(java.util.Locale.ROOT);
+		sorter.setRowFilter(text.isEmpty() ? null : new javax.swing.RowFilter<DefaultTableModel, Integer>() {
+			public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+				for (int column = 1; column < entry.getValueCount(); column++)
+					if (entry.getStringValue(column).toLowerCase(java.util.Locale.ROOT).contains(text))
+						return true;
+				return false;
+			}
+		});
+		refresh();
+	}
+
+	private void refreshCounts() {
+		int selected = 0, hidden = 0;
+		for (int row = 0; row < model.getRowCount(); row++) {
+			if (!Boolean.TRUE.equals(model.getValueAt(row, 0)))
+				continue;
+			selected++;
+			if (tables.convertRowIndexToView(row) < 0)
+				hidden++;
+		}
+		count.setText(tables.getRowCount() + " / " + model.getRowCount() + " tables; " + selected + " selected ("
+				+ hidden + " hidden)");
+	}
+
+	private void updateSelection(final boolean include, final boolean all) {
+		if (busy || snapshot == null)
+			return;
+		if (tables.isEditing())
+			tables.getCellEditor().stopCellEditing();
+		final var rows = new ArrayList<Integer>();
+		for (int row = 0; row < (all ? model.getRowCount() : tables.getRowCount()); row++)
+			rows.add(all ? row : tables.convertRowIndexToModel(row));
+		selectingBatch = true;
+		try {
+			for (final int row : rows)
+				if (!include || snapshot.tables().get(row).selectable())
+					model.setValueAt(include, row, 0);
+		} finally {
+			selectingBatch = false;
+		}
+		draftOptionsChanged();
+		refresh();
 	}
 
 	void inspectSchema() {
 		if (busy)
 			return;
 		final String path = schemaFile.getText().trim();
-		final long requested = revision;
 		snapshot = null;
 		model.setRowCount(0);
+		filter.setText("");
 		fingerprint.setText("");
+		final long requested = revision;
 		busy = true;
 		refresh();
 		status.setText("Reading Schema model and eligibility…");

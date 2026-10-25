@@ -55,9 +55,14 @@ final class ReportReviewService {
 	}
 
 	record Review(String summary, List<String> columns, List<List<String>> rows, String details,
-			List<DetailTable> tables) {
+			List<DetailTable> tables, List<Integer> numericColumns) {
 		Review(String summary, List<String> columns, List<List<String>> rows, String details) {
 			this(summary, columns, rows, details, List.of());
+		}
+
+		Review(String summary, List<String> columns, List<List<String>> rows, String details,
+				List<DetailTable> tables) {
+			this(summary, columns, rows, details, tables, List.of());
 		}
 
 		Review {
@@ -66,6 +71,7 @@ final class ReportReviewService {
 			rows = rows.stream().map(List::copyOf).toList();
 			Objects.requireNonNull(details, "details");
 			tables = List.copyOf(tables);
+			numericColumns = List.copyOf(numericColumns);
 		}
 	}
 
@@ -117,7 +123,7 @@ final class ReportReviewService {
 								: "not recorded")
 						+ "\nPlan fingerprint: " + artifact.planFingerprint(),
 				List.of("Migration", "Description", "Statements", "Transactional", "Rollback available", "Source"),
-				rows, artifact);
+				rows, artifact, 2);
 	}
 
 	private Review schemaExecution(final Path file) {
@@ -158,7 +164,8 @@ final class ReportReviewService {
 				+ "\nSaved event: " + (report.execution() == null ? "not recorded" : report.execution().event())
 				+ "\nMaintenance: " + (report.maintenance() == null ? "not recorded" : report.maintenance().status())
 				+ "\nGenerated: " + report.generatedAt() + "\nPlan fingerprint: " + report.planFingerprint(),
-				List.of("Task", "Catalog", "Schema", "Table", "Saved state", "Mode", "Checkpoint rows"), rows, report);
+				List.of("Task", "Catalog", "Schema", "Table", "Saved state", "Mode", "Checkpoint rows"), rows, report,
+				6);
 	}
 
 	private Review execution(final Path file) {
@@ -171,7 +178,7 @@ final class ReportReviewService {
 						+ "\nVerification is recorded in a separate verification report." + "\nCompleted: "
 						+ report.completedAt() + "\nPlan fingerprint: " + report.planFingerprint(),
 				List.of("Task", "Previous rows", "Invocation rows", "Completed chunks", "Already complete"), rows,
-				report);
+				report, 1, 2, 3);
 	}
 
 	private Review failure(final Path file) {
@@ -185,7 +192,8 @@ final class ReportReviewService {
 						+ "\nStopped-task committed chunks may exist; inspect checkpoints before resuming."
 						+ "\nFailure: " + report.failureType() + ": " + report.failureMessage() + "\nRecorded: "
 						+ report.failedAt() + "\nPlan fingerprint: " + report.planFingerprint(),
-				List.of("Completed task", "Previous rows", "Invocation rows", "Completed chunks"), rows, report);
+				List.of("Completed task", "Previous rows", "Invocation rows", "Completed chunks"), rows, report, 1, 2,
+				3);
 	}
 
 	private Review verification(final Path file) {
@@ -221,21 +229,22 @@ final class ReportReviewService {
 						+ "\nGenerated: " + report.generatedAt() + "\nPlan fingerprint: " + report.planFingerprint(),
 				List.of("Task", "Verification", "Expected rows", "Actual rows", "Mismatched chunks",
 						"Recorded details"),
-				rows, report);
+				rows, report, 2, 3, 4, 5);
 		final var table = new DetailTable("Mismatch chunks",
 				evidence + "\nChunk indexes are zero-based. Missing hashes or keys are shown as 'not recorded'."
 						+ keysets,
 				List.of("Task", "Chunk index", "Expected rows", "Actual rows", "Expected hash", "Actual hash",
 						"Expected first key", "Expected last key", "Actual first key", "Actual last key"),
 				chunks, List.of(1, 2, 3));
-		return new Review(base.summary(), base.columns(), base.rows(), base.details(), List.of(table));
+		return new Review(base.summary(), base.columns(), base.rows(), base.details(), List.of(table),
+				base.numericColumns());
 	}
 
 	private Review review(final String summary, final List<String> columns, final List<List<String>> rows,
-			final Object model) {
+			final Object model, final Integer... numericColumns) {
 		final var converter = new JsonConverter();
 		converter.setIndentOutput(true);
-		return new Review(summary, columns, rows, converter.toJsonString(model));
+		return new Review(summary, columns, rows, converter.toJsonString(model), List.of(), List.of(numericColumns));
 	}
 
 	private static <T> T requireReport(final T report) {

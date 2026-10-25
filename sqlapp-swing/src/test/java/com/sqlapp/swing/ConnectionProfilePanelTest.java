@@ -22,6 +22,66 @@ class ConnectionProfilePanelTest {
 			"jdbc:hsqldb:mem:profile", "SA", "org.hsqldb.jdbc.JDBCDriver");
 
 	@Test
+	void disablingAndReenablingPanelUpdatesActionsImmediately() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = view(file -> {
+				fail("Disabled load");
+				return loaded;
+			}, (profile, file) -> fail("Disabled save"));
+			panel.setEnabled(false);
+			assertFalse(panel.load.isEnabled());
+			assertFalse(panel.save.isEnabled());
+			panel.loadFrom(directory.resolve("profile.json"));
+			panel.saveTo(directory.resolve("profile.json"));
+			assertFalse(panel.isBusy());
+			panel.setEnabled(true);
+			assertTrue(panel.load.isEnabled());
+			assertTrue(panel.save.isEnabled());
+		});
+	}
+
+	@Test
+	void savingEarlierSettingsReportsNewerInputsAndIgnoresPasswordOnlyEdits() throws Exception {
+		final var release = new CountDownLatch(1);
+		final var finished = new CountDownLatch(1);
+		final var panel = new AtomicReference<ConnectionProfilePanel>();
+		final var written = new AtomicReference<ConnectionProfileService.Profile>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var view = view(file -> loaded, (profile, file) -> {
+				written.set(profile);
+				if (!release.await(5, TimeUnit.SECONDS))
+					throw new IllegalStateException("Timeout");
+			});
+			panel.set(view);
+			onEnabled(view.save, finished);
+			view.saveTo(directory.resolve("profile.json"));
+			fields[1].setText("new-user");
+			view.setEnabled(false);
+			view.setEnabled(true);
+			assertFalse(view.save.isEnabled());
+			assertTrue(view.isBusy());
+		});
+		release.countDown();
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		final var secondSave = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals("original-user", written.get().username());
+			assertEquals("new-user", fields[1].getText());
+			assertEquals("Profile saved; newer connection inputs are not saved", panel.get().status.getText());
+			assertTrue(panel.get().statusPanel.detailsText().contains("profile.json"));
+			onEnabled(panel.get().save, secondSave);
+			panel.get().saveTo(directory.resolve("profile.json"));
+			fields[3].setText("new-secret");
+		});
+		assertTrue(secondSave.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals("new-user", written.get().username());
+			assertEquals("Profile saved", panel.get().status.getText());
+			assertArrayEquals("new-secret".toCharArray(), ((JPasswordField) fields[3]).getPassword());
+		});
+	}
+
+	@Test
 	void readsOffEdtAndAppliesOnlyAfterValidationClearingPassword() throws Exception {
 		final var finished = new CountDownLatch(1);
 		final var panel = new AtomicReference<ConnectionProfilePanel>();
@@ -35,11 +95,13 @@ class ConnectionProfilePanelTest {
 			onEnabled(view.load, finished);
 			view.loadFrom(directory.resolve("profile.json"));
 			assertFalse(view.load.isEnabled());
+			assertTrue(view.isBusy());
 		});
 		assertTrue(finished.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			final var view = panel.get();
 			assertEquals("Loaded; enter password", view.status.getText());
+			assertFalse(view.isBusy());
 			assertEquals(directory.toFile(), view.chooser(false).getCurrentDirectory());
 			assertEquals(directory.resolve("connection.json").toFile(), view.chooser(true).getSelectedFile());
 			assertTrue(view.statusPanel.detailsText().contains("profile.json"));
@@ -150,6 +212,7 @@ class ConnectionProfilePanelTest {
 			assertEquals("original-user", fields[1].getText());
 			assertArrayEquals("secret".toCharArray(), ((JPasswordField) fields[3]).getPassword());
 			assertEquals("Profile operation failed", panel.get().status.getText());
+			assertFalse(panel.get().isBusy());
 			assertTrue(panel.get().statusPanel.detailsText().contains("Unsupported file version"));
 			assertEquals("Profile operation failed", panel.get().status.getToolTipText());
 			assertTrue(panel.get().save.isEnabled());

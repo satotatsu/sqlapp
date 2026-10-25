@@ -67,20 +67,22 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(jobEditor);
 				return true;
 			});
-			tabs.addTab("Migration reports", new ReportReviewPanel());
+			final var reports = new ReportReviewPanel();
+			tabs.addTab("Migration reports", reports);
+			final java.util.function.BooleanSupplier activity = () -> comparison.isBusy() || schemaPlan.isBusy()
+					|| dataPlan.isBusy() || jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy();
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {
 				@Override
 				public void windowClosing(final WindowEvent event) {
 					frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-					if (comparison.isBusy() || schemaPlan.isExecuting() || dataPlan.isExecuting() || jobEditor.isBusy()
-							|| sqlEditor.isBusy()) {
+					if (activity.getAsBoolean()) {
 						JOptionPane.showMessageDialog(frame,
 								"An operation is running. Wait for its result before closing.", "Operation running",
 								JOptionPane.INFORMATION_MESSAGE);
 						return;
 					}
-					if (sqlEditor.canDiscardChanges() && jobEditor.canDiscardChanges())
+					if (sqlEditor.canDiscardChanges() && jobEditor.canDiscardChanges() && !activity.getAsBoolean())
 						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 				}
 			});

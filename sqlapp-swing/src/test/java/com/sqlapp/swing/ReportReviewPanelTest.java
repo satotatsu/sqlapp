@@ -38,6 +38,7 @@ class ReportReviewPanelTest {
 			assertFalse(view.details.isEditable());
 			assertEquals(REVIEW.details(), view.details.getText());
 			assertTrue(view.status.getText().contains("No live checks"));
+			assertFalse(view.isBusy());
 			view.file.setText("other.json");
 			assertEquals("", view.summary.getText());
 			assertEquals(0, view.tasks.getRowCount());
@@ -69,6 +70,7 @@ class ReportReviewPanelTest {
 			assertTrue(view.file.isEnabled());
 			assertTrue(view.type.isEnabled());
 			assertTrue(view.status.getText().startsWith("Load failed"));
+			assertFalse(view.isBusy());
 			assertTrue(view.statusPanel.detailsText().contains("Bad header"));
 			view.file.setText("another-report.json");
 			assertEquals(view.status.getText(), view.statusPanel.detailsText());
@@ -114,6 +116,7 @@ class ReportReviewPanelTest {
 		});
 		view.load.doClick();
 		assertFalse(view.load.isEnabled());
+		assertTrue(view.isBusy());
 		assertFalse(view.type.isEnabled());
 	}
 }

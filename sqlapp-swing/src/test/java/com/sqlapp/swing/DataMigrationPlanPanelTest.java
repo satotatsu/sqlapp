@@ -77,6 +77,10 @@ class DataMigrationPlanPanelTest {
 			assertEquals(expected.review().summary(), panel.view.summary.getText());
 			assertTrue(panel.save.isEnabled());
 			assertTrue(panel.status.getText().contains("No rows migrated"));
+			panel.view.taskTable.filter.setText("no matching task");
+			assertEquals(0, panel.view.tasks.getRowCount());
+			assertEquals(expected.review().details(), panel.view.details.getText());
+			assertTrue(panel.save.isEnabled());
 			onEnabled(panel.save, saved);
 			panel.saveTo(directory.resolve("status.json"));
 		});
