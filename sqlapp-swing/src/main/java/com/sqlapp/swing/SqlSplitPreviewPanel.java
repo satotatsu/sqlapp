@@ -40,12 +40,14 @@ final class SqlSplitPreviewPanel extends JPanel {
 	final JButton previous = new JButton("Previous part");
 	final JButton next = new JButton("Next part");
 	final JButton copy = new JButton("Copy part");
+	final JButton findSource = new JButton("Find in SQL");
 	final JCheckBox hideComments = new JCheckBox("Hide comments");
 	final JTextField filter = new JTextField(14);
 	final JLabel count = new JLabel();
 	final JLabel copyStatus = new JLabel("Select a part to inspect or copy its parser output.");
 	private final Consumer<String> clipboard;
 	private MigrationSqlInspection.Result result;
+	private Consumer<String> sourceFinder;
 
 	SqlSplitPreviewPanel() {
 		this(text -> Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null));
@@ -61,6 +63,8 @@ final class SqlSplitPreviewPanel extends JPanel {
 		tools.add(previous);
 		tools.add(next);
 		tools.add(copy);
+		tools.add(findSource);
+		findSource.setToolTipText("Select the parser text in the source SQL when it has exactly one literal match.");
 		tools.add(hideComments);
 		final var filterLabel = new JLabel("Filter parts");
 		filterLabel.setLabelFor(filter);
@@ -88,6 +92,11 @@ final class SqlSplitPreviewPanel extends JPanel {
 		previous.addActionListener(event -> move(-1));
 		next.addActionListener(event -> move(1));
 		copy.addActionListener(event -> copySelected());
+		findSource.addActionListener(event -> {
+			final var selected = selectedPart();
+			if (selected != null && sourceFinder != null)
+				sourceFinder.accept(selected.text());
+		});
 		hideComments.addActionListener(event -> applyFilter());
 		filter.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
@@ -113,6 +122,11 @@ final class SqlSplitPreviewPanel extends JPanel {
 		applyFilter();
 		summary.setText(
 				"Select a product/version and inspect statement boundaries. No SQL validation or execution is performed.");
+	}
+
+	void setSourceFinder(final Consumer<String> finder) {
+		sourceFinder = finder;
+		refreshSelection();
 	}
 
 	void showResult(final MigrationSqlInspection.Result inspected) {
@@ -175,6 +189,7 @@ final class SqlSplitPreviewPanel extends JPanel {
 		sql.setText(part == null ? "" : part.text());
 		sql.setCaretPosition(0);
 		copy.setEnabled(part != null);
+		findSource.setEnabled(part != null && sourceFinder != null);
 		previous.setEnabled(part != null && parts.getSelectedRow() > 0);
 		next.setEnabled(part != null && parts.getSelectedRow() + 1 < parts.getRowCount());
 		copyStatus.setText("Parser output may omit statement delimiters. Copying does not validate SQL.");

@@ -30,6 +30,7 @@ import com.sqlapp.data.db.command.migration.schema.MigrationSqlEditorIO.Snapshot
 final class SqlEditorPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final RSyntaxTextArea text = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, true);
+	final EditorPositionLabel position = new EditorPositionLabel(text);
 	final EditorNavigationBar navigation = new EditorNavigationBar(text);
 	final JButton fresh = new JButton("New");
 	final JButton open = new JButton("Open…");
@@ -51,6 +52,7 @@ final class SqlEditorPanel extends JPanel {
 	private final MigrationSqlEditorIO io;
 	private final Predicate<Path> directoryReceiver;
 	private Snapshot snapshot;
+	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 	private long revision;
 	private boolean busy;
 
@@ -96,9 +98,14 @@ final class SqlEditorPanel extends JPanel {
 		add(header, BorderLayout.NORTH);
 		workspace.addTab("SQL editor", CodeEditors.scroll(text));
 		workspace.addTab("Statement boundaries", splitPreview);
+		splitPreview.setSourceFinder(this::findPartInSource);
 		add(workspace, BorderLayout.CENTER);
 		navigation.setEditorActivation(() -> workspace.setSelectedIndex(0));
-		add(statusPanel, BorderLayout.SOUTH);
+		final var bottom = new JPanel(new BorderLayout(8, 0));
+		bottom.add(statusPanel, BorderLayout.CENTER);
+		bottom.add(position, BorderLayout.EAST);
+		add(bottom, BorderLayout.SOUTH);
+		workspace.addChangeListener(event -> position.setVisible(workspace.getSelectedIndex() == 0));
 		text.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
 				changed();
@@ -121,7 +128,7 @@ final class SqlEditorPanel extends JPanel {
 			refresh();
 		});
 		open.addActionListener(event -> {
-			final var chooser = chooser();
+			final var chooser = chooser(false);
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				requestOpen(chooser.getSelectedFile().toPath());
 		});
@@ -132,9 +139,8 @@ final class SqlEditorPanel extends JPanel {
 		reload.setToolTipText("Read the current file again; unsaved edits require confirmation. No file is written.");
 		reload.addActionListener(event -> reloadFromDisk());
 		saveAs.addActionListener(event -> {
-			final var chooser = chooser();
+			final var chooser = chooser(true);
 			chooser.setDialogTitle("Save SQL — choose a new filename");
-			chooser.setSelectedFile(new java.io.File(SchemaComparisonService.defaultSqlDraftName()));
 			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION)
 				saveTo(chooser.getSelectedFile().toPath());
 		});
@@ -189,10 +195,9 @@ final class SqlEditorPanel extends JPanel {
 		return requestOpen(snapshot.file());
 	}
 
-	private JFileChooser chooser() {
-		final var chooser = new JFileChooser();
-		chooser.setFileFilter(new FileNameExtensionFilter("Migration SQL", "sql"));
-		return chooser;
+	JFileChooser chooser(final boolean saving) {
+		return fileDialogs.create(new FileNameExtensionFilter("Migration SQL", "sql"),
+				saving ? SchemaComparisonService.defaultSqlDraftName() : null);
 	}
 
 	private void changed() {
@@ -239,6 +244,7 @@ final class SqlEditorPanel extends JPanel {
 						return;
 					}
 					snapshot = loaded;
+					fileDialogs.remember(loaded.file());
 					navigation.history.resetWith(() -> text.setText(loaded.text()));
 					text.setCaretPosition(0);
 					workspace.setSelectedIndex(0);
@@ -275,6 +281,7 @@ final class SqlEditorPanel extends JPanel {
 			protected void done() {
 				try {
 					snapshot = get();
+					fileDialogs.remember(snapshot.file());
 					status.setText(isDirty() ? "Saved earlier revision. Newer buffer edits remain unsaved."
 							: "Saved SQL. Review all directory files and build a new connected plan before applying.");
 				} catch (final InterruptedException exception) {
@@ -374,5 +381,28 @@ final class SqlEditorPanel extends JPanel {
 
 	private void failed(final Throwable failure) {
 		status.setText(EditorStatusPanel.failureMessage(failure));
+	}
+
+	void findPartInSource(final String part) {
+		if (busy)
+			return;
+		final String source = text.getText();
+		final int start = part.isEmpty() ? -1 : source.indexOf(part);
+		if (start < 0) {
+			status.setText(
+					"Part text has no exact match in the source SQL. The splitter may have changed whitespace or delimiters; review the source manually.");
+			return;
+		}
+		if (source.indexOf(part, start + 1) >= 0) {
+			status.setText(
+					"Part text matches multiple places in the source SQL. No location selected; review the source manually.");
+			return;
+		}
+		workspace.setSelectedIndex(0);
+		CodeEditors.reveal(text, start);
+		text.select(start, start + part.length());
+		text.requestFocusInWindow();
+		status.setText(
+				"Selected the unique literal match for this parser part. This does not validate its SQL boundary or execution safety.");
 	}
 }

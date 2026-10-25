@@ -32,7 +32,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final RSyntaxTextArea text = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_YAML, true);
 	final RTextScrollPane editorScroll = CodeEditors.scroll(text);
-	final JLabel position = new JLabel("Line 1, column 1");
+	final EditorPositionLabel position = new EditorPositionLabel(text);
 	final EditorNavigationBar navigation = new EditorNavigationBar(text);
 	final JButton fromSchema = new JButton("From Schema…");
 	final JButton fresh = new JButton("New");
@@ -48,6 +48,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 	private final BulkMigrationJobConfigurationEditorIO io;
 	private final Consumer<Snapshot> useJob;
 	private Snapshot snapshot;
+	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 	private boolean busy;
 	private long revision;
 	private long validatedRevision = -1;
@@ -80,7 +81,6 @@ final class JobConfigurationEditorPanel extends JPanel {
 		bottom.add(statusPanel, BorderLayout.CENTER);
 		bottom.add(position, BorderLayout.EAST);
 		add(bottom, BorderLayout.SOUTH);
-		text.addCaretListener(event -> updatePosition());
 		text.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
 				changed();
@@ -102,7 +102,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 			}
 		});
 		open.addActionListener(event -> {
-			final var chooser = chooser();
+			final var chooser = chooser(false);
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				requestOpen(chooser.getSelectedFile().toPath());
 		});
@@ -115,9 +115,8 @@ final class JobConfigurationEditorPanel extends JPanel {
 				saveTo(snapshot.file());
 		});
 		saveAs.addActionListener(event -> {
-			final var chooser = chooser();
+			final var chooser = chooser(true);
 			chooser.setDialogTitle("Save job — relative paths use this folder; choose a new filename");
-			chooser.setSelectedFile(new java.io.File("job.yaml"));
 			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION)
 				saveTo(chooser.getSelectedFile().toPath());
 		});
@@ -155,10 +154,9 @@ final class JobConfigurationEditorPanel extends JPanel {
 			status.setText("Edited. Check syntax and save, then inspect the live data plan.");
 	}
 
-	private JFileChooser chooser() {
-		final var chooser = new JFileChooser();
-		chooser.setFileFilter(new FileNameExtensionFilter("Migration job YAML / JSON", "yaml", "yml", "json"));
-		return chooser;
+	JFileChooser chooser(final boolean saving) {
+		return fileDialogs.create(new FileNameExtensionFilter("Migration job YAML / JSON", "yaml", "yml", "json"),
+				saving ? "job.yaml" : null);
 	}
 
 	private void refresh() {
@@ -248,6 +246,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 						return;
 					}
 					snapshot = loaded;
+					fileDialogs.remember(loaded.file());
 					navigation.history.resetWith(() -> text.setText(loaded.text()));
 					text.setCaretPosition(0);
 					status.setText("Opened. Check syntax/types before selecting this job for live inspection.");
@@ -319,6 +318,7 @@ final class JobConfigurationEditorPanel extends JPanel {
 			protected void done() {
 				try {
 					snapshot = get();
+					fileDialogs.remember(snapshot.file());
 					if (requested == revision)
 						validatedRevision = revision;
 					status.setText(requested == revision
@@ -335,16 +335,6 @@ final class JobConfigurationEditorPanel extends JPanel {
 				}
 			}
 		}.execute();
-	}
-
-	private void updatePosition() {
-		try {
-			final int offset = text.getCaretPosition();
-			final int line = text.getLineOfOffset(offset);
-			position.setText("Line " + (line + 1) + ", column " + (offset - text.getLineStartOffset(line) + 1));
-		} catch (final javax.swing.text.BadLocationException exception) {
-			throw new IllegalStateException("Editor caret is outside its document.", exception);
-		}
 	}
 
 	void moveToDiagnostic(final int line, final int column) {
