@@ -28,7 +28,8 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 			return nativeSql;
 		var result = new java.util.ArrayList<com.sqlapp.data.db.sql.SqlOperation>();
 		if (index.getDefinition().isEmpty()
-				&& index.getColumns().stream().anyMatch(column -> !column.getStatement().isEmpty()))
+				&& index.getColumns().stream().anyMatch(column -> !column.getStatement().isEmpty())
+				|| !index.getDefinition().isEmpty() && getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
 			for (String sql : com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.sql(null,
 					index.getSpecifics().get("FUNC_PATH")))
 				addSql(result, createSqlBuilder()._add(sql), com.sqlapp.data.db.sql.SqlType.SET_SEARCH_PATH_TO_SCHEMA,
@@ -66,19 +67,30 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 		if ("S".equals(column.getSpecifics().get("DB2_VIRTUAL")))
 			throw new IllegalArgumentException("Db2 statistical-view index requires a complete native definition");
 		if (column.getStatement().isEmpty())
-			builder.name(column);
+			addIdentifier(column.getName(), builder);
 		else {
-			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) || column.getStatement().size() != 1
-					|| column.getStatement().getFirst() == null || column.getStatement().getFirst().isBlank())
-				throw new IllegalArgumentException(
-						"Db2 expression index requires one expression and LUW 11.1 or later");
-			builder._add("(")._add(column.getStatement().getFirst())._add(")");
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))
+				throw new IllegalArgumentException("Db2 expression index requires LUW 11.1 or later");
+			builder._add("(")._add(Db2DefinitionSql.text(column.getStatement()))._add(")");
 		}
+	}
+
+	private void addIdentifier(String name, AbstractSqlBuilder<?> builder) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			String quoted = com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.identifier(name);
+			if (name.indexOf('"') >= 0) {
+				builder._add(quoted);
+				return;
+			}
+		}
+		builder.name(name);
 	}
 
 	@Override
 	protected boolean createIndex(Index index) {
 		Table table = index.getTable();
+		if (table == null && getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+			return true;
 		if (table != null) {
 			for (var constraint : table.getConstraints().getUniqueConstraints()) {
 				if (constraint.isEnable() && java.util.Objects.equals(index.getName(), constraint.getIndex().getName()))
@@ -91,7 +103,10 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 	@Override
 	public void addObjectDetail(Index index, Table table, AbstractSqlBuilder<?> builder) {
 		String nativeType = index.getSpecifics().get("INDEXTYPE");
-		if (nativeType != null && !java.util.Set.of("REG", "CLUS").contains(nativeType))
+		boolean xml = "XVIL".equals(nativeType) && getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110;
+		if (xml)
+			Db2XmlIndexSql.validate(index, table);
+		if (nativeType != null && !xml && !java.util.Set.of("REG", "CLUS").contains(nativeType))
 			throw new IllegalArgumentException(
 					"Db2 specialized index requires a complete native definition: " + nativeType);
 		if (index.getIndexType() != null && index.getIndexType() != IndexType.BTree
@@ -112,10 +127,17 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 			schema = index.getSchemaName();
 		}
 		if (schema != null && (getOptions().isDecorateSchemaName() || !schema.equals(table.getSchemaName()))) {
-			builder.name(schema)._add(".");
+			addIdentifier(schema, builder);
+			builder._add(".");
 		}
-		builder.name(index.getName()).on().name(table,
-				getOptions().isDecorateSchemaName() || "SESSION".equals(table.getSchemaName()));
+		addIdentifier(index.getName(), builder);
+		builder.on();
+		if ((getOptions().isDecorateSchemaName() || "SESSION".equals(table.getSchemaName())
+				|| schema != null && !schema.equals(table.getSchemaName())) && table.getSchemaName() != null) {
+			addIdentifier(table.getSchemaName(), builder);
+			builder._add(".");
+		}
+		addIdentifier(table.getName(), builder);
 		builder.space()._add("(");
 		int count = 0;
 		for (ReferenceColumn column : index.getColumns()) {
@@ -125,6 +147,8 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 			}
 		}
 		builder.space()._add(")");
+		if (xml)
+			Db2XmlIndexSql.append(index, builder);
 		if (includes) {
 			builder.space()._add("INCLUDE (");
 			count = 0;

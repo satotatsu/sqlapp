@@ -11,6 +11,44 @@ import com.sqlapp.data.schemas.Table;
 
 public class Db2AlterTableFactory extends AlterTableFactory {
 	@Override
+	protected void addIndexDefinition(Table originalTable, Table table, com.sqlapp.data.schemas.Index originalIndex,
+			com.sqlapp.data.schemas.Index index, DbObjectDifference difference, List<SqlOperation> result) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
+				&& Db2AlterIndexFactory.canAlter(difference)) {
+			com.sqlapp.data.db.sql.SqlFactory<com.sqlapp.data.schemas.Index> factory = getSqlFactoryRegistry()
+					.getSqlFactory(index, com.sqlapp.data.db.sql.SqlType.ALTER);
+			result.addAll(factory.createDiffSql(difference));
+			return;
+		}
+		super.addIndexDefinition(originalTable, table, originalIndex, index, difference, result);
+	}
+
+	@Override
+	protected void addDropIndexDefinition(Table originalTable, Table table, com.sqlapp.data.schemas.Index originalIndex,
+			com.sqlapp.data.schemas.Index index, DbObjectDifference difference, List<SqlOperation> result) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)) {
+			super.addDropIndexDefinition(originalTable, table, originalIndex, index, difference, result);
+			return;
+		}
+		com.sqlapp.data.db.sql.SqlFactory<com.sqlapp.data.schemas.Index> factory = getSqlFactoryRegistry()
+				.getSqlFactory(originalIndex, com.sqlapp.data.db.sql.SqlType.DROP);
+		result.addAll(factory.createSql(originalIndex));
+	}
+
+	@Override
+	protected void addCreateIndexDefinition(Table originalTable, Table table,
+			com.sqlapp.data.schemas.Index originalIndex, com.sqlapp.data.schemas.Index index,
+			DbObjectDifference difference, List<SqlOperation> result) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)) {
+			super.addCreateIndexDefinition(originalTable, table, originalIndex, index, difference, result);
+			return;
+		}
+		com.sqlapp.data.db.sql.SqlFactory<com.sqlapp.data.schemas.Index> factory = getSqlFactoryRegistry()
+				.getSqlFactory(index, com.sqlapp.data.db.sql.SqlType.CREATE);
+		result.addAll(factory.createSql(index));
+	}
+
+	@Override
 	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
 		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
 		if ((before != null && Db2Nickname.isNickname(before)) || (after != null && Db2Nickname.isNickname(after))) {

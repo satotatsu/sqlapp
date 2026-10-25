@@ -22,19 +22,35 @@ public class Db2_1110CreateSequenceFactory extends Db2CreateSequenceFactory {
 
 	@Override
 	protected void addCreateObject(Sequence sequence, Db2SqlBuilder builder) {
+		if (sequence.getScale() != null && sequence.getScale() != 0)
+			throw new IllegalArgumentException("Db2 sequence scale must be zero");
 		builder._add("CREATE SEQUENCE " + name(sequence, getOptions().isDecorateSchemaName()));
 		if (sequence.getDataType() == DataType.OTHER) {
 			builder._add(" AS " + Db2CreationContext.qualified(sequence.getSpecifics().get("SEQUENCE_TYPE_SCHEMA"),
 					sequence.getSpecifics().get("SEQUENCE_TYPE_NAME")));
 		} else if (sequence.getDataType() != null || sequence.getDataTypeName() != null) {
+			Sequence typed = sequence.clone();
+			if (sequence.getDataTypeName() != null) {
+				DataType named = switch (sequence.getDataTypeName().toUpperCase(Locale.ROOT)) {
+				case "SMALLINT" -> DataType.SMALLINT;
+				case "INT", "INTEGER" -> DataType.INT;
+				case "BIGINT" -> DataType.BIGINT;
+				case "DECIMAL", "NUMERIC" -> DataType.DECIMAL;
+				default ->
+					throw new IllegalArgumentException("Unsupported Db2 sequence type: " + sequence.getDataTypeName());
+				};
+				if (sequence.getDataType() != null && sequence.getDataType() != named)
+					throw new IllegalArgumentException("Conflicting Db2 sequence type and type name");
+				typed.setDataType(named).setDataTypeName(null);
+			}
 			if (!Set.of(DataType.SMALLINT, DataType.INT, DataType.BIGINT, DataType.DECIMAL)
-					.contains(sequence.getDataType() == null ? DataType.OTHER : sequence.getDataType()))
+					.contains(typed.getDataType() == null ? DataType.OTHER : typed.getDataType()))
 				throw new IllegalArgumentException(
 						"Db2 sequence requires an integer/decimal type or complete definition");
-			if (sequence.getDataType() == DataType.DECIMAL && sequence.getPrecision() != null
+			if (typed.getDataType() == DataType.DECIMAL && sequence.getPrecision() != null
 					&& (sequence.getPrecision() < 1 || sequence.getPrecision() > 31))
 				throw new IllegalArgumentException("Db2 decimal sequence precision must be between 1 and 31");
-			addDataType(sequence, builder);
+			addDataType(typed, builder);
 		}
 		if (sequence.getStartValue() != null)
 			addStartWith(sequence, builder);

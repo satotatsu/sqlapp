@@ -30,6 +30,20 @@ public class Db2_1110SqlFactoryRegistry extends Db2_1050SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2DropIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Db2_1110CreateSynonymFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2_1110DropSynonymFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterSynonymFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
 		registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, com.sqlapp.data.db.sql.SqlType.CREATE,
 				Db2_1110CreateSequenceFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, com.sqlapp.data.db.sql.SqlType.DROP,

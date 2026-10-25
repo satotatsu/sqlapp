@@ -59,6 +59,10 @@ public class Db2IndexReader extends IndexReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				boolean modern = getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110;
+				String nativeType = getString(rs, "INDEXTYPE");
+				if (modern && java.util.Set.of("XPTH", "XRGN", "XVIP").contains(nativeType == null ? "" : nativeType))
+					return;
 				String catalogName = null;
 				String schemaName = getString(rs, SCHEMA_NAME);
 				String name = getString(rs, INDEX_NAME);
@@ -90,10 +94,33 @@ public class Db2IndexReader extends IndexReader {
 					map.put(catalogName, schemaName, name, index);
 					result.add(index);
 				}
+				if (modern && "XVIL".equals(nativeType)) {
+					for (String field : java.util.List.of("XML_PATTERN", "XML_TYPEMODEL", "XML_DATATYPE", "XML_HASHED",
+							"XML_LENGTH", "XML_SCALE")) {
+						String value = rs.getString(field);
+						if (value == null)
+							continue;
+						if (!"XML_PATTERN".equals(field))
+							value = value.stripTrailing();
+						String previous = index.getSpecifics().get(field);
+						if (previous != null && !previous.equals(value))
+							throw new SQLException(
+									"Db2 XML index has conflicting pattern/type rows; complete native definition required: "
+											+ name);
+						index.getSpecifics().put(field, value);
+					}
+				}
 				String colOrder = getString(rs, "COLORDER");
 				String columnName = getString(rs, COLUMN_NAME);
+				if (modern && colOrder == null && columnName == null)
+					return;
 				if (!java.util.Set.of("A", "D", "I", "R").contains(colOrder == null ? "" : colOrder))
 					throw new SQLException("Unsupported Db2 index column order: " + colOrder);
+				if (modern && "XVIL".equals(nativeType) && index.getColumns().contains(columnName)) {
+					if (!colOrder.equals(index.getColumns().get(columnName).getSpecifics().get("DB2_COLORDER")))
+						throw new SQLException("Conflicting Db2 XML index key order: " + name);
+					return;
+				}
 				var reference = new com.sqlapp.data.schemas.ReferenceColumn(columnName);
 				reference.setIncludedColumn("I".equals(colOrder));
 				reference.setOrder(Order.parse(colOrder));
@@ -105,7 +132,7 @@ public class Db2IndexReader extends IndexReader {
 					if (expression != null) {
 						if (expression.isBlank())
 							throw new SQLException("Blank Db2 index key expression");
-						reference.getStatement().add(expression);
+						reference.setStatement(expression);
 					} else if ("Y".equals(virtual) || "S".equals(virtual)) {
 						throw new SQLException("Db2 virtual index column is missing its expression: " + columnName);
 					}

@@ -155,8 +155,9 @@ class Db2RecreationTest extends AbstractDb2SqlFactoryTest {
 		for (String type : java.util.List.of("TABLE", "SEQUENCE", "MODULE")) {
 			Synonym alias = new Synonym("A").setSchemaName("APP").setObjectSchemaName("TARGET").setObjectName("BASE");
 			alias.getSpecifics().put("ALIAS_TYPE", type);
-			assertEquals("CREATE ALIAS APP.A FOR " + type + " TARGET.BASE", sql(alias.clone(), SqlType.CREATE));
-			assertEquals("DROP ALIAS APP.A FOR " + type, sql(alias, SqlType.DROP));
+			assertEquals("CREATE ALIAS \"APP\".\"A\" FOR " + type + " \"TARGET\".\"BASE\"",
+					sql(alias.clone(), SqlType.CREATE));
+			assertEquals("DROP ALIAS \"APP\".\"A\" FOR " + type, sql(alias, SqlType.DROP));
 		}
 	}
 }

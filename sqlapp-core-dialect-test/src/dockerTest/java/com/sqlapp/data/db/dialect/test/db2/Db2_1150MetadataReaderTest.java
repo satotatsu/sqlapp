@@ -45,6 +45,13 @@ class Db2_1150MetadataReaderTest {
 	}
 
 	@Test
+	void nativeAlterPreservesObjectsAndSequenceProgress() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2NativeAlterAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void schemaObjectsSurviveXmlAndDdlRecreation() throws Exception {
 		try (Connection connection = DB2.createConnection("")) {
 			Db2RecreationAssertions.verify(connection);

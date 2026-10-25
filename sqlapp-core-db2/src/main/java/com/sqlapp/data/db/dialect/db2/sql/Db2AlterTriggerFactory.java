@@ -8,7 +8,28 @@ import com.sqlapp.data.schemas.State;
 
 public class Db2AlterTriggerFactory extends Db2CreateTriggerFactory {
 	@Override
+	public List<SqlOperation> createSql(com.sqlapp.data.schemas.Trigger target) {
+		throw new IllegalArgumentException("Db2 ALTER requires original and target models; use createDiffSql");
+	}
+
+	@Override
 	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+		if (difference.getState() == State.Unchanged)
+			return List.of();
+		if (difference.getState() == State.Added)
+			return super.createSql(difference.getTarget(com.sqlapp.data.schemas.Trigger.class));
+		if (difference.getState() == State.Deleted) {
+			com.sqlapp.data.schemas.Trigger before = difference.getOriginal(com.sqlapp.data.schemas.Trigger.class);
+			com.sqlapp.data.db.sql.SqlFactory<com.sqlapp.data.schemas.Trigger> drop = getSqlFactoryRegistry()
+					.getSqlFactory(before, com.sqlapp.data.db.sql.SqlType.DROP);
+			return drop.createSql(before);
+		}
+		if (difference.getState() == State.Modified && Db2AlterCommentSql.onlyRemarks(difference)) {
+			com.sqlapp.data.schemas.Trigger after = difference.getTarget(com.sqlapp.data.schemas.Trigger.class);
+			String target = "TRIGGER " + Db2CreateTriggerFactory.name(after, getOptions().isDecorateSchemaName());
+			return List.of(createOperation(Db2AlterCommentSql.comment(getDialect(), target, after.getRemarks()),
+					com.sqlapp.data.db.sql.SqlType.SET_COMMENT, after));
+		}
 		if (difference.getState() == State.Modified)
 			throw new IllegalArgumentException(
 					"Db2 trigger changes require an explicit replacement plan preserving trigger activation order");

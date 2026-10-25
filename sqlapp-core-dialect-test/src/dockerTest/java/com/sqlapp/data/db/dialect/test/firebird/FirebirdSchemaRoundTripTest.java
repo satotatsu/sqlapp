@@ -76,6 +76,9 @@ class FirebirdSchemaRoundTripTest {
 				assertEquals(Integer.parseInt(version.substring(0, 1)), major);
 				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 				assertEquals("Firebird" + version.replace(".", ""), dialect.getClass().getSimpleName());
+				capabilityBoundaries(connection, statement, dialect);
+				nativeSchemaObjects(connection, statement, dialect);
+				nativeCollations(connection, statement, dialect);
 				columns(connection, statement, dialect, major);
 				temporaryTables(connection, statement, dialect, major, url);
 				temporaryIndexCreation(connection, statement, dialect, major, url);
@@ -109,6 +112,208 @@ class FirebirdSchemaRoundTripTest {
 				packageAlter(connection, statement, dialect, major);
 			}
 		}
+	}
+
+	private void nativeCollations(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		statement.execute(
+				"CREATE COLLATION \"native natural\" FOR UTF8 FROM UNICODE NO PAD CASE INSENSITIVE ACCENT INSENSITIVE 'NUMERIC-SORT=1'");
+		statement.execute("COMMENT ON COLLATION \"native natural\" IS 'natural''s collation'");
+		statement.execute(
+				"CREATE COLLATION \"native inherited\" FOR UTF8 FROM \"native natural\" PAD SPACE CASE SENSITIVE ACCENT SENSITIVE");
+		statement.execute("CREATE DOMAIN \"native text\" AS VARCHAR(30) CHARACTER SET UTF8 COLLATE \"native natural\"");
+		statement.execute(
+				"CREATE TABLE \"native collation table\" (\"value\" \"native text\", \"strict value\" VARCHAR(30) CHARACTER SET UTF8 COLLATE \"native inherited\")");
+		statement.execute("CREATE INDEX FB_NATIVE_COLLATION_IDX ON \"native collation table\" (\"value\")");
+		var schemaReader = dialect.getCatalogReader().getSchemaReader();
+		boolean exclude = schemaReader.getReaderOptions().isExcludeSystemObjects();
+		Schema schema;
+		try {
+			schemaReader.getReaderOptions().setExcludeSystemObjects(true);
+			schema = schemaReader.getAllFull(connection).get(0);
+		} finally {
+			schemaReader.getReaderOptions().setExcludeSystemObjects(exclude);
+		}
+		var nativeObjects = com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(schema);
+		assertEquals(2, nativeObjects.size());
+		assertTrue(nativeObjects.stream().allMatch(
+				object -> object.kind() == com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObject.Kind.COLLATION));
+		assertEquals("native natural", schema.getDomains().get("native text").getCollation());
+		assertEquals("native inherited",
+				schema.getTables().get("native collation table").getColumns().get("strict value").getCollation());
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
+		assertEquals(nativeObjects, com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(restored));
+		assertCollationBehavior(statement);
+		assertThrows(SQLException.class, () -> statement.execute("DROP COLLATION \"native natural\""));
+		statement.execute("DROP TABLE \"native collation table\"");
+		statement.execute("DROP DOMAIN \"native text\"");
+		for (String sql : com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.dropSql(restored))
+			statement.execute(sql);
+		for (var sql : dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE))
+			statement.execute(sql.getSqlText());
+		assertEquals(nativeObjects,
+				new com.sqlapp.data.db.dialect.firebird.metadata.FirebirdSchemaObjectReader(dialect).read(connection));
+		assertCollationBehavior(statement);
+		statement.execute("DROP TABLE \"native collation table\"");
+		statement.execute("DROP DOMAIN \"native text\"");
+		for (String sql : com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.dropSql(restored))
+			statement.execute(sql);
+	}
+
+	private void assertCollationBehavior(Statement statement) throws SQLException {
+		for (String value : List.of("É2", "E2 ", "item10", "item2"))
+			statement.execute("INSERT INTO \"native collation table\" VALUES ('" + value + "', 'É2')");
+		try (var rows = statement
+				.executeQuery("SELECT COUNT(*) FROM \"native collation table\" WHERE \"value\"='e2'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		try (var rows = statement
+				.executeQuery("SELECT COUNT(*) FROM \"native collation table\" WHERE \"strict value\"='E2'")) {
+			assertTrue(rows.next());
+			assertEquals(0, rows.getInt(1));
+		}
+		try (var rows = statement
+				.executeQuery("SELECT COUNT(*) FROM \"native collation table\" WHERE \"strict value\"='É2 '")) {
+			assertTrue(rows.next());
+			assertEquals(4, rows.getInt(1));
+		}
+		try (var rows = statement.executeQuery(
+				"SELECT \"value\" FROM \"native collation table\" WHERE \"value\" STARTING WITH 'item' ORDER BY \"value\"")) {
+			assertTrue(rows.next());
+			assertEquals("item2", rows.getString(1));
+			assertTrue(rows.next());
+			assertEquals("item10", rows.getString(1));
+			assertFalse(rows.next());
+		}
+	}
+
+	private void nativeSchemaObjects(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		statement.execute("CREATE EXCEPTION \"native exception\" '''message'' with apostrophe' ");
+		statement.execute("COMMENT ON EXCEPTION \"native exception\" IS 'exception''s comment'");
+		statement.execute(
+				"DECLARE FILTER \"native filter\" INPUT_TYPE 0 OUTPUT_TYPE -1002 ENTRY_POINT 'missing_entry' MODULE_NAME 'sqlapp_missing_library'");
+		statement.execute("COMMENT ON FILTER \"native filter\" IS 'filter''s comment'");
+		var reader = new com.sqlapp.data.db.dialect.firebird.metadata.FirebirdSchemaObjectReader(dialect);
+		var objects = reader.read(connection);
+		assertEquals(2, objects.size());
+		var schemaReader = dialect.getCatalogReader().getSchemaReader();
+		assertEquals(objects, com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects
+				.get(schemaReader.getAllFull(connection).get(0)));
+		schemaReader.getReaderOptions().setReadStatement(false);
+		assertTrue(com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects
+				.get(schemaReader.getAllFull(connection).get(0)).isEmpty());
+		schemaReader.getReaderOptions().setReadStatement(true);
+		var schema = new Schema();
+		com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.set(schema, objects);
+		schema.getProcedures()
+				.add(new Procedure("FB_NATIVE_EXCEPTION").setStatement("BEGIN EXCEPTION \"native exception\"; END"));
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
+		assertEquals(objects, com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(restored));
+		statement.execute("CREATE PROCEDURE FB_NATIVE_EXCEPTION AS BEGIN EXCEPTION \"native exception\"; END");
+		SQLException error = assertThrows(SQLException.class,
+				() -> statement.execute("EXECUTE PROCEDURE FB_NATIVE_EXCEPTION"));
+		assertTrue(error.getMessage().contains("'message' with apostrophe"), error.getMessage());
+		assertThrows(SQLException.class, () -> statement.execute("DROP EXCEPTION \"native exception\""));
+		statement.execute("DROP PROCEDURE FB_NATIVE_EXCEPTION");
+		for (String sql : com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.dropSql(restored))
+			statement.execute(sql);
+		for (var sql : dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE))
+			statement.execute(sql.getSqlText());
+		assertEquals(objects, reader.read(connection));
+		assertThrows(SQLException.class, () -> statement.execute("EXECUTE PROCEDURE FB_NATIVE_EXCEPTION"));
+		statement.execute("DROP PROCEDURE FB_NATIVE_EXCEPTION");
+		for (String sql : com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.dropSql(restored))
+			statement.execute(sql);
+	}
+
+	private void capabilityBoundaries(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		statement.execute("CREATE TABLE \"capability table\" (A INTEGER, B INTEGER, PRIMARY KEY(A,B))");
+		statement.execute("INSERT INTO \"capability table\" VALUES(1,1)");
+		statement.execute("INSERT INTO \"capability table\" VALUES(1,2)");
+		statement.execute("INSERT INTO \"capability table\" VALUES(2,1)");
+		Table model = new Table("capability table");
+		model.getColumns().add(new Column("A").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		model.getColumns().add(new Column("B").setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		var first = model.newRow();
+		first.put("A", 1);
+		first.put("B", 1);
+		var second = model.newRow();
+		second.put("A", 2);
+		second.put("B", 1);
+		var columns = new com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder(
+				new java.util.LinkedHashSet<>(model.getColumns()), List.of(first, second));
+		var membership = new com.sqlapp.util.SqlBuilder(dialect);
+		var bindings = columns.addInParameters(dialect, List.of(first, second), null, membership);
+		try (var query = connection.prepareStatement("SELECT COUNT(*) FROM \"capability table\" WHERE " + membership)) {
+			for (int i = 0; i < bindings.getBindParameters().size(); i++)
+				query.setObject(i + 1, bindings.getBindParameters().get(i).getValue());
+			try (var rows = query.executeQuery()) {
+				assertTrue(rows.next());
+				assertEquals(2, rows.getInt(1));
+			}
+		}
+		var greater = new com.sqlapp.util.SqlBuilder(dialect);
+		var bounds = com.sqlapp.data.db.sql.RowComparisonOperator.GREATER_THAN.addOperator(dialect, columns, first,
+				null, greater);
+		try (var query = connection.prepareStatement("SELECT COUNT(*) FROM \"capability table\" WHERE " + greater)) {
+			for (int i = 0; i < bounds.getBindParameters().size(); i++)
+				query.setObject(i + 1, bounds.getBindParameters().get(i).getValue());
+			try (var rows = query.executeQuery()) {
+				assertTrue(rows.next());
+				assertEquals(2, rows.getInt(1));
+			}
+		}
+		assertThrows(SQLException.class,
+				() -> statement.executeQuery("SELECT A FROM \"capability table\" WHERE (A,B) IN ((1,1))"));
+		for (var operator : List.of(com.sqlapp.data.db.sql.RowComparisonOperator.EQUAL,
+				com.sqlapp.data.db.sql.RowComparisonOperator.GREATER_THAN_OR_EQUAL,
+				com.sqlapp.data.db.sql.RowComparisonOperator.LESS_THAN_OR_EQUAL)) {
+			var anchor = model.newRow();
+			anchor.put("A", 1);
+			anchor.put("B", 2);
+			var condition = new com.sqlapp.util.SqlBuilder(dialect);
+			var parameters = operator.addOperator(dialect, columns, anchor, null, condition);
+			try (var query = connection
+					.prepareStatement("SELECT COUNT(*) FROM \"capability table\" WHERE " + condition)) {
+				for (int i = 0; i < parameters.getBindParameters().size(); i++)
+					query.setObject(i + 1, parameters.getBindParameters().get(i).getValue());
+				try (var rows = query.executeQuery()) {
+					assertTrue(rows.next());
+					assertEquals(operator == com.sqlapp.data.db.sql.RowComparisonOperator.EQUAL ? 1 : 2,
+							rows.getInt(1));
+				}
+			}
+		}
+		assertThrows(SQLException.class,
+				() -> statement.executeQuery("SELECT A FROM \"capability table\" WHERE (A,B)>(1,1)"));
+		assertTrue(dialect.supportsWith());
+		try (var rows = statement.executeQuery("WITH C AS (SELECT 1 AS V FROM RDB$DATABASE) SELECT V FROM C")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		statement.execute("CREATE VIEW FB_CAPABILITY_DEP AS SELECT A FROM \"capability table\"");
+		String drop = dialect.createSqlFactoryRegistry().createSql(model, SqlType.DROP).get(0).getSqlText();
+		assertFalse(drop.contains("CASCADE"));
+		assertThrows(SQLException.class, () -> statement.execute(drop));
+		assertRowCount(statement, "\"capability table\"", 3);
+		statement.execute("DROP VIEW FB_CAPABILITY_DEP");
+		statement.execute(drop);
+		var modern = dialect.getCatalogReader().getTableSpaceReader().getAll(connection);
+		assertEquals(1, modern.size());
+		var legacyReader = new com.sqlapp.data.db.dialect.firebird.metadata.FirebirdTableSpaceReader(dialect) {
+			@Override
+			protected com.sqlapp.jdbc.sql.node.SqlNode getSqlSqlNode(
+					com.sqlapp.data.schemas.ProductVersionInfo version) {
+				return super.getSqlSqlNode(
+						new com.sqlapp.data.schemas.ProductVersionInfo().setMajorVersion(2).setMinorVersion(0));
+			}
+		};
+		legacyReader.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+		var legacy = legacyReader.getAll(connection);
+		assertEquals(1, legacy.size());
+		assertEquals(modern.get(0).getTableSpaceFiles().get(0).getName(),
+				legacy.get(0).getTableSpaceFiles().get(0).getName());
+		assertNull(legacy.get(0).getCreatedAt());
 	}
 
 	private void generatedColumnAlter(Connection connection, Statement statement, Dialect dialect, int major)

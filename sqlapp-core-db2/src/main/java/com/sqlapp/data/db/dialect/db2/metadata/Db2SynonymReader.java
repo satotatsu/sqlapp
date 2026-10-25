@@ -70,8 +70,9 @@ public class Db2SynonymReader extends SynonymReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo.getMajorVersion() > 9
-				|| (productVersionInfo.getMajorVersion() == 9 && productVersionInfo.getMinorVersion() >= 7)) {
+		Integer major = productVersionInfo.getMajorVersion(), minor = productVersionInfo.getMinorVersion();
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_970
+				|| major != null && (major > 9 || major == 9 && minor != null && minor >= 7)) {
 			return getSqlNodeCache().getString("synonyms970.sql");
 		}
 		return getSqlNodeCache().getString("synonyms.sql");

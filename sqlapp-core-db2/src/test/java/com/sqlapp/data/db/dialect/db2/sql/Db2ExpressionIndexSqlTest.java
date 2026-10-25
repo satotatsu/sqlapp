@@ -78,7 +78,7 @@ class Db2ExpressionIndexSqlTest {
 		index.getColumns().getFirst().getSpecifics().put("DB2_VIRTUAL", "S");
 		assertThrows(IllegalArgumentException.class, () -> sql(index));
 		index.getColumns().getFirst().getSpecifics().clear();
-		index.getColumns().getFirst().getStatement().add("SECOND EXPRESSION");
+		index.getColumns().getFirst().getStatement().add("\0");
 		assertThrows(IllegalArgumentException.class, () -> sql(index));
 		SqlFactory<Index> old = DialectHolder.Db2_1050Dialect.createSqlFactoryRegistry().getSqlFactory(index,
 				SqlType.CREATE);
