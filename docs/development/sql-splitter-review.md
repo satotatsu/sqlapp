@@ -258,3 +258,57 @@ This supersedes the earlier full-DB2-compilation verification limitation. Full
 suites for the other affected modules and external database tests remain
 unexecuted. The full-suite log is in the ignored
 `build/splitter-verification/db2-full-suite.log`.
+
+## Full module suite verification (2026-10-26)
+
+All 17 reviewed modules now have successful full test-suite runs: 5,245 tests,
+zero failures, errors or skips, counted from the isolated JUnit XML reports.
+This aggregate includes the previous 257-test DB2 run; the new 16-module runs
+cover 4,988 tests. These counts replace the earlier selected-test scope for
+verification coverage; they are not additional unique tests to add to it.
+No implementation change was needed during this follow-up. Public APIs and
+configuration formats were unchanged.
+
+| Module | Tests |
+| --- | ---: |
+| sqlapp-core | 1226 |
+| sqlapp-command | 627 |
+| sqlapp-swing | 168 |
+| sqlapp-core-mysql | 291 |
+| sqlapp-core-mariadb | 52 |
+| sqlapp-core-postgres | 305 |
+| sqlapp-core-oracle | 514 |
+| sqlapp-core-sqlserver | 163 |
+| sqlapp-core-sybase | 33 |
+| sqlapp-core-saphana | 113 |
+| sqlapp-core-h2 | 287 |
+| sqlapp-core-hsql | 166 |
+| sqlapp-core-firebird | 162 |
+| sqlapp-core-sqlite | 811 |
+| sqlapp-core-spanner | 40 |
+| sqlapp-core-virtica | 30 |
+| sqlapp-core-db2 | 257 |
+
+Java 21 and the repository Gradle Wrapper were used with the same generated
+isolation init script as the successful full DB2 run. No test-source filtering
+was applied. External database connections were not used: database execution in
+these unit suites uses embedded H2/HSQLDB/SQLite or test doubles. Temporary test
+files and isolated build output are verification artifacts; no migration
+artifacts, dependency versions or repository build settings were changed.
+
+The following three invocations all completed BUILD SUCCESSFUL (JAVA_HOME set
+to the installed Java 21 runtime):
+
+```powershell
+.\gradlew.bat :sqlapp-core-mysql:test :sqlapp-core-mariadb:test :sqlapp-core-postgres:test :sqlapp-core-oracle:test :sqlapp-core-sqlserver:test :sqlapp-core-sybase:test :sqlapp-core-saphana:test --init-script build/splitter-verification/full-db2.gradle --project-cache-dir build/splitter-verification/cache --offline --console=plain --continue
+.\gradlew.bat :sqlapp-core-h2:test :sqlapp-core-hsql:test :sqlapp-core-firebird:test :sqlapp-core-sqlite:test :sqlapp-core-spanner:test :sqlapp-core-virtica:test --init-script build/splitter-verification/full-db2.gradle --project-cache-dir build/splitter-verification/cache --offline --console=plain --continue
+.\gradlew.bat :sqlapp-core:test :sqlapp-command:test :sqlapp-swing:test --init-script build/splitter-verification/full-db2.gradle --project-cache-dir build/splitter-verification/cache --offline --console=plain --continue
+```
+
+Logs are under the ignored `build/splitter-verification/` directory:
+`dialect-full-suites.log`, `remaining-dialect-full-suites.log`, and
+`shared-full-suites.log`. Machine-readable counts are in
+`full-suite-summary.json`. Gradle reported deprecation warnings; they did not
+fail these runs. This supersedes the earlier limitation concerning unexecuted
+full suites for these modules. Other repository modules and real external
+server/version integration tests remain outside this verification scope.

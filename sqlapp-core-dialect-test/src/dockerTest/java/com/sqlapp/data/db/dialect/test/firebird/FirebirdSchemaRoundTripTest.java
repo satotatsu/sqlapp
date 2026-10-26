@@ -79,6 +79,9 @@ class FirebirdSchemaRoundTripTest {
 				capabilityBoundaries(connection, statement, dialect);
 				nativeSchemaObjects(connection, statement, dialect);
 				nativeCollations(connection, statement, dialect);
+				if (major >= 4)
+					publicationPolicy(connection, statement, dialect);
+				schemaDependencyOrder(connection, statement, dialect, major);
 				columns(connection, statement, dialect, major);
 				temporaryTables(connection, statement, dialect, major, url);
 				temporaryIndexCreation(connection, statement, dialect, major, url);
@@ -112,6 +115,153 @@ class FirebirdSchemaRoundTripTest {
 				packageAlter(connection, statement, dialect, major);
 			}
 		}
+	}
+
+	private void schemaDependencyOrder(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		statement.execute("CREATE TABLE Z_DEP_SOURCE (ID INTEGER)");
+		statement.execute("CREATE VIEW Z_DEP_VIEW AS SELECT ID FROM Z_DEP_SOURCE");
+		statement.execute(
+				"CREATE PROCEDURE Z_DEP_CALLEE RETURNS (V INTEGER) AS BEGIN SELECT MAX(ID) FROM Z_DEP_VIEW INTO :V; SUSPEND; END");
+		statement.execute(
+				"CREATE PROCEDURE A_DEP_CALLER RETURNS (V INTEGER) AS BEGIN SELECT V FROM Z_DEP_CALLEE INTO :V; SUSPEND; END");
+		statement.execute("COMMENT ON PROCEDURE A_DEP_CALLER IS 'caller comment'");
+		if (major >= 3) {
+			statement.execute(
+					"CREATE FUNCTION Z_DEP_DOUBLE (I INTEGER) RETURNS INTEGER DETERMINISTIC AS BEGIN RETURN I * 2; END");
+			statement.execute("CREATE INDEX DEP_EXPR ON Z_DEP_SOURCE COMPUTED BY (Z_DEP_DOUBLE(ID))");
+			statement.execute(
+					"CREATE FUNCTION A_DEP_READ RETURNS INTEGER AS DECLARE V INTEGER; BEGIN SELECT MAX(ID) FROM Z_DEP_SOURCE INTO :V; RETURN V; END");
+			statement.execute("CREATE TABLE A_DEP_COMPUTED (ID INTEGER, V COMPUTED BY (Z_DEP_DOUBLE(ID)))");
+			statement.execute(
+					"CREATE PACKAGE DEP_PACKAGE AS BEGIN FUNCTION F(I TYPE OF COLUMN Z_DEP_SOURCE.ID) RETURNS INTEGER; END");
+			statement.execute(
+					"CREATE PACKAGE BODY DEP_PACKAGE AS BEGIN FUNCTION F(I TYPE OF COLUMN Z_DEP_SOURCE.ID) RETURNS INTEGER AS BEGIN RETURN I + 1; END END");
+			statement.execute("CREATE FUNCTION A_DEP_PACKAGE RETURNS INTEGER AS BEGIN RETURN DEP_PACKAGE.F(10); END");
+		}
+		var reader = dialect.getCatalogReader().getSchemaReader();
+		boolean exclude = reader.getReaderOptions().isExcludeSystemObjects();
+		Schema schema;
+		try {
+			reader.getReaderOptions().setExcludeSystemObjects(true);
+			schema = reader.getAllFull(connection).get(0);
+		} finally {
+			reader.getReaderOptions().setExcludeSystemObjects(exclude);
+		}
+		assertFalse(com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.get(schema).isEmpty());
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
+		assertEquals(com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.get(schema),
+				com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.get(restored));
+		var create = dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE);
+		assertDependencyExecution(statement, major);
+		dropDependencyFixture(statement, major);
+		for (var sql : create) {
+			try {
+				statement.execute(sql.getSqlText());
+			} catch (SQLException e) {
+				throw new SQLException("Dependency fixture DDL: " + sql.getSqlText() + "\nDependencies: "
+						+ com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.get(restored) + "\nPlan: "
+						+ create.stream().map(operation -> operation.getSqlText()).toList(), e);
+			}
+		}
+		assertDependencyExecution(statement, major);
+		dropDependencyFixture(statement, major);
+	}
+
+	private void assertDependencyExecution(Statement statement, int major) throws SQLException {
+		statement.execute("INSERT INTO Z_DEP_SOURCE VALUES (10)");
+		try (var rows = statement.executeQuery("SELECT V FROM A_DEP_CALLER")) {
+			assertTrue(rows.next());
+			assertEquals(10, rows.getInt(1));
+		}
+		if (major >= 3) {
+			statement.execute("INSERT INTO A_DEP_COMPUTED(ID) VALUES (7)");
+			try (var rows = statement.executeQuery("SELECT V, A_DEP_READ(), A_DEP_PACKAGE() FROM A_DEP_COMPUTED")) {
+				assertTrue(rows.next());
+				assertEquals(14, rows.getInt(1));
+				assertEquals(10, rows.getInt(2));
+				assertEquals(11, rows.getInt(3));
+			}
+		}
+	}
+
+	private void dropDependencyFixture(Statement statement, int major) throws SQLException {
+		statement.execute("DROP PROCEDURE A_DEP_CALLER");
+		statement.execute("DROP PROCEDURE Z_DEP_CALLEE");
+		if (major >= 3) {
+			statement.execute("DROP FUNCTION A_DEP_READ");
+			statement.execute("DROP FUNCTION A_DEP_PACKAGE");
+			statement.execute("DROP PACKAGE BODY DEP_PACKAGE");
+			statement.execute("DROP PACKAGE DEP_PACKAGE");
+			statement.execute("DROP TABLE A_DEP_COMPUTED");
+		}
+		statement.execute("DROP VIEW Z_DEP_VIEW");
+		statement.execute("DROP TABLE Z_DEP_SOURCE");
+		if (major >= 3)
+			statement.execute("DROP FUNCTION Z_DEP_DOUBLE");
+	}
+
+	private void publicationPolicy(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		var reader = new com.sqlapp.data.db.dialect.firebird.metadata.Firebird40PublicationReader(dialect);
+		for (boolean auto : List.of(false, true))
+			for (boolean active : List.of(false, true)) {
+				statement.execute("ALTER DATABASE DISABLE PUBLICATION");
+				statement.execute("ALTER DATABASE EXCLUDE ALL FROM PUBLICATION");
+				statement.execute("CREATE TABLE \"publication included\" (ID INTEGER PRIMARY KEY)");
+				statement.execute("CREATE TABLE \"publication excluded\" (ID INTEGER PRIMARY KEY)");
+				if (auto) {
+					statement.execute("ALTER DATABASE INCLUDE ALL TO PUBLICATION");
+					statement.execute("ALTER TABLE \"publication excluded\" DISABLE PUBLICATION");
+				} else
+					statement.execute("ALTER TABLE \"publication included\" ENABLE PUBLICATION");
+				if (active)
+					statement.execute("ALTER DATABASE ENABLE PUBLICATION");
+				var expected = new com.sqlapp.data.db.dialect.firebird.FirebirdPublication(active, auto,
+						List.of("publication included"));
+				assertEquals(expected, reader.read(connection));
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				boolean exclude = schemaReader.getReaderOptions().isExcludeSystemObjects();
+				Schema schema;
+				try {
+					schemaReader.getReaderOptions().setExcludeSystemObjects(true);
+					schema = schemaReader.getAllFull(connection).get(0);
+				} finally {
+					schemaReader.getReaderOptions().setExcludeSystemObjects(exclude);
+				}
+				assertEquals(expected,
+						com.sqlapp.data.db.dialect.firebird.FirebirdPublications.get(schema).orElseThrow());
+				Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
+				assertEquals(expected,
+						com.sqlapp.data.db.dialect.firebird.FirebirdPublications.get(restored).orElseThrow());
+				var create = dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE);
+				assertTrue(create.stream().noneMatch(sql -> sql.getSqlText().contains("PUBLICATION")));
+				statement.execute("ALTER DATABASE DISABLE PUBLICATION");
+				statement.execute("ALTER DATABASE EXCLUDE ALL FROM PUBLICATION");
+				statement.execute("DROP TABLE \"publication included\"");
+				statement.execute("DROP TABLE \"publication excluded\"");
+				for (var sql : create)
+					statement.execute(sql.getSqlText());
+				for (String sql : com.sqlapp.data.db.dialect.firebird.FirebirdPublications.restoreSql(restored,
+						dialect))
+					statement.execute(sql);
+				assertEquals(new com.sqlapp.data.db.dialect.firebird.FirebirdPublication(false, auto,
+						List.of("publication included")), reader.read(connection));
+				Schema inactive = restored.clone();
+				com.sqlapp.data.db.dialect.firebird.FirebirdPublications.set(inactive, reader.read(connection));
+				var alter = (com.sqlapp.data.db.dialect.firebird.sql.FirebirdAlterSchemaFactory) dialect
+						.createSqlFactoryRegistry().getSqlFactory(inactive, SqlType.ALTER);
+				for (var sql : alter.createDiffSql(inactive.diff(restored),
+						com.sqlapp.data.db.dialect.firebird.FirebirdPublications.Activation.SOURCE_STATE))
+					statement.execute(sql.getSqlText());
+				assertEquals(expected, reader.read(connection));
+				statement.execute("CREATE TABLE FB_FUTURE_PUBLICATION (ID INTEGER PRIMARY KEY)");
+				assertEquals(auto, reader.read(connection).tables().contains("FB_FUTURE_PUBLICATION"));
+				statement.execute("DROP TABLE FB_FUTURE_PUBLICATION");
+				statement.execute("ALTER DATABASE DISABLE PUBLICATION");
+				statement.execute("ALTER DATABASE EXCLUDE ALL FROM PUBLICATION");
+				statement.execute("DROP TABLE \"publication included\"");
+				statement.execute("DROP TABLE \"publication excluded\"");
+			}
 	}
 
 	private void nativeCollations(Connection connection, Statement statement, Dialect dialect) throws Exception {

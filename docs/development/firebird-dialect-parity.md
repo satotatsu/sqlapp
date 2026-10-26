@@ -4,6 +4,252 @@ The comparison target is PostgreSQL's use of the shared Schema model, versioned
 catalog readers and database-specific DDL factories. PostgreSQL-only objects
 are not Firebird requirements. Full PostgreSQL-level coverage is not yet claimed.
 
+## Final audit scope (2026-10-26)
+
+This pass closes the implementation and verification of the core object families
+below. Completion means the listed paths have version-aware implementations and
+regression coverage, not that every Firebird or PostgreSQL feature is supported.
+The restrictions at the end of this section are explicit exclusions from that
+verified scope; they are not hidden behind the successful test count.
+
+| Area | Verified Firebird scope | Boundary |
+|---|---|---|
+| Resolution and native types | 2.5 / 3.0 / 4.0 / 5.0; version-specific types, precision, quoting | Earlier versions have catalog/SQL unit checks, not native certification; future majors are not certified |
+| Tables, columns, domains | Read/create/reread; defaults, nullability, comments, domain references, arrays, GTT and external tables; supported in-place ALTER | Destructive/ambiguous conversions fail; external file access is limited to disposable fixtures |
+| Views and constraints | Query plus column aliases, CHECK OPTION, PK/UNIQUE/FK/CHECK recreation and enforcement | Dependencies must exist; unsupported constraint options fail |
+| Indexes | Normal/expression/5.0 partial indexes; direction, state, comments, ALTER/REBUILD/ANALYZE | Statistics mean Firebird selectivity, not PostgreSQL histograms; ANALYZE needs modeled index information |
+| PSQL, UDR, packages and triggers | Versioned signatures, bodies/complete definitions, comments, SQL SECURITY and event masks; read/recreate/execute paths | External UDR/UDF code must be installed separately; scalar-array UDF execution is not tested |
+| Exceptions and BLOB filters | 2.5 / 3.0 / 4.0 / 5.0 complete CREATE and COMMENT definitions, Schema XML retention and recreation | External filter libraries are not deployed or executed; replacing/removing native objects requires an explicit dependency-aware migration |
+| User-created collations | 2.5 / 3.0 / 4.0 / 5.0 external base, comparison flags, specific attributes and comments; dependent domain/table/index recreation | Built-in collations are not recreated; target intl/ICU libraries must provide the recorded base and version; default character-set settings are separate |
+| Publication policy | 4.0 / 5.0 database active flag, automatic membership for future tables and published table identities; XML retention and explicit restore SQL | Default restore leaves publication inactive; server transport configuration, replica modes and actual data delivery are outside this SQL metadata path |
+| Full Schema CREATE ordering | 2.5 / 3.0 / 4.0 / 5.0 dependency-aware ordering across tables, views and routines; 3+ package declarations and bodies | Cycles require explicit staging; missing objects outside a filtered Schema remain caller-supplied prerequisites; this is not a general ALTER dependency planner |
+| Roles and grants | Versioned membership, object/column/routine/DDL privileges and 4.0+ system privileges | Server CREATE DATABASE grants are opt-in; user/password export and ownership reassignment are outside scope |
+| DML and maintenance | Bulk/upsert/migration/JDBC-tree tests; rollback-aware DELETE-based truncation; composite-key predicate fallback; safe table DROP | Firebird has no supported tuple-comparison or cascading table-DROP path; dependencies are not removed implicitly |
+| Database-file information | 2.0 context fallback and 2.1+ monitoring query; one metadata read; path/alias retention | Not a PostgreSQL tablespace implementation; pre-2.0 has no reader; 2.0 native execution remains unverified |
+
+The final audit corrected inaccurate capability flags: tuple comparisons and
+tuple IN are disabled, so shared `SqlSignature` and row predicates use AND/OR
+expressions with the same bound values. Table DROP no longer appends unsupported
+`CASCADE CONSTRAINTS`; a dependent view prevents deletion. WITH is advertised
+from the 2.5 dialect onward. The combined 2.0/2.1 dialect conservatively returns
+false because CTEs were introduced in 2.1, although callers may issue valid 2.1
+CTEs explicitly. Resolver boundaries and public method signatures are unchanged.
+
+The audit also corrected the shared core fallback itself: composite equality
+now binds every component with AND; inclusive comparisons use strict prefix
+comparisons and an inclusive final component. For example `(a,b)>=(x,y)` becomes
+`a>x OR (a=x AND b>=y)`. Previously its first branch used `a>=x`, admitting rows
+below the boundary. Native tuple paths and single-column predicates retain
+their existing behavior. This core correction affects dialects using fallback
+predicates; focused shared tests and core/command/PostgreSQL regressions accompany
+the Firebird native checks. Public APIs and serialized models are unchanged.
+
+The database-file reader no longer queries MON$DATABASE on 2.0. It uses
+RDB$GET_CONTEXT('SYSTEM', 'DB_NAME') and reports an unknown creation date there;
+2.1+ uses monitoring metadata. File basenames keep intermediate dots, aliases
+keep their full name, and a missing identity is an explicit failure.
+The pre-2.0 catalog no longer exposes the previously unusable monitoring reader.
+Monitoring also requires the server's appropriate ODS/system-table support.
+
+Known exclusions remaining after this pass:
+
+- Native certification of pre-2.5 servers and future major releases.
+- Execution of external scalar-array UDF libraries, automatic ownership
+  reassignment, security-database user/password lifecycle, and deployment of
+  external libraries.
+- Server-side replication transport configuration and data delivery, replica
+  database modes, operational cutover and publication ownership reassignment.
+- PostgreSQL-specific extension, policy, FDW, type/operator and partition
+  representations are not treated as Firebird parity requirements.
+- Ambiguous renames, unsupported collation/type conversions and changes that
+  would require destructive rebuilding need an explicit migration rather than
+  an inferred ALTER. Detailed guards are documented below.
+
+## Native exception, BLOB filter and collation definitions (2.5+)
+
+The schema reader now stores exceptions, declared BLOB filters and user-created collations in the shared
+Schema's `specifics` under `firebird.schemaObjects.v1`. `FirebirdSchemaObjects.get`
+provides typed immutable `FirebirdSchemaObject` values with complete executable
+definitions and explicit DROP statements. XML serialization and cloning retain
+the versioned payload without changing the shared XML format. Unknown manifest
+fields, unsupported format versions and duplicate object identities fail clearly.
+Names remain case-sensitive; identifiers and raw string literals are escaped
+separately, including messages whose first and last characters are apostrophes.
+
+There are three catalog queries per schema, independent of the number of objects.
+`excludeSystemObjects` is applied to exceptions and filters. Collations always
+exclude built-ins because those cannot be recreated as user declarations. `readStatement=false` skips
+these executable definitions. Pre-2.5 schema readers retain their previous
+behavior; this additional extraction is deliberately limited to the tested
+2.5/3/4/5 catalog family.
+
+The regular schema CREATE factory emits these definitions and their comments
+before modeled domains, tables, procedures, packages and triggers, and emits no unsupported
+`CREATE SCHEMA` statement for Firebird's unnamed schema. For example:
+
+```java
+var reader = dialect.getCatalogReader().getSchemaReader();
+reader.getReaderOptions().setExcludeSystemObjects(true);
+Schema schema = reader.getAllFull(connection).get(0);
+List<SqlOperation> create = dialect.createSqlFactoryRegistry().createSql(schema, SqlType.CREATE);
+List<FirebirdSchemaObject> nativeObjects = FirebirdSchemaObjects.get(schema);
+```
+
+Schema ALTER can add native objects before the corresponding shared object
+changes. Changing or removing an existing native definition fails with an
+actionable error rather than dropping dependencies implicitly. For an explicit
+migration, `FirebirdSchemaObjects.dropSql(schema)` supplies DROP statements in
+reverse stored order; dependent routines, tables and domains must be removed first. Ownership and
+external library deployment remain separate concerns. Filter declarations can
+be recreated without the library being loaded, but this does not certify the
+external filter implementation or its execution.
+
+Docker coverage recreates quoted exceptions and filters with comments through
+Schema XML and the schema CREATE registry on 2.5/3/4/5. A dependent procedure is
+recreated in the same schema plan and raises the restored exception. A direct
+exception DROP while the procedure exists must fail. Unit coverage also checks
+three queries for 150 objects, strict manifest validation and schema ALTER guards.
+
+Collation extraction uses `FROM EXTERNAL` with the catalog's external base, as
+Firebird's isql extraction does. A collation derived from another user collation
+therefore does not need its original parent restored first. PAD SPACE/NO PAD,
+case and accent sensitivity are emitted explicitly. Specific attributes such as
+NUMERIC-SORT and the recorded ICU version are preserved verbatim; unknown flag
+bits fail rather than being ignored. Target servers still need matching intl
+configuration and libraries. Installing them or changing character-set default
+collations is outside this object-recreation path.
+
+Docker coverage reads two related user collations with opposite comparison
+flags, a dependent domain, a table with an explicit column collation and an
+index. It recreates the full user schema through XML and the regular schema
+CREATE factory, then checks case/accent equality, trailing-space behavior and
+numeric ordering before and after recreation. Dropping an in-use collation must
+fail. Unit coverage checks all eight flag combinations, missing optional
+attributes, escaping, unknown flags and the older-version boundary.
+
+Collation references: [2.5 catalog fields](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref25/fblangref-appx04-collations.html),
+[CREATE COLLATION syntax](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref25/fblangref25-ddl-collation.html)
+and [isql extraction](https://github.com/FirebirdSQL/firebird/blob/master/src/isql/extract.epp).
+
+## Full Schema CREATE dependencies (2.5+)
+
+The shared collection order creates routines before tables, which cannot restore
+a Firebird procedure or function whose body references a table not yet created.
+`FirebirdCreateSchemaFactory` now stably orders the operations generated by the
+existing object factories using the catalog dependency graph. Object identity
+includes kind and exact name, so a function and table with the same name are
+distinct. Comments, indexes and constraints remain associated with their owning
+object. Native exception/filter/collation prerequisites still precede shared
+objects. Foreign-key prerequisites come from the canonical Schema model, and
+package bodies depend on their corresponding headers.
+
+The schema reader retains typed edges under `firebird.dependencies.v1` in Schema
+specifics, including XML and cloning. One bulk catalog query handles compiled
+dependencies and joins computed columns, expression indexes and constraint
+triggers to their owning table or view. On 3+, one additional UNION query reads
+public package argument/return declarations: TYPE OF COLUMN and domain references
+in package headers are not all present in RDB$DEPENDENCIES. References to packaged
+functions/procedures resolve to the package header, not to a same-named global
+routine. Private members do not create false public-header dependencies. No
+per-object or per-column SELECT is issued. Queries for 2.5 omit package columns;
+pre-2.5 readers retain their prior behavior. `readStatement=false` skips export.
+
+User-object recreation should read with `ReaderOptions.excludeSystemObjects=true`;
+dependency export then needs no additional configuration. For a manually built
+Schema, callers can supply edges with `FirebirdSchemaDependencies.set` when its
+routine/body dependencies cannot be inferred from the shared model. Without
+catalog edges, the original stable order and modeled foreign-key prerequisites
+remain available. A filtered Schema must include its needed objects or have
+those prerequisites already installed; absent objects are not invented. Cycles
+among objects in the plan produce an actionable error before any partial SQL
+plan is returned. Automatic stub routines, destructive cycle breaking and a
+general dependency-aware ALTER planner are not provided. Dependency payload
+changes alone do not produce ALTER DDL, and invalid manifests still fail.
+
+Docker coverage reads a table/view/callee/caller chain whose names are in the
+opposite order to their dependencies, restores it through Schema XML and executes
+the caller. On 3+ it also restores a table-reading function, a function-based
+computed column and expression index, a package with TYPE OF COLUMN in its public
+header, and a function calling that package. Full recreation and execution are
+checked on each engine version, not just isolated object factories.
+
+This uncovered a shared XML issue: IndexType.parse did not accept every enum name
+emitted by XML, so `indexType="Function"` became null and a restored expression
+index was generated as a normal quoted-column index. Core now recognizes enum
+names before its existing vendor alias patterns. XML output, public signatures
+and the existing unknown-input behavior are unchanged. Tests round-trip every
+index enum value through XML; the correction applies to every dialect using the
+shared model, with core/command/PostgreSQL regressions in addition to Firebird.
+
+References: [2.5 dependencies](https://firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref25/fblangref-appx04-dependencies.html),
+[3.0 dependencies](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref30/fblangref-appx04-dependencies.html)
+and [engine package-reference storage](https://github.com/FirebirdSQL/firebird/blob/v5.0-release/src/jrd/met.epp).
+
+## Publication policy (4.0+)
+
+`Firebird40SchemaReader` additionally reads the predefined `RDB$DEFAULT`
+publication and all its table memberships in one joined query. The active flag,
+automatic membership of new tables, and case-sensitive table identities are
+stored as `firebird.publication.v1` in Schema specifics. Older readers issue no
+publication query; `readStatement=false` skips this policy export. There are
+three native-object queries on 2.5/3 and those same queries plus one publication
+query on 4/5. Dependency export adds one query on 2.5 or two on 3+, for four,
+five and six total auxiliary schema queries respectively, without per-table SELECTs.
+
+`FirebirdPublications.get(schema)` exposes the immutable `FirebirdPublication`.
+Schema XML and cloning retain the versioned payload. Duplicate or invalid names,
+unknown JSON fields, missing boolean values, unsupported format versions and
+unrecognized publication/catalog flag values fail clearly. Table membership is
+canonicalized independently of input order.
+
+Ordinary schema CREATE validates this metadata but does not apply publication
+policy; the source Schema retains the policy. A changed policy in ordinary schema
+ALTER fails with an instruction to use its explicit activation overload, so it
+cannot disappear into a generic specifics change. After creating tables on a
+fresh target, the standalone publication plan can be applied as follows:
+
+```java
+// Use a fresh dedicated target database and a complete target user-table Schema.
+List<SqlOperation> objects = dialect.createSqlFactoryRegistry().createSql(schema, SqlType.CREATE);
+List<String> policy = FirebirdPublications.restoreSql(schema, dialect);
+// Execute objects first, then policy. Policy remains inactive by default.
+```
+
+`restoreSql` only returns SQL. It replaces the database-wide membership policy,
+so its target must be the intended complete database, not unrelated preexisting
+tables. The plan disables publication first, clears existing membership, restores
+the automatic-membership setting and exact included/excluded tables, and keeps
+publication inactive. Missing published tables or temporary/external tables are
+rejected before any SQL is returned. Quoted identifiers are escaped. To restore
+the source active state deliberately, use the overload with
+`FirebirdPublications.Activation.SOURCE_STATE`; activation, when needed, is last.
+Server `replication.conf`, transport paths, replication journals, replica modes,
+ownership reassignment and delivery verification remain separate operations.
+
+For a combined ALTER plan, use
+`FirebirdAlterSchemaFactory.createDiffSql(difference, Activation.DISABLED)` (or
+explicit `SOURCE_STATE`). This composes the shared DDL factories with the same
+publication planner: it disables publication before any object changes, then
+restores table membership and optional activation after those changes. No edits
+to the stored JSON or duplicate schema-diff implementation are required. The
+entire target policy and table set are validated before a plan is returned.
+
+Docker coverage on 4/5 checks all four active/auto-enable combinations, full
+Schema XML/table recreation, safe inactive restore, explicit source-state
+activation, exact exclusions and automatic membership of a subsequently created
+table. No replication transport is installed or delivery claimed. The 2.5/3
+matrix verifies that existing readers and native-object recreation still work.
+
+References: [publication catalog](https://firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-appx04-publications.html),
+[membership catalog](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-appx04-publication-tables.html)
+and [publication DDL](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl.html).
+
+References for the audit fixes:
+[table DROP grammar](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl-table.html),
+[predicate grammar](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-commons-predicates.html),
+[2.0 context variables](https://www.firebirdsql.org/refdocs/langrefupd20-get-context.html),
+[2.1 monitoring catalog](https://www.firebirdsql.org/rlsnotesh/rnfb210-admin.html).
+
 ## Version boundaries
 
 | Server | Dialect | Behavior |
@@ -13,7 +259,7 @@ are not Firebird requirements. Full PostgreSQL-level coverage is not yet claimed
 | 2.5 | `Firebird25` | Existing 2.5 metadata and settings support |
 | 3.x | `Firebird30` | Native BOOLEAN, PSQL functions, package-aware queries and database-local DDL privileges |
 | 4.x | `Firebird40` | INT128, DECFLOAT, time-zone types, precision up to 38 and role system privileges |
-| 5.x and later | `Firebird50` | Existing returning support and conditional index catalog queries |
+| 5.x | `Firebird50` | Existing returning support and conditional index catalog queries; later major versions currently resolve here without native certification |
 
 `Firebird40` extends `Firebird30` and reuses its compatible catalog readers.
 `Firebird50` now extends `Firebird40`. The resolver returns the new 4.0 class
@@ -415,6 +661,35 @@ REBUILD accepts a named index, not a structural diff. Unique-key violations duri
 activation remain execution errors; the caller must resolve duplicate data first.
 See [Firebird index maintenance](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl-index.html).
 
+`registry.createSql(index, SqlType.ANALYZE)` emits `SET STATISTICS INDEX ...`
+to recalculate selectivity without rebuilding or activating the index. The
+index name uses the normal identifier quoting rules; no table association is
+required. An inactive or unnamed index and structural diffs are rejected.
+
+For an indexed table returned by `TableReader.getAllFull`,
+`registry.createSql(table, SqlType.ANALYZE)` composes those operations for the
+modeled active ordinary, expression, partial (5.0+) and constraint indexes.
+Names are deduplicated exactly, preserving distinct quoted identifier case.
+Inactive ordinary indexes are skipped and stay inactive. A table containing
+only inactive indexes produces no operations. A name-only table or a model
+without any index information is rejected instead of implying that statistics
+were refreshed; provide loaded metadata or analyze a named Index directly.
+Missing constraint backing-index names also fail with an actionable error,
+and views cannot be analyzed.
+
+Unique/primary and foreign-key readers retain auto-generated physical index
+names under the read-only `firebird.catalog.indexName` when they start with
+`RDB$`. This supplements `firebird.indexName` for explicitly named indexes.
+The value is read in the existing bulk query (50 composite constraints still
+require one query per reader), used for statistics, and ignored by CREATE DDL.
+Generated names can change on recreation, so read metadata again before
+analyzing recreated objects. SQL generation performs no catalog queries and
+does not change the input model. Docker covers selectivity refresh after DML,
+expression/partial and automatic PK/FK indexes, quoting, retained comments,
+inactive indexes and continued PK/FK enforcement on 2.5/3.0/4.0/5.0.
+This updates Firebird index selectivity; table/column histograms are outside
+its scope. See the official [SET STATISTICS rules](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl-index.html).
+
 Comment-only diffs avoid recompiling the view or trigger. Modeled structural
 diffs reject complete definitions that would shadow the requested changes.
 Docker verifies dependent domain columns, default/CHECK behavior, view grants
@@ -491,12 +766,29 @@ DDL, numeric subtypes, multiline defaults, trigger event masks, trigger DDL,
 index DDL and PSQL routine DDL. The unit checks are complemented by the opt-in
 Docker matrix, which reads metadata, drops and recreates objects with generated
 SQL, rereads the result and executes representative data/routine operations.
-Verified on 2026-10-25 with Java 21: 155 unit tests and 13 Docker tests passed,
+Verified on 2026-10-26 with Java 21: 186 Firebird unit tests and 13 Docker tests passed,
 with no failures or skipped tests. The Docker cases comprise four version
 round trips, two existing metadata/sequence tests, six bulk/migration tests
 and one JDBC-tree generated-key test. Earlier startup/protocol and SQL failures
 were corrected before this successful final run. No external or production
 database was accessed.
+
+The final shared-core regression additionally passed 1,232 core tests, 627
+command tests and 305 PostgreSQL unit tests. The combined results cover 2,350 unit
+tests and 13 Docker tests. The verification tasks were
+`:sqlapp-core:test :sqlapp-command:test :sqlapp-core-postgres:test
+:sqlapp-core-dialect-test:firebirdCompatibilityTest` with Java 21, offline
+dependency resolution and `--no-parallel`, using the temporary output/cache
+isolation described below. The first added Docker check needed an explicit
+ReaderOptions on its standalone reader; this fixture setup was corrected before
+the successful final run. PostgreSQL verification here is unit-only, not access
+to an external PostgreSQL database.
+
+The dependency-order and index XML corrections reran all 186 Firebird unit tests
+and the Docker matrix, as well as all core, command and PostgreSQL unit tests
+because IndexType parsing is shared. Earlier package-header ordering and
+expression-index XML failures were reproduced and corrected before the final
+successful matrix. The XML output and public method signatures were preserved.
 
 Initial runs encountered missing class files and one test report write failure
 while concurrent builds shared the checkout during the ownership extension. The final verification
@@ -598,13 +890,10 @@ column-length alias, and a 2.5 procedure parameter can inherit its default from
 its field/domain row. Column queries now use `CHAR_LEN`; procedure arguments
 use COALESCE of the parameter and field default source in the same bulk query.
 
-Remaining parity work includes real-server read/recreate/reread coverage across
-the pre-2.5 releases and additional object options, execution of scalar-array UDFs,
-automatic ownership restoration,
-other version-specific object properties.
-Complete `definition` can preserve
-DDL supplied by callers, but automatic extraction of these remaining details
-is not claimed. The procedure-argument boundary was checked against the official
+The closed verification scope and concrete exclusions are listed in the final
+audit table above. A complete `definition` can preserve executable DDL supplied
+by callers, but does not imply automatic extraction or restoration of its
+external dependencies. The procedure-argument boundary was checked against the official
 1.5/2.0/2.1/2.5 release catalog definitions and unit-tested; pre-2.5 execution on
 a real server remains unverified.
 

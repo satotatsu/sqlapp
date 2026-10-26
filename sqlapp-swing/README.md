@@ -17,6 +17,14 @@ remain read-only; syntax highlighting does not validate or execute SQL. YAML
 validation continues to use the shared command validator. Search, go-to-line and
 error navigation reveal folded text when needed.
 
+Schema comparison **Review** and **SQL draft** use the same read-only code
+navigation as parsed report JSON: literal search, match counts, line/column
+navigation, visual wrapping and caret/selection position. Each tab keeps its own
+query and wrap preference. Changing Schema inputs or generating a new comparison
+clears the previous search/navigation state. Comparison and save operations
+temporarily disable navigation, then restore it, including after a failed save.
+Search and wrapping never alter the generated review or exported SQL draft.
+
 The editor toolbar and native right-click Undo/Redo share RSyntaxTextArea's one
 undo history; grouped replacement and the existing save/dirty-buffer protections
 remain in effect. The dependencies are confined to `sqlapp-swing`; command/core
@@ -96,11 +104,29 @@ update them; existing overwrite confirmations and execution guards still apply.
 
 ## Status and diagnostics across migration screens
 
+Application close is blocked while Schema comparison, editor IO/checks, Schema
+or data planning, migration execution, report/audit/verification saves, saved
+report loading or connection-profile IO is running. The close guard checks the
+current state again after unsaved-edit confirmations. It does not cancel work;
+wait for the result and retry closing. The Schema draft dialog retains its own
+read/build close guard.
+
+Connection-profile IO contributes to its parent Schema/data screen's active
+state. Starting planning or execution while a related profile is loading or
+saving shows a wait message; retry after it completes. Save methods also reject
+duplicate calls while an operation is active. Success and failure both restore
+the normal action state; retained plans and execution audits remain available
+under the existing inspection and retry rules.
+
 **Details…** is available in Schema comparison, Schema migration plan, Data
 migration plan, saved reports, the Schema-based job builder and connection
 profiles, as well as both source editors. It opens read-only, selectable text
 with the complete current status or error. Failure details include the exception
-and its cause chain; plan/report summaries retain the same diagnostic evidence.
+and its cause chain, suppressed failures (such as rollback or close failures),
+and JDBC chained exceptions with their SQLState and vendor error code. Shared
+references and cycles are marked without expanding an exception twice; deeply
+nested causes are traversed without recursion. No stack trace is added.
+Plan/report summaries retain the same diagnostic evidence.
 Completed, failed or paused execution results also expose their summary through
 Details. Reading or copying this text does not inspect or execute a database.
 
@@ -189,11 +215,25 @@ with no JDBC or Swing dependency. Input is limited to 1 MiB of valid UTF-8 text.
 In **Job YAML editor**, choose **From Schema…**. Select a Schema XML file and
 click **Read Schema**. The dialog lists the canonical table identities, primary
 keys and availability reasons, and displays the SHA-256 of the exact XML bytes.
-Choose individual tables or **Select eligible**. No tables are selected silently.
+Choose individual tables or **Select visible eligible**. No tables are selected silently.
 Set an optional job ID and chunk row count, then choose **Create draft in editor**.
 The builder re-reads the XML and rejects changes made after inspection. Closing
 the dialog leaves the original editor buffer intact; replacing unsaved edits
 uses the editor's existing confirmation. File operations run in the background.
+
+**Find tables** filters table identities, primary-key names and availability
+reasons with case-insensitive literal matching. Ctrl+F / Cmd+F focuses the filter.
+The count shows visible/all tables, the total selected tables and how many
+selections are hidden by the filter. Filtering never changes the Include flags.
+**Select visible eligible** and **Clear visible** affect only currently displayed
+tables, even after sorting; ineligible tables remain unselectable. **Clear all
+selected** also clears hidden selections. Draft creation includes every selected
+table, including hidden ones, using the shared builder's ordering and validation.
+
+Changing the Schema path or reading it again clears the filter and selection.
+Re-reading the same Schema correctly replaces the previous list and fingerprint;
+an older asynchronous read still cannot replace newer inputs. Filter and selection
+controls are disabled while reading or building a draft.
 
 Drafts use `INSERT`, `requireEmptyTarget: true`, `resume: false`, transactional
 chunks and the same target table identities/column names as the source. Ordered
@@ -349,6 +389,32 @@ numbers show the allowed range and preserve the selection instead of silently
 choosing another position. Search, line navigation and edit history are disabled during editor reads, checks
 and saves. Search and line navigation do not change the buffer or validation state.
 
+## Open saved reports
+
+In **Parsed report JSON**, use the read-only navigation bar to search literal
+text, move to the next/previous match, count non-overlapping matches, go to a
+one-based line/optional Unicode column, or wrap long lines visually. Ctrl+F,
+F3/Shift+F3 and Ctrl+L operate while the JSON view has focus. The position label
+shows the current line, column and selected character count. Replacement and
+Undo/Redo controls are omitted; navigation never changes the report text.
+Changing or clearing the report resets the query, line/column inputs, selection
+and search result. Wrap lines remains a view preference for the current screen.
+
+After successfully saving a Schema plan/result, data status, execution audit or
+verification report, **Open saved report** opens that file in **Migration
+reports** with its format already selected. It reads and validates the file
+again; no live database checks or execution occur. The button refers to the
+last successfully saved supported report, even after planning inputs change;
+hover to see its path and type. Failed saves retain the previous link. Wait and
+retry if the report viewer is already reading another file. Data execution
+audits use the existing success or failure/pause format; the shortcut selects
+the format actually written. These audits record the copy phase and do not
+prove verification passed; open the separately saved verification report for
+verification evidence.
+The report viewer's **Details…** includes the loaded file, selected format and
+summary, or the attempted file/format and diagnostics after a failed read.
+Changing the file or format clears these details with the previous result.
+
 ## Reuse connection profiles
 
 The **Connection profile** / **Profile** row in Schema planning and both data
@@ -386,11 +452,52 @@ hover over the status for details. Reads and writes run in the background.
 A pending load is discarded if inputs change or the connection form becomes
 busy before loading finishes. Saves capture the settings at the time of the
 click and replace files atomically where supported, with overwrite confirmation.
+If the URL, username or driver changes during saving, the result explicitly
+states that the newer inputs are not saved; save again to write them. Password
+changes do not affect this message because passwords are excluded. Disabling a
+profile panel immediately disables both file actions, and reenabling it during
+an operation keeps them disabled until that operation finishes.
 
 There is no automatic profile store, home-directory setting, saved password,
 startup connection or driver download. Driver classes still need to be on the
-application's runtime classpath. Execution retains its existing connection
+application's runtime classpath or loaded from **JDBC drivers**. Execution retains its existing connection
 confirmation, password re-entry and live identity/fingerprint checks.
+
+## Add JDBC driver JARs
+
+Open **JDBC drivers**, optionally enter the JDBC driver class, then choose
+**Load driver JARs…** and select the driver JAR and its dependency JARs together.
+When the class is blank, JDBC service definitions in the selected libraries are
+used to discover drivers. For a legacy driver without a service definition,
+enter its fully qualified class, for example `oracle.jdbc.OracleDriver`.
+The list shows the loaded JAR paths and detected classes; **Details…** explains
+load failures. Only load trusted local JARs: loading initializes their Java code.
+Loading does not open a database connection.
+
+Successful additions are immediately available to Schema planning/execution
+and both source/target data connections. Use the existing JDBC URL and credentials;
+choose a class in **Loaded driver** and use **Use for Schema**, **Use for source**
+or **Use for target** to fill that connection's driver class without typing it.
+The destination tab opens with Advanced options visible; URL, username and
+password are retained. Changing the driver invalidates the current reviewed
+plan, so inspect/build a new plan before execution. Handoff is refused while
+operations are running and can be retried. Class selection does not connect.
+In **Advanced options**, specify the loaded driver class if multiple added
+drivers accept that URL. Bundled drivers retain priority for automatic URL
+selection. When adding another driver, select its common dependency JARs again
+with the new driver JAR; dependencies already used by another library are allowed.
+The current driver selection stays unchanged after adding another library.
+Added libraries do not replace bundled classes. Selecting the same path twice
+in one load, selecting only already loaded JARs, or registering an already loaded
+driver class is rejected. Restart to change driver versions.
+JARs stay loaded for the application session; there is no unload, automatic
+download, file copy or persisted JAR list. Select them again after restarting.
+Connection profiles keep their existing format and do not include JAR paths.
+Adding a JAR supplies a JDBC driver, not a new sqlapp database dialect.
+
+Loading runs off the UI thread and disables duplicate loads. Wait for existing
+operations to finish before loading. The application also blocks closing while
+a load is running. A failed load leaves the previously loaded libraries available.
 
 ## Schema comparison
 
@@ -470,13 +577,15 @@ re-enter the password for another attempt. Connection acquisition has a
 10-second pool timeout; driver/network timeouts are driver-specific. There is
 no cancellation control for planning yet.
 
-The included HSQLDB dialect supplies an embedded JDBC driver. Other JDBC
-drivers must be available on the runtime classpath; specifying a driver class
-does not install its JAR. For example, after `:sqlapp-swing:installDist`, launch
-on Windows with a locally installed PostgreSQL driver:
+The current distribution includes HSQLDB, PostgreSQL, MySQL, SQL Server and
+SQLite JDBC drivers. Oracle's dialect is included, but its JDBC driver must be
+provided separately. Use **JDBC drivers** to load additional local JARs without
+restarting. Specifying a driver class alone does not install its JAR.
+Alternatively, after `:sqlapp-swing:installDist`, launch on Windows with a local
+Oracle driver on the runtime classpath:
 
 ```powershell
-java -cp "sqlapp-swing/build/install/sqlapp-swing/lib/*;C:/drivers/postgresql.jar" com.sqlapp.swing.MigrationApplication
+java -cp "sqlapp-swing/build/install/sqlapp-swing/lib/*;C:/drivers/ojdbc11.jar" com.sqlapp.swing.MigrationApplication
 ```
 
 For an entirely local trial, put the following in a directory as
@@ -700,6 +809,50 @@ pausing does not make changing source data safe. There is no force-cancel or
 statement-level progress control.
 
 ## Saved migration reports
+
+The **Tasks / migrations** list is shared by Schema plans, data plans, execution
+results and saved reports. **Filter tasks / migrations** performs a
+case-insensitive literal search across every displayed column, including long
+cell values; regex characters are treated as text. The count distinguishes
+visible rows from all rows. **Clear** restores the list, and Ctrl+F / Cmd+F
+focuses this filter while the list has focus.
+
+Select a row to read its full column values in the read-only area below the
+table and copy selected text. Row details follow the correct model row after
+sorting or filtering. Changing the filter clears the selection, and displaying
+a new review or clearing inputs resets the filter and old row details. Filtering
+changes only the view: the plan, execution approval, JSON and saved artifacts
+retain the complete result.
+
+Count columns sort numerically in the main list as well as recorded-detail
+tables: Schema statement counts, data checkpoint/processed row counts, completed
+chunks and verification counts. Missing checkpoint counts remain `not recorded`
+and sort after numbers in ascending order (before numbers in descending order);
+they are never treated as zero. Copying follows the resulting visible order.
+The live data plan also sorts execution order and chunk size numerically.
+
+When rows are added, removed or edited in the current list, visible counts,
+filter membership and copy availability update with the table. Replacing the
+list detaches the previous model so later changes to it cannot affect the view.
+
+**Copy visible rows** copies the entire visible list with column headings as
+tab-separated text, in its current sorted row order and displayed column order.
+Use Ctrl/Cmd-click or Shift-click to select multiple rows, then **Copy selected
+rows** to copy just that selection with the same headings, ordering and limit.
+With multiple rows selected, the detail area identifies the selection count and
+shows the first selected row. Filtering clears the selection; copying selected
+rows is disabled when nothing is selected. Both copy actions appear below the
+search field so they do not reduce its available width.
+It is also available in recorded-detail tables. Tabs, CR/LF and quotes inside
+cells are preserved using quoted cells and doubled quotes. The action does not
+require a selected row and does not copy rows hidden by the filter. Empty lists
+disable copying. Copy failures are displayed for retry; changing the filter or
+review clears the previous copy feedback.
+
+The complete clipboard text is limited to 1 MiB in UTF-8, including headings
+and separators. Oversized results are rejected before touching the clipboard;
+filter fewer rows or use the existing full report export. Copying never truncates
+the result or changes the plan, source data, saved report or execution approval.
 
 Open **Migration reports**, select the report type and a JSON file, then click
 **Load report**. The summary shows the saved outcome and plan fingerprint;

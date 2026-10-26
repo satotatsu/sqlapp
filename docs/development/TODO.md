@@ -1,6 +1,6 @@
 # Migration TODO
 
-Updated: 2026-10-25.
+Updated: 2026-10-26.
 
 ## Session quoting policy
 
@@ -26,9 +26,11 @@ initial quoting policy for each fixed-mode segment. The command/GUI preview uses
 the documented defaults; advanced initial policies are available on the dialect
 splitters. See the [policy and examples](sql-splitter-review.md#fixed-session-quoting-policy).
 
-Full suites for modules other than DB2 and external database verification remain
-unexecuted; any
-external database tests require explicit authorization for their target and behavior.
+Full suites for all 17 reviewed modules passed: 5,245 tests including the previous
+DB2 run, with zero failures, errors or skips. See the
+[full-suite verification record](sql-splitter-review.md#full-module-suite-verification-2026-10-26).
+External database verification remains unexecuted and requires explicit
+authorization for its target and behavior.
 
 ## Completed SQL splitter work
 
