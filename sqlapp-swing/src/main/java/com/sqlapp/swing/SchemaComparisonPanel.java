@@ -117,6 +117,8 @@ final class SchemaComparisonPanel extends JPanel {
 	}
 
 	private JPanel fileRow(final String label, final JTextField field, final JButton browse) {
+		FileDropHandler.path(field, false, java.util.List.of("xml"), () -> !busy,
+				FileDropHandler.errors(status, statusPanel));
 		final var row = new JPanel(new BorderLayout(8, 0));
 		row.add(new JLabel(label), BorderLayout.WEST);
 		row.add(field, BorderLayout.CENTER);

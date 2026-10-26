@@ -95,6 +95,14 @@ final class ConnectionProfilePanel extends JPanel {
 					"Replace connection profile", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION)
 				saveTo(file);
 		});
+		for (final var target : new javax.swing.JComponent[] { this, load })
+			FileDropHandler.file(target, java.util.List.of("json"), () -> !busy && isEnabled() && jdbcUrl.isEnabled(),
+					this::droppedProfile, FileDropHandler.errors(status, statusPanel));
+	}
+
+	private boolean droppedProfile(final Path path) {
+		loadFrom(path);
+		return busy;
 	}
 
 	JFileChooser chooser(final boolean saving) {

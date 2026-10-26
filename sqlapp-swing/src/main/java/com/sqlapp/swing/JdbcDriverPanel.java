@@ -89,7 +89,17 @@ final class JdbcDriverPanel extends JPanel {
 				loadFrom(java.util.Arrays.stream(chooser.getSelectedFiles()).map(java.io.File::toPath).toList(),
 						driverClass.getText());
 		});
+		for (final var target : new JComponent[] { this, loaded, load })
+			FileDropHandler.files(target, List.of("jar"), () -> !busy && !blocked.getAsBoolean(),
+					this::droppedLibraries, FileDropHandler.errors(status, statusPanel));
 		refreshLibraries();
+	}
+
+	private boolean droppedLibraries(final List<Path> paths) {
+		if (busy || blocked.getAsBoolean())
+			return false;
+		loadFrom(paths, driverClass.getText());
+		return busy;
 	}
 
 	void setBlockedSupplier(final BooleanSupplier blocked) {

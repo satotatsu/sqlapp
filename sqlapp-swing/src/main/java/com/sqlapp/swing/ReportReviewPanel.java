@@ -59,6 +59,8 @@ final class ReportReviewPanel extends JPanel {
 		input.add(format, BorderLayout.NORTH);
 		input.add(new JLabel("Report JSON"), BorderLayout.WEST);
 		input.add(file, BorderLayout.CENTER);
+		FileDropHandler.path(file, false, java.util.List.of("json"), () -> !busy,
+				FileDropHandler.errors(status, statusPanel));
 		input.add(browse, BorderLayout.EAST);
 		add(input, BorderLayout.NORTH);
 		add(view, BorderLayout.CENTER);

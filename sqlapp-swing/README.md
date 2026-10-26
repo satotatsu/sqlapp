@@ -1,10 +1,25 @@
 # sqlapp Swing migration review
 
-Run on a Java 21 graphical desktop from the repository root:
+Run on a Java 25 graphical desktop from the repository root:
 
 ```powershell
 .\gradlew.bat :sqlapp-swing:run
 ```
+
+Gradle `run` and generated distribution scripts enable native access with
+`--enable-native-access=ALL-UNNAMED`. FlatLaf uses native libraries, and JDK 24+
+requires explicit native-access permission to avoid restricted-method warnings.
+See [JEP 472](https://openjdk.org/jeps/472).
+
+For Eclipse, refresh the `sqlapp-swing` project and run the shared
+`MigrationApplication.launch` configuration (Java Application). If you already
+have a launch configuration, add `--enable-native-access=ALL-UNNAMED` under
+**Run Configurations → Arguments → VM arguments**, not Program arguments.
+Gradle's application JVM options do not automatically update existing Eclipse
+Java Application launch configurations. These options permit native code in
+classpath libraries; they do not disable native functionality or suppress other
+JVM warnings. No machine-wide environment variable or Eclipse installation
+setting is required.
 
 ## Appearance and code views
 
@@ -31,6 +46,29 @@ remain in effect. The dependencies are confined to `sqlapp-swing`; command/core
 modules and existing artifact formats have no GUI dependency. Both jars are
 included by `installDist`. Modern Docking has been evaluated as an option for
 future simultaneous pane layouts; the current workflow retains its tabs.
+
+## Drag and drop files
+
+Drag local files from the file manager to these targets instead of using Browse/Open:
+
+| Target | Accepted drop | Action |
+| --- | --- | --- |
+| Schema comparison Before/After path | One XML file | Select that input; Compare remains explicit |
+| Schema migration SQL directory fields | One folder | Select that directory; planning remains explicit |
+| Data migration Job YAML path | One YAML/YML file | Select the job; inspection remains explicit |
+| Schema-based job builder Schema path | One XML file | Select the Schema; Read Schema remains explicit |
+| SQL / Job YAML editor, filename label or Open button | One SQL / YAML/YML file | Open through the normal unsaved-edit confirmation |
+| Migration reports JSON path | One JSON file | Select the file; choose its type and Load report |
+| Connection profile Load button | One JSON file | Load the profile through the existing validation |
+| JDBC drivers list or Load button | One or more JAR files | Load the batch with the optional driver-class setting |
+
+Single-file targets reject multiple files. Wrong extensions, files dropped on
+folder targets and folders dropped on file targets leave the previous selection
+unchanged and show a diagnostic. Busy or disabled targets reject file drops.
+File drops use Copy semantics and do not move the original files. Normal text
+copy/paste and text drag operations retain their existing handlers. Dropping a
+file does not start database planning or execution. Driver JAR loading still
+initializes Java code under the existing trusted-library rules.
 
 ## Editor file shortcuts
 
@@ -487,9 +525,13 @@ drivers accept that URL. Bundled drivers retain priority for automatic URL
 selection. When adding another driver, select its common dependency JARs again
 with the new driver JAR; dependencies already used by another library are allowed.
 The current driver selection stays unchanged after adding another library.
-Added libraries do not replace bundled classes. Selecting the same path twice
-in one load, selecting only already loaded JARs, or registering an already loaded
-driver class is rejected. Restart to change driver versions.
+Added libraries do not replace bundled classes. If the same JAR contains another
+driver class that was not registered through its service definition, enter that
+fully qualified class and select the same JARs again to register it explicitly.
+Selecting the same path twice in one load, selecting only already loaded JARs
+without specifying an unregistered class, or registering an already loaded driver
+class is rejected. Duplicate classes are checked before initialization for
+explicit names and discovered service providers. Restart to change driver versions.
 JARs stay loaded for the application session; there is no unload, automatic
 download, file copy or persisted JAR list. Select them again after restarting.
 Connection profiles keep their existing format and do not include JAR paths.
@@ -648,8 +690,67 @@ Custom history column layouts and live Schema drift checks remain unavailable.
 
 ## Inspect a data migration plan
 
-Open **Data migration plan**, select an existing job YAML and enter the source
-and target JDBC connections. **Connect and inspect plan** resolves the job
+For an initial copy, open **Data migration plan** and enter the source and target
+JDBC connections. Choose **New migration…**, select a folder for the migration
+settings, and select the source tables to copy. **Save and review plan** saves
+the settings and opens the connected plan review. Preparing YAML or Schema XML
+by hand is unnecessary. This flow reads metadata and inspects the plan; copying
+rows still requires **Execute reviewed job…** and its existing confirmation.
+
+Each connection has **Test connection**. It checks only that connection and its
+supported database dialect, and displays the database product/version. No job or
+other connection is required. It opens a short-lived pool in read-only mode and
+does not read table rows, create artifacts or inspect/execute a migration. Test
+success does not check target table compatibility or approve execution; inspect
+the plan afterward. Failures appear in **Details…**, with the supplied JDBC URL
+and password redacted. Password fields remain available for the next action in
+this session; temporary password copies are cleared after each test.
+
+**Build URL…** on either connection opens an optional form for PostgreSQL, MySQL,
+SQL Server or Oracle Thin service-name connections. Choose the database type and
+enter a host, port and database/service name. Ports start with the conventional
+value for the selected database and remain editable. **Use URL** applies the
+preview to that connection only; usernames, passwords and explicit driver classes
+are retained. Applying a URL invalidates the previous migration plan. Cancel,
+Escape or closing the dialog retains the existing connection. No connection is
+opened and no driver is downloaded by this form.
+
+The form supports single hosts, including IPv6 literals and international DNS
+names. Database names are encoded for PostgreSQL/MySQL and quoted for SQL Server;
+unsupported names fail explicitly. Oracle accepts simple service names. Existing
+URLs are not parsed into the form; only a recognized database type is preselected.
+Existing URL parameters are replaced, not merged into the generated URL.
+Use direct URL input for other databases, TLS options, multiple hosts, Oracle SID
+or TNS/wallet connections, and other driver properties. Generated URLs do not add
+credentials or override the driver's TLS settings. JDBC driver JARs still need to
+be available through **JDBC drivers** or the application's classpath.
+
+URL formats follow the driver documentation:
+[PostgreSQL](https://jdbc.postgresql.org/documentation/use/),
+[MySQL](https://dev.mysql.com/doc/connector-j/en/connector-j-reference-jdbc-url-format.html),
+[SQL Server](https://learn.microsoft.com/en-us/sql/connect/jdbc/building-the-connection-url),
+and [Oracle](https://docs.oracle.com/en/database/oracle/oracle-database/19/jjdbc/data-sources-and-URLs.html).
+
+The source's current schema is used. If it cannot be resolved uniquely, enter
+the exact **Source schema** in **Advanced options**. Table eligibility and primary
+key restrictions are shown in the selection list. **Copy options** exposes the
+optional job ID, chunk size and verification choice; verification starts enabled.
+The initial copy requires existing, same-named, empty target tables. It does not
+create target tables, replace existing rows or enable checkpoint resume.
+
+The selected folder receives a unique `migration-*` child containing
+`source-schema.xml` and `migration.yaml`. Keep these files together; the saved
+job pins the Schema fingerprint and can be reopened or edited later. Connection
+passwords are not written to these files. Cancelling table selection may leave
+the captured Schema XML in that child folder.
+The table selection screen shows the settings destination before saving.
+**Cancel**, **Escape**, or closing that dialog retains the previously selected
+job and review. Cancellation is disabled while settings are being saved.
+Missing JDBC URLs identify the source or target field to complete; a saved
+connection profile can also supply that connection's non-secret settings.
+
+Alternatively, select an existing job YAML and enter the source and target
+JDBC connections. **Connect and inspect plan** resolves the job
 through `BulkMigrationJobConfigurationResolver`, validates the live target's
 tables/columns/keys through `BulkMigrationTargetValidator`, and reads the
 configured checkpoints. `requireEmptyTarget`, when configured in YAML, is

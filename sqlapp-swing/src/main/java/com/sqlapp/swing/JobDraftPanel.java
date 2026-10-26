@@ -28,8 +28,8 @@ import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobDraftBuilder;
 import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobDraftBuilder.SchemaSnapshot;
 
 /**
- * Selects canonical Schema tables and creates an unsaved YAML draft, without
- * JDBC.
+ * Selects canonical Schema tables for an editor draft or saved migration
+ * settings, without JDBC.
  */
 final class JobDraftPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
@@ -40,6 +40,7 @@ final class JobDraftPanel extends JPanel {
 	final JCheckBox verify = new JCheckBox("Verify copied data", true);
 	final JButton inspect = new JButton("Read Schema");
 	final JButton create = new JButton("Create draft in editor");
+	final JButton cancel = new JButton("Cancel");
 	final JButton select = new JButton("Select visible eligible");
 	final JButton clear = new JButton("Clear visible");
 	final JButton clearAll = new JButton("Clear all selected");
@@ -78,9 +79,75 @@ final class JobDraftPanel extends JPanel {
 	private long revision;
 	private final EditorFileChooser fileDialogs = new EditorFileChooser();
 	private final JButton browse = new JButton("Browse…");
+	private JPanel pathRow;
+	private JPanel identityRow;
+	private JPanel optionsRow;
+	private JPanel header;
+	private JPanel actions;
+	private Path managedDirectory;
+	private Consumer<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> savedReady;
 
 	JobDraftPanel(final Consumer<String> ready) {
 		this(new BulkMigrationJobDraftBuilder(), ready);
+	}
+
+	JobDraftPanel(final SchemaSnapshot schema, final Path directory,
+			final Consumer<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> ready) {
+		this(schema, directory, ready, () -> {
+		});
+	}
+
+	JobDraftPanel(final SchemaSnapshot schema, final Path directory,
+			final Consumer<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> ready,
+			final Runnable cancelled) {
+		this(yaml -> {
+		});
+		managedDirectory = directory;
+		savedReady = ready;
+		schemaFile.setText(schema.file().toString());
+		showSnapshot(schema);
+		pathRow.setVisible(false);
+		identityRow.setVisible(false);
+		optionsRow.setVisible(false);
+		header.add(new JLabel("<html>Select tables to copy into existing, same-named empty target tables.<br>"
+				+ "Defaults: verify copied data; no row replacement or checkpoint resume.</html>"), 0);
+		final var advanced = new javax.swing.JToggleButton("Copy options");
+		advanced.addActionListener(event -> {
+			optionsRow.setVisible(advanced.isSelected());
+			header.revalidate();
+		});
+		header.add(advanced);
+		final var destination = new JTextField(
+				directory.toAbsolutePath().normalize().resolve("migration.yaml").toString());
+		destination.setEditable(false);
+		destination.setToolTipText(destination.getText());
+		final var destinationRow = new JPanel(new BorderLayout(4, 0));
+		final var destinationLabel = new JLabel("Save settings to");
+		destinationLabel.setLabelFor(destination);
+		destinationRow.add(destinationLabel, BorderLayout.WEST);
+		destinationRow.add(destination, BorderLayout.CENTER);
+		header.add(destinationRow);
+		for (final var component : header.getComponents())
+			if (component instanceof javax.swing.JComponent field)
+				field.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+		actions.add(cancel);
+		cancel.addActionListener(event -> {
+			if (!busy)
+				cancelled.run();
+		});
+		getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"),
+				"cancelMigration");
+		getActionMap().put("cancelMigration", new javax.swing.AbstractAction() {
+			@Override
+			public void actionPerformed(java.awt.event.ActionEvent event) {
+				if (!busy)
+					cancelled.run();
+			}
+		});
+		create.setText("Save and review plan");
+		status.setText(
+				"Select tables to copy into same-named empty target tables. Existing rows are not replaced. Verification is enabled.");
+		refresh();
 	}
 
 	JobDraftPanel(final BulkMigrationJobDraftBuilder builder, final Consumer<String> ready) {
@@ -89,21 +156,28 @@ final class JobDraftPanel extends JPanel {
 		this.ready = ready;
 		setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var path = new JPanel(new BorderLayout(4, 0));
+		pathRow = path;
 		path.add(new JLabel("Schema XML"), BorderLayout.WEST);
 		path.add(schemaFile, BorderLayout.CENTER);
+		FileDropHandler.path(schemaFile, false, java.util.List.of("xml"), () -> !busy,
+				FileDropHandler.errors(status, statusPanel));
 		final var files = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
 		files.add(browse);
 		files.add(inspect);
 		path.add(files, BorderLayout.EAST);
 		fingerprint.setEditable(false);
 		final var settings = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		optionsRow = settings;
 		settings.add(new JLabel("Job ID (optional)"));
 		settings.add(jobId);
 		settings.add(new JLabel("Chunk rows"));
 		settings.add(chunkSize);
 		settings.add(verify);
-		final var top = new JPanel(new java.awt.GridLayout(3, 1, 4, 4));
+		final var top = new JPanel();
+		top.setLayout(new javax.swing.BoxLayout(top, javax.swing.BoxLayout.Y_AXIS));
+		header = top;
 		final var identity = new JPanel(new BorderLayout(4, 0));
+		identityRow = identity;
 		identity.add(new JLabel("Schema SHA-256"), BorderLayout.WEST);
 		identity.add(fingerprint, BorderLayout.CENTER);
 		top.add(path);
@@ -135,6 +209,7 @@ final class JobDraftPanel extends JPanel {
 		tableArea.add(tableScroll, BorderLayout.CENTER);
 		add(tableArea, BorderLayout.CENTER);
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		this.actions = actions;
 		actions.add(select);
 		actions.add(clear);
 		actions.add(clearAll);
@@ -256,9 +331,9 @@ final class JobDraftPanel extends JPanel {
 	}
 
 	private void refresh() {
-		schemaFile.setEnabled(!busy);
-		browse.setEnabled(!busy);
-		inspect.setEnabled(!busy);
+		schemaFile.setEnabled(!busy && managedDirectory == null);
+		browse.setEnabled(!busy && managedDirectory == null);
+		inspect.setEnabled(!busy && managedDirectory == null);
 		jobId.setEnabled(!busy);
 		chunkSize.setEnabled(!busy);
 		verify.setEnabled(!busy);
@@ -268,6 +343,7 @@ final class JobDraftPanel extends JPanel {
 		filter.setEnabled(!busy);
 		clearFilter.setEnabled(!busy && !filter.getText().isEmpty());
 		create.setEnabled(!busy && snapshot != null && !selected().isEmpty());
+		cancel.setEnabled(!busy);
 		tables.setEnabled(!busy);
 		refreshCounts();
 	}
@@ -321,7 +397,7 @@ final class JobDraftPanel extends JPanel {
 	}
 
 	void inspectSchema() {
-		if (busy)
+		if (busy || managedDirectory != null)
 			return;
 		final String path = schemaFile.getText().trim();
 		snapshot = null;
@@ -346,12 +422,8 @@ final class JobDraftPanel extends JPanel {
 						status.setText("Schema path or settings changed; read again.");
 						return;
 					}
-					snapshot = result;
+					showSnapshot(result);
 					fileDialogs.remember(Path.of(path));
-					fingerprint.setText(result.fingerprint());
-					for (final var table : result.tables())
-						model.addRow(new Object[] { false, table.table(), String.join(", ", table.primaryKey()),
-								table.selectable() ? "Available" : table.restriction() });
 					status.setText(result.tables().size()
 							+ " tables read. Select tables; review generated YAML before live inspection.");
 				} catch (InterruptedException failure) {
@@ -387,17 +459,22 @@ final class JobDraftPanel extends JPanel {
 		busy = true;
 		refresh();
 		status.setText("Rechecking Schema fingerprint and ordering selected tasks…");
-		new SwingWorker<String, Void>() {
-			protected String doInBackground() throws Exception {
-				return builder.draft(reviewed, selected, name, chunk, verification);
+		new SwingWorker<Draft, Void>() {
+			protected Draft doInBackground() throws Exception {
+				final String yaml = builder.draft(reviewed, selected, name, chunk, verification);
+				return new Draft(yaml,
+						managedDirectory == null ? null : DataMigrationDraftService.save(managedDirectory, yaml));
 			}
 
 			protected void done() {
 				try {
-					final String yaml = get();
-					if (requested == revision)
-						ready.accept(yaml);
-					else
+					final var draft = get();
+					if (requested == revision) {
+						if (savedReady == null)
+							ready.accept(draft.yaml());
+						else
+							savedReady.accept(draft.saved());
+					} else
 						status.setText("Inputs changed; create the draft again.");
 				} catch (InterruptedException failure) {
 					Thread.currentThread().interrupt();
@@ -410,6 +487,19 @@ final class JobDraftPanel extends JPanel {
 				}
 			}
 		}.execute();
+	}
+
+	private record Draft(String yaml,
+			com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot saved) {
+	}
+
+	private void showSnapshot(final SchemaSnapshot value) {
+		snapshot = value;
+		fingerprint.setText(value.fingerprint());
+		model.setRowCount(0);
+		for (final var table : value.tables())
+			model.addRow(new Object[] { false, table.table(), String.join(", ", table.primaryKey()),
+					table.selectable() ? "Available" : table.restriction() });
 	}
 
 	private void failed(Throwable failure) {

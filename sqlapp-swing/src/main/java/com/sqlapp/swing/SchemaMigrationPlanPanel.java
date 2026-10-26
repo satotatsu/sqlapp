@@ -204,6 +204,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	private JPanel directoryField(final JTextField field) {
+		FileDropHandler.path(field, true, java.util.List.of(), () -> !isBusy(),
+				FileDropHandler.errors(status, statusPanel));
 		final var panel = new JPanel(new BorderLayout(6, 0));
 		final var browse = new JButton("Browse…");
 		panel.add(field, BorderLayout.CENTER);

@@ -61,6 +61,9 @@ final class JobConfigurationEditorPanel extends JPanel {
 		this.io = io;
 		this.useJob = useJob;
 		setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
+		for (final var target : new javax.swing.JComponent[] { this, text, file, open })
+			FileDropHandler.file(target, java.util.List.of("yaml", "yml"), () -> !busy, this::requestOpen,
+					FileDropHandler.errors(status, statusPanel));
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		for (final var button : new JButton[] { fresh, open, reload, save, saveAs })
 			actions.add(button);

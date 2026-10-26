@@ -13,6 +13,30 @@ import org.junit.jupiter.api.io.TempDir;
 
 class JdbcDriverPanelTest {
 	@Test
+	void explicitAdditionalClassFromSameJarAppearsWithoutChangingCurrentSelection() throws Exception {
+		final var jars = new JdbcDriverJarFixture(directory);
+		libraries.add(List.of(jars.secondShared, jars.dependency), "");
+		final var panel = new AtomicReference<JdbcDriverPanel>();
+		final var finished = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var view = new JdbcDriverPanel(libraries);
+			panel.set(view);
+			assertEquals("fixture.SecondDriver", view.selectedDriver.getSelectedItem());
+			onEnabled(view, finished);
+			view.loadFrom(List.of(jars.secondShared, jars.dependency), "fixture.ChildDriver");
+		});
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var view = panel.get();
+			assertEquals(2, view.selectedDriver.getItemCount());
+			assertEquals("fixture.SecondDriver", view.selectedDriver.getSelectedItem());
+			assertEquals("fixture.ChildDriver", view.selectedDriver.getItemAt(1));
+			assertTrue(view.status.getText().startsWith("Loaded 1 JDBC driver"));
+			assertFalse(view.isBusy());
+		});
+	}
+
+	@Test
 	void loadingAnotherDriverWithSharedDependencyRetainsSelectedClass() throws Exception {
 		final var jars = new JdbcDriverJarFixture(directory);
 		libraries.add(List.of(jars.driver, jars.dependency), "");

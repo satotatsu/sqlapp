@@ -75,6 +75,9 @@ final class SqlEditorPanel extends JPanel {
 		this.inspector = java.util.Objects.requireNonNull(inspector, "inspector");
 		directoryReceiver = java.util.Objects.requireNonNull(receiver, "receiver");
 		setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 12, 12, 12));
+		for (final var target : new javax.swing.JComponent[] { this, text, file, open })
+			FileDropHandler.file(target, java.util.List.of("sql"), () -> !busy, this::requestOpen,
+					FileDropHandler.errors(status, statusPanel));
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		for (final var button : new JButton[] { fresh, open, reload, save, saveAs, use })
 			actions.add(button);
