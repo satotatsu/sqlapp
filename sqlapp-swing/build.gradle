@@ -19,4 +19,6 @@ dependencies {
 
 application {
     mainClass = 'com.sqlapp.swing.MigrationApplication'
+    // FlatLaf loads native libraries from the classpath (JDK 24+ restricted JNI access).
+    applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED']
 }

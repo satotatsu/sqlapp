@@ -65,14 +65,18 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect30) >= 0;
 		boolean parameterAttributes = getDialect()
 				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect25) >= 0;
+		boolean columnReferences = parameterAttributes;
 		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
 			int major = productVersionInfo.getMajorVersion();
 			packages = major >= 3;
 			Integer minor = productVersionInfo.getMinorVersion();
 			parameterAttributes = major > 2 || major == 2 && minor != null && minor >= 1;
+			columnReferences = major > 2 || major == 2 && minor != null && minor >= 5;
 		}
 		if (packages)
 			return getSqlNodeCache().getString("procedureArguments30.sql");
+		if (columnReferences)
+			return getSqlNodeCache().getString("procedureArguments25.sql");
 		if (parameterAttributes)
 			return getSqlNodeCache().getString("procedureArguments21.sql");
 		return getSqlNodeCache().getString("procedureArguments.sql");
@@ -116,6 +120,8 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 		} else if (direction == 2) {
 			obj.setDirection(ParameterDirection.Inout);
 		}
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.firebird.Firebird25 && rs.contains("TYPE_DOMAIN"))
+			FirebirdRoutineTypeMetadata.apply(obj, rs);
 		return obj;
 	}
 

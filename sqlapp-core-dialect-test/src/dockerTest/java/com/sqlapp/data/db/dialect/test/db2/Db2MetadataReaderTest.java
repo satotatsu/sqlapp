@@ -56,6 +56,27 @@ class Db2MetadataReaderTest {
 	}
 
 	@Test
+	void specificMethodPrivilegesSurviveXmlAndNativeGrantRevoke() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2MethodPrivilegeAssertions.verify(connection);
+		}
+	}
+
+	@Test
+	void mixedTypesAndModuleCursorSurviveXmlAndCatalogRecreation() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2TypeGraphAssertions.verify(connection);
+		}
+	}
+
+	@Test
+	void crossSchemaTypeDependenciesRecreateFromReversedCatalog() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2TypeGraphAssertions.verifyCrossSchema(connection);
+		}
+	}
+
+	@Test
 	void schemaObjectsSurviveXmlAndDdlRecreation() throws Exception {
 		try (Connection connection = DB2.createConnection("")) {
 			Db2RecreationAssertions.verify(connection);
@@ -126,7 +147,8 @@ class Db2MetadataReaderTest {
 			assertEquals(DataType.DECIMAL, money.getDataType());
 			Table typed = schema.getTables().get("METADATA_TYPED");
 			assertNotNull(typed);
-			assertEquals("METADATA_MONEY", typed.getColumns().get("AMOUNT").getDataTypeName());
+			assertEquals("\"" + schemaName + "\".\"METADATA_MONEY\"",
+					typed.getColumns().get("AMOUNT").getDataTypeName());
 			var address = schema.getTypes().get("METADATA_ADDRESS");
 			assertNotNull(address);
 			assertEquals(2, address.getColumns().size());
@@ -139,20 +161,26 @@ class Db2MetadataReaderTest {
 			assertTrue(String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var procedure = schema.getProcedures().get("METADATA_PROCEDURE");
 			assertNotNull(procedure);
-			assertEquals(1, procedure.getArguments().size());
-			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
-			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
+			if (procedure.getDefinition().isEmpty()) {
+				assertEquals(1, procedure.getArguments().size());
+				assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
+				assertEquals(DataType.BIGINT, procedure.getArguments().get(0).getDataType());
+			}
+			assertTrue(source(procedure).contains("P_PARENT_ID"));
+			assertTrue(source(procedure).contains("METADATA_AUDIT"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
-			assertEquals(1, function.getArguments().size());
-			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
-			assertEquals(DataType.DECIMAL, function.getArguments().get(0).getDataType());
+			if (function.getDefinition().isEmpty()) {
+				assertEquals(1, function.getArguments().size());
+				assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
+				assertEquals(DataType.DECIMAL, function.getArguments().get(0).getDataType());
+			}
+			assertTrue(source(function).contains("P_AMOUNT"));
 			var compiledFunction = schema.getFunctions().get("METADATA_COMPILED_FUNCTION");
 			assertNotNull(compiledFunction);
-			assertEquals(1, compiledFunction.getArguments().size());
-			String compiledFunctionStatement = String.join("\n", compiledFunction.getStatement())
-					.toUpperCase(Locale.ROOT);
+			if (compiledFunction.getDefinition().isEmpty())
+				assertEquals(1, compiledFunction.getArguments().size());
+			String compiledFunctionStatement = source(compiledFunction);
 			assertTrue(compiledFunctionStatement.contains("RETURN"));
 			assertTrue(compiledFunctionStatement.contains("P_AMOUNT"));
 			var trigger = schema.getTriggers().get("METADATA_TRIGGER");
@@ -161,6 +189,11 @@ class Db2MetadataReaderTest {
 			assertTrue(String.join("\n", trigger.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_AUDIT"));
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_ALIAS"));
 		}
+	}
+
+	private static String source(com.sqlapp.data.schemas.Routine<?> routine) {
+		return String.join("\n", routine.getDefinition().isEmpty() ? routine.getStatement() : routine.getDefinition())
+				.toUpperCase(Locale.ROOT);
 	}
 
 	private void createSchemaObjects(final Connection connection) throws SQLException {

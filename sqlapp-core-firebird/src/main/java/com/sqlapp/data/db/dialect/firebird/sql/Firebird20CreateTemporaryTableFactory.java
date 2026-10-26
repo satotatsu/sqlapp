@@ -77,6 +77,12 @@ public class Firebird20CreateTemporaryTableFactory extends AbstractCreateTempora
 		for (var column : physical.getColumns())
 			if (column.getRemarks() != null)
 				result.addAll(getSqlFactoryRegistry().createSql(column, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+		for (var key : physical.getConstraints().getForeignKeyConstraints()) {
+			var builder = createSqlBuilder();
+			FirebirdConstraintSql.indexComment(key, builder);
+			if (key.getSpecifics().get("firebird.indexComment") != null)
+				addSql(result, builder, com.sqlapp.data.db.sql.SqlType.SET_COMMENT, key);
+		}
 	}
 
 	@Override

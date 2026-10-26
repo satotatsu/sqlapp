@@ -34,12 +34,10 @@ public class Db2CreateDomainFactory extends SimpleSqlFactory<Domain, Db2SqlBuild
 		} else {
 			var fields = type.getSpecifics();
 			String kind = fields.get("METATYPE");
-			if (!Set.of("T", "A", "L").contains(kind == null ? "" : kind) || fields.get("SOURCEMODULENAME") != null
-					|| (fields.get("SOURCESCHEMA") != null && !"SYSIBM".equals(fields.get("SOURCESCHEMA")))
-					|| type.getDefaultValue() != null || type.getOnUpdate() != null || !type.getChecks().isEmpty()
-					|| !type.getColumns().isEmpty())
+			if (!Set.of("T", "A", "L").contains(kind == null ? "" : kind) || type.getDefaultValue() != null
+					|| type.getOnUpdate() != null || !type.getChecks().isEmpty() || !type.getColumns().isEmpty())
 				throw unsupported(type);
-			String sql = "CREATE TYPE " + name + " AS " + source(type);
+			String sql = createTypePrefix(type) + " AS " + renderSourceType(type);
 			if ("T".equals(kind)) {
 				if (type.getArrayDimension() != 0)
 					throw unsupported(type);
@@ -84,7 +82,26 @@ public class Db2CreateDomainFactory extends SimpleSqlFactory<Domain, Db2SqlBuild
 		return result;
 	}
 
-	private String source(Domain type) {
+	/** Module types share the same source, constraint and array validators. */
+	protected String createTypePrefix(Domain type) {
+		return "CREATE TYPE " + Db2CreationContext.qualified(type.getSchemaName(), type.getName());
+	}
+
+	@Override
+	protected List<Domain> sort(List<Domain> types) {
+		return Db2TypeCreateOrder.sort(types).stream().map(Domain.class::cast).toList();
+	}
+
+	/** Distinct sources remain built-in; arrays may use resolved named types. */
+	protected String renderSourceType(Domain type) {
+		var specifics = type.getSpecifics();
+		if (Set.of("A", "L").contains(specifics.getOrDefault("METATYPE", ""))
+				&& specifics.get("SOURCEMODULENAME") == null && specifics.get("SOURCESCHEMA") != null
+				&& !"SYSIBM".equals(specifics.get("SOURCESCHEMA")))
+			return Db2CreationContext.qualified(specifics.get("SOURCESCHEMA"), specifics.get("SOURCENAME"));
+		if (specifics.get("SOURCEMODULENAME") != null
+				|| (specifics.get("SOURCESCHEMA") != null && !"SYSIBM".equals(specifics.get("SOURCESCHEMA"))))
+			throw unsupported(type);
 		String source = type.getSpecifics().get("SOURCENAME");
 		if (!Set.of("SMALLINT", "INTEGER", "BIGINT", "REAL", "DOUBLE", "DATE", "TIME", "TIMESTAMP", "DECIMAL",
 				"NUMERIC", "BOOLEAN", "CHAR", "CHARACTER", "VARCHAR", "GRAPHIC", "VARGRAPHIC", "BINARY", "VARBINARY",

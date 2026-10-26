@@ -61,6 +61,9 @@ final class SchemaComparisonPanel extends JPanel {
 	private final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JButton beforeBrowse = new JButton("Browse…");
 	private final JButton afterBrowse = new JButton("Browse…");
+	final JButton beforeDatabase = new JButton("Read DB…");
+	final JButton afterDatabase = new JButton("Read DB…");
+	private final EditorFileChooser captureDialogs = new EditorFileChooser();
 
 	SchemaComparisonPanel() {
 		this(new SchemaComparisonService()::inspect, new SchemaComparisonService()::save);
@@ -72,8 +75,8 @@ final class SchemaComparisonPanel extends JPanel {
 		this.saver = java.util.Objects.requireNonNull(saver, "saver");
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var inputs = new JPanel(new GridLayout(2, 1, 4, 4));
-		inputs.add(fileRow("Before Schema XML", original, beforeBrowse));
-		inputs.add(fileRow("After Schema XML", target, afterBrowse));
+		inputs.add(fileRow("Before Schema XML", original, beforeBrowse, beforeDatabase));
+		inputs.add(fileRow("After Schema XML", target, afterBrowse, afterDatabase));
 		add(inputs, BorderLayout.NORTH);
 		preview.setEditable(false);
 		sqlPreview.setEditable(false);
@@ -116,13 +119,27 @@ final class SchemaComparisonPanel extends JPanel {
 		saveSql.addActionListener(event -> chooseSave(true));
 	}
 
-	private JPanel fileRow(final String label, final JTextField field, final JButton browse) {
+	private JPanel fileRow(final String label, final JTextField field, final JButton browse, final JButton database) {
 		FileDropHandler.path(field, false, java.util.List.of("xml"), () -> !busy,
 				FileDropHandler.errors(status, statusPanel));
 		final var row = new JPanel(new BorderLayout(8, 0));
 		row.add(new JLabel(label), BorderLayout.WEST);
 		row.add(field, BorderLayout.CENTER);
-		row.add(browse, BorderLayout.EAST);
+		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		actions.add(browse);
+		actions.add(database);
+		row.add(actions, BorderLayout.EAST);
+		database.addActionListener(event -> {
+			if (busy)
+				return;
+			final var chooser = captureDialogs.forDirectory("");
+			chooser.setDialogTitle("Choose a folder for captured Schema XML");
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				final Path folder = chooser.getSelectedFile().toPath();
+				captureInto(field == original, () -> showCapture(folder, field == original ? "Before" : "After"));
+				captureDialogs.rememberDirectory(folder);
+			}
+		});
 		browse.addActionListener(event -> {
 			final var chooser = inputChooser(field.getText());
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -130,6 +147,56 @@ final class SchemaComparisonPanel extends JPanel {
 			}
 		});
 		return row;
+	}
+
+	void captureInto(boolean before, java.util.function.Supplier<Path> presenter) {
+		if (busy)
+			return;
+		final long requested = revision;
+		busy(true);
+		try {
+			final Path file = presenter.get();
+			if (requested != revision)
+				status.setText("Inputs changed. Captured XML was not selected; choose it explicitly if needed.");
+			else if (file == null)
+				status.setText("Schema capture cancelled. Existing comparison retained.");
+			else {
+				(before ? original : target).setText(file.toAbsolutePath().normalize().toString());
+				inputDialogs.remember(file);
+				status.setText("Captured " + (before ? "Before" : "After")
+						+ " Schema XML. Compare when ready; no migration SQL executed.");
+			}
+		} catch (RuntimeException failure) {
+			status.setText("Schema capture failed. Existing comparison retained; see Details.");
+			statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
+		} finally {
+			busy(false);
+		}
+	}
+
+	private Path showCapture(Path folder, String side) {
+		final var selected = new java.util.concurrent.atomic.AtomicReference<Path>();
+		final var dialog = new javax.swing.JDialog(javax.swing.SwingUtilities.getWindowAncestor(this),
+				"Read " + side + " Schema from database", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+		final var panel = new SchemaCapturePanel(folder, file -> {
+			selected.set(file);
+			dialog.dispose();
+		}, dialog::dispose);
+		dialog.setContentPane(panel);
+		dialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent event) {
+				if (!panel.isBusy()) {
+					panel.connection.password.setText("");
+					dialog.dispose();
+				}
+			}
+		});
+		dialog.setSize(900, 470);
+		dialog.setLocationRelativeTo(this);
+		dialog.setVisible(true);
+		return selected.get();
 	}
 
 	private void invalidatePreview() {
@@ -167,6 +234,8 @@ final class SchemaComparisonPanel extends JPanel {
 		target.setEnabled(!busy);
 		beforeBrowse.setEnabled(!busy);
 		afterBrowse.setEnabled(!busy);
+		beforeDatabase.setEnabled(!busy);
+		afterDatabase.setEnabled(!busy);
 		compare.setEnabled(!busy);
 		save.setEnabled(!busy && result != null);
 		saveSql.setEnabled(!busy && result != null && result.statements() > 0);

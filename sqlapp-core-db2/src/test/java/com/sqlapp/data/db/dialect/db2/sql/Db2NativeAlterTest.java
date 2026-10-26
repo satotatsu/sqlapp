@@ -99,7 +99,7 @@ class Db2NativeAlterTest {
 		table.getColumns().add("ID", column -> column.setDataType(DataType.INT));
 		Index index = new Index("I\"Q");
 		index.getColumns().add("ID");
-		index.getSpecifics().putAll(Map.of("INDEX_SCHEMA", "IX.Q", "INDEXTYPE", "REG", "COMPRESSION", "N"));
+		index.getSpecifics().putAll(Map.of("INDEX_SCHEMA", "IX.Q", "INDEXTYPE", "REG ", "COMPRESSION", "N"));
 		table.getIndexes().add(index);
 		return table;
 	}

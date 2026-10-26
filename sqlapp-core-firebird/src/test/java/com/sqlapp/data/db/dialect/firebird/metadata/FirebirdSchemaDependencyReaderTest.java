@@ -23,14 +23,28 @@ class FirebirdSchemaDependencyReaderTest {
 		var result = new FirebirdSchemaDependencyReader(DialectHolder.defaultDialect30)
 				.read(connection(data, queries, true));
 		assertEquals(2, queries.get());
-		assertEquals(6, result.size());
+		assertEquals(7, result.size());
 		assertEquals(new Dependency(new ObjectId(Kind.TABLE, "T"), new ObjectId(Kind.FUNCTION, "F")), result.get(0));
 		assertEquals(new ObjectId(Kind.PACKAGE, "PROVIDER"), result.get(1).prerequisite());
 		assertEquals(new ObjectId(Kind.PACKAGE_BODY, "BODY"), result.get(1).dependent());
 		assertEquals(new ObjectId(Kind.DOMAIN, "D"), result.get(2).prerequisite());
 		assertEquals(new ObjectId(Kind.VIEW, "V"), result.get(3).dependent());
 		assertEquals(new Dependency(new ObjectId(Kind.PACKAGE, "BODY"), new ObjectId(Kind.TABLE, "T")), result.get(4));
-		assertEquals(new ObjectId(Kind.DOMAIN, "D"), result.get(5).prerequisite());
+		assertEquals(new ObjectId(Kind.COLLATION, "PACKAGE_COLL"), result.get(5).prerequisite());
+		assertEquals(new ObjectId(Kind.DOMAIN, "D"), result.get(6).prerequisite());
+	}
+
+	@Test
+	void nativeProvidersShareTheSameBulkQueryOn25() throws Exception {
+		var data = List.<Object[]>of(new Object[] { "P", 5, "E", 7, null, null, null, null, null },
+				new Object[] { "F", 15, "C", 17, null, null, null, null, null },
+				new Object[] { "P", 5, "FILTER", 16, null, null, null, null, null });
+		var queries = new AtomicInteger();
+		var result = new FirebirdSchemaDependencyReader(DialectHolder.defaultDialect25)
+				.read(connection(data, queries, false));
+		assertEquals(List.of(Kind.EXCEPTION, Kind.COLLATION, Kind.BLOB_FILTER),
+				result.stream().map(edge -> edge.prerequisite().kind()).toList());
+		assertEquals(1, queries.get());
 	}
 
 	@Test
@@ -56,7 +70,8 @@ class FirebirdSchemaDependencyReaderTest {
 			else
 				assertTrue(packages);
 			List<Object[]> selected = signature
-					? List.<Object[]>of(new Object[] { "BODY", "T", null, 0 }, new Object[] { "BODY", null, "D", 0 })
+					? List.<Object[]>of(new Object[] { "BODY", "T", null, 0, "PACKAGE_COLL" },
+							new Object[] { "BODY", null, "D", 0, null })
 					: data;
 			queries.incrementAndGet();
 			var position = new AtomicInteger(-1);

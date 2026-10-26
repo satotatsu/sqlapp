@@ -58,7 +58,12 @@ public abstract class FirebirdAlterRoutineFactory<T extends ArgumentRoutine<T>>
 						? new com.sqlapp.data.schemas.NamedArgument(argumentTarget.getName()).diff(argumentTarget)
 						: argument;
 				validateProperties(actual, Set.of("name", "dataType", "dataTypeName", "length", "scale", "notNull",
-						"defaultValue", "characterSet", "collation", "direction", "remarks"), "argument");
+						"defaultValue", "characterSet", "collation", "direction", "remarks", "specifics"), "argument");
+				var oldSpecifics = argument.getOriginal() == null ? java.util.Map.<String, String>of()
+						: ((com.sqlapp.data.schemas.NamedArgument) argument.getOriginal()).getSpecifics();
+				validateSpecifics(oldSpecifics, argumentTarget.getSpecifics(),
+						Set.of(com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.SPECIFICS_KEY));
+				validateResolvedType(actual, oldSpecifics, argumentTarget.getSpecifics());
 				if (argument.getOriginal() == null
 						|| actual.getChangedProperties().keySet().stream().anyMatch(key -> !"remarks".equals(key)))
 					structural = true;
@@ -72,7 +77,9 @@ public abstract class FirebirdAlterRoutineFactory<T extends ArgumentRoutine<T>>
 					"return type");
 			var before = (com.sqlapp.data.schemas.FunctionReturning) returning.getOriginal();
 			var after = (com.sqlapp.data.schemas.FunctionReturning) returning.getTarget();
-			validateSpecifics(before.getSpecifics(), after.getSpecifics(), Set.of("firebird.notNull"));
+			validateSpecifics(before.getSpecifics(), after.getSpecifics(), Set.of("firebird.notNull",
+					com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.SPECIFICS_KEY));
+			validateResolvedType(returning, before.getSpecifics(), after.getSpecifics());
 		}
 		var original = (T) difference.getOriginal();
 		T target = (T) difference.getTarget();
@@ -107,6 +114,17 @@ public abstract class FirebirdAlterRoutineFactory<T extends ArgumentRoutine<T>>
 		if (!unsupported.isEmpty())
 			throw new UnsupportedOperationException(
 					"Firebird " + label + " ALTER does not support changes to " + unsupported);
+	}
+
+	private void validateResolvedType(DbObjectDifference difference, java.util.Map<String, String> before,
+			java.util.Map<String, String> after) {
+		var reference = com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.get(after);
+		if (reference != null
+				&& reference.equals(com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.get(before))
+				&& difference.getChangedProperties().keySet().stream()
+						.anyMatch(Set.of("dataType", "dataTypeName", "length", "scale", "characterSet")::contains))
+			throw new IllegalArgumentException(
+					"A routine type reference determines its resolved scalar type; change the reference or its provider instead");
 	}
 
 	private void validateSpecifics(java.util.Map<String, String> original, java.util.Map<String, String> target,

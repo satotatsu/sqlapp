@@ -1,0 +1,65 @@
+dialect	case	factory	outcome	sql_or_error
+Db2_1215	reader.getTableReader	com.sqlapp.data.db.dialect.db2.metadata.Db2_1212TableReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getViewReader	com.sqlapp.data.db.dialect.db2.metadata.Db2ViewReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getMviewReader	com.sqlapp.data.db.dialect.db2.metadata.Db2MviewReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getSequenceReader	com.sqlapp.data.db.dialect.db2.metadata.Db2SequenceReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getDomainReader	com.sqlapp.data.db.dialect.db2.metadata.Db2DomainReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getTypeReader	com.sqlapp.data.db.dialect.db2.metadata.Db2TypeReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getFunctionReader	com.sqlapp.data.db.dialect.db2.metadata.Db2FunctionReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getProcedureReader	com.sqlapp.data.db.dialect.db2.metadata.Db2ProcedureReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getTriggerReader	com.sqlapp.data.db.dialect.db2.metadata.Db2TriggerReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getPackageReader	com.sqlapp.data.db.dialect.db2.metadata.Db2ModuleReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	reader.getConstantReader	com.sqlapp.data.db.dialect.db2.metadata.Db2GlobalVariableReader	RESOLVED	Dispatch only; no metadata query executed
+Db2_1215	column.default.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER DEFAULT 1]
+Db2_1215	column.default.drop	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER]
+Db2_1215	column.notNull.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER NOT NULL]
+Db2_1215	column.type.widen	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V BIGINT]
+Db2_1215	column.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ADD COLUMN NEW_COL INTEGER]
+Db2_1215	column.drop	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T DROP COLUMN V]
+Db2_1215	column.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER]
+Db2_1215	table.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[]
+Db2_1215	function.comment	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Db2_1215	schema.function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterSchemaFactory	GENERATED	[]
+Db2_1215	catalog.function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterCatalogFactory	GENERATED	[]
+Db2_1215	function.body	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Db2_1215	procedure.comment	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Db2_1215	view.body	com.sqlapp.data.db.dialect.db2.sql.Db2AlterViewFactory	REJECTED	IllegalArgumentException: Db2 view changes require an explicit replacement plan for dependent objects and privileges
+Db2_1215	view.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterViewFactory	GENERATED	[SET_COMMENT:COMMENT ON TABLE "APP"."V" IS 'changed']
+Db2_1215	table.CREATE	com.sqlapp.data.db.dialect.db2.sql.Db2_1010CreateTableFactory	RESOLVED	SQL not generated in dispatch-only observation
+Db2_1215	table.DROP	com.sqlapp.data.db.dialect.db2.sql.Db2DropTableFactory	RESOLVED	SQL not generated in dispatch-only observation
+Db2_1215	table.INSERT	com.sqlapp.data.db.sql.InsertFactory	RESOLVED	SQL not generated in dispatch-only observation
+Db2_1215	table.UPDATE	com.sqlapp.data.db.sql.UpdateFactory	RESOLVED	SQL not generated in dispatch-only observation
+Db2_1215	table.DELETE	com.sqlapp.data.db.sql.DeleteFactory	RESOLVED	SQL not generated in dispatch-only observation
+Db2_1215	table.MERGE	com.sqlapp.data.db.sql.MergeFactory	RESOLVED	SQL not generated in dispatch-only observation
+Postgres180	reader.getTableReader	com.sqlapp.data.db.dialect.postgres.metadata.Postgres180TableReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getViewReader	com.sqlapp.data.db.dialect.postgres.metadata.PostgresViewReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getMviewReader	com.sqlapp.data.db.dialect.postgres.metadata.Postgres93MviewReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getSequenceReader	com.sqlapp.data.db.dialect.postgres.metadata.PostgresSequenceReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getDomainReader	com.sqlapp.data.db.dialect.postgres.metadata.Postgres83DomainReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getTypeReader	com.sqlapp.data.db.dialect.postgres.metadata.PostgresTypeReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getFunctionReader	com.sqlapp.data.db.dialect.postgres.metadata.Postgres110FunctionReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getProcedureReader	none	UNSUPPORTED	Dispatch only; no metadata query executed
+Postgres180	reader.getTriggerReader	com.sqlapp.data.db.dialect.postgres.metadata.Postgres90TriggerReader	RESOLVED	Dispatch only; no metadata query executed
+Postgres180	reader.getPackageReader	none	UNSUPPORTED	Dispatch only; no metadata query executed
+Postgres180	reader.getConstantReader	none	UNSUPPORTED	Dispatch only; no metadata query executed
+Postgres180	column.default.add	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" INT DEFAULT 1, ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" SET DEFAULT 1]
+Postgres180	column.default.drop	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" INT, ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" DROP DEFAULT]
+Postgres180	column.notNull.add	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" INT, ALTER:ALTER TABLE "APP"."T" ALTER COLUMN SET NOT NULL]
+Postgres180	column.type.widen	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" BIGINT]
+Postgres180	column.add	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ADD COLUMN "NEW_COL" INT]
+Postgres180	column.drop	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" DROP COLUMN "V"]
+Postgres180	column.comment	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[SET_COMMENT:COMMENT ON COLUMN "APP"."T"."V" IS'changed']
+Postgres180	table.comment	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterTableFactory	GENERATED	[SET_COMMENT:COMMENT ON TABLE "APP"."T" IS'changed']
+Postgres180	function.comment	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterFunctionFactory	GENERATED	[SET_COMMENT:COMMENT ON FUNCTION "APP"."F"() IS 'changed']
+Postgres180	schema.function.comment	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterSchemaFactory	GENERATED	[SET_COMMENT:COMMENT ON FUNCTION "APP"."F"() IS 'changed']
+Postgres180	catalog.function.comment	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterCatalogFactory	GENERATED	[SET_COMMENT:COMMENT ON FUNCTION "APP"."F"() IS 'changed']
+Postgres180	function.body	com.sqlapp.data.db.dialect.postgres.sql.PostgresAlterFunctionFactory	REJECTED	UnsupportedOperationException: Routine body replacement requires a matching catalog CREATE OR REPLACE DDL, SQL/PLpgSQL language and original statement; re-read metadata or provide an explicit migration
+Postgres180	procedure.comment	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Postgres180	view.body	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Postgres180	view.comment	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Postgres180	table.CREATE	com.sqlapp.data.db.dialect.postgres.sql.Postgres180CreateTableFactory	RESOLVED	SQL not generated in dispatch-only observation
+Postgres180	table.DROP	com.sqlapp.data.db.dialect.postgres.sql.PostgresDropTableFactory	RESOLVED	SQL not generated in dispatch-only observation
+Postgres180	table.INSERT	com.sqlapp.data.db.dialect.postgres.sql.Postgres180InsertFactory	RESOLVED	SQL not generated in dispatch-only observation
+Postgres180	table.UPDATE	com.sqlapp.data.db.dialect.postgres.sql.Postgres180UpdateFactory	RESOLVED	SQL not generated in dispatch-only observation
+Postgres180	table.DELETE	com.sqlapp.data.db.dialect.postgres.sql.Postgres180DeleteFactory	RESOLVED	SQL not generated in dispatch-only observation
+Postgres180	table.MERGE	com.sqlapp.data.db.dialect.postgres.sql.Postgres180MergeFactory	RESOLVED	SQL not generated in dispatch-only observation

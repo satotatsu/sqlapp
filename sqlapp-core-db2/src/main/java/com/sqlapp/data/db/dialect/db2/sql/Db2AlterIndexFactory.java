@@ -45,6 +45,8 @@ public class Db2AlterIndexFactory extends SimpleSqlFactory<Index, Db2SqlBuilder>
 		List<SqlOperation> result = new ArrayList<>();
 		if (before.isCompression() != after.isCompression()) {
 			String nativeType = after.getSpecifics().get("INDEXTYPE");
+			if (nativeType != null)
+				nativeType = nativeType.stripTrailing();
 			Table table = after.getTable();
 			if (!after.getDefinition().isEmpty() || nativeType != null && !Set.of("REG", "CLUS").contains(nativeType)
 					|| after.getIndexType() != null && after.getIndexType() != IndexType.BTree

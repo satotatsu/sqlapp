@@ -66,7 +66,16 @@ public class FirebirdSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 				FirebirdCreateUniqueConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, SqlType.CREATE,
 				FirebirdCreateForeignKeyConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, SqlType.DROP,
+				FirebirdDropForeignKeyConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.DROP,
+				FirebirdDropConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.DROP,
+				FirebirdDropConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.CREATE, FirebirdCreateFunctionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.DROP, FirebirdDropFunctionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.ALTER,
+				FirebirdAlterExternalFunctionFactory.class);
 		registerSqlFactory(Role.class, SqlType.CREATE, FirebirdCreateRoleFactory.class);
 		registerSqlFactory(Role.class, SqlType.ALTER, FirebirdAlterRoleFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.GRANT,

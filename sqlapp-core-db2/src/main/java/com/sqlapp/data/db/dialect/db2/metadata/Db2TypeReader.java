@@ -90,6 +90,12 @@ public class Db2TypeReader extends TypeReader {
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
 			obj.setDialect(getDialect());
 			obj.getSpecifics().put("METATYPE", metaType);
+			if ("C".equals(metaType))
+				for (String key : List.of("CURSOR_KIND", "CURSOR_ROW_SCHEMA", "CURSOR_ROW_MODULE", "CURSOR_ROW_NAME")) {
+					String value = getString(rs, key);
+					if (value != null)
+						obj.getSpecifics().put("DB2_" + key, value);
+				}
 			obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 			obj.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
 		}

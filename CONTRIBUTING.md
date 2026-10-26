@@ -21,7 +21,7 @@ Main modules:
 
 ## General rules
 
-- Use Java 21 and the repository Gradle Wrapper.
+- Use Java 25 and the repository Gradle Wrapper.
 - Preserve existing source encoding and formatting.
 - Do not modify generated files under build/ or IDE output under bin/.
 - Do not make unrelated changes.

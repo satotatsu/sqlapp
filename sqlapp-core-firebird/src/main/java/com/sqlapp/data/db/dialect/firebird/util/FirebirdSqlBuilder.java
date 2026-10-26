@@ -40,6 +40,23 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 		super(dialect);
 	}
 
+	@Override
+	public FirebirdSqlBuilder cascadeRule(com.sqlapp.data.schemas.ForeignKeyConstraint constraint) {
+		addCascadeRule("DELETE", constraint.getDeleteRule());
+		addCascadeRule("UPDATE", constraint.getUpdateRule());
+		return instance();
+	}
+
+	private void addCascadeRule(String event, com.sqlapp.data.schemas.CascadeRule rule) {
+		if (rule == null)
+			return;
+		space()._add("ON ")._add(event).space();
+		if (rule == com.sqlapp.data.schemas.CascadeRule.Restrict || rule == com.sqlapp.data.schemas.CascadeRule.None)
+			_add("NO ACTION");
+		else
+			_add(rule);
+	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -184,8 +201,12 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 	@Override
 	public FirebirdSqlBuilder argument(final NamedArgument argument) {
 		name(argument).space();
-		typeDefinition(argument);
-		if (argument.getCharacterSet() != null)
+		var reference = com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.get(argument.getSpecifics());
+		if (reference == null)
+			typeDefinition(argument);
+		else
+			reference.appendTo(this);
+		if (reference == null && argument.getCharacterSet() != null)
 			space()._add("CHARACTER SET ").name(argument.getCharacterSet());
 		if (argument.isNotNull()) {
 			space().not().null_();

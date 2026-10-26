@@ -39,6 +39,38 @@ public class FirebirdAlterTableFactory extends AbstractAlterTableFactory<Firebir
 		return createSqlBuilder()._add("ALTER TABLE ").name(table.getName());
 	}
 
+	@Override
+	protected void addConstraintDefinition(Table originalTable, Table table, Constraint original, Constraint target,
+			DbObjectDifference difference, List<SqlOperation> result) {
+		if (original instanceof ForeignKeyConstraint old && target instanceof ForeignKeyConstraint next) {
+			var before = old.clone();
+			var after = next.clone();
+			before.getSpecifics().remove("firebird.indexComment");
+			after.getSpecifics().remove("firebird.indexComment");
+			if (before.diff(after).getChangedProperties().isEmpty()) {
+				String name = next.getSpecifics().get("firebird.indexName");
+				if (name == null)
+					name = old.getSpecifics().get("firebird.catalog.indexName");
+				var builder = createSqlBuilder();
+				FirebirdConstraintSql.indexComment(name, next.getSpecifics().get("firebird.indexComment"), builder);
+				addSql(result, builder, SqlType.SET_COMMENT, next);
+				return;
+			}
+		}
+		super.addConstraintDefinition(originalTable, table, original, target, difference, result);
+	}
+
+	@Override
+	protected void addCreateConstraintDefinition(Table originalTable, Table table, Constraint original,
+			Constraint target, DbObjectDifference difference, List<SqlOperation> result) {
+		super.addCreateConstraintDefinition(originalTable, table, original, target, difference, result);
+		if (target instanceof ForeignKeyConstraint && target.getSpecifics().get("firebird.indexComment") != null) {
+			var builder = createSqlBuilder();
+			FirebirdConstraintSql.indexComment(target, builder);
+			addSql(result, builder, SqlType.SET_COMMENT, target);
+		}
+	}
+
 	private FirebirdSqlBuilder columnPrefix(Table table, String name) {
 		return prefix(table)._add(" ALTER COLUMN ").name(name);
 	}

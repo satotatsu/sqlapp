@@ -29,6 +29,18 @@ class Db2IndexRecreationTest {
 	}
 
 	@Test
+	void catalogUnspecifiedPctfreeDoesNotBecomeInvalidNativeDdl() {
+		var index = table().getIndexes().getFirst();
+		index.getSpecifics().put("PCTFREE", "-1");
+		assertFalse(sql(index, SqlType.CREATE).getFirst().contains("PCTFREE"));
+		assertEquals("-1", index.getSpecifics().get("PCTFREE"));
+		index.getSpecifics().put("PCTFREE", "0");
+		assertTrue(sql(index, SqlType.CREATE).getFirst().contains("PCTFREE 0"));
+		index.getSpecifics().put("PCTFREE", "-2");
+		assertThrows(IllegalArgumentException.class, () -> sql(index, SqlType.CREATE));
+	}
+
+	@Test
 	void nativeSchemaAndQuotedTableKeyIncludeNamesSurviveXmlForCreateDropAndComment() throws Exception {
 		Table restored = SchemaUtils.readXml(new StringReader(table().asXml()));
 		Index index = restored.getIndexes().getFirst();

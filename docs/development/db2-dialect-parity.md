@@ -1,5 +1,315 @@
 # Db2 LUW metadata and DDL recreation
 
+Cross-schema modeled type prerequisites (LUW 11.1+, continuation 2026-10-27):
+Catalog creation now orders its Schema objects by canonical type references.
+Named ROW fields, array element types and strong cursor targets establish
+prerequisite schemas; module-qualified cursor targets include the module's schema.
+The existing per-Schema Type/Domain order is then reused without duplicating
+type generation. Original Catalog/Schema collections remain unchanged.
+
+This supports an acyclic order of whole schemas. A cycle between schemas is
+rejected with an explicit request for an interleaved creation plan, even when
+the individual types could be created by interleaving two schemas. References
+outside the supplied Catalog still require existing objects. Opaque complete
+definitions retain their existing caller-order contract; their supplemental
+dependency fields are ignored. Unrelated schemas preserve input order.
+This is a type-prerequisite plan, not a general parser/planner for routine bodies,
+tables, aliases or reverse module/global dependencies.
+
+The modern Catalog factory applies this ordering only for LUW 11.1+ dialects.
+No public API, model format, metadata reader, query count or module dependency
+was changed. The live fixture reuses the existing mixed-type verification with
+the module/distinct/base ROW in one schema and arrays/nested ROW/cursors/function
+in another. It reads each requested schema, passes the consumer schema first,
+recreates the Catalog, rereads cursor qualification and executes the function.
+Unit tests cover XML, exact quoted-name identities, cycles, full-definition
+precedence, external prerequisites and unchanged model collection order.
+
+Type cycles are validated separately across the supplied type set before the
+whole-schema sort, so their error differs from an acyclic type graph requiring
+schema interleaving. The initial unit test assumed a particular uppercase-schema
+quoting style; its expected schema statements were corrected to use the existing
+Schema factory output. The final test suite also covers the distinct cycle cases.
+
+Java 25 validation: 345 unit tests and fourteen real tests passed (seven each on
+disposable 11.5.8.0 and 12.1.5.0), with zero failures/errors/skips. Command:
+
+```powershell
+./gradlew.bat :sqlapp-core-db2:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.db2.Db2MetadataReaderTest' --tests 'com.sqlapp.data.db.dialect.test.db2.Db2_1150MetadataReaderTest' -PtestcontainersReuse=true --console=plain
+```
+
+No production or external database was accessed. Owned test containers were
+removed after verification; generated files were not manually edited.
+
+Mixed global type dependencies and module-row cursors (LUW 11.1+, continuation
+verified 2026-10-27): global ROW fields now retain resolved named types, and native
+arrays may use a resolved global named element type. A global strong cursor can
+qualify its row target with schema, module and type names. Each component is
+quoted independently, retaining dots and escaped quotes inside identifiers.
+
+Db2CreateSchemaFactory now composes Type and Domain creation through one local
+dependency order instead of generating the two collections independently. The
+same order is used for direct Type/Domain collections and Schema creation inside
+Catalog creation. It covers named ROW fields, array element types and named
+cursor targets. Objects without a dependency keep their relative order; no model
+collection is mutated. Duplicate identities and cycles are rejected before any
+plan is returned. Complete definitions remain authoritative over supplemental
+fields, with their opaque dependencies requiring an explicit caller order.
+
+Scope is the supplied type set within one Schema (or an explicit direct
+collection). References outside that set must already exist; this is not a
+cross-schema Catalog dependency planner. Modules still precede the global type
+group, so a cursor may use an already-published module ROW type. Module members
+that need global type prerequisites continue to require complete parent DDL;
+the global renderer expansion does not silently enable that reverse dependency.
+Structured types, global ROW fields referring to module types, and ambiguous or
+anchored cursor targets remain outside this modeled recreation path.
+
+The new real-database fixture creates a strong distinct type, a ROW using it,
+an array of that ROW, a ROW containing the array, ordinary and module-targeted
+strong cursors, and a function that uses the distinct/ROW types. It reads Schema
+metadata, preserves it through XML, reverses the type collections, and recreates
+the whole Catalog before executing the function and rereading type metadata.
+The initial fixture attempted a cursor over a ROW containing an array; both
+servers reject that target (SQL0206). It was changed to a legal ROW target.
+The strong distinct cast in the fixture also required schema qualification to
+avoid the native INTEGER overload ambiguity (SQL0245). These fixture failures
+were resolved rather than skipped. An initial compile error using the collection's
+protected parent accessor was corrected to its existing public getSchema API.
+
+No public Java signatures, XML formats, dependencies, metadata SELECTs, historical
+reader resources or dialect resolution were changed by this continuation. Core
+code and generated files were not manually edited.
+
+Final validation on Java 25: 343 Db2 unit tests and twelve real tests passed with
+zero failures/errors/skips (six each on disposable 11.5.8.0 and 12.1.5.0).
+The earlier targeted fixture failures described above were resolved; the full
+combined run then passed:
+
+```powershell
+./gradlew.bat :sqlapp-core-db2:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.db2.Db2MetadataReaderTest' --tests 'com.sqlapp.data.db.dialect.test.db2.Db2_1150MetadataReaderTest' -PtestcontainersReuse=true --console=plain
+```
+
+No external or production database was accessed. The two owned containers and
+the temporary native-catalog probe objects were removed after verification.
+
+Independent module declarations before routine-dependent defaults (LUW 11.1+,
+executed 2026-10-26): the existing module-member query now aggregates
+SYSCAT.ROUTINEPARMS to retain optional ROUTINE_DECLARATION_INDEPENDENT evidence.
+Only signatures with the complete argument count, built-in SYSIBM types and no
+parameter defaults, locator/reference/scope/transform/cast dependencies or custom
+collations qualify; functions also require result metadata. Generated type-cast
+routines do not receive the new attribute. The source scanner additionally
+refuses ANCHOR and DEFAULT in the signature, since resolved catalog types alone
+cannot prove those declarations independent. See IBM's
+[ROUTINEPARMS catalog](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatroutineparms).
+
+Proven public SQL routine declarations precede the ordinary member sequence;
+their bodies retain the existing second phase and original creation context.
+Other declarations retain their original positions. This lets a variable default
+refer to routines whose prototype existed before the variable but whose catalog
+CREATE_TIME was updated when the implementation was installed. The snapshot
+member order is not rewritten, and every definition is validated before a SQL
+plan is returned. A later routine without proven independent declaration still
+keeps the conservative full-parent-DDL gate for a non-literal earlier default.
+This is not yet a general module dependency-graph planner.
+
+The evidence uses a grouped join in the existing member SELECT: metadata remains
+two queries per requested module set, plus the existing single bulk row-field
+query when needed. Public Java signatures and snapshot format version are
+unchanged. Older XML without the optional evidence retains its conservative
+ordering behavior. Historical dialect resources and resolver selection are
+unchanged; older-server live validation remains open.
+
+The disposable 11.5.8.0 and 12.1.5.0 fixture now creates RD DEFAULT RF(4) between
+the recursive function prototypes and implementations. It asserts the resulting
+catalog timestamp inversion and signature evidence, then verifies XML/read/drop/
+recreate and the default value. Additional module routines use a row-type argument,
+a parameter DEFAULT and an anchored parameter, checking that these declarations
+remain after their prerequisites; the anchored function is also called after
+recreation. Unit tests cover XML preservation, absent/false/malformed evidence,
+anchored/defaulted source checks and the unchanged two-query reader count.
+
+Java 25 validation: 336 unit tests and ten real tests passed with zero failures,
+errors or skips. Commands:
+
+```powershell
+./gradlew.bat :sqlapp-core-db2:test --console=plain
+./gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.db2.Db2MetadataReaderTest' --tests 'com.sqlapp.data.db.dialect.test.db2.Db2_1150MetadataReaderTest' -PtestcontainersReuse=true --console=plain
+```
+
+No production or external database was accessed; owned verification containers
+were removed after the run. No generated files were intentionally edited.
+
+Module default/order and procedure-option continuation (LUW 11.1+, executed 2026-10-26):
+the conservative default-order gate now distinguishes literal-only expressions
+from possible object references. Numeric/string/boolean/NULL literals and their
+arithmetic grouping have no routine or variable dependencies, so they can precede
+implemented published routines. Quoted identifiers, function calls, variables,
+subqueries and unrecognized forms still require the existing dependency evidence
+or complete parent DDL. The classifier does not evaluate or rewrite expressions;
+SQL tokenization preserves quoted strings and nested comments. A dot is only
+accepted within a number, so qualified keyword names cannot pass as literals.
+
+Published procedure declarations now retain DYNAMIC RESULT SETS (0..32767),
+CALLED ON NULL INPUT and COMMIT ON RETURN YES/NO. Staging recognizes the latter
+as a header clause, not a RETURN body. Function prototypes reject procedure-only
+clauses. Body text, per-phase creation context, member snapshots and public API
+formats are unchanged. No additional catalog queries or dependencies were added,
+and historical dialect selection is unchanged. These clauses follow the native
+[Db2 SQL procedure syntax](https://www.ibm.com/docs/en/db2/12.1.x?topic=statements-create-procedure-sql).
+
+The live module fixture adds an early literal default and both unimplemented and
+implemented public procedures with these clauses. XML/read/drop/recreate is
+followed by checking the default value and calling the recreated OUT-parameter
+procedure. Broader prototype clauses, routine-dependent defaults before updated
+routine timestamps, PL/SQL modules and older-server validation remain open.
+Default-expression wrapping also places its closing parenthesis on a new line
+when the source may contain a line comment, preserving commented expressions.
+
+Validation used the combined Java 25 command below: 334 DB2 unit tests and ten
+real tests (five each on disposable 11.5.8.0 and 12.1.5.0) passed with zero
+failures/errors/skips. The fixture checks the early default value and the public
+procedure's OUT value after recreation. No external or production database was
+used; the two owned containers were removed after verification.
+
+Module routine declarations and cycles (LUW 11.1+, executed 2026-10-26):
+published SQL function/procedure prototypes with an explicit SPECIFIC identity
+can now be replayed with or without LANGUAGE SQL. The implementation flag must
+agree with the declaration: bodies, external/wrapped implementations, duplicate
+language clauses and additional statements are rejected in prototype metadata.
+Supported declarations retain determinism, NO EXTERNAL ACTION and SQL-data-access
+characteristics after SPECIFIC/LANGUAGE SQL. Broader prototype options and PL/SQL
+packages remain full-definition cases.
+
+Implemented published routines are recreated in two phases. Declarations retain
+their original member positions and visibility; bodies follow all declarations
+using ALTER MODULE ADD. Private routine bodies are deferred without publishing
+them. Each phase restores its original schema and SQL path through the shared
+routine renderer. Body text/options are not rewritten; only the identifying
+PUBLISH keyword changes to ADD for implementation. Original snapshot metadata
+is unchanged, and no extra metadata SELECTs were introduced.
+
+Native catalog probing confirmed that implementing a prototype replaces its
+CREATE_TIME. A non-NULL variable default preceding an implemented published
+routine therefore has no proven original declaration order. Such snapshots
+explicitly require complete parent DDL before any operations are returned;
+even a constant default in that position is conservatively refused. This remains
+a dependency-planning limitation rather than an inferred recreation order.
+
+The live DEFAULT case also exposed catalog expression text without outer
+parentheses. The shared Db2 variable factory now wraps non-NULL DEFAULT/CONSTANT
+expressions, for both global and module variables. Explicit NULL stays unchanged
+for array/row compatibility; full native definitions remain authoritative.
+
+The disposable 11.5.8.0 and 12.1.5.0 fixtures now include unimplemented function
+and procedure declarations and two mutually recursive functions. They verify
+XML/read/drop/recreate, preserved unimplemented flags and actual recursive
+execution. A variable default referencing the deterministic recursive function
+also verifies that declaration characteristics survive and its value can be
+initialized after all bodies are installed. The replay strategy follows IBM's
+[ALTER MODULE rules](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-alter-module).
+Unit coverage also checks declaration ordering, private visibility, original
+creation context and quoted/default text containing SQL keywords. Public Java
+APIs and snapshot formats are unchanged by this continuation. Historical dialect
+resolution and catalog queries are unchanged; real older-server runs remain open.
+
+Validation command (Java 25):
+
+```powershell
+./gradlew.bat :sqlapp-core-db2:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.db2.Db2MetadataReaderTest' --tests 'com.sqlapp.data.db.dialect.test.db2.Db2_1150MetadataReaderTest' -PtestcontainersReuse=true --console=plain
+```
+
+Result: 331 DB2 unit tests and ten real tests passed (five on each version), with
+zero failures/errors/skips. An initial unit assertion incorrectly expected a
+trailing declaration comment to be stripped; it was corrected to check that
+the original text is preserved. The extra DEFAULT fixture initially used an
+unparenthesized expression and then a function without the required determinism/
+external-action characteristics; those fixture definitions were corrected and
+the generated expression-parentheses defect and unprovable declaration order
+were handled before the final full
+suites were rerun. No production or external database was used.
+
+Java 25 / real-database continuation (LUW 11.1+, executed 2026-10-26):
+the common and dialect-test projects both target Java 25, and the repository
+instructions/primary build documentation now reflect that baseline. No temporary
+Java 21 overrides were used for the final run. Public Java signatures remain
+compatible apart from additive hooks/helpers, but the runtime/bytecode baseline
+is now Java 25 as requested.
+
+Weak cursors and strong cursors based on a named row type are read from a
+set-based DATATYPEDEP/DATATYPES aggregate in the existing type/member query.
+Exactly one dependency resolving to a row type proves a named strong target;
+no dependencies represents a weak cursor. Other dependency shapes are retained
+as unsupported rather than inferred. Global row types precede cursor types in
+Schema/collection creation. Module strong cursors require an earlier published
+row type in that module; cursor variables use the same native variable renderer.
+Anchored/ambiguous cursor targets and global cursors targeting module rows still
+require complete native definitions and an explicit dependency plan. The added
+catalog SQL stays in the modern reader resources; historical resources remain
+separate.
+
+Generated module cast functions are associated with supported types using
+USERDEFINED=N, ORIGIN=S, one parameter, matching visibility and the forward or
+reverse built-in/user-defined type signature. They stay in the immutable member
+inventory and header count, but are recreated automatically by type DDL and are
+excluded from creation-time tie checks. Unproven/generated signatures, comments
+and unknown attributes fail explicitly. Native CHAR padding in module attributes
+is normalized while routine bodies, defaults, constraint text and comments keep
+their text.
+
+Routine grants now include specific methods and future function/procedure/method
+scopes, including all methods of a named type. They are fetched in one bulk query
+without expansion into the current routines. Future scopes use DB2_ROUTINE_SCOPE
+and explicit subject-type fields; logical object names such as FUNCTION *,
+PROCEDURE * and METHOD * FOR a qualified type keep shared clone/diff identities
+from collapsing distinct scopes. SQL emits the native wildcard form, never these
+logical labels as a routine identifier. Historical readers keep their original
+query, and wildcard generation is gated to LUW 11.1+.
+
+Real execution also found and corrected these recreation failures:
+- Scalar return metadata must prefer ROWTYPE C (the declared result after casting)
+  over R, without duplicate header rows.
+- Catalog routine text may omit an automatically assigned SPECIFIC name. The
+  reader now binds that identity into SQL CREATE DDL, ignoring quoted/commented
+  keywords and preserving existing explicit clauses. This preserves grants and
+  specific comments when the routine is recreated.
+- INDEXTYPE CHAR padding must not reject regular indexes. Catalog PCTFREE=-1
+  represents an unspecified setting and is omitted from DDL; invalid values
+  below that sentinel still fail.
+- DATAPARTITIONS has one storage row even for an ordinary table. Only rows with
+  a matching DATAPARTITIONEXPRESSION represent modeled range partitions.
+- RCAC predicate trailing whitespace is normalized on read to avoid a growing
+  diff after each recreate/read cycle.
+
+Final verification used the repository wrapper and Amazon Corretto 25.0.3:
+
+```powershell
+./gradlew.bat :sqlapp-core-db2:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.db2.Db2MetadataReaderTest' --tests 'com.sqlapp.data.db.dialect.test.db2.Db2_1150MetadataReaderTest' -PtestcontainersReuse=true --console=plain
+```
+
+All **327 unit tests and 10 real-database tests passed**, zero failures/errors/skips.
+Real targets were DB2 Community 11.5.8.0 and 12.1.5.0, five tests each: representative
+metadata, sequence configuration, XML/DDL/schema/RCAC/privilege recreation, native
+ALTER/module recreation, and specific method GRANT/XML/REVOKE. The recreation
+fixture includes global and module weak/strong cursors, nested row/array types,
+cursor variables, generated type casts, SQL routine invocation and future grant
+scopes. Containers were reused only during this owned verification and both
+owned containers were removed afterward. No production/external database was
+accessed, no dependency versions were changed, and no generated-file edits were
+intended. Initial failing runs above were repaired before this final passing run.
+This evidence does not imply exhaustive coverage of historical releases or all
+advanced federation/LBAC/physical forms; see the remaining completion gates.
+
+References: IBM [cursor types](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-type-cursor),
+[DATATYPEDEP](https://www.ibm.com/docs/en/db2/11.1?topic=views-syscatdatatypedep),
+[routine privileges](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-grant-routine-privileges),
+[routine designators](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-function-method-procedure-designators)
+and [ROUTINEPARMS](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatroutineparms).
+
+The batches below retain their historical implementation/verification notes.
+
+
 Module dependency/routine continuation (LUW 11.1+): supported earlier published
 types in the same module can now be used as ordinary/associative array element
 types and row field types, as well as variable types. Row -> array -> nested row
@@ -38,6 +348,17 @@ XML/clone, quoted names/comments/default literals and mismatched/incomplete
 headers. The existing 11.5/12.1.5 fixture now includes a nested type chain and SQL
 function/procedure, then invokes the recreated function; it has only been
 compiled and has not been executed against a database.
+
+Final verification follow-up: the common repository convention changed to Java
+25 during this work while the dialect-test project still requested Java 21.
+The plain combined command therefore failed dependency resolution before tests
+ran. Verification used a temporary Gradle init script with independent output
+under TEMP/sqlapp-db2-java21-verification, setting sourceCompatibility,
+targetCompatibility, toolchain.languageVersion and JavaCompile.options.release
+to 21 in gradle.projectsEvaluated for Java projects. Repository build settings
+were preserved; the temporary script was removed after verification. This does
+not resolve the default repository Java-version mismatch. A padded CHAR catalog
+LANGUAGE value such as 'SQL     ' is accepted without altering retained metadata.
 
 Java 21: all 313 DB2 unit tests passed (zero failures/errors/skips), and
 `:sqlapp-core-dialect-test:compileDockerTestJava` passed. No real database or

@@ -91,6 +91,9 @@ public class FirebirdForeignKeyConstraintReader extends ForeignKeyConstraintRead
 						c.getSpecifics().put("firebird.catalog.indexName", indexName);
 					if (rs.getInt("INDEX_DESCENDING") == 1)
 						c.getSpecifics().put("firebird.indexDescending", "true");
+					String indexComment = getString(rs, "INDEX_DESCRIPTION");
+					if (indexComment != null)
+						c.getSpecifics().put("firebird.indexComment", indexComment);
 					c.setUpdateRule(CascadeRule.parse(trim(getString(rs, "UPDATE_RULE"))));
 					c.setDeleteRule(CascadeRule.parse(trim(getString(rs, "DELETE_RULE"))));
 					c.setDeferrability(

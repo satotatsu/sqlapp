@@ -64,10 +64,12 @@ public class Db2_1010SchemaReader extends Db2_980SchemaReader {
 				String tableSchema = getString(rs, "TABSCHEMA"), tableName = getString(rs, "TABNAME");
 				if (schema.getName().equals(tableSchema) && !schema.getTables().contains(tableName))
 					return;
-				permissions.add(new Db2RowPermissions.Permission(getString(rs, "CONTROLSCHEMA"),
-						getString(rs, "CONTROLNAME"), tableSchema, tableName, getString(rs, "RULETEXT"),
-						getString(rs, "TABCORRELATION"), flag(rs, "ENABLE"), flag(rs, "VALID"),
-						getString(rs, "QUALIFIER"), getString(rs, "FUNC_PATH"), getString(rs, "REMARKS")));
+				String rule = getString(rs, "RULETEXT");
+				permissions.add(
+						new Db2RowPermissions.Permission(getString(rs, "CONTROLSCHEMA"), getString(rs, "CONTROLNAME"),
+								tableSchema, tableName, rule == null ? null : rule.stripTrailing(),
+								getString(rs, "TABCORRELATION"), flag(rs, "ENABLE"), flag(rs, "VALID"),
+								getString(rs, "QUALIFIER"), getString(rs, "FUNC_PATH"), getString(rs, "REMARKS")));
 			}
 		});
 		execute(connection, getSqlNodeCache().getString("accessControls.sql"), context, new ResultSetNextHandler() {

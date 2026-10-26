@@ -44,8 +44,14 @@ public class Firebird30CreateFunctionFactory extends FirebirdCreateFunctionFacto
 			}
 			builder._add(")");
 		}
-		builder.lineBreak().returns().space()._add(obj.getReturning());
-		if (obj.getReturning().getCharacterSet() != null)
+		builder.lineBreak().returns().space();
+		var reference = com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference
+				.get(obj.getReturning().getSpecifics());
+		if (reference == null)
+			builder._add(obj.getReturning());
+		else
+			reference.appendTo(builder);
+		if (reference == null && obj.getReturning().getCharacterSet() != null)
 			builder._add(" CHARACTER SET ").name(obj.getReturning().getCharacterSet());
 		String notNull = obj.getReturning().getSpecifics().get("firebird.notNull");
 		if (notNull != null && !java.util.Set.of("true", "false").contains(notNull))

@@ -80,7 +80,8 @@ public class Db2IndexReader extends IndexReader {
 					index.setIndexType(Db2Utils.getIndexType(getString(rs, "INDEXTYPE")));
 					index.setTableSpaceName(this.getString(rs, "table_space"));
 					index.setRemarks(getString(rs, REMARKS));
-					setSpecifics(rs, "INDEXTYPE", index);
+					if (nativeType != null)
+						index.getSpecifics().put("INDEXTYPE", nativeType);
 					setSpecifics(rs, "COMPRESSION", index);
 					if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
 						setSpecifics(rs, "FUNC_PATH", index);

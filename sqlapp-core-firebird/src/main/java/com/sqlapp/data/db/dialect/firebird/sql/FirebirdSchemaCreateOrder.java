@@ -35,14 +35,66 @@ final class FirebirdSchemaCreateOrder {
 
 	static List<Dependency> dependencies(Schema schema) {
 		var dependencies = new ArrayList<>(FirebirdSchemaDependencies.get(schema));
+		for (var object : objects(schema).values()) {
+			ObjectId owner = direct(object);
+			addCollation(owner, object, dependencies);
+			if (object instanceof Table table)
+				for (var column : table.getColumns())
+					addCollation(owner, column, dependencies);
+			if (object instanceof ArgumentRoutine<?> routine)
+				for (var argument : routine.getArguments()) {
+					addCollation(owner, argument, dependencies);
+					addTypeReference(schema, owner, argument.getSpecifics(), dependencies);
+				}
+			if (object instanceof Function function) {
+				addCollation(owner, function.getReturning(), dependencies);
+				addTypeReference(schema, owner, function.getReturning().getSpecifics(), dependencies);
+			}
+		}
 		for (Table table : schema.getTables())
 			for (var fk : table.getConstraints().getForeignKeyConstraints())
-				dependencies.add(new Dependency(new ObjectId(Kind.TABLE, table.getName()),
-						new ObjectId(Kind.TABLE, fk.getRelatedTableName())));
+				dependencies.add(new Dependency(new ObjectId(Kind.TABLE, table.getName()), new ObjectId(Kind.TABLE,
+						fk.getRelatedTable() == null ? fk.getRelatedTableName() : fk.getRelatedTable().getName())));
+		for (var object : objects(schema).values())
+			if (object instanceof Table table)
+				for (var column : table.getColumns())
+					if (column.getDomainName() != null)
+						dependencies
+								.add(new Dependency(direct(table), new ObjectId(Kind.DOMAIN, column.getDomainName())));
 		for (var body : schema.getPackageBodies())
 			dependencies.add(new Dependency(new ObjectId(Kind.PACKAGE_BODY, body.getName()),
 					new ObjectId(Kind.PACKAGE, body.getName())));
+		for (var object : objects(schema).values())
+			if (object instanceof Trigger trigger && trigger.getTableName() != null) {
+				Kind owner = schema.getViews().stream().anyMatch(view -> view.getName().equals(trigger.getTableName()))
+						? Kind.VIEW
+						: Kind.TABLE;
+				dependencies.add(new Dependency(new ObjectId(Kind.TRIGGER, trigger.getName()),
+						new ObjectId(owner, trigger.getTableName())));
+			}
 		return dependencies;
+	}
+
+	private static void addTypeReference(Schema schema, ObjectId owner, Map<String, String> specifics,
+			List<Dependency> dependencies) {
+		var reference = com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.get(specifics);
+		if (reference == null)
+			return;
+		Kind kind = Kind.DOMAIN;
+		String name = reference.domain();
+		if (reference.kind() == com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.Kind.TYPE_OF_COLUMN) {
+			name = reference.relation();
+			String relation = name;
+			kind = schema.getViews().stream().anyMatch(view -> view.getName().equals(relation)) ? Kind.VIEW
+					: Kind.TABLE;
+		}
+		dependencies.add(new Dependency(owner, new ObjectId(kind, name)));
+	}
+
+	private static void addCollation(ObjectId owner, Object object, List<Dependency> dependencies) {
+		if (object instanceof com.sqlapp.data.schemas.properties.CollationProperty<?> property
+				&& property.getCollation() != null)
+			dependencies.add(new Dependency(owner, new ObjectId(Kind.COLLATION, property.getCollation())));
 	}
 
 	static List<SqlOperation> sorted(Map<ObjectId, List<SqlOperation>> groups, Map<ObjectId, Set<ObjectId>> required,

@@ -23,6 +23,15 @@ setting is required.
 
 ## Appearance and code views
 
+The application opens on **Start**, with three task-oriented entry points:
+**Copy data**, **Compare Schema definitions**, and **Review saved results**.
+The data entry explains the connection/table/plan flow without requiring YAML
+preparation. **More tools** reveals SQL migration planning, SQL and Job YAML
+editors, and JDBC driver management. All existing tool tabs remain available.
+Start actions only switch to the existing tab; they do not clear inputs, replace
+unsaved edits, load files, connect to a database or approve/execute a migration.
+Return to **Start** at any time to choose another task.
+
 The desktop installs [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (Light)
 before creating Swing components. SQL comparison previews, the YAML job editor,
 and parsed JSON reports use
@@ -58,7 +67,7 @@ Drag local files from the file manager to these targets instead of using Browse/
 | Data migration Job YAML path | One YAML/YML file | Select the job; inspection remains explicit |
 | Schema-based job builder Schema path | One XML file | Select the Schema; Read Schema remains explicit |
 | SQL / Job YAML editor, filename label or Open button | One SQL / YAML/YML file | Open through the normal unsaved-edit confirmation |
-| Migration reports JSON path | One JSON file | Select the file; choose its type and Load report |
+| Migration reports JSON path | One JSON file | Select the file; Detect and load or choose a format explicitly |
 | Connection profile Load button | One JSON file | Load the profile through the existing validation |
 | JDBC drivers list or Load button | One or more JAR files | Load the batch with the optional driver-class setting |
 
@@ -584,6 +593,20 @@ next database version or generate rollback SQL.
 
 ## Build a Schema migration plan
 
+**Build URL…** and **Test connection** are available here as well as in Data
+migration. The shared URL form supports PostgreSQL, MySQL, SQL Server and Oracle
+service names. Applying the preview changes only the JDBC URL and invalidates
+the old plan; cancellation retains the connection and review. Existing URL
+options are not carried over. Credentials, driver classes, SQL directories and
+policy choices are retained.
+
+**Test connection** works before choosing any SQL directory. It uses the same
+short-lived read-only connection check as Data migration and displays the product
+and version. It does not inspect migration history, read SQL files, create a
+history table or approve execution. Password copies are cleared after the check;
+the field remains available for the next action. Errors are shown in **Details…**
+with the supplied JDBC URL and password redacted.
+
 Open **Schema migration plan**, enter the JDBC URL, username, password and
 **Up SQL directory**, then click **Connect and build plan**. This action
 connects to the chosen database and reads its metadata and migration history.
@@ -731,9 +754,24 @@ URL formats follow the driver documentation:
 [SQL Server](https://learn.microsoft.com/en-us/sql/connect/jdbc/building-the-connection-url),
 and [Oracle](https://docs.oracle.com/en/database/oracle/oracle-database/19/jjdbc/data-sources-and-URLs.html).
 
-The source's current schema is used. If it cannot be resolved uniquely, enter
-the exact **Source schema** in **Advanced options**. Table eligibility and primary
-key restrictions are shown in the selection list. **Copy options** exposes the
+The source's current schema is used by default. **Choose schema…** in the source
+connection reads visible Schema names through the shared dialect reader and
+opens a literal-filtered list. No target connection or job is required. Select
+**Use selected schema**, or **Use current schema** to restore the default. The
+current choice is always shown below the source connection. Alternatively enter
+the exact **Source schema** in **Advanced options**.
+
+This selection affects **New migration** only; it does not rewrite a saved job.
+Editing the source URL, username or driver clears the choice back to the current
+schema. Cancellation or discovery failure retains the previous choice and review.
+Listing schemas uses a short-lived read-only pool, does not read table metadata
+or rows, and creates no files. Supplied passwords and JDBC URLs are redacted from
+failure details; temporary password copies are cleared. Ambiguous schema names
+fail explicitly: select a specific database/catalog in the connection or use a
+saved job with resolved identities.
+
+Table eligibility and primary key restrictions are shown in the selection list.
+**Copy options** exposes the
 optional job ID, chunk size and verification choice; verification starts enabled.
 The initial copy requires existing, same-named, empty target tables. It does not
 create target tables, replace existing rows or enable checkpoint resume.
@@ -955,8 +993,34 @@ and separators. Oversized results are rejected before touching the clipboard;
 filter fewer rows or use the existing full report export. Copying never truncates
 the result or changes the plan, source data, saved report or execution approval.
 
-Open **Migration reports**, select the report type and a JSON file, then click
-**Load report**. The summary shows the saved outcome and plan fingerprint;
+Open **Migration reports**, select a JSON file, then click **Detect and load**.
+The six supported report types are identified from top-level JSON fields, not
+the filename. Detection still delegates to the existing typed readers for
+version, fingerprint and consistency validation. Unknown or ambiguous formats
+fail explicitly; **Choose format** reveals the type selector and **Load report**
+for the existing explicit workflow. Known reports opened from another screen
+retain their supplied type and bypass detection.
+
+After a successful load, **Recent reports** offers up to ten paths for this
+session. Select an entry and **Open recent** to reread and validate the current
+file; choosing an entry alone does not load it. Automatically detected reports
+are detected again, while explicitly typed reports keep their selected reader.
+Paths are normalized, deduplicated and ordered by most recent successful load.
+Failed or superseded loads do not enter history. Missing or changed files are
+reread normally; an old cached review is never substituted for a failed read.
+**Clear history** removes the list without clearing the displayed review.
+History stores only paths, type and read mode in memory, is not written to disk,
+and is cleared when the application closes. History actions are disabled during
+loading. The row is hidden until a report has loaded successfully.
+
+Automatic detection accepts one strict UTF-8 JSON object up to 16 MiB; duplicate
+keys and trailing JSON values are rejected. For larger or custom reports, choose
+the intended format explicitly and use its existing reader. Detection and typed
+validation use the same temporary byte snapshot, removed before publishing the
+review, so concurrent edits cannot mix file revisions. The original report is
+not modified. Changing the selected path/type discards an in-flight result.
+
+The summary shows the saved outcome and plan fingerprint;
 **Tasks / migrations** lists migrations or tables in artifact order. Columns
 can be sorted. **Parsed report JSON** retains the known model's detailed
 fields, including evidence, failure and provenance information. This tab is

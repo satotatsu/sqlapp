@@ -14,7 +14,8 @@ public final class FirebirdSchemaDependencies {
 	public static final String SPECIFICS_KEY = "firebird.dependencies.v1";
 
 	public enum Kind {
-		TABLE, VIEW, TRIGGER, PROCEDURE, DOMAIN, SEQUENCE, FUNCTION, PACKAGE, PACKAGE_BODY
+		TABLE, VIEW, TRIGGER, PROCEDURE, DOMAIN, SEQUENCE, FUNCTION, PACKAGE, PACKAGE_BODY, EXCEPTION, BLOB_FILTER,
+		COLLATION
 	}
 
 	public record ObjectId(Kind kind, String name) {

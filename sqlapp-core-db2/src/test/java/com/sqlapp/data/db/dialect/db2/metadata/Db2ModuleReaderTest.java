@@ -15,13 +15,25 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class Db2ModuleReaderTest {
 	@Test
-	void twentyModulesUseOneQueryIncludingMemberCounts() {
+	void twentyModulesUseTwoBulkQueriesIncludingMembers() {
 		AtomicInteger queries = new AtomicInteger();
 		var reader = new Db2ModuleReader(DialectHolder.Db2_1110Dialect) {
 			@Override
 			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
 					ResultSetNextHandler handler) {
 				queries.incrementAndGet();
+				if (node.toString().contains("CONDITION_SQLSTATE")) {
+					for (int i = 0; i < 20; i++)
+						for (int j = 0; j < 3; j++)
+							try {
+								handler.handleResultSetNext(Db2MetadataParityTest.row(Map.of("OBJECTSCHEMA", "APP",
+										"OBJECTMODULENAME", "M" + i, "OBJECTNAME", "C" + j, "OBJECTTYPE", "CONDITION",
+										"PUBLISHED", "Y", "USERDEFINED", "Y", "CONDITION_SQLSTATE", "75001")));
+							} catch (SQLException exception) {
+								throw new IllegalStateException(exception);
+							}
+					return null;
+				}
 				assertTrue(node.toString().contains("SYSCAT.MODULEOBJECTS"));
 				assertTrue(node.toString().contains("m.MODULETYPE IN ('M', 'P')"));
 				assertTrue(node.toString().contains("packageName"));
@@ -39,7 +51,7 @@ class Db2ModuleReaderTest {
 		};
 		var modules = reader.doGetAll(null, new ParametersContext(), new ProductVersionInfo());
 		assertEquals(20, modules.size());
-		assertEquals(1, queries.get());
+		assertEquals(2, queries.get());
 		assertEquals("MODULE", modules.getFirst().getSpecifics().get("DB2_OBJECT_TYPE"));
 		assertEquals("3", modules.getFirst().getSpecifics().get("MEMBER_COUNT"));
 		assertTrue(modules.getFirst().getDefinition().isEmpty());

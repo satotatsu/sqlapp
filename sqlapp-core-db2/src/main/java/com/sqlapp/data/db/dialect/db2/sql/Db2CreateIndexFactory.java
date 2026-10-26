@@ -103,6 +103,8 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 	@Override
 	public void addObjectDetail(Index index, Table table, AbstractSqlBuilder<?> builder) {
 		String nativeType = index.getSpecifics().get("INDEXTYPE");
+		if (nativeType != null)
+			nativeType = nativeType.stripTrailing();
 		boolean xml = "XVIL".equals(nativeType) && getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110;
 		if (xml)
 			Db2XmlIndexSql.validate(index, table);
@@ -167,6 +169,9 @@ public class Db2CreateIndexFactory extends CreateIndexFactory {
 			String value = index.getSpecifics().get(option);
 			if (value != null) {
 				int number = Integer.parseInt(value);
+				// The catalog uses -1 when PCTFREE was not explicitly declared.
+				if ("PCTFREE".equals(option) && number == -1)
+					continue;
 				if (number < 0 || number > 99)
 					throw new IllegalArgumentException("Db2 " + option + " must be between 0 and 99");
 				builder.space()._add(option).space()._add(number);

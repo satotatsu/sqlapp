@@ -68,8 +68,12 @@ public class Db2CreateCatalogFactory extends CreateCatalogFactory {
 			result.addAll(Db2DatabasePrivilegePlan.create((com.sqlapp.data.schemas.UserPrivilegeCollection) collection,
 					getSqlFactoryRegistry()));
 		} else if (SchemaObjectProperties.SCHEMAS.getLabel().equals(propertyName)) {
-			for (var object : collection) {
-				Schema schema = (Schema) object;
+			List<Schema> schemas = new java.util.ArrayList<>();
+			for (var object : collection)
+				schemas.add((Schema) object);
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+				schemas = Db2TypeCreateOrder.schemas(schemas);
+			for (Schema schema : schemas) {
 				SqlFactory<Schema> factory = getSqlFactoryRegistry().getSqlFactory(schema, SqlType.CREATE);
 				if (factory instanceof Db2CreateSchemaFactory db2)
 					result.addAll(db2.createBaseSql(schema));

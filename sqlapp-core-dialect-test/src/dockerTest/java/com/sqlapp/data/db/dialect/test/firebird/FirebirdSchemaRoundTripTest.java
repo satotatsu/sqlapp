@@ -79,9 +79,14 @@ class FirebirdSchemaRoundTripTest {
 				capabilityBoundaries(connection, statement, dialect);
 				nativeSchemaObjects(connection, statement, dialect);
 				nativeCollations(connection, statement, dialect);
+				nativeSchemaAlter(connection, statement, dialect);
+				routineTypeReferences(connection, statement, dialect, major);
+				standaloneConstraintLifecycle(connection, statement, dialect);
 				if (major >= 4)
 					publicationPolicy(connection, statement, dialect);
 				schemaDependencyOrder(connection, statement, dialect, major);
+				schemaAlterRetargeting(connection, statement, dialect);
+				circularForeignKeys(connection, statement, dialect);
 				columns(connection, statement, dialect, major);
 				temporaryTables(connection, statement, dialect, major, url);
 				temporaryIndexCreation(connection, statement, dialect, major, url);
@@ -119,7 +124,9 @@ class FirebirdSchemaRoundTripTest {
 
 	private void schemaDependencyOrder(Connection connection, Statement statement, Dialect dialect, int major)
 			throws Exception {
-		statement.execute("CREATE TABLE Z_DEP_SOURCE (ID INTEGER)");
+		Schema empty = readUserSchema(connection, dialect);
+		statement.execute("CREATE DOMAIN Z_DEP_DOMAIN AS INTEGER");
+		statement.execute("CREATE TABLE Z_DEP_SOURCE (ID Z_DEP_DOMAIN)");
 		statement.execute("CREATE VIEW Z_DEP_VIEW AS SELECT ID FROM Z_DEP_SOURCE");
 		statement.execute(
 				"CREATE PROCEDURE Z_DEP_CALLEE RETURNS (V INTEGER) AS BEGIN SELECT MAX(ID) FROM Z_DEP_VIEW INTO :V; SUSPEND; END");
@@ -165,7 +172,131 @@ class FirebirdSchemaRoundTripTest {
 			}
 		}
 		assertDependencyExecution(statement, major);
-		dropDependencyFixture(statement, major);
+		var alter = dialect.createSqlFactoryRegistry().getSqlFactory(restored, SqlType.ALTER);
+		for (var sql : alter.createDiffSql(restored.diff(empty)))
+			statement.execute(sql.getSqlText());
+		assertTrue(readUserSchema(connection, dialect).getTables().isEmpty());
+		for (var sql : alter.createDiffSql(empty.diff(restored)))
+			statement.execute(sql.getSqlText());
+		assertDependencyExecution(statement, major);
+		for (var sql : alter.createDiffSql(restored.diff(empty)))
+			statement.execute(sql.getSqlText());
+		assertTrue(readUserSchema(connection, dialect).getProcedures().isEmpty());
+	}
+
+	private void circularForeignKeys(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		Schema empty = readUserSchema(connection, dialect);
+		statement.execute("CREATE TABLE \"cycle left\" (ID INTEGER NOT NULL PRIMARY KEY, PARENT_ID INTEGER)");
+		statement.execute("CREATE TABLE \"cycle right\" (ID INTEGER NOT NULL PRIMARY KEY, PARENT_ID INTEGER)");
+		statement.execute(
+				"ALTER TABLE \"cycle left\" ADD CONSTRAINT \"left fk\" FOREIGN KEY (PARENT_ID) REFERENCES \"cycle right\" (ID) ON DELETE SET NULL USING DESCENDING INDEX \"left fk index\"");
+		statement.execute(
+				"ALTER TABLE \"cycle right\" ADD CONSTRAINT \"right fk\" FOREIGN KEY (PARENT_ID) REFERENCES \"cycle left\" (ID) ON UPDATE CASCADE");
+		statement.execute("COMMENT ON INDEX \"left fk index\" IS 'retained foreign key index comment'");
+		Schema source = readUserSchema(connection, dialect);
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(source.asXml()));
+		var alter = dialect.createSqlFactoryRegistry().getSqlFactory(source, SqlType.ALTER);
+		for (var operation : alter.createDiffSql(source.diff(empty)))
+			statement.execute(operation.getSqlText());
+		assertTrue(readUserSchema(connection, dialect).getTables().isEmpty());
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE))
+			statement.execute(operation.getSqlText());
+		var reread = readUserSchema(connection, dialect);
+		var left = reread.getTables().get("cycle left").getConstraints().getForeignKeyConstraints().get(0);
+		var right = reread.getTables().get("cycle right").getConstraints().getForeignKeyConstraints().get(0);
+		assertEquals(CascadeRule.SetNull, left.getDeleteRule());
+		assertEquals("left fk index", left.getSpecifics().get("firebird.indexName"));
+		assertEquals("true", left.getSpecifics().get("firebird.indexDescending"));
+		assertEquals(CascadeRule.Cascade, right.getUpdateRule());
+		try (var rows = statement
+				.executeQuery("SELECT RDB$DESCRIPTION FROM RDB$INDICES WHERE RDB$INDEX_NAME='left fk index'")) {
+			assertTrue(rows.next());
+			assertEquals("retained foreign key index comment", rows.getString(1));
+		}
+		var beforeComment = reread.getTables().get("cycle left");
+		var afterComment = beforeComment.clone();
+		afterComment.getConstraints().getForeignKeyConstraints().get(0).getSpecifics().put("firebird.indexComment",
+				"changed index comment");
+		var commentPlan = dialect.createSqlFactoryRegistry().createSql(beforeComment.diff(afterComment), SqlType.ALTER);
+		assertEquals(1, commentPlan.size());
+		assertEquals(SqlType.SET_COMMENT, commentPlan.get(0).getSqlType());
+		statement.execute(commentPlan.get(0).getSqlText());
+		for (var operation : dialect.createSqlFactoryRegistry().createSql(afterComment.diff(beforeComment),
+				SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		statement.execute("INSERT INTO \"cycle left\" VALUES (1, NULL)");
+		statement.execute("INSERT INTO \"cycle right\" VALUES (2, 1)");
+		statement.execute("UPDATE \"cycle left\" SET PARENT_ID=2 WHERE ID=1");
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"cycle left\" VALUES (3, 999)"));
+		assertThrows(SQLException.class, () -> statement.execute("DELETE FROM \"cycle left\" WHERE ID=1"));
+		statement.execute("UPDATE \"cycle left\" SET ID=4 WHERE ID=1");
+		try (var rows = statement.executeQuery("SELECT PARENT_ID FROM \"cycle right\" WHERE ID=2")) {
+			assertTrue(rows.next());
+			assertEquals(4, rows.getInt(1));
+		}
+		statement.execute("DELETE FROM \"cycle right\" WHERE ID=2");
+		try (var rows = statement.executeQuery("SELECT PARENT_ID FROM \"cycle left\" WHERE ID=4")) {
+			assertTrue(rows.next());
+			assertNull(rows.getObject(1));
+		}
+		for (var operation : alter.createDiffSql(restored.diff(empty)))
+			statement.execute(operation.getSqlText());
+		for (var operation : alter.createDiffSql(empty.diff(restored)))
+			statement.execute(operation.getSqlText());
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"cycle left\" VALUES (3, 999)"));
+		assertEquals("left fk index", readUserSchema(connection, dialect).getTables().get("cycle left").getConstraints()
+				.getForeignKeyConstraints().get(0).getSpecifics().get("firebird.indexName"));
+		for (var operation : alter.createDiffSql(restored.diff(empty)))
+			statement.execute(operation.getSqlText());
+	}
+
+	private Schema readUserSchema(Connection connection, Dialect dialect) throws Exception {
+		var reader = dialect.getCatalogReader().getSchemaReader();
+		boolean exclude = reader.getReaderOptions().isExcludeSystemObjects();
+		try {
+			reader.getReaderOptions().setExcludeSystemObjects(true);
+			return reader.getAllFull(connection).get(0);
+		} finally {
+			reader.getReaderOptions().setExcludeSystemObjects(exclude);
+		}
+	}
+
+	private void schemaAlterRetargeting(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		statement.execute("CREATE TABLE DEP_OLD_SOURCE (ID INTEGER)");
+		statement.execute("CREATE VIEW DEP_REWIRE AS SELECT ID FROM DEP_OLD_SOURCE");
+		statement.execute(
+				"CREATE PROCEDURE DEP_REWIRE_PROC RETURNS(V INTEGER) AS BEGIN SELECT MAX(ID) FROM DEP_REWIRE INTO :V; SUSPEND; END");
+		statement.execute("CREATE ROLE DEP_DIFF_READER");
+		statement.execute("GRANT SELECT ON DEP_REWIRE TO DEP_DIFF_READER");
+		Schema before = readUserSchema(connection, dialect);
+		statement.execute("CREATE TABLE DEP_NEW_SOURCE (ID INTEGER)");
+		statement.execute("ALTER VIEW DEP_REWIRE AS SELECT ID FROM DEP_NEW_SOURCE");
+		statement.execute("DROP TABLE DEP_OLD_SOURCE");
+		Schema after = readUserSchema(connection, dialect);
+		statement.execute("CREATE TABLE DEP_OLD_SOURCE (ID INTEGER)");
+		statement.execute("ALTER VIEW DEP_REWIRE AS SELECT ID FROM DEP_OLD_SOURCE");
+		statement.execute("DROP TABLE DEP_NEW_SOURCE");
+		statement.execute("INSERT INTO DEP_OLD_SOURCE VALUES(10)");
+		var plan = dialect.createSqlFactoryRegistry().getSqlFactory(before, SqlType.ALTER)
+				.createDiffSql(before.diff(after));
+		assertTrue(plan.stream().noneMatch(
+				sql -> sql.getSqlText().startsWith("DROP VIEW") || sql.getSqlText().startsWith("DROP PROCEDURE")));
+		for (var sql : plan)
+			statement.execute(sql.getSqlText());
+		statement.execute("INSERT INTO DEP_NEW_SOURCE VALUES(20)");
+		try (var rows = statement.executeQuery("SELECT V FROM DEP_REWIRE_PROC")) {
+			assertTrue(rows.next());
+			assertEquals(20, rows.getInt(1));
+		}
+		try (var rows = statement.executeQuery(
+				"SELECT COUNT(*) FROM RDB$USER_PRIVILEGES WHERE RDB$RELATION_NAME='DEP_REWIRE' AND RDB$USER='DEP_DIFF_READER' AND RDB$PRIVILEGE='S'")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		statement.execute("DROP PROCEDURE DEP_REWIRE_PROC");
+		statement.execute("DROP VIEW DEP_REWIRE");
+		statement.execute("DROP TABLE DEP_NEW_SOURCE");
+		statement.execute("DROP ROLE DEP_DIFF_READER");
 	}
 
 	private void assertDependencyExecution(Statement statement, int major) throws SQLException {
@@ -197,6 +328,7 @@ class FirebirdSchemaRoundTripTest {
 		}
 		statement.execute("DROP VIEW Z_DEP_VIEW");
 		statement.execute("DROP TABLE Z_DEP_SOURCE");
+		statement.execute("DROP DOMAIN Z_DEP_DOMAIN");
 		if (major >= 3)
 			statement.execute("DROP FUNCTION Z_DEP_DOUBLE");
 	}
@@ -335,6 +467,246 @@ class FirebirdSchemaRoundTripTest {
 			assertEquals("item10", rows.getString(1));
 			assertFalse(rows.next());
 		}
+	}
+
+	private void standaloneConstraintLifecycle(Connection connection, Statement statement, Dialect dialect)
+			throws Exception {
+		statement.execute(
+				"CREATE TABLE \"drop parent\" (ID INTEGER NOT NULL, CODE INTEGER, CONSTRAINT \"drop pk\" PRIMARY KEY(ID), CONSTRAINT \"drop unique\" UNIQUE(CODE), CONSTRAINT \"drop check\" CHECK(CODE > 0))");
+		statement.execute(
+				"CREATE TABLE \"drop child\" (PARENT_ID INTEGER, CONSTRAINT \"drop fk\" FOREIGN KEY(PARENT_ID) REFERENCES \"drop parent\"(ID))");
+		Schema schema = SchemaUtils.readXml(new java.io.StringReader(readUserSchema(connection, dialect).asXml()));
+		var parent = schema.getTables().get("drop parent");
+		var child = schema.getTables().get("drop child");
+		var primary = parent.getConstraints().get("drop pk");
+		var unique = parent.getConstraints().get("drop unique");
+		var check = parent.getConstraints().get("drop check");
+		var foreign = child.getConstraints().get("drop fk");
+		var registry = dialect.createSqlFactoryRegistry();
+		String primaryDrop = registry.createSql(primary, SqlType.DROP).getFirst().getSqlText();
+		assertFalse(primaryDrop.contains("CASCADE"));
+		assertThrows(SQLException.class, () -> statement.execute(primaryDrop));
+		for (Constraint constraint : List.of(foreign, primary, unique, check))
+			for (var operation : registry.createSql(constraint, SqlType.DROP))
+				statement.execute(operation.getSqlText());
+		statement.execute("INSERT INTO \"drop parent\" VALUES(1,-1)");
+		statement.execute("INSERT INTO \"drop parent\" VALUES(1,-1)");
+		statement.execute("INSERT INTO \"drop child\" VALUES(999)");
+		statement.execute("DELETE FROM \"drop child\"");
+		statement.execute("DELETE FROM \"drop parent\"");
+		for (Constraint constraint : List.of(primary, unique, check, foreign))
+			for (var operation : registry.createSql(constraint, SqlType.CREATE))
+				statement.execute(operation.getSqlText());
+		statement.execute("INSERT INTO \"drop parent\" VALUES(1,1)");
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"drop parent\" VALUES(1,2)"));
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"drop parent\" VALUES(2,1)"));
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"drop parent\" VALUES(2,-1)"));
+		assertThrows(SQLException.class, () -> statement.execute("INSERT INTO \"drop child\" VALUES(999)"));
+		statement.execute("INSERT INTO \"drop child\" VALUES(1)");
+		assertThrows(SQLException.class, () -> statement.execute(primaryDrop));
+		statement.execute("DROP TABLE \"drop child\"");
+		statement.execute("DROP TABLE \"drop parent\"");
+	}
+
+	private void routineTypeReferences(Connection connection, Statement statement, Dialect dialect, int major)
+			throws Exception {
+		Schema empty = readUserSchema(connection, dialect);
+		statement.execute("CREATE DOMAIN \"positive domain\" AS INTEGER DEFAULT 7 NOT NULL CHECK (VALUE > 0)");
+		statement.execute("CREATE DOMAIN \"text domain\" AS VARCHAR(10) CHARACTER SET UTF8 COLLATE UNICODE");
+		statement.execute("CREATE TABLE \"reference table\" (\"id value\" \"positive domain\")");
+		statement.execute(
+				"CREATE VIEW \"reference view\" (\"id alias\") AS SELECT \"id value\" FROM \"reference table\"");
+		for (var declaration : List.of("P_DOMAIN(A \"positive domain\")", "P_ONLY(A TYPE OF \"positive domain\")",
+				"P_COLUMN(A TYPE OF COLUMN \"reference table\".\"id value\")",
+				"P_VIEW(A TYPE OF COLUMN \"reference view\".\"id alias\")",
+				"P_DEFAULT(A TYPE OF \"positive domain\" DEFAULT -1)",
+				"P_LOCAL(A TYPE OF \"positive domain\" NOT NULL)"))
+			statement.execute("CREATE PROCEDURE " + declaration
+					+ " RETURNS (R INTEGER) AS BEGIN R=COALESCE(A,-77); SUSPEND; END");
+		statement.execute(
+				"CREATE PROCEDURE P_OUT(A INTEGER) RETURNS (R \"positive domain\") AS BEGIN R=A; SUSPEND; END");
+		statement.execute(
+				"CREATE PROCEDURE P_OUT_ONLY(A INTEGER) RETURNS (R TYPE OF \"positive domain\") AS BEGIN R=A; SUSPEND; END");
+		statement.execute(
+				"CREATE PROCEDURE P_TEXT(A TYPE OF \"text domain\" COLLATE UNICODE_CI) RETURNS (R INTEGER) AS BEGIN IF (A = _UTF8 'A') THEN R=1; ELSE R=0; SUSPEND; END");
+		if (major >= 3) {
+			statement.execute("CREATE FUNCTION F_DOMAIN(A \"positive domain\") RETURNS INTEGER AS BEGIN RETURN A; END");
+			statement.execute(
+					"CREATE FUNCTION F_ONLY(A TYPE OF \"positive domain\") RETURNS INTEGER AS BEGIN RETURN COALESCE(A,-77); END");
+			statement.execute(
+					"CREATE FUNCTION F_COLUMN(A TYPE OF COLUMN \"reference view\".\"id alias\") RETURNS TYPE OF COLUMN \"reference table\".\"id value\" AS BEGIN RETURN COALESCE(A,-77); END");
+			statement.execute("CREATE FUNCTION F_RET(A INTEGER) RETURNS \"positive domain\" AS BEGIN RETURN A; END");
+			statement.execute(
+					"CREATE FUNCTION F_RET_ONLY(A INTEGER) RETURNS TYPE OF \"positive domain\" AS BEGIN RETURN A; END");
+			statement.execute(
+					"CREATE FUNCTION F_TEXT(A \"text domain\") RETURNS \"text domain\" AS BEGIN RETURN A; END");
+		}
+		assertRoutineReferenceBehavior(statement, major);
+		Schema source = readUserSchema(connection, dialect);
+		var reference = com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference
+				.get(source.getProcedures().get("P_DOMAIN").getArguments().get(0).getSpecifics());
+		assertEquals(com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.domain("positive domain"),
+				reference);
+		assertNull(source.getProcedures().get("P_ONLY").getArguments().get(0).getDefaultValue());
+		assertFalse(source.getProcedures().get("P_ONLY").getArguments().get(0).isNotNull());
+		assertTrue(source.getProcedures().get("P_LOCAL").getArguments().get(0).isNotNull());
+		assertEquals("UNICODE_CI", source.getProcedures().get("P_TEXT").getArguments().get(0).getCollation());
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(source.asXml()));
+		var registry = dialect.createSqlFactoryRegistry();
+		for (var operation : registry.getSqlFactory(source, SqlType.ALTER).createDiffSql(source.diff(empty)))
+			statement.execute(operation.getSqlText());
+		for (var operation : registry.createSql(restored, SqlType.CREATE))
+			statement.execute(operation.getSqlText());
+		assertRoutineReferenceBehavior(statement, major);
+		var before = readUserSchema(connection, dialect).getProcedures().get("P_DOMAIN");
+		var after = before.clone();
+		com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.set(after.getArguments().get(0).getSpecifics(),
+				com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.typeOfDomain("positive domain"));
+		for (var operation : registry.createSql(before.diff(after), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		assertScalar(statement, "SELECT R FROM P_DOMAIN(-1)", -1);
+		for (var operation : registry.createSql(after.diff(before), SqlType.ALTER))
+			statement.execute(operation.getSqlText());
+		assertThrows(SQLException.class, () -> scalar(statement, "SELECT R FROM P_DOMAIN(-1)"));
+		for (var operation : registry.getSqlFactory(restored, SqlType.ALTER).createDiffSql(restored.diff(empty)))
+			statement.execute(operation.getSqlText());
+		for (var operation : registry.getSqlFactory(empty, SqlType.ALTER).createDiffSql(empty.diff(restored)))
+			statement.execute(operation.getSqlText());
+		assertRoutineReferenceBehavior(statement, major);
+		for (var operation : registry.getSqlFactory(restored, SqlType.ALTER).createDiffSql(restored.diff(empty)))
+			statement.execute(operation.getSqlText());
+	}
+
+	private void assertRoutineReferenceBehavior(Statement statement, int major) throws Exception {
+		assertThrows(SQLException.class, () -> scalar(statement, "SELECT R FROM P_DOMAIN(-1)"));
+		assertThrows(SQLException.class, () -> scalar(statement, "SELECT R FROM P_DOMAIN(NULL)"));
+		assertThrows(SQLException.class, () -> scalar(statement, "SELECT R FROM P_OUT(-1)"));
+		assertThrows(SQLException.class, () -> scalar(statement, "SELECT R FROM P_LOCAL(NULL)"));
+		for (String procedure : List.of("P_ONLY", "P_COLUMN", "P_VIEW")) {
+			assertScalar(statement, "SELECT R FROM " + procedure + "(-1)", -1);
+			assertScalar(statement, "SELECT R FROM " + procedure + "(NULL)", -77);
+		}
+		assertScalar(statement, "SELECT R FROM P_DEFAULT", -1);
+		assertThrows(SQLException.class, () -> scalar(statement, "SELECT R FROM P_ONLY"));
+		assertScalar(statement, "SELECT R FROM P_OUT_ONLY(-1)", -1);
+		assertScalar(statement, "SELECT R FROM P_TEXT(_UTF8 'a')", 1);
+		if (major >= 3) {
+			assertThrows(SQLException.class, () -> scalar(statement, "SELECT F_DOMAIN(-1) FROM RDB$DATABASE"));
+			assertThrows(SQLException.class, () -> scalar(statement, "SELECT F_RET(-1) FROM RDB$DATABASE"));
+			assertScalar(statement, "SELECT F_ONLY(-1) FROM RDB$DATABASE", -1);
+			assertScalar(statement, "SELECT F_COLUMN(NULL) FROM RDB$DATABASE", -77);
+			assertScalar(statement, "SELECT F_RET_ONLY(-1) FROM RDB$DATABASE", -1);
+			try (var rows = statement.executeQuery("SELECT F_TEXT(_UTF8 '日本語') FROM RDB$DATABASE")) {
+				assertTrue(rows.next());
+				assertEquals("日本語", rows.getString(1));
+			}
+		}
+	}
+
+	private int scalar(Statement statement, String sql) throws SQLException {
+		try (var rows = statement.executeQuery(sql)) {
+			assertTrue(rows.next(), sql);
+			return rows.getInt(1);
+		}
+	}
+
+	private void assertScalar(Statement statement, String sql, int expected) throws SQLException {
+		assertEquals(expected, scalar(statement, sql), sql);
+	}
+
+	private void nativeSchemaAlter(Connection connection, Statement statement, Dialect dialect) throws Exception {
+		Schema empty = readUserSchema(connection, dialect);
+		statement.execute("CREATE EXCEPTION \"alter exception\" 'original message'");
+		statement.execute("COMMENT ON EXCEPTION \"alter exception\" IS 'original comment'");
+		statement.execute(
+				"DECLARE FILTER \"alter filter\" INPUT_TYPE 0 OUTPUT_TYPE -1003 ENTRY_POINT 'old_entry' MODULE_NAME 'sqlapp_missing_library'");
+		statement.execute("CREATE COLLATION \"alter collation\" FOR UTF8 FROM UNICODE CASE INSENSITIVE");
+		statement.execute("CREATE COLLATION \"free alter collation\" FOR UTF8 FROM UNICODE CASE SENSITIVE");
+		statement.execute("COMMENT ON COLLATION \"alter collation\" IS 'original collation comment'");
+		statement.execute(
+				"CREATE DOMAIN FB_NATIVE_DOMAIN AS VARCHAR(20) CHARACTER SET UTF8 COLLATE \"alter collation\"");
+		statement.execute(
+				"CREATE TABLE FB_NATIVE_TABLE (V FB_NATIVE_DOMAIN, OTHER_V VARCHAR(20) CHARACTER SET UTF8 COLLATE \"alter collation\")");
+		statement.execute("CREATE PROCEDURE FB_ALTER_NATIVE AS BEGIN EXCEPTION \"alter exception\"; END");
+		if (connection.getMetaData().getDatabaseMajorVersion() >= 3)
+			statement.execute(
+					"CREATE PACKAGE FB_NATIVE_PACKAGE AS BEGIN PROCEDURE P(V VARCHAR(20) CHARACTER SET UTF8 COLLATE \"alter collation\"); END");
+		Schema before = readUserSchema(connection, dialect);
+		if (connection.getMetaData().getDatabaseMajorVersion() >= 3)
+			assertTrue(com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.get(before).stream()
+					.anyMatch(edge -> edge.dependent()
+							.kind() == com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.Kind.PACKAGE
+							&& edge.dependent().name().equals("FB_NATIVE_PACKAGE")
+							&& edge.prerequisite()
+									.kind() == com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.Kind.COLLATION
+							&& edge.prerequisite().name().equals("alter collation")));
+		int identity;
+		try (var rows = statement.executeQuery(
+				"SELECT RDB$EXCEPTION_NUMBER FROM RDB$EXCEPTIONS WHERE RDB$EXCEPTION_NAME='alter exception'")) {
+			assertTrue(rows.next());
+			identity = rows.getInt(1);
+		}
+		statement.execute("ALTER EXCEPTION \"alter exception\" 'changed ''message'''");
+		statement.execute("COMMENT ON EXCEPTION \"alter exception\" IS NULL");
+		statement.execute("DROP FILTER \"alter filter\"");
+		statement.execute(
+				"DECLARE FILTER \"alter filter\" INPUT_TYPE 0 OUTPUT_TYPE -1003 ENTRY_POINT 'new_entry' MODULE_NAME 'sqlapp_missing_library'");
+		statement.execute("COMMENT ON FILTER \"alter filter\" IS 'new filter comment'");
+		statement.execute("COMMENT ON COLLATION \"alter collation\" IS 'new collation comment'");
+		statement.execute("DROP COLLATION \"free alter collation\"");
+		statement.execute("CREATE COLLATION \"free alter collation\" FOR UTF8 FROM UNICODE CASE INSENSITIVE");
+		Schema after = readUserSchema(connection, dialect);
+		statement.execute("ALTER EXCEPTION \"alter exception\" 'original message'");
+		statement.execute("COMMENT ON EXCEPTION \"alter exception\" IS 'original comment'");
+		statement.execute("COMMENT ON COLLATION \"alter collation\" IS 'original collation comment'");
+		statement.execute("DROP COLLATION \"free alter collation\"");
+		statement.execute("CREATE COLLATION \"free alter collation\" FOR UTF8 FROM UNICODE CASE SENSITIVE");
+		statement.execute("DROP FILTER \"alter filter\"");
+		statement.execute(
+				"DECLARE FILTER \"alter filter\" INPUT_TYPE 0 OUTPUT_TYPE -1003 ENTRY_POINT 'old_entry' MODULE_NAME 'sqlapp_missing_library'");
+		var registry = dialect.createSqlFactoryRegistry();
+		var plan = registry.getSqlFactory(before, SqlType.ALTER).createDiffSql(before.diff(after));
+		assertFalse(plan.stream().anyMatch(operation -> operation.getSqlText().startsWith("DROP EXCEPTION")));
+		for (var operation : plan)
+			statement.execute(operation.getSqlText());
+		try (var rows = statement.executeQuery(
+				"SELECT RDB$EXCEPTION_NUMBER FROM RDB$EXCEPTIONS WHERE RDB$EXCEPTION_NAME='alter exception'")) {
+			assertTrue(rows.next());
+			assertEquals(identity, rows.getInt(1));
+		}
+		SQLException raised = assertThrows(SQLException.class,
+				() -> statement.execute("EXECUTE PROCEDURE FB_ALTER_NATIVE"));
+		assertTrue(raised.getMessage().contains("changed 'message'"));
+		try (var rows = statement.executeQuery(
+				"SELECT CASE WHEN _UTF8 'a' COLLATE \"free alter collation\" = _UTF8 'A' THEN 1 ELSE 0 END FROM RDB$DATABASE")) {
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+		}
+		assertEquals(com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(after),
+				com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(readUserSchema(connection, dialect)));
+		var unsafe = after.clone();
+		com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.set(unsafe,
+				com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(after).stream()
+						.filter(object -> object
+								.kind() != com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObject.Kind.EXCEPTION)
+						.toList());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(after.diff(unsafe)));
+		statement.execute("ALTER PROCEDURE FB_ALTER_NATIVE AS BEGIN END");
+		statement.execute("DROP EXCEPTION \"alter exception\"");
+		Schema released = readUserSchema(connection, dialect);
+		for (var object : com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(after))
+			if (object.kind() == com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObject.Kind.EXCEPTION)
+				for (String sql : object.definition())
+					statement.execute(sql);
+		statement.execute("ALTER PROCEDURE FB_ALTER_NATIVE AS BEGIN EXCEPTION \"alter exception\"; END");
+		for (var operation : registry.getSqlFactory(after, SqlType.ALTER).createDiffSql(after.diff(released)))
+			statement.execute(operation.getSqlText());
+		statement.execute("EXECUTE PROCEDURE FB_ALTER_NATIVE");
+		for (var operation : registry.getSqlFactory(released, SqlType.ALTER).createDiffSql(released.diff(empty)))
+			statement.execute(operation.getSqlText());
+		assertTrue(com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.get(readUserSchema(connection, dialect))
+				.isEmpty());
 	}
 
 	private void nativeSchemaObjects(Connection connection, Statement statement, Dialect dialect) throws Exception {
@@ -656,6 +1028,7 @@ class FirebirdSchemaRoundTripTest {
 		foreign.setUpdateRule(CascadeRule.Cascade).setDeleteRule(CascadeRule.Cascade);
 		foreign.getSpecifics().put("firebird.indexName", "gtt fk idx");
 		foreign.getSpecifics().put("firebird.indexDescending", "true");
+		foreign.getSpecifics().put("firebird.indexComment", "temporary foreign key index comment");
 		child.getConstraints().add(foreign);
 		for (Table model : new Table[] { parent, child }) {
 			com.sqlapp.data.db.sql.SqlFactory<Table> factory = dialect.createSqlFactoryRegistry().getSqlFactory(model,
@@ -684,6 +1057,7 @@ class FirebirdSchemaRoundTripTest {
 		assertEquals(2, restored.getConstraints().getCheckConstraints().size());
 		var fk = restored.getConstraints().getForeignKeyConstraints().get(0);
 		assertEquals("tmp_fk parent_x", fk.getRelatedTableName());
+		assertEquals("temporary foreign key index comment", fk.getSpecifics().get("firebird.indexComment"));
 		assertEquals("gtt fk idx", fk.getSpecifics().get("firebird.indexName"));
 		statement.execute("DROP TABLE \"tmp_fk child_x\"");
 		execute(statement, dialect, restored, SqlType.CREATE);

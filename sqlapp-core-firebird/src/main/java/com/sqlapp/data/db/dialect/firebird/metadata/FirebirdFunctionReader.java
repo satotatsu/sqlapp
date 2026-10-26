@@ -98,6 +98,10 @@ public class FirebirdFunctionReader extends FunctionReader {
 								.setDataTypeName(argument.getDataTypeName()).setLength(argument.getLength())
 								.setScale(argument.getScale()).setCharacterSet(argument.getCharacterSet())
 								.setCollation(argument.getCollation());
+						com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.set(
+								function.getReturning().getSpecifics(),
+								com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference
+										.get(argument.getSpecifics()));
 						if (argument.isNotNull())
 							function.getReturning().getSpecifics().put("firebird.notNull", "true");
 						if (legacyReturn)

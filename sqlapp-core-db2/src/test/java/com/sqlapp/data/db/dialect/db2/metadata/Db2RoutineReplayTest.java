@@ -70,6 +70,34 @@ class Db2RoutineReplayTest {
 	}
 
 	@Test
+	void generatedSpecificIdentityIsBoundIntoCatalogDdlBeforeXmlAndReplay() throws Exception {
+		ReaderOptions options = new ReaderOptions();
+		options.setReadDefinition(true);
+		for (boolean function : List.of(true, false)) {
+			var values = fields(function);
+			String kind = function ? "FUNCTION" : "PROCEDURE";
+			String source = "/* native /* comment */ header */ CREATE " + kind + " APP." + (function ? "F" : "P")
+					+ "(P VARCHAR(30) DEFAULT 'SPECIFIC OTHER LANGUAGE SQL') " + (function ? "RETURNS INTEGER " : "")
+					+ "LANGUAGE SQL " + (function ? "RETURN 1" : "BEGIN VALUES 'LANGUAGE SQL; SPECIFIC'; END");
+			values.put("ROUTINE_DEFINITION", source);
+			var routine = read(function, values, options);
+			assertTrue(String.join("\n", routine.getDefinition())
+					.contains("SPECIFIC \"" + (function ? "F" : "P") + "_SPEC\" LANGUAGE SQL"));
+			assertTrue(sql(routine, SqlType.CREATE).stream()
+					.anyMatch(text -> text.contains("SPECIFIC \"" + (function ? "F" : "P") + "_SPEC\" LANGUAGE SQL")));
+		}
+	}
+
+	@Test
+	void explicitSpecificClausesAndExternalOrNonCreateTextAreNotRewritten() {
+		for (String source : List.of("CREATE FUNCTION APP.F() RETURNS INTEGER LANGUAGE SQL SPECIFIC F_SPEC RETURN 1",
+				"CREATE FUNCTION APP.F() RETURNS INTEGER SPECIFIC F_SPEC LANGUAGE SQL RETURN 1",
+				"CREATE FUNCTION APP.F() RETURNS INTEGER LANGUAGE C EXTERNAL NAME 'lib!f'", "RETURN 1"))
+			assertEquals(source,
+					com.sqlapp.data.db.dialect.db2.util.Db2RoutineDefinition.preserveSpecificName(source, "OTHER"));
+	}
+
+	@Test
 	void definitionsAreOrderedSeparateOperationsAndOwnEmbeddedOptions() throws Exception {
 		for (Routine<?> routine : List.of(function(), new Procedure("P").setSchemaName("APP"))) {
 			routine.setDefinition(

@@ -11,8 +11,30 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaObjectProperties;
+import com.sqlapp.data.schemas.AbstractSchemaObjectCollection;
+import com.sqlapp.data.schemas.AbstractSchemaObject;
 
 public class Db2CreateSchemaFactory extends CreateSchemaFactory {
+	@Override
+	protected void addCreateSchemaObjectCollection(String propertyName, AbstractSchemaObjectCollection<?> collection,
+			List<SqlOperation> result) {
+		if ((getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+				&& (SchemaObjectProperties.TYPES.getLabel().equals(propertyName)
+						|| SchemaObjectProperties.DOMAINS.getLabel().equals(propertyName))) {
+			Schema schema = collection.getSchema();
+			if (SchemaObjectProperties.TYPES.getLabel().equals(propertyName) && schema.getTypes().isEmpty())
+				return;
+			if (SchemaObjectProperties.DOMAINS.getLabel().equals(propertyName) && !schema.getTypes().isEmpty())
+				return;
+			List<AbstractSchemaObject<?>> types = new java.util.ArrayList<>();
+			types.addAll(schema.getTypes());
+			types.addAll(schema.getDomains());
+			addCreateSortedSchemaObjectCollection(propertyName, Db2TypeCreateOrder.sort(types), result);
+			return;
+		}
+		super.addCreateSchemaObjectCollection(propertyName, collection, result);
+	}
+
 	@Override
 	protected Set<String> getCreateCollectionOrder() {
 		Set<String> order = new LinkedHashSet<>();

@@ -54,6 +54,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	final JCheckBox repeatables = new JCheckBox("Enable R__ repeatable migrations");
 	final JCheckBox recursive = new JCheckBox("Search SQL directories recursively");
 	final JButton build = new JButton("Connect and build plan");
+	final JButton buildUrl = new JButton("Build URL…");
+	final JButton test = new JButton("Test connection");
 	final JButton save = new JButton("Save plan JSON…");
 	final JButton apply = new JButton("Apply reviewed plan…");
 	final JButton saveExecution = new JButton("Save last result JSON…");
@@ -69,6 +71,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	private final Saver saver;
 	private final Executor executor;
 	private final ExecutionSaver executionSaver;
+	private final java.util.function.BiFunction<PlanningJdbc.Spec, char[], String> connectionTester;
 
 	private SchemaMigrationPlanningService.Result result;
 	private SchemaMigrationPlanningService.Request reviewedRequest;
@@ -111,7 +114,20 @@ final class SchemaMigrationPlanPanel extends JPanel {
 
 	SchemaMigrationPlanPanel(final Planner planner, final Saver saver, final Executor executor,
 			final ExecutionSaver executionSaver) {
+		this(planner, saver, executor, executionSaver, new JdbcConnectionTestService()::test);
+	}
+
+	SchemaMigrationPlanPanel(final Planner planner, final Saver saver,
+			final java.util.function.BiFunction<PlanningJdbc.Spec, char[], String> tester) {
+		this(planner, saver, new SchemaMigrationExecutionService()::execute,
+				new SchemaMigrationExecutionService()::save, tester);
+	}
+
+	private SchemaMigrationPlanPanel(final Planner planner, final Saver saver, final Executor executor,
+			final ExecutionSaver executionSaver,
+			final java.util.function.BiFunction<PlanningJdbc.Spec, char[], String> tester) {
 		super(new BorderLayout(8, 8));
+		connectionTester = java.util.Objects.requireNonNull(tester);
 		this.planner = java.util.Objects.requireNonNull(planner, "planner");
 		this.saver = java.util.Objects.requireNonNull(saver, "saver");
 		this.executor = java.util.Objects.requireNonNull(executor, "executor");
@@ -122,7 +138,11 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		row(common, 1, "Username", username);
 		row(common, 2, "Password", password);
 		row(common, 3, "Connection profile", profile);
-		row(common, 4, "Up SQL directory", directoryField(upDirectory));
+		final var connectionActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		connectionActions.add(buildUrl);
+		connectionActions.add(test);
+		row(common, 4, "Connection", connectionActions);
+		row(common, 5, "Up SQL directory", directoryField(upDirectory));
 		form.add(common, BorderLayout.NORTH);
 		final var advanced = new JPanel(new GridBagLayout());
 		row(advanced, 0, "Down SQL directory", directoryField(downDirectory));
@@ -161,7 +181,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		advancedToggle.addActionListener(event -> {
 			advanced.setVisible(advancedToggle.isSelected());
 			input.revalidate();
-			split.setDividerLocation(advancedToggle.isSelected() ? 400 : 240);
+			split.setDividerLocation(advancedToggle.isSelected() ? 470 : 240);
 		});
 		final DocumentListener changed = new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
@@ -181,6 +201,9 @@ final class SchemaMigrationPlanPanel extends JPanel {
 			field.getDocument().addDocumentListener(changed);
 		}
 		build.addActionListener(event -> build());
+		buildUrl.addActionListener(
+				event -> buildConnectionUrl(url -> JdbcUrlBuilderPanel.showDialog(this, url, "Schema migration")));
+		test.addActionListener(event -> testConnection());
 		save.addActionListener(event -> chooseSave());
 		apply.addActionListener(event -> confirmApply());
 		saveExecution.addActionListener(event -> chooseExecutionSave());
@@ -274,6 +297,84 @@ final class SchemaMigrationPlanPanel extends JPanel {
 				enable(nested, enabled);
 			}
 		}
+	}
+
+	void buildConnectionUrl(final java.util.function.Function<String, String> dialog) {
+		if (isBusy())
+			return;
+		final long requested = revision;
+		busy(true);
+		try {
+			final String url = dialog.apply(jdbcUrl.getText());
+			if (requested != revision)
+				status.setText("Connection inputs changed. Open Build URL again.");
+			else if (url == null)
+				status.setText("URL builder cancelled. Existing connection retained.");
+			else {
+				new PlanningJdbc.Spec(url, "", "");
+				jdbcUrl.setText(url);
+				status.setText(
+						"JDBC URL updated. Enter credentials and use Test connection; no connection was opened.");
+			}
+		} catch (RuntimeException failure) {
+			status.setText("Unable to build the JDBC URL. Existing connection retained.");
+			statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
+		} finally {
+			busy(false);
+		}
+	}
+
+	void testConnection() {
+		if (isBusy())
+			return;
+		final PlanningJdbc.Spec connection;
+		try {
+			connection = new PlanningJdbc.Spec(jdbcUrl.getText().trim(), username.getText().trim(),
+					driverClass.getText().trim());
+		} catch (IllegalArgumentException failure) {
+			status.setText("Enter a JDBC URL starting with jdbc: before testing.");
+			jdbcUrl.requestFocusInWindow();
+			return;
+		}
+		final char[] secret = password.getPassword();
+		final long requested = revision;
+		busy(true);
+		status.setText("Testing connection. No migration history or table rows are read or written.");
+		new SwingWorker<String, Void>() {
+			@Override
+			protected String doInBackground() {
+				try {
+					return connectionTester.apply(connection, secret);
+				} finally {
+					Arrays.fill(secret, '\0');
+				}
+			}
+
+			@Override
+			protected void done() {
+				try {
+					if (requested != revision) {
+						status.setText("Connection inputs changed. Test the connection again.");
+						return;
+					}
+					status.setText("Connection succeeded: " + get());
+					statusPanel.setDetails(status.getText()
+							+ "\nConnection and supported dialect checked. Build a migration plan to inspect history and SQL. This test does not approve execution.");
+				} catch (InterruptedException failure) {
+					Thread.currentThread().interrupt();
+					failed(failure);
+				} catch (ExecutionException failure) {
+					failed(failure.getCause());
+				} finally {
+					busy(false);
+				}
+			}
+
+			private void failed(final Throwable failure) {
+				status.setText("Connection failed. Check the URL, credentials and JDBC driver; see Details.");
+				statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
+			}
+		}.execute();
 	}
 
 	private void build() {

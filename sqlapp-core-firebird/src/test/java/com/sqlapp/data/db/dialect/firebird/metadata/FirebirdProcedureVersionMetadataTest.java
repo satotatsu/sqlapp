@@ -20,9 +20,10 @@ class FirebirdProcedureVersionMetadataTest {
 			assertEquals(modern, text.contains("pp.RDB$DEFAULT_SOURCE"), text);
 			assertEquals(modern, text.contains("pp.RDB$NULL_FLAG"), text);
 			assertEquals(modern, text.contains("pp.RDB$COLLATION_ID"), text);
-			assertFalse(text.contains("pp.RDB$FIELD_NAME"), text);
-			assertFalse(text.contains("pp.RDB$RELATION_NAME"), text);
-			assertFalse(text.contains("pp.RDB$PARAMETER_MECHANISM"), text);
+			boolean references = version[0] == 2 && version[1] >= 5;
+			assertEquals(references, text.contains("pp.RDB$FIELD_NAME"), text);
+			assertEquals(references, text.contains("pp.RDB$RELATION_NAME"), text);
+			assertEquals(references, text.contains("pp.RDB$PARAMETER_MECHANISM"), text);
 			assertTrue(text.contains("f.RDB$DEFAULT_SOURCE"), text);
 			assertTrue(text.contains("CHAR_LEN"), text);
 		}

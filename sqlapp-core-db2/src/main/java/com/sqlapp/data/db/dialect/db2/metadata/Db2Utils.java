@@ -57,8 +57,13 @@ public class Db2Utils {
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setLanguage(getString(rs, "LANGUAGE"));
 		String definition = getString(rs, "ROUTINE_DEFINITION");
+		String replayDefinition = dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
+				&& "SQL".equals(obj.getLanguage())
+						? com.sqlapp.data.db.dialect.db2.util.Db2RoutineDefinition.preserveSpecificName(definition,
+								obj.getSpecificName())
+						: definition;
 		if (readerOption.isReadDefinition()) {
-			obj.setDefinition(definition);
+			obj.setDefinition(replayDefinition);
 		}
 		if (readerOption.isReadStatement()) {
 			int offset = rs.getInt("TEXT_BODY_OFFSET");
@@ -67,7 +72,7 @@ public class Db2Utils {
 							|| "PL/SQL".equalsIgnoreCase(getString(rs, "DIALECT"))
 							|| "Y".equals(getString(rs, "AUTONOMOUS")))) {
 				// The requested body cannot safely recreate these native routine forms.
-				obj.setDefinition(definition);
+				obj.setDefinition(replayDefinition);
 			} else if (offset > 0 && definition != null) {
 				obj.setStatement(definition.substring(offset));
 			}

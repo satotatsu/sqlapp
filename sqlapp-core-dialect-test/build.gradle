@@ -7,10 +7,10 @@ plugins {
 java {
 	withJavadocJar();
 	withSourcesJar();
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -297,6 +297,15 @@ tasks.register('alloydbCompatibilityTest') {
 }
 
 tasks.named('dockerTest') { exclude '**/alloydb/AlloyDBExternalTest.class' }
+
+tasks.register('db2PostgresAudit', JavaExec) {
+	description = 'Writes offline Db2/PostgreSQL factory evidence; does not connect to databases or validate server SQL.'
+	group = 'verification'
+	dependsOn tasks.named('dockerTestClasses')
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	mainClass = 'com.sqlapp.data.db.dialect.test.audit.Db2PostgresCapabilityAudit'
+	args rootProject.file('docs/development/db2-postgres-audit-evidence.tsv').absolutePath
+}
 tasks.register('alloydbExternalTest', Test) {
 	group = 'verification'
 	description = 'Opt-in destructive checks on an explicitly authorized disposable managed AlloyDB database.'

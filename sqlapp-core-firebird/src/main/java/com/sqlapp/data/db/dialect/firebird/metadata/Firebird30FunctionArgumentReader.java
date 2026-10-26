@@ -48,6 +48,7 @@ public class Firebird30FunctionArgumentReader extends FirebirdFunctionArgumentRe
 		if (rs.getInt("RDB$ARGUMENT_POSITION") > 0) {
 			obj.setDirection(ParameterDirection.Input);
 		}
+		FirebirdRoutineTypeMetadata.apply(obj, rs);
 		return obj;
 	}
 }

@@ -7,7 +7,7 @@ does not cover publishing credentials or release deployment.
 
 ## Prerequisites
 
-- Java 21
+- Java 25
 - The checked-in Gradle Wrapper
 - UTF-8 source and generated text
 - Docker only when explicitly running `sqlapp-core-dialect-test:dockerTest`
@@ -20,7 +20,7 @@ java -version
 ```
 
 On Windows PowerShell, replace `./gradlew` with `.\gradlew.bat`. The wrapper
-currently selects Gradle 9.6.1 and configures a Java 21 toolchain.
+currently selects Gradle 9.8.1 and configures a Java 25 toolchain.
 
 ## Repository build
 

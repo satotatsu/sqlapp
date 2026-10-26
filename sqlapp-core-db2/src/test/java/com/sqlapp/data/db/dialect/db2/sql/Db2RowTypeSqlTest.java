@@ -45,6 +45,7 @@ class Db2RowTypeSqlTest {
 	void cursorStructuredAndNestedFieldsRequireCompleteDdlAndDefinitionsAreAuthoritative() {
 		var row = row();
 		row.getColumns().getFirst().getSpecifics().put("DB2_TYPE_SCHEMA", "CUSTOM");
+		// A custom field type requires its resolved name, not an inferred built-in.
 		assertThrows(IllegalArgumentException.class, () -> sql(row, SqlType.CREATE));
 		String ddl = "CREATE TYPE \"A.Schema\".\"R.Name\" AS ROW (N CUSTOM.T)";
 		row.getDefinition().add(ddl);
@@ -71,6 +72,15 @@ class Db2RowTypeSqlTest {
 		SqlFactory<Type> old = DialectHolder.Db2_1050Dialect.createSqlFactoryRegistry().getSqlFactory(row,
 				SqlType.CREATE);
 		assertThrows(IllegalArgumentException.class, () -> old.createSql(row));
+	}
+
+	@Test
+	void customRowFieldCollationRequiresCompleteDefinition() {
+		var row = row();
+		row.getColumns().getLast().getSpecifics().put("COLLATIONSCHEMA", "CUSTOM");
+		assertThrows(IllegalArgumentException.class, () -> sql(row, SqlType.CREATE));
+		row.getDefinition().add("CREATE TYPE \"A.Schema\".\"R.Name\" AS ROW (ID INTEGER)");
+		assertEquals(row.getDefinition(), sql(row, SqlType.CREATE));
 	}
 
 	@Test

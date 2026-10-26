@@ -49,27 +49,46 @@ public class FirebirdAlterSchemaFactory extends AlterSchemaFactory {
 		}
 		original.getSpecifics().remove(com.sqlapp.data.db.dialect.firebird.FirebirdPublications.SPECIFICS_KEY);
 		target.getSpecifics().remove(com.sqlapp.data.db.dialect.firebird.FirebirdPublications.SPECIFICS_KEY);
-		var before = FirebirdSchemaObjects.get(original);
-		var after = FirebirdSchemaObjects.get(target);
-		for (var object : before) {
-			if (!after.contains(object))
-				throw new UnsupportedOperationException(
-						"Changing/removing Firebird native schema objects requires an explicit dependency-aware migration: "
-								+ object.name());
-		}
 		var result = new ArrayList<SqlOperation>();
 		if (!publicationSql.isEmpty())
 			result.add(new SqlOperation(publicationSql.getFirst(), SqlType.ALTER, (Schema) difference.getTarget()));
-		for (var object : after)
-			if (!before.contains(object))
-				for (String sql : object.definition())
-					result.add(new SqlOperation(sql, SqlType.CREATE, target));
 		original.getSpecifics().remove(FirebirdSchemaObjects.SPECIFICS_KEY);
 		target.getSpecifics().remove(FirebirdSchemaObjects.SPECIFICS_KEY);
-		original.setDialect(getDialect());
-		target.setDialect(getDialect());
-		result.addAll(FirebirdSchemaAlterOrder.order((Schema) difference.getOriginal(), (Schema) difference.getTarget(),
-				super.createDiffSql(original.diff(target))));
+		var removedKeys = original.getTables().stream()
+				.filter(table -> target.getTables().stream().noneMatch(next -> next.getName().equals(table.getName())))
+				.flatMap(table -> table.getConstraints().getForeignKeyConstraints().stream()).toList();
+		var addedKeys = target.getTables().stream()
+				.filter(table -> original.getTables().stream()
+						.noneMatch(previous -> previous.getName().equals(table.getName())))
+				.flatMap(table -> table.getConstraints().getForeignKeyConstraints().stream()).toList();
+		for (var table : target.getTables())
+			if (addedKeys.stream().anyMatch(key -> key.getTable() == table))
+				getSqlFactoryRegistry().createSql(table, SqlType.CREATE);
+		for (var key : addedKeys) {
+			String provider = key.getRelatedTable().getName();
+			if (original.getTables().stream().anyMatch(table -> table.getName().equals(provider))
+					&& target.getTables().stream().noneMatch(table -> table.getName().equals(provider)))
+				throw new UnsupportedOperationException(
+						"Firebird target foreign key references a removed table: " + provider);
+		}
+		var keyAdditions = FirebirdSchemaForeignKeys.create(getSqlFactoryRegistry(), addedKeys);
+		var orderedOriginal = FirebirdSchemaForeignKeys.without((Schema) difference.getOriginal(), removedKeys);
+		var orderedTarget = FirebirdSchemaForeignKeys.without((Schema) difference.getTarget(), addedKeys);
+		var shared = new ArrayList<SqlOperation>();
+		for (var key : removedKeys)
+			shared.addAll(getSqlFactoryRegistry().createSql(key, SqlType.DROP));
+		var ddlOriginal = FirebirdSchemaForeignKeys.without(original, removedKeys);
+		var ddlTarget = FirebirdSchemaForeignKeys.without(target, addedKeys);
+		ddlOriginal.setDialect(getDialect());
+		ddlTarget.setDialect(getDialect());
+		shared.addAll(FirebirdSchemaAlterOrder.order(orderedOriginal, orderedTarget,
+				super.createDiffSql(ddlOriginal.diff(ddlTarget))));
+		shared.addAll(keyAdditions);
+		var nativePlan = FirebirdNativeSchemaAlter.plan((Schema) difference.getOriginal(),
+				(Schema) difference.getTarget(), shared);
+		result.addAll(nativePlan.before());
+		result.addAll(shared);
+		result.addAll(nativePlan.after());
 		for (String sql : publicationSql.stream().skip(1).toList())
 			result.add(new SqlOperation(sql, SqlType.ALTER, (Schema) difference.getTarget()));
 		return result;

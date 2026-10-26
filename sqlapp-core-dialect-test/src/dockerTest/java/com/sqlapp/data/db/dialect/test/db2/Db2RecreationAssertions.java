@@ -28,6 +28,9 @@ final class Db2RecreationAssertions {
 			statement.execute("CREATE SCHEMA " + SCHEMA);
 			try {
 				statement.execute("CREATE TABLE " + SCHEMA + ".T (ID INTEGER NOT NULL, PAYLOAD INTEGER)");
+				statement.execute("CREATE TYPE " + SCHEMA + ".RR AS ROW(ID INTEGER)");
+				statement.execute("CREATE TYPE " + SCHEMA + ".CW AS CURSOR");
+				statement.execute("CREATE TYPE " + SCHEMA + ".CS AS " + SCHEMA + ".RR CURSOR");
 				statement.execute(
 						"CREATE UNIQUE INDEX " + SCHEMA + ".IX ON " + SCHEMA + ".T (ID DESC) INCLUDE (PAYLOAD)");
 				statement.execute("COMMENT ON TABLE " + SCHEMA + ".T IS 'Parity table'");
@@ -39,6 +42,9 @@ final class Db2RecreationAssertions {
 				statement.execute("GRANT SELECT ON TABLE " + SCHEMA + ".T TO PUBLIC");
 				statement.execute("GRANT UPDATE (PAYLOAD) ON TABLE " + SCHEMA + ".T TO PUBLIC");
 				statement.execute("GRANT EXECUTE ON FUNCTION " + SCHEMA + ".F TO PUBLIC");
+				statement.execute("GRANT EXECUTE ON FUNCTION " + SCHEMA + ".* TO PUBLIC");
+				statement.execute("GRANT EXECUTE ON PROCEDURE " + SCHEMA + ".* TO PUBLIC");
+				statement.execute("GRANT EXECUTE ON METHOD * FOR " + SCHEMA + ".* TO PUBLIC");
 				statement.execute("CREATE SEQUENCE " + SCHEMA + ".IX AS BIGINT START WITH 41 INCREMENT BY 3");
 				statement.execute("GRANT USAGE ON SEQUENCE " + SCHEMA + ".IX TO PUBLIC");
 				statement.execute("GRANT CONTROL ON INDEX " + SCHEMA + ".IX TO PUBLIC");
@@ -75,6 +81,9 @@ final class Db2RecreationAssertions {
 								.getIndex().getName());
 				assertEquals(1, com.sqlapp.data.db.dialect.db2.Db2RowPermissions.get(original).permissions().size());
 				Schema restored = SchemaUtils.readXml(new StringReader(original.asXml()));
+				assertEquals("W", restored.getTypes().get("CW").getSpecifics().get("DB2_CURSOR_KIND"));
+				assertEquals("S", restored.getTypes().get("CS").getSpecifics().get("DB2_CURSOR_KIND"));
+				assertEquals("RR", restored.getTypes().get("CS").getSpecifics().get("DB2_CURSOR_ROW_NAME"));
 				var tablePrivileges = dialect.getCatalogReader().getObjectPrivilegeReader();
 				tablePrivileges.setSchemaName(SCHEMA);
 				tablePrivileges.setObjectName("T");
@@ -105,6 +114,13 @@ final class Db2RecreationAssertions {
 				grants.getColumnPrivileges().addAll(columnPrivileges.getAllFull(connection));
 				routinePrivileges.getAllFull(connection).stream().filter(p -> SCHEMA.equals(p.getSchemaName()))
 						.forEach(p -> grants.getRoutinePrivileges().add(p));
+				routinePrivileges.setObjectName(null);
+				var futureGrants = routinePrivileges.getAllFull(connection).stream()
+						.filter(p -> SCHEMA.equals(p.getSchemaName()) && "PUBLIC".equals(p.getGranteeName())
+								&& "SCHEMA".equals(p.getSpecifics().get("DB2_ROUTINE_SCOPE")))
+						.toList();
+				assertEquals(3, futureGrants.size());
+				grants.getRoutinePrivileges().addAll(futureGrants);
 				assertTrue(grants.getObjectPrivileges().stream()
 						.anyMatch(p -> "PUBLIC".equals(p.getGranteeName()) && "SELECT".equals(p.getPrivilege())));
 				assertTrue(grants.getColumnPrivileges().stream()
@@ -128,6 +144,11 @@ final class Db2RecreationAssertions {
 					statement.execute("REVOKE SELECTIN ON SCHEMA " + SCHEMA + " FROM PUBLIC");
 				for (SqlOperation operation : grantFactory.createSql(restoredGrants))
 					statement.execute(operation.getSqlText());
+				assertEquals(3,
+						routinePrivileges.getAllFull(connection).stream()
+								.filter(p -> SCHEMA.equals(p.getSchemaName()) && "PUBLIC".equals(p.getGranteeName())
+										&& "SCHEMA".equals(p.getSpecifics().get("DB2_ROUTINE_SCOPE")))
+								.count());
 				Catalog rereadExtended = new Catalog();
 				extendedPrivileges.loadFull(connection, rereadExtended);
 				assertEquals(2, com.sqlapp.data.db.dialect.db2.Db2ObjectPrivileges.get(rereadExtended).grants().stream()
@@ -209,7 +230,8 @@ final class Db2RecreationAssertions {
 				"DROP SEQUENCE " + SCHEMA + ".IX RESTRICT", "DROP PERMISSION " + SCHEMA + ".ALLOW_POSITIVE",
 				"DROP MASK " + SCHEMA + ".HIDE_PAYLOAD", "DROP TABLE " + SCHEMA + ".MQ",
 				"DROP TABLE " + SCHEMA + ".MQ_BASE", "DROP TABLE " + SCHEMA + ".T", "DROP FUNCTION " + SCHEMA + ".F",
-				"DROP PROCEDURE " + SCHEMA + ".P");
+				"DROP PROCEDURE " + SCHEMA + ".P", "DROP TYPE " + SCHEMA + ".CS", "DROP TYPE " + SCHEMA + ".CW",
+				"DROP TYPE " + SCHEMA + ".RR");
 	}
 
 	private static void verifyDatabaseAuthorities(Connection connection) throws Exception {

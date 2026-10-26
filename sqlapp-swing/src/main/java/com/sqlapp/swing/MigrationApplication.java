@@ -100,6 +100,11 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(dataPlan);
 				return true;
 			});
+			MigrationStartPanel.install(tabs, java.util.Map.of(MigrationStartPanel.Destination.DATA, dataPlan,
+					MigrationStartPanel.Destination.COMPARE, comparison, MigrationStartPanel.Destination.REPORTS,
+					reports, MigrationStartPanel.Destination.SCHEMA_PLAN, schemaPlan,
+					MigrationStartPanel.Destination.SQL_EDITOR, sqlEditor, MigrationStartPanel.Destination.JOB_EDITOR,
+					jobEditor, MigrationStartPanel.Destination.DRIVERS, drivers));
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {
 				@Override

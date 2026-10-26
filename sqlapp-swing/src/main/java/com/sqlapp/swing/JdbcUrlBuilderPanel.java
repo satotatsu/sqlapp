@@ -88,6 +88,21 @@ final class JdbcUrlBuilderPanel extends JPanel {
 		refresh();
 	}
 
+	static String showDialog(java.awt.Component owner, String currentUrl, String connectionName) {
+		final var selected = new java.util.concurrent.atomic.AtomicReference<String>();
+		final var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Build JDBC URL — " + connectionName,
+				java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+		dialog.setContentPane(new JdbcUrlBuilderPanel(currentUrl, url -> {
+			selected.set(url);
+			dialog.dispose();
+		}, dialog::dispose));
+		dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		dialog.setSize(750, 360);
+		dialog.setLocationRelativeTo(owner);
+		dialog.setVisible(true);
+		return selected.get();
+	}
+
 	private static void row(JPanel form, JLabel label, JComponent field) {
 		label.setLabelFor(field);
 		final var row = new JPanel(new BorderLayout(8, 0));

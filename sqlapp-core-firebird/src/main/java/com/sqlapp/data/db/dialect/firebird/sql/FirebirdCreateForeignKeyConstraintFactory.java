@@ -8,6 +8,16 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 public class FirebirdCreateForeignKeyConstraintFactory
 		extends AbstractCreateForeignKeyConstraintFactory<FirebirdSqlBuilder> {
 	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(ForeignKeyConstraint constraint) {
+		var result = super.createSql(constraint);
+		var builder = createSqlBuilder();
+		FirebirdConstraintSql.indexComment(constraint, builder);
+		if (constraint.getSpecifics().get("firebird.indexComment") != null)
+			addSql(result, builder, com.sqlapp.data.db.sql.SqlType.SET_COMMENT, constraint);
+		return result;
+	}
+
+	@Override
 	public void addCreateObject(ForeignKeyConstraint constraint, FirebirdSqlBuilder builder) {
 		if (constraint.getTable() == null)
 			throw new IllegalArgumentException("Firebird foreign key requires an owning table");

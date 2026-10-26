@@ -92,7 +92,7 @@ class FirebirdSchemaAlterOrderTest {
 	}
 
 	@Test
-	void releasingAReferenceBeforeDeletingAColumnUsesTheOldGraph() {
+	void releasingAReferenceBeforeDeletingAColumnUsesTheOldGraph() throws Exception {
 		var before = new Schema();
 		before.getTables().add(table("T"));
 		before.getTables().get("T").getColumns().add(new Column("KEPT").setDataType(DataType.INT));
@@ -102,8 +102,102 @@ class FirebirdSchemaAlterOrderTest {
 		after.getTables().get("T").getColumns().remove("ID");
 		after.getProcedures().get("P").setStatement("BEGIN EXIT; END");
 		FirebirdSchemaDependencies.set(after, List.of());
+		String beforeXml = before.asXml(), afterXml = after.asXml();
 		var plan = sql(before, after);
+		assertEquals(beforeXml, before.asXml(), "Planner must not modify the source snapshot");
+		assertEquals(afterXml, after.asXml(), "Planner must not modify the target snapshot");
 		assertTrue(plan.getFirst().contains("ALTER PROCEDURE P"), plan.toString());
 		assertTrue(plan.getLast().contains("DROP ID"), plan.toString());
+		after.getSpecifics().remove(FirebirdSchemaDependencies.SPECIFICS_KEY);
+		assertThrows(UnsupportedOperationException.class, () -> sql(before, after));
+	}
+
+	@Test
+	void cyclesAreRejectedAndExplicitEmptyGraphsSurviveXml() throws Exception {
+		var empty = new Schema();
+		FirebirdSchemaDependencies.set(empty, List.of());
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(empty.asXml()));
+		assertNotNull(restored.getSpecifics().get(FirebirdSchemaDependencies.SPECIFICS_KEY));
+		assertTrue(FirebirdSchemaDependencies.get(restored).isEmpty());
+		var target = schema();
+		FirebirdSchemaDependencies.set(target,
+				List.of(edge(Kind.PROCEDURE, "P", Kind.VIEW, "V"), edge(Kind.VIEW, "V", Kind.PROCEDURE, "P")));
+		var error = assertThrows(UnsupportedOperationException.class, () -> sql(empty, target));
+		assertTrue(error.getMessage().contains("cyclic dependencies"));
+	}
+
+	@Test
+	void packageBodyDropUsesVendorSyntaxAndPrecedesHeaderDrop() {
+		for (var dialect : List.of(DialectHolder.defaultDialect30, DialectHolder.defaultDialect40,
+				DialectHolder.defaultDialect50)) {
+			var registry = dialect.createSqlFactoryRegistry();
+			assertEquals("DROP PACKAGE BODY \"quoted\"\" body\"",
+					registry.createSql(new PackageBody("quoted\" body"), SqlType.DROP).getFirst().getSqlText());
+			var before = new Schema();
+			before.getPackages().add(new com.sqlapp.data.schemas.Package("PKG").setStatement("BEGIN END"));
+			before.getPackageBodies().add(new PackageBody("PKG").setStatement("BEGIN END"));
+			var drop = registry.getSqlFactory(before, SqlType.ALTER).createDiffSql(before.diff(new Schema())).stream()
+					.map(operation -> operation.getSqlText()).toList();
+			assertEquals(List.of("DROP PACKAGE BODY PKG", "DROP PACKAGE PKG"), drop);
+		}
+	}
+
+	@Test
+	void modeledForeignKeyReleaseDoesNotRequireCatalogPayload() {
+		var before = new Schema();
+		var parent = table("PARENT");
+		var child = table("CHILD");
+		before.getTables().add(parent);
+		before.getTables().add(child);
+		child.getConstraints()
+				.add(new ForeignKeyConstraint("FK_DEP", child.getColumns().get(0), parent.getColumns().get(0)));
+		var after = before.clone();
+		after.getTables().get("CHILD").getConstraints().clear();
+		after.getTables().remove("PARENT");
+		var plan = sql(before, after);
+		assertTrue(plan.getFirst().contains("DROP CONSTRAINT FK_DEP"), plan.toString());
+		assertEquals("DROP TABLE PARENT", plan.getLast());
+		child.getColumns()
+				.add(new Column("VALUE").setDataType(DataType.INT).setFormula("(SELECT MAX(ID) FROM PARENT)"));
+		var opaque = before.clone();
+		opaque.getTables().get("CHILD").getConstraints().clear();
+		opaque.getTables().remove("PARENT");
+		assertThrows(UnsupportedOperationException.class, () -> sql(before, opaque));
+	}
+
+	@Test
+	void unknownLegacyBodyGraphsCannotSilentlyGuessCrossObjectOrder() {
+		var before = schema();
+		before.getSpecifics().remove(FirebirdSchemaDependencies.SPECIFICS_KEY);
+		assertThrows(UnsupportedOperationException.class, () -> sql(before, new Schema()));
+		var target = schema();
+		target.getSpecifics().remove(FirebirdSchemaDependencies.SPECIFICS_KEY);
+		assertThrows(UnsupportedOperationException.class, () -> sql(new Schema(), target));
+	}
+
+	@Test
+	void modeledTriggerOwnerDoesNotNeedCatalogPayload() {
+		var target = new Schema();
+		target.getTables().add(table("T"));
+		var trigger = new Trigger("TR").setTableName("T").setActionTiming("BEFORE").setStatement("BEGIN END");
+		trigger.addEventManipulation("INSERT");
+		target.getTriggers().add(trigger);
+		var create = sql(new Schema(), target);
+		assertTrue(create.getFirst().contains("CREATE TABLE T"), create.toString());
+		assertTrue(create.getLast().contains("CREATE TRIGGER TR"), create.toString());
+		assertEquals(List.of("DROP TRIGGER TR", "DROP TABLE T"), sql(target, new Schema()));
+	}
+
+	@Test
+	void modeledColumnDomainsSupplyCreateAndDropOrderWithoutCatalogPayload() {
+		var schema = new Schema();
+		schema.getDomains().add(new Domain("D").setDataType(DataType.INT));
+		schema.getTables().add(table("T"));
+		schema.getTables().get("T").getColumns().get("ID").setDomainName("D");
+		assertTrue(sql(new Schema(), schema).getFirst().contains("CREATE DOMAIN D"));
+		assertEquals(List.of("DROP TABLE T", "DROP DOMAIN D"), sql(schema, new Schema()));
+		var retained = schema.clone();
+		retained.getDomains().clear();
+		assertThrows(UnsupportedOperationException.class, () -> sql(schema, retained));
 	}
 }

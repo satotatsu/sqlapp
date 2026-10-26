@@ -38,19 +38,22 @@ public class Db2CreateModuleFactory extends SimpleSqlFactory<Package, Db2SqlBuil
 		} else {
 			String type = module.getSpecifics().get("MODULETYPE");
 			String sql;
+			List<SqlOperation> members = List.of();
 			if ("A".equals(type)) {
 				sql = "CREATE " + ("SYSPUBLIC".equals(module.getSchemaName()) ? "PUBLIC " : "") + "ALIAS " + name
 						+ " FOR MODULE " + Db2CreationContext.qualified(module.getSpecifics().get("BASE_MODULESCHEMA"),
 								module.getSpecifics().get("BASE_MODULENAME"));
 			} else {
-				if (!"M".equals(type) || !"0".equals(module.getSpecifics().get("MEMBER_COUNT"))
-						|| !module.getStatement().isEmpty() || module.getBody() != null)
+				if (!"M".equals(type) || !module.getStatement().isEmpty() || module.getBody() != null)
 					throw new IllegalArgumentException(
 							"Db2 module with members or PL/SQL package requires complete ordered CREATE/ALTER MODULE definition: "
 									+ name);
+				members = Db2ModuleMemberSql.create(module, this,
+						(text, operationType) -> createOperation(text, operationType, module));
 				sql = "CREATE MODULE " + name;
 			}
 			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, module);
+			result.addAll(members);
 		}
 		if (module.getRemarks() != null) {
 			String target = "A".equals(module.getSpecifics().get("MODULETYPE"))

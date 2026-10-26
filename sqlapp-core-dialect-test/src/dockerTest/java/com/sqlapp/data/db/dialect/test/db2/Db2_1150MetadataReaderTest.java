@@ -52,6 +52,27 @@ class Db2_1150MetadataReaderTest {
 	}
 
 	@Test
+	void specificMethodPrivilegesSurviveXmlAndNativeGrantRevoke() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2MethodPrivilegeAssertions.verify(connection);
+		}
+	}
+
+	@Test
+	void mixedTypesAndModuleCursorSurviveXmlAndCatalogRecreation() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2TypeGraphAssertions.verify(connection);
+		}
+	}
+
+	@Test
+	void crossSchemaTypeDependenciesRecreateFromReversedCatalog() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2TypeGraphAssertions.verifyCrossSchema(connection);
+		}
+	}
+
+	@Test
 	void schemaObjectsSurviveXmlAndDdlRecreation() throws Exception {
 		try (Connection connection = DB2.createConnection("")) {
 			Db2RecreationAssertions.verify(connection);
@@ -158,13 +179,14 @@ class Db2_1150MetadataReaderTest {
 					String.join("\n", view.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_COMPAT_CHILD"));
 			var procedure = schema.getProcedures().get("METADATA_COMPAT_PROCEDURE");
 			assertNotNull(procedure);
-			assertEquals(1, procedure.getArguments().size());
-			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT)
-					.contains("METADATA_COMPAT_AUDIT"));
+			if (procedure.getDefinition().isEmpty())
+				assertEquals(1, procedure.getArguments().size());
+			assertTrue(source(procedure).contains("METADATA_COMPAT_AUDIT"));
 			var function = schema.getFunctions().get("METADATA_COMPAT_FUNCTION");
 			assertNotNull(function);
-			assertEquals(1, function.getArguments().size());
-			assertTrue(String.join("\n", function.getStatement()).toUpperCase(Locale.ROOT).contains("P_AMOUNT"));
+			if (function.getDefinition().isEmpty())
+				assertEquals(1, function.getArguments().size());
+			assertTrue(source(function).contains("P_AMOUNT"));
 			var trigger = schema.getTriggers().get("METADATA_COMPAT_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_COMPAT_CHILD", trigger.getTableName());
@@ -182,13 +204,18 @@ class Db2_1150MetadataReaderTest {
 			var money = schema.getDomains().get("METADATA_COMPAT_MONEY");
 			assertNotNull(money);
 			assertEquals(DataType.DECIMAL, money.getDataType());
-			assertEquals("METADATA_COMPAT_MONEY",
+			assertEquals("\"" + schemaName + "\".\"METADATA_COMPAT_MONEY\"",
 					schema.getTables().get("METADATA_COMPAT_TYPED").getColumns().get("AMOUNT").getDataTypeName());
 			var address = schema.getTypes().get("METADATA_COMPAT_ADDRESS");
 			assertNotNull(address);
 			assertEquals(2, address.getColumns().size());
 			assertEquals(DataType.VARCHAR, address.getColumns().get("STREET").getDataType());
 		}
+	}
+
+	private static String source(com.sqlapp.data.schemas.Routine<?> routine) {
+		return String.join("\n", routine.getDefinition().isEmpty() ? routine.getStatement() : routine.getDefinition())
+				.toUpperCase(Locale.ROOT);
 	}
 
 	private void drop(final Statement statement, final String sql) throws SQLException {

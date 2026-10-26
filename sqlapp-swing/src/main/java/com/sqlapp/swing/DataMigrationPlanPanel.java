@@ -2,13 +2,9 @@
 package com.sqlapp.swing;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Container;
 import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.Insets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -40,6 +36,8 @@ final class DataMigrationPlanPanel extends JPanel {
 	final JButton editJob = new JButton("Edit job…");
 	final JButton newMigration = new JButton("New migration…");
 	final JTextField sourceSchema = new JTextField();
+	final JButton chooseSourceSchema = new JButton("Choose schema…");
+	final JTextField sourceSchemaSummary = new JTextField("Current schema (default)");
 	final JButton build = new JButton("Connect and inspect plan");
 	final JButton apply = new JButton("Execute reviewed job…");
 	final JButton saveExecution = new JButton("Save last audit…");
@@ -81,6 +79,11 @@ final class DataMigrationPlanPanel extends JPanel {
 	@FunctionalInterface
 	interface ConnectionTester {
 		String test(PlanningJdbc.Spec connection, char[] password);
+	}
+
+	@FunctionalInterface
+	interface SchemaLister {
+		java.util.List<String> list(PlanningJdbc.Spec source, char[] password);
 	}
 
 	@FunctionalInterface
@@ -167,6 +170,13 @@ final class DataMigrationPlanPanel extends JPanel {
 		connections.add(source);
 		connections.add(target);
 		settings.add(connections, BorderLayout.CENTER);
+		final var schemaSelection = new JPanel(new BorderLayout(4, 0));
+		sourceSchemaSummary.setEditable(false);
+		schemaSelection.add(sourceSchemaSummary, BorderLayout.CENTER);
+		schemaSelection.add(chooseSourceSchema, BorderLayout.EAST);
+		source.row(6, new JLabel("Schema"), schemaSelection);
+		chooseSourceSchema.addActionListener(event -> chooseSourceSchema(new SourceSchemaDiscoveryService()::list,
+				names -> SourceSchemaSelectionPanel.showDialog(this, names, sourceSchema.getText())));
 		final var advanced = new JPanel(new BorderLayout(8, 0));
 		advanced.add(new JLabel("Expected configuration SHA-256 (optional)"), BorderLayout.WEST);
 		advanced.add(expectedFingerprint, BorderLayout.CENTER);
@@ -220,7 +230,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		});
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, input, view);
 		split.setResizeWeight(0.25);
-		split.setDividerLocation(325);
+		split.setDividerLocation(355);
 		add(split, BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout(8, 0));
 		footer.add(statusPanel, BorderLayout.CENTER);
@@ -231,7 +241,7 @@ final class DataMigrationPlanPanel extends JPanel {
 			source.showDriver(advancedToggle.isSelected());
 			target.showDriver(advancedToggle.isSelected());
 			settings.revalidate();
-			split.setDividerLocation(advancedToggle.isSelected() ? 395 : 325);
+			split.setDividerLocation(advancedToggle.isSelected() ? 425 : 355);
 		});
 		final DocumentListener changed = new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
@@ -248,6 +258,46 @@ final class DataMigrationPlanPanel extends JPanel {
 		};
 		configurationFile.getDocument().addDocumentListener(changed);
 		sourceSchema.getDocument().addDocumentListener(changed);
+		sourceSchema.getDocument().addDocumentListener(new DocumentListener() {
+			private void refresh() {
+				final String name = sourceSchema.getText();
+				sourceSchemaSummary.setText(name.isBlank() ? "Current schema (default)" : name);
+				sourceSchemaSummary.setToolTipText("Schema: " + sourceSchemaSummary.getText());
+				sourceSchemaSummary.setCaretPosition(0);
+			}
+
+			public void insertUpdate(DocumentEvent event) {
+				refresh();
+			}
+
+			public void removeUpdate(DocumentEvent event) {
+				refresh();
+			}
+
+			public void changedUpdate(DocumentEvent event) {
+				refresh();
+			}
+		});
+		final DocumentListener sourceIdentityChanged = new DocumentListener() {
+			private void reset() {
+				if (!sourceSchema.getText().isEmpty())
+					sourceSchema.setText("");
+			}
+
+			public void insertUpdate(DocumentEvent event) {
+				reset();
+			}
+
+			public void removeUpdate(DocumentEvent event) {
+				reset();
+			}
+
+			public void changedUpdate(DocumentEvent event) {
+				reset();
+			}
+		};
+		for (var field : new JTextField[] { source.jdbcUrl, source.username, source.driverClass })
+			field.getDocument().addDocumentListener(sourceIdentityChanged);
 		expectedFingerprint.getDocument().addDocumentListener(changed);
 		for (final var fields : new ConnectionFields[] { source, target }) {
 			fields.test.addActionListener(event -> testConnection(fields));
@@ -356,6 +406,71 @@ final class DataMigrationPlanPanel extends JPanel {
 		}
 	}
 
+	void chooseSourceSchema(final SchemaLister lister,
+			final java.util.function.Function<java.util.List<String>, String> picker) {
+		if (isBusy())
+			return;
+		final PlanningJdbc.Spec connection;
+		try {
+			connection = source.snapshot().spec();
+		} catch (IllegalArgumentException failure) {
+			status.setText("Source connection: enter a JDBC URL starting with jdbc: before choosing a schema.");
+			source.jdbcUrl.requestFocusInWindow();
+			return;
+		}
+		final char[] password = source.password.getPassword();
+		final long requested = revision;
+		busy(true);
+		status.setText("Reading source schema names. No table rows are read or written.");
+		new SwingWorker<java.util.List<String>, Void>() {
+			@Override
+			protected java.util.List<String> doInBackground() {
+				try {
+					return java.util.List.copyOf(lister.list(connection, password));
+				} finally {
+					Arrays.fill(password, '\0');
+				}
+			}
+
+			@Override
+			protected void done() {
+				try {
+					if (requested != revision) {
+						status.setText("Connection inputs changed. Choose the source schema again.");
+						return;
+					}
+					final var names = get();
+					final String selected = picker.apply(names);
+					if (requested != revision)
+						status.setText("Connection inputs changed. Choose the source schema again.");
+					else if (selected == null)
+						status.setText("Schema selection cancelled. Existing settings retained.");
+					else {
+						if (!selected.isEmpty() && !names.contains(selected))
+							throw new IllegalArgumentException("Choose a schema from the current source list.");
+						sourceSchema.setText(selected);
+						status.setText("Source schema selected for New migration: "
+								+ (selected.isEmpty() ? "current schema" : selected) + ". Saved jobs are unchanged.");
+					}
+				} catch (InterruptedException failure) {
+					Thread.currentThread().interrupt();
+					failed(failure);
+				} catch (ExecutionException failure) {
+					failed(failure.getCause());
+				} catch (RuntimeException failure) {
+					failed(failure);
+				} finally {
+					busy(false);
+				}
+			}
+
+			private void failed(Throwable failure) {
+				status.setText("Unable to read source schemas. Existing settings retained; see Details.");
+				statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
+			}
+		}.execute();
+	}
+
 	private void chooseNewMigration() {
 		if (isBusy())
 			return;
@@ -395,18 +510,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	private String showUrlBuilder(final String currentUrl, final String connectionName) {
-		final var selected = new java.util.concurrent.atomic.AtomicReference<String>();
-		final var dialog = new javax.swing.JDialog(javax.swing.SwingUtilities.getWindowAncestor(this),
-				"Build JDBC URL — " + connectionName, java.awt.Dialog.ModalityType.APPLICATION_MODAL);
-		dialog.setContentPane(new JdbcUrlBuilderPanel(currentUrl, url -> {
-			selected.set(url);
-			dialog.dispose();
-		}, dialog::dispose));
-		dialog.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
-		dialog.setSize(750, 360);
-		dialog.setLocationRelativeTo(this);
-		dialog.setVisible(true);
-		return selected.get();
+		return JdbcUrlBuilderPanel.showDialog(this, currentUrl, connectionName);
 	}
 
 	void testConnection(final ConnectionFields fields) {
@@ -874,59 +978,4 @@ final class DataMigrationPlanPanel extends JPanel {
 		statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
 	}
 
-	static final class ConnectionFields extends JPanel {
-		private static final long serialVersionUID = 1L;
-		final JTextField jdbcUrl = new JTextField(20);
-		final JTextField username = new JTextField();
-		final JPasswordField password = new JPasswordField();
-		final JTextField driverClass = new JTextField();
-		final JButton test = new JButton("Test connection");
-		final JButton buildUrl = new JButton("Build URL…");
-		final ConnectionProfilePanel profile = new ConnectionProfilePanel(jdbcUrl, username, driverClass, password);
-		private final JLabel driverLabel = new JLabel("Driver class");
-
-		ConnectionFields(final String title) {
-			super(new GridBagLayout());
-			setBorder(BorderFactory.createTitledBorder(title));
-			row(0, new JLabel("JDBC URL"), jdbcUrl);
-			row(1, new JLabel("Username"), username);
-			row(2, new JLabel("Password"), password);
-			row(3, driverLabel, driverClass);
-			row(4, new JLabel("Profile"), profile);
-			test.setToolTipText("Check this connection and supported database dialect without a migration job.");
-			final var testRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-			testRow.add(buildUrl);
-			testRow.add(test);
-			row(5, new JLabel("Connection"), testRow);
-			showDriver(false);
-		}
-
-		void showDriver(final boolean show) {
-			driverLabel.setVisible(show);
-			driverClass.setVisible(show);
-		}
-
-		Input snapshot() {
-			return new Input(jdbcUrl.getText().trim(), username.getText().trim(), driverClass.getText().trim());
-		}
-
-		private void row(final int index, final JLabel label, final Component field) {
-			final var constraints = new GridBagConstraints();
-			constraints.gridy = index;
-			constraints.insets = new Insets(3, 3, 3, 3);
-			constraints.anchor = GridBagConstraints.WEST;
-			label.setLabelFor(field);
-			add(label, constraints);
-			constraints.gridx = 1;
-			constraints.weightx = 1;
-			constraints.fill = GridBagConstraints.HORIZONTAL;
-			add(field, constraints);
-		}
-	}
-
-	private record Input(String jdbcUrl, String username, String driverClass) {
-		PlanningJdbc.Spec spec() {
-			return new PlanningJdbc.Spec(jdbcUrl, username, driverClass);
-		}
-	}
 }

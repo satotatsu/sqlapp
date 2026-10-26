@@ -45,6 +45,8 @@ public final class FirebirdPrivilege {
 		if (name == null || name.isBlank()) {
 			throw new IllegalArgumentException("Firebird " + label + " is required");
 		}
+		if (name.indexOf('\0') >= 0)
+			throw new IllegalArgumentException("Firebird " + label + " must not contain NUL");
 	}
 
 	/** An explicit option keeps the default REVOKE behavior unchanged. */

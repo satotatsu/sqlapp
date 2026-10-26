@@ -93,7 +93,7 @@ For a larger example, explore the [generated business database reference](docs/g
 
 ## Try sqlapp
 
-Run all three customer/order demos from this repository with Java 21:
+Run all three customer/order demos from this repository with Java 25:
 
 ```shell
 ./gradlew --init-script docs/examples/offline-html/demo.init.gradle demoSqlapp
@@ -128,7 +128,7 @@ before selecting advanced migration options.
 
 ## Requirements
 
-- Java 21
+- Java 25
 - A JDBC driver for the database being accessed; declare it explicitly in the
   application so its version remains under application control
 - A matching `sqlapp-core-{db}` dialect module for database-specific metadata
@@ -292,7 +292,7 @@ keys, data import/export, format conversion, and test-data generation.
 
 ## Building this repository
 
-Use Java 21 and the checked-in wrapper:
+Use Java 25 and the checked-in wrapper:
 
 ```shell
 ./gradlew build

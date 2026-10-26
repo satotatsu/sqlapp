@@ -38,12 +38,11 @@ public class Db2CreateGlobalVariableFactory extends SimpleSqlFactory<Constant, D
 			}
 		} else {
 			var fields = variable.getSpecifics();
-			if (!"S".equals(fields.get("SCOPE")) || !Set.of("N", "C").contains(fields.getOrDefault("READONLY", ""))
-					|| !"SYSIBM".equals(fields.get("TYPESCHEMA")) || fields.get("TYPEMODULENAME") != null)
+			if (!"S".equals(fields.get("SCOPE")) || !Set.of("N", "C").contains(fields.getOrDefault("READONLY", "")))
 				throw new IllegalArgumentException(
 						"Db2 variable needs a complete CREATE definition for unsupported scope or type: "
 								+ variable.getName());
-			String renderedType = Db2NativeTypeSql.render(getDialect(), fields, variable.getName());
+			String renderedType = renderVariableType(variable);
 			List<String> statements = variable.getStatement();
 			if ("C".equals(fields.get("READONLY")) && statements.isEmpty())
 				throw new IllegalArgumentException(
@@ -51,10 +50,15 @@ public class Db2CreateGlobalVariableFactory extends SimpleSqlFactory<Constant, D
 			String expression = statements.isEmpty() ? null : Db2DefinitionSql.text(statements);
 			if (expression != null && (expression.isBlank() || expression.indexOf('\0') >= 0))
 				throw new IllegalArgumentException("Invalid Db2 variable expression");
+			// Catalog DEFAULT text omits the expression parentheses required by CREATE
+			// VARIABLE.
+			// Keep NULL as the native clause form (also valid for array/row variables).
+			// A possible line comment must not swallow the closing parenthesis.
+			if (expression != null && !"NULL".equalsIgnoreCase(expression.strip()))
+				expression = "(" + expression + (expression.contains("--") ? "\n)" : ")");
 			for (String sql : Db2CreationContext.sql(fields.get("QUALIFIER"), fields.get("FUNC_PATH")))
 				addSql(result, createSqlBuilder()._add(sql), SqlType.SET_SEARCH_PATH_TO_SCHEMA, variable);
-			String sql = "CREATE VARIABLE " + Db2CreationContext.qualified(variable.getSchemaName(), variable.getName())
-					+ " " + renderedType;
+			String sql = createVariablePrefix(variable) + " " + renderedType;
 			if (expression != null)
 				sql += ("C".equals(fields.get("READONLY")) ? " CONSTANT " : " DEFAULT ") + expression;
 			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, variable);
@@ -66,5 +70,23 @@ public class Db2CreateGlobalVariableFactory extends SimpleSqlFactory<Constant, D
 							+ variable.getRemarks().replace("'", "''") + "'"),
 					SqlType.SET_COMMENT, variable);
 		return result;
+	}
+
+	/**
+	 * Allows module-scoped variables to compose the same type/default validation.
+	 */
+	protected String createVariablePrefix(Constant variable) {
+		return "CREATE VARIABLE " + Db2CreationContext.qualified(variable.getSchemaName(), variable.getName());
+	}
+
+	/**
+	 * Resolves module-local types without changing default global-variable rules.
+	 */
+	protected String renderVariableType(Constant variable) {
+		var fields = variable.getSpecifics();
+		if (!"SYSIBM".equals(fields.get("TYPESCHEMA")) || fields.get("TYPEMODULENAME") != null)
+			throw new IllegalArgumentException(
+					"Db2 variable needs a complete definition for unsupported type: " + variable.getName());
+		return Db2NativeTypeSql.render(getDialect(), fields, variable.getName());
 	}
 }

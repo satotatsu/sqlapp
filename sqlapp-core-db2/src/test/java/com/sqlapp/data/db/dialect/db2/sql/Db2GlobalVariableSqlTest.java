@@ -35,7 +35,7 @@ class Db2GlobalVariableSqlTest {
 		assertEquals(variable, variable.clone());
 		var sql = sql(restored, SqlType.CREATE);
 		assertEquals("SET CURRENT SCHEMA = 'A.Schema'", sql.getFirst());
-		assertTrue(sql.contains("CREATE VARIABLE \"A.Schema\".\"V.Name\" INTEGER DEFAULT (1 + 2)"), sql.toString());
+		assertTrue(sql.contains("CREATE VARIABLE \"A.Schema\".\"V.Name\" INTEGER DEFAULT ((1 + 2))"), sql.toString());
 		assertEquals("COMMENT ON VARIABLE \"A.Schema\".\"V.Name\" IS 'variable''s comment'", sql.getLast());
 		assertEquals(List.of("DROP VARIABLE \"A.Schema\".\"V.Name\" RESTRICT"), sql(variable, SqlType.DROP));
 	}
@@ -45,7 +45,13 @@ class Db2GlobalVariableSqlTest {
 		var variable = variable("INTEGER");
 		variable.setStatement("(1\n\n + 2)");
 		Constant restored = SchemaUtils.readXml(new java.io.StringReader(variable.asXml()));
-		assertTrue(sql(restored, SqlType.CREATE).getFirst().endsWith("DEFAULT (1\n\n + 2)"));
+		assertTrue(sql(restored, SqlType.CREATE).getFirst().endsWith("DEFAULT ((1\n\n + 2))"));
+		variable.setStatement("APP.F(4)");
+		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("DEFAULT (APP.F(4))"));
+		variable.setStatement("NULL");
+		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("DEFAULT NULL"));
+		variable.setStatement("1 -- literal default");
+		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("DEFAULT (1 -- literal default\n)"));
 	}
 
 	@Test
@@ -63,7 +69,7 @@ class Db2GlobalVariableSqlTest {
 		variable = variable("INTEGER");
 		variable.getSpecifics().put("READONLY", "C");
 		variable.getStatement().add("42");
-		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("INTEGER CONSTANT 42"));
+		assertTrue(sql(variable, SqlType.CREATE).getFirst().endsWith("INTEGER CONSTANT (42)"));
 	}
 
 	@Test

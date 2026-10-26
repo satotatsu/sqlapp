@@ -2,7 +2,7 @@
 
 ## Project overview
 
-sqlapp is a Java 21 and Gradle multi-project database utility.
+sqlapp is a Java 25 and Gradle multi-project database utility.
 
 - `sqlapp-core`: shared Schema model, JDBC access and SQL generation
 - `sqlapp-command`: documentation, data handling and migration commands
@@ -15,7 +15,7 @@ Read the nearest module `AGENTS.md` in addition to this file.
 
 ## Environment
 
-- Use Java 21 and the repository Gradle Wrapper.
+- Use Java 25 and the repository Gradle Wrapper.
 - Use UTF-8 for source files and generated text.
 - Do not modify `build/`, `bin/`, `.gradle/`, generated output, dependency
   versions, credentials, production data or local settings unless required.

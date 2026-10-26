@@ -44,17 +44,44 @@ final class Db2NativeAlterAssertions {
 				statement.execute("CREATE MODULE " + schemaName + ".M");
 				cleanup.push("DROP MODULE " + schemaName + ".M");
 				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH CONDITION C FOR SQLSTATE '75001'");
-				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE V INTEGER");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH VARIABLE V INTEGER DEFAULT (1 + 2 -- literal default\n)");
 				statement.execute("ALTER MODULE " + schemaName
 						+ ".M PUBLISH TYPE R AS ROW (ID INTEGER, LABEL VARCHAR(10 OCTETS))");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH FUNCTION FROW(P R) RETURNS INTEGER SPECIFIC FROW_S LANGUAGE SQL RETURN P.ID");
 				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE RV R");
 				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH TYPE RA AS R ARRAY[10]");
 				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH TYPE N AS ROW (ITEMS RA)");
 				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE NV N");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH TYPE CW AS CURSOR");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH TYPE CS AS R CURSOR");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE CV CS");
 				statement.execute("ALTER MODULE " + schemaName
 						+ ".M PUBLISH FUNCTION F(P INTEGER) RETURNS INTEGER SPECIFIC F_S LANGUAGE SQL RETURN P + 1");
 				statement.execute("ALTER MODULE " + schemaName
 						+ ".M ADD PROCEDURE P() SPECIFIC P_S LANGUAGE SQL BEGIN DECLARE X INTEGER; SET X=1; SET X=X+1; END");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH FUNCTION FP(P INTEGER) RETURNS INTEGER SPECIFIC FP_S");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH PROCEDURE PP(IN P INTEGER) SPECIFIC PP_S LANGUAGE SQL DYNAMIC RESULT SETS 1 CALLED ON NULL INPUT COMMIT ON RETURN NO");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH PROCEDURE PQ(OUT N INTEGER) SPECIFIC PQ_S LANGUAGE SQL DYNAMIC RESULT SETS 0 CALLED ON NULL INPUT COMMIT ON RETURN NO BEGIN SET N=7; END");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH FUNCTION FD(N INTEGER DEFAULT 1) RETURNS INTEGER SPECIFIC FD_S LANGUAGE SQL RETURN N");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH FUNCTION FA(N ANCHOR DATA TYPE TO V) RETURNS INTEGER SPECIFIC FA_S LANGUAGE SQL RETURN N");
+				for (String name : List.of("RF", "RG"))
+					statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH FUNCTION " + name
+							+ "(N INTEGER) RETURNS INTEGER SPECIFIC " + name
+							+ "_S LANGUAGE SQL DETERMINISTIC NO EXTERNAL ACTION CONTAINS SQL");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE RD INTEGER DEFAULT (RF(4))");
+				for (String name : List.of("RF", "RG"))
+					statement.execute("ALTER MODULE " + schemaName + ".M ADD FUNCTION " + name
+							+ "(N INTEGER) RETURNS INTEGER SPECIFIC " + name
+							+ "_S LANGUAGE SQL DETERMINISTIC NO EXTERNAL ACTION CONTAINS SQL BEGIN "
+							+ "IF N=0 THEN RETURN 0; END IF; RETURN " + (name.equals("RF") ? "RG" : "RF")
+							+ "(N-1)+1; END");
 				var reader = dialect.getCatalogReader().getSchemaReader();
 				reader.setSchemaName(schemaName);
 				Schema before = reader.getAllFull(connection).stream().filter(s -> schemaName.equals(s.getName()))
@@ -107,7 +134,29 @@ final class Db2NativeAlterAssertions {
 					assertEquals(1, rows.getInt(1));
 				}
 				com.sqlapp.data.schemas.Package module = after.getPackages().get("M");
-				assertEquals(9, com.sqlapp.data.db.dialect.db2.Db2ModuleMembers.get(module).members().size());
+				var originalMembers = com.sqlapp.data.db.dialect.db2.Db2ModuleMembers.get(module).members();
+				var memberSnapshot = com.sqlapp.data.db.dialect.db2.Db2ModuleMembers.get(module);
+				assertTrue(memberSnapshot.orderKnown(),
+						originalMembers
+								.stream().map(
+										member -> member.kind() + ":" + member.name() + ":" + member.userDefined() + ":"
+												+ member.attributes().get("MEMBER_CREATE_TIME") + ":"
+												+ com.sqlapp.data.db.dialect.db2.Db2ModuleMembers
+														.generatedTypeOwner(memberSnapshot, member))
+								.toList().toString());
+				assertEquals(21, originalMembers.stream()
+						.filter(com.sqlapp.data.db.dialect.db2.Db2ModuleMembers.Member::userDefined).count());
+				for (String routine : List.of("RF", "RG", "PQ"))
+					assertEquals("Y", originalMembers.stream().filter(member -> member.name().equals(routine))
+							.findFirst().orElseThrow().attributes().get("ROUTINE_DECLARATION_INDEPENDENT"));
+				for (String routine : List.of("FROW", "FD"))
+					assertEquals("N", originalMembers.stream().filter(member -> member.name().equals(routine))
+							.findFirst().orElseThrow().attributes().get("ROUTINE_DECLARATION_INDEPENDENT"));
+				String defaultTime = originalMembers.stream().filter(member -> member.name().equals("RD")).findFirst()
+						.orElseThrow().attributes().get("MEMBER_CREATE_TIME");
+				String implementationTime = originalMembers.stream().filter(member -> member.name().equals("RF"))
+						.findFirst().orElseThrow().attributes().get("MEMBER_CREATE_TIME");
+				assertTrue(defaultTime.compareTo(implementationTime) < 0);
 				SqlFactory<com.sqlapp.data.schemas.Package> recreateModule = dialect.createSqlFactoryRegistry()
 						.getSqlFactory(module, SqlType.CREATE);
 				statement.execute("DROP MODULE " + schemaName + ".M");
@@ -117,14 +166,43 @@ final class Db2NativeAlterAssertions {
 						.findFirst().orElseThrow();
 				var rereadMembers = com.sqlapp.data.db.dialect.db2.Db2ModuleMembers
 						.get(moduleActual.getPackages().get("M")).members();
-				assertEquals(9, rereadMembers.size());
-				var rereadRow = rereadMembers.stream().filter(member -> member.name().equals("R")).findFirst()
-						.orElseThrow();
+				assertEquals(originalMembers.size(), rereadMembers.size());
+				for (String prototype : List.of("FP", "PP")) {
+					var member = rereadMembers.stream().filter(value -> value.name().equals(prototype)).findFirst()
+							.orElseThrow();
+					assertEquals("N", member.attributes().get("MODULEROUTINEIMPLEMENTED"));
+					assertTrue(member.published());
+				}
+				var rereadRow = rereadMembers.stream()
+						.filter(member -> member.kind() == com.sqlapp.data.db.dialect.db2.Db2ModuleMembers.Kind.TYPE
+								&& member.name().equals("R"))
+						.findFirst().orElseThrow();
 				assertEquals(List.of("ID", "LABEL"), com.sqlapp.data.db.dialect.db2.Db2ModuleMembers
 						.getRowType(rereadRow).getColumns().stream().map(TypeColumn::getName).toList());
 				try (var rows = statement.executeQuery("VALUES " + schemaName + ".M.F(41)")) {
 					assertTrue(rows.next());
 					assertEquals(42, rows.getInt(1));
+				}
+				try (var rows = statement.executeQuery("VALUES " + schemaName + ".M.RF(4)")) {
+					assertTrue(rows.next());
+					assertEquals(4, rows.getInt(1));
+				}
+				try (var rows = statement.executeQuery("VALUES " + schemaName + ".M.RD")) {
+					assertTrue(rows.next());
+					assertEquals(4, rows.getInt(1));
+				}
+				try (var rows = statement.executeQuery("VALUES " + schemaName + ".M.V")) {
+					assertTrue(rows.next());
+					assertEquals(3, rows.getInt(1));
+				}
+				try (var call = connection.prepareCall("CALL " + schemaName + ".M.PQ(?)")) {
+					call.registerOutParameter(1, java.sql.Types.INTEGER);
+					call.execute();
+					assertEquals(7, call.getInt(1));
+				}
+				try (var rows = statement.executeQuery("VALUES " + schemaName + ".M.FA(5)")) {
+					assertTrue(rows.next());
+					assertEquals(5, rows.getInt(1));
 				}
 				try (var rows = statement.executeQuery("VALUES NEXT VALUE FOR " + schemaName + ".S")) {
 					assertTrue(rows.next());

@@ -16,6 +16,7 @@ final class FirebirdSchemaAlterOrder {
 		var before = FirebirdSchemaCreateOrder.objects(original);
 		var after = FirebirdSchemaCreateOrder.objects(target);
 		var oldEdges = FirebirdSchemaCreateOrder.dependencies(original);
+		var compiledEdges = new HashSet<>(FirebirdSchemaDependencies.get(original));
 		var newEdges = new HashSet<>(FirebirdSchemaCreateOrder.dependencies(target));
 		var groups = new LinkedHashMap<ObjectId, List<SqlOperation>>();
 		var result = new ArrayList<SqlOperation>();
@@ -34,6 +35,28 @@ final class FirebirdSchemaAlterOrder {
 		for (var key : groups.keySet())
 			if (before.containsKey(key) && after.containsKey(key) && changesShape(before.get(key), after.get(key)))
 				risky.add(key);
+		if (original.getSpecifics().get(FirebirdSchemaDependencies.SPECIFICS_KEY) == null)
+			for (var dependent : before.entrySet())
+				if (hasBody(dependent.getValue()))
+					for (var provider : groups.keySet())
+						if ((removed.contains(provider) || risky.contains(provider))
+								&& canReference(dependent.getKey(), provider)
+								&& !oldEdges.contains(new Dependency(dependent.getKey(), provider)))
+							throw unsafe(new Dependency(dependent.getKey(), provider),
+									"original body dependencies are unknown; read or record the original graph");
+		if (target.getSpecifics().get(FirebirdSchemaDependencies.SPECIFICS_KEY) == null)
+			for (var dependent : after.entrySet())
+				if (groups.containsKey(dependent.getKey()) && hasBody(dependent.getValue())
+						&& structural(groups.get(dependent.getKey())))
+					for (var provider : groups.keySet())
+						if (structural(groups.get(provider))
+								&& (removed.contains(provider) || !before.containsKey(provider)
+										|| risky.contains(provider)
+										|| addsMembers(before.get(provider), after.get(provider)))
+								&& canReference(dependent.getKey(), provider)
+								&& !newEdges.contains(new Dependency(dependent.getKey(), provider)))
+							throw unsafe(new Dependency(dependent.getKey(), provider),
+									"target body dependencies are unknown; read or record the target graph");
 		var required = new LinkedHashMap<ObjectId, Set<ObjectId>>();
 		groups.keySet().forEach(key -> required.put(key, new LinkedHashSet<>()));
 		for (var edge : newEdges) {
@@ -55,7 +78,8 @@ final class FirebirdSchemaAlterOrder {
 				if (newEdges.contains(edge))
 					throw unsafe(edge,
 							"retained dependency cannot be proved compatible with this shape change/removal");
-				if (!target.getSpecifics().containsKey(FirebirdSchemaDependencies.SPECIFICS_KEY))
+				if (compiledEdges.contains(edge)
+						&& target.getSpecifics().get(FirebirdSchemaDependencies.SPECIFICS_KEY) == null)
 					throw unsafe(edge, "record the target dependency graph, including an explicitly empty graph");
 				if (!groups.containsKey(dependent)
 						|| groups.get(dependent).stream().allMatch(op -> op.getSqlType() == SqlType.SET_COMMENT))
@@ -67,6 +91,39 @@ final class FirebirdSchemaAlterOrder {
 		}
 		result.addAll(FirebirdSchemaCreateOrder.sorted(groups, required, "ALTER"));
 		return result;
+	}
+
+	private static boolean canReference(ObjectId dependent, ObjectId provider) {
+		return !dependent.equals(provider) && provider.kind() != Kind.TRIGGER && provider.kind() != Kind.PACKAGE_BODY;
+	}
+
+	private static boolean structural(List<SqlOperation> operations) {
+		return operations.stream().anyMatch(operation -> operation.getSqlType() != SqlType.SET_COMMENT);
+	}
+
+	private static boolean addsMembers(AbstractSchemaObject<?> before, AbstractSchemaObject<?> after) {
+		if (!(before instanceof Table old) || !(after instanceof Table next))
+			return false;
+		return next.getColumns().stream().anyMatch(
+				column -> old.getColumns().stream().noneMatch(previous -> previous.getName().equals(column.getName())))
+				|| next.getIndexes().stream().anyMatch(index -> old.getIndexes().stream()
+						.noneMatch(previous -> previous.getName().equals(index.getName())));
+	}
+
+	private static boolean hasBody(AbstractSchemaObject<?> object) {
+		if (object instanceof View || object instanceof ArgumentRoutine<?> || object instanceof Trigger
+				|| object instanceof com.sqlapp.data.schemas.Package || object instanceof PackageBody)
+			return true;
+		if (object instanceof Domain domain)
+			return domain.getCheck() != null || domain.getDefaultValue() != null;
+		if (object instanceof Table table)
+			return table.getColumns().stream()
+					.anyMatch(column -> column.getFormula() != null || column.getDefaultValue() != null
+							|| column.getCheckConstraint() != null)
+					|| table.getConstraints().stream().anyMatch(constraint -> constraint instanceof CheckConstraint)
+					|| table.getIndexes().stream()
+							.anyMatch(index -> index.getIndexType() == IndexType.Function || index.getWhere() != null);
+		return false;
 	}
 
 	private static UnsupportedOperationException unsafe(Dependency edge, String reason) {

@@ -31,7 +31,7 @@ public class FirebirdSetCommentFactory extends SimpleSqlFactory<AbstractNamedObj
 		else if (object instanceof Procedure)
 			kind = "PROCEDURE";
 		else if (object instanceof Function function)
-			kind = function.getSpecifics().containsKey("firebird.udf.module") ? "EXTERNAL FUNCTION" : "FUNCTION";
+			kind = FirebirdExternalFunctionSql.legacy(function, getDialect()) ? "EXTERNAL FUNCTION" : "FUNCTION";
 		else if (object instanceof com.sqlapp.data.schemas.Package)
 			kind = "PACKAGE";
 		else if (object instanceof Role)
