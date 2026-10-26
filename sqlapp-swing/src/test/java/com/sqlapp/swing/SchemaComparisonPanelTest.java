@@ -57,15 +57,25 @@ class SchemaComparisonPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = ref.get();
 			assertEquals(snapshot.sqlDraft(), panel.sqlPreview.getText());
+			panel.sqlCode.navigation.query.setText("TABLE");
+			panel.sqlCode.navigation.next.doClick(0);
+			assertEquals("TABLE", panel.sqlPreview.getSelectedText());
+			panel.reviewCode.navigation.query.setText("review");
+			panel.reviewCode.navigation.count.doClick(0);
+			assertEquals("1 match (non-overlapping)", panel.reviewCode.navigation.status.getText());
+			assertEquals("TABLE", panel.sqlCode.navigation.query.getText());
 			assertTrue(panel.saveSql.isEnabled());
 			onEnabled(panel.compare, failed);
 			panel.saveTo(java.nio.file.Path.of("draft.sql"), true);
 			assertFalse(panel.saveSql.isEnabled());
+			assertFalse(panel.sqlCode.navigation.next.isEnabled());
 		});
 		assertTrue(failed.await(5, java.util.concurrent.TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = ref.get();
 			assertTrue(panel.status.getText().contains("disk full"));
+			assertTrue(panel.sqlCode.navigation.next.isEnabled());
+			assertEquals("TABLE", panel.sqlCode.navigation.query.getText());
 			assertTrue(panel.statusPanel.detailsText().contains("disk full"));
 			assertEquals(snapshot.sqlDraft(), panel.sqlPreview.getText());
 			onEnabled(panel.compare, saved);
@@ -81,6 +91,8 @@ class SchemaComparisonPanelTest {
 			panel.target.setText("new.xml");
 			assertFalse(panel.saveSql.isEnabled());
 			assertTrue(panel.sqlPreview.getText().isEmpty());
+			assertTrue(panel.sqlCode.navigation.query.getText().isEmpty());
+			assertTrue(panel.reviewCode.navigation.query.getText().isEmpty());
 		});
 	}
 

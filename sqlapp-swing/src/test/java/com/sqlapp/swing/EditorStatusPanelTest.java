@@ -12,6 +12,51 @@ import org.junit.jupiter.api.Test;
 
 class EditorStatusPanelTest {
 	@Test
+	void diagnosticsIncludeSqlStatesVendorCodesChainedAndCleanupFailures() {
+		final var sql = new java.sql.SQLException("Statement rejected", "42000", 123);
+		final var next = new java.sql.SQLException("More server detail", "22001", 456);
+		sql.setNextException(next);
+		sql.initCause(new java.io.IOException("Transport failed"));
+		sql.addSuppressed(new java.io.IOException("Rollback failed"));
+		next.addSuppressed(new java.io.IOException("Close failed"));
+		final String text = EditorStatusPanel.failureDetails(new IllegalStateException("Migration failed", sql));
+		assertTrue(text.contains("Caused by: java.sql.SQLException: Statement rejected"));
+		assertTrue(text.contains("SQLState: 42000; vendor code: 123"));
+		assertTrue(text.contains("Caused by: java.io.IOException: Transport failed"));
+		assertTrue(text.contains("Suppressed: java.io.IOException: Rollback failed"));
+		assertTrue(text.contains("Next SQL exception: java.sql.SQLException: More server detail"));
+		assertTrue(text.contains("SQLState: 22001; vendor code: 456"));
+		assertTrue(text.contains("Suppressed: java.io.IOException: Close failed"));
+		assertTrue(EditorStatusPanel.failureDetails(new java.sql.SQLException("Unknown"))
+				.contains("SQLState: not provided; vendor code: 0"));
+	}
+
+	@Test
+	void diagnosticsTerminateForSharedAndCyclicSqlAndSuppressedExceptions() {
+		final var first = new java.sql.SQLException("first", "A", 1);
+		final var second = new java.sql.SQLException("second", "B", 2);
+		first.setNextException(second);
+		second.setNextException(first);
+		first.addSuppressed(second);
+		second.addSuppressed(first);
+		final String text = EditorStatusPanel.failureDetails(first);
+		assertEquals(1, text.split("SQLState: A", -1).length - 1);
+		assertEquals(1, text.split("SQLState: B", -1).length - 1);
+		assertTrue(text.contains("already reported"));
+		assertTrue(text.length() < 1000);
+	}
+
+	@Test
+	void diagnosticsHandleDeepCauseChainsWithoutRecursiveStackGrowth() {
+		Throwable failure = new IllegalStateException("root");
+		for (int index = 0; index < 2000; index++)
+			failure = new IllegalStateException("layer " + index, failure);
+		final String text = EditorStatusPanel.failureDetails(failure);
+		assertTrue(text.startsWith("java.lang.IllegalStateException: layer 1999"));
+		assertTrue(text.endsWith("Caused by: java.lang.IllegalStateException: root"));
+	}
+
+	@Test
 	void extendedDetailsAreSelectableAndExpireWhenStatusChanges() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			final var label = new JLabel("Failed");

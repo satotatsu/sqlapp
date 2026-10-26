@@ -60,6 +60,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	final ReportReviewView view = new ReportReviewView();
 	final JLabel status = new JLabel("Connect to read migration history. Migration SQL is not executed.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
+	final SavedReportButton savedReport = new SavedReportButton(this::isBusy);
 	private final EditorFileChooser directoryDialogs = new EditorFileChooser();
 	private final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JPanel form = new JPanel(new BorderLayout(4, 4));
@@ -153,7 +154,10 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(240);
 		add(split, BorderLayout.CENTER);
-		add(statusPanel, BorderLayout.SOUTH);
+		final var footer = new JPanel(new BorderLayout(8, 0));
+		footer.add(statusPanel, BorderLayout.CENTER);
+		footer.add(savedReport, BorderLayout.EAST);
+		add(footer, BorderLayout.SOUTH);
 		advancedToggle.addActionListener(event -> {
 			advanced.setVisible(advancedToggle.isSelected());
 			input.revalidate();
@@ -250,6 +254,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 
 	private void busy(final boolean busy) {
 		this.busy = busy;
+		savedReport.refresh();
 		enable(form, !busy);
 		advancedToggle.setEnabled(!busy);
 		build.setEnabled(!busy);
@@ -435,6 +440,15 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		return busy || executing || profile.isBusy();
 	}
 
+	boolean selectDriverClass(final String name) {
+		if (isBusy())
+			return false;
+		driverClass.setText(java.util.Objects.requireNonNull(name));
+		if (!advancedToggle.isSelected())
+			advancedToggle.doClick(0);
+		return true;
+	}
+
 	private boolean blockedByProfile() {
 		if (!profile.isBusy())
 			return false;
@@ -473,6 +487,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved execution result: " + destination);
+					savedReport.saved(destination, ReportReviewService.Type.SCHEMA_EXECUTION);
 					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
@@ -529,6 +544,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved plan: " + destination);
+					savedReport.saved(destination, ReportReviewService.Type.SCHEMA_PLAN);
 					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();

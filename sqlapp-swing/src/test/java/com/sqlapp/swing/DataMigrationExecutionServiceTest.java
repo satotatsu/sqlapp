@@ -78,6 +78,7 @@ class DataMigrationExecutionServiceTest {
 		assertTrue(result.successful(), result.review().summary());
 		assertEquals(1, result.execution().processedRows());
 		assertTrue(result.review().summary().contains("Verification: MATCH"));
+		assertEquals(List.of(1, 2, 3), result.review().numericColumns());
 		assertEquals(1, count(targetUrl, "SELECT COUNT(*) FROM CUSTOMERS WHERE CUSTOMER_ID=1 AND NAME='source'"));
 		final Path audit = directory.resolve("execution.json");
 		executor.save(result, audit);

@@ -14,6 +14,52 @@ import org.junit.jupiter.api.Test;
 
 class ReportReviewViewTest {
 	@Test
+	void jsonNavigationSearchesCountsAndNavigatesWithoutEditingAndResetsForNextReport() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var view = new ReportReviewView();
+			final String json = "{\n  \"task\": \"日😀\",\n  \"note\": \"TASK [x].*\"\n}";
+			view.showReview(new ReportReviewService.Review("First", List.of(), List.of(), json));
+			view.tabs.setSelectedIndex(1);
+			view.navigation.query.setText("task");
+			view.navigation.count.doClick(0);
+			assertEquals("2 matches (non-overlapping)", view.navigation.status.getText());
+			view.navigation.next.doClick(0);
+			assertEquals("task", view.details.getSelectedText());
+			view.navigation.next.doClick(0);
+			assertEquals("TASK", view.details.getSelectedText());
+			view.navigation.previous.doClick(0);
+			assertEquals("task", view.details.getSelectedText());
+			view.navigation.query.setText("[x].*");
+			view.navigation.next.doClick(0);
+			assertEquals("[x].*", view.details.getSelectedText());
+			view.navigation.line.setText("2");
+			view.navigation.column.setText("3");
+			view.navigation.go.doClick(0);
+			assertEquals(json.indexOf('\n') + 3, view.details.getCaretPosition());
+			view.navigation.wrapLines.doClick(0);
+			assertTrue(view.details.getLineWrap());
+			assertNull(view.navigation.replace.getParent());
+			assertNull(view.navigation.history.undo.getParent());
+			view.navigation.replacement.setText("changed");
+			view.navigation.replaceAllMatches();
+			view.navigation.history.undo();
+			assertEquals(json, view.details.getText());
+			assertFalse(view.details.isEditable());
+			assertFalse(view.navigation.history.undo.isEnabled());
+			view.showReview(new ReportReviewService.Review("Second", List.of(), List.of(), "{}"));
+			assertTrue(view.navigation.query.getText().isEmpty());
+			assertTrue(view.navigation.line.getText().isEmpty());
+			assertTrue(view.navigation.column.getText().isEmpty());
+			assertTrue(view.navigation.status.getText().isBlank());
+			assertEquals(0, view.details.getCaretPosition());
+			assertTrue(view.details.getLineWrap());
+			view.clear();
+			assertEquals("", view.details.getText());
+			assertFalse(view.navigation.history.undo.isEnabled());
+		});
+	}
+
+	@Test
 	void numericColumnsSortCountsPreserveMissingValuesAndResetForNextReview() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			final var view = new ReportReviewView();
@@ -27,6 +73,9 @@ class ReportReviewViewTest {
 			view.tasks.setRowSelectionInterval(1, 2);
 			assertTrue(view.taskTable.selected.getText().contains("Task: small"));
 			assertEquals("Task\tRows\nsmall\t2\nmedium\t100\n", ReportTableClipboard.formatSelected(view.tasks));
+			view.tasks.getRowSorter().toggleSortOrder(1);
+			assertEquals("not recorded", view.tasks.getValueAt(0, 1));
+			assertEquals(Long.toString(Long.MAX_VALUE), view.tasks.getValueAt(1, 1));
 			view.taskTable.filter.setText("missing");
 			assertEquals("not recorded", view.tasks.getValueAt(0, 1));
 			assertEquals(5, view.tasks.getModel().getRowCount());

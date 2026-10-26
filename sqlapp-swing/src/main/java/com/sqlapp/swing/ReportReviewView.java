@@ -19,6 +19,9 @@ final class ReportReviewView extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final JTextArea summary = readOnlyText();
 	final RSyntaxTextArea details = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_JSON, false);
+	private final ReadOnlyCodePanel json = new ReadOnlyCodePanel(details);
+	final EditorNavigationBar navigation = json.navigation;
+	final EditorPositionLabel position = json.position;
 	final JTable tasks = new JTable();
 	final ReportDetailTablePanel taskTable = new ReportDetailTablePanel(tasks, null, "Filter tasks / migrations",
 			"rows");
@@ -31,7 +34,7 @@ final class ReportReviewView extends JPanel {
 		summary.setRows(7);
 		tasks.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		tabs.addTab("Tasks / migrations", taskTable);
-		tabs.addTab("Parsed report JSON", CodeEditors.scroll(details));
+		tabs.addTab("Parsed report JSON", json);
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(summary), tabs);
 		split.setResizeWeight(0.3);
 		add(split, BorderLayout.CENTER);
@@ -39,7 +42,7 @@ final class ReportReviewView extends JPanel {
 
 	void clear() {
 		summary.setText("");
-		details.setText("");
+		resetDetails("");
 		tasks.setModel(new DefaultTableModel());
 		resetDetailTabs();
 	}
@@ -48,8 +51,7 @@ final class ReportReviewView extends JPanel {
 		resetDetailTabs();
 		summary.setText(review.summary());
 		summary.setCaretPosition(0);
-		details.setText(review.details());
-		details.setCaretPosition(0);
+		resetDetails(review.details());
 		showTable(tasks, review.columns(), review.rows());
 		taskTable.setNumericColumns(review.numericColumns());
 		for (final var section : review.tables()) {
@@ -61,6 +63,10 @@ final class ReportReviewView extends JPanel {
 		tabs.setSelectedIndex(0);
 		while (tabs.getTabCount() > 2)
 			tabs.removeTabAt(1);
+	}
+
+	private void resetDetails(final String text) {
+		json.showText(text);
 	}
 
 	private static void showTable(final JTable table, final java.util.List<String> columns,

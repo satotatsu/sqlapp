@@ -39,13 +39,22 @@ final class PlanningJdbc {
 
 	private static HikariDataSource open(final Spec spec, final char[] password, final boolean readOnly,
 			final int size) {
+		return open(spec, password, readOnly, size, JdbcDriverLibraries.SESSION);
+	}
+
+	static HikariDataSource open(final Spec spec, final char[] password, final boolean readOnly, final int size,
+			final JdbcDriverLibraries libraries) {
 		final var configuration = new HikariConfig();
-		configuration.setJdbcUrl(spec.jdbcUrl());
+		final var added = libraries.resolve(spec);
+		if (added != null)
+			configuration.setDataSource(new AddedDriverDataSource(added, spec, password));
+		else
+			configuration.setJdbcUrl(spec.jdbcUrl());
 		if (spec.username() != null && !spec.username().isBlank()) {
 			configuration.setUsername(spec.username());
 		}
 		configuration.setPassword(new String(password));
-		if (spec.driverClass() != null && !spec.driverClass().isBlank()) {
+		if (added == null && spec.driverClass() != null && !spec.driverClass().isBlank()) {
 			configuration.setDriverClassName(spec.driverClass().trim());
 		}
 		configuration.setReadOnly(readOnly);

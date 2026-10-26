@@ -133,11 +133,13 @@ final class ReportReviewPanel extends JPanel {
 					view.showReview(review);
 					fileDialogs.remember(Path.of(path));
 					status.setText("Loaded saved report. No live checks, approval or execution performed.");
+					statusPanel.setDetails(status.getText() + "\nFile: " + Path.of(path).toAbsolutePath().normalize()
+							+ "\nReport type: " + selectedType + "\n\n" + review.summary());
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
-					failure(exception);
+					failure(exception, path, selectedType);
 				} catch (final ExecutionException exception) {
-					failure(exception.getCause());
+					failure(exception.getCause(), path, selectedType);
 				} finally {
 					busy(false);
 				}
@@ -145,10 +147,22 @@ final class ReportReviewPanel extends JPanel {
 		}.execute();
 	}
 
-	private void failure(final Throwable failure) {
+	boolean requestOpen(final Path selectedFile, final ReportReviewService.Type selectedType) {
+		if (busy)
+			return false;
+		java.util.Objects.requireNonNull(selectedFile, "report file");
+		java.util.Objects.requireNonNull(selectedType, "report type");
+		file.setText(selectedFile.toAbsolutePath().normalize().toString());
+		type.setSelectedItem(selectedType);
+		load();
+		return true;
+	}
+
+	private void failure(final Throwable failure, final String path, final ReportReviewService.Type selectedType) {
 		summary.setText("Unable to load the selected report.\n" + EditorStatusPanel.failureDetails(failure));
 		status.setText("Load failed. Check the report type, format and file.");
-		statusPanel.setDetails(status.getText() + "\n\n" + summary.getText());
+		statusPanel.setDetails(
+				status.getText() + "\nFile: " + path + "\nReport type: " + selectedType + "\n\n" + summary.getText());
 	}
 
 	boolean isBusy() {

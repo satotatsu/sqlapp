@@ -83,10 +83,23 @@ class DataMigrationPlanPanelTest {
 			assertTrue(panel.save.isEnabled());
 			onEnabled(panel.save, saved);
 			panel.saveTo(directory.resolve("status.json"));
+			final String previousDriver = panel.target.driverClass.getText();
+			assertFalse(panel.selectDriverClass("blocked.Driver", false));
+			assertEquals(previousDriver, panel.target.driverClass.getText());
 		});
 		assertTrue(saved.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			assertTrue(view.get().status.getText().startsWith("Saved status report:"));
+			view.get().savedReport.setReceiver((file, type) -> {
+				assertEquals(directory.resolve("status.json").toAbsolutePath().normalize(), file);
+				assertEquals(ReportReviewService.Type.BULK_OPERATIONAL, type);
+				return true;
+			});
+			assertTrue(view.get().savedReport.isEnabled());
+			view.get().savedReport.doClick(0);
+			assertTrue(view.get().selectDriverClass("selected.Driver", false));
+			assertFalse(view.get().save.isEnabled());
+			assertFalse(view.get().apply.isEnabled());
 			view.get().target.username.setText("changed");
 			assertFalse(view.get().save.isEnabled());
 			assertEquals("", view.get().view.details.getText());

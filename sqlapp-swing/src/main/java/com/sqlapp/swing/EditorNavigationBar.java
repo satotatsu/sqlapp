@@ -31,12 +31,18 @@ final class EditorNavigationBar extends JPanel {
 	final JButton go = new JButton("Go");
 	final JLabel status = new JLabel(" ");
 	private final JTextArea editor;
+	private final boolean allowEditing;
 	private Runnable activateEditor = () -> {
 	};
 
 	EditorNavigationBar(final JTextArea editor) {
+		this(editor, true);
+	}
+
+	EditorNavigationBar(final JTextArea editor, final boolean allowEditing) {
 		super(new java.awt.BorderLayout(4, 4));
 		this.editor = editor;
+		this.allowEditing = allowEditing;
 		history = new EditorEditHistory(editor);
 		final var search = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
 		search.add(new JLabel("Find"));
@@ -54,12 +60,14 @@ final class EditorNavigationBar extends JPanel {
 		search.add(go);
 		add(search, java.awt.BorderLayout.NORTH);
 		final var edits = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-		edits.add(new JLabel("Replace"));
-		edits.add(replacement);
-		edits.add(replace);
-		edits.add(replaceAll);
-		edits.add(history.undo);
-		edits.add(history.redo);
+		if (allowEditing) {
+			edits.add(new JLabel("Replace"));
+			edits.add(replacement);
+			edits.add(replace);
+			edits.add(replaceAll);
+			edits.add(history.undo);
+			edits.add(history.redo);
+		}
 		edits.add(count);
 		edits.add(wrapLines);
 		wrapLines.setSelected(editor.getLineWrap());
@@ -114,12 +122,13 @@ final class EditorNavigationBar extends JPanel {
 		});
 		bind("F3", "next", () -> find(true));
 		bind("shift F3", "previous", () -> find(false));
-		bind("control H", "replace", () -> {
-			if (isEnabled()) {
-				replacement.requestFocusInWindow();
-				replacement.selectAll();
-			}
-		});
+		if (allowEditing)
+			bind("control H", "replace", () -> {
+				if (isEnabled()) {
+					replacement.requestFocusInWindow();
+					replacement.selectAll();
+				}
+			});
 		bind("control L", "line", () -> {
 			if (isEnabled()) {
 				line.requestFocusInWindow();
@@ -147,7 +156,7 @@ final class EditorNavigationBar extends JPanel {
 	}
 
 	void replaceSelected() {
-		if (!isEnabled() || !editor.isEditable())
+		if (!allowEditing || !isEnabled() || !editor.isEditable())
 			return;
 		activateEditor.run();
 		final String needle = query.getText();
@@ -183,7 +192,7 @@ final class EditorNavigationBar extends JPanel {
 	}
 
 	void replaceAllMatches() {
-		if (!isEnabled() || !editor.isEditable())
+		if (!allowEditing || !isEnabled() || !editor.isEditable())
 			return;
 		activateEditor.run();
 		final String needle = query.getText(), value = replacement.getText(), source = editor.getText();

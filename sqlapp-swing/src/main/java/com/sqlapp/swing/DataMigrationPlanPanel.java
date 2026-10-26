@@ -51,6 +51,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	final ReportReviewView view = new ReportReviewView();
 	final JLabel status = new JLabel("Select job YAML and connections. Inspection does not migrate rows.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
+	final SavedReportButton savedReport = new SavedReportButton(this::isBusy);
 	private final EditorFileChooser inputDialogs = new EditorFileChooser();
 	private final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JPanel settings = new JPanel(new BorderLayout(4, 4));
@@ -175,7 +176,10 @@ final class DataMigrationPlanPanel extends JPanel {
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(325);
 		add(split, BorderLayout.CENTER);
-		add(statusPanel, BorderLayout.SOUTH);
+		final var footer = new JPanel(new BorderLayout(8, 0));
+		footer.add(statusPanel, BorderLayout.CENTER);
+		footer.add(savedReport, BorderLayout.EAST);
+		add(footer, BorderLayout.SOUTH);
 		advancedToggle.addActionListener(event -> {
 			advanced.setVisible(advancedToggle.isSelected());
 			source.showDriver(advancedToggle.isSelected());
@@ -278,6 +282,7 @@ final class DataMigrationPlanPanel extends JPanel {
 
 	private void busy(final boolean busy) {
 		this.busy = busy;
+		savedReport.refresh();
 		enable(settings, !busy);
 		advancedToggle.setEnabled(!busy);
 		build.setEnabled(!busy);
@@ -365,6 +370,15 @@ final class DataMigrationPlanPanel extends JPanel {
 
 	boolean isBusy() {
 		return busy || executing || source.profile.isBusy() || target.profile.isBusy();
+	}
+
+	boolean selectDriverClass(final String name, final boolean sourceConnection) {
+		if (isBusy())
+			return false;
+		(sourceConnection ? source : target).driverClass.setText(java.util.Objects.requireNonNull(name));
+		if (!advancedToggle.isSelected())
+			advancedToggle.doClick(0);
+		return true;
 	}
 
 	private boolean blockedByProfile() {
@@ -506,6 +520,8 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved execution audit: " + destination);
+					savedReport.saved(destination, snapshot.failure() == null ? ReportReviewService.Type.BULK_EXECUTION
+							: ReportReviewService.Type.BULK_FAILURE);
 					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
@@ -534,6 +550,7 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved verification report: " + destination);
+					savedReport.saved(destination, ReportReviewService.Type.BULK_VERIFICATION);
 					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();
@@ -578,6 +595,7 @@ final class DataMigrationPlanPanel extends JPanel {
 				try {
 					get();
 					status.setText("Saved status report: " + destination);
+					savedReport.saved(destination, ReportReviewService.Type.BULK_OPERATIONAL);
 					outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();

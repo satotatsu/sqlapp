@@ -69,6 +69,7 @@ class DataMigrationPlanningServiceTest {
 		assertEquals("PUBLIC.CUSTOMERS", result.review().rows().getFirst().get(3));
 		assertTrue(result.review().rows().getFirst().get(8).contains("CUSTOMER_ID"));
 		assertTrue(result.review().summary().contains("No rows were migrated"));
+		assertEquals(List.of(0, 5), result.review().numericColumns());
 		assertEquals("sha256:" + MessageDigests.SHA256.checksumAsString(job.toFile()),
 				result.report().provenance().configurationFingerprint());
 		try (var source = DriverManager.getConnection(sourceUrl, "SA", "")) {

@@ -85,15 +85,35 @@ final class EditorStatusPanel extends JPanel {
 	static String failureDetails(final Throwable failure) {
 		final var text = new StringBuilder();
 		final var seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
-		for (Throwable current = failure; current != null; current = current.getCause()) {
+		final var pending = new java.util.ArrayDeque<FailureEntry>();
+		if (failure != null)
+			pending.push(new FailureEntry("", failure));
+		while (!pending.isEmpty()) {
+			final var entry = pending.pop();
+			final var current = entry.failure();
 			if (!seen.add(current)) {
-				text.append("\nCause cycle detected.");
-				break;
+				text.append("\n").append(entry.label().equals("Caused by: ") ? "Cause cycle detected."
+						: entry.label() + "Exception already reported (shared reference or cycle).");
+				continue;
 			}
 			if (!text.isEmpty())
-				text.append("\nCaused by: ");
-			text.append(current);
+				text.append('\n');
+			text.append(entry.label()).append(current);
+			if (current instanceof java.sql.SQLException sql) {
+				text.append("\nSQLState: ").append(sql.getSQLState() == null ? "not provided" : sql.getSQLState())
+						.append("; vendor code: ").append(sql.getErrorCode());
+				if (sql.getNextException() != null)
+					pending.push(new FailureEntry("Next SQL exception: ", sql.getNextException()));
+			}
+			final var suppressed = current.getSuppressed();
+			for (int index = suppressed.length - 1; index >= 0; index--)
+				pending.push(new FailureEntry("Suppressed: ", suppressed[index]));
+			if (current.getCause() != null)
+				pending.push(new FailureEntry("Caused by: ", current.getCause()));
 		}
 		return text.toString();
+	}
+
+	private record FailureEntry(String label, Throwable failure) {
 	}
 }

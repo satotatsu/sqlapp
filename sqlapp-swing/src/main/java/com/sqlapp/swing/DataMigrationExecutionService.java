@@ -208,7 +208,8 @@ final class DataMigrationExecutionService {
 													: "\nOperation failed: ")
 											+ message
 											+ "\nCommitted chunks are retained. Inspect target and checkpoints before retrying."),
-					review.columns(), review.rows(), converter.toJsonString(details));
+					review.columns(), review.rows(), converter.toJsonString(details), review.tables(),
+					review.numericColumns());
 			return new Outcome(command.getExecutionReport(), command.getExecutionFailureReport(), review, message,
 					command.getResult(), command.getVerificationResult(), verificationReport);
 		} finally {

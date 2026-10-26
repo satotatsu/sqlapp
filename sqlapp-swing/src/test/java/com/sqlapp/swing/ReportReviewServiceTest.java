@@ -151,6 +151,7 @@ class ReportReviewServiceTest {
 		final var details = saved.tables().getFirst();
 		assertEquals("Mismatch chunks", details.title());
 		assertEquals(List.of(1, 2, 3), details.numericColumns());
+		assertEquals(List.of(2, 3, 4, 5), direct.numericColumns());
 		assertEquals(List.of("customer", "12", "2", "1", "expected", "actual", "[21]", "[22]", "[21]", "[21]"),
 				details.rows().getFirst());
 		assertTrue(details.summary().contains("zero-based"));

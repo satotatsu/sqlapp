@@ -69,8 +69,37 @@ public final class MigrationApplication {
 			});
 			final var reports = new ReportReviewPanel();
 			tabs.addTab("Migration reports", reports);
+			final java.util.function.BiPredicate<java.nio.file.Path, ReportReviewService.Type> openReport = (path,
+					type) -> {
+				if (!reports.requestOpen(path, type))
+					return false;
+				tabs.setSelectedComponent(reports);
+				return true;
+			};
+			schemaPlan.savedReport.setReceiver(openReport);
+			dataPlan.savedReport.setReceiver(openReport);
+			final var drivers = new JdbcDriverPanel();
+			tabs.addTab("JDBC drivers", drivers);
 			final java.util.function.BooleanSupplier activity = () -> comparison.isBusy() || schemaPlan.isBusy()
-					|| dataPlan.isBusy() || jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy();
+					|| dataPlan.isBusy() || jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy()
+					|| drivers.isBusy();
+			drivers.setBlockedSupplier(activity);
+			drivers.setConnectionReceivers(name -> {
+				if (!schemaPlan.selectDriverClass(name))
+					return false;
+				tabs.setSelectedComponent(schemaPlan);
+				return true;
+			}, name -> {
+				if (!dataPlan.selectDriverClass(name, true))
+					return false;
+				tabs.setSelectedComponent(dataPlan);
+				return true;
+			}, name -> {
+				if (!dataPlan.selectDriverClass(name, false))
+					return false;
+				tabs.setSelectedComponent(dataPlan);
+				return true;
+			});
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {
 				@Override

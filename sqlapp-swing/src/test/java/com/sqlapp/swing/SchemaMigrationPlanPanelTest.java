@@ -59,6 +59,9 @@ class SchemaMigrationPlanPanelTest {
 			panel.build.doClick();
 			assertFalse(panel.build.isEnabled());
 			assertFalse(panel.jdbcUrl.isEnabled());
+			final String previousDriver = panel.driverClass.getText();
+			assertFalse(panel.selectDriverClass("blocked.Driver"));
+			assertEquals(previousDriver, panel.driverClass.getText());
 			assertEquals(0, panel.password.getPassword().length);
 		});
 		assertTrue(finished.await(5, TimeUnit.SECONDS));
@@ -76,6 +79,16 @@ class SchemaMigrationPlanPanelTest {
 		assertTrue(saved.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
 			assertTrue(view.get().status.getText().startsWith("Saved plan:"));
+			view.get().savedReport.setReceiver((file, type) -> {
+				assertEquals(directory.resolve("plan.json").toAbsolutePath().normalize(), file);
+				assertEquals(ReportReviewService.Type.SCHEMA_PLAN, type);
+				return true;
+			});
+			assertTrue(view.get().savedReport.isEnabled());
+			view.get().savedReport.doClick(0);
+			assertTrue(view.get().selectDriverClass("selected.Driver"));
+			assertFalse(view.get().save.isEnabled());
+			assertFalse(view.get().apply.isEnabled());
 			view.get().username.setText("different_user");
 			assertEquals("", view.get().view.summary.getText());
 			assertFalse(view.get().save.isEnabled());

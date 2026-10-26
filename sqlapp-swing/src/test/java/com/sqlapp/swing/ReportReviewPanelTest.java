@@ -13,6 +13,46 @@ import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 
 class ReportReviewPanelTest {
+	@Test
+	void handoffLoadsExactFileAndTypeAndRefusesReplacementWhileBusy() throws Exception {
+		final var release = new CountDownLatch(1);
+		final var finished = new CountDownLatch(1);
+		final var file = new AtomicReference<java.nio.file.Path>();
+		final var type = new AtomicReference<ReportReviewService.Type>();
+		final var panel = new AtomicReference<ReportReviewPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var view = new ReportReviewPanel((path, format) -> {
+				file.set(path);
+				type.set(format);
+				try {
+					if (!release.await(5, TimeUnit.SECONDS))
+						throw new IllegalStateException("Timeout");
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new IllegalStateException(e);
+				}
+				return REVIEW;
+			});
+			panel.set(view);
+			view.load.addPropertyChangeListener("enabled", event -> {
+				if (Boolean.TRUE.equals(event.getNewValue()))
+					finished.countDown();
+			});
+			assertTrue(view.requestOpen(java.nio.file.Path.of("saved-verification.json"),
+					ReportReviewService.Type.BULK_VERIFICATION));
+			assertFalse(view.requestOpen(java.nio.file.Path.of("other.json"), ReportReviewService.Type.SCHEMA_PLAN));
+			assertEquals(ReportReviewService.Type.BULK_VERIFICATION, view.type.getSelectedItem());
+			assertTrue(view.file.getText().endsWith("saved-verification.json"));
+		});
+		release.countDown();
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(java.nio.file.Path.of("saved-verification.json").toAbsolutePath().normalize(), file.get());
+			assertEquals(ReportReviewService.Type.BULK_VERIFICATION, type.get());
+			assertEquals("MATCH", panel.get().summary.getText());
+		});
+	}
+
 	private static final ReportReviewService.Review REVIEW = new ReportReviewService.Review("MATCH",
 			List.of("Task", "Outcome"), List.of(List.of("CUSTOMER", "MATCH")), "{\"match\":true}");
 
@@ -38,6 +78,10 @@ class ReportReviewPanelTest {
 			assertFalse(view.details.isEditable());
 			assertEquals(REVIEW.details(), view.details.getText());
 			assertTrue(view.status.getText().contains("No live checks"));
+			assertTrue(view.statusPanel.detailsText()
+					.contains("File: " + java.nio.file.Path.of("report.json").toAbsolutePath().normalize()));
+			assertTrue(view.statusPanel.detailsText().contains("Report type: Schema migration plan"));
+			assertTrue(view.statusPanel.detailsText().contains("MATCH"));
 			assertFalse(view.isBusy());
 			view.file.setText("other.json");
 			assertEquals("", view.summary.getText());
@@ -72,6 +116,8 @@ class ReportReviewPanelTest {
 			assertTrue(view.status.getText().startsWith("Load failed"));
 			assertFalse(view.isBusy());
 			assertTrue(view.statusPanel.detailsText().contains("Bad header"));
+			assertTrue(view.statusPanel.detailsText().contains("File: report.json"));
+			assertTrue(view.statusPanel.detailsText().contains("Report type: Schema migration plan"));
 			view.file.setText("another-report.json");
 			assertEquals(view.status.getText(), view.statusPanel.detailsText());
 		});

@@ -30,6 +30,8 @@ final class SchemaComparisonPanel extends JPanel {
 	final JButton save = new JButton("Save review…");
 	final RSyntaxTextArea preview = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, false);
 	final RSyntaxTextArea sqlPreview = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, false);
+	final ReadOnlyCodePanel reviewCode = new ReadOnlyCodePanel(preview);
+	final ReadOnlyCodePanel sqlCode = new ReadOnlyCodePanel(sqlPreview);
 	final JButton saveSql = new JButton("Save SQL draft…");
 	final JButton useDirectory = new JButton("Use saved SQL directory");
 	final JButton editSql = new JButton("Edit saved SQL…");
@@ -75,8 +77,8 @@ final class SchemaComparisonPanel extends JPanel {
 		add(inputs, BorderLayout.NORTH);
 		preview.setEditable(false);
 		sqlPreview.setEditable(false);
-		tabs.addTab("Review", CodeEditors.scroll(preview));
-		tabs.addTab("SQL draft", CodeEditors.scroll(sqlPreview));
+		tabs.addTab("Review", reviewCode);
+		tabs.addTab("SQL draft", sqlCode);
 		add(tabs, BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout());
 		final var actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -134,8 +136,8 @@ final class SchemaComparisonPanel extends JPanel {
 		savedSql = null;
 		useDirectory.setEnabled(false);
 		editSql.setEnabled(false);
-		preview.setText("");
-		sqlPreview.setText("");
+		reviewCode.showText("");
+		sqlCode.showText("");
 		save.setEnabled(false);
 		saveSql.setEnabled(false);
 		status.setText("Inputs changed. Compare to generate a new review.");
@@ -157,6 +159,8 @@ final class SchemaComparisonPanel extends JPanel {
 
 	private void busy(final boolean busy) {
 		this.busy = busy;
+		reviewCode.navigation.setBusy(busy);
+		sqlCode.navigation.setBusy(busy);
 		original.setEnabled(!busy);
 		target.setEnabled(!busy);
 		beforeBrowse.setEnabled(!busy);
@@ -190,10 +194,8 @@ final class SchemaComparisonPanel extends JPanel {
 					final var compared = get();
 					result = compared;
 					inputDialogs.remember(compared.target());
-					preview.setText(result.review());
-					sqlPreview.setText(result.sqlDraft());
-					sqlPreview.setCaretPosition(0);
-					preview.setCaretPosition(0);
+					reviewCode.showText(result.review());
+					sqlCode.showText(result.sqlDraft());
 					status.setText("Review generated: " + result.statements()
 							+ " SQL statements. Draft requires review; no SQL executed.");
 				} catch (final InterruptedException exception) {

@@ -153,12 +153,10 @@ final class DataMigrationPlanningService {
 					+ "\nPause: "
 					+ (pauseRestriction == null ? "available at a committed chunk boundary" : pauseRestriction)
 					+ "\nGUI execution: " + (restriction == null ? "available after confirmation" : restriction);
-			return new Result(request.configurationFile(), report,
-					new ReportReviewService.Review(summary,
-							List.of("Order", "Task", "Source table", "Target table", "Strategy", "Chunk size",
-									"Checkpoint", "Saved state", "Column mappings"),
-							rows, base.details()),
-					snapshot, resolution.verificationConfiguration());
+			return new Result(request.configurationFile(), report, new ReportReviewService.Review(summary,
+					List.of("Order", "Task", "Source table", "Target table", "Strategy", "Chunk size", "Checkpoint",
+							"Saved state", "Column mappings"),
+					rows, base.details(), List.of(), List.of(0, 5)), snapshot, resolution.verificationConfiguration());
 		} catch (final Exception failure) {
 			String message = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
 			for (final char[] password : new char[][] { sourcePassword, targetPassword }) {
