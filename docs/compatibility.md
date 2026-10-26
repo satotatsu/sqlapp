@@ -19,10 +19,10 @@ documentation change.
 
 | Component | Current baseline | Compatibility statement |
 |---|---|---|
-| Published Java artifacts | Java 21 | Sources are compiled with a Java 21 toolchain. Consumers should use a Java 21 or later runtime compatible with the published bytecode. |
-| Repository build | Gradle Wrapper 9.6.1 | This is the checked-in, supported build path for release verification. |
-| Gradle plugin | Java 21; tested by this repository with Gradle 9.6.1 | A lower or upper Gradle compatibility range has not yet been established. Do not infer one from Gradle API compilation alone. |
-| Companion example | Java 21; Gradle Wrapper 9.6.1 | The `develop` branch of `sqlapp-gradle-example` uses the same current baseline. |
+| Published Java artifacts | Java 25 | Sources are compiled with a Java 25 toolchain. Consumers should use a Java 25 or later runtime compatible with the published bytecode. |
+| Repository build | Gradle Wrapper 9.8.1 | This is the checked-in, supported build path for release verification. |
+| Gradle plugin | Java 25; tested by this repository with Gradle 9.8.1 | A lower or upper Gradle compatibility range has not yet been established. Do not infer one from Gradle API compilation alone. |
+| Companion example | Java 25; Gradle Wrapper 9.8.1 | The `develop` branch of `sqlapp-gradle-example` uses the same current baseline. |
 
 Before publishing, the release build should run with the checked-in wrapper.
 If compatibility with older Gradle releases is promised, add a TestKit matrix

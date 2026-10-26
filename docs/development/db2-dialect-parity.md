@@ -1,5 +1,415 @@
 # Db2 LUW metadata and DDL recreation
 
+Module dependency/routine continuation (LUW 11.1+): supported earlier published
+types in the same module can now be used as ordinary/associative array element
+types and row field types, as well as variable types. Row -> array -> nested row
+-> variable chains reuse the existing Domain/Type/Constant factories. Additive
+protected source/field rendering hooks keep standalone type rules unchanged.
+Private, forward, recursive and external module type references fail explicitly.
+Creation-time ordering checks now include type-source/row-field references and
+routine members; missing/equal timestamps prevent inferred replay when multiple
+members may depend on one another. No extra SELECT per member is introduced.
+
+SQL routine members can replay a complete native ALTER MODULE definition from
+ROUTINE_TEXT when scope, ADD/PUBLISH visibility, kind, local routine name and an
+explicit local SPECIFIC name before LANGUAGE SQL match the member inventory.
+Quoted identifiers, nested header comments and default string literals are
+handled by a header-only scanner. The body remains unchanged, including internal
+semicolons and blank lines. Function/Procedure definitions and schema/path
+restoration compose the existing native routine replay helper; resulting member
+operations retain the owning Package and ALTER operation type. Routine remarks
+are now retained in bulk metadata and require complete parent DDL rather than
+being silently lost.
+
+This is deliberately limited to matching implemented LANGUAGE SQL routines with
+complete native ALTER MODULE source. Generic CREATE text, body-only text,
+prototypes, external/PLSQL/wrapped forms without the required header, generated
+support functions and member comments still require complete parent definitions.
+Routine references inside opaque SQL bodies are not parsed into a dependency
+graph; cyclic/prototype-first module construction requires explicit ordered parent
+DDL. Actual catalog text forms and recreation remain subject to the live gate.
+Cursor type return-row reconstruction remains open: the DATATYPES header alone
+is insufficient to infer its full declaration faithfully.
+
+Nine additional tests cover nested type chains, associative index validation,
+wrong/private/forward/self references, bulk ordering and query counts, complete
+SQL function/procedure replay, overload SPECIFIC identities, Schema CREATE,
+XML/clone, quoted names/comments/default literals and mismatched/incomplete
+headers. The existing 11.5/12.1.5 fixture now includes a nested type chain and SQL
+function/procedure, then invokes the recreated function; it has only been
+compiled and has not been executed against a database.
+
+Java 21: all 313 DB2 unit tests passed (zero failures/errors/skips), and
+`:sqlapp-core-dialect-test:compileDockerTestJava` passed. No real database or
+Docker tests ran, no dependencies/shared formats changed, and no generated files
+were intentionally edited.
+References: IBM [array types](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-type-array),
+[ALTER MODULE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-alter-module)
+and [ROUTINES](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatroutines).
+
+
+Module row-type continuation (LUW 11.1+): module TYPE members with METATYPE F now
+retain their fields as a canonical Schema Type model in TYPE_ROW_MODEL. The
+additive Db2ModuleMembers.withRowType/getRowType helpers preserve this model
+through the existing member snapshot/XML/clone path and return independent
+models. Name, kind, row metatype and module schema must agree before recreation;
+embedded standalone DDL cannot override the owning module scope.
+
+The reader uses one additional set-based ROWFIELDS query only when module row
+types exist: one query for an empty module set, two for ordinary member sets,
+and three including all requested row-type fields. Existing TypeColumn reading
+retains field ordinal, literal names, built-in type dimensions, string units,
+code page, collation and nested type identity. Gaps, duplicate names, missing
+fields and row/module scope drift fail explicitly. These WITH UR queries do not
+provide a transactionally consistent snapshot during concurrent DDL.
+
+Package CREATE composes Db2CreateTypeFactory through an additive protected
+prefix hook to generate ADD/PUBLISH TYPE AS ROW. Supported published row types
+can be referenced by later module variables. Unsupported nested/user-defined
+field types, constraints, custom collation schemas, member comments and
+ambiguous dependency order require complete module DDL. Cursor types, routine
+members and generated type-support function association remain open. Custom
+field collation schemas are also rejected by standalone row generation instead
+of silently losing them; explicit full definitions remain authoritative there.
+
+Five additional module tests and one standalone collation test cover Schema and
+direct CREATE, XML/clone, stale model identity/scope, DDL ownership, field order,
+missing/duplicate metadata and 20 modules sharing one bulk field query. The
+existing 11.5/12.1.5 live fixture now includes a published row type and variable,
+and checks fields after drop/recreation; this fixture has only been compiled.
+
+Java 21 validation passed all 304 DB2 tests (zero failures/errors/skips) and
+`:sqlapp-core-dialect-test:compileDockerTestJava`. An initial checked-exception
+compilation error in the new XML helper was corrected before successful runs.
+No external database or Docker tests ran; no generated files were intentionally
+edited. Shared model/configuration formats and dialect resolution are unchanged.
+References: IBM [ROWFIELDS](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatrowfields)
+and [module example](https://www.ibm.com/docs/en/db2/11.5.x?topic=SSEPGG_11.5.0%2Fcom.ibm.db2.luw.apdv.sample.doc%2Fdoc%2Fsqlpl%2Fs-modules-db2.htm).
+
+
+Module-type continuation (LUW 11.1+): the existing two-query member reader now
+retains native type dimensions, nullability, constraints, string units, array
+index types, creation path and collation metadata. Package CREATE composes the
+existing Domain renderer to emit ADD/PUBLISH TYPE for supported distinct,
+ordinary-array and associative-array types. Module variables can refer to an
+earlier published supported type in the same module. External, private and
+forward references require complete DDL; missing/equal creation timestamps also
+prevent inferred ordering for variables with module type references.
+
+Five additional tests cover type/variable XML, clone and Schema CREATE,
+distinct constraints, associative array units, bulk metadata/query counts,
+dependency ordering and explicit rejection of unsupported components. The type
+prefix and variable type-rendering hooks are protected additive APIs; global
+variable rules are unchanged. No shared model or dependency changes were needed.
+
+Generated supporting functions are not silently discarded. Catalog snapshots
+containing these functions still require complete module DDL until their exact
+association/replay is supported. Row/cursor types, routine members, member
+comments, custom collation schemas and PL/SQL packages also remain full-DDL
+cases. This batch does not close all module reconstruction gaps.
+
+Java 21 verification: all 298 DB2 tests passed with zero failures/errors/skips;
+`:sqlapp-core-dialect-test:compileDockerTestJava` passed. Real database and Docker
+tests were not executed. No generated files were intentionally changed.
+References: IBM [DATATYPES](https://www.ibm.com/docs/en/ias?topic=views-syscatdatatypes)
+and [ALTER MODULE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-alter-module).
+
+
+Module-member batch (LUW 11.1+): module headers and all member inventories are
+read in two set-based queries for the requested module set (one header query
+when no modules exist). MODULEOBJECTS joins condition, variable, routine and type
+catalogs, retaining kind, published/user-defined state, literal names, routine
+SPECIFIC identity, source/type/default/context attributes and creation times.
+Counts must agree between header and member snapshots. Detected count/scope drift, invalid flags and duplicate identities fail
+explicitly; these two WITH UR queries do not establish transactionally consistent
+metadata under every concurrent DDL change. Aliases remain
+Synonym objects and are not duplicated as modules; old dialects are unchanged.
+
+`Db2ModuleMembers.get(module)` exposes an immutable, versioned snapshot stored in
+the existing Package specifics. The XML/clone path retains it without changing
+shared Schema formats. Package CREATE automatically replays supported user-defined
+CONDITION and built-in VARIABLE members with ADD/PUBLISH visibility. Conditions
+retain optional SQLSTATE; variables retain type dimensions, string units,
+DEFAULT/CONSTANT expression and creation-time schema/path. A small protected
+prefix hook composes the existing global-variable renderer/validators; module
+variables do not duplicate those rules. New member operations refer to the
+owning Package and have ALTER operation type.
+
+Module member source ordering uses catalog creation times. When multiple members
+include variable defaults, missing/equal timestamps mark ordering unknown and
+prevent inferred replay; a caller can provide an explicitly ordered snapshot
+through `Db2ModuleMembers.set(module, members)`. The setter derives MEMBER_COUNT
+from the supplied list, defaults an otherwise untyped Package to a SQL module,
+and retains other specifics. Existing PL/SQL markers are not inferred or overwritten.
+Unknown member attributes,
+unsupported scopes/types, custom collation schemas, system-generated members,
+member comments, routines, types and PL/SQL packages require complete parent
+CREATE/ALTER MODULE definitions. Their inventory/source information is retained;
+this is not automatic routine/type/PLSQL member reconstruction. Full definitions
+remain authoritative and do not require duplicate member metadata. No incomplete
+empty module is returned as a recreation plan for unsupported members.
+
+Seven new tests cover XML/clone/Schema CREATE, visibility, generic conditions,
+variable units and defaults, all member kinds and overloaded routine identities,
+immutable snapshots, malformed formats/unknown JSON, scope mismatch, incomplete
+counts, invalid flags and ambiguous order. The existing bulk test now checks
+20 modules with 60 members using exactly two SELECTs. Global variable and module
+recreation tests remain included. Early compilation failures were fixed in the
+new metadata error handling and test lambda, with no shared API changes.
+
+The existing disposable 11.5/12.1.5 fixture now creates a condition/variable module,
+reads it through Schema XML, recreates it and rereads the member count. This is
+source/compile coverage only until an explicitly authorized real test run.
+Existing APIs remain compatible; the typed snapshot API and protected variable
+prefix hook are additive. No new dependency or generated-file edits are intended.
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` with all 293 tests
+(zero failures/errors/skips), plus
+`:sqlapp-core-dialect-test:compileDockerTestJava` including module recreation
+assertions. `git diff --check` passed for affected files. No external database
+or Docker tests were executed and no generated files were intentionally edited.
+
+References: IBM [MODULEOBJECTS](https://www.ibm.com/docs/zh/db2w-as-a-service?topic=views-syscatmoduleobjects),
+[CONDITIONS](https://www.ibm.com/docs/es/db2/11.5.x?topic=views-syscatconditions),
+[VARIABLES](https://www.ibm.com/docs/ja/db2/11.5.x?topic=views-syscatvariables),
+[ROUTINES](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-syscatroutines),
+and [ALTER MODULE](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-alter-module).
+
+Logical XML-index batch (LUW 11.1+): the modern index query starts from
+SYSCAT.INDEXES, left-joins key columns, and joins SYSCAT.INDEXXMLPATTERNS in the
+same bulk query. Logical XVIL indexes retain XML_PATTERN, XML_TYPEMODEL,
+XML_DATATYPE, XML_HASHED, XML_LENGTH and XML_SCALE in specifics. Indexes without
+key rows are retained as headers instead of silently disappearing. Their missing
+components still require an explicit complete CREATE definition for recreation.
+Internal XPTH/XRGN/XVIP support indexes are excluded, matching IBM's distinction
+between user-created logical indexes and database-managed physical indexes.
+Older query resources/read behavior remain unchanged; no N+1 query is added.
+
+The shared Index plus one XML-column reference now recreates supported logical
+XML indexes with GENERATE KEY USING XMLPATTERN ... AS SQL ... . Supported SQL
+conversion types are DOUBLE, INTEGER, DATE, TIMESTAMP, DECIMAL(precision,scale),
+VARCHAR(length), and VARCHAR HASHED. TYPEMODEL Q/R recreates IGNORE/REJECT INVALID
+VALUES respectively. Pattern text, including namespaces, quotes and newlines,
+is preserved as a SQL character literal. Existing name quoting, uniqueness,
+comments and supported ordinary physical options remain composed with the XML
+clause. No shared Schema/API format or module dependency is added. The metadata
+fields are optional advanced controls for manually modeled XML indexes; normal
+reader-to-CREATE use requires no new configuration.
+
+INCLUDE, descending/random/expression keys, CLUSTER, non-XML source columns and
+EXCLUDE NULL KEYS are rejected for modeled XML indexes. Missing/unsupported type
+metadata requires a full native definition. Repeated identical pattern rows
+are coalesced without duplicating columns; conflicting pattern/type/key-order
+rows fail explicitly instead of dropping data. Multiple different patterns,
+other specialized index families and arbitrary XML pattern semantic validation
+remain outside this implementation. VARCHAR lengths must be positive and fit
+the catalog length field; actual key/page-size limits remain database validation.
+A supplied full native definition remains authoritative and bypasses component
+requirements. XML compression ALTER remains excluded from the regular-index
+ALTER path. DialectResolver and historical registry mappings are unchanged.
+
+Five focused tests cover 20 logical plus physical indexes in one query,
+XML/clone/native SQL, type and invalid-value modes, hashed values, missing and
+invalid components, conflicting rows, full-DDL fallback and historical isolation.
+The initial focused compilation caught an invalid compound var declaration in
+the new test fixture, which was corrected. The existing 11.5/12.1.5 disposable
+ALTER fixture now also inserts XML data, reads/recreates an XML index through
+Schema XML, excludes internal index rows and rereads the result. These real-DB
+assertions are compiled only; no Docker or external database execution occurred.
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` with all 286 tests
+(zero failures/errors/skips), followed by
+`:sqlapp-core-dialect-test:compileDockerTestJava` with the XML recreation fixture.
+An earlier combined invocation was not executed because automatic approval
+review could not complete under the usage limit; retrying the same approval
+path succeeded. No external database/Docker tests or intentional generated-file
+edits occurred. `git diff --check` passed for affected files.
+
+References: IBM [SYSCAT.INDEXXMLPATTERNS](https://www.ibm.com/docs/en/db2/11.1?topic=views-syscatindexxmlpatterns),
+[SYSCAT.INDEXES](https://www.ibm.com/docs/en/db2/11.1?topic=views-syscatindexes),
+[logical and physical XML indexes](https://www.ibm.com/docs/en/db2/11.5.x?topic=indexing-logical-physical-indexes-over-xml-data),
+and [CREATE INDEX](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-create-index).
+
+Native ALTER batch (LUW 11.1+): modeled sequences support INCREMENT BY,
+MINVALUE/NO MINVALUE, MAXVALUE/NO MAXVALUE, CYCLE/NO CYCLE, CACHE/NO CACHE and
+ORDER/NO ORDER changes. The generator emits only changed clauses and never
+infers RESTART from START, lastValue or a cache allocation boundary. New CACHE
+settings require an explicit size of at least 2. Type/name/START/runtime-state
+changes, unsupported specifics and changes to authoritative full definitions
+still require explicit plans. NEXTCACHEFIRSTVALUE-only drift is recognized as
+allocation metadata and produces no DDL; unrelated specifics are not ignored.
+CREATE's existing vendor validation is reused for changed sequence settings.
+
+Regular index compression changes use ALTER INDEX ... COMPRESS YES/NO through
+direct and Table/Schema paths rather than DROP/CREATE. The canonical compression
+property takes precedence over supplemental raw COMPRESSION metadata. Temporary,
+specialized and full-definition index compression alterations fail explicitly.
+Physical index reorganization is neither generated nor executed; compression
+changes take effect physically only after the separately planned rebuild/REORG.
+Structural table-index changes retain the existing recreation path. Direct
+structural index ALTER requires an explicit recreation plan.
+
+Comments on sequences, indexes, views, triggers and aliases can be updated,
+cleared with IS NULL, or set to an empty string without object replacement.
+Shared comment generation retains literal identifier quoting and character
+escaping. View/trigger/alias structural changes still require replacement plans.
+Unchanged diffs produce no SQL. ALTER factories dispatch added/deleted objects
+to CREATE/DROP and reject target-only calls that lack an original model, instead
+of accidentally returning CREATE SQL. Existing method signatures/XML are retained;
+these target-only calls now fail with an actionable message. Older version
+registries and resolver mappings are unchanged. No catalog query was added.
+
+New tests exercise direct, Table, Schema and Catalog diffs, XML round trips,
+sequence settings and allocation drift, compression toggling, comment clearing,
+unsupported forms, and added/deleted/unchanged lifecycle dispatch. The first
+compilation attempts exposed generic type issues in the test helper; these were
+corrected without production API changes. Real ALTER assertions were added to
+the existing disposable-container 11.5 and 12.1.5 test classes; they are compiled
+only in this work, never executed against a database or Docker daemon.
+
+The concrete remaining work and completion criteria are tracked in
+[Db2 completion gates](db2-dialect-completion.md). The implementation is still
+not a claim of complete PostgreSQL parity or live compatibility.
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` with all 281 tests
+(zero failures/errors/skips) and
+`:sqlapp-core-dialect-test:compileDockerTestJava`, including the new real-ALTER
+fixture. The 11.5/12.1.5 fixtures were compiled, not executed.
+`git diff --check` passed for affected files. No generated files were
+intentionally edited.
+
+References: IBM [ALTER SEQUENCE](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-alter-sequence),
+[ALTER INDEX](https://www.ibm.com/docs/en/db2/11.1?topic=statements-alter-index),
+[index compression](https://www.ibm.com/docs/en/db2/11.1?topic=compression-index),
+and [COMMENT](https://www.ibm.com/docs/en/db2/11.1?topic=statements-comment).
+
+Index recreation follow-up (LUW 11.1+): DROP INDEX now resolves the catalog
+INDEX_SCHEMA rather than assuming the parent table's schema, including when a
+Table diff removes an index. Table-diff CREATE/DROP now delegate to the same
+registered index factories, retaining expression context and comments on
+recreation rather than using the generic inline renderer. Native schema/index names are individually quoted.
+Modeled CREATE escapes embedded quotes in index, table/schema, key and INCLUDE
+column identifiers while retaining existing ordinary-name rendering. A distinct
+index/table schema keeps the table target qualified even when ordinary schema
+decoration is disabled. Full native CREATE definitions can be replayed without
+a parent table; modeled indexes without a table still fail with a clear error.
+
+Expression text collections are lines, not distinct expressions. Multiline keys
+with blank lines are joined as one parenthesized expression; empty/null/NUL text
+is rejected through the existing DB2 text helper. FUNC_PATH is restored for full
+native definitions as well as modeled expression keys. Native DDL remains
+authoritative for specialized indexes. Legacy expression-version restrictions
+are retained. No reader query or N+1 access was introduced, and DialectResolver
+mappings are unchanged. The dedicated DROP factory is registered only at 11.1+.
+The 12.1.5 VECTOR-specific modeled CREATE renderer is otherwise unchanged.
+
+Public API signatures, shared Schema XML and dependencies are unchanged. Changes
+are in sqlapp-core-db2 and this document. Tests cover XML/native schema identity,
+embedded quote identifiers, multiline expressions, full-definition creation
+without a table, function-path restoration, and index removal through Table diff.
+Five new index recreation tests passed on Java 21, together with the existing
+expression/VECTOR tests. The initial table-diff removal test exposed the generic
+inline DROP bypass; the dedicated delegation fixes both DROP and CREATE paths.
+The old expression validation fixture now uses NUL as invalid text; multiple
+lines are a supported expression representation. Arbitrary specialized index
+reconstruction, physical ALTER execution and dependency planning remain separate.
+No external database or Docker execution is authorized by this work.
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` (272 tests,
+zero failures/errors/skips) and
+`:sqlapp-core-dialect-test:compileDockerTestJava` (compilation only).
+`git diff --check` passed for the affected files. No external database/Docker
+execution or intentional generated-file edits occurred.
+
+References: IBM [DROP](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-drop)
+and [CREATE INDEX](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-create-index).
+
+Alias recreation follow-up (LUW 11.1+): dedicated factories quote schema, alias,
+and target identifiers individually for TABLE, SEQUENCE and MODULE aliases,
+including literal dots and embedded quotes. Private/public aliases retain their
+kind through XML/clone and emit target-specific COMMENT ON [PUBLIC] ALIAS ...
+FOR TABLE/MODULE/SEQUENCE statements. DROP uses the same identity and kind.
+Complete multiline CREATE definitions and explicitly delimited scripts use the
+existing DB2 definition replay helper; native definitions do not require duplicate
+target fields. Missing targets, unsupported remote database links and unknown
+modeled alias kinds fail explicitly. Modified aliases require an explicit
+replacement plan for dependencies rather than silently issuing another CREATE.
+Alias-chain dependency order is still caller supplied; it is not inferred here.
+
+The alias reader now selects the 9.7+ catalog union when the selected Dialect
+supports it, even with empty ProductVersionInfo. The legacy path handles null
+major/minor version values safely, retains the older table-only query, and still
+uses explicit supplied version information when available. This adds no catalog
+columns or per-alias SELECTs. Module aliases remain Synonym objects; the modern
+module reader continues excluding them, avoiding duplicate module recreation.
+DialectResolver mappings and older alias SQL factories are unchanged.
+
+Focused Java 21 validation passed all 13 related tests (four new recreation tests
+plus existing public-alias and object-recreation tests). The initial run exposed
+the legacy null-version exception; the reader now handles it explicitly. Tests
+cover reader/XML/native SQL/comments, three kinds and both visibility modes,
+complete-definition scripts, invalid inputs, direct/Schema replacement guards,
+and 30 aliases fetched in one query. Public API signatures, shared Schema XML
+and dependencies are unchanged. Implementation changes belong to sqlapp-core-db2;
+no generated-file edits or external database/Docker executions are intentional.
+
+Final validation on Java 21 passed `:sqlapp-core-db2:test` (267 tests,
+zero failures/errors/skips) and
+`:sqlapp-core-dialect-test:compileDockerTestJava` (compilation only).
+`git diff --check` passed for affected files.
+
+References: IBM [CREATE ALIAS](https://www.ibm.com/docs/ja/db2/11.5.x?topic=statements-create-alias)
+and [COMMENT](https://www.ibm.com/docs/en/db2/11.1?topic=statements-comment).
+
+Sequence recreation follow-up (LUW 11.1+): the versioned sequence query resolves
+DATATYPEID against SYSCAT.DATATYPES in one bulk join, restricted to non-module
+types. This preserves DECIMAL(5/10/19,0) instead of mistaking precision for the
+SMALLINT/INTEGER/BIGINT type, and retains schema-qualified distinct type identity.
+Unresolved types fail explicitly. Earlier dialects retain the original query
+and precision-based representation; DialectResolver mappings are unchanged.
+NEXTCACHEFIRSTVALUE is retained in specifics as an allocation boundary; it is
+not exposed as the model's last assigned value. Recreating a sequence uses its
+configured START, never an inferred restart based on cached allocation state.
+
+The modern factory emits CREATE SEQUENCE without an implicit OR REPLACE,
+quotes schema and sequence names individually, and emits COMMENT ON SEQUENCE.
+DROP uses quoted identifiers and explicit RESTRICT. Complete multiline definitions
+remain authoritative and can use the existing explicit-terminator script path.
+Modeled generation preserves integral numeric types, min/max/start/increment,
+cycle/cache/order settings and native distinct types. Built-in type-name-only
+models support SMALLINT, INT/INTEGER, BIGINT, DECIMAL/NUMERIC. Conflicting model
+and named types, nonzero scale, invalid decimal precision, zero increments and
+reversed bounds fail explicitly. Validation reads scale before cloning because
+the existing shared Sequence XML/clone representation does not retain scale;
+Db2 sequences require scale zero. Shared Schema APIs and XML formats are unchanged.
+
+Sequence modifications through direct or Schema diffs require an explicit ALTER
+plan preserving live allocation state; they never implicitly restart or replace
+the object. Generic dependency planning and automatic live-state transfer are
+not implemented. Distinct types must exist before sequence execution; automatic
+reordering for arbitrary type/sequence dependencies is not inferred here.
+Manual distinct-type models use DataType.OTHER and SEQUENCE_TYPE_SCHEMA/NAME
+specifics. No per-sequence SELECT or external DB execution is introduced.
+
+The focused Java 21 run passed all 11 sequence tests, including six new recreation
+tests for reader/XML/native DDL, quoting/comments, exact large values, type-name
+models, type conflicts, one query for 20 sequences, historical isolation and
+Schema diff guards. The initial invalid-scale test serialized the model before
+validation; it now checks the original input directly, and validation was also
+moved before cloning. Changes belong to `sqlapp-core-db2` and this document;
+no dependency version or generated-file edits are intentional.
+
+Final Java 21 validation passed `:sqlapp-core-db2:test` with all 263 tests
+(zero failures/errors/skips) and
+`:sqlapp-core-dialect-test:compileDockerTestJava` (compilation only).
+`git diff --check` passed for affected files. External databases and Docker
+were not executed.
+
+References: IBM [SYSCAT.SEQUENCES](https://www.ibm.com/docs/es/db2/11.1.0?topic=views-syscatsequences),
+[SYSCAT.DATATYPES](https://www.ibm.com/docs/en/db2/11.1?topic=views-syscatdatatypes),
+[CREATE SEQUENCE](https://www.ibm.com/docs/ja/db2/11.1.0?topic=statements-create-sequence),
+and [DROP](https://www.ibm.com/docs/en/db2/11.1.0?topic=statements-drop).
+
 Trigger recreation follow-up (LUW 11.1+): the versioned bulk catalog query now
 includes valid, invalid and inoperative triggers, retaining the raw VALID state
 as well as the model validity flag. EVENTINSERT/EVENTUPDATE/EVENTDELETE preserve
@@ -1286,10 +1696,10 @@ References: [ROWFIELDS](https://www.ibm.com/docs/en/db2/11.1.0?topic=views-sysca
 
 PostgreSQL's general vendor-object coverage is still broader. Federation
 external user-mapping repositories, fully automatic complex nickname recreation
-and fully automatic function/type mapping reconstruction, automatic module-member reconstruction,
+and fully automatic function/type mapping reconstruction, automatic routine/type/PLSQL module-member reconstruction and member comments,
 security labels, instance-level authorities, the newer schema RCAC
 backup/restore authority and method privileges still need separate work.
-Automatic XML/text/specialized index reconstruction, all physical index options,
+Automatic reconstruction of unsupported XML forms/text/other specialized indexes, all physical index options,
 arbitrary dependency planning and comprehensive ALTER round trips also need
 separate work. MQT/view dependency order beyond the supplied native Schema
 ordering is not inferred from SQL text. Existing CREATE IF NOT EXISTS behavior is unchanged; the example
