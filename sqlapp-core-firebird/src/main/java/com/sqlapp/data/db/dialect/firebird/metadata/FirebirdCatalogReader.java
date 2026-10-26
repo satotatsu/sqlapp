@@ -73,7 +73,8 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
-		return new FirebirdTableSpaceReader(this.getDialect());
+		// Pre-2.0 servers have neither monitoring tables nor RDB$GET_CONTEXT.
+		return null;
 	}
 
 	@Override

@@ -237,6 +237,13 @@ public enum IndexType implements EnumProperties {
 		if (type != null) {
 			return type;
 		}
+		// XML stores enum names; vendor display-name patterns do not cover every name.
+		for (final IndexType enm : IndexType.values()) {
+			if (enm.name().equalsIgnoreCase(text)) {
+				typeCache.put(text, enm);
+				return enm;
+			}
+		}
 		for (final IndexType enm : IndexType.values()) {
 			final Matcher matcher = enm.pattern.matcher(text);
 			if (matcher.matches()) {

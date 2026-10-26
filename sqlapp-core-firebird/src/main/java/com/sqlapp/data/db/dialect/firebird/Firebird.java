@@ -159,7 +159,7 @@ public class Firebird extends Dialect {
 
 	@Override
 	public boolean supportsWith() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -174,7 +174,7 @@ public class Firebird extends Dialect {
 
 	@Override
 	public boolean supportsDropCascade() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -293,11 +293,11 @@ public class Firebird extends Dialect {
 
 	@Override
 	public boolean supportsRowValueComparison() {
-		return true;
+		return false;
 	}
 
 	@Override
 	public boolean supportsRowValueComparisonIn() {
-		return true;
+		return false;
 	}
 }

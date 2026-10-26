@@ -58,10 +58,12 @@ public class FirebirdTableSpaceReader extends TableSpaceReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String path = trim(getString(rs, "MON$DATABASE_NAME"));
+				if (path == null || path.isBlank())
+					throw new SQLException("Firebird database path or alias was not returned by the catalog");
 				String[] splitPaths = path.split("[/\\\\]");
 				String lastPath = splitPaths[splitPaths.length - 1];
-				String[] splitLastName = lastPath.split("[.]");
-				String name = splitLastName[0];
+				int extension = lastPath.lastIndexOf('.');
+				String name = splitPaths.length > 1 && extension > 0 ? lastPath.substring(0, extension) : lastPath;
 				TableSpace storageSpace = new TableSpace(name);
 				storageSpace.setCreatedAt(rs.getTimestamp("MON$CREATION_DATE"));
 				TableSpaceFile storageFile = new TableSpaceFile(path, path);
@@ -73,7 +75,14 @@ public class FirebirdTableSpaceReader extends TableSpaceReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tableSpaces.sql");
+		boolean monitoring = getDialect()
+				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect25) >= 0;
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
+			int major = productVersionInfo.getMajorVersion();
+			Integer minor = productVersionInfo.getMinorVersion();
+			monitoring = major > 2 || major == 2 && minor != null && minor >= 1;
+		}
+		return getSqlNodeCache().getString(monitoring ? "tableSpaces.sql" : "tableSpaces20.sql");
 	}
 
 	@Override

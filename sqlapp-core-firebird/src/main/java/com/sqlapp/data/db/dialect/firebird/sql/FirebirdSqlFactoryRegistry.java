@@ -42,6 +42,8 @@ public class FirebirdSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.CREATE, FirebirdCreateSchemaFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.ALTER, FirebirdAlterSchemaFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, FirebirdAlterTableFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.CREATE,
 				FirebirdCreateCheckConstraintFactory.class);

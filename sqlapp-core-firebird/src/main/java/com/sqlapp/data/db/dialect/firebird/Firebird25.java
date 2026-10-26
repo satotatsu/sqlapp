@@ -34,6 +34,10 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  * 
  */
 public class Firebird25 extends Firebird20 {
+	@Override
+	public boolean supportsWith() {
+		return true;
+	}
 
 	protected Firebird25(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);

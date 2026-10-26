@@ -11,6 +11,19 @@ public class Firebird40SchemaReader extends Firebird30SchemaReader {
 	}
 
 	@Override
+	protected void setSchemaAfter(java.sql.Connection connection, com.sqlapp.data.schemas.Schema schema) {
+		super.setSchemaAfter(connection, schema);
+		if (!getReaderOptions().isReadStatement())
+			return;
+		try {
+			com.sqlapp.data.db.dialect.firebird.FirebirdPublications.set(schema,
+					new Firebird40PublicationReader(getDialect()).read(connection));
+		} catch (java.sql.SQLException e) {
+			throw new IllegalStateException("Unable to read Firebird publication policy", e);
+		}
+	}
+
+	@Override
 	protected ProcedureReader newProcedureReader() {
 		return new Firebird40ProcedureReader(getDialect());
 	}
