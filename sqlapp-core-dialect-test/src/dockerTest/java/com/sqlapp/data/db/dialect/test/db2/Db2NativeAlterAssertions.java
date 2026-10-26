@@ -41,6 +41,20 @@ final class Db2NativeAlterAssertions {
 				cleanup.push("DROP INDEX " + schemaName + ".XI");
 				statement.execute("INSERT INTO " + schemaName
 						+ ".XT VALUES(XMLPARSE(DOCUMENT '<book><price>12.30</price></book>'))");
+				statement.execute("CREATE MODULE " + schemaName + ".M");
+				cleanup.push("DROP MODULE " + schemaName + ".M");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH CONDITION C FOR SQLSTATE '75001'");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE V INTEGER");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH TYPE R AS ROW (ID INTEGER, LABEL VARCHAR(10 OCTETS))");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE RV R");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH TYPE RA AS R ARRAY[10]");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH TYPE N AS ROW (ITEMS RA)");
+				statement.execute("ALTER MODULE " + schemaName + ".M PUBLISH VARIABLE NV N");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M PUBLISH FUNCTION F(P INTEGER) RETURNS INTEGER SPECIFIC F_S LANGUAGE SQL RETURN P + 1");
+				statement.execute("ALTER MODULE " + schemaName
+						+ ".M ADD PROCEDURE P() SPECIFIC P_S LANGUAGE SQL BEGIN DECLARE X INTEGER; SET X=1; SET X=X+1; END");
 				var reader = dialect.getCatalogReader().getSchemaReader();
 				reader.setSchemaName(schemaName);
 				Schema before = reader.getAllFull(connection).stream().filter(s -> schemaName.equals(s.getName()))
@@ -91,6 +105,26 @@ final class Db2NativeAlterAssertions {
 				try (var rows = statement.executeQuery("SELECT COUNT(*) FROM " + schemaName + ".XT")) {
 					assertTrue(rows.next());
 					assertEquals(1, rows.getInt(1));
+				}
+				com.sqlapp.data.schemas.Package module = after.getPackages().get("M");
+				assertEquals(9, com.sqlapp.data.db.dialect.db2.Db2ModuleMembers.get(module).members().size());
+				SqlFactory<com.sqlapp.data.schemas.Package> recreateModule = dialect.createSqlFactoryRegistry()
+						.getSqlFactory(module, SqlType.CREATE);
+				statement.execute("DROP MODULE " + schemaName + ".M");
+				for (var operation : recreateModule.createSql(module))
+					statement.execute(operation.getSqlText());
+				Schema moduleActual = reader.getAllFull(connection).stream().filter(s -> schemaName.equals(s.getName()))
+						.findFirst().orElseThrow();
+				var rereadMembers = com.sqlapp.data.db.dialect.db2.Db2ModuleMembers
+						.get(moduleActual.getPackages().get("M")).members();
+				assertEquals(9, rereadMembers.size());
+				var rereadRow = rereadMembers.stream().filter(member -> member.name().equals("R")).findFirst()
+						.orElseThrow();
+				assertEquals(List.of("ID", "LABEL"), com.sqlapp.data.db.dialect.db2.Db2ModuleMembers
+						.getRowType(rereadRow).getColumns().stream().map(TypeColumn::getName).toList());
+				try (var rows = statement.executeQuery("VALUES " + schemaName + ".M.F(41)")) {
+					assertTrue(rows.next());
+					assertEquals(42, rows.getInt(1));
 				}
 				try (var rows = statement.executeQuery("VALUES NEXT VALUE FOR " + schemaName + ".S")) {
 					assertTrue(rows.next());
