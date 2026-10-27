@@ -10,6 +10,95 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class FirebirdExternalFunctionLifecycleTest {
+	@Test
+	void legacyTextReturnDeclarationsRetainTheirCharacterSet() {
+		for (var dialect : List.of(DialectHolder.defaultDialect25, DialectHolder.defaultDialect30,
+				DialectHolder.defaultDialect40, DialectHolder.defaultDialect50)) {
+			for (String type : List.of("CSTRING", "VARCHAR", "CHAR")) {
+				var function = legacy();
+				function.getReturning().setDataType("CHAR".equals(type) ? DataType.CHAR : DataType.VARCHAR)
+						.setDataTypeName(type).setLength(12).setCharacterSet("UTF8");
+				function.getSpecifics().put("firebird.udf.returnMechanism", "1");
+				String sql = dialect.createSqlFactoryRegistry().createSql(function, SqlType.CREATE).getFirst()
+						.getSqlText();
+				assertTrue(sql.contains("RETURNS " + type + "(12) CHARACTER SET UTF8"), sql);
+			}
+		}
+	}
+
+	@Test
+	void modeledDeclarationsRejectInvalidReturnPositionsInsteadOfChangingTheirMeaning() {
+		for (var dialect : List.of(DialectHolder.defaultDialect25, DialectHolder.defaultDialect30,
+				DialectHolder.defaultDialect40, DialectHolder.defaultDialect50)) {
+			var registry = dialect.createSqlFactoryRegistry();
+			for (String position : List.of("-1", "2", "not-a-number", "2147483648")) {
+				var function = legacy();
+				function.getSpecifics().put("firebird.udf.returnPosition", position);
+				assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.CREATE));
+			}
+			var function = legacy();
+			function.getSpecifics().put("firebird.udf.returnPosition", "1");
+			assertTrue(registry.createSql(function, SqlType.CREATE).getFirst().getSqlText()
+					.contains("RETURNS PARAMETER 1"));
+		}
+	}
+
+	@Test
+	void modeledDeclarationsRejectNulIdentitiesAndLibraryLiterals() {
+		for (var dialect : List.of(DialectHolder.defaultDialect25, DialectHolder.defaultDialect30,
+				DialectHolder.defaultDialect40, DialectHolder.defaultDialect50)) {
+			var registry = dialect.createSqlFactoryRegistry();
+			for (String name : List.of("", " ", "bad\0name")) {
+				var function = legacy().setName(name);
+				assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.CREATE));
+			}
+			for (String key : List.of("firebird.udf.module", "firebird.udf.entrypoint")) {
+				var function = legacy();
+				function.getSpecifics().put(key, "bad\0value");
+				assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.CREATE));
+			}
+		}
+	}
+
+	@Test
+	void modeledCStringArgumentsAndReturnsRequirePositiveByteLengths() {
+		for (var dialect : List.of(DialectHolder.defaultDialect25, DialectHolder.defaultDialect30,
+				DialectHolder.defaultDialect40, DialectHolder.defaultDialect50)) {
+			var registry = dialect.createSqlFactoryRegistry();
+			for (Long length : Arrays.asList(null, 0L, -1L)) {
+				var input = legacy();
+				input.getArguments().getFirst().setDataTypeName("CSTRING").setLength(length);
+				assertThrows(IllegalArgumentException.class, () -> registry.createSql(input, SqlType.CREATE));
+				var output = legacy();
+				output.getReturning().setDataTypeName("CSTRING").setLength(length);
+				assertThrows(IllegalArgumentException.class, () -> registry.createSql(output, SqlType.CREATE));
+			}
+			var function = legacy();
+			function.getArguments().getFirst().setDataTypeName("CSTRING").setLength(8);
+			function.getReturning().setDataTypeName("CSTRING").setLength(16);
+			function.getSpecifics().put("firebird.udf.returnMechanism", "1");
+			String sql = registry.createSql(function, SqlType.CREATE).getFirst().getSqlText();
+			assertTrue(sql.contains("CSTRING(8)"), sql);
+			assertTrue(sql.contains("RETURNS CSTRING(16)"), sql);
+		}
+	}
+
+	@Test
+	void definitionOnlyLegacyDeclarationsDoNotEmitModernParameterComments() {
+		for (var dialect : List.of(DialectHolder.defaultDialect25, DialectHolder.defaultDialect30,
+				DialectHolder.defaultDialect40, DialectHolder.defaultDialect50)) {
+			var function = new Function("F").setRemarks("legacy comment");
+			function.setDefinition(
+					"declare external function F integer returns integer by value entry_point 'x' module_name 'x'");
+			function.getArguments()
+					.add(new NamedArgument("A").setDataType(DataType.INT).setRemarks("supplemental metadata"));
+			var sql = dialect.createSqlFactoryRegistry().createSql(function, SqlType.CREATE);
+			assertEquals(2, sql.size());
+			assertEquals(String.join("\n", function.getDefinition()), sql.getFirst().getSqlText());
+			assertEquals("COMMENT ON EXTERNAL FUNCTION F IS 'legacy comment'", sql.getLast().getSqlText());
+		}
+	}
+
 	private Function legacy() {
 		var function = new Function("legacy function");
 		function.getSpecifics().put("firebird.udf.module", "oldlib");
@@ -109,6 +198,9 @@ class FirebirdExternalFunctionLifecycleTest {
 		unknown.getSpecifics().put("unhandled", "x");
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(before.diff(unknown), SqlType.ALTER));
+		var renamed = before.clone().setName("LEGACY FUNCTION");
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(before.diff(renamed), SqlType.ALTER));
 		var modern = new Function("legacy function").setStatement("BEGIN RETURN 1; END");
 		modern.setDialect(DialectHolder.defaultDialect30);
 		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(before.diff(modern), SqlType.ALTER));

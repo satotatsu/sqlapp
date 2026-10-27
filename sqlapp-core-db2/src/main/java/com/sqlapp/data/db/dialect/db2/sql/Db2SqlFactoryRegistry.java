@@ -43,6 +43,13 @@ import com.sqlapp.data.schemas.SchemaPrivilege;
 import com.sqlapp.data.schemas.UserPrivilege;
 
 public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
+	@Override
+	protected void setDialect(com.sqlapp.data.db.sql.SqlFactory<?> factory, Object value) {
+		// Differences may detach cloned children carrying the generic model dialect.
+		// An explicitly selected Db2 registry must keep its vendor/version semantics.
+		if (factory != null)
+			factory.setDialect(getDialect());
+	}
 
 	public Db2SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);

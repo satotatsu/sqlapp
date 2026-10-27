@@ -12,6 +12,31 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
 class FirebirdRoutineTypeMetadataTest {
+	@Test
+	void legacyTextArgumentsRetainCharsetAndDeclaredLengthAfterTypeResolution() throws Exception {
+		for (int type : List.of(14, 37, 40)) {
+			var values = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
+			values.put("ROUTINE_NAME", "F");
+			values.put("MODULE_NAME", "missing_library");
+			values.put("FIELD_TYPE", type);
+			values.put("FIELD_LENGTH", 128);
+			values.put("CHAR_LEN", 32);
+			values.put("CHARACTER_SET_NAME", "UTF8");
+			values.put("COLLATION_NAME", "UNICODE");
+			values.put("RDB$ARGUMENT_POSITION", 1);
+			values.put("RDB$MECHANISM", 1);
+			for (var reader : List.of(new FirebirdFunctionArgumentReader(DialectHolder.defaultDialect25),
+					new Firebird30FunctionArgumentReader(DialectHolder.defaultDialect50))) {
+				var argument = reader.createNamedArgument(row(values));
+				assertEquals("UTF8", argument.getCharacterSet());
+				assertEquals("UNICODE", argument.getCollation());
+				assertEquals(32L, argument.getLength());
+				assertEquals(type == 14 ? com.sqlapp.data.db.datatype.DataType.CHAR
+						: com.sqlapp.data.db.datatype.DataType.VARCHAR, argument.getDataType());
+			}
+		}
+	}
+
 	private ExResultSet row(Map<String, Object> values) {
 		return new ExResultSet(null) {
 			@Override

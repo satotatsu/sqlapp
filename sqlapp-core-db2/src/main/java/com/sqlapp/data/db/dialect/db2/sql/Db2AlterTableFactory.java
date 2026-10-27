@@ -50,6 +50,8 @@ public class Db2AlterTableFactory extends AlterTableFactory {
 						"ALTER TABLE " + Db2CreationContext.qualified(table.getSchemaName(), table.getName())
 								+ " DROP COLUMN " + Db2CreationContext.identifier(column.getName()),
 						SqlType.ALTER, column));
+		result.add(new SqlOperation("-- Db2 DROP COLUMN may require an explicit table REORG before subsequent access.",
+				SqlType.COMMENT, column));
 	}
 
 	@Override

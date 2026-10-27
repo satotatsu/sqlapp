@@ -75,6 +75,9 @@ public class Db2Utils {
 				obj.setDefinition(replayDefinition);
 			} else if (offset > 0 && definition != null) {
 				obj.setStatement(definition.substring(offset));
+				if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && "SQL".equals(obj.getLanguage()))
+					obj.getSpecifics().put("DB2_ROUTINE_DDL_BASE64", java.util.Base64.getEncoder().encodeToString(
+							replayDefinition.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 			}
 		}
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));

@@ -1,15 +1,15 @@
 # Db2 / PostgreSQL parity audit
 
-Audit date: 2026-10-27. This is a working-tree audit, not a claim that parity is
-complete. The comparison uses sqlapp's current Db2_1215 and Postgres180 dialects,
+Audit and remediation date: 2026-10-27. The comparison uses sqlapp's current Db2_1215 and Postgres180 dialects,
 Java 25, their inherited factories and shared Schema model. Existing Db2 live
 evidence covers disposable LUW 11.5.8.0 and 12.1.5.0; historical readers remain
 subject to the existing compatibility requirement.
 
 ## Conclusion and completion boundary
 
-The critical remainder is **two implementation packages and one verification
-package**, below. The prior completion checklist mixed these with a much larger
+The audit identified **two implementation packages and one verification
+package**, below. P1/P2 are now implemented with the explicit supported boundaries
+described below; P3 covers the final executed regressions. The prior completion checklist mixed these with a much larger
 Db2-specific expansion backlog. That made both the remaining size and the
 meaning of completion unclear. It also put substantial vendor-specific work
 ahead of defects in ordinary ALTER operations.
@@ -52,19 +52,22 @@ empty results. It is an evidence tool, not a green parity test. Reader-null case
 also need interpretation: PostgreSQL procedures are represented through its
 Function reader and routine-kind metadata, not the standalone Procedure reader.
 
-### Confirmed blocking findings
+### Reproduced blockers and remediation
 
-| ID | Reproduction | Confirmed result | Owning implementation |
+| ID | Reproduction | Current result after remediation | Owning implementation |
 | --- | --- | --- | --- |
-| B1 | Db2 `column.default.add/drop`, `column.notNull.add`, `column.type.widen` | Emits full column declarations after ALTER COLUMN, e.g. `ALTER TABLE APP.T ALTER COLUMN V INTEGER DEFAULT 1`; dropping a default emits only `... V INTEGER` | [Db2AlterTableFactory](../../sqlapp-core-db2/src/main/java/com/sqlapp/data/db/dialect/db2/sql/Db2AlterTableFactory.java) inherits [AbstractAlterTableFactory.addAlterColumn](../../sqlapp-core/src/main/java/com/sqlapp/data/db/sql/AbstractAlterTableFactory.java) |
-| B1 | Db2 `column.comment` and `table.comment` | Column comment emits `... ALTER COLUMN V INTEGER` without COMMENT; table comment returns `[]` | Same factory; shared behavior has not been replaced for these changes |
-| B2 | Db2 `function.comment`, `function.body`, `procedure.comment` | Direct ALTER resolves EmptySqlFactory and returns `[]` | [Db2SqlFactoryRegistry](../../sqlapp-core-db2/src/main/java/com/sqlapp/data/db/dialect/db2/sql/Db2SqlFactoryRegistry.java), inherited [SimpleSqlFactoryRegistry](../../sqlapp-core/src/main/java/com/sqlapp/data/db/sql/SimpleSqlFactoryRegistry.java) |
-| B2 | Db2 `schema.function.comment`, `catalog.function.comment` | Both higher-level entry points also return `[]` | [Db2AlterSchemaFactory](../../sqlapp-core-db2/src/main/java/com/sqlapp/data/db/dialect/db2/sql/Db2AlterSchemaFactory.java), [Db2AlterCatalogFactory](../../sqlapp-core-db2/src/main/java/com/sqlapp/data/db/dialect/db2/sql/Db2AlterCatalogFactory.java) |
+| B1 | Db2 `column.default.add/drop`, `column.notNull.add`, `column.type.widen` | Native SET/DROP DEFAULT, SET/DROP NOT NULL and SET DATA TYPE; explicit maintenance notes; unsupported conversions rejected | [Db2ColumnAlterSql](../../sqlapp-core-db2/src/main/java/com/sqlapp/data/db/dialect/db2/sql/Db2ColumnAlterSql.java), Db2AlterTableFactory |
+| B1 | Db2 `column.comment` and `table.comment` | Native COMMENT ON; removal uses `IS ''`, verified on both targets | Db2AlterTableFactory, Db2AlterCommentSql |
+| B2 | Db2 `function.comment`, `function.body`, `procedure.comment` | SPECIFIC comments generated; the audit's unverified statement-only model remains rejected; real SQL bodies with retained catalog templates or complete DDL support verified unchanged-header replacement | Db2AlterFunctionFactory, Db2AlterProcedureFactory |
+| B2 | Db2 `schema.function.comment`, `catalog.function.comment` | Both generate the same native SPECIFIC comment; explicit Db2 registry version survives detached model differences | Db2SqlFactoryRegistry, Db2AlterSchemaFactory, Db2AlterCatalogFactory |
 
-The column output conflicts with the native ALTER forms: `SET DATA TYPE`,
+The original column output conflicted with the native ALTER forms: `SET DATA TYPE`,
 `SET/DROP DEFAULT`, and `SET/DROP NOT NULL`. This grammar finding is supported by
 [IBM's LUW ALTER TABLE reference](https://www.ibm.com/docs/en/db2/11.5.x?topic=statements-alter-table).
-The offline audit did not execute the malformed output against a server.
+The offline audit does not execute SQL. Separate live fixtures now execute the
+replacement clauses and reread metadata and populated rows. The first live run
+also exposed `IS NULL` comment removal as invalid; all shared native comment
+removals now use a character literal, matching [IBM's COMMENT grammar](https://www.ibm.com/docs/en/db2-as-a-service?topic=statements-comment).
 
 The comparator itself is not a perfect gold standard. The same probe finds
 PostgreSQL column ALTER output without TYPE, and a NOT NULL statement missing
@@ -73,7 +76,7 @@ PostgreSQL/shared-path findings, not behavior to copy into Db2. PostgreSQL's
 dedicated routine factory does generate FUNCTION comments and explicitly rejects
 body replacement without verified catalog DDL; that is a useful safety contrast.
 
-## Required remaining packages
+## Completion packages and evidence
 
 | Package | Bounded work | Acceptance evidence |
 | --- | --- | --- |
@@ -81,11 +84,24 @@ body replacement without verified catalog DDL; that is a useful safety contrast.
 | P2: routine changes and no-op safety (B2) | FUNCTION/PROCEDURE comments and supported changes; native body replacement where identity/header and preservation guarantees can be established, otherwise explicit actionable rejection; registry state routing | No supported meaningful routine diff becomes `[]`; direct and nested entry points agree; live comments/replay and identity/grants checks; unsupported cases fail before a plan is returned |
 | P3: closing verification | Re-run the common-case fixture suite and historical resolver/SQL-resource boundary tests; add ordinary FK/table/view dependency recreation and generated DML checks; run applicable existing bulk/tree suites | Native SQL executes, model rereads agree, DML results and existing data are checked; all executed/unexecuted targets reported. Re-run the offline audit so B1/B2 observations have no unexplained silent outcome |
 
-P1 and P2 are implementation work; P3 is a verification package and can expose
-additional concrete fixes. This is a planning estimate of **three work packages,
-not three chat turns or a reliable person-day estimate**. It is smaller and more
-bounded than the old all-vendor backlog. No numerical completion percentage is
-justified by test counts or factory-file counts.
+P1/P2 are implemented for Db2 LUW 11.1 and later, inherited by the current
+11.5/12.1 routes. Historical factory registrations remain on their previous paths.
+The continuation also adds native SQL routine body replacement from complete
+matching CREATE DDL with preserved creation context; unsupported or changed
+headers remain explicit errors. The two live targets check grants, SPECIFIC
+names, untouched overload behavior and dependent-view revalidation.
+Default SQL-body reads also retain the fetched native header as supplemental
+metadata, allowing statement-only edits after XML round-trip when both source
+identity and body can be verified. Independent snapshots validate both headers;
+missing/corrupt templates remain explicit errors. The original offline body
+probe intentionally has no catalog template and therefore remains rejected.
+Native unqualified declaration names are now accepted when the retained creation
+schema proves their model identity. The replacement declaration is explicitly
+quoted/qualified; body text and its original SQL PATH are preserved. Ambiguous
+or mismatched creation schemas still require an explicit plan.
+The supported contract and actual executed commands are recorded in
+[the completion gates](db2-dialect-completion.md). No numerical completion
+percentage is justified by test counts or factory-file counts.
 
 Existing relevant verification includes
 [Db2BulkInsertTest](../../sqlapp-core-dialect-test/src/dockerTest/java/com/sqlapp/data/db/dialect/test/db2/Db2BulkInsertTest.java),
@@ -102,17 +118,17 @@ server conformance. Prior unit/live evidence is catalogued in
 
 | Shared capability | Current Db2 status | Remaining classification |
 | --- | --- | --- |
-| Tables/columns, native data types, identity/generated fields | Versioned readers and native CREATE factories; representative metadata and XML/DDL fixtures | Ordinary ALTER is P1; broad field permutations remain validation, not an absent-reader claim |
+| Tables/columns, native data types, identity/generated fields | Versioned readers/CREATE; native ordinary ALTER with explicit conversion boundaries | Broad field permutations and historical live targets remain unverified |
 | PK/unique/check/FK | Dedicated metadata readers, shared/native generation, representative composite/FK reads | Ordinary dependent-object recreation belongs in P3 |
 | Ordinary indexes | Metadata/native recreation, compression/comment ALTER with data-preservation fixture | Supported scope is implemented; uncommon XML/physical options are vendor expansion |
 | Views and MQTs | Catalog statement/DDL, view columns and native recreation; view comments; unsupported body change explicitly rejected | Explicit replacement plans retained; do not equate rejection with silent loss |
 | Sequences | Configuration/native ALTER, allocation-state separation and live progression/recreation | Implemented documented scope |
-| Functions/procedures | Dedicated readers, args/return handling, creation context, SPECIFIC binding and replay | Modification routing/comments/body handling is P2 |
+| Functions/procedures | Dedicated readers, args/return handling, context, SPECIFIC binding/replay; native comments and verified SQL body replacement from complete DDL | Signature/options changes and unproven DDL require explicit plans |
 | Triggers | Native definition/context replay and explicit change boundaries | Broad trigger ALTER is additional work unless a common-case regression is demonstrated |
 | Roles and object/column/routine/schema/database grants | Typed readers/plans; live grants, specific methods and distinct future scopes | Supported scopes implemented; LBAC/instance authorities are separate vendor expansion |
 | ROW/distinct/array/cursor types | Canonical Type/Domain recreation and mixed dependency order | Structured/anchored/opaque cases retain explicit definitions/plans |
 | Schema/Catalog composition | Object recreation, typed metadata, RCAC/grants composition; acyclic whole-schema type dependencies | Ordinary dependency regression is P3; arbitrary SQL-body/interleaved graph planning is advanced work |
-| Comments | CREATE preservation and several native comment ALTER paths | Table/column and routine modification gaps are B1/B2 |
+| Comments | CREATE preservation; native table/column/routine and other object comment ALTER/removal | Supported B1/B2 paths now covered by unit and live regressions |
 | DML/identity/returning | Registry paths exist; unit/bulk/tree verification sources exist | Dispatch is not execution evidence; closing checks are P3 |
 | Temporary tables, truncate and locks | Dedicated Db2 factories and targeted unit tests | Include applicable common-case checks in P3; not identified as absent implementations |
 | Quoting/case and versions | Named components, cursor/module qualification and resolver boundaries have targeted tests | Preserve ordinary quoted identifiers and older reader routes; old-server live runs remain unexecuted unless separately run |
@@ -133,13 +149,11 @@ equivalent Db2 feature is requested later, define its native scope explicitly.
 
 ## What ran in this audit
 
-The offline task compiled and completed, writing 64 observations. While extending
-it, compilation initially used a schema-only type for Schema/Catalog and then a
-package-private base class; both were corrected to the existing public DbObject
-interface. No production dialect behavior was changed or defect fixed here.
-
-The previously executed results remain 345 Db2 unit tests and fourteen real
-tests across 11.5.8/12.1.5. They are **previous validation**, not new runs in this
-audit and not proof that B1/B2 work. No database was opened, no container started,
-and no production data/settings or dependency versions changed. The TSV is an
-intentional generated documentation artifact and is reproducible with the task.
+The offline task was rerun after remediation, writing 64 observations. B1/B2
+now generate native statements or explicitly reject unsupported changes; no
+probed meaningful Db2 diff returns an unexplained empty plan.
+Live verification uses only the explicitly authorized disposable Community
+11.5.8/12.1.5 containers. No external/production data, credentials, local settings
+or dependency versions were changed. The TSV is an intentional generated
+documentation artifact reproducible with the task. Exact run counts and commands
+are in the completion record.

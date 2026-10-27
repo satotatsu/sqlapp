@@ -10,19 +10,19 @@ Db2_1215	reader.getProcedureReader	com.sqlapp.data.db.dialect.db2.metadata.Db2Pr
 Db2_1215	reader.getTriggerReader	com.sqlapp.data.db.dialect.db2.metadata.Db2TriggerReader	RESOLVED	Dispatch only; no metadata query executed
 Db2_1215	reader.getPackageReader	com.sqlapp.data.db.dialect.db2.metadata.Db2ModuleReader	RESOLVED	Dispatch only; no metadata query executed
 Db2_1215	reader.getConstantReader	com.sqlapp.data.db.dialect.db2.metadata.Db2GlobalVariableReader	RESOLVED	Dispatch only; no metadata query executed
-Db2_1215	column.default.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER DEFAULT 1]
-Db2_1215	column.default.drop	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER]
-Db2_1215	column.notNull.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER NOT NULL]
-Db2_1215	column.type.widen	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V BIGINT]
-Db2_1215	column.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ADD COLUMN NEW_COL INTEGER]
-Db2_1215	column.drop	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T DROP COLUMN V]
-Db2_1215	column.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE APP.T ALTER COLUMN V INTEGER]
-Db2_1215	table.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[]
-Db2_1215	function.comment	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
-Db2_1215	schema.function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterSchemaFactory	GENERATED	[]
-Db2_1215	catalog.function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterCatalogFactory	GENERATED	[]
-Db2_1215	function.body	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
-Db2_1215	procedure.comment	com.sqlapp.data.db.sql.EmptySqlFactory	GENERATED	[]
+Db2_1215	column.default.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" SET DEFAULT 1]
+Db2_1215	column.default.drop	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" DROP DEFAULT]
+Db2_1215	column.notNull.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" SET NOT NULL, COMMENT:-- Db2 column changes on "APP"."T" may require an explicit table REORG before subsequent access; no REORG or data backfill is performed by this plan.]
+Db2_1215	column.type.widen	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ALTER COLUMN "V" SET DATA TYPE BIGINT, COMMENT:-- Db2 column changes on "APP"."T" may require an explicit table REORG before subsequent access; no REORG or data backfill is performed by this plan.]
+Db2_1215	column.add	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" ADD COLUMN "NEW_COL" INTEGER]
+Db2_1215	column.drop	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[ALTER:ALTER TABLE "APP"."T" DROP COLUMN "V", COMMENT:-- Db2 DROP COLUMN may require an explicit table REORG before subsequent access.]
+Db2_1215	column.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[SET_COMMENT:COMMENT ON COLUMN "APP"."T"."V" IS 'changed']
+Db2_1215	table.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterTableFactory	GENERATED	[SET_COMMENT:COMMENT ON TABLE "APP"."T" IS 'changed']
+Db2_1215	function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterFunctionFactory	GENERATED	[SET_COMMENT:COMMENT ON SPECIFIC FUNCTION "APP"."F" IS 'changed']
+Db2_1215	schema.function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterSchemaFactory	GENERATED	[SET_COMMENT:COMMENT ON SPECIFIC FUNCTION "APP"."F" IS 'changed']
+Db2_1215	catalog.function.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterCatalogFactory	GENERATED	[SET_COMMENT:COMMENT ON SPECIFIC FUNCTION "APP"."F" IS 'changed']
+Db2_1215	function.body	com.sqlapp.data.db.dialect.db2.sql.Db2AlterFunctionFactory	REJECTED	IllegalArgumentException: Db2 routine body replacement requires complete SQL CREATE DDL with matching qualified name, SPECIFIC identity, unchanged signature/options and resolved QUALIFIER/FUNC_PATH; re-read metadata with readDefinition=true or provide an explicit native replacement plan
+Db2_1215	procedure.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterProcedureFactory	GENERATED	[SET_COMMENT:COMMENT ON SPECIFIC PROCEDURE "APP"."P" IS 'changed']
 Db2_1215	view.body	com.sqlapp.data.db.dialect.db2.sql.Db2AlterViewFactory	REJECTED	IllegalArgumentException: Db2 view changes require an explicit replacement plan for dependent objects and privileges
 Db2_1215	view.comment	com.sqlapp.data.db.dialect.db2.sql.Db2AlterViewFactory	GENERATED	[SET_COMMENT:COMMENT ON TABLE "APP"."V" IS 'changed']
 Db2_1215	table.CREATE	com.sqlapp.data.db.dialect.db2.sql.Db2_1010CreateTableFactory	RESOLVED	SQL not generated in dispatch-only observation

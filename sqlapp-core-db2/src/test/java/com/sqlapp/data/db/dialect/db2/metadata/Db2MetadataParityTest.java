@@ -150,15 +150,17 @@ class Db2MetadataParityTest {
 
 	@Test
 	void indexUsesTableSchemaForAttachmentAndRetainsIndexSchema() {
-		var reader = new Db2IndexReader(DialectHolder.defaultDialect) {
+		AtomicInteger queries = new AtomicInteger();
+		var reader = new Db2IndexReader(DialectHolder.Db2_1110Dialect) {
 			@Override
 			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
 					ResultSetNextHandler handler) {
+				queries.incrementAndGet();
 				try {
 					for (String order : java.util.List.of("D", "I")) {
 						handler.handleResultSetNext(row(Map.of("schema_name", "INDEX_OWNER", "table_schema", "APP",
 								"table_name", "T", "index_name", "IX", "UNIQUERULE", "U", "INDEXTYPE", "REG",
-								"column_name", order.equals("D") ? "ID" : "PAYLOAD", "COLORDER", order)));
+								"column_name", order.equals("D") ? "ID" : "PAYLOAD", "COLORDER", order, "DB2_CONSTRAINT_NAME", "UQ_T")));
 					}
 				} catch (SQLException e) {
 					throw new IllegalStateException(e);
@@ -171,6 +173,8 @@ class Db2MetadataParityTest {
 		Index index = indexes.get(0);
 		assertEquals("APP", index.getSchemaName());
 		assertEquals("INDEX_OWNER", index.getSpecifics().get("INDEX_SCHEMA"));
+		assertEquals("UQ_T", index.getSpecifics().get("DB2_CONSTRAINT_NAME"));
+		assertEquals(1, queries.get());
 		assertEquals(Order.Desc, index.getColumns().get(0).getOrder());
 		assertTrue(index.getColumns().get(1).isIncludedColumn());
 	}

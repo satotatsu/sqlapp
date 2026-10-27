@@ -14,7 +14,7 @@ public class Firebird30CreateFunctionFactory extends FirebirdCreateFunctionFacto
 	protected void addOtherDefinitions(Function obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
 		if (obj.getRemarks() != null)
 			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
-		if (obj.getSpecifics().containsKey("firebird.udf.module"))
+		if (FirebirdExternalFunctionSql.legacy(obj, getDialect()))
 			return;
 		for (var argument : obj.getArguments()) {
 			if (argument.getRemarks() != null)
@@ -25,7 +25,7 @@ public class Firebird30CreateFunctionFactory extends FirebirdCreateFunctionFacto
 
 	@Override
 	protected void addCreateObject(Function obj, FirebirdSqlBuilder builder) {
-		if (obj.getSpecifics().containsKey("firebird.udf.module")) {
+		if (FirebirdExternalFunctionSql.legacy(obj, getDialect())) {
 			super.addCreateObject(obj, builder);
 			return;
 		}

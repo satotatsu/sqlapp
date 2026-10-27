@@ -69,6 +69,93 @@ class/API remains available and uses the same implementation.
 
 ## Verification
 
+### Follow-up: legacy external functions (2026-10-27)
+
+The function DROP factory distinguishes legacy `DECLARE EXTERNAL FUNCTION`
+declarations from 3.0+ PSQL/UDR functions. Legacy declarations use
+`DROP EXTERNAL FUNCTION`, including Schema ALTER removals; modern functions
+retain `DROP FUNCTION`. Firebird 2.5 function comments use `COMMENT ON EXTERNAL
+FUNCTION`, including declarations represented only by their name.
+
+`createSql(before.diff(after), SqlType.ALTER)` supports legacy entry-point,
+module-name and comment changes through `ALTER EXTERNAL FUNCTION`, retaining
+the function identity and callers. It rejects renames, signature changes,
+legacy/modern conversion, unsupported specifics and inconsistent changed
+definition caches. Public method signatures and Schema XML are unchanged.
+No new metadata queries or module dependencies are introduced.
+
+Legacy text return declarations retain `FunctionReturning.characterSet` in
+CREATE, including CSTRING, VARCHAR and CHAR. Previously only input argument
+character sets were emitted, so the reader's cached declaration and model-based
+restoration could lose an explicitly declared return character set. The argument
+reader also now applies charset/collation after type-name resolution, which can
+reset these attributes, and uses the existing catalog character length instead
+of the encoded byte length for text declarations. CSTRING retains its logical
+VARCHAR type after setting its vendor type name. These changes prevent UTF8
+declarations from growing on repeated reconstruction. SQL-generation changes
+belong to the legacy CREATE factory and metadata changes to the argument reader;
+public APIs and catalog queries are unchanged. Regression fixtures declare UTF8 input/return
+values, read metadata, retain it through Schema XML and recreate from modeled
+components with the cached definition cleared. They compare the reread return
+type, length and character set. Fixtures never invoke the missing external
+library. The syntax follows the official
+[external-function grammar](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl-extfunc.html).
+
+Modeled legacy CREATE declarations now reject negative/out-of-range return
+parameter positions, invalid names, NUL-containing module/entry-point literals
+and missing/nonpositive CSTRING byte lengths. A negative return position must
+not silently select the scalar-return branch. Zero still denotes a separate
+return value; positive positions are one-based and refer to an existing argument.
+Complete caller-supplied definitions remain authoritative and do not require
+duplicated supplemental fields. This validation changes invalid-input behavior
+only, without changing public signatures or metadata retrieval.
+
+The validation follow-up passed its focused lifecycle class, then 241 Firebird
+unit tests and 13 Docker compatibility tests, with no failures/errors/skips.
+Java 25 and the wrapper ran
+`:sqlapp-core-dialect-test:firebirdCompatibilityTest --offline --no-parallel`
+with temporary output/cache isolation (5 minutes 44 seconds). Valid declaration,
+metadata, XML recreation and ALTER paths passed on disposable local Firebird
+2.5/3.0/4.0/5.0 containers. Shared core/command/PostgreSQL suites were not rerun
+for this dialect-only validation change; production/external databases were
+not accessed and no dependency or generated repository files were changed.
+
+The subsequent reconstruction audit also unified CREATE's legacy classification
+with DROP/ALTER/comment generation. A complete `DECLARE EXTERNAL FUNCTION`
+definition suffices without a duplicated `firebird.udf.module` marker. Its
+supplemental argument annotations do not generate modern `COMMENT ON PARAMETER`
+statements, which are unavailable for legacy UDF arguments. Native coverage
+removes the duplicated function specifics before reconstruction and retains an
+argument remark to exercise this boundary on all four supported engines.
+
+This reconstruction follow-up passed the focused lifecycle class first, then
+the full Firebird unit suite (238 tests) and Docker compatibility suite (13 tests;
+2.5/3.0/4.0/5.0), with zero failures, errors or skips. The Java 25 wrapper command
+was `:sqlapp-core-dialect-test:firebirdCompatibilityTest --offline --no-parallel`
+with isolated temporary outputs; it completed in 6 minutes 40 seconds. No shared
+modules changed, so their suites were not rerun. Only disposable local containers
+were used; no production/external database or library deployment was involved.
+
+The native regression covers metadata-read snapshots, forward/reverse Schema
+ALTER, stable function identity, XML reconstruction and factory DROP on all
+four engines. Firebird 2.5/3.0 also check a bundled executable UDF and its PSQL
+caller. Missing-library declarations on 4.0/5.0 are never executed; external
+library installation remains outside scope. Syntax follows the official
+[2.5 external-function reference](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref25/fblangref25-ddl-extfunc.html)
+and [5.0 external-function reference](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl-extfunc.html).
+
+The legacy-UDF follow-up executed `:sqlapp-core-firebird:test` (237 tests,
+zero failures/errors/skips) and `:sqlapp-core-dialect-test:firebirdCompatibilityTest`
+(13 Docker tests, zero failures/errors/skips) with Java 25 and the wrapper,
+`--offline --no-parallel`. Focused lifecycle/comment classes passed first.
+The final Docker rerun completed in 5 minutes 47 seconds. During verification,
+an obsolete comment expectation was corrected and the test-only identity check
+was changed from the 3.0+ `RDB$FUNCTION_ID` column to `RDB$DB_KEY` for 2.5
+compatibility. Shared core/command/PostgreSQL suites were not rerun for this
+dialect-only follow-up; their earlier results below remain separately recorded.
+
+### Fixed-scope completion run
+
 Focused class: `FirebirdConstraintLifecycleTest`, followed by
 `FirebirdSchemaForeignKeyOrderTest` and `FirebirdConstraintValidationSqlTest`.
 The final Java 25 wrapper tasks are:

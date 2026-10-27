@@ -77,11 +77,16 @@ public class FirebirdFunctionArgumentReader extends RoutineArgumentReader<Functi
 		int length = getInt(rs, "FIELD_LENGTH");
 		int precision = getInt(rs, "FIELD_PRECISION");
 		int scale = abs(getInt(rs, "FIELD_SCALE"));
-		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
-		obj.setCollation(getString(rs, COLLATION_NAME));
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
 		if (type == 40)
-			obj.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setDataTypeName("CSTRING").setLength(length);
+			obj.setDataTypeName("CSTRING").setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR);
+		if ((type == 14 || type == 37 || type == 40) && segmentLength > 0)
+			obj.setLength(segmentLength);
+		else if (type == 40)
+			obj.setLength(length);
+		// Type-name resolution can reset text attributes; apply catalog values last.
+		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
+		obj.setCollation(getString(rs, COLLATION_NAME));
 		if (getString(rs, "MODULE_NAME") != null) {
 			int position = rs.getInt("RDB$ARGUMENT_POSITION");
 			obj.setName(position == 0 ? null : "ARGUMENT_" + position);

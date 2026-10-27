@@ -86,8 +86,10 @@ class FirebirdObjectRecreationSqlTest {
 				() -> registry.createSql(new Column("unbound"), SqlType.SET_COMMENT));
 		assertThrows(IllegalArgumentException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
 				.createSql(new Table("old"), SqlType.SET_COMMENT));
+		assertEquals("COMMENT ON EXTERNAL FUNCTION \"new\" IS NULL",
+				registry.createSql(new Function("new"), SqlType.SET_COMMENT).getFirst().getSqlText());
 		assertThrows(IllegalArgumentException.class,
-				() -> registry.createSql(new Function("new"), SqlType.SET_COMMENT));
+				() -> registry.createSql(new com.sqlapp.data.schemas.Package("new"), SqlType.SET_COMMENT));
 	}
 
 	@Test

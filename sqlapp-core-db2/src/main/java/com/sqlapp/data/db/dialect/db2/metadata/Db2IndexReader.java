@@ -84,6 +84,7 @@ public class Db2IndexReader extends IndexReader {
 						index.getSpecifics().put("INDEXTYPE", nativeType);
 					setSpecifics(rs, "COMPRESSION", index);
 					if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+						setSpecifics(rs, "DB2_CONSTRAINT_NAME", index);
 						setSpecifics(rs, "FUNC_PATH", index);
 						setSpecifics(rs, "NULLKEYS", index);
 					}

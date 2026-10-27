@@ -26,6 +26,9 @@ final class FirebirdExternalFunctionSql {
 		if (!legacy(original, builder.getDialect()) || !legacy(target, builder.getDialect()))
 			throw new UnsupportedOperationException(
 					"Converting legacy UDF and stored/UDR functions requires an explicit migration");
+		FirebirdPrivilege.identifier(original.getName(), "external function name");
+		if (!Objects.equals(original.getName(), target.getName()))
+			throw new UnsupportedOperationException("External function rename requires an explicit migration");
 		var before = original.clone();
 		var after = target.clone();
 		before.setDefinition(List.of());

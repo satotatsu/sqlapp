@@ -10,6 +10,31 @@ import com.sqlapp.data.db.sql.*;
 import com.sqlapp.data.schemas.*;
 
 class Db2IndexRecreationTest {
+	@Test
+	void onlyProvenSystemConstraintBackingIndexesAreImplicitlyRecreated() throws Exception {
+		Table table = new Table("T").setSchemaName("APP");
+		table.getColumns().add("ID", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNotNull(true));
+		UniqueConstraint primary = new UniqueConstraint("PK_T", true);
+		primary.getColumns().add("ID");
+		primary.getIndex().setName("SQL_GENERATED");
+		primary.getIndex().getSpecifics().put("INDEX_SCHEMA", "SYSIBM  ");
+		table.getConstraints().add(primary);
+		Index backing = new Index("SQL_GENERATED").setUnique(true);
+		backing.getColumns().add("ID"); backing.getSpecifics().put("INDEX_SCHEMA", "SYSIBM  ");
+		backing.getSpecifics().put("DB2_CONSTRAINT_NAME", "PK_T");
+		table.getIndexes().add(backing);
+		Index ordinary = new Index("USER_INDEX"); ordinary.getColumns().add("ID");
+		table.getIndexes().add(ordinary);
+		SqlFactory<Table> factory = DialectHolder.Db2_1110Dialect.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
+		var statements = factory.createSql(table).stream().map(SqlOperation::getSqlText).toList();
+		assertTrue(statements.stream().anyMatch(sql -> sql.contains("PRIMARY KEY")));
+		assertTrue(statements.stream().anyMatch(sql -> sql.contains("USER_INDEX")));
+		assertTrue(statements.stream().noneMatch(sql -> sql.contains("SQL_GENERATED")));
+		assertEquals(2, table.getIndexes().size());
+		Table restored = SchemaUtils.readXml(new StringReader(table.asXml()));
+		assertTrue(factory.createSql(restored).stream().noneMatch(o -> o.getSqlText().contains("SQL_GENERATED")));
+	}
+
 	private Table table() {
 		Table table = new Table("T\"Q").setSchemaName("Table\"Schema");
 		table.getColumns().add("C\"Q");

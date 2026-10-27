@@ -49,6 +49,48 @@ class Db2MetadataReaderTest {
 	}
 
 	@Test
+	void ordinaryDependenciesAndGeneratedDmlExecute() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2CommonFeatureAssertions.verify(connection);
+		}
+	}
+
+	@Test
+	void unqualifiedRoutineReplacementRestoresCreationNamespaceAndPath() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2RoutineAlterAssertions.verifyUnqualifiedReplacement(connection);
+		}
+	}
+
+	@Test
+	void routineStatementReplacementSurvivesXmlAndPreservesGrants() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2RoutineAlterAssertions.verifyStatementReplacement(connection);
+		}
+	}
+
+	@Test
+	void routineBodyReplacementPreservesSpecificNamesGrantsAndDependants() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2RoutineAlterAssertions.verifyReplacement(connection);
+		}
+	}
+
+	@Test
+	void routineCommentsPreserveIdentityAndGrants() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2RoutineAlterAssertions.verify(connection);
+		}
+	}
+
+	@Test
+	void ordinaryColumnChangesPreservePopulatedData() throws Exception {
+		try (Connection connection = DB2.createConnection("")) {
+			Db2OrdinaryAlterAssertions.verify(connection);
+		}
+	}
+
+	@Test
 	void nativeAlterPreservesObjectsAndSequenceProgress() throws Exception {
 		try (Connection connection = DB2.createConnection("")) {
 			Db2NativeAlterAssertions.verify(connection);

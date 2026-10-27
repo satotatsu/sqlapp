@@ -89,7 +89,7 @@ class Db2NativeAlterTest {
 			var before = objects.get(i);
 			var after = before.clone().setRemarks("new's comment");
 			assertEquals(List.of("COMMENT ON " + designators.get(i) + " IS 'new''s comment'"), alter(before, after));
-			assertEquals(List.of("COMMENT ON " + designators.get(i) + " IS NULL"), alter(after, before));
+			assertEquals(List.of("COMMENT ON " + designators.get(i) + " IS ''"), alter(after, before));
 			assertEquals(List.of(), alter(before, before.clone()));
 		}
 	}
@@ -115,7 +115,7 @@ class Db2NativeAlterTest {
 		assertEquals(expected, alter(before.getIndexes().getFirst(), index));
 		assertEquals(expected, alter(before, after));
 		assertEquals(
-				List.of("ALTER INDEX \"IX.Q\".\"I\"\"Q\" COMPRESS NO", "COMMENT ON INDEX \"IX.Q\".\"I\"\"Q\" IS NULL"),
+				List.of("ALTER INDEX \"IX.Q\".\"I\"\"Q\" COMPRESS NO", "COMMENT ON INDEX \"IX.Q\".\"I\"\"Q\" IS ''"),
 				alter(index, before.getIndexes().getFirst()));
 	}
 

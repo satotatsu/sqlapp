@@ -272,6 +272,16 @@ uses the editor's existing confirmation. File operations run in the background.
 reasons with case-insensitive literal matching. Ctrl+F / Cmd+F focuses the filter.
 The count shows visible/all tables, the total selected tables and how many
 selections are hidden by the filter. Filtering never changes the Include flags.
+**Selected tables only** narrows the list to checked tables and combines with
+the text filter. Unchecking a table removes it from this view immediately;
+turn the option off to include other tables. **Clear filter** clears only the
+text search. Reading another Schema or re-reading the current one resets both
+filters and the selection. These view changes do not save settings or connect
+to a database.
+An inline hint explains empty schemas, unavailable tables, unmatched filters and
+the next selection step. When selections are hidden, it reminds you that they
+will still be included. In **New migration**, the ready hint also distinguishes
+saving and inspecting the plan from copying rows.
 **Select visible eligible** and **Clear visible** affect only currently displayed
 tables, even after sorting; ineligible tables remain unselectable. **Clear all
 selected** also clears hidden selections. Draft creation includes every selected
@@ -552,6 +562,29 @@ a load is running. A failed load leaves the previously loaded libraries availabl
 
 ## Schema comparison
 
+Use **Read DB…** beside either XML input to capture that side from a database.
+Choose an existing writable destination folder, enter a connection (or load a
+profile), and use **Test connection** or **Choose schema…** if needed. Blank Schema
+means the current schema and fails explicitly if it cannot be resolved uniquely.
+Editing the URL, username or driver clears the Schema choice back to current.
+**Read and use Schema XML** reads full Schema metadata through the shared dialect
+reader, including supported views, sequences and routines; it does not attach a
+row iterator, dump table rows or execute migration SQL. Available objects depend
+on the dialect and the account's metadata permissions. Connection pools request
+read-only mode and close afterward.
+
+Each capture writes UTF-8 `schema.xml` atomically inside a unique `schema-*`
+child of the chosen folder. Existing XML files are not overwritten. The result
+fills only the selected Before/After input and invalidates the old comparison;
+**Compare** remains explicit and both sides must use the same database product.
+Cancel or failure retains the previous inputs and review. The dialog blocks
+closing while a capture or profile operation is running. Password copies are
+cleared after operations and the password field is cleared on successful capture
+or cancellation. Failure details redact the supplied URL and password. Reading
+from DB is explicit; ordinary XML comparison remains offline. A failed write may
+leave an empty capture folder; an input change during capture can leave a saved
+XML file without selecting it, and the status gives its path.
+
 Select **Before Schema XML** (current structure) and **After Schema XML**
 (desired structure), then click **Compare**. The target Schema's database
 product/version selects the existing sqlapp SQL factory. Both files must have
@@ -592,6 +625,14 @@ handoff performs no database connection or SQL execution. It does not infer a
 next database version or generate rollback SQL.
 
 ## Build a Schema migration plan
+
+Both connected plan screens offer **Focus on results**. This temporarily hides
+the input settings and gives the reviewed summary, task tables and details more
+space, especially in smaller windows. **Show input settings** restores the form
+and its previous divider position. Inputs, review, audit results and execution
+eligibility are retained; changing presentation never rebuilds or approves a
+plan. The control is disabled while the screen is busy. SQL-directory, Job YAML
+and driver-class handoffs restore the relevant inputs before editing them.
 
 **Build URL…** and **Test connection** are available here as well as in Data
 migration. The shared URL form supports PostgreSQL, MySQL, SQL Server and Oracle
@@ -1075,3 +1116,11 @@ Tests (headless panel state checks and isolated in-memory HSQLDB planning/execut
 ```powershell
 .\gradlew.bat :sqlapp-swing:test
 ```
+
+`DataMigrationCreationIntegrationTest` covers source discovery, generated job
+handoff and automatic live inspection together, using in-memory source and target
+databases. It checks that a missing target table leaves execution disabled and
+is not created by inspection, and that source/target row counts remain unchanged.
+The selection dialog is supplied by a test callback; this does not verify native
+file chooser interaction or keyboard input. Existing `JobDraftPanel` tests cover
+table selection and saving separately.

@@ -19,10 +19,8 @@ final class Db2AlterCommentSql {
 	static String comment(Dialect dialect, String target, String remarks) {
 		Db2SqlBuilder builder = new Db2SqlBuilder(dialect);
 		builder._add("COMMENT ON " + target + " IS ");
-		if (remarks == null)
-			builder._add("NULL");
-		else
-			builder.sqlChar(remarks);
+		// Db2 COMMENT requires a character literal; the empty literal removes it.
+		builder.sqlChar(remarks == null ? "" : remarks);
 		return builder.toString();
 	}
 }

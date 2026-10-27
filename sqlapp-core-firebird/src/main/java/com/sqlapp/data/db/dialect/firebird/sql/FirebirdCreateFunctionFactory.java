@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.dialect.firebird.sql;
 
 import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder;
+import com.sqlapp.data.db.dialect.firebird.util.FirebirdPrivilege;
 import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.util.CommonUtils;
@@ -27,12 +28,19 @@ public class FirebirdCreateFunctionFactory extends AbstractCreateFunctionFactory
 		if (module == null || module.isBlank() || entry == null || entry.isBlank())
 			throw new IllegalArgumentException(
 					"Legacy Firebird function requires module and entrypoint or complete definition");
+		FirebirdPrivilege.identifier(function.getName(), "external function name");
+		if (module.indexOf('\0') >= 0 || entry.indexOf('\0') >= 0)
+			throw new IllegalArgumentException("Legacy Firebird module and entrypoint must not contain NUL");
+		int returnPosition = Integer.parseInt(function.getSpecifics().getOrDefault("firebird.udf.returnPosition", "0"));
+		if (returnPosition < 0 || returnPosition > function.getArguments().size())
+			throw new IllegalArgumentException(
+					"UDF return parameter position must be zero or a valid one-based argument position");
 		builder._add("DECLARE EXTERNAL FUNCTION ").name(function.getName()).lineBreak();
 		for (int i = 0; i < function.getArguments().size(); i++) {
 			var argument = function.getArguments().get(i);
 			builder.comma(i > 0);
 			if ("CSTRING".equals(argument.getDataTypeName()))
-				builder._add("CSTRING(")._add(argument.getLength())._add(")");
+				cstring(argument.getLength(), builder);
 			else if (argument.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB
 					|| argument.getDataType() == com.sqlapp.data.db.datatype.DataType.CLOB)
 				builder._add("BLOB");
@@ -45,23 +53,28 @@ public class FirebirdCreateFunctionFactory extends AbstractCreateFunctionFactory
 					builder);
 		}
 		builder.lineBreak().returns().space();
-		int returnPosition = Integer.parseInt(function.getSpecifics().getOrDefault("firebird.udf.returnPosition", "0"));
 		if (returnPosition > 0) {
-			if (returnPosition > function.getArguments().size())
-				throw new IllegalArgumentException("Invalid UDF return parameter position");
 			if (Math.abs(Integer.parseInt(function.getArguments().get(returnPosition - 1).getSpecifics()
 					.getOrDefault("firebird.udf.mechanism", "1"))) == 4)
 				throw new IllegalArgumentException("SCALAR_ARRAY cannot be used as a UDF return parameter");
 			builder._add("PARAMETER ")._add(returnPosition);
 		} else {
 			if ("CSTRING".equals(function.getReturning().getDataTypeName()))
-				builder._add("CSTRING(")._add(function.getReturning().getLength())._add(")");
+				cstring(function.getReturning().getLength(), builder);
 			else
 				builder._add(function.getReturning());
+			if (function.getReturning().getCharacterSet() != null)
+				builder._add(" CHARACTER SET ").name(function.getReturning().getCharacterSet());
 			mechanism(Integer.parseInt(function.getSpecifics().getOrDefault("firebird.udf.returnMechanism", "0")), true,
 					builder);
 		}
 		builder.lineBreak()._add("ENTRY_POINT ").sqlChar(entry)._add(" MODULE_NAME ").sqlChar(module);
+	}
+
+	private void cstring(Long length, FirebirdSqlBuilder builder) {
+		if (length == null || length <= 0)
+			throw new IllegalArgumentException("Legacy Firebird CSTRING requires a positive byte length");
+		builder._add("CSTRING(")._add(length)._add(")");
 	}
 
 	private void mechanism(int mechanism, boolean returning, FirebirdSqlBuilder builder) {

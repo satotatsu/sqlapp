@@ -133,6 +133,27 @@ class Db2RoutineReplayTest {
 	}
 
 	@Test
+	void defaultBodyReadRetainsNativeHeaderThroughXmlWithoutExtraQueries() throws Exception {
+		for (boolean function : List.of(true, false)) {
+			var values = fields(function);
+			String ddl = values.get("ROUTINE_DEFINITION");
+			values.put("TEXT_BODY_OFFSET", Integer.toString(ddl.indexOf(function ? "RETURN" : "BEGIN")));
+			Routine<?> routine = read(function, values, new ReaderOptions());
+			assertTrue(routine.getDefinition().isEmpty());
+			assertFalse(routine.getStatement().isEmpty());
+			String encoded = routine.getSpecifics().get("DB2_ROUTINE_DDL_BASE64");
+			assertNotNull(encoded);
+			assertEquals(ddl, new String(java.util.Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8));
+			Routine<?> restored = SchemaUtils.readXml(new java.io.StringReader(routine.asXml()));
+			assertEquals(encoded, restored.getSpecifics().get("DB2_ROUTINE_DDL_BASE64"));
+			Routine<?> legacy = function ? new Function("F") : new Procedure("P");
+			Db2Utils.setRutine(DialectHolder.Db2_1050Dialect, Db2MetadataParityTest.row(values), new ReaderOptions(), legacy);
+			assertFalse(legacy.getStatement().isEmpty());
+			assertFalse(legacy.getSpecifics().containsKey("DB2_ROUTINE_DDL_BASE64"));
+		}
+	}
+
+	@Test
 	void procedureBodyReplayIncludesResultsAccessCommitAndDeterminism() throws Exception {
 		var values = fields(false);
 		String body = "BEGIN DECLARE C CURSOR WITH RETURN FOR SELECT 1 FROM SYSIBM.SYSDUMMY1; OPEN C; END";

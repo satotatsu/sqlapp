@@ -30,6 +30,10 @@ public class Db2_1110SqlFactoryRegistry extends Db2_1050SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterFunctionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterProcedureFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.db.sql.SqlType.ALTER,
 				Db2AlterIndexFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.schemas.State.Modified,
@@ -67,6 +71,15 @@ public class Db2_1110SqlFactoryRegistry extends Db2_1050SqlFactoryRegistry {
 		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.ALTER,
 				Db2AlterViewFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+	}
+
+	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, com.sqlapp.data.schemas.State.Modified,
 				com.sqlapp.data.db.sql.SqlType.ALTER);
 	}
 
