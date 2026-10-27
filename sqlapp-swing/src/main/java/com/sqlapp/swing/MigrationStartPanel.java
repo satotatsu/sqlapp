@@ -24,12 +24,12 @@ final class MigrationStartPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	enum Destination {
-		DATA, COMPARE, REPORTS, SCHEMA_PLAN, SQL_EDITOR, JOB_EDITOR, DRIVERS
+		DATA, FILE, COMPARE, REPORTS, SCHEMA_PLAN, SQL_EDITOR, JOB_EDITOR, DRIVERS
 	}
 
 	final Map<Destination, JButton> buttons = new EnumMap<>(Destination.class);
 	final JToggleButton more = new JToggleButton("More tools");
-	final JPanel tools = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+	final JPanel tools = new JPanel(new GridLayout(0, 2, 8, 4));
 
 	MigrationStartPanel(Consumer<Destination> navigate) {
 		super(new BorderLayout());
@@ -37,25 +37,27 @@ final class MigrationStartPanel extends JPanel {
 		final var content = new Content();
 		content.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
 		final var heading = new JPanel(new BorderLayout(0, 8));
-		final var title = new JLabel("What would you like to do?");
+		final var title = new JLabel("Move data between databases");
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
 		heading.add(title, BorderLayout.NORTH);
-		heading.add(new JLabel("Choose a task. You can return to Start at any time."), BorderLayout.SOUTH);
+		heading.add(new JLabel("Choose direct JDBC or a CSV package. Review the target before importing."),
+				BorderLayout.SOUTH);
 		content.add(heading, BorderLayout.NORTH);
 		final var cards = new JPanel(new GridLayout(3, 1, 0, 12));
-		cards.add(card("Copy data",
+		cards.add(card("Direct JDBC transfer",
 				"Enter source and target connections, select tables, then review the plan.\n"
 						+ "No YAML preparation is needed. Initial copies use existing, same-named empty target tables.",
 				button(Destination.DATA, "Open data migration", navigate)));
-		cards.add(card("Compare Schema definitions",
-				"Choose Schema XML, or capture definitions from a database, to review changes and prepare SQL.\n"
-						+ "The comparison itself works offline.",
-				button(Destination.COMPARE, "Open Schema comparison", navigate)));
+		cards.add(card("Transfer with a CSV package",
+				"Create a shared GUI / Gradle job, export the source, then import the package when ready.\n"
+						+ "Import does not need the source connection. Current targets must already exist and be empty.",
+				button(Destination.FILE, "Open CSV transfer", navigate)));
 		cards.add(card("Review saved results",
 				"Open saved migration or verification reports to inspect results.\n"
 						+ "Saved reports do not check the current database state.",
 				button(Destination.REPORTS, "Open reports", navigate)));
 		content.add(cards, BorderLayout.CENTER);
+		tools.add(button(Destination.COMPARE, "Compare Schema definitions", navigate));
 		tools.add(button(Destination.SCHEMA_PLAN, "Review / apply SQL migrations", navigate));
 		tools.add(button(Destination.SQL_EDITOR, "SQL editor", navigate));
 		tools.add(button(Destination.JOB_EDITOR, "Job YAML editor", navigate));

@@ -42,6 +42,12 @@ public final class TransferJobConfigurationIO {
 			return configuration.mappingFile() == null ? null
 					: file.getParent().resolve(configuration.mappingFile()).normalize();
 		}
+
+		/** File transport location follows the saved job when its directory moves. */
+		public Path filesDirectory() {
+			return configuration.files() == null ? null
+					: file.getParent().resolve(configuration.files().directory()).normalize();
+		}
 	}
 
 	public TransferJobConfiguration validate(String text) {
@@ -54,12 +60,15 @@ public final class TransferJobConfigurationIO {
 			// database.
 			if (configuration.mappingFile() != null)
 				Path.of(configuration.mappingFile());
+			if (configuration.files() != null)
+				Path.of(configuration.files().directory());
 			return configuration;
 		} catch (RuntimeException failure) {
 			// Parser exceptions may contain credentials mistakenly pasted into the job.
 			throw new IllegalArgumentException("Invalid transfer job. Require formatVersion: 1, runtime source/target "
 					+ "connection names, a nonempty unique tables list and schemaMode (CREATE_MISSING or REQUIRE_EXISTING). "
-					+ "Check field names, types, paths and chunkSize (1..1000000); credentials are runtime inputs.");
+					+ "Check field names, types, paths and chunkSize (1..1000000). FILE dataMode requires files.directory, "
+					+ "a supported encoding and an explicit CSV nullValue; JSONL uses JSON null. Credentials are runtime inputs.");
 		}
 	}
 

@@ -103,8 +103,11 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 			}
 			insertTable.getColumns().add(column);
 		}
-		final var nodes = dialect.createSqlFactoryRegistry()
-				.createSqlNodes(insertTable, SqlType.INSERT);
+		final var registry = dialect.createSqlFactoryRegistry();
+		// This executor binds by position, independently of column names. Named
+		// expressions cannot safely represent quoted identifiers containing spaces.
+		registry.getTableOptions().setParameterExpression((column, defaultValue) -> "?");
+		final var nodes = registry.createSqlNodes(insertTable, SqlType.INSERT);
 		if (nodes.isEmpty()) {
 			throw new IllegalStateException("No INSERT SQL factory is available for "
 					+ dialect.getClass().getName());

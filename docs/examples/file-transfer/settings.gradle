@@ -1,0 +1,11 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    plugins {
+        id 'com.sqlapp.db' version providers.gradleProperty('sqlappVersion').get()
+    }
+}
+rootProject.name = 'sqlapp-csv-transfer-example'

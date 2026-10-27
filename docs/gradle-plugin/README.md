@@ -22,6 +22,7 @@ use a plugin release that contains the tasks you need.
 | [Troubleshooting](troubleshooting.md) | Task discovery, classpath, dialect, DataSource files, paths, outputs, and diagnostic commands |
 | [Runnable example project](example-project.md) | How the companion project is organized and which task demonstrates each workflow |
 | [Task reference](task-reference.md) | Registered names, task classes, primary inputs/outputs, database effects, and common properties |
+| [CSV package transfer](file-transfer.md) | Shared transfer job, source-only export, target-only import, verification and audit results |
 | [Schema, SQL and HTML](schema-sql-and-html.md) | XML export, comparison, SQL generation, documentation properties and outputs |
 | [Test-data generation](../data/test-data-generation.md) | Excel templates, generation expressions, lookups, JDBC batches, and scale planning |
 | [Custom tasks](custom-tasks-and-migrations.md) | Data export, file conversion, SQL execution and task registration |

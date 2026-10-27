@@ -512,6 +512,13 @@ public class BulkMigrationJobConfigurationResolver {
 				"Schema XML must contain Catalog, SchemaCollection, Schema, " + "TableCollection, or Table.");
 	}
 
+	/**
+	 * Resolve a source identity offline using the same rules as bulk job loading.
+	 */
+	public static Table resolveTable(final List<Table> tables, final String name) {
+		return findTable(tables, name);
+	}
+
 	static Table findTable(final List<Table> tables, final String name) {
 		if (name == null || name.isBlank()) {
 			throw new CommandException("Each bulk migration task requires a table.");

@@ -15,6 +15,29 @@ import org.junit.jupiter.api.io.TempDir;
 
 /** Offline contract tests: no JDBC driver, connection or database is needed. */
 class TransferJobConfigurationIOTest {
+	@Test
+	void temporalExportDefaultsToWarningsAndAllowsExplicitErrorPolicy() {
+		final var io = new TransferJobConfigurationIO();
+		final String yaml = "formatVersion: 1\nsource: source\ntarget: target\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ndataMode: FILE\nfiles: {directory: packages, nullValue: __NULL__}";
+		assertEquals(TransferJobConfiguration.TemporalPolicy.WARN,
+				io.validate(yaml).files().unsupportedTemporalPolicy());
+		final var strict = io
+				.validate(yaml.replace("nullValue: __NULL__", "nullValue: __NULL__, unsupportedTemporalPolicy: ERROR"));
+		assertEquals(TransferJobConfiguration.TemporalPolicy.ERROR, strict.files().unsupportedTemporalPolicy());
+		assertEquals(strict, io.validate(io.format(strict)));
+		assertThrows(IllegalArgumentException.class, () -> io.validate(
+				yaml.replace("nullValue: __NULL__", "nullValue: __NULL__, unsupportedTemporalPolicy: IGNORE")));
+	}
+
+	@Test
+	void compatibilityPolicyDefaultsToWarningsAndStrictModeIsExplicit() {
+		assertEquals(TransferJobConfiguration.CompatibilityPolicy.WARN, io.validate(yaml).compatibilityPolicy());
+		final var strict = io.validate(yaml + "compatibilityPolicy: ERROR\n");
+		assertEquals(TransferJobConfiguration.CompatibilityPolicy.ERROR, strict.compatibilityPolicy());
+		assertEquals(strict, io.validate(io.format(strict)));
+		assertThrows(IllegalArgumentException.class, () -> io.validate(yaml + "compatibilityPolicy: IGNORE\n"));
+	}
+
 	@TempDir
 	Path directory;
 	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();

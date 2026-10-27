@@ -11,7 +11,64 @@ import java.util.List;
 @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 public record TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
 		SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
-		Boolean verify) {
+		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy) {
+	public enum CompatibilityPolicy {
+		WARN, ERROR
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, CompatibilityPolicy.WARN);
+	}
+
+	/** Independent of database product pairing and target Schema preparation. */
+	public enum DataMode {
+		JDBC_DIRECT, FILE
+	}
+
+	public enum FileFormat {
+		CSV, JSONL
+	}
+
+	public enum TemporalPolicy {
+		WARN, ERROR
+	}
+
+	/**
+	 * Saved file-transport intent, not a claim that export/import is implemented.
+	 * CSV exporters must reject literal null-token collisions rather than lose
+	 * data.
+	 */
+	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+	public record FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
+			TemporalPolicy unsupportedTemporalPolicy) {
+		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue) {
+			this(directory, format, encoding, nullValue, TemporalPolicy.WARN);
+		}
+
+		public FileTransfer {
+			unsupportedTemporalPolicy = unsupportedTemporalPolicy == null ? TemporalPolicy.WARN
+					: unsupportedTemporalPolicy;
+			if (directory == null || directory.isBlank())
+				throw new IllegalArgumentException("files.directory is required for file transport.");
+			format = format == null ? FileFormat.CSV : format;
+			encoding = encoding == null ? "UTF-8" : encoding;
+			final java.nio.charset.Charset charset = java.nio.charset.Charset.forName(encoding);
+			encoding = charset.name();
+			if (format == FileFormat.CSV) {
+				if (nullValue == null || nullValue.isBlank()
+						|| nullValue.chars().anyMatch(c -> c == ',' || c == '"' || c == '\r' || c == '\n'))
+					throw new IllegalArgumentException(
+							"CSV files require an explicit nonblank nullValue without commas, quotes or line breaks.");
+				if (!charset.newEncoder().canEncode(nullValue))
+					throw new IllegalArgumentException("CSV nullValue must be representable in files.encoding.");
+			} else if (nullValue != null) {
+				throw new IllegalArgumentException("JSONL uses JSON null; omit files.nullValue.");
+			}
+		}
+	}
 
 	/** Policy for target preparation; destructive replacement is not supported. */
 	public enum SchemaMode {
@@ -23,7 +80,16 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		this(1, source, target, tables, schemaMode, null, null, null, null, null);
 	}
 
+	/** Retains the original direct-JDBC construction API and defaults. */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, null, null);
+	}
+
 	public TransferJobConfiguration {
+		compatibilityPolicy = compatibilityPolicy == null ? CompatibilityPolicy.WARN : compatibilityPolicy;
 		if (formatVersion != 1)
 			throw new IllegalArgumentException("Transfer job formatVersion must be 1.");
 		source = connectionName(source, "source");
@@ -43,6 +109,12 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		if (chunkSize < 1 || chunkSize > 1_000_000)
 			throw new IllegalArgumentException("chunkSize must be between 1 and 1000000.");
 		verify = verify == null ? Boolean.TRUE : verify;
+		dataMode = dataMode == null ? DataMode.JDBC_DIRECT : dataMode;
+		if (dataMode == DataMode.FILE && files == null)
+			throw new IllegalArgumentException("FILE dataMode requires files settings.");
+		if (dataMode == DataMode.JDBC_DIRECT && files != null)
+			throw new IllegalArgumentException(
+					"files settings require FILE dataMode; they cannot be ignored in JDBC_DIRECT mode.");
 	}
 
 	private static String connectionName(String value, String field) {

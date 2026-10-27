@@ -1,4 +1,4 @@
-# sqlapp Swing migration review
+# sqlapp Swing RDB transfer
 
 Run on a Java 25 graphical desktop from the repository root:
 
@@ -24,13 +24,70 @@ setting is required.
 ## Appearance and code views
 
 The application opens on **Start**, with three task-oriented entry points:
-**Copy data**, **Compare Schema definitions**, and **Review saved results**.
-The data entry explains the connection/table/plan flow without requiring YAML
-preparation. **More tools** reveals SQL migration planning, SQL and Job YAML
-editors, and JDBC driver management. All existing tool tabs remain available.
+**Direct JDBC transfer**, **CSV package**, and **Review saved results**.
+The transfer entries explain the connection/table/review flow without requiring
+YAML preparation. **More tools** reveals Schema comparison, SQL migration
+planning, SQL and Job YAML editors, and JDBC driver management.
+All existing tool tabs remain available.
 Start actions only switch to the existing tab; they do not clear inputs, replace
 unsaved edits, load files, connect to a database or approve/execute a migration.
 Return to **Start** at any time to choose another task.
+
+## CSV transfer without preparing YAML
+
+Open **CSV package**, choose **Export source to CSV**, and enter or load the
+source connection. **New CSV job…** asks for a working folder, reads source
+metadata, and opens the existing searchable table picker. Unsupported tables
+show a reason and cannot be selected. Choose tables, review the visible CSV NULL
+token, and save. Chunk size and verification remain optional adjustments.
+**Create missing target tables before importing** is an explicit opt-in; leave
+it unchecked to require existing tables. The target schema namespace must exist.
+Compatibility concerns default to warnings so users can first try migration and
+then refine the result. **Treat compatibility warnings as errors** enables strict
+preflight via the shared `compatibilityPolicy: ERROR`; its default is `WARN`.
+Unsupported temporal types default to warning-only JDBC-text export; the more
+specific `files.unsupportedTemporalPolicy: ERROR` is also available in YAML.
+A warning-bearing temporal
+column requires conversion before automatic import; exporting it does not approve
+a lossy import. Inspect the warning count and `manifest.warnings` in the result.
+The saved `transfer.yaml` uses the shared command format, logical connections
+`source` / `target`, and a `packages` directory relative to the job. It contains
+no credentials. Saving does not export data or write to either database.
+
+Choose **Export source to CSV** explicitly to create the completed package.
+Its manifest path is displayed and selected for later import. Switch to
+**Import CSV package**, select or drop `manifest.json`, and provide the target
+connection. **Review package and target** checks package integrity and existing
+empty target tables and displays generated DDL for missing tables when requested.
+Review that SQL, choose a results folder, then **Import reviewed package…**
+and confirm. Changing the connection or manifest requires another review.
+Execution revalidates the package and target and retains copy, verification,
+committed progress and audit information, including on import failure.
+Committed chunks and created objects can remain after a failure. The result
+records completed DDL and the uncertain attempted statement; no automatic retry or target reset
+is performed.
+
+Database/file work runs in the background, with inputs disabled during work.
+Review and connection checks retain the UI password for the next action;
+export/import clear it when starting. Password copies are cleared after work.
+GUI-only JDBC JAR additions must also be configured in Gradle's runtime
+classpath for unattended execution. The same saved job/package can be used with
+[`exportTransferFile` / `importTransferFile`](../docs/gradle-plugin/file-transfer.md).
+
+The current CSV path supports pre-existing empty
+targets or explicit creation of missing ordinary tables, numeric primary keys
+and supported scalar columns. Product differences and missing-table features
+such as identity/default/generated/domain columns or partitioning/inheritance
+are warnings by default, and strict policy can reject them. The target dialect
+generates best-effort DDL; inspect retained/omitted vendor features and actual
+failures. Unresolved external-schema FK references require explicit resolution.
+DATE, second-precision TIME and standard
+TIMESTAMP (up to nanoseconds) support typed CSV import. Unsupported temporal
+types can be exported as JDBC text with warnings. Full Schema cloning,
+complete vendor-specific cross-product conversion, binary/LOB columns and JSONL
+execution are not implemented. Direct JDBC transfer retains its existing
+Data Job workflow; its integration with the new transfer-definition format is
+still pending.
 
 The desktop installs [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (Light)
 before creating Swing components. SQL comparison previews, the YAML job editor,

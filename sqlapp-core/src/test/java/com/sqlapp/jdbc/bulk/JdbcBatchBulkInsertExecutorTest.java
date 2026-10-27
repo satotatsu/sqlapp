@@ -18,6 +18,23 @@ import com.sqlapp.data.schemas.Table;
 
 class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 	@Test
+	void bindsQuotedColumnNamesPositionallyAndPreservesNullValues() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE \"Batch Items\" (\"Key Id\" INTEGER, \"Display Name\" VARCHAR(32))");
+			final var table = new Table("Batch Items");
+			table.getColumns().add(new Column("Key Id").setDataType(DataType.INT));
+			table.getColumns().add(new Column("Display Name").setDataType(DataType.VARCHAR).setLength(32));
+			for (int id = 1; id <= 2; id++) {
+				final var row = table.newRow(); row.put("Key Id", id); row.put("Display Name", id == 1 ? "value" : null); table.getRows().add(row);
+			}
+			assertEquals(2, new JdbcBatchBulkInsertExecutor(getDialect(connection)).execute(connection, table, BulkOption.defaults()));
+			try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT \"Key Id\", \"Display Name\" FROM \"Batch Items\" ORDER BY \"Key Id\"")) {
+				assertTrue(rows.next()); assertEquals(1, rows.getInt(1)); assertEquals("value", rows.getString(2));
+				assertTrue(rows.next()); assertEquals(2, rows.getInt(1)); assertEquals(null, rows.getString(2)); assertFalse(rows.next());
+			}
+		});
+	}
+	@Test
 	void bindsBinaryAndNullValuesWithoutCommittingCallerTransaction() throws Exception {
 		testDb(connection -> {
 			execute(connection, "CREATE TABLE SQLAPP_BATCH_BINARY (ID INTEGER, CONTENT BLOB)");

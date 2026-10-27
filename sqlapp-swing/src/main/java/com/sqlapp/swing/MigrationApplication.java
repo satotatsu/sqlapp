@@ -21,7 +21,7 @@ public final class MigrationApplication {
 		}
 		SwingUtilities.invokeLater(() -> {
 			DesktopAppearance.install();
-			final var frame = new JFrame("sqlapp — Migration review");
+			final var frame = new JFrame("sqlapp — RDB transfer");
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			final var tabs = new JTabbedPane();
 			final var comparison = new SchemaComparisonPanel();
@@ -80,10 +80,12 @@ public final class MigrationApplication {
 			schemaPlan.savedReport.setReceiver(openReport);
 			dataPlan.savedReport.setReceiver(openReport);
 			final var drivers = new JdbcDriverPanel();
+			final var fileTransfer = new FileTransferPanel();
+			tabs.addTab("CSV package transfer", fileTransfer);
 			tabs.addTab("JDBC drivers", drivers);
 			final java.util.function.BooleanSupplier activity = () -> comparison.isBusy() || schemaPlan.isBusy()
 					|| dataPlan.isBusy() || jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy()
-					|| drivers.isBusy();
+					|| drivers.isBusy() || fileTransfer.isBusy();
 			drivers.setBlockedSupplier(activity);
 			drivers.setConnectionReceivers(name -> {
 				if (!schemaPlan.selectDriverClass(name))
@@ -101,11 +103,18 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(dataPlan);
 				return true;
 			});
+			tabs.remove(dataPlan);
+			tabs.insertTab("Direct JDBC transfer", null, dataPlan,
+					"Copy directly between source and target connections", 0);
+			tabs.remove(fileTransfer);
+			tabs.insertTab("CSV package transfer", null, fileTransfer,
+					"Create a shared job, export, review and import CSV", 1);
 			MigrationStartPanel.install(tabs, java.util.Map.of(MigrationStartPanel.Destination.DATA, dataPlan,
-					MigrationStartPanel.Destination.COMPARE, comparison, MigrationStartPanel.Destination.REPORTS,
-					reports, MigrationStartPanel.Destination.SCHEMA_PLAN, schemaPlan,
-					MigrationStartPanel.Destination.SQL_EDITOR, sqlEditor, MigrationStartPanel.Destination.JOB_EDITOR,
-					jobEditor, MigrationStartPanel.Destination.DRIVERS, drivers));
+					MigrationStartPanel.Destination.FILE, fileTransfer, MigrationStartPanel.Destination.COMPARE,
+					comparison, MigrationStartPanel.Destination.REPORTS, reports,
+					MigrationStartPanel.Destination.SCHEMA_PLAN, schemaPlan, MigrationStartPanel.Destination.SQL_EDITOR,
+					sqlEditor, MigrationStartPanel.Destination.JOB_EDITOR, jobEditor,
+					MigrationStartPanel.Destination.DRIVERS, drivers));
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {
 				@Override

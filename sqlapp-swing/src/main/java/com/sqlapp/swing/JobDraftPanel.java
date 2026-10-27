@@ -87,6 +87,13 @@ final class JobDraftPanel extends JPanel {
 	private JPanel header;
 	private JPanel actions;
 	private Path managedDirectory;
+
+	@FunctionalInterface
+	interface FileDraftWriter {
+		String save(SchemaSnapshot snapshot, List<String> selected, int chunkSize, boolean verify) throws Exception;
+	}
+
+	private java.util.function.Supplier<FileDraftWriter> fileDraftWriter;
 	private Consumer<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> savedReady;
 
 	JobDraftPanel(final Consumer<String> ready) {
@@ -320,7 +327,7 @@ final class JobDraftPanel extends JPanel {
 		refresh();
 	}
 
-	private void draftOptionsChanged() {
+	void draftOptionsChanged() {
 		revision++;
 		if (!busy)
 			status.setText("Draft options changed. Review the selection and create the draft again.");
@@ -405,9 +412,11 @@ final class JobDraftPanel extends JPanel {
 			selectionHelp.setText(
 					"Hidden selections will also be included. Clear the filter to review every selected table.");
 		else
-			selectionHelp.setText(managedDirectory == null
-					? "Selection ready. Create a draft to review the generated settings in the editor."
-					: "Selection ready. Save and review plan checks the target; it does not copy rows.");
+			selectionHelp.setText(fileDraftWriter != null
+					? "Selection ready. Save the shared CSV job; no rows are exported by saving."
+					: managedDirectory == null
+							? "Selection ready. Create a draft to review the generated settings in the editor."
+							: "Selection ready. Save and review plan checks the target; it does not copy rows.");
 	}
 
 	private void updateSelection(final boolean include, final boolean all) {
@@ -491,12 +500,15 @@ final class JobDraftPanel extends JPanel {
 		final String name = jobId.getText();
 		final int chunk = ((Number) chunkSize.getValue()).intValue();
 		final boolean verification = verify.isSelected();
+		final FileDraftWriter customWriter = fileDraftWriter == null ? null : fileDraftWriter.get();
 		final long requested = revision;
 		busy = true;
 		refresh();
 		status.setText("Rechecking Schema fingerprint and ordering selected tasks…");
 		new SwingWorker<Draft, Void>() {
 			protected Draft doInBackground() throws Exception {
+				if (customWriter != null)
+					return new Draft(customWriter.save(reviewed, selected, chunk, verification), null);
 				final String yaml = builder.draft(reviewed, selected, name, chunk, verification);
 				return new Draft(yaml,
 						managedDirectory == null ? null : DataMigrationDraftService.save(managedDirectory, yaml));
@@ -527,6 +539,39 @@ final class JobDraftPanel extends JPanel {
 
 	private record Draft(String yaml,
 			com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot saved) {
+	}
+
+	static JobDraftPanel fileTransfer(SchemaSnapshot schema, java.util.function.Supplier<FileDraftWriter> saver,
+			Consumer<Path> ready, Runnable cancelled) {
+		final var panel = new JobDraftPanel(path -> ready.accept(Path.of(path)));
+		panel.schemaFile.setText(schema.file().toString());
+		panel.showSnapshot(schema);
+		panel.fileDraftWriter = saver;
+		panel.pathRow.setVisible(false);
+		panel.identityRow.setVisible(false);
+		panel.jobId.setVisible(false);
+		for (var component : ((JPanel) panel.jobId.getParent()).getComponents())
+			if (component instanceof JLabel label && "Job ID (optional)".equals(label.getText()))
+				label.setVisible(false);
+		panel.create.setText("Save CSV transfer job");
+		panel.actions.add(panel.cancel);
+		panel.cancel.addActionListener(event -> {
+			if (!panel.isBusy())
+				cancelled.run();
+		});
+		panel.getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"),
+				"cancelFileJob");
+		panel.getActionMap().put("cancelFileJob", new javax.swing.AbstractAction() {
+			@Override
+			public void actionPerformed(java.awt.event.ActionEvent event) {
+				if (!panel.isBusy())
+					cancelled.run();
+			}
+		});
+		panel.status.setText(
+				"Select tables for export. Review export warnings before import; saving settings does not move data.");
+		panel.refresh();
+		return panel;
 	}
 
 	private void showSnapshot(final SchemaSnapshot value) {
