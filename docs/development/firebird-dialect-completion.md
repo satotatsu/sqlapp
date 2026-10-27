@@ -101,6 +101,27 @@ type, length and character set. Fixtures never invoke the missing external
 library. The syntax follows the official
 [external-function grammar](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-ddl-extfunc.html).
 
+During this follow-up, all four reconstruction cases passed but the separate
+JDBC-tree fixture stalled in the initial connection handshake. Its worker was
+terminated after a thread dump confirmed that it had not entered dialect code.
+The fixture now waits for the image health check, uses the Testcontainers host
+and sets `connectTimeout=30` (seconds) and `soTimeout=60000` (milliseconds).
+The isolated JDBC-tree rerun passed in 59 seconds. These are test-only settings;
+application connection defaults are unchanged. Timeout units follow the
+[Jaybird manual](https://firebirdsql.github.io/jaybird-manual/jaybird_manual.html).
+
+The final charset follow-up verified 243 Firebird unit tests and 13 Docker
+compatibility tests, with zero failures/errors/skips. The focused metadata and
+SQL lifecycle classes passed before the full unit suite; the final full Docker
+rerun completed in 6 minutes 6 seconds using Java 25, the repository wrapper and
+`:sqlapp-core-dialect-test:firebirdCompatibilityTest --offline --no-parallel`.
+The unit suite executed after the production changes; the final rerun reused
+those unchanged unit results while executing all Docker tests. Build outputs
+and the project cache were isolated in the owned temporary verification folder.
+Shared core/command/PostgreSQL suites were not rerun for this dialect-only
+change. Only dedicated disposable local databases were used. No application
+connection settings, dependency versions or repository-generated files changed.
+
 Modeled legacy CREATE declarations now reject negative/out-of-range return
 parameter positions, invalid names, NUL-containing module/entry-point literals
 and missing/nonpositive CSTRING byte lengths. A negative return position must

@@ -109,11 +109,14 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 			// They cannot be explicitly recreated in the reserved system schema.
 			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
 					&& "SYSIBM".equals(index.getSpecifics().getOrDefault("INDEX_SCHEMA", "").stripTrailing())
-					&& table.getConstraints().stream().filter(com.sqlapp.data.schemas.UniqueConstraint.class::isInstance)
+					&& table.getConstraints().stream()
+							.filter(com.sqlapp.data.schemas.UniqueConstraint.class::isInstance)
 							.map(com.sqlapp.data.schemas.UniqueConstraint.class::cast)
-							.anyMatch(c -> java.util.Objects.equals(c.getName(), index.getSpecifics().get("DB2_CONSTRAINT_NAME"))
+							.anyMatch(c -> java.util.Objects.equals(c.getName(),
+									index.getSpecifics().get("DB2_CONSTRAINT_NAME"))
 									|| (java.util.Objects.equals(c.getIndex().getName(), index.getName())
-									&& "SYSIBM".equals(c.getIndex().getSpecifics().getOrDefault("INDEX_SCHEMA", "").stripTrailing()))))
+											&& "SYSIBM".equals(c.getIndex().getSpecifics()
+													.getOrDefault("INDEX_SCHEMA", "").stripTrailing()))))
 				continue;
 			com.sqlapp.data.db.sql.SqlFactory<Index> factory = getSqlFactoryRegistry().getSqlFactory(index,
 					SqlType.CREATE);

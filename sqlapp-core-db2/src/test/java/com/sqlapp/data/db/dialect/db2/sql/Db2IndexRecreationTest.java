@@ -20,12 +20,15 @@ class Db2IndexRecreationTest {
 		primary.getIndex().getSpecifics().put("INDEX_SCHEMA", "SYSIBM  ");
 		table.getConstraints().add(primary);
 		Index backing = new Index("SQL_GENERATED").setUnique(true);
-		backing.getColumns().add("ID"); backing.getSpecifics().put("INDEX_SCHEMA", "SYSIBM  ");
+		backing.getColumns().add("ID");
+		backing.getSpecifics().put("INDEX_SCHEMA", "SYSIBM  ");
 		backing.getSpecifics().put("DB2_CONSTRAINT_NAME", "PK_T");
 		table.getIndexes().add(backing);
-		Index ordinary = new Index("USER_INDEX"); ordinary.getColumns().add("ID");
+		Index ordinary = new Index("USER_INDEX");
+		ordinary.getColumns().add("ID");
 		table.getIndexes().add(ordinary);
-		SqlFactory<Table> factory = DialectHolder.Db2_1110Dialect.createSqlFactoryRegistry().getSqlFactory(table, SqlType.CREATE);
+		SqlFactory<Table> factory = DialectHolder.Db2_1110Dialect.createSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.CREATE);
 		var statements = factory.createSql(table).stream().map(SqlOperation::getSqlText).toList();
 		assertTrue(statements.stream().anyMatch(sql -> sql.contains("PRIMARY KEY")));
 		assertTrue(statements.stream().anyMatch(sql -> sql.contains("USER_INDEX")));

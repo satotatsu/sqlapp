@@ -471,15 +471,15 @@ class FirebirdSchemaRoundTripTest {
 		}
 	}
 
-	private void legacyUdfTextReturnLifecycle(Connection connection, Statement statement, Dialect dialect) throws Exception {
+	private void legacyUdfTextReturnLifecycle(Connection connection, Statement statement, Dialect dialect)
+			throws Exception {
 		var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader();
 		var registry = dialect.createSqlFactoryRegistry();
 		int index = 0;
 		for (String type : List.of("CSTRING(32)", "VARCHAR(8)", "CHAR(8)")) {
 			String name = "FB_UDF_TEXT_" + index++;
 			// Declaration-only: no external library is loaded or invoked.
-			statement.execute("DECLARE EXTERNAL FUNCTION " + name + " " + type
-					+ " CHARACTER SET UTF8 RETURNS " + type
+			statement.execute("DECLARE EXTERNAL FUNCTION " + name + " " + type + " CHARACTER SET UTF8 RETURNS " + type
 					+ " CHARACTER SET UTF8 ENTRY_POINT 'unused' MODULE_NAME 'sqlapp_missing_library'");
 			reader.setObjectName(name);
 			var before = reader.getAllFull(connection).getFirst();
@@ -497,33 +497,43 @@ class FirebirdSchemaRoundTripTest {
 			assertEquals(before.getReturning().getCharacterSet(), after.getReturning().getCharacterSet());
 			assertEquals(before.getReturning().getDataTypeName(), after.getReturning().getDataTypeName());
 			assertEquals(before.getReturning().getLength(), after.getReturning().getLength());
-			assertEquals(before.getArguments().getFirst().getCharacterSet(), after.getArguments().getFirst().getCharacterSet());
+			assertEquals(before.getArguments().getFirst().getCharacterSet(),
+					after.getArguments().getFirst().getCharacterSet());
 			execute(statement, dialect, after, SqlType.DROP);
 		}
 		reader.setObjectName(null);
 	}
 
-	private void legacyUdfMetadataLifecycle(Connection connection, Statement statement, Dialect dialect) throws Exception {
+	private void legacyUdfMetadataLifecycle(Connection connection, Statement statement, Dialect dialect)
+			throws Exception {
 		// Declaration-only on all versions; no missing external library is loaded.
-		statement.execute("DECLARE EXTERNAL FUNCTION \"legacy meta\" INTEGER RETURNS INTEGER BY VALUE ENTRY_POINT 'old_entry' MODULE_NAME 'sqlapp_old_missing_library'");
+		statement.execute(
+				"DECLARE EXTERNAL FUNCTION \"legacy meta\" INTEGER RETURNS INTEGER BY VALUE ENTRY_POINT 'old_entry' MODULE_NAME 'sqlapp_old_missing_library'");
 		statement.execute("COMMENT ON EXTERNAL FUNCTION \"legacy meta\" IS 'old comment'");
 		var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader();
 		reader.setObjectName("legacy meta");
 		Function before = reader.getAllFull(connection).get(0);
 		byte[] identity = legacyUdfIdentity(statement);
-		statement.execute("ALTER EXTERNAL FUNCTION \"legacy meta\" ENTRY_POINT 'new_entry' MODULE_NAME 'sqlapp_new_missing_library'");
+		statement.execute(
+				"ALTER EXTERNAL FUNCTION \"legacy meta\" ENTRY_POINT 'new_entry' MODULE_NAME 'sqlapp_new_missing_library'");
 		statement.execute("COMMENT ON EXTERNAL FUNCTION \"legacy meta\" IS NULL");
 		Function after = reader.getAllFull(connection).get(0);
-		statement.execute("ALTER EXTERNAL FUNCTION \"legacy meta\" ENTRY_POINT 'old_entry' MODULE_NAME 'sqlapp_old_missing_library'");
+		statement.execute(
+				"ALTER EXTERNAL FUNCTION \"legacy meta\" ENTRY_POINT 'old_entry' MODULE_NAME 'sqlapp_old_missing_library'");
 		statement.execute("COMMENT ON EXTERNAL FUNCTION \"legacy meta\" IS 'old comment'");
-		var original = new Schema(); original.setDialect(dialect); original.getFunctions().add(before.clone());
+		var original = new Schema();
+		original.setDialect(dialect);
+		original.getFunctions().add(before.clone());
 		com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.set(original, List.of());
-		var target = original.clone(); target.getFunctions().clear(); target.getFunctions().add(after.clone());
+		var target = original.clone();
+		target.getFunctions().clear();
+		target.getFunctions().add(after.clone());
 		var registry = dialect.createSqlFactoryRegistry();
 		var plan = registry.getSqlFactory(original, SqlType.ALTER).createDiffSql(original.diff(target));
 		assertTrue(plan.getFirst().getSqlText().startsWith("ALTER EXTERNAL FUNCTION"));
 		assertFalse(plan.stream().anyMatch(operation -> operation.getSqlText().startsWith("DROP")));
-		for (var operation : plan) statement.execute(operation.getSqlText());
+		for (var operation : plan)
+			statement.execute(operation.getSqlText());
 		assertArrayEquals(identity, legacyUdfIdentity(statement));
 		Function reread = reader.getAllFull(connection).get(0);
 		assertEquals("new_entry", reread.getSpecifics().get("firebird.udf.entrypoint"));
@@ -533,9 +543,11 @@ class FirebirdSchemaRoundTripTest {
 			statement.execute(operation.getSqlText());
 		assertEquals("old comment", reader.getAllFull(connection).get(0).getRemarks());
 		Schema restored = SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
-		var empty = new Schema(); com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.set(empty, List.of());
+		var empty = new Schema();
+		com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.set(empty, List.of());
 		for (var operation : registry.getSqlFactory(original, SqlType.ALTER).createDiffSql(original.diff(empty))) {
-			assertTrue(operation.getSqlText().startsWith("DROP EXTERNAL FUNCTION")); statement.execute(operation.getSqlText());
+			assertTrue(operation.getSqlText().startsWith("DROP EXTERNAL FUNCTION"));
+			statement.execute(operation.getSqlText());
 		}
 		assertTrue(reader.getAllFull(connection).isEmpty());
 		// Complete legacy DDL is sufficient; argument annotations remain supplemental.
@@ -544,16 +556,19 @@ class FirebirdSchemaRoundTripTest {
 		declaration.getSpecifics().clear();
 		declaration.getArguments().get(0).setRemarks("supplemental argument comment");
 		var recreation = registry.createSql(restored, SqlType.CREATE);
-		assertFalse(recreation.stream().anyMatch(operation -> operation.getSqlText().startsWith("COMMENT ON PARAMETER")));
-		for (var operation : recreation) statement.execute(operation.getSqlText());
+		assertFalse(
+				recreation.stream().anyMatch(operation -> operation.getSqlText().startsWith("COMMENT ON PARAMETER")));
+		for (var operation : recreation)
+			statement.execute(operation.getSqlText());
 		assertEquals("old_entry", reader.getAllFull(connection).get(0).getSpecifics().get("firebird.udf.entrypoint"));
-		for (var operation : registry.createSql(restored.getFunctions().get(0), SqlType.DROP)) statement.execute(operation.getSqlText());
+		for (var operation : registry.createSql(restored.getFunctions().get(0), SqlType.DROP))
+			statement.execute(operation.getSqlText());
 		reader.setObjectName(null);
 	}
 
 	private byte[] legacyUdfIdentity(Statement statement) throws SQLException {
-		try (var rows = statement.executeQuery(
-				"SELECT RDB$DB_KEY FROM RDB$FUNCTIONS WHERE RDB$FUNCTION_NAME='legacy meta'")) {
+		try (var rows = statement
+				.executeQuery("SELECT RDB$DB_KEY FROM RDB$FUNCTIONS WHERE RDB$FUNCTION_NAME='legacy meta'")) {
 			assertTrue(rows.next());
 			return rows.getBytes(1);
 		}
@@ -2803,13 +2818,18 @@ class FirebirdSchemaRoundTripTest {
 				assertTrue(rows.next());
 				assertEquals(3.5, rows.getDouble(1));
 			}
-			statement.execute("CREATE PROCEDURE FB_UDF_CALLER RETURNS (R DOUBLE PRECISION) AS BEGIN R=FB_LEGACY_ABS(-3.5); SUSPEND; END");
-			var changed = function.clone(); changed.getSpecifics().put("firebird.udf.entrypoint", "sqlapp_missing_entry");
+			statement.execute(
+					"CREATE PROCEDURE FB_UDF_CALLER RETURNS (R DOUBLE PRECISION) AS BEGIN R=FB_LEGACY_ABS(-3.5); SUSPEND; END");
+			var changed = function.clone();
+			changed.getSpecifics().put("firebird.udf.entrypoint", "sqlapp_missing_entry");
 			var registry = dialect.createSqlFactoryRegistry();
-			for (var operation : registry.createSql(function.diff(changed), SqlType.ALTER)) statement.execute(operation.getSqlText());
-			for (var operation : registry.createSql(changed.diff(function), SqlType.ALTER)) statement.execute(operation.getSqlText());
+			for (var operation : registry.createSql(function.diff(changed), SqlType.ALTER))
+				statement.execute(operation.getSqlText());
+			for (var operation : registry.createSql(changed.diff(function), SqlType.ALTER))
+				statement.execute(operation.getSqlText());
 			try (var rows = statement.executeQuery("SELECT R FROM FB_UDF_CALLER")) {
-				assertTrue(rows.next()); assertEquals(3.5, rows.getDouble(1));
+				assertTrue(rows.next());
+				assertEquals(3.5, rows.getDouble(1));
 			}
 			assertThrows(SQLException.class, () -> execute(statement, dialect, function, SqlType.DROP));
 			statement.execute("DROP PROCEDURE FB_UDF_CALLER");

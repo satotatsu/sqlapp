@@ -160,7 +160,8 @@ class Db2MetadataParityTest {
 					for (String order : java.util.List.of("D", "I")) {
 						handler.handleResultSetNext(row(Map.of("schema_name", "INDEX_OWNER", "table_schema", "APP",
 								"table_name", "T", "index_name", "IX", "UNIQUERULE", "U", "INDEXTYPE", "REG",
-								"column_name", order.equals("D") ? "ID" : "PAYLOAD", "COLORDER", order, "DB2_CONSTRAINT_NAME", "UQ_T")));
+								"column_name", order.equals("D") ? "ID" : "PAYLOAD", "COLORDER", order,
+								"DB2_CONSTRAINT_NAME", "UQ_T")));
 					}
 				} catch (SQLException e) {
 					throw new IllegalStateException(e);

@@ -87,8 +87,10 @@ class Db2OrdinaryAlterTest {
 		SqlFactory<Catalog> factory = DialectHolder.Db2_1110Dialect.createSqlFactoryRegistry().getSqlFactory(after,
 				SqlType.ALTER);
 		var statements = factory.createDiffSql(before.diff(after)).stream().map(SqlOperation::getSqlText).toList();
-		assertInstanceOf(Db2AlterTableFactory.class, factory.getSqlFactoryRegistry().getSqlFactory(changed, State.Modified));
-		assertInstanceOf(com.sqlapp.data.db.dialect.db2.Db2_1110.class, ((AbstractSqlFactory<?, ?>) factory).getDialect());
+		assertInstanceOf(Db2AlterTableFactory.class,
+				factory.getSqlFactoryRegistry().getSqlFactory(changed, State.Modified));
+		assertInstanceOf(com.sqlapp.data.db.dialect.db2.Db2_1110.class,
+				((AbstractSqlFactory<?, ?>) factory).getDialect());
 		assertTrue(statements.stream().anyMatch(value -> value.endsWith("SET DEFAULT 3")), statements.toString());
 		assertTrue(statements.stream().anyMatch(value -> value.startsWith("COMMENT ON TABLE")), statements.toString());
 		assertNull(before.getSchemas().get("APP").getTables().getFirst().getColumns().get("V").getDefaultValue());
@@ -126,8 +128,8 @@ class Db2OrdinaryAlterTest {
 		var renamed = before.clone();
 		renamed.getColumns().get("V").setName("NEW\".Q");
 		assertTrue(sql(before, renamed).getFirst().endsWith("RENAME COLUMN \"V\" TO \"NEW\"\".Q\""));
-		assertFalse(DialectHolder.Db2_1050Dialect.createSqlFactoryRegistry().getSqlFactory(new Function("F"), SqlType.ALTER)
-				instanceof Db2AlterFunctionFactory);
+		assertFalse(DialectHolder.Db2_1050Dialect.createSqlFactoryRegistry().getSqlFactory(new Function("F"),
+				SqlType.ALTER) instanceof Db2AlterFunctionFactory);
 	}
 
 	@Test

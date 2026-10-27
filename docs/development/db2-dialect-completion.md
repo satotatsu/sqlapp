@@ -65,9 +65,9 @@ defaults or anchoring). Unproven declaration dependencies still require complete
 parent DDL. Procedure
 declarations retain result-set counts, NULL-input and COMMIT ON RETURN clauses.
 
-Current verification: Java 25, 367 DB2 unit tests and 35 real database tests passed
+Current verification: Java 25, 371 DB2 unit tests and 37 real database tests passed
 with zero failures/errors/skips. Real targets were disposable DB2 Community
-11.5.8.0 and 12.1.5.0 containers: twelve metadata/recreation tests on each target,
+11.5.8.0 and 12.1.5.0 containers: thirteen metadata/recreation tests on each target,
 seven bulk insert/upsert tests on 12.1.5 and four hierarchical JDBC tests on 11.5.8.
 Both owned containers were
 removed after verification. Common and dialect-test builds now both use Java 25;
@@ -79,7 +79,7 @@ the earlier Java-version mismatch no longer applies.
 | --- | --- | --- |
 | P1: ordinary table/column ALTER | Native DEFAULT, nullability, supported widening and table/column comment changes/removals; unsupported fields rejected | Direct Table and nested Schema/Catalog tests; both live targets reread correctly; populated rows/default behavior retained; explicit REORG notes |
 | P2: routine changes and no-op safety | Native SPECIFIC comments/removals; verified complete-DDL and retained-template statement body replacement; unsupported headers rejected | Comment-only changes retain IDs/times; both body-edit paths retain SPECIFIC names, grants and usable dependants on both live targets |
-| P3: closing verification | FK/table/view XML recreation; generated prepared INSERT/UPDATE/DELETE; bulk and hierarchical writes; resolver/resource boundary unit suite | 367 unit and 35 real tests passed; offline evidence has native B1/B2 SQL or explicit errors |
+| P3: closing verification | FK/table/view XML recreation; generated prepared INSERT/UPDATE/DELETE; bulk and hierarchical writes; resolver/resource boundary unit suite | 371 unit and 37 real tests passed; offline evidence has native B1/B2 SQL or explicit errors |
 
 Closing verification exposed an additional ordinary recreation defect: the
 generated plan tried to CREATE a constraint's automatic index in reserved SYSIBM.
@@ -159,6 +159,19 @@ reader cannot split reliably retain their authoritative complete DDL path. Model
 
 ## Executed commands (2026-10-27)
 
+The unqualified-name continuation ran the focused `Db2RoutineAlterTest`, then the
+full Db2 unit module (371 tests), followed by the new unqualified-name fixture on
+both live targets. After resuming, the full `db2.*` Docker suite was executed
+again: 37 tests passed with zero failures/errors/skips. The unit command also
+completed successfully, with Gradle confirming its prior 371-test result as
+UP-TO-DATE for the current source tree. The new fixture exercises both complete
+DDL and statement templates, resets the caller's CURRENT SCHEMA and SQL PATH
+before execution, and verifies an unqualified helper function reference still
+resolves correctly. Grants, SPECIFIC identities, another overload and the
+dependent view are preserved. The only production change is the Db2 SQL
+replacement helper; no public API, metadata query, dependency or historical
+resolver route changed. Both owned containers were removed after verification.
+
 The subsequent default-reader/statement continuation reran `Db2RoutineAlterTest`
 and `Db2RoutineReplayTest`, the full unit module (367 tests), the full `db2.*`
 Docker suite (35 tests), and the offline comparison task (64 observations).
@@ -194,6 +207,32 @@ fixed and the full suites above passed. A test-only call to a nonexistent Option
 setter also failed compilation and was replaced with the existing schema replay
 API. The audit TSV was intentionally regenerated (64 observations). No build
 output was manually edited. No dependency versions or module dependencies changed.
+
+## Deferred TODOs — current work closed
+
+On 2026-10-27 the user agreed to close this work at the documented shared-feature
+scope and defer the following extensions. These are future work, not remaining
+mandatory completion gates. No further implementation or database runs are
+scheduled by this record. The closing evidence is 371 unit tests and 37 real
+database tests on disposable Db2 11.5.8/12.1.5; older live targets remain unverified.
+
+- [ ] Automate routine signature/options changes with explicit identity, grant
+  and dependency preservation rules; retain actionable rejection until supported.
+- [ ] Extend replacement coverage for views, triggers and other currently
+  unsupported structural changes, with dependency and privilege regression tests.
+- [ ] Support general/interleaved cross-schema dependency planning, including
+  module members that require global types and wider module anchoring graphs.
+- [ ] Expand PL/SQL packages and structured/anchored type coverage beyond the
+  existing complete-DDL fallback contract.
+- [ ] Extend uncommon XML/text/physical indexes, complex federation and external
+  credential repositories, LBAC, instance authorities and administrative objects.
+- [ ] Run historical supported database versions on explicitly authorized
+  disposable targets; define the version/image matrix before execution.
+
+Each future item needs a bounded native scope, version boundaries and acceptance
+tests before implementation. Do not replace explicit unsupported-case errors with
+silent omissions or implicit destructive replacement. Public API/configuration
+compatibility and metadata batching requirements continue to apply.
 
 PL/SQL completeness, structured/anchored types, interleaved/general dependency
 graphs, exotic XML/physical indexes, complex federation, LBAC and instance

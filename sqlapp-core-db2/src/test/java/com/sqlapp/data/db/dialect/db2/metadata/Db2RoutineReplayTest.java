@@ -143,11 +143,13 @@ class Db2RoutineReplayTest {
 			assertFalse(routine.getStatement().isEmpty());
 			String encoded = routine.getSpecifics().get("DB2_ROUTINE_DDL_BASE64");
 			assertNotNull(encoded);
-			assertEquals(ddl, new String(java.util.Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8));
+			assertEquals(ddl,
+					new String(java.util.Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8));
 			Routine<?> restored = SchemaUtils.readXml(new java.io.StringReader(routine.asXml()));
 			assertEquals(encoded, restored.getSpecifics().get("DB2_ROUTINE_DDL_BASE64"));
 			Routine<?> legacy = function ? new Function("F") : new Procedure("P");
-			Db2Utils.setRutine(DialectHolder.Db2_1050Dialect, Db2MetadataParityTest.row(values), new ReaderOptions(), legacy);
+			Db2Utils.setRutine(DialectHolder.Db2_1050Dialect, Db2MetadataParityTest.row(values), new ReaderOptions(),
+					legacy);
 			assertFalse(legacy.getStatement().isEmpty());
 			assertFalse(legacy.getSpecifics().containsKey("DB2_ROUTINE_DDL_BASE64"));
 		}

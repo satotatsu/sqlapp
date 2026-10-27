@@ -10,10 +10,15 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.*;
 import com.sqlapp.data.schemas.*;
 
-/** Populated disposable tables only; maintenance is explicitly performed by the test. */
+/**
+ * Populated disposable tables only; maintenance is explicitly performed by the
+ * test.
+ */
 final class Db2OrdinaryAlterAssertions {
 	private static final String NAME = "SQLAPP_ORDINARY_ALTER";
-	private Db2OrdinaryAlterAssertions() { }
+
+	private Db2OrdinaryAlterAssertions() {
+	}
 
 	static void verify(Connection connection) throws Exception {
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -43,8 +48,10 @@ final class Db2OrdinaryAlterAssertions {
 					before = read(connection, dialect);
 					after = before.clone();
 					Column column = after.getTables().get("T").getColumns().get("V");
-					if (step == 0) column.setNotNull(true);
-					else if (step == 1) column.setDataType(DataType.BIGINT);
+					if (step == 0)
+						column.setNotNull(true);
+					else if (step == 1)
+						column.setDataType(DataType.BIGINT);
 					else {
 						column.setNotNull(false).setDefaultValue(null).setRemarks(null);
 						after.getTables().get("T").setRemarks(null);
@@ -53,7 +60,8 @@ final class Db2OrdinaryAlterAssertions {
 					actual = read(connection, dialect);
 					Column reread = actual.getTables().get("T").getColumns().get("V");
 					assertEquals(step != 2, reread.isNotNull());
-					if (step > 0) assertEquals(DataType.BIGINT, reread.getDataType());
+					if (step > 0)
+						assertEquals(DataType.BIGINT, reread.getDataType());
 					if (step == 2) {
 						assertNull(reread.getDefaultValue());
 						assertTrue(reread.getRemarks() == null || reread.getRemarks().isEmpty());
@@ -64,14 +72,22 @@ final class Db2OrdinaryAlterAssertions {
 				}
 				statement.execute("INSERT INTO " + NAME + ".T (ID,TXT) VALUES (3,'nullable')");
 				try (var rows = statement.executeQuery("SELECT V FROM " + NAME + ".T WHERE ID=3")) {
-					assertTrue(rows.next()); assertNull(rows.getObject(1));
+					assertTrue(rows.next());
+					assertNull(rows.getObject(1));
 				}
 			} catch (Exception | AssertionError e) {
-				failure = e; throw e;
+				failure = e;
+				throw e;
 			} finally {
 				while (!cleanup.isEmpty()) {
-					try { statement.execute(cleanup.pop()); }
-					catch (SQLException e) { if (failure != null) failure.addSuppressed(e); else throw e; }
+					try {
+						statement.execute(cleanup.pop());
+					} catch (SQLException e) {
+						if (failure != null)
+							failure.addSuppressed(e);
+						else
+							throw e;
+					}
 				}
 			}
 		}
@@ -88,7 +104,8 @@ final class Db2OrdinaryAlterAssertions {
 		List<SqlOperation> operations;
 		if (catalog) {
 			Catalog left = new Catalog(), right = new Catalog();
-			left.getSchemas().add(before.clone()); right.getSchemas().add(after.clone());
+			left.getSchemas().add(before.clone());
+			right.getSchemas().add(after.clone());
 			SqlFactory<Catalog> factory = dialect.createSqlFactoryRegistry().getSqlFactory(right, SqlType.ALTER);
 			operations = factory.createDiffSql(left.diff(right));
 		} else {
@@ -97,7 +114,8 @@ final class Db2OrdinaryAlterAssertions {
 		}
 		assertFalse(operations.isEmpty());
 		for (var operation : operations) {
-			if (operation.getSqlType() == SqlType.COMMENT) continue;
+			if (operation.getSqlType() == SqlType.COMMENT)
+				continue;
 			assertFalse(operation.getSqlText().contains("ADMIN_CMD"));
 			statement.execute(operation.getSqlText());
 		}
@@ -107,10 +125,15 @@ final class Db2OrdinaryAlterAssertions {
 
 	private static void assertData(Statement statement) throws SQLException {
 		try (var rows = statement.executeQuery("SELECT ID,V,TXT FROM " + NAME + ".T ORDER BY ID")) {
-			assertTrue(rows.next()); assertEquals(1, rows.getInt(1)); assertEquals(7, rows.getInt(2));
+			assertTrue(rows.next());
+			assertEquals(1, rows.getInt(1));
+			assertEquals(7, rows.getInt(2));
 			assertEquals("keep", rows.getString(3));
-			assertTrue(rows.next()); assertEquals(2, rows.getInt(1)); assertEquals(9, rows.getInt(2));
-			assertEquals("default", rows.getString(3)); assertFalse(rows.next());
+			assertTrue(rows.next());
+			assertEquals(2, rows.getInt(1));
+			assertEquals(9, rows.getInt(2));
+			assertEquals("default", rows.getString(3));
+			assertFalse(rows.next());
 		}
 	}
 }

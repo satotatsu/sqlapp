@@ -31,30 +31,41 @@ abstract class Db2AlterRoutineFactory<T extends Routine<T>> extends AbstractSqlF
 		var changed = new java.util.HashSet<>(difference.getChangedProperties().keySet());
 		var beforeSpecifics = new java.util.HashMap<>(before.getSpecifics());
 		var afterSpecifics = new java.util.HashMap<>(after.getSpecifics());
-		beforeSpecifics.remove("DB2_ROUTINE_DDL_BASE64"); afterSpecifics.remove("DB2_ROUTINE_DDL_BASE64");
-		boolean refreshed = !java.util.Objects.equals(before.getSpecifics().get("DB2_ROUTINE_DDL_BASE64"), after.getSpecifics().get("DB2_ROUTINE_DDL_BASE64"));
-		if (beforeSpecifics.equals(afterSpecifics)) changed.remove("specifics");
-		if (refreshed) Db2RoutineReplacement.replaceStatement(before, after);
-		if (changed.isEmpty()) return List.of();
-		boolean definitionChange = changed.contains("definition") && Set.of("definition", "remarks").containsAll(changed);
-		boolean statementChange = changed.contains("statement") && Set.of("statement", "definition", "remarks").containsAll(changed);
+		beforeSpecifics.remove("DB2_ROUTINE_DDL_BASE64");
+		afterSpecifics.remove("DB2_ROUTINE_DDL_BASE64");
+		boolean refreshed = !java.util.Objects.equals(before.getSpecifics().get("DB2_ROUTINE_DDL_BASE64"),
+				after.getSpecifics().get("DB2_ROUTINE_DDL_BASE64"));
+		if (beforeSpecifics.equals(afterSpecifics))
+			changed.remove("specifics");
+		if (refreshed)
+			Db2RoutineReplacement.replaceStatement(before, after);
+		if (changed.isEmpty())
+			return List.of();
+		boolean definitionChange = changed.contains("definition")
+				&& Set.of("definition", "remarks").containsAll(changed);
+		boolean statementChange = changed.contains("statement")
+				&& Set.of("statement", "definition", "remarks").containsAll(changed);
 		if (difference.getState() == State.Modified && (definitionChange || statementChange)) {
 			String replacement = definitionChange ? Db2RoutineReplacement.replace(before, after)
 					: Db2RoutineReplacement.replaceStatement(before, after);
 			List<SqlOperation> result = new ArrayList<>();
-			for (String context : Db2CreationContext.sql(after.getSpecifics().get("QUALIFIER"), after.getSpecifics().get("FUNC_PATH")))
+			for (String context : Db2CreationContext.sql(after.getSpecifics().get("QUALIFIER"),
+					after.getSpecifics().get("FUNC_PATH")))
 				result.add(new SqlOperation(context, SqlType.SET_SEARCH_PATH_TO_SCHEMA, after));
 			result.add(new SqlOperation(replacement, SqlType.ALTER, before, after));
 			result.add(comment(before, after));
 			return result;
 		}
 		if (difference.getState() != State.Modified || !Set.of("remarks").containsAll(changed))
-			throw new IllegalArgumentException("Db2 routine body, signature, identity or option changes require an explicit "
-					+ "native replacement plan preserving SPECIFIC identity, grants and dependencies: " + before.getName());
+			throw new IllegalArgumentException(
+					"Db2 routine body, signature, identity or option changes require an explicit "
+							+ "native replacement plan preserving SPECIFIC identity, grants and dependencies: "
+							+ before.getName());
 		if (after.getSpecificName() == null || after.getSpecificName().isBlank() || after.getSchemaName() == null
 				|| after.getSchemaName().isBlank())
-			throw new IllegalArgumentException("Db2 routine comment requires schemaName and specificName to identify the overload: "
-					+ after.getName());
+			throw new IllegalArgumentException(
+					"Db2 routine comment requires schemaName and specificName to identify the overload: "
+							+ after.getName());
 		return List.of(comment(before, after));
 	}
 
