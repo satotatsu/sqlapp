@@ -45,8 +45,10 @@ final class JobDraftPanel extends JPanel {
 	final JButton clear = new JButton("Clear visible");
 	final JButton clearAll = new JButton("Clear all selected");
 	final JTextField filter = new JTextField();
+	final JCheckBox selectedOnly = new JCheckBox("Selected tables only");
 	final JButton clearFilter = new JButton("Clear filter");
 	final JLabel count = new JLabel();
+	final JLabel selectionHelp = new JLabel();
 	final JLabel status = new JLabel(
 			"Choose Schema XML. INSERT into empty targets; resume disabled. No database connection.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
@@ -188,7 +190,7 @@ final class JobDraftPanel extends JPanel {
 		sorter.setSortsOnUpdates(true);
 		sorter.addRowSorterListener(event -> {
 			if (!selectingBatch)
-				refreshCounts();
+				refresh();
 		});
 		tables.getColumnModel().getColumn(0).setMaxWidth(70);
 		tables.getColumnModel().getColumn(1).setPreferredWidth(220);
@@ -200,10 +202,15 @@ final class JobDraftPanel extends JPanel {
 		filterLabel.setLabelFor(filter);
 		find.add(filterLabel, BorderLayout.WEST);
 		find.add(filter, BorderLayout.CENTER);
-		find.add(clearFilter, BorderLayout.EAST);
+		final var filterActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+		filterActions.add(selectedOnly);
+		filterActions.add(clearFilter);
+		find.add(filterActions, BorderLayout.EAST);
+		selectedOnly.setToolTipText("Show only included tables, also matching Find tables. Selections are retained.");
 		final var tableHeader = new JPanel(new BorderLayout(4, 4));
 		tableHeader.add(find, BorderLayout.NORTH);
 		tableHeader.add(count, BorderLayout.SOUTH);
+		tableHeader.add(selectionHelp, BorderLayout.CENTER);
 		final var tableArea = new JPanel(new BorderLayout(4, 4));
 		tableArea.add(tableHeader, BorderLayout.NORTH);
 		tableArea.add(tableScroll, BorderLayout.CENTER);
@@ -267,6 +274,7 @@ final class JobDraftPanel extends JPanel {
 		clear.addActionListener(event -> updateSelection(false, false));
 		clearAll.addActionListener(event -> updateSelection(false, true));
 		clearFilter.addActionListener(event -> filter.setText(""));
+		selectedOnly.addItemListener(event -> refreshFilter());
 		filter.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(DocumentEvent event) {
 				refreshFilter();
@@ -306,6 +314,7 @@ final class JobDraftPanel extends JPanel {
 		fingerprint.setText("");
 		model.setRowCount(0);
 		filter.setText("");
+		selectedOnly.setSelected(false);
 		if (!busy)
 			status.setText("Schema input changed. Read Schema again before creating a draft.");
 		refresh();
@@ -341,6 +350,7 @@ final class JobDraftPanel extends JPanel {
 		clear.setEnabled(!busy && snapshot != null && tables.getRowCount() > 0);
 		clearAll.setEnabled(!busy && !selected().isEmpty());
 		filter.setEnabled(!busy);
+		selectedOnly.setEnabled(!busy && snapshot != null);
 		clearFilter.setEnabled(!busy && !filter.getText().isEmpty());
 		create.setEnabled(!busy && snapshot != null && !selected().isEmpty());
 		cancel.setEnabled(!busy);
@@ -352,8 +362,12 @@ final class JobDraftPanel extends JPanel {
 		if (tables.isEditing())
 			tables.getCellEditor().stopCellEditing();
 		final String text = filter.getText().toLowerCase(java.util.Locale.ROOT);
-		sorter.setRowFilter(text.isEmpty() ? null : new javax.swing.RowFilter<DefaultTableModel, Integer>() {
+		sorter.setRowFilter(new javax.swing.RowFilter<DefaultTableModel, Integer>() {
 			public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+				if (selectedOnly.isSelected() && !Boolean.TRUE.equals(entry.getValue(0)))
+					return false;
+				if (text.isEmpty())
+					return true;
 				for (int column = 1; column < entry.getValueCount(); column++)
 					if (entry.getStringValue(column).toLowerCase(java.util.Locale.ROOT).contains(text))
 						return true;
@@ -374,6 +388,26 @@ final class JobDraftPanel extends JPanel {
 		}
 		count.setText(tables.getRowCount() + " / " + model.getRowCount() + " tables; " + selected + " selected ("
 				+ hidden + " hidden)");
+		if (snapshot == null)
+			selectionHelp.setText("Read Schema to see the tables available for selection.");
+		else if (model.getRowCount() == 0)
+			selectionHelp.setText("No tables in this Schema. Choose another Schema or source schema.");
+		else if (snapshot.tables().stream().noneMatch(table -> table.selectable()))
+			selectionHelp.setText("No eligible tables. Review Availability; this copy workflow requires primary keys.");
+		else if (selectedOnly.isSelected() && selected == 0)
+			selectionHelp.setText("No tables selected. Turn off Selected tables only to choose tables.");
+		else if (tables.getRowCount() == 0)
+			selectionHelp.setText(selected == 0 ? "No tables match. Clear the filter to see available tables."
+					: "No tables match. Selected tables are hidden and will still be included; clear the filter to review them.");
+		else if (selected == 0)
+			selectionHelp.setText("Tick Include for each table to copy, or use Select visible eligible.");
+		else if (hidden > 0)
+			selectionHelp.setText(
+					"Hidden selections will also be included. Clear the filter to review every selected table.");
+		else
+			selectionHelp.setText(managedDirectory == null
+					? "Selection ready. Create a draft to review the generated settings in the editor."
+					: "Selection ready. Save and review plan checks the target; it does not copy rows.");
 	}
 
 	private void updateSelection(final boolean include, final boolean all) {
@@ -392,6 +426,7 @@ final class JobDraftPanel extends JPanel {
 		} finally {
 			selectingBatch = false;
 		}
+		sorter.sort();
 		draftOptionsChanged();
 		refresh();
 	}
@@ -403,6 +438,7 @@ final class JobDraftPanel extends JPanel {
 		snapshot = null;
 		model.setRowCount(0);
 		filter.setText("");
+		selectedOnly.setSelected(false);
 		fingerprint.setText("");
 		final long requested = revision;
 		busy = true;

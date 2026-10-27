@@ -39,6 +39,8 @@ final class DataMigrationPlanPanel extends JPanel {
 	final JButton chooseSourceSchema = new JButton("Choose schema…");
 	final JTextField sourceSchemaSummary = new JTextField("Current schema (default)");
 	final JButton build = new JButton("Connect and inspect plan");
+	final JToggleButton focusReview = new JToggleButton("Focus on results");
+	private final ReviewFocusControl reviewFocus;
 	final JButton apply = new JButton("Execute reviewed job…");
 	final JButton saveExecution = new JButton("Save last audit…");
 	final JButton showExecution = new JButton("Last execution");
@@ -188,6 +190,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		settings.add(advanced, BorderLayout.SOUTH);
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		actions.add(advancedToggle);
+		actions.add(focusReview);
 		actions.add(build);
 		actions.add(save);
 		actions.add(apply);
@@ -212,7 +215,8 @@ final class DataMigrationPlanPanel extends JPanel {
 			}
 		});
 		final var input = new JPanel(new BorderLayout());
-		input.add(new JScrollPane(settings), BorderLayout.CENTER);
+		final var inputViewport = new JScrollPane(settings);
+		input.add(inputViewport, BorderLayout.CENTER);
 		final var executionRow = new JPanel(new BorderLayout(8, 0));
 		activity.setPreferredSize(new java.awt.Dimension(70, 16));
 		executionRow.add(activity, BorderLayout.WEST);
@@ -231,6 +235,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, input, view);
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(355);
+		reviewFocus = new ReviewFocusControl(split, inputViewport, controls, focusReview, advancedToggle);
 		add(split, BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout(8, 0));
 		footer.add(statusPanel, BorderLayout.CENTER);
@@ -385,7 +390,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		this.busy = busy;
 		savedReport.refresh();
 		enable(settings, !busy);
-		advancedToggle.setEnabled(!busy);
+		reviewFocus.setBusy(busy);
 		build.setEnabled(!busy);
 		newMigration.setEnabled(!busy);
 		refreshEditAction();
@@ -738,10 +743,15 @@ final class DataMigrationPlanPanel extends JPanel {
 	boolean selectDriverClass(final String name, final boolean sourceConnection) {
 		if (isBusy())
 			return false;
+		showInputs();
 		(sourceConnection ? source : target).driverClass.setText(java.util.Objects.requireNonNull(name));
 		if (!advancedToggle.isSelected())
 			advancedToggle.doClick(0);
 		return true;
+	}
+
+	void showInputs() {
+		reviewFocus.showInputs();
 	}
 
 	private boolean blockedByProfile() {

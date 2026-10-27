@@ -48,8 +48,8 @@ final class MigrationStartPanel extends JPanel {
 						+ "No YAML preparation is needed. Initial copies use existing, same-named empty target tables.",
 				button(Destination.DATA, "Open data migration", navigate)));
 		cards.add(card("Compare Schema definitions",
-				"Choose before and after Schema XML to review changes and prepare SQL.\n"
-						+ "Schema comparison works offline.",
+				"Choose Schema XML, or capture definitions from a database, to review changes and prepare SQL.\n"
+						+ "The comparison itself works offline.",
 				button(Destination.COMPARE, "Open Schema comparison", navigate)));
 		cards.add(card("Review saved results",
 				"Open saved migration or verification reports to inspect results.\n"

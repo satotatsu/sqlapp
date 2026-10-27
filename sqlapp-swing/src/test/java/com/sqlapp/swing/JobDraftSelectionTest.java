@@ -84,20 +84,77 @@ class JobDraftSelectionTest {
 	}
 
 	@Test
+	void selectedOnlyCombinesWithSearchAndDraftStillIncludesHiddenSelections() throws Exception {
+		final var selected = new AtomicReference<List<String>>();
+		final var draft = new AtomicReference<String>();
+		final var panel = open(selected, draft);
+		SwingUtilities.invokeAndWait(() -> {
+			panel.filter.setText("customers");
+			panel.select.doClick(0);
+			panel.filter.setText("orders");
+			panel.select.doClick(0);
+			panel.clearFilter.doClick(0);
+			panel.selectedOnly.doClick(0);
+			assertEquals(2, panel.tables.getRowCount());
+			panel.tables.getRowSorter().toggleSortOrder(1);
+			panel.filter.setText("orders");
+			assertEquals(1, panel.tables.getRowCount());
+			assertTrue(panel.count.getText().contains("2 selected (1 hidden)"));
+			panel.clear.doClick(0);
+			assertEquals(0, panel.tables.getRowCount());
+			assertFalse(panel.clear.isEnabled());
+			assertTrue(panel.create.isEnabled());
+			assertEquals(Boolean.TRUE, panel.model.getValueAt(0, 0));
+			assertEquals(Boolean.FALSE, panel.model.getValueAt(1, 0));
+			panel.filter.setText("[no matches].*");
+		});
+		finish(panel, panel::createDraft);
+		assertEquals(List.of("PUBLIC.CUSTOMERS"), selected.get());
+		assertEquals("draft", draft.get());
+	}
+
+	@Test
+	void selectedOnlyUpdatesWhenUncheckedAndEmptySelectionCanReturnToAllTables() throws Exception {
+		final var panel = open(new AtomicReference<>(), new AtomicReference<>());
+		SwingUtilities.invokeAndWait(() -> {
+			panel.selectedOnly.doClick(0);
+			assertEquals(0, panel.tables.getRowCount());
+			assertTrue(panel.selectionHelp.getText().contains("Turn off Selected tables only"));
+			assertFalse(panel.select.isEnabled());
+			panel.selectedOnly.doClick(0);
+			panel.select.doClick(0);
+			panel.selectedOnly.doClick(0);
+			assertEquals(3, panel.tables.getRowCount());
+			final int modelRow = panel.tables.convertRowIndexToModel(0);
+			panel.tables.setValueAt(false, 0, 0);
+			assertEquals(Boolean.FALSE, panel.model.getValueAt(modelRow, 0));
+			assertEquals(2, panel.tables.getRowCount());
+			panel.clearAll.doClick(0);
+			assertEquals(0, panel.tables.getRowCount());
+			assertFalse(panel.create.isEnabled());
+			panel.selectedOnly.doClick(0);
+			assertEquals(4, panel.tables.getRowCount());
+		});
+	}
+
+	@Test
 	void rereadingSameSchemaSucceedsAndResetsThePreviousFilterAndSelection() throws Exception {
 		final var panel = open(new AtomicReference<>(), new AtomicReference<>());
 		SwingUtilities.invokeAndWait(() -> {
 			panel.select.doClick(0);
 			panel.filter.setText("customers");
+			panel.selectedOnly.doClick(0);
 		});
 		finish(panel, () -> {
 			panel.inspectSchema();
 			assertFalse(panel.filter.isEnabled());
+			assertFalse(panel.selectedOnly.isEnabled());
 			assertFalse(panel.clearAll.isEnabled());
 		});
 		SwingUtilities.invokeAndWait(() -> {
 			assertEquals(4, panel.tables.getRowCount());
 			assertTrue(panel.filter.getText().isEmpty());
+			assertFalse(panel.selectedOnly.isSelected());
 			assertEquals("4 / 4 tables; 0 selected (0 hidden)", panel.count.getText());
 			assertTrue(panel.fingerprint.getText().startsWith("sha256:"));
 			assertFalse(panel.create.isEnabled());

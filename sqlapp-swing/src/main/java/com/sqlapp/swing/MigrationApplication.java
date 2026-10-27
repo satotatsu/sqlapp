@@ -56,6 +56,7 @@ public final class MigrationApplication {
 							"Wait for the current data operation before selecting another job.");
 					return;
 				}
+				dataPlan.showInputs();
 				dataPlan.configurationFile.setText(snapshot.file().toString());
 				dataPlan.expectedFingerprint.setText(snapshot.fingerprint());
 				tabs.setSelectedComponent(dataPlan);

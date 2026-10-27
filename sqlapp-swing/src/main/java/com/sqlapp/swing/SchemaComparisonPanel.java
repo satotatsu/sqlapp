@@ -55,7 +55,8 @@ final class SchemaComparisonPanel extends JPanel {
 		void save(SchemaComparisonService.Result result, Path destination, boolean sqlDraft) throws Exception;
 	}
 
-	final JLabel status = new JLabel("Select before and after Schema XML. No database connection is used.");
+	final JLabel status = new JLabel(
+			"Select Schema XML or use Read DB. Compare is offline; database capture is explicit.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	private final EditorFileChooser inputDialogs = new EditorFileChooser();
 	private final EditorFileChooser outputDialogs = new EditorFileChooser();
@@ -157,7 +158,8 @@ final class SchemaComparisonPanel extends JPanel {
 		try {
 			final Path file = presenter.get();
 			if (requested != revision)
-				status.setText("Inputs changed. Captured XML was not selected; choose it explicitly if needed.");
+				status.setText("Inputs changed. " + (file == null ? "Schema capture selection was discarded."
+						: "Captured XML was not selected: " + file));
 			else if (file == null)
 				status.setText("Schema capture cancelled. Existing comparison retained.");
 			else {

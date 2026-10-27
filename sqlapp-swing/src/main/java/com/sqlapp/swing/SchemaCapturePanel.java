@@ -89,6 +89,26 @@ final class SchemaCapturePanel extends JPanel {
 		for (var field : new JTextField[] { connection.jdbcUrl, connection.username, connection.password,
 				connection.driverClass, schema })
 			field.getDocument().addDocumentListener(changed);
+		final var identityChanged = new DocumentListener() {
+			private void reset() {
+				if (!schema.getText().isEmpty())
+					schema.setText("");
+			}
+
+			public void insertUpdate(DocumentEvent event) {
+				reset();
+			}
+
+			public void removeUpdate(DocumentEvent event) {
+				reset();
+			}
+
+			public void changedUpdate(DocumentEvent event) {
+				reset();
+			}
+		};
+		for (var field : new JTextField[] { connection.jdbcUrl, connection.username, connection.driverClass })
+			field.getDocument().addDocumentListener(identityChanged);
 		capture.addActionListener(event -> run(Action.CAPTURE));
 		connection.test.addActionListener(event -> run(Action.TEST));
 		chooseSchema.addActionListener(event -> run(Action.SCHEMAS));
@@ -188,9 +208,14 @@ final class SchemaCapturePanel extends JPanel {
 					else {
 						final String choice = SourceSchemaSelectionPanel.showDialog(SchemaCapturePanel.this,
 								result.schemas(), schema.getText());
-						if (choice != null && requested == revision)
+						if (requested != revision)
+							status.setText("Inputs changed. Choose the Schema again.");
+						else if (choice == null)
+							status.setText("Schema selection cancelled. Current setting retained.");
+						else {
 							schema.setText(choice);
-						status.setText("Schema selection finished. Read and use Schema XML when ready.");
+							status.setText("Schema selected. Read and use Schema XML when ready.");
+						}
 					}
 				} catch (InterruptedException failure) {
 					Thread.currentThread().interrupt();

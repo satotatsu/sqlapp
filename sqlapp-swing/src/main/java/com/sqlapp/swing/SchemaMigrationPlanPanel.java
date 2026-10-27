@@ -54,6 +54,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	final JCheckBox repeatables = new JCheckBox("Enable R__ repeatable migrations");
 	final JCheckBox recursive = new JCheckBox("Search SQL directories recursively");
 	final JButton build = new JButton("Connect and build plan");
+	final JToggleButton focusReview = new JToggleButton("Focus on results");
+	private final ReviewFocusControl reviewFocus;
 	final JButton buildUrl = new JButton("Build URL…");
 	final JButton test = new JButton("Test connection");
 	final JButton save = new JButton("Save plan JSON…");
@@ -162,17 +164,20 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		form.add(advanced, BorderLayout.CENTER);
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		actions.add(advancedToggle);
+		actions.add(focusReview);
 		actions.add(build);
 		actions.add(save);
 		actions.add(apply);
 		actions.add(saveExecution);
 		final var input = new JPanel(new BorderLayout());
-		input.add(new JScrollPane(form), BorderLayout.CENTER);
+		final var inputViewport = new JScrollPane(form);
+		input.add(inputViewport, BorderLayout.CENTER);
 		input.add(actions, BorderLayout.SOUTH);
 		input.setPreferredSize(new Dimension(900, 240));
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, input, view);
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(240);
+		reviewFocus = new ReviewFocusControl(split, inputViewport, actions, focusReview, advancedToggle);
 		add(split, BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout(8, 0));
 		footer.add(statusPanel, BorderLayout.CENTER);
@@ -245,6 +250,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	boolean selectUpDirectory(final Path directory) {
 		if (executing || !upDirectory.isEnabled())
 			return false;
+		reviewFocus.showInputs();
 		upDirectory.setText(
 				java.util.Objects.requireNonNull(directory, "directory").toAbsolutePath().normalize().toString());
 		clear();
@@ -281,7 +287,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		this.busy = busy;
 		savedReport.refresh();
 		enable(form, !busy);
-		advancedToggle.setEnabled(!busy);
+		reviewFocus.setBusy(busy);
 		build.setEnabled(!busy);
 		save.setEnabled(!busy && result != null);
 		final String restriction = SchemaMigrationExecutionService.restriction(reviewedRequest, result);
@@ -546,6 +552,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	boolean selectDriverClass(final String name) {
 		if (isBusy())
 			return false;
+		reviewFocus.showInputs();
 		driverClass.setText(java.util.Objects.requireNonNull(name));
 		if (!advancedToggle.isSelected())
 			advancedToggle.doClick(0);
