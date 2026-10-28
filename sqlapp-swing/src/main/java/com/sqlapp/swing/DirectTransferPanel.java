@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 import javax.swing.*;
 import com.sqlapp.data.db.command.migration.transfer.TransferJobExecutionService;
+import com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration;
 
 /**
  * The common direct job workflow; adapters delegate all migration rules to
@@ -47,6 +48,7 @@ final class DirectTransferPanel extends JPanel {
 	final JTextArea summary = new JTextArea(
 			"1. Enter source and target connections.\n2. Create a direct job and choose tables, or open a saved job.\n3. Review the transfer.\n4. Confirm execution when ready.");
 	final JTabbedPane results = new JTabbedPane();
+	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
 	final ReadOnlyCodePanel gradle = new ReadOnlyCodePanel(
@@ -71,7 +73,7 @@ final class DirectTransferPanel extends JPanel {
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
 		settings.add(new JLabel(
-				"One job for GUI and Gradle. Review existing empty targets or optional missing-table creation."));
+				"One job for GUI and Gradle. New direct job offers data transfer or schema only (no row copy)."));
 		settings.add(row("Shared job (optional for New job)", job, false));
 		settings.add(row("Working folder and reports", workspace, true));
 		settings.add(row("Source schema for New job (blank: current)", sourceSchema, null));
@@ -112,11 +114,14 @@ final class DirectTransferPanel extends JPanel {
 		review.addActionListener(event -> run(Action.REVIEW));
 		jobSettings.addActionListener(event -> editSettings(path -> TransferJobSettingsDialog.show(this, path,
 				com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.DataMode.JDBC_DIRECT)));
-		execute.addActionListener(event -> executeReviewed(() -> JOptionPane.showConfirmDialog(this,
-				"Copy into the reviewed target?\nConfiguration: " + reviewed.review().prepared().job().fingerprint()
-						+ "\nCompatibility warnings: " + reviewed.review().prepared().warnings().size()
-						+ "\nDDL statements: " + reviewed.review().prepared().schemaPreparation().statements().size()
-						+ "\nCreated objects and committed chunks may remain after failure. Inspect the review and Schema SQL before confirming.",
+		execute.addActionListener(event -> executeReviewed(() -> JOptionPane.showConfirmDialog(this, (reviewed.review()
+				.prepared().job().configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+						? "Create the reviewed target tables without copying rows?\nConfiguration: "
+						: "Copy into the reviewed target?\nConfiguration: ")
+				+ reviewed.review().prepared().job().fingerprint() + "\nCompatibility warnings: "
+				+ reviewed.review().prepared().warnings().size() + "\nDDL statements: "
+				+ reviewed.review().prepared().schemaPreparation().statements().size()
+				+ "\nCreated objects and committed chunks may remain after failure. Inspect the review and Schema SQL before confirming.",
 				"Confirm direct transfer", JOptionPane.OK_CANCEL_OPTION,
 				JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION));
 		drivers.addActionListener(event -> {
@@ -190,6 +195,7 @@ final class DirectTransferPanel extends JPanel {
 
 	private void changed() {
 		revision++;
+		warningTabs.clear(results);
 		results.remove(schemaSql);
 		schemaSql.showText("");
 		results.remove(gradle);
@@ -335,12 +341,16 @@ final class DirectTransferPanel extends JPanel {
 			target.password.setText("");
 		}
 		if (!testing) {
+			warningTabs.clear(results);
 			reviewed = null;
 			results.remove(gradle);
 			gradle.showText("");
 		}
 		setBusy(true);
-		status.setText(action == Action.EXECUTE ? "Copying and verifying; committed chunks may remain on failure."
+		status.setText(action == Action.EXECUTE ? request.reviewed().review().prepared().job().configuration()
+				.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+						? "Creating reviewed target tables only; created objects may remain on failure. No rows are copied."
+						: "Copying and verifying; committed chunks may remain on failure."
 				: "Working: " + action + ". This action does not copy rows.");
 		new SwingWorker<Object, Void>() {
 			@Override
@@ -377,11 +387,14 @@ final class DirectTransferPanel extends JPanel {
 								+ ". Inspect the review before execution.");
 					} else if (action == Action.EXECUTE) {
 						show(value);
-						status.setText(
-								"Direct transfer finished. Inspect verification, warnings and the saved audit before another run.");
+						status.setText(((DirectTransferDesktopService.Executed) value).outcome().prepared().job()
+								.configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+										? "Schema-only transfer finished. Inspect DDL results, warnings and the saved audit. No rows were copied."
+										: "Direct transfer finished. Inspect verification, warnings and the saved audit before another run.");
 					} else
 						status.setText("Connection check: " + value);
 				} catch (Exception failure) {
+					warningTabs.clear(results);
 					final var cause = failure instanceof java.util.concurrent.ExecutionException ? failure.getCause()
 							: failure;
 					reviewed = null;
@@ -421,22 +434,29 @@ final class DirectTransferPanel extends JPanel {
 
 	private void show(Object value) {
 		result.showJson(value);
+		warningTabs.show(results, value);
 		results.remove(gradle);
 		gradle.showText("");
 		final var text = new StringBuilder();
 		if (value instanceof DirectTransferDesktopService.Reviewed reviewed) {
 			final var review = reviewed.review();
 			final var config = review.prepared().job().configuration();
-			text.append("Transfer reviewed. No rows have been copied. Execution requires your confirmation.\n\n")
-					.append("Source: ").append(review.sourceIdentity().productName()).append(" / ")
+			if (config.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY)
+				text.append(
+						"SCHEMA ONLY: create missing tables, constraints and indexes. No row copy or row verification.\n")
+						.append("Existing target tables are skipped without comparison or modification. The target schema must already exist.\n\n");
+			text.append("Transfer reviewed. No rows have been copied. Execution requires your confirmation.\n\n");
+			TransferGeneratedKeyNotice.append(text, review.prepared().warnings());
+			text.append("Source: ").append(review.sourceIdentity().productName()).append(" / ")
 					.append(review.sourceIdentity().productVersion()).append('\n').append("Target: ")
 					.append(review.targetIdentity().productName()).append(" / ")
 					.append(review.targetIdentity().productVersion()).append('\n').append("Selected tables (")
 					.append(config.tables().size()).append("):\n");
 			for (String table : config.tables())
 				text.append("  ").append(table).append('\n');
-			text.append("\nChunk rows: ").append(config.chunkSize()).append("; verification: ")
-					.append(config.verify() ? "enabled" : "disabled").append('\n');
+			if (config.dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY)
+				text.append("\nChunk rows: ").append(config.chunkSize()).append("; verification: ")
+						.append(config.verify() ? "enabled" : "disabled").append('\n');
 			text.append("Target preparation: ").append(config.schemaMode()).append("; DDL statements: ")
 					.append(review.prepared().schemaPreparation().statements().size()).append('\n');
 			warnings(text, review.prepared().warnings());
@@ -446,15 +466,35 @@ final class DirectTransferPanel extends JPanel {
 			results.addTab("Gradle", gradle);
 		} else if (value instanceof DirectTransferDesktopService.Executed execution) {
 			final var outcome = execution.outcome();
-			text.append("Execution phase: ").append(outcome.phase()).append('\n').append("Completed tables: ")
-					.append(outcome.completedTasks().size()).append('\n').append("Processed rows: ")
-					.append(outcome.copyResult() == null ? "see retained committed progress in Details"
-							: outcome.copyResult().getProcessedRows())
-					.append('\n').append("Verification: ").append(
-							!outcome.prepared().job().configuration().verify() ? "disabled"
-									: outcome.verificationResult() == null ? "not completed"
-											: outcome.verificationResult().isMatch() ? "matched" : "mismatch")
-					.append('\n');
+			final boolean schemaOnly = outcome.prepared().job().configuration()
+					.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY;
+			if (schemaOnly)
+				text.append("SCHEMA ONLY: no data-copy or row-verification operations were requested.\n");
+			if (schemaOnly && outcome.phase() == TransferJobExecutionService.Phase.COMPLETE)
+				text.append("Schema-only transfer completed. Inspect DDL results and compatibility warnings below.\n");
+			else
+				TransferExecutionSummary.append(text, outcome.phase());
+			text.append("Execution phase: ").append(outcome.phase()).append('\n');
+			TransferGeneratedKeyNotice.append(text, outcome.prepared().warnings());
+			if (schemaOnly)
+				text.append("Next: inspect DDL results and warnings; test target definitions before loading data.\n");
+			else
+				TransferNextSteps.append(text, outcome.phase(), outcome.prepared().job().configuration().verify(),
+						outcome.prepared().warnings());
+			if (schemaOnly)
+				text.append("Row copy: not requested. Row verification: not applicable (schema only).\n");
+			else
+				text.append("Completed tables: ").append(outcome.completedTasks().size()).append('\n')
+						.append("Processed rows: ")
+						.append(schemaOnly ? "not applicable (schema only)"
+								: outcome.copyResult() == null ? "see retained committed progress in Details"
+										: outcome.copyResult().getProcessedRows())
+						.append('\n').append("Verification: ")
+						.append(schemaOnly ? "not applicable (schema only)"
+								: !outcome.prepared().job().configuration().verify() ? "disabled"
+										: outcome.verificationResult() == null ? "not completed"
+												: outcome.verificationResult().isMatch() ? "matched" : "mismatch")
+						.append('\n');
 			warnings(text, outcome.prepared().warnings());
 			text.append("\nResult report: ").append(execution.report() == null ? "unavailable" : execution.report());
 			text.append("\nDDL statements completed: ").append(outcome.schemaPreparation().completedStatements())

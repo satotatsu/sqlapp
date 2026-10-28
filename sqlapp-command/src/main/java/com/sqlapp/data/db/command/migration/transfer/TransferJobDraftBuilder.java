@@ -11,6 +11,22 @@ import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEd
  * fingerprint and dependency order.
  */
 public final class TransferJobDraftBuilder {
+	/** Save schema-only intent without requiring data-copy keys or reading rows. */
+	public TransferJobConfigurationIO.Snapshot saveSchemaOnly(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot,
+			List<String> selected, TransferJobConfiguration.CompatibilityPolicy policy, String targetSchema, Path file)
+			throws Exception {
+		final var schema = TransferFileJobDraftBuilder.schema(snapshot);
+		final var tables = TransferSchemaOnlyPreparation.select(schema, selected).stream()
+				.map(table -> TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
+						table.getName()))
+				.toList();
+		final var configuration = new TransferJobConfiguration(1, "source", "target", tables,
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING, schema.getName(), targetSchema, null, null, false,
+				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy);
+		final var io = new TransferJobConfigurationIO();
+		return io.write(file, io.format(configuration), null);
+	}
+
 	public TransferJobConfigurationIO.Snapshot saveDirect(BulkMigrationJobDraftBuilder.SchemaSnapshot schema,
 			List<String> selected, int chunkSize, boolean verify, TransferJobConfiguration.CompatibilityPolicy policy,
 			String targetSchema, Path file) throws Exception {

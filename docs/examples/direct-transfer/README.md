@@ -10,6 +10,15 @@ existing empty targets. To prepare absent selected tables, set
 `schemaMode: CREATE_MISSING` before review, inspect the generated Schema plan and
 use the new job fingerprint for execution. The target schema namespace must exist.
 
+For schema-only transfer, edit `schema-only.yaml` to select your tables and use
+`-PtransferJob=schema-only.yaml` on both review and execution commands below.
+This supports different source/target products using the target dialect, requires
+no primary keys, and creates missing tables, constraints and indexes without
+copying any rows. Existing tables are skipped with warnings and retain their
+definitions and rows. The target schema must already exist. Views, independent
+sequences, routines and triggers are not copied; review the scope/vendor warnings
+and generated DDL. Do not interpret DDL completion as full database equivalence.
+
 Review only:
 
 ```text

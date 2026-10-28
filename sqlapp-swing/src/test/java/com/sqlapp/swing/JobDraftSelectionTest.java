@@ -12,6 +12,22 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobDraftBuilder;
 
 class JobDraftSelectionTest {
+	@Test
+	void schemaOnlySelectionAllowsKeylessTablesAndClearsThemWhenReturningToCopyMode() throws Exception {
+		var panel = open(new AtomicReference<>(), new AtomicReference<>());
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(panel.model.isCellEditable(3, 0));
+			panel.schemaOnly(true);
+			assertTrue(panel.model.isCellEditable(3, 0));
+			panel.filter.setText("NO_KEY");
+			panel.select.doClick(0);
+			assertTrue((Boolean) panel.model.getValueAt(3, 0));
+			panel.schemaOnly(false);
+			assertFalse((Boolean) panel.model.getValueAt(3, 0));
+			assertFalse(panel.model.isCellEditable(3, 0));
+		});
+	}
+
 	private static BulkMigrationJobDraftBuilder builder(AtomicReference<List<String>> selected) {
 		return new BulkMigrationJobDraftBuilder() {
 			@Override

@@ -61,7 +61,7 @@ final class JobDraftPanel extends JPanel {
 
 		@Override
 		public boolean isCellEditable(int row, int column) {
-			return !busy && column == 0 && snapshot != null && snapshot.tables().get(row).selectable();
+			return !busy && column == 0 && snapshot != null && eligible(row);
 		}
 	};
 	final JTable tables = new JTable(model) {
@@ -76,6 +76,28 @@ final class JobDraftPanel extends JPanel {
 	private SchemaSnapshot snapshot;
 	private boolean busy;
 	private boolean selectingBatch;
+	private boolean schemaOnly;
+
+	private boolean eligible(int row) {
+		return schemaOnly || snapshot.tables().get(row).selectable();
+	}
+
+	void schemaOnly(boolean enabled) {
+		if (busy)
+			return;
+		schemaOnly = enabled;
+		for (int row = 0; row < model.getRowCount(); row++) {
+			final var table = snapshot.tables().get(row);
+			if (!eligible(row))
+				model.setValueAt(false, row, 0);
+			model.setValueAt(enabled ? "Schema only: no data-copy key required"
+					: table.selectable() ? "Available" : table.restriction(), row, 3);
+		}
+		optionsRow.setVisible(!enabled);
+		draftOptionsChanged();
+		refresh();
+	}
+
 	private final javax.swing.table.TableRowSorter<DefaultTableModel> sorter = new javax.swing.table.TableRowSorter<>(
 			model);
 	private long revision;
@@ -399,7 +421,7 @@ final class JobDraftPanel extends JPanel {
 			selectionHelp.setText("Read Schema to see the tables available for selection.");
 		else if (model.getRowCount() == 0)
 			selectionHelp.setText("No tables in this Schema. Choose another Schema or source schema.");
-		else if (snapshot.tables().stream().noneMatch(table -> table.selectable()))
+		else if (!schemaOnly && snapshot.tables().stream().noneMatch(table -> table.selectable()))
 			selectionHelp.setText("No eligible tables. Review Availability; this copy workflow requires primary keys.");
 		else if (selectedOnly.isSelected() && selected == 0)
 			selectionHelp.setText("No tables selected. Turn off Selected tables only to choose tables.");
@@ -430,7 +452,7 @@ final class JobDraftPanel extends JPanel {
 		selectingBatch = true;
 		try {
 			for (final int row : rows)
-				if (!include || snapshot.tables().get(row).selectable())
+				if (!include || eligible(row))
 					model.setValueAt(include, row, 0);
 		} finally {
 			selectingBatch = false;

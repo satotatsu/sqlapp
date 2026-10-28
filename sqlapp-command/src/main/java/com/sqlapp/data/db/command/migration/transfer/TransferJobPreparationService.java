@@ -32,6 +32,10 @@ import com.sqlapp.util.YamlConverter;
  * does not approve or execute a copy and does not create database objects.
  */
 public final class TransferJobPreparationService {
+	/**
+	 * dataJob is null for SCHEMA_ONLY; schemaPreparation retains the executable
+	 * DDL.
+	 */
 	public record Prepared(Path directory, TransferJobConfigurationIO.Snapshot job, Path sourceSchemaFile,
 			BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, String planFingerprint, List<String> taskIds,
 			List<String> warnings, TransferSchemaPreparation.Plan schemaPreparation) {
@@ -64,7 +68,7 @@ public final class TransferJobPreparationService {
 		final var io = new TransferJobConfigurationIO();
 		final var snapshot = io.read(jobFile);
 		final var configuration = snapshot.configuration();
-		if (configuration.dataMode() != TransferJobConfiguration.DataMode.JDBC_DIRECT)
+		if (configuration.dataMode() == TransferJobConfiguration.DataMode.FILE)
 			throw new IllegalArgumentException("FILE transport requires separate export/import execution, which is not "
 					+ "implemented in the direct-JDBC preparation path. No file export or database connection was started.");
 		if (configuration.mappingFile() != null)
@@ -107,6 +111,11 @@ public final class TransferJobPreparationService {
 					throw new java.io.IOException("Unable to serialize source Schema metadata.");
 				}
 			});
+			if (configuration.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY) {
+				phase = "planning schema-only target table creation";
+				return TransferSchemaOnlyPreparation.prepare(to, schema, snapshot, directory, xml, targetCatalog,
+						targetSchema);
+			}
 			final var definition = new LinkedHashMap<String, Object>();
 			definition.put("schemaFile", "source-schema.xml");
 			definition.put("schemaFingerprint",

@@ -71,7 +71,11 @@ public final class TransferJobExecutionService {
 
 		private ExecutionException(Outcome outcome) {
 			super("Transfer failed during " + outcome.phase() + ". Inspect the outcome before retrying; "
-					+ "committed copy work may remain. Raw driver exceptions are omitted from this exception.");
+					+ (outcome.prepared().job().configuration()
+							.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+									? "created objects may remain. "
+									: "committed copy work may remain. ")
+					+ "Raw driver exceptions are omitted from this exception.");
 			this.outcome = outcome;
 		}
 
@@ -122,9 +126,10 @@ public final class TransferJobExecutionService {
 					null, current.warnings());
 			if (!current.schemaPreparation().statements().isEmpty()) {
 				try (var target = bindings.target().getConnection()) {
-					if (!target.getMetaData().supportsTransactions()
-							|| current.job().configuration().verify() && !target.getMetaData()
-									.supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE))
+					if (current.job().configuration().dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY
+							&& (!target.getMetaData().supportsTransactions()
+									|| current.job().configuration().verify() && !target.getMetaData()
+											.supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE)))
 						throw new IllegalArgumentException("Target transaction/verification support is insufficient.");
 					target.setReadOnly(false);
 					target.setAutoCommit(true);
@@ -137,6 +142,8 @@ public final class TransferJobExecutionService {
 					});
 				}
 			}
+			if (current.job().configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY)
+				return new Outcome(current, Phase.COMPLETE, null, null, List.of(), Map.of(), null, schemaProgress[0]);
 			final var execution = current;
 			command.setConfigurationFile(execution.dataJob().file().toFile());
 			command.setExpectedConfigurationFingerprint(execution.dataJob().fingerprint());
@@ -205,6 +212,13 @@ public final class TransferJobExecutionService {
 		if (!io.read(review.definitionFile()).fingerprint().equals(prepared.job().fingerprint())
 				|| !io.read(prepared.job().file()).fingerprint().equals(prepared.job().fingerprint()))
 			throw new IllegalArgumentException("Reviewed transfer definition changed.");
+		if (prepared.job().configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY) {
+			if (!prepared.planFingerprint()
+					.equals(TransferSchemaOnlyPreparation.fingerprint(prepared.sourceSchemaFile(),
+							prepared.job().fingerprint(), prepared.schemaPreparation().fingerprint())))
+				throw new IllegalArgumentException("Reviewed Schema artifact changed.");
+			return;
+		}
 		final var bulkIO = new BulkMigrationJobConfigurationEditorIO();
 		final var bulk = bulkIO.read(prepared.dataJob().file());
 		if (!bulk.fingerprint().equals(prepared.dataJob().fingerprint()))

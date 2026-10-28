@@ -51,8 +51,9 @@ final class FileTransferSummary {
 					.append("Move the whole package if importing on another machine.\n")
 					.append("The Gradle tab contains settings for this package and optional re-export.\n");
 		} else if (value instanceof FileTransferDesktopService.Reviewed reviewed) {
-			text.append("Package and target reviewed. No tables or rows have been created.\n\n").append("Target: ")
-					.append(reviewed.review().targetIdentity().productName()).append(" / ")
+			text.append("Package and target reviewed. No tables or rows have been created.\n\n");
+			TransferGeneratedKeyNotice.append(text, reviewed.review().schemaPreparation().warnings());
+			text.append("Target: ").append(reviewed.review().targetIdentity().productName()).append(" / ")
 					.append(reviewed.review().targetIdentity().productVersion()).append('\n');
 			packageDetails(text, reviewed.manifest());
 			text.append("\nMissing-table DDL statements: ")
@@ -62,7 +63,11 @@ final class FileTransferSummary {
 					.append("\nNext: inspect warnings and Schema SQL, then confirm Import reviewed package.\n")
 					.append("The source connection is not needed. The Gradle tab provides target-only settings.\n");
 		} else if (value instanceof TransferFileImportService.Outcome outcome) {
+			TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Import execution phase: ").append(outcome.phase()).append('\n');
+			TransferGeneratedKeyNotice.append(text, outcome.schemaPreparation().warnings());
+			TransferNextSteps.append(text, outcome.phase(), outcome.verificationRequested(),
+					outcome.schemaPreparation().warnings());
 			if (outcome.copyResult() != null)
 				text.append("Completed tables: ").append(outcome.copyResult().getTasks().size())
 						.append("\nProcessed rows in completed tables: ")

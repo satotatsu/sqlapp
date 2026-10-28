@@ -105,7 +105,7 @@ public final class MigrationApplication {
 				return true;
 			});
 			tabs.insertTab("Direct JDBC transfer", null, directTransfer,
-					"Copy directly between source and target connections", 0);
+					"Copy directly between source and target connections, or create tables only", 0);
 			tabs.remove(fileTransfer);
 			tabs.insertTab("CSV package transfer", null, fileTransfer,
 					"Create a shared job, export, review and import CSV", 1);

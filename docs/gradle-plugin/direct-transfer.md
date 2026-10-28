@@ -9,6 +9,51 @@ Set `allowExecution=true` and supply the exact configuration fingerprint to copy
 and verify. It composes `TransferJobExecutionService`; the task adds no migration
 rules. Existing Data Job tasks and formats are unchanged.
 
+## Copy only table definitions, including between different database products
+
+```yaml
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.CUSTOMERS, PUBLIC.ORDERS]
+dataMode: SCHEMA_ONLY
+schemaMode: CREATE_MISSING
+# targetSchema: public   # omit to use the target connection's current schema
+# verify is false by default in SCHEMA_ONLY; verify: true is rejected.
+```
+
+Use the same `transferDatabase` task, runtime connections, review-only default,
+explicit execution flag and configuration pin shown below. The GUI creates this
+job through **Direct JDBC transfer → New direct job… → Schema only**, or changes
+an existing job with **Job settings… → Schema only**. GUI and Gradle share the
+same service, Schema model, target-dialect CREATE factories, warning policy and
+DDL progress/audit handling. Review the **Schema SQL** and **Warnings** tabs
+before confirming execution. No Data Job YAML or copy planner is generated.
+
+This mode creates absent selected tables, constraints and indexes in an existing
+target schema. It supports tables without a primary key and does not read row
+data, INSERT, verify rows or synchronize generated-key counters. Existing target
+tables are skipped with warnings, including nonempty or structurally different
+tables; they are not compared, altered or cleared. Include referenced parent
+tables from the same source schema. Views, independent sequences, routines,
+triggers and other schema-level objects are outside this mode's scope, which is
+reported as a compatibility warning. Consequently `compatibilityPolicy: ERROR`
+also rejects that scope warning. `WARN` permits trying generated DDL and fixing
+vendor differences. Actual SQL failures stop execution and retain completed and
+uncertain DDL progress; there is no automatic cleanup or retry.
+
+Schema-only review fingerprints captured Schema bytes, job bytes and the DDL
+plan. Editing captured artifacts or changing the planned missing-table set
+requires another review. A concurrent database change can still cause SQL failure;
+review is not a lock. `Prepared.dataJob` and copy/verification results are null
+for this mode, and completed data tasks/committed row progress are empty. Java
+consumers should inspect the saved `dataMode` and DDL progress rather than infer
+row-copy completion. Existing constructors, default JDBC behavior and format
+version 1 remain available; `SCHEMA_ONLY` is an additive enum value. Older
+versions cannot consume jobs using it. No module dependency was added.
+
+See [the schema-only example](../examples/direct-transfer/schema-only.yaml).
+
 ```yaml
 formatVersion: 1
 source: from
@@ -29,6 +74,23 @@ so parent keys are not silently regenerated while children retain their original
 foreign keys. Low-level Bulk API defaults are unchanged. Existing shared jobs
 need no new option; review them again after upgrading. Sequence/identity counter
 synchronization for subsequent generated inserts remains a separate concern.
+Selected columns modeled as identity or auto-increment now produce a per-column
+`[GENERATED_KEY_COUNTER]` warning in review and outcomes, including for
+`REQUIRE_EXISTING`. It names the resolved target table/column and states that
+counter alignment has not been checked or changed. `WARN` permits transfer;
+`ERROR` rejects this unverified condition before copying. This follows the same
+shared policy in GUI and Gradle. A target without a generator can treat that
+follow-up as not applicable after inspection. The stable code and
+`TransferGeneratedKeyChecks.messages` expose this warning category without
+changing job/report record layouts. The GUI calls out the pending follow-up even
+when copied-row verification matches.
+
+Before application writes, check the target's next generated values against
+imported keys, accounting for increment direction, bounds, cycling, caches and
+concurrent writers. No automatic MAX+1 restart or probe INSERT/nextval is executed.
+Detection uses canonical identity/auto-increment metadata; independent sequences
+and vendor default expressions not represented that way are not comprehensively
+detected. Existing generic DDL/default/identity compatibility warnings remain.
 
 The bulk job target uses the command's nontransactional connection wrapper:
 the chunk executor alone commits/rolls back data and checkpoint transactions.

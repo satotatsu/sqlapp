@@ -486,10 +486,14 @@ class FileTransferPanelTest {
 			assertTrue(panel.apply.isEnabled());
 			assertEquals(0, panel.resultTabs.getSelectedIndex());
 			assertTrue(panel.summary.getText().contains("Missing-table DDL statements: 1"));
+			assertTrue(java.util.stream.IntStream.range(0, panel.resultTabs.getTabCount())
+					.anyMatch(index -> panel.resultTabs.getTitleAt(index).equals("Warnings (1)")));
 			assertTrue(panel.summary.getText().contains("No tables or rows have been created"));
 			assertFalse(panel.schemaSql.editor.isEditable());
 			assertTrue(panel.schemaSql.editor.getText().contains("CREATE TABLE ITEMS"));
 			panel.manifest.setText("changed.json");
+			assertFalse(java.util.stream.IntStream.range(0, panel.resultTabs.getTabCount())
+					.anyMatch(index -> panel.resultTabs.getTitleAt(index).startsWith("Warnings (")));
 			assertFalse(panel.apply.isEnabled());
 			assertEquals(-1, panel.resultTabs.indexOfComponent(panel.schemaSql));
 			assertEquals("", panel.schemaSql.editor.getText());

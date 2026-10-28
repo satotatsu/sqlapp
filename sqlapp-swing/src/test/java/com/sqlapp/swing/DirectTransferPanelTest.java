@@ -13,6 +13,59 @@ import com.sqlapp.data.db.command.migration.transfer.*;
 import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentity;
 
 class DirectTransferPanelTest {
+	@Test
+	void schemaOnlyReviewAndExecutionClearlyExcludeRowCopyAndVerification() throws Exception {
+		var base = reviewed();
+		var config = new TransferJobConfiguration(1, "source", "target", List.of("PUBLIC.ITEMS"),
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING, null, null, null, null, null,
+				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null);
+		var original = base.review().prepared();
+		var saved = new TransferJobConfigurationIO.Snapshot(original.job().file(), "schema-only", HASH, config);
+		var prepared = new TransferJobPreparationService.Prepared(directory, saved, original.sourceSchemaFile(), null,
+				HASH, original.taskIds(), original.warnings(), original.schemaPreparation());
+		var review = new DirectTransferDesktopService.Reviewed(new TransferJobExecutionService.Review(saved.file(),
+				prepared, base.review().sourceIdentity(), base.review().targetIdentity()), base.report());
+		var outcome = new TransferJobExecutionService.Outcome(prepared, TransferJobExecutionService.Phase.COMPLETE,
+				null, null, List.of(), Map.of(), null,
+				new TransferSchemaPreparation.Progress(original.schemaPreparation().statements(), 1, null));
+		var ref = new AtomicReference<DirectTransferPanel>();
+		var ready = new CountDownLatch(1);
+		var finished = new CountDownLatch(1);
+		var executed = new AtomicBoolean();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new DirectTransferPanel((action, request, from, to) -> {
+				if (action == DirectTransferPanel.Action.REVIEW)
+					return review;
+				executed.set(true);
+				return new DirectTransferDesktopService.Executed(outcome, directory.resolve("result.json"));
+			}, ignored -> null);
+			ref.set(panel);
+			configure(panel);
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.summary.getText().startsWith("SCHEMA ONLY:"));
+			assertFalse(panel.summary.getText().contains("Chunk rows:"));
+			assertTrue(panel.gradle.editor.getText().contains("SCHEMA_ONLY"));
+			panel.review.addPropertyChangeListener("enabled", event -> {
+				if (Boolean.TRUE.equals(event.getNewValue()) && executed.get())
+					finished.countDown();
+			});
+			panel.executeReviewed(() -> true);
+		});
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var text = ref.get().summary.getText();
+			assertTrue(text.contains("Row copy: not requested"));
+			assertTrue(text.contains("DDL statements completed: 1 / 1"));
+			assertFalse(text.contains("Row verification was disabled"));
+			assertFalse(text.contains("Completed tables: 0"));
+		});
+	}
+
 	@TempDir
 	Path directory;
 	private static final String HASH = "sha256:" + "a".repeat(64);
@@ -164,6 +217,8 @@ class DirectTransferPanelTest {
 			final var panel = ref.get();
 			assertTrue(panel.execute.isEnabled());
 			assertTrue(panel.status.getText().contains("warnings: 1"));
+			assertTrue(java.util.stream.IntStream.range(0, panel.results.getTabCount())
+					.anyMatch(index -> panel.results.getTitleAt(index).equals("Warnings (1)")));
 			assertTrue(panel.summary.getText().contains("No rows have been copied"));
 			assertTrue(panel.summary.getText().contains("Compatibility fixture warning"));
 			assertFalse(panel.summary.isEditable());
@@ -233,6 +288,7 @@ class DirectTransferPanelTest {
 			assertFalse(ref.get().execute.isEnabled());
 			assertFalse(ref.get().result.editor.isEditable());
 			assertTrue(ref.get().result.editor.getText().contains("COMPLETE"));
+			assertTrue(ref.get().summary.getText().startsWith("Transfer completed."));
 			assertTrue(ref.get().result.editor.getLineCount() > 5);
 			assertEquals(-1, ref.get().results.indexOfComponent(ref.get().gradle));
 		});

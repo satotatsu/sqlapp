@@ -7,7 +7,7 @@ dependencies {
     runtimeOnly providers.gradleProperty('targetDriver').orElse(providers.gradleProperty('sourceDriver'))
 }
 tasks.named('transferDatabase') {
-    configurationFile.set(layout.projectDirectory.file('transfer.yaml'))
+    configurationFile.set(layout.projectDirectory.file(providers.gradleProperty('transferJob').getOrElse('transfer.yaml')))
     allowExecution.set(providers.gradleProperty('execute').map { it.toBoolean() }.orElse(false))
     expectedConfigurationFingerprint.set(providers.gradleProperty('configurationFingerprint'))
     sourceDataSource {

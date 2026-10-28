@@ -37,7 +37,7 @@ final class MigrationStartPanel extends JPanel {
 		final var content = new Content();
 		content.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
 		final var heading = new JPanel(new BorderLayout(0, 8));
-		final var title = new JLabel("Move data between databases");
+		final var title = new JLabel("Move schemas and data between databases");
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
 		heading.add(title, BorderLayout.NORTH);
 		heading.add(new JLabel("Choose direct JDBC or a CSV package. Review the target before importing."),
@@ -46,7 +46,7 @@ final class MigrationStartPanel extends JPanel {
 		final var cards = new JPanel(new GridLayout(3, 1, 0, 12));
 		cards.add(card("Direct JDBC transfer",
 				"Create one job for GUI and Gradle from connections and selected tables, then review the plan.\n"
-						+ "No YAML preparation is needed. Initial copies use existing, same-named empty target tables.",
+						+ "No YAML preparation is needed. Choose schema only to create missing tables without copying rows.",
 				button(Destination.DATA, "Open direct transfer", navigate)));
 		cards.add(card("Transfer with a CSV package",
 				"Create a shared GUI / Gradle job, export the source, then import the package when ready.\n"

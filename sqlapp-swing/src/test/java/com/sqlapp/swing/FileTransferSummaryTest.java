@@ -22,6 +22,7 @@ class FileTransferSummaryTest {
 				Map.of("items", new ChunkedBulkMigrationProgress("items", 0, 3, 0, 3)), "items", null, ddl);
 		final var text = FileTransferSummary.text(outcome);
 		assertTrue(text.contains("Verification: not completed"));
+		assertTrue(text.startsWith("Transfer stopped while preparing target tables."));
 		assertTrue(text.contains("Committed rows / items: 3"));
 		assertTrue(text.contains("DDL statements completed: 0 / 1"));
 		assertTrue(text.contains("Uncertain attempted DDL statement: 1"));
@@ -29,6 +30,8 @@ class FileTransferSummaryTest {
 		assertTrue(text.contains("Stopped task: items"));
 		assertTrue(text.contains("Audit report: unavailable"));
 		assertTrue(text.contains("Import did not complete"));
+		assertTrue(text.contains("Retrying does not reset existing data"));
+		assertTrue(text.indexOf("Next steps:") < text.indexOf("Committed rows / items"));
 	}
 
 	@Test
@@ -38,9 +41,12 @@ class FileTransferSummaryTest {
 				Map.of(), null, Path.of("import-result.json"));
 		final var text = FileTransferSummary.text(outcome);
 		assertTrue(text.contains("Verification: disabled by job configuration"));
+		assertTrue(text.startsWith("Transfer completed."));
 		assertTrue(text.contains("Completed tables: 0"));
 		assertTrue(text.contains("Processed rows in completed tables: 0"));
 		assertFalse(text.contains("Verification: matched"));
+		assertTrue(text.contains("Row verification was disabled"));
+		assertTrue(text.contains("Test application reads and writes"));
 	}
 
 	@Test

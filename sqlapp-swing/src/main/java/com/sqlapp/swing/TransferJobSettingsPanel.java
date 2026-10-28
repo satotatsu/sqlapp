@@ -15,6 +15,7 @@ final class TransferJobSettingsPanel extends JPanel {
 	final JTextField targetSchema = new JTextField(24);
 	final JCheckBox createMissing = new JCheckBox("Create missing target tables (the schema itself must exist)");
 	final JCheckBox verify = new JCheckBox("Verify copied data");
+	final JCheckBox schemaOnly = new JCheckBox("Schema only (no row copy; create missing tables)");
 	final JCheckBox strict = new JCheckBox("Treat compatibility warnings as errors");
 	final JSpinner chunk = new JSpinner(new SpinnerNumberModel(10000, 1, 1000000, 1));
 	final JButton save = new JButton("Save settings");
@@ -41,6 +42,15 @@ final class TransferJobSettingsPanel extends JPanel {
 		schemaRow.add(label);
 		schemaRow.add(targetSchema);
 		fields.add(schemaRow);
+		if (mode != TransferJobConfiguration.DataMode.FILE)
+			fields.add(schemaOnly);
+		schemaOnly.addActionListener(event -> {
+			if (schemaOnly.isSelected()) {
+				createMissing.setSelected(true);
+				verify.setSelected(false);
+			}
+			refresh();
+		});
 		fields.add(createMissing);
 		fields.add(verify);
 		fields.add(strict);
@@ -86,7 +96,8 @@ final class TransferJobSettingsPanel extends JPanel {
 			protected TransferJobConfigurationIO.Snapshot doInBackground() throws Exception {
 				checkEditable(file);
 				final var loaded = io.read(file);
-				if (loaded.configuration().dataMode() != mode)
+				if (loaded.configuration().dataMode() != mode && !(mode == TransferJobConfiguration.DataMode.JDBC_DIRECT
+						&& loaded.configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY))
 					throw new IllegalArgumentException("Choose a saved job for this transfer route.");
 				return loaded;
 			}
@@ -96,6 +107,7 @@ final class TransferJobSettingsPanel extends JPanel {
 				try {
 					snapshot = get();
 					final var configuration = snapshot.configuration();
+					schemaOnly.setSelected(configuration.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY);
 					targetSchema.setText(configuration.targetSchema() == null ? "" : configuration.targetSchema());
 					createMissing.setSelected(
 							configuration.schemaMode() == TransferJobConfiguration.SchemaMode.CREATE_MISSING);
@@ -124,12 +136,16 @@ final class TransferJobSettingsPanel extends JPanel {
 			final var original = snapshot.configuration();
 			updated = new TransferJobConfiguration(original.formatVersion(), original.source(), original.target(),
 					original.tables(),
-					createMissing.isSelected() ? TransferJobConfiguration.SchemaMode.CREATE_MISSING
+					schemaOnly.isSelected() || createMissing.isSelected()
+							? TransferJobConfiguration.SchemaMode.CREATE_MISSING
 							: TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING,
 					original.sourceSchema(), targetSchema.getText().isBlank() ? null : targetSchema.getText(),
 					original.mappingFile(), new java.math.BigDecimal(chunk.getValue().toString()).intValueExact(),
-					verify.isSelected(), original.dataMode(), original.files(),
-					strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
+					!schemaOnly.isSelected() && verify.isSelected(),
+					mode == TransferJobConfiguration.DataMode.FILE ? mode
+							: schemaOnly.isSelected() ? TransferJobConfiguration.DataMode.SCHEMA_ONLY
+									: TransferJobConfiguration.DataMode.JDBC_DIRECT,
+					original.files(), strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
 							: TransferJobConfiguration.CompatibilityPolicy.WARN);
 		} catch (Exception failure) {
 			status.setText("Check chunk size (1..1000000) and target schema settings before saving.");
@@ -181,6 +197,12 @@ final class TransferJobSettingsPanel extends JPanel {
 	private void refresh() {
 		for (var field : new java.awt.Component[] { targetSchema, createMissing, verify, strict, chunk })
 			field.setEnabled(!busy && snapshot != null);
+		schemaOnly.setEnabled(!busy && snapshot != null);
+		if (schemaOnly.isSelected()) {
+			createMissing.setEnabled(false);
+			verify.setEnabled(false);
+			chunk.setEnabled(false);
+		}
 		save.setEnabled(!busy && snapshot != null);
 		cancel.setEnabled(!busy);
 	}

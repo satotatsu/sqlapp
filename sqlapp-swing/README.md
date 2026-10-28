@@ -49,6 +49,13 @@ and gaps) and NULLs, so dependent foreign keys keep their original meaning.
 No extra GUI option is required. Review again after upgrading; existing copied
 rows are not rewritten or cleared. Identity/sequence counter synchronization for
 subsequent generated inserts remains a separate check.
+Review and execution Summary call out generated-key counter checks and show
+per-column `[GENERATED_KEY_COUNTER]` warnings with resolved target names. Matching
+row verification does not mean future generated IDs are safe. This also applies
+to existing target tables. WARN leaves the transfer executable; ERROR rejects
+the unverified counter condition. Check actual generator state before application
+INSERTs; counters are neither probed nor changed automatically. Independently
+used sequences and unmodeled vendor default expressions still need manual review.
 
 **Review transfer** checks the live source and existing empty target tables or
 plans absent selected tables without creating them,
@@ -1329,3 +1336,51 @@ is not created by inspection, and that source/target row counts remain unchanged
 The selection dialog is supplied by a test callback; this does not verify native
 file chooser interaction or keyboard input. Existing `JobDraftPanel` tests cover
 table selection and saving separately.
+
+## Execution follow-up
+
+### Schema-only transfer between database products
+
+Open **Direct JDBC transfer**, enter source and target connections, and choose
+**New direct job…**. Select **Schema only**, choose tables and save the job.
+The table picker allows tables without primary keys in this mode. Specify an
+existing target schema or leave it blank to use the target connection's current
+schema. Review the **Summary**, **Warnings** and **Schema SQL** tabs, then confirm
+**Execute reviewed transfer…**. **Job settings…** can also switch a saved direct
+job to schema-only. The **Gradle** tab runs the same saved job with
+`transferDatabase`; no hand-authored migration SQL or Data Job YAML is required.
+
+Schema-only creates missing selected tables, constraints and indexes using the
+target dialect. It does not copy or verify rows. Existing tables are skipped
+with warnings without comparison, alteration or clearing, even when they contain
+data. Include referenced parent tables. Views, independent sequences, routines,
+triggers and other schema objects are outside this mode's scope and are called
+out in warnings. Default WARN permits trying generated SQL; ERROR rejects the
+scope/compatibility warning. Review generated SQL and repair vendor differences.
+DDL can remain after failure; inspect retained completed/uncertain statements
+before another review. It does not create the target schema namespace or provide
+incremental ALTER migrations. Use Schema migration plan for reviewed SQL history.
+
+Existing jobs retain JDBC row-transfer defaults. New schema-only jobs use
+`dataMode: SCHEMA_ONLY`, `schemaMode: CREATE_MISSING`, and omitted or false
+`verify`. They require the updated application/plugin; no JDBC credentials are
+persisted. See the [shared job guide](../docs/gradle-plugin/direct-transfer.md).
+
+Results with warnings include a **Warnings** tab with literal search, full selected
+row text and copy actions. CSV package review lists export warnings with their
+task and column alongside target compatibility warnings. Target warnings retain
+their original messages without guessing identifiers from text. Import execution
+results list retained target warnings; export warnings remain in the manifest and
+package review. Changing inputs or starting another transfer or package inspection
+clears the old warning tab. Viewing or copying warnings does not approve execution.
+
+Direct JDBC and CSV import results show next steps near the top of Summary.
+The first line describes completion or the stage where execution stopped in plain
+language; the recorded phase remains visible for troubleshooting. A completed run
+does not imply that optional row verification was enabled or all warnings resolved.
+Completed runs remind users to inspect compatibility warnings, check generated-key
+counters when listed, and test application reads and writes before switching
+connections. Disabled row verification is called out explicitly. Interrupted runs
+instead direct users to committed rows, attempted DDL and target repair before
+another review; retrying never implies clearing the target. These instructions do
+not perform additional database operations.

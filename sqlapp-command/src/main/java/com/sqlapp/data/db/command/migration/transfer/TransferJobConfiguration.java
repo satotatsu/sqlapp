@@ -23,9 +23,11 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 				verify, dataMode, files, CompatibilityPolicy.WARN);
 	}
 
-	/** Independent of database product pairing and target Schema preparation. */
+	/**
+	 * Transfer intent; SCHEMA_ONLY creates missing definitions without row access.
+	 */
 	public enum DataMode {
-		JDBC_DIRECT, FILE
+		JDBC_DIRECT, FILE, SCHEMA_ONLY
 	}
 
 	public enum FileFormat {
@@ -108,8 +110,11 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		chunkSize = chunkSize == null ? 10_000 : chunkSize;
 		if (chunkSize < 1 || chunkSize > 1_000_000)
 			throw new IllegalArgumentException("chunkSize must be between 1 and 1000000.");
-		verify = verify == null ? Boolean.TRUE : verify;
 		dataMode = dataMode == null ? DataMode.JDBC_DIRECT : dataMode;
+		verify = verify == null ? dataMode != DataMode.SCHEMA_ONLY : verify;
+		if (dataMode == DataMode.SCHEMA_ONLY && (schemaMode != SchemaMode.CREATE_MISSING || verify || files != null))
+			throw new IllegalArgumentException(
+					"SCHEMA_ONLY requires CREATE_MISSING, verify: false and no files settings.");
 		if (dataMode == DataMode.FILE && files == null)
 			throw new IllegalArgumentException("FILE dataMode requires files settings.");
 		if (dataMode == DataMode.JDBC_DIRECT && files != null)

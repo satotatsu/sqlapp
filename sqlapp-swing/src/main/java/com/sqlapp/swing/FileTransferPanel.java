@@ -57,6 +57,7 @@ final class FileTransferPanel extends JPanel {
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
 	final JTabbedPane resultTabs = new JTabbedPane();
+	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
 	final JTextArea summary = new JTextArea(
 			"1. Export: create or choose a job and export a CSV package.\n2. Import: choose the completed manifest and enter the target connection.\n3. Review warnings and optional table creation, then confirm import.");
 	private boolean hasSummary;
@@ -504,6 +505,7 @@ final class FileTransferPanel extends JPanel {
 						status.setText(requested == revision ? "Connection check: " + value
 								: "Inputs changed. Test the connection again.");
 				} catch (Exception failure) {
+					warningTabs.clear(resultTabs);
 					final Throwable cause = failure instanceof java.util.concurrent.ExecutionException
 							? failure.getCause()
 							: failure;
@@ -533,6 +535,7 @@ final class FileTransferPanel extends JPanel {
 
 	private void show(Object value) {
 		result.showJson(value);
+		warningTabs.show(resultTabs, value);
 		summary.setText(FileTransferSummary.text(value));
 		summary.setCaretPosition(0);
 		hasSummary = true;
@@ -559,6 +562,7 @@ final class FileTransferPanel extends JPanel {
 	}
 
 	private void clearGradle() {
+		warningTabs.clear(resultTabs);
 		resultTabs.remove(gradle);
 		gradle.showText("");
 	}

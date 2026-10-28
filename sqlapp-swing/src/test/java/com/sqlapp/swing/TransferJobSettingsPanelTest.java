@@ -17,6 +17,35 @@ class TransferJobSettingsPanelTest {
 	Path directory;
 	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();
 
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void schemaOnlySettingsRoundTripThroughDirectRouteWithoutEnablingDataOptions(boolean alreadySchemaOnly)
+			throws Exception {
+		var file = Files.writeString(directory.resolve("schema.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [NO_KEY]\nschemaMode: CREATE_MISSING\ndataMode: "
+						+ (alreadySchemaOnly ? "SCHEMA_ONLY" : "JDBC_DIRECT") + "\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			if (!alreadySchemaOnly)
+				panel.schemaOnly.doClick(0);
+			assertTrue(panel.schemaOnly.isSelected());
+			assertFalse(panel.verify.isEnabled());
+			assertFalse(panel.createMissing.isEnabled());
+			assertFalse(panel.chunk.isEnabled());
+			panel.targetSchema.setText("ARCHIVE");
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		var actual = io.read(file).configuration();
+		assertEquals(TransferJobConfiguration.DataMode.SCHEMA_ONLY, actual.dataMode());
+		assertFalse(actual.verify());
+		assertEquals("ARCHIVE", actual.targetSchema());
+	}
+
 	private Path job() throws Exception {
 		return Files.writeString(directory.resolve("transfer.yaml"), """
 				formatVersion: 1
@@ -170,7 +199,10 @@ class TransferJobSettingsPanelTest {
 			throws Exception {
 		final var done = new CountDownLatch(1);
 		final var ref = new AtomicReference<TransferJobSettingsPanel>();
-		final var mode = io.read(file).configuration().dataMode();
+		final var actualMode = io.read(file).configuration().dataMode();
+		final var mode = actualMode == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+				? TransferJobConfiguration.DataMode.JDBC_DIRECT
+				: actualMode;
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = new TransferJobSettingsPanel(mode, saved::set, () -> {
 			});

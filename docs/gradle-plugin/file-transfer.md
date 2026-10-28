@@ -125,6 +125,12 @@ CSV import explicitly requests preservation of source identity values and NULLs
 from the bulk insert provider, just like direct transfer. Existing packages keep
 their format and require a fresh review, not manual edits. Database-generated
 sequence/identity counters for later inserts are not synchronized automatically.
+Review and outcomes name modeled identity/auto-increment columns with the same
+`[GENERATED_KEY_COUNTER]` follow-up as direct transfer, for both existing and
+newly prepared tables. WARN permits execution; ERROR stops before copying.
+Copied-row verification does not certify future generated values. Inspect the
+target counter separately; no restart or nextval probe is performed. This is
+limited to columns represented as generated keys in the canonical Schema.
 Upgrading does not repair rows already copied with regenerated keys; inspect the
 previous audit and use a known empty target before rerunning.
 

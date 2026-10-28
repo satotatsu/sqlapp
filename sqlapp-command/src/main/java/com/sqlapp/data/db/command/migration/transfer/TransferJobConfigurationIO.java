@@ -68,7 +68,8 @@ public final class TransferJobConfigurationIO {
 			throw new IllegalArgumentException("Invalid transfer job. Require formatVersion: 1, runtime source/target "
 					+ "connection names, a nonempty unique tables list and schemaMode (CREATE_MISSING or REQUIRE_EXISTING). "
 					+ "Check field names, types, paths and chunkSize (1..1000000). FILE dataMode requires files.directory, "
-					+ "a supported encoding and an explicit CSV nullValue; JSONL uses JSON null. Credentials are runtime inputs.");
+					+ "a supported encoding and an explicit CSV nullValue; JSONL uses JSON null. SCHEMA_ONLY requires CREATE_MISSING, "
+					+ "verify: false (or omitted), and no files settings. Credentials are runtime inputs.");
 		}
 	}
 
