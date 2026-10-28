@@ -299,7 +299,7 @@ public final class TransferFileImportService {
 					.requireEmptyTarget(true)
 					.options(ChunkedBulkMigrationOption.builder().migrationId(member.taskId())
 							.mode(BulkMigrationMode.INSERT).resume(false).chunkSize(loaded.configuration().chunkSize())
-							.build())
+							.bulkOption(BulkOption.builder().keepIdentity(true).keepNulls(true).build()).build())
 					.build());
 		}
 		return BulkMigrationJobPlanner.plan(tasks);

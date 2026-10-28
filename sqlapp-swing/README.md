@@ -44,13 +44,20 @@ opts into `CREATE_MISSING`; unchecked uses `REQUIRE_EXISTING`. The resulting `tr
 common `JDBC_DIRECT` format used by Gradle `transferDatabase`. It contains logical
 `source` / `target` bindings and no connection passwords or JDBC URLs. Saving
 does not connect to the target or copy rows.
+Direct and CSV initial copies preserve original identity values (including zero
+and gaps) and NULLs, so dependent foreign keys keep their original meaning.
+No extra GUI option is required. Review again after upgrading; existing copied
+rows are not rewritten or cleared. Identity/sequence counter synchronization for
+subsequent generated inserts remains a separate check.
 
 **Review transfer** checks the live source and existing empty target tables or
 plans absent selected tables without creating them,
 pins the identities and artifacts, and saves `transfer-review.json`. The default
 **Summary** tab shows database products, selected tables, options and warnings;
 **Schema SQL** shows generated DDL when present. **Details** retains complete read-only JSON with resolved plans and artifact
-fingerprints. Review never copies rows. **Execute reviewed transfer…** requires
+fingerprints. Direct and CSV Details display JSON with indentation and line breaks;
+the saved audit format and string values remain unchanged. Use **Wrap lines** for
+long values. Review never copies rows. **Execute reviewed transfer…** requires
 confirmation (including DDL count), reruns the shared checks, creates the
 unchanged reviewed missing-table plan and copies/verifies through the same
 service used by Gradle. Changing a job, endpoint, source schema or working folder

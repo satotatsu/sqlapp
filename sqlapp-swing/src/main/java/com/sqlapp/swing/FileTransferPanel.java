@@ -532,7 +532,7 @@ final class FileTransferPanel extends JPanel {
 	}
 
 	private void show(Object value) {
-		result.showText(new com.sqlapp.util.JsonConverter().toJsonString(value));
+		result.showJson(value);
 		summary.setText(FileTransferSummary.text(value));
 		summary.setCaretPosition(0);
 		hasSummary = true;

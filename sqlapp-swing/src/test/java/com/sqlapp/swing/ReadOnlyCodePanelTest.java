@@ -38,6 +38,22 @@ class ReadOnlyCodePanelTest {
 	}
 
 	@Test
+	void jsonIsIndentedWithoutChangingUnicodeOrEmbeddedSqlValues() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new ReadOnlyCodePanel(CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_JSON, false));
+			final var model = java.util.Map.of("schema", "日本語", "sql", "SELECT 'line';\nSELECT 2;", "tables",
+					java.util.List.of("ITEMS", "ORDERS"));
+			panel.showJson(model);
+			assertTrue(panel.editor.getLineCount() > 3);
+			final var converter = new com.sqlapp.util.JsonConverter();
+			assertEquals(converter.getObjectMapper().readTree(converter.toJsonString(model)),
+					converter.getObjectMapper().readTree(panel.editor.getText()));
+			assertFalse(panel.editor.isEditable());
+			assertEquals(0, panel.editor.getCaretPosition());
+		});
+	}
+
+	@Test
 	void refusesEditableDocuments() throws Exception {
 		SwingUtilities.invokeAndWait(() -> assertThrows(IllegalArgumentException.class,
 				() -> new ReadOnlyCodePanel(CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, true))));

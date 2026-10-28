@@ -420,7 +420,7 @@ final class DirectTransferPanel extends JPanel {
 	}
 
 	private void show(Object value) {
-		result.showText(new com.sqlapp.util.JsonConverter().toJsonString(value));
+		result.showJson(value);
 		results.remove(gradle);
 		gradle.showText("");
 		final var text = new StringBuilder();

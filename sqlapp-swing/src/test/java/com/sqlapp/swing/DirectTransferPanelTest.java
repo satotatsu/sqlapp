@@ -233,6 +233,7 @@ class DirectTransferPanelTest {
 			assertFalse(ref.get().execute.isEnabled());
 			assertFalse(ref.get().result.editor.isEditable());
 			assertTrue(ref.get().result.editor.getText().contains("COMPLETE"));
+			assertTrue(ref.get().result.editor.getLineCount() > 5);
 			assertEquals(-1, ref.get().results.indexOfComponent(ref.get().gradle));
 		});
 	}

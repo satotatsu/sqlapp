@@ -121,6 +121,9 @@ public final class TransferJobPreparationService {
 				task.put("resume", false);
 				task.put("requireEmptyTarget", true);
 				task.put("chunkSize", configuration.chunkSize());
+				// Initial-copy jobs preserve source values, including identity keys used by
+				// FKs.
+				task.put("bulk", Map.of("keepIdentity", true, "keepNulls", true));
 				tasks.add(task);
 				tasksById.put((String) task.get("id"), task);
 			}

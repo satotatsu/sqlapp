@@ -23,6 +23,17 @@ copying. `REQUIRE_EXISTING` keeps the existing-target path. The target schema
 namespace must already exist. Existing tables must be empty and pass the shared
 key/column checks; none are altered, dropped or cleared. Both modes use the same
 saved job in the GUI and Gradle.
+Common initial-copy jobs explicitly preserve source identity values and NULLs.
+Generated per-table bulk options use `keepIdentity: true` and `keepNulls: true`,
+so parent keys are not silently regenerated while children retain their original
+foreign keys. Low-level Bulk API defaults are unchanged. Existing shared jobs
+need no new option; review them again after upgrading. Sequence/identity counter
+synchronization for subsequent generated inserts remains a separate concern.
+
+The bulk job target uses the command's nontransactional connection wrapper:
+the chunk executor alone commits/rolls back data and checkpoint transactions.
+There is no extra target commit/rollback after autoCommit is restored. Connection
+release and owned DataSource cleanup still run, including on a failed borrow.
 When the target namespace is missing, preparation reports its requested name
 and up to ten existing schemas from JDBC metadata in the selected catalog. Use
 the exact name/case in `targetSchema`, or create the namespace with the intended

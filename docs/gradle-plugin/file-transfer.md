@@ -121,6 +121,12 @@ Execution rechecks that identity, target tables, columns, non-null keys and empt
 targets. It composes the existing bulk planner and transactional chunk executor
 with INSERT and resume disabled. No target is cleared or reset. A second import
 into a now nonempty target fails even if the first import succeeded.
+CSV import explicitly requests preservation of source identity values and NULLs
+from the bulk insert provider, just like direct transfer. Existing packages keep
+their format and require a fresh review, not manual edits. Database-generated
+sequence/identity counters for later inserts are not synchronized automatically.
+Upgrading does not repair rows already copied with regenerated keys; inspect the
+previous audit and use a known empty target before rerunning.
 
 `schemaMode: REQUIRE_EXISTING` preserves the existing-table path. Set
 `schemaMode: CREATE_MISSING` before exporting to prepare missing ordinary tables

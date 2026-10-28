@@ -55,6 +55,7 @@ class FileTransferPanelTest {
 			assertFalse(panel.apply.isEnabled());
 			assertFalse(panel.result.editor.isEditable());
 			assertTrue(panel.result.editor.getText().contains("manifest.json"));
+			assertTrue(panel.result.editor.getLineCount() > 5);
 			assertFalse(panel.isBusy());
 			assertTrue(panel.status.getText().contains("Warnings: 1"));
 			assertEquals(0, panel.resultTabs.getSelectedIndex());

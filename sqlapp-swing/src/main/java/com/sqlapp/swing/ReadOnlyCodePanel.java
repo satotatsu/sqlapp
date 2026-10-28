@@ -32,4 +32,10 @@ final class ReadOnlyCodePanel extends JPanel {
 		navigation.column.setText("");
 		navigation.status.setText(" ");
 	}
+
+	void showJson(final Object value) {
+		final var converter = new com.sqlapp.util.JsonConverter();
+		converter.setIndentOutput(true);
+		showText(converter.toJsonString(value));
+	}
 }

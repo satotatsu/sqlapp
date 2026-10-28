@@ -185,7 +185,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			final BulkMigrationJobConfigurationResolver.VerificationConfiguration verificationConfiguration,
 			final Connection sourceConnection, final BulkMigrationArtifactProvenance provenance) {
 		executionPlan.validateUnchanged();
-		execute(getDataSource(), targetConnection -> {
+		executeNoTranAndClose(getDataSource(), targetConnection -> {
 			// The chunk executor owns commit/rollback boundaries, including durable
 			// checkpoint writes. AbstractDataSourceCommand otherwise starts a transaction.
 			targetConnection.setAutoCommit(true);
