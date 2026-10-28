@@ -22,6 +22,7 @@ class TransferFileJobDraftBuilderTest {
 				directory.resolve("transfer.yaml"));
 		assertEquals(saved, new TransferJobConfigurationIO().read(saved.file()));
 		assertEquals("PUBLIC", saved.configuration().sourceSchema());
+		assertNull(saved.configuration().targetSchema());
 		assertEquals(List.of("PUBLIC.ITEMS"), saved.configuration().tables());
 		assertEquals(TransferJobConfiguration.DataMode.FILE, saved.configuration().dataMode());
 		assertEquals(TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING, saved.configuration().schemaMode());
@@ -34,6 +35,28 @@ class TransferFileJobDraftBuilderTest {
 		assertThrows(Exception.class,
 				() -> builder.save(snapshot, List.of("PUBLIC.ITEMS"), 200, false, "__NULL__", saved.file()));
 		assertEquals(saved, new TransferJobConfigurationIO().read(saved.file()));
+	}
+
+	@Test
+	void explicitTargetSchemaPreservesSourceSelectionAndPoliciesAndRejectsBlankNames() throws Exception {
+		final var reviewed = snapshot();
+		final var builder = new TransferFileJobDraftBuilder();
+		final var saved = builder.save(reviewed, List.of("PUBLIC.ITEMS"), 50, false, "__NULL__",
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING, TransferJobConfiguration.TemporalPolicy.WARN,
+				TransferJobConfiguration.CompatibilityPolicy.ERROR, "Archive Data", directory.resolve("target.yaml"));
+		final var config = new TransferJobConfigurationIO().read(saved.file()).configuration();
+		assertEquals("Archive Data", config.targetSchema());
+		assertEquals("PUBLIC", config.sourceSchema());
+		assertEquals(List.of("PUBLIC.ITEMS"), config.tables());
+		assertEquals(TransferJobConfiguration.CompatibilityPolicy.ERROR, config.compatibilityPolicy());
+		assertEquals(TransferJobConfiguration.TemporalPolicy.WARN, config.files().unsupportedTemporalPolicy());
+		assertFalse(config.verify());
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.save(reviewed, List.of("PUBLIC.ITEMS"), 50, true, "__NULL__",
+						TransferJobConfiguration.SchemaMode.CREATE_MISSING,
+						TransferJobConfiguration.TemporalPolicy.WARN, TransferJobConfiguration.CompatibilityPolicy.WARN,
+						" ", directory.resolve("blank.yaml")));
+		assertFalse(Files.exists(directory.resolve("blank.yaml")));
 	}
 
 	@Test

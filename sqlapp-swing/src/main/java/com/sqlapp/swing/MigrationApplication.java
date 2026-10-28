@@ -49,7 +49,8 @@ public final class MigrationApplication {
 			});
 
 			final var dataPlan = new DataMigrationPlanPanel();
-			tabs.addTab("Data migration plan", dataPlan);
+			tabs.addTab("Advanced Data Job", dataPlan);
+			final var directTransfer = new DirectTransferPanel();
 			final var jobEditor = new JobConfigurationEditorPanel(snapshot -> {
 				if (!dataPlan.configurationFile.isEnabled()) {
 					JOptionPane.showMessageDialog(frame,
@@ -85,7 +86,7 @@ public final class MigrationApplication {
 			tabs.addTab("JDBC drivers", drivers);
 			final java.util.function.BooleanSupplier activity = () -> comparison.isBusy() || schemaPlan.isBusy()
 					|| dataPlan.isBusy() || jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy()
-					|| drivers.isBusy() || fileTransfer.isBusy();
+					|| drivers.isBusy() || fileTransfer.isBusy() || directTransfer.isBusy();
 			drivers.setBlockedSupplier(activity);
 			drivers.setConnectionReceivers(name -> {
 				if (!schemaPlan.selectDriverClass(name))
@@ -93,28 +94,28 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(schemaPlan);
 				return true;
 			}, name -> {
-				if (!dataPlan.selectDriverClass(name, true))
+				if (!directTransfer.selectDriverClass(name, true))
 					return false;
-				tabs.setSelectedComponent(dataPlan);
+				tabs.setSelectedComponent(directTransfer);
 				return true;
 			}, name -> {
-				if (!dataPlan.selectDriverClass(name, false))
+				if (!directTransfer.selectDriverClass(name, false))
 					return false;
-				tabs.setSelectedComponent(dataPlan);
+				tabs.setSelectedComponent(directTransfer);
 				return true;
 			});
-			tabs.remove(dataPlan);
-			tabs.insertTab("Direct JDBC transfer", null, dataPlan,
+			tabs.insertTab("Direct JDBC transfer", null, directTransfer,
 					"Copy directly between source and target connections", 0);
 			tabs.remove(fileTransfer);
 			tabs.insertTab("CSV package transfer", null, fileTransfer,
 					"Create a shared job, export, review and import CSV", 1);
-			MigrationStartPanel.install(tabs, java.util.Map.of(MigrationStartPanel.Destination.DATA, dataPlan,
-					MigrationStartPanel.Destination.FILE, fileTransfer, MigrationStartPanel.Destination.COMPARE,
-					comparison, MigrationStartPanel.Destination.REPORTS, reports,
-					MigrationStartPanel.Destination.SCHEMA_PLAN, schemaPlan, MigrationStartPanel.Destination.SQL_EDITOR,
-					sqlEditor, MigrationStartPanel.Destination.JOB_EDITOR, jobEditor,
-					MigrationStartPanel.Destination.DRIVERS, drivers));
+			MigrationStartPanel.install(tabs, java.util.Map.of(MigrationStartPanel.Destination.DATA, directTransfer,
+					MigrationStartPanel.Destination.LEGACY_DATA, dataPlan, MigrationStartPanel.Destination.FILE,
+					fileTransfer, MigrationStartPanel.Destination.COMPARE, comparison,
+					MigrationStartPanel.Destination.REPORTS, reports, MigrationStartPanel.Destination.SCHEMA_PLAN,
+					schemaPlan, MigrationStartPanel.Destination.SQL_EDITOR, sqlEditor,
+					MigrationStartPanel.Destination.JOB_EDITOR, jobEditor, MigrationStartPanel.Destination.DRIVERS,
+					drivers));
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {
 				@Override

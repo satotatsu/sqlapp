@@ -58,6 +58,27 @@ public final class TransferSchemaPreparation {
 	private TransferSchemaPreparation() {
 	}
 
+	/**
+	 * Shared DDL boundary; observers retain an uncertain attempt even when execute
+	 * or close fails.
+	 */
+	static Progress execute(Connection target, Plan plan, java.util.function.Consumer<Progress> observer)
+			throws java.sql.SQLException {
+		int completed = 0;
+		Progress progress = new Progress(plan.statements(), 0, null, plan.warnings());
+		observer.accept(progress);
+		for (int index = 0; index < plan.statements().size(); index++) {
+			progress = new Progress(plan.statements(), completed, index + 1, plan.warnings());
+			observer.accept(progress);
+			try (var statement = target.createStatement()) {
+				statement.execute(plan.statements().get(index).sql());
+			}
+			progress = new Progress(plan.statements(), ++completed, null, plan.warnings());
+			observer.accept(progress);
+		}
+		return progress;
+	}
+
 	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy)
 			throws Exception {
@@ -71,16 +92,32 @@ public final class TransferSchemaPreparation {
 		}
 		final Table first = data.getTasks().getFirst().getEffectiveTargetTable();
 		boolean schemaExists = false;
+		final var availableSchemas = new java.util.TreeSet<String>();
 		try (var schemas = connection.getMetaData().getSchemas()) {
-			while (schemas.next())
-				if (Objects.equals(first.getSchemaName(), schemas.getString("TABLE_SCHEM"))
-						&& (schemas.getString("TABLE_CATALOG") == null || first.getCatalogName() == null
-								|| Objects.equals(first.getCatalogName(), schemas.getString("TABLE_CATALOG"))))
+			while (schemas.next()) {
+				if (schemas.getString("TABLE_CATALOG") != null && first.getCatalogName() != null
+						&& !Objects.equals(first.getCatalogName(), schemas.getString("TABLE_CATALOG")))
+					continue;
+				final String name = schemas.getString("TABLE_SCHEM");
+				if (name != null) {
+					availableSchemas.add(name);
+					if (availableSchemas.size() > 10)
+						availableSchemas.pollLast();
+				}
+				if (Objects.equals(first.getSchemaName(), name))
 					schemaExists = true;
+			}
 		}
 		if (!schemaExists)
-			throw new ValidationException(
-					"Create the target schema namespace before importing; only missing tables are prepared.");
+			throw new ValidationException("Target schema " + diagnosticName(first.getSchemaName())
+					+ " was not found in the selected catalog. "
+					+ "CREATE_MISSING prepares tables inside an existing schema. Set targetSchema to an existing schema "
+					+ "with its exact name/case, or create the schema separately with the intended owner and privileges, then review again. "
+					+ "Existing schemas (up to 10): "
+					+ (availableSchemas.isEmpty() ? "none reported by JDBC metadata"
+							: availableSchemas.stream().limit(10).map(TransferSchemaPreparation::diagnosticName)
+									.collect(java.util.stream.Collectors.joining(", ")))
+					+ ".");
 		final var names = new ArrayList<String>();
 		try (var objects = connection.getMetaData().getTables(first.getCatalogName(), null, "%", null)) {
 			while (objects.next())
@@ -157,6 +194,14 @@ public final class TransferSchemaPreparation {
 				"sha256:" + com.sqlapp.util.MessageDigests.SHA256
 						.checksumAsString(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
 				statements, warnings);
+	}
+
+	private static String diagnosticName(String name) {
+		if (name == null)
+			return "(unspecified)";
+		final String printable = name.replaceAll("\\p{Cntrl}", " ");
+		return "'" + (printable.length() > 128 ? printable.substring(0, 128) + "…" : printable).replace("'", "''")
+				+ "'";
 	}
 
 	private static void compatibility(TransferJobConfiguration.CompatibilityPolicy policy, List<String> warnings,

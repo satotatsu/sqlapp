@@ -51,7 +51,14 @@ public final class TransferJobExecutionService {
 	public record Outcome(TransferJobPreparationService.Prepared prepared, Phase phase,
 			BulkMigrationJobResult copyResult, BulkMigrationJobVerificationResult verificationResult,
 			List<String> completedTasks, Map<String, ChunkedBulkMigrationProgress> committedProgress,
-			String stoppedTaskId) {
+			String stoppedTaskId, TransferSchemaPreparation.Progress schemaPreparation) {
+		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
+				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
+				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId) {
+			this(prepared, phase, copyResult, verificationResult, completedTasks, committedProgress, stoppedTaskId,
+					new TransferSchemaPreparation.Progress(List.of(), 0, null, prepared.warnings()));
+		}
+
 		public Outcome {
 			completedTasks = List.copyOf(completedTasks);
 			committedProgress = Map.copyOf(committedProgress);
@@ -97,6 +104,8 @@ public final class TransferJobExecutionService {
 		final var progress = new LinkedHashMap<String, ChunkedBulkMigrationProgress>();
 		final Phase[] phase = { Phase.REVALIDATION };
 		final String[] activeTask = { null };
+		final TransferSchemaPreparation.Progress[] schemaProgress = {
+				new TransferSchemaPreparation.Progress(List.of(), 0, null) };
 		var current = review.prepared();
 		try {
 			checkArtifacts(review);
@@ -105,8 +114,29 @@ public final class TransferJobExecutionService {
 			current = new TransferJobPreparationService().prepare(review.definitionFile(), bindings.connections(),
 					review.prepared().directory().getParent());
 			if (!current.job().fingerprint().equals(review.prepared().job().fingerprint())
-					|| !current.planFingerprint().equals(review.prepared().planFingerprint()))
+					|| !current.planFingerprint().equals(review.prepared().planFingerprint())
+					|| !current.warnings().equals(review.prepared().warnings())
+					|| !current.schemaPreparation().equals(review.prepared().schemaPreparation()))
 				throw new IllegalArgumentException("Definition or plan changed. Review again before executing.");
+			schemaProgress[0] = new TransferSchemaPreparation.Progress(current.schemaPreparation().statements(), 0,
+					null, current.warnings());
+			if (!current.schemaPreparation().statements().isEmpty()) {
+				try (var target = bindings.target().getConnection()) {
+					if (!target.getMetaData().supportsTransactions()
+							|| current.job().configuration().verify() && !target.getMetaData()
+									.supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE))
+						throw new IllegalArgumentException("Target transaction/verification support is insufficient.");
+					target.setReadOnly(false);
+					target.setAutoCommit(true);
+					checkArtifacts(review);
+					phase[0] = Phase.SCHEMA_PREPARATION;
+					TransferSchemaPreparation.execute(target, current.schemaPreparation(), value -> {
+						schemaProgress[0] = value;
+						activeTask[0] = value.attemptedStatement() == null ? null
+								: value.planned().get(value.attemptedStatement() - 1).taskId();
+					});
+				}
+			}
 			final var execution = current;
 			command.setConfigurationFile(execution.dataJob().file().toFile());
 			command.setExpectedConfigurationFingerprint(execution.dataJob().fingerprint());
@@ -157,7 +187,7 @@ public final class TransferJobExecutionService {
 					&& (command.getVerificationResult() == null || !command.getVerificationResult().isMatch()))
 				throw new IllegalStateException("Transfer verification did not succeed.");
 			return new Outcome(current, Phase.COMPLETE, command.getResult(), command.getVerificationResult(), completed,
-					progress, null);
+					progress, null, schemaProgress[0]);
 		} catch (Exception failure) {
 			// Driver exceptions and their causes may include credentials or secret-bearing
 			// URLs.
@@ -165,7 +195,7 @@ public final class TransferJobExecutionService {
 					|| command.getVerificationResult() != null && command.getVerificationResult().isMatch()))
 				phase[0] = Phase.FINALIZATION;
 			throw new ExecutionException(new Outcome(current, phase[0], command.getResult(),
-					command.getVerificationResult(), completed, progress, activeTask[0]));
+					command.getVerificationResult(), completed, progress, activeTask[0], schemaProgress[0]));
 		}
 	}
 

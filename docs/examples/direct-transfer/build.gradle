@@ -1,0 +1,23 @@
+plugins { id 'java'; id 'com.sqlapp.db' }
+repositories { mavenLocal(); mavenCentral() }
+dependencies {
+    runtimeOnly providers.gradleProperty('sourceDialect')
+    runtimeOnly providers.gradleProperty('targetDialect').orElse(providers.gradleProperty('sourceDialect'))
+    runtimeOnly providers.gradleProperty('sourceDriver')
+    runtimeOnly providers.gradleProperty('targetDriver').orElse(providers.gradleProperty('sourceDriver'))
+}
+tasks.named('transferDatabase') {
+    configurationFile.set(layout.projectDirectory.file('transfer.yaml'))
+    allowExecution.set(providers.gradleProperty('execute').map { it.toBoolean() }.orElse(false))
+    expectedConfigurationFingerprint.set(providers.gradleProperty('configurationFingerprint'))
+    sourceDataSource {
+        jdbcUrl.set(providers.environmentVariable('SOURCE_JDBC_URL'))
+        username.set(providers.environmentVariable('SOURCE_JDBC_USER'))
+        password.set(providers.environmentVariable('SOURCE_JDBC_PASSWORD'))
+    }
+    dataSource {
+        jdbcUrl.set(providers.environmentVariable('TARGET_JDBC_URL'))
+        username.set(providers.environmentVariable('TARGET_JDBC_USER'))
+        password.set(providers.environmentVariable('TARGET_JDBC_PASSWORD'))
+    }
+}

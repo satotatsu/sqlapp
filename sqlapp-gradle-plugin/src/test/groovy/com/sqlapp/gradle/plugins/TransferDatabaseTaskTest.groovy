@@ -1,0 +1,73 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.gradle.plugins
+
+import static org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
+
+class TransferDatabaseTaskTest extends AbstractTaskTest {
+	@Test void registersReadOnlyDefaultsAndValidatesBeforeCreatingPools() {
+		def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
+		def task = project.tasks.named('transferDatabase', TransferDatabaseTask).get()
+		assertFalse(task.allowExecution.get()); assertNotNull(task.sourceDataSource)
+		assertTrue(task.workspaceDirectory.get().asFile.path.contains('sqlapp-transfer'))
+		task.configurationFile.set(new File(testProjectDir, 'missing.yaml')); task.allowExecution.set(true)
+		assertTrue(assertThrows(IllegalArgumentException, { task.exec() }).message.contains('expectedConfigurationFingerprint'))
+		assertNull(task.internalCommand().dataSource); assertNull(task.internalCommand().sourceDataSource)
+	}
+	@ParameterizedTest @ValueSource(booleans=[false,true])
+	void testKitReviewsThenExecutesSharedDefinitionAndRevalidatesReplay(boolean createMissing) {
+		def sourceUrl = 'jdbc:hsqldb:file:' + new File(testProjectDir, 'source/db').path.replace('\\','/') + ';shutdown=true'
+		def targetUrl = 'jdbc:hsqldb:file:' + new File(testProjectDir, 'target/db').path.replace('\\','/') + ';shutdown=true'
+		for (def url : [sourceUrl,targetUrl]) {
+			def ds = new org.hsqldb.jdbc.JDBCDataSource(); ds.setUrl(url); ds.setUser('SA'); ds.setPassword('')
+			ds.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+				if(url==sourceUrl||!createMissing)s.execute('CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)')
+				if(url == sourceUrl) s.execute('INSERT INTO ITEMS VALUES(1),(2)')
+			}}
+		}
+		new File(testProjectDir,'settings.gradle').text = "rootProject.name='direct-transfer-test'\n"
+		new File(testProjectDir,'transfer.yaml').text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nchunkSize: 1\n'.replace('REQUIRE_EXISTING',createMissing?'CREATE_MISSING':'REQUIRE_EXISTING')
+		new File(testProjectDir,'build.gradle').text = """plugins { id 'com.sqlapp.db' }
+tasks.named('transferDatabase') {
+ configurationFile.set(layout.projectDirectory.file('transfer.yaml'))
+ allowExecution.set(providers.gradleProperty('execute').map { it.toBoolean() }.orElse(false))
+ expectedConfigurationFingerprint.set(providers.gradleProperty('pin'))
+ sourceDataSource { jdbcUrl.set('${sourceUrl}'); username.set('SA'); password.set('') }
+ dataSource { jdbcUrl.set('${targetUrl}'); username.set('SA'); password.set('') }
+ doLast { file('review-pin.txt').text = internalCommand().review.prepared().job().fingerprint() }
+}
+"""
+		def metadata = new Properties(); getClass().classLoader.getResourceAsStream('plugin-under-test-metadata.properties').withCloseable { metadata.load(it) }
+		def classpath = metadata.getProperty('implementation-classpath').split(File.pathSeparator).collect {new File(it)}
+		for(def type : [org.hsqldb.jdbc.JDBCDataSource,com.sqlapp.data.db.dialect.hsql.Hsql]) {
+			def location = new File(type.protectionDomain.codeSource.location.toURI()); classpath.add(location)
+			if(location.isDirectory()) { def resources = new File(location,'../../../resources/main').canonicalFile; if(resources.isDirectory()) classpath.add(resources) }
+		}
+		def runner = { List<String> args -> GradleRunner.create().withProjectDir(testProjectDir).withPluginClasspath(classpath).withArguments(['transferDatabase','--offline','--stacktrace'] + args) }
+		assertEquals(TaskOutcome.SUCCESS,runner([]).build().task(':transferDatabase').outcome)
+		def target = new org.hsqldb.jdbc.JDBCDataSource(); target.setUrl(targetUrl); target.setUser('SA'); target.setPassword('')
+		if(!createMissing)target.connection.withCloseable { c -> c.createStatement().withCloseable { s -> s.executeQuery('SELECT COUNT(*) FROM ITEMS').withCloseable { r -> r.next(); assertEquals(0,r.getInt(1)) } } }
+		else target.connection.withCloseable { c -> c.metaData.getTables(null,'PUBLIC','ITEMS',null).withCloseable {r->assertFalse(r.next())} }
+		def pin = new File(testProjectDir,'review-pin.txt').text
+		assertEquals(TaskOutcome.SUCCESS,runner(['-Pexecute=true','-Ppin='+pin]).build().task(':transferDatabase').outcome)
+		assertEquals(TaskOutcome.FAILED,runner(['-Pexecute=true','-Ppin='+pin]).buildAndFail().task(':transferDatabase').outcome)
+		target.connection.withCloseable { c -> c.createStatement().withCloseable { s -> s.executeQuery('SELECT COUNT(*) FROM ITEMS').withCloseable { r -> r.next(); assertEquals(2,r.getInt(1)) } } }
+		assertTrue(new File(testProjectDir,'build/sqlapp-transfer/direct').listFiles().any {new File(it,'transfer-result.json').isFile()})
+	}
+	@Test void sourceSetupFailureReleasesTheTaskOwnedTargetPool() {
+		def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
+		def task = project.tasks.named('transferDatabase', TransferDatabaseTask).get()
+		def definition = new File(testProjectDir,'transfer.yaml')
+		definition.text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\n'
+		task.configurationFile.set(definition)
+		task.dataSource.jdbcUrl.set('jdbc:hsqldb:mem:source_setup_cleanup_' + UUID.randomUUID())
+		task.dataSource.username.set('SA'); task.dataSource.password.set('')
+		assertThrows(IllegalArgumentException, {task.exec()})
+		assertTrue(((com.zaxxer.hikari.HikariDataSource)task.internalCommand().dataSource).isClosed())
+		assertNull(task.internalCommand().sourceDataSource)
+	}
+}

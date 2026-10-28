@@ -28,6 +28,57 @@ class TransferJobPreparationServiceTest {
 	private final TransferJobPreparationService service = new TransferJobPreparationService();
 
 	@Test
+	void sourceConnectionFailureRetainsSqlCodesButNotDriverSecrets() throws Exception {
+		final var source = new JDBCDataSource() {
+			@Override
+			public java.sql.Connection getConnection() throws SQLException {
+				final var failure = new SQLException("jdbc:private driver-secret");
+				failure.setNextException(new SQLException("password-secret", "28P01", 23));
+				throw failure;
+			}
+		};
+		final var failure = assertThrows(TransferJobPreparationService.PreparationException.class,
+				() -> service.prepare(job("tables: [ITEMS]\n"), Map.of("from", source, "to", database()), directory));
+		assertEquals("opening source connection", failure.phase());
+		assertEquals("28P01", failure.sqlState());
+		assertEquals(23, failure.vendorCode());
+		assertFalse(failure.getMessage().contains("driver-secret"));
+		assertFalse(failure.getMessage().contains("password-secret"));
+		assertNull(failure.getCause());
+		assertEquals(0, failure.getSuppressed().length);
+	}
+
+	@Test
+	void targetConnectionFailureDoesNotRetainSuppressedSourceCleanupSecrets() throws Exception {
+		final var source = new JDBCDataSource() {
+			@Override
+			public java.sql.Connection getConnection() {
+				return (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
+						java.sql.Connection.class.getClassLoader(), new Class<?>[] { java.sql.Connection.class },
+						(proxy, method, args) -> {
+							if (method.getName().equals("close"))
+								throw new SQLException("cleanup-secret jdbc:private");
+							throw new UnsupportedOperationException();
+						});
+			}
+		};
+		final var target = new JDBCDataSource() {
+			@Override
+			public java.sql.Connection getConnection() throws SQLException {
+				throw new SQLException("driver-secret", "3D000", 7);
+			}
+		};
+		final var failure = assertThrows(TransferJobPreparationService.PreparationException.class,
+				() -> service.prepare(job("tables: [ITEMS]\n"), Map.of("from", source, "to", target), directory));
+		assertEquals("opening target connection", failure.phase());
+		assertEquals("3D000", failure.sqlState());
+		assertNull(failure.getCause());
+		assertEquals(0, failure.getSuppressed().length);
+		assertFalse(failure.getMessage().contains("cleanup-secret"));
+		assertFalse(failure.getMessage().contains("driver-secret"));
+	}
+
+	@Test
 	void preparesPinnedPortableBulkJobWithTargetSchemaAndDependencyOrderWithoutCopyingRows() throws Exception {
 		final var source = database();
 		final var target = database();
@@ -80,11 +131,7 @@ class TransferJobPreparationServiceTest {
 		final Path job = job("tables: [ITEMS]\n");
 		assertThrows(IllegalArgumentException.class,
 				() -> service.prepare(job, Map.of("from", neverConnect), directory));
-		Files.writeString(job, Files.readString(job).replace("REQUIRE_EXISTING", "CREATE_MISSING"));
-		assertTrue(assertThrows(IllegalArgumentException.class, () -> service.prepare(job, bindings, directory))
-				.getMessage().contains("CREATE_MISSING"));
-		Files.writeString(job,
-				Files.readString(job).replace("CREATE_MISSING", "REQUIRE_EXISTING") + "mappingFile: mapping.yaml\n");
+		Files.writeString(job, Files.readString(job) + "mappingFile: mapping.yaml\n");
 		assertTrue(assertThrows(IllegalArgumentException.class, () -> service.prepare(job, bindings, directory))
 				.getMessage().contains("mappingFile"));
 		assertEquals(0, borrowed.get());
@@ -109,12 +156,15 @@ class TransferJobPreparationServiceTest {
 		final var missing = assertThrows(IllegalArgumentException.class,
 				() -> service.prepare(job, bindings, directory));
 		assertTrue(missing.getMessage().contains("empty-target conditions"));
+		assertTrue(missing.getMessage().contains("target table was not found"));
+		assertTrue(missing.getMessage().contains("ITEMS"));
 		try (var connection = target.getConnection();
 				var tables = connection.getMetaData().getTables(null, "PUBLIC", "ITEMS", null)) {
 			assertFalse(tables.next());
 		}
 		sql(target, "CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)", "INSERT INTO ITEMS VALUES(9)");
-		assertThrows(IllegalArgumentException.class, () -> service.prepare(job, bindings, directory));
+		assertTrue(assertThrows(IllegalArgumentException.class, () -> service.prepare(job, bindings, directory))
+				.getMessage().contains("must be empty"));
 		assertEquals(1, count(source, "ITEMS"));
 		assertEquals(1, count(target, "ITEMS"));
 	}

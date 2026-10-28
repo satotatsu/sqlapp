@@ -24,7 +24,7 @@ final class MigrationStartPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	enum Destination {
-		DATA, FILE, COMPARE, REPORTS, SCHEMA_PLAN, SQL_EDITOR, JOB_EDITOR, DRIVERS
+		DATA, FILE, COMPARE, REPORTS, SCHEMA_PLAN, SQL_EDITOR, JOB_EDITOR, DRIVERS, LEGACY_DATA
 	}
 
 	final Map<Destination, JButton> buttons = new EnumMap<>(Destination.class);
@@ -45,12 +45,12 @@ final class MigrationStartPanel extends JPanel {
 		content.add(heading, BorderLayout.NORTH);
 		final var cards = new JPanel(new GridLayout(3, 1, 0, 12));
 		cards.add(card("Direct JDBC transfer",
-				"Enter source and target connections, select tables, then review the plan.\n"
+				"Create one job for GUI and Gradle from connections and selected tables, then review the plan.\n"
 						+ "No YAML preparation is needed. Initial copies use existing, same-named empty target tables.",
-				button(Destination.DATA, "Open data migration", navigate)));
+				button(Destination.DATA, "Open direct transfer", navigate)));
 		cards.add(card("Transfer with a CSV package",
 				"Create a shared GUI / Gradle job, export the source, then import the package when ready.\n"
-						+ "Import does not need the source connection. Current targets must already exist and be empty.",
+						+ "Import needs only the target connection. Review existing empty targets or optional table creation.",
 				button(Destination.FILE, "Open CSV transfer", navigate)));
 		cards.add(card("Review saved results",
 				"Open saved migration or verification reports to inspect results.\n"
@@ -62,6 +62,7 @@ final class MigrationStartPanel extends JPanel {
 		tools.add(button(Destination.SQL_EDITOR, "SQL editor", navigate));
 		tools.add(button(Destination.JOB_EDITOR, "Job YAML editor", navigate));
 		tools.add(button(Destination.DRIVERS, "JDBC drivers", navigate));
+		tools.add(button(Destination.LEGACY_DATA, "Advanced Data Job", navigate));
 		tools.setVisible(false);
 		more.addActionListener(event -> {
 			tools.setVisible(more.isSelected());

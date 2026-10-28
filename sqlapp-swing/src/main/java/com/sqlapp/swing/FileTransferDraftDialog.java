@@ -9,17 +9,43 @@ import com.sqlapp.data.db.command.migration.transfer.TransferFileJobDraftBuilder
 
 /** Reuses the existing table picker; saving never exports or imports rows. */
 final class FileTransferDraftDialog {
+	record Form(JPanel content, JobDraftPanel picker, JTextField targetSchema) {
+	}
+
 	static Path show(java.awt.Component owner, DataMigrationDraftService.Prepared prepared) {
 		final var selected = new AtomicReference<Path>();
 		final var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Create CSV transfer job",
 				java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+		final var form = form(prepared, path -> {
+			selected.set(path);
+			dialog.dispose();
+		}, dialog::dispose);
+		dialog.setContentPane(form.content());
+		dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent event) {
+				if (!form.picker().isBusy())
+					dialog.dispose();
+			}
+		});
+		dialog.setSize(1050, 650);
+		dialog.setLocationRelativeTo(owner);
+		dialog.setVisible(true);
+		return selected.get();
+	}
+
+	static Form form(DataMigrationDraftService.Prepared prepared, java.util.function.Consumer<Path> saved,
+			Runnable cancelled) {
 		final var nullValue = new JTextField("__SQLAPP_NULL__", 20);
+		final var targetSchema = new JTextField(20);
 		final var createMissing = new JCheckBox(
 				"Create missing target tables before importing (review generated DDL first)");
 		final var temporalErrors = new JCheckBox(
 				"Treat compatibility warnings as errors (default: try migration and report warnings)");
 		final var panel = JobDraftPanel.fileTransfer(prepared.schema(), () -> {
 			final String token = nullValue.getText(); // Capture Swing input before the background writer starts.
+			final String destinationSchema = targetSchema.getText().isBlank() ? null : targetSchema.getText();
 			final var mode = createMissing.isSelected()
 					? com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING
 					: com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING;
@@ -29,15 +55,25 @@ final class FileTransferDraftDialog {
 			final var compatibilityPolicy = temporalErrors.isSelected()
 					? com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.CompatibilityPolicy.ERROR
 					: com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.CompatibilityPolicy.WARN;
-			return (schema, tables, chunk,
-					verify) -> new TransferFileJobDraftBuilder().save(schema, tables, chunk, verify, token, mode,
-							policy, compatibilityPolicy, prepared.directory().resolve("transfer.yaml")).file()
-							.toString();
-		}, path -> {
-			selected.set(path);
-			dialog.dispose();
-		}, dialog::dispose);
+			return (schema, tables, chunk, verify) -> new TransferFileJobDraftBuilder()
+					.save(schema, tables, chunk, verify, token, mode, policy, compatibilityPolicy, destinationSchema,
+							prepared.directory().resolve("transfer.yaml"))
+					.file().toString();
+		}, saved, cancelled);
 		nullValue.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+			public void insertUpdate(javax.swing.event.DocumentEvent event) {
+				panel.draftOptionsChanged();
+			}
+
+			public void removeUpdate(javax.swing.event.DocumentEvent event) {
+				panel.draftOptionsChanged();
+			}
+
+			public void changedUpdate(javax.swing.event.DocumentEvent event) {
+				panel.draftOptionsChanged();
+			}
+		});
+		targetSchema.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent event) {
 				panel.draftOptionsChanged();
 			}
@@ -54,6 +90,7 @@ final class FileTransferDraftDialog {
 		temporalErrors.addActionListener(event -> panel.draftOptionsChanged());
 		panel.inspect.addPropertyChangeListener("enabled", event -> {
 			nullValue.setEnabled(!panel.isBusy());
+			targetSchema.setEnabled(!panel.isBusy());
 			createMissing.setEnabled(!panel.isBusy());
 			temporalErrors.setEnabled(!panel.isBusy());
 		});
@@ -61,6 +98,12 @@ final class FileTransferDraftDialog {
 		final var heading = new JPanel(new java.awt.GridLayout(0, 1, 4, 4));
 		heading.add(new JLabel(
 				"Save a shared GUI / Gradle job. Existing targets must be empty; saving never changes a database."));
+		final var schemaRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+		final var schemaLabel = new JLabel("Target schema (blank: current; must already exist)");
+		schemaLabel.setLabelFor(targetSchema);
+		schemaRow.add(schemaLabel);
+		schemaRow.add(targetSchema);
+		heading.add(schemaRow);
 		heading.add(createMissing);
 		heading.add(temporalErrors);
 		final var tokenRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
@@ -75,18 +118,6 @@ final class FileTransferDraftDialog {
 		content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		content.add(heading, BorderLayout.NORTH);
 		content.add(panel, BorderLayout.CENTER);
-		dialog.setContentPane(content);
-		dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
-			@Override
-			public void windowClosing(java.awt.event.WindowEvent event) {
-				if (!panel.isBusy())
-					dialog.dispose();
-			}
-		});
-		dialog.setSize(1050, 650);
-		dialog.setLocationRelativeTo(owner);
-		dialog.setVisible(true);
-		return selected.get();
+		return new Form(content, panel, targetSchema);
 	}
 }

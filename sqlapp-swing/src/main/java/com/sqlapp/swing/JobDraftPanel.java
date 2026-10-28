@@ -413,7 +413,7 @@ final class JobDraftPanel extends JPanel {
 					"Hidden selections will also be included. Clear the filter to review every selected table.");
 		else
 			selectionHelp.setText(fileDraftWriter != null
-					? "Selection ready. Save the shared CSV job; no rows are exported by saving."
+					? "Selection ready. Save the shared transfer job; saving does not move data."
 					: managedDirectory == null
 							? "Selection ready. Create a draft to review the generated settings in the editor."
 							: "Selection ready. Save and review plan checks the target; it does not copy rows.");

@@ -89,6 +89,32 @@ class FileDropHandlerTest {
 	}
 
 	@Test
+	void fileOrFolderSelectionAcceptsOnePathAndPreservesInputOnInvalidOrBlockedDrops() throws Exception {
+		final Path manifest = Files.writeString(directory.resolve("manifest.json"), "{}");
+		final Path wrong = Files.writeString(directory.resolve("table.csv"), "ID\n");
+		SwingUtilities.invokeAndWait(() -> {
+			final var field = new JTextField("old");
+			final var ready = new AtomicBoolean(true);
+			final var errors = new AtomicReference<Throwable>();
+			FileDropHandler.fileOrDirectory(field, List.of("json"), ready::get, errors::set);
+			assertTrue(drop(field, directory));
+			assertEquals(directory.toString(), field.getText());
+			assertTrue(drop(field, manifest));
+			assertEquals(manifest.toString(), field.getText());
+			assertFalse(drop(field, wrong));
+			assertEquals(manifest.toString(), field.getText());
+			assertFalse(drop(field, directory, manifest));
+			assertTrue(errors.get().getMessage().contains("exactly one"));
+			ready.set(false);
+			assertFalse(drop(field, directory));
+			assertEquals(manifest.toString(), field.getText());
+			ready.set(true);
+			field.setEnabled(false);
+			assertFalse(drop(field, directory));
+		});
+	}
+
+	@Test
 	void multipleFileValidationIsAtomicAndHonorsReceiverRefusal() throws Exception {
 		final Path first = Files.writeString(directory.resolve("first.jar"), "fixture");
 		final Path second = Files.writeString(directory.resolve("second.JAR"), "fixture");

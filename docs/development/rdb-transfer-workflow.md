@@ -29,9 +29,9 @@ partial execution evidence together so they can inspect and refine the job.
 requests strict preflight. GUI and Gradle use the same policy. Existing strict
 low-level validators are composed where needed, rather than silently weakened.
 New transfer paths should classify compatibility concerns as warnings and apply
-strict rejection only when requested. This policy is implemented first in CSV
-export/import and its optional Schema preparation; direct-JDBC and other legacy
-entry points still need the same policy integration as their adapters evolve.
+strict rejection only when requested. This policy is implemented in CSV and
+the common direct-JDBC review/execution service, desktop screen and Gradle
+adapter. Existing low-level/legacy entry points preserve their contracts.
 
 Warning-only completion means the planned operations completed, not that the
 whole source database was faithfully reproduced. Report retained, converted,
@@ -52,9 +52,9 @@ flag. Selecting Schema preparation must not force a particular data transport.
 
 | Data use case | Target Schema beforehand | Current implementation |
 |---|---|---|
-| Same product, direct JDBC | Prepare or require existing | Direct copy into existing targets has embedded coverage; creation is pending |
+| Same product, direct JDBC | Prepare or require existing | Shared GUI/Gradle review of missing-table DDL, explicit creation, copy and verification; embedded coverage |
 | Same product, JDBC export then file import | Prepare or require existing | CSV GUI/Gradle export/import and verification implemented; optional missing ordinary-table creation |
-| Different products, direct JDBC | Prepare or require existing | Conversion/mapping support pending; current direct service rejects this pairing |
+| Different products, direct JDBC | Prepare or require existing | Best-effort shared GUI/Gradle execution with optional missing-table DDL and WARN/ERROR; actual heterogeneous DB validation and vendor conversion remain incomplete |
 | Different products, JDBC export then file import | Prepare or require existing | Shared Schema/target-dialect best-effort CSV path attempts execution with warnings; vendor-specific conversion and real heterogeneous DB validation remain incomplete |
 
 For file transport, export and import are separate actions that may run at
@@ -158,7 +158,7 @@ runtime connections. `TransferJobPreparationService` now accepts a map of these
 names to caller-owned `DataSource` instances for read-only preparation.
 `TransferJobExecutionService` now provides the explicit Java review/execute
 boundary described below. CSV export/import GUI and Gradle adapters are
-implemented; direct-transfer GUI/Gradle adapters for this format remain pending.
+implemented. Direct-transfer GUI/Gradle review/execution uses this same format.
 
 `schemaMode` is required explicitly: `CREATE_MISSING` expresses target creation
 intent; `REQUIRE_EXISTING` requests validation of pre-existing objects. Neither
@@ -225,10 +225,23 @@ No connection, Schema mutation or data transfer occurs during read/write.
 
 `TransferJobPreparationService.prepare(jobFile, connections, workspace)` is the
 shared command-module entry for the first preparation path. It supports
-`REQUIRE_EXISTING` with the same database product on both sides. Missing runtime
-bindings, `CREATE_MISSING`, and explicit `mappingFile` settings are rejected
-before borrowing connections. Cross-product preparation is also rejected, rather
-than treating the same-product path as a Schema conversion facility.
+`REQUIRE_EXISTING` or `CREATE_MISSING`. Missing runtime
+bindings and explicit `mappingFile` settings are rejected
+before borrowing connections. Product-name differences are warnings by default;
+`compatibilityPolicy: ERROR` rejects them. Shared Schema types and target-dialect
+execution are best-effort and do not certify complete vendor-specific conversion.
+Warnings and the shared target Schema plan are returned in `Prepared` and retained
+in success/failure outcomes. The bulk data-plan fingerprint retains its meaning;
+Schema-plan fingerprint/DDL/missing set are checked independently before writes.
+The previous Prepared constructor remains available; record patterns must account
+for the additive warning component. Fresh execution compares the warning set as
+well as configuration and data-plan fingerprints.
+
+`TransferDatabaseCommand` and Gradle `transferDatabase` compose the same service.
+Review-only is the default. Explicit execution requires a pinned configuration
+fingerprint and performs a fresh live review, with `transfer-review.json` and
+`transfer-result.json` audits. Command-owned source/target pools are closed once;
+services keep caller pools open. See the [direct task guide](../gradle-plugin/direct-transfer.md).
 
 The service borrows and closes connections, requests read-only access and never
 closes the caller's DataSources. It reads one exact/current source schema through
@@ -259,11 +272,23 @@ remain with intermediate artifacts for diagnosis. Do not treat such artifacts,
 or a successful preparation result, as execution approval. Existing bulk commands
 and Gradle tasks can consume the generated data-job format, but they must perform
 their normal fresh validation and fingerprint checks. The transfer definition
-itself still has no GUI/Gradle execution adapter. Target creation, heterogeneous
-conversion, mapping application, persistent aggregate reporting and recovery
+now has GUI and Gradle review/execution adapters and optional table preparation. Vendor-specific heterogeneous
+conversion, mapping application and recovery
 remain pending.
 
 ### Implemented review and initial-copy execution
+
+Direct execution reuses the CSV path's `TransferSchemaPreparation` planner and
+statement executor for optional missing-table preparation. Fresh preparation
+must match the reviewed data plan, warnings and exact Schema plan before DDL.
+Database identity is checked on every borrowed connection. The target dialect
+generates CREATE operations, existing targets are validated and never replaced,
+and generated plans are not reinterpreted as destructive Schema diffs.
+DDL progress is separate from copied-row progress, including uncertain execution
+or statement-close failures. Data copying starts only after DDL finishes, then
+the shared bulk command validates target state and copies/verifies. Nontransactional
+DDL and committed chunks may remain after errors. Target namespaces and unselected
+dependencies still require explicit resolution; no complete Schema clone is claimed.
 
 `TransferJobExecutionService.review(jobFile, connections, workspace)` prepares
 the job without writes and binds the review to the actual source/target database
@@ -397,8 +422,8 @@ repeat import fails instead of being skipped or clearing the target.
 
 See the [task guide](../gradle-plugin/file-transfer.md) and
 [runnable example](../examples/file-transfer/README.md). The separate companion
-example checkout is absent here; no external repository was changed. CSV import
-currently supports the same database product, existing targets or optional missing
+example checkout is outside this task's authorized writable scope; no external repository was changed. CSV import
+currently attempts same/different product pairs, with existing targets or optional missing
 ordinary-table preparation, numeric keys and the documented scalar types.
 Full Schema recreation, vendor-specific heterogeneous mapping and JSONL execution
 remain incomplete; product-name mismatch alone is a warning in the CSV path.
@@ -467,8 +492,9 @@ policies and require explicit decisions where no safe default exists.
   them; do not remove the same-product comparison guard to simulate conversion.
 - The CSV transfer job now coordinates optional missing-table preparation, data
   copy, verification and runtime connection references in GUI and Gradle. A
-  complete Schema clone, heterogeneous conversion and the corresponding direct
-  JDBC transfer-definition adapters remain unfinished.
+  complete Schema clone and vendor-specific heterogeneous conversion remain
+  unfinished. Direct transfer definitions now have a shared command/Gradle
+  adapter and desktop integration. The legacy Data Job tools remain available.
 
 ## Implementation order and acceptance evidence
 

@@ -60,6 +60,19 @@ public final class TransferFileJobDraftBuilder {
 			boolean verify, String nullValue, TransferJobConfiguration.SchemaMode schemaMode,
 			TransferJobConfiguration.TemporalPolicy policy,
 			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, Path file) throws Exception {
+		return save(reviewed, selected, chunkSize, verify, nullValue, schemaMode, policy, compatibilityPolicy, null,
+				file);
+	}
+
+	/**
+	 * Explicit target namespace; null retains the target connection's current
+	 * schema.
+	 */
+	public TransferJobConfigurationIO.Snapshot save(SchemaSnapshot reviewed, List<String> selected, int chunkSize,
+			boolean verify, String nullValue, TransferJobConfiguration.SchemaMode schemaMode,
+			TransferJobConfiguration.TemporalPolicy policy,
+			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema, Path file)
+			throws Exception {
 		final String draft = new BulkMigrationJobDraftBuilder().draft(reviewed, selected, "", chunkSize, verify);
 		final var bulk = new BulkMigrationJobConfigurationEditorIO().validate(draft);
 		final var schema = schema(reviewed);
@@ -67,7 +80,7 @@ public final class TransferFileJobDraftBuilder {
 		for (String table : tables)
 			supported(schema, table, policy);
 		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, schemaMode,
-				schema.getName(), null, null, chunkSize, verify, TransferJobConfiguration.DataMode.FILE,
+				schema.getName(), targetSchema, null, chunkSize, verify, TransferJobConfiguration.DataMode.FILE,
 				new TransferJobConfiguration.FileTransfer("packages", TransferJobConfiguration.FileFormat.CSV, "UTF-8",
 						nullValue, policy),
 				compatibilityPolicy);
@@ -75,7 +88,7 @@ public final class TransferFileJobDraftBuilder {
 		return io.write(file, io.format(configuration), null);
 	}
 
-	private static Schema schema(SchemaSnapshot reviewed) throws Exception {
+	static Schema schema(SchemaSnapshot reviewed) throws Exception {
 		final byte[] bytes = BoundedMigrationFile.read(reviewed.file(), 16_777_216L, "maxSchemaBytes", "Schema");
 		if (!("sha256:" + MessageDigests.SHA256.checksumAsString(bytes)).equals(reviewed.fingerprint())
 				|| !new BulkMigrationJobDraftBuilder().inspect(reviewed.file()).fingerprint()

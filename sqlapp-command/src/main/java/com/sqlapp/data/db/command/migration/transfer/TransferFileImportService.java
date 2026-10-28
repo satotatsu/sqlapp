@@ -150,16 +150,18 @@ public final class TransferFileImportService {
 				schemaWarnings = schemaPlan.warnings();
 				if (!ddl.isEmpty()) {
 					phase = TransferJobExecutionService.Phase.SCHEMA_PREPARATION;
-					for (int index = 0; index < ddl.size(); index++) {
-						attemptedDdl = index + 1;
-						active[0] = ddl.get(index).taskId();
-						try (var statement = target.createStatement()) {
-							statement.execute(ddl.get(index).sql());
-						}
-						completedDdl++;
+					final TransferSchemaPreparation.Progress[] observed = {
+							new TransferSchemaPreparation.Progress(ddl, 0, null, schemaWarnings) };
+					try {
+						TransferSchemaPreparation.execute(target, schemaPlan, value -> {
+							observed[0] = value;
+							active[0] = value.attemptedStatement() == null ? null
+									: value.planned().get(value.attemptedStatement() - 1).taskId();
+						});
+					} finally {
+						completedDdl = observed[0].completedStatements();
+						attemptedDdl = observed[0].attemptedStatement();
 					}
-					attemptedDdl = null;
-					active[0] = null;
 				}
 				BulkMigrationTargetValidator.validate(target, plan);
 				phase = TransferJobExecutionService.Phase.COPY;

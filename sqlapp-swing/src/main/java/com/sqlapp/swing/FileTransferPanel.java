@@ -19,7 +19,11 @@ final class FileTransferPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	enum Action {
-		DISCOVER, EXPORT, REVIEW, IMPORT, TEST
+		DISCOVER, EXPORT, INSPECT, INSPECT_DATA, REVIEW, IMPORT, TEST;
+
+		boolean isInspection() {
+			return this == INSPECT || this == INSPECT_DATA;
+		}
 	}
 
 	@FunctionalInterface
@@ -36,9 +40,14 @@ final class FileTransferPanel extends JPanel {
 	final JTextField workspace = new JTextField();
 	final JTextField sourceSchema = new JTextField();
 	final JButton create = new JButton("New CSV job…");
+	final JButton jobSettings = new JButton("Job settings…");
 	final JButton export = new JButton("Export source to CSV");
 	final JButton review = new JButton("Review package and target");
+	final JButton inspectPackage = new JButton("Inspect package (no connection)");
+	final JCheckBox inspectValues = new JCheckBox(
+			"Also validate CSV values during inspection (offline; may take longer)");
 	final JButton apply = new JButton("Import reviewed package…");
+	final JButton nextImport = new JButton("Continue to import this package…");
 	final JToggleButton drivers = new JToggleButton("Driver class");
 	final JLabel status = new JLabel(
 			"Choose Export to create a job without YAML, or Import to use a completed package.");
@@ -48,6 +57,11 @@ final class FileTransferPanel extends JPanel {
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
 	final JTabbedPane resultTabs = new JTabbedPane();
+	final JTextArea summary = new JTextArea(
+			"1. Export: create or choose a job and export a CSV package.\n2. Import: choose the completed manifest and enter the target connection.\n3. Review warnings and optional table creation, then confirm import.");
+	private boolean hasSummary;
+	final ReadOnlyCodePanel gradle = new ReadOnlyCodePanel(
+			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_GROOVY, false));
 	private final JPanel connections = new JPanel(new CardLayout());
 	private final JPanel settings = new JPanel(new CardLayout());
 	private final Backend backend;
@@ -56,6 +70,7 @@ final class FileTransferPanel extends JPanel {
 	private boolean busy;
 	private long revision;
 	private FileTransferDesktopService.Reviewed reviewed;
+	private TransferFilePackageIO.Snapshot exportedForImport;
 
 	FileTransferPanel() {
 		this(new FileTransferDesktopService(), null);
@@ -72,8 +87,8 @@ final class FileTransferPanel extends JPanel {
 		heading.add(new JLabel("Move data with a portable CSV package — the source is not needed during import."),
 				BorderLayout.NORTH);
 		heading.add(step, BorderLayout.CENTER);
-		heading.add(
-				new JLabel("Same product, numeric keys and scalar columns; optionally create missing target tables."),
+		heading.add(new JLabel(
+				"Numeric keys and supported scalar columns; review compatibility warnings and optional table creation."),
 				BorderLayout.SOUTH);
 		input.add(heading, BorderLayout.NORTH);
 		connections.add(source, "0");
@@ -82,8 +97,9 @@ final class FileTransferPanel extends JPanel {
 		exportSettings.add(row("Saved CSV job (optional for New job)", job, false, List.of("yaml", "yml")));
 		exportSettings.add(row("Source schema (blank: current)", sourceSchema, null, List.of()));
 		final var importSettings = new JPanel(new GridLayout(0, 1, 4, 4));
-		importSettings.add(row("Completed package manifest", manifest, false, List.of("json")));
+		importSettings.add(row("Completed package (manifest or folder)", manifest, false, List.of("json")));
 		importSettings.add(row("Save import results to", workspace, true, List.of()));
+		importSettings.add(inspectValues);
 		settings.add(exportSettings, "0");
 		settings.add(importSettings, "1");
 		final var form = new JPanel(new BorderLayout(4, 4));
@@ -92,13 +108,27 @@ final class FileTransferPanel extends JPanel {
 		input.add(form, BorderLayout.CENTER);
 		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		actions.add(create);
+		actions.add(jobSettings);
 		actions.add(export);
+		actions.add(inspectPackage);
 		actions.add(review);
 		actions.add(apply);
 		actions.add(drivers);
-		input.add(actions, BorderLayout.SOUTH);
-		resultTabs.addTab("Review / result", result);
-		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(input), resultTabs);
+		summary.setEditable(false);
+		summary.setLineWrap(true);
+		summary.setWrapStyleWord(true);
+		summary.setMargin(new Insets(8, 8, 8, 8));
+		final var summaryPanel = new JPanel(new BorderLayout(4, 4));
+		summaryPanel.add(new JScrollPane(summary), BorderLayout.CENTER);
+		final var nextActions = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		nextActions.add(nextImport);
+		summaryPanel.add(nextActions, BorderLayout.SOUTH);
+		resultTabs.addTab("Summary", summaryPanel);
+		resultTabs.addTab("Details", result);
+		final var controls = new JPanel(new BorderLayout(4, 4));
+		controls.add(new JScrollPane(input), BorderLayout.CENTER);
+		controls.add(actions, BorderLayout.SOUTH);
+		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, controls, resultTabs);
 		split.setResizeWeight(0.55);
 		add(split, BorderLayout.CENTER);
 		add(statusPanel, BorderLayout.SOUTH);
@@ -120,7 +150,26 @@ final class FileTransferPanel extends JPanel {
 				discover(chooser.getSelectedFile().toPath());
 		});
 		export.addActionListener(event -> run(Action.EXPORT, null));
+		jobSettings.addActionListener(event -> editSettings(path -> TransferJobSettingsDialog.show(this, path,
+				com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.DataMode.FILE)));
+		nextImport.addActionListener(event -> {
+			if (isBusy() || exportedForImport == null || step.getSelectedIndex() != 0)
+				return;
+			final var exported = exportedForImport;
+			step.setSelectedIndex(1);
+			manifest.setText(exported.file().toString());
+			show(exported);
+			summary.setText(FileTransferSummary.readyForImport(exported));
+			summary.setCaretPosition(0);
+			showGradle(null, exported.file(), exported.fingerprint());
+			status.setText(
+					"Package selected for import. Enter the target connection and review; no rows have been imported.");
+			target.jdbcUrl.requestFocusInWindow();
+		});
 		review.addActionListener(event -> run(Action.REVIEW, null));
+		inspectPackage.addActionListener(
+				event -> run(inspectValues.isSelected() ? Action.INSPECT_DATA : Action.INSPECT, null));
+		inspectValues.addItemListener(event -> changed());
 		apply.addActionListener(event -> {
 			if (isBusy() || reviewed == null)
 				return;
@@ -174,8 +223,12 @@ final class FileTransferPanel extends JPanel {
 		panel.add(label, BorderLayout.WEST);
 		panel.add(field, BorderLayout.CENTER);
 		if (directory != null) {
-			FileDropHandler.path(field, directory, extensions, () -> !isBusy(),
-					FileDropHandler.errors(status, statusPanel));
+			if (field == manifest)
+				FileDropHandler.fileOrDirectory(field, extensions, () -> !isBusy(),
+						FileDropHandler.errors(status, statusPanel));
+			else
+				FileDropHandler.path(field, directory, extensions, () -> !isBusy(),
+						FileDropHandler.errors(status, statusPanel));
 			final var browse = new JButton("Browse…");
 			browse.addActionListener(event -> {
 				if (isBusy())
@@ -183,6 +236,10 @@ final class FileTransferPanel extends JPanel {
 				final var chooser = directory ? files.forDirectory(field.getText())
 						: files.forFile(new javax.swing.filechooser.FileNameExtensionFilter("Transfer files",
 								extensions.toArray(String[]::new)), field.getText());
+				if (field == manifest) {
+					chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+					chooser.setDialogTitle("Choose manifest.json or its completed package folder");
+				}
 				if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 					field.setText(chooser.getSelectedFile().getAbsolutePath());
 			});
@@ -209,6 +266,11 @@ final class FileTransferPanel extends JPanel {
 
 	private void changed() {
 		revision++;
+		exportedForImport = null;
+		if (hasSummary && !summary.getText().startsWith("Inputs changed."))
+			summary.setText(
+					"Inputs changed. The previous result below cannot authorize import.\n\n" + summary.getText());
+		clearGradle();
 		reviewed = null;
 		resultTabs.remove(schemaSql);
 		schemaSql.showText("");
@@ -222,8 +284,10 @@ final class FileTransferPanel extends JPanel {
 		((CardLayout) settings.getLayout()).show(settings, Integer.toString(step.getSelectedIndex()));
 		final boolean importing = step.getSelectedIndex() == 1;
 		create.setVisible(!importing);
+		jobSettings.setVisible(!importing);
 		export.setVisible(!importing);
 		review.setVisible(importing);
+		inspectPackage.setVisible(importing);
 		apply.setVisible(importing);
 	}
 
@@ -249,10 +313,14 @@ final class FileTransferPanel extends JPanel {
 
 	private void refresh() {
 		create.setEnabled(!busy);
+		jobSettings.setEnabled(!busy);
 		export.setEnabled(!busy);
 		review.setEnabled(!busy);
+		inspectPackage.setEnabled(!busy);
 		apply.setEnabled(!busy && reviewed != null);
 		drivers.setEnabled(!busy);
+		nextImport.setVisible(exportedForImport != null && step.getSelectedIndex() == 0);
+		nextImport.setEnabled(!busy && exportedForImport != null && step.getSelectedIndex() == 0);
 	}
 
 	private boolean validConnection(ConnectionFields fields) {
@@ -268,6 +336,31 @@ final class FileTransferPanel extends JPanel {
 
 	void discover(Path directory) {
 		run(Action.DISCOVER, directory);
+	}
+
+	void editSettings(
+			java.util.function.Function<Path, com.sqlapp.data.db.command.migration.transfer.TransferJobConfigurationIO.Snapshot> presenter) {
+		if (isBusy() || step.getSelectedIndex() != 0)
+			return;
+		final Path file;
+		try {
+			if (job.getText().isBlank())
+				throw new IllegalArgumentException();
+			file = Path.of(job.getText());
+		} catch (RuntimeException failure) {
+			status.setText("Choose a saved CSV job before opening settings.");
+			return;
+		}
+		setBusy(true);
+		try {
+			if (presenter.apply(file) != null) {
+				changed();
+				status.setText(
+						"Job settings saved. Export a new package; completed packages keep their original settings.");
+			}
+		} finally {
+			setBusy(false);
+		}
 	}
 
 	void importReviewed(BooleanSupplier confirmation) {
@@ -307,10 +400,12 @@ final class FileTransferPanel extends JPanel {
 		if (isBusy())
 			return;
 		final boolean importing = step.getSelectedIndex() == 1;
+		if (action.isInspection() && !importing)
+			return;
 		if (action == Action.IMPORT && (reviewed == null || !importing))
 			return;
 		final var fields = action == Action.DISCOVER || action == Action.EXPORT ? source : importing ? target : source;
-		if (!validConnection(fields))
+		if (!action.isInspection() && !validConnection(fields))
 			return;
 		final Path input;
 		try {
@@ -322,11 +417,17 @@ final class FileTransferPanel extends JPanel {
 			status.setText("Choose a saved CSV job or completed package manifest first.");
 			return;
 		}
-		final var spec = fields.snapshot().spec();
-		final char[] password = fields.password.getPassword();
+		final var spec = action.isInspection() ? null : fields.snapshot().spec();
+		final char[] password = action.isInspection() ? new char[0] : fields.password.getPassword();
 		final var prior = reviewed;
 		final long requested = revision;
 		final String schema = sourceSchema.getText();
+		if (action != Action.TEST) {
+			clearGradle();
+			exportedForImport = null;
+		}
+		if (action.isInspection())
+			reviewed = null;
 		if (action == Action.IMPORT || action == Action.EXPORT)
 			fields.password.setText("");
 		setBusy(true);
@@ -357,6 +458,17 @@ final class FileTransferPanel extends JPanel {
 							status.setText("Shared CSV job saved. Choose Export source to CSV to create the package.");
 						} else
 							status.setText("Job creation cancelled or inputs changed. Previous job retained.");
+					} else if (action.isInspection()) {
+						if (requested != revision) {
+							status.setText("Inputs changed. Inspect the selected package again.");
+							return;
+						}
+						final var inspected = (FileTransferDesktopService.Inspected) value;
+						show(inspected);
+						showGradle(null, inspected.snapshot().file(), inspected.snapshot().fingerprint());
+						status.setText(inspected.valuesValidated()
+								? "Package and CSV values checked without a connection. Review the target before import."
+								: "Package file integrity checked without a connection. Review CSV values and the target before import.");
 					} else if (action == Action.REVIEW) {
 						if (requested != revision) {
 							status.setText("Inputs changed. Review package again.");
@@ -364,14 +476,22 @@ final class FileTransferPanel extends JPanel {
 						}
 						reviewed = (FileTransferDesktopService.Reviewed) value;
 						show(value);
+						showGradle(null, reviewed.review().manifestFile(), reviewed.review().manifestFingerprint());
 						status.setText("Package and target reviewed. Compatibility warnings: "
 								+ reviewed.review().schemaPreparation().warnings().size()
 								+ ". Inspect the review and generated DDL before import.");
 					} else if (action == Action.EXPORT) {
 						final var saved = (TransferFilePackageIO.Snapshot) value;
-						show(value);
-						if (requested == revision)
+						if (requested == revision) {
 							manifest.setText(saved.file().toString());
+							show(value);
+							showGradle(input, saved.file(), saved.fingerprint());
+							exportedForImport = saved;
+						} else {
+							show(value);
+							summary.setText(
+									"Inputs changed. This export belongs to previous inputs.\n\n" + summary.getText());
+						}
 						status.setText("CSV package exported. Warnings: " + saved.manifest().warnings().size()
 								+ ". Inspect the result before import. Manifest: " + saved.file());
 					} else if (action == Action.IMPORT) {
@@ -391,6 +511,17 @@ final class FileTransferPanel extends JPanel {
 						reviewed = null;
 					if (cause instanceof TransferFileImportService.ImportException imported)
 						show(imported.outcome());
+					else if (cause instanceof TransferPreparationFailure validation) {
+						summary.setText("Target preparation needs attention:\n\n" + validation.getMessage()
+								+ "\n\nFix the target or job settings and review again.");
+						summary.setCaretPosition(0);
+						resultTabs.setSelectedIndex(0);
+					} else {
+						summary.setText(
+								"CSV action failed. Previous results cannot authorize import.\nInspect status Details and review again after fixing the problem.\n\n"
+										+ summary.getText());
+						resultTabs.setSelectedIndex(0);
+					}
 					status.setText("CSV operation failed; inspect Details and any retained result before retrying.");
 					statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(cause));
 				} finally {
@@ -402,6 +533,9 @@ final class FileTransferPanel extends JPanel {
 
 	private void show(Object value) {
 		result.showText(new com.sqlapp.util.JsonConverter().toJsonString(value));
+		summary.setText(FileTransferSummary.text(value));
+		summary.setCaretPosition(0);
+		hasSummary = true;
 		resultTabs.remove(schemaSql);
 		final var statements = value instanceof FileTransferDesktopService.Reviewed review
 				? review.review().schemaPreparation().statements()
@@ -420,7 +554,17 @@ final class FileTransferPanel extends JPanel {
 						.append('\n').append(statements.get(index).sql()).append("\n\n");
 			schemaSql.showText(text.toString());
 			resultTabs.addTab("Schema SQL", schemaSql);
-			resultTabs.setSelectedComponent(value instanceof FileTransferDesktopService.Reviewed ? schemaSql : result);
 		}
+		resultTabs.setSelectedIndex(0);
+	}
+
+	private void clearGradle() {
+		resultTabs.remove(gradle);
+		gradle.showText("");
+	}
+
+	private void showGradle(Path exportJob, Path manifest, String fingerprint) {
+		gradle.showText(FileTransferGradleGuide.text(exportJob, manifest, fingerprint));
+		resultTabs.addTab("Gradle", gradle);
 	}
 }

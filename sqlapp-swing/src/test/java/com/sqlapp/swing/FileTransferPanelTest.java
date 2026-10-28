@@ -57,7 +57,287 @@ class FileTransferPanelTest {
 			assertTrue(panel.result.editor.getText().contains("manifest.json"));
 			assertFalse(panel.isBusy());
 			assertTrue(panel.status.getText().contains("Warnings: 1"));
+			assertEquals(0, panel.resultTabs.getSelectedIndex());
+			assertFalse(panel.summary.isEditable());
+			assertTrue(panel.summary.getText().contains("No rows have been imported"));
+			assertTrue(panel.summary.getText().contains("PUBLIC.ITEMS: 0 rows"));
+			assertTrue(panel.summary.getText().contains("Test export warning"));
+			assertTrue(panel.nextImport.isVisible());
+			assertTrue(panel.nextImport.isEnabled());
+			assertTrue(panel.resultTabs.indexOfComponent(panel.gradle) >= 0);
+			assertFalse(panel.gradle.editor.isEditable());
+			assertTrue(panel.gradle.editor.getText().contains("tasks.named('exportTransferFile')"));
+			assertTrue(panel.gradle.editor.getText().contains("expectedManifestFingerprint.set('" + HASH + "')"));
+			assertFalse(panel.gradle.editor.getText().contains("jdbc:source"));
+			panel.editSettings(path -> {
+				assertTrue(panel.isBusy());
+				return null;
+			});
+			assertTrue(panel.nextImport.isEnabled());
+			panel.editSettings(path -> new TransferJobConfigurationIO.Snapshot(path, "formatVersion: 1", HASH,
+					new TransferJobConfiguration(1, "source", "target", List.of("ITEMS"),
+							TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING, null, null, null, null, null,
+							TransferJobConfiguration.DataMode.FILE, exported().manifest().files())));
+			assertFalse(panel.nextImport.isEnabled());
+			assertEquals(-1, panel.resultTabs.indexOfComponent(panel.gradle));
+			panel.job.setText("another-job.yaml");
+			assertTrue(panel.summary.getText().startsWith("Inputs changed."));
+			assertEquals(-1, panel.resultTabs.indexOfComponent(panel.gradle));
+			assertFalse(panel.nextImport.isVisible());
+			assertFalse(panel.nextImport.isEnabled());
 		});
+	}
+
+	@Test
+	void packageInspectionNeedsNoUrlOrPasswordAndCannotAuthorizeImport() throws Exception {
+		final var done = new CountDownLatch(1);
+		final var ref = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				assertEquals(FileTransferPanel.Action.INSPECT, action);
+				assertNull(spec);
+				assertEquals(0, password.length);
+				assertFalse(SwingUtilities.isEventDispatchThread());
+				return new FileTransferDesktopService.Inspected(exported());
+			}, prepared -> null);
+			ref.set(panel);
+			panel.step.setSelectedIndex(1);
+			panel.manifest.setText(directory.toString());
+			panel.target.password.setText("not-needed");
+			onEnabled(panel.inspectPackage, done);
+			panel.inspectPackage.doClick(0);
+			assertTrue(panel.isBusy());
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = ref.get();
+			assertFalse(panel.apply.isEnabled());
+			assertEquals("", panel.target.jdbcUrl.getText());
+			assertArrayEquals("not-needed".toCharArray(), panel.target.password.getPassword());
+			assertTrue(panel.summary.getText().contains("No database connection was opened"));
+			assertTrue(panel.summary.getText().contains("Test export warning"));
+			assertTrue(panel.summary.getText().contains("have not been reviewed"));
+			assertEquals(0, panel.resultTabs.getSelectedIndex());
+			assertTrue(panel.gradle.editor.getText().contains("expectedManifestFingerprint"));
+		});
+	}
+
+	@Test
+	void optionalOfflineValueValidationShowsItsScopeAndSavedTargetSettings() throws Exception {
+		final var done = new CountDownLatch(1);
+		final var ref = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				assertEquals(FileTransferPanel.Action.INSPECT_DATA, action);
+				assertNull(spec);
+				assertEquals(0, password.length);
+				final var configuration = new TransferJobConfiguration(1, "source", "target", List.of("PUBLIC.ITEMS"),
+						TransferJobConfiguration.SchemaMode.CREATE_MISSING, "PUBLIC", "ARCHIVE", null, 100, false,
+						TransferJobConfiguration.DataMode.FILE, exported().manifest().files());
+				return new FileTransferDesktopService.Inspected(exported(), true, configuration);
+			}, prepared -> null);
+			ref.set(panel);
+			panel.step.setSelectedIndex(1);
+			panel.manifest.setText(directory.toString());
+			assertFalse(panel.inspectValues.isSelected());
+			panel.inspectValues.setSelected(true);
+			assertNull(SwingUtilities.getAncestorOfClass(JScrollPane.class, panel.inspectPackage));
+			assertNull(SwingUtilities.getAncestorOfClass(JScrollPane.class, panel.review));
+			assertNull(SwingUtilities.getAncestorOfClass(JScrollPane.class, panel.apply));
+			onEnabled(panel.inspectPackage, done);
+			panel.inspectPackage.doClick(0);
+			assertFalse(panel.inspectValues.isEnabled());
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = ref.get();
+			assertFalse(panel.apply.isEnabled());
+			assertTrue(panel.summary.getText().contains("CSV values and recorded row counts checked"));
+			assertTrue(panel.summary.getText().contains("Target compatibility has not been reviewed"));
+			assertTrue(panel.summary.getText().contains("Saved target schema: ARCHIVE"));
+			assertTrue(panel.summary.getText().contains("Verification after import: disabled"));
+			panel.inspectValues.setSelected(false);
+			assertEquals(-1, panel.resultTabs.indexOfComponent(panel.gradle));
+			assertTrue(panel.summary.getText().startsWith("Inputs changed."));
+		});
+	}
+
+	@Test
+	void inspectionDiscardsAnEarlierTargetReview() throws Exception {
+		final var ready = new CountDownLatch(1);
+		final var ref = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema,
+					prior) -> action == FileTransferPanel.Action.REVIEW ? reviewed()
+							: new FileTransferDesktopService.Inspected(exported()),
+					prepared -> null);
+			ref.set(panel);
+			configureImport(panel);
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		final var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = ref.get();
+			assertTrue(panel.apply.isEnabled());
+			onEnabled(panel.inspectPackage, done);
+			panel.inspectPackage.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> assertFalse(ref.get().apply.isEnabled()));
+	}
+
+	@Test
+	void changedSelectionDiscardsBackgroundInspection() throws Exception {
+		final var entered = new CountDownLatch(1);
+		final var release = new CountDownLatch(1);
+		final var done = new CountDownLatch(1);
+		final var ref = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				entered.countDown();
+				assertTrue(release.await(5, TimeUnit.SECONDS));
+				return new FileTransferDesktopService.Inspected(exported());
+			}, prepared -> null);
+			ref.set(panel);
+			panel.step.setSelectedIndex(1);
+			panel.manifest.setText("manifest.json");
+			onEnabled(panel.inspectPackage, done);
+			panel.inspectPackage.doClick(0);
+		});
+		assertTrue(entered.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> ref.get().manifest.setText("another.json"));
+		release.countDown();
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(ref.get().apply.isEnabled());
+			assertEquals(-1, ref.get().resultTabs.indexOfComponent(ref.get().gradle));
+			assertTrue(ref.get().status.getText().contains("Inputs changed"));
+		});
+	}
+
+	@Test
+	void missingTargetSchemaDuringCsvReviewAppearsInSummaryAndCannotAuthorizeImport() throws Exception {
+		final var source = new PlanningJdbc.Spec("jdbc:hsqldb:mem:csv_schema_source_" + java.util.UUID.randomUUID(),
+				"SA", "");
+		final var target = new PlanningJdbc.Spec("jdbc:hsqldb:mem:csv_schema_target_" + java.util.UUID.randomUUID(),
+				"SA", "");
+		try (var connection = java.sql.DriverManager.getConnection(source.jdbcUrl(), "SA", "");
+				var sql = connection.createStatement()) {
+			sql.execute("CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)");
+		}
+		final var job = java.nio.file.Files.writeString(directory.resolve("missing-schema.yaml"),
+				"formatVersion: 1\nsource: source\ntarget: target\ntables: [ITEMS]\nschemaMode: CREATE_MISSING\ntargetSchema: ARCHIVE\ndataMode: FILE\nfiles: {directory: packages, nullValue: __NULL__}\n");
+		final var exported = (TransferFilePackageIO.Snapshot) new FileTransferDesktopService()
+				.perform(FileTransferPanel.Action.EXPORT, job, null, source, new char[0], "", null);
+		final var ready = new CountDownLatch(1);
+		final var ref = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel();
+			ref.set(panel);
+			panel.step.setSelectedIndex(1);
+			panel.target.jdbcUrl.setText(target.jdbcUrl());
+			panel.target.username.setText("SA");
+			panel.manifest.setText(exported.file().getParent().toString());
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(10, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = ref.get();
+			assertFalse(panel.apply.isEnabled());
+			assertEquals(0, panel.resultTabs.getSelectedIndex());
+			assertTrue(panel.summary.getText().contains("Target schema 'ARCHIVE'"), panel.summary.getText());
+			assertTrue(panel.summary.getText().contains("'PUBLIC'"));
+			assertFalse(panel.summary.getText().contains("jdbc:"));
+		});
+	}
+
+	@Test
+	void droppingPackageFolderSelectsItAndInvalidatesReviewWithoutCallingBackend() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				throw new AssertionError("Selecting a package must not connect");
+			}, prepared -> null);
+			panel.step.setSelectedIndex(1);
+			assertTrue(FileDropHandlerTest.drop(panel.manifest, directory));
+			assertEquals(directory.toString(), panel.manifest.getText());
+			assertFalse(panel.apply.isEnabled());
+		});
+	}
+
+	@Test
+	void changedInputsDuringExportCannotPublishStaleGradleInstructions() throws Exception {
+		final var entered = new CountDownLatch(1);
+		final var release = new CountDownLatch(1);
+		final var finished = new CountDownLatch(1);
+		final var reference = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				entered.countDown();
+				assertTrue(release.await(5, TimeUnit.SECONDS));
+				return exported();
+			}, prepared -> null);
+			reference.set(panel);
+			panel.source.jdbcUrl.setText("jdbc:source");
+			panel.job.setText("old-job.yaml");
+			onEnabled(panel.export, finished);
+			panel.export.doClick(0);
+		});
+		assertTrue(entered.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> reference.get().job.setText("new-job.yaml"));
+		release.countDown();
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals("", reference.get().manifest.getText());
+			assertEquals(-1, reference.get().resultTabs.indexOfComponent(reference.get().gradle));
+			assertEquals("", reference.get().gradle.editor.getText());
+			assertFalse(reference.get().nextImport.isEnabled());
+		});
+	}
+
+	@Test
+	void exportedPackageHandoffSelectsTargetWithoutConnectingOrCopyingSourceCredentials() throws Exception {
+		final var finished = new CountDownLatch(1);
+		final var calls = new AtomicInteger();
+		final var reference = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				assertEquals(FileTransferPanel.Action.EXPORT, action);
+				calls.incrementAndGet();
+				return exported();
+			}, prepared -> null);
+			reference.set(panel);
+			assertFalse(panel.nextImport.isVisible());
+			panel.source.jdbcUrl.setText("jdbc:source");
+			panel.source.username.setText("source-user");
+			panel.source.password.setText("source-secret");
+			panel.target.jdbcUrl.setText("jdbc:target");
+			panel.target.username.setText("target-user");
+			panel.target.password.setText("target-secret");
+			panel.job.setText("transfer.yaml");
+			onEnabled(panel.export, finished);
+			panel.export.doClick(0);
+		});
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = reference.get();
+			panel.nextImport.doClick(0);
+			assertEquals(1, panel.step.getSelectedIndex());
+			assertEquals(exported().file().toString(), panel.manifest.getText());
+			assertEquals("jdbc:target", panel.target.jdbcUrl.getText());
+			assertEquals("target-user", panel.target.username.getText());
+			assertArrayEquals("target-secret".toCharArray(), panel.target.password.getPassword());
+			assertFalse(panel.apply.isEnabled());
+			assertFalse(panel.nextImport.isVisible());
+			assertTrue(panel.summary.getText().startsWith("Ready for target review"));
+			assertTrue(panel.summary.getText().contains("target-only import settings"));
+			assertFalse(panel.summary.getText().contains("optional re-export"));
+			assertTrue(panel.gradle.editor.getText().contains("TARGET_JDBC_URL"));
+			assertFalse(panel.gradle.editor.getText().contains("SOURCE_JDBC"));
+		});
+		assertEquals(1, calls.get());
 	}
 
 	@Test
@@ -90,6 +370,8 @@ class FileTransferPanelTest {
 			final var panel = reference.get();
 			assertTrue(panel.apply.isEnabled());
 			panel.importReviewed(() -> false);
+			assertTrue(panel.gradle.editor.getText().contains("TARGET_JDBC_URL"));
+			assertFalse(panel.gradle.editor.getText().contains("SOURCE_JDBC"));
 			assertEquals(0, calls.get());
 			assertTrue(panel.apply.isEnabled());
 			panel.importReviewed(() -> {
@@ -99,6 +381,7 @@ class FileTransferPanelTest {
 			});
 			assertEquals(0, calls.get());
 			assertFalse(panel.apply.isEnabled());
+			assertEquals(-1, panel.resultTabs.indexOfComponent(panel.gradle));
 		});
 		final var reviewedAgain = new CountDownLatch(1);
 		SwingUtilities.invokeAndWait(() -> {
@@ -115,6 +398,7 @@ class FileTransferPanelTest {
 			});
 			panel.importReviewed(() -> true);
 			assertFalse(panel.apply.isEnabled());
+			assertEquals(-1, panel.resultTabs.indexOfComponent(panel.gradle));
 		});
 		assertTrue(imported.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> {
@@ -199,7 +483,9 @@ class FileTransferPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = reference.get();
 			assertTrue(panel.apply.isEnabled());
-			assertSame(panel.schemaSql, panel.resultTabs.getSelectedComponent());
+			assertEquals(0, panel.resultTabs.getSelectedIndex());
+			assertTrue(panel.summary.getText().contains("Missing-table DDL statements: 1"));
+			assertTrue(panel.summary.getText().contains("No tables or rows have been created"));
 			assertFalse(panel.schemaSql.editor.isEditable());
 			assertTrue(panel.schemaSql.editor.getText().contains("CREATE TABLE ITEMS"));
 			panel.manifest.setText("changed.json");

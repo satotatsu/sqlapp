@@ -11,7 +11,22 @@ import com.sqlapp.data.db.command.migration.transfer.*;
  * commands.
  */
 final class FileTransferDesktopService implements FileTransferPanel.Backend {
+	private static final class PackageSelectionException extends IllegalArgumentException {
+		private static final long serialVersionUID = 1L;
+
+		PackageSelectionException() {
+			super("The selected package folder must contain manifest.json directly. Choose a completed export folder, not its parent or CSV subfolder.");
+		}
+	}
+
 	record Reviewed(TransferFileImportService.Review review, TransferFilePackageIO.Manifest manifest) {
+	}
+
+	record Inspected(TransferFilePackageIO.Snapshot snapshot, boolean valuesValidated,
+			TransferJobConfiguration configuration) {
+		Inspected(TransferFilePackageIO.Snapshot snapshot) {
+			this(snapshot, false, null);
+		}
 	}
 
 	@Override
@@ -32,11 +47,22 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 							Map.of(definition.configuration().source(), pool));
 				}
 			}
+			final var manifestPath = java.nio.file.Files.isDirectory(input) ? input.resolve("manifest.json") : input;
+			if (java.nio.file.Files.isDirectory(input) && !java.nio.file.Files.isRegularFile(manifestPath))
+				throw new PackageSelectionException();
 			final var manifest = action == FileTransferPanel.Action.IMPORT
-					? new TransferFilePackageIO().read(input, reviewed.review().manifestFingerprint())
-					: new TransferFilePackageIO().read(input, null);
+					? new TransferFilePackageIO().read(manifestPath, reviewed.review().manifestFingerprint())
+					: new TransferFilePackageIO().read(manifestPath, null);
 			final var definition = new TransferJobConfigurationIO()
 					.read(manifest.file().getParent().resolve("transfer.yaml"));
+			if (!definition.fingerprint().equals(manifest.manifest().jobFingerprint()))
+				throw new IllegalArgumentException("Package job changed.");
+			if (action.isInspection()) {
+				if (action == FileTransferPanel.Action.INSPECT_DATA)
+					new TransferFileImportService().validatePackage(manifest.file(), manifest.fingerprint());
+				return new Inspected(manifest, action == FileTransferPanel.Action.INSPECT_DATA,
+						definition.configuration());
+			}
 			try (var pool = action == FileTransferPanel.Action.IMPORT
 					? PlanningJdbc.openForDataExecution(spec, password)
 					: PlanningJdbc.open(spec, password)) {
@@ -44,13 +70,22 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 				final var service = new TransferFileImportService();
 				if (action == FileTransferPanel.Action.IMPORT)
 					return service.execute(reviewed.review(), bindings, workspace);
-				return new Reviewed(service.review(input, manifest.fingerprint(), bindings), manifest.manifest());
+				return new Reviewed(service.review(manifest.file(), manifest.fingerprint(), bindings),
+						manifest.manifest());
 			}
 		} catch (TransferFileImportService.ImportException failure) {
 			throw failure;
 		} catch (TransferSchemaPreparation.ValidationException failure) {
+			throw new TransferPreparationFailure(failure);
+		} catch (PackageSelectionException failure) {
 			throw failure;
 		} catch (Exception failure) {
+			if (action == FileTransferPanel.Action.INSPECT_DATA)
+				throw new IllegalArgumentException(
+						"CSV value validation failed. Check recorded row counts, headers, types, keys and export warnings. Use package-only inspection to view warnings. No database connection was opened.");
+			if (action.isInspection())
+				throw new IllegalArgumentException(
+						"Package inspection failed. Check manifest.json, all package members and their recorded sizes/hashes. No database connection was opened.");
 			throw new IllegalArgumentException(
 					"CSV operation failed. Check the connection, supported scalar columns/numeric keys, "
 							+ "existing empty target tables, file settings and package integrity. No automatic retry or target reset was performed.");

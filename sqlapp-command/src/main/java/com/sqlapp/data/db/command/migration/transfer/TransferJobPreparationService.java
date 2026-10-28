@@ -24,19 +24,33 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator;
 import com.sqlapp.util.YamlConverter;
 
 /**
- * Shared read-only preparation of an initial copy into existing target tables.
+ * Shared read-only preparation of a direct copy and optional missing-table DDL.
  * Owns borrowed JDBC connections, never the caller's DataSources. Preparation
  * does not approve or execute a copy and does not create database objects.
  */
 public final class TransferJobPreparationService {
 	public record Prepared(Path directory, TransferJobConfigurationIO.Snapshot job, Path sourceSchemaFile,
-			BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, String planFingerprint, List<String> taskIds) {
+			BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, String planFingerprint, List<String> taskIds,
+			List<String> warnings, TransferSchemaPreparation.Plan schemaPreparation) {
+		public Prepared(Path directory, TransferJobConfigurationIO.Snapshot job, Path sourceSchemaFile,
+				BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, String planFingerprint, List<String> taskIds,
+				List<String> warnings) {
+			this(directory, job, sourceSchemaFile, dataJob, planFingerprint, taskIds, warnings,
+					new TransferSchemaPreparation.Plan(planFingerprint, List.of(), warnings));
+		}
+
+		public Prepared(Path directory, TransferJobConfigurationIO.Snapshot job, Path sourceSchemaFile,
+				BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, String planFingerprint, List<String> taskIds) {
+			this(directory, job, sourceSchemaFile, dataJob, planFingerprint, taskIds, List.of());
+		}
+
 		public Prepared {
 			taskIds = List.copyOf(taskIds);
+			warnings = List.copyOf(warnings);
+			Objects.requireNonNull(schemaPreparation, "schemaPreparation");
 		}
 	}
 
@@ -53,10 +67,6 @@ public final class TransferJobPreparationService {
 		if (configuration.dataMode() != TransferJobConfiguration.DataMode.JDBC_DIRECT)
 			throw new IllegalArgumentException("FILE transport requires separate export/import execution, which is not "
 					+ "implemented in the direct-JDBC preparation path. No file export or database connection was started.");
-		if (configuration.schemaMode() != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING)
-			throw new IllegalArgumentException(
-					"CREATE_MISSING preparation is not implemented yet. Prepare target tables "
-							+ "separately and choose REQUIRE_EXISTING, or wait for target Schema preparation support.");
 		if (configuration.mappingFile() != null)
 			throw new IllegalArgumentException(
 					"Transfer mappingFile preparation is not implemented yet; it cannot be ignored.");
@@ -70,15 +80,14 @@ public final class TransferJobPreparationService {
 			throw new IllegalArgumentException("Choose an existing writable workspace for transfer artifacts.");
 
 		String phase = "opening runtime connections";
-		try (var from = source.getConnection(); var to = target.getConnection()) {
+		try (var from = openConnection(source, "opening source connection");
+				var to = openConnection(target, "opening target connection")) {
+			phase = "configuring read-only source and target connections";
 			from.setReadOnly(true);
 			to.setReadOnly(true);
 			phase = "checking supported database products";
 			final Dialect sourceDialect = dialect(from);
 			final Dialect targetDialect = dialect(to);
-			if (!Objects.equals(from.getMetaData().getDatabaseProductName(), to.getMetaData().getDatabaseProductName()))
-				throw new PreparationException("Cross-product transfer preparation requires conversion support; this "
-						+ "initial preparation path currently supports the same database product only.");
 			phase = "resolving source Schema metadata";
 			final Schema schema = readSchema(from, sourceDialect, configuration.sourceSchema());
 			final String targetSchema = configuration.targetSchema() == null
@@ -139,19 +148,28 @@ public final class TransferJobPreparationService {
 			phase = "resolving target table identities in the generated bulk configuration";
 			final var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
-			BulkMigrationTargetValidator.validate(to, resolved.plan());
+			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
+					configuration.schemaMode(), configuration.compatibilityPolicy());
 			phase = "checking that the transfer definition has not changed";
 			if (!io.read(jobFile).fingerprint().equals(snapshot.fingerprint()))
 				throw new PreparationException("Transfer definition changed during preparation. Prepare it again.");
 			final var savedJob = io.write(directory.resolve("transfer.yaml"), snapshot.text(), null);
 			return new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
-					resolved.plan().getTaskIds());
-		} catch (PreparationException failure) {
+					resolved.plan().getTaskIds(), compatibility.warnings(), compatibility);
+		} catch (TransferSchemaPreparation.ValidationException failure) {
 			throw failure;
+		} catch (PreparationException failure) {
+			throw new PreparationException(failure);
 		} catch (Exception failure) {
-			throw new IllegalArgumentException("Transfer preparation failed while " + phase + " ("
-					+ failure.getClass().getSimpleName()
-					+ "). Check connection availability and the selected schemas/tables. No copy or database DDL was executed.");
+			throw new PreparationException(phase, failure);
+		}
+	}
+
+	private static Connection openConnection(DataSource source, String phase) throws java.sql.SQLException {
+		try {
+			return source.getConnection();
+		} catch (java.sql.SQLException | RuntimeException failure) {
+			throw new PreparationException(phase, failure);
 		}
 	}
 
@@ -202,13 +220,114 @@ public final class TransferJobPreparationService {
 	}
 
 	/**
-	 * Messages authored here contain no driver diagnostics or runtime credentials.
+	 * Structured stage/SQL codes and selected library validation text. Raw driver
+	 * messages, causes and suppressed cleanup exceptions are not retained.
 	 */
-	private static final class PreparationException extends IllegalArgumentException {
+	public static final class PreparationException extends IllegalArgumentException {
 		private static final long serialVersionUID = 1L;
+		private final String phase;
+		private final String exceptionType;
+		private final String sqlState;
+		private final Integer vendorCode;
+		private final String validationDetail;
 
-		PreparationException(String message) {
+		private PreparationException(String message) {
 			super(message);
+			phase = "checking transfer settings";
+			exceptionType = "Validation";
+			sqlState = null;
+			vendorCode = null;
+			validationDetail = message;
+		}
+
+		private PreparationException(PreparationException original) {
+			super(original.getMessage());
+			phase = original.phase;
+			exceptionType = original.exceptionType;
+			sqlState = original.sqlState;
+			vendorCode = original.vendorCode;
+			validationDetail = original.validationDetail;
+		}
+
+		private PreparationException(String phase, Throwable failure) {
+			this(phase, failure.getClass().getSimpleName(), sql(failure), validation(failure));
+		}
+
+		private PreparationException(String phase, String type, java.sql.SQLException sql, String detail) {
+			super("Transfer preparation failed while " + phase + " (" + type + "). "
+					+ (detail == null ? "Check connection availability and the selected schemas/tables. "
+							: detail + " ")
+					+ (sql == null ? ""
+							: "SQLState: " + (state(sql) == null ? "not provided" : state(sql)) + "; vendor code: "
+									+ sql.getErrorCode() + ". ")
+					+ "No copy or database DDL was executed.");
+			this.phase = phase;
+			exceptionType = type;
+			sqlState = sql == null ? null : state(sql);
+			vendorCode = sql == null ? null : sql.getErrorCode();
+			validationDetail = detail;
+		}
+
+		public String phase() {
+			return phase;
+		}
+
+		public String exceptionType() {
+			return exceptionType;
+		}
+
+		public String sqlState() {
+			return sqlState;
+		}
+
+		public Integer vendorCode() {
+			return vendorCode;
+		}
+
+		public String validationDetail() {
+			return validationDetail;
+		}
+
+		private static String state(java.sql.SQLException sql) {
+			return sql.getSQLState() != null && sql.getSQLState().matches("[A-Za-z0-9]{5}") ? sql.getSQLState() : null;
+		}
+
+		private static java.sql.SQLException sql(Throwable failure) {
+			final var seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
+			final var pending = new java.util.ArrayDeque<Throwable>();
+			pending.add(failure);
+			java.sql.SQLException fallback = null;
+			while (!pending.isEmpty() && seen.size() < 64) {
+				final var current = pending.removeFirst();
+				if (!seen.add(current))
+					continue;
+				if (current instanceof java.sql.SQLException sql) {
+					if (state(sql) != null)
+						return sql;
+					if (fallback == null)
+						fallback = sql;
+					if (sql.getNextException() != null)
+						pending.add(sql.getNextException());
+				}
+				if (current.getCause() != null)
+					pending.add(current.getCause());
+			}
+			return fallback;
+		}
+
+		private static String validation(Throwable failure) {
+			final var frames = failure.getStackTrace();
+			if (frames.length == 0)
+				return null;
+			final String owner = frames[0].getClassName();
+			if (!owner.equals("com.sqlapp.jdbc.bulk.BulkMigrationTargetValidator")
+					&& !owner.equals("com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationResolver"))
+				return null;
+			final String message = failure.getMessage();
+			if (message == null)
+				return null;
+			final String safe = message.replaceAll("(?i)jdbc:[^\\s]*", "[JDBC URL]").replaceAll("\\p{Cntrl}", " ");
+			return safe.length() > 2048 ? safe.substring(0, 2048) + "…" : safe;
 		}
 	}
 }

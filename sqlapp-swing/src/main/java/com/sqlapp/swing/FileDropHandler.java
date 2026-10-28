@@ -20,6 +20,7 @@ final class FileDropHandler extends TransferHandler {
 	private final TransferHandler previous;
 	private final boolean multiple;
 	private final boolean directory;
+	private final boolean allowDirectories;
 	private final List<String> extensions;
 	private final BooleanSupplier ready;
 	private final Predicate<List<Path>> receive;
@@ -38,6 +39,16 @@ final class FileDropHandler extends TransferHandler {
 		install(component, false, false, extensions, ready, paths -> receive.test(paths.getFirst()), failed);
 	}
 
+	static void fileOrDirectory(final JTextField field, final List<String> extensions, final BooleanSupplier ready,
+			final Consumer<Throwable> failed) {
+		field.setTransferHandler(
+				new FileDropHandler(field.getTransferHandler(), false, false, true, extensions, ready, paths -> {
+					field.setText(paths.getFirst().toString());
+					return true;
+				}, failed));
+		field.setToolTipText("Drop one " + String.join(" / ", extensions) + " file or its containing folder here.");
+	}
+
 	static void files(final JComponent component, final List<String> extensions, final BooleanSupplier ready,
 			final Predicate<List<Path>> receive, final Consumer<Throwable> failed) {
 		install(component, true, false, extensions, ready, receive, failed);
@@ -54,7 +65,7 @@ final class FileDropHandler extends TransferHandler {
 	private static void install(final JComponent component, final boolean multiple, final boolean directory,
 			final List<String> extensions, final BooleanSupplier ready, final Predicate<List<Path>> receive,
 			final Consumer<Throwable> failed) {
-		component.setTransferHandler(new FileDropHandler(component.getTransferHandler(), multiple, directory,
+		component.setTransferHandler(new FileDropHandler(component.getTransferHandler(), multiple, directory, false,
 				extensions, ready, receive, failed));
 		if (component.getToolTipText() == null)
 			component.setToolTipText(directory ? "Drop one folder here."
@@ -63,11 +74,12 @@ final class FileDropHandler extends TransferHandler {
 	}
 
 	private FileDropHandler(final TransferHandler previous, final boolean multiple, final boolean directory,
-			final List<String> extensions, final BooleanSupplier ready, final Predicate<List<Path>> receive,
-			final Consumer<Throwable> failed) {
+			final boolean allowDirectories, final List<String> extensions, final BooleanSupplier ready,
+			final Predicate<List<Path>> receive, final Consumer<Throwable> failed) {
 		this.previous = previous;
 		this.multiple = multiple;
 		this.directory = directory;
+		this.allowDirectories = allowDirectories;
 		this.extensions = List.copyOf(extensions);
 		this.ready = ready;
 		this.receive = receive;
@@ -99,15 +111,18 @@ final class FileDropHandler extends TransferHandler {
 			if (!(value instanceof List<?> entries) || entries.isEmpty())
 				throw new IllegalArgumentException("Drop a local file or folder.");
 			if (!multiple && entries.size() != 1)
-				throw new IllegalArgumentException("Drop exactly one " + (directory ? "folder." : "file."));
+				throw new IllegalArgumentException(
+						"Drop exactly one " + (directory ? "folder." : allowDirectories ? "file or folder." : "file."));
 			final var paths = new java.util.ArrayList<Path>();
 			for (final var entry : entries) {
 				if (!(entry instanceof File file))
 					throw new IllegalArgumentException("Drop local files from your file manager.");
 				final Path path = file.toPath().toAbsolutePath().normalize();
-				if (directory ? !Files.isDirectory(path) : !Files.isRegularFile(path))
-					throw new IllegalArgumentException("Expected a " + (directory ? "folder: " : "file: ") + path);
-				if (!directory && !extensions.isEmpty() && extensions.stream().noneMatch(
+				final boolean folder = Files.isDirectory(path);
+				if (directory ? !folder : !Files.isRegularFile(path) && !(allowDirectories && folder))
+					throw new IllegalArgumentException("Expected a "
+							+ (directory ? "folder: " : allowDirectories ? "file or folder: " : "file: ") + path);
+				if (!directory && !folder && !extensions.isEmpty() && extensions.stream().noneMatch(
 						extension -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith("." + extension)))
 					throw new IllegalArgumentException("Expected " + String.join(" / ", extensions) + " file: " + path);
 				paths.add(path);

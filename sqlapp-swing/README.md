@@ -27,11 +27,96 @@ The application opens on **Start**, with three task-oriented entry points:
 **Direct JDBC transfer**, **CSV package**, and **Review saved results**.
 The transfer entries explain the connection/table/review flow without requiring
 YAML preparation. **More tools** reveals Schema comparison, SQL migration
-planning, SQL and Job YAML editors, and JDBC driver management.
+planning, SQL and Job YAML editors, JDBC driver management and **Advanced Data Job**.
 All existing tool tabs remain available.
 Start actions only switch to the existing tab; they do not clear inputs, replace
 unsaved edits, load files, connect to a database or approve/execute a migration.
 Return to **Start** at any time to choose another task.
+
+## Direct JDBC transfer without preparing YAML
+
+Open **Direct JDBC transfer** and enter or load the source and target connection
+profiles. Choose a working folder. **New direct job…** reads source metadata and
+opens the shared searchable table picker; it needs only the source connection.
+Select tables, optionally change chunk size, verification, target schema or the
+strict compatibility option, and save. **Create missing target tables before copying**
+opts into `CREATE_MISSING`; unchecked uses `REQUIRE_EXISTING`. The resulting `transfer.yaml` is the
+common `JDBC_DIRECT` format used by Gradle `transferDatabase`. It contains logical
+`source` / `target` bindings and no connection passwords or JDBC URLs. Saving
+does not connect to the target or copy rows.
+
+**Review transfer** checks the live source and existing empty target tables or
+plans absent selected tables without creating them,
+pins the identities and artifacts, and saves `transfer-review.json`. The default
+**Summary** tab shows database products, selected tables, options and warnings;
+**Schema SQL** shows generated DDL when present. **Details** retains complete read-only JSON with resolved plans and artifact
+fingerprints. Review never copies rows. **Execute reviewed transfer…** requires
+confirmation (including DDL count), reruns the shared checks, creates the
+unchanged reviewed missing-table plan and copies/verifies through the same
+service used by Gradle. Changing a job, endpoint, source schema or working folder
+requires a new review. File selection supports drag and drop. Driver selection,
+connection tests, profile loading and URL construction use existing components.
+
+Both endpoint passwords remain in the UI after review for the next action, and
+are cleared when execution starts. Temporary copies are erased after background
+work. Execution consumes the review, including on failure. The displayed outcome
+and `transfer-result.json` retain warnings, copy/verification state, committed
+progress and DDL progress. A failure may leave created objects and committed rows.
+DDL failures retain successful statements and the uncertain attempted statement;
+copying does not start. A missing report path indicates
+unavailable publication. Connection cleanup failures remain errors even when the
+retained data outcome is COMPLETE. Settings are disabled during background work,
+and app closing waits for work to finish.
+
+Use the unchanged job with [Gradle transferDatabase](../docs/gradle-plugin/direct-transfer.md).
+After a successful review, the read-only **Gradle** tab provides a Groovy task
+configuration with the absolute job path, environment-based connection bindings,
+and review/execute commands using that job's configuration fingerprint. Select
+and copy the text into a project that applies `com.sqlapp.db`; configure both
+drivers and dialects there. Connection URLs and passwords are not copied from
+the GUI. Run review first and inspect Gradle's own report: execution makes a fresh
+live plan, and the fingerprint pins YAML bytes rather than approving the GUI plan.
+The guide is cleared when inputs change, a new review starts, or execution starts.
+Add GUI-loaded JDBC JARs to Gradle's runtime classpath separately. This direct
+path supports existing empty targets and optional missing-table preparation.
+The target schema namespace must exist; views/routines/triggers/grants and a
+complete database clone are outside this table-copy path. Real heterogeneous database
+behavior remains unverified here; product differences default to warnings and
+strict mode can reject them. The existing Data Job YAML format, editors, pause
+controls and advanced reports remain in **Advanced Data Job** under **More tools**.
+
+**Job settings…** opens an offline form for an existing common job. Adjust the
+target schema, missing-table creation, chunk size, verification and WARN/ERROR
+policy, then choose **Save settings**. The same action is available in CSV export;
+it needs no connection. Tables, logical bindings, source schema, mapping and file
+options stay unchanged, and the job remains in its original folder so relative
+paths keep their meaning. Saving atomically replaces the opened YAML only if its
+fingerprint still matches; external changes require reopening. The form rewrites
+YAML formatting and comments, as noted before saving. Cancel leaves the file and
+current review unchanged. A successful save invalidates review and Gradle guidance;
+review the direct job again, or export a new CSV package. Completed-package
+settings cannot be edited through this form, including when package markers
+appear after the job was opened. Loading and saving run outside the UI thread;
+closing waits for the current file operation.
+
+If missing-table preparation cannot find the target schema, Summary names the
+requested schema and lists up to ten existing schemas reported by JDBC for the
+selected catalog. Set `targetSchema` with the exact name/case, or create the schema
+separately with the intended owner and privileges, then review again. Shared
+preparation validation messages also appear in CSV Summary; arbitrary driver
+exceptions and cleanup causes are not promoted into this guidance.
+
+Direct transfer failures replace Summary with the latest failure stage, reason,
+next checks and available SQLState/vendor code. Source and target connection
+opening are distinguished. Authentication, connection, missing-database and
+permission SQLStates receive specific guidance; supported library validators
+retain details such as missing tables/columns and nonempty targets. Repeated
+failures do not accumulate old messages. Failed reviews clear stale JSON, SQL
+and Gradle guidance; execution failures still retain their outcome and audit.
+The status Details dialog contains the same selectable diagnostic. Raw driver
+messages, credential-bearing causes and suppressed cleanup errors are not kept
+in preparation diagnostics. Connection-test/source-discovery messages retain
+their existing redaction. Review failures do not authorize execution.
 
 ## CSV transfer without preparing YAML
 
@@ -42,6 +127,12 @@ show a reason and cannot be selected. Choose tables, review the visible CSV NULL
 token, and save. Chunk size and verification remain optional adjustments.
 **Create missing target tables before importing** is an explicit opt-in; leave
 it unchecked to require existing tables. The target schema namespace must exist.
+**Target schema** is optional in the creation form, just as for direct JDBC
+jobs. Leave it blank to use the import connection's current schema; enter the
+exact existing name/case to import elsewhere. The value is captured in the shared
+job and completed package, so GUI and Gradle use the same destination. Source
+table identities remain unchanged. For an already saved job, use **Job settings…**
+before exporting again; completed packages retain their original destination.
 Compatibility concerns default to warnings so users can first try migration and
 then refine the result. **Treat compatibility warnings as errors** enables strict
 preflight via the shared `compatibilityPolicy: ERROR`; its default is `WARN`.
@@ -56,13 +147,51 @@ no credentials. Saving does not export data or write to either database.
 
 Choose **Export source to CSV** explicitly to create the completed package.
 Its manifest path is displayed and selected for later import. Switch to
-**Import CSV package**, select or drop `manifest.json`, and provide the target
+**Import CSV package**, select or drop `manifest.json` or its containing package
+folder, and provide the target
 connection. **Review package and target** checks package integrity and existing
 empty target tables and displays generated DDL for missing tables when requested.
 Review that SQL, choose a results folder, then **Import reviewed package…**
 and confirm. Changing the connection or manifest requires another review.
+Before entering any connection, **Inspect package (no connection)** checks the
+completed package members, recorded byte sizes and hashes through the shared
+package reader. Summary shows recorded tables/rows and export warnings, and
+Details retains the complete manifest. This opens no database connection and
+does not read the target password. Select **Also validate CSV values during inspection**
+for the shared offline import preflight, including headers, value types, recorded
+row counts, non-null columns and ascending unique numeric keys. This may scan
+large CSV files and still opens no connection. Export-only types that require
+conversion can fail this optional check; package-only inspection remains available
+to view warnings. Summary distinguishes file integrity from validated values and
+shows saved target schema, table preparation, verification and compatibility settings.
+Target compatibility still requires **Review package and target**, which repeats
+the required package checks. Inspection is not an
+import approval or proof of authenticity; it clears an earlier target review.
+Changing the selected package discards an in-progress inspection result.
+Operation buttons stay outside the settings scroll area so inspection, review
+and import remain accessible when connection fields need scrolling.
+After a current export, **Continue to import this package…** in Summary switches
+to the import screen with that manifest selected and focuses the target connection.
+It preserves any target connection already entered and starts no connection,
+review or import. Source credentials are not copied to the target. The shortcut
+is removed when inputs change or a new operation starts; every import still
+requires a fresh target review and explicit confirmation.
+Typing the package folder path also works. The folder must contain `manifest.json`
+directly; parent folders, CSV-only folders and incomplete exports are rejected.
+Folder selection starts no connection or import. Review resolves the manifest
+and retains the same package integrity, fingerprint and target checks as explicit
+file selection. The Gradle tab still uses the resolved manifest file path.
 Execution revalidates the package and target and retains copy, verification,
 committed progress and audit information, including on import failure.
+The default **Summary** tab shows exported tables and row counts, package export
+warnings, target product, optional DDL count and the next action. Import outcomes
+show the execution phase, completed-table row counts, recorded verification,
+per-task committed progress, DDL progress and audit path. Missing verification
+is shown as not completed; disabled verification is explicit, and a partial
+verification only describes recorded tables. **Details** retains the complete
+read-only JSON; **Schema SQL** remains available for inspecting planned DDL.
+Input changes mark the previous summary as stale, and failures cannot authorize
+another import without review.
 Committed chunks and created objects can remain after a failure. The result
 records completed DDL and the uncertain attempted statement; no automatic retry or target reset
 is performed.
@@ -73,6 +202,18 @@ export/import clear it when starting. Password copies are cleared after work.
 GUI-only JDBC JAR additions must also be configured in Gradle's runtime
 classpath for unattended execution. The same saved job/package can be used with
 [`exportTransferFile` / `importTransferFile`](../docs/gradle-plugin/file-transfer.md).
+After export, the read-only **Gradle** tab supplies source-only re-export settings
+and target-only import settings for the completed package, including its absolute
+manifest path and fingerprint. A new export produces a different package; review
+it and update import settings before execution. After an import review, the tab
+contains only the target settings and import command, so the source is unnecessary.
+Copy the settings into a project applying `com.sqlapp.db`, add driver/dialect
+runtime dependencies, and supply connection values through environment variables.
+GUI URLs and passwords are not included. Move the entire package and update the
+manifest path when transferring to another machine. `allowImport=true` explicitly
+authorizes execution; omitting it refuses import rather than performing a review.
+Gradle validates the target afresh. Input changes or a new operation clear the
+guide; connection tests leave the current guide available.
 
 The current CSV path supports pre-existing empty
 targets or explicit creation of missing ordinary tables, numeric primary keys
@@ -86,8 +227,8 @@ TIMESTAMP (up to nanoseconds) support typed CSV import. Unsupported temporal
 types can be exported as JDBC text with warnings. Full Schema cloning,
 complete vendor-specific cross-product conversion, binary/LOB columns and JSONL
 execution are not implemented. Direct JDBC transfer retains its existing
-Data Job workflow; its integration with the new transfer-definition format is
-still pending.
+Data Job workflow in the advanced tool; the primary direct-transfer screen uses
+the common transfer-definition format described above.
 
 The desktop installs [FlatLaf](https://www.formdev.com/flatlaf/) 3.7.2 (Light)
 before creating Swing components. SQL comparison previews, the YAML job editor,
