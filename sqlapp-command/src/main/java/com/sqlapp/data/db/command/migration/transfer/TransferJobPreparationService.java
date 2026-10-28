@@ -33,8 +33,8 @@ import com.sqlapp.util.YamlConverter;
  */
 public final class TransferJobPreparationService {
 	/**
-	 * dataJob is null for SCHEMA_ONLY; schemaPreparation retains the executable
-	 * DDL.
+	 * dataJob is null for SCHEMA_ONLY; schemaPreparation retains the planned Schema
+	 * SQL.
 	 */
 	public record Prepared(Path directory, TransferJobConfigurationIO.Snapshot job, Path sourceSchemaFile,
 			BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, String planFingerprint, List<String> taskIds,

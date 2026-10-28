@@ -9,8 +9,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.*;
 
 /**
- * Read-only planning of missing ordinary tables. DDL comes exclusively from the
- * target dialect.
+ * Read-only planning of missing tables and optional selected-table differences.
+ * Schema SQL comes exclusively from the target dialect.
  */
 public final class TransferSchemaPreparation {
 	/**
@@ -59,8 +59,8 @@ public final class TransferSchemaPreparation {
 	}
 
 	/**
-	 * Shared DDL boundary; observers retain an uncertain attempt even when execute
-	 * or close fails.
+	 * Shared Schema SQL boundary; observers retain an uncertain attempt even when
+	 * execute or close fails.
 	 */
 	static Progress execute(Connection target, Plan plan, java.util.function.Consumer<Progress> observer)
 			throws java.sql.SQLException {
@@ -98,6 +98,12 @@ public final class TransferSchemaPreparation {
 			TransferJobConfiguration.CompatibilityPolicy policy) throws Exception {
 		return plan(connection, sourceSchema, tasks, fingerprint, TransferJobConfiguration.SchemaMode.CREATE_MISSING,
 				policy, null);
+	}
+
+	static Plan schemaOnly(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
+			TransferJobConfiguration.CompatibilityPolicy policy, TransferJobConfiguration.SchemaMode mode)
+			throws Exception {
+		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, null);
 	}
 
 	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
@@ -168,7 +174,8 @@ public final class TransferSchemaPreparation {
 			compatibility(policy, warnings,
 					"Schema-only scope: selected tables, constraints and indexes only. Views, independent sequences, routines, triggers and other schema objects are not copied. Review vendor-specific properties in generated DDL.");
 			for (var task : tasks)
-				if (existing.contains(task.getTaskId()))
+				if (existing.contains(task.getTaskId())
+						&& mode != TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES)
 					compatibility(policy, warnings,
 							"Existing target table " + diagnosticName(task.getEffectiveTargetTable().getName())
 									+ " is skipped without comparison or modification. Existing rows are untouched.");
@@ -183,7 +190,8 @@ public final class TransferSchemaPreparation {
 			remapped.put(task.getEffectiveSourceTable().getName(), task.getEffectiveSourceTable().clone()
 					.setCatalogName(first.getCatalogName()).setSchemaName(first.getSchemaName()));
 		final var statements = new ArrayList<Statement>();
-		for (var task : missing) {
+		final var preparedTasks = mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES ? tasks : missing;
+		for (var task : preparedTasks) {
 			final var source = task.getEffectiveSourceTable();
 			ordinary(source, policy, warnings);
 			final var target = remapped.get(source.getName());
@@ -203,6 +211,12 @@ public final class TransferSchemaPreparation {
 				fk.getRelatedColumns().clear();
 				fk.getRelatedColumns().addAll(columns);
 			}
+		}
+		if (mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES)
+			return TransferSchemaDifferencePreparation.plan(connection, tasks, remapped, registry, fingerprint,
+					warnings, policy);
+		for (var task : missing) {
+			final var target = remapped.get(task.getEffectiveSourceTable().getName());
 			final var operations = registry.createSql(target, SqlType.CREATE);
 			if (operations.isEmpty())
 				throw new ValidationException(
@@ -218,7 +232,7 @@ public final class TransferSchemaPreparation {
 		return result(fingerprint, statements, warnings, mode);
 	}
 
-	private static Plan result(String fingerprint, List<Statement> statements, List<String> warnings,
+	static Plan result(String fingerprint, List<Statement> statements, List<String> warnings,
 			TransferJobConfiguration.SchemaMode mode) {
 		if (mode == TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING && warnings.isEmpty())
 			return new Plan(fingerprint, statements);
@@ -238,7 +252,7 @@ public final class TransferSchemaPreparation {
 				+ "'";
 	}
 
-	private static void compatibility(TransferJobConfiguration.CompatibilityPolicy policy, List<String> warnings,
+	static void compatibility(TransferJobConfiguration.CompatibilityPolicy policy, List<String> warnings,
 			String message) {
 		if (policy == TransferJobConfiguration.CompatibilityPolicy.ERROR)
 			throw new ValidationException(message);

@@ -28,9 +28,18 @@ class TransferJobTransportTest {
 
 	@ParameterizedTest
 	@EnumSource(TransferJobConfiguration.SchemaMode.class)
-	void bothSchemaPoliciesRoundTripWithEitherTransportWithoutDuplicatingProductPairing(
+	void schemaPoliciesRoundTripWithCompatibleIntentsWithoutDuplicatingProductPairing(
 			TransferJobConfiguration.SchemaMode policy) {
 		final String intent = BASE + "schemaMode: " + policy + "\n";
+		if (policy == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES) {
+			assertThrows(IllegalArgumentException.class, () -> io.validate(intent));
+			assertThrows(IllegalArgumentException.class,
+					() -> io.validate(intent + "dataMode: FILE\nfiles: {directory: packages, nullValue: NULL}\n"));
+			final var schemaOnly = io.validate(intent + "dataMode: SCHEMA_ONLY\n");
+			assertEquals(policy, schemaOnly.schemaMode());
+			assertEquals(schemaOnly, io.validate(io.format(schemaOnly)));
+			return;
+		}
 		final var direct = io.validate(intent);
 		assertEquals(TransferJobConfiguration.DataMode.JDBC_DIRECT, direct.dataMode());
 		assertNull(direct.files());

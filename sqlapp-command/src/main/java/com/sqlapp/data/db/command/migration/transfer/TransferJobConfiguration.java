@@ -11,7 +11,19 @@ import java.util.List;
 @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 public record TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
 		SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
-		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy) {
+		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges) {
+	/**
+	 * Retains the existing construction API; data-impacting changes are not
+	 * authorized by default.
+	 */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, false);
+	}
+
 	public enum CompatibilityPolicy {
 		WARN, ERROR
 	}
@@ -24,7 +36,8 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 	}
 
 	/**
-	 * Transfer intent; SCHEMA_ONLY creates missing definitions without row access.
+	 * Transfer intent; SCHEMA_ONLY prepares definitions without a source row-copy
+	 * job.
 	 */
 	public enum DataMode {
 		JDBC_DIRECT, FILE, SCHEMA_ONLY
@@ -72,9 +85,9 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		}
 	}
 
-	/** Policy for target preparation; destructive replacement is not supported. */
+	/** Target preparation; differences are opt-in and limited to SCHEMA_ONLY. */
 	public enum SchemaMode {
-		CREATE_MISSING, REQUIRE_EXISTING
+		CREATE_MISSING, REQUIRE_EXISTING, APPLY_DIFFERENCES
 	}
 
 	/** Common initial-copy intent with verification and default chunk sizing. */
@@ -91,6 +104,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 	}
 
 	public TransferJobConfiguration {
+		allowDestructiveSchemaChanges = Boolean.TRUE.equals(allowDestructiveSchemaChanges);
 		compatibilityPolicy = compatibilityPolicy == null ? CompatibilityPolicy.WARN : compatibilityPolicy;
 		if (formatVersion != 1)
 			throw new IllegalArgumentException("Transfer job formatVersion must be 1.");
@@ -112,9 +126,15 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 			throw new IllegalArgumentException("chunkSize must be between 1 and 1000000.");
 		dataMode = dataMode == null ? DataMode.JDBC_DIRECT : dataMode;
 		verify = verify == null ? dataMode != DataMode.SCHEMA_ONLY : verify;
-		if (dataMode == DataMode.SCHEMA_ONLY && (schemaMode != SchemaMode.CREATE_MISSING || verify || files != null))
+		if (dataMode == DataMode.SCHEMA_ONLY && (schemaMode == SchemaMode.REQUIRE_EXISTING || verify || files != null))
 			throw new IllegalArgumentException(
-					"SCHEMA_ONLY requires CREATE_MISSING, verify: false and no files settings.");
+					"SCHEMA_ONLY requires CREATE_MISSING or APPLY_DIFFERENCES, verify: false and no files settings.");
+		if (schemaMode == SchemaMode.APPLY_DIFFERENCES && dataMode != DataMode.SCHEMA_ONLY)
+			throw new IllegalArgumentException("APPLY_DIFFERENCES is available only for SCHEMA_ONLY jobs.");
+		if (allowDestructiveSchemaChanges
+				&& (dataMode != DataMode.SCHEMA_ONLY || schemaMode != SchemaMode.APPLY_DIFFERENCES))
+			throw new IllegalArgumentException(
+					"allowDestructiveSchemaChanges requires SCHEMA_ONLY and APPLY_DIFFERENCES.");
 		if (dataMode == DataMode.FILE && files == null)
 			throw new IllegalArgumentException("FILE dataMode requires files settings.");
 		if (dataMode == DataMode.JDBC_DIRECT && files != null)

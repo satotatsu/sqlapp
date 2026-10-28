@@ -19,6 +19,36 @@ class TransferJobSettingsPanelTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
+	void differenceSettingsRoundTripExplicitPermissionOrClearItWhenDifferencesAreDisabled(boolean keepDifferences)
+			throws Exception {
+		var file = Files.writeString(directory.resolve("difference.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\n"
+						+ "dataMode: SCHEMA_ONLY\nschemaMode: APPLY_DIFFERENCES\nallowDestructiveSchemaChanges: true\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.applyDifferences.isSelected());
+			assertTrue(panel.allowDestructive.isSelected());
+			assertTrue(panel.createMissing.isSelected());
+			assertTrue(panel.allowDestructive.isVisible());
+			if (!keepDifferences) {
+				panel.applyDifferences.doClick(0);
+				assertFalse(panel.allowDestructive.isSelected());
+			}
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		var configuration = io.read(file).configuration();
+		assertEquals(keepDifferences ? TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+				: TransferJobConfiguration.SchemaMode.CREATE_MISSING, configuration.schemaMode());
+		assertEquals(keepDifferences, configuration.allowDestructiveSchemaChanges());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
 	void schemaOnlySettingsRoundTripThroughDirectRouteWithoutEnablingDataOptions(boolean alreadySchemaOnly)
 			throws Exception {
 		var file = Files.writeString(directory.resolve("schema.yaml"),

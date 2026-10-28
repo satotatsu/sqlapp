@@ -45,7 +45,7 @@ final class TransferSchemaOnlyPreparation {
 					source.clone().setCatalogName(catalog).setSchemaName(targetSchema)));
 		}
 		final var plan = TransferSchemaPreparation.schemaOnly(target, schema, tasks, job.fingerprint(),
-				job.configuration().compatibilityPolicy());
+				job.configuration().compatibilityPolicy(), job.configuration().schemaMode());
 		final var io = new TransferJobConfigurationIO();
 		if (!io.read(job.file()).fingerprint().equals(job.fingerprint()))
 			throw new IllegalArgumentException("Transfer definition changed during schema-only preparation.");

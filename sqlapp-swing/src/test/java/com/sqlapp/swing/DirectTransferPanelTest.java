@@ -14,6 +14,52 @@ import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentit
 
 class DirectTransferPanelTest {
 	@Test
+	void dataImpactReviewKeepsSqlVisibleButDisablesExecutionUntilPermissionIsSavedAndReviewed() throws Exception {
+		var base = reviewed();
+		var original = base.review().prepared();
+		var configuration = new TransferJobConfiguration(1, "source", "target", List.of("PUBLIC.ITEMS"),
+				TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES, null, null, null, null, null,
+				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null);
+		var job = new TransferJobConfigurationIO.Snapshot(original.job().file(), "difference", HASH, configuration);
+		var warnings = List
+				.of(TransferSchemaChangeChecks.DATA_IMPACT + " Column removal requires explicit permission.");
+		var schema = new TransferSchemaPreparation.Plan(HASH,
+				List.of(new TransferSchemaPreparation.Statement("items", "ALTER TABLE ITEMS DROP COLUMN EXTRA")),
+				warnings);
+		var prepared = new TransferJobPreparationService.Prepared(directory, job, original.sourceSchemaFile(), null,
+				HASH, List.of("items"), warnings, schema);
+		var review = new DirectTransferDesktopService.Reviewed(new TransferJobExecutionService.Review(job.file(),
+				prepared, base.review().sourceIdentity(), base.review().targetIdentity()), base.report());
+		var ready = new CountDownLatch(1);
+		var ref = new AtomicReference<DirectTransferPanel>();
+		var calls = new AtomicInteger();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new DirectTransferPanel((action, request, from, to) -> {
+				calls.incrementAndGet();
+				return review;
+			}, ignored -> null);
+			ref.set(panel);
+			configure(panel);
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertFalse(panel.execute.isEnabled());
+			assertTrue(panel.summary.getText().contains("EXECUTION BLOCKED"));
+			assertTrue(panel.summary.getText().contains("CREATE/ALTER/DROP"));
+			assertTrue(panel.schemaSql.editor.getText().contains("DROP COLUMN EXTRA"));
+			panel.executeReviewed(() -> {
+				fail("A blocked plan must not open execution confirmation");
+				return true;
+			});
+			assertEquals(1, calls.get());
+			assertTrue(panel.status.getText().contains("Execution blocked"));
+		});
+	}
+
+	@Test
 	void schemaOnlyReviewAndExecutionClearlyExcludeRowCopyAndVerification() throws Exception {
 		var base = reviewed();
 		var config = new TransferJobConfiguration(1, "source", "target", List.of("PUBLIC.ITEMS"),

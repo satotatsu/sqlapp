@@ -17,6 +17,10 @@ final class DirectTransferDraftDialog {
 				"Create missing target tables before copying (review generated DDL first)");
 		final var targetSchema = new JTextField(20);
 		final var schemaOnly = new JCheckBox("Schema only — create tables, constraints and indexes; do not copy rows");
+		final var applyDifferences = new JCheckBox("Apply differences to existing selected tables (review ALTER SQL)");
+		final var allowDestructive = new JCheckBox("Allow removals and changes that may affect existing data");
+		applyDifferences.setVisible(false);
+		allowDestructive.setVisible(false);
 		final var picker = JobDraftPanel.fileTransfer(prepared.schema(), () -> {
 			final var policy = strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
 					: TransferJobConfiguration.CompatibilityPolicy.WARN;
@@ -24,9 +28,12 @@ final class DirectTransferDraftDialog {
 			final var mode = createMissing.isSelected() ? TransferJobConfiguration.SchemaMode.CREATE_MISSING
 					: TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING;
 			if (schemaOnly.isSelected())
-				return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder()
-						.saveSchemaOnly(snapshot, tables, policy, schema, prepared.directory().resolve("transfer.yaml"))
-						.file().toString();
+				return (snapshot, tables, chunk,
+						verify) -> new TransferJobDraftBuilder().saveSchemaOnly(snapshot, tables, policy, schema,
+								applyDifferences.isSelected() ? TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+										: TransferJobConfiguration.SchemaMode.CREATE_MISSING,
+								applyDifferences.isSelected() && allowDestructive.isSelected(),
+								prepared.directory().resolve("transfer.yaml")).file().toString();
 			return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder().saveDirect(snapshot, tables,
 					chunk, verify, policy, schema, mode, prepared.directory().resolve("transfer.yaml")).file()
 					.toString();
@@ -39,11 +46,26 @@ final class DirectTransferDraftDialog {
 				.setText("Select tables. Existing targets must be empty; saving never creates tables or copies rows.");
 		strict.addActionListener(event -> picker.draftOptionsChanged());
 		createMissing.addActionListener(event -> picker.draftOptionsChanged());
+		applyDifferences.addActionListener(event -> {
+			if (!applyDifferences.isSelected())
+				allowDestructive.setSelected(false);
+			allowDestructive.setVisible(schemaOnly.isSelected() && applyDifferences.isSelected());
+			picker.draftOptionsChanged();
+			picker.status.setText(applyDifferences.isSelected()
+					? "Schema differences: inspect generated ALTER/DROP SQL and any data-impact warnings before execution."
+					: "Schema only: existing target tables are skipped with warnings; no rows are copied.");
+			dialog.revalidate();
+		});
+		allowDestructive.addActionListener(event -> picker.draftOptionsChanged());
 		schemaOnly.addActionListener(event -> {
 			if (schemaOnly.isSelected())
 				createMissing.setSelected(true);
 			picker.schemaOnly(schemaOnly.isSelected());
 			createMissing.setEnabled(!schemaOnly.isSelected());
+			applyDifferences.setVisible(schemaOnly.isSelected());
+			allowDestructive.setVisible(schemaOnly.isSelected() && applyDifferences.isSelected());
+			if (!schemaOnly.isSelected())
+				allowDestructive.setSelected(false);
 			picker.status.setText(schemaOnly.isSelected()
 					? "Schema only: existing target tables are skipped with warnings. No rows are copied. The target schema must exist."
 					: "Select tables to copy; existing targets must be empty.");
@@ -66,6 +88,8 @@ final class DirectTransferDraftDialog {
 			targetSchema.setEnabled(!picker.isBusy());
 			createMissing.setEnabled(!picker.isBusy() && !schemaOnly.isSelected());
 			schemaOnly.setEnabled(!picker.isBusy());
+			applyDifferences.setEnabled(!picker.isBusy());
+			allowDestructive.setEnabled(!picker.isBusy());
 		});
 		final var heading = new JPanel(new GridLayout(0, 1, 4, 4));
 		heading.add(new JLabel(
@@ -77,6 +101,8 @@ final class DirectTransferDraftDialog {
 		row.add(targetSchema);
 		heading.add(row);
 		heading.add(schemaOnly);
+		heading.add(applyDifferences);
+		heading.add(allowDestructive);
 		heading.add(createMissing);
 		heading.add(strict);
 		final var path = new JTextField(prepared.directory().resolve("transfer.yaml").toString());

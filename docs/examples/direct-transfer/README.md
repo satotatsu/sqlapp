@@ -19,6 +19,15 @@ definitions and rows. The target schema must already exist. Views, independent
 sequences, routines and triggers are not copied; review the scope/vendor warnings
 and generated DDL. Do not interpret DDL completion as full database equivalence.
 
+For optional existing-table changes, use `-PtransferJob=schema-differences.yaml`
+on both review and execution commands. This job uses
+`schemaMode: APPLY_DIFFERENCES`. Inspect CREATE/ALTER/DROP SQL and warnings.
+Removals, type/narrowing changes, constraint/index replacements and generated
+target-data preparation require `allowDestructiveSchemaChanges: true`; save and
+review again to obtain a new pin before executing. Source rows are not transferred.
+Partial changes may remain after failure, with no automatic reset, rollback or
+data restoration. Unsupported changes are unresolved warnings requiring manual work.
+
 Review only:
 
 ```text

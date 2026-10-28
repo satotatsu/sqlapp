@@ -54,6 +54,71 @@ versions cannot consume jobs using it. No module dependency was added.
 
 See [the schema-only example](../examples/direct-transfer/schema-only.yaml).
 
+### Optionally apply differences to existing selected tables
+
+```yaml
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.CUSTOMERS, PUBLIC.ORDERS]
+dataMode: SCHEMA_ONLY
+schemaMode: APPLY_DIFFERENCES
+# targetSchema: public
+# allowDestructiveSchemaChanges: true  # enable only after reviewing data-impact warnings and SQL
+```
+
+`CREATE_MISSING` remains the default GUI choice. For this optional behavior,
+enable **Schema only → Apply differences to existing selected tables** in the
+new-job dialog or **Job settings…**. GUI and Gradle use the canonical Schema
+diff and actual target dialect's SQL factories. Target metadata is captured in
+bulk and projected onto selected tables. Missing tables are created; existing
+selected tables can receive column, constraint and index changes. Unselected
+tables are not deliberately altered or dropped. Database-enforced dependency
+effects on referencing objects still require review.
+Components are matched by exact name; renames are not inferred from their
+positions. Replacing a column with a different name is a removal and addition,
+and may discard that column's old values when explicitly authorized. Use a
+reviewed custom SQL migration when you need to preserve data through a rename.
+
+Review is read-only and shows CREATE/ALTER/DROP SQL even when execution of
+potentially data-impacting changes is disabled. `[SCHEMA_DATA_IMPACT]` warnings
+cover removals, narrowing/type/native/generated column changes, physical table
+changes, constraint/index removals or replacements, and generated target-data
+preparation. Classification is conservative, not proof that other changes are
+safe for every application. For example, PostgreSQL can generate an UPDATE to
+populate a new NOT NULL column with its default; it remains visible in Schema SQL.
+No source row-copy job is generated.
+
+Without `allowDestructiveSchemaChanges: true`, the GUI disables execution for a
+plan with data-impact warnings. The shared executor enforces the same gate before
+any SQL, including from Gradle or Java. Enable **Allow removals and changes that
+may affect existing data**, save, and review again only when intended. Changed
+job bytes require a new Gradle configuration pin. The optional boolean defaults
+to false and is omitted from generated YAML when false. It is valid only with
+SCHEMA_ONLY/APPLY_DIFFERENCES. Existing constructors retain the false default;
+new record components/enum values require the updated application. No task
+property or module dependency was added.
+
+The plan also fingerprints captured target definitions. Execution captures fresh
+source and target metadata and compares exact SQL, warnings and fingerprints.
+Definition or permission changes require another review. This does not lock
+metadata or fence concurrent writers. Statements may commit individually; a
+later failure retains successful statements and an uncertain attempted statement,
+without automatic rollback, reset, restoration or retry. Inspect target state
+before re-running. Audits retain SQL and warnings; no chunk/row copy results or
+source/target row verification are produced for this mode.
+
+Under WARN, unsupported table SQL-generation failures produce
+`[SCHEMA_DIFF_UNRESOLVED]` warnings, with no SQL for that table while other
+selected-table SQL remains available. Differences with no generated SQL are also
+reported. ERROR rejects compatibility warnings. Completing generated SQL is not
+proof of full Schema equivalence; inspect unresolved warnings and fix vendor
+differences manually. Views, independent sequences, routines, triggers and other
+Schema objects remain outside this feature. Use SQL migration planning for a
+hand-reviewed script/history or data restoration strategy.
+
+See [the optional-difference example](../examples/direct-transfer/schema-differences.yaml).
+
 ```yaml
 formatVersion: 1
 source: from

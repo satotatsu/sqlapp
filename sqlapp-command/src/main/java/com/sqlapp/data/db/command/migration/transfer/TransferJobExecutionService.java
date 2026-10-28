@@ -124,6 +124,9 @@ public final class TransferJobExecutionService {
 				throw new IllegalArgumentException("Definition or plan changed. Review again before executing.");
 			schemaProgress[0] = new TransferSchemaPreparation.Progress(current.schemaPreparation().statements(), 0,
 					null, current.warnings());
+			if (TransferSchemaChangeChecks.executionBlocked(current.job().configuration(), current.schemaPreparation()))
+				throw new IllegalArgumentException(
+						"Schema changes may affect existing data. Review the SQL and explicitly set allowDestructiveSchemaChanges: true before execution.");
 			if (!current.schemaPreparation().statements().isEmpty()) {
 				try (var target = bindings.target().getConnection()) {
 					if (current.job().configuration().dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY

@@ -15,7 +15,10 @@ final class TransferJobSettingsPanel extends JPanel {
 	final JTextField targetSchema = new JTextField(24);
 	final JCheckBox createMissing = new JCheckBox("Create missing target tables (the schema itself must exist)");
 	final JCheckBox verify = new JCheckBox("Verify copied data");
-	final JCheckBox schemaOnly = new JCheckBox("Schema only (no row copy; create missing tables)");
+	final JCheckBox schemaOnly = new JCheckBox("Schema only (no row copy)");
+	final JCheckBox applyDifferences = new JCheckBox(
+			"Apply differences to existing selected tables (review ALTER SQL)");
+	final JCheckBox allowDestructive = new JCheckBox("Allow removals and changes that may affect existing data");
 	final JCheckBox strict = new JCheckBox("Treat compatibility warnings as errors");
 	final JSpinner chunk = new JSpinner(new SpinnerNumberModel(10000, 1, 1000000, 1));
 	final JButton save = new JButton("Save settings");
@@ -45,6 +48,8 @@ final class TransferJobSettingsPanel extends JPanel {
 		if (mode != TransferJobConfiguration.DataMode.FILE)
 			fields.add(schemaOnly);
 		schemaOnly.addActionListener(event -> {
+			if (!schemaOnly.isSelected())
+				allowDestructive.setSelected(false);
 			if (schemaOnly.isSelected()) {
 				createMissing.setSelected(true);
 				verify.setSelected(false);
@@ -52,6 +57,13 @@ final class TransferJobSettingsPanel extends JPanel {
 			refresh();
 		});
 		fields.add(createMissing);
+		fields.add(applyDifferences);
+		fields.add(allowDestructive);
+		applyDifferences.addActionListener(event -> {
+			if (!applyDifferences.isSelected())
+				allowDestructive.setSelected(false);
+			refresh();
+		});
 		fields.add(verify);
 		fields.add(strict);
 		final var chunkRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -108,9 +120,12 @@ final class TransferJobSettingsPanel extends JPanel {
 					snapshot = get();
 					final var configuration = snapshot.configuration();
 					schemaOnly.setSelected(configuration.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY);
+					applyDifferences.setSelected(
+							configuration.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES);
+					allowDestructive.setSelected(configuration.allowDestructiveSchemaChanges());
 					targetSchema.setText(configuration.targetSchema() == null ? "" : configuration.targetSchema());
 					createMissing.setSelected(
-							configuration.schemaMode() == TransferJobConfiguration.SchemaMode.CREATE_MISSING);
+							configuration.schemaMode() != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
 					verify.setSelected(configuration.verify());
 					strict.setSelected(
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR);
@@ -136,17 +151,21 @@ final class TransferJobSettingsPanel extends JPanel {
 			final var original = snapshot.configuration();
 			updated = new TransferJobConfiguration(original.formatVersion(), original.source(), original.target(),
 					original.tables(),
-					schemaOnly.isSelected() || createMissing.isSelected()
-							? TransferJobConfiguration.SchemaMode.CREATE_MISSING
-							: TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING,
+					schemaOnly.isSelected() && applyDifferences.isSelected()
+							? TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+							: schemaOnly.isSelected() || createMissing.isSelected()
+									? TransferJobConfiguration.SchemaMode.CREATE_MISSING
+									: TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING,
 					original.sourceSchema(), targetSchema.getText().isBlank() ? null : targetSchema.getText(),
 					original.mappingFile(), new java.math.BigDecimal(chunk.getValue().toString()).intValueExact(),
 					!schemaOnly.isSelected() && verify.isSelected(),
 					mode == TransferJobConfiguration.DataMode.FILE ? mode
 							: schemaOnly.isSelected() ? TransferJobConfiguration.DataMode.SCHEMA_ONLY
 									: TransferJobConfiguration.DataMode.JDBC_DIRECT,
-					original.files(), strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
-							: TransferJobConfiguration.CompatibilityPolicy.WARN);
+					original.files(),
+					strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
+							: TransferJobConfiguration.CompatibilityPolicy.WARN,
+					schemaOnly.isSelected() && applyDifferences.isSelected() && allowDestructive.isSelected());
 		} catch (Exception failure) {
 			status.setText("Check chunk size (1..1000000) and target schema settings before saving.");
 			return;
@@ -198,6 +217,10 @@ final class TransferJobSettingsPanel extends JPanel {
 		for (var field : new java.awt.Component[] { targetSchema, createMissing, verify, strict, chunk })
 			field.setEnabled(!busy && snapshot != null);
 		schemaOnly.setEnabled(!busy && snapshot != null);
+		applyDifferences.setVisible(mode != TransferJobConfiguration.DataMode.FILE && schemaOnly.isSelected());
+		applyDifferences.setEnabled(!busy && snapshot != null && schemaOnly.isSelected());
+		allowDestructive.setVisible(applyDifferences.isVisible() && applyDifferences.isSelected());
+		allowDestructive.setEnabled(applyDifferences.isEnabled() && applyDifferences.isSelected());
 		if (schemaOnly.isSelected()) {
 			createMissing.setEnabled(false);
 			verify.setEnabled(false);

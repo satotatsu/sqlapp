@@ -9,6 +9,7 @@ import java.util.function.BooleanSupplier;
 import javax.swing.*;
 import com.sqlapp.data.db.command.migration.transfer.TransferJobExecutionService;
 import com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration;
+import com.sqlapp.data.db.command.migration.transfer.TransferSchemaChangeChecks;
 
 /**
  * The common direct job workflow; adapters delegate all migration rules to
@@ -116,7 +117,10 @@ final class DirectTransferPanel extends JPanel {
 				com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.DataMode.JDBC_DIRECT)));
 		execute.addActionListener(event -> executeReviewed(() -> JOptionPane.showConfirmDialog(this, (reviewed.review()
 				.prepared().job().configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
-						? "Create the reviewed target tables without copying rows?\nConfiguration: "
+						? reviewed.review().prepared().job().configuration()
+								.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+										? "Apply reviewed Schema SQL, including ALTER/DROP? Target data may change if explicitly allowed. No source rows are transferred.\nConfiguration: "
+										: "Create the reviewed target tables without copying rows?\nConfiguration: "
 						: "Copy into the reviewed target?\nConfiguration: ")
 				+ reviewed.review().prepared().job().fingerprint() + "\nCompatibility warnings: "
 				+ reviewed.review().prepared().warnings().size() + "\nDDL statements: "
@@ -241,7 +245,13 @@ final class DirectTransferPanel extends JPanel {
 		create.setEnabled(!busy);
 		jobSettings.setEnabled(!busy);
 		review.setEnabled(!busy);
-		execute.setEnabled(!busy && reviewed != null);
+		execute.setEnabled(!busy && reviewed != null
+				&& !TransferSchemaChangeChecks.executionBlocked(reviewed.review().prepared().job().configuration(),
+						reviewed.review().prepared().schemaPreparation()));
+		execute.setToolTipText(reviewed != null && TransferSchemaChangeChecks.executionBlocked(
+				reviewed.review().prepared().job().configuration(), reviewed.review().prepared().schemaPreparation())
+						? "Inspect Schema SQL; enable data-impacting changes in Job settings and review again."
+						: null);
 		drivers.setEnabled(!busy);
 	}
 
@@ -291,6 +301,12 @@ final class DirectTransferPanel extends JPanel {
 	void executeReviewed(BooleanSupplier confirmation) {
 		if (isBusy() || reviewed == null)
 			return;
+		if (TransferSchemaChangeChecks.executionBlocked(reviewed.review().prepared().job().configuration(),
+				reviewed.review().prepared().schemaPreparation())) {
+			status.setText(
+					"Execution blocked: inspect Schema SQL, then explicitly allow data-impacting changes in Job settings and review again.");
+			return;
+		}
 		final var snapshot = reviewed;
 		final long requested = revision;
 		boolean accepted;
@@ -349,7 +365,7 @@ final class DirectTransferPanel extends JPanel {
 		setBusy(true);
 		status.setText(action == Action.EXECUTE ? request.reviewed().review().prepared().job().configuration()
 				.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
-						? "Creating reviewed target tables only; created objects may remain on failure. No rows are copied."
+						? "Applying reviewed Schema SQL; completed statements may remain on failure. No source rows are transferred."
 						: "Copying and verifying; committed chunks may remain on failure."
 				: "Working: " + action + ". This action does not copy rows.");
 		new SwingWorker<Object, Void>() {
@@ -442,9 +458,22 @@ final class DirectTransferPanel extends JPanel {
 			final var review = reviewed.review();
 			final var config = review.prepared().job().configuration();
 			if (config.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY)
+				text.append(config.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+						? "SCHEMA ONLY: apply selected table differences using reviewed CREATE/ALTER/DROP SQL. No source rows are transferred or verified.\n"
+						: "SCHEMA ONLY: create missing tables, constraints and indexes. No row copy or row verification.\n")
+						.append(config.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+								? "Existing selected tables may change. Unselected tables are outside the migration scope. The target schema must already exist.\n\n"
+								: "Existing target tables are skipped without comparison or modification. The target schema must already exist.\n\n");
+			if (TransferSchemaChangeChecks.executionBlocked(config, review.prepared().schemaPreparation()))
 				text.append(
-						"SCHEMA ONLY: create missing tables, constraints and indexes. No row copy or row verification.\n")
-						.append("Existing target tables are skipped without comparison or modification. The target schema must already exist.\n\n");
+						"EXECUTION BLOCKED: data-impacting changes require explicit permission in Job settings and a new review. SQL remains available for inspection.\n\n");
+			if (config.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES)
+				text.append("Data-impacting Schema changes allowed by saved job: ")
+						.append(config.allowDestructiveSchemaChanges()).append("\n\n");
+			if (TransferSchemaChangeChecks.unresolvedCount(review.prepared().schemaPreparation()) > 0)
+				text.append("Unresolved table-change warnings: ")
+						.append(TransferSchemaChangeChecks.unresolvedCount(review.prepared().schemaPreparation()))
+						.append(". These changes still require manual work; see Warnings.\n\n");
 			text.append("Transfer reviewed. No rows have been copied. Execution requires your confirmation.\n\n");
 			TransferGeneratedKeyNotice.append(text, review.prepared().warnings());
 			text.append("Source: ").append(review.sourceIdentity().productName()).append(" / ")
@@ -457,7 +486,10 @@ final class DirectTransferPanel extends JPanel {
 			if (config.dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY)
 				text.append("\nChunk rows: ").append(config.chunkSize()).append("; verification: ")
 						.append(config.verify() ? "enabled" : "disabled").append('\n');
-			text.append("Target preparation: ").append(config.schemaMode()).append("; DDL statements: ")
+			text.append("Target preparation: ").append(config.schemaMode())
+					.append(config.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+							? "; Schema SQL statements: "
+							: "; DDL statements: ")
 					.append(review.prepared().schemaPreparation().statements().size()).append('\n');
 			warnings(text, review.prepared().warnings());
 			text.append("\nReview report: ").append(reviewed.report());
@@ -469,9 +501,14 @@ final class DirectTransferPanel extends JPanel {
 			final boolean schemaOnly = outcome.prepared().job().configuration()
 					.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY;
 			if (schemaOnly)
-				text.append("SCHEMA ONLY: no data-copy or row-verification operations were requested.\n");
+				text.append(outcome.prepared().job().configuration()
+						.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+								? "SCHEMA ONLY: no source rows were transferred. Reviewed Schema SQL may change target data when explicitly allowed.\n"
+								: "SCHEMA ONLY: no data-copy or row-verification operations were requested.\n");
 			if (schemaOnly && outcome.phase() == TransferJobExecutionService.Phase.COMPLETE)
-				text.append("Schema-only transfer completed. Inspect DDL results and compatibility warnings below.\n");
+				text.append(TransferSchemaChangeChecks.unresolvedCount(outcome.prepared().schemaPreparation()) > 0
+						? "Generated Schema SQL completed, but unresolved table changes remain. See Warnings before using the target.\n"
+						: "Schema-only transfer completed. Inspect DDL results and compatibility warnings below.\n");
 			else
 				TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Execution phase: ").append(outcome.phase()).append('\n');
@@ -497,8 +534,12 @@ final class DirectTransferPanel extends JPanel {
 						.append('\n');
 			warnings(text, outcome.prepared().warnings());
 			text.append("\nResult report: ").append(execution.report() == null ? "unavailable" : execution.report());
-			text.append("\nDDL statements completed: ").append(outcome.schemaPreparation().completedStatements())
-					.append(" / ").append(outcome.schemaPreparation().planned().size());
+			text.append(outcome.prepared().job().configuration()
+					.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+							? "\nSchema SQL statements completed: "
+							: "\nDDL statements completed: ")
+					.append(outcome.schemaPreparation().completedStatements()).append(" / ")
+					.append(outcome.schemaPreparation().planned().size());
 			if (outcome.schemaPreparation().attemptedStatement() != null)
 				text.append("; uncertain attempted statement: ")
 						.append(outcome.schemaPreparation().attemptedStatement());

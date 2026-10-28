@@ -14,7 +14,8 @@ final class DirectTransferGradleGuide {
 	static String text(TransferJobConfigurationIO.Snapshot job) {
 		return "// Saved transfer mode: " + job.configuration().dataMode() + "\n" + (job.configuration()
 				.dataMode() == com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.DataMode.SCHEMA_ONLY
-						? "// SCHEMA_ONLY creates missing selected tables; no rows are copied or verified.\n"
+						? "// SCHEMA_ONLY prepares reviewed table definitions; source rows are not transferred or verified.\n// Schema SQL may change target data when explicitly allowed.\n// Schema mode: "
+								+ job.configuration().schemaMode() + "\n"
 						: "")
 				+ """
 						// Use this saved YAML unchanged in your Gradle project.

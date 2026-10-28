@@ -15,14 +15,22 @@ public final class TransferJobDraftBuilder {
 	public TransferJobConfigurationIO.Snapshot saveSchemaOnly(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot,
 			List<String> selected, TransferJobConfiguration.CompatibilityPolicy policy, String targetSchema, Path file)
 			throws Exception {
+		return saveSchemaOnly(snapshot, selected, policy, targetSchema,
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING, false, file);
+	}
+
+	public TransferJobConfigurationIO.Snapshot saveSchemaOnly(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot,
+			List<String> selected, TransferJobConfiguration.CompatibilityPolicy policy, String targetSchema,
+			TransferJobConfiguration.SchemaMode mode, boolean allowDestructiveSchemaChanges, Path file)
+			throws Exception {
 		final var schema = TransferFileJobDraftBuilder.schema(snapshot);
 		final var tables = TransferSchemaOnlyPreparation.select(schema, selected).stream()
 				.map(table -> TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
 						table.getName()))
 				.toList();
-		final var configuration = new TransferJobConfiguration(1, "source", "target", tables,
-				TransferJobConfiguration.SchemaMode.CREATE_MISSING, schema.getName(), targetSchema, null, null, false,
-				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy);
+		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, mode, schema.getName(),
+				targetSchema, null, null, false, TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy,
+				allowDestructiveSchemaChanges);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(configuration), null);
 	}

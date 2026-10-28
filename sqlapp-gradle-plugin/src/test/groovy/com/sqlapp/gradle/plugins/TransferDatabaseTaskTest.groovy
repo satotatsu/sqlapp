@@ -9,17 +9,22 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 
 class TransferDatabaseTaskTest extends AbstractTaskTest {
-	@Test void executesSchemaOnlySharedJobWithoutCopyingKeylessTableRows() {
+	@ParameterizedTest @ValueSource(booleans=[false,true])
+	void executesSchemaOnlySharedJobWithoutCopyingKeylessTableRows(boolean applyDifferences) {
 		def sourceUrl = 'jdbc:hsqldb:mem:schema_task_source_' + UUID.randomUUID()
 		def targetUrl = 'jdbc:hsqldb:mem:schema_task_target_' + UUID.randomUUID()
 		def source = new org.hsqldb.jdbc.JDBCDataSource(); source.setUrl(sourceUrl); source.setUser('SA'); source.setPassword('')
 		source.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
-			s.execute('CREATE TABLE ITEMS(ID INTEGER)'); s.execute('INSERT INTO ITEMS VALUES(NULL),(42)')
+			s.execute(applyDifferences ? 'CREATE TABLE ITEMS(ID INTEGER, NAME VARCHAR(40))' : 'CREATE TABLE ITEMS(ID INTEGER)'); s.execute('INSERT INTO ITEMS(ID) VALUES(NULL),(42)')
 		} }
 		def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
 		def task = project.tasks.named('transferDatabase', TransferDatabaseTask).get()
 		def file = new File(testProjectDir, 'schema-only.yaml')
-		file.text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING\ndataMode: SCHEMA_ONLY\n'
+		file.text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: ' + (applyDifferences ? 'APPLY_DIFFERENCES' : 'CREATE_MISSING') + '\ndataMode: SCHEMA_ONLY\n'
+		if (applyDifferences) {
+			def existing = new org.hsqldb.jdbc.JDBCDataSource(); existing.setUrl(targetUrl); existing.setUser('SA'); existing.setPassword('')
+			existing.connection.withCloseable { c -> c.createStatement().withCloseable { s -> s.execute('CREATE TABLE ITEMS(ID INTEGER)'); s.execute('INSERT INTO ITEMS VALUES(5)') } }
+		}
 		task.configurationFile.set(file)
 		task.sourceDataSource.jdbcUrl.set(sourceUrl); task.sourceDataSource.username.set('SA'); task.sourceDataSource.password.set('')
 		task.dataSource.jdbcUrl.set(targetUrl); task.dataSource.username.set('SA'); task.dataSource.password.set('')
@@ -31,7 +36,10 @@ class TransferDatabaseTaskTest extends AbstractTaskTest {
 		assertEquals(com.sqlapp.data.db.command.migration.transfer.TransferJobExecutionService.Phase.COMPLETE, task.internalCommand().result.phase())
 		assertNull(task.internalCommand().result.copyResult())
 		def target = new org.hsqldb.jdbc.JDBCDataSource(); target.setUrl(targetUrl); target.setUser('SA'); target.setPassword('')
-		target.connection.withCloseable { c -> c.createStatement().withCloseable { s -> s.executeQuery('SELECT COUNT(*) FROM ITEMS').withCloseable { r -> r.next(); assertEquals(0, r.getInt(1)) } } }
+		target.connection.withCloseable { c ->
+			c.createStatement().withCloseable { s -> s.executeQuery('SELECT COUNT(*) FROM ITEMS').withCloseable { r -> r.next(); assertEquals(applyDifferences ? 1 : 0, r.getInt(1)) } }
+			if(applyDifferences) c.metaData.getColumns(null,'PUBLIC','ITEMS','NAME').withCloseable { r -> assertTrue(r.next()) }
+		}
 	}
 	@Test void registersReadOnlyDefaultsAndValidatesBeforeCreatingPools() {
 		def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
