@@ -190,9 +190,10 @@ class MdbFileLoaderTest {
 								query("更新処理", Query.Type.UPDATE, false, List.of(), "UPDATE [販売] SET [状態] = 1")),
 						schema);
 
-		assertEquals(2, schema.getViews().size());
+		assertEquals(3, schema.getViews().size());
 		assertEquals("SELECT * FROM [販売]", schema.getViews().get("販売一覧").getDefinition().get(0));
 		assertNotNull(schema.getViews().get("販売統合"));
+		assertNotNull(schema.getViews().get("パラメータ付き").getSpecifics().get(MdbFileLoader.SAVED_QUERY_PARAMETERS));
 	}
 
 	@Test

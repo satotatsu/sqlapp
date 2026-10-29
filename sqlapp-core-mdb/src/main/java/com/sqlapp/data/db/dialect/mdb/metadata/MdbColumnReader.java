@@ -12,13 +12,13 @@ import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcColumnReader;
+import com.sqlapp.data.db.dialect.mdb.util.MdbColumnSupport;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 
 import io.github.spannm.jackcess.Database;
-import net.ucanaccess.jdbc.UcanaccessConnection;
 
 /** Restores Access AutoNumber metadata exposed by UCanAccess. */
 public class MdbColumnReader extends JdbcColumnReader {
@@ -32,16 +32,14 @@ public class MdbColumnReader extends JdbcColumnReader {
 			final ProductVersionInfo productVersionInfo) {
 		final List<Column> columns = super.doGetAll(connection, context, productVersionInfo);
 		try {
-			if (!connection.isWrapperFor(UcanaccessConnection.class)) {
+			final Database database = MdbMetadataSupport.database(connection);
+			if (database == null) {
 				return columns;
 			}
-			final UcanaccessConnection ucanaccessConnection = connection.unwrap(UcanaccessConnection.class);
-			ucanaccessConnection.reloadDbIO();
-			final Database database = ucanaccessConnection.getDbIO();
 			for (final Column column : columns) {
 				final io.github.spannm.jackcess.Table table = database.getTable(column.getTableName());
 				if (table != null && table.getColumn(column.getName()) != null) {
-					column.setIdentity(table.getColumn(column.getName()).isAutoNumber());
+					MdbColumnSupport.enrich(column, table.getColumn(column.getName()));
 				}
 			}
 			return columns;

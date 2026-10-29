@@ -18,6 +18,6 @@ public class MdbDropIndexFactory extends SimpleSqlFactory<Index, MdbSqlBuilder> 
 	@Override
 	public List<SqlOperation> createSql(final Index index) {
 		throw new UnsupportedOperationException(
-				"UCanAccess 5.1.6 does not support DROP INDEX for Access databases: " + index.getName());
+				"UCanAccess 5.2.0 does not support DROP INDEX for Access databases: " + index.getName());
 	}
 }

@@ -64,6 +64,9 @@ public class Mdb extends Dialect {
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar("TEXT", 255, type -> {
+			// UCanAccess JDBC metadata exposes Access short text as VARCHAR.
+			type.addColumnTypeMatcher("VARCHAR");
+			type.addColumnTypeMatcher("CHARACTER VARYING");
 			type.setLiteral("'", "'");
 		});
 		// LONGVARCHAR

@@ -9,6 +9,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.View;
 
@@ -33,6 +34,7 @@ public class MdbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.MERGE, MdbUnsupportedMergeFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, MdbCreateIndexFactory.class);
 		registerSqlFactory(Index.class, SqlType.DROP, MdbDropIndexFactory.class);
+		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE, MdbCreateForeignKeyConstraintFactory.class);
 		registerSqlFactory(View.class, SqlType.CREATE, MdbUnsupportedViewFactory.class);
 		registerSqlFactory(View.class, SqlType.DROP, MdbUnsupportedViewFactory.class);
 	}

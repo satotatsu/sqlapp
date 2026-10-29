@@ -12,8 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import io.github.spannm.jackcess.Cursor;
 import io.github.spannm.jackcess.Database;
@@ -32,8 +30,6 @@ final class MdbSavedQuerySupport {
 	private static final int UNION_OBJECT_FLAG = 128;
 	private static final String UNION_PART1 = "X7YZ_____1";
 	private static final String UNION_PART2 = "X7YZ_____2";
-	private static final Pattern SELECT = Pattern.compile("(?is)^SELECT\\s+(DISTINCT\\s+)?(.+?)\\s+FROM\\s+"
-			+ "(\\[[^]]+]|[A-Za-z0-9_$]+)" + "(?:\\s+WHERE\\s+(.+?))?" + "(?:\\s+ORDER\\s+BY\\s+(.+))?$");
 
 	private MdbSavedQuerySupport() {
 	}
@@ -42,8 +38,12 @@ final class MdbSavedQuerySupport {
 		if (findQueryObject(database, name) != null) {
 			throw new IllegalArgumentException("Access saved query already exists: " + name);
 		}
-		final String sql = stripTerminator(definition);
+		final var parsed = MdbSelectQueryParser.definition(definition);
+		final String sql = parsed.sql();
 		final UnionParts union = splitUnion(sql);
+		validateSources(database, union == null ? sql : union.first);
+		if (union != null)
+			validateSources(database, union.second);
 		final int objectId = nextObjectId(database);
 		final int flags = union == null ? 0 : UNION_OBJECT_FLAG;
 		addCatalogRow(database, objectId, name, flags);
@@ -53,6 +53,15 @@ final class MdbSavedQuerySupport {
 			} else {
 				addUnionRows(database, objectId, union);
 			}
+			final var parameters = new ArrayList<Map<String, Object>>();
+			for (final var parameter : parsed.parameters()) {
+				final var row = queryRow(objectId, (byte) 2, null, parameter.type(), parameter.name(), null);
+				row.put("LvExtra", parameter.length());
+				parameters.add(row);
+			}
+			addRowOrder(parameters);
+			if (!parameters.isEmpty())
+				database.getSystemTable("MSysQueries").addRowsFromMaps(parameters);
 		} catch (final IOException | RuntimeException e) {
 			drop(database, name);
 			throw e;
@@ -72,33 +81,38 @@ final class MdbSavedQuerySupport {
 
 	private static void addSelectRows(final Database database, final int objectId, final String sql)
 			throws IOException {
-		final Matcher matcher = SELECT.matcher(sql);
-		if (!matcher.matches()) {
-			throw new UnsupportedOperationException("Direct saved SELECT currently supports SELECT columns FROM "
-					+ "one-table [WHERE ...] [ORDER BY ...]: " + sql);
-		}
+		final var select = MdbSelectQueryParser.select(sql);
 		final List<Map<String, Object>> rows = new ArrayList<>();
 		rows.add(queryRow(objectId, TYPE_ATTRIBUTE, null, (short) 1, null, null));
 		short selectFlags = 0;
-		if (matcher.group(1) != null) {
+		if (select.distinct()) {
 			selectFlags |= 0x02;
 		}
-		final String columns = matcher.group(2).trim();
+		final String columns = select.columns();
 		if ("*".equals(columns)) {
 			selectFlags |= 0x01;
 		}
 		rows.add(queryRow(objectId, FLAG_ATTRIBUTE, null, selectFlags, null, null));
-		rows.add(queryRow(objectId, TABLE_ATTRIBUTE, null, null, unquote(matcher.group(3)), null));
+		for (final var table : select.tables())
+			rows.add(queryRow(objectId, TABLE_ATTRIBUTE, null, null, table.name(), table.alias()));
+		for (final var join : select.joins()) {
+			rows.add(queryRow(objectId, (byte) 7, join.condition(), join.type(), join.left(), join.right()));
+		}
 		if (!"*".equals(columns)) {
 			for (final String column : splitComma(columns)) {
 				rows.add(queryRow(objectId, COLUMN_ATTRIBUTE, column.trim(), (short) 0, null, null));
 			}
 		}
-		if (matcher.group(4) != null) {
-			rows.add(queryRow(objectId, WHERE_ATTRIBUTE, matcher.group(4).trim(), null, null, null));
+		if (select.where() != null) {
+			rows.add(queryRow(objectId, WHERE_ATTRIBUTE, select.where(), null, null, null));
 		}
-		if (matcher.group(5) != null) {
-			for (String order : splitComma(matcher.group(5))) {
+		if (select.group() != null)
+			for (final String group : splitComma(select.group()))
+				rows.add(queryRow(objectId, (byte) 9, group, null, null, null));
+		if (select.having() != null)
+			rows.add(queryRow(objectId, (byte) 10, select.having(), null, null, null));
+		if (select.order() != null) {
+			for (String order : splitComma(select.order())) {
 				order = order.trim();
 				final boolean descending = order.toUpperCase(Locale.ROOT).endsWith(" DESC");
 				if (descending) {
@@ -192,43 +206,26 @@ final class MdbSavedQuerySupport {
 		}
 	}
 
-	private static String stripTerminator(final String sql) {
-		String value = sql.strip();
-		if (value.endsWith(";")) {
-			value = value.substring(0, value.length() - 1).stripTrailing();
-		}
-		return value;
-	}
-
 	private static UnionParts splitUnion(final String sql) {
-		final Matcher matcher = Pattern.compile("(?is)^(.+)\\s+UNION(\\s+ALL)?\\s+(.+)$").matcher(sql);
-		return matcher.matches()
-				? new UnionParts(matcher.group(1).trim(), matcher.group(3).trim(), matcher.group(2) != null)
-				: null;
+		final int position = MdbSelectQueryParser.keyword(sql, "UNION");
+		if (position < 0)
+			return null;
+		String second = sql.substring(position + 5).strip();
+		final boolean all = second.matches("(?is)^ALL\\s+.*");
+		if (all)
+			second = second.replaceFirst("(?is)^ALL\\s+", "");
+		return new UnionParts(sql.substring(0, position).strip(), second, all);
 	}
 
 	private static List<String> splitComma(final String value) {
-		final List<String> result = new ArrayList<>();
-		int depth = 0;
-		int start = 0;
-		for (int i = 0; i < value.length(); i++) {
-			final char ch = value.charAt(i);
-			if (ch == '(') {
-				depth++;
-			} else if (ch == ')') {
-				depth--;
-			} else if (ch == ',' && depth == 0) {
-				result.add(value.substring(start, i));
-				start = i + 1;
-			}
-		}
-		result.add(value.substring(start));
-		return result;
+		return MdbSelectQueryParser.splitComma(value);
 	}
 
-	private static String unquote(final String identifier) {
-		return identifier.startsWith("[") && identifier.endsWith("]") ? identifier.substring(1, identifier.length() - 1)
-				: identifier;
+	private static void validateSources(final Database database, final String sql) throws IOException {
+		for (final var table : MdbSelectQueryParser.select(sql).tables()) {
+			if (database.getTable(table.name()) == null)
+				throw new IllegalArgumentException("Saved query source table not found: " + table.name());
+		}
 	}
 
 	private record UnionParts(String first, String second, boolean all) {

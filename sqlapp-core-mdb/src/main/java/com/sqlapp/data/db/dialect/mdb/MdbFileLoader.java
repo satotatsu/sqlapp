@@ -11,11 +11,10 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.mdb.rowiterator.MdbRowIteratorHandler;
+import com.sqlapp.data.db.dialect.mdb.util.MdbRelationshipSupport;
+import com.sqlapp.data.db.dialect.mdb.util.MdbColumnSupport;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.CascadeRule;
-import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ReferenceColumn;
@@ -31,11 +30,11 @@ import io.github.spannm.jackcess.query.Query;
 /**
  * Loads an Access MDB/ACCDB file without passing identifiers through SQL.
  * <p>
- * Table rows are read lazily. Non-parameterized saved SELECT and UNION queries
- * are represented as views whose definition contains the Access SQL. Action,
- * hidden and parameterized queries are not represented as views. Access complex
- * columns remain unsupported by the row iterator because a single Schema column
- * cannot preserve attachment or multi-value structure.
+ * Table rows are read lazily. Saved SELECT and UNION queries, including
+ * parameters, are represented as views whose definition contains the Access
+ * SQL. Action, hidden and parameterized queries are not represented as views.
+ * Access complex columns remain unsupported by the row iterator because a
+ * single Schema column cannot preserve attachment or multi-value structure.
  * </p>
  */
 public final class MdbFileLoader {
@@ -49,6 +48,11 @@ public final class MdbFileLoader {
 	 * Access text-column empty-string policy retained by the assessment snapshot.
 	 */
 	public static final String ALLOW_ZERO_LENGTH = "access.allowZeroLength";
+	/**
+	 * Parameter declarations of an Access saved SELECT/UNION; definition includes
+	 * PARAMETERS.
+	 */
+	public static final String SAVED_QUERY_PARAMETERS = "access.parameters";
 
 	private MdbFileLoader() {
 	}
@@ -73,10 +77,6 @@ public final class MdbFileLoader {
 				} else {
 					final var source = metadata.open(database);
 					final Table table = toTable(source);
-					for (final var column : source.getColumns()) {
-						table.getColumns().get(column.getName()).getSpecifics().put(SOURCE_TYPE,
-								column.getType().name());
-					}
 					schema.getTables().add(table);
 				}
 			}
@@ -106,6 +106,7 @@ public final class MdbFileLoader {
 		final Path normalized = file.toAbsolutePath().normalize();
 		final Schema schema = new Schema("");
 		try (Database database = new DatabaseBuilder().withPath(normalized).withReadOnly(true).open()) {
+			schema.getSpecifics().put(SOURCE_FILE_FORMAT, database.getFileFormat().name());
 			loadTables(database, normalized, schema);
 			loadRelationships(database, schema);
 			loadQueries(database.getQueries(), schema);
@@ -115,12 +116,13 @@ public final class MdbFileLoader {
 
 	static void loadQueries(final Iterable<Query> queries, final Schema schema) {
 		for (final Query query : queries) {
-			if (query.isHidden() || !query.getParameters().isEmpty()
-					|| (query.getType() != Query.Type.SELECT && query.getType() != Query.Type.UNION)) {
+			if (query.isHidden() || (query.getType() != Query.Type.SELECT && query.getType() != Query.Type.UNION)) {
 				continue;
 			}
 			final View view = new View(query.getName());
 			view.setDefinition(query.toSQLString());
+			if (!query.getParameters().isEmpty())
+				view.getSpecifics().put(SAVED_QUERY_PARAMETERS, String.join("; ", query.getParameters()));
 			schema.getViews().add(view);
 		}
 	}
@@ -166,32 +168,13 @@ public final class MdbFileLoader {
 			table.getConstraints().addCheckConstraint(null, validationRule);
 		}
 		for (final io.github.spannm.jackcess.Column sourceColumn : source.getColumns()) {
-			final Column column = new Column(sourceColumn.getName());
-			column.setDataType(toDataType(sourceColumn.getType()));
-			column.setDataTypeName(sourceColumn.getType().getTypeName());
-			column.setIdentity(sourceColumn.isAutoNumber());
-			final PropertyMap properties = sourceColumn.getProperties();
-			column.setNotNull(Boolean.TRUE.equals(properties.getValue(PropertyMap.REQUIRED_PROP)));
-			column.setDefaultValue(toString(properties.getValue(PropertyMap.DEFAULT_VALUE_PROP)));
-			column.setRemarks(toString(properties.getValue(PropertyMap.DESCRIPTION_PROP)));
-			column.setCheck(toString(properties.getValue(PropertyMap.VALIDATION_RULE_PROP)));
-			final Object allowZeroLength = properties.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP);
-			if (allowZeroLength instanceof Boolean) {
-				column.getSpecifics().put(ALLOW_ZERO_LENGTH, allowZeroLength.toString());
-			}
-			if (sourceColumn.isCalculated()) {
-				column.setFormula(toString(properties.getValue(PropertyMap.EXPRESSION_PROP)));
-			}
-			if (sourceColumn.getType().isTextual() && !sourceColumn.getType().isLongValue()) {
-				column.setLength((long) sourceColumn.getLengthInUnits());
-			}
-			if (sourceColumn.getType().getHasScalePrecision()) {
-				column.setLength((long) sourceColumn.getPrecision());
-				column.setScale((int) sourceColumn.getScale());
-			}
+			final Column column = MdbColumnSupport.read(sourceColumn);
 			table.getColumns().add(column);
 		}
 		for (final io.github.spannm.jackcess.Index sourceIndex : source.getIndexes()) {
+			if (MdbRelationshipSupport.isRelationshipIndex(sourceIndex)) {
+				continue;
+			}
 			final List<Column> keyColumns = new ArrayList<>();
 			for (final io.github.spannm.jackcess.Index.Column sourceColumn : sourceIndex.getColumns()) {
 				keyColumns.add(table.getColumns().get(sourceColumn.getName()));
@@ -226,40 +209,10 @@ public final class MdbFileLoader {
 			if (table == null || relatedTable == null) {
 				continue;
 			}
-			final ForeignKeyConstraint foreignKey = new ForeignKeyConstraint(relationship.getName());
-			foreignKey.setRelatedTableName(relatedTable.getName());
-			final List<Column> columns = new ArrayList<>();
-			for (final io.github.spannm.jackcess.Column sourceColumn : relationship.getToColumns()) {
-				columns.add(table.getColumns().get(sourceColumn.getName()));
-			}
-			foreignKey.addColumns(columns);
-			final List<Column> relatedColumns = new ArrayList<>();
-			for (final io.github.spannm.jackcess.Column sourceColumn : relationship.getFromColumns()) {
-				relatedColumns.add(relatedTable.getColumns().get(sourceColumn.getName()));
-			}
-			foreignKey.addRelatedColumns(relatedColumns);
-			foreignKey.setUpdateRule(relationship.cascadeUpdates() ? CascadeRule.Cascade : CascadeRule.None);
-			foreignKey.setDeleteRule(relationship.cascadeDeletes() ? CascadeRule.Cascade : CascadeRule.None);
-			table.getConstraints().add(foreignKey);
+			final var key = MdbRelationshipSupport.toForeignKey(relationship);
+			MdbRelationshipSupport.bindColumns(key, table, relatedTable);
+			table.getConstraints().add(key);
 		}
 	}
 
-	private static DataType toDataType(final io.github.spannm.jackcess.DataType type) {
-		return switch (type) {
-		case BOOLEAN -> DataType.BOOLEAN;
-		case BYTE -> DataType.TINYINT;
-		case INT -> DataType.SMALLINT;
-		case LONG -> DataType.INT;
-		case BIG_INT -> DataType.BIGINT;
-		case MONEY, NUMERIC -> DataType.DECIMAL;
-		case FLOAT -> DataType.REAL;
-		case DOUBLE -> DataType.DOUBLE;
-		case SHORT_DATE_TIME, EXT_DATE_TIME -> DataType.DATETIME;
-		case BINARY -> DataType.VARBINARY;
-		case TEXT, GUID -> DataType.NVARCHAR;
-		case MEMO -> DataType.LONGNVARCHAR;
-		case OLE, COMPLEX_TYPE -> DataType.BLOB;
-		default -> DataType.OTHER;
-		};
-	}
 }

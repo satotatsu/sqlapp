@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.mdb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -41,6 +42,111 @@ class MdbSqlIntegrationTest {
 
 	@TempDir
 	Path tempDirectory;
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = { "V2000", "V2010" })
+	void generatedTableRenameAndAddedColumnPersistAcrossFormats(final String format) throws Exception {
+		final Path database = tempDirectory.resolve("rename-" + format + ("V2000".equals(format) ? ".mdb" : ".accdb"));
+		final Dialect dialect = DialectHolder.defaultDialect;
+		final Table original = new Table("変更前 Table");
+		original.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		original.getColumns().add(id);
+		original.getColumns().add(new Column("名称").setDataType(DataType.VARCHAR).setLength(40L));
+		original.setPrimaryKey("PK_RENAME", id);
+		original.getIndexes().add("IDX_RENAME", original.getColumns().get("名称"));
+		final Table detail = new Table("DETAIL");
+		detail.setDialect(dialect);
+		final Column parentId = new Column("PARENT_ID").setDataType(DataType.INT);
+		detail.getColumns().add(parentId);
+		detail.getConstraints().addForeignKeyConstraint("FK_RENAME", parentId, id);
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:ucanaccess://" + database.toAbsolutePath() + ";newDatabaseVersion=" + format)) {
+			execute(connection, dialect.createSqlFactoryRegistry().createSql(original, SqlType.CREATE));
+			execute(connection, dialect.createSqlFactoryRegistry().createSql(detail, SqlType.CREATE));
+			try (Statement statement = connection.createStatement()) {
+				statement.executeUpdate("INSERT INTO [変更前 Table] ([ID], [名称]) VALUES (1, 'retained')");
+				statement.executeUpdate("INSERT INTO [DETAIL] ([PARENT_ID]) VALUES (1)");
+			}
+			final Table target = original.clone().setName("変更後 Table");
+			assertEquals(1, dialect.createSqlFactoryRegistry().createSql(original.diff(target)).size());
+			target.getColumns().add(new Column("追加列").setDataType(DataType.INT));
+			final var operations = dialect.createSqlFactoryRegistry().createSql(original.diff(target));
+			assertEquals(2, operations.size());
+			execute(connection, operations);
+		}
+		final var schema = MdbFileLoader.load(database);
+		assertNull(schema.getTables().get("変更前 Table"));
+		final Table renamed = schema.getTables().get("変更後 Table");
+		assertNotNull(renamed);
+		assertNotNull(renamed.getColumns().get("追加列"));
+		assertNotNull(renamed.getIndexes().get("IDX_RENAME"));
+		assertEquals(1, renamed.getConstraints().getPrimaryKeyConstraint().getColumns().size());
+		final var rows = renamed.getRows().iterator();
+		assertTrue(rows.hasNext());
+		assertEquals("retained", rows.next().get("名称"));
+		assertFalse(rows.hasNext());
+		final var foreignKeys = schema.getTables().get("DETAIL").getConstraints().getForeignKeyConstraints();
+		assertEquals(1, foreignKeys.size());
+		final var foreignKey = foreignKeys.getFirst();
+		assertEquals("変更後 Table", foreignKey.getRelatedTableName());
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = { "V2000", "V2010" })
+	void jdbcMetadataPreservesTextAndAutoNumberAcrossFileFormats(final String format) throws Exception {
+		final Path database = tempDirectory.resolve(format + ("V2000".equals(format) ? ".mdb" : ".accdb"));
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:ucanaccess://" + database.toAbsolutePath() + ";newDatabaseVersion=" + format)) {
+			final Dialect dialect = com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(connection);
+			assertEquals("MS Jet", dialect.getProductName());
+			final Table table = createTable(dialect);
+			execute(connection, dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE));
+			final var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+			reader.setObjectName(table.getName());
+			final Table loaded = reader.getAllFull(connection).getFirst();
+			assertTrue(loaded.getColumns().get("ID").isIdentity());
+			assertNotNull(loaded.getConstraints().getPrimaryKeyConstraint());
+			final Column text = loaded.getColumns().get("DISPLAY_NAME");
+			assertEquals(DataType.VARCHAR, text.getDataType());
+			assertEquals(50L, text.getLength());
+			assertTrue(text.isNotNull());
+			assertNotNull(loaded.getIndexes().get("IDX_ORDER_DETAIL_NAME"), loaded.getIndexes().toString());
+		}
+	}
+
+	@Test
+	void explicitNullAndOmittedDefaultSurviveReopen() throws Exception {
+		final Path database = tempDirectory.resolve("defaults.accdb");
+		final Dialect dialect = DialectHolder.defaultDialect;
+		final Table table = new Table("DEFAULT TARGET");
+		table.setDialect(dialect);
+		final Column id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+		table.getColumns().add(id);
+		table.getColumns().add(
+				new Column("DISPLAY NAME").setDataType(DataType.VARCHAR).setLength(80L).setDefaultValue("'fallback'"));
+		table.setPrimaryKey("PK_DEFAULT_TARGET", id);
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:ucanaccess://" + database.toAbsolutePath() + ";newDatabaseVersion=V2010")) {
+			execute(connection, dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE));
+			try (PreparedStatement statement = connection
+					.prepareStatement("INSERT INTO [DEFAULT TARGET] ([ID], [DISPLAY NAME]) VALUES (?, ?)")) {
+				statement.setInt(1, 1);
+				statement.setNull(2, java.sql.Types.VARCHAR);
+				assertEquals(1, statement.executeUpdate());
+			}
+			try (Statement statement = connection.createStatement()) {
+				statement.executeUpdate("INSERT INTO [DEFAULT TARGET] ([ID]) VALUES (2)");
+			}
+		}
+		// Read the physical Access file independently of UCanAccess's HSQLDB mirror.
+		try (var file = new io.github.spannm.jackcess.DatabaseBuilder().withPath(database).withReadOnly(true).open()) {
+			final var rows = file.getTable("DEFAULT TARGET").iterator();
+			assertNull(rows.next().get("DISPLAY NAME"));
+			assertEquals("fallback", rows.next().get("DISPLAY NAME"));
+			assertFalse(rows.hasNext());
+		}
+	}
 
 	@Test
 	void generatedDdlDmlAndMetadataRoundTrip() throws Exception {
@@ -235,7 +341,7 @@ class MdbSqlIntegrationTest {
 			view.setStatement("SELECT ID, PARENT_ID FROM [CHILD TABLE]");
 			final UnsupportedOperationException viewError = assertThrows(UnsupportedOperationException.class,
 					() -> dialect.createSqlFactoryRegistry().createSql(view, SqlType.CREATE));
-			assertTrue(viewError.getMessage().contains("UCanAccess 5.1.6"));
+			assertTrue(viewError.getMessage().contains("UCanAccess 5.2.0"));
 
 			final UnsupportedOperationException indexError = assertThrows(UnsupportedOperationException.class,
 					() -> dialect.createSqlFactoryRegistry().createSql(index, SqlType.DROP));
@@ -315,12 +421,8 @@ class MdbSqlIntegrationTest {
 			renamed.getColumns().get("NEW_VALUE").setName("RENAMED_VALUE");
 			final UnsupportedOperationException renameError = assertThrows(UnsupportedOperationException.class,
 					() -> dialect.createSqlFactoryRegistry().createSql(indexed.diff(renamed)));
-			assertTrue(renameError.getMessage().contains("UCanAccess 5.1.6"));
+			assertTrue(renameError.getMessage().contains("UCanAccess 5.2.0"));
 
-			final Table renamedTable = indexed.clone().setName("RENAMED TABLE");
-			final UnsupportedOperationException tableRenameError = assertThrows(UnsupportedOperationException.class,
-					() -> dialect.createSqlFactoryRegistry().createSql(indexed.diff(renamedTable)));
-			assertTrue(tableRenameError.getMessage().contains("table rename"));
 		}
 
 		final Table loaded = MdbFileLoader.loadTable(database, "ALTER TARGET");

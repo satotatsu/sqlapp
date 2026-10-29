@@ -19,7 +19,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.db.dialect.mdb.util.MdbRelationshipSupport;
+import com.sqlapp.data.db.dialect.mdb.util.MdbColumnSupport;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
@@ -36,7 +37,6 @@ import io.github.spannm.jackcess.DatabaseBuilder;
 import io.github.spannm.jackcess.IndexBuilder;
 import io.github.spannm.jackcess.IndexCursor;
 import io.github.spannm.jackcess.PropertyMap;
-import io.github.spannm.jackcess.RelationshipBuilder;
 import io.github.spannm.jackcess.TableBuilder;
 
 /**
@@ -215,20 +215,7 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	/** Adds an Access relationship represented by a Schema foreign key. */
 	public void addRelationship(final ForeignKeyConstraint foreignKey) throws IOException {
 		ensureOpen();
-		final String childName = foreignKey.getTable().getName();
-		final RelationshipBuilder builder = new RelationshipBuilder(foreignKey.getRelatedTableName(), childName)
-				.withName(foreignKey.getName()).withReferentialIntegrity();
-		for (int i = 0; i < foreignKey.getColumns().size(); i++) {
-			builder.addColumns(foreignKey.getRelatedColumns().get(i).getName(),
-					foreignKey.getColumns().get(i).getName());
-		}
-		if (foreignKey.getUpdateRule() == CascadeRule.Cascade) {
-			builder.withCascadeUpdates();
-		}
-		if (foreignKey.getDeleteRule() == CascadeRule.Cascade) {
-			builder.withCascadeDeletes();
-		}
-		builder.toRelationship(database);
+		addRelationship(database, foreignKey);
 		dirty = true;
 	}
 
@@ -303,6 +290,8 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		try {
 			try (Database input = new DatabaseBuilder().withPath(source).withReadOnly(true).open();
 					Database output = DatabaseBuilder.create(input.getFileFormat(), target.toFile())) {
+				input.setDateTimeType(io.github.spannm.jackcess.DateTimeType.LOCAL_DATE_TIME);
+				output.setDateTimeType(io.github.spannm.jackcess.DateTimeType.LOCAL_DATE_TIME);
 				for (final Table model : targetSchema.getTables()) {
 					createTable(output, model);
 				}
@@ -437,7 +426,25 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		for (final Index index : model.getIndexes()) {
 			builder.addIndex(toIndexBuilder(index));
 		}
-		builder.toTable(database);
+		final var table = builder.toTable(database);
+		final var properties = table.getProperties();
+		if (model.getRemarks() != null) {
+			properties.put(PropertyMap.DESCRIPTION_PROP, model.getRemarks());
+		}
+		final String rule = tableValidationRule(model);
+		if (rule != null) {
+			properties.put(PropertyMap.VALIDATION_RULE_PROP, rule);
+		}
+		properties.save();
+	}
+
+	static String tableValidationRule(final Table table) {
+		final var checks = table.getConstraints().getCheckConstraints();
+		if (checks.isEmpty())
+			return null;
+		return checks.size() == 1 ? checks.getFirst().getExpression()
+				: checks.stream().map(check -> "(" + check.getExpression() + ")")
+						.collect(java.util.stream.Collectors.joining(" AND "));
 	}
 
 	private static void copyRows(final io.github.spannm.jackcess.Table source,
@@ -446,14 +453,20 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			return;
 		}
 		final List<Object[]> rows = new ArrayList<>();
+		final Map<String, String> sourceColumns = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		for (final var column : source.getColumns())
+			sourceColumns.put(column.getName(), column.getName());
 		for (final io.github.spannm.jackcess.Row sourceRow : source) {
 			final Object[] row = new Object[target.getColumnCount()];
 			for (final io.github.spannm.jackcess.Column targetColumn : target.getColumns()) {
+				if (targetColumn.isCalculated()) {
+					continue;
+				}
 				final String sourceName = mapping != null && mapping.containsKey(targetColumn.getName())
 						? mapping.get(targetColumn.getName())
 						: targetColumn.getName();
-				if (source.getColumn(sourceName) != null) {
-					row[targetColumn.getColumnIndex()] = sourceRow.get(sourceName);
+				if (sourceColumns.containsKey(sourceName)) {
+					row[targetColumn.getColumnIndex()] = sourceRow.get(sourceColumns.get(sourceName));
 				} else if (targetColumn.isAutoNumber()) {
 					row[targetColumn.getColumnIndex()] = io.github.spannm.jackcess.Column.AUTO_NUMBER;
 				}
@@ -468,23 +481,14 @@ public final class MdbJackcessSupport implements AutoCloseable {
 
 	private static void addRelationship(final Database database, final ForeignKeyConstraint foreignKey)
 			throws IOException {
-		final RelationshipBuilder builder = new RelationshipBuilder(foreignKey.getRelatedTableName(),
-				foreignKey.getTable().getName()).withName(foreignKey.getName()).withReferentialIntegrity();
-		for (int i = 0; i < foreignKey.getColumns().size(); i++) {
-			builder.addColumns(foreignKey.getRelatedColumns().get(i).getName(),
-					foreignKey.getColumns().get(i).getName());
-		}
-		if (foreignKey.getUpdateRule() == CascadeRule.Cascade) {
-			builder.withCascadeUpdates();
-		}
-		if (foreignKey.getDeleteRule() == CascadeRule.Cascade) {
-			builder.withCascadeDeletes();
-		}
-		builder.toRelationship(database);
+		MdbRelationshipSupport.toBuilder(foreignKey).toRelationship(database);
 	}
 
 	private static ColumnBuilder toColumnBuilder(final Column column) {
 		final ColumnBuilder builder = new ColumnBuilder(column.getName(), toJackcessType(column));
+		if (builder.getType() == io.github.spannm.jackcess.DataType.BINARY && column.getLength() != null) {
+			builder.withLength(Math.toIntExact(column.getLength()));
+		}
 		if (column.getLength() != null && column.getLength() > 0 && builder.getType().isTextual()
 				&& !builder.getType().isLongValue()) {
 			builder.withLengthInUnits(Math.toIntExact(column.getLength()));
@@ -496,6 +500,17 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			builder.withScale(column.getScale());
 		}
 		builder.withAutoNumber(column.isIdentity());
+		if (column.getFormula() != null && !column.getFormula().isBlank()) {
+			builder.withCalculatedInfo(column.getFormula());
+		}
+		final String allowZero = column.getSpecifics().get(MdbFileLoader.ALLOW_ZERO_LENGTH);
+		if (allowZero != null) {
+			if (!"true".equalsIgnoreCase(allowZero) && !"false".equalsIgnoreCase(allowZero)) {
+				throw new IllegalArgumentException(
+						"Invalid AllowZeroLength for column " + column.getName() + ": " + allowZero);
+			}
+			builder.withProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, Boolean.parseBoolean(allowZero));
+		}
 		if (column.isNotNull()) {
 			builder.withProperty(PropertyMap.REQUIRED_PROP, true);
 		}
@@ -511,9 +526,40 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		return builder;
 	}
 
-	private static io.github.spannm.jackcess.DataType toJackcessType(final Column column) {
+	static io.github.spannm.jackcess.DataType toJackcessType(final Column column) {
 		if (column.getDataType() == null) {
 			throw new IllegalArgumentException("Column data type is required: " + column.getName());
+		}
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.UUID)
+			return io.github.spannm.jackcess.DataType.GUID;
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.MONEY)
+			return io.github.spannm.jackcess.DataType.MONEY;
+		final String sourceType = column.getSpecifics().get(MdbFileLoader.SOURCE_TYPE);
+		if (sourceType != null) {
+			final var nativeType = io.github.spannm.jackcess.DataType.valueOf(sourceType);
+			final boolean shortText = switch (column.getDataType()) {
+			case CHAR, VARCHAR, NCHAR, NVARCHAR -> true;
+			default -> false;
+			};
+			boolean compatible = MdbColumnSupport.dataType(nativeType) == column.getDataType()
+					|| (nativeType == io.github.spannm.jackcess.DataType.TEXT
+							|| nativeType == io.github.spannm.jackcess.DataType.GUID) && shortText;
+			if (nativeType == io.github.spannm.jackcess.DataType.COMPLEX_TYPE || !nativeType.isSupported()) {
+				throw new UnsupportedOperationException(
+						"Cannot rebuild Access column type " + sourceType + ": " + column.getName());
+			}
+			if (nativeType == io.github.spannm.jackcess.DataType.MONEY
+					&& (column.getScale() != null && column.getScale() != 4
+							|| column.getLength() != null && column.getLength() != 19L)) {
+				compatible = false;
+			}
+			if (nativeType == io.github.spannm.jackcess.DataType.GUID && column.getLength() != null
+					&& column.getLength() != 38L) {
+				compatible = false;
+			}
+			if (compatible) {
+				return nativeType;
+			}
 		}
 		return switch (column.getDataType().getJdbcType()) {
 		case BOOLEAN, BIT -> io.github.spannm.jackcess.DataType.BOOLEAN;
