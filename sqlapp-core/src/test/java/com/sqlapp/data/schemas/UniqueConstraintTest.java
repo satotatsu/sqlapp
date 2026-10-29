@@ -21,6 +21,47 @@ package com.sqlapp.data.schemas;
 
 public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint> {
 	@org.junit.jupiter.api.Test
+	public void enabledUniqueDoesNotChangeColumnNullability() throws Exception {
+		Table table = new Table("items");
+		Column column = new Column("value").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNullable(true);
+		table.getColumns().add(column);
+		table.getConstraints().addUniqueConstraint("uq", false, column);
+		org.junit.jupiter.api.Assertions.assertFalse(column.isNotNull());
+		Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		org.junit.jupiter.api.Assertions.assertFalse(restored.getColumns().get("value").isNotNull());
+	}
+	@org.junit.jupiter.api.Test
+	public void preservesDisabledKeysAndNullableColumnsThroughTableXml() throws Exception {
+		for (boolean primary : new boolean[] {true, false}) {
+			Table table = new Table("items");
+			Column column = new Column("id").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNullable(true);
+			table.getColumns().add(column);
+			UniqueConstraint key = new UniqueConstraint("disabled_key", primary);
+			key.setEnable(false);
+			key.getColumns().add(column);
+			table.getConstraints().add(key);
+			org.junit.jupiter.api.Assertions.assertFalse(column.isNotNull());
+			Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			org.junit.jupiter.api.Assertions.assertFalse(restored.getConstraints().get("disabled_key").isEnable());
+			org.junit.jupiter.api.Assertions.assertFalse(restored.getColumns().get("id").isNotNull());
+		}
+	}
+
+	@org.junit.jupiter.api.Test
+	public void preservesDisabledNamedNotNullThroughTableXml() throws Exception {
+		Table table = new Table("items");
+		Column column = new Column("id").setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNullable(true);
+		table.getColumns().add(column);
+		NotNullConstraint constraint = new NotNullConstraint("disabled_nn");
+		constraint.setEnable(false);
+		constraint.setColumn(column);
+		table.getConstraints().add(constraint);
+		org.junit.jupiter.api.Assertions.assertFalse(column.isNotNull());
+		Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		org.junit.jupiter.api.Assertions.assertFalse(restored.getConstraints().getNotNullConstraints().get(0).isEnable());
+		org.junit.jupiter.api.Assertions.assertFalse(restored.getColumns().get("id").isNotNull());
+	}
+	@org.junit.jupiter.api.Test
 	public void preservesIncludesThroughXmlCloneAndDifference() throws Exception {
 		for (boolean primary : new boolean[] {true, false}) {
 			UniqueConstraint key = new UniqueConstraint("covering_key", primary);

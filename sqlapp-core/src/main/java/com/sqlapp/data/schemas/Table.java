@@ -201,7 +201,15 @@ public class Table extends AbstractSchemaObject<Table>
 				}
 			});
 		}
-		return super.setName(name);
+		super.setName(name);
+		if (childRelations != null) {
+			childRelations.forEach(key -> {
+				if (CommonUtils.eq(key.getRelatedTableName(), originalName)) {
+					key.setRelatedTableName(name);
+				}
+			});
+		}
+		return this;
 	}
 
 	/**

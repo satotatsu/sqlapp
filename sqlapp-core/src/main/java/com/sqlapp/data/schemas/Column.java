@@ -735,7 +735,7 @@ public final class Column extends AbstractColumn<Column>
 		}
 		columnsList.forEach(cc -> {
 			for (final Column column : cc) {
-				if (CommonUtils.eq(column.getName(), originalName)) {
+				if (column != this && CommonUtils.eq(column.getName(), originalName)) {
 					column.setName(name);
 				}
 			}

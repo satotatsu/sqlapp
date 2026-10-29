@@ -36,6 +36,24 @@ import com.sqlapp.util.StaxWriter;
 
 public class ColumnTest extends AbstractDbObjectTest<Column> {
 	@Test
+	void renamesForeignKeyColumnWithoutRecursing() {
+		final Schema schema = new Schema("APP");
+		final Table parent = new Table("P"); schema.getTables().add(parent);
+		final Column id = new Column("ID").setDataType(DataType.INT); parent.getColumns().add(id);
+		parent.setPrimaryKey("PK_P", id);
+		final Table child = new Table("C"); schema.getTables().add(child);
+		final Column parentId = new Column("PID").setDataType(DataType.INT); child.getColumns().add(parentId);
+		final var key = child.getConstraints().addForeignKeyConstraint("FK_C", parentId, id);
+		parentId.setName("PARENT_ID");
+		assertEquals("PARENT_ID", key.getColumns().getFirst().getName());
+		id.setName("KEY");
+		assertEquals("KEY", key.getRelatedColumns().getFirst().getName());
+		assertEquals("KEY", parent.getPrimaryKeyConstraint().getColumns().getFirst().getName());
+		parent.setName("PARENT");
+		assertEquals("PARENT", key.getRelatedTableName());
+		assertEquals(parent, key.getRelatedTable());
+	}
+	@Test
 	void namedIdentitySequenceSurvivesXml() throws Exception {
 		var column = new Column("ID").setDataType(DataType.INT).setIdentity(true);
 		column.setSequence(new Sequence("Named.Sequence").setSchemaName("Other.Schema"));

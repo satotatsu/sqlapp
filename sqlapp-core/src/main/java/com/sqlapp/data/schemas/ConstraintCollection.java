@@ -299,9 +299,11 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 				this.inner.remove(pk);
 			}
 		}
-		for (final ReferenceColumn column : uc.getColumns()) {
-			if (column.getColumn() != null) {
-				column.getColumn().setNotNull(true);
+		if (uc.isPrimaryKey() && uc.isEnable()) {
+			for (final ReferenceColumn column : uc.getColumns()) {
+				if (column.getColumn() != null) {
+					column.getColumn().setNotNull(true);
+				}
 			}
 		}
 		super.add(uc);

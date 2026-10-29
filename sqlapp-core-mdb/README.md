@@ -23,6 +23,8 @@ The Access-specific SQL generator supports:
 - table, primary-key and index creation without unsupported clauses
 - foreign-key creation with cascade update/delete behavior
 - schema-difference ALTER support for adding columns, constraints and indexes
+- table renaming through `ALTER TABLE ... RENAME TO`, including a rename
+  combined with adding columns without rebuilding unchanged indexes
 - prepared single-row INSERT, UPDATE, SELECT and DELETE generation
 - ordinal-based prepared parameter expressions, allowing Access column names
   containing spaces, Japanese text or punctuation in single-row CRUD
@@ -33,13 +35,59 @@ The Access-specific SQL generator supports:
 - truncate semantics through `DELETE FROM`, because Access has no `TRUNCATE`
 - Access cascade-rule capability reporting and mixed-case identifiers
 
-Generated SQL is intended for UCanAccess 5.1.6 and Access `.mdb`/`.accdb`
+Generated SQL is intended for UCanAccess 5.2.0 and Access `.mdb`/`.accdb`
 files. UCanAccess accepts multi-row `VALUES` even though older native Access
 interfaces do not expose all of the same syntax.
 
 ## Current limitation
 
-UCanAccess 5.1.6 uses Jackcess to access the database file. Some Access index
+The UCanAccess 5.2.0 upgrade also corrects JDBC metadata loading: direct
+UCanAccess connections are recognized before checking JDBC `Wrapper` methods
+(which delegate to HSQLDB), so Access AutoNumber flags are restored. Primary
+keys, foreign keys and secondary indexes are read from the physical Access
+file through the connection's Jackcess handle. This preserves original primary-key names,
+composite key order, index names, uniqueness, sort order and IgnoreNulls flags
+rather than exposing internal HSQLDB indexes. Readers support a single table
+or all tables and exact, case-insensitive constraint/index-name filters.
+Direct connections and JDBC wrappers exposing `unwrap(UcanaccessConnection.class)`
+use the same path. Other connections retain the generic JDBC fallback.
+UCanAccess table loading reads all columns with one JDBC metadata call, then
+loads keys, indexes and relationships in bulk from the file. It does not issue
+JDBC key/index queries per table. Physical relationship names, paired column
+order, cascade rules, `SET NULL` and referential-integrity enablement are
+retained. Relationship backing indexes (including hidden `.rB` indexes) are
+represented by the relationships instead of duplicated as independent indexes;
+Jackcess recreates them when rebuilding the file.
+
+File loading, JDBC metadata and direct Jackcess writers share the same
+relationship mapping. Direct `addRelationship` and `rebuild` preserve
+`ON DELETE SET NULL` and non-enforced relationships. Unsupported `SET DEFAULT`
+and `ON UPDATE SET NULL` rules fail explicitly. JDBC CREATE of a non-enforced
+relationship is rejected with a pointer to the direct writer, so it cannot
+silently become an enforced foreign key.
+
+UCanAccess 5.2.0 loads existing `SET NULL` relationships as `NO ACTION` in its
+internal SQL mirror in the tested MDB/ACCDB cases. The physical metadata still
+retains `SET NULL`, but deleting the referenced parent through JDBC fails.
+Close JDBC connections and use the direct Jackcess writer for these deletes;
+local tests verify that both columns of a composite child key become NULL.
+
+Local regression coverage includes Access 2000 `.mdb` and Access 2010 `.accdb`
+JDBC metadata, generated DDL/DML, AutoNumber propagation, and physical-file
+verification that explicit NULL stays NULL while an omitted column receives
+its default. Table-rename tests also verify retained rows, indexes and foreign
+key references after reopening the physical file. The generic Access resolver
+and existing public entry points are
+unchanged. Newer Access file formats and unsupported native features are not
+implied by this driver upgrade.
+
+UCanAccess 5.2.0 exposes short-text columns as JDBC `VARCHAR`. The MDB dialect
+recognizes this metadata spelling as `VARCHAR` with the reported length, while
+continuing to generate Access `TEXT` DDL. This prevents common transfer jobs
+from treating these columns as unsupported native types. The existing native
+`TEXT` spelling remains supported; no database-version resolver changed.
+
+UCanAccess 5.2.0 uses Jackcess to access the database file. Some Access index
 collations are not writable in that version. In particular, the Japanese
 collation used by `src/test/resources/AccessSample.accdb` is reported as an
 unsupported sort order and the affected indexes make that database read-only.
@@ -56,14 +104,70 @@ statement is still reused. Use explicit, non-AutoNumber keys when maximum
 parent/child loading throughput is required; those rows continue to use JDBC
 batching and reuse one prepared statement per SQL signature.
 
-UCanAccess 5.1.6 cannot persist `CREATE VIEW`, `DROP VIEW`, `DROP INDEX`,
-`DROP COLUMN`, `DROP CONSTRAINT`, table/column renames, or column-definition
+UCanAccess 5.2.0 cannot persist `CREATE VIEW`, `DROP VIEW`, `DROP INDEX`,
+`DROP COLUMN`, `DROP CONSTRAINT`, column renames, or column-definition
 changes through JDBC. The MDB SQL registry rejects these operations with an
 actionable `UnsupportedOperationException` instead of returning SQL that fails
-later. Destructive or modifying schema changes currently require rebuilding the
-Access table outside the JDBC dialect.
-Existing non-parameterized saved SELECT/UNION queries can still be loaded as
+later. These unsupported schema changes currently require rebuilding the
+Access table outside the JDBC dialect. Table renaming is supported and does
+not require rebuilding the file.
+Existing saved SELECT/UNION queries, including parameter declarations, can be loaded as
 Schema views by `MdbFileLoader`.
+
+## Schema changes with a single entry point
+
+`MdbSchemaMigration.rebuild` edits the shared Schema and creates a separate
+Access file using the existing direct writer:
+
+```java
+var result = MdbSchemaMigration.rebuild(source, target, schema -> {
+    var table = schema.getTables().get("ITEMS");
+    table.getColumns().get("TXT").setLength(100L);
+    table.getColumns().get("TXT").setName("DISPLAY_NAME");
+    table.getColumns().remove("OLD");
+});
+```
+
+The source is never replaced and an existing target is rejected. Table and
+column renames are inferred from retained Schema object identities. Optional
+`plan(source, target, editor)` and `execute(plan)` separate review and execution.
+The plan retains target Schema XML without row data, resolved rename mappings,
+and SHA-256 fingerprints of the source file and target schema. A changed source
+or modified schema fingerprint is rejected before writing. Results retain the
+plan, observed schema and per-table row counts. Verification covers table and
+column identities, native column types and properties, primary/foreign keys,
+indexes, saved-query names and row counts. It does not claim full data equality
+or saved-query SQL semantic equivalence. A failed post-write verification leaves
+the target for inspection and throws `MdbSchemaMigration.VerificationException`,
+which retains the plan, observed schema, row counts and all detected issues.
+Replacing the source remains an explicit `replaceWithRebuilt` operation with
+a caller-selected backup. Close all JDBC connections before this workflow.
+
+Linked tables, hidden queries and action/crosstab queries are rejected by the
+high-level planner because they cannot be preserved by this workflow. Update
+saved-query definitions explicitly when renaming tables/columns they reference;
+the saved-query writer rejects missing source tables. The lower-level rebuild
+overloads remain available for an explicitly supplied target Schema and maps.
+
+## Column metadata and type preservation
+
+File and JDBC metadata share Access-specific column enrichment: identity,
+required/default/description/validation properties, AllowZeroLength and
+calculated expressions. Primary-key and AutoNumber columns remain NOT NULL
+even when Access's separate Required property is false. `access.sourceType` retains the native type, while the
+existing portable Schema types remain available. Rebuild preserves compatible
+GUID, MONEY, BIG_INT and EXT_DATE_TIME native types instead of flattening them
+to text, NUMERIC or ordinary DATETIME. Native-type hints are ignored when the
+logical type is changed incompatibly; GUID length and MONEY precision/scale
+changes also select the requested ordinary type. Remove the native hint when
+explicitly changing between native types with the same logical representation.
+Access file-format restrictions still apply; rebuild retains the source format.
+
+Direct writes restore AllowZeroLength, column/table descriptions, validation
+rules, numeric precision/scale and calculated-column expressions. Calculated
+values are recomputed. MDB/ACCDB round-trip tests include native GUID, currency,
+23-digit NUMERIC values and V2019 BIGINT/extended datetime with sub-millisecond
+precision. JDBC text metadata retains its existing VARCHAR representation.
 
 ## Direct Jackcess complement
 
@@ -97,9 +201,14 @@ which is slow or unavailable through UCanAccess:
   file without the named secondary index, preserves the source file and rejects
   primary-key removal unless the caller supplies a complete target Schema.
 - `createSavedQuery` and `dropSavedQuery` write Access `MSysObjects` and
-  `MSysQueries` consistently. The initial supported creation grammar is a
-  non-parameterized SELECT over one table with optional WHERE/ORDER BY, or a
-  two-part UNION/UNION ALL. Rebuild restores these supported Schema views and
+  `MSysQueries` consistently. The supported grammar is a SELECT over one table,
+  or multiple tables joined by INNER/LEFT/RIGHT JOIN with optional aliases
+  and parenthesized join groups (including self joins with distinct aliases),
+  WHERE, GROUP BY, HAVING and ORDER BY, or a two-part UNION/UNION ALL.
+  An optional PARAMETERS clause accepts explicit scalar types (TEXT length
+  1–255, BYTE, SHORT, LONG, DATETIME, BOOLEAN, CURRENCY, SINGLE, DOUBLE, GUID).
+  Quoting-aware splitting preserves commas and UNION inside string literals.
+  Rebuild restores these supported Schema views and
   fails without leaving a target file if a definition cannot be represented.
 
 Close all UCanAccess connections to the file before opening the direct writer.
@@ -113,8 +222,10 @@ has no set-based update/delete API.
 
 Jackcess exposes no public saved-query writer API, so sqlapp's direct writer
 isolates the necessary catalog updates and deliberately accepts only the
-grammar described above. Parameterized queries, joins, GROUP BY/HAVING,
-crosstabs and action queries remain read-only. Access has no MERGE and the
+grammar described above. Parameterized queries retain their full executable
+definition and the `access.parameters` metadata. CROSS/FULL JOIN,
+TOP/DISTINCTROW, SQL comments, crosstabs and action queries remain unsupported
+by the saved-query writer. Access has no MERGE and the
 direct complement does not emulate it. Access file-version restrictions
 also apply to generated types; for example, BIGINT requires a sufficiently new
 ACCDB format. Complex columns, attachments and multi-value fields remain
@@ -123,6 +234,6 @@ outside the flat sqlapp Column model.
 Access SQL has no `MERGE` statement. Direct `SqlType.MERGE` generation is
 therefore rejected explicitly; use conditional INSERT or the data session's
 update-then-insert behavior where its transaction semantics are acceptable.
-UCanAccess 5.1.6 cannot resolve a whitespace-containing target column in
+UCanAccess 5.2.0 cannot resolve a whitespace-containing target column in
 `INSERT ... SELECT`; this affects the conditional-INSERT factory only. Regular
 prepared INSERT, UPDATE, SELECT and DELETE support such quoted column names.

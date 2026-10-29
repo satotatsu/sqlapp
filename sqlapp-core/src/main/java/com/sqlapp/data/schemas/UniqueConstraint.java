@@ -283,6 +283,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 		stax.indent();
 		stax.writeStartElement(PRIMARY_KEY_CONSTRAINT);
 		writeName(stax);
+		if (!isEnable()) stax.writeAttribute(SchemaProperties.ENABLE.getLabel(), false);
 		stax.writeAttribute(SchemaProperties.DEFERRABILITY.getLabel(), this.getDeferrability());
 		stax.writeAttribute(SchemaProperties.INDEX_TYPE.getLabel(), this.getIndexType());
 		writeCommonAttribute(stax);
