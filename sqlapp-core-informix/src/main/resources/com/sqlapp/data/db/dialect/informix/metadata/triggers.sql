@@ -1,18 +1,21 @@
 SELECT
-  DBINFO('dbname') AS catalog_name
-, tr.owner AS schema_name
+  TRIM(DBINFO('dbname')) AS catalog_name
+, TRIM(tr.owner) AS schema_name
 , tr.trigid AS trigger_id
 , tr.trigname AS trigger_name
 , tr.event AS trigger_event
+, s.state AS trigger_state
 , tr.old AS old_reference
 , tr.new AS new_reference
-, t.owner AS table_schema_name
+, TRIM(t.owner) AS table_schema_name
 , t.tabname AS table_name
 , b.datakey AS data_key
 , b.data AS trigger_text
 FROM systriggers tr
 INNER JOIN systables t
   ON (tr.tabid = t.tabid)
+LEFT JOIN sysobjstate s
+  ON (s.objtype='T' AND s.tabid=tr.tabid AND s.name=tr.trigname AND s.owner=tr.owner)
 LEFT JOIN systrigbody b
   ON (tr.trigid = b.trigid AND b.datakey IN ('D', 'A'))
 WHERE 1 = 1

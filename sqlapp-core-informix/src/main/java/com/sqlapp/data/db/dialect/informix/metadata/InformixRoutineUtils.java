@@ -18,6 +18,18 @@ final class InformixRoutineUtils {
 	private InformixRoutineUtils() {
 	}
 
+	static String specificName(final com.sqlapp.jdbc.ExResultSet rs, final String name) throws java.sql.SQLException {
+		final String specific = rs.getString("specific_name");
+		if (specific != null && !specific.isBlank())
+			return specific.stripTrailing();
+		final String types = rs.getString("routine_parameter_types");
+		if ((types == null || types.isBlank()) && rs.getInt("argument_count") > 0)
+			throw new IllegalStateException("Missing Informix routine parameter types: " + name);
+		// SPECIFIC is optional in Informix. A type signature gives unnamed overloads
+		// stable model identities.
+		return name + "(" + (types == null ? "" : types.strip()) + ")";
+	}
+
 	static void setArguments(final ArgumentRoutine<?> routine, final String definition) {
 		int open = definition.indexOf('(');
 		if (open < 0) {

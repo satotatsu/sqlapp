@@ -11,6 +11,7 @@ public class InformixCreateSequenceFactory extends AbstractCreateSequenceFactory
 	protected void addDataType(final Sequence obj, AbstractSqlBuilder<?> builder) {
 		// Informix sequences are signed 64-bit integers and have no AS clause.
 	}
+
 	@Override
 	protected void addCache(final Sequence obj, AbstractSqlBuilder<?> builder) {
 		if (obj.getCacheSize() < 0) {
@@ -24,11 +25,13 @@ public class InformixCreateSequenceFactory extends AbstractCreateSequenceFactory
 			super.addCache(obj, builder);
 		}
 	}
+
 	@Override
 	protected void addOptions(final Sequence obj, AbstractSqlBuilder<?> builder) {
 		if (!obj.isCache() && obj.getCacheSize() == null) {
 			builder.space()._add("NOCACHE");
 		}
+		builder.space()._add(obj.isOrder() ? "ORDER" : "NOORDER");
 	}
 
 }

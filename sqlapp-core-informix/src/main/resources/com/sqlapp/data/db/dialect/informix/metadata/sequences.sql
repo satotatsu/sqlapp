@@ -1,6 +1,6 @@
 SELECT
-  DBINFO('dbname') AS catalog_name
-, t.owner AS schema_name
+  TRIM(DBINFO('dbname')) AS catalog_name
+, TRIM(t.owner) AS schema_name
 , t.tabname AS sequence_name
 , s.start_val AS start_value
 , s.inc_val AS increment_value
@@ -8,6 +8,7 @@ SELECT
 , s.max_val AS maximum_value
 , s.cycle AS cycle_option
 , s.cache AS cache_size
+, s.order AS order_option
 FROM syssequences s
 INNER JOIN systables t
   ON (s.tabid = t.tabid)

@@ -26,8 +26,10 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.informix.metadata.InformixCatalogReader;
 import com.sqlapp.data.db.dialect.informix.sql.InformixSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.informix.util.InformixSqlBuilder;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
  * Informix固有情報クラス
@@ -36,6 +38,12 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  *
  */
 public class Informix extends Dialect {
+	/** Actual owner when it differs from the containing table's schema. */
+	public static final String OBJECT_OWNER = "INFORMIX_OBJECT_OWNER";
+	/**
+	 * Ordered catalog ALTER history applied after a routine's CREATE definition.
+	 */
+	public static final String ROUTINE_ALTER = "INFORMIX_ROUTINE_ALTER";
 	/**
 	 * serialVersionUID
 	 */
@@ -108,7 +116,7 @@ public class Informix extends Dialect {
 		});
 		// DateTime
 		getDbDataTypes().addDateTime("DATETIME YEAR TO SECOND", type -> {
-			type.setDefaultValueLiteral(getCurrentDateFunction());
+			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
 		});
 		// Time
 		getDbDataTypes().addTime("DATETIME HOUR TO SECOND", type -> {
@@ -116,9 +124,14 @@ public class Informix extends Dialect {
 		});
 		// Time
 		getDbDataTypes().addTimestamp("DATETIME YEAR TO FRACTION", type -> {
-			type.setCreateFormat("DATETIME YEAR TO FRACTION").setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setCreateFormat("DATETIME YEAR TO FRACTION(5)").setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
-		// Decimal
+		// DECIMAL without scale uses decimal floating-point semantics.
+		getDbDataTypes().addDecimalFloat("DECIMAL");
+		((com.sqlapp.data.db.datatype.DecimalFloatType) getDbDataTypes()
+				.getDbTypeStrict(com.sqlapp.data.db.datatype.DataType.DECIMALFLOAT)).setMaxPrecision(32)
+				.setDefaultPrecision(16);
+		// Fixed-scale decimal
 		getDbDataTypes().addDecimal(type -> {
 			type.setMaxPrecision(32).setMaxScale(32);
 		});
@@ -136,6 +149,19 @@ public class Informix extends Dialect {
 	@Override
 	public String getProductName() {
 		return "Informix Dynamic Server";
+	}
+
+	@Override
+	public java.util.Optional<com.sqlapp.data.db.datatype.util.TypeInformation> matchDbType(
+			final com.sqlapp.data.db.datatype.DataType dataType, final String productDataType, final Long precision,
+			final Integer scale) {
+		if (productDataType != null && "DECIMAL".equalsIgnoreCase(productDataType.strip()) && precision != null
+				&& scale != null) {
+			final String declaration = scale == 255 ? "DECIMAL(" + precision + ")"
+					: "DECIMAL(" + precision + "," + scale + ")";
+			return super.matchDbType(dataType, declaration, precision, scale == 255 ? null : scale);
+		}
+		return super.matchDbType(dataType, productDataType, precision, scale);
 	}
 
 	/*
@@ -163,7 +189,7 @@ public class Informix extends Dialect {
 
 	@Override
 	public String getIdentitySelectString() {
-		return "select SCOPE_IDENTITY()";
+		return "SELECT DBINFO('sqlca.sqlerrd1') FROM systables WHERE tabid=1";
 	}
 
 	@Override
@@ -188,12 +214,37 @@ public class Informix extends Dialect {
 
 	@Override
 	public String getIdentityColumnString() {
-		return "IDENTITY NOT NULL";
+		return "SERIAL";
 	}
 
 	@Override
 	public String getCurrentDateFunction() {
-		return "CAST(CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,121) AS DATETIME)";
+		return "TODAY";
+	}
+
+	@Override
+	public String getCurrentDateTimeFunction() {
+		return "CURRENT YEAR TO SECOND";
+	}
+
+	@Override
+	public String getCurrentTimeFunction() {
+		return "CURRENT HOUR TO SECOND";
+	}
+
+	@Override
+	public String getCurrentTimestampFunction() {
+		return "CURRENT YEAR TO FRACTION(5)";
+	}
+
+	@Override
+	public String getSelectDummyTableName() {
+		return "sysmaster:sysdual";
+	}
+
+	@Override
+	public AbstractSqlBuilder<?> createSqlBuilder() {
+		return new InformixSqlBuilder(this);
 	}
 
 	@Override

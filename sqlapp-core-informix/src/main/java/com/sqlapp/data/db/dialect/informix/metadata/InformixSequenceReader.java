@@ -41,9 +41,16 @@ public class InformixSequenceReader extends SequenceReader {
 				sequence.setIncrementBy(rs.getLong("increment_value"));
 				sequence.setMinValue(rs.getLong("minimum_value"));
 				sequence.setMaxValue(rs.getLong("maximum_value"));
-				sequence.setCycle(rs.getInt("cycle_option") != 0);
+				final String cycle = getString(rs, "cycle_option");
+				if (!"0".equals(cycle) && !"1".equals(cycle))
+					throw new IllegalStateException("Unknown Informix sequence cycle option: " + cycle);
+				sequence.setCycle("1".equals(cycle));
 				sequence.setCacheSize(rs.getLong("cache_size"));
 				sequence.setCache(sequence.getCacheSize() > 0);
+				final String order = getString(rs, "order_option");
+				if (!"0".equals(order) && !"1".equals(order))
+					throw new IllegalStateException("Unknown Informix sequence order option: " + order);
+				sequence.setOrder("1".equals(order));
 				result.add(sequence);
 			}
 		});

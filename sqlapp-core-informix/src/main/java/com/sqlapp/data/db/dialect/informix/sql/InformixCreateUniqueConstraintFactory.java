@@ -29,11 +29,11 @@ public class InformixCreateUniqueConstraintFactory
 			i++;
 		}
 		builder.space()._add(')');
-		if (obj.getName() != null) {
-			builder.space().constraint().space();
-			builder.name(obj, table == null && this.getOptions().isDecorateSchemaName());
-		}
+		InformixConstraintNames.append(obj, builder, getOptions().isDecorateSchemaName());
 		addDeferrability(obj, builder);
 		addAfter(obj, builder);
+		final String mode = com.sqlapp.data.db.dialect.informix.util.InformixConstraintModes.sql(obj);
+		if (mode != null)
+			builder.space()._add(mode);
 	}
 }

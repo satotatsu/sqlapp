@@ -1,6 +1,6 @@
 SELECT
-  DBINFO('dbname') AS catalog_name
-, t.owner AS schema_name
+  TRIM(DBINFO('dbname')) AS catalog_name
+, TRIM(t.owner) AS schema_name
 , t.tabname AS table_name
 , v.viewtext AS view_definition
 FROM systables t
