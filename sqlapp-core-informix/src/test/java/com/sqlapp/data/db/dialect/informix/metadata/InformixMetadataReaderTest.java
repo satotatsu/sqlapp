@@ -75,6 +75,7 @@ class InformixMetadataReaderTest {
 	}
 
 	static class Indexes extends InformixIndexReader {
+		final List<Map<String, Object>> indexHeaders = new ArrayList<>();
 		final List<Map<String, Object>> rows = new ArrayList<>();
 		final List<Map<String, Object>> routines = new ArrayList<>();
 		final List<Map<String, Object>> operatorClasses = new ArrayList<>();
@@ -95,6 +96,8 @@ class InformixMetadataReaderTest {
 				feed(operatorClasses, handler);
 			} else if (resource.equals("indexColumns.sql")) {
 				feed(rows, handler);
+			} else if (!indexHeaders.isEmpty()) {
+				feed(indexHeaders, handler);
 			} else {
 				final Map<List<Object>, Map<String, Object>> headers = new java.util.LinkedHashMap<>();
 				for (var row : rows)
@@ -360,5 +363,44 @@ class InformixMetadataReaderTest {
 			else
 				assertNull(mode);
 		}
+	}
+
+	@Test
+	void groupsIndexFragmentsAndRetainsSingleAndAttachedStorageInTwoQueries() {
+		final var reader = new Indexes();
+		for (int i = 0; i < 3; i++) {
+			for (int column = 1; column <= 2; column++)
+				reader.rows.add(indexRow("owner", "items" + i, "c" + column, column));
+			final var header = indexRow("owner", "items" + i, "c1", 1);
+			if (i != 0) {
+				header.put("storage_index_name", "ix");
+				header.put("storage_strategy", i == 1 ? "I" : "E");
+				header.put("storage_dbspace", "rootdbs");
+			}
+			if (i == 2) {
+				header.put("storage_partition", "p1");
+				header.put("storage_expression", "(c1 < 10)");
+				header.put("storage_position", 0);
+			}
+			reader.indexHeaders.add(header);
+			if (i == 2) {
+				final var second = new HashMap<>(header);
+				second.put("storage_partition", "p2");
+				second.put("storage_expression", "REMAINDER");
+				second.put("storage_position", 1);
+				reader.indexHeaders.add(second);
+			}
+		}
+		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(2, reader.queries);
+		assertEquals(3, indexes.size());
+		assertEquals("true", indexes.get(0).getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_IN_TABLE));
+		assertEquals("rootdbs", indexes.get(1).getTableSpaceName());
+		assertEquals(2, indexes.get(2).getPartitioning().getPartitions().size());
+		assertEquals("REMAINDER", indexes.get(2).getPartitioning().getPartitions().get(1).getSpecifics()
+				.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION));
+		reader.indexHeaders.get(0).put("storage_strategy", "N");
+		reader.indexHeaders.get(0).put("storage_dbspace", "rootdbs");
+		assertThrows(UnsupportedOperationException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
 	}
 }

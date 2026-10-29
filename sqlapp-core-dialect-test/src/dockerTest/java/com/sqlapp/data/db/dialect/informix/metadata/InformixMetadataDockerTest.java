@@ -529,6 +529,80 @@ class InformixMetadataDockerTest {
 	}
 
 	@Test
+	void recreatesIndexDbspacesExpressionFragmentsAndLegacyAttachedStorage() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
+				"in4mix"); var statement = connection.createStatement()) {
+			final String prefix = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+			try {
+				statement.execute("CREATE TABLE " + prefix + "(id INTEGER,a INTEGER,b INTEGER)");
+				statement.execute("INSERT INTO " + prefix + " VALUES(1,5,7)");
+				statement.execute("INSERT INTO " + prefix + " VALUES(2,15,8)");
+				statement.execute("CREATE INDEX " + prefix + "_single ON " + prefix + "(id) IN rootdbs");
+				statement.execute("CREATE INDEX " + prefix + "_expr ON " + prefix
+						+ "(a) FRAGMENT BY EXPRESSION PARTITION lo (a<10) IN rootdbs,PARTITION hi REMAINDER IN rootdbs");
+				statement.execute("CREATE INDEX " + prefix + "_attached ON " + prefix + "(b) IN TABLE");
+				final String catalog = "SELECT f.indexname,f.strategy,f.partition,f.exprtext,f.dbspace,f.evalpos FROM sysfragments f JOIN systables t ON t.tabid=f.tabid WHERE t.owner='informix' AND t.tabname='"
+						+ prefix + "' AND f.fragtype='I' ORDER BY f.indexname,f.evalpos";
+				final var original = new java.util.ArrayList<List<String>>();
+				try (var rows = statement.executeQuery(catalog)) {
+					while (rows.next())
+						original.add(java.util.Arrays.asList(rows.getString(1), rows.getString(2), rows.getString(3),
+								rows.getString(4), rows.getString(5), rows.getString(6)));
+				}
+				final var reader = new InformixIndexReader(DialectHolder.defaultDialect);
+				reader.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+				final var context = new ParametersContext();
+				context.put("schemaName", "informix");
+				context.put("tableName", prefix);
+				final AtomicInteger queries = new AtomicInteger();
+				final Connection counted = (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+						new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+							if (method.getName().equals("prepareStatement"))
+								queries.incrementAndGet();
+							try {
+								return method.invoke(connection, args);
+							} catch (java.lang.reflect.InvocationTargetException e) {
+								throw e.getCause();
+							}
+						});
+				final Table table = new Table(prefix).setSchemaName("informix");
+				for (String name : List.of("id", "a", "b"))
+					table.getColumns().add(name, c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+				table.getIndexes().addAll(reader.doGetAll(counted, context, null));
+				assertEquals(2, queries.get());
+				assertEquals(3, table.getIndexes().size());
+				assertEquals("rootdbs", table.getIndexes().get(prefix + "_single").getTableSpaceName());
+				assertEquals(2, table.getIndexes().get(prefix + "_expr").getPartitioning().getPartitions().size());
+				assertEquals("true", table.getIndexes().get(prefix + "_attached").getSpecifics()
+						.get(InformixIndexReader.INFORMIX_INDEX_IN_TABLE));
+				final Table restored = SchemaUtils.readXml(new StringReader(table.asXml()));
+				for (var index : restored.getIndexes()) {
+					statement.execute("DROP INDEX " + index.getName());
+					for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(index,
+							SqlType.CREATE))
+						statement.execute(operation.getSqlText());
+				}
+				final var recreated = new java.util.ArrayList<List<String>>();
+				try (var rows = statement.executeQuery(catalog)) {
+					while (rows.next())
+						recreated.add(java.util.Arrays.asList(rows.getString(1), rows.getString(2), rows.getString(3),
+								rows.getString(4), rows.getString(5), rows.getString(6)));
+				}
+				assertEquals(original, recreated);
+				try (var rows = statement.executeQuery("SELECT a FROM " + prefix + " ORDER BY a")) {
+					assertTrue(rows.next());
+					assertEquals(5, rows.getInt(1));
+					assertTrue(rows.next());
+					assertEquals(15, rows.getInt(1));
+				}
+			} finally {
+				statement.execute("DROP TABLE IF EXISTS " + prefix);
+			}
+		}
+	}
+
+	@Test
 	void loadsMetadataWithAReadOnlyNonDbaDatabaseUser() throws Exception {
 		final var client = INFORMIX.getDockerClient();
 		final var command = client.execCreateCmd(INFORMIX.getContainerId()).withUser("root").withAttachStdout(true)

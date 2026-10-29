@@ -9,6 +9,59 @@ source. These tasks are available in this checkout; use a plugin build containin
 them. The runnable [example](../examples/file-transfer/README.md) supplies runtime
 driver coordinates and connection values externally.
 
+Missing-table CREATE planning reports repeated source constraint or index names (such as
+Access `PrimaryKey`) as compatibility warnings and assigns stable, distinct
+target names derived from table and object identity. Keys, constraint rules and index
+columns, ordering and uniqueness remain intact;
+`compatibilityPolicy: ERROR` rejects the adjustment. Captured source metadata is
+not renamed.
+
+The GUI's optional **Include referenced tables** action adds foreign-key parents
+from the pinned captured Schema before saving a CSV job. Hidden rows can be
+included; review the selection count and clear the filter before saving. An
+unavailable parent (including a CSV-unsupported key/value type) leaves the whole
+selection unchanged. The action opens no connection and does not export data.
+The resulting ordinary YAML works with these Gradle tasks unchanged.
+
+Name-adjustment warnings use `[SCHEMA_NAME_ADJUSTED]` in the shared plan, audit
+report and SQL draft. The GUI summarizes their count and groups them under
+**Warnings → Target / Object names** with guidance for scripts or applications
+that refer to constraint/index names. These messages describe planned names;
+recorded DDL progress determines whether statements completed or have uncertain
+effects. Configuration and report structures remain compatible. Review again
+after updating because warning text is included in the Schema-plan fingerprint.
+
+For an Access source in the GUI, use **Access file migration → CSV package
+transfer** and select or drop the MDB/ACCDB file. The source JDBC URL is assembled
+automatically and **New Access CSV job…** creates the same shared job format.
+An Access database's unnamed schema is omitted from generated YAML rather than
+saved as an invalid blank schema. Review and import the completed package with
+only a target connection; the original Access file is not required during import.
+The generated job can be used unchanged by these Gradle tasks, with source and
+target connections supplied externally as usual.
+
+In the GUI, a successful **Review package and target** exposes **Schema SQL**
+when missing-table DDL exists. **Save SQL draft…** writes the displayed UTF-8
+snapshot with the actual target delimiter policy, warnings and job/plan pins;
+**Edit saved SQL…** opens it in the existing SQL editor. These actions open no
+database connection and do not start import or authorize execution. Review the
+package and target again after applying manual SQL to the target.
+
+Import-result drafts are available only when their manifest, plan and retained
+Schema statements/warnings match the captured review. They include the full
+planned SQL, completed count and uncertain attempt, so applied statements may
+be present. They are not resume scripts. Package members (including CSV files),
+captured import members and audit files are protected against save destinations
+that alias them. Input changes, inspection or another result clear the old saved
+file handoff. Saving leaves job/package bytes and integrity fingerprints unchanged.
+
+Java callers can use `TransferFileImportService.reviewWithSqlDraft`, returning
+a `SqlReview` with the ordinary `review` and nullable `schemaSqlDraft`. The existing
+review/execute API, public record components, CSV package format, audit JSON and
+Gradle properties remain unchanged. A null draft means there are no Schema SQL
+statements. Import still needs only the target connection; SQL capture uses the
+same metadata review and adds no source access.
+
 ```yaml
 formatVersion: 1
 source: from

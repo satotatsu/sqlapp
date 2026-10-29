@@ -193,7 +193,7 @@ class InformixCreateTableFactoryTest {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		final String sql = registry.createSql(restored, SqlType.CREATE).get(1).getSqlText().replaceAll("\\s+", " ");
 		assertTrue(sql.contains("\"Odd Column\" \"informix\".\"bts_varchar_ops\" DESC"), sql);
-		assertTrue(sql.contains("IN \"text_space\" USING \"informix\".\"bts\" (analyzer='keyword')"), sql);
+		assertTrue(sql.contains("USING \"informix\".\"bts\" (analyzer='keyword') IN \"text_space\""), sql);
 		index.getSpecifics()
 				.remove(com.sqlapp.data.db.dialect.informix.metadata.InformixIndexReader.INFORMIX_ACCESS_METHOD);
 		index.setIndexType(com.sqlapp.data.schemas.IndexType.BTree);

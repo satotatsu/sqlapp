@@ -28,6 +28,16 @@ review again to obtain a new pin before executing. Source rows are not transferr
 Partial changes may remain after failure, with no automatic reset, rollback or
 data restoration. Unsupported changes are unresolved warnings requiring manual work.
 
+For schema-only name changes, adjust `schema-only-mapped.yaml` and
+`name-mapping.yaml` to your captured source identifiers, then use
+`-PtransferJob=schema-only-mapped.yaml` on both commands. PK/FK/index references
+follow the mapped names; source SQL expressions remain verbatim with a warning.
+Review the generated SQL. Keep both files together; the mapping path resolves
+from the original job folder. For direct copy with the same name mapping, use
+`-PtransferJob=direct-mapped.yaml` on both commands. Source tables require NOT NULL
+keys, mapped targets must be empty and compatible (or absent with CREATE_MISSING),
+and copied data is verified by default. CSV name mapping remains unsupported.
+
 Review only:
 
 ```text
@@ -44,6 +54,10 @@ gradle transferDatabase -PsqlappVersion=<version> -PsourceDialect=<dialect-coord
 ```
 
 Execution performs a fresh live review rather than replaying a saved report.
+The configuration pin covers job bytes, not mapping-file bytes across separate
+task invocations. Inspect a new review after editing either file. Within each
+review/execute operation, original and captured mapping fingerprints are checked
+and changes invalidate that review.
 Inspect `transfer-result.json`, including on failure. Previously committed rows
 and created objects may remain; no automatic reset or replay is performed. Both credentials and
 drivers are runtime inputs. The source/target DataSources are command-owned by

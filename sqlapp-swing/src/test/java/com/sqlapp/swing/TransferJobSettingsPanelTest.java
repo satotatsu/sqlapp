@@ -92,6 +92,29 @@ class TransferJobSettingsPanelTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
+	void nameMappingSavesRelativePathAndCanBeCleared(boolean schemaOnly) throws Exception {
+		var file = Files.writeString(directory.resolve("names.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\ndataMode: "
+						+ (schemaOnly ? "SCHEMA_ONLY" : "JDBC_DIRECT") + "\nschemaMode: CREATE_MISSING\n");
+		for (String mapping : java.util.List.of("maps/名前.yaml", "")) {
+			var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+			var panel = load(file, saved);
+			var done = new CountDownLatch(1);
+			SwingUtilities.invokeAndWait(() -> {
+				assertTrue(panel.mappingFile.isShowing() || panel.mappingFile.getParent().isVisible());
+				assertNotNull(panel.mappingFile.getTransferHandler());
+				panel.mappingFile.setText(mapping);
+				onIdle(panel, done);
+				panel.save.doClick(0);
+			});
+			assertTrue(done.await(5, TimeUnit.SECONDS));
+			assertNotNull(saved.get());
+			assertEquals(mapping.isEmpty() ? null : mapping, io.read(file).configuration().mappingFile());
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
 	void savesEditableSettingsAndPreservesSelectionsRelativePathsAndAdvancedOptions(boolean fileTransport)
 			throws Exception {
 		final var file = job();

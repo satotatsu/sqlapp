@@ -21,6 +21,17 @@ class TransferWarningTabsTest {
 	}
 
 	@Test
+	void nameMappingWarningExplainsUnchangedExpressionsAndDraftLimits() {
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COMPLETE,
+				null, false, Map.of(), Map.of(), null, null, new TransferSchemaPreparation.Progress(List.of(), 0, null,
+						List.of(TransferSchemaChangeChecks.MAPPING_EXPRESSIONS + " fixture")));
+		var row = TransferWarningTabs.rows(outcome).getFirst();
+		assertEquals("Target / Name mapping", row.getFirst());
+		assertTrue(row.get(4).contains("retain source identifiers verbatim"));
+		assertTrue(row.get(4).contains("does not change the reviewed job"));
+	}
+
+	@Test
 	void exportIdentityAndMessageArePreservedWithoutParsing() {
 		var row = TransferWarningTabs.rows(snapshot()).getFirst();
 		assertEquals(List.of("Package export", "customers", "ID", "Review precision\nFull detail"), row.subList(0, 4));

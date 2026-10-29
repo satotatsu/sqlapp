@@ -35,6 +35,7 @@ public class InformixIndexReader extends JdbcIndexReader {
 	public static final String INFORMIX_OPERATOR_CLASS = "INFORMIX_OPERATOR_CLASS";
 	public static final String INFORMIX_OPERATOR_CLASS_OWNER = "INFORMIX_OPERATOR_CLASS_OWNER";
 	public static final String INFORMIX_INDEX_EXPRESSION = "INFORMIX_INDEX_EXPRESSION";
+	public static final String INFORMIX_INDEX_IN_TABLE = "INFORMIX_INDEX_IN_TABLE";
 
 	record Metadata(Index index, String constraintName, int accessMethod) {
 	}
@@ -49,13 +50,26 @@ public class InformixIndexReader extends JdbcIndexReader {
 			final boolean uniqueConstraints) {
 		final List<Metadata> result = new ArrayList<>();
 		final List<InformixIndexColumns> keys = new ArrayList<>();
+		final Map<List<String>, Index> headers = new LinkedHashMap<>();
 		final Set<Integer> routineIds = new LinkedHashSet<>();
 		final Set<Integer> operatorClassIds = new LinkedHashSet<>();
 		query(connection, uniqueConstraints ? "uniqueConstraints.sql" : "indexes.sql", context,
 				new ResultSetNextHandler() {
 					@Override
 					public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+						final var identity = java.util.Arrays.asList(getString(rs, CATALOG_NAME),
+								getString(rs, SCHEMA_NAME), getString(rs, TABLE_NAME), getString(rs, "index_owner"),
+								getString(rs, INDEX_NAME), uniqueConstraints ? getString(rs, CONSTRAINT_NAME) : null);
+						final var existing = headers.get(identity);
+						if (existing != null) {
+							if (!uniqueConstraints)
+								readStorage(rs, existing);
+							return;
+						}
 						final Index index = new Index(getString(rs, INDEX_NAME));
+						if (!uniqueConstraints)
+							readStorage(rs, index);
+						headers.put(identity, index);
 						index.setCatalogName(getString(rs, CATALOG_NAME));
 						index.setSchemaName(getString(rs, SCHEMA_NAME));
 						index.setTableName(getString(rs, TABLE_NAME));
@@ -142,6 +156,43 @@ public class InformixIndexReader extends JdbcIndexReader {
 					result.get(i).accessMethod(), getDialect().createSqlBuilder());
 		}
 		return result;
+	}
+
+	private void readStorage(final ExResultSet rs, final Index index) throws SQLException {
+		final String strategy = getString(rs, "storage_strategy");
+		if (strategy == null) {
+			if (getString(rs, "storage_index_name") != null)
+				throw new IllegalStateException("Missing Informix index storage strategy: " + index.getName());
+			index.getSpecifics().put(INFORMIX_INDEX_IN_TABLE, "true");
+			return;
+		}
+		final String dbspace = getString(rs, "storage_dbspace");
+		if (dbspace == null || dbspace.isBlank())
+			throw new IllegalStateException("Missing Informix index dbspace: " + index.getName());
+		if ("I".equals(strategy)) {
+			if (index.getPartitioning() != null
+					|| index.getTableSpaceName() != null && !index.getTableSpaceName().equals(dbspace))
+				throw new IllegalStateException("Conflicting Informix index storage: " + index.getName());
+			index.setTableSpaceName(dbspace);
+			return;
+		}
+		if (!"E".equals(strategy))
+			throw new UnsupportedOperationException(
+					"Unsupported Informix index fragmentation strategy " + strategy + ": " + index.getName());
+		if (index.getTableSpaceName() != null || rs.getInt("storage_position") < 0)
+			throw new UnsupportedOperationException(
+					"Unsupported hierarchical Informix index fragmentation: " + index.getName());
+		if (index.getPartitioning() == null) {
+			index.setPartitioning(new com.sqlapp.data.schemas.Partitioning());
+			index.getPartitioning().getSpecifics().put(InformixTableReader.INFORMIX_FRAGMENT_STRATEGY, "E");
+		}
+		final String expression = rs.getString("storage_expression");
+		if (expression == null || expression.isBlank())
+			throw new IllegalStateException("Missing Informix index fragment expression: " + index.getName());
+		final var partition = new com.sqlapp.data.schemas.Partition(getString(rs, "storage_partition"));
+		partition.setTableSpaceName(dbspace);
+		partition.getSpecifics().put(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION, expression);
+		index.getPartitioning().getPartitions().add(partition);
 	}
 
 	protected void query(final Connection connection, final String resource, final ParametersContext context,

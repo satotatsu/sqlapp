@@ -44,6 +44,19 @@ change does not claim a successful Informix 15 integration run.
   representation and are excluded from standalone index generation.
   Configure target violations/diagnostics tables explicitly before filtering DML;
   their associations are not recreated by the index factory.
+- Standalone index storage is joined from `sysfragments` in that same header
+  SELECT. Multiple fragment rows are grouped by catalog, table/schema, index
+  owner and index identity before key resolution, so query counts remain at
+  two to four SELECTs. Single-dbspace indexes retain `Index.tableSpaceName`;
+  EXPRESSION fragments retain ordered names, expressions and dbspaces in
+  `Index.partitioning` using the existing Informix fragment specifics. Legacy
+  attached indexes without index-fragment catalog rows retain
+  `INFORMIX_INDEX_IN_TABLE=true` and generate IN TABLE. Conflicting storage
+  settings, missing fragment data, other fragmentation strategies and
+  hierarchical index layouts fail explicitly. Storage clauses follow USING
+  access-method clauses and precede index modes in CREATE INDEX.
+  This applies to standalone indexes; constraint-backed index storage is not
+  added to the existing constraint representation by this change.
 - SERIAL, SERIAL8 and BIGSERIAL identity columns use native types without a generated
   identity clause. Non-unit identity increments are rejected. The legacy
   `getIdentitySelectString()` returns the last SERIAL value using
@@ -200,6 +213,8 @@ compatible; the existing optional `enable` attribute is now also written for a
 disabled primary key.
 Re-read standalone index metadata from artifacts that omitted disabled or
 filtering modes; the existing default enabled state remains compatible.
+Re-read index metadata to recover dbspace placement, EXPRESSION fragments and
+legacy IN TABLE storage; older artifacts did not retain these distinctions.
 Re-read sequence/synonym metadata to recover sequence ordering, synonym ANSI
 mode and local-versus-cross-database target identity from earlier artifacts.
 
@@ -228,6 +243,11 @@ then verify catalog state and actual firing after XML recreation.
 Index-mode tests retain ordinary disabled indexes and all four UNIQUE index
 modes through XML, recreate disabled UNIQUE indexes over existing duplicates,
 and check rejection, acceptance and violations-table routing of duplicate rows.
+Index-storage tests recreate single-dbspace, two named EXPRESSION fragments
+including REMAINDER, and legacy IN TABLE indexes over existing rows; compare
+their sysfragments records before/after XML recreation; and retain the same
+two-query bound. Unit tests also cover quoted fragment names, grouping and
+conflicting storage options.
 Whole-schema coverage uses the public SchemaReader.loadFull entry point, XML,
 then an explicit dependency order for object recreation. It exercises related
 tables and FK/CHECK/NOT NULL, defaults, disabled indexes, views, routines,

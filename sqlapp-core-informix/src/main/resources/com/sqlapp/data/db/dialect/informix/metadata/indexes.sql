@@ -12,9 +12,16 @@ SELECT
 , i.amparam AS access_parameters
 , am.am_name AS access_method_name
 , TRIM(am.am_owner) AS access_method_owner
+, f.indexname AS storage_index_name
+, f.strategy AS storage_strategy
+, f.partition AS storage_partition
+, f.exprtext AS storage_expression
+, f.dbspace AS storage_dbspace
+, f.evalpos AS storage_position
 FROM systables t
 INNER JOIN sysindices i ON i.tabid=t.tabid
 LEFT JOIN sysams am ON am.am_id=i.amid
+LEFT JOIN sysfragments f ON f.fragtype='I' AND f.tabid=i.tabid AND f.indexname=i.idxname
 LEFT JOIN sysobjstate s ON s.objtype='I' AND s.tabid=i.tabid AND s.name=i.idxname AND s.owner=i.owner
 WHERE t.tabtype='T'
   AND NOT EXISTS (SELECT 1 FROM sysconstraints con WHERE con.tabid=i.tabid AND con.idxname=i.idxname AND con.constrtype IN ('P','U','R'))
@@ -30,4 +37,4 @@ WHERE t.tabtype='T'
   /*if isNotEmpty(indexName)*/
   AND i.idxname IN /*indexName*/('%')
   /*end*/
-ORDER BY t.owner,t.tabname,i.idxname
+ORDER BY t.owner,t.tabname,i.idxname,f.evalpos

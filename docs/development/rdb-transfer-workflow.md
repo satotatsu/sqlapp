@@ -15,6 +15,11 @@ GUI. Saving a job never starts a migration.
 Schema version migrations, SQL editing and artifact inspection remain available
 as supporting tools rather than the primary product navigation.
 
+The [data-migration UX and priorities](data-migration-plan.md)
+describe the planned improvements to this workflow.
+The next substantial gap is shared table/column mapping with a guided review,
+not a GUI-only interpretation of the saved job.
+
 ## Default compatibility policy: try, inspect and refine
 
 The normal migration workflow should let users attempt a transfer and then fix

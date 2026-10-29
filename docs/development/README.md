@@ -10,6 +10,7 @@
 | Refresh the generated product previews | [Demo previews](build-and-test.md#refresh-readme-demo-previews) |
 | Check copied HTML and SVG navigation | [Generated example checks](build-and-test.md#check-the-saved-gradle-html-example) |
 | Review planned work | [Roadmap](roadmap.md) |
+| Review migration UX and mapping priorities | [Data migration plan](data-migration-plan.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
 | Read and recreate PostgreSQL-only schema objects | [PostgreSQL schema objects](postgresql-schema-objects.md) |
 | Review Firebird metadata, version boundaries and DDL recreation | [Firebird dialect coverage](firebird-dialect-parity.md) |

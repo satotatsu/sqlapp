@@ -69,6 +69,9 @@ final class TransferWarningTabs {
 			} else if (warning.startsWith(TransferSchemaChangeChecks.NAME_ADJUSTMENT)) {
 				category = "Target / Object names";
 				action = "Compare the source and target names in this message and Schema SQL. Check scripts or application code that refer to constraint/index names. Source Schema retains the original names. This warning does not confirm SQL execution.";
+			} else if (warning.startsWith(TransferSchemaChangeChecks.MAPPING_EXPRESSIONS)) {
+				category = "Target / Name mapping";
+				action = "Compare the mapping with Schema SQL. SQL expressions retain source identifiers verbatim; inspect checks, defaults, generated expressions and predicates. Saving an edited SQL draft does not change the reviewed job or authorize execution.";
 			}
 			rows.add(List.of(category, "", "", warning, action));
 		}

@@ -11,6 +11,38 @@ rules. Existing Data Job tasks and formats are unchanged.
 
 ## Copy only table definitions, including between different database products
 
+In the GUI table picker, **Include referenced tables** can expand a selection to
+its foreign-key parents using only the pinned captured Schema. Review the added
+selection before saving the shared YAML; the action neither saves nor executes
+a job. A missing, ambiguous or ineligible parent leaves the selection unchanged.
+Schema-only mode permits keyless definitions, while data-copy requirements and
+the shared planner's cycle/order checks remain in force. References outside the
+captured Schema require another capture or explicit configuration, not a live
+database lookup from this helper.
+
+Java callers can use
+`BulkMigrationJobDraftBuilder.includeReferencedTables(snapshot, selection)`
+to obtain the same expanded canonical table IDs, then pass them to the existing
+draft/save API. The helper does not infer data fingerprints, eligibility or
+execution order.
+
+For missing-table creation, repeated constraint or index names across selected source
+tables (for example Access `PrimaryKey`) receive distinct, stable target names
+derived from their table and object identity. Constraint columns and rules, index
+columns, ordering and uniqueness remain
+unchanged and each adjustment is a compatibility warning; `ERROR` policy rejects
+it. Source Schema metadata is retained. This normalization is limited to CREATE
+planning and does not rename objects during optional difference application.
+
+These warnings carry the stable `[SCHEMA_NAME_ADJUSTED]` code in shared review
+and execution reports and generated SQL drafts. The GUI highlights their count
+and categorizes them as **Target / Object names**. Compare original and target
+names in each message and inspect scripts/application references to object names.
+The code is planning evidence, not confirmation that DDL was executed. Existing
+configuration and report shapes remain unchanged; review again after updating,
+because coded warning text participates in Schema-plan fingerprints. Older
+uncoded report messages are retained as generic compatibility warnings.
+
 ```yaml
 formatVersion: 1
 source: from
@@ -53,6 +85,74 @@ version 1 remain available; `SCHEMA_ONLY` is an additive enum value. Older
 versions cannot consume jobs using it. No module dependency was added.
 
 See [the schema-only example](../examples/direct-transfer/schema-only.yaml).
+
+<a id="optionally-map-table-and-column-names-schema-only"></a>
+
+### Optionally map table and column names
+
+Add `mappingFile: maps/names.yaml` to a `SCHEMA_ONLY` or `JDBC_DIRECT` job, or choose/drop that
+file in **Job settings… → Name mapping YAML**. Relative paths resolve from the
+original saved job folder. The GUI's Gradle handoff uses that same original job.
+The optional UTF-8 mapping file is limited to 1 MiB:
+
+```yaml
+formatVersion: 1
+tables:
+  PUBLIC.CUSTOMERS:
+    targetTable: customers_copy
+    columns:
+      ID: customer_id
+  PUBLIC.ORDERS:
+    targetTable: orders_copy
+    columns:
+      CUSTOMER_ID: customer_id
+```
+
+Keys identify source tables and source columns. Omitted names remain unchanged;
+`targetSchema` in the job controls the target namespace. Japanese names and spaces
+are retained. Source table identities must resolve uniquely within the captured
+Schema, and every mapping must refer to a selected table. Include all referenced
+parents from the same source schema. Unknown fields/columns, duplicate rules and
+case-insensitive target-name collisions fail explicitly before execution.
+
+The common Schema projection updates PK/unique/FK columns and index/include
+columns together, retaining composite-key order and index options. It leaves the
+original Schema XML unchanged. Name mappings support both `CREATE_MISSING` and
+`APPLY_DIFFERENCES`; differences compare the desired mapped names with the target,
+and do **not** infer an ALTER RENAME. Existing destructive-change guards still
+apply. Types, values and SQL expressions are not transformed. When names change,
+`[SCHEMA_MAPPING_EXPRESSIONS]` warns that checks, defaults, generated expressions
+and predicates remain verbatim; inspect the generated SQL. `ERROR` policy rejects
+this warning, while `WARN` permits trying the DDL and refining the configuration.
+
+Review artifacts retain the mapping bytes as `transfer-mapping.yaml`. Both the
+original mapping and captured copy are fingerprinted and checked before execution;
+even a comment edit requires another review. Keep the original job and mapping
+together for GUI/Gradle reuse. The private captured job is audit evidence, not a
+relocated standalone configuration. Existing job format/version and public result
+record shapes are unchanged; `TransferNameMappingIO` is an additive Java API.
+Across separate Gradle invocations, the configuration pin covers job bytes;
+execution performs its own fresh review and does not replay an earlier report.
+Inspect a new review after changing the mapping. See the
+[mapped job example](../examples/direct-transfer/schema-only-mapped.yaml).
+For `JDBC_DIRECT`, the same mapping is resolved into the generated bulk job's
+`targetTable` and `columnMappings`. Source queries and keyset order retain original
+identifiers; INSERT, empty-target/PK checks and post-copy verification use mapped
+target identifiers. NOT NULL source-key requirements, identity/NULL preservation,
+transaction chunks, parent-first ordering and no automatic replay are unchanged.
+Use `CREATE_MISSING` to prepare absent mapped tables, or `REQUIRE_EXISTING` to copy
+into already compatible empty mapped targets. Source expressions are unused when
+no DDL is prepared; name changes alone do not produce an expression warning in
+`REQUIRE_EXISTING` mode. Data transfer does not apply Schema differences.
+
+The generated data job pins the mapping's raw-byte fingerprint in a YAML comment;
+its own byte fingerprint is checked during revalidation and before copy. Original
+and captured mappings must still match that pin, including comment-only edits.
+The bulk execution plan fingerprint retains its existing semantics. See the
+[direct copy example](../examples/direct-transfer/direct-mapped.yaml).
+CSV export/import still reject `mappingFile` explicitly.
+An interactive mapping editor, target-type overrides and value conversion remain
+future work.
 
 ### Optionally apply differences to existing selected tables
 
@@ -118,6 +218,24 @@ Schema objects remain outside this feature. Use SQL migration planning for a
 hand-reviewed script/history or data restoration strategy.
 
 See [the optional-difference example](../examples/direct-transfer/schema-differences.yaml).
+
+### Manual Schema SQL drafts
+
+The Direct JDBC GUI can save its displayed **Schema SQL** draft and open it in
+the SQL editor. The draft uses the actual target delimiter policy and retains
+warnings and job/plan fingerprints. Result drafts additionally identify execution
+progress and include already-applied SQL; they are not automatic retry scripts.
+Manual editing/execution is separate from `transferDatabase` and does not change
+or authorize the shared job. Review any versioned SQL migration before applying it.
+
+Java callers can opt into `TransferJobExecutionService.reviewWithSqlDraft`, whose
+`SqlReview` contains the ordinary `review` plus nullable `schemaSqlDraft` (null
+when no Schema SQL exists). `TransferSchemaSqlScript.render` provides the same
+serialization for a plan and an explicit target dialect. The existing `review`,
+`Prepared`/`Review` record components, execution API, configuration and audit JSON
+formats are unchanged. The optional draft is captured while the target dialect
+is known; saving it needs no new database access. A fresh review is required for
+GUI export. No Gradle task property or module dependency was added.
 
 ```yaml
 formatVersion: 1
@@ -236,7 +354,8 @@ succeeded. Inspect retained results before retrying. Credentials and JDBC URLs
 are not written to the job/review/result. Runtime driver logging follows its own
 configuration.
 
-This adapter requires `JDBC_DIRECT` and no explicit `mappingFile`. It does
+This adapter accepts `JDBC_DIRECT` or `SCHEMA_ONLY`, including optional `mappingFile`.
+It does
 not claim complete heterogeneous conversion. Embedded tests use HSQL databases,
 including different product-label fixtures to exercise WARN/ERROR; actual
 heterogeneous servers have not been tested here. The desktop primary direct

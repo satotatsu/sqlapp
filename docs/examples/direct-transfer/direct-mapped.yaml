@@ -1,0 +1,10 @@
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.CUSTOMERS, PUBLIC.ORDERS]
+dataMode: JDBC_DIRECT
+schemaMode: CREATE_MISSING
+mappingFile: name-mapping.yaml
+# Adjust both files to your captured Schema. Data copy requires NOT NULL keys.
+# verify defaults to true; existing targets must be compatible and empty.
+# targetSchema: public

@@ -42,12 +42,11 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 		final String method = index.getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD);
 		final String owner = index.getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD_OWNER);
 		final String parameters = index.getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_PARAMETERS);
-		if (index.getTableSpaceName() != null)
-			builder.space()._add("IN").space().name(index.getTableSpaceName());
 		if (method == null) {
 			if (owner != null || parameters != null)
 				throw new IllegalArgumentException(
 						"Informix access-method parameters/owner require a method name: " + index.getName());
+			addStorage(index, builder);
 			addMode(index, builder);
 			return;
 		}
@@ -60,7 +59,54 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 		builder.name(method);
 		if (parameters != null && !parameters.isBlank())
 			builder.space()._add('(')._add(parameters)._add(')');
+		addStorage(index, builder);
 		addMode(index, builder);
+	}
+
+	private void addStorage(final Index index, final AbstractSqlBuilder<?> builder) {
+		final String attached = index.getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_IN_TABLE);
+		if (attached != null && !java.util.Set.of("true", "false").contains(attached))
+			throw new IllegalArgumentException("Invalid Informix IN TABLE flag: " + attached);
+		if ("true".equals(attached)) {
+			if (index.getTableSpaceName() != null || index.getPartitioning() != null)
+				throw new IllegalArgumentException(
+						"Informix IN TABLE conflicts with detached index storage: " + index.getName());
+			builder.space()._add("IN TABLE");
+			return;
+		}
+		if (index.getPartitioning() == null) {
+			if (index.getTableSpaceName() != null) {
+				if (index.getTableSpaceName().isBlank())
+					throw new IllegalArgumentException("Blank Informix index dbspace");
+				builder.space()._add("IN").space().name(index.getTableSpaceName().replace("\"", "\"\""));
+			}
+			return;
+		}
+		final var partitioning = index.getPartitioning();
+		if (index.getTableSpaceName() != null || !"E".equals(partitioning.getSpecifics()
+				.get(com.sqlapp.data.db.dialect.informix.metadata.InformixTableReader.INFORMIX_FRAGMENT_STRATEGY)))
+			throw new IllegalArgumentException(
+					"Informix index fragmentation requires EXPRESSION and no single dbspace: " + index.getName());
+		if (partitioning.getPartitions().isEmpty())
+			throw new IllegalArgumentException("Informix index fragments are required: " + index.getName());
+		builder.space()._add("FRAGMENT BY EXPRESSION");
+		int position = 0;
+		for (var partition : partitioning.getPartitions()) {
+			final String expression = partition.getSpecifics()
+					.get(com.sqlapp.data.db.dialect.informix.metadata.InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION);
+			if (expression == null || expression.isBlank() || partition.getTableSpaceName() == null
+					|| partition.getTableSpaceName().isBlank())
+				throw new IllegalArgumentException(
+						"Informix index fragment requires expression and dbspace: " + partition.getName());
+			builder.comma(position++ > 0).space();
+			if (partition.getName() != null) {
+				if (partition.getName().isBlank())
+					throw new IllegalArgumentException("Blank Informix index partition name");
+				builder._add("PARTITION").space().name(partition.getName().replace("\"", "\"\"")).space();
+			}
+			builder._add(expression).space()._add("IN").space()
+					.name(partition.getTableSpaceName().replace("\"", "\"\""));
+		}
 	}
 
 	private void addMode(final Index index, final AbstractSqlBuilder<?> builder) {

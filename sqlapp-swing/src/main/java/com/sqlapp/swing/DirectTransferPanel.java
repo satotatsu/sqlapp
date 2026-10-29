@@ -1,6 +1,8 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.swing;
 
+import com.sqlapp.data.db.command.migration.transfer.TransferJobConfigurationIO;
+
 import java.awt.*;
 import java.nio.file.*;
 import java.util.Arrays;
@@ -515,7 +517,9 @@ final class DirectTransferPanel extends JPanel {
 			warnings(text, review.prepared().warnings());
 			text.append("\nReview report: ").append(reviewed.report());
 			text.append("\nRun this saved job from Gradle: see the Gradle tab for setup and commands.");
-			gradle.showText(DirectTransferGradleGuide.text(review.prepared().job()));
+			var saved = review.prepared().job();
+			gradle.showText(DirectTransferGradleGuide.text(new TransferJobConfigurationIO.Snapshot(
+					review.definitionFile(), saved.text(), saved.fingerprint(), saved.configuration())));
 			results.addTab("Gradle", gradle);
 		} else if (value instanceof DirectTransferDesktopService.Executed execution) {
 			final var outcome = execution.outcome();
@@ -595,6 +599,12 @@ final class DirectTransferPanel extends JPanel {
 			protectedInputs.addAll(sourceFiles);
 			protectedInputs.add(prepared.job().file());
 			protectedInputs.add(prepared.sourceSchemaFile());
+			if (prepared.job().configuration().mappingFile() != null) {
+				protectedInputs.add(prepared.directory().resolve("transfer-mapping.yaml"));
+				if (definitionFile != null)
+					protectedInputs.add(definitionFile.toAbsolutePath().getParent()
+							.resolve(prepared.job().configuration().mappingFile()).normalize());
+			}
 			if (prepared.dataJob() != null)
 				protectedInputs.add(prepared.dataJob().file());
 			if (definitionFile != null)

@@ -53,6 +53,18 @@ selects the existing schema-only option so keyless tables can still have their
 definitions transferred. Returning to data copy clears selections that are not
 eligible for it. CSV jobs retain their existing numeric-key and value-type rules.
 
+After selecting a child table, **Include referenced tables** optionally includes
+its transitive foreign-key parent tables from the captured Schema, including
+rows hidden by the current filter. Clear the filter or inspect the selection
+count/details to review every added table before saving. No job is saved and no
+database is opened by this action. The XML byte fingerprint is rechecked first.
+Missing/ambiguous references and parents unavailable in the current data-copy
+mode leave the complete selection unchanged, with an actionable explanation.
+Schema-only mode can include keyless parents; CSV eligibility remains enforced.
+This action adds parents, not child/descendant tables, and does not bypass the
+ordinary ordering, cycle or execution checks. It is optional when referenced
+tables already exist at the target and are intentionally outside the job.
+
 When missing-table CREATE planning adjusts repeated constraint or index names,
 **Summary** highlights the number of name-adjustment warnings. In **Warnings**,
 filter for **Target / Object names** or `[SCHEMA_NAME_ADJUSTED]` to inspect the
@@ -1418,6 +1430,17 @@ table selection and saving separately.
 
 Open **Direct JDBC transfer**, enter source and target connections, and choose
 **New direct job…**. Select **Schema only**, choose tables and save the job.
+
+For optional table/column name changes, open **Job settings…** and select or drop
+a **Name mapping YAML**. Unspecified names stay unchanged; PK/FK/index references
+follow mapped names. The same original saved job and relative mapping path work
+with Gradle. Review **Schema SQL** and expression warnings before execution.
+Mapping supports schema-only creation/differences and direct JDBC copy/verification.
+For data copy, use the same **Job settings… → Name mapping YAML**; missing-table DDL,
+INSERT and verification share the saved mapping. Source NOT NULL-key and target
+empty/compatible-table requirements remain in force. CSV mapping and an interactive
+mapping editor remain unsupported. See the
+[mapping format and limitations](../docs/gradle-plugin/direct-transfer.md#optionally-map-table-and-column-names-schema-only).
 The table picker allows tables without primary keys in this mode. Specify an
 existing target schema or leave it blank to use the target connection's current
 schema. Review the **Summary**, **Warnings** and **Schema SQL** tabs, then confirm

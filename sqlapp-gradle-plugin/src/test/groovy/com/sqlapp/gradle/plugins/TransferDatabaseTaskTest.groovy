@@ -10,6 +10,35 @@ import org.gradle.testkit.runner.TaskOutcome
 
 class TransferDatabaseTaskTest extends AbstractTaskTest {
 	@ParameterizedTest @ValueSource(booleans=[false,true])
+	void executesNameMappingFromTheSameSavedJob(boolean schemaOnly) {
+		def sourceUrl = 'jdbc:hsqldb:mem:mapped_task_source_' + UUID.randomUUID()
+		def targetUrl = 'jdbc:hsqldb:mem:mapped_task_target_' + UUID.randomUUID()
+		def source = new org.hsqldb.jdbc.JDBCDataSource(); source.setUrl(sourceUrl); source.setUser('SA'); source.setPassword('')
+		source.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+			s.execute('CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)'); s.execute('INSERT INTO ITEMS VALUES(42)')
+		} }
+		def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
+		def task = project.tasks.named('transferDatabase', TransferDatabaseTask).get()
+		def file = new File(testProjectDir, 'mapped.yaml')
+		file.text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\ndataMode: ' + (schemaOnly ? 'SCHEMA_ONLY' : 'JDBC_DIRECT') + '\nschemaMode: CREATE_MISSING\nmappingFile: names.yaml\n'
+		new File(testProjectDir, 'names.yaml').text = 'formatVersion: 1\ntables: {ITEMS: {targetTable: COPY, columns: {ID: ITEM_ID}}}\n'
+		task.configurationFile.set(file)
+		task.sourceDataSource.jdbcUrl.set(sourceUrl); task.sourceDataSource.username.set('SA'); task.sourceDataSource.password.set('')
+		task.dataSource.jdbcUrl.set(targetUrl); task.dataSource.username.set('SA'); task.dataSource.password.set('')
+		task.exec()
+		assertNull(task.internalCommand().result)
+		task.allowExecution.set(true)
+		task.expectedConfigurationFingerprint.set(task.internalCommand().review.prepared().job().fingerprint())
+		task.exec()
+		assertEquals(com.sqlapp.data.db.command.migration.transfer.TransferJobExecutionService.Phase.COMPLETE, task.internalCommand().result.phase())
+		if (!schemaOnly) assertTrue(task.internalCommand().result.verificationResult().isMatch())
+		def target = new org.hsqldb.jdbc.JDBCDataSource(); target.setUrl(targetUrl); target.setUser('SA'); target.setPassword('')
+		target.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+			s.executeQuery('SELECT COUNT(ITEM_ID) FROM COPY').withCloseable { r -> r.next(); assertEquals(schemaOnly ? 0 : 1,r.getInt(1)) }
+		} }
+	}
+
+	@ParameterizedTest @ValueSource(booleans=[false,true])
 	void executesSchemaOnlySharedJobWithoutCopyingKeylessTableRows(boolean applyDifferences) {
 		def sourceUrl = 'jdbc:hsqldb:mem:schema_task_source_' + UUID.randomUUID()
 		def targetUrl = 'jdbc:hsqldb:mem:schema_task_target_' + UUID.randomUUID()
