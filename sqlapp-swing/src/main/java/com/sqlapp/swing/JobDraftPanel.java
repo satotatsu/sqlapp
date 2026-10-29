@@ -44,8 +44,11 @@ final class JobDraftPanel extends JPanel {
 	final JButton select = new JButton("Select visible eligible");
 	final JButton clear = new JButton("Clear visible");
 	final JButton clearAll = new JButton("Clear all selected");
+	final JButton includeReferenced = new JButton("Include referenced tables");
 	final JTextField filter = new JTextField();
 	final JCheckBox selectedOnly = new JCheckBox("Selected tables only");
+	final JCheckBox unavailableOnly = new JCheckBox("Unavailable for data copy");
+	final JButton useSchemaOnly = new JButton("Switch to schema only");
 	final JButton clearFilter = new JButton("Clear filter");
 	final JLabel count = new JLabel();
 	final JLabel selectionHelp = new JLabel();
@@ -77,6 +80,12 @@ final class JobDraftPanel extends JPanel {
 	private boolean busy;
 	private boolean selectingBatch;
 	private boolean schemaOnly;
+	private Runnable schemaOnlyAction;
+
+	void offerSchemaOnly(Runnable action) {
+		schemaOnlyAction = java.util.Objects.requireNonNull(action);
+		refresh();
+	}
 
 	private boolean eligible(int row) {
 		return schemaOnly || snapshot.tables().get(row).selectable();
@@ -86,6 +95,8 @@ final class JobDraftPanel extends JPanel {
 		if (busy)
 			return;
 		schemaOnly = enabled;
+		if (enabled)
+			unavailableOnly.setSelected(false);
 		for (int row = 0; row < model.getRowCount(); row++) {
 			final var table = snapshot.tables().get(row);
 			if (!eligible(row))
@@ -233,13 +244,22 @@ final class JobDraftPanel extends JPanel {
 		find.add(filter, BorderLayout.CENTER);
 		final var filterActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
 		filterActions.add(selectedOnly);
+		filterActions.add(unavailableOnly);
 		filterActions.add(clearFilter);
 		find.add(filterActions, BorderLayout.EAST);
 		selectedOnly.setToolTipText("Show only included tables, also matching Find tables. Selections are retained.");
 		final var tableHeader = new JPanel(new BorderLayout(4, 4));
 		tableHeader.add(find, BorderLayout.NORTH);
 		tableHeader.add(count, BorderLayout.SOUTH);
-		tableHeader.add(selectionHelp, BorderLayout.CENTER);
+		final var guidance = new JPanel(new BorderLayout(4, 0));
+		guidance.add(selectionHelp, BorderLayout.CENTER);
+		guidance.add(useSchemaOnly, BorderLayout.EAST);
+		tableHeader.add(guidance, BorderLayout.CENTER);
+		useSchemaOnly.setVisible(false);
+		useSchemaOnly.addActionListener(event -> {
+			if (!busy && schemaOnlyAction != null && !schemaOnly)
+				schemaOnlyAction.run();
+		});
 		final var tableArea = new JPanel(new BorderLayout(4, 4));
 		tableArea.add(tableHeader, BorderLayout.NORTH);
 		tableArea.add(tableScroll, BorderLayout.CENTER);
@@ -249,6 +269,9 @@ final class JobDraftPanel extends JPanel {
 		actions.add(select);
 		actions.add(clear);
 		actions.add(clearAll);
+		actions.add(includeReferenced);
+		includeReferenced.setToolTipText(
+				"Include transitive foreign-key parent tables from this captured Schema, including hidden rows. Review the resulting selection before saving; no database connection is opened.");
 		actions.add(create);
 		create.setToolTipText("Create a draft for all selected tables, including selections hidden by the filter.");
 		select.setToolTipText("Select eligible tables in the current filtered view only.");
@@ -302,8 +325,10 @@ final class JobDraftPanel extends JPanel {
 		select.addActionListener(event -> updateSelection(true, false));
 		clear.addActionListener(event -> updateSelection(false, false));
 		clearAll.addActionListener(event -> updateSelection(false, true));
+		includeReferenced.addActionListener(event -> includeReferencedTables());
 		clearFilter.addActionListener(event -> filter.setText(""));
 		selectedOnly.addItemListener(event -> refreshFilter());
+		unavailableOnly.addItemListener(event -> refreshFilter());
 		filter.getDocument().addDocumentListener(new DocumentListener() {
 			public void insertUpdate(DocumentEvent event) {
 				refreshFilter();
@@ -344,6 +369,7 @@ final class JobDraftPanel extends JPanel {
 		model.setRowCount(0);
 		filter.setText("");
 		selectedOnly.setSelected(false);
+		unavailableOnly.setSelected(false);
 		if (!busy)
 			status.setText("Schema input changed. Read Schema again before creating a draft.");
 		refresh();
@@ -378,8 +404,13 @@ final class JobDraftPanel extends JPanel {
 		select.setEnabled(!busy && snapshot != null && tables.getRowCount() > 0);
 		clear.setEnabled(!busy && snapshot != null && tables.getRowCount() > 0);
 		clearAll.setEnabled(!busy && !selected().isEmpty());
+		includeReferenced.setEnabled(!busy && snapshot != null && !selected().isEmpty());
 		filter.setEnabled(!busy);
 		selectedOnly.setEnabled(!busy && snapshot != null);
+		unavailableOnly.setEnabled(!busy && snapshot != null && !schemaOnly);
+		useSchemaOnly.setEnabled(!busy);
+		useSchemaOnly.setVisible(schemaOnlyAction != null && !schemaOnly && snapshot != null
+				&& snapshot.tables().stream().anyMatch(table -> !table.selectable()));
 		clearFilter.setEnabled(!busy && !filter.getText().isEmpty());
 		create.setEnabled(!busy && snapshot != null && !selected().isEmpty());
 		cancel.setEnabled(!busy);
@@ -394,6 +425,9 @@ final class JobDraftPanel extends JPanel {
 		sorter.setRowFilter(new javax.swing.RowFilter<DefaultTableModel, Integer>() {
 			public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
 				if (selectedOnly.isSelected() && !Boolean.TRUE.equals(entry.getValue(0)))
+					return false;
+				if (unavailableOnly.isSelected()
+						&& (snapshot == null || snapshot.tables().get(entry.getIdentifier()).selectable()))
 					return false;
 				if (text.isEmpty())
 					return true;
@@ -417,12 +451,21 @@ final class JobDraftPanel extends JPanel {
 		}
 		count.setText(tables.getRowCount() + " / " + model.getRowCount() + " tables; " + selected + " selected ("
 				+ hidden + " hidden)");
+		if (snapshot != null) {
+			long available = snapshot.tables().stream().filter(table -> table.selectable()).count();
+			count.setText(count.getText() + "; data-copy eligible: " + available + "; unavailable: "
+					+ (snapshot.tables().size() - available));
+		}
 		if (snapshot == null)
 			selectionHelp.setText("Read Schema to see the tables available for selection.");
 		else if (model.getRowCount() == 0)
 			selectionHelp.setText("No tables in this Schema. Choose another Schema or source schema.");
 		else if (!schemaOnly && snapshot.tables().stream().noneMatch(table -> table.selectable()))
-			selectionHelp.setText("No eligible tables. Review Availability; this copy workflow requires primary keys.");
+			selectionHelp.setText(
+					"No eligible tables. Review Availability: primary keys and supported copy types are required.");
+		else if (unavailableOnly.isSelected())
+			selectionHelp.setText(
+					"Review Availability for each restriction. Existing selections remain included; this filter changes no copy rules.");
 		else if (selectedOnly.isSelected() && selected == 0)
 			selectionHelp.setText("No tables selected. Turn off Selected tables only to choose tables.");
 		else if (tables.getRowCount() == 0)
@@ -462,6 +505,80 @@ final class JobDraftPanel extends JPanel {
 		refresh();
 	}
 
+	void includeReferencedTables() {
+		if (busy || snapshot == null || selected().isEmpty())
+			return;
+		if (tables.isEditing())
+			tables.getCellEditor().stopCellEditing();
+		final var reviewed = snapshot;
+		final var original = selected();
+		final long requested = revision;
+		busy = true;
+		refresh();
+		status.setText("Checking captured Schema and referenced tables. No connection is opened…");
+		new SwingWorker<List<String>, Void>() {
+			protected List<String> doInBackground() throws Exception {
+				return builder.includeReferencedTables(reviewed, original);
+			}
+
+			protected void done() {
+				try {
+					final var expanded = get();
+					if (requested != revision) {
+						status.setText("Inputs changed. Check referenced tables again; selection was not expanded.");
+						return;
+					}
+					final var rows = new ArrayList<Integer>();
+					final var added = new ArrayList<String>();
+					for (var name : expanded) {
+						if (original.contains(name))
+							continue;
+						int row = -1;
+						for (int index = 0; index < model.getRowCount(); index++)
+							if (name.equals(model.getValueAt(index, 1))) {
+								row = index;
+								break;
+							}
+						if (row < 0)
+							throw new IllegalArgumentException("Referenced table is outside this selection: " + name);
+						if (!eligible(row))
+							throw new IllegalArgumentException("Referenced table is unavailable for data copy: " + name
+									+ "\n" + snapshot.tables().get(row).restriction()
+									+ "\nSelection was not expanded. Review Availability or use schema only for definitions.");
+						rows.add(row);
+						added.add(name);
+					}
+					selectingBatch = true;
+					try {
+						for (int row : rows)
+							model.setValueAt(true, row, 0);
+					} finally {
+						selectingBatch = false;
+					}
+					sorter.sort();
+					if (!added.isEmpty())
+						draftOptionsChanged();
+					status.setText(added.isEmpty() ? "All referenced tables are already included. Selection unchanged."
+							: "Added " + added.size()
+									+ " referenced table(s), including any hidden rows. Review all selected tables before saving.");
+					statusPanel.setDetails(added.isEmpty() ? status.getText()
+							: "Added referenced tables:\n" + String.join("\n", added)
+									+ "\n\nOnly the selection changed. No job was saved and no rows were moved. Execution ordering and cycle checks still apply.");
+				} catch (InterruptedException failure) {
+					Thread.currentThread().interrupt();
+					failed(failure);
+				} catch (ExecutionException failure) {
+					failed(failure.getCause());
+				} catch (IllegalArgumentException failure) {
+					failed(failure);
+				} finally {
+					busy = false;
+					refresh();
+				}
+			}
+		}.execute();
+	}
+
 	void inspectSchema() {
 		if (busy || managedDirectory != null)
 			return;
@@ -470,6 +587,7 @@ final class JobDraftPanel extends JPanel {
 		model.setRowCount(0);
 		filter.setText("");
 		selectedOnly.setSelected(false);
+		unavailableOnly.setSelected(false);
 		fingerprint.setText("");
 		final long requested = revision;
 		busy = true;

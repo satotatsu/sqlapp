@@ -24,7 +24,7 @@ final class MigrationStartPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	enum Destination {
-		DATA, FILE, COMPARE, REPORTS, SCHEMA_PLAN, SQL_EDITOR, JOB_EDITOR, DRIVERS, LEGACY_DATA
+		DATA, FILE, MDB, COMPARE, REPORTS, SCHEMA_PLAN, SQL_EDITOR, JOB_EDITOR, DRIVERS, LEGACY_DATA
 	}
 
 	final Map<Destination, JButton> buttons = new EnumMap<>(Destination.class);
@@ -43,7 +43,7 @@ final class MigrationStartPanel extends JPanel {
 		heading.add(new JLabel("Choose direct JDBC or a CSV package. Review the target before importing."),
 				BorderLayout.SOUTH);
 		content.add(heading, BorderLayout.NORTH);
-		final var cards = new JPanel(new GridLayout(3, 1, 0, 12));
+		final var cards = new JPanel(new GridLayout(4, 1, 0, 12));
 		cards.add(card("Direct JDBC transfer",
 				"Create one job for GUI and Gradle from connections and selected tables, then review the plan.\n"
 						+ "No YAML preparation is needed. Choose schema only to create missing tables without copying rows.",
@@ -52,6 +52,10 @@ final class MigrationStartPanel extends JPanel {
 				"Create a shared GUI / Gradle job, export the source, then import the package when ready.\n"
 						+ "Import needs only the target connection. Review existing empty targets or optional table creation.",
 				button(Destination.FILE, "Open CSV transfer", navigate)));
+		cards.add(card("Migrate an Access file",
+				"Select or drop an MDB / ACCDB file, then choose tables and a target database.\n"
+						+ "No source JDBC URL is needed. Transfer schema and data, or schema only, using a shared GUI / Gradle job.",
+				button(Destination.MDB, "Open Access migration", navigate)));
 		cards.add(card("Review saved results",
 				"Open saved migration or verification reports to inspect results.\n"
 						+ "Saved reports do not check the current database state.",

@@ -43,6 +43,8 @@ class DirectTransferDesktopServiceTest {
 				new DirectTransferPanel.Request(saved.file(), directory, source, target, "", null), new char[0],
 				new char[0]);
 		assertTrue(Files.isRegularFile(review.report()));
+		assertEquals(createMissing, review.schemaSqlDraft() != null);
+		assertFalse(Files.readString(review.report()).contains("schemaSqlDraft"));
 		if (!createMissing)
 			assertEquals(0, count(target));
 		else
@@ -55,6 +57,17 @@ class DirectTransferDesktopServiceTest {
 		assertEquals(2, count(target));
 		assertTrue(Files.isRegularFile(result.report()));
 		assertEquals(createMissing, result.outcome().schemaPreparation().completedStatements() > 0);
+		assertEquals(review.schemaSqlDraft(), result.schemaSqlDraft());
+		if (createMissing) {
+			var original = review.review().prepared();
+			var changed = new TransferJobPreparationService.Prepared(original.directory(), original.job(),
+					original.sourceSchemaFile(), original.dataJob(), original.planFingerprint(), original.taskIds(),
+					original.warnings(), new TransferSchemaPreparation.Plan("changed-plan",
+							original.schemaPreparation().statements(), original.warnings()));
+			var changedOutcome = new TransferJobExecutionService.Outcome(changed,
+					TransferJobExecutionService.Phase.REVALIDATION, null, null, List.of(), Map.of(), null);
+			assertNull(DirectTransferDesktopService.draftFor(changedOutcome, review));
+		}
 		try (var from = PlanningJdbc.open(source, new char[0]);
 				var to = PlanningJdbc.openForDataExecution(another, new char[0])) {
 			final var command = new TransferDatabaseCommand();

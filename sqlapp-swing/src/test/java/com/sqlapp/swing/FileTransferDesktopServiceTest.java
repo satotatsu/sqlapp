@@ -68,6 +68,9 @@ class FileTransferDesktopServiceTest {
 			final var review = (FileTransferDesktopService.Reviewed) service.perform(FileTransferPanel.Action.REVIEW,
 					selected, null, target, new char[0], "", null);
 			assertEquals(exported.file(), review.review().manifestFile());
+			assertEquals(createMissing, review.schemaSqlDraft() != null);
+			if (createMissing)
+				assertTrue(review.schemaSqlDraft().contains("-- Job: " + exported.manifest().jobFingerprint()));
 			final var result = (TransferFileImportService.Outcome) service.perform(FileTransferPanel.Action.IMPORT,
 					selected, directory, target, new char[0], "", review);
 			assertEquals(TransferJobExecutionService.Phase.COMPLETE, result.phase());
@@ -75,6 +78,15 @@ class FileTransferDesktopServiceTest {
 			assertFalse(result.verification().isEmpty());
 			assertEquals(createMissing, result.schemaPreparation().completedStatements() > 0);
 			assertTrue(Files.isRegularFile(result.auditFile()));
+			assertEquals(review.schemaSqlDraft(), FileTransferDesktopService.draftFor(result, review));
+			assertFalse(Files.readString(result.auditFile()).contains("schemaSqlDraft"));
+			if (createMissing) {
+				var changed = new TransferFileImportService.Outcome(result.manifestFingerprint(),
+						result.planFingerprint(), result.phase(), result.copyResult(), result.verificationRequested(),
+						result.verification(), result.committedProgress(), null, result.auditFile(),
+						new TransferSchemaPreparation.Progress(List.of(), 0, null));
+				assertNull(FileTransferDesktopService.draftFor(changed, review));
+			}
 			try (var sql = to.createStatement();
 					var rows = sql.executeQuery("SELECT ID, NAME FROM " + targetTable + " ORDER BY ID")) {
 				assertTrue(rows.next());

@@ -11,10 +11,18 @@ import com.sqlapp.data.db.command.migration.transfer.*;
  * semantics.
  */
 final class DirectTransferDesktopService implements DirectTransferPanel.Backend {
-	record Reviewed(TransferJobExecutionService.Review review, Path report) {
+	record Reviewed(TransferJobExecutionService.Review review, Path report,
+			@com.fasterxml.jackson.annotation.JsonIgnore String schemaSqlDraft) {
+		Reviewed(TransferJobExecutionService.Review review, Path report) {
+			this(review, report, null);
+		}
 	}
 
-	record Executed(TransferJobExecutionService.Outcome outcome, Path report) {
+	record Executed(TransferJobExecutionService.Outcome outcome, Path report,
+			@com.fasterxml.jackson.annotation.JsonIgnore String schemaSqlDraft) {
+		Executed(TransferJobExecutionService.Outcome outcome, Path report) {
+			this(outcome, report, null);
+		}
 	}
 
 	static final class ExecutionFailure extends IllegalStateException {
@@ -25,6 +33,14 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 			super(message);
 			this.result = result;
 		}
+	}
+
+	static String draftFor(TransferJobExecutionService.Outcome outcome, Reviewed reviewed) {
+		return reviewed != null
+				&& outcome.prepared().job().fingerprint().equals(reviewed.review().prepared().job().fingerprint())
+				&& outcome.prepared().schemaPreparation().equals(reviewed.review().prepared().schemaPreparation())
+						? reviewed.schemaSqlDraft()
+						: null;
 	}
 
 	@Override
@@ -66,15 +82,17 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 				final var reports = new TransferJobReportIO();
 				if (action == DirectTransferPanel.Action.REVIEW) {
 					phase = "reviewing source metadata and target tables";
-					final var review = service.review(request.job(), bindings, request.workspace());
+					final var captured = service.reviewWithSqlDraft(request.job(), bindings, request.workspace());
+					final var review = captured.review();
 					phase = "saving the review report";
-					return new Reviewed(review, reports.writeReview(review));
+					return new Reviewed(review, reports.writeReview(review), captured.schemaSqlDraft());
 				}
 				final var review = request.reviewed().review();
 				try {
 					final var outcome = service.execute(review, bindings);
-					completed = new Executed(outcome, null);
-					completed = new Executed(outcome, reports.writeOutcome(review, outcome));
+					completed = new Executed(outcome, null, draftFor(outcome, request.reviewed()));
+					completed = new Executed(outcome, reports.writeOutcome(review, outcome),
+							completed.schemaSqlDraft());
 					return completed;
 				} catch (TransferJobExecutionService.ExecutionException failure) {
 					Path report = null;
@@ -82,7 +100,8 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 						report = reports.writeOutcome(review, failure.outcome());
 					} catch (java.io.IOException unavailable) {
 						/* Exposed by a null report path. */ }
-					throw new ExecutionFailure(new Executed(failure.outcome(), report),
+					throw new ExecutionFailure(
+							new Executed(failure.outcome(), report, draftFor(failure.outcome(), request.reviewed())),
 							"Direct transfer failed. Inspect committed work, verification and audit availability before retrying.");
 				}
 			}

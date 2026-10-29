@@ -22,8 +22,9 @@ class TransferWarningTabsTest {
 
 	@Test
 	void exportIdentityAndMessageArePreservedWithoutParsing() {
-		assertEquals(List.of(List.of("Package export", "customers", "ID", "Review precision\nFull detail")),
-				TransferWarningTabs.rows(snapshot()));
+		var row = TransferWarningTabs.rows(snapshot()).getFirst();
+		assertEquals(List.of("Package export", "customers", "ID", "Review precision\nFull detail"), row.subList(0, 4));
+		assertTrue(row.get(4).contains("before importing"));
 	}
 
 	@Test
@@ -36,7 +37,7 @@ class TransferWarningTabsTest {
 		var rows = TransferWarningTabs.rows(review);
 		assertEquals(3, rows.size());
 		assertEquals("Package export", rows.get(0).get(0));
-		assertEquals(List.of("Target compatibility", "", "", "Target warning"), rows.get(1));
+		assertEquals(List.of("Target compatibility", "", "", "Target warning"), rows.get(1).subList(0, 4));
 		assertEquals(rows.get(1), rows.get(2));
 	}
 
@@ -54,6 +55,8 @@ class TransferWarningTabsTest {
 			assertEquals(1, panel.table.getRowCount());
 			panel.table.setRowSelectionInterval(0, 0);
 			assertTrue(panel.selected.getText().contains("Full detail"));
+			assertTrue(panel.selected.getText().contains("Next action:"));
+			assertTrue(panel.selected.getText().contains("before importing"));
 			panel.filter.setText("no matching warning");
 			assertEquals(0, panel.table.getRowCount());
 			warnings.clear(tabs);
@@ -62,5 +65,27 @@ class TransferWarningTabsTest {
 					TransferJobExecutionService.Phase.COMPLETE, null, false, Map.of(), Map.of(), null, null));
 			assertEquals(1, tabs.getTabCount());
 		});
+	}
+
+	@Test
+	void stableCodesSelectGuidanceWithoutGuessingCategoriesFromEnglishMessages() {
+		var warnings = List.of(TransferSchemaChangeChecks.DATA_IMPACT + " fixture",
+				TransferSchemaChangeChecks.UNRESOLVED + " fixture", TransferGeneratedKeyChecks.CODE + " fixture",
+				TransferSchemaChangeChecks.NAME_ADJUSTMENT + " fixture",
+				"Repeated source constraint name without a category code",
+				"Column removal and generated keys require manual work", "[FUTURE_WARNING] fixture");
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COMPLETE,
+				null, false, Map.of(), Map.of(), null, null,
+				new TransferSchemaPreparation.Progress(List.of(), 0, null, warnings));
+		var rows = TransferWarningTabs.rows(outcome);
+		assertEquals(List.of("Target / Data impact", "Target / Manual work", "Target / Generated keys",
+				"Target / Object names", "Target compatibility", "Target compatibility", "Target compatibility"),
+				rows.stream().map(row -> row.getFirst()).toList());
+		assertTrue(rows.get(0).get(4).contains("save and review again"));
+		assertTrue(rows.get(1).get(4).contains("does not resolve"));
+		assertTrue(rows.get(2).get(4).contains("not checked or synchronized"));
+		assertTrue(rows.get(3).get(4).contains("source and target names"));
+		assertTrue(rows.get(3).get(4).contains("does not confirm SQL execution"));
+		assertEquals(warnings, rows.stream().map(row -> row.get(3)).toList());
 	}
 }

@@ -50,8 +50,12 @@ final class DirectTransferPanel extends JPanel {
 			"1. Enter source and target connections.\n2. Create a direct job and choose tables, or open a saved job.\n3. Review the transfer.\n4. Confirm execution when ready.");
 	final JTabbedPane results = new JTabbedPane();
 	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
+	private final TransferSchemaStatementTabs statementTabs = new TransferSchemaStatementTabs();
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
+	final GeneratedSqlDraftActions schemaDraft = new GeneratedSqlDraftActions(schemaSql, this::isBusy, this::setBusy,
+			status::setText,
+			failure -> statusPanel.setDetails("SQL draft save failed.\n" + EditorStatusPanel.failureDetails(failure)));
 	final ReadOnlyCodePanel gradle = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_GROOVY, false));
 	private final JPanel form = new JPanel(new BorderLayout(4, 4));
@@ -61,6 +65,8 @@ final class DirectTransferPanel extends JPanel {
 	private DirectTransferDesktopService.Reviewed reviewed;
 	private long revision;
 	private boolean busy;
+	private List<Path> sourceFiles = List.of();
+	private JTextField sourceFileInput;
 
 	DirectTransferPanel() {
 		this(new DirectTransferDesktopService(), null);
@@ -199,7 +205,9 @@ final class DirectTransferPanel extends JPanel {
 
 	private void changed() {
 		revision++;
+		schemaDraft.clear();
 		warningTabs.clear(results);
+		statementTabs.clear(results);
 		results.remove(schemaSql);
 		schemaSql.showText("");
 		results.remove(gradle);
@@ -242,6 +250,7 @@ final class DirectTransferPanel extends JPanel {
 	}
 
 	private void refresh() {
+		schemaDraft.refresh();
 		create.setEnabled(!busy);
 		jobSettings.setEnabled(!busy);
 		review.setEnabled(!busy);
@@ -288,8 +297,13 @@ final class DirectTransferPanel extends JPanel {
 			fields.snapshot().spec();
 			return true;
 		} catch (IllegalArgumentException failure) {
-			status.setText("Enter the " + (fields == source ? "source" : "target") + " JDBC URL first.");
-			fields.jdbcUrl.requestFocusInWindow();
+			if (fields == source && sourceFileInput != null) {
+				status.setText("Choose an existing readable source database file first.");
+				sourceFileInput.requestFocusInWindow();
+			} else {
+				status.setText("Enter the " + (fields == source ? "source" : "target") + " JDBC URL first.");
+				fields.jdbcUrl.requestFocusInWindow();
+			}
 			return false;
 		}
 	}
@@ -357,7 +371,9 @@ final class DirectTransferPanel extends JPanel {
 			target.password.setText("");
 		}
 		if (!testing) {
+			schemaDraft.clear();
 			warningTabs.clear(results);
+			statementTabs.clear(results);
 			reviewed = null;
 			results.remove(gradle);
 			gradle.showText("");
@@ -397,12 +413,12 @@ final class DirectTransferPanel extends JPanel {
 							status.setText("Job creation cancelled or inputs changed. No rows copied.");
 					} else if (action == Action.REVIEW) {
 						reviewed = (DirectTransferDesktopService.Reviewed) value;
-						show(value);
+						show(value, request.job());
 						status.setText("Transfer reviewed. Compatibility warnings: "
 								+ reviewed.review().prepared().warnings().size()
 								+ ". Inspect the review before execution.");
 					} else if (action == Action.EXECUTE) {
-						show(value);
+						show(value, request.job());
 						status.setText(((DirectTransferDesktopService.Executed) value).outcome().prepared().job()
 								.configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
 										? "Schema-only transfer finished. Inspect DDL results, warnings and the saved audit. No rows were copied."
@@ -410,12 +426,14 @@ final class DirectTransferPanel extends JPanel {
 					} else
 						status.setText("Connection check: " + value);
 				} catch (Exception failure) {
+					schemaDraft.clear();
 					warningTabs.clear(results);
+					statementTabs.clear(results);
 					final var cause = failure instanceof java.util.concurrent.ExecutionException ? failure.getCause()
 							: failure;
 					reviewed = null;
 					if (cause instanceof DirectTransferDesktopService.ExecutionFailure execution) {
-						show(execution.result);
+						show(execution.result, request.job());
 						summary.setText("Action failed: " + execution.getMessage() + "\n\n" + summary.getText());
 					} else {
 						result.showText("");
@@ -448,9 +466,11 @@ final class DirectTransferPanel extends JPanel {
 		}.execute();
 	}
 
-	private void show(Object value) {
+	private void show(Object value, Path definitionFile) {
+		schemaDraft.clear();
 		result.showJson(value);
 		warningTabs.show(results, value);
+		statementTabs.show(results, value);
 		results.remove(gradle);
 		gradle.showText("");
 		final var text = new StringBuilder();
@@ -476,6 +496,7 @@ final class DirectTransferPanel extends JPanel {
 						.append(". These changes still require manual work; see Warnings.\n\n");
 			text.append("Transfer reviewed. No rows have been copied. Execution requires your confirmation.\n\n");
 			TransferGeneratedKeyNotice.append(text, review.prepared().warnings());
+			TransferNameAdjustmentNotice.append(text, review.prepared().warnings());
 			text.append("Source: ").append(review.sourceIdentity().productName()).append(" / ")
 					.append(review.sourceIdentity().productVersion()).append('\n').append("Target: ")
 					.append(review.targetIdentity().productName()).append(" / ")
@@ -513,6 +534,7 @@ final class DirectTransferPanel extends JPanel {
 				TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Execution phase: ").append(outcome.phase()).append('\n');
 			TransferGeneratedKeyNotice.append(text, outcome.prepared().warnings());
+			TransferNameAdjustmentNotice.append(text, outcome.prepared().warnings());
 			if (schemaOnly)
 				text.append("Next: inspect DDL results and warnings; test target definitions before loading data.\n");
 			else
@@ -556,12 +578,53 @@ final class DirectTransferPanel extends JPanel {
 			for (int index = 0; index < statements.size(); index++)
 				sql.append("-- Statement ").append(index + 1).append(" / ").append(statements.get(index).taskId())
 						.append('\n').append(statements.get(index).sql()).append("\n\n");
-			schemaSql.showText(sql.toString());
+			final var prepared = value instanceof DirectTransferDesktopService.Reviewed review
+					? review.review().prepared()
+					: ((DirectTransferDesktopService.Executed) value).outcome().prepared();
+			String draft = value instanceof DirectTransferDesktopService.Reviewed review ? review.schemaSqlDraft()
+					: ((DirectTransferDesktopService.Executed) value).schemaSqlDraft();
+			if (draft != null && value instanceof DirectTransferDesktopService.Executed execution)
+				draft = "-- RECORDED EXECUTION: " + execution.outcome().phase() + "; completed statements: "
+						+ execution.outcome().schemaPreparation().completedStatements() + "; uncertain attempt: "
+						+ execution.outcome().schemaPreparation().attemptedStatement()
+						+ "\n-- This is the FULL planned SQL, including statements that may already be applied.\n"
+						+ "-- Inspect and repair the target before retrying; this is not an automatic resume script.\n\n"
+						+ draft;
+			schemaSql.showText(draft == null ? sql.toString() : draft);
+			final var protectedInputs = new java.util.ArrayList<Path>();
+			protectedInputs.addAll(sourceFiles);
+			protectedInputs.add(prepared.job().file());
+			protectedInputs.add(prepared.sourceSchemaFile());
+			if (prepared.dataJob() != null)
+				protectedInputs.add(prepared.dataJob().file());
+			if (definitionFile != null)
+				protectedInputs.add(definitionFile);
+			final var report = value instanceof DirectTransferDesktopService.Reviewed review ? review.report()
+					: ((DirectTransferDesktopService.Executed) value).report();
+			if (report != null)
+				protectedInputs.add(report);
+			schemaDraft.show(draft, protectedInputs);
 			results.addTab("Schema SQL", schemaSql);
 		}
 		summary.setText(text.toString());
 		summary.setCaretPosition(0);
 		results.setSelectedIndex(0);
+	}
+
+	void setSqlEditor(java.util.function.Predicate<Path> receiver) {
+		schemaDraft.setEditor(receiver);
+	}
+
+	void setSourceFiles(List<Path> files) {
+		sourceFiles = List.copyOf(files);
+	}
+
+	void useFileSource(JTextField input) {
+		sourceFileInput = java.util.Objects.requireNonNull(input);
+		source.useFileSource();
+		final var row = sourceSchema.getParent();
+		if (row != null && row.getParent() != null)
+			row.getParent().remove(row);
 	}
 
 	private static void warnings(StringBuilder text, List<String> warnings) {

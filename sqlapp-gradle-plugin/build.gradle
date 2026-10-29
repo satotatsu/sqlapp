@@ -40,7 +40,7 @@ dependencies {
 	testRuntimeOnly project(':sqlapp-core-oracle')
 	// Exercise SQL Server assessment discovery without adding a plugin runtime dependency.
 	testRuntimeOnly project(':sqlapp-core-sqlserver')
-	testImplementation('io.github.spannm:ucanaccess:5.1.6')
+	testImplementation('io.github.spannm:ucanaccess:5.2.0')
 	
 	//JUnit
 	testImplementation(platform('org.junit:junit-bom:6.1.0'))

@@ -56,8 +56,12 @@ final class FileTransferPanel extends JPanel {
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JSON, false));
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
+	final GeneratedSqlDraftActions schemaDraft = new GeneratedSqlDraftActions(schemaSql, this::isBusy, this::setBusy,
+			status::setText,
+			failure -> statusPanel.setDetails("SQL draft save failed.\n" + EditorStatusPanel.failureDetails(failure)));
 	final JTabbedPane resultTabs = new JTabbedPane();
 	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
+	private final TransferSchemaStatementTabs statementTabs = new TransferSchemaStatementTabs();
 	final JTextArea summary = new JTextArea(
 			"1. Export: create or choose a job and export a CSV package.\n2. Import: choose the completed manifest and enter the target connection.\n3. Review warnings and optional table creation, then confirm import.");
 	private boolean hasSummary;
@@ -69,6 +73,8 @@ final class FileTransferPanel extends JPanel {
 	private final java.util.function.Function<DataMigrationDraftService.Prepared, Path> draftDialog;
 	private final EditorFileChooser files = new EditorFileChooser();
 	private boolean busy;
+	private JTextField sourceFileInput;
+	private List<Path> sourceFiles = List.of();
 	private long revision;
 	private FileTransferDesktopService.Reviewed reviewed;
 	private TransferFilePackageIO.Snapshot exportedForImport;
@@ -313,6 +319,7 @@ final class FileTransferPanel extends JPanel {
 	}
 
 	private void refresh() {
+		schemaDraft.refresh();
 		create.setEnabled(!busy);
 		jobSettings.setEnabled(!busy);
 		export.setEnabled(!busy);
@@ -329,8 +336,13 @@ final class FileTransferPanel extends JPanel {
 			fields.snapshot().spec();
 			return true;
 		} catch (IllegalArgumentException failure) {
-			status.setText("Enter a JDBC URL or load a connection profile first.");
-			fields.jdbcUrl.requestFocusInWindow();
+			if (fields == source && sourceFileInput != null) {
+				status.setText("Choose an existing readable source database file first.");
+				sourceFileInput.requestFocusInWindow();
+			} else {
+				status.setText("Enter a JDBC URL or load a connection profile first.");
+				fields.jdbcUrl.requestFocusInWindow();
+			}
 			return false;
 		}
 	}
@@ -497,7 +509,7 @@ final class FileTransferPanel extends JPanel {
 								+ ". Inspect the result before import. Manifest: " + saved.file());
 					} else if (action == Action.IMPORT) {
 						reviewed = null;
-						show(value);
+						show(value, prior);
 						status.setText("CSV import finished. Compatibility warnings: "
 								+ ((TransferFileImportService.Outcome) value).schemaPreparation().warnings().size()
 								+ ". Inspect verification and the saved audit before another run.");
@@ -505,14 +517,16 @@ final class FileTransferPanel extends JPanel {
 						status.setText(requested == revision ? "Connection check: " + value
 								: "Inputs changed. Test the connection again.");
 				} catch (Exception failure) {
+					schemaDraft.clear();
 					warningTabs.clear(resultTabs);
+					statementTabs.clear(resultTabs);
 					final Throwable cause = failure instanceof java.util.concurrent.ExecutionException
 							? failure.getCause()
 							: failure;
 					if (action == Action.REVIEW || action == Action.IMPORT)
 						reviewed = null;
 					if (cause instanceof TransferFileImportService.ImportException imported)
-						show(imported.outcome());
+						show(imported.outcome(), prior);
 					else if (cause instanceof TransferPreparationFailure validation) {
 						summary.setText("Target preparation needs attention:\n\n" + validation.getMessage()
 								+ "\n\nFix the target or job settings and review again.");
@@ -534,8 +548,14 @@ final class FileTransferPanel extends JPanel {
 	}
 
 	private void show(Object value) {
+		show(value, null);
+	}
+
+	private void show(Object value, FileTransferDesktopService.Reviewed prior) {
+		schemaDraft.clear();
 		result.showJson(value);
 		warningTabs.show(resultTabs, value);
+		statementTabs.show(resultTabs, value);
 		summary.setText(FileTransferSummary.text(value));
 		summary.setCaretPosition(0);
 		hasSummary = true;
@@ -555,20 +575,66 @@ final class FileTransferPanel extends JPanel {
 			for (int index = 0; index < statements.size(); index++)
 				text.append("-- Statement ").append(index + 1).append(" / ").append(statements.get(index).taskId())
 						.append('\n').append(statements.get(index).sql()).append("\n\n");
-			schemaSql.showText(text.toString());
+			final var context = value instanceof FileTransferDesktopService.Reviewed review ? review : prior;
+			String draft = value instanceof FileTransferDesktopService.Reviewed review ? review.schemaSqlDraft()
+					: FileTransferDesktopService.draftFor((TransferFileImportService.Outcome) value, prior);
+			if (draft != null && value instanceof TransferFileImportService.Outcome outcome)
+				draft = "-- RECORDED IMPORT: " + outcome.phase() + "; completed statements: "
+						+ outcome.schemaPreparation().completedStatements() + "; uncertain attempt: "
+						+ outcome.schemaPreparation().attemptedStatement()
+						+ "\n-- FULL planned SQL includes statements that may already be applied. Inspect and repair the target before retrying.\n"
+						+ "-- This is not an automatic resume script.\n\n" + draft;
+			schemaSql.showText(draft == null ? text.toString() : draft);
+			if (draft != null && context != null) {
+				final var inputs = new java.util.ArrayList<Path>();
+				protectPackage(inputs, context.review().manifestFile().toAbsolutePath().getParent(),
+						context.manifest());
+				if (value instanceof TransferFileImportService.Outcome outcome && outcome.auditFile() != null) {
+					inputs.add(outcome.auditFile());
+					protectPackage(inputs, outcome.auditFile().toAbsolutePath().getParent(), context.manifest());
+				}
+				inputs.addAll(sourceFiles);
+				schemaDraft.show(draft, inputs);
+			}
 			resultTabs.addTab("Schema SQL", schemaSql);
 		}
 		resultTabs.setSelectedIndex(0);
 	}
 
 	private void clearGradle() {
+		schemaDraft.clear();
 		warningTabs.clear(resultTabs);
+		statementTabs.clear(resultTabs);
 		resultTabs.remove(gradle);
 		gradle.showText("");
+	}
+
+	void useFileSource(JTextField input) {
+		sourceFileInput = java.util.Objects.requireNonNull(input);
+		source.useFileSource();
+		final var row = sourceSchema.getParent();
+		if (row != null && row.getParent() != null)
+			row.getParent().remove(row);
+	}
+
+	void setSourceFiles(List<Path> files) {
+		sourceFiles = List.copyOf(files);
 	}
 
 	private void showGradle(Path exportJob, Path manifest, String fingerprint) {
 		gradle.showText(FileTransferGradleGuide.text(exportJob, manifest, fingerprint));
 		resultTabs.addTab("Gradle", gradle);
+	}
+
+	private static void protectPackage(java.util.List<Path> inputs, Path folder,
+			TransferFilePackageIO.Manifest manifest) {
+		for (var name : java.util.List.of("manifest.json", "transfer.yaml", "source-schema.xml"))
+			inputs.add(folder.resolve(name));
+		for (var table : manifest.tables())
+			inputs.add(folder.resolve(table.file()));
+	}
+
+	void setSqlEditor(java.util.function.Predicate<Path> receiver) {
+		schemaDraft.setEditor(receiver);
 	}
 }

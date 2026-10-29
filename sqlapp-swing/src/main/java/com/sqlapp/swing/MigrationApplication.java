@@ -51,6 +51,12 @@ public final class MigrationApplication {
 			final var dataPlan = new DataMigrationPlanPanel();
 			tabs.addTab("Advanced Data Job", dataPlan);
 			final var directTransfer = new DirectTransferPanel();
+			directTransfer.setSqlEditor(path -> {
+				if (!sqlEditor.requestOpen(path))
+					return false;
+				tabs.setSelectedComponent(sqlEditor);
+				return true;
+			});
 			final var jobEditor = new JobConfigurationEditorPanel(snapshot -> {
 				if (!dataPlan.configurationFile.isEnabled()) {
 					JOptionPane.showMessageDialog(frame,
@@ -82,11 +88,31 @@ public final class MigrationApplication {
 			dataPlan.savedReport.setReceiver(openReport);
 			final var drivers = new JdbcDriverPanel();
 			final var fileTransfer = new FileTransferPanel();
+			final var mdbTransfer = new MdbTransferPanel();
+			mdbTransfer.transfer.setSqlEditor(path -> {
+				if (!sqlEditor.requestOpen(path))
+					return false;
+				tabs.setSelectedComponent(sqlEditor);
+				return true;
+			});
+			mdbTransfer.csv.setSqlEditor(path -> {
+				if (!sqlEditor.requestOpen(path))
+					return false;
+				tabs.setSelectedComponent(sqlEditor);
+				return true;
+			});
+			fileTransfer.setSqlEditor(path -> {
+				if (!sqlEditor.requestOpen(path))
+					return false;
+				tabs.setSelectedComponent(sqlEditor);
+				return true;
+			});
 			tabs.addTab("CSV package transfer", fileTransfer);
+			tabs.addTab("Access file migration", mdbTransfer);
 			tabs.addTab("JDBC drivers", drivers);
 			final java.util.function.BooleanSupplier activity = () -> comparison.isBusy() || schemaPlan.isBusy()
 					|| dataPlan.isBusy() || jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy()
-					|| drivers.isBusy() || fileTransfer.isBusy() || directTransfer.isBusy();
+					|| drivers.isBusy() || fileTransfer.isBusy() || directTransfer.isBusy() || mdbTransfer.isBusy();
 			drivers.setBlockedSupplier(activity);
 			drivers.setConnectionReceivers(name -> {
 				if (!schemaPlan.selectDriverClass(name))
@@ -111,11 +137,11 @@ public final class MigrationApplication {
 					"Create a shared job, export, review and import CSV", 1);
 			MigrationStartPanel.install(tabs, java.util.Map.of(MigrationStartPanel.Destination.DATA, directTransfer,
 					MigrationStartPanel.Destination.LEGACY_DATA, dataPlan, MigrationStartPanel.Destination.FILE,
-					fileTransfer, MigrationStartPanel.Destination.COMPARE, comparison,
-					MigrationStartPanel.Destination.REPORTS, reports, MigrationStartPanel.Destination.SCHEMA_PLAN,
-					schemaPlan, MigrationStartPanel.Destination.SQL_EDITOR, sqlEditor,
-					MigrationStartPanel.Destination.JOB_EDITOR, jobEditor, MigrationStartPanel.Destination.DRIVERS,
-					drivers));
+					fileTransfer, MigrationStartPanel.Destination.MDB, mdbTransfer,
+					MigrationStartPanel.Destination.COMPARE, comparison, MigrationStartPanel.Destination.REPORTS,
+					reports, MigrationStartPanel.Destination.SCHEMA_PLAN, schemaPlan,
+					MigrationStartPanel.Destination.SQL_EDITOR, sqlEditor, MigrationStartPanel.Destination.JOB_EDITOR,
+					jobEditor, MigrationStartPanel.Destination.DRIVERS, drivers));
 			frame.setContentPane(tabs);
 			frame.addWindowListener(new WindowAdapter() {
 				@Override

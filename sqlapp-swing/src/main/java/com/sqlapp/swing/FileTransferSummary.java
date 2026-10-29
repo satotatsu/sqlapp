@@ -53,6 +53,7 @@ final class FileTransferSummary {
 		} else if (value instanceof FileTransferDesktopService.Reviewed reviewed) {
 			text.append("Package and target reviewed. No tables or rows have been created.\n\n");
 			TransferGeneratedKeyNotice.append(text, reviewed.review().schemaPreparation().warnings());
+			TransferNameAdjustmentNotice.append(text, reviewed.review().schemaPreparation().warnings());
 			text.append("Target: ").append(reviewed.review().targetIdentity().productName()).append(" / ")
 					.append(reviewed.review().targetIdentity().productVersion()).append('\n');
 			packageDetails(text, reviewed.manifest());
@@ -66,6 +67,7 @@ final class FileTransferSummary {
 			TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Import execution phase: ").append(outcome.phase()).append('\n');
 			TransferGeneratedKeyNotice.append(text, outcome.schemaPreparation().warnings());
+			TransferNameAdjustmentNotice.append(text, outcome.schemaPreparation().warnings());
 			TransferNextSteps.append(text, outcome.phase(), outcome.verificationRequested(),
 					outcome.schemaPreparation().warnings());
 			if (outcome.copyResult() != null)

@@ -160,18 +160,22 @@ class JobDraftSelectionTest {
 			panel.select.doClick(0);
 			panel.filter.setText("customers");
 			panel.selectedOnly.doClick(0);
+			panel.unavailableOnly.doClick(0);
 		});
 		finish(panel, () -> {
 			panel.inspectSchema();
 			assertFalse(panel.filter.isEnabled());
 			assertFalse(panel.selectedOnly.isEnabled());
+			assertFalse(panel.unavailableOnly.isEnabled());
 			assertFalse(panel.clearAll.isEnabled());
 		});
 		SwingUtilities.invokeAndWait(() -> {
 			assertEquals(4, panel.tables.getRowCount());
 			assertTrue(panel.filter.getText().isEmpty());
 			assertFalse(panel.selectedOnly.isSelected());
-			assertEquals("4 / 4 tables; 0 selected (0 hidden)", panel.count.getText());
+			assertFalse(panel.unavailableOnly.isSelected());
+			assertEquals("4 / 4 tables; 0 selected (0 hidden); data-copy eligible: 3; unavailable: 1",
+					panel.count.getText());
 			assertTrue(panel.fingerprint.getText().startsWith("sha256:"));
 			assertFalse(panel.create.isEnabled());
 		});

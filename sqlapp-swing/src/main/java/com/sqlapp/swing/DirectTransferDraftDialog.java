@@ -42,6 +42,7 @@ final class DirectTransferDraftDialog {
 			dialog.dispose();
 		}, dialog::dispose);
 		picker.create.setText("Save direct transfer job");
+		picker.offerSchemaOnly(() -> schemaOnly.doClick(0));
 		picker.status
 				.setText("Select tables. Existing targets must be empty; saving never creates tables or copies rows.");
 		strict.addActionListener(event -> picker.draftOptionsChanged());

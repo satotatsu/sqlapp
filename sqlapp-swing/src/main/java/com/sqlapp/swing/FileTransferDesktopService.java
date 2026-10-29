@@ -19,7 +19,20 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 		}
 	}
 
-	record Reviewed(TransferFileImportService.Review review, TransferFilePackageIO.Manifest manifest) {
+	record Reviewed(TransferFileImportService.Review review, TransferFilePackageIO.Manifest manifest,
+			@com.fasterxml.jackson.annotation.JsonIgnore String schemaSqlDraft) {
+		Reviewed(TransferFileImportService.Review review, TransferFilePackageIO.Manifest manifest) {
+			this(review, manifest, null);
+		}
+	}
+
+	static String draftFor(TransferFileImportService.Outcome outcome, Reviewed reviewed) {
+		return reviewed != null && outcome.manifestFingerprint().equals(reviewed.review().manifestFingerprint())
+				&& outcome.planFingerprint().equals(reviewed.review().planFingerprint())
+				&& outcome.schemaPreparation().planned().equals(reviewed.review().schemaPreparation().statements())
+				&& outcome.schemaPreparation().warnings().equals(reviewed.review().schemaPreparation().warnings())
+						? reviewed.schemaSqlDraft()
+						: null;
 	}
 
 	record Inspected(TransferFilePackageIO.Snapshot snapshot, boolean valuesValidated,
@@ -70,8 +83,8 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 				final var service = new TransferFileImportService();
 				if (action == FileTransferPanel.Action.IMPORT)
 					return service.execute(reviewed.review(), bindings, workspace);
-				return new Reviewed(service.review(manifest.file(), manifest.fingerprint(), bindings),
-						manifest.manifest());
+				final var captured = service.reviewWithSqlDraft(manifest.file(), manifest.fingerprint(), bindings);
+				return new Reviewed(captured.review(), manifest.manifest(), captured.schemaSqlDraft());
 			}
 		} catch (TransferFileImportService.ImportException failure) {
 			throw failure;

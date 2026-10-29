@@ -23,8 +23,71 @@ setting is required.
 
 ## Appearance and code views
 
-The application opens on **Start**, with three task-oriented entry points:
-**Direct JDBC transfer**, **CSV package**, and **Review saved results**.
+### Access MDB / ACCDB migration
+
+Choose **Start → Open Access migration** (or **Access file migration**), then
+browse for or drop an existing `.mdb` / `.accdb` file. Enter only the target
+connection, an optional Access password and a working folder. Choose **New
+Access migration job…**, select tables and choose data transfer or schema only.
+Review warnings and Schema SQL, then explicitly confirm execution. The file
+selection itself does not open a connection. The MDB dialect and its existing
+UCanAccess 5.2.0 dependency are bundled with the desktop distribution, so this
+source does not require adding a driver JAR manually.
+
+Inside **Access file migration**, choose **CSV package transfer** to export the
+selected Access file through the common CSV workflow. Create **New Access CSV
+job…**, choose tables and optional target-table creation, then export. Use
+**Continue to import this package…** to select the exported package automatically.
+Import uses only the target connection: the Access file selector is hidden and
+the original MDB/ACCDB need not be available. The direct and CSV workflows share
+the file selection but keep their jobs, reviews, passwords and results separate.
+Changing the selected file invalidates both workflows' prior reviews. The same
+CSV job remains usable with Gradle `exportTransferFile` / `importTransferFile`.
+
+The table picker reports data-copy eligible and unavailable counts. **Unavailable
+for data copy** shows restrictions such as missing keys or unsupported values;
+it can be combined with text search and retains all existing selections, including
+hidden ones. Review **Availability** for the precise reason. This view does not
+relax validation. In direct-job creation, **Switch to schema only** explicitly
+selects the existing schema-only option so keyless tables can still have their
+definitions transferred. Returning to data copy clears selections that are not
+eligible for it. CSV jobs retain their existing numeric-key and value-type rules.
+
+When missing-table CREATE planning adjusts repeated constraint or index names,
+**Summary** highlights the number of name-adjustment warnings. In **Warnings**,
+filter for **Target / Object names** or `[SCHEMA_NAME_ADJUSTED]` to inspect the
+recorded original name, table and target name. Check the corresponding **Schema
+SQL** and any application code or scripts that refer to these names. The notice
+describes the plan, not proof of execution; use the recorded SQL progress to see
+completed or uncertain attempts. Source Schema retains its original names.
+
+This screen composes the common direct-transfer service: saved YAML, warning
+policies, optional missing-table creation / schema differences, SQL drafts and
+partial-failure evidence retain the same behavior. Access forms, reports and VBA
+are outside table/schema transfer. Data transfer retains the common keyset and
+primary-key requirements; schema-only transfer does not require data-copy keys.
+Changing or clearing the selected file invalidates the prior review. Missing
+files and paths containing semicolons are rejected before opening the source;
+no new Access database is created. Source files are protected from SQL-draft
+overwrite, including file aliases.
+
+Use the unchanged saved YAML with `transferDatabase` as shown in the **Gradle**
+tab. Add the `sqlapp-core-mdb` dialect (and the target dialect/driver) to that
+project's runtime dependencies and supply, for example,
+`SOURCE_JDBC_URL=jdbc:ucanaccess://C:/data/source.mdb` in the Gradle process
+environment. The file path and optional password remain runtime connection
+settings, not credentials embedded in the YAML.
+
+Generated local MDB tests cover Japanese and space-containing file, table and
+column names, Japanese text values, foreign keys and schema-only transfer to
+embedded HSQL. This does not establish compatibility with every existing Access
+file, collation or complex field. See the MDB module's documented Japanese
+index-collation write restriction in [its README](../sqlapp-core-mdb/README.md).
+
+### Navigation
+
+The application opens on **Start**, with four task-oriented entry points:
+**Direct JDBC transfer**, **CSV package**, **Access file migration**, and **Review saved results**.
 The transfer entries explain the connection/table/review flow without requiring
 YAML preparation. **More tools** reveals Schema comparison, SQL migration
 planning, SQL and Job YAML editors, JDBC driver management and **Advanced Data Job**.
@@ -204,6 +267,18 @@ per-task committed progress, DDL progress and audit path. Missing verification
 is shown as not completed; disabled verification is explicit, and a partial
 verification only describes recorded tables. **Details** retains the complete
 read-only JSON; **Schema SQL** remains available for inspecting planned DDL.
+
+CSV target review also offers **Save SQL draft…** and **Edit saved SQL…** in
+**Schema SQL**, using the same offline actions as direct transfer. The draft
+retains target delimiters, warnings and job/plan pins. Saving protects manifest,
+job, Schema, CSV data and retained import/audit files, including aliases. It never
+starts import, changes package bytes or authorizes execution. If you apply manual
+SQL through the separate SQL migration workflow, review the package and target
+again before importing. Result drafts identify completed/uncertain statements
+and may include already-applied SQL; they are not retry scripts. A result that
+does not match the captured review cannot reuse its draft. Input changes and new
+inspection/results clear the saved-file handoff. No export is offered without
+Schema statements. Package and audit formats are unchanged.
 Input changes mark the previous summary as stale, and failures cannot authorize
 another import without review.
 Committed chunks and created objects can remain after a failure. The result
@@ -1350,6 +1425,23 @@ schema. Review the **Summary**, **Warnings** and **Schema SQL** tabs, then confi
 job to schema-only. The **Gradle** tab runs the same saved job with
 `transferDatabase`; no hand-authored migration SQL or Data Job YAML is required.
 
+The **Schema SQL** tab in Direct JDBC transfer offers **Save SQL draft…** and,
+after saving, **Edit saved SQL…** to open the built-in SQL editor. A fresh review
+captures the actual target dialect's statement delimiters, warnings and job/plan
+fingerprints. Saving writes the displayed UTF-8 snapshot atomically, protecting
+the source job, captured Schema, generated data-job and audit files, including
+hard-link aliases. No database connection or SQL execution is started by saving
+or editing, and the shared transfer job is unchanged. Input changes or another
+result clear the saved-file handoff. A save failure leaves the review available.
+
+Execution-result drafts include the full planned SQL, execution phase, completed
+statement count and uncertain attempt. Some statements may already be applied;
+inspect and repair the target before retrying. The draft is not a resume script
+or execution approval. Edit and execute manual corrections through the separate
+SQL migration workflow, reviewing its versioned SQL directory and policies.
+Saving does not apply the transfer job's permission settings to that workflow.
+No draft export is offered when there are no Schema statements.
+
 Schema-only creates missing selected tables, constraints and indexes using the
 target dialect. It does not copy or verify rows. Existing tables are skipped
 with warnings without comparison, alteration or clearing, even when they contain
@@ -1358,8 +1450,35 @@ triggers and other schema objects are outside this mode's scope and are called
 out in warnings. Default WARN permits trying generated SQL; ERROR rejects the
 scope/compatibility warning. Review generated SQL and repair vendor differences.
 DDL can remain after failure; inspect retained completed/uncertain statements
-before another review. It does not create the target schema namespace or provide
-incremental ALTER migrations. Use Schema migration plan for reviewed SQL history.
+before another review. The default CREATE_MISSING mode does not create the target
+schema namespace or alter existing tables. Use Schema migration plan for reviewed
+SQL history.
+
+To optionally update existing selected tables, enable **Apply differences to
+existing selected tables** under **Schema only** in the new-job dialog or
+**Job settings…**. The shared job uses `schemaMode: APPLY_DIFFERENCES`. Review
+the generated CREATE/ALTER/DROP SQL and warnings. Columns, constraints and indexes
+can change; unselected tables are outside the intended modification scope.
+Components are matched by name. Column renames are not inferred: differing names
+appear as removal/addition and can lose old column values when explicitly allowed.
+Database-enforced dependency effects still require review. Source and target
+definitions are read again before execution, and a changed plan requires another
+review. No source rows are transferred and no row verification is performed.
+
+Potentially data-impacting changes remain reviewable but disable execution by
+default. **Allow removals and changes that may affect existing data** saves
+`allowDestructiveSchemaChanges: true`. Enable it only after reviewing SQL, then
+save and review again. Java and Gradle enforce the same gate. Target factories
+may include target-data preparation, such as a PostgreSQL UPDATE to fill a new
+default column; this also requires permission and appears in Schema SQL.
+Progress includes those statements. There is no automatic rollback, reset or
+data restoration after partial failure.
+
+Unsupported table changes produce `[SCHEMA_DIFF_UNRESOLVED]` warnings under WARN;
+no SQL for that table is included, while other selected-table SQL remains
+reviewable. Completing generated SQL does not prove full Schema equivalence.
+Inspect warnings and fix remaining definitions manually. ERROR rejects
+compatibility warnings. The existing default still skips existing tables.
 
 Existing jobs retain JDBC row-transfer defaults. New schema-only jobs use
 `dataMode: SCHEMA_ONLY`, `schemaMode: CREATE_MISSING`, and omitted or false
@@ -1374,6 +1493,13 @@ results list retained target warnings; export warnings remain in the manifest an
 package review. Changing inputs or starting another transfer or package inspection
 clears the old warning tab. Viewing or copying warnings does not approve execution.
 
+The warning table distinguishes data-impact permission, unresolved manual work,
+and generated-key follow-up using stable warning codes. Uncoded or future warnings
+remain general compatibility warnings; messages are preserved without inferring
+identifiers or categories from English prose. **Next action** offers guidance and
+is included in selected-row details, filtering and copying. It does not grant
+permission, modify a job, synchronize counters or recheck the database.
+
 Direct JDBC and CSV import results show next steps near the top of Summary.
 The first line describes completion or the stage where execution stopped in plain
 language; the recorded phase remains visible for troubleshooting. A completed run
@@ -1384,3 +1510,5 @@ connections. Disabled row verification is called out explicitly. Interrupted run
 instead direct users to committed rows, attempted DDL and target repair before
 another review; retrying never implies clearing the target. These instructions do
 not perform additional database operations.
+
+The direct-transfer and CSV import results also provide a searchable **Schema statements** table. It preserves SQL execution order and shows reviewed, completed, uncertain-attempt and unexecuted statements. Select a row to inspect its full SQL. Recorded completion does not guarantee transaction commit; uncertain attempts may have taken effect. The table does not authorize execution or provide automatic resume.

@@ -28,8 +28,10 @@ class DirectTransferPanelTest {
 				warnings);
 		var prepared = new TransferJobPreparationService.Prepared(directory, job, original.sourceSchemaFile(), null,
 				HASH, List.of("items"), warnings, schema);
-		var review = new DirectTransferDesktopService.Reviewed(new TransferJobExecutionService.Review(job.file(),
-				prepared, base.review().sourceIdentity(), base.review().targetIdentity()), base.report());
+		var review = new DirectTransferDesktopService.Reviewed(
+				new TransferJobExecutionService.Review(job.file(), prepared, base.review().sourceIdentity(),
+						base.review().targetIdentity()),
+				base.report(), "-- Review before use\nALTER TABLE ITEMS DROP COLUMN EXTRA\n;\n");
 		var ready = new CountDownLatch(1);
 		var ref = new AtomicReference<DirectTransferPanel>();
 		var calls = new AtomicInteger();
@@ -47,6 +49,7 @@ class DirectTransferPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			var panel = ref.get();
 			assertFalse(panel.execute.isEnabled());
+			assertTrue(panel.schemaDraft.save.isEnabled());
 			assertTrue(panel.summary.getText().contains("EXECUTION BLOCKED"));
 			assertTrue(panel.summary.getText().contains("CREATE/ALTER/DROP"));
 			assertTrue(panel.schemaSql.editor.getText().contains("DROP COLUMN EXTRA"));
@@ -69,8 +72,10 @@ class DirectTransferPanelTest {
 		var saved = new TransferJobConfigurationIO.Snapshot(original.job().file(), "schema-only", HASH, config);
 		var prepared = new TransferJobPreparationService.Prepared(directory, saved, original.sourceSchemaFile(), null,
 				HASH, original.taskIds(), original.warnings(), original.schemaPreparation());
-		var review = new DirectTransferDesktopService.Reviewed(new TransferJobExecutionService.Review(saved.file(),
-				prepared, base.review().sourceIdentity(), base.review().targetIdentity()), base.report());
+		var review = new DirectTransferDesktopService.Reviewed(
+				new TransferJobExecutionService.Review(saved.file(), prepared, base.review().sourceIdentity(),
+						base.review().targetIdentity()),
+				base.report(), "-- Review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n");
 		var outcome = new TransferJobExecutionService.Outcome(prepared, TransferJobExecutionService.Phase.COMPLETE,
 				null, null, List.of(), Map.of(), null,
 				new TransferSchemaPreparation.Progress(original.schemaPreparation().statements(), 1, null));
@@ -83,7 +88,8 @@ class DirectTransferPanelTest {
 				if (action == DirectTransferPanel.Action.REVIEW)
 					return review;
 				executed.set(true);
-				return new DirectTransferDesktopService.Executed(outcome, directory.resolve("result.json"));
+				return new DirectTransferDesktopService.Executed(outcome, directory.resolve("result.json"),
+						review.schemaSqlDraft());
 			}, ignored -> null);
 			ref.set(panel);
 			configure(panel);
@@ -109,7 +115,66 @@ class DirectTransferPanelTest {
 			assertTrue(text.contains("DDL statements completed: 1 / 1"));
 			assertFalse(text.contains("Row verification was disabled"));
 			assertFalse(text.contains("Completed tables: 0"));
+			assertTrue(ref.get().schemaSql.editor.getText().startsWith("-- RECORDED EXECUTION: COMPLETE"));
+			assertTrue(ref.get().schemaSql.editor.getText().contains("FULL planned SQL"));
+			assertTrue(ref.get().schemaDraft.save.isEnabled());
 		});
+	}
+
+	@Test
+	void savedSchemaDraftOpensEditorAndInputChangesClearTheHandoffWithoutExecutingTransfer() throws Exception {
+		var base = reviewed();
+		var original = base.review().prepared();
+		String draft = "-- 変更SQL: review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
+		var prepared = new TransferJobPreparationService.Prepared(directory, original.job(),
+				original.sourceSchemaFile(), original.dataJob(), original.planFingerprint(), original.taskIds(),
+				original.warnings(), original.schemaPreparation());
+		var review = new DirectTransferDesktopService.Reviewed(
+				new TransferJobExecutionService.Review(base.review().definitionFile(), prepared,
+						base.review().sourceIdentity(), base.review().targetIdentity()),
+				base.report(), draft);
+		var ref = new AtomicReference<DirectTransferPanel>();
+		var ready = new CountDownLatch(1);
+		var saved = new CountDownLatch(1);
+		var calls = new AtomicInteger();
+		var opened = new AtomicReference<Path>();
+		var file = directory.resolve("draft.sql");
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new DirectTransferPanel((action, request, from, to) -> {
+				assertEquals(DirectTransferPanel.Action.REVIEW, action);
+				calls.incrementAndGet();
+				return review;
+			}, ignored -> null);
+			ref.set(panel);
+			configure(panel);
+			panel.setSqlEditor(path -> {
+				opened.set(path);
+				return true;
+			});
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertEquals(draft, panel.schemaSql.editor.getText());
+			onEnabled(panel.review, saved);
+			panel.schemaDraft.saveTo(file);
+			assertTrue(panel.isBusy());
+		});
+		assertTrue(saved.await(5, TimeUnit.SECONDS));
+		assertEquals(draft, java.nio.file.Files.readString(file));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.execute.isEnabled());
+			assertTrue(panel.schemaDraft.edit.isEnabled());
+			panel.schemaDraft.edit.doClick(0);
+			assertEquals(file.toAbsolutePath(), opened.get());
+			panel.target.jdbcUrl.setText("jdbc:changed");
+			assertFalse(panel.schemaDraft.save.isEnabled());
+			assertFalse(panel.schemaDraft.edit.isEnabled());
+		});
+		assertEquals(1, calls.get());
 	}
 
 	@TempDir
@@ -409,6 +474,44 @@ class DirectTransferPanelTest {
 		panel.target.password.setText("target");
 		panel.job.setText("transfer.yaml");
 		panel.workspace.setText(directory.toString());
+	}
+
+	@Test
+	void nameAdjustmentsAreHighlightedWithoutBlockingOrAutomaticallyExecutingReview() throws Exception {
+		var base = reviewed();
+		var original = base.review().prepared();
+		var warnings = List
+				.of(TransferSchemaChangeChecks.NAME_ADJUSTMENT + " PrimaryKey on ITEMS is generated as sqlapp_fixture");
+		var prepared = new TransferJobPreparationService.Prepared(original.directory(), original.job(),
+				original.sourceSchemaFile(), original.dataJob(), original.planFingerprint(), original.taskIds(),
+				warnings,
+				new TransferSchemaPreparation.Plan(HASH, original.schemaPreparation().statements(), warnings));
+		var review = new DirectTransferDesktopService.Reviewed(
+				new TransferJobExecutionService.Review(base.review().definitionFile(), prepared,
+						base.review().sourceIdentity(), base.review().targetIdentity()),
+				base.report());
+		var calls = new java.util.concurrent.atomic.AtomicInteger();
+		var ready = new CountDownLatch(1);
+		var ref = new AtomicReference<DirectTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new DirectTransferPanel((action, request, from, to) -> {
+				assertEquals(DirectTransferPanel.Action.REVIEW, action);
+				calls.incrementAndGet();
+				return review;
+			}, ignored -> null);
+			ref.set(panel);
+			configure(panel);
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.summary.getText().contains("Object-name adjustment warnings: 1"));
+			assertTrue(panel.result.editor.getText().contains(TransferSchemaChangeChecks.NAME_ADJUSTMENT));
+			assertTrue(panel.execute.isEnabled());
+		});
+		assertEquals(1, calls.get());
 	}
 
 	private DirectTransferDesktopService.Reviewed reviewed() {

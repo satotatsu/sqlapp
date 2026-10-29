@@ -10,11 +10,16 @@ import java.nio.file.StandardCopyOption;
 
 final class ReviewFileWriter {
 	void write(final Path destination, final String text, final Path original, final Path target) throws IOException {
+		write(destination, text, java.util.List.of(original, target));
+	}
+
+	void write(final Path destination, final String text, final java.util.List<Path> protectedInputs)
+			throws IOException {
 		final Path file = destination.toAbsolutePath().normalize();
-		for (final Path input : new Path[] { original, target }) {
+		for (final Path input : protectedInputs) {
 			if (file.equals(input.toAbsolutePath().normalize())
 					|| Files.exists(file) && Files.isSameFile(file, input)) {
-				throw new IllegalArgumentException("Choose a destination different from the input Schema files.");
+				throw new IllegalArgumentException("Choose a destination different from the input files.");
 			}
 		}
 		final Path temporary = Files.createTempFile(file.getParent(), ".sqlapp-review-", ".tmp");

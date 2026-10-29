@@ -41,6 +41,18 @@ final class ConnectionFields extends JPanel {
 		driverClass.setVisible(show);
 	}
 
+	void useFileSource() {
+		for (var component : getComponents())
+			if (component instanceof JLabel label
+					&& java.util.Set.of("JDBC URL", "Username", "Profile").contains(label.getText()))
+				label.setVisible(false);
+		jdbcUrl.setVisible(false);
+		username.setVisible(false);
+		profile.setVisible(false);
+		buildUrl.setVisible(false);
+		setBorder(BorderFactory.createTitledBorder("Access source — optional password"));
+	}
+
 	Input snapshot() {
 		return new Input(jdbcUrl.getText().trim(), username.getText().trim(), driverClass.getText().trim());
 	}

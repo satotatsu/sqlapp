@@ -14,6 +14,123 @@ import com.sqlapp.data.db.command.migration.transfer.*;
 import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentity;
 
 class FileTransferPanelTest {
+	@Test
+	void importResultRetainsMatchingDraftWithAppliedStatementWarning() throws Exception {
+		var base = reviewed();
+		String draft = "-- review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
+		var statements = List.of(new TransferSchemaPreparation.Statement("task", "CREATE TABLE ITEMS(ID INTEGER)"));
+		var review = new FileTransferDesktopService.Reviewed(
+				new TransferFileImportService.Review(base.review().manifestFile(), HASH, base.review().targetIdentity(),
+						HASH, new TransferSchemaPreparation.Plan(HASH, statements)),
+				base.manifest(), draft);
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COMPLETE,
+				null, false, Map.of(), Map.of(), null, directory.resolve("import-result.json"),
+				new TransferSchemaPreparation.Progress(statements, 1, null));
+		var ref = new AtomicReference<FileTransferPanel>();
+		var ready = new CountDownLatch(1);
+		var finished = new CountDownLatch(1);
+		var ran = new AtomicBoolean();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				if (action == FileTransferPanel.Action.REVIEW)
+					return review;
+				assertEquals(FileTransferPanel.Action.IMPORT, action);
+				assertNotNull(prior);
+				ran.set(true);
+				return outcome;
+			}, ignored -> null);
+			ref.set(panel);
+			configureImport(panel);
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			panel.review.addPropertyChangeListener("enabled", event -> {
+				if (Boolean.TRUE.equals(event.getNewValue()) && ran.get())
+					finished.countDown();
+			});
+			panel.importReviewed(() -> true);
+		});
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.schemaDraft.save.isEnabled());
+			assertFalse(panel.apply.isEnabled());
+			assertTrue(panel.schemaSql.editor.getText().startsWith("-- RECORDED IMPORT: COMPLETE"));
+			assertTrue(panel.schemaSql.editor.getText().contains("FULL planned SQL"));
+			assertTrue(panel.schemaSql.editor.getText().contains("completed statements: 1"));
+		});
+	}
+
+	@Test
+	void schemaDraftSavesOpensEditorAndProtectsCsvPackageMembers() throws Exception {
+		for (var member : List.of("manifest.json", "transfer.yaml", "source-schema.xml", "table-1.csv"))
+			java.nio.file.Files.writeString(directory.resolve(member), "protected " + member);
+		var base = reviewed();
+		String draft = "-- review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
+		var review = new FileTransferDesktopService.Reviewed(
+				new TransferFileImportService.Review(base.review().manifestFile(), HASH, base.review().targetIdentity(),
+						HASH,
+						new TransferSchemaPreparation.Plan(HASH, List.of(
+								new TransferSchemaPreparation.Statement("task", "CREATE TABLE ITEMS(ID INTEGER)")))),
+				base.manifest(), draft);
+		var ref = new AtomicReference<FileTransferPanel>();
+		var ready = new CountDownLatch(1);
+		var saved = new CountDownLatch(1);
+		var opened = new AtomicReference<Path>();
+		var calls = new AtomicInteger();
+		var file = directory.resolve("manual.sql");
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new FileTransferPanel((action, input, workspace, spec, password, schema, prior) -> {
+				assertEquals(FileTransferPanel.Action.REVIEW, action);
+				calls.incrementAndGet();
+				return review;
+			}, ignored -> null);
+			ref.set(panel);
+			configureImport(panel);
+			panel.setSqlEditor(path -> {
+				opened.set(path);
+				return true;
+			});
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertEquals(draft, panel.schemaSql.editor.getText());
+			onEnabled(panel.review, saved);
+			panel.schemaDraft.saveTo(file);
+			assertTrue(panel.isBusy());
+		});
+		assertTrue(saved.await(5, TimeUnit.SECONDS));
+		assertEquals(draft, java.nio.file.Files.readString(file));
+		var alias = java.nio.file.Files.createLink(directory.resolve("csv-alias.sql"),
+				directory.resolve("table-1.csv"));
+		var failed = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.apply.isEnabled());
+			panel.schemaDraft.edit.doClick(0);
+			assertEquals(file.toAbsolutePath(), opened.get());
+			onEnabled(panel.review, failed);
+			panel.schemaDraft.saveTo(alias);
+		});
+		assertTrue(failed.await(5, TimeUnit.SECONDS));
+		assertEquals("protected table-1.csv", java.nio.file.Files.readString(directory.resolve("table-1.csv")));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.status.getText().contains("save failed"));
+			assertTrue(panel.apply.isEnabled());
+			panel.manifest.setText("changed.json");
+			assertFalse(panel.schemaDraft.edit.isEnabled());
+			assertFalse(panel.schemaDraft.save.isEnabled());
+		});
+		assertEquals(1, calls.get());
+	}
+
 	@TempDir
 	Path directory;
 	private static final String HASH = "sha256:" + "a".repeat(64);
