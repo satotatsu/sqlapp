@@ -14,6 +14,29 @@ class MdbSavedQuerySupportTest {
 	@TempDir
 	Path directory;
 
+	@Test
+	void missingAndAmbiguousColumnsAreRejectedBeforeCatalogWrites() throws Exception {
+		final Path source = directory.resolve("references.accdb");
+		try (var file = DatabaseBuilder.create(Database.FileFormat.V2010, source.toFile())) {
+			new TableBuilder("P").addColumn(new ColumnBuilder("ID", DataType.LONG))
+					.addColumn(new ColumnBuilder("NAME", DataType.TEXT)).toTable(file);
+		}
+		try (var writer = MdbJackcessSupport.open(source)) {
+			for (final String sql : new String[] { "SELECT missing FROM P", "SELECT p.missing FROM P p",
+					"SELECT ID FROM P p INNER JOIN P q ON p.ID=q.ID", "SELECT ID FROM P WHERE missing=1",
+					"SELECT ID FROM P ORDER BY missing", "SELECT p.ID FROM P p INNER JOIN P q ON p.missing=q.ID",
+					"SELECT ID FROM P WHERE ID + (missing)=0" }) {
+				assertThrows(IllegalArgumentException.class, () -> writer.createSavedQuery("BAD", sql), sql);
+			}
+			writer.createSavedQuery("GOOD",
+					"PARAMETERS [min value] LONG; SELECT IIf(ID > [min value], NAME, 'p.deleted') AS [display name] FROM P ORDER BY [display name]");
+		}
+		try (var file = new DatabaseBuilder().withPath(source).withReadOnly(true).open()) {
+			assertEquals(1, file.getQueries().size());
+			assertEquals("GOOD", file.getQueries().getFirst().getName());
+		}
+	}
+
 	@ParameterizedTest
 	@EnumSource(value = Database.FileFormat.class, names = { "V2000", "V2010" })
 	void multipleNestedAndSelfJoinsRetainGroupingAfterRebuild(final Database.FileFormat format) throws Exception {

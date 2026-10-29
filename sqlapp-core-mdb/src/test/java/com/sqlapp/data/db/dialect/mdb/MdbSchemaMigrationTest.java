@@ -11,6 +11,106 @@ import com.sqlapp.data.db.datatype.DataType;
 import io.github.spannm.jackcess.*;
 
 class MdbSchemaMigrationTest {
+	@Test
+	void planningReportsTypeAndQueryFailuresTogetherWithoutCreatingTarget() throws Exception {
+		final Path source = create();
+		final Path target = directory.resolve("invalid.accdb");
+		final byte[] before = Files.readAllBytes(source);
+		final var error = assertThrows(IllegalArgumentException.class,
+				() -> MdbSchemaMigration.plan(source, target, schema -> {
+					schema.getTables().get("ITEMS").getColumns().get("ID").setDataType(DataType.BIGINT);
+					final var query = new com.sqlapp.data.schemas.View("BROKEN");
+					query.setDefinition("SELECT missing FROM ITEMS");
+					schema.getViews().add(query);
+				}));
+		assertTrue(error.getMessage().contains("ITEMS.ID"));
+		assertTrue(error.getMessage().contains("BROKEN"));
+		assertFalse(Files.exists(target));
+		assertArrayEquals(before, Files.readAllBytes(source));
+	}
+
+	@Test
+	void columnRenameRequiresUpdatingSavedQueryDefinitionDuringPlanning() throws Exception {
+		final Path source = create();
+		try (var writer = MdbJackcessSupport.open(source)) {
+			writer.createSavedQuery("Q", "SELECT TXT FROM ITEMS");
+		}
+		final Path target = directory.resolve("renamed-query.accdb");
+		assertThrows(IllegalArgumentException.class, () -> MdbSchemaMigration.plan(source, target,
+				schema -> schema.getTables().get("ITEMS").getColumns().get("TXT").setName("RENAMED")));
+		final var result = MdbSchemaMigration.rebuild(source, target, schema -> {
+			schema.getTables().get("ITEMS").getColumns().get("TXT").setName("RENAMED");
+			schema.getViews().get("Q").setDefinition("SELECT RENAMED FROM ITEMS");
+		});
+		assertNotNull(result.schema().getViews().get("Q"));
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.EnumSource(value = Database.FileFormat.class, names = { "V2000", "V2010" })
+	void batchedCopyPreservesNullsAndAppliesDefaultsOnlyToNewColumns(final Database.FileFormat format)
+			throws Exception {
+		final Path source = directory.resolve("batch" + format.getFileExtension());
+		try (var file = DatabaseBuilder.create(format, source.toFile())) {
+			final var table = new TableBuilder("ROWS")
+					.addColumn(new ColumnBuilder("ID", io.github.spannm.jackcess.DataType.LONG).withAutoNumber(true))
+					.addColumn(new ColumnBuilder("TXT", io.github.spannm.jackcess.DataType.TEXT))
+					.addIndex(new IndexBuilder("PK_ROWS").withPrimaryKey().withColumns("ID")).toTable(file);
+			for (int i = 0; i < 2051; i++)
+				table.addRow(null, i % 2 == 0 ? null : "row-" + i);
+			table.getColumn("TXT").getProperties().put(PropertyMap.DEFAULT_VALUE_PROP, "\"existing-default\"");
+			table.getColumn("TXT").getProperties().save();
+		}
+		final byte[] before = Files.readAllBytes(source);
+		final var result = MdbSchemaMigration.rebuild(source, directory.resolve("rebuilt" + format.getFileExtension()),
+				schema -> {
+					final var table = schema.getTables().get("ROWS");
+					table.getColumns().get("TXT").setName("RENAMED");
+					table.getColumns().add(new com.sqlapp.data.schemas.Column("NEW_VALUE").setDataType(DataType.INT)
+							.setNotNull(true).setDefaultValue("7"));
+				});
+		assertEquals(2051L, result.rowCounts().get("ROWS"));
+		try (var file = new DatabaseBuilder().withPath(result.plan().target()).open()) {
+			final var table = file.getTable("ROWS");
+			int i = 0;
+			for (final var row : table) {
+				assertEquals(i + 1, row.get("ID"));
+				assertEquals(i % 2 == 0 ? null : "row-" + i, row.get("RENAMED"));
+				assertEquals(7, row.get("NEW_VALUE"));
+				i++;
+			}
+			final var inserted = table.addRow(null, null, null);
+			assertEquals(2052, inserted[0]);
+			assertEquals("existing-default", inserted[1]);
+			assertEquals(7, inserted[2]);
+		}
+		assertArrayEquals(before, Files.readAllBytes(source));
+	}
+
+	@Test
+	void manuallySuppliedPlanMappingsUseAccessIdentifierCaseRules() throws Exception {
+		final var plan = MdbSchemaMigration.plan(create(), directory.resolve("mapped.accdb"),
+				schema -> schema.getTables().get("ITEMS").setName("RENAMED"));
+		final var supplied = new MdbSchemaMigration.Plan(plan.source(), plan.target(), plan.sourceFingerprint(),
+				plan.schemaXml(), plan.schemaFingerprint(), Map.of("renamed", "items"), Map.of());
+		assertEquals(1L, MdbSchemaMigration.execute(supplied).rowCounts().get("RENAMED"));
+	}
+
+	@Test
+	void uniqueConstraintsBecomeEnforcedAccessIndexes() throws Exception {
+		final var result = MdbSchemaMigration.rebuild(create(), directory.resolve("unique.accdb"), schema -> {
+			final var table = schema.getTables().get("ITEMS");
+			final var key = new com.sqlapp.data.schemas.UniqueConstraint("UQ_TXT_OLD", false);
+			key.getColumns().add("TXT");
+			key.getColumns().add("OLD");
+			table.getConstraints().add(key);
+		});
+		assertTrue(result.schema().getTables().get("ITEMS").getIndexes().get("UQ_TXT_OLD").isUnique());
+		try (var file = new DatabaseBuilder().withPath(result.plan().target()).open()) {
+			assertThrows(java.io.IOException.class, () -> file.getTable("ITEMS").addRow(2, "private-row-value", 7));
+			file.getTable("ITEMS").addRow(2, "private-row-value", 8);
+		}
+	}
+
 	@TempDir
 	Path directory;
 

@@ -41,9 +41,18 @@ final class MdbSavedQuerySupport {
 		final var parsed = MdbSelectQueryParser.definition(definition);
 		final String sql = parsed.sql();
 		final UnionParts union = splitUnion(sql);
-		validateSources(database, union == null ? sql : union.first);
+		final SourceColumns lookup = nameOfTable -> {
+			final var table = database.getTable(nameOfTable);
+			if (table == null)
+				return null;
+			final var columns = MdbQueryReferences.columnNames();
+			for (final var column : table.getColumns())
+				columns.add(column.getName());
+			return columns;
+		};
+		validateSources(union == null ? sql : union.first, parsed.parameters(), lookup);
 		if (union != null)
-			validateSources(database, union.second);
+			validateSources(union.second, parsed.parameters(), lookup);
 		final int objectId = nextObjectId(database);
 		final int flags = union == null ? 0 : UNION_OBJECT_FLAG;
 		addCatalogRow(database, objectId, name, flags);
@@ -221,11 +230,40 @@ final class MdbSavedQuerySupport {
 		return MdbSelectQueryParser.splitComma(value);
 	}
 
-	private static void validateSources(final Database database, final String sql) throws IOException {
-		for (final var table : MdbSelectQueryParser.select(sql).tables()) {
-			if (database.getTable(table.name()) == null)
+	@FunctionalInterface
+	private interface SourceColumns {
+		java.util.Set<String> get(String name) throws IOException;
+	}
+
+	static void validate(final com.sqlapp.data.schemas.Schema schema, final String definition) throws IOException {
+		final var parsed = MdbSelectQueryParser.definition(definition);
+		final UnionParts union = splitUnion(parsed.sql());
+		final SourceColumns lookup = name -> {
+			final var table = schema.getTables().stream().filter(t -> t.getName().equalsIgnoreCase(name)).findFirst()
+					.orElse(null);
+			if (table == null)
+				return null;
+			final var columns = MdbQueryReferences.columnNames();
+			for (final var column : table.getColumns())
+				columns.add(column.getName());
+			return columns;
+		};
+		validateSources(union == null ? parsed.sql() : union.first, parsed.parameters(), lookup);
+		if (union != null)
+			validateSources(union.second, parsed.parameters(), lookup);
+	}
+
+	private static void validateSources(final String sql, final List<MdbSelectQueryParser.Parameter> parameters,
+			final SourceColumns lookup) throws IOException {
+		final var select = MdbSelectQueryParser.select(sql);
+		final var tables = MdbQueryReferences.tables();
+		for (final var table : select.tables()) {
+			final var columns = lookup.get(table.name());
+			if (columns == null)
 				throw new IllegalArgumentException("Saved query source table not found: " + table.name());
+			tables.put(table.key(), columns);
 		}
+		MdbQueryReferences.validate(select, tables, parameters);
 	}
 
 	private record UnionParts(String first, String second, boolean all) {

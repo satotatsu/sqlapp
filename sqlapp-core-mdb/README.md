@@ -136,17 +136,38 @@ and SHA-256 fingerprints of the source file and target schema. A changed source
 or modified schema fingerprint is rejected before writing. Results retain the
 plan, observed schema and per-table row counts. Verification covers table and
 column identities, native column types and properties, primary/foreign keys,
-indexes, saved-query names and row counts. It does not claim full data equality
-or saved-query SQL semantic equivalence. A failed post-write verification leaves
+indexes, saved-query names and row counts. Copied columns are also compared row
+by row in the writer's traversal/insertion order, without buffering whole tables.
+Rename mappings are resolved case-insensitively. NULL, binary content, numeric
+values and extended datetime precision are compared; lossy numeric conversions
+fail verification even when Jackcess accepts the write. Comparison reports the
+table, column and copied-row ordinal without including cell values. It stops at
+the first value mismatch per table. New columns and recalculated columns are
+excluded from source-value comparison; saved-query SQL semantic equivalence is
+not verified. A failed post-write verification leaves
 the target for inspection and throws `MdbSchemaMigration.VerificationException`,
 which retains the plan, observed schema, row counts and all detected issues.
+LONG AutoNumber counters are checked against the source, including deleted-value
+history and empty tables. The current writer cannot preserve a counter greater
+than that reconstructed from copied rows; such a rebuild fails verification
+instead of silently allowing reuse of previously issued values. This check uses
+the isolated Jackcess 5.2.0 internal LONG generator because its public API has no
+persisted-counter accessor. GUID AutoNumber has no comparable sequence counter.
 Replacing the source remains an explicit `replaceWithRebuilt` operation with
 a caller-selected backup. Close all JDBC connections before this workflow.
 
 Linked tables, hidden queries and action/crosstab queries are rejected by the
 high-level planner because they cannot be preserved by this workflow. Update
 saved-query definitions explicitly when renaming tables/columns they reference;
-the saved-query writer rejects missing source tables. The lower-level rebuild
+the saved-query writer rejects missing source tables, missing columns and
+ambiguous unqualified column references. Declared parameters, function calls,
+quoted literals and explicit output aliases in ORDER BY are recognized.
+This is bounded name resolution, not complete SQL/function/type validation;
+references using Access's `!` notation must be written as `table.column`.
+Planning validates column compatibility with the source file format and the
+supported saved-query grammar/references, reporting detected errors together
+before row copying. The lower-level writer repeats these checks for supplied
+schemas. The lower-level rebuild
 overloads remain available for an explicitly supplied target Schema and maps.
 
 ## Column metadata and type preservation
@@ -188,12 +209,22 @@ which is slow or unavailable through UCanAccess:
   directly.
 - `rebuild(source, target, schema)` creates a separate Access file, recreates
   tables and relationships from the sqlapp Schema model, and bulk-copies data.
+  Copying buffers at most 1,024 rows at a time rather than a whole table.
+  Existing columns retain explicit NULL values even when they have defaults;
+  newly added columns receive their target defaults. Copied-column defaults
+  are temporarily suppressed during copying and restored before verification.
   A per-table target-to-source column-name map supports column renames. Dropped
   columns are omitted and changed definitions are created from the target
   model. The source is never overwritten and an existing target is rejected.
 - The rebuild overload accepting a target-to-source table map supports table
   renames. Tables omitted from the target Schema are dropped from the rebuilt
   file, while target tables without a source are created empty.
+  Explicit mapping names are case-insensitive. Unknown source/target names,
+  blank/null entries, duplicate target names differing only in case and
+  copying into calculated columns are rejected instead of silently losing data.
+  New tables and columns remain supported without explicit mappings.
+  Schema UNIQUE constraints are recreated as Access unique indexes and are
+  reported as indexes when read back, including composite keys.
 - `replaceWithRebuilt` switches a verified rebuilt file into the source path,
   first moving the original to a caller-selected backup. It never overwrites a
   backup and restores the original if the second move fails.

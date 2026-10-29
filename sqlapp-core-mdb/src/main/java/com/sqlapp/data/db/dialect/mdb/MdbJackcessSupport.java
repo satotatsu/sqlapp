@@ -290,17 +290,23 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		try {
 			try (Database input = new DatabaseBuilder().withPath(source).withReadOnly(true).open();
 					Database output = DatabaseBuilder.create(input.getFileFormat(), target.toFile())) {
+				final var tables = mappingNames(tableMappings, "table mappings");
+				final var columns = new java.util.TreeMap<String, Map<String, String>>(String.CASE_INSENSITIVE_ORDER);
+				for (final var entry : mappingNames(columnMappings, "column mapping tables").entrySet()) {
+					columns.put(entry.getKey(),
+							mappingNames(entry.getValue(), "column mappings for " + entry.getKey()));
+				}
+				validateMappings(input, targetSchema, tables, columns);
+				validateTargetSchema(input, targetSchema);
 				input.setDateTimeType(io.github.spannm.jackcess.DateTimeType.LOCAL_DATE_TIME);
 				output.setDateTimeType(io.github.spannm.jackcess.DateTimeType.LOCAL_DATE_TIME);
 				for (final Table model : targetSchema.getTables()) {
 					createTable(output, model);
 				}
 				for (final Table model : targetSchema.getTables()) {
-					final String sourceTableName = tableMappings != null && tableMappings.containsKey(model.getName())
-							? tableMappings.get(model.getName())
-							: model.getName();
+					final String sourceTableName = tables.getOrDefault(model.getName(), model.getName());
 					copyRows(input.getTable(sourceTableName), output.getTable(model.getName()),
-							columnMappings == null ? null : columnMappings.get(model.getName()));
+							columns.get(model.getName()));
 				}
 				for (final Table model : targetSchema.getTables()) {
 					for (final ForeignKeyConstraint fk : model.getConstraints().getForeignKeyConstraints()) {
@@ -331,6 +337,60 @@ public final class MdbJackcessSupport implements AutoCloseable {
 	public static void rebuild(final Path sourceFile, final Path targetFile, final Schema targetSchema)
 			throws IOException {
 		rebuild(sourceFile, targetFile, targetSchema, Map.of(), Map.of());
+	}
+
+	private static <V> Map<String, V> mappingNames(final Map<String, V> mappings, final String location) {
+		final Map<String, V> result = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		if (mappings == null)
+			return result;
+		for (final var entry : mappings.entrySet()) {
+			if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null
+					|| entry.getValue() instanceof String name && name.isBlank()) {
+				throw new IllegalArgumentException("Names and values are required in " + location);
+			}
+			if (result.containsKey(entry.getKey()))
+				throw new IllegalArgumentException("Duplicate name in " + location + ": " + entry.getKey());
+			result.put(entry.getKey(), entry.getValue());
+		}
+		return result;
+	}
+
+	private static void validateMappings(final Database source, final Schema target, final Map<String, String> tables,
+			final Map<String, Map<String, String>> columns) throws IOException {
+		final Map<String, Table> targetTables = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		for (final Table table : target.getTables())
+			targetTables.put(table.getName(), table);
+		for (final var entry : tables.entrySet()) {
+			if (!targetTables.containsKey(entry.getKey()))
+				throw new IllegalArgumentException("Unknown target table in mapping: " + entry.getKey());
+			if (source.getTable(entry.getValue()) == null)
+				throw new IllegalArgumentException("Unknown source table in mapping: " + entry.getValue());
+		}
+		for (final var entry : columns.entrySet()) {
+			final Table model = targetTables.get(entry.getKey());
+			if (model == null)
+				throw new IllegalArgumentException("Unknown target table in column mappings: " + entry.getKey());
+			final var original = source.getTable(tables.getOrDefault(model.getName(), model.getName()));
+			final var names = new java.util.TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+			if (original != null)
+				for (final var column : original.getColumns())
+					names.add(column.getName());
+			final Map<String, Column> targetColumns = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+			for (final Column column : model.getColumns())
+				targetColumns.put(column.getName(), column);
+			for (final var column : entry.getValue().entrySet()) {
+				final Column targetColumn = targetColumns.get(column.getKey());
+				if (targetColumn == null)
+					throw new IllegalArgumentException(
+							"Unknown target column in mapping: " + model.getName() + "." + column.getKey());
+				if (targetColumn.getFormula() != null && !targetColumn.getFormula().isBlank())
+					throw new IllegalArgumentException("Calculated columns cannot receive copied values: "
+							+ model.getName() + "." + column.getKey());
+				if (!names.contains(column.getValue()))
+					throw new IllegalArgumentException(
+							"Unknown source column in mapping for " + model.getName() + ": " + column.getValue());
+			}
+		}
 	}
 
 	/**
@@ -414,14 +474,36 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		rebuild(sourceFile, targetFile, schema);
 	}
 
+	static void validateTargetSchema(final Database source, final Schema schema) throws IOException {
+		final List<String> issues = new ArrayList<>();
+		final var format = ((io.github.spannm.jackcess.impl.DatabaseImpl) source).getFormat();
+		for (final Table table : schema.getTables()) {
+			for (final Column column : table.getColumns()) {
+				try {
+					toColumnBuilder(column).validate(format);
+				} catch (final IllegalArgumentException | UnsupportedOperationException e) {
+					issues.add(table.getName() + "." + column.getName() + ": " + e.getMessage());
+				}
+			}
+		}
+		for (final Table view : schema.getViews()) {
+			try {
+				MdbSavedQuerySupport.validate(schema, String.join(System.lineSeparator(), view.getDefinition()));
+			} catch (final IllegalArgumentException | UnsupportedOperationException e) {
+				issues.add(view.getName() + ": " + e.getMessage());
+			}
+		}
+		if (!issues.isEmpty())
+			throw new IllegalArgumentException("Access rebuild preflight failed: " + String.join("; ", issues));
+	}
+
 	private static void createTable(final Database database, final Table model) throws IOException {
 		final TableBuilder builder = new TableBuilder(model.getName());
 		for (final Column column : model.getColumns()) {
 			builder.addColumn(toColumnBuilder(column));
 		}
-		final UniqueConstraint primaryKey = model.getPrimaryKeyConstraint();
-		if (primaryKey != null) {
-			builder.addIndex(toIndexBuilder(primaryKey));
+		for (final UniqueConstraint key : model.getConstraints().getUniqueConstraints()) {
+			builder.addIndex(toIndexBuilder(key));
 		}
 		for (final Index index : model.getIndexes()) {
 			builder.addIndex(toIndexBuilder(index));
@@ -452,10 +534,26 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		if (source == null) {
 			return;
 		}
-		final List<Object[]> rows = new ArrayList<>();
+		final int batchSize = 1024;
+		final List<Object[]> rows = new ArrayList<>(batchSize);
 		final Map<String, String> sourceColumns = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		for (final var column : source.getColumns())
 			sourceColumns.put(column.getName(), column.getName());
+		// Jackcess applies defaults to explicit NULL too. Suppress them only for
+		// copied columns; newly added columns still receive their defaults.
+		final Map<io.github.spannm.jackcess.Column, PropertyMap.Property> defaults = new LinkedHashMap<>();
+		for (final var column : target.getColumns()) {
+			final String sourceName = mapping != null ? mapping.getOrDefault(column.getName(), column.getName())
+					: column.getName();
+			if (!column.isCalculated() && sourceColumns.containsKey(sourceName)) {
+				final var property = column.getProperties().remove(PropertyMap.DEFAULT_VALUE_PROP);
+				if (property != null)
+					defaults.put(column, property);
+			}
+		}
+		if (!defaults.isEmpty())
+			target.getProperties().save();
+		target.setAllowAutoNumberInsert(true);
 		for (final io.github.spannm.jackcess.Row sourceRow : source) {
 			final Object[] row = new Object[target.getColumnCount()];
 			for (final io.github.spannm.jackcess.Column targetColumn : target.getColumns()) {
@@ -472,11 +570,20 @@ public final class MdbJackcessSupport implements AutoCloseable {
 				}
 			}
 			rows.add(row);
+			if (rows.size() == batchSize) {
+				target.addRows(rows);
+				rows.clear();
+			}
 		}
 		if (!rows.isEmpty()) {
-			target.setAllowAutoNumberInsert(true);
 			target.addRows(rows);
 		}
+		for (final var entry : defaults.entrySet()) {
+			final var property = entry.getValue();
+			entry.getKey().getProperties().put(property.getName(), property.getType(), property.getValue());
+		}
+		if (!defaults.isEmpty())
+			target.getProperties().save();
 	}
 
 	private static void addRelationship(final Database database, final ForeignKeyConstraint foreignKey)

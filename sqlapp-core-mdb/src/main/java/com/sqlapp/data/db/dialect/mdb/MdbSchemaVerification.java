@@ -102,8 +102,15 @@ final class MdbSchemaVerification {
 	}
 
 	private static void indexes(final List<String> issues, final Table expected, final Table actual) {
-		equal(issues, expected.getName(), "index count", expected.getIndexes().size(), actual.getIndexes().size());
-		for (final Index index : expected.getIndexes()) {
+		final List<Index> indexes = new ArrayList<>(expected.getIndexes());
+		for (final UniqueConstraint key : expected.getConstraints().getUniqueConstraints(c -> !c.isPrimaryKey())) {
+			final Index index = new Index(key.getName()).setUnique(true).setEnable(key.isEnable());
+			for (final var column : key.getColumns())
+				index.getColumns().add(column.getName());
+			indexes.add(index);
+		}
+		equal(issues, expected.getName(), "index count", indexes.size(), actual.getIndexes().size());
+		for (final Index index : indexes) {
 			final String location = expected.getName() + "." + index.getName();
 			final Index found = actual.getIndexes().get(index.getName());
 			if (found == null) {

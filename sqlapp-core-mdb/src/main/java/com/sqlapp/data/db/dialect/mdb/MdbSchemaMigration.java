@@ -48,8 +48,8 @@ public final class MdbSchemaMigration {
 	}
 
 	/**
-	 * Successful metadata and row-count verification; does not claim full data
-	 * equality.
+	 * Successful metadata, row-count and copied-value verification. New and
+	 * recalculated column values are not compared to source data.
 	 */
 	public record Result(Plan plan, Schema schema, Map<String, Long> rowCounts) {
 		public Result {
@@ -130,6 +130,9 @@ public final class MdbSchemaMigration {
 		}
 		Objects.requireNonNull(changes, "Schema editor is required").accept(schema);
 		validateMetadataOnly(schema);
+		try (var database = new DatabaseBuilder().withPath(source).withReadOnly(true).open()) {
+			MdbJackcessSupport.validateTargetSchema(database, schema);
+		}
 		final Map<String, String> tables = new LinkedHashMap<>();
 		final Map<String, Map<String, String>> columns = new LinkedHashMap<>();
 		for (final Table table : schema.getTables()) {
@@ -179,11 +182,17 @@ public final class MdbSchemaMigration {
 		final Schema observed = MdbFileLoader.load(plan.target());
 		final List<String> issues = new ArrayList<>(MdbSchemaVerification.verify(targetSchema, observed));
 		final Map<String, Long> counts = new LinkedHashMap<>();
+		final Map<String, String> tableMappings = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		tableMappings.putAll(plan.tableMappings());
+		final Map<String, Map<String, String>> columnMappings = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		columnMappings.putAll(plan.columnMappings());
 		try (var source = new DatabaseBuilder().withPath(plan.source()).withReadOnly(true).open();
 				var target = new DatabaseBuilder().withPath(plan.target()).withReadOnly(true).open()) {
+			source.setDateTimeType(io.github.spannm.jackcess.DateTimeType.LOCAL_DATE_TIME);
+			target.setDateTimeType(io.github.spannm.jackcess.DateTimeType.LOCAL_DATE_TIME);
 			for (final Table expected : targetSchema.getTables()) {
 				final var original = source
-						.getTable(plan.tableMappings().getOrDefault(expected.getName(), expected.getName()));
+						.getTable(tableMappings.getOrDefault(expected.getName(), expected.getName()));
 				final var rebuilt = target.getTable(expected.getName());
 				if (rebuilt == null)
 					continue;
@@ -191,6 +200,7 @@ public final class MdbSchemaMigration {
 				if (count != (original == null ? 0 : original.getRowCount()))
 					issues.add("Rebuilt row count differs: " + expected.getName());
 				counts.put(expected.getName(), count);
+				MdbDataVerification.verify(original, rebuilt, columnMappings.get(expected.getName()), issues);
 			}
 		}
 		if (!plan.sourceFingerprint().equals(fileFingerprint(plan.source())))
