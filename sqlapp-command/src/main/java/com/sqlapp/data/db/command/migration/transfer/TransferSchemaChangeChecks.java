@@ -2,11 +2,18 @@
 package com.sqlapp.data.db.command.migration.transfer;
 
 /**
- * Stable category for explicit authorization of potentially data-impacting DDL.
+ * Stable Schema warning categories and authorization checks for data-impacting
+ * DDL.
  */
 public final class TransferSchemaChangeChecks {
 	public static final String DATA_IMPACT = "[SCHEMA_DATA_IMPACT]";
 	public static final String UNRESOLVED = "[SCHEMA_DIFF_UNRESOLVED]";
+	/**
+	 * Target CREATE names adjusted to avoid collisions; definitions are retained.
+	 */
+	public static final String NAME_ADJUSTMENT = "[SCHEMA_NAME_ADJUSTED]";
+	/** Name mapping retains opaque source SQL expressions verbatim. */
+	public static final String MAPPING_EXPRESSIONS = "[SCHEMA_MAPPING_EXPRESSIONS]";
 
 	private TransferSchemaChangeChecks() {
 	}

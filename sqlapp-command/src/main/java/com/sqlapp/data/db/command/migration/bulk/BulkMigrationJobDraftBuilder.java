@@ -57,6 +57,54 @@ public class BulkMigrationJobDraftBuilder {
 	}
 
 	/**
+	 * Expands a reviewed selection through foreign-key parents in the captured
+	 * Schema only. Rechecks the byte fingerprint, returns canonical identities, and
+	 * opens no connections. Eligibility and execution ordering remain the
+	 * responsibility of the ordinary authoring path and shared planner.
+	 */
+	public List<String> includeReferencedTables(final SchemaSnapshot reviewed, final List<String> selectedTables)
+			throws IOException {
+		Objects.requireNonNull(reviewed, "reviewed");
+		final var captured = read(reviewed.file());
+		if (!Objects.equals(reviewed.fingerprint(), captured.fingerprint()))
+			throw new IllegalArgumentException(
+					"Schema XML changed. Inspect it again before including referenced tables.");
+		if (selectedTables == null || selectedTables.isEmpty())
+			throw new IllegalArgumentException("Select at least one table before including referenced tables.");
+		if (selectedTables.stream().anyMatch(name -> name == null || name.isBlank()))
+			throw new IllegalArgumentException("Selected table names must not be blank.");
+		final var selected = new java.util.LinkedHashSet<String>();
+		final var queue = new ArrayList<Table>();
+		for (var name : selectedTables) {
+			final var table = BulkMigrationJobConfigurationResolver.findTable(captured.tables(), name);
+			if (!selected.add(identity(table)))
+				throw new IllegalArgumentException("Select each table only once.");
+			queue.add(table);
+		}
+		for (int position = 0; position < queue.size(); position++) {
+			final var child = queue.get(position);
+			for (var foreignKey : child.getConstraints().getForeignKeyConstraints()) {
+				if (foreignKey.getRelatedTableName() == null || foreignKey.getRelatedTableName().isBlank())
+					throw new IllegalArgumentException("Referenced table identity is missing for " + identity(child));
+				final String schemaName = foreignKey.getRelatedTableSchemaName();
+				var parent = new Table(foreignKey.getRelatedTableName()).setCatalogName(child.getCatalogName())
+						.setSchemaName(schemaName == null || schemaName.isBlank() ? child.getSchemaName() : schemaName);
+				try {
+					parent = BulkMigrationJobConfigurationResolver.findTable(captured.tables(), identity(parent));
+				} catch (RuntimeException failure) {
+					throw new IllegalArgumentException("Referenced table " + identity(parent) + " for "
+							+ identity(child)
+							+ " is missing or ambiguous in the captured Schema. Capture the required schema or configure the relationship explicitly.",
+							failure);
+				}
+				if (selected.add(identity(parent)))
+					queue.add(parent);
+			}
+		}
+		return List.copyOf(selected);
+	}
+
+	/**
 	 * Rechecks the XML byte fingerprint and delegates selected-table ordering to
 	 * the shared planner. No connection, data fingerprint, resume guarantee or
 	 * target compatibility is inferred.

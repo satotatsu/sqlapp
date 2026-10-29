@@ -84,6 +84,26 @@ public final class TransferFileImportService {
 
 	public Review review(Path manifest, String expectedFingerprint, Map<String, ? extends DataSource> connections)
 			throws Exception {
+		return review(manifest, expectedFingerprint, connections, null);
+	}
+
+	/**
+	 * Optional manual draft; the existing review and audit models remain unchanged.
+	 */
+	public record SqlReview(Review review, String schemaSqlDraft) {
+		public SqlReview {
+			Objects.requireNonNull(review, "review");
+		}
+	}
+
+	public SqlReview reviewWithSqlDraft(Path manifest, String expectedFingerprint,
+			Map<String, ? extends DataSource> connections) throws Exception {
+		final var draft = new java.util.concurrent.atomic.AtomicReference<String>();
+		return new SqlReview(review(manifest, expectedFingerprint, connections, draft::set), draft.get());
+	}
+
+	private Review review(Path manifest, String expectedFingerprint, Map<String, ? extends DataSource> connections,
+			java.util.function.Consumer<String> draft) throws Exception {
 		final Loaded loaded = load(manifest, expectedFingerprint);
 		try (var target = binding(loaded, connections).getConnection()) {
 			target.setReadOnly(true);
@@ -91,6 +111,9 @@ public final class TransferFileImportService {
 			final var schemaPlan = TransferSchemaPreparation.plan(target, loaded.schema(), plan,
 					loaded.configuration().schemaMode(), loaded.configuration().compatibilityPolicy());
 			new TransferFilePackageIO().read(manifest, loaded.snapshot().fingerprint());
+			if (draft != null)
+				draft.accept(TransferSchemaSqlScript.render(schemaPlan, TransferJobPreparationService.dialect(target),
+						loaded.snapshot().manifest().jobFingerprint()));
 			return new Review(manifest.toAbsolutePath().normalize(), loaded.snapshot().fingerprint(),
 					MigrationPlanCommand.databaseIdentity(target), schemaPlan.fingerprint(), schemaPlan);
 		} catch (TransferSchemaPreparation.ValidationException failure) {

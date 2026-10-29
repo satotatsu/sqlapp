@@ -25,6 +25,111 @@ class BulkMigrationJobDraftBuilderTest {
 	private final BulkMigrationJobDraftBuilder builder = new BulkMigrationJobDraftBuilder();
 
 	@Test
+	void includesTransitiveParentsWithoutUnrelatedTablesOrChangingSchema() throws Exception {
+		var schema = new Schema("PUBLIC");
+		var grandparent = table("ROOTS");
+		var parent = table("PARENTS");
+		var child = table("CHILDREN");
+		parent.getConstraints().addForeignKeyConstraint("FK_ROOT", parent.getColumns().get("ID"),
+				grandparent.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK_PARENT", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		schema.getTables().add(child);
+		schema.getTables().add(parent);
+		schema.getTables().add(grandparent);
+		schema.getTables().add(table("OTHER"));
+		var file = directory.resolve("references.xml");
+		schema.writeXml(file.toFile());
+		var original = Files.readAllBytes(file);
+		var snapshot = builder.inspect(file);
+		assertEquals(List.of("PUBLIC.CHILDREN", "PUBLIC.PARENTS", "PUBLIC.ROOTS"),
+				builder.includeReferencedTables(snapshot, List.of("PUBLIC.CHILDREN")));
+		assertArrayEquals(original, Files.readAllBytes(file));
+		var draft = new BulkMigrationJobConfigurationEditorIO().validate(builder.draft(snapshot,
+				builder.includeReferencedTables(snapshot, List.of("PUBLIC.CHILDREN")), null, 100, true));
+		assertEquals(List.of("PUBLIC.ROOTS", "PUBLIC.PARENTS", "PUBLIC.CHILDREN"),
+				draft.getTasks().stream().map(task -> task.getTable()).toList());
+		Files.writeString(file, Files.readString(file) + "\n<!-- changed -->");
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.includeReferencedTables(snapshot, List.of("PUBLIC.CHILDREN")));
+	}
+
+	@Test
+	void unresolvedParentsAreRejectedWithoutGuessingAnotherSchema() throws Exception {
+		var schema = new Schema("PUBLIC");
+		var child = table("CHILDREN");
+		var external = new Schema("EXTERNAL");
+		var externalParent = table("PARENTS");
+		external.getTables().add(externalParent);
+		child.getConstraints().addForeignKeyConstraint("FK_EXTERNAL", child.getColumns().get("ID"),
+				externalParent.getColumns().get("ID"));
+		schema.getTables().add(child);
+		schema.getTables().add(table("PARENTS"));
+		var file = directory.resolve("external.xml");
+		schema.writeXml(file.toFile());
+		assertTrue(Files.readString(file).contains("EXTERNAL"));
+		var failure = assertThrows(IllegalArgumentException.class,
+				() -> builder.includeReferencedTables(builder.inspect(file), List.of("PUBLIC.CHILDREN")));
+		assertTrue(failure.getMessage().contains("EXTERNAL.PARENTS"));
+		assertTrue(failure.getMessage().contains("missing or ambiguous"));
+	}
+
+	@Test
+	void cyclesTerminateInSelectionButOrdinaryPlannerStillRejectsExecutionCycle() throws Exception {
+		var schema = new Schema("PUBLIC");
+		var first = table("FIRST");
+		var second = table("SECOND");
+		first.getConstraints().addForeignKeyConstraint("FK_SECOND", first.getColumns().get("ID"),
+				second.getColumns().get("ID"));
+		second.getConstraints().addForeignKeyConstraint("FK_FIRST", second.getColumns().get("ID"),
+				first.getColumns().get("ID"));
+		schema.getTables().add(first);
+		schema.getTables().add(second);
+		var file = directory.resolve("cycle.xml");
+		schema.writeXml(file.toFile());
+		var snapshot = builder.inspect(file);
+		var selected = builder.includeReferencedTables(snapshot, List.of("PUBLIC.FIRST"));
+		assertEquals(List.of("PUBLIC.FIRST", "PUBLIC.SECOND"), selected);
+		assertTrue(
+				assertThrows(IllegalArgumentException.class, () -> builder.draft(snapshot, selected, null, 100, false))
+						.getMessage().contains("cyclic"));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.includeReferencedTables(snapshot, List.of("PUBLIC.FIRST", "FIRST")));
+		assertThrows(IllegalArgumentException.class, () -> builder.includeReferencedTables(snapshot, List.of()));
+		assertThrows(IllegalArgumentException.class, () -> builder.includeReferencedTables(snapshot, List.of(" ")));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.includeReferencedTables(snapshot, java.util.Collections.singletonList(null)));
+	}
+
+	@Test
+	void resolvesCatalogAndSchemaQualifiedParentAndIgnoresSelfReference() throws Exception {
+		var catalog = new com.sqlapp.data.schemas.Catalog("CAT");
+		var childSchema = new Schema("APP");
+		var parentSchema = new Schema("MASTER");
+		var otherSchema = new Schema("OTHER");
+		catalog.getSchemas().add(childSchema);
+		catalog.getSchemas().add(parentSchema);
+		catalog.getSchemas().add(otherSchema);
+		var child = table("CHILDREN");
+		var parent = table("PARENTS");
+		childSchema.getTables().add(child);
+		parentSchema.getTables().add(parent);
+		otherSchema.getTables().add(table("PARENTS"));
+		child.getConstraints().addForeignKeyConstraint("FK_PARENT", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		parent.getConstraints().addForeignKeyConstraint("FK_SELF", parent.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		var file = directory.resolve("catalog.xml");
+		catalog.writeXml(file.toFile());
+		var snapshot = builder.inspect(file);
+		assertEquals(List.of("CAT.APP.CHILDREN", "CAT.MASTER.PARENTS"),
+				builder.includeReferencedTables(snapshot, List.of("CHILDREN")));
+		assertTrue(assertThrows(RuntimeException.class,
+				() -> builder.includeReferencedTables(snapshot, List.of("PARENTS"))).getMessage()
+				.toLowerCase(java.util.Locale.ROOT).contains("ambiguous"));
+	}
+
+	@Test
 	void generatesPinnedConciseYamlAndDelegatesForeignKeyOrderingToSharedPlanner() throws Exception {
 		final var schema = new Schema("PUBLIC");
 		final var parent = table("PARENTS");

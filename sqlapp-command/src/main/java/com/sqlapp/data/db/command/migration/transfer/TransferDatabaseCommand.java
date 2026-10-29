@@ -42,10 +42,11 @@ public class TransferDatabaseCommand extends AbstractTransferFileCommand {
 		if (expectedConfigurationFingerprint != null
 				&& !expectedConfigurationFingerprint.equals(definition.fingerprint()))
 			throw new IllegalArgumentException("Transfer configuration changed. Review it again.");
-		if (definition.configuration().dataMode() == TransferJobConfiguration.DataMode.FILE
-				|| definition.configuration().mappingFile() != null)
+		if (definition.configuration().dataMode() == TransferJobConfiguration.DataMode.FILE)
 			throw new IllegalArgumentException(
-					"Direct execution requires JDBC_DIRECT or SCHEMA_ONLY and no explicit mappingFile.");
+					"Direct execution requires JDBC_DIRECT or SCHEMA_ONLY. Use the file export/import commands for FILE jobs.");
+		if (definition.configuration().mappingFile() != null)
+			new TransferNameMappingIO().read(definition.mappingFile());
 	}
 
 	@Override

@@ -31,7 +31,12 @@ class TransferFileImportServiceTest {
 		sql(target, "CREATE SCHEMA ARCHIVE AUTHORIZATION DBA");
 		final var exported = export(source, "[ORDERS, ITEMS]", "targetSchema: ARCHIVE\n", "CREATE_MISSING");
 		final var bindings = Map.of("to", target);
-		final var review = service.review(exported.file(), exported.fingerprint(), bindings);
+		final var captured = service.reviewWithSqlDraft(exported.file(), exported.fingerprint(), bindings);
+		final var review = captured.review();
+		assertTrue(captured.schemaSqlDraft().contains("-- Job: " + exported.manifest().jobFingerprint()));
+		assertTrue(captured.schemaSqlDraft().contains("-- Schema plan: " + review.schemaPreparation().fingerprint()));
+		assertTrue(captured.schemaSqlDraft().contains(";\n"));
+		assertEquals(exported, new TransferFilePackageIO().read(exported.file(), exported.fingerprint()));
 		assertFalse(review.schemaPreparation().statements().isEmpty());
 		assertEquals("export-table-2", review.schemaPreparation().statements().getFirst().taskId());
 		assertTrue(review.schemaPreparation().statements().stream()

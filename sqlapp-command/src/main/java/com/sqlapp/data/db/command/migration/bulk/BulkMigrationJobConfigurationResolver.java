@@ -245,10 +245,25 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		final Table target = new Table(source.getName()).setCatalogName(source.getCatalogName())
 				.setSchemaName(source.getSchemaName());
-		source.getColumns().forEach(column -> target.getColumns().add(column.clone()));
+		final var targetNames = new HashSet<String>();
+		if (columnMappings != null) {
+			final var mappedSources = new HashSet<String>();
+			for (var mapping : columnMappings.entrySet()) {
+				var column = source.getColumns().get(mapping.getKey());
+				if (column == null || !mappedSources.add(column.getName()) || mapping.getValue() == null
+						|| mapping.getValue().isBlank())
+					throw new CommandException("Invalid or duplicate columnMappings source: " + mapping.getKey());
+			}
+		}
+		for (var column : source.getColumns()) {
+			String name = mappedName(columnMappings, column.getName());
+			if (name == null || name.isBlank() || !targetNames.add(name.toLowerCase(java.util.Locale.ROOT)))
+				throw new CommandException("columnMappings must produce unique non-empty target columns: " + name);
+			target.getColumns().add(column.clone().setName(name));
+		}
 		if (source.getPrimaryKeyConstraint() != null) {
 			final var primaryKeyColumns = source.getPrimaryKeyConstraint().getColumns().stream()
-					.map(reference -> target.getColumns().get(reference.getName()))
+					.map(reference -> target.getColumns().get(mappedName(columnMappings, reference.getName())))
 					.toArray(com.sqlapp.data.schemas.Column[]::new);
 			target.setPrimaryKey(source.getPrimaryKeyConstraint().getName(), primaryKeyColumns);
 		}
@@ -258,24 +273,6 @@ public class BulkMigrationJobConfigurationResolver {
 		}
 		if (parts.length == 3) {
 			target.setCatalogName(parts[0]);
-		}
-		if (columnMappings != null) {
-			final var targetNames = new HashSet<String>();
-			for (final var sourceColumn : source.getColumns()) {
-				final String targetName = mappedName(columnMappings, sourceColumn.getName());
-				if (targetName == null || targetName.isBlank()
-						|| !targetNames.add(targetName.toLowerCase(java.util.Locale.ROOT))) {
-					throw new CommandException(
-							"columnMappings must produce unique non-empty target columns: " + targetName);
-				}
-			}
-			for (final var mapping : columnMappings.entrySet()) {
-				final var column = target.getColumns().get(mapping.getKey());
-				if (column == null || mapping.getValue() == null || mapping.getValue().isBlank()) {
-					throw new CommandException("Invalid columnMappings entry: " + mapping);
-				}
-				column.setName(mapping.getValue());
-			}
 		}
 		return target;
 	}

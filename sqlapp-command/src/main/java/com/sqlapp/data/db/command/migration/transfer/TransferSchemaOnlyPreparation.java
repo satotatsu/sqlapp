@@ -37,28 +37,54 @@ final class TransferSchemaOnlyPreparation {
 	static TransferJobPreparationService.Prepared prepare(Connection target, Schema schema,
 			TransferJobConfigurationIO.Snapshot job, Path directory, Path xml, String catalog, String targetSchema)
 			throws Exception {
+		return prepare(target, schema, job, directory, xml, catalog, targetSchema, null);
+	}
+
+	static TransferJobPreparationService.Prepared prepare(Connection target, Schema schema,
+			TransferJobConfigurationIO.Snapshot job, Path directory, Path xml, String catalog, String targetSchema,
+			TransferNameMappingIO.Snapshot mapping) throws Exception {
 		final var selected = select(schema, job.configuration().tables());
+		final var projection = mapping == null ? null
+				: TransferNameMappingProjection.project(schema, selected, mapping.configuration());
+		final var warnings = new ArrayList<String>();
+		if (projection != null && projection.renamedIdentifiers()) {
+			String warning = TransferSchemaChangeChecks.MAPPING_EXPRESSIONS
+					+ " Table/column names are mapped; SQL expressions, checks, defaults and predicates remain verbatim. Review Schema SQL and adjust source expressions where necessary.";
+			TransferSchemaPreparation.compatibility(job.configuration().compatibilityPolicy(), warnings, warning);
+		}
 		final var tasks = new ArrayList<TransferSchemaPreparation.Selection>();
 		for (int index = 0; index < selected.size(); index++) {
-			final var source = selected.get(index);
+			final var source = projection == null ? selected.get(index)
+					: projection.bySourceName().get(selected.get(index).getName());
 			tasks.add(new TransferSchemaPreparation.Selection("schema-table-" + (index + 1), source,
 					source.clone().setCatalogName(catalog).setSchemaName(targetSchema)));
 		}
-		final var plan = TransferSchemaPreparation.schemaOnly(target, schema, tasks, job.fingerprint(),
-				job.configuration().compatibilityPolicy(), job.configuration().schemaMode());
+		final var base = TransferSchemaPreparation.schemaOnly(target, projection == null ? schema : projection.schema(),
+				tasks, job.fingerprint(), job.configuration().compatibilityPolicy(), job.configuration().schemaMode());
+		warnings.addAll(base.warnings());
+		final var plan = projection == null ? base
+				: TransferSchemaPreparation.result(base.fingerprint(), base.statements(), warnings,
+						job.configuration().schemaMode());
 		final var io = new TransferJobConfigurationIO();
 		if (!io.read(job.file()).fingerprint().equals(job.fingerprint()))
 			throw new IllegalArgumentException("Transfer definition changed during schema-only preparation.");
+		TransferNameMappingIO.capture(mapping, directory);
 		final var saved = io.write(directory.resolve("transfer.yaml"), job.text(), null);
 		return new TransferJobPreparationService.Prepared(directory, saved, xml, null,
-				fingerprint(xml, saved.fingerprint(), plan.fingerprint()),
+				fingerprint(xml, saved.fingerprint(), plan.fingerprint(),
+						mapping == null ? null : mapping.fingerprint()),
 				tasks.stream().map(TransferSchemaPreparation.Selection::getTaskId).toList(), plan.warnings(), plan);
 	}
 
 	static String fingerprint(Path xml, String job, String plan) throws java.io.IOException {
+		return fingerprint(xml, job, plan, null);
+	}
+
+	static String fingerprint(Path xml, String job, String plan, String mapping) throws java.io.IOException {
 		final String schema = BoundedMigrationFile.sha256(xml, 16_777_216L, "maxSchemaBytes", "Schema");
 		return "sha256:" + MessageDigests.SHA256
-				.checksumAsString((schema + "\n" + job + "\n" + plan).getBytes(StandardCharsets.UTF_8));
+				.checksumAsString((schema + "\n" + job + "\n" + plan + (mapping == null ? "" : "\n" + mapping))
+						.getBytes(StandardCharsets.UTF_8));
 	}
 
 	static String identity(String catalog, String schema, String table) {

@@ -132,8 +132,7 @@ class TransferJobPreparationServiceTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> service.prepare(job, Map.of("from", neverConnect), directory));
 		Files.writeString(job, Files.readString(job) + "mappingFile: mapping.yaml\n");
-		assertTrue(assertThrows(IllegalArgumentException.class, () -> service.prepare(job, bindings, directory))
-				.getMessage().contains("mappingFile"));
+		assertThrows(java.nio.file.NoSuchFileException.class, () -> service.prepare(job, bindings, directory));
 		assertEquals(0, borrowed.get());
 		try (var files = Files.list(directory)) {
 			assertEquals(1, files.count());

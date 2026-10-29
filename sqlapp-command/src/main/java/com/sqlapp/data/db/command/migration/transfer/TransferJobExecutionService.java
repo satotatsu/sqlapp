@@ -87,9 +87,28 @@ public final class TransferJobExecutionService {
 	/** Read-only preparation bound to the actual source/target connections used. */
 	public Review review(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace)
 			throws java.io.IOException {
+		return review(jobFile, connections, workspace, null);
+	}
+
+	/** Optional manual SQL draft alongside the unchanged review/audit model. */
+	public record SqlReview(Review review, String schemaSqlDraft) {
+		public SqlReview {
+			Objects.requireNonNull(review, "review");
+		}
+	}
+
+	public SqlReview reviewWithSqlDraft(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace)
+			throws java.io.IOException {
+		final var draft = new java.util.concurrent.atomic.AtomicReference<String>();
+		return new SqlReview(review(jobFile, connections, workspace, draft::set), draft.get());
+	}
+
+	private Review review(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace,
+			java.util.function.Consumer<String> draft) throws java.io.IOException {
 		final var definition = new TransferJobConfigurationIO().read(jobFile);
 		final var bindings = bindings(definition.configuration(), connections, null, null);
-		final var prepared = new TransferJobPreparationService().prepare(jobFile, bindings.connections(), workspace);
+		final var prepared = new TransferJobPreparationService().prepare(jobFile, bindings.connections(), workspace,
+				draft);
 		if (!definition.fingerprint().equals(prepared.job().fingerprint()))
 			throw new IllegalArgumentException("Transfer definition changed during review. Review it again.");
 		return new Review(jobFile, prepared, bindings.source().identity, bindings.target().identity);
@@ -118,6 +137,8 @@ public final class TransferJobExecutionService {
 			current = new TransferJobPreparationService().prepare(review.definitionFile(), bindings.connections(),
 					review.prepared().directory().getParent());
 			if (!current.job().fingerprint().equals(review.prepared().job().fingerprint())
+					|| current.dataJob() != null
+							&& !current.dataJob().fingerprint().equals(review.prepared().dataJob().fingerprint())
 					|| !current.planFingerprint().equals(review.prepared().planFingerprint())
 					|| !current.warnings().equals(review.prepared().warnings())
 					|| !current.schemaPreparation().equals(review.prepared().schemaPreparation()))
@@ -215,15 +236,27 @@ public final class TransferJobExecutionService {
 		if (!io.read(review.definitionFile()).fingerprint().equals(prepared.job().fingerprint())
 				|| !io.read(prepared.job().file()).fingerprint().equals(prepared.job().fingerprint()))
 			throw new IllegalArgumentException("Reviewed transfer definition changed.");
+		String mappingFingerprint = null;
+		if (prepared.job().configuration().mappingFile() != null) {
+			var mappingIO = new TransferNameMappingIO();
+			mappingFingerprint = mappingIO.read(prepared.directory().resolve(TransferNameMappingIO.CAPTURED_FILE))
+					.fingerprint();
+			if (!mappingFingerprint
+					.equals(mappingIO.read(io.read(review.definitionFile()).mappingFile()).fingerprint()))
+				throw new IllegalArgumentException("Reviewed name mapping changed.");
+		}
 		if (prepared.job().configuration().dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY) {
 			if (!prepared.planFingerprint()
 					.equals(TransferSchemaOnlyPreparation.fingerprint(prepared.sourceSchemaFile(),
-							prepared.job().fingerprint(), prepared.schemaPreparation().fingerprint())))
+							prepared.job().fingerprint(), prepared.schemaPreparation().fingerprint(),
+							mappingFingerprint)))
 				throw new IllegalArgumentException("Reviewed Schema artifact changed.");
 			return;
 		}
 		final var bulkIO = new BulkMigrationJobConfigurationEditorIO();
 		final var bulk = bulkIO.read(prepared.dataJob().file());
+		if (mappingFingerprint != null)
+			TransferNameMappingIO.checkDataJobPin(bulk.text(), mappingFingerprint);
 		if (!bulk.fingerprint().equals(prepared.dataJob().fingerprint()))
 			throw new IllegalArgumentException("Reviewed data job changed.");
 		final var configuration = bulkIO.validate(bulk.text());

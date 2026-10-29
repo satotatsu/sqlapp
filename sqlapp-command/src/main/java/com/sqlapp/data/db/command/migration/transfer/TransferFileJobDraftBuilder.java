@@ -80,7 +80,8 @@ public final class TransferFileJobDraftBuilder {
 		for (String table : tables)
 			supported(schema, table, policy);
 		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, schemaMode,
-				schema.getName(), targetSchema, null, chunkSize, verify, TransferJobConfiguration.DataMode.FILE,
+				schema.getName() == null || schema.getName().isBlank() ? null : schema.getName(), targetSchema, null,
+				chunkSize, verify, TransferJobConfiguration.DataMode.FILE,
 				new TransferJobConfiguration.FileTransfer("packages", TransferJobConfiguration.FileFormat.CSV, "UTF-8",
 						nullValue, policy),
 				compatibilityPolicy);

@@ -20,7 +20,7 @@ public final class TransferSchemaPreparation {
 	public static final class ValidationException extends IllegalArgumentException {
 		private static final long serialVersionUID = 1L;
 
-		private ValidationException(String message) {
+		ValidationException(String message) {
 			super(message);
 		}
 	}
@@ -82,6 +82,27 @@ public final class TransferSchemaPreparation {
 	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy)
 			throws Exception {
+		return plan(connection, sourceSchema, data, mode, policy, null);
+	}
+
+	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			TransferNameMappingProjection.Projection projection) throws Exception {
+		if (projection != null) {
+			final var warnings = new ArrayList<String>();
+			if (projection.renamedIdentifiers() && mode != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING)
+				compatibility(policy, warnings, TransferSchemaChangeChecks.MAPPING_EXPRESSIONS
+						+ " Table/column names are mapped; SQL expressions, checks, defaults and predicates remain verbatim. Review Schema SQL and adjust source expressions where necessary.");
+			final var selections = data.getTasks().stream()
+					.map(task -> new Selection(task.getTaskId(),
+							projection.bySourceName().get(task.getEffectiveSourceTable().getName()),
+							task.getEffectiveTargetTable()))
+					.toList();
+			final var base = plan(connection, projection.schema(), selections, data.getFingerprint(), mode, policy,
+					data);
+			warnings.addAll(base.warnings());
+			return result(base.fingerprint(), base.statements(), warnings, mode);
+		}
 		return plan(
 				connection, sourceSchema, data.getTasks().stream().map(task -> new Selection(task.getTaskId(),
 						task.getEffectiveSourceTable(), task.getEffectiveTargetTable())).toList(),
@@ -215,8 +236,45 @@ public final class TransferSchemaPreparation {
 		if (mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES)
 			return TransferSchemaDifferencePreparation.plan(connection, tasks, remapped, registry, fingerprint,
 					warnings, policy);
+		// Access and other table-local namespaces may repeat a constraint name.
+		// Give repeated names stable target identities; retain source metadata.
+		final var constraintNames = new HashMap<String, Integer>();
+		final var indexNames = new HashMap<String, Integer>();
+		for (var table : remapped.values())
+			for (var constraint : table.getConstraints())
+				if (constraint.getName() != null)
+					constraintNames.merge(constraint.getName().toUpperCase(Locale.ROOT), 1, Integer::sum);
+		for (var table : remapped.values())
+			for (var index : table.getIndexes())
+				if (index.getName() != null)
+					indexNames.merge(index.getName().toUpperCase(Locale.ROOT), 1, Integer::sum);
+		final var reservedNames = new HashSet<>(constraintNames.keySet());
+		reservedNames.addAll(indexNames.keySet());
 		for (var task : missing) {
 			final var target = remapped.get(task.getEffectiveSourceTable().getName());
+			for (var constraint : target.getConstraints())
+				if (constraint.getName() != null
+						&& constraintNames.get(constraint.getName().toUpperCase(Locale.ROOT)) > 1) {
+					final String originalName = constraint.getName();
+					final String name = targetObjectName(target, originalName, "sqlapp_", reservedNames);
+					compatibility(policy, warnings,
+							TransferSchemaChangeChecks.NAME_ADJUSTMENT + " Repeated source constraint name "
+									+ diagnosticName(originalName) + " on table " + diagnosticName(target.getName())
+									+ " is generated as " + name
+									+ " in CREATE SQL. Constraint columns and rules are retained.");
+					constraint.setName(name);
+				}
+			for (var index : target.getIndexes())
+				if (index.getName() != null && indexNames.get(index.getName().toUpperCase(Locale.ROOT)) > 1) {
+					final String originalName = index.getName();
+					final String name = targetObjectName(target, originalName, "sqlapp_i_", reservedNames);
+					compatibility(policy, warnings,
+							TransferSchemaChangeChecks.NAME_ADJUSTMENT + " Repeated source index name "
+									+ diagnosticName(originalName) + " on table " + diagnosticName(target.getName())
+									+ " is generated as " + name
+									+ " in CREATE SQL. Index columns, ordering and uniqueness are retained.");
+					index.setName(name);
+				}
 			final var operations = registry.createSql(target, SqlType.CREATE);
 			if (operations.isEmpty())
 				throw new ValidationException(
@@ -230,6 +288,18 @@ public final class TransferSchemaPreparation {
 			}
 		}
 		return result(fingerprint, statements, warnings, mode);
+	}
+
+	private static String targetObjectName(Table table, String originalName, String prefix, Set<String> reserved)
+			throws Exception {
+		final String identity = String.join("\u0000", Objects.toString(table.getCatalogName(), ""),
+				Objects.toString(table.getSchemaName(), ""), table.getName(), originalName);
+		final String name = prefix + HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+				.digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8))).substring(0, 20);
+		if (!reserved.add(name.toUpperCase(Locale.ROOT)))
+			throw new ValidationException(
+					"Generated target object name collides. Rename the source constraint or index, or prepare the target table separately.");
+		return name;
 	}
 
 	static Plan result(String fingerprint, List<Statement> statements, List<String> warnings,

@@ -28,9 +28,9 @@ public final class TransferJobDraftBuilder {
 				.map(table -> TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
 						table.getName()))
 				.toList();
-		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, mode, schema.getName(),
-				targetSchema, null, null, false, TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy,
-				allowDestructiveSchemaChanges);
+		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, mode,
+				sourceSchema(schema.getName()), targetSchema, null, null, false,
+				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy, allowDestructiveSchemaChanges);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(configuration), null);
 	}
@@ -49,9 +49,14 @@ public final class TransferJobDraftBuilder {
 				.validate(new BulkMigrationJobDraftBuilder().draft(schema, selected, "", chunkSize, verify));
 		final var canonical = TransferFileJobDraftBuilder.schema(schema);
 		final var job = new TransferJobConfiguration(1, "source", "target",
-				draft.getTasks().stream().map(task -> task.getTable()).toList(), schemaMode, canonical.getName(),
-				targetSchema, null, chunkSize, verify, TransferJobConfiguration.DataMode.JDBC_DIRECT, null, policy);
+				draft.getTasks().stream().map(task -> task.getTable()).toList(), schemaMode,
+				sourceSchema(canonical.getName()), targetSchema, null, chunkSize, verify,
+				TransferJobConfiguration.DataMode.JDBC_DIRECT, null, policy);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(job), null);
+	}
+
+	private static String sourceSchema(String name) {
+		return name == null || name.isBlank() ? null : name;
 	}
 }

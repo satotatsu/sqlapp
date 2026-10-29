@@ -56,7 +56,25 @@ class TransferJobDraftBuilderTest {
 	}
 
 	private BulkMigrationJobDraftBuilder.SchemaSnapshot schema() throws Exception {
-		final var schema = new Schema("PUBLIC");
+		return schema("PUBLIC");
+	}
+
+	@Test
+	void unnamedAccessSchemaIsOmittedForDirectAndSchemaOnlyJobs() throws Exception {
+		var snapshot = schema("");
+		var builder = new TransferJobDraftBuilder();
+		var direct = builder.saveDirect(snapshot, List.of("ITEMS"), 100, true, null, "PUBLIC",
+				directory.resolve("direct.yaml"));
+		var schemaOnly = builder.saveSchemaOnly(snapshot, List.of("ITEMS"), null, "PUBLIC",
+				directory.resolve("schema.yaml"));
+		assertNull(direct.configuration().sourceSchema());
+		assertNull(schemaOnly.configuration().sourceSchema());
+		assertFalse(direct.text().contains("sourceSchema:"));
+		assertFalse(schemaOnly.text().contains("sourceSchema:"));
+	}
+
+	private BulkMigrationJobDraftBuilder.SchemaSnapshot schema(String name) throws Exception {
+		final var schema = new Schema(name);
 		final var table = new Table("ITEMS");
 		final var id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(id);

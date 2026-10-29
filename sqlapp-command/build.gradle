@@ -12,7 +12,7 @@ dependencies {
 	testImplementation project(':sqlapp-core-test')
 	// Create local Access fixtures for offline assessment tests.
 	testRuntimeOnly project(':sqlapp-core-mdb')
-	testImplementation('io.github.spannm:ucanaccess:5.1.6')
+	testImplementation('io.github.spannm:ucanaccess:5.2.0')
 	//JDBC
 	api("com.zaxxer:HikariCP:7.0.2")
 	

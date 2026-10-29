@@ -16,6 +16,83 @@ class TransferSchemaOnlyTest {
 	private final TransferJobExecutionService service = new TransferJobExecutionService();
 
 	@Test
+	void repeatedTableLocalIndexNamesRetainBothDefinitionsAndUniqueness() throws Exception {
+		var schema = new com.sqlapp.data.schemas.Schema("").setProductName("Microsoft Access");
+		var selections = new ArrayList<TransferSchemaPreparation.Selection>();
+		for (String name : List.of("CUSTOMERS", "SUPPLIERS")) {
+			var table = new com.sqlapp.data.schemas.Table(name);
+			table.getColumns().add("CODE",
+					column -> column.setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNotNull(true));
+			var index = new com.sqlapp.data.schemas.Index("IX_CODE").setUnique(true);
+			index.getColumns().add(table.getColumns().get("CODE"), com.sqlapp.data.schemas.Order.Desc);
+			table.getIndexes().add(index);
+			schema.getTables().add(table);
+			selections.add(new TransferSchemaPreparation.Selection(name, table, table.clone().setSchemaName("PUBLIC")));
+		}
+		try (var connection = database().getConnection()) {
+			var plan = TransferSchemaPreparation.schemaOnly(connection, schema, selections, "fixture",
+					TransferJobConfiguration.CompatibilityPolicy.WARN);
+			assertEquals(plan, TransferSchemaPreparation.schemaOnly(connection, schema, selections, "fixture",
+					TransferJobConfiguration.CompatibilityPolicy.WARN));
+			assertEquals(2, plan.statements().stream()
+					.filter(statement -> statement.sql().toUpperCase(Locale.ROOT).contains(" DESC")).count());
+			TransferSchemaPreparation.execute(connection, plan, progress -> {
+			});
+			var names = new HashSet<String>();
+			for (var table : schema.getTables()) {
+				assertEquals("IX_CODE", table.getIndexes().getFirst().getName());
+				try (var indexes = connection.getMetaData().getIndexInfo(null, "PUBLIC", table.getName(), true,
+						false)) {
+					assertTrue(indexes.next());
+					assertFalse(indexes.getBoolean("NON_UNIQUE"));
+					assertEquals("CODE", indexes.getString("COLUMN_NAME"));
+					names.add(indexes.getString("INDEX_NAME"));
+				}
+			}
+			assertEquals(2, names.size());
+			assertEquals(2,
+					plan.warnings().stream().filter(warning -> warning.contains("Repeated source index name")).count());
+			assertEquals(2, plan.warnings().stream()
+					.filter(warning -> warning.startsWith(TransferSchemaChangeChecks.NAME_ADJUSTMENT)).count());
+		}
+	}
+
+	@Test
+	void repeatedTableLocalConstraintNamesReceiveStableNamesOnlyInTargetCreatePlan() throws Exception {
+		var schema = new com.sqlapp.data.schemas.Schema("").setProductName("Microsoft Access");
+		var selections = new ArrayList<TransferSchemaPreparation.Selection>();
+		for (String name : List.of("PARENTS", "CHILDREN")) {
+			var table = new com.sqlapp.data.schemas.Table(name);
+			table.getColumns().add("ID",
+					column -> column.setDataType(com.sqlapp.data.db.datatype.DataType.INT).setNotNull(true));
+			table.setPrimaryKey("PrimaryKey", table.getColumns().get("ID"));
+			schema.getTables().add(table);
+			selections.add(new TransferSchemaPreparation.Selection(name, table, table.clone().setSchemaName("PUBLIC")));
+		}
+		var target = database();
+		try (var connection = target.getConnection()) {
+			var plan = TransferSchemaPreparation.schemaOnly(connection, schema, selections, "fixture",
+					TransferJobConfiguration.CompatibilityPolicy.WARN);
+			assertEquals(2, plan.warnings().stream()
+					.filter(warning -> warning.contains("Repeated source constraint name")).count());
+			assertEquals(2, plan.warnings().stream()
+					.filter(warning -> warning.startsWith(TransferSchemaChangeChecks.NAME_ADJUSTMENT)).count());
+			assertTrue(plan.statements().stream().noneMatch(statement -> statement.sql().contains("PrimaryKey")));
+			assertEquals(plan, TransferSchemaPreparation.schemaOnly(connection, schema, selections, "fixture",
+					TransferJobConfiguration.CompatibilityPolicy.WARN));
+			assertEquals(2, TransferSchemaPreparation.execute(connection, plan, progress -> {
+			}).completedStatements());
+			for (var table : schema.getTables()) {
+				assertEquals("PrimaryKey", table.getPrimaryKeyConstraint().getName());
+				try (var keys = connection.getMetaData().getPrimaryKeys(null, "PUBLIC", table.getName())) {
+					assertTrue(keys.next());
+					assertEquals("ID", keys.getString("COLUMN_NAME"));
+				}
+			}
+		}
+	}
+
+	@Test
 	void hsqlModelGeneratesPostgresqlDdlUsingTargetDialectWithoutExternalDatabase() throws Exception {
 		var target = database();
 		var schema = new com.sqlapp.data.schemas.Schema("PUBLIC");
@@ -106,8 +183,12 @@ class TransferSchemaOnlyTest {
 				"CREATE TABLE CHILD(ID INTEGER, PARENT_ID INTEGER REFERENCES PARENT(ID))",
 				"CREATE INDEX CHILD_PARENT ON CHILD(PARENT_ID)", "INSERT INTO CHILD VALUES(NULL,42)");
 		var bindings = Map.of("from", source, "to", target);
-		var review = service.review(job("[CHILD, PARENT]", ""), bindings, directory);
+		var captured = service.reviewWithSqlDraft(job("[CHILD, PARENT]", ""), bindings, directory);
+		var review = captured.review();
 		assertNull(review.prepared().dataJob());
+		assertTrue(captured.schemaSqlDraft()
+				.contains("-- Schema plan: " + review.prepared().schemaPreparation().fingerprint()));
+		assertTrue(captured.schemaSqlDraft().contains(";\n"));
 		assertFalse(Files.exists(review.prepared().directory().resolve("data-job.yaml")));
 		assertFalse(exists(target, "PARENT"));
 		assertTrue(review.prepared().warnings().stream().anyMatch(w -> w.contains("Views, independent sequences")));
@@ -130,6 +211,7 @@ class TransferSchemaOnlyTest {
 		}
 		var report = new TransferJobReportIO().writeOutcome(review, result);
 		assertTrue(Files.readString(report).contains("SCHEMA_ONLY"));
+		assertFalse(Files.readString(report).contains("schemaSqlDraft"));
 	}
 
 	@Test

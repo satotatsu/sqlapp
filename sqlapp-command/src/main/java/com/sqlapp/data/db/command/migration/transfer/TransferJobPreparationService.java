@@ -65,15 +65,19 @@ public final class TransferJobPreparationService {
 	 */
 	public Prepared prepare(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace)
 			throws IOException {
+		return prepare(jobFile, connections, workspace, null);
+	}
+
+	Prepared prepare(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace,
+			java.util.function.Consumer<String> draft) throws IOException {
 		final var io = new TransferJobConfigurationIO();
 		final var snapshot = io.read(jobFile);
 		final var configuration = snapshot.configuration();
 		if (configuration.dataMode() == TransferJobConfiguration.DataMode.FILE)
 			throw new IllegalArgumentException("FILE transport requires separate export/import execution, which is not "
 					+ "implemented in the direct-JDBC preparation path. No file export or database connection was started.");
-		if (configuration.mappingFile() != null)
-			throw new IllegalArgumentException(
-					"Transfer mappingFile preparation is not implemented yet; it cannot be ignored.");
+		final var mapping = configuration.mappingFile() == null ? null
+				: new TransferNameMappingIO().read(snapshot.mappingFile());
 		Objects.requireNonNull(connections, "connections");
 		final DataSource source = connections.get(configuration.source());
 		final DataSource target = connections.get(configuration.target());
@@ -113,8 +117,9 @@ public final class TransferJobPreparationService {
 			});
 			if (configuration.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY) {
 				phase = "planning schema-only target table creation";
-				return TransferSchemaOnlyPreparation.prepare(to, schema, snapshot, directory, xml, targetCatalog,
-						targetSchema);
+				final var prepared = TransferSchemaOnlyPreparation.prepare(to, schema, snapshot, directory, xml,
+						targetCatalog, targetSchema, mapping);
+				return withDraft(prepared, targetDialect, draft);
 			}
 			final var definition = new LinkedHashMap<String, Object>();
 			definition.put("schemaFile", "source-schema.xml");
@@ -140,11 +145,16 @@ public final class TransferJobPreparationService {
 			definition.put("verification", Map.of("enabled", configuration.verify()));
 			final var bulkIO = new BulkMigrationJobConfigurationEditorIO();
 			phase = "saving the generated bulk configuration";
-			var bulk = bulkIO.write(directory.resolve("data-job.yaml"), new YamlConverter().toJsonString(definition),
-					null);
+			var bulk = bulkIO.write(directory.resolve("data-job.yaml"),
+					TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping), null);
 			final var resolver = new BulkMigrationJobConfigurationResolver();
 			phase = "resolving selected source tables and NOT NULL keys in the generated bulk configuration";
 			final var selected = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+			phase = "projecting selected source names for transfer";
+			final var projection = mapping == null ? null
+					: TransferNameMappingProjection.project(schema,
+							selected.plan().getTasks().stream().map(task -> task.getEffectiveSourceTable()).toList(),
+							mapping.configuration());
 			final var identities = new HashSet<String>();
 			for (final var selectedTask : selected.plan().getTasks()) {
 				final Table table = selectedTask.getEffectiveSourceTable();
@@ -154,20 +164,36 @@ public final class TransferJobPreparationService {
 							"Multiple selections resolve to the same source table. Select each table once.");
 				final var task = Objects.requireNonNull(tasksById.get(selectedTask.getTaskId()));
 				task.put("table", identity);
-				task.put("targetTable", identity(targetCatalog, targetSchema, table.getName()));
+				final var mapped = projection == null ? table : projection.bySourceName().get(table.getName());
+				task.put("targetTable", identity(targetCatalog, targetSchema, mapped.getName()));
+				if (projection != null) {
+					final var columns = new LinkedHashMap<String, String>();
+					for (int column = 0; column < table.getColumns().size(); column++) {
+						String sourceName = table.getColumns().get(column).getName();
+						String targetName = mapped.getColumns().get(column).getName();
+						if (!sourceName.equals(targetName))
+							columns.put(sourceName, targetName);
+					}
+					task.put("columnMappings", columns);
+				}
 			}
-			bulk = bulkIO.write(bulk.file(), new YamlConverter().toJsonString(definition), bulk.fingerprint());
+			bulk = bulkIO.write(bulk.file(),
+					TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping),
+					bulk.fingerprint());
 			phase = "resolving target table identities in the generated bulk configuration";
 			final var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
 			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
-					configuration.schemaMode(), configuration.compatibilityPolicy());
+					configuration.schemaMode(), configuration.compatibilityPolicy(), projection);
 			phase = "checking that the transfer definition has not changed";
 			if (!io.read(jobFile).fingerprint().equals(snapshot.fingerprint()))
 				throw new PreparationException("Transfer definition changed during preparation. Prepare it again.");
+			TransferNameMappingIO.capture(mapping, directory);
 			final var savedJob = io.write(directory.resolve("transfer.yaml"), snapshot.text(), null);
-			return new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
-					resolved.plan().getTaskIds(), compatibility.warnings(), compatibility);
+			return withDraft(
+					new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
+							resolved.plan().getTaskIds(), compatibility.warnings(), compatibility),
+					targetDialect, draft);
 		} catch (TransferSchemaPreparation.ValidationException failure) {
 			throw failure;
 		} catch (PreparationException failure) {
@@ -175,6 +201,13 @@ public final class TransferJobPreparationService {
 		} catch (Exception failure) {
 			throw new PreparationException(phase, failure);
 		}
+	}
+
+	private static Prepared withDraft(Prepared prepared, Dialect target, java.util.function.Consumer<String> draft) {
+		if (draft != null)
+			draft.accept(
+					TransferSchemaSqlScript.render(prepared.schemaPreparation(), target, prepared.job().fingerprint()));
+		return prepared;
 	}
 
 	private static Connection openConnection(DataSource source, String phase) throws java.sql.SQLException {

@@ -100,7 +100,20 @@ class TransferFileJobDraftBuilderTest {
 	}
 
 	private BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot() throws Exception {
-		final var schema = new Schema("PUBLIC");
+		return snapshot("PUBLIC");
+	}
+
+	@Test
+	void accessCsvJobOmitsUnnamedSourceSchema() throws Exception {
+		var saved = new TransferFileJobDraftBuilder().save(snapshot(""), List.of("ITEMS"), 100, true, "__NULL__",
+				directory.resolve("access.yaml"));
+		assertNull(saved.configuration().sourceSchema());
+		assertFalse(saved.text().contains("sourceSchema:"));
+		assertEquals(saved, new TransferJobConfigurationIO().read(saved.file()));
+	}
+
+	private BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot(String schemaName) throws Exception {
+		final var schema = new Schema(schemaName);
 		for (String name : List.of("ITEMS", "DATES", "TEXT_KEYS")) {
 			final var table = new Table(name);
 			final var key = new Column("ID").setDataType(name.equals("TEXT_KEYS") ? DataType.VARCHAR : DataType.INT)
