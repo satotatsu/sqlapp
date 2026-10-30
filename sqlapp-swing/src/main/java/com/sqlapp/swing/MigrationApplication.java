@@ -6,9 +6,9 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
-import javax.swing.JOptionPane;
 
 /** Desktop entry point for migration comparison, planning and review. */
 public final class MigrationApplication {
@@ -157,7 +157,7 @@ public final class MigrationApplication {
 						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 				}
 			});
-			frame.setSize(1000, 700);
+			frame.setSize(1200, 840);
 			frame.setLocationRelativeTo(null);
 			frame.setVisible(true);
 		});
