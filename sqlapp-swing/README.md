@@ -1470,6 +1470,11 @@ choose to keep editing or explicitly discard. Filters/previews and unchanged sou
 column loading do not trigger this prompt. Saved mapping paths are attached to
 Job settings relative to the job folder when possible; other drives stay absolute.
 Save settings to keep that reference and review again before running.
+For target-only generated primary keys, **Generated PK column** defaults to `ID`
+and can be changed in New direct job or Job settings. The shared YAML option is
+`generatedKeyColumn`; it requires `CREATE_MISSING_WITH_IDENTITY`. Choose an unused
+name if the source already contains `ID`. Set `SQLAPP_ROW_ID` explicitly to retain
+the earlier default; existing target tables are unchanged.
 The table picker allows tables without primary keys in this mode. Specify an
 existing target schema or leave it blank to use the target connection's current
 schema. Review the **Summary**, **Warnings** and **Schema SQL** tabs, then confirm

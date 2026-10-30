@@ -23,6 +23,14 @@ public final class TransferJobDraftBuilder {
 			List<String> selected, TransferJobConfiguration.CompatibilityPolicy policy, String targetSchema,
 			TransferJobConfiguration.SchemaMode mode, boolean allowDestructiveSchemaChanges, Path file)
 			throws Exception {
+		return saveSchemaOnly(snapshot, selected, policy, targetSchema, mode, allowDestructiveSchemaChanges, file,
+				null);
+	}
+
+	public TransferJobConfigurationIO.Snapshot saveSchemaOnly(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot,
+			List<String> selected, TransferJobConfiguration.CompatibilityPolicy policy, String targetSchema,
+			TransferJobConfiguration.SchemaMode mode, boolean allowDestructiveSchemaChanges, Path file,
+			String generatedKeyColumn) throws Exception {
 		final var schema = TransferFileJobDraftBuilder.schema(snapshot);
 		final var tables = TransferSchemaOnlyPreparation.select(schema, selected).stream()
 				.map(table -> TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
@@ -30,7 +38,8 @@ public final class TransferJobDraftBuilder {
 				.toList();
 		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, mode,
 				sourceSchema(schema.getName()), targetSchema, null, null, false,
-				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy, allowDestructiveSchemaChanges);
+				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy, allowDestructiveSchemaChanges,
+				generatedKeyColumn);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(configuration), null);
 	}
@@ -45,13 +54,20 @@ public final class TransferJobDraftBuilder {
 	public TransferJobConfigurationIO.Snapshot saveDirect(BulkMigrationJobDraftBuilder.SchemaSnapshot schema,
 			List<String> selected, int chunkSize, boolean verify, TransferJobConfiguration.CompatibilityPolicy policy,
 			String targetSchema, TransferJobConfiguration.SchemaMode schemaMode, Path file) throws Exception {
+		return saveDirect(schema, selected, chunkSize, verify, policy, targetSchema, schemaMode, file, null);
+	}
+
+	public TransferJobConfigurationIO.Snapshot saveDirect(BulkMigrationJobDraftBuilder.SchemaSnapshot schema,
+			List<String> selected, int chunkSize, boolean verify, TransferJobConfiguration.CompatibilityPolicy policy,
+			String targetSchema, TransferJobConfiguration.SchemaMode schemaMode, Path file, String generatedKeyColumn)
+			throws Exception {
 		final var draft = new BulkMigrationJobConfigurationEditorIO()
 				.validate(new BulkMigrationJobDraftBuilder().draftInsert(schema, selected, "", chunkSize, verify));
 		final var canonical = TransferFileJobDraftBuilder.schema(schema);
 		final var job = new TransferJobConfiguration(1, "source", "target",
 				draft.getTasks().stream().map(task -> task.getTable()).toList(), schemaMode,
 				sourceSchema(canonical.getName()), targetSchema, null, chunkSize, verify,
-				TransferJobConfiguration.DataMode.JDBC_DIRECT, null, policy);
+				TransferJobConfiguration.DataMode.JDBC_DIRECT, null, policy, false, generatedKeyColumn);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(job), null);
 	}

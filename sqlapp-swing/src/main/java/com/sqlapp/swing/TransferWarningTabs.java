@@ -63,7 +63,7 @@ final class TransferWarningTabs {
 			}
 			if (warning.startsWith(TransferKeylessChecks.GENERATED_TARGET_KEY)) {
 				rows.add(List.of("Target / Generated PK", "", "", warning,
-						"Review SQLAPP_ROW_ID and identity syntax in Schema SQL. Source values and FK mappings are unchanged; this is target-only key creation, not a source row identity or a resume key."));
+						"Review the generated PK column (default: ID; configurable as generatedKeyColumn) and identity syntax in Schema SQL. Source values and FK mappings are unchanged; this is target-only key creation, not a source row identity or a resume key."));
 				continue;
 			}
 			String action = "Review vendor differences and test the target definitions before application use.";

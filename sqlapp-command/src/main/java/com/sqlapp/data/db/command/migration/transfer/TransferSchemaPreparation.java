@@ -88,6 +88,12 @@ public final class TransferSchemaPreparation {
 	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			TransferNameMappingProjection.Projection projection) throws Exception {
+		return plan(connection, sourceSchema, data, mode, policy, projection, TransferKeylessChecks.GENERATED_COLUMN);
+	}
+
+	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			TransferNameMappingProjection.Projection projection, String generatedKeyColumn) throws Exception {
 		if (projection != null) {
 			final var warnings = new ArrayList<String>();
 			if (projection.renamedIdentifiers() && mode != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING)
@@ -98,14 +104,16 @@ public final class TransferSchemaPreparation {
 							task.getEffectiveTargetTable()))
 					.toList();
 			final var base = plan(connection, projection.schema(), selections, data.getFingerprint(), mode, policy,
-					data);
+					data, generatedKeyColumn);
 			warnings.addAll(base.warnings());
 			return result(base.fingerprint(), base.statements(), warnings, mode);
 		}
-		return plan(
-				connection, sourceSchema, data.getTasks().stream().map(task -> new Selection(task.getTaskId(),
-						task.getEffectiveSourceTable(), task.getEffectiveTargetTable())).toList(),
-				data.getFingerprint(), mode, policy, data);
+		return plan(connection, sourceSchema,
+				data.getTasks().stream()
+						.map(task -> new Selection(task.getTaskId(), task.getEffectiveSourceTable(),
+								task.getEffectiveTargetTable()))
+						.toList(),
+				data.getFingerprint(), mode, policy, data, generatedKeyColumn);
 	}
 
 	/**
@@ -129,6 +137,19 @@ public final class TransferSchemaPreparation {
 	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			BulkMigrationJobPlan data) throws Exception {
+		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, data,
+				TransferKeylessChecks.GENERATED_COLUMN);
+	}
+
+	static Plan schemaOnly(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
+			TransferJobConfiguration.CompatibilityPolicy policy, TransferJobConfiguration.SchemaMode mode,
+			String generatedKeyColumn) throws Exception {
+		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, null, generatedKeyColumn);
+	}
+
+	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			BulkMigrationJobPlan data, String generatedKeyColumn) throws Exception {
 		final var warnings = new ArrayList<String>();
 		if (!Objects.equals(sourceSchema.getProductName(), connection.getMetaData().getDatabaseProductName()))
 			compatibility(policy, warnings,
@@ -219,10 +240,10 @@ public final class TransferSchemaPreparation {
 					&& (target.getPrimaryKeyConstraint() == null
 							|| target.getPrimaryKeyConstraint().getColumns().isEmpty())) {
 				if (target.getColumns().stream()
-						.anyMatch(column -> column.getName().equalsIgnoreCase(TransferKeylessChecks.GENERATED_COLUMN)))
-					throw new ValidationException(
-							"Generated target key SQLAPP_ROW_ID collides with a source column. Prepare a target with another generated key manually and use REQUIRE_EXISTING.");
-				final var column = new com.sqlapp.data.schemas.Column(TransferKeylessChecks.GENERATED_COLUMN)
+						.anyMatch(column -> column.getName().equalsIgnoreCase(generatedKeyColumn)))
+					throw new ValidationException("Generated target key " + diagnosticName(generatedKeyColumn)
+							+ " collides with a source/mapped column. Set generatedKeyColumn to an unused name, or prepare the target separately and use REQUIRE_EXISTING.");
+				final var column = new com.sqlapp.data.schemas.Column(generatedKeyColumn)
 						.setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT).setIdentity(true).setNotNull(true);
 				target.getColumns().add(column);
 				String name = "sqlapp_pk_"
@@ -235,8 +256,9 @@ public final class TransferSchemaPreparation {
 							"Generated target primary-key constraint name collides. Prepare the target separately and use REQUIRE_EXISTING.");
 				target.setPrimaryKey(name, column);
 				compatibility(policy, warnings, TransferKeylessChecks.GENERATED_TARGET_KEY + " Target table "
-						+ target.getName()
-						+ " will add BIGINT identity primary key SQLAPP_ROW_ID. Values are generated only in the target, excluded from source copy/verification and are not business keys or inferred FK mappings. Review dialect CREATE SQL.");
+						+ target.getName() + " will add BIGINT identity primary key "
+						+ diagnosticName(generatedKeyColumn)
+						+ ". Values are generated only in the target, excluded from source copy/verification and are not business keys or inferred FK mappings. Review dialect CREATE SQL.");
 			}
 			for (var fk : target.getConstraints().getForeignKeyConstraints()) {
 				if (fk.getRelatedTableSchemaName() != null

@@ -28,9 +28,8 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 /** Reads ASE triggers from sysobjects and their source from syscomments. */
 public class SybaseTriggerReader extends TriggerReader {
 	private static final Pattern EVENT_PATTERN = Pattern.compile(
-			"\\b(?:FOR|INSTEAD\\s+OF)\\s+((?:INSERT|UPDATE|DELETE)(?:\\s*,\\s*(?:INSERT|UPDATE|DELETE))*)",
+			"\\b(FOR|INSTEAD\\s+OF)\\s+((?:INSERT|UPDATE|DELETE)(?:\\s*,\\s*(?:INSERT|UPDATE|DELETE))*)",
 			Pattern.CASE_INSENSITIVE);
-	private static final Pattern INSTEAD_OF_PATTERN = Pattern.compile("\\bINSTEAD\\s+OF\\b", Pattern.CASE_INSENSITIVE);
 
 	protected SybaseTriggerReader(final Dialect dialect) {
 		super(dialect);
@@ -52,12 +51,13 @@ public class SybaseTriggerReader extends TriggerReader {
 					trigger.setSchemaName(getString(rs, SCHEMA_NAME));
 					trigger.setTableSchemaName(getString(rs, "table_schema_name"));
 					trigger.setTableName(getString(rs, TABLE_NAME));
-					trigger.setActionOrientation("ROW");
+					trigger.setActionOrientation("STATEMENT");
 					trigger.setCreatedAt(rs.getTimestamp("created"));
 					source = new TriggerSource(trigger);
 					sources.put(id, source);
 				}
-				source.definition.append(getString(rs, "definition"));
+				if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement())
+					source.definition.append(SybaseSourceText.required(rs, "definition", source.trigger.getName()));
 			}
 		});
 		List<Trigger> result = list();
@@ -70,10 +70,14 @@ public class SybaseTriggerReader extends TriggerReader {
 			if (getReaderOptions().isReadStatement()) {
 				trigger.setStatement(definition);
 			}
-			trigger.setActionTiming(INSTEAD_OF_PATTERN.matcher(definition).find() ? "INSTEAD OF" : "AFTER");
-			Matcher events = EVENT_PATTERN.matcher(definition);
+			String header = SybaseSourceText.mask(definition);
+			final var body = Pattern.compile("(?i)\\bAS\\b").matcher(header);
+			if (body.find())
+				header = header.substring(0, body.start());
+			Matcher events = EVENT_PATTERN.matcher(header);
 			if (events.find()) {
-				for (String event : events.group(1).split("\\s*,\\s*")) {
+				trigger.setActionTiming(events.group(1).equalsIgnoreCase("FOR") ? "AFTER" : "INSTEAD OF");
+				for (String event : events.group(2).split("\\s*,\\s*")) {
 					trigger.getEventManipulation().add(event.toUpperCase(Locale.ROOT));
 				}
 			}

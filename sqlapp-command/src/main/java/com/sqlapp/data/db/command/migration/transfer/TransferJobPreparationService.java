@@ -188,7 +188,8 @@ public final class TransferJobPreparationService {
 			final var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
 			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
-					configuration.schemaMode(), configuration.compatibilityPolicy(), projection);
+					configuration.schemaMode(), configuration.compatibilityPolicy(), projection,
+					configuration.effectiveGeneratedKeyColumn());
 			final var copyWarnings = new ArrayList<>(compatibility.warnings());
 			for (var task : resolved.plan().getTasks())
 				if (task.isFullScan())

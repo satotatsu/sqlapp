@@ -29,7 +29,7 @@ class TransferDatabaseTaskTest extends AbstractTaskTest {
 		assertEquals(3,task.internalCommand().result.copyResult().processedRows)
 		def target=new org.hsqldb.jdbc.JDBCDataSource(); target.setUrl(targetUrl); target.setUser('SA'); target.setPassword('')
 		target.connection.withCloseable { c -> c.metaData.getPrimaryKeys(null,'PUBLIC','ITEMS').withCloseable { keys ->
-			assertEquals(generatedKey,keys.next()); if(generatedKey) assertEquals('SQLAPP_ROW_ID',keys.getString('COLUMN_NAME'))
+			assertEquals(generatedKey,keys.next()); if(generatedKey) assertEquals('ID',keys.getString('COLUMN_NAME'))
 		} }
 	}
 	@ParameterizedTest @ValueSource(booleans=[false,true])

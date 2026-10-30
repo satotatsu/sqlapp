@@ -19,6 +19,50 @@ class MdbTransferIntegrationTest {
 	Path directory;
 
 	@ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings = { "ID", "行ID" })
+	void keylessAccessUsesDefaultOrConfiguredTargetIdentityWithoutChangingTheFile(String keyName) throws Exception {
+		var file = directory.resolve("keyless.accdb");
+		try (var connection = DriverManager
+				.getConnection("jdbc:ucanaccess://" + file.toAbsolutePath() + ";newDatabaseVersion=V2010");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE [NO_KEY] ([VALUE] INTEGER)");
+			for (var value : List.of("1", "1", "NULL"))
+				statement.execute("INSERT INTO [NO_KEY] VALUES(" + value + ")");
+		}
+		byte[] original = Files.readAllBytes(file);
+		var source = new PlanningJdbc.Spec(MdbSourceFile.jdbcUrl(file), "", MdbSourceFile.DRIVER);
+		var target = new PlanningJdbc.Spec("jdbc:hsqldb:mem:" + UUID.randomUUID(), "SA", "");
+		var service = new DirectTransferDesktopService();
+		var discovered = (DataMigrationDraftService.Prepared) service.perform(DirectTransferPanel.Action.DISCOVER,
+				new DirectTransferPanel.Request(null, directory, source, null, "", null), new char[0], new char[0]);
+		var tables = discovered.schema().tables().stream().map(table -> table.table()).toList();
+		var saved = new TransferJobDraftBuilder().saveDirect(discovered.schema(), tables, 1, true, null, "PUBLIC",
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY,
+				discovered.directory().resolve("transfer.yaml"), keyName.equals("ID") ? null : keyName);
+		var reviewed = (DirectTransferDesktopService.Reviewed) service.perform(DirectTransferPanel.Action.REVIEW,
+				new DirectTransferPanel.Request(saved.file(), directory, source, target, "", null), new char[0],
+				new char[0]);
+		var executed = (DirectTransferDesktopService.Executed) service.perform(DirectTransferPanel.Action.EXECUTE,
+				new DirectTransferPanel.Request(saved.file(), directory, source, target, "", reviewed), new char[0],
+				new char[0]);
+		assertEquals(TransferJobExecutionService.Phase.COMPLETE, executed.outcome().phase());
+		assertTrue(executed.outcome().verificationResult().isMatch());
+		try (var connection = DriverManager.getConnection(target.jdbcUrl(), "SA", "");
+				var keys = connection.getMetaData().getPrimaryKeys(null, "PUBLIC", "NO_KEY")) {
+			assertTrue(keys.next());
+			assertEquals(keyName, keys.getString("COLUMN_NAME"));
+		}
+		try (var connection = DriverManager.getConnection(target.jdbcUrl(), "SA", "");
+				var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT COUNT(*), COUNT(DISTINCT \"" + keyName + "\") FROM NO_KEY")) {
+			rows.next();
+			assertEquals(3, rows.getInt(1));
+			assertEquals(3, rows.getInt(2));
+		}
+		assertArrayEquals(original, Files.readAllBytes(file));
+	}
+
+	@ParameterizedTest
 	@CsvSource({ "false,false", "true,false", "true,true" })
 	void accessFileDiscoversReviewsAndTransfersRelationshipsThroughSharedJob(boolean japanese, boolean schemaOnly)
 			throws Exception {

@@ -55,14 +55,52 @@ public class SybaseColumnReader extends ColumnReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
+		final java.util.Map<Column, int[]> definitions = new java.util.LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Column column = createColumn(rs);
+				if (rs.getBoolean("is_computed") && rs.getInt("computed_id") <= 0 && column.getFormula() == null)
+					throw new IllegalStateException(
+							"Missing SAP ASE computed column source identity: " + column.getName());
 				result.add(column);
+				definitions.put(column, new int[] { rs.getInt("default_id"), rs.getInt("computed_id") });
 			}
 		});
+		final var ids = new java.util.LinkedHashSet<Integer>();
+		definitions.values().forEach(pair -> {
+			for (int id : pair)
+				if (id > 0)
+					ids.add(id);
+		});
+		if (!ids.isEmpty()) {
+			final var parameters = context.clone();
+			parameters.put("definitionIds", ids);
+			final java.util.Map<Integer, StringBuilder> texts = new java.util.LinkedHashMap<>();
+			execute(connection, getSqlNodeCache().getString("columnDefinitions.sql"), parameters,
+					new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rs) throws SQLException {
+							final int id = rs.getInt("definition_id");
+							texts.computeIfAbsent(id, key -> new StringBuilder())
+									.append(SybaseSourceText.required(rs, "definition", "column source " + id));
+						}
+					});
+			definitions.forEach((column, pair) -> {
+				if (pair[0] > 0 && !column.isIdentity())
+					column.setDefaultValue(SybaseSourceText.defaultExpression(requiredDefinition(texts, pair[0])));
+				if (pair[1] > 0)
+					column.setFormula(requiredDefinition(texts, pair[1]));
+			});
+		}
 		return result;
+	}
+
+	private String requiredDefinition(java.util.Map<Integer, StringBuilder> texts, int id) {
+		final var text = texts.get(id);
+		if (text == null || text.toString().isBlank())
+			throw new IllegalStateException("Missing SAP ASE column source: " + id);
+		return text.toString();
 	}
 
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
@@ -70,9 +108,8 @@ public class SybaseColumnReader extends ColumnReader {
 	}
 
 	static String getColumnSqlResource(final ProductVersionInfo productVersionInfo) {
-		return productVersionInfo.getMajorVersion() != null && productVersionInfo.getMajorVersion() >= 15
-				? "columns15.sql"
-				: "columns.sql";
+		return productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 15 ? "columns15.sql" : "columns.sql";
 	}
 
 	/**
@@ -133,10 +170,12 @@ public class SybaseColumnReader extends ColumnReader {
 		Column obj = new Column(getString(rs, COLUMN_NAME));
 		obj.setNullable(rs.getBoolean("is_nullable"));
 		obj.setIdentity(rs.getBoolean("is_identity"));
-		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
-		obj.setDefaultValue(unwrap(getString(rs, "default_definition"), '(', ')'));
+		final boolean decimal = productDataType != null && java.util.Set.of("NUMERIC", "DECIMAL", "DEC")
+				.contains(productDataType.toUpperCase(java.util.Locale.ROOT));
+		this.getDialect().setDbType(productDataType, decimal ? precision : notZero(max_length, precision), scale, obj);
+		obj.setDefaultValue(unwrap(rs.getString("default_definition"), '(', ')'));
 		if (rs.getBoolean("is_computed")) {
-			obj.setFormula(getString(rs, "computed_definition"));
+			obj.setFormula(rs.getString("computed_definition"));
 			obj.setFormulaPersisted(rs.getBoolean("is_computed_persisted"));
 		}
 		// column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
@@ -144,9 +183,9 @@ public class SybaseColumnReader extends ColumnReader {
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setTableName(getString(rs, TABLE_NAME));
 		if (obj.isIdentity()) {
-			obj.setIdentityStartValue(rs.getLong("ident_seed"));
-			obj.setIdentityStep(rs.getLong("ident_increment"));
-			obj.setIdentityLastValue(rs.getLong("ident_current"));
+			obj.setIdentityStartValue(rs.getLongValue("ident_seed"));
+			obj.setIdentityStep(rs.getLongValue("ident_increment"));
+			obj.setIdentityLastValue(rs.getLongValue("ident_current"));
 		}
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setRemarks(getString(rs, "remarks"));

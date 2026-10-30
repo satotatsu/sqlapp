@@ -58,7 +58,8 @@ final class TransferSchemaOnlyPreparation {
 					source.clone().setCatalogName(catalog).setSchemaName(targetSchema)));
 		}
 		final var base = TransferSchemaPreparation.schemaOnly(target, projection == null ? schema : projection.schema(),
-				tasks, job.fingerprint(), job.configuration().compatibilityPolicy(), job.configuration().schemaMode());
+				tasks, job.fingerprint(), job.configuration().compatibilityPolicy(), job.configuration().schemaMode(),
+				job.configuration().effectiveGeneratedKeyColumn());
 		warnings.addAll(base.warnings());
 		final var plan = projection == null ? base
 				: TransferSchemaPreparation.result(base.fingerprint(), base.statements(), warnings,

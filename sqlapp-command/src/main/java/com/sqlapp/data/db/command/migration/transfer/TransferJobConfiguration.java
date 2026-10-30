@@ -12,7 +12,25 @@ import java.util.List;
 public record TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
 		SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
 		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
-		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges) {
+		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges,
+		String generatedKeyColumn) {
+	/**
+	 * Retains the previous constructor; an omitted generated key name defaults to
+	 * ID.
+	 */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public String effectiveGeneratedKeyColumn() {
+		return generatedKeyColumn == null ? TransferKeylessChecks.GENERATED_COLUMN : generatedKeyColumn;
+	}
+
 	/**
 	 * Retains the existing construction API; data-impacting changes are not
 	 * authorized by default.
@@ -104,6 +122,15 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 	}
 
 	public TransferJobConfiguration {
+		if (generatedKeyColumn != null) {
+			if (schemaMode != SchemaMode.CREATE_MISSING_WITH_IDENTITY)
+				throw new IllegalArgumentException("generatedKeyColumn requires CREATE_MISSING_WITH_IDENTITY.");
+			if (generatedKeyColumn.isBlank() || !generatedKeyColumn.equals(generatedKeyColumn.strip())
+					|| generatedKeyColumn.codePoints().anyMatch(Character::isISOControl)
+					|| !java.nio.charset.StandardCharsets.UTF_8.newEncoder().canEncode(generatedKeyColumn))
+				throw new IllegalArgumentException(
+						"generatedKeyColumn must be a nonblank Unicode column name without control or surrounding whitespace.");
+		}
 		allowDestructiveSchemaChanges = Boolean.TRUE.equals(allowDestructiveSchemaChanges);
 		compatibilityPolicy = compatibilityPolicy == null ? CompatibilityPolicy.WARN : compatibilityPolicy;
 		if (formatVersion != 1)

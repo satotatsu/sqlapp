@@ -62,12 +62,17 @@ public class SybaseViewReader extends AbstractISViewReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String name = getString(rs, TABLE_NAME);
 				Table obj = result.isEmpty() ? null : result.get(result.size() - 1);
-				if (obj == null || !name.equals(obj.getName())) {
+				if (obj == null || !name.equals(obj.getName())
+						|| !java.util.Objects.equals(getString(rs, TABLE_SCHEMA), obj.getSchemaName())
+						|| !java.util.Objects.equals(getString(rs, TABLE_CATALOG), obj.getCatalogName())) {
 					obj = superCreateTable(rs);
 					result.add(obj);
 					definitions.put(obj, new StringBuilder());
 				}
-				definitions.get(obj).append(getString(rs, "view_definition"));
+				if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
+					final String text = SybaseSourceText.required(rs, "view_definition", name);
+					definitions.get(obj).append(text);
+				}
 			}
 		});
 		definitions.forEach((obj, definition) -> setDefinition(obj, definition.toString()));
@@ -75,15 +80,16 @@ public class SybaseViewReader extends AbstractISViewReader {
 	}
 
 	private Table superCreateTable(ExResultSet rs) throws SQLException {
-		return createTable(rs);
+		return createTable(getString(rs, TABLE_NAME)).setCatalogName(getString(rs, TABLE_CATALOG))
+				.setSchemaName(getString(rs, TABLE_SCHEMA));
 	}
 
 	private void setDefinition(Table obj, String definition) {
-		if (this.getReaderOptions().isReadDefinition()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(definition);
 		}
 		if (this.getReaderOptions().isReadStatement()) {
-			obj.setStatement(SybaseUtils.getViewStatement(definition));
+			obj.setStatement(SybaseSourceText.viewStatement(definition));
 		}
 	}
 

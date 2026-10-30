@@ -15,6 +15,22 @@ class TransferJobDraftBuilderTest {
 	Path directory;
 
 	@Test
+	void authorsCustomGeneratedKeyNamesForBothRoutes() throws Exception {
+		var snapshot = schema();
+		var builder = new TransferJobDraftBuilder();
+		var direct = builder.saveDirect(snapshot, List.of("PUBLIC.ITEMS"), 100, true, null, null,
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY, directory.resolve("direct-key.yaml"),
+				"ROW_ID");
+		var schemaOnly = builder.saveSchemaOnly(snapshot, List.of("PUBLIC.ITEMS"), null, null,
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY, false,
+				directory.resolve("schema-key.yaml"), "生成ID");
+		assertEquals("ROW_ID",
+				new TransferJobConfigurationIO().read(direct.file()).configuration().generatedKeyColumn());
+		assertEquals("生成ID",
+				new TransferJobConfigurationIO().read(schemaOnly.file()).configuration().generatedKeyColumn());
+	}
+
+	@Test
 	void directDraftAcceptsKeylessInsertWhileGenericDraftRetainsKeyRequirements() throws Exception {
 		var model = new Schema("");
 		model.setCatalogName("CATALOG");

@@ -13,6 +13,58 @@ class TransferKeylessInsertTest {
 	@TempDir
 	Path directory;
 
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({ "JDBC_DIRECT,ROW_ID", "SCHEMA_ONLY,生成ID",
+			"JDBC_DIRECT,SQLAPP_ROW_ID" })
+	void customGeneratedKeyAvoidsAnExistingIdColumnAndRetainsSourceData(String mode, String name) throws Exception {
+		var source = database();
+		var target = database();
+		sql(source, "CREATE TABLE ITEMS(ID INTEGER)", "INSERT INTO ITEMS VALUES(1),(1),(NULL)");
+		var file = Files.writeString(directory.resolve("custom.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\ndataMode: "
+						+ mode + "\ngeneratedKeyColumn: " + name + "\n");
+		var service = new TransferJobExecutionService();
+		var bindings = Map.of("from", source, "to", target);
+		var review = service.review(file, bindings, directory);
+		assertEquals(name, review.prepared().job().configuration().effectiveGeneratedKeyColumn());
+		var outcome = service.execute(review, bindings);
+		assertEquals(TransferJobExecutionService.Phase.COMPLETE, outcome.phase());
+		if (mode.equals("JDBC_DIRECT"))
+			assertTrue(outcome.verificationResult().isMatch());
+		try (var c = target.getConnection(); var keys = c.getMetaData().getPrimaryKeys(null, "PUBLIC", "ITEMS")) {
+			assertTrue(keys.next());
+			assertEquals(name, keys.getString("COLUMN_NAME"));
+			assertFalse(keys.next());
+		}
+		try (var c = target.getConnection();
+				var s = c.createStatement();
+				var rows = s.executeQuery("SELECT COUNT(*), COUNT(DISTINCT \"" + name + "\") FROM ITEMS")) {
+			rows.next();
+			int expected = mode.equals("JDBC_DIRECT") ? 3 : 0;
+			assertEquals(expected, rows.getInt(1));
+			assertEquals(expected, rows.getInt(2));
+		}
+		try (var c = source.getConnection(); var keys = c.getMetaData().getPrimaryKeys(null, "PUBLIC", "ITEMS")) {
+			assertFalse(keys.next());
+		}
+	}
+
+	@org.junit.jupiter.api.Test
+	void generatedKeyConfigurationIsOptionalStrictAndRoundTrips() {
+		var io = new TransferJobConfigurationIO();
+		String yaml = "formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n";
+		var defaultJob = io.validate(yaml);
+		assertNull(defaultJob.generatedKeyColumn());
+		assertEquals("ID", defaultJob.effectiveGeneratedKeyColumn());
+		assertFalse(io.format(defaultJob).contains("generatedKeyColumn"));
+		var custom = io.validate(yaml + "generatedKeyColumn: SQLAPP_ROW_ID\n");
+		assertEquals(custom, io.validate(io.format(custom)));
+		for (var invalid : List.of("''", "' ID '", "12", "[]", "\"bad\\nname\""))
+			assertThrows(IllegalArgumentException.class, () -> io.validate(yaml + "generatedKeyColumn: " + invalid));
+		assertThrows(IllegalArgumentException.class, () -> io.validate(
+				yaml.replace("CREATE_MISSING_WITH_IDENTITY", "CREATE_MISSING") + "generatedKeyColumn: ROW_ID\n"));
+	}
+
 	@ParameterizedTest
 	@ValueSource(strings = { "REQUIRE_EXISTING", "CREATE_MISSING", "CREATE_MISSING_WITH_IDENTITY" })
 	void keylessChildrenCopyDuplicatesAndNullsInParentOrderAndVerify(String schemaMode) throws Exception {
@@ -56,7 +108,7 @@ class TransferKeylessInsertTest {
 			}
 			try (var c = target.getConnection();
 					var s = c.createStatement();
-					var rows = s.executeQuery("SELECT COUNT(DISTINCT SQLAPP_ROW_ID) FROM " + eventTable)) {
+					var rows = s.executeQuery("SELECT COUNT(DISTINCT ID) FROM " + eventTable)) {
 				rows.next();
 				assertEquals(3, rows.getInt(1));
 			}
@@ -77,7 +129,7 @@ class TransferKeylessInsertTest {
 	void generatedColumnCollisionAndStrictWarningsRejectBeforeTargetChanges() throws Exception {
 		var source = database();
 		var target = database();
-		sql(source, "CREATE TABLE ITEMS(SQLAPP_ROW_ID INTEGER)");
+		sql(source, "CREATE TABLE ITEMS(ID INTEGER)");
 		Path file = Files.writeString(directory.resolve("collision.yaml"),
 				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n");
 		var service = new TransferJobExecutionService();

@@ -7,7 +7,7 @@ import com.sqlapp.data.schemas.Table;
 public final class TransferKeylessChecks {
 	public static final String CODE = "[KEYLESS_INSERT]";
 	public static final String GENERATED_TARGET_KEY = "[TARGET_GENERATED_PK]";
-	public static final String GENERATED_COLUMN = "SQLAPP_ROW_ID";
+	public static final String GENERATED_COLUMN = "ID";
 
 	private TransferKeylessChecks() {
 	}

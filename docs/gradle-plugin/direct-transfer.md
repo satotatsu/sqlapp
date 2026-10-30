@@ -127,7 +127,7 @@ schemaMode: CREATE_MISSING_WITH_IDENTITY
 
 In **New direct job…** or **Job settings…**, enable missing-table creation, then
 **Add target-only generated PK to new tables without a primary key**. The same
-saved job works with Gradle. This mode creates an additional `SQLAPP_ROW_ID`
+saved job works with Gradle. By default this mode creates an additional `ID`
 BIGINT identity column and stable named PK through the target dialect's shared
 Schema factories, only when a newly created table has no modeled PK. Existing
 source PKs are preserved. Existing target tables are not altered to add this key.
@@ -137,11 +137,22 @@ The source file/database and FK mappings are retained. The new column is omitted
 from INSERT and source-value verification, so the target generates its values.
 It does not become a source/business key or enable MERGE/resume. Review the
 `[TARGET_GENERATED_PK]` warning and actual Schema SQL; dialect identity support
-still requires testing. If a source/mapped column already uses `SQLAPP_ROW_ID`,
-review fails before DDL; prepare a compatible target with another generated key
-and use `REQUIRE_EXISTING` instead. Strict warning policy rejects the warning.
+still requires testing. Change **Generated PK column** in either GUI form, or set
+`generatedKeyColumn: ROW_ID` in YAML, to choose another name (Unicode names are
+supported). The option is valid only with `CREATE_MISSING_WITH_IDENTITY`.
+If a source/mapped column already uses that name (case-insensitive check), review
+fails before DDL with guidance to choose an unused name. A compatible manually
+prepared target can also use `REQUIRE_EXISTING`. Strict warning policy rejects
+the generated-key warning.
 
-Existing job/result record shapes and constructors remain available. The new
+Omitting `generatedKeyColumn` now means `ID`, including existing jobs in this mode.
+To retain the earlier generated name, set `generatedKeyColumn: SQLAPP_ROW_ID`.
+Existing target tables are not renamed or altered by this option. Review saved
+jobs again after changing the name or upgrading from the earlier default.
+
+Existing job constructors and result record shapes remain available. The optional
+`generatedKeyColumn` adds a job record component; older readers reject this field.
+The new
 SchemaMode value and low-level `fullScan` property are additive; older versions
 cannot execute these new modes. Generic advanced draft creation keeps its key
 requirements; Java callers may explicitly use `BulkMigrationJobDraftBuilder.draftInsert`.

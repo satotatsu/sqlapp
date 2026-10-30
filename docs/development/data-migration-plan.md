@@ -34,7 +34,8 @@ capabilities or a commitment to implement every option.
 - Direct JDBC keyless INSERT now reuses lazy Table row iteration, shared chunk
   execution and externally sorted multiset-hash verification. Missing PKs warn;
   MERGE/resume/repair stay disabled. Optional missing-table creation can add a
-  target-only generated PK. CSV keyless transport remains a separate next step.
+  target-only generated PK, defaulting to `ID` with optional `generatedKeyColumn`
+  in the shared job and both GUI authoring forms. CSV keyless transport remains a separate next step.
 - The common settings form exposes target schema, Schema preparation, chunk
   size, verification and compatibility policy. More extraction/load controls
   require shared configuration and execution support first.

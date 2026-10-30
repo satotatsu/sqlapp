@@ -14,8 +14,10 @@ SELECT
   , 0 AS is_computed
   , 0 AS is_computed_persisted
   , CAST(NULL AS VARCHAR(16384)) AS computed_definition
+  , 0 AS computed_id
   , c.colid AS colorder
-  , cm.text AS default_definition
+  , CAST(NULL AS VARCHAR(16384)) AS default_definition
+  , c.cdefault AS default_id
   , CASE WHEN (c.status & 128) = 128 THEN 1 ELSE 0 END AS is_identity
   , NULL AS ident_seed
   , NULL AS ident_increment
@@ -28,8 +30,6 @@ INNER JOIN sysusers su
   ON (so.uid = su.uid)
 INNER JOIN systypes t
   ON (c.usertype = t.usertype)
-LEFT OUTER JOIN syscomments cm
-  ON (c.cdefault = cm.id)
 WHERE 1=1
 --  AND SO.type = 'U'
   /*if isNotEmpty(schemaName) */

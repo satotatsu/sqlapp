@@ -18,8 +18,9 @@ final class TransferJobSettingsPanel extends JPanel {
 	final JButton editMapping = new JButton("Edit names…");
 	private final JPanel mappingRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 	final JCheckBox createMissing = new JCheckBox("Create missing target tables (the schema itself must exist)");
-	final JCheckBox generatedKey = new JCheckBox(
-			"Add target-only generated PK to new tables without a primary key (SQLAPP_ROW_ID)");
+	final JCheckBox generatedKey = new JCheckBox("Add target-only generated PK to new tables without a primary key");
+	final JTextField generatedKeyColumn = new JTextField("ID", 20);
+	private final JPanel generatedKeyRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 	final JCheckBox verify = new JCheckBox("Verify copied data");
 	final JCheckBox schemaOnly = new JCheckBox("Schema only (no row copy)");
 	final JCheckBox applyDifferences = new JCheckBox(
@@ -100,6 +101,12 @@ final class TransferJobSettingsPanel extends JPanel {
 		});
 		fields.add(createMissing);
 		fields.add(generatedKey);
+		var generatedKeyLabel = new JLabel("Generated PK column (default: ID)");
+		generatedKeyLabel.setLabelFor(generatedKeyColumn);
+		generatedKeyRow.add(generatedKeyLabel);
+		generatedKeyRow.add(generatedKeyColumn);
+		fields.add(generatedKeyRow);
+		generatedKey.addActionListener(event -> refresh());
 		createMissing.addActionListener(event -> {
 			if (!createMissing.isSelected())
 				generatedKey.setSelected(false);
@@ -179,6 +186,7 @@ final class TransferJobSettingsPanel extends JPanel {
 							configuration.schemaMode() != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
 					generatedKey.setSelected(configuration
 							.schemaMode() == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY);
+					generatedKeyColumn.setText(configuration.effectiveGeneratedKeyColumn());
 					verify.setSelected(configuration.verify());
 					strict.setSelected(
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR);
@@ -221,9 +229,10 @@ final class TransferJobSettingsPanel extends JPanel {
 					original.files(),
 					strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
 							: TransferJobConfiguration.CompatibilityPolicy.WARN,
-					schemaOnly.isSelected() && applyDifferences.isSelected() && allowDestructive.isSelected());
+					schemaOnly.isSelected() && applyDifferences.isSelected() && allowDestructive.isSelected(),
+					generatedKey.isSelected() && generatedKey.isVisible() ? generatedKeyColumn.getText() : null);
 		} catch (Exception failure) {
-			status.setText("Check chunk size (1..1000000) and target schema settings before saving.");
+			status.setText("Check chunk size (1..1000000), target schema and generated PK column name before saving.");
 			return;
 		}
 		final var opened = snapshot;
@@ -284,6 +293,8 @@ final class TransferJobSettingsPanel extends JPanel {
 		generatedKey.setVisible(mode != TransferJobConfiguration.DataMode.FILE && createMissing.isSelected()
 				&& !(schemaOnly.isSelected() && applyDifferences.isSelected()));
 		generatedKey.setEnabled(!busy && snapshot != null && generatedKey.isVisible());
+		generatedKeyRow.setVisible(generatedKey.isVisible() && generatedKey.isSelected());
+		generatedKeyColumn.setEnabled(!busy && snapshot != null && generatedKeyRow.isVisible());
 		if (schemaOnly.isSelected()) {
 			createMissing.setEnabled(false);
 			verify.setEnabled(false);

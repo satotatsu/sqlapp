@@ -61,12 +61,17 @@ public class SybaseProcedureReader extends ProcedureReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String name = getString(rs, ROUTINE_NAME);
 				Procedure procedure = result.isEmpty() ? null : result.get(result.size() - 1);
-				if (procedure == null || !name.equals(procedure.getName())) {
+				if (procedure == null || !name.equals(procedure.getName())
+						|| !java.util.Objects.equals(getString(rs, "specific_schema"), procedure.getSchemaName())
+						|| !java.util.Objects.equals(getString(rs, "specific_catalog"), procedure.getCatalogName())) {
 					procedure = createProcedure(rs);
 					result.add(procedure);
 					definitions.put(procedure, new StringBuilder());
 				}
-				definitions.get(procedure).append(getString(rs, "routine_definition"));
+				if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
+					final String text = SybaseSourceText.required(rs, "routine_definition", name);
+					definitions.get(procedure).append(text);
+				}
 			}
 		});
 		definitions.forEach((procedure, definition) -> setDefinition(procedure, definition.toString()));

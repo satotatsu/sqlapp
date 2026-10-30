@@ -48,8 +48,12 @@ interfaces do not expose all of the same syntax.
 Direct JDBC transfer can copy keyless Access tables with full-scan INSERT and
 duplicate-preserving unordered hash verification. It warns about missing source
 keys; MERGE and resume remain unavailable. Optional
-`CREATE_MISSING_WITH_IDENTITY` creates a target-only `SQLAPP_ROW_ID` identity PK
+`CREATE_MISSING_WITH_IDENTITY` creates a target-only `ID` identity PK by default
 on new keyless tables through the target dialect, without changing the source file.
+Set `generatedKeyColumn` in the shared job YAML, or edit **Generated PK column**
+in the GUI, to use another name. Existing source/mapped columns with the chosen
+name cause an actionable collision error before DDL; choose an unused name.
+Set `generatedKeyColumn: SQLAPP_ROW_ID` to retain the earlier generated name.
 CSV package eligibility still retains its existing key/type requirements.
 Advanced Data Job YAML can explicitly use full-scan INSERT, or select an existing
 modeled NOT NULL unique keyset for the keyed path; naming arbitrary columns does

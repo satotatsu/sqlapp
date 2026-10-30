@@ -19,6 +19,28 @@ class TransferJobSettingsPanelTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
+	void generatedKeyColumnCanBeEditedInDirectAndSchemaOnlyJobs(boolean schemaOnly) throws Exception {
+		var file = Files.writeString(directory.resolve("custom-key.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n"
+						+ "generatedKeyColumn: SQLAPP_ROW_ID\ndataMode: " + (schemaOnly ? "SCHEMA_ONLY" : "JDBC_DIRECT")
+						+ "\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals("SQLAPP_ROW_ID", panel.generatedKeyColumn.getText());
+			assertTrue(panel.generatedKeyColumn.isEnabled());
+			panel.generatedKeyColumn.setText("移行ID");
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		assertEquals("移行ID", io.read(file).configuration().generatedKeyColumn());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
 	void differenceSettingsRoundTripExplicitPermissionOrClearItWhenDifferencesAreDisabled(boolean keepDifferences)
 			throws Exception {
 		var file = Files.writeString(directory.resolve("difference.yaml"),
@@ -102,6 +124,7 @@ class TransferJobSettingsPanelTest {
 			assertTrue(panel.createMissing.isSelected());
 			assertTrue(panel.generatedKey.isSelected());
 			assertTrue(panel.generatedKey.isVisible());
+			assertEquals("ID", panel.generatedKeyColumn.getText());
 			if (!keepGeneratedKey)
 				panel.generatedKey.doClick(0);
 			onIdle(panel, done);

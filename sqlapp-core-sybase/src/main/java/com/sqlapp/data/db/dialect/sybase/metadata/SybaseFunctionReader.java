@@ -61,12 +61,17 @@ public class SybaseFunctionReader extends FunctionReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String name = getString(rs, ROUTINE_NAME);
 				Function function = result.isEmpty() ? null : result.get(result.size() - 1);
-				if (function == null || !name.equals(function.getName())) {
+				if (function == null || !name.equals(function.getName())
+						|| !java.util.Objects.equals(getString(rs, "specific_schema"), function.getSchemaName())
+						|| !java.util.Objects.equals(getString(rs, "specific_catalog"), function.getCatalogName())) {
 					function = createFunction(rs);
 					result.add(function);
 					definitions.put(function, new StringBuilder());
 				}
-				definitions.get(function).append(getString(rs, "routine_definition"));
+				if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
+					final String text = SybaseSourceText.required(rs, "routine_definition", name);
+					definitions.get(function).append(text);
+				}
 			}
 		});
 		definitions.forEach(this::setDefinition);
