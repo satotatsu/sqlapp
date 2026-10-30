@@ -376,6 +376,20 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
 		final List<BulkMigrationJobTaskVerificationResult> results = new ArrayList<>();
 		for (final BulkMigrationJobTask task : plan.getTasks()) {
+			if (task.isFullScan()) {
+				final var actual = task.getEffectiveTargetTable().clone();
+				actual.setRowIteratorHandler(
+						new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(targetConnection));
+				final List<String> columns = columnsByTask.getOrDefault(task.getTaskId(),
+						defaultVerificationColumns(task));
+				final var verification = com.sqlapp.jdbc.bulk.BulkMigrationUnorderedVerifier.verify(
+						task.getEffectiveSourceTable(), task.getEffectiveSourceTable().getRows().iterator(), actual,
+						actual.getRows().iterator(), columns, columns.stream().map(task::getTargetColumnName).toList(),
+						chunkSize);
+				results.add(new BulkMigrationJobTaskVerificationResult(task.getTaskId(), verification.getColumns(),
+						verification));
+				continue;
+			}
 			if (!(task.getKeysetSource() instanceof JdbcBulkMigrationKeysetSource source)) {
 				throw new CommandException(
 						"Declarative verification requires a JDBC keyset source: " + task.getTaskId());
@@ -409,7 +423,7 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 				continue;
 			}
 			tasks.add(BulkMigrationJobTask.builder().taskId(task.getTaskId()).sourceTable(task.getSourceTable())
-					.keysetSource(task.getKeysetSource()).targetTable(task.getTargetTable())
+					.keysetSource(task.getKeysetSource()).fullScan(task.isFullScan()).targetTable(task.getTargetTable())
 					.columnMappings(task.getColumnMappings()).requireEmptyTarget(task.isRequireEmptyTarget())
 					.options(task.getOptions()).chunkListener(task.getChunkListener())
 					.checkpointStore(new JdbcBulkMigrationCheckpointStore(targetConnection,

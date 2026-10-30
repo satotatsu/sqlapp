@@ -368,13 +368,13 @@ class InformixMetadataReaderTest {
 	@Test
 	void groupsIndexFragmentsAndRetainsSingleAndAttachedStorageInTwoQueries() {
 		final var reader = new Indexes();
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 4; i++) {
 			for (int column = 1; column <= 2; column++)
 				reader.rows.add(indexRow("owner", "items" + i, "c" + column, column));
 			final var header = indexRow("owner", "items" + i, "c1", 1);
 			if (i != 0) {
 				header.put("storage_index_name", "ix");
-				header.put("storage_strategy", i == 1 ? "I" : "E");
+				header.put("storage_strategy", i == 1 ? "I" : i == 2 ? "E" : "T");
 				header.put("storage_dbspace", "rootdbs");
 			}
 			if (i == 2) {
@@ -393,14 +393,84 @@ class InformixMetadataReaderTest {
 		}
 		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
 		assertEquals(2, reader.queries);
-		assertEquals(3, indexes.size());
+		assertEquals(4, indexes.size());
 		assertEquals("true", indexes.get(0).getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_IN_TABLE));
 		assertEquals("rootdbs", indexes.get(1).getTableSpaceName());
 		assertEquals(2, indexes.get(2).getPartitioning().getPartitions().size());
+		assertEquals("true", indexes.get(3).getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_FOLLOWS_TABLE));
 		assertEquals("REMAINDER", indexes.get(2).getPartitioning().getPartitions().get(1).getSpecifics()
 				.get(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION));
 		reader.indexHeaders.get(0).put("storage_strategy", "N");
 		reader.indexHeaders.get(0).put("storage_dbspace", "rootdbs");
 		assertThrows(UnsupportedOperationException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+	}
+
+	@Test
+	void retainsVirtualIndexDescriptorLocationWithoutGuessingItsDataSpace() {
+		final var reader = new Indexes();
+		for (int column = 1; column <= 2; column++)
+			reader.rows.add(indexRow("owner", "items", "c" + column, column));
+		final var header = indexRow("owner", "items", "c1", 1);
+		header.put("access_method", 100);
+		header.put("access_method_name", "bts");
+		header.put("raw_index_keys", "1 [100], 2 [100]");
+		header.put("storage_strategy", "I");
+		header.put("storage_dbspace", "rootdbs");
+		reader.indexHeaders.add(header);
+		reader.operatorClasses.add(Map.of("operator_class_id", 100, "access_method", 100, "operator_class_owner",
+				"informix", "operator_class_name", "bts_int_ops"));
+		final var index = reader.doGetAll(null, new ParametersContext(), null).get(0);
+		assertNull(index.getTableSpaceName());
+		assertNull(index.getPartitioning());
+		assertEquals("rootdbs", index.getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_CATALOG_DBSPACE));
+		assertFalse(index.getSpecifics().containsKey(InformixIndexReader.INFORMIX_INDEX_IN_TABLE));
+		assertEquals(3, reader.queries); // Header/storage, columns and the existing bulk operator-class lookup.
+		assertEquals("true", index.getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED));
+		header.put("access_method_storage", "A");
+		header.put("storage_is_sbspace", "1");
+		header.put("storage_is_blobspace", "0");
+		header.put("storage_dbspace", "actual_sbspace");
+		assertEquals("actual_sbspace", reader.doGetAll(null, new ParametersContext(), null).get(0).getTableSpaceName());
+		header.put("storage_strategy", "E");
+		header.put("storage_position", 0);
+		header.put("storage_partition", "p0");
+		header.put("storage_expression", "c1 < 10");
+		header.put("storage_is_sbspace", "0");
+		final var unresolved = reader.doGetAll(null, new ParametersContext(), null).get(0);
+		assertEquals(1, unresolved.getPartitioning().getPartitions().size());
+		assertNull(unresolved.getPartitioning().getPartitions().get(0).getTableSpaceName());
+		assertEquals("actual_sbspace", unresolved.getPartitioning().getPartitions().get(0).getSpecifics()
+				.get(InformixIndexReader.INFORMIX_INDEX_CATALOG_DBSPACE));
+	}
+
+	@Test
+	void preservesCustomOperatorClassForUniqueBackingIndexes() throws Exception {
+		final var indexes = new Indexes();
+		final var key = indexRow("owner", "items", "id", 1);
+		key.put("raw_index_keys", "1 [100]");
+		indexes.rows.add(key);
+		indexes.operatorClasses.add(Map.of("operator_class_id", 100, "access_method", 1, "operator_class_owner",
+				"custom", "operator_class_name", "custom_int_ops"));
+		final var reader = new Tables() {
+			@Override
+			protected InformixIndexReader newIndexMetadataReader() {
+				return indexes;
+			}
+		};
+		final var table = new Table("items").setSchemaName("owner").setCatalogName("testdb");
+		table.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		final var tables = new DoubleKeyMap<String, String, Table>();
+		tables.put("owner", "items", table);
+		reader.setUniqueConstraints(null, tables);
+		assertEquals(3, indexes.queries);
+		assertEquals("ix", table.getConstraints().getUniqueConstraints().get(0).getIndexName());
+		assertEquals("custom_int_ops", table.getIndexes().get(0).getColumns().get(0).getSpecifics()
+				.get(InformixIndexReader.INFORMIX_OPERATOR_CLASS));
+		final Table xml = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		final var operations = DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(xml,
+				com.sqlapp.data.db.sql.SqlType.CREATE);
+		assertEquals(3, operations.size());
+		assertTrue(operations.get(1).getSqlText().contains("custom_int_ops"));
+		assertTrue(operations.get(2).getSqlText().contains("ADD CONSTRAINT UNIQUE"));
 	}
 }

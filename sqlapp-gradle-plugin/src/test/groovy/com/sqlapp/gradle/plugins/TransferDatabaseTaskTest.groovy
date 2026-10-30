@@ -10,6 +10,29 @@ import org.gradle.testkit.runner.TaskOutcome
 
 class TransferDatabaseTaskTest extends AbstractTaskTest {
 	@ParameterizedTest @ValueSource(booleans=[false,true])
+	void insertsKeylessDuplicatesWithOptionalTargetOnlyIdentity(boolean generatedKey) {
+		def sourceUrl='jdbc:hsqldb:mem:keyless_task_source_'+UUID.randomUUID()
+		def targetUrl='jdbc:hsqldb:mem:keyless_task_target_'+UUID.randomUUID()
+		def source=new org.hsqldb.jdbc.JDBCDataSource(); source.setUrl(sourceUrl); source.setUser('SA'); source.setPassword('')
+		source.connection.withCloseable {c -> c.createStatement().withCloseable {s -> s.execute('CREATE TABLE ITEMS(VALUE INTEGER)'); s.execute('INSERT INTO ITEMS VALUES(7),(7),(NULL)') }}
+		def project=createProject(testProjectDir); project.plugins.apply(DbPlugin)
+		def task=project.tasks.named('transferDatabase',TransferDatabaseTask).get()
+		def file=new File(testProjectDir,'keyless.yaml')
+		file.text='formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: '+(generatedKey?'CREATE_MISSING_WITH_IDENTITY':'CREATE_MISSING')+'\n'
+		task.configurationFile.set(file)
+		task.sourceDataSource.jdbcUrl.set(sourceUrl); task.sourceDataSource.username.set('SA'); task.sourceDataSource.password.set('')
+		task.dataSource.jdbcUrl.set(targetUrl); task.dataSource.username.set('SA'); task.dataSource.password.set('')
+		task.exec()
+		task.allowExecution.set(true); task.expectedConfigurationFingerprint.set(task.internalCommand().review.prepared().job().fingerprint())
+		task.exec()
+		assertTrue(task.internalCommand().result.verificationResult().isMatch())
+		assertEquals(3,task.internalCommand().result.copyResult().processedRows)
+		def target=new org.hsqldb.jdbc.JDBCDataSource(); target.setUrl(targetUrl); target.setUser('SA'); target.setPassword('')
+		target.connection.withCloseable { c -> c.metaData.getPrimaryKeys(null,'PUBLIC','ITEMS').withCloseable { keys ->
+			assertEquals(generatedKey,keys.next()); if(generatedKey) assertEquals('SQLAPP_ROW_ID',keys.getString('COLUMN_NAME'))
+		} }
+	}
+	@ParameterizedTest @ValueSource(booleans=[false,true])
 	void executesNameMappingFromTheSameSavedJob(boolean schemaOnly) {
 		def sourceUrl = 'jdbc:hsqldb:mem:mapped_task_source_' + UUID.randomUUID()
 		def targetUrl = 'jdbc:hsqldb:mem:mapped_task_target_' + UUID.randomUUID()

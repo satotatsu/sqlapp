@@ -15,6 +15,25 @@ class TransferJobDraftBuilderTest {
 	Path directory;
 
 	@Test
+	void directDraftAcceptsKeylessInsertWhileGenericDraftRetainsKeyRequirements() throws Exception {
+		var model = new Schema("");
+		model.setCatalogName("CATALOG");
+		var table = new Table("NO_KEY");
+		table.getColumns().add(new Column("VALUE").setDataType(DataType.INT));
+		model.getTables().add(table);
+		Path xml = directory.resolve("keyless.xml");
+		model.writeXml(xml.toFile());
+		var generic = new BulkMigrationJobDraftBuilder();
+		var snapshot = generic.inspect(xml);
+		assertThrows(IllegalArgumentException.class, () -> generic.draft(snapshot, List.of("NO_KEY"), "", 100, true));
+		var saved = new TransferJobDraftBuilder().saveDirect(snapshot, List.of("NO_KEY"), 100, true, null, "PUBLIC",
+				TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY, directory.resolve("keyless.yaml"));
+		assertEquals(List.of("NO_KEY"), saved.configuration().tables());
+		assertEquals(TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY,
+				saved.configuration().schemaMode());
+	}
+
+	@Test
 	void authorsSharedDirectIntentWithOptionalPolicyAndTargetSchemaAndNeverOverwrites() throws Exception {
 		final var snapshot = schema();
 		final var builder = new TransferJobDraftBuilder();

@@ -27,6 +27,7 @@ class MdbTransferIntegrationTest {
 		String id = japanese ? "識別番号" : "ID";
 		String name = japanese ? "顧客 名" : "NAME";
 		String parentId = japanese ? "親番号" : "PARENT_ID";
+		String created = japanese ? "登録 日時" : "CREATED_AT";
 		var file = directory.resolve(japanese ? schemaOnly ? "日本語 データ.accdb" : "日本語 データ.mdb" : "source database.mdb");
 		try (var connection = DriverManager.getConnection("jdbc:ucanaccess://" + file.toAbsolutePath()
 				+ (schemaOnly ? ";newDatabaseVersion=V2010" : ";newDatabaseVersion=V2000"));
@@ -35,11 +36,16 @@ class MdbTransferIntegrationTest {
 			for (String suffix : List.of("", "2")) {
 				int key = suffix.isEmpty() ? 1 : 11;
 				statement.execute("CREATE TABLE [" + parent + suffix + "] ([" + id + "] INTEGER NOT NULL PRIMARY KEY, ["
-						+ name + "] VARCHAR(40))");
+						+ name + "] VARCHAR(40), [" + created + "] DATETIME)");
 				statement.execute("CREATE TABLE [" + child + suffix + "] ([" + id + "] INTEGER NOT NULL PRIMARY KEY, ["
 						+ parentId + "] INTEGER, CONSTRAINT FK_PARENT" + suffix + " FOREIGN KEY ([" + parentId
 						+ "]) REFERENCES [" + parent + suffix + "]([" + id + "]))");
-				statement.execute("INSERT INTO [" + parent + suffix + "] VALUES (" + key + ", '日本語データ')");
+				try (var insert = connection.prepareStatement("INSERT INTO [" + parent + suffix + "] VALUES (?,?,?)")) {
+					insert.setInt(1, key);
+					insert.setString(2, "日本語データ");
+					insert.setTimestamp(3, suffix.isEmpty() ? java.sql.Timestamp.valueOf("2001-02-03 04:05:06") : null);
+					insert.executeUpdate();
+				}
 				statement.execute("INSERT INTO [" + child + suffix + "] VALUES (" + (key + 1) + ", " + key + ")");
 			}
 		}
@@ -76,11 +82,13 @@ class MdbTransferIntegrationTest {
 			assertTrue(result.outcome().verificationResult().isMatch());
 		try (var connection = DriverManager.getConnection(target.jdbcUrl(), "SA", "");
 				var statement = connection.createStatement();
-				var rows = statement.executeQuery("SELECT P.\"" + name + "\" FROM \"" + parent + "\" P JOIN \"" + child
-						+ "\" C ON P.\"" + id + "\"=C.\"" + parentId + "\" WHERE C.\"" + id + "\"=2")) {
+				var rows = statement.executeQuery(
+						"SELECT P.\"" + name + "\", P.\"" + created + "\" FROM \"" + parent + "\" P JOIN \"" + child
+								+ "\" C ON P.\"" + id + "\"=C.\"" + parentId + "\" WHERE C.\"" + id + "\"=2")) {
 			if (!schemaOnly) {
 				assertTrue(rows.next());
 				assertEquals("日本語データ", rows.getString(1));
+				assertEquals(java.sql.Timestamp.valueOf("2001-02-03 04:05:06"), rows.getTimestamp(2));
 			}
 			assertFalse(rows.next());
 			for (String suffix : List.of("", "2"))

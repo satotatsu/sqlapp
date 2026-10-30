@@ -19,6 +19,10 @@ The Access-specific SQL generator supports:
 
 - Access `COUNTER`/AutoNumber column DDL, including inline primary keys
 - `TEXT`, `MEMO`, `OLE`, Boolean, numeric and date/time type generation
+- UCanAccess JDBC `TIMESTAMP` metadata maps to the existing Access `DATETIME`
+  model/handler, preserving Date/Time columns during JDBC copy. Native `DATETIME`
+  names remain supported. This applies to existing Jet/ACE MDB/ACCDB Date/Time
+  columns; no SQL-generation or dialect-version boundary changes were introduced.
 - Access date/time default functions (`DATE()`, `TIME()` and `NOW()`)
 - table, primary-key and index creation without unsupported clauses
 - foreign-key creation with cascade update/delete behavior
@@ -40,6 +44,16 @@ files. UCanAccess accepts multi-row `VALUES` even though older native Access
 interfaces do not expose all of the same syntax.
 
 ## Current limitation
+
+Direct JDBC transfer can copy keyless Access tables with full-scan INSERT and
+duplicate-preserving unordered hash verification. It warns about missing source
+keys; MERGE and resume remain unavailable. Optional
+`CREATE_MISSING_WITH_IDENTITY` creates a target-only `SQLAPP_ROW_ID` identity PK
+on new keyless tables through the target dialect, without changing the source file.
+CSV package eligibility still retains its existing key/type requirements.
+Advanced Data Job YAML can explicitly use full-scan INSERT, or select an existing
+modeled NOT NULL unique keyset for the keyed path; naming arbitrary columns does
+not establish uniqueness.
 
 The UCanAccess 5.2.0 upgrade also corrects JDBC metadata loading: direct
 UCanAccess connections are recognized before checking JDBC `Wrapper` methods

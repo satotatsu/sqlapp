@@ -88,7 +88,15 @@ final class JobDraftPanel extends JPanel {
 	}
 
 	private boolean eligible(int row) {
-		return schemaOnly || snapshot.tables().get(row).selectable();
+		return schemaOnly || (fullScanInsert ? snapshot.tables().get(row).insertSelectable()
+				: snapshot.tables().get(row).selectable());
+	}
+
+	private boolean fullScanInsert;
+
+	void fullScanInsert(boolean enabled) {
+		fullScanInsert = enabled;
+		schemaOnly(schemaOnly);
 	}
 
 	void schemaOnly(boolean enabled) {
@@ -102,7 +110,11 @@ final class JobDraftPanel extends JPanel {
 			if (!eligible(row))
 				model.setValueAt(false, row, 0);
 			model.setValueAt(enabled ? "Schema only: no data-copy key required"
-					: table.selectable() ? "Available" : table.restriction(), row, 3);
+					: table.selectable() ? "Available"
+							: fullScanInsert && table.insertSelectable()
+									? "Warning: full-scan INSERT; no MERGE or resume. Consider a target generated PK."
+									: table.restriction(),
+					row, 3);
 		}
 		optionsRow.setVisible(!enabled);
 		draftOptionsChanged();
@@ -426,8 +438,7 @@ final class JobDraftPanel extends JPanel {
 			public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
 				if (selectedOnly.isSelected() && !Boolean.TRUE.equals(entry.getValue(0)))
 					return false;
-				if (unavailableOnly.isSelected()
-						&& (snapshot == null || snapshot.tables().get(entry.getIdentifier()).selectable()))
+				if (unavailableOnly.isSelected() && (snapshot == null || eligible(entry.getIdentifier())))
 					return false;
 				if (text.isEmpty())
 					return true;
@@ -452,7 +463,8 @@ final class JobDraftPanel extends JPanel {
 		count.setText(tables.getRowCount() + " / " + model.getRowCount() + " tables; " + selected + " selected ("
 				+ hidden + " hidden)");
 		if (snapshot != null) {
-			long available = snapshot.tables().stream().filter(table -> table.selectable()).count();
+			long available = snapshot.tables().stream()
+					.filter(table -> fullScanInsert ? table.insertSelectable() : table.selectable()).count();
 			count.setText(count.getText() + "; data-copy eligible: " + available + "; unavailable: "
 					+ (snapshot.tables().size() - available));
 		}
@@ -460,7 +472,8 @@ final class JobDraftPanel extends JPanel {
 			selectionHelp.setText("Read Schema to see the tables available for selection.");
 		else if (model.getRowCount() == 0)
 			selectionHelp.setText("No tables in this Schema. Choose another Schema or source schema.");
-		else if (!schemaOnly && snapshot.tables().stream().noneMatch(table -> table.selectable()))
+		else if (!schemaOnly && snapshot.tables().stream()
+				.noneMatch(table -> fullScanInsert ? table.insertSelectable() : table.selectable()))
 			selectionHelp.setText(
 					"No eligible tables. Review Availability: primary keys and supported copy types are required.");
 		else if (unavailableOnly.isSelected())

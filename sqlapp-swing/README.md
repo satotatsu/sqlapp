@@ -48,10 +48,11 @@ The table picker reports data-copy eligible and unavailable counts. **Unavailabl
 for data copy** shows restrictions such as missing keys or unsupported values;
 it can be combined with text search and retains all existing selections, including
 hidden ones. Review **Availability** for the precise reason. This view does not
-relax validation. In direct-job creation, **Switch to schema only** explicitly
-selects the existing schema-only option so keyless tables can still have their
-definitions transferred. Returning to data copy clears selections that are not
-eligible for it. CSV jobs retain their existing numeric-key and value-type rules.
+relax unrelated restrictions. Direct-job creation permits keyless tables with a
+**full-scan INSERT** warning; duplicates and NULLs are preserved and hash-multiset
+verification is used. MERGE and resume are unavailable. **Switch to schema only**
+still selects definitions without row copy. CSV jobs retain their existing
+numeric-key and value-type rules.
 
 After selecting a child table, **Include referenced tables** optionally includes
 its transitive foreign-key parent tables from the captured Schema, including
@@ -60,7 +61,7 @@ count/details to review every added table before saving. No job is saved and no
 database is opened by this action. The XML byte fingerprint is rechecked first.
 Missing/ambiguous references and parents unavailable in the current data-copy
 mode leave the complete selection unchanged, with an actionable explanation.
-Schema-only mode can include keyless parents; CSV eligibility remains enforced.
+Schema-only and direct full-scan INSERT can include keyless parents; CSV eligibility remains enforced.
 This action adds parents, not child/descendant tables, and does not bypass the
 ordinary ordering, cycle or execution checks. It is optional when referenced
 tables already exist at the target and are intentionally outside the job.
@@ -600,7 +601,7 @@ change that reference. Task IDs are generated deterministically from table
 identity; dependency order comes from the shared job planner. Schema XML is not
 modified, and creating a draft never connects to a database or writes a job file.
 
-The common path supports tables with a complete NOT NULL primary key. Missing
+The generic advanced draft path supports tables with a complete NOT NULL primary key. Missing
 keys, ambiguous identities and identifiers containing dots are shown with
 reasons and cannot be selected. Catalog, SchemaCollection, Schema, TableCollection
 and Table XML roots use the same table extraction and name resolution as the
@@ -1437,10 +1438,38 @@ follow mapped names. The same original saved job and relative mapping path work
 with Gradle. Review **Schema SQL** and expression warnings before execution.
 Mapping supports schema-only creation/differences and direct JDBC copy/verification.
 For data copy, use the same **Job settings… → Name mapping YAML**; missing-table DDL,
-INSERT and verification share the saved mapping. Source NOT NULL-key and target
-empty/compatible-table requirements remain in force. CSV mapping and an interactive
-mapping editor remain unsupported. See the
+INSERT and verification share the saved mapping. Keyed reading uses NOT NULL keys;
+keyless direct INSERT uses full scan with duplicate-preserving multiset verification.
+Target empty/compatible-table requirements remain in force. **Job settings… → Edit names…**
+opens an offline Tables/Columns editor and saves the shared mapping YAML. Save job
+settings afterward to attach the path, then review again. Mapping saves are immediate
+and remain saved if job settings are canceled. Existing files are protected against
+concurrent changes; comments/formatting are rewritten. Choose/drop the captured
+**Source Schema XML** and click **Load columns** to append source columns and their
+informational types for listed tables while retaining existing names. The default
+path is `source-schema.xml` beside the job. This is an offline snapshot, so review
+against the databases before execution. Same-name columns need no YAML overrides;
+removing a row removes only the rename, not the copied column. Target-type editing,
+value conversion and CSV mapping remain unsupported. See the
 [mapping format and limitations](../docs/gradle-plugin/direct-transfer.md#optionally-map-table-and-column-names-schema-only).
+The Tables/Columns tabs offer literal **Find**, sorting, **Renamed only**, counts
+and **Reset selected names**. Filters affect display only; saving includes hidden
+overrides. Reset/remove actions operate on the selected rows in the displayed
+order and do not exclude source tables or columns from the transfer.
+**Check names** shows blank/invalid names and duplicate source entries together
+in **Input checks**. Double-click a problem or use **Go to selected field** to
+reveal its field despite filters/sorting. Editing clears stale problem locations;
+saving checks the latest cell values again. Successful input checks do not replace
+the database Review or authorize execution.
+**Preview YAML** shows the generated mapping in a read-only RSyntaxTextArea view
+with search/line navigation and **Copy YAML**. It uses the save formatter and
+includes hidden overrides. Editing clears the old preview and disables copying
+until refreshed; previewing/copying writes no file and does not execute a transfer.
+Closing the name editor protects unsaved name changes (including invalid edits);
+choose to keep editing or explicitly discard. Filters/previews and unchanged source
+column loading do not trigger this prompt. Saved mapping paths are attached to
+Job settings relative to the job folder when possible; other drives stay absolute.
+Save settings to keep that reference and review again before running.
 The table picker allows tables without primary keys in this mode. Specify an
 existing target schema or leave it blank to use the target connection's current
 schema. Review the **Summary**, **Warnings** and **Schema SQL** tabs, then confirm

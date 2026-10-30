@@ -39,6 +39,9 @@ public class InformixTableReader extends JdbcTableReader {
 	public static final String INFORMIX_INTERVAL_FRAGMENT = "INFORMIX_INTERVAL_FRAGMENT";
 	public static final String INFORMIX_FRAGMENT_HEADER = "INFORMIX_FRAGMENT_HEADER_";
 	public static final String INFORMIX_FRAGMENT_EXPRESSION = "INFORMIX_FRAGMENT_EXPRESSION";
+	public static final String INFORMIX_ROW_TYPE = "INFORMIX_ROW_TYPE";
+	public static final String INFORMIX_ROW_TYPE_OWNER = "INFORMIX_ROW_TYPE_OWNER";
+	public static final String INFORMIX_BACKING_INDEX_REQUIRED = "INFORMIX_BACKING_INDEX_REQUIRED";
 
 	public InformixTableReader(final Dialect dialect) {
 		super(dialect);
@@ -52,9 +55,42 @@ public class InformixTableReader extends JdbcTableReader {
 		}
 		super.setMetadataDetail(connection, context, tableList);
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
+		setTableTypes(connection, tables);
 		setUniqueConstraints(connection, tables);
 		setFragmentation(connection, tables);
 		setConstraintOwners(connection, tables);
+	}
+
+	protected void setTableTypes(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
+		if (tables.keySet().isEmpty())
+			return;
+		final var context = defaultParametersContext(connection);
+		context.put(SCHEMA_NAME, tables.keySet());
+		context.put(TABLE_NAME, tables.secondKeySet());
+		execute(connection, getSqlNodeCache().getString("tableTypes.sql"), context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final var table = tables.get(getString(rs, SCHEMA_NAME), getString(rs, TABLE_NAME));
+				if (table == null || table.getCatalogName() != null
+						&& !table.getCatalogName().equals(getString(rs, CATALOG_NAME)))
+					return;
+				final String type = getString(rs, "row_type_name");
+				if (rs.getInt("row_type_id") > 0 && type == null)
+					throw new IllegalStateException("Missing Informix table ROW type identity: " + table.getName());
+				if (type != null) {
+					table.getSpecifics().put(INFORMIX_ROW_TYPE, type);
+					table.getSpecifics().put(INFORMIX_ROW_TYPE_OWNER, getString(rs, "row_type_owner"));
+				}
+				final String parent = getString(rs, "parent_name");
+				if (parent != null) {
+					if (type == null)
+						throw new IllegalStateException(
+								"Informix table inheritance requires its ROW type: " + table.getName());
+					table.getInherits().add(new Table(parent).setSchemaName(getString(rs, "parent_owner"))
+							.setCatalogName(getString(rs, CATALOG_NAME)));
+				}
+			}
+		});
 	}
 
 	protected void setConstraintOwners(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
@@ -124,13 +160,12 @@ public class InformixTableReader extends JdbcTableReader {
 		initializeChild(reader);
 		for (final InformixIndexReader.Metadata metadata : reader.readIndexes(connection, context, true)) {
 			final Index index = metadata.index();
-			if (index.getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD) != null
+			final boolean backing = "true".equals(index.getSpecifics().get(INFORMIX_BACKING_INDEX_REQUIRED))
+					|| index.getIndexType() == com.sqlapp.data.schemas.IndexType.Clustered
+					|| index.getPartitioning() != null
+					|| index.getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD) != null
 					|| index.getColumns().stream()
-							.anyMatch(c -> c.getSpecifics().get(InformixIndexReader.INFORMIX_OPERATOR_CLASS) != null)) {
-				throw new UnsupportedOperationException(
-						"Informix UNIQUE constraint with a custom backing index requires explicit index dependencies: "
-								+ metadata.constraintName());
-			}
+							.anyMatch(c -> c.getSpecifics().get(InformixIndexReader.INFORMIX_OPERATOR_CLASS) != null);
 			final Table table = tables.get(index.getSchemaName(), index.getTableName());
 			if (table == null
 					|| table.getCatalogName() != null && !table.getCatalogName().equals(index.getCatalogName()))
@@ -150,6 +185,17 @@ public class InformixTableReader extends JdbcTableReader {
 				constraint.getColumns().add(table.getColumns().get(column.getName()), column.getOrder());
 			});
 			table.getConstraints().add(constraint);
+			if (backing) {
+				if (index.getName().startsWith(" "))
+					index.setName("sqlapp_" + Integer.toUnsignedString(
+							(table.getSchemaName() + "." + table.getName() + "." + constraint.getName()).hashCode(),
+							36));
+				if (table.getIndexes().contains(index.getName()))
+					throw new IllegalStateException("Ambiguous Informix backing index: " + index.getName());
+				table.getIndexes().add(index);
+				constraint.setIndexName(index.getName());
+				constraint.getSpecifics().put(INFORMIX_BACKING_INDEX_REQUIRED, "true");
+			}
 		}
 	}
 
@@ -182,6 +228,8 @@ public class InformixTableReader extends JdbcTableReader {
 	}
 
 	protected Partition readFragment(final ExResultSet rs, final Table table) throws SQLException {
+		if (!table.getInherits().isEmpty())
+			return null; // Storage is inherited, not a second independent policy.
 		final String strategy = rs.getString(4);
 		if ("I".equalsIgnoreCase(strategy)) {
 			table.setTableSpaceName(rs.getString(7));

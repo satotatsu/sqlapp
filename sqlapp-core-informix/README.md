@@ -1,12 +1,15 @@
 # Informix dialect
 
+See [enhancement status and remaining work](ENHANCEMENT_STATUS.md) for the
+completion scope, remaining validation and intentionally rejected cases.
+
 The dialect retains the existing resolver for Informix 11.70, 12.10, 14.10 and
 later versions. These enhancements use the existing catalog baseline rather
 than introducing newer-version-only catalog columns. The Docker integration
-tests below have been executed on Informix Developer Edition 12.10.FC12W1 and
-14.10.FC9W1. Informix 11.70 and 15 have not been verified against a live server.
-The published 15.0.0.0 tag and digest returned "not found" when checked, so this
-change does not claim a successful Informix 15 integration run.
+tests below have been executed on Informix Developer Edition 12.10.FC12W1,
+14.10.FC9W1 and the 15.0.1.0.3 container image. Informix 11.70 has not been
+verified against a live server. The older published 15.0.0.0 tag returned
+"not found"; the available 15.0.1.0.3 tag was selected from the registry tag list.
 
 ## Metadata and SQL generation
 
@@ -40,11 +43,12 @@ change does not claim a successful Informix 15 integration run.
   CREATE INDEX includes its mode directly, including with custom access methods,
   so a disabled UNIQUE index can be recreated over existing duplicate data
   without first creating an enabled index. Query counts and the resolver/version
-  baseline are unchanged. Constraint-backed indexes retain their constraint
-  representation and are excluded from standalone index generation.
+  baseline are unchanged. Ordinary implicit constraint-backed indexes retain
+  their constraint representation; named or special backing indexes are modeled
+  explicitly as described below.
   Configure target violations/diagnostics tables explicitly before filtering DML;
   their associations are not recreated by the index factory.
-- Standalone index storage is joined from `sysfragments` in that same header
+- Standalone B-tree index storage is joined from `sysfragments` in that same header
   SELECT. Multiple fragment rows are grouped by catalog, table/schema, index
   owner and index identity before key resolution, so query counts remain at
   two to four SELECTs. Single-dbspace indexes retain `Index.tableSpaceName`;
@@ -55,8 +59,20 @@ change does not claim a successful Informix 15 integration run.
   settings, missing fragment data, other fragmentation strategies and
   hierarchical index layouts fail explicitly. Storage clauses follow USING
   access-method clauses and precede index modes in CREATE INDEX.
-  This applies to standalone indexes; constraint-backed index storage is not
-  added to the existing constraint representation by this change.
+  Table-based fragmentation (`sysfragments.strategy=T`) retains
+  `INFORMIX_INDEX_FOLLOWS_TABLE=true` and omits a storage override so the index
+  follows its target table. Recreate the table's fragmentation before its index;
+  conflicting detached/legacy storage settings are rejected.
+  Virtual access methods can store only a descriptor in the catalog dbspace
+  while their data lives in an sbspace/extspace. Their single catalog location
+  is retained as supplemental `INFORMIX_INDEX_CATALOG_DBSPACE`. Storage is used
+  only when `sysams.am_sptype` and `sysmaster:sysdbspaces` identify a compatible
+  data location. Otherwise `INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED=true`
+  prevents CREATE until the caller sets the actual target `Index.tableSpaceName`
+  or each expression fragment's `Partition.tableSpaceName`. Descriptor locations
+  are never substituted for unknown data locations. BTS on 12.10 can require
+  this explicit mapping; 14.10 reports its sbspace in the tested configuration.
+  Metadata users require SELECT access to `sysmaster:sysdbspaces`.
 - SERIAL, SERIAL8 and BIGSERIAL identity columns use native types without a generated
   identity clause. Non-unit identity increments are rejected. The legacy
   `getIdentitySelectString()` returns the last SERIAL value using
@@ -174,8 +190,66 @@ change does not claim a successful Informix 15 integration run.
   methods, DataBlade modules and operator classes must already exist at the
   destination; this dialect does not install them automatically.
 
-Custom access methods/operator classes on UNIQUE constraints and hierarchical
-fragmentation remain unsupported and fail explicitly. A disabled interval that already has
+Named or special UNIQUE backing indexes retain their full `Table.indexes`
+representation and `UniqueConstraint.indexName`. Table CREATE returns operations
+in table, index, UNIQUE, FK order; execute the entire list. Internal index names
+with illegal leading spaces are replaced by deterministic target names.
+Functional UNIQUE indexes are supported separately, including duplicate rejection
+after XML recreation. A function key reported as a UNIQUE constraint is rejected
+rather than guessed into a column constraint. Native tests cover named backing index reuse;
+custom operator classes/access methods still require their destination libraries.
+
+Named ROW and DISTINCT types are read in one bulk query as executable `Type.definition`,
+including UNDER and only newly introduced subtype fields. Typed tables retain
+their ROW type identity and canonical `Table.inherits` in one additional bulk
+query. CREATE uses OF TYPE/UNDER; child storage follows the parent rather than
+repeating its fragmentation. Recreate referenced types, parent types and tables
+before their children. A populated parent model suppresses duplicate inherited
+constraints only when both constraint name and effective owner match. In ANSI
+databases, a child's own constraint can share its parent's name under a different
+owner; it is emitted separately and retains its enforcement after Catalog XML
+recreation. This uses existing constraint-owner metadata without extra SELECTs.
+Primitive/temporal fields and named type references are
+supported. DISTINCT definitions preserve built-in precision/length, including
+LVARCHAR limits, and qualified named source types. SET, MULTISET and LIST fields
+can contain named types or anonymous ROW/collection types, with element NOT NULL
+retained. Anonymous type catalogs are fetched database-wide in the same SELECT
+because their IDs can be shared across owners; only the requested named types
+are returned. Missing members, cycles and malformed collections fail explicitly.
+System built-in type IDs are excluded from named type output.
+Ordinary table columns also retain schema-qualified named ROW/DISTINCT and
+user-defined opaque type identities
+and anonymous ROW/SET/MULTISET/LIST declarations in `Column.dataTypeName`.
+`INFORMIX_NATIVE_TYPE` in column specifics stores the exact native declaration
+for SQL rendering, preserving quoted identifier case and whitespace through XML
+and avoiding generic type-name normalization and JDBC type/length substitution.
+The native declaration must agree with the normalized `Column.dataTypeName`.
+When changing a native type, update both; when switching to an ordinary type,
+remove `INFORMIX_NATIVE_TYPE`. Conflicts fail with an actionable error rather
+than silently recreating the previous type.
+Named identities are joined into the existing defaults query. Only when anonymous
+complex columns are present is one additional bulk type-catalog SELECT needed,
+independent of the number of tables or columns. The same declaration renderer
+is used for named type attributes and ordinary columns.
+Opaque column identities use the existing catalog join without an additional
+SELECT. System built-in opaque types, including BOOLEAN and LVARCHAR, retain
+their native built-in rendering. Opaque types and their support functions must
+already exist at the destination; the reader does not synthesize library-backed
+type definitions. Docker coverage preserves a quoted opaque type reference,
+checks its catalog owner/name after XML recreation, and verifies neighboring
+built-in columns. That fixture inserts NULL for the opaque value and does not
+claim to test custom input/output functions.
+Disabling both type-text options returns named type headers without requiring
+the source identities needed to generate DISTINCT DDL.
+Typed-table column defaults are restored with shared column definitions through
+ALTER TABLE MODIFY after OF TYPE creation. Execute all returned operations.
+ROW subtypes that introduce no fields are recreated without an empty field list:
+`CREATE ROW TYPE child UNDER parent`. Multi-level inheritance retains the
+parent's fields and NOT NULL semantics. Root ROW types still require readable
+fields. Native opaque library/type installation and automatic dependency planning
+are outside this dialect.
+
+A disabled interval that already has
 automatically generated fragments is rejected during CREATE generation because
 reconstructing only its initial ranges would prevent data from being reloaded.
 Informix also rejects recreating or renaming the reserved generated partition
@@ -248,6 +322,8 @@ including REMAINDER, and legacy IN TABLE indexes over existing rows; compare
 their sysfragments records before/after XML recreation; and retain the same
 two-query bound. Unit tests also cover quoted fragment names, grouping and
 conflicting storage options.
+Another round trip recreates a fragmented table and its table-based index and
+checks that both inherited index fragments retain strategy T.
 Whole-schema coverage uses the public SchemaReader.loadFull entry point, XML,
 then an explicit dependency order for object recreation. It exercises related
 tables and FK/CHECK/NOT NULL, defaults, disabled indexes, views, routines,
@@ -274,8 +350,17 @@ Constraint-mode coverage recreates disabled PK, UNIQUE, CHECK, FK and named
 NOT NULL through XML, checks acceptance of NULL/duplicate/invalid references,
 re-adds NOT NULL through MODIFY while retaining its default, and exercises both
 filtering error modes with explicitly created target violations tables.
-The BTS test creates a temporary smart-blob space and
-registers the shipped module inside its disposable container. Unit tests also
+The BTS test creates a temporary smart-blob space, registers the shipped module
+inside its disposable container, and verifies both single-space and expression-
+fragmented index recreation with searches spanning the fragments. Typed-table
+coverage recreates parent/child ROW types and fragmented table inheritance
+through whole-schema XML, then checks inherited queries, defaults and stored values.
+Complex-type coverage recreates DISTINCT chains and bounded LVARCHAR plus
+nested SET/MULTISET/LIST/anonymous ROW attributes, compares reread definitions
+and inserts values using the recreated types.
+Backing-index coverage checks CREATE ordering, native index reuse, duplicates
+and self-referencing FK enforcement. Custom backing operator-class mapping has
+unit coverage; no external native library is installed for that case. Unit tests also
 cover same-name objects across owners/tables, quoted expression-like column
 names, malformed keys, missing identities and unknown policy flags.
 
@@ -290,7 +375,21 @@ and tree-session test classes retain their existing fixed image. Readiness for
 the metadata test is checked by a local SQL connection rather than a
 version-specific log message.
 
+For Informix 15, quote the complete property argument in PowerShell:
+
+```powershell
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests com.sqlapp.data.db.dialect.informix.metadata.InformixMetadataDockerTest '-PinformixTestImage=icr.io/informix/informix-developer-database:15.0.1.0.3'
+```
+
+The fixture detects both the older direct installation and the versioned
+`/opt/ibm/informix/v*` installation used by the tested 15 image. Readiness and
+BTS setup use the detected server binaries; no host installation is required.
+The tested 15 image digest is
+`sha256:8202d69ba5674df4b13140d5121dd11b7b26b28dc60119b7e8f87e533e538ba1`.
+
 References: [IBM catalog documentation](https://www.ibm.com/docs/en/informix-servers/14.10.0?topic=tables-sysindexes),
+[extended type catalog](https://www.ibm.com/docs/en/informix-servers/14.10.0?topic=tables-sysxtdtypes),
+[complex type attributes](https://www.ibm.com/docs/en/informix-servers/14.10.0?topic=tables-sysattrtypes),
 [fragment catalog](https://www.ibm.com/docs/en/informix-servers/12.10.0?topic=tables-sysfragments),
 [functional index catalog](https://www.ibm.com/docs/en/informix-servers/14.10.0?topic=tables-sysindices),
 [trigger text catalog](https://www.ibm.com/docs/en/informix-servers/14.10.0?topic=tables-systrigbody),

@@ -78,6 +78,70 @@ class InformixColumnDefaultsTest {
 	}
 
 	@Test
+	void resolvesManyComplexColumnsWithOneBulkTypeLookup() {
+		final var calls = new java.util.concurrent.atomic.AtomicInteger();
+		final var reader = new Reader() {
+			@Override
+			protected Map<Integer, String> readComplexDeclarations(Connection c, java.util.Set<Integer> ids) {
+				calls.incrementAndGet();
+				assertEquals(java.util.Set.of(77), ids);
+				return Map.of(77, "SET(INTEGER NOT NULL)");
+			}
+		};
+		for (int i = 0; i < 20; i++) {
+			reader.add(i, "U", null);
+			reader.defaults.get(i).put("column_type_mode", "C");
+			reader.defaults.get(i).put("column_type_id", 77);
+		}
+		final var columns = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(1, calls.get());
+		assertEquals(1, reader.queries);
+		assertEquals(20, columns.size());
+		for (var column : columns) {
+			assertEquals("SET(INTEGER NOT NULL)", column.getDataTypeName());
+			assertEquals("SET(INTEGER NOT NULL)", column.getSpecifics().get(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+		}
+	}
+
+	@Test
+	void preservesQuotedNamedTypesAndRejectsMissingOwners() {
+		final var reader = new Reader();
+		reader.add(1, "U", null);
+		final var row = reader.defaults.get(0);
+		row.put("column_type_mode", "D");
+		row.put("column_type_name", "money\"type");
+		row.put("column_type_owner", "owner");
+		assertEquals("\"owner\".\"money\"\"type\"", reader.doGetAll(null, new ParametersContext(), null).get(0)
+				.getSpecifics().get(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+		row.remove("column_type_owner");
+		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+	}
+
+	@Test
+	void qualifiesCustomOpaqueTypesWithoutOverridingBuiltInOpaqueTypes() {
+		final var reader = new Reader();
+		reader.add(1, "U", null);
+		reader.add(2, "U", null);
+		final var custom = reader.defaults.get(0);
+		custom.put("column_type_mode", "B");
+		custom.put("column_type_id", 2048);
+		custom.put("column_type_name", "Token\"Type");
+		custom.put("column_type_owner", "custom");
+		final var builtin = reader.defaults.get(1);
+		builtin.put("column_type_mode", "B");
+		builtin.put("column_type_id", 1);
+		builtin.put("column_type_name", "lvarchar");
+		builtin.put("column_type_owner", "informix");
+		final var columns = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals("\"custom\".\"Token\"\"Type\"",
+				columns.get(0).getSpecifics().get(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+		assertFalse(columns.get(1).getSpecifics().containsKey(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+		assertEquals(1, reader.queries);
+		custom.remove("column_type_name");
+		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+	}
+
+	@Test
 	void excludesJdbcSequencePseudoColumnsWithoutHidingUnresolvedTableColumns() {
 		final Reader reader = new Reader();
 		reader.add(1, "U", null);

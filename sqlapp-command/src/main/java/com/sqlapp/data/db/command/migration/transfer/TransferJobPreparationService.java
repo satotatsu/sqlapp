@@ -138,6 +138,10 @@ public final class TransferJobPreparationService {
 				// Initial-copy jobs preserve source values, including identity keys used by
 				// FKs.
 				task.put("bulk", Map.of("keepIdentity", true, "keepNulls", true));
+				final var selectedTable = TransferSchemaOnlyPreparation
+						.select(schema, List.of(configuration.tables().get(index))).getFirst();
+				if (TransferKeylessChecks.requiresFullScan(selectedTable))
+					task.put("fullScan", true);
 				tasks.add(task);
 				tasksById.put((String) task.get("id"), task);
 			}
@@ -185,15 +189,22 @@ public final class TransferJobPreparationService {
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
 			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
 					configuration.schemaMode(), configuration.compatibilityPolicy(), projection);
+			final var copyWarnings = new ArrayList<>(compatibility.warnings());
+			for (var task : resolved.plan().getTasks())
+				if (task.isFullScan())
+					TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings,
+							TransferKeylessChecks.CODE + " Table " + task.getEffectiveSourceTable().getName()
+									+ " uses full-scan INSERT without a usable NOT NULL primary key. Duplicate rows are preserved; verification compares externally sorted row hashes, including multiplicity. Verification chunk indexes are hash-sort positions, not source row positions. MERGE, resume and key-based repair are unavailable. Review the target key design; optional missing-table creation can add a target-only generated PK.");
+			final var copyPlan = copyWarnings.equals(compatibility.warnings()) ? compatibility
+					: TransferSchemaPreparation.result(compatibility.fingerprint(), compatibility.statements(),
+							copyWarnings, configuration.schemaMode());
 			phase = "checking that the transfer definition has not changed";
 			if (!io.read(jobFile).fingerprint().equals(snapshot.fingerprint()))
 				throw new PreparationException("Transfer definition changed during preparation. Prepare it again.");
 			TransferNameMappingIO.capture(mapping, directory);
 			final var savedJob = io.write(directory.resolve("transfer.yaml"), snapshot.text(), null);
-			return withDraft(
-					new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
-							resolved.plan().getTaskIds(), compatibility.warnings(), compatibility),
-					targetDialect, draft);
+			return withDraft(new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
+					resolved.plan().getTaskIds(), copyPlan.warnings(), copyPlan), targetDialect, draft);
 		} catch (TransferSchemaPreparation.ValidationException failure) {
 			throw failure;
 		} catch (PreparationException failure) {

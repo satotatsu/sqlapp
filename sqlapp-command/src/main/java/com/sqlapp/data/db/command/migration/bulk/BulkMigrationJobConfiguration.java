@@ -47,6 +47,10 @@ public class BulkMigrationJobConfiguration {
 		private Map<String, String> columnMappings = new LinkedHashMap<>();
 		/** Reject execution when the target already contains rows. */
 		private boolean requireEmptyTarget;
+		/**
+		 * Single-pass INSERT without a key; cannot resume or produce key-based repair.
+		 */
+		private boolean fullScan;
 		private List<String> keysetColumns = new ArrayList<>();
 		private String migrationId;
 		private int chunkSize = 10_000;

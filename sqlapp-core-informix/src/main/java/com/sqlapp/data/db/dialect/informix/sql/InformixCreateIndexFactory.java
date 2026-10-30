@@ -64,9 +64,25 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 	}
 
 	private void addStorage(final Index index, final AbstractSqlBuilder<?> builder) {
+		final String override = index.getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED);
+		if (override != null && !java.util.Set.of("true", "false").contains(override))
+			throw new IllegalArgumentException("Invalid Informix storage override flag: " + override);
+		if ("true".equals(override) && index.getTableSpaceName() == null && index.getPartitioning() == null)
+			throw new IllegalArgumentException("Cannot resolve actual Informix virtual index storage for "
+					+ index.getName()
+					+ "; set Index.tableSpaceName to the target sbspace/extspace (catalog descriptor location is not the data location)");
 		final String attached = index.getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_IN_TABLE);
+		final String followsTable = index.getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_FOLLOWS_TABLE);
 		if (attached != null && !java.util.Set.of("true", "false").contains(attached))
 			throw new IllegalArgumentException("Invalid Informix IN TABLE flag: " + attached);
+		if (followsTable != null && !java.util.Set.of("true", "false").contains(followsTable))
+			throw new IllegalArgumentException("Invalid Informix table-based index flag: " + followsTable);
+		if ("true".equals(followsTable)) {
+			if ("true".equals(attached) || index.getTableSpaceName() != null || index.getPartitioning() != null)
+				throw new IllegalArgumentException(
+						"Table-based Informix index cannot override its table storage: " + index.getName());
+			return; // Omission preserves inheritance from the target table's fragmentation.
+		}
 		if ("true".equals(attached)) {
 			if (index.getTableSpaceName() != null || index.getPartitioning() != null)
 				throw new IllegalArgumentException(
@@ -78,7 +94,7 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 			if (index.getTableSpaceName() != null) {
 				if (index.getTableSpaceName().isBlank())
 					throw new IllegalArgumentException("Blank Informix index dbspace");
-				builder.space()._add("IN").space().name(index.getTableSpaceName().replace("\"", "\"\""));
+				builder.space()._add("IN").space()._add(quotedIdentifier(builder, index.getTableSpaceName()));
 			}
 			return;
 		}
@@ -102,11 +118,15 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 			if (partition.getName() != null) {
 				if (partition.getName().isBlank())
 					throw new IllegalArgumentException("Blank Informix index partition name");
-				builder._add("PARTITION").space().name(partition.getName().replace("\"", "\"\"")).space();
+				builder._add("PARTITION").space()._add(quotedIdentifier(builder, partition.getName())).space();
 			}
 			builder._add(expression).space()._add("IN").space()
-					.name(partition.getTableSpaceName().replace("\"", "\"\""));
+					._add(quotedIdentifier(builder, partition.getTableSpaceName()));
 		}
+	}
+
+	private String quotedIdentifier(final AbstractSqlBuilder<?> builder, final String name) {
+		return builder.isQuateObjectName() ? "\"" + name.replace("\"", "\"\"") + "\"" : name;
 	}
 
 	private void addMode(final Index index, final AbstractSqlBuilder<?> builder) {

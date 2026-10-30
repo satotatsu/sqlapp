@@ -15,8 +15,11 @@ final class TransferJobSettingsPanel extends JPanel {
 	final JTextField targetSchema = new JTextField(24);
 	final JTextField mappingFile = new JTextField(24);
 	final JButton browseMapping = new JButton("Browse…");
+	final JButton editMapping = new JButton("Edit names…");
 	private final JPanel mappingRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 	final JCheckBox createMissing = new JCheckBox("Create missing target tables (the schema itself must exist)");
+	final JCheckBox generatedKey = new JCheckBox(
+			"Add target-only generated PK to new tables without a primary key (SQLAPP_ROW_ID)");
 	final JCheckBox verify = new JCheckBox("Verify copied data");
 	final JCheckBox schemaOnly = new JCheckBox("Schema only (no row copy)");
 	final JCheckBox applyDifferences = new JCheckBox(
@@ -53,6 +56,24 @@ final class TransferJobSettingsPanel extends JPanel {
 		mappingRow.add(mappingLabel);
 		mappingRow.add(mappingFile);
 		mappingRow.add(browseMapping);
+		mappingRow.add(editMapping);
+		editMapping.addActionListener(event -> {
+			if (busy || snapshot == null)
+				return;
+			try {
+				var job = snapshot.file();
+				var mapping = mappingFile.getText().isBlank() ? null
+						: job.getParent().resolve(mappingFile.getText()).normalize();
+				var edited = TransferNameMappingDialog.show(this, job, mapping, snapshot.configuration().tables());
+				if (edited != null) {
+					mappingFile.setText(TransferMappingPaths.fromJob(job, edited));
+					status.setText(
+							"Mapping saved. Save job settings to attach it, then review again before execution.");
+				}
+			} catch (Exception failure) {
+				status.setText(message(failure));
+			}
+		});
 		fields.add(mappingRow);
 		FileDropHandler.path(mappingFile, false, java.util.List.of("yaml", "yml"), () -> mappingFile.isEnabled(),
 				failure -> status.setText(failure.getMessage()));
@@ -61,7 +82,8 @@ final class TransferJobSettingsPanel extends JPanel {
 		browseMapping.addActionListener(event -> {
 			var chooser = new EditorFileChooser().forFile(
 					new javax.swing.filechooser.FileNameExtensionFilter("YAML mapping", "yaml", "yml"),
-					mappingFile.getText());
+					snapshot == null ? mappingFile.getText()
+							: TransferMappingPaths.browseHint(snapshot.file(), mappingFile.getText()));
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				mappingFile.setText(chooser.getSelectedFile().getAbsolutePath());
 		});
@@ -77,9 +99,17 @@ final class TransferJobSettingsPanel extends JPanel {
 			refresh();
 		});
 		fields.add(createMissing);
+		fields.add(generatedKey);
+		createMissing.addActionListener(event -> {
+			if (!createMissing.isSelected())
+				generatedKey.setSelected(false);
+			refresh();
+		});
 		fields.add(applyDifferences);
 		fields.add(allowDestructive);
 		applyDifferences.addActionListener(event -> {
+			if (applyDifferences.isSelected())
+				generatedKey.setSelected(false);
 			if (!applyDifferences.isSelected())
 				allowDestructive.setSelected(false);
 			refresh();
@@ -147,6 +177,8 @@ final class TransferJobSettingsPanel extends JPanel {
 					mappingFile.setText(configuration.mappingFile() == null ? "" : configuration.mappingFile());
 					createMissing.setSelected(
 							configuration.schemaMode() != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
+					generatedKey.setSelected(configuration
+							.schemaMode() == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY);
 					verify.setSelected(configuration.verify());
 					strict.setSelected(
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR);
@@ -175,7 +207,9 @@ final class TransferJobSettingsPanel extends JPanel {
 					schemaOnly.isSelected() && applyDifferences.isSelected()
 							? TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
 							: schemaOnly.isSelected() || createMissing.isSelected()
-									? TransferJobConfiguration.SchemaMode.CREATE_MISSING
+									? generatedKey.isSelected()
+											? TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
+											: TransferJobConfiguration.SchemaMode.CREATE_MISSING
 									: TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING,
 					original.sourceSchema(), targetSchema.getText().isBlank() ? null : targetSchema.getText(),
 					mappingFile.getText().isBlank() ? null : mappingFile.getText(),
@@ -239,6 +273,7 @@ final class TransferJobSettingsPanel extends JPanel {
 		mappingRow.setVisible(mode != TransferJobConfiguration.DataMode.FILE || !mappingFile.getText().isBlank());
 		mappingFile.setEnabled(!busy && snapshot != null);
 		browseMapping.setEnabled(mappingFile.isEnabled());
+		editMapping.setEnabled(mappingFile.isEnabled() && mode != TransferJobConfiguration.DataMode.FILE);
 		for (var field : new java.awt.Component[] { targetSchema, createMissing, verify, strict, chunk })
 			field.setEnabled(!busy && snapshot != null);
 		schemaOnly.setEnabled(!busy && snapshot != null);
@@ -246,6 +281,9 @@ final class TransferJobSettingsPanel extends JPanel {
 		applyDifferences.setEnabled(!busy && snapshot != null && schemaOnly.isSelected());
 		allowDestructive.setVisible(applyDifferences.isVisible() && applyDifferences.isSelected());
 		allowDestructive.setEnabled(applyDifferences.isEnabled() && applyDifferences.isSelected());
+		generatedKey.setVisible(mode != TransferJobConfiguration.DataMode.FILE && createMissing.isSelected()
+				&& !(schemaOnly.isSelected() && applyDifferences.isSelected()));
+		generatedKey.setEnabled(!busy && snapshot != null && generatedKey.isVisible());
 		if (schemaOnly.isSelected()) {
 			createMissing.setEnabled(false);
 			verify.setEnabled(false);

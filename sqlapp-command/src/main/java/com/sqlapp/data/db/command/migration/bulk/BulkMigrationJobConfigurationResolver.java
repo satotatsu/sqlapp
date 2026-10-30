@@ -164,12 +164,25 @@ public class BulkMigrationJobConfigurationResolver {
 					.checkpointMode(task.getCheckpointMode()).checkpointTableName(task.getCheckpointTableName())
 					.sourceFingerprint(task.getSourceFingerprint()).targetFingerprint(task.getTargetFingerprint())
 					.bulkOption(bulk).bulkUpsertOption(upsert).retryOption(retry).build();
-			final JdbcBulkMigrationKeysetSource source = task.getKeysetColumns() == null
-					|| task.getKeysetColumns().isEmpty() ? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
-							: new JdbcBulkMigrationKeysetSource(sourceConnection, table, task.getKeysetColumns());
-			final var builder = BulkMigrationJobTask.builder().taskId(task.getId()).keysetSource(source)
+			final var builder = BulkMigrationJobTask.builder().taskId(task.getId()).fullScan(task.isFullScan())
 					.targetTable(targetTable).columnMappings(task.getColumnMappings())
 					.requireEmptyTarget(task.isRequireEmptyTarget()).options(options);
+			if (task.isFullScan()) {
+				if (options.getMode() != com.sqlapp.jdbc.bulk.BulkMigrationMode.INSERT || options.isResume()
+						|| !task.isRequireEmptyTarget() || task.getIncrementalStrategy() != null
+						|| task.getKeysetColumns() != null && !task.getKeysetColumns().isEmpty()
+						|| configuration.getVerification() != null
+								&& configuration.getVerification().getRepairPlanOnMismatchFile() != null)
+					throw new CommandException(
+							"fullScan requires INSERT, resume: false, requireEmptyTarget: true, no keyset/incremental strategy and no repair plan.");
+				table.setRowIteratorHandler(
+						new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(sourceConnection));
+				builder.sourceTable(table);
+			} else {
+				builder.keysetSource(task.getKeysetColumns() == null || task.getKeysetColumns().isEmpty()
+						? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
+						: new JdbcBulkMigrationKeysetSource(sourceConnection, table, task.getKeysetColumns()));
+			}
 			if (task.getCheckpointMode() == com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.FILE) {
 				if (task.getCheckpointDirectory() == null || task.getCheckpointDirectory().isBlank()) {
 					throw new CommandException(

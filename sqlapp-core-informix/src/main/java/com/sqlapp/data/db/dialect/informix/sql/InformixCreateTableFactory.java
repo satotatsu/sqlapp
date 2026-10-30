@@ -12,6 +12,83 @@ import com.sqlapp.data.schemas.Table;
 
 /** Recreates Informix table fragmentation using the shared partition model. */
 public class InformixCreateTableFactory extends AbstractCreateTableFactory<InformixSqlBuilder> {
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(final Table table) {
+		final String rowType = table.getSpecifics().get(INFORMIX_ROW_TYPE);
+		if (rowType == null) {
+			if (!table.getInherits().isEmpty())
+				throw new IllegalArgumentException("Informix UNDER requires its named ROW type: " + table.getName());
+			return super.createSql(table);
+		}
+		final String owner = table.getSpecifics().get(INFORMIX_ROW_TYPE_OWNER);
+		if (rowType.isBlank() || owner == null || owner.isBlank() || table.getInherits().size() > 1)
+			throw new IllegalArgumentException("Invalid Informix typed table metadata: " + table.getName());
+		final var result = new java.util.ArrayList<com.sqlapp.data.db.sql.SqlOperation>();
+		final var builder = createSqlBuilder();
+		addCreateObject(table, builder);
+		builder.space()._add("OF TYPE").space()._add(identifier(owner) + "." + identifier(rowType));
+		if (!table.getInherits().isEmpty()) {
+			final var parent = table.getInherits().get(0);
+			if (table.getPartitioning() != null || table.getTableSpaceName() != null)
+				throw new IllegalArgumentException(
+						"Informix subtable storage must follow its parent: " + table.getName());
+			final String parentOwner = parent.getSchemaName() == null ? table.getSchemaName() : parent.getSchemaName();
+			builder.space()._add("UNDER").space()._add(identifier(parentOwner) + "." + identifier(parent.getName()));
+		} else
+			addOption(table, builder);
+		addSql(result, builder, com.sqlapp.data.db.sql.SqlType.CREATE, table);
+		for (var column : table.getColumns()) {
+			if (column.getDefaultValue() == null)
+				continue;
+			final var modify = createSqlBuilder();
+			modify.alter().table().name(table, getOptions().isDecorateSchemaName()).space()._add("MODIFY (")
+					.name(column).space().definition(column, false)._add(')');
+			addSql(result, modify, com.sqlapp.data.db.sql.SqlType.ALTER, column);
+		}
+		addIndexDefinitions(table, result);
+		for (var constraint : table.getConstraints().stream()
+				.sorted(java.util.Comparator
+						.comparingInt(c -> c instanceof com.sqlapp.data.schemas.ForeignKeyConstraint ? 1 : 0))
+				.toList()) {
+			// Inherited constraints are supplied by the supertable, not recreated on every
+			// child.
+			if (!table.getInherits().isEmpty()) {
+				final var parent = table.getInherits().get(0);
+				final var inherited = parent.getConstraints().get(constraint.getName());
+				final String ownerKey = com.sqlapp.data.db.dialect.informix.Informix.OBJECT_OWNER;
+				if (inherited != null && java.util.Objects.equals(
+						constraint.getSpecifics().getOrDefault(ownerKey, table.getSchemaName()),
+						inherited.getSpecifics().getOrDefault(ownerKey, parent.getSchemaName())))
+					continue;
+			}
+			result.addAll(getSqlFactoryRegistry().createSql(constraint, com.sqlapp.data.db.sql.SqlType.CREATE));
+		}
+		addOtherDefinitions(table, result);
+		return result;
+	}
+
+	private String identifier(final String name) {
+		if (name == null || name.isBlank())
+			throw new IllegalArgumentException("Informix typed table requires resolved type/parent identifiers");
+		return "\"" + name.replace("\"", "\"\"") + "\"";
+	}
+
+	@Override
+	protected void addUniqueConstraintDefinitions(final Table table, final InformixSqlBuilder builder) {
+		for (var constraint : table.getConstraints().getUniqueConstraints())
+			if (!requiresBackingIndex(constraint))
+				addConstraintDefinition(constraint, builder);
+	}
+
+	@Override
+	protected void addForeignKeyConstraintDefinitions(final Table table, final InformixSqlBuilder builder) {
+		if (table.getConstraints().getUniqueConstraints().stream().noneMatch(this::requiresBackingIndex))
+			super.addForeignKeyConstraintDefinitions(table, builder);
+	}
+
+	private boolean requiresBackingIndex(final com.sqlapp.data.schemas.UniqueConstraint constraint) {
+		return "true".equals(constraint.getSpecifics().get(INFORMIX_BACKING_INDEX_REQUIRED));
+	}
 
 	@Override
 	protected void addOption(final Table table, final InformixSqlBuilder builder) {
@@ -126,6 +203,14 @@ public class InformixCreateTableFactory extends AbstractCreateTableFactory<Infor
 	@Override
 	protected void addOtherDefinitions(final Table table,
 			final java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (table.getSpecifics().get(INFORMIX_ROW_TYPE) == null
+				&& table.getConstraints().getUniqueConstraints().stream().anyMatch(this::requiresBackingIndex)) {
+			for (var constraint : table.getConstraints().getUniqueConstraints())
+				if (requiresBackingIndex(constraint))
+					result.addAll(getSqlFactoryRegistry().createSql(constraint, com.sqlapp.data.db.sql.SqlType.CREATE));
+			for (var constraint : table.getConstraints().getForeignKeyConstraints())
+				result.addAll(getSqlFactoryRegistry().createSql(constraint, com.sqlapp.data.db.sql.SqlType.CREATE));
+		}
 		if (table.getPartitioning() == null)
 			return;
 		final String disabled = table.getPartitioning().getSpecifics().get(INFORMIX_INTERVAL_DISABLED);

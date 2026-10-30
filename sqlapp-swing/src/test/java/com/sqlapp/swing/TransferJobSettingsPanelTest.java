@@ -92,6 +92,31 @@ class TransferJobSettingsPanelTest {
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
+	void generatedTargetKeyOptionRoundTripsAndCanBeRemoved(boolean keepGeneratedKey) throws Exception {
+		var file = Files.writeString(directory.resolve("generated-key.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [NO_KEY]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.createMissing.isSelected());
+			assertTrue(panel.generatedKey.isSelected());
+			assertTrue(panel.generatedKey.isVisible());
+			if (!keepGeneratedKey)
+				panel.generatedKey.doClick(0);
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		assertEquals(
+				keepGeneratedKey ? TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
+						: TransferJobConfiguration.SchemaMode.CREATE_MISSING,
+				io.read(file).configuration().schemaMode());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
 	void nameMappingSavesRelativePathAndCanBeCleared(boolean schemaOnly) throws Exception {
 		var file = Files.writeString(directory.resolve("names.yaml"),
 				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\ndataMode: "
@@ -103,6 +128,7 @@ class TransferJobSettingsPanelTest {
 			SwingUtilities.invokeAndWait(() -> {
 				assertTrue(panel.mappingFile.isShowing() || panel.mappingFile.getParent().isVisible());
 				assertNotNull(panel.mappingFile.getTransferHandler());
+				assertTrue(panel.editMapping.isEnabled());
 				panel.mappingFile.setText(mapping);
 				onIdle(panel, done);
 				panel.save.doClick(0);

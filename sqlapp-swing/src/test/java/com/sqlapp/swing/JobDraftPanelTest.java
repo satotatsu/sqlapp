@@ -22,6 +22,33 @@ class JobDraftPanelTest {
 	Path directory;
 
 	@Test
+	void directInsertAllowsOnlyKeyRestrictedTablesAndShowsAWarning() throws Exception {
+		var schema = new Schema("PUBLIC");
+		for (String name : java.util.List.of("NO_KEY", "POLICY_BLOCKED")) {
+			var table = new Table(name);
+			table.getColumns().add(new Column("VALUE").setDataType(DataType.INT));
+			schema.getTables().add(table);
+		}
+		Path file = directory.resolve("keys.xml");
+		schema.writeXml(file.toFile());
+		var original = new BulkMigrationJobDraftBuilder().inspect(file);
+		var snapshot = new BulkMigrationJobDraftBuilder.SchemaSnapshot(file, original.fingerprint(),
+				java.util.List.of(original.tables().getFirst(), new BulkMigrationJobDraftBuilder.TableChoice(
+						"PUBLIC.POLICY_BLOCKED", java.util.List.of(), "Explicit source policy")));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new JobDraftPanel(snapshot, directory, saved -> fail("Selection does not save"));
+			panel.fullScanInsert(true);
+			assertTrue(panel.tables.getModel().isCellEditable(0, 0));
+			assertFalse(panel.tables.getModel().isCellEditable(1, 0));
+			assertTrue(panel.tables.getModel().getValueAt(0, 3).toString().contains("Warning: full-scan INSERT"));
+			panel.select.doClick(0);
+			assertEquals(true, panel.tables.getModel().getValueAt(0, 0));
+			assertEquals(false, panel.tables.getModel().getValueAt(1, 0));
+			assertTrue(panel.count.getText().contains("data-copy eligible: 1; unavailable: 1"));
+		});
+	}
+
+	@Test
 	void inspectsEligibilityAndCreatesUnsavedDraftOffEdtWithSelectedOptions() throws Exception {
 		final var schema = new Schema("PUBLIC");
 		final var table = new Table("ITEMS");

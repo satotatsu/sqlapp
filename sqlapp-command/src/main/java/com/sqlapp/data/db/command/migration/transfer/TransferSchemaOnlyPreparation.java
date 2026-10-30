@@ -48,9 +48,7 @@ final class TransferSchemaOnlyPreparation {
 				: TransferNameMappingProjection.project(schema, selected, mapping.configuration());
 		final var warnings = new ArrayList<String>();
 		if (projection != null && projection.renamedIdentifiers()) {
-			String warning = TransferSchemaChangeChecks.MAPPING_EXPRESSIONS
-					+ " Table/column names are mapped; SQL expressions, checks, defaults and predicates remain verbatim. Review Schema SQL and adjust source expressions where necessary.";
-			TransferSchemaPreparation.compatibility(job.configuration().compatibilityPolicy(), warnings, warning);
+			TransferSchemaPreparation.mappingExpressions(job.configuration().compatibilityPolicy(), warnings);
 		}
 		final var tasks = new ArrayList<TransferSchemaPreparation.Selection>();
 		for (int index = 0; index < selected.size(); index++) {

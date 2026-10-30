@@ -76,6 +76,22 @@ public final class BulkMigrationTargetValidator {
 
 	private static void validateEmpty(final Connection connection, final BulkMigrationJobTask task)
 			throws SQLException {
+		if (task.isFullScan()) {
+			final var table = task.getEffectiveTargetTable().clone();
+			table.setRowIteratorHandler(new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(connection));
+			final var rows = table.getRows().iterator();
+			Throwable failure = null;
+			try {
+				if (rows.hasNext())
+					throw new SQLException("Bulk migration target must be empty for task " + task.getTaskId() + ": " + qualified(table));
+			} catch (SQLException | RuntimeException | Error rejected) {
+				failure = rejected;
+				throw rejected;
+			} finally {
+				BulkMigrationIteratorSupport.close(failure, rows);
+			}
+			return;
+		}
 		final List<String> keyColumns = targetKeyColumns(task);
 		if (keyColumns.isEmpty()) {
 			throw new SQLException("Bulk migration target emptiness cannot be checked without a key for task "

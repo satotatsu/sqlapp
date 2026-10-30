@@ -32,14 +32,17 @@ import com.sqlapp.util.DoubleKeyMap;
  * selected test DB.
  */
 class InformixMetadataDockerTest {
+	private static final String INFORMIX_ENVIRONMENT = "for candidate in /opt/ibm/informix /opt/ibm/informix/v*; do "
+			+ "if [ -x \"$candidate/bin/dbaccess\" ]; then export INFORMIXDIR=\"$candidate\"; break; fi; done; "
+			+ "test -n \"$INFORMIXDIR\" || exit 1; "
+			+ "export INFORMIXSERVER=informix LD_LIBRARY_PATH=\"$INFORMIXDIR/lib:$INFORMIXDIR/lib/esql\"; ";
 	private static final GenericContainer<?> INFORMIX = ReusableTestcontainers
 			.configure(new GenericContainer<>(DockerImageName.parse(System.getProperty("sqlapp.test.informix.image",
 					"icr.io/informix/informix-developer-database:14.10.FC9W1DE"))).withEnv("LICENSE", "accept")
 					.withEnv("STORAGE", "local").withEnv("SIZE", "small").withExposedPorts(9088)
 					.waitingFor(Wait
-							.forSuccessfulCommand("sh -c 'INFORMIXDIR=/opt/ibm/informix INFORMIXSERVER=informix "
-									+ "LD_LIBRARY_PATH=/opt/ibm/informix/lib:/opt/ibm/informix/lib/esql "
-									+ "/opt/ibm/informix/bin/dbaccess sysmaster - </dev/null'")
+							.forSuccessfulCommand("sh -c '" + INFORMIX_ENVIRONMENT
+									+ "\"$INFORMIXDIR/bin/dbaccess\" sysmaster - </dev/null'")
 							.withStartupTimeout(Duration.ofMinutes(3))));
 
 	@BeforeAll
@@ -529,6 +532,380 @@ class InformixMetadataDockerTest {
 	}
 
 	@Test
+	void recreatesNamedBackingIndexBeforeUniqueAndSelfReferencingForeignKey() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
+				"in4mix"); var statement = connection.createStatement()) {
+			final String prefix = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+			try {
+				statement.execute("CREATE TABLE " + prefix + "(id INTEGER,parent_id INTEGER)");
+				statement.execute("CREATE UNIQUE INDEX " + prefix + "_ix ON " + prefix + "(id) IN rootdbs");
+				statement.execute("ALTER TABLE " + prefix + " ADD CONSTRAINT UNIQUE(id) CONSTRAINT " + prefix + "_uk");
+				statement.execute("ALTER TABLE " + prefix + " ADD CONSTRAINT FOREIGN KEY(parent_id) REFERENCES "
+						+ prefix + "(id) CONSTRAINT " + prefix + "_fk");
+				final var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName("informix");
+				reader.setObjectName(prefix);
+				final var tables = reader.getAllFull(connection);
+				assertEquals(1, tables.size());
+				final var schema = new com.sqlapp.data.schemas.Schema("informix");
+				schema.getTables().add(tables.get(0));
+				final com.sqlapp.data.schemas.Schema restored = SchemaUtils.readXml(new StringReader(schema.asXml()));
+				final var table = restored.getTables().get(0);
+				assertEquals("true", table.getConstraints().get(prefix + "_uk").getSpecifics()
+						.get(InformixTableReader.INFORMIX_BACKING_INDEX_REQUIRED));
+				assertEquals(1, table.getIndexes().size());
+				statement.execute("DROP TABLE " + prefix);
+				final var operations = DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(table,
+						SqlType.CREATE);
+				assertEquals(4, operations.size());
+				for (var operation : operations) {
+					try {
+						statement.execute(operation.getSqlText());
+					} catch (java.sql.SQLException e) {
+						throw new java.sql.SQLException(operation.getSqlText(), e);
+					}
+				}
+				statement.execute("INSERT INTO " + prefix + " VALUES(1,NULL)");
+				statement.execute("INSERT INTO " + prefix + " VALUES(2,1)");
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO " + prefix + " VALUES(2,NULL)"));
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO " + prefix + " VALUES(3,999)"));
+				try (var rows = statement
+						.executeQuery("SELECT idxname FROM sysconstraints WHERE constrname='" + prefix + "_uk'")) {
+					assertTrue(rows.next());
+					assertEquals(prefix + "_ix", rows.getString(1).strip());
+				}
+			} finally {
+				statement.execute("DROP TABLE IF EXISTS " + prefix);
+			}
+		}
+	}
+
+	@Test
+	void recreatesDistinctAndNestedCollectionTypesThroughXml() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE DISTINCT TYPE fixture.amount_t AS DECIMAL(9,2)");
+				statement.execute("CREATE DISTINCT TYPE fixture.amount2_t AS fixture.amount_t");
+				statement.execute("CREATE DISTINCT TYPE fixture.large_t AS LVARCHAR(500)");
+				statement.execute("CREATE ROW TYPE fixture.complex_t(id INTEGER,tags SET(VARCHAR(30) NOT NULL),"
+						+ "vals LIST(ROW(a INTEGER,b VARCHAR(10)) NOT NULL),nested ROW(x INTEGER,y MULTISET(INTEGER NOT NULL)),amount fixture.amount2_t)");
+				final var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTypeReader();
+				reader.setSchemaName("fixture");
+				final var schema = new com.sqlapp.data.schemas.Schema("fixture");
+				schema.getTypes().addAll(reader.getAllFull(connection));
+				assertEquals(4, schema.getTypes().size());
+				final com.sqlapp.data.schemas.Schema xml = SchemaUtils.readXml(new StringReader(schema.asXml()));
+				statement.execute("DROP ROW TYPE fixture.complex_t RESTRICT");
+				statement.execute("DROP TYPE fixture.amount2_t RESTRICT");
+				statement.execute("DROP TYPE fixture.amount_t RESTRICT");
+				statement.execute("DROP TYPE fixture.large_t RESTRICT");
+				for (String name : List.of("amount_t", "amount2_t", "large_t", "complex_t"))
+					for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry()
+							.createSql(xml.getTypes().get(name), SqlType.CREATE))
+						statement.execute(operation.getSqlText());
+				for (var type : reader.getAllFull(connection))
+					assertEquals(xml.getTypes().get(type.getName()).getDefinition(), type.getDefinition(),
+							type.getName());
+				statement.execute("CREATE TABLE fixture.items OF TYPE fixture.complex_t");
+				statement.execute(
+						"INSERT INTO fixture.items VALUES(1,SET{'alpha','beta'},LIST{ROW(2,'hello')},ROW(3,MULTISET{4,4}),12.34::fixture.amount_t::fixture.amount2_t)");
+				try (var rows = statement
+						.executeQuery("SELECT id,amount::fixture.amount_t::DECIMAL(9,2) FROM fixture.items")) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+					assertEquals(new java.math.BigDecimal("12.34"), rows.getBigDecimal(2));
+				}
+				try (var rows = statement
+						.executeQuery("SELECT maxlen FROM sysxtdtypes WHERE name='large_t' AND owner='fixture'")) {
+					assertTrue(rows.next());
+					assertEquals(500, rows.getInt(1));
+				}
+				statement.execute("CREATE TABLE fixture.plain_items(id INTEGER,tags SET(VARCHAR(30) NOT NULL),"
+						+ "nested ROW(a INTEGER,b LIST(INTEGER NOT NULL)),amount fixture.amount2_t,record fixture.complex_t)");
+				final String insertPlain = "INSERT INTO fixture.plain_items VALUES(1,SET{'alpha'},ROW(2,LIST{3,4}),"
+						+ "12.34::fixture.amount_t::fixture.amount2_t,ROW(1,SET{'beta'},LIST{ROW(2,'hello')},ROW(3,MULTISET{4,4}),"
+						+ "12.34::fixture.amount_t::fixture.amount2_t)::fixture.complex_t)";
+				statement.execute(insertPlain);
+				final var tableReader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader()
+						.getTableReader();
+				tableReader.setSchemaName("fixture");
+				tableReader.setObjectName("plain_items");
+				final Table plain = tableReader.getAllFull(connection).get(0);
+				final var saved = new com.sqlapp.data.schemas.Schema("fixture");
+				saved.getTables().add(plain);
+				final com.sqlapp.data.schemas.Schema plainXml = SchemaUtils.readXml(new StringReader(saved.asXml()));
+				statement.execute("DROP TABLE fixture.plain_items");
+				final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(plainXml.getTables().get(0), SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				statement.execute(insertPlain);
+				try (var rows = statement
+						.executeQuery("SELECT amount::fixture.amount_t::DECIMAL(9,2) FROM fixture.plain_items")) {
+					assertTrue(rows.next());
+					assertEquals(new java.math.BigDecimal("12.34"), rows.getBigDecimal(1));
+				}
+				final var reread = tableReader.getAllFull(connection).get(0);
+				for (String name : List.of("tags", "nested", "amount", "record")) {
+					assertEquals(plain.getColumns().get(name).getDataTypeName(),
+							reread.getColumns().get(name).getDataTypeName());
+					assertEquals(
+							plain.getColumns().get(name).getSpecifics().get(InformixColumnReader.INFORMIX_NATIVE_TYPE),
+							reread.getColumns().get(name).getSpecifics()
+									.get(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+				}
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
+	void recreatesSubtypesContainingOnlyInheritedFields() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE ROW TYPE fixture.base_t(id INTEGER NOT NULL,label VARCHAR(30))");
+				statement.execute("CREATE ROW TYPE fixture.child_t UNDER fixture.base_t");
+				statement.execute("CREATE ROW TYPE fixture.leaf_t UNDER fixture.child_t");
+				final var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTypeReader();
+				reader.setSchemaName("fixture");
+				final var schema = new com.sqlapp.data.schemas.Schema("fixture").setCatalogName(database);
+				schema.getTypes().addAll(reader.getAllFull(connection));
+				assertEquals(3, schema.getTypes().size());
+				final com.sqlapp.data.schemas.Schema xml = SchemaUtils.readXml(new StringReader(schema.asXml()));
+				assertFalse(String.join("\n", xml.getTypes().get("child_t").getDefinition()).contains("("));
+				statement.execute("DROP ROW TYPE fixture.leaf_t RESTRICT");
+				statement.execute("DROP ROW TYPE fixture.child_t RESTRICT");
+				statement.execute("DROP ROW TYPE fixture.base_t RESTRICT");
+				for (String name : List.of("base_t", "child_t", "leaf_t"))
+					for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry()
+							.createSql(xml.getTypes().get(name), SqlType.CREATE))
+						statement.execute(operation.getSqlText());
+				statement.execute("CREATE TABLE fixture.items OF TYPE fixture.leaf_t");
+				statement.execute("INSERT INTO fixture.items VALUES(1,'inherited')");
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO fixture.items VALUES(NULL,'invalid')"));
+				try (var rows = statement.executeQuery("SELECT id,label FROM fixture.items")) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+					assertEquals("inherited", rows.getString(2));
+				}
+				for (var type : reader.getAllFull(connection))
+					assertEquals(xml.getTypes().get(type.getName()).getDefinition(), type.getDefinition());
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
+	void recreatesColumnsUsingPreinstalledQuotedOpaqueTypes() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE OPAQUE TYPE fixture.\"TokenType\" (INTERNALLENGTH=4)");
+				statement.execute(
+						"CREATE TABLE fixture.items(id INTEGER,value fixture.\"TokenType\",description LVARCHAR(500),enabled BOOLEAN)");
+				final var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
+				reader.setSchemaName("fixture");
+				reader.setObjectName("items");
+				final var schema = new com.sqlapp.data.schemas.Schema("fixture").setCatalogName(database);
+				schema.getTables().addAll(reader.getAllFull(connection));
+				final com.sqlapp.data.schemas.Schema xml = SchemaUtils.readXml(new StringReader(schema.asXml()));
+				final Table table = xml.getTables().get(0);
+				assertEquals("\"fixture\".\"TokenType\"",
+						table.getColumns().get("value").getSpecifics().get(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+				assertFalse(table.getColumns().get("description").getSpecifics()
+						.containsKey(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+				assertFalse(table.getColumns().get("enabled").getSpecifics()
+						.containsKey(InformixColumnReader.INFORMIX_NATIVE_TYPE));
+				statement.execute("DROP TABLE fixture.items");
+				final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(table, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO fixture.items(id,description,enabled) VALUES(1,'plain text','t')");
+				try (var rows = statement.executeQuery("SELECT id,description,enabled FROM fixture.items")) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+					assertEquals("plain text", rows.getString(2));
+					assertTrue(rows.getBoolean(3));
+				}
+				try (var rows = statement.executeQuery("SELECT x.name,TRIM(x.owner) FROM syscolumns c "
+						+ "JOIN systables t ON t.tabid=c.tabid JOIN sysxtdtypes x ON x.extended_id=c.extended_id "
+						+ "WHERE t.tabname='items' AND t.owner='fixture' AND c.colname='value'")) {
+					assertTrue(rows.next());
+					assertEquals("TokenType", rows.getString(1));
+					assertEquals("fixture", rows.getString(2));
+				}
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
+	void recreatesSameNamedConstraintsAcrossTypedTableOwners() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG MODE ANSI");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE ROW TYPE fixturea.root_t(id INTEGER)");
+				statement.execute("CREATE ROW TYPE fixtureb.sub_t(extra INTEGER) UNDER fixturea.root_t");
+				statement.execute("CREATE TABLE fixturea.roots OF TYPE fixturea.root_t");
+				statement.execute("ALTER TABLE fixturea.roots ADD CONSTRAINT CHECK(id>0) CONSTRAINT fixturea.shared");
+				statement.execute("CREATE TABLE fixtureb.subs OF TYPE fixtureb.sub_t UNDER fixturea.roots");
+				statement.execute("ALTER TABLE fixtureb.subs ADD CONSTRAINT CHECK(extra>0) CONSTRAINT fixtureb.shared");
+				final var catalog = new com.sqlapp.data.schemas.Catalog(database);
+				for (String owner : List.of("FIXTUREA", "FIXTUREB")) {
+					final var schema = new com.sqlapp.data.schemas.Schema(owner).setCatalogName(database);
+					DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().loadFull(connection, schema);
+					catalog.getSchemas().add(schema);
+				}
+				final com.sqlapp.data.schemas.Catalog xml = SchemaUtils.readXml(new StringReader(catalog.asXml()));
+				final var parent = xml.getSchemas().get("FIXTUREA").getTables().get("roots");
+				final var child = xml.getSchemas().get("FIXTUREB").getTables().get("subs");
+				child.getInherits().clear();
+				child.getInherits().add(parent);
+				assertNotNull(parent.getConstraints().get("shared"));
+				assertNotNull(child.getConstraints().get("shared"));
+				statement.execute("DROP TABLE fixtureb.subs");
+				statement.execute("DROP TABLE fixturea.roots");
+				final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (var operation : registry.createSql(parent, SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				final var childOperations = registry.createSql(child, SqlType.CREATE);
+				assertEquals(2, childOperations.size());
+				for (var operation : childOperations)
+					statement.execute(operation.getSqlText());
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO fixtureb.subs VALUES(-1,1)"));
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO fixtureb.subs VALUES(1,-1)"));
+				statement.execute("INSERT INTO fixtureb.subs VALUES(1,1)");
+				connection.commit();
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
+	void recreatesRowTypesAndFragmentedTypedTableHierarchyThroughWholeSchemaXml() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE ROW TYPE fixture.base_t(id INTEGER,label VARCHAR(30))");
+				statement.execute(
+						"CREATE ROW TYPE fixture.child_t(stamp DATETIME YEAR TO FRACTION(3),amount DECIMAL(9,2)) UNDER fixture.base_t");
+				statement.execute(
+						"CREATE TABLE fixture.parents OF TYPE fixture.base_t FRAGMENT BY EXPRESSION PARTITION lo (id<10) IN rootdbs,PARTITION hi REMAINDER IN rootdbs");
+				statement.execute("CREATE TABLE fixture.children OF TYPE fixture.child_t UNDER fixture.parents");
+				statement.execute("ALTER TABLE fixture.parents MODIFY(label VARCHAR(30) DEFAULT 'parent default')");
+				final var schema = new com.sqlapp.data.schemas.Schema("fixture").setCatalogName(database);
+				DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().loadFull(connection, schema);
+				assertEquals(2, schema.getTypes().size());
+				assertEquals(2, schema.getTables().size());
+				assertEquals(1, schema.getTables().get("children").getInherits().size());
+				assertNull(schema.getTables().get("children").getPartitioning());
+				final com.sqlapp.data.schemas.Schema restored = SchemaUtils.readXml(new StringReader(schema.asXml()));
+				statement.execute("DROP TABLE fixture.children");
+				statement.execute("DROP TABLE fixture.parents");
+				statement.execute("DROP ROW TYPE fixture.child_t RESTRICT");
+				statement.execute("DROP ROW TYPE fixture.base_t RESTRICT");
+				final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+				registry.getOptions().setDecorateSchemaName(true);
+				for (String name : List.of("base_t", "child_t"))
+					for (var operation : registry.createSql(restored.getTypes().get(name), SqlType.CREATE))
+						statement.execute(operation.getSqlText());
+				for (String name : List.of("parents", "children"))
+					for (var operation : registry.createSql(restored.getTables().get(name), SqlType.CREATE))
+						statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO fixture.parents VALUES(1,'parent')");
+				statement.execute("INSERT INTO fixture.parents(id) VALUES(2)");
+				try (var rows = statement.executeQuery("SELECT label FROM fixture.parents WHERE id=2")) {
+					assertTrue(rows.next());
+					assertEquals("parent default", rows.getString(1));
+				}
+				statement.execute("DELETE FROM fixture.parents WHERE id=2");
+				statement.execute("INSERT INTO fixture.children VALUES(11,'child',CURRENT YEAR TO FRACTION(3),12.34)");
+				try (var rows = statement.executeQuery("SELECT COUNT(*) FROM fixture.parents")) {
+					assertTrue(rows.next());
+					assertEquals(2, rows.getInt(1));
+				}
+				try (var rows = statement.executeQuery("SELECT COUNT(*) FROM ONLY(fixture.parents)")) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+				}
+				try (var rows = statement.executeQuery("SELECT amount FROM fixture.children WHERE id=11")) {
+					assertTrue(rows.next());
+					assertEquals(new java.math.BigDecimal("12.34"), rows.getBigDecimal(1));
+				}
+				final var actual = new com.sqlapp.data.schemas.Schema("fixture").setCatalogName(database);
+				DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().loadFull(connection, actual);
+				assertEquals("parents", actual.getTables().get("children").getInherits().get(0).getName());
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
 	void recreatesIndexDbspacesExpressionFragmentsAndLegacyAttachedStorage() throws Exception {
 		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
 				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
@@ -595,6 +972,51 @@ class InformixMetadataDockerTest {
 					assertEquals(5, rows.getInt(1));
 					assertTrue(rows.next());
 					assertEquals(15, rows.getInt(1));
+				}
+			} finally {
+				statement.execute("DROP TABLE IF EXISTS " + prefix);
+			}
+		}
+	}
+
+	@Test
+	void recreatesIndexesThatFollowTheirTableFragmentation() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
+				"in4mix"); var statement = connection.createStatement()) {
+			final String prefix = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+			try {
+				statement.execute("CREATE TABLE " + prefix
+						+ "(id INTEGER) FRAGMENT BY EXPRESSION PARTITION lo (id<10) IN rootdbs,PARTITION hi REMAINDER IN rootdbs");
+				statement.execute("CREATE INDEX " + prefix + "_ix ON " + prefix + "(id)");
+				final var context = new ParametersContext();
+				context.put("schemaName", "informix");
+				context.put("tableName", prefix);
+				final var indexes = new InformixIndexReader(DialectHolder.defaultDialect);
+				indexes.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+				final Table table = new Table(prefix).setSchemaName("informix");
+				table.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+				table.getIndexes().addAll(indexes.doGetAll(connection, context, null));
+				assertEquals(1, table.getIndexes().size());
+				assertEquals("true",
+						table.getIndexes().get(0).getSpecifics().get(InformixIndexReader.INFORMIX_INDEX_FOLLOWS_TABLE));
+				final var tables = new InformixTableReader(DialectHolder.defaultDialect);
+				tables.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+				tables.setFragmentation(connection, SchemaUtils.toDoubleKeyMap(List.of(table)));
+				final Table restored = SchemaUtils.readXml(new StringReader(table.asXml()));
+				statement.execute("DROP TABLE " + prefix);
+				for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(restored,
+						SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO " + prefix + " VALUES(5)");
+				statement.execute("INSERT INTO " + prefix + " VALUES(15)");
+				try (var rows = statement
+						.executeQuery("SELECT strategy,COUNT(*) FROM sysfragments WHERE fragtype='I' AND indexname='"
+								+ prefix + "_ix' GROUP BY strategy")) {
+					assertTrue(rows.next());
+					assertEquals("T", rows.getString(1).strip());
+					assertEquals(2, rows.getInt(2));
+					assertFalse(rows.next());
 				}
 			} finally {
 				statement.execute("DROP TABLE IF EXISTS " + prefix);
@@ -1200,17 +1622,15 @@ class InformixMetadataDockerTest {
 	@Test
 	void recreatesBtsAccessMethodParametersAndSearchBehavior() throws Exception {
 		final String prefix = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
-		final String environment = "INFORMIXDIR=/opt/ibm/informix INFORMIXSERVER=informix "
-				+ "LD_LIBRARY_PATH=/opt/ibm/informix/lib:/opt/ibm/informix/lib/esql ";
-		final var space = INFORMIX.execInContainer("sh", "-c",
-				"umask 007; touch /tmp/" + prefix + ".sb && " + environment + "/opt/ibm/informix/bin/onspaces -c -S "
-						+ prefix + " -p /tmp/" + prefix + ".sb -o 0 -s 20000");
+		final String environment = INFORMIX_ENVIRONMENT;
+		final var space = INFORMIX.execInContainer("sh", "-c", environment + "umask 007; touch /tmp/" + prefix
+				+ ".sb && \"$INFORMIXDIR/bin/onspaces\" -c -S " + prefix + " -p /tmp/" + prefix + ".sb -o 0 -s 20000");
 		assertEquals(0, space.getExitCode(), space.getStdout() + space.getStderr());
 		final var config = INFORMIX.execInContainer("sh", "-c",
-				environment + "/opt/ibm/informix/bin/onmode -wm SBSPACENAME=" + prefix);
+				environment + "\"$INFORMIXDIR/bin/onmode\" -wm SBSPACENAME=" + prefix);
 		assertEquals(0, config.getExitCode(), config.getStdout() + config.getStderr());
-		final var modules = INFORMIX.execInContainer("sh", "-c",
-				"for directory in /opt/ibm/informix/extend/bts.*; do if [ -d \"$directory\" ]; then basename \"$directory\"; fi; done");
+		final var modules = INFORMIX.execInContainer("sh", "-c", environment
+				+ "for directory in \"$INFORMIXDIR\"/extend/bts.*; do if [ -d \"$directory\" ]; then basename \"$directory\"; fi; done");
 		assertEquals(0, modules.getExitCode());
 		final var versions = modules.getStdout().lines().filter(v -> !v.isBlank()).toList();
 		assertEquals(1, versions.size(), modules.getStdout());
@@ -1253,6 +1673,14 @@ class InformixMetadataDockerTest {
 						restored.getIndexes().get(0).getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD));
 				assertEquals("analyzer='keyword'", restored.getIndexes().get(0).getSpecifics()
 						.get(InformixIndexReader.INFORMIX_ACCESS_PARAMETERS));
+				if ("true".equals(restored.getIndexes().get(0).getSpecifics()
+						.get(InformixIndexReader.INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED))) {
+					assertThrows(IllegalArgumentException.class, () -> DialectHolder.defaultDialect
+							.createSqlFactoryRegistry().createSql(restored.getIndexes().get(0), SqlType.CREATE));
+					restored.getIndexes().get(0).setTableSpaceName(prefix); // Explicit target sbspace, not the source
+																			// descriptor dbspace.
+				} else
+					assertEquals(prefix, restored.getIndexes().get(0).getTableSpaceName());
 				statement.execute("DROP INDEX text_idx");
 				for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry()
 						.createSql(restored.getIndexes().get(0), SqlType.CREATE))
@@ -1276,6 +1704,37 @@ class InformixMetadataDockerTest {
 				assertEquals(1, disabled.size());
 				assertFalse(disabled.get(0).isEnable());
 				assertEquals("bts", disabled.get(0).getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD));
+				statement.execute("CREATE TABLE documents_frag(id INTEGER,txt VARCHAR(200))");
+				statement.execute(
+						"CREATE INDEX text_frag ON documents_frag(txt bts_varchar_ops) USING bts (analyzer='keyword') "
+								+ "FRAGMENT BY EXPRESSION PARTITION lo (id<10) IN " + prefix
+								+ ",PARTITION hi REMAINDER IN " + prefix);
+				context.put("tableName", "documents_frag");
+				final Table fragmented = new Table("documents_frag").setSchemaName("informix");
+				fragmented.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+				fragmented.getColumns().add("txt",
+						c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setLength(200));
+				fragmented.getIndexes().addAll(reader.doGetAll(connection, context, null));
+				final Table fragmentXml = SchemaUtils.readXml(new StringReader(fragmented.asXml()));
+				final var fragmentIndex = fragmentXml.getIndexes().get(0);
+				assertEquals(2, fragmentIndex.getPartitioning().getPartitions().size());
+				if (fragmentIndex.getPartitioning().getPartitions().stream()
+						.anyMatch(p -> p.getTableSpaceName() == null)) {
+					assertThrows(IllegalArgumentException.class, () -> DialectHolder.defaultDialect
+							.createSqlFactoryRegistry().createSql(fragmentIndex, SqlType.CREATE));
+					fragmentIndex.getPartitioning().getPartitions().forEach(p -> p.setTableSpaceName(prefix));
+				}
+				statement.execute("DROP INDEX text_frag");
+				for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(fragmentIndex,
+						SqlType.CREATE))
+					statement.execute(operation.getSqlText());
+				statement.execute("INSERT INTO documents_frag VALUES(1,'Alpha Beta')");
+				statement.execute("INSERT INTO documents_frag VALUES(11,'Alpha Beta')");
+				try (var rows = statement
+						.executeQuery("SELECT COUNT(*) FROM documents_frag WHERE bts_contains(txt,'\"Alpha Beta\"')")) {
+					assertTrue(rows.next());
+					assertEquals(2, rows.getInt(1));
+				}
 			}
 		} finally {
 			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
@@ -1347,6 +1806,11 @@ class InformixMetadataDockerTest {
 						assertEquals(original, rows.getString(1));
 					}
 				}
+				assertTrue(restored.getIndexes().get(prefix + "_ix1").isUnique());
+				statement.execute("INSERT INTO " + prefix + "(c1,c2,c3,c17) VALUES(1,5,2,7)");
+				assertThrows(java.sql.SQLException.class,
+						() -> statement.execute("INSERT INTO " + prefix + "(c1,c2,c3,c17) VALUES(2,5,1,8)"));
+				statement.execute("INSERT INTO " + prefix + "(c1,c2,c3,c17) VALUES(2,6,1,8)");
 			} finally {
 				statement.execute("DROP TABLE IF EXISTS " + prefix);
 				statement.execute("DROP FUNCTION IF EXISTS " + prefix + "_sum");

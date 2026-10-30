@@ -26,7 +26,7 @@ final class TransferJobSettingsDialog {
 					dialog.dispose();
 			}
 		});
-		dialog.setSize(850, 430);
+		dialog.setSize(940, 650);
 		dialog.setLocationRelativeTo(owner);
 		panel.load(file);
 		dialog.setVisible(true);

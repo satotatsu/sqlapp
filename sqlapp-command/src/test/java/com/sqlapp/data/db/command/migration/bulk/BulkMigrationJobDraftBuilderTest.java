@@ -25,6 +25,50 @@ class BulkMigrationJobDraftBuilderTest {
 	private final BulkMigrationJobDraftBuilder builder = new BulkMigrationJobDraftBuilder();
 
 	@Test
+	void loadsOfflineColumnsForKeylessTablesPreservingNamesAndRejectingStaleOrDuplicateIdentities() throws Exception {
+		var schema = new Schema("PUBLIC");
+		var table = new Table("注文");
+		table.getColumns().add(new Column("顧客 名前").setDataType(DataType.VARCHAR));
+		table.getColumns().add(new Column("数量").setDataType(DataType.INT));
+		schema.getTables().add(table);
+		var file = directory.resolve("columns.xml");
+		schema.writeXml(file.toFile());
+		var original = Files.readAllBytes(file);
+		var reviewed = builder.inspect(file);
+		var columns = builder.inspectColumns(reviewed, List.of("注文"));
+		assertEquals(List.of(new BulkMigrationJobDraftBuilder.SourceColumn("顧客 名前", "VARCHAR"),
+				new BulkMigrationJobDraftBuilder.SourceColumn("数量", "INT")), columns.get("注文"));
+		assertThrows(UnsupportedOperationException.class, () -> columns.clear());
+		assertThrows(UnsupportedOperationException.class, () -> columns.get("注文").clear());
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.inspectColumns(reviewed, List.of("注文", "PUBLIC.注文")));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> builder.inspectColumns(reviewed, List.of("UNKNOWN")));
+		assertThrows(IllegalArgumentException.class, () -> builder.inspectColumns(reviewed, List.of()));
+		assertThrows(IllegalArgumentException.class, () -> builder.inspectColumns(reviewed, List.of(" ")));
+		assertArrayEquals(original, Files.readAllBytes(file));
+		Files.writeString(file, Files.readString(file) + "\n<!-- changed -->");
+		assertThrows(IllegalArgumentException.class, () -> builder.inspectColumns(reviewed, List.of("注文")));
+	}
+
+	@Test
+	void offlineColumnDiscoveryRejectsAmbiguousShortNames() throws Exception {
+		var catalog = new com.sqlapp.data.schemas.Catalog("CAT");
+		for (var name : List.of("ONE", "TWO")) {
+			var schema = new Schema(name);
+			schema.getTables().add(table("ITEMS"));
+			catalog.getSchemas().add(schema);
+		}
+		var file = directory.resolve("ambiguous-columns.xml");
+		catalog.writeXml(file.toFile());
+		var reviewed = builder.inspect(file);
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> builder.inspectColumns(reviewed, List.of("ITEMS")));
+		assertEquals("ID",
+				builder.inspectColumns(reviewed, List.of("CAT.ONE.ITEMS")).get("CAT.ONE.ITEMS").getFirst().name());
+	}
+
+	@Test
 	void includesTransitiveParentsWithoutUnrelatedTablesOrChangingSchema() throws Exception {
 		var schema = new Schema("PUBLIC");
 		var grandparent = table("ROOTS");

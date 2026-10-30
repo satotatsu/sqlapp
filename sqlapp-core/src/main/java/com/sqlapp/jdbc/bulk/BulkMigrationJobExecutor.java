@@ -175,12 +175,15 @@ public final class BulkMigrationJobExecutor {
 									task.getOptions(), task.getCheckpointStore(),
 									chunkListener);
 				} else {
-					result = task.getCheckpointStore() == null
-							? ChunkedBulkMigrationExecutor.executeWithListener(targetConnection,
-									task.getSourceTable(), task.getOptions(), chunkListener)
-							: ChunkedBulkMigrationExecutor.execute(targetConnection,
-									task.getSourceTable(), task.getOptions(), task.getCheckpointStore(),
-									chunkListener);
+					if (task.getCheckpointStore() == null && task.getOptions().getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE)
+						throw new IllegalArgumentException("A checkpoint store is required for this table source.");
+					if (task.getCheckpointStore() == null && !targetConnection.getAutoCommit())
+						throw new IllegalStateException("Database checkpoint mode requires an auto-commit connection so the chunk executor can own transaction boundaries");
+					final var store = task.getCheckpointStore() == null
+							? new JdbcBulkMigrationCheckpointStore(targetConnection, task.getOptions().getCheckpointTableName())
+							: task.getCheckpointStore();
+					result = ChunkedBulkMigrationExecutor.execute(targetConnection, task.getSourceTable(),
+							task.getEffectiveTargetTable(), task.getColumnMappings(), task.getOptions(), store, chunkListener);
 				}
 				results.add(new BulkMigrationJobTaskResult(task.getTaskId(), result));
 				listener.onTaskCompleted(task.getTaskId(), result, taskIndex, ordered.size());

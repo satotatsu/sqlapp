@@ -21,6 +21,7 @@ public class InformixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Table.class, SqlType.CREATE, InformixCreateTableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, SqlType.CREATE, InformixCreateTypeFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.CREATE, InformixCreateTriggerFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.CREATE, InformixCreateFunctionFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, SqlType.CREATE,

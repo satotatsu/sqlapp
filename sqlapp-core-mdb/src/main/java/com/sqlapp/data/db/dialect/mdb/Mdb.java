@@ -133,6 +133,8 @@ public class Mdb extends Dialect {
 		});
 		// Date
 		getDbDataTypes().addDateTime("DATETIME", type -> {
+			// UCanAccess exposes Access Date/Time columns as JDBC TIMESTAMP.
+			type.addColumnTypeMatcher("TIMESTAMP");
 			type.setLiteral("#", "#").setJdbcTypeHandler(new DateTimeTypeHandler(DataType.DATETIME.getJdbcType(),
 					Converters.getDefault().getConverter(java.util.Date.class)));
 		});

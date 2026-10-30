@@ -56,6 +56,16 @@ final class TransferWarningTabs {
 	private static void compatibility(List<List<String>> rows, List<String> warnings) {
 		for (var warning : warnings) {
 			String category = "Target compatibility";
+			if (warning.startsWith(TransferKeylessChecks.CODE)) {
+				rows.add(List.of("Source / Keyless INSERT", "", "", warning,
+						"Review full-scan INSERT and multiset-hash verification. Do not use MERGE, resume or key-based repair. For new keyless target tables, optionally choose generated target PK creation; inspect partial data before any retry."));
+				continue;
+			}
+			if (warning.startsWith(TransferKeylessChecks.GENERATED_TARGET_KEY)) {
+				rows.add(List.of("Target / Generated PK", "", "", warning,
+						"Review SQLAPP_ROW_ID and identity syntax in Schema SQL. Source values and FK mappings are unchanged; this is target-only key creation, not a source row identity or a resume key."));
+				continue;
+			}
 			String action = "Review vendor differences and test the target definitions before application use.";
 			if (warning.startsWith(TransferSchemaChangeChecks.DATA_IMPACT)) {
 				category = "Target / Data impact";

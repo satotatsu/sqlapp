@@ -44,6 +44,13 @@ class TransferJobTransportTest {
 		assertEquals(TransferJobConfiguration.DataMode.JDBC_DIRECT, direct.dataMode());
 		assertNull(direct.files());
 		assertEquals(direct, io.validate(io.format(direct)));
+		if (policy == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY) {
+			var schemaOnly = io.validate(intent + "dataMode: SCHEMA_ONLY\n");
+			assertEquals(schemaOnly, io.validate(io.format(schemaOnly)));
+			assertThrows(IllegalArgumentException.class,
+					() -> io.validate(intent + "dataMode: FILE\nfiles: {directory: packages, nullValue: NULL}\n"));
+			return;
+		}
 		final var file = io.validate(intent + "dataMode: FILE\nfiles:\n  directory: packages\n  nullValue: '\\N'\n");
 		assertEquals(TransferJobConfiguration.DataMode.FILE, file.dataMode());
 		assertEquals(policy, file.schemaMode());

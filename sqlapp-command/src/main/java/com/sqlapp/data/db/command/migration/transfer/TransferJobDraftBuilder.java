@@ -46,7 +46,7 @@ public final class TransferJobDraftBuilder {
 			List<String> selected, int chunkSize, boolean verify, TransferJobConfiguration.CompatibilityPolicy policy,
 			String targetSchema, TransferJobConfiguration.SchemaMode schemaMode, Path file) throws Exception {
 		final var draft = new BulkMigrationJobConfigurationEditorIO()
-				.validate(new BulkMigrationJobDraftBuilder().draft(schema, selected, "", chunkSize, verify));
+				.validate(new BulkMigrationJobDraftBuilder().draftInsert(schema, selected, "", chunkSize, verify));
 		final var canonical = TransferFileJobDraftBuilder.schema(schema);
 		final var job = new TransferJobConfiguration(1, "source", "target",
 				draft.getTasks().stream().map(task -> task.getTable()).toList(), schemaMode,

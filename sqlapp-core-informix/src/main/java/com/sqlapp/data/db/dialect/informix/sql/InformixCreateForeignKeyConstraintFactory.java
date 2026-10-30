@@ -13,6 +13,13 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class InformixCreateForeignKeyConstraintFactory
 		extends AbstractCreateForeignKeyConstraintFactory<AbstractSqlBuilder<?>> {
 	@Override
+	public void addCreateObject(final ForeignKeyConstraint constraint, final AbstractSqlBuilder<?> builder) {
+		builder.alter().table().name(constraint.getTable(), getOptions().isDecorateSchemaName());
+		builder.add().constraint().space();
+		addObjectDetail(constraint, constraint.getTable(), builder);
+	}
+
+	@Override
 	public void addObjectDetail(final ForeignKeyConstraint constraint, final Table table,
 			final AbstractSqlBuilder<?> builder) {
 		builder.foreignKey().space()._add('(').names(constraint.getColumns())._add(')').references();

@@ -107,6 +107,11 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 		// This executor binds by position, independently of column names. Named
 		// expressions cannot safely represent quoted identifiers containing spaces.
 		registry.getTableOptions().setParameterExpression((column, defaultValue) -> "?");
+		// Bulk copy binds source values, including audit timestamps and version
+		// counters; ordinary CRUD conventions must not replace them with literals.
+		registry.getTableOptions().setCreatedAtColumn(column -> false);
+		registry.getTableOptions().setUpdatedAtColumn(column -> false);
+		registry.getTableOptions().setOptimisticLockColumn(column -> false);
 		final var nodes = registry.createSqlNodes(insertTable, SqlType.INSERT);
 		if (nodes.isEmpty()) {
 			throw new IllegalStateException("No INSERT SQL factory is available for "

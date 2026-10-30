@@ -2,7 +2,7 @@
 
 [Development index](README.md) · [RDB transfer direction](rdb-transfer-workflow.md)
 
-Updated: 2026-10-29. This document describes planned improvements, not new runtime
+Updated: 2026-10-30. This document describes planned improvements, not new runtime
 capabilities or a commitment to implement every option.
 
 ## Confirmed sqlapp baseline
@@ -15,11 +15,26 @@ capabilities or a commitment to implement every option.
   CREATE/differences and direct JDBC copy/verification, using the common Schema,
   target factories and existing bulk executor.
   GUI settings can select/drop the file; GUI and Gradle use the same saved job.
-  CSV paths still reject it explicitly. Type/value conversion and
-  an interactive mapping editor remain unimplemented.
+  CSV paths still reject it explicitly. The offline Tables/Columns editor in
+  Job settings now saves the shared mapping without hand-written YAML. It starts
+  from selected table identities and can load columns/informational types from
+  captured metadata-only Schema XML without database access. Existing renames
+  survive enrichment; type/value conversion remains unimplemented.
+  Mapping grids provide literal search, sorting, renamed-only filtering and
+  selected-name reset without changing hidden overrides or transfer selection.
+  Input checks locate all syntax/duplicate-source issues using shared name rules;
+  database resolution, target collision and FK checks remain in Review.
+  A read-only YAML preview uses the save formatter, supports search/copy and
+  invalidates generated content when names change. Previewing never writes files.
+  The editor protects unsaved mapping intent on close and attaches saved mappings
+  using job-relative references where path roots permit it.
 - Lower-level bulk configuration already has target-table identities and column
   mappings. Reuse those facilities where appropriate rather than create a
   separate GUI executor.
+- Direct JDBC keyless INSERT now reuses lazy Table row iteration, shared chunk
+  execution and externally sorted multiset-hash verification. Missing PKs warn;
+  MERGE/resume/repair stay disabled. Optional missing-table creation can add a
+  target-only generated PK. CSV keyless transport remains a separate next step.
 - The common settings form exposes target schema, Schema preparation, chunk
   size, verification and compatibility policy. More extraction/load controls
   require shared configuration and execution support first.
@@ -46,7 +61,7 @@ statements that the corresponding features are already implemented.
 | Later | Optional naming/type rules | Preserve Japanese, quoted identifiers and original case by default. Preview changes, resolve identities unambiguously, detect collisions and retain the original model. |
 | Later | Value conversion and tuning | Define reproducible shared semantics before GUI controls. Distinguish fetch size, JDBC batching and transaction chunks; transformations must retain type, NULL, identity and FK consistency. |
 
-Extending name mapping to CSV and adding an interactive mapping editor are the next
+Extending name mapping to CSV and adding live target mapping review are the next
 substantial gaps. Keep `mappingFile` rejection in each path until that path supports
 mapping end to end, including copy and verification.
 The common no-override job must stay concise. Generated artifacts retain resolved

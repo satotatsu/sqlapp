@@ -140,6 +140,8 @@ public final class BulkMigrationRepairExecutor {
 		Objects.requireNonNull(target, "target");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
+		if (verification.isUnordered())
+			throw new IllegalArgumentException("Unordered multiset verification has no source row ranges and cannot drive key-based repair.");
 		final Table table = Objects.requireNonNull(expected.getTable(), "expected.table");
 		final List<BulkMigrationVerificationChunk> mismatches = verification.getMismatches();
 		final List<Column> columns = verificationColumns(table, verification.getColumns());
@@ -276,6 +278,8 @@ public final class BulkMigrationRepairExecutor {
 		Objects.requireNonNull(target, "target");
 		Objects.requireNonNull(verification, "verification");
 		Objects.requireNonNull(options, "options");
+		if (verification.isUnordered())
+			throw new IllegalArgumentException("Unordered multiset verification has no source row ranges and cannot drive key-based repair.");
 		if (options.getMaxBufferedRows() < 0) {
 			throw new IllegalArgumentException("maxBufferedRows must not be negative");
 		}

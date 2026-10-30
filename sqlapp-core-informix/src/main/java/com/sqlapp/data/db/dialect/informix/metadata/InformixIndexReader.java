@@ -36,6 +36,9 @@ public class InformixIndexReader extends JdbcIndexReader {
 	public static final String INFORMIX_OPERATOR_CLASS_OWNER = "INFORMIX_OPERATOR_CLASS_OWNER";
 	public static final String INFORMIX_INDEX_EXPRESSION = "INFORMIX_INDEX_EXPRESSION";
 	public static final String INFORMIX_INDEX_IN_TABLE = "INFORMIX_INDEX_IN_TABLE";
+	public static final String INFORMIX_INDEX_CATALOG_DBSPACE = "INFORMIX_INDEX_CATALOG_DBSPACE";
+	public static final String INFORMIX_INDEX_FOLLOWS_TABLE = "INFORMIX_INDEX_FOLLOWS_TABLE";
+	public static final String INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED = "INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED";
 
 	record Metadata(Index index, String constraintName, int accessMethod) {
 	}
@@ -62,13 +65,13 @@ public class InformixIndexReader extends JdbcIndexReader {
 								getString(rs, INDEX_NAME), uniqueConstraints ? getString(rs, CONSTRAINT_NAME) : null);
 						final var existing = headers.get(identity);
 						if (existing != null) {
-							if (!uniqueConstraints)
-								readStorage(rs, existing);
+							readStorage(rs, existing);
 							return;
 						}
 						final Index index = new Index(getString(rs, INDEX_NAME));
-						if (!uniqueConstraints)
-							readStorage(rs, index);
+						readStorage(rs, index);
+						if (uniqueConstraints && "1".equals(getString(rs, "backing_named")))
+							index.getSpecifics().put(InformixTableReader.INFORMIX_BACKING_INDEX_REQUIRED, "true");
 						headers.put(identity, index);
 						index.setCatalogName(getString(rs, CATALOG_NAME));
 						index.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -79,9 +82,8 @@ public class InformixIndexReader extends JdbcIndexReader {
 						index.setIndexType("C".equalsIgnoreCase(getString(rs, "is_clustered")) ? IndexType.Clustered
 								: IndexType.BTree);
 						index.setUnique("U".equalsIgnoreCase(getString(rs, "index_kind")));
-						if (!uniqueConstraints)
-							com.sqlapp.data.db.dialect.informix.util.InformixIndexModes.apply(index,
-									getString(rs, "index_state"));
+						com.sqlapp.data.db.dialect.informix.util.InformixIndexModes.apply(index,
+								getString(rs, "index_state"));
 						final int accessMethod = rs.getInt("access_method");
 						final String methodName = getString(rs, "access_method_name");
 						final String methodOwner = getString(rs, "access_method_owner");
@@ -160,15 +162,50 @@ public class InformixIndexReader extends JdbcIndexReader {
 
 	private void readStorage(final ExResultSet rs, final Index index) throws SQLException {
 		final String strategy = getString(rs, "storage_strategy");
+		final boolean nativeBtree = rs.getInt("access_method") == 1;
 		if (strategy == null) {
 			if (getString(rs, "storage_index_name") != null)
 				throw new IllegalStateException("Missing Informix index storage strategy: " + index.getName());
-			index.getSpecifics().put(INFORMIX_INDEX_IN_TABLE, "true");
+			if (nativeBtree)
+				index.getSpecifics().put(INFORMIX_INDEX_IN_TABLE, "true");
+			else
+				index.getSpecifics().put(INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED, "true");
 			return;
 		}
+		if (nativeBtree && "T".equals(strategy)) {
+			if (index.getTableSpaceName() != null || index.getPartitioning() != null)
+				throw new IllegalStateException("Conflicting table-based Informix index storage: " + index.getName());
+			index.getSpecifics().put(INFORMIX_INDEX_FOLLOWS_TABLE, "true");
+			return;
+		}
+		if (index.getSpecifics().containsKey(INFORMIX_INDEX_FOLLOWS_TABLE))
+			throw new IllegalStateException("Conflicting table-based Informix index strategy: " + index.getName());
 		final String dbspace = getString(rs, "storage_dbspace");
+		String targetSpace = dbspace;
 		if (dbspace == null || dbspace.isBlank())
 			throw new IllegalStateException("Missing Informix index dbspace: " + index.getName());
+		if (!nativeBtree) {
+			// Virtual access methods may store only their descriptor here, while the
+			// index data lives in an sbspace/extspace (for example BTS on 12.10).
+			if ("I".equals(strategy))
+				index.getSpecifics().put(INFORMIX_INDEX_CATALOG_DBSPACE, dbspace);
+			final String supported = getString(rs, "access_method_storage");
+			final String smart = getString(rs, "storage_is_sbspace");
+			final boolean compatible = supported != null && ("1".equals(smart)
+					? supported.equalsIgnoreCase("S") || supported.equalsIgnoreCase("DS")
+							|| supported.equalsIgnoreCase("A")
+					: "0".equals(smart) && "0".equals(getString(rs, "storage_is_blobspace"))
+							&& (supported.equalsIgnoreCase("D") || supported.equalsIgnoreCase("DS")));
+			if (!compatible) {
+				index.getSpecifics().put(INFORMIX_INDEX_STORAGE_OVERRIDE_REQUIRED, "true");
+				if ("I".equals(strategy))
+					return;
+				if (!"E".equals(strategy))
+					throw new UnsupportedOperationException(
+							"Unresolved virtual index fragment storage: " + index.getName());
+				targetSpace = null; // Retain the fragment, but require the caller's actual target space.
+			}
+		}
 		if ("I".equals(strategy)) {
 			if (index.getPartitioning() != null
 					|| index.getTableSpaceName() != null && !index.getTableSpaceName().equals(dbspace))
@@ -190,7 +227,10 @@ public class InformixIndexReader extends JdbcIndexReader {
 		if (expression == null || expression.isBlank())
 			throw new IllegalStateException("Missing Informix index fragment expression: " + index.getName());
 		final var partition = new com.sqlapp.data.schemas.Partition(getString(rs, "storage_partition"));
-		partition.setTableSpaceName(dbspace);
+		if (targetSpace != null)
+			partition.setTableSpaceName(targetSpace);
+		if (!nativeBtree)
+			partition.getSpecifics().put(INFORMIX_INDEX_CATALOG_DBSPACE, dbspace);
 		partition.getSpecifics().put(InformixTableReader.INFORMIX_FRAGMENT_EXPRESSION, expression);
 		index.getPartitioning().getPartitions().add(partition);
 	}

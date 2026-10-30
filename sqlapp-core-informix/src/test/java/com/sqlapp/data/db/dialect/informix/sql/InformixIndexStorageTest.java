@@ -31,15 +31,16 @@ class InformixIndexStorageTest {
 		index.setEnable(false);
 		index.setPartitioning(new Partitioning());
 		index.getPartitioning().getSpecifics().put(INFORMIX_FRAGMENT_STRATEGY, "E");
-		for (String name : java.util.List.of("quoted\"part", "rest")) {
+		for (String name : java.util.List.of("quoted\"part", "\"rest\"")) {
 			var partition = new Partition(name).setTableSpaceName("rootdbs");
-			partition.getSpecifics().put(INFORMIX_FRAGMENT_EXPRESSION, name.equals("rest") ? "REMAINDER" : "(id<10)");
+			partition.getSpecifics().put(INFORMIX_FRAGMENT_EXPRESSION,
+					name.equals("\"rest\"") ? "REMAINDER" : "(id<10)");
 			index.getPartitioning().getPartitions().add(partition);
 		}
 		final Table restored = SchemaUtils.readXml(new StringReader(table.asXml()));
 		final String sql = sql(restored);
 		assertTrue(sql.contains("FRAGMENT BY EXPRESSION PARTITION \"quoted\"\"part\" (id<10) IN \"rootdbs\""), sql);
-		assertTrue(sql.contains("PARTITION \"rest\" REMAINDER IN \"rootdbs\""), sql);
+		assertTrue(sql.contains("PARTITION \"\"\"rest\"\"\" REMAINDER IN \"rootdbs\""), sql);
 		assertTrue(sql.endsWith("DISABLED"));
 	}
 
@@ -55,5 +56,14 @@ class InformixIndexStorageTest {
 		assertTrue(sql(table).endsWith("IN \"rootdbs\""));
 		index.setPartitioning(new Partitioning());
 		assertThrows(IllegalArgumentException.class, () -> sql(table));
+		final var inherited = table();
+		inherited.getIndexes().get(0).getSpecifics().put(InformixIndexReader.INFORMIX_INDEX_FOLLOWS_TABLE, "true");
+		assertFalse(sql(inherited).contains("FRAGMENT BY"));
+		assertFalse(sql(inherited).contains("IN TABLE"));
+		inherited.getIndexes().get(0).getSpecifics().put(InformixIndexReader.INFORMIX_INDEX_IN_TABLE, "invalid");
+		assertThrows(IllegalArgumentException.class, () -> sql(inherited));
+		inherited.getIndexes().get(0).getSpecifics().remove(InformixIndexReader.INFORMIX_INDEX_IN_TABLE);
+		inherited.getIndexes().get(0).setTableSpaceName("rootdbs");
+		assertThrows(IllegalArgumentException.class, () -> sql(inherited));
 	}
 }

@@ -91,8 +91,7 @@ public final class TransferSchemaPreparation {
 		if (projection != null) {
 			final var warnings = new ArrayList<String>();
 			if (projection.renamedIdentifiers() && mode != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING)
-				compatibility(policy, warnings, TransferSchemaChangeChecks.MAPPING_EXPRESSIONS
-						+ " Table/column names are mapped; SQL expressions, checks, defaults and predicates remain verbatim. Review Schema SQL and adjust source expressions where necessary.");
+				mappingExpressions(policy, warnings);
 			final var selections = data.getTasks().stream()
 					.map(task -> new Selection(task.getTaskId(),
 							projection.bySourceName().get(task.getEffectiveSourceTable().getName()),
@@ -216,6 +215,29 @@ public final class TransferSchemaPreparation {
 			final var source = task.getEffectiveSourceTable();
 			ordinary(source, policy, warnings);
 			final var target = remapped.get(source.getName());
+			if (mode == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
+					&& (target.getPrimaryKeyConstraint() == null
+							|| target.getPrimaryKeyConstraint().getColumns().isEmpty())) {
+				if (target.getColumns().stream()
+						.anyMatch(column -> column.getName().equalsIgnoreCase(TransferKeylessChecks.GENERATED_COLUMN)))
+					throw new ValidationException(
+							"Generated target key SQLAPP_ROW_ID collides with a source column. Prepare a target with another generated key manually and use REQUIRE_EXISTING.");
+				final var column = new com.sqlapp.data.schemas.Column(TransferKeylessChecks.GENERATED_COLUMN)
+						.setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT).setIdentity(true).setNotNull(true);
+				target.getColumns().add(column);
+				String name = "sqlapp_pk_"
+						+ com.sqlapp.util.MessageDigests.SHA256.checksumAsString(java.util.List
+								.of(Objects.toString(target.getCatalogName(), ""),
+										Objects.toString(target.getSchemaName(), ""), target.getName())
+								.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)).substring(0, 20);
+				if (target.getConstraints().get(name) != null)
+					throw new ValidationException(
+							"Generated target primary-key constraint name collides. Prepare the target separately and use REQUIRE_EXISTING.");
+				target.setPrimaryKey(name, column);
+				compatibility(policy, warnings, TransferKeylessChecks.GENERATED_TARGET_KEY + " Target table "
+						+ target.getName()
+						+ " will add BIGINT identity primary key SQLAPP_ROW_ID. Values are generated only in the target, excluded from source copy/verification and are not business keys or inferred FK mappings. Review dialect CREATE SQL.");
+			}
 			for (var fk : target.getConstraints().getForeignKeyConstraints()) {
 				if (fk.getRelatedTableSchemaName() != null
 						&& !Objects.equals(fk.getRelatedTableSchemaName(), sourceSchema.getName())
@@ -327,6 +349,11 @@ public final class TransferSchemaPreparation {
 		if (policy == TransferJobConfiguration.CompatibilityPolicy.ERROR)
 			throw new ValidationException(message);
 		warnings.add(message);
+	}
+
+	static void mappingExpressions(TransferJobConfiguration.CompatibilityPolicy policy, List<String> warnings) {
+		compatibility(policy, warnings, TransferSchemaChangeChecks.MAPPING_EXPRESSIONS
+				+ " Table/column names are mapped; SQL expressions, checks, defaults and predicates remain verbatim. Review Schema SQL and adjust source expressions where necessary.");
 	}
 
 	private static void ordinary(Table table, TransferJobConfiguration.CompatibilityPolicy policy,

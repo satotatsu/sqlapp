@@ -9,6 +9,13 @@ import com.sqlapp.util.AbstractSqlBuilder;
 /** Informix names CHECK constraints after their expression. */
 public class InformixCreateCheckConstraintFactory extends AbstractCreateCheckConstraintFactory<AbstractSqlBuilder<?>> {
 	@Override
+	public void addCreateObject(final CheckConstraint constraint, final AbstractSqlBuilder<?> builder) {
+		builder.alter().table().name(constraint.getTable(), getOptions().isDecorateSchemaName());
+		builder.add().constraint().space();
+		addObjectDetail(constraint, constraint.getTable(), builder);
+	}
+
+	@Override
 	public void addObjectDetail(final CheckConstraint constraint, final Table table,
 			final AbstractSqlBuilder<?> builder) {
 		if (constraint.getExpression() == null || constraint.getExpression().isBlank())

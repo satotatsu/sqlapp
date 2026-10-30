@@ -6,6 +6,8 @@ SELECT TRIM(DBINFO('dbname')) AS catalog_name
 , d.type AS default_kind
 , d.default AS default_value
 , c.colno AS column_number
+, xt.mode AS column_type_mode, xt.extended_id AS column_type_id
+, xt.name AS column_type_name, TRIM(xt.owner) AS column_type_owner
 , nn.constrname AS not_null_name
 , TRIM(nn.owner) AS not_null_owner
 , ns.state AS not_null_state
@@ -14,6 +16,7 @@ SELECT TRIM(DBINFO('dbname')) AS catalog_name
 , pki.indexkeys::LVARCHAR AS primary_key_columns
 FROM systables t
 LEFT JOIN syscolumns c ON c.tabid=t.tabid
+LEFT JOIN sysxtdtypes xt ON xt.extended_id=c.extended_id
 LEFT JOIN sysdefaults d ON d.tabid=c.tabid AND d.colno=c.colno AND d.class='T'
 LEFT JOIN (sysconstraints nn INNER JOIN syscoldepend nd ON nd.constrid=nn.constrid AND nn.constrtype='N')
   ON nn.tabid=c.tabid AND nd.colno=c.colno

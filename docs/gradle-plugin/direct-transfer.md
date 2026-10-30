@@ -86,6 +86,67 @@ versions cannot consume jobs using it. No module dependency was added.
 
 See [the schema-only example](../examples/direct-transfer/schema-only.yaml).
 
+### INSERT tables without a usable primary key
+
+Direct JDBC initial copy now accepts tables without a complete NOT NULL primary
+key. The table picker shows a warning and permits selecting them. The generated
+Data Job automatically uses `fullScan: true`, `mode: INSERT`, `resume: false` and
+`requireEmptyTarget: true`; no source key or data fingerprint is invented.
+Existing keyed tables retain their JDBC keyset path. Parent-first ordering,
+target checks, chunk transactions and retained partial-progress evidence are shared.
+
+Full scan opens one JDBC row stream and preserves duplicates and NULLs. It cannot
+MERGE/UPSERT, resume, use an incremental strategy or produce key-based repair.
+Committed chunks can remain after failure; inspect/repair the target before a new
+attempt. There is no automatic truncate, cleanup or replay. A full scan does not
+implicitly lock or snapshot a changing source database.
+
+Verification compares the multiset of canonical row hashes, including duplicate
+multiplicity, independently of source/target row order. Bounded hash runs are
+sorted through temporary files containing only SHA-256 hashes, with at most 32
+merge readers; all runs are removed on success or failure. Result chunk hashes use
+`multiset-sha256-v1:`. Their indexes identify hash-sort positions, not source row
+positions or resumable keys. They are rejected by key-based repair. This uses
+cryptographic hash comparison, not row-by-row equality without hash assumptions.
+
+`[KEYLESS_INSERT]` records the read/verification strategy and target-key guidance.
+Warnings permit execution by default; `compatibilityPolicy: ERROR` rejects them.
+This increment applies to direct JDBC jobs and explicit advanced full-scan INSERT
+Data Jobs. CSV package eligibility retains its existing key/type requirements.
+
+### Optionally add a generated primary key to new keyless target tables
+
+```yaml
+formatVersion: 1
+source: from
+target: to
+tables: [T_order]
+schemaMode: CREATE_MISSING_WITH_IDENTITY
+# dataMode: JDBC_DIRECT   # default
+```
+
+In **New direct job…** or **Job settings…**, enable missing-table creation, then
+**Add target-only generated PK to new tables without a primary key**. The same
+saved job works with Gradle. This mode creates an additional `SQLAPP_ROW_ID`
+BIGINT identity column and stable named PK through the target dialect's shared
+Schema factories, only when a newly created table has no modeled PK. Existing
+source PKs are preserved. Existing target tables are not altered to add this key.
+Schema-only jobs may also select this mode; FILE jobs reject it explicitly.
+
+The source file/database and FK mappings are retained. The new column is omitted
+from INSERT and source-value verification, so the target generates its values.
+It does not become a source/business key or enable MERGE/resume. Review the
+`[TARGET_GENERATED_PK]` warning and actual Schema SQL; dialect identity support
+still requires testing. If a source/mapped column already uses `SQLAPP_ROW_ID`,
+review fails before DDL; prepare a compatible target with another generated key
+and use `REQUIRE_EXISTING` instead. Strict warning policy rejects the warning.
+
+Existing job/result record shapes and constructors remain available. The new
+SchemaMode value and low-level `fullScan` property are additive; older versions
+cannot execute these new modes. Generic advanced draft creation keeps its key
+requirements; Java callers may explicitly use `BulkMigrationJobDraftBuilder.draftInsert`.
+See [the keyless INSERT example](../examples/direct-transfer/keyless-insert.yaml).
+
 <a id="optionally-map-table-and-column-names-schema-only"></a>
 
 ### Optionally map table and column names
@@ -138,8 +199,12 @@ Inspect a new review after changing the mapping. See the
 For `JDBC_DIRECT`, the same mapping is resolved into the generated bulk job's
 `targetTable` and `columnMappings`. Source queries and keyset order retain original
 identifiers; INSERT, empty-target/PK checks and post-copy verification use mapped
-target identifiers. NOT NULL source-key requirements, identity/NULL preservation,
+target identifiers. Keyed-read requirements, identity/NULL preservation,
 transaction chunks, parent-first ordering and no automatic replay are unchanged.
+Portable JDBC batches bind supplied audit timestamps (`created_at`, `updated_at`)
+and version counters (`lock_version`, `version_no`) verbatim, including NULLs,
+instead of applying normal CRUD-generated values. This also keeps SQL placeholders
+aligned with bound copy columns. Ordinary CRUD generation retains its conventions.
 Use `CREATE_MISSING` to prepare absent mapped tables, or `REQUIRE_EXISTING` to copy
 into already compatible empty mapped targets. Source expressions are unused when
 no DDL is prepared; name changes alone do not produce an expression warning in
@@ -151,8 +216,80 @@ and captured mappings must still match that pin, including comment-only edits.
 The bulk execution plan fingerprint retains its existing semantics. See the
 [direct copy example](../examples/direct-transfer/direct-mapped.yaml).
 CSV export/import still reject `mappingFile` explicitly.
-An interactive mapping editor, target-type overrides and value conversion remain
-future work.
+In **Job settings… → Edit names…**, edit target table names in the Tables tab
+and source-to-target column names in the Columns tab without writing YAML.
+A new mapping starts with the job's selected source table identities. Blank
+target table names and unlisted columns keep their original names. Column rows
+require both names; remove a row to remove its override. Names retain case,
+Unicode and spaces.
+
+To avoid entering source column names, choose or drop a captured **Source Schema
+XML** and click **Load columns**. The suggested file is `source-schema.xml` beside
+the saved job, as created by the new-job workflow. Loading resolves the tables
+currently listed in the editor through the common job resolver; qualify ambiguous
+names. It appends missing columns with their source names as defaults, shows
+informational source model types, and retains existing target names and overrides.
+Repeated loading does not duplicate columns. Same-name column entries are omitted
+from the saved mapping; removing a column row removes its name override, not the
+column from the transfer. Existing overrides absent from the snapshot remain
+visible for correction during review.
+
+The reader accepts bounded metadata-only Schema XML, rejects DTDs and row data,
+and checks that the inspected file has not changed while resolving columns.
+This operation accesses no database and does not establish that the snapshot is
+current. Review the saved job against the databases before execution. Target types
+cannot be edited here.
+
+Both editor tabs support literal, case-insensitive **Find**, sortable column
+headers and **Renamed only**. Counts distinguish visible rows, all editor rows
+and renamed rows. Filtering and sorting never change which mappings are saved.
+**Reset selected names** restores the source names for selected rows while
+retaining column metadata and other overrides. **Remove selected overrides**
+removes only those editor rows, even after filtering/sorting; it does not exclude
+tables or columns from the transfer. Use the job's table selection to exclude
+tables. **Add row** clears filters so the new editable row is visible. Clear the
+filter to inspect unchanged columns again.
+
+**Check names** lists input problems together in the **Input checks** tab. It
+uses the shared name rules for blank/invalid identifiers and reports repeated
+source table/column entries. Choose **Go to selected field**, double-click a
+problem or press Enter to clear the relevant filters and edit the field, even
+after sorting or moving columns. Editing invalidates the old problem locations;
+check again to refresh them. Saving also runs these checks before writing a file.
+The result is syntax feedback only: aliases, target collisions, missing database
+objects and relationship consistency still require the ordinary database Review.
+
+**Preview YAML** opens a read-only, syntax-highlighted view of the generated
+mapping using the same formatter as **Save mapping…**. Search and line navigation
+are available, and **Copy YAML** copies the whole generated mapping, including
+overrides hidden by table/column filters. The preview does not write a file or
+run a transfer. Editing names clears the old preview and disables copying until
+**Refresh preview** regenerates it. Invalid input opens Input checks instead of
+leaving an old valid preview available. Copy failures can be retried. Save the
+mapping and job settings, then perform the normal database Review before running.
+
+Closing the name editor with **Close**, the window close button or Escape checks
+for unsaved mapping changes. Choose **Keep editing** to retain them or explicitly
+discard to close. Filters, sorting, input checks, previews and loading unchanged
+source columns alone do not count as name changes. Invalid in-progress edits are
+also protected. The editor shows the current mapping file (or a new/unsaved label).
+
+When a mapping is saved from this editor, Job settings fills its reference relative
+to the job's folder when both paths have the same root; another drive uses an
+absolute path. Generated relative references use forward slashes on Windows too.
+Browse resolves relative references from the job folder too.
+Save job settings to retain the reference. Moving a job together with its mapping
+directory preserves these relative references; completed review artifacts still
+need a new Review in the new location. Canceling Job settings does not undo an
+already saved mapping file.
+
+**Save mapping…** writes the mapping immediately; **Save settings** then attaches
+its path to the job. Canceling job settings does not undo a mapping already saved.
+Existing mappings use fingerprint-checked writes; other existing destination
+files are never overwritten. Saving rewrites YAML comments and formatting.
+Review again to validate source identities, collisions and FK consistency against
+the Schema before executing. The same saved job and mapping work with Gradle.
+Target-type overrides and value conversion remain future work.
 
 ### Optionally apply differences to existing selected tables
 

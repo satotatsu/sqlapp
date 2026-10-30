@@ -122,6 +122,8 @@ public class BulkMigrationJobPlan {
 				final Table table = sourceTable(task);
 				final Table target = task.getEffectiveTargetTable();
 				final ChunkedBulkMigrationOption option = task.getOptions();
+				if (task.isFullScan())
+					update(digest, "FULL_SCAN_INSERT_V1");
 				update(digest, task.getTaskId(), table.getCatalogName(), table.getSchemaName(),
 						table.getName(), target.getCatalogName(), target.getSchemaName(), target.getName(),
 						task.getKeysetSource() != null,

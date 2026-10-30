@@ -17,6 +17,16 @@ final class TransferNameMappingProjection {
 	}
 
 	static Projection project(Schema source, List<Table> selected, TransferNameMappingIO.Configuration mapping) {
+		// Runtime full-scan tables carry a lazy row handler. Resolve their identity
+		// back to the canonical metadata rather than comparing or cloning live rows.
+		var canonicalSelection = selected.stream()
+				.map(input -> source.getTables().stream()
+						.filter(table -> Objects.equals(table.getName(), input.getName())
+								&& Objects.equals(table.getSchemaName(), input.getSchemaName())
+								&& Objects.equals(table.getCatalogName(), input.getCatalogName()))
+						.findFirst().orElseThrow(() -> new TransferSchemaPreparation.ValidationException(
+								"Selected source table is outside the captured Schema: " + input.getName())))
+				.toList();
 		var rules = new LinkedHashMap<String, TransferNameMappingIO.TableMapping>();
 		for (var entry : mapping.tables().entrySet()) {
 			final Table table;
@@ -26,7 +36,7 @@ final class TransferNameMappingProjection {
 				throw new TransferSchemaPreparation.ValidationException(
 						"Mapping source table must resolve uniquely in the captured Schema: " + entry.getKey());
 			}
-			if (!selected.contains(table))
+			if (!canonicalSelection.contains(table))
 				throw new TransferSchemaPreparation.ValidationException(
 						"Mapping table is outside the selected scope: " + entry.getKey());
 			if (rules.putIfAbsent(table.getName(), entry.getValue()) != null)
@@ -39,7 +49,7 @@ final class TransferNameMappingProjection {
 		var columnNames = new LinkedHashMap<String, Map<String, String>>();
 		var targetNames = new HashSet<String>();
 		boolean renamed = false;
-		for (var table : selected) {
+		for (var table : canonicalSelection) {
 			var rule = rules.getOrDefault(table.getName(), new TransferNameMappingIO.TableMapping(null, Map.of()));
 			String targetName = rule.targetTable() == null ? table.getName() : rule.targetTable();
 			renamed |= !targetName.equals(table.getName());
@@ -71,7 +81,7 @@ final class TransferNameMappingProjection {
 			targets.put(table.getName(), target);
 			columnNames.put(table.getName(), names);
 		}
-		for (var table : selected) {
+		for (var table : canonicalSelection) {
 			var target = targets.get(table.getName());
 			var names = columnNames.get(table.getName());
 			for (int i = 0; i < table.getConstraints().size(); i++) {

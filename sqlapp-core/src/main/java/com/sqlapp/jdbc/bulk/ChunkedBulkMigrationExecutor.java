@@ -105,6 +105,15 @@ public final class ChunkedBulkMigrationExecutor {
 		return executeInternal(targetConnection, sourceTable, sourceTable, Map.of(), null, options, checkpointStore, listener);
 	}
 
+	/** Streams a Table's rows to a separately named/mapped target. */
+	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
+			final Table sourceTable, final Table targetTable, final Map<String, String> columnMappings,
+			final ChunkedBulkMigrationOption options, final BulkMigrationCheckpointStore checkpointStore,
+			final ChunkedBulkMigrationListener listener) throws SQLException {
+		return executeInternal(targetConnection, sourceTable, targetTable, columnMappings, null, options,
+				checkpointStore, listener);
+	}
+
 	/** Executes a source that resumes by its unique ordered key rather than row count. */
 	public static ChunkedBulkMigrationResult execute(final Connection targetConnection,
 			final BulkMigrationKeysetSource source, final ChunkedBulkMigrationOption options,

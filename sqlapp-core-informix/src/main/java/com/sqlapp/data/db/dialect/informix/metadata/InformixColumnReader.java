@@ -25,6 +25,8 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /** Normalizes Informix SERIAL family columns as generated identities. */
 public class InformixColumnReader extends JdbcColumnReader {
+	public static final String INFORMIX_NATIVE_TYPE = "INFORMIX_NATIVE_TYPE";
+
 	public InformixColumnReader(final Dialect dialect) {
 		super(dialect);
 	}
@@ -55,6 +57,7 @@ public class InformixColumnReader extends JdbcColumnReader {
 		final var seen = new HashSet<List<String>>();
 		final java.util.Set<Column> nonColumns = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
 		final Map<String, InformixIndexColumns> primaryKeys = new LinkedHashMap<>();
+		final Map<Column, Integer> complexColumns = new LinkedHashMap<>();
 		final var parameters = context.clone();
 		parameters.put("catalogName",
 				columns.stream().map(Column::getCatalogName).filter(java.util.Objects::nonNull).distinct().toList());
@@ -89,6 +92,17 @@ public class InformixColumnReader extends JdbcColumnReader {
 						&& !column.getCatalogName().equals(getString(rs, CATALOG_NAME)))
 					return;
 				seen.add(key);
+				final String mode = getString(rs, "column_type_mode");
+				if ("C".equals(mode))
+					complexColumns.put(column, rs.getInt("column_type_id"));
+				else if ("D".equals(mode) || "R".equals(mode)
+						|| "B".equals(mode) && rs.getInt("column_type_id") >= 2048) {
+					final String name = getString(rs, "column_type_name"), owner = getString(rs, "column_type_owner");
+					if (name == null || name.isBlank() || owner == null || owner.isBlank())
+						throw new IllegalStateException("Missing Informix named column type: " + column.getName());
+					setNativeType(column,
+							"\"" + owner.replace("\"", "\"\"") + "\".\"" + name.replace("\"", "\"\"") + "\"");
+				}
 				column.setDefaultValue(column.isIdentity() ? null
 						: InformixColumnDefaults.expression(column, getString(rs, "default_kind"),
 								rs.getString("default_value")));
@@ -96,6 +110,15 @@ public class InformixColumnReader extends JdbcColumnReader {
 			}
 		});
 		columns.removeIf(nonColumns::contains);
+		if (!complexColumns.isEmpty()) {
+			final var declarations = readComplexDeclarations(connection, new HashSet<>(complexColumns.values()));
+			complexColumns.forEach((column, id) -> {
+				final String declaration = declarations.get(id);
+				if (declaration == null)
+					throw new IllegalStateException("Missing Informix column type declaration: " + column.getName());
+				setNativeType(column, declaration);
+			});
+		}
 		if (!seen.containsAll(selected.keySet())) {
 			final var missing = new java.util.LinkedHashSet<>(selected.keySet());
 			missing.removeAll(seen);
@@ -103,6 +126,15 @@ public class InformixColumnReader extends JdbcColumnReader {
 					"Cannot resolve Informix column defaults in the connected database; missing="
 							+ missing.stream().limit(10).toList() + "; catalogs=" + parameters.get("catalogName"));
 		}
+	}
+
+	protected Map<Integer, String> readComplexDeclarations(Connection connection, java.util.Set<Integer> ids) {
+		return new InformixRowTypeReader(getDialect()).readComplexDeclarations(connection, ids);
+	}
+
+	private void setNativeType(Column column, String declaration) {
+		column.setDataTypeName(declaration);
+		column.getSpecifics().put(INFORMIX_NATIVE_TYPE, declaration);
 	}
 
 	private void setNullability(ExResultSet rs, Column column, Map<String, InformixIndexColumns> primaryKeys)

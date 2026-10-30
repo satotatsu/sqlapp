@@ -102,6 +102,13 @@ public class BulkMigrationVerificationResult {
 		}
 	}
 
+	/** Hash-sorted multiset chunks have no source row positions and cannot drive repair. */
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public boolean isUnordered() {
+		return chunks.stream().anyMatch(chunk -> chunk.getExpectedHash().startsWith(BulkMigrationUnorderedVerifier.HASH_PREFIX)
+				|| chunk.getActualHash().startsWith(BulkMigrationUnorderedVerifier.HASH_PREFIX));
+	}
+
 	public boolean isMatch() {
 		return expectedRows == actualRows
 				&& chunks.stream().allMatch(BulkMigrationVerificationChunk::isMatch);

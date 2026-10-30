@@ -12,7 +12,25 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class InformixCreateUniqueConstraintFactory
 		extends AbstractCreateUniqueConstraintFactory<AbstractSqlBuilder<?>> {
 	@Override
+	public void addCreateObject(final UniqueConstraint constraint, final AbstractSqlBuilder<?> builder) {
+		builder.alter().table().name(constraint.getTable(), getOptions().isDecorateSchemaName());
+		builder.add().constraint().space();
+		addObjectDetail(constraint, constraint.getTable(), builder);
+	}
+
+	@Override
 	public void addObjectDetail(final UniqueConstraint obj, final Table table, final AbstractSqlBuilder<?> builder) {
+		if ("true".equals(obj.getSpecifics().get(
+				com.sqlapp.data.db.dialect.informix.metadata.InformixTableReader.INFORMIX_BACKING_INDEX_REQUIRED))) {
+			final var index = table == null ? null : table.getIndexes().get(obj.getIndexName());
+			if (index == null || !index.isUnique() || index.getColumns().size() != obj.getColumns().size())
+				throw new IllegalArgumentException(
+						"Informix UNIQUE requires its explicitly modeled unique backing index: " + obj.getName());
+			for (int i = 0; i < index.getColumns().size(); i++)
+				if (!java.util.Objects.equals(index.getColumns().get(i).getName(), obj.getColumns().get(i).getName()))
+					throw new IllegalArgumentException(
+							"Informix UNIQUE backing columns do not match: " + obj.getName());
+		}
 		if (obj.isPrimaryKey()) {
 			builder.primaryKey();
 		} else {

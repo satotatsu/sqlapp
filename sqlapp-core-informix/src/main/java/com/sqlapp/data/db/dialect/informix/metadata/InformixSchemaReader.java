@@ -27,6 +27,11 @@ public class InformixSchemaReader extends JdbcSchemaReader {
 	}
 
 	@Override
+	protected com.sqlapp.data.db.metadata.TypeReader newTypeReader() {
+		return new InformixRowTypeReader(getDialect());
+	}
+
+	@Override
 	protected ViewReader newViewReader() {
 		return new InformixViewReader(getDialect());
 	}

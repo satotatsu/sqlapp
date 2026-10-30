@@ -17,6 +17,17 @@ public class InformixSqlBuilder extends AbstractSqlBuilder<InformixSqlBuilder> {
 
 	@Override
 	protected InformixSqlBuilder typeDefinition(final Column column) {
+		final String nativeType = column.getSpecifics().get(com.sqlapp.data.db.dialect.informix.metadata.InformixColumnReader.INFORMIX_NATIVE_TYPE);
+		if (nativeType != null) {
+			if (nativeType.isBlank() || java.util.Set.of("true","false").contains(nativeType) || column.isIdentity() || column.getDomain() != null
+					|| column.getDataTypeName() == null || column.getDataTypeName().isBlank())
+				throw new IllegalArgumentException("Invalid Informix native column type: " + column.getName());
+			if (!java.util.Objects.equals(com.sqlapp.data.schemas.SchemaUtils.normalizeDataType(nativeType),
+					com.sqlapp.data.schemas.SchemaUtils.normalizeDataType(column.getDataTypeName())))
+				throw new IllegalArgumentException("Informix native declaration differs from Column.dataTypeName: "
+						+ column.getName() + "; update INFORMIX_NATIVE_TYPE together with dataTypeName, or remove it when selecting an ordinary type");
+			return _add(nativeType);
+		}
 		if (column.getDomain() != null)
 			return super.typeDefinition(column);
 		final String name = column.getDataTypeName() == null ? ""

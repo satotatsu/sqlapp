@@ -18,6 +18,40 @@ import com.sqlapp.data.schemas.Table;
 
 class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 	@Test
+	void copiesAuditTimestampsAndVersionCountersVerbatimIncludingNulls() throws Exception {
+		testDb(connection -> {
+			execute(connection, "CREATE TABLE BULK_AUDIT_VALUES(ID INTEGER, CREATED_AT TIMESTAMP, UPDATED_AT TIMESTAMP, LOCK_VERSION INTEGER, VERSION_NO INTEGER)");
+			var table = new Table("BULK_AUDIT_VALUES");
+			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+			for (String name : List.of("CREATED_AT", "UPDATED_AT"))
+				table.getColumns().add(new Column(name).setDataType(DataType.TIMESTAMP));
+			for (String name : List.of("LOCK_VERSION", "VERSION_NO"))
+				table.getColumns().add(new Column(name).setDataType(DataType.INT));
+			var timestamp = java.sql.Timestamp.valueOf("2001-02-03 04:05:06");
+			for (int id = 1; id <= 2; id++) {
+				var row = table.newRow();
+				row.put("ID", id);
+				row.put("CREATED_AT", id == 1 ? timestamp : null);
+				row.put("UPDATED_AT", id == 1 ? null : timestamp);
+				row.put("LOCK_VERSION", id == 1 ? 7 : null);
+				row.put("VERSION_NO", id == 1 ? 9 : 0);
+				table.getRows().add(row);
+			}
+			assertEquals(2, new JdbcBatchBulkInsertExecutor(getDialect(connection)).execute(connection, table,
+					BulkOption.builder().batchSize(1).build()));
+			try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT CREATED_AT,UPDATED_AT,LOCK_VERSION,VERSION_NO FROM BULK_AUDIT_VALUES ORDER BY ID")) {
+				assertTrue(rows.next());
+				assertEquals(timestamp, rows.getTimestamp(1)); assertEquals(null, rows.getTimestamp(2));
+				assertEquals(7, rows.getInt(3)); assertEquals(9, rows.getInt(4));
+				assertTrue(rows.next());
+				assertEquals(null, rows.getTimestamp(1)); assertEquals(timestamp, rows.getTimestamp(2));
+				assertEquals(null, rows.getObject(3)); assertEquals(0, rows.getInt(4));
+				assertFalse(rows.next());
+			}
+		});
+	}
+
+	@Test
 	void bindsQuotedColumnNamesPositionallyAndPreservesNullValues() throws Exception {
 		testDb(connection -> {
 			execute(connection, "CREATE TABLE \"Batch Items\" (\"Key Id\" INTEGER, \"Display Name\" VARCHAR(32))");

@@ -87,7 +87,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 
 	/** Target preparation; differences are opt-in and limited to SCHEMA_ONLY. */
 	public enum SchemaMode {
-		CREATE_MISSING, REQUIRE_EXISTING, APPLY_DIFFERENCES
+		CREATE_MISSING, REQUIRE_EXISTING, APPLY_DIFFERENCES, CREATE_MISSING_WITH_IDENTITY
 	}
 
 	/** Common initial-copy intent with verification and default chunk sizing. */
@@ -128,7 +128,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		verify = verify == null ? dataMode != DataMode.SCHEMA_ONLY : verify;
 		if (dataMode == DataMode.SCHEMA_ONLY && (schemaMode == SchemaMode.REQUIRE_EXISTING || verify || files != null))
 			throw new IllegalArgumentException(
-					"SCHEMA_ONLY requires CREATE_MISSING or APPLY_DIFFERENCES, verify: false and no files settings.");
+					"SCHEMA_ONLY requires CREATE_MISSING, CREATE_MISSING_WITH_IDENTITY or APPLY_DIFFERENCES, verify: false and no files settings.");
 		if (schemaMode == SchemaMode.APPLY_DIFFERENCES && dataMode != DataMode.SCHEMA_ONLY)
 			throw new IllegalArgumentException("APPLY_DIFFERENCES is available only for SCHEMA_ONLY jobs.");
 		if (allowDestructiveSchemaChanges
@@ -137,6 +137,9 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 					"allowDestructiveSchemaChanges requires SCHEMA_ONLY and APPLY_DIFFERENCES.");
 		if (dataMode == DataMode.FILE && files == null)
 			throw new IllegalArgumentException("FILE dataMode requires files settings.");
+		if (dataMode == DataMode.FILE && schemaMode == SchemaMode.CREATE_MISSING_WITH_IDENTITY)
+			throw new IllegalArgumentException(
+					"CREATE_MISSING_WITH_IDENTITY currently supports JDBC_DIRECT and SCHEMA_ONLY, not FILE.");
 		if (dataMode == DataMode.JDBC_DIRECT && files != null)
 			throw new IllegalArgumentException(
 					"files settings require FILE dataMode; they cannot be ignored in JDBC_DIRECT mode.");

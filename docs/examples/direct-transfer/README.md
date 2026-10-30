@@ -34,9 +34,16 @@ For schema-only name changes, adjust `schema-only-mapped.yaml` and
 follow the mapped names; source SQL expressions remain verbatim with a warning.
 Review the generated SQL. Keep both files together; the mapping path resolves
 from the original job folder. For direct copy with the same name mapping, use
-`-PtransferJob=direct-mapped.yaml` on both commands. Source tables require NOT NULL
-keys, mapped targets must be empty and compatible (or absent with CREATE_MISSING),
+`-PtransferJob=direct-mapped.yaml` on both commands. Usable NOT NULL primary keys
+select the keyed path; other direct tables use full-scan INSERT. Mapped targets
+must be empty and compatible (or absent with CREATE_MISSING),
 and copied data is verified by default. CSV name mapping remains unsupported.
+
+For keyless INSERT with an optional new target-only identity PK, adjust
+`keyless-insert.yaml` and use `-PtransferJob=keyless-insert.yaml` on both commands.
+Duplicate rows/NULLs are retained and verification compares hash multisets.
+MERGE, resume and key-based repair are unavailable. To create a keyless target
+without the extra column, choose `CREATE_MISSING` instead.
 
 Review only:
 

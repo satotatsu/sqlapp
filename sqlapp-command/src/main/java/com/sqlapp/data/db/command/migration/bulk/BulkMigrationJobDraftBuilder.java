@@ -28,6 +28,7 @@ import com.sqlapp.util.YamlConverter;
  * model.
  */
 public class BulkMigrationJobDraftBuilder {
+	private static final String KEY_RESTRICTION = "Draft creation requires a complete NOT NULL primary key; specify an explicit unique keyset in YAML otherwise.";
 	private static final long MAX_SCHEMA_BYTES = 16_777_216;
 
 	public record TableChoice(String table, List<String> primaryKey, String restriction) {
@@ -37,6 +38,13 @@ public class BulkMigrationJobDraftBuilder {
 
 		public boolean selectable() {
 			return restriction == null;
+		}
+
+		/**
+		 * Allows only the library's key restriction to be relaxed for full-scan INSERT.
+		 */
+		public boolean insertSelectable() {
+			return selectable() || KEY_RESTRICTION.equals(restriction);
 		}
 	}
 
@@ -54,6 +62,44 @@ public class BulkMigrationJobDraftBuilder {
 	public SchemaSnapshot inspect(final Path file) throws IOException {
 		final var captured = read(file);
 		return snapshot(file, captured);
+	}
+
+	/**
+	 * A source column description for offline authoring; no rows or connections.
+	 */
+	public record SourceColumn(String name, String type) {
+	}
+
+	/**
+	 * Returns columns for the listed tables, using the ordinary job name resolver.
+	 * Retains the caller's table names for editing existing mappings and rechecks
+	 * the inspected Schema bytes. This is authoring metadata, not execution
+	 * approval.
+	 */
+	public Map<String, List<SourceColumn>> inspectColumns(final SchemaSnapshot reviewed,
+			final List<String> selectedTables) throws IOException {
+		Objects.requireNonNull(reviewed, "reviewed");
+		final var captured = read(reviewed.file());
+		if (!Objects.equals(reviewed.fingerprint(), captured.fingerprint()))
+			throw new IllegalArgumentException("Schema XML changed. Inspect it again before loading columns.");
+		if (selectedTables == null || selectedTables.isEmpty())
+			throw new IllegalArgumentException("List at least one source table before loading columns.");
+		final var result = new LinkedHashMap<String, List<SourceColumn>>();
+		final var identities = new java.util.HashSet<String>();
+		for (var name : selectedTables) {
+			if (name == null || name.isBlank())
+				throw new IllegalArgumentException("Source table names must not be blank.");
+			final var table = BulkMigrationJobConfigurationResolver.findTable(captured.tables(), name);
+			if (!identities.add(identity(table)))
+				throw new IllegalArgumentException(
+						"List each source table only once, including qualified aliases: " + name);
+			result.put(name,
+					table.getColumns().stream()
+							.map(column -> new SourceColumn(column.getName(),
+									column.getDataType() == null ? "Unknown" : column.getDataType().toString()))
+							.toList());
+		}
+		return java.util.Collections.unmodifiableMap(result);
 	}
 
 	/**
@@ -111,6 +157,20 @@ public class BulkMigrationJobDraftBuilder {
 	 */
 	public String draft(final SchemaSnapshot reviewed, final List<String> selectedTables, final String jobId,
 			final int chunkSize, final boolean verify) throws IOException {
+		return draft(reviewed, selectedTables, jobId, chunkSize, verify, false);
+	}
+
+	/**
+	 * Initial INSERT authoring may use a full scan when no usable primary key
+	 * exists.
+	 */
+	public String draftInsert(final SchemaSnapshot reviewed, final List<String> selectedTables, final String jobId,
+			final int chunkSize, final boolean verify) throws IOException {
+		return draft(reviewed, selectedTables, jobId, chunkSize, verify, true);
+	}
+
+	private String draft(final SchemaSnapshot reviewed, final List<String> selectedTables, final String jobId,
+			final int chunkSize, final boolean verify, final boolean allowFullScan) throws IOException {
 		Objects.requireNonNull(reviewed, "reviewed");
 		final var captured = read(reviewed.file());
 		final var current = snapshot(reviewed.file(), captured);
@@ -128,11 +188,19 @@ public class BulkMigrationJobDraftBuilder {
 			final var choice = current.tables().stream().filter(table -> table.table().equals(selected)).findFirst()
 					.orElseThrow(
 							() -> new IllegalArgumentException("Table is not in the inspected Schema: " + selected));
-			if (!choice.selectable())
+			if (!(allowFullScan ? choice.insertSelectable() : choice.selectable()))
 				throw new IllegalArgumentException(choice.restriction());
+			if (allowFullScan) {
+				var original = reviewed.tables().stream().filter(table -> table.table().equals(selected)).findFirst()
+						.orElseThrow(() -> new IllegalArgumentException(
+								"Table is outside the reviewed selection: " + selected));
+				if (!original.insertSelectable())
+					throw new IllegalArgumentException(original.restriction());
+			}
 			final var table = BulkMigrationJobConfigurationResolver.findTable(captured.tables(), selected);
 			tasks.add(
-					BulkMigrationJobTask.builder().taskId(taskId(selected)).sourceTable(table).requireEmptyTarget(true)
+					BulkMigrationJobTask.builder().taskId(taskId(selected)).sourceTable(table)
+							.fullScan(allowFullScan && !choice.selectable()).requireEmptyTarget(true)
 							.options(ChunkedBulkMigrationOption.builder().migrationId(taskId(selected))
 									.chunkSize(chunkSize).mode(BulkMigrationMode.INSERT).resume(false).build())
 							.build());
@@ -152,6 +220,8 @@ public class BulkMigrationJobDraftBuilder {
 			definition.put("mode", "INSERT");
 			definition.put("resume", false);
 			definition.put("requireEmptyTarget", true);
+			if (task.isFullScan())
+				definition.put("fullScan", true);
 			if (chunkSize != 10_000)
 				definition.put("chunkSize", chunkSize);
 			definitions.add(definition);
@@ -214,7 +284,7 @@ public class BulkMigrationJobDraftBuilder {
 			}
 			if (restriction == null && (keys.isEmpty() || keys.stream().anyMatch(
 					key -> table.getColumns().get(key) == null || !table.getColumns().get(key).isNotNull()))) {
-				restriction = "Draft creation requires a complete NOT NULL primary key; specify an explicit unique keyset in YAML otherwise.";
+				restriction = KEY_RESTRICTION;
 			}
 			choices.add(new TableChoice(id, keys, restriction));
 		}
