@@ -5,6 +5,9 @@ This batch uses local unit tests, mocked catalogs, Schema XML round trips and
 SQL generation. No Docker image was downloaded or started and no external
 database was contacted.
 
+See [data type review](DATA_TYPES.md) for corrected type mappings, defaults,
+national-character width handling, compatibility impact and regression commands.
+
 ## Metadata and recreation
 
 - Source chunks are grouped by catalog, owner and name, preserving whitespace.
