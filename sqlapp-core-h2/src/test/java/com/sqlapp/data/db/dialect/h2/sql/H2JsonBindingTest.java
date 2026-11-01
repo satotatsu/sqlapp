@@ -31,8 +31,12 @@ class H2JsonBindingTest {
 			row.put("C", value.equals("SQL_NULL") ? null : value);
 			table.getRows().add(row);
 			var registry = DialectResolver.getInstance().getDialect(connection).createSqlFactoryRegistry();
-			assertEquals(1, H2NativeDmlTest.write(connection, registry, table, type,
-					type == SqlType.INSERT_ROWS || type == SqlType.MERGE_ROWS ? table : row));
+			int affected;
+			if (type == SqlType.INSERT_ROWS || type == SqlType.MERGE_ROWS)
+				affected = H2NativeDmlTest.write(connection, registry, table, type, table);
+			else
+				affected = H2NativeDmlTest.write(connection, registry, table, type, row);
+			assertEquals(1, affected);
 			try (var rows = statement.executeQuery("SELECT C FROM T")) {
 				assertTrue(rows.next());
 				assertEquals(value.equals("SQL_NULL") ? null : value, rows.getString(1));

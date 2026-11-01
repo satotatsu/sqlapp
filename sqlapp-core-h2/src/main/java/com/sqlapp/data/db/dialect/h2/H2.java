@@ -121,11 +121,12 @@ public class H2 extends Dialect {
 		});
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
-			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("(BIT|BOOL)", ""));
-			type.setLiteral("X'", "'").setDefaultValueLiteral("FALSE");
+			type.setLiteral("X'", "'");
 		});
 		// Boolean
-		getDbDataTypes().addBoolean();
+		getDbDataTypes().addBoolean(type -> {
+			type.addColumnTypeMatcher("BIT", "BOOL");
+		});
 		// Byte
 		getDbDataTypes().addTinyInt(type -> {
 		});

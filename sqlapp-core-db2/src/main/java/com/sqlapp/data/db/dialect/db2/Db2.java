@@ -144,7 +144,11 @@ public class Db2 extends Dialect {
 		getDbDataTypes().addBigInt(type -> {
 		});
 		// XML
-		getDbDataTypes().addSqlXml("XML", type -> {
+		getDbDataTypes().addSqlXml("XML", LEN_2GB, type -> {
+			type.setCreateFormat("XML");
+			type.addColumnTypeMatcher("XMLVARCHAR");
+			type.addColumnTypeMatcher("XMLCLOB");
+			type.setLiteral("'", "'");
 		});
 		// REAL
 		getDbDataTypes().addReal(type -> {
@@ -160,6 +164,7 @@ public class Db2 extends Dialect {
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME");
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
 		});
 		// Timestamp
@@ -173,13 +178,6 @@ public class Db2 extends Dialect {
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
 			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
-		});
-		// XML
-		getDbDataTypes().addSqlXml("XMLVARCHAR", 32672, type -> {
-			type.setLiteral("'", "'");
-		});
-		getDbDataTypes().addSqlXml("XMLCLOB", CommonUtils.LEN_2GB, type -> {
-			type.setLiteral("'", "'");
 		});
 		// 推奨される型の登録
 		getDbDataTypes().registerRecommend(CHAR, VARCHAR);

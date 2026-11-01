@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.FloatType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleCatalogReader;
 import com.sqlapp.data.db.dialect.oracle.sql.OracleSqlFactoryRegistry;
@@ -164,6 +165,7 @@ public class Oracle extends Dialect {
 		});
 		// Float
 		getDbDataTypes().addFloat(126);
+		FloatType.class.cast(getDbDataTypes().getDbType(DataType.FLOAT)).setDefaultPrecision(126);
 		// DATETIME
 		getDbDataTypes().addDateTime("DATE", type -> {
 			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
@@ -191,6 +193,7 @@ public class Oracle extends Dialect {
 		getDbDataTypes().addAnyData("ANYDATA");
 		// Single
 		getDbDataTypes().addSqlXml("XMLType", type -> {
+			type.setCreateFormat("XMLType");
 		});
 		;
 		// Indexタイプの設定

@@ -126,6 +126,7 @@ public class SqlServer2005 extends SqlServer2000 {
 		});
 		// XML
 		getDbDataTypes().addSqlXml("XML", type -> {
+			type.setCreateFormat("XML");
 			type.setLiteral("'", "'");
 		});
 	}

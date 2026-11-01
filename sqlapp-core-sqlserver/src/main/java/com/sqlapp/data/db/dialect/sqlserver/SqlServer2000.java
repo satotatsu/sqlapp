@@ -34,6 +34,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.FloatType;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -135,6 +137,7 @@ public class SqlServer2000 extends Dialect {
 		});
 		// Single
 		getDbDataTypes().addFloat(53);
+		FloatType.class.cast(getDbDataTypes().getDbType(DataType.FLOAT)).setDefaultPrecision(53);
 		// SmallDateTime
 		getDbDataTypes().addSmallDateTime(type -> {
 			type.setLiteral("{ts '", "'}").setCreateFormat("SMALLDATETIME")

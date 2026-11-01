@@ -1884,7 +1884,7 @@ public enum DataType {
 		}
 	},
 	/** LINE型 */
-	LINE(java.sql.JDBCType.OTHER, "CIRCLE", Line.class, MetaType.OTHER) {
+	LINE(java.sql.JDBCType.OTHER, "LINE", Line.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;

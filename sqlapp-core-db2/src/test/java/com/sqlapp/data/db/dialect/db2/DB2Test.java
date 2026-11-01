@@ -122,10 +122,10 @@ public class DB2Test {
 		assertEquals(DataType.SQLXML, dbType.getDataType());
 		dbType = dialect.getDbDataTypes().getDbType(DataType.SQLXML, 30000);
 		assertEquals(DataType.SQLXML, dbType.getDataType());
-		assertEquals("XMLVARCHAR", dbType.getTypeName());
+		assertEquals("XML", dbType.getTypeName());
 		dbType = dialect.getDbDataTypes().getDbType(DataType.SQLXML, CommonUtils.LEN_2GB);
 		assertEquals(DataType.SQLXML, dbType.getDataType());
-		assertEquals("XMLCLOB", dbType.getTypeName());
+		assertEquals("XML", dbType.getTypeName());
 	}
 
 	@Test

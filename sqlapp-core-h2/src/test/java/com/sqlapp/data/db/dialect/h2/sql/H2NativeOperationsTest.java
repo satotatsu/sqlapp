@@ -33,18 +33,19 @@ class H2NativeOperationsTest {
 			var reader = DialectResolver.getInstance().getDialect(connection).getCatalogReader().getSchemaReader();
 			reader.setSchemaName(schema);
 			var model = reader.getAllFull(connection).get(0);
-			AbstractNamedObject<?> object = switch (kind) {
-			case "table" -> model.getTables().get("T");
-			case "column" -> model.getTables().get("T").getColumns().get("C");
-			case "view" -> model.getViews().get("V");
-			case "index" -> model.getTables().get("T").getIndexes().get("IX");
-			case "domain" -> model.getDomains().get("D");
-			case "sequence" -> model.getSequences().get("S");
-			case "alias" -> model.getFunctions().get("HEX");
-			case "trigger" -> model.getTriggers().get("TR");
-			case "constant" -> model.getConstants().get("N");
-			default -> model;
-			};
+			AbstractNamedObject<?> object;
+			switch (kind) {
+			case "table" -> object = model.getTables().get("T");
+			case "column" -> object = model.getTables().get("T").getColumns().get("C");
+			case "view" -> object = model.getViews().get("V");
+			case "index" -> object = model.getTables().get("T").getIndexes().get("IX");
+			case "domain" -> object = model.getDomains().get("D");
+			case "sequence" -> object = model.getSequences().get("S");
+			case "alias" -> object = model.getFunctions().get("HEX");
+			case "trigger" -> object = model.getTriggers().get("TR");
+			case "constant" -> object = model.getConstants().get("N");
+			default -> object = model;
+			}
 			String catalog = switch (kind) {
 			case "table", "view" -> "TABLES";
 			case "column" -> "COLUMNS";

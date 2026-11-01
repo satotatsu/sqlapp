@@ -94,7 +94,8 @@ public final class TransferFileJobDraftBuilder {
 		if (!("sha256:" + MessageDigests.SHA256.checksumAsString(bytes)).equals(reviewed.fingerprint())
 				|| !new BulkMigrationJobDraftBuilder().inspect(reviewed.file()).fingerprint()
 						.equals(reviewed.fingerprint()))
-			throw new IllegalArgumentException("Source Schema changed. Read the source again before saving a CSV job.");
+			throw new IllegalArgumentException(
+					"Source Schema changed. Read the source again before using the captured Schema.");
 		final var root = SchemaUtils.readXml(new java.io.ByteArrayInputStream(bytes));
 		if (!(root instanceof Schema schema))
 			throw new IllegalArgumentException("A captured source Schema is required.");

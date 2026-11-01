@@ -268,16 +268,24 @@ class H2NativeDmlTest {
 			row.put("V", dataType.startsWith("VARCHAR") ? "oversized" : new byte[] { 1, 2, 3, 4 });
 			table.getRows().add(row);
 			var registry = DialectResolver.getInstance().getDialect(connection).createSqlFactoryRegistry();
-			assertThrows(SQLException.class,
-					() -> write(connection, registry, table, type, type == SqlType.MERGE_ROWS ? table : row));
+			assertThrows(SQLException.class, () -> {
+				if (type == SqlType.MERGE_ROWS)
+					write(connection, registry, table, type, table);
+				else
+					write(connection, registry, table, type, row);
+			});
 			try (var rows = statement.executeQuery("SELECT count(*) FROM T")) {
 				assertTrue(rows.next());
 				assertEquals(0, rows.getInt(1));
 			}
 			statement.execute(
 					"INSERT INTO T VALUES(1," + (dataType.startsWith("VARCHAR") ? "'old'" : "X'010203'") + ")");
-			assertThrows(SQLException.class,
-					() -> write(connection, registry, table, type, type == SqlType.MERGE_ROWS ? table : row));
+			assertThrows(SQLException.class, () -> {
+				if (type == SqlType.MERGE_ROWS)
+					write(connection, registry, table, type, table);
+				else
+					write(connection, registry, table, type, row);
+			});
 			try (var rows = statement.executeQuery("SELECT V FROM T")) {
 				assertTrue(rows.next());
 				if (dataType.startsWith("VARCHAR"))

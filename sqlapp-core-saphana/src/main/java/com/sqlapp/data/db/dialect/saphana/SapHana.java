@@ -98,6 +98,8 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addUTinyInt("TINYINT", type -> {
 		});
 		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			// Output mapping for signed bytes only; native SMALLINT must remain SMALLINT.
+			type.clearColumnTypeMatchers();
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
@@ -136,6 +138,7 @@ public class SapHana extends Dialect {
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME");
 		});
 		// インデックスタイプ
 		this.setIndexTypeName(IndexType.BTree);

@@ -152,6 +152,7 @@ public class Postgres extends Dialect {
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar(32672, type -> {
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?\\s+VARYING", ""));
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		getDbDataTypes().addVarchar("TEXT", LEN_1GB, type -> {
@@ -227,12 +228,16 @@ public class Postgres extends Dialect {
 		});
 		// Single
 		getDbDataTypes().addReal("FLOAT4", type -> {
+			type.addColumnTypeMatcher("REAL");
+			type.addColumnTypeMatcher(new RegexColumnTypeMatcher("FLOAT\\s*\\(\\s*(?:[1-9]|1[0-9]|2[0-4])\\s*\\)"));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Double
-		getDbDataTypes().addDouble(type -> {
-			type.addColumnTypeMatcher("FLOAT8");
+		getDbDataTypes().addDouble("DOUBLE PRECISION", type -> {
+			type.setColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION", "FLOAT8");
+			type.addColumnTypeMatcher(
+					new RegexColumnTypeMatcher("FLOAT(?:\\s*\\(\\s*(?:2[5-9]|[34][0-9]|5[0-3])\\s*\\))?"));
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
@@ -245,6 +250,7 @@ public class Postgres extends Dialect {
 		});
 		// XML
 		getDbDataTypes().addSqlXml("XML", type -> {
+			type.setCreateFormat("XML");
 			type.setLiteral("XML '", "'");
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
@@ -263,12 +269,14 @@ public class Postgres extends Dialect {
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
+			type.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("TIME", "WITHOUT\\s+TIME\\s+ZONE"));
 			type.setDefaultValueLiteral(getCurrentTimeFunction()).setLiteral("TIME '", "'");
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone("TIMETZ", type -> {
+			type.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("TIME", "WITH\\s+TIME\\s+ZONE"));
 			type.setDefaultPrecision(6).setDefaultValueLiteral(getCurrentTimeFunction())
 					.setLiteral("TIME WITH TIME ZONE '", "'");
 			type.setSupportsArray(true);
@@ -276,6 +284,7 @@ public class Postgres extends Dialect {
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp(type -> {
+			type.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("TIMESTAMP", "WITHOUT\\s+TIME\\s+ZONE"));
 			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setLiteral("TIMESTAMP '", "'");
 			type.setSupportsArray(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
@@ -283,6 +292,7 @@ public class Postgres extends Dialect {
 		// Timestamp With Time Zone
 		getDbDataTypes().addTimestampWithTimeZone("TIMESTAMPTZ", type -> {
 			type.setColumnTypeMatcher(new PrecisionColumnTypeMatcher("TIMESTAMP", "WITH\\s+TIME\\s+ZONE"));
+			type.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("TIMESTAMPTZ", ""));
 			type.setLiteral("TIMESTAMP WITH TIME ZONE '", "'").setDefaultPrecision(6)
 					.setDefaultValueLiteral(getCurrentTimestampFunction());
 			type.setSupportsArray(true);

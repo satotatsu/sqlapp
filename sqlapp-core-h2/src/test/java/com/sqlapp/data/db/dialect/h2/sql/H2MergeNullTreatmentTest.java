@@ -44,7 +44,10 @@ class H2MergeNullTreatmentTest {
 					statement.execute(operation.getSqlText());
 				}
 			} else {
-				write(connection, registry, table, type, type == SqlType.MERGE ? row : table.getRows());
+				if (type == SqlType.MERGE)
+					write(connection, registry, table, type, row);
+				else
+					write(connection, registry, table, type, table.getRows());
 			}
 			try (var rows = statement.executeQuery("SELECT COUNT(*),MAX(V) FROM T")) {
 				assertTrue(rows.next());
