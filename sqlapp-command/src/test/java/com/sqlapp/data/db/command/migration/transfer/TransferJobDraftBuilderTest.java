@@ -15,6 +15,23 @@ class TransferJobDraftBuilderTest {
 	Path directory;
 
 	@Test
+	void resolvesSavedSelectionsWithoutWritingAndRejectsUnknownDuplicateOrStaleTables() throws Exception {
+		var snapshot = schema();
+		var builder = new TransferJobDraftBuilder();
+		byte[] original = Files.readAllBytes(snapshot.file());
+		assertEquals(List.of("PUBLIC.ITEMS"), builder.resolveTables(snapshot, List.of("ITEMS")));
+		assertEquals(List.of("PUBLIC.ITEMS"), builder.resolveTables(snapshot, List.of("public.items")));
+		assertArrayEquals(original, Files.readAllBytes(snapshot.file()));
+		assertThrows(IllegalArgumentException.class, () -> builder.resolveTables(snapshot, List.of()));
+		assertThrows(com.sqlapp.exceptions.CommandException.class,
+				() -> builder.resolveTables(snapshot, List.of("UNKNOWN")));
+		assertThrows(IllegalArgumentException.class,
+				() -> builder.resolveTables(snapshot, List.of("ITEMS", "PUBLIC.ITEMS")));
+		Files.writeString(snapshot.file(), Files.readString(snapshot.file()) + "\n<!-- changed -->");
+		assertThrows(IllegalArgumentException.class, () -> builder.resolveTables(snapshot, List.of("ITEMS")));
+	}
+
+	@Test
 	void authorsCustomGeneratedKeyNamesForBothRoutes() throws Exception {
 		var snapshot = schema();
 		var builder = new TransferJobDraftBuilder();
@@ -41,6 +58,7 @@ class TransferJobDraftBuilderTest {
 		model.writeXml(xml.toFile());
 		var generic = new BulkMigrationJobDraftBuilder();
 		var snapshot = generic.inspect(xml);
+		assertEquals(List.of("NO_KEY"), new TransferJobDraftBuilder().resolveTables(snapshot, List.of("NO_KEY")));
 		assertThrows(IllegalArgumentException.class, () -> generic.draft(snapshot, List.of("NO_KEY"), "", 100, true));
 		var saved = new TransferJobDraftBuilder().saveDirect(snapshot, List.of("NO_KEY"), 100, true, null, "PUBLIC",
 				TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY, directory.resolve("keyless.yaml"));

@@ -1456,6 +1456,19 @@ The Tables/Columns tabs offer literal **Find**, sorting, **Renamed only**, count
 and **Reset selected names**. Filters affect display only; saving includes hidden
 overrides. Reset/remove actions operate on the selected rows in the displayed
 order and do not exclude source tables or columns from the transfer.
+**Naming rules…** previews case changes and optional Unicode-space-to-underscore
+replacement for selected target names. Only **Apply preview** changes the mapping;
+hidden/unselected rows remain unchanged. **Undo last rules** restores the last
+batch for that tab if its rows have not subsequently changed. Stale previews and
+undo fail before changing any row. Results are saved as ordinary explicit mapping
+names for GUI/Gradle, with no global rules. Run Check Schema and database Review
+after applying, since rules can produce colliding names.
+The naming preview also offers **Check proposed Schema** using the source XML
+chosen in the name editor. It checks the full proposed mapping, including hidden
+overrides, before changing any cells. Results and failures appear in its Schema
+check tab; stale asynchronous results are discarded. A failed check still allows
+applying an unfinished draft for correction, while database Review remains required
+for execution. No files or databases are changed by the proposed-name check.
 **Check names** shows blank/invalid names and duplicate source entries together
 in **Input checks**. Double-click a problem or use **Go to selected field** to
 reveal its field despite filters/sorting. Editing clears stale problem locations;
@@ -1477,6 +1490,16 @@ choose to keep editing or explicitly discard. Filters/previews and unchanged sou
 column loading do not trigger this prompt. Saved mapping paths are attached to
 Job settings relative to the job folder when possible; other drives stay absolute.
 Save settings to keep that reference and review again before running.
+**Job settings… → Edit tables…** reopens the table picker using a captured source
+Schema XML. Read the Schema, change Include checkboxes, optionally include referenced
+parents, then **Use selected tables**. Filters retain hidden selections. Changes
+stay in the settings form until **Save settings**, followed by a new Review.
+Direct keyless INSERT, Schema-only eligibility and CSV key/type restrictions reuse
+the existing picker behavior. All other settings are retained. Excluded-table name
+mapping overrides need adjustment separately. CSV changes require a new export;
+completed packages are not edited. A changed Schema/path cannot publish an old
+selection, and missing saved identities are reported instead of silently omitted.
+
 For target-only generated primary keys, **Generated PK column** defaults to `ID`
 and can be changed in New direct job or Job settings. The shared YAML option is
 `generatedKeyColumn`; it requires `CREATE_MISSING_WITH_IDENTITY`. Choose an unused

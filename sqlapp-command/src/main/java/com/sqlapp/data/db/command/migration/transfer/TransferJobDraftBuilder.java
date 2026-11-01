@@ -11,6 +11,35 @@ import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEd
  * fingerprint and dependency order.
  */
 public final class TransferJobDraftBuilder {
+	/**
+	 * Resolve a captured selection without creating a job or opening connections.
+	 */
+	public List<String> resolveTables(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot, List<String> selected)
+			throws Exception {
+		return resolveTables(snapshot, selected, TransferJobConfiguration.DataMode.JDBC_DIRECT);
+	}
+
+	public List<String> resolveTables(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot, List<String> selected,
+			TransferJobConfiguration.DataMode mode) throws Exception {
+		if (selected == null || selected.isEmpty()
+				|| selected.stream().anyMatch(name -> name == null || name.isBlank()))
+			throw new IllegalArgumentException("Select at least one table with a nonblank source identity.");
+		var schema = TransferFileJobDraftBuilder.schema(snapshot);
+		var sourceTables = List.copyOf(schema.getTables());
+		var names = mode == TransferJobConfiguration.DataMode.SCHEMA_ONLY ? selected
+				: selected.stream()
+						.map(name -> com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationResolver
+								.resolveTable(sourceTables, name))
+						.map(table -> TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
+								table.getName()))
+						.toList();
+		return TransferSchemaOnlyPreparation.select(schema, names).stream()
+				.map(table -> schema.getName() == null || schema.getName().isBlank() ? table.getName()
+						: TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
+								table.getName()))
+				.toList();
+	}
+
 	/** Save schema-only intent without requiring data-copy keys or reading rows. */
 	public TransferJobConfigurationIO.Snapshot saveSchemaOnly(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot,
 			List<String> selected, TransferJobConfiguration.CompatibilityPolicy policy, String targetSchema, Path file)

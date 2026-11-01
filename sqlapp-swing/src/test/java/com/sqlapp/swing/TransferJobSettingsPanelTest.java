@@ -18,6 +18,52 @@ class TransferJobSettingsPanelTest {
 	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();
 
 	@ParameterizedTest
+	@ValueSource(strings = { "JDBC_DIRECT", "SCHEMA_ONLY", "FILE" })
+	void editsTableSelectionOnlyInMemoryUntilSaveAndPreservesOtherSettings(String route) throws Exception {
+		String options = route.equals("FILE")
+				? "schemaMode: CREATE_MISSING\nfiles: {directory: packages, nullValue: __NULL__, unsupportedTemporalPolicy: ERROR}\n"
+				: route.equals("SCHEMA_ONLY")
+						? "schemaMode: APPLY_DIFFERENCES\nallowDestructiveSchemaChanges: true\nmappingFile: names.yaml\n"
+						: "schemaMode: CREATE_MISSING_WITH_IDENTITY\ngeneratedKeyColumn: ROW_ID\nmappingFile: names.yaml\n";
+		var file = Files.writeString(directory.resolve("tables.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [PUBLIC.OLD]\nsourceSchema: PUBLIC\ntargetSchema: ARCHIVE\nchunkSize: 123\ncompatibilityPolicy: ERROR\ndataMode: "
+						+ route + "\n" + options);
+		String bytes = Files.readString(file);
+		var original = io.read(file).configuration();
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.editTables.isEnabled());
+			panel.updateSelectedTables(java.util.List.of("PUBLIC.PARENTS", "PUBLIC.CHILDREN"));
+			assertTrue(panel.tableCount.getText().contains("not saved"));
+			assertThrows(IllegalArgumentException.class, () -> panel.updateSelectedTables(java.util.List.of()));
+		});
+		assertEquals(bytes, Files.readString(file));
+		SwingUtilities.invokeAndWait(() -> {
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		var updated = io.read(file).configuration();
+		assertEquals(java.util.List.of("PUBLIC.PARENTS", "PUBLIC.CHILDREN"), updated.tables());
+		assertEquals(original.source(), updated.source());
+		assertEquals(original.target(), updated.target());
+		assertEquals(original.schemaMode(), updated.schemaMode());
+		assertEquals(original.sourceSchema(), updated.sourceSchema());
+		assertEquals(original.targetSchema(), updated.targetSchema());
+		assertEquals(original.mappingFile(), updated.mappingFile());
+		assertEquals(original.chunkSize(), updated.chunkSize());
+		assertEquals(original.verify(), updated.verify());
+		assertEquals(original.dataMode(), updated.dataMode());
+		assertEquals(original.files(), updated.files());
+		assertEquals(original.compatibilityPolicy(), updated.compatibilityPolicy());
+		assertEquals(original.allowDestructiveSchemaChanges(), updated.allowDestructiveSchemaChanges());
+		assertEquals(original.generatedKeyColumn(), updated.generatedKeyColumn());
+	}
+
+	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
 	void generatedKeyColumnCanBeEditedInDirectAndSchemaOnlyJobs(boolean schemaOnly) throws Exception {
 		var file = Files.writeString(directory.resolve("custom-key.yaml"),

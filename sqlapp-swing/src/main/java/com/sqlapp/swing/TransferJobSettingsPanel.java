@@ -16,6 +16,9 @@ final class TransferJobSettingsPanel extends JPanel {
 	final JTextField mappingFile = new JTextField(24);
 	final JButton browseMapping = new JButton("Browse…");
 	final JButton editMapping = new JButton("Edit names…");
+	final JButton editTables = new JButton("Edit tables…");
+	final JLabel tableCount = new JLabel(" ");
+	private java.util.List<String> selectedTables = java.util.List.of();
 	private final JPanel mappingRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 	final JCheckBox createMissing = new JCheckBox("Create missing target tables (the schema itself must exist)");
 	final JCheckBox generatedKey = new JCheckBox("Add target-only generated PK to new tables without a primary key");
@@ -46,6 +49,20 @@ final class TransferJobSettingsPanel extends JPanel {
 		this.saved = saved;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		add(identity, BorderLayout.NORTH);
+		var tablesRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		tablesRow.add(editTables);
+		tablesRow.add(tableCount);
+		fields.add(tablesRow);
+		editTables.addActionListener(event -> {
+			if (busy || snapshot == null)
+				return;
+			var route = mode == TransferJobConfiguration.DataMode.FILE ? mode
+					: schemaOnly.isSelected() ? TransferJobConfiguration.DataMode.SCHEMA_ONLY
+							: TransferJobConfiguration.DataMode.JDBC_DIRECT;
+			var selected = TransferTableSelectionDialog.show(this, snapshot.file(), selectedTables, route);
+			if (selected != null)
+				updateSelectedTables(selected);
+		});
 		final var schemaRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		final var label = new JLabel("Target schema (blank: current)");
 		label.setLabelFor(targetSchema);
@@ -65,7 +82,7 @@ final class TransferJobSettingsPanel extends JPanel {
 				var job = snapshot.file();
 				var mapping = mappingFile.getText().isBlank() ? null
 						: job.getParent().resolve(mappingFile.getText()).normalize();
-				var edited = TransferNameMappingDialog.show(this, job, mapping, snapshot.configuration().tables());
+				var edited = TransferNameMappingDialog.show(this, job, mapping, selectedTables);
 				if (edited != null) {
 					mappingFile.setText(TransferMappingPaths.fromJob(job, edited));
 					status.setText(
@@ -134,7 +151,7 @@ final class TransferJobSettingsPanel extends JPanel {
 		fields.add(new JLabel(mode == TransferJobConfiguration.DataMode.FILE
 				? "After saving, export a new package; existing packages keep their original settings."
 				: "After saving, review again in the GUI or Gradle before execution."));
-		add(fields, BorderLayout.CENTER);
+		add(new JScrollPane(fields), BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout(4, 4));
 		footer.add(status, BorderLayout.NORTH);
 		final var actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -176,6 +193,8 @@ final class TransferJobSettingsPanel extends JPanel {
 				try {
 					snapshot = get();
 					final var configuration = snapshot.configuration();
+					selectedTables = configuration.tables();
+					tableCount.setText(selectedTables.size() + " selected tables");
 					schemaOnly.setSelected(configuration.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY);
 					applyDifferences.setSelected(
 							configuration.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES);
@@ -191,7 +210,7 @@ final class TransferJobSettingsPanel extends JPanel {
 					strict.setSelected(
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR);
 					chunk.setValue(configuration.chunkSize());
-					identity.setText(snapshot.file() + " — " + configuration.tables().size() + " selected tables");
+					identity.setText(snapshot.file().toString());
 					status.setText("Adjust settings and save, or cancel to keep the original job.");
 				} catch (Exception failure) {
 					status.setText(message(failure));
@@ -211,7 +230,7 @@ final class TransferJobSettingsPanel extends JPanel {
 			chunk.commitEdit();
 			final var original = snapshot.configuration();
 			updated = new TransferJobConfiguration(original.formatVersion(), original.source(), original.target(),
-					original.tables(),
+					selectedTables,
 					schemaOnly.isSelected() && applyDifferences.isSelected()
 							? TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
 							: schemaOnly.isSelected() || createMissing.isSelected()
@@ -270,6 +289,20 @@ final class TransferJobSettingsPanel extends JPanel {
 					"Completed packages cannot be edited. Open the original job and export a new package.");
 	}
 
+	void updateSelectedTables(java.util.List<String> tables) {
+		if (busy || snapshot == null)
+			return;
+		if (tables == null || tables.isEmpty() || tables.stream().anyMatch(name -> name == null || name.isBlank())
+				|| tables.stream().distinct().count() != tables.size())
+			throw new IllegalArgumentException("Choose a nonempty unique table selection.");
+		selectedTables = java.util.List.copyOf(tables);
+		boolean changed = !selectedTables.equals(snapshot.configuration().tables());
+		tableCount.setText(selectedTables.size() + " selected tables" + (changed ? " — not saved yet" : ""));
+		status.setText(mappingFile.getText().isBlank()
+				? "Table selection updated in this form. Save settings, then review again."
+				: "Table selection updated in this form. Adjust name mappings for removed tables, save settings, then review again.");
+	}
+
 	private static String message(Exception failure) {
 		final var cause = failure instanceof java.util.concurrent.ExecutionException ? failure.getCause() : failure;
 		if ((cause instanceof java.io.IOException || cause instanceof IllegalArgumentException)
@@ -279,6 +312,7 @@ final class TransferJobSettingsPanel extends JPanel {
 	}
 
 	private void refresh() {
+		editTables.setEnabled(!busy && snapshot != null);
 		mappingRow.setVisible(mode != TransferJobConfiguration.DataMode.FILE || !mappingFile.getText().isBlank());
 		mappingFile.setEnabled(!busy && snapshot != null);
 		browseMapping.setEnabled(mappingFile.isEnabled());

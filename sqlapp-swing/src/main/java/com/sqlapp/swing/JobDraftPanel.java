@@ -26,6 +26,8 @@ import javax.swing.table.DefaultTableModel;
 
 import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobDraftBuilder;
 import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobDraftBuilder.SchemaSnapshot;
+import com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.DataMode;
+import com.sqlapp.data.db.command.migration.transfer.TransferJobDraftBuilder;
 
 /**
  * Selects canonical Schema tables for an editor draft or saved migration
@@ -64,7 +66,8 @@ final class JobDraftPanel extends JPanel {
 
 		@Override
 		public boolean isCellEditable(int row, int column) {
-			return !busy && column == 0 && snapshot != null && eligible(row);
+			return !busy && column == 0 && snapshot != null
+					&& (eligible(row) || Boolean.TRUE.equals(getValueAt(row, 0)));
 		}
 	};
 	final JTable tables = new JTable(model) {
@@ -140,6 +143,12 @@ final class JobDraftPanel extends JPanel {
 
 	private java.util.function.Supplier<FileDraftWriter> fileDraftWriter;
 	private Consumer<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> savedReady;
+	private Consumer<List<String>> selectionReady;
+	private DataMode selectionMode;
+
+	List<String> selectedTables() {
+		return List.copyOf(selected());
+	}
 
 	JobDraftPanel(final Consumer<String> ready) {
 		this(new BulkMigrationJobDraftBuilder(), ready);
@@ -390,7 +399,9 @@ final class JobDraftPanel extends JPanel {
 	void draftOptionsChanged() {
 		revision++;
 		if (!busy)
-			status.setText("Draft options changed. Review the selection and create the draft again.");
+			status.setText(
+					selectionReady != null ? "Table selection changed. Use selected tables, then save job settings."
+							: "Draft options changed. Review the selection and create the draft again.");
 	}
 
 	JFileChooser chooser() {
@@ -490,11 +501,13 @@ final class JobDraftPanel extends JPanel {
 			selectionHelp.setText(
 					"Hidden selections will also be included. Clear the filter to review every selected table.");
 		else
-			selectionHelp.setText(fileDraftWriter != null
-					? "Selection ready. Save the shared transfer job; saving does not move data."
-					: managedDirectory == null
-							? "Selection ready. Create a draft to review the generated settings in the editor."
-							: "Selection ready. Save and review plan checks the target; it does not copy rows.");
+			selectionHelp.setText(selectionReady != null
+					? "Selection ready. Use selected tables, then save job settings and review."
+					: fileDraftWriter != null
+							? "Selection ready. Save the shared transfer job; saving does not move data."
+							: managedDirectory == null
+									? "Selection ready. Create a draft to review the generated settings in the editor."
+									: "Selection ready. Save and review plan checks the target; it does not copy rows.");
 	}
 
 	private void updateSelection(final boolean include, final boolean all) {
@@ -640,6 +653,10 @@ final class JobDraftPanel extends JPanel {
 	void createDraft() {
 		if (busy || snapshot == null || selected().isEmpty())
 			return;
+		if (selectionReady != null) {
+			useSelection();
+			return;
+		}
 		if (tables.isEditing())
 			tables.getCellEditor().stopCellEditing();
 		try {
@@ -688,6 +705,67 @@ final class JobDraftPanel extends JPanel {
 				}
 			}
 		}.execute();
+	}
+
+	private void useSelection() {
+		if (tables.isEditing())
+			tables.getCellEditor().stopCellEditing();
+		for (int row = 0; row < model.getRowCount(); row++)
+			if (Boolean.TRUE.equals(model.getValueAt(row, 0)) && !eligible(row)) {
+				status.setText("Remove unavailable table before using this selection: " + model.getValueAt(row, 1));
+				return;
+			}
+		var captured = snapshot;
+		var names = selected();
+		long token = revision;
+		busy = true;
+		refresh();
+		status.setText("Rechecking captured Schema and resolving selected tables…");
+		new SwingWorker<List<String>, Void>() {
+			@Override
+			protected List<String> doInBackground() throws Exception {
+				return new TransferJobDraftBuilder().resolveTables(captured, names, selectionMode);
+			}
+
+			@Override
+			protected void done() {
+				try {
+					var resolved = get();
+					if (token == revision)
+						selectionReady.accept(resolved);
+					else
+						status.setText("Selection changed. Use the selection again.");
+				} catch (Exception failure) {
+					failed(failure instanceof ExecutionException ? failure.getCause() : failure);
+				} finally {
+					busy = false;
+					refresh();
+				}
+			}
+		}.execute();
+	}
+
+	static JobDraftPanel tableSelection(SchemaSnapshot schema, List<String> initial, DataMode mode,
+			Consumer<List<String>> chosen) {
+		var panel = new JobDraftPanel(text -> {
+		});
+		panel.schemaFile.setText(schema.file().toString());
+		panel.showSnapshot(schema);
+		panel.fullScanInsert(mode == DataMode.JDBC_DIRECT);
+		panel.schemaOnly(mode == DataMode.SCHEMA_ONLY);
+		panel.pathRow.setVisible(false);
+		panel.optionsRow.setVisible(false);
+		panel.selectionReady = chosen;
+		panel.selectionMode = mode;
+		panel.create.setText("Use selected tables");
+		panel.create.setToolTipText(
+				"Use all selected tables, including hidden selections. Save job settings afterward; no file or database is changed here.");
+		for (int row = 0; row < panel.model.getRowCount(); row++)
+			panel.model.setValueAt(initial.contains(panel.model.getValueAt(row, 1)), row, 0);
+		panel.status.setText(
+				"Choose tables for the saved job. Include referenced tables when needed; database Review remains required.");
+		panel.refresh();
+		return panel;
 	}
 
 	private record Draft(String yaml,

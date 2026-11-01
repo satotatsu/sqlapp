@@ -51,6 +51,13 @@ final class TransferNameMappingDialog {
 		var opened = new java.util.concurrent.atomic.AtomicReference<TransferNameMappingIO.Snapshot>();
 		var busy = new boolean[] { true };
 		var available = new boolean[] { false };
+		editor.setSchemaInspector(mapping -> {
+			if (schemaFile.getText().isBlank())
+				throw new IllegalArgumentException("Choose a source Schema XML file.");
+			var capturedPath = Path.of(schemaFile.getText());
+			var capturedSelection = java.util.List.copyOf(selected);
+			return () -> new TransferNameMappingInspectionService().inspect(capturedPath, capturedSelection, mapping);
+		});
 		var closeGuard = new TransferNameMappingCloseGuard(editor::configuration, () -> {
 			var choices = new String[] { "Keep editing", "Discard name changes" };
 			return JOptionPane.showOptionDialog(dialog,

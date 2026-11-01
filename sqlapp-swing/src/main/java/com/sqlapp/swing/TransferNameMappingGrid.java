@@ -6,6 +6,11 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.*;
+import com.sqlapp.data.db.command.migration.transfer.TransferNameRules;
+import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingIO;
+import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingInspectionService.Result;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 /** Search and edit a mapping without confusing view rows with source rows. */
 final class TransferNameMappingGrid extends JPanel {
@@ -17,6 +22,30 @@ final class TransferNameMappingGrid extends JPanel {
 	final JButton remove = new JButton("Remove selected overrides");
 	final JButton reset = new JButton("Reset selected names");
 	final JButton clear = new JButton("Clear filter");
+	final JButton naming = new JButton("Naming rules…");
+	final JButton undoRules = new JButton("Undo last rules");
+	private java.util.List<NameChange> undo;
+	private Function<java.util.List<NameChange>, Callable<Result>> ruleInspector;
+
+	void setRuleInspector(Function<java.util.List<NameChange>, Callable<Result>> inspector) {
+		ruleInspector = inspector;
+	}
+
+	void checkRulePreview(java.util.List<NameChange> changes) {
+		finishEdit();
+		checkRows(changes);
+	}
+
+	record NameChange(int row, java.util.List<Object> before, String currentName, String proposedName) {
+		NameChange {
+			before = Collections.unmodifiableList(new ArrayList<>(before));
+		}
+
+		boolean changed() {
+			return !currentName.equals(proposedName);
+		}
+	}
+
 	private final JTable grid;
 	private final DefaultTableModel model;
 	private final int sourceColumn;
@@ -53,10 +82,15 @@ final class TransferNameMappingGrid extends JPanel {
 		buttons.add(add);
 		buttons.add(reset);
 		buttons.add(remove);
+		buttons.add(naming);
+		buttons.add(undoRules);
 		add(buttons, BorderLayout.SOUTH);
 		remove.setToolTipText(
 				"Removes editor rows only. Tables and columns are still transferred using the saved job selection.");
 		reset.setToolTipText("Restore source names for selected rows; keep source metadata and other overrides.");
+		naming.setToolTipText("Preview case/space rules for selected target names only.");
+		undoRules.setToolTipText(
+				"Restore the last naming batch only if its affected rows have not changed since applying it.");
 		filter.getDocument().addDocumentListener(new DocumentListener() {
 			@Override
 			public void insertUpdate(DocumentEvent event) {
@@ -110,6 +144,37 @@ final class TransferNameMappingGrid extends JPanel {
 				model.setValueAt(blankUnchanged ? null : value(row, sourceColumn), row, targetColumn);
 			refreshCounts();
 		});
+		naming.addActionListener(event -> {
+			var dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Naming rules for selected rows",
+					Dialog.ModalityType.APPLICATION_MODAL);
+			dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+			var panel = new TransferNameRulesPanel(this, dialog::dispose, ruleInspector);
+			dialog.setContentPane(panel);
+			dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+				@Override
+				public void windowClosing(java.awt.event.WindowEvent event) {
+					panel.requestClose();
+				}
+			});
+			dialog.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"),
+					"cancelRules");
+			dialog.getRootPane().getActionMap().put("cancelRules", new AbstractAction() {
+				@Override
+				public void actionPerformed(java.awt.event.ActionEvent event) {
+					panel.requestClose();
+				}
+			});
+			dialog.setSize(940, 650);
+			dialog.setLocationRelativeTo(this);
+			dialog.setVisible(true);
+		});
+		undoRules.addActionListener(event -> {
+			try {
+				undoRules();
+			} catch (IllegalArgumentException failure) {
+				JOptionPane.showMessageDialog(this, failure.getMessage(), "Names changed", JOptionPane.WARNING_MESSAGE);
+			}
+		});
 		grid.getSelectionModel().addListSelectionListener(event -> refreshActions());
 		sorter.addRowSorterListener(event -> scheduleCounts());
 		model.addTableModelListener(event -> scheduleCounts());
@@ -127,8 +192,83 @@ final class TransferNameMappingGrid extends JPanel {
 	}
 
 	private void finishEdit() {
-		if (grid.isEditing())
-			grid.getCellEditor().stopCellEditing();
+		if (grid.isEditing() && !grid.getCellEditor().stopCellEditing())
+			throw new IllegalArgumentException("Finish editing the current name first.");
+	}
+
+	java.util.List<NameChange> previewRules(TransferNameRules rules) {
+		finishEdit();
+		var changes = new ArrayList<NameChange>();
+		for (int row : selectedModelRows()) {
+			new TransferNameMappingIO.Configuration(1,
+					Map.of(value(row, 0), new TransferNameMappingIO.TableMapping(null, Map.of())));
+			String current = value(row, targetColumn);
+			if (blankUnchanged && current.isBlank()) {
+				String source = value(row, sourceColumn);
+				current = source.substring(source.lastIndexOf('.') + 1);
+			}
+			String proposed = rules.apply(current);
+			if (!blankUnchanged)
+				new TransferNameMappingIO.TableMapping(null, Map.of(value(row, sourceColumn), proposed));
+			validateName(proposed);
+			changes.add(new NameChange(row, rowValues(row), current, proposed));
+		}
+		if (changes.isEmpty())
+			throw new IllegalArgumentException("Select table or column rows first.");
+		return java.util.List.copyOf(changes);
+	}
+
+	private java.util.List<Object> rowValues(int row) {
+		var values = new ArrayList<Object>();
+		for (int column = 0; column < model.getColumnCount(); column++)
+			values.add(model.getValueAt(row, column));
+		return values;
+	}
+
+	private void validateName(String name) {
+		new TransferNameMappingIO.TableMapping(blankUnchanged ? name : null,
+				blankUnchanged ? Map.of() : Map.of("source", name));
+	}
+
+	private void checkRows(java.util.List<NameChange> changes) {
+		var seen = new HashSet<Integer>();
+		for (var change : changes) {
+			if (change.row() < 0 || change.row() >= model.getRowCount() || !seen.add(change.row())
+					|| !change.before().equals(rowValues(change.row())))
+				throw new IllegalArgumentException(
+						"Mapping rows changed. Refresh the naming preview before applying or undoing rules.");
+		}
+	}
+
+	void applyRules(java.util.List<NameChange> changes) {
+		finishEdit();
+		checkRows(changes);
+		for (var change : changes)
+			validateName(change.proposedName());
+		var applied = changes.stream().filter(NameChange::changed).toList();
+		for (var change : applied) {
+			model.setValueAt(change.proposedName(), change.row(), targetColumn);
+		}
+		if (!applied.isEmpty()) {
+			// Keep original raw values too, so a blank table target can be restored as
+			// blank.
+			undo = applied.stream().map(change -> new NameChange(change.row(), rowValues(change.row()),
+					change.currentName(),
+					change.before().get(targetColumn) == null ? "" : change.before().get(targetColumn).toString()))
+					.toList();
+		}
+		refreshCounts();
+	}
+
+	void undoRules() {
+		finishEdit();
+		if (undo == null)
+			return;
+		checkRows(undo);
+		for (var change : undo)
+			model.setValueAt(change.proposedName(), change.row(), targetColumn);
+		undo = null;
+		refreshCounts();
 	}
 
 	private int[] selectedModelRows() {
@@ -175,5 +315,7 @@ final class TransferNameMappingGrid extends JPanel {
 	private void refreshActions() {
 		reset.setEnabled(grid.isEnabled() && grid.getSelectedRowCount() > 0);
 		remove.setEnabled(reset.isEnabled());
+		naming.setEnabled(reset.isEnabled());
+		undoRules.setEnabled(grid.isEnabled() && undo != null);
 	}
 }

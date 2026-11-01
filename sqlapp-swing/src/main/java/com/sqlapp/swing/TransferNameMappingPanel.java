@@ -7,6 +7,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingIO;
 import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobDraftBuilder.SourceColumn;
+import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingInspectionService.Result;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 /** Offline name editor over the shared mapping format. */
 final class TransferNameMappingPanel extends JPanel {
@@ -38,9 +41,21 @@ final class TransferNameMappingPanel extends JPanel {
 	final JList<TransferNameMappingInputChecks.Issue> issueList = new JList<>(issues);
 	final JLabel checkStatus = new JLabel("Check names to locate input problems. Database review is still required.");
 	private boolean checked;
+	private Function<TransferNameMappingIO.Configuration, Callable<Result>> schemaInspector;
+
+	void setSchemaInspector(Function<TransferNameMappingIO.Configuration, Callable<Result>> inspector) {
+		schemaInspector = inspector;
+	}
 
 	TransferNameMappingPanel() {
 		super(new BorderLayout(8, 8));
+		for (var grid : java.util.List.of(tableTools, columnTools))
+			grid.setRuleInspector(changes -> {
+				if (schemaInspector == null)
+					throw new IllegalArgumentException(
+							"Open the mapping through Job settings and choose a source Schema XML to check proposed names.");
+				return schemaInspector.apply(proposedConfiguration(grid, changes));
+			});
 		var header = new JPanel(new BorderLayout());
 		header.add(
 				new JLabel(
@@ -101,6 +116,36 @@ final class TransferNameMappingPanel extends JPanel {
 
 	String formattedMapping() {
 		return new TransferNameMappingIO().format(configuration());
+	}
+
+	/** Build a candidate without changing editor cells or its saved mapping. */
+	TransferNameMappingIO.Configuration proposedConfiguration(TransferNameMappingGrid grid,
+			java.util.List<TransferNameMappingGrid.NameChange> changes) {
+		if (grid != tableTools && grid != columnTools)
+			throw new IllegalArgumentException("Choose this editor's mapping grid.");
+		grid.checkRulePreview(changes);
+		var resolved = new LinkedHashMap<>(configuration().tables());
+		for (var change : changes)
+			if (change.changed()) {
+				String table = change.before().get(0).toString();
+				var original = resolved.get(table);
+				if (grid == tableTools)
+					resolved.put(table,
+							new TransferNameMappingIO.TableMapping(change.proposedName(), original.columns()));
+				else {
+					var names = new LinkedHashMap<>(original.columns());
+					String column = change.before().get(1).toString();
+					if (column.equals(change.proposedName()))
+						names.remove(column);
+					else
+						names.put(column, change.proposedName());
+					resolved.put(table, new TransferNameMappingIO.TableMapping(original.targetTable(), names));
+				}
+			}
+		var candidate = new TransferNameMappingIO.Configuration(1, resolved);
+		var io = new TransferNameMappingIO();
+		io.validate(io.format(candidate));
+		return candidate;
 	}
 
 	private void showPreview() {
