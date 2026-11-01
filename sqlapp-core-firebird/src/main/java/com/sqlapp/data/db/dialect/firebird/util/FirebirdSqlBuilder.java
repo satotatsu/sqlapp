@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.dialect.firebird.util;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.NamedArgument;
@@ -35,6 +36,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  */
 public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 	public static final String ARRAY_BOUNDS = "firebird.array.bounds";
+	public static final String BLOB_SEGMENT_SIZE = "firebird.blob.segmentSize";
 
 	public FirebirdSqlBuilder(Dialect dialect) {
 		super(dialect);
@@ -120,6 +122,24 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 				throw new IllegalArgumentException("Firebird domain column cannot also be identity or computed");
 			return name(column.getDomainName());
 		}
+		var dataType = column.getDataType();
+		if ((dataType == DataType.NUMERIC || dataType == DataType.DECIMAL)
+				&& !"INT128".equalsIgnoreCase(column.getDataTypeName())) {
+			long precision = column.getLength() == null ? 9 : column.getLength();
+			int scale = column.getScale() == null ? 0 : column.getScale();
+			int maximum = getDialect().compareTo(DialectHolder.defaultDialect40) < 0 ? 18 : 38;
+			if (precision < 1 || precision > maximum || scale < 0 || scale > precision)
+				throw new IllegalArgumentException(
+						"Firebird numeric precision must be 1.." + maximum + " and scale 0..precision");
+		}
+		if (column.getArrayDimension() > 0 && (dataType == DataType.BLOB || dataType == DataType.CLOB))
+			throw new IllegalArgumentException("Firebird does not support BLOB arrays");
+		if (dataType == DataType.DECIMALFLOAT) {
+			if (getDialect().compareTo(DialectHolder.defaultDialect40) < 0)
+				throw new IllegalArgumentException("DECFLOAT requires Firebird 4.0 or later");
+			if (column.getLength() != null && column.getLength() != 16 && column.getLength() != 34)
+				throw new IllegalArgumentException("Firebird DECFLOAT precision must be 16 or 34");
+		}
 		if ("INT128".equalsIgnoreCase(column.getDataTypeName())) {
 			if (getDialect().compareTo(DialectHolder.defaultDialect40) < 0) {
 				throw new IllegalArgumentException("INT128 requires Firebird 4.0 or later");
@@ -127,6 +147,17 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 			_add("INT128");
 		} else {
 			super.typeDefinition(column);
+		}
+		String segment = column.getSpecifics().get(BLOB_SEGMENT_SIZE);
+		if (segment != null) {
+			try {
+				int size = Integer.parseInt(segment);
+				if ((dataType != DataType.BLOB && dataType != DataType.CLOB) || size < 1 || size > 65535)
+					throw new IllegalArgumentException("Firebird BLOB segment size must be 1..65535 on a BLOB/CLOB");
+				_add(" SEGMENT SIZE " + size);
+			} catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Invalid Firebird BLOB segment size: " + segment, e);
+			}
 		}
 		if (column.getArrayDimension() > 0) {
 			String bounds = column.getSpecifics().get(ARRAY_BOUNDS);

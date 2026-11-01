@@ -23,6 +23,8 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.firebird.metadata.FirebirdCatalogReader;
 import com.sqlapp.data.db.dialect.firebird.sql.FirebirdSqlFactoryRegistry;
@@ -68,24 +70,28 @@ public class Firebird extends Dialect {
 		// CHAR
 		getDbDataTypes().addChar(32767);
 		// VARCHAR
-		getDbDataTypes().addVarchar(32765);
+		getDbDataTypes().addVarchar(32765, type -> {
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?\\s+VARYING", ""));
+		});
 		// CLOB
 		getDbDataTypes().addClob("BLOB SUB_TYPE TEXT", SIZE_MAX, type -> {
 			type.addColumnTypeMatcher("BLOB SUBTYPE 1");
-			type.setCreateFormat("BLOB SUB_TYPE TEXT SEGMENT SIZE(", ")");
+			type.addColumnTypeMatcher(new RegexColumnTypeMatcher("BLOB\\s+SUB_TYPE\\s+(?:TEXT|1)"));
+			type.setCreateFormat("BLOB SUB_TYPE TEXT");
 		});
 		// Binary
 		getDbDataTypes().addBlob("BLOB", SIZE_MAX, type -> {
 			type.addColumnTypeMatcher("BLOB SUBTYPE 0");
-			type.setCreateFormat("BLOB SUB_TYPE BINARY SEGMENT SIZE(", ")");
+			type.addColumnTypeMatcher(new RegexColumnTypeMatcher("BLOB\\s+SUB_TYPE\\s+(?:BINARY|0)"));
+			type.setCreateFormat("BLOB SUB_TYPE BINARY");
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
-			type.setDefaultPrecision(18).setDefaultScale(5).setMaxPrecision(18).setMaxScale(18);
+			type.setDefaultPrecision(9).setDefaultScale(0).setMaxPrecision(18).setMaxScale(18);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
-			type.setDefaultPrecision(18).setDefaultScale(5).setMaxPrecision(18).setMaxScale(18);
+			type.setDefaultPrecision(9).setDefaultScale(0).setMaxPrecision(18).setMaxScale(18);
 		});
 		// Boolean
 		getDbDataTypes().addBoolean("DECIMAL(1,0)", type -> {
@@ -107,10 +113,13 @@ public class Firebird extends Dialect {
 		});
 		// Single
 		getDbDataTypes().addReal("FLOAT", type -> {
+			type.addColumnTypeMatcher("REAL");
+			type.addColumnTypeMatcher(new RegexColumnTypeMatcher("FLOAT\\s*\\(\\s*[0-7]\\s*\\)"));
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
 			type.setCreateFormat("DOUBLE PRECISION");
+			type.addColumnTypeMatcher(new RegexColumnTypeMatcher("FLOAT\\s*\\(\\s*(?:[89]|[1-9][0-9]+)\\s*\\)"));
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {

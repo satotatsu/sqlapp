@@ -26,7 +26,7 @@ import static com.sqlapp.data.db.datatype.DataType.CLOB;
 import static com.sqlapp.data.db.datatype.DataType.DATE;
 import static com.sqlapp.data.db.datatype.DataType.DECIMAL;
 import static com.sqlapp.data.db.datatype.DataType.DOUBLE;
-import static com.sqlapp.data.db.datatype.DataType.FLOAT;
+import static com.sqlapp.data.db.datatype.DataType.REAL;
 import static com.sqlapp.data.db.datatype.DataType.INT;
 import static com.sqlapp.data.db.datatype.DataType.NUMERIC;
 import static com.sqlapp.data.db.datatype.DataType.SMALLINT;
@@ -167,7 +167,7 @@ public class FirebirdUtils {
 			break;
 		case 10:// FLOAT
 			column.setDataTypeName("FLOAT");
-			column.setDataType(FLOAT);
+			column.setDataType(REAL);
 			column.setOctetLength(4);
 			break;
 		case 12:// DATE
@@ -224,6 +224,9 @@ public class FirebirdUtils {
 			column.setOctetLength(length);
 			break;
 		case 261:// BLOB
+			if (segmentLength > 0)
+				column.getSpecifics().put(com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder.BLOB_SEGMENT_SIZE,
+						Integer.toString(segmentLength));
 			switch (subType) {
 			case 0:// BLOB
 				column.setDataTypeName("BLOB SUB_TYPE BINARY");
