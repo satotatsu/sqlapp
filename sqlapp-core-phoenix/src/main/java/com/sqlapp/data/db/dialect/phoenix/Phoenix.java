@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcCatalogReader;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.util.TypeInformation;
+import com.sqlapp.data.db.dialect.phoenix.metadata.PhoenixCatalogReader;
 import com.sqlapp.data.db.dialect.phoenix.sql.PhoenixSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.phoenix.util.PhoenixSqlBuilder;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -63,7 +65,7 @@ public class Phoenix extends Dialect {
 	protected void registerDataType() {
 		// CHAR
 		getDbDataTypes().addChar(SIZE_MAX, type -> {
-			type.setDefaultLength(1).setCharset("UTF-16");
+			type.setDefaultLength(1).setCharset("UTF-8");
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar(SIZE_MAX, type -> {
@@ -125,7 +127,7 @@ public class Phoenix extends Dialect {
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
-			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(38).setMaxScale(38);
 		});
 	}
 
@@ -135,6 +137,76 @@ public class Phoenix extends Dialect {
 	@Override
 	public String getProductName() {
 		return "Apache Phoenix";
+	}
+
+	/** Retains native encodings while using the shared scalar/array model. */
+	@Override
+	public java.util.Optional<TypeInformation> matchDbType(final DataType dataType, final String productDataType,
+			final Long length, final Integer scale) {
+		if (productDataType == null)
+			return super.matchDbType(dataType, null, length, scale);
+		String name = productDataType.strip().toUpperCase(java.util.Locale.ROOT);
+		final var array = arrayType(name);
+		final boolean isArray = array.matches();
+		if (isArray)
+			name = array.group(1).strip();
+		final String base = switch (name) {
+		case "UNSIGNED_FLOAT" -> "FLOAT";
+		case "UNSIGNED_DOUBLE" -> "DOUBLE";
+		case "UNSIGNED_DATE" -> "DATE";
+		case "UNSIGNED_TIME" -> "TIME";
+		case "UNSIGNED_TIMESTAMP" -> "TIMESTAMP";
+		default -> name;
+		};
+		if (!isArray && base.equals(name))
+			return super.matchDbType(dataType, productDataType, length, scale);
+		final var result = super.matchDbType(null, base, length, scale);
+		final String nativeName = name;
+		result.ifPresent(info -> {
+			if (!nativeName.equals(base))
+				info.setDataTypeName(nativeName);
+			if (isArray) {
+				if (info.getDataType().orElse(DataType.OTHER) == DataType.OTHER || base.equals("VARBINARY"))
+					throw new IllegalArgumentException("Unsupported Phoenix ARRAY element type: " + nativeName);
+				info.setArrayDimension(1);
+			}
+		});
+		return result;
+	}
+
+	private static java.util.regex.Matcher arrayType(String name) {
+		return java.util.regex.Pattern
+				.compile("^(.+?)\\s*(?:\\s+ARRAY(?:\\s*\\[(?<capacity>[^\\[\\]]*)\\])?|\\[(?<size>[^\\[\\]]*)\\])$")
+				.matcher(name);
+	}
+
+	@Override
+	public boolean setDbType(final DataType dataType, final String productDataType, final Long length,
+			final Integer scale, final com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
+		Integer capacity = null;
+		if (productDataType != null) {
+			final var array = arrayType(productDataType.strip().toUpperCase(java.util.Locale.ROOT));
+			if (array.matches()) {
+				final String text = array.group("capacity") != null ? array.group("capacity") : array.group("size");
+				if (text != null && !text.isBlank()) {
+					try {
+						capacity = Integer.valueOf(text.strip());
+					} catch (NumberFormatException e) {
+						throw new IllegalArgumentException("Phoenix ARRAY capacity exceeds the Schema integer range",
+								e);
+					}
+					if (capacity <= 0)
+						throw new IllegalArgumentException("Phoenix ARRAY capacity must be positive");
+				}
+			}
+		}
+		final boolean matched = super.setDbType(dataType, productDataType, length, scale, column);
+		if (matched && capacity != null) {
+			if (!(column instanceof com.sqlapp.data.schemas.properties.ArrayDimensionUpperBoundProperty<?> bound))
+				throw new IllegalArgumentException("Target Schema object cannot retain Phoenix ARRAY capacity");
+			bound.setArrayDimensionUpperBound(capacity);
+		}
+		return matched;
 	}
 
 	/**
@@ -153,6 +225,27 @@ public class Phoenix extends Dialect {
 	@Override
 	public String getSelectDummyTableName() {
 		return null;
+	}
+
+	@Override
+	public String getCurrentDateFunction() {
+		return "CURRENT_DATE()";
+	}
+
+	@Override
+	public String getCurrentDateTimeFunction() {
+		// Phoenix DATE includes time to millisecond precision.
+		return getCurrentDateFunction();
+	}
+
+	@Override
+	public String getCurrentTimeFunction() {
+		return "CURRENT_TIME()";
+	}
+
+	@Override
+	public String getCurrentTimestampFunction() {
+		return "CAST(CURRENT_DATE() AS TIMESTAMP)";
 	}
 
 	@Override
@@ -181,7 +274,7 @@ public class Phoenix extends Dialect {
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
-		return new JdbcCatalogReader(this);
+		return new PhoenixCatalogReader(this);
 	}
 
 	/*
