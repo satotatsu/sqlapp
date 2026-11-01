@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.sybase.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.notZero;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -75,7 +74,8 @@ public class SybaseDomainReader extends DomainReader {
 		Long prec = getLong(rs, "prec");
 		Integer scale = getInteger(rs, "scale");
 		obj.setNullable(rs.getBoolean("allownulls"));
-		getDialect().setDbType(productDataType, notZero(max_length, prec), scale, obj);
+		getDialect().setDbType(productDataType, SybaseUtils.getTypeLength(productDataType, max_length, prec), scale,
+				obj);
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		setSpecifics(rs, "collation_name", obj);

@@ -32,6 +32,7 @@ final class TransferNameMappingPanel extends JPanel {
 	final JButton checkNames = new JButton("Check names");
 	final JButton previewYaml = new JButton("Preview YAML");
 	final TransferNameMappingPreview preview = new TransferNameMappingPreview();
+	final TransferNameMappingSchemaPanel schemaCheck = new TransferNameMappingSchemaPanel();
 	final JButton goToIssue = new JButton("Go to selected field");
 	final DefaultListModel<TransferNameMappingInputChecks.Issue> issues = new DefaultListModel<>();
 	final JList<TransferNameMappingInputChecks.Issue> issueList = new JList<>(issues);
@@ -58,6 +59,7 @@ final class TransferNameMappingPanel extends JPanel {
 		checks.add(goToIssue, BorderLayout.SOUTH);
 		tabs.addTab("Input checks", checks);
 		tabs.addTab("YAML preview", preview);
+		tabs.addTab("Schema check", schemaCheck);
 		previewYaml.addActionListener(event -> showPreview());
 		preview.refresh.addActionListener(event -> showPreview());
 		checkNames.addActionListener(event -> checkInputs(true));
@@ -81,6 +83,7 @@ final class TransferNameMappingPanel extends JPanel {
 		});
 		javax.swing.event.TableModelListener invalidated = event -> {
 			preview.changed();
+			schemaCheck.changed();
 			if (checked) {
 				issues.clear();
 				checked = false;

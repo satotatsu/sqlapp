@@ -22,7 +22,6 @@ package com.sqlapp.data.db.dialect.sybase.metadata;
 import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.eqIgnoreCase;
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.notZero;
 import static com.sqlapp.util.CommonUtils.unwrap;
 
 import java.sql.Connection;
@@ -170,9 +169,8 @@ public class SybaseColumnReader extends ColumnReader {
 		Column obj = new Column(getString(rs, COLUMN_NAME));
 		obj.setNullable(rs.getBoolean("is_nullable"));
 		obj.setIdentity(rs.getBoolean("is_identity"));
-		final boolean decimal = productDataType != null && java.util.Set.of("NUMERIC", "DECIMAL", "DEC")
-				.contains(productDataType.toUpperCase(java.util.Locale.ROOT));
-		this.getDialect().setDbType(productDataType, decimal ? precision : notZero(max_length, precision), scale, obj);
+		this.getDialect().setDbType(productDataType, SybaseUtils.getTypeLength(productDataType, max_length, precision),
+				scale, obj);
 		obj.setDefaultValue(unwrap(rs.getString("default_definition"), '(', ')'));
 		if (rs.getBoolean("is_computed")) {
 			obj.setFormula(rs.getString("computed_definition"));

@@ -64,6 +64,8 @@ public class SybaseTriggerReader extends TriggerReader {
 		sources.values().forEach(source -> {
 			String definition = source.definition.toString();
 			Trigger trigger = source.trigger;
+			if ((getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) && definition.isBlank())
+				throw new IllegalStateException("Empty SAP ASE trigger source: " + trigger.getName());
 			if (getReaderOptions().isReadDefinition()) {
 				trigger.setDefinition(definition);
 			}

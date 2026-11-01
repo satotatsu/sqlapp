@@ -101,6 +101,8 @@ public class SybaseProcedureReader extends ProcedureReader {
 
 	private void setDefinition(Procedure obj, String definition) {
 		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
+			if (definition.isBlank())
+				throw new IllegalStateException("Empty SAP ASE procedure source: " + obj.getName());
 			obj.setDefinition(definition);
 		}
 	}

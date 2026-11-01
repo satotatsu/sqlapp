@@ -102,6 +102,8 @@ public class SybaseFunctionReader extends FunctionReader {
 	private void setDefinition(Function function, StringBuilder definitionBuilder) {
 		String definition = definitionBuilder.toString();
 		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
+			if (definition.isBlank())
+				throw new IllegalStateException("Empty SAP ASE function source: " + function.getName());
 			function.setDefinition(definition);
 		}
 		String productDataType = SybaseUtils.getFunctionReturnName(definition);

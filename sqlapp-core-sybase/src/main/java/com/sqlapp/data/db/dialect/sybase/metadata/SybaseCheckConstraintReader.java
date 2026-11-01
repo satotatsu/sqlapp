@@ -71,7 +71,13 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 			}
 		});
 		List<CheckConstraint> list = map.toList();
-		text.forEach((constraint, source) -> constraint.setExpression(unwrap(source.toString(), '(', ')')));
+		text.forEach((constraint, source) -> {
+			final String expression = unwrap(source.toString(), '(', ')');
+			if (expression == null || expression.isBlank()) {
+				throw new IllegalStateException("Empty SAP ASE CHECK source: " + constraint.getName());
+			}
+			constraint.setExpression(expression);
+		});
 		return list;
 	}
 

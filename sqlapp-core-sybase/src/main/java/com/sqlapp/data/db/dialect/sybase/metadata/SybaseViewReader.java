@@ -86,6 +86,8 @@ public class SybaseViewReader extends AbstractISViewReader {
 
 	private void setDefinition(Table obj, String definition) {
 		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
+			if (definition.isBlank())
+				throw new IllegalStateException("Empty SAP ASE view source: " + obj.getName());
 			obj.setDefinition(definition);
 		}
 		if (this.getReaderOptions().isReadStatement()) {

@@ -22,6 +22,7 @@ final class TransferNameMappingDialog {
 		var schemaFile = new JTextField(job.getParent().resolve("source-schema.xml").toString(), 30);
 		var browseSchema = new JButton("Browse…");
 		var loadColumns = new JButton("Load columns");
+		var checkSchema = new JButton("Check Schema");
 		var schemaRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		var schemaLabel = new JLabel("Source Schema XML");
 		schemaLabel.setLabelFor(schemaFile);
@@ -29,6 +30,7 @@ final class TransferNameMappingDialog {
 		schemaRow.add(schemaFile);
 		schemaRow.add(browseSchema);
 		schemaRow.add(loadColumns);
+		schemaRow.add(checkSchema);
 		var footer = new JPanel(new BorderLayout());
 		var actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		actions.add(save);
@@ -60,6 +62,7 @@ final class TransferNameMappingDialog {
 			save.setEnabled(!busy[0] && available[0]);
 			cancel.setEnabled(!busy[0]);
 			loadColumns.setEnabled(save.isEnabled());
+			checkSchema.setEnabled(save.isEnabled());
 			browseSchema.setEnabled(save.isEnabled());
 			schemaFile.setEnabled(save.isEnabled());
 			enable(editor, save.isEnabled());
@@ -69,6 +72,58 @@ final class TransferNameMappingDialog {
 			editor.preview.refreshEnabled(save.isEnabled());
 		};
 		refresh.run();
+		schemaFile.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+			public void insertUpdate(javax.swing.event.DocumentEvent event) {
+				editor.schemaCheck.changed();
+			}
+
+			public void removeUpdate(javax.swing.event.DocumentEvent event) {
+				editor.schemaCheck.changed();
+			}
+
+			public void changedUpdate(javax.swing.event.DocumentEvent event) {
+				editor.schemaCheck.changed();
+			}
+		});
+		checkSchema.addActionListener(event -> {
+			final TransferNameMappingIO.Configuration mapping;
+			final Path schema;
+			try {
+				mapping = editor.configuration();
+				if (schemaFile.getText().isBlank())
+					throw new IllegalArgumentException("Choose a source Schema XML file.");
+				schema = Path.of(schemaFile.getText());
+			} catch (Exception failure) {
+				status.setText(message(failure));
+				return;
+			}
+			busy[0] = true;
+			refresh.run();
+			editor.schemaCheck.clear("Checking captured Schema and selected mapping…");
+			editor.tabs.setSelectedIndex(4);
+			status.setText("Checking captured Schema without a database connection…");
+			new SwingWorker<TransferNameMappingInspectionService.Result, Void>() {
+				@Override
+				protected TransferNameMappingInspectionService.Result doInBackground() throws Exception {
+					return new TransferNameMappingInspectionService().inspect(schema, selected, mapping);
+				}
+
+				@Override
+				protected void done() {
+					try {
+						editor.schemaCheck.showResult(get());
+						status.setText(
+								"Captured Schema mapping checked. Save settings and review against the current databases before execution.");
+					} catch (Exception failure) {
+						editor.schemaCheck.clear("Schema check failed: " + message(failure));
+						status.setText(message(failure));
+					} finally {
+						busy[0] = false;
+						refresh.run();
+					}
+				}
+			}.execute();
+		});
 		FileDropHandler.path(schemaFile, false, java.util.List.of("xml"), schemaFile::isEnabled,
 				failure -> status.setText(failure.getMessage()));
 		browseSchema.addActionListener(event -> {

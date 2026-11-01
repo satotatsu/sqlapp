@@ -13,7 +13,9 @@ INNER JOIN sysobjects so
   ON (c.tableid=so.id)
 INNER JOIN sysusers su
   ON (so.uid = su.uid)
-INNER JOIN syscomments sc
+INNER JOIN sysobjects co
+  ON (c.constrid = co.id AND co.type = 'C')
+LEFT OUTER JOIN syscomments sc
   ON (c.constrid = sc.id AND sc.texttype=0)
 WHERE (c.status & 128)=128
   AND (c.status & 1)=0

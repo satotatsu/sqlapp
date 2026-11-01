@@ -14,6 +14,33 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class SybaseDefinitionReaderTest {
+	@Test
+	void rejectsBlankRoutineSourcesButRetainsHeaderOnlyObjects() {
+		final var options = new ReaderOptions();
+		final var procedure = new SybaseProcedureReader(DialectHolder.defaultDialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+				feed(h, List.of(row("dbo", " \n ")));
+				return null;
+			}
+		};
+		final var function = new SybaseFunctionReader(DialectHolder.defaultDialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+				feed(h, List.of(row("dbo", " \n ")));
+				return null;
+			}
+		};
+		procedure.setReaderOptions(options);
+		function.setReaderOptions(options);
+		assertThrows(IllegalStateException.class, () -> procedure.doGetAll(null, new ParametersContext(), null));
+		assertThrows(IllegalStateException.class, () -> function.doGetAll(null, new ParametersContext(), null));
+		options.setReadStatement(false);
+		options.setReadDefinition(false);
+		assertEquals(1, procedure.doGetAll(null, new ParametersContext(), null).size());
+		assertEquals(1, function.doGetAll(null, new ParametersContext(), null).size());
+	}
+
 	private ExResultSet row(String owner, String text) {
 		return new ExResultSet(null) {
 			@Override
@@ -49,7 +76,7 @@ class SybaseDefinitionReaderTest {
 	}
 
 	@Test
-	void keepsProcedureOwnersSeparateAndPreservesChunkWhitespace() {
+	void keepsProcedureOwnersSeparateAndPreservesChunkWhitespace() throws Exception {
 		final var rows = List.of(row("a", "CREATE PROCEDURE a.shared AS SELECT 'a "), row("a", "b'"),
 				row("b", "CREATE PROCEDURE b.shared AS SELECT 'other'"));
 		final var calls = new int[1];
@@ -68,10 +95,15 @@ class SybaseDefinitionReaderTest {
 		assertEquals("a", result.get(0).getSchemaName());
 		assertEquals("b", result.get(1).getSchemaName());
 		assertEquals("CREATE PROCEDURE a.shared AS SELECT 'a b'", String.join("\n", result.get(0).getDefinition()));
+		final com.sqlapp.data.schemas.Procedure restored = com.sqlapp.data.schemas.SchemaUtils
+				.readXml(new java.io.StringReader(result.get(0).asXml()));
+		assertEquals("CREATE PROCEDURE a.shared AS SELECT 'a b'",
+				DialectHolder.defaultDialect.createSqlFactoryRegistry()
+						.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE).get(0).getSqlText());
 	}
 
 	@Test
-	void readsViewsWithoutInformationSchemaOnlyColumnsAndHonorsTextOptions() {
+	void readsViewsWithoutInformationSchemaOnlyColumnsAndHonorsTextOptions() throws Exception {
 		final var rows = new ArrayList<>(List.of(row("a", "CREATE VIEW a.shared AS SELECT 'a "),
 				row("a", "b' AS value"), row("b", "CREATE VIEW b.shared AS SELECT 2 AS value")));
 		final var calls = new int[1];
@@ -91,6 +123,11 @@ class SybaseDefinitionReaderTest {
 		assertEquals(1, calls[0]);
 		assertEquals(2, result.size());
 		assertEquals("CREATE VIEW a.shared AS SELECT 'a b' AS value", String.join("\n", result.get(0).getDefinition()));
+		final com.sqlapp.data.schemas.Table restored = com.sqlapp.data.schemas.SchemaUtils
+				.readXml(new java.io.StringReader(result.get(0).asXml()));
+		assertEquals("CREATE VIEW a.shared AS SELECT 'a b' AS value",
+				DialectHolder.defaultDialect.createSqlFactoryRegistry()
+						.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE).get(0).getSqlText());
 		rows.clear();
 		rows.add(row("a", null));
 		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
@@ -99,7 +136,7 @@ class SybaseDefinitionReaderTest {
 	}
 
 	@Test
-	void keepsFunctionOwnersSeparateAndRequiresReadableTextOnlyWhenRequested() {
+	void keepsFunctionOwnersSeparateAndRequiresReadableTextOnlyWhenRequested() throws Exception {
 		final var rows = new ArrayList<>(
 				List.of(row("a", "CREATE FUNCTION a.shared() RETURNS VARCHAR(20) AS BEGIN RETURN 'a "),
 						row("a", "b' END"), row("b", "CREATE FUNCTION b.shared() RETURNS INT AS BEGIN RETURN 2 END")));
@@ -115,6 +152,11 @@ class SybaseDefinitionReaderTest {
 		final var result = reader.doGetAll(null, new ParametersContext(), null);
 		assertEquals(2, result.size());
 		assertTrue(String.join("\n", result.get(0).getDefinition()).contains("'a b'"));
+		final com.sqlapp.data.schemas.Function restored = com.sqlapp.data.schemas.SchemaUtils
+				.readXml(new java.io.StringReader(result.get(0).asXml()));
+		assertEquals(String.join("\n", result.get(0).getDefinition()),
+				DialectHolder.defaultDialect.createSqlFactoryRegistry()
+						.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE).get(0).getSqlText());
 		rows.clear();
 		rows.add(row("a", null));
 		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));

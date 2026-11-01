@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.sybase.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.NamedArgumentCollection;
 import com.sqlapp.data.schemas.Procedure;
@@ -39,6 +41,31 @@ public class SybaseSqlBuilder extends AbstractSqlBuilder<SybaseSqlBuilder> {
 
 	public SybaseSqlBuilder identity() {
 		appendElement("IDENTITY");
+		return instance();
+	}
+
+	@Override
+	protected SybaseSqlBuilder autoIncrement(final AbstractColumn<?> column) {
+		if ((column.getIdentityStep() != null && column.getIdentityStep() != 1L)
+				|| (column.getIdentityStartValue() != null && column.getIdentityStartValue() != 1L)) {
+			throw new IllegalArgumentException("ASE IDENTITY column " + column.getName()
+					+ " cannot declare a custom start or increment in column DDL");
+		}
+		return identity();
+	}
+
+	@Override
+	public SybaseSqlBuilder definition(final Column column, final boolean withRemarks) {
+		if (column.getFormula() == null) {
+			return super.definition(column, withRemarks);
+		}
+		if (column.getFormula().isBlank() || column.isIdentity() || column.getDefaultValue() != null
+				|| column.getCheck() != null || column.getOnUpdate() != null) {
+			throw new IllegalArgumentException("ASE computed column " + column.getName()
+					+ " requires a nonempty formula without identity, default, check or on-update clauses");
+		}
+		as().space()._add(column.getFormula());
+		space()._add(column.isFormulaPersisted() ? "MATERIALIZED" : "NOT MATERIALIZED");
 		return instance();
 	}
 

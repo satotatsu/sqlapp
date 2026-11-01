@@ -71,7 +71,7 @@ public class SybaseUtils extends ReaderUtils {
 		Integer scale = getInteger(rs, "scale");
 		obj.setDefaultValue(getString(rs, "default_value"));
 		obj.setReadonly(getBoolean(rs, "is_readonly"));
-		dialect.setDbType(productDataType, notZero(max_length, precision), scale, obj);
+		dialect.setDbType(productDataType, getTypeLength(productDataType, max_length, precision), scale, obj);
 	}
 
 	/**
@@ -282,10 +282,18 @@ public class SybaseUtils extends ReaderUtils {
 		return statement;
 	}
 
+	static Long getTypeLength(String productDataType, Long length, Long precision) {
+		if (productDataType != null && java.util.Set.of("NUMERIC", "DECIMAL", "DEC")
+				.contains(productDataType.toUpperCase(java.util.Locale.ROOT))) {
+			return precision;
+		}
+		return notZero(length, precision);
+	}
+
 	public static Long getMaxLength(String productDataType, Long byteLength) {
-		productDataType = productDataType.toUpperCase();
-		if (productDataType.startsWith("NTEXT") || productDataType.startsWith("NCHAR")
-				|| productDataType.startsWith("NVARCHAR") && byteLength != null) {
+		productDataType = productDataType.toUpperCase(java.util.Locale.ROOT);
+		if (byteLength != null && (productDataType.startsWith("NTEXT") || productDataType.startsWith("NCHAR")
+				|| productDataType.startsWith("NVARCHAR"))) {
 			if (byteLength.longValue() > 0) {
 				return byteLength.longValue() / 2;
 			}

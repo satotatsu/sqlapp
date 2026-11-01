@@ -10,6 +10,26 @@ import com.sqlapp.data.db.dialect.sybase.DialectHolder;
 import com.sqlapp.data.db.sql.SqlType;
 
 class SybaseSourceTextTest {
+	@Test
+	void rejectsViewHeadersWithoutExecutableBody() {
+		assertThrows(IllegalStateException.class, () -> SybaseSourceText.viewStatement("CREATE VIEW v AS "));
+		assertThrows(IllegalStateException.class,
+				() -> SybaseSourceText.viewStatement("CREATE VIEW v AS /* missing */"));
+	}
+
+	@Test
+	void rejectsNumberedGroupsAndPreservesFirstGroupSource() throws Exception {
+		assertThrows(UnsupportedOperationException.class,
+				() -> SybaseSourceText.required(
+						SybaseReaderTestSupport
+								.row(java.util.Map.of("source_group", 2, "definition", "CREATE PROC p;2 AS SELECT 2")),
+						"definition", "p"));
+		assertEquals(" source ",
+				SybaseSourceText.required(
+						SybaseReaderTestSupport.row(java.util.Map.of("source_group", 1, "definition", " source ")),
+						"definition", "p"));
+	}
+
 	@ParameterizedTest
 	@CsvSource(value = { "DEFAULT (42)|(42)", "CREATE DEFAULT [AS] AS 'hello world'|'hello world'",
 			"CREATE OR REPLACE DEFAULT dbo.x AS (1 + 2)|(1 + 2)",

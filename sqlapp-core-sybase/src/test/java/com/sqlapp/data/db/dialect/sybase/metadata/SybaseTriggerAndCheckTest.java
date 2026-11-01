@@ -14,6 +14,27 @@ import com.sqlapp.jdbc.sql.*;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class SybaseTriggerAndCheckTest {
+	@Test
+	void rejectsMissingAndBlankTriggerSourcesWithoutLosingHeaders() {
+		for (String text : new String[] { null, "", " \n " }) {
+			final var values = trigger(1, text);
+			final var reader = new SybaseTriggerReader(DialectHolder.defaultDialect) {
+				@Override
+				protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p,
+						ResultSetNextHandler h) {
+					SybaseReaderTestSupport.feed(h, List.of(values));
+					return null;
+				}
+			};
+			final var options = new ReaderOptions();
+			reader.setReaderOptions(options);
+			assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			options.setReadStatement(false);
+			options.setReadDefinition(false);
+			assertEquals(1, reader.doGetAll(null, new ParametersContext(), null).size());
+		}
+	}
+
 	private Map<String, Object> trigger(int id, String text) {
 		var row = new HashMap<String, Object>();
 		row.put("catalog_name", "db");
@@ -99,6 +120,23 @@ class SybaseTriggerAndCheckTest {
 			assertEquals("value = 'a b'", check.getExpression());
 			final CheckConstraint xml = SchemaUtils.readXml(new java.io.StringReader(check.asXml()));
 			assertEquals(check.getExpression(), xml.getExpression());
+		}
+	}
+
+	@Test
+	void rejectsEmptyCheckDefinitions() {
+		for (String source : List.of("", "   ", "()", "( )")) {
+			var reader = new SybaseCheckConstraintReader(DialectHolder.defaultDialect) {
+				@Override
+				protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p,
+						ResultSetNextHandler h) {
+					SybaseReaderTestSupport.feed(h,
+							List.of(Map.of("constraint_name", "empty_check", "definition", source)));
+					return null;
+				}
+			};
+			assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, new ParametersContext(), null),
+					source);
 		}
 	}
 }

@@ -7,7 +7,7 @@ SELECT
   , NULL AS text_in_row_limit
   , CASE WHEN EXISTS (
       SELECT 1 FROM sysindexes si
-      WHERE si.id = so.id AND si.indid = 1
+      WHERE si.id = so.id AND (si.indid = 1 OR (si.status2 & 512) = 512)
     ) THEN 1 ELSE 0 END AS has_clustered_index
   , NULL AS file_group_name
   , NULL AS lob_file_group_name

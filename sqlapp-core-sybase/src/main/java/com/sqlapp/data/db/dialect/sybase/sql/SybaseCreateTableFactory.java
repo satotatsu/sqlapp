@@ -12,7 +12,7 @@ public class SybaseCreateTableFactory extends CreateTableFactory {
 	@Override
 	protected void addColumnDefinition(final Column column, final AbstractSqlBuilder<?> builder) {
 		super.addColumnDefinition(column, builder);
-		if (!column.isNotNull()) {
+		if (!column.isNotNull() && !column.isIdentity() && column.getFormula() == null) {
 			builder.space().null_();
 		}
 	}

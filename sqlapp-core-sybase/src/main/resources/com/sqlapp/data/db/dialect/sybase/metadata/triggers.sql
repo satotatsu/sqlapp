@@ -11,7 +11,7 @@ SELECT
 , c.number AS source_group
 FROM sysobjects tr
 INNER JOIN sysobjects tbl ON tr.deltrig=tbl.id
-INNER JOIN syscomments c ON tr.id=c.id AND c.texttype=0
+LEFT OUTER JOIN syscomments c ON tr.id=c.id AND c.texttype=0
 WHERE tr.type='TR'
   /*if isNotEmpty(catalogName) */
   AND DB_NAME() IN /*catalogName;type=VARCHAR*/('%')

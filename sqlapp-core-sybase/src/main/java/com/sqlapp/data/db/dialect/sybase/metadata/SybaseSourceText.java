@@ -92,6 +92,9 @@ public final class SybaseSourceText {
 		final var as = Pattern.compile("(?i)\\bAS\\b").matcher(masked);
 		if (!create.find() || !as.find(create.end()))
 			throw new IllegalStateException("Missing SAP ASE CREATE VIEW AS header");
-		return source.substring(as.end()).stripLeading();
+		final String statement = source.substring(as.end()).stripLeading();
+		if (mask(statement).isBlank())
+			throw new IllegalStateException("Empty SAP ASE view statement");
+		return statement;
 	}
 }

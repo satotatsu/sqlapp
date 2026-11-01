@@ -18,6 +18,33 @@ class MdbTransferIntegrationTest {
 	@TempDir
 	Path directory;
 
+	@org.junit.jupiter.api.Test
+	void accessDoubleMetadataProducesPostgresDoublePrecisionDdl() throws Exception {
+		var file = directory.resolve("item-double.accdb");
+		try (var connection = DriverManager
+				.getConnection("jdbc:ucanaccess://" + file.toAbsolutePath() + ";newDatabaseVersion=V2010");
+				var statement = connection.createStatement()) {
+			statement.execute(
+					"CREATE TABLE [T_item] ([item] VARCHAR(40) NOT NULL PRIMARY KEY, [price] DOUBLE DEFAULT 0)");
+			statement.execute("INSERT INTO [T_item] VALUES('sample',1.5)");
+		}
+		byte[] original = Files.readAllBytes(file);
+		var prepared = new DataMigrationDraftService().discover(
+				new PlanningJdbc.Spec(MdbSourceFile.jdbcUrl(file), "", MdbSourceFile.DRIVER), new char[0], "",
+				directory);
+		com.sqlapp.data.schemas.Schema schema = com.sqlapp.data.schemas.SchemaUtils
+				.readXml(prepared.schema().file().toFile());
+		var table = schema.getTables().get("T_item");
+		assertEquals(com.sqlapp.data.db.datatype.DataType.DOUBLE, table.getColumns().get("price").getDataType());
+		var postgres = com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("postgres", 18, 0, null);
+		com.sqlapp.data.db.sql.SqlFactory<com.sqlapp.data.schemas.Table> factory = postgres.createSqlFactoryRegistry()
+				.getSqlFactory(table, com.sqlapp.data.db.sql.SqlType.CREATE);
+		String sql = factory.createSql(table).getFirst().getSqlText();
+		assertTrue(sql.contains("DOUBLE PRECISION DEFAULT 0"), sql);
+		assertFalse(sql.contains("DOUBLE DEFAULT"), sql);
+		assertArrayEquals(original, Files.readAllBytes(file));
+	}
+
 	@ParameterizedTest
 	@org.junit.jupiter.params.provider.ValueSource(strings = { "ID", "行ID" })
 	void keylessAccessUsesDefaultOrConfiguredTargetIdentityWithoutChangingTheFile(String keyName) throws Exception {

@@ -9,7 +9,7 @@ db_name() AS specific_catalog
 , (ISNULL(c.status,0) & 1) AS source_hidden
 , c.number AS source_group
 FROM sysobjects o
-INNER JOIN syscomments c ON o.id=c.id AND c.texttype=0
+LEFT OUTER JOIN syscomments c ON o.id=c.id AND c.texttype=0
 WHERE o.type IN ('F', 'SF')
   /*if isNotEmpty(catalogName) */
   AND db_name() IN /*catalogName;type=VARCHAR*/('%')

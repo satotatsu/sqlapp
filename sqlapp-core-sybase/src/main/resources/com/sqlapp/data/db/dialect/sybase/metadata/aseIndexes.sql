@@ -6,7 +6,7 @@ SELECT
 , index_col(so.name, si.indid, n.number, su.uid) AS column_name
 , n.number AS keyno
 , CASE WHEN (si.status & 2) = 2 THEN 1 ELSE 0 END AS is_unique
-, CASE si.indid WHEN 1 THEN 1 ELSE 2 END AS type
+, CASE WHEN si.indid = 1 OR (si.status2 & 512) = 512 THEN 1 ELSE 2 END AS type
 , si.fill_factor AS fill_factor
 , NULL AS pad_index
 , NULL AS allow_row_locks

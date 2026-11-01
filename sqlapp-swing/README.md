@@ -1465,6 +1465,13 @@ the database Review or authorize execution.
 with search/line navigation and **Copy YAML**. It uses the save formatter and
 includes hidden overrides. Editing clears the old preview and disables copying
 until refreshed; previewing/copying writes no file and does not execute a transfer.
+**Source Schema XML → Check Schema** checks the mapping against captured metadata
+through the same shared Schema projection used by execution. **Schema check**
+shows resolved table/column names, source logical types, source PK/NULL properties,
+warnings and source/mapping fingerprints. Unknown columns, out-of-selection
+mappings, collisions and missing referenced parents are reported without database
+access or file writes. Edits or Schema-path changes clear the result. It remains a
+snapshot: target existence/types, generated keys and DDL require database Review.
 Closing the name editor protects unsaved name changes (including invalid edits);
 choose to keep editing or explicitly discard. Filters/previews and unchanged source
 column loading do not trigger this prompt. Saved mapping paths are attached to

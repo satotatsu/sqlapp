@@ -21,7 +21,7 @@ public class SybaseAlterTableFactory extends AlterTableFactory {
 		builder.alter().table().name(table, this.getOptions().isDecorateSchemaName());
 		builder.add();
 		builder.name(column).space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
-		if (!column.isNotNull()) {
+		if (!column.isNotNull() && !column.isIdentity() && column.getFormula() == null) {
 			builder.space().null_();
 		}
 		add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
