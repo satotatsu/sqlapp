@@ -16,6 +16,6 @@ public class MariadbCreateSequenceFactory extends AbstractCreateSequenceFactory<
 
 	@Override
 	protected void addIfNotExists(Sequence obj, MySqlSqlBuilder builder) {
-		builder.ifNotExists();
+		builder.ifNotExists(getOptions().isCreateIfNotExists());
 	}
 }

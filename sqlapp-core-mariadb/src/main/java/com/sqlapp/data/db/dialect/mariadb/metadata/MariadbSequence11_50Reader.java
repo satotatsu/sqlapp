@@ -41,7 +41,10 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 				Sequence sequence = new Sequence(getString(rs, "SEQUENCE_NAME"));
 				sequence.setCatalogName(getString(rs, "SEQUENCE_CATALOG"));
 				sequence.setSchemaName(getString(rs, "SEQUENCE_SCHEMA"));
-				sequence.setDataTypeName(getString(rs, "DATA_TYPE"));
+				final var type = new com.sqlapp.data.schemas.Column();
+				getDialect().setDbType(getString(rs, "DATA_TYPE"), null, null, type);
+				sequence.setDataType(type.getDataType());
+				sequence.setDataTypeName(type.getDataTypeName());
 				sequence.setPrecision(getInteger(rs, "NUMERIC_PRECISION"));
 				sequence.setScale(getInteger(rs, "NUMERIC_SCALE"));
 				sequence.setStartValue(toBigInteger(rs.getBigDecimal("START_VALUE")));
@@ -56,6 +59,6 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 	}
 
 	private static java.math.BigInteger toBigInteger(BigDecimal value) {
-		return value == null ? null : value.toBigInteger();
+		return value == null ? null : value.toBigIntegerExact();
 	}
 }

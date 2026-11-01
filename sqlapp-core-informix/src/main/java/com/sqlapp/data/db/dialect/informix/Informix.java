@@ -89,6 +89,7 @@ public class Informix extends Dialect {
 		});
 		// Int64
 		getDbDataTypes().addBigInt("INT8", type -> {
+			type.addColumnTypeMatcher("BIGINT");
 		});
 		// Serial
 		getDbDataTypes().addSerial(type -> {
@@ -106,9 +107,11 @@ public class Informix extends Dialect {
 		});
 		// Single
 		getDbDataTypes().addReal("SMALLFLOAT", type -> {
+			type.addColumnTypeMatcher("REAL");
 		});
 		// Double
 		getDbDataTypes().addDouble("FLOAT", type -> {
+			type.addColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -120,6 +123,7 @@ public class Informix extends Dialect {
 		});
 		// Time
 		getDbDataTypes().addTime("DATETIME HOUR TO SECOND", type -> {
+			type.setCreateFormat("DATETIME HOUR TO SECOND");
 			type.setDefaultValueLiteral(getCurrentTimeFunction());
 		});
 		// Time
@@ -149,6 +153,15 @@ public class Informix extends Dialect {
 	@Override
 	public String getProductName() {
 		return "Informix Dynamic Server";
+	}
+
+	@Override
+	public boolean setDbType(String productDataType, Long lengthOrPrecision, Integer scale,
+			com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
+		boolean matched = super.setDbType(productDataType, lengthOrPrecision, scale, column);
+		if (matched && "BIGINT".equalsIgnoreCase(productDataType.strip()))
+			column.setDataTypeName("BIGINT");
+		return matched;
 	}
 
 	@Override

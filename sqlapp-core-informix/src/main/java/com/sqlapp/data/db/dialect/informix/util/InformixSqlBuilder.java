@@ -17,15 +17,18 @@ public class InformixSqlBuilder extends AbstractSqlBuilder<InformixSqlBuilder> {
 
 	@Override
 	protected InformixSqlBuilder typeDefinition(final Column column) {
-		final String nativeType = column.getSpecifics().get(com.sqlapp.data.db.dialect.informix.metadata.InformixColumnReader.INFORMIX_NATIVE_TYPE);
+		final String nativeType = column.getSpecifics()
+				.get(com.sqlapp.data.db.dialect.informix.metadata.InformixColumnReader.INFORMIX_NATIVE_TYPE);
 		if (nativeType != null) {
-			if (nativeType.isBlank() || java.util.Set.of("true","false").contains(nativeType) || column.isIdentity() || column.getDomain() != null
-					|| column.getDataTypeName() == null || column.getDataTypeName().isBlank())
+			if (nativeType.isBlank() || java.util.Set.of("true", "false").contains(nativeType) || column.isIdentity()
+					|| column.getDomain() != null || column.getDataTypeName() == null
+					|| column.getDataTypeName().isBlank())
 				throw new IllegalArgumentException("Invalid Informix native column type: " + column.getName());
 			if (!java.util.Objects.equals(com.sqlapp.data.schemas.SchemaUtils.normalizeDataType(nativeType),
 					com.sqlapp.data.schemas.SchemaUtils.normalizeDataType(column.getDataTypeName())))
 				throw new IllegalArgumentException("Informix native declaration differs from Column.dataTypeName: "
-						+ column.getName() + "; update INFORMIX_NATIVE_TYPE together with dataTypeName, or remove it when selecting an ordinary type");
+						+ column.getName()
+						+ "; update INFORMIX_NATIVE_TYPE together with dataTypeName, or remove it when selecting an ordinary type");
 			return _add(nativeType);
 		}
 		if (column.getDomain() != null)
@@ -55,6 +58,8 @@ public class InformixSqlBuilder extends AbstractSqlBuilder<InformixSqlBuilder> {
 				Long precision = column.getLength();
 				if (precision == null && name.matches("DECIMAL\\([0-9]+\\)"))
 					precision = Long.valueOf(name.substring(8, name.length() - 1));
+				if (precision == null)
+					precision = 16L;
 				if ((column.getDataType() != com.sqlapp.data.db.datatype.DataType.DECIMAL
 						&& column.getDataType() != com.sqlapp.data.db.datatype.DataType.DECIMALFLOAT)
 						|| column.getScale() != null || precision == null || precision < 1 || precision > 32)

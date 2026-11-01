@@ -3,6 +3,30 @@
 See [enhancement status and remaining work](ENHANCEMENT_STATUS.md) for the
 completion scope, remaining validation and intentionally rejected cases.
 
+Data type review (2026-11-01): `InformixDataTypeMatrixTest` checks native
+resolution and CREATE TABLE output for the 11.70, 12.10, 14.10 and 15 resolver
+selections, which continue to use the existing common dialect. BIGINT, REAL and
+DOUBLE/DOUBLE PRECISION aliases now resolve correctly; BIGINT retains its native
+spelling, REAL emits SMALLFLOAT and DOUBLE emits FLOAT. Portable TIME emits
+DATETIME HOUR TO SECOND, and a portable floating DECIMAL without precision uses
+the existing DECIMAL(16) default instead of failing. Explicit decimal precision,
+fixed/floating decimal semantics and temporal qualifiers remain covered by the
+existing metadata tests. No resolver, metadata queries, dependency versions or
+existing method signatures changed. The review ran unit tests only; it did not
+connect to a live Informix server.
+
+The final module run passed all 107 tests, including 19 new matrix/portable-type
+cases, with no failures or skipped tests. No tracked generated files were
+intentionally changed by this review.
+
+```powershell
+.\gradlew.bat :sqlapp-core-informix:test --tests '*InformixDataTypeMatrixTest' --console=plain
+.\gradlew.bat :sqlapp-core-informix:test --console=plain
+```
+
+References: [Informix built-in types](https://www.ibm.com/docs/en/informix-servers/14.10.0?topic=udt-built-in-data-types),
+[Informix DATETIME ranges](https://informix.hcldoc.com/12.10/help/topic/com.ibm.ddi.doc/ids_ddi_200.htm).
+
 The dialect retains the existing resolver for Informix 11.70, 12.10, 14.10 and
 later versions. These enhancements use the existing catalog baseline rather
 than introducing newer-version-only catalog columns. The Docker integration
