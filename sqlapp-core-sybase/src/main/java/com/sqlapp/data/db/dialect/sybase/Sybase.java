@@ -33,6 +33,9 @@ import static com.sqlapp.util.CommonUtils.size;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.FloatType;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sybase.db.datatype.util.SybaseNumberColumnTypeMatcher;
@@ -55,6 +58,23 @@ public class Sybase extends Dialect {
 
 	protected Sybase(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
+	}
+
+	@Override
+	public boolean setDbType(String productDataType, Long lengthOrPrecision, Integer scale,
+			com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
+		boolean matched = super.setDbType(productDataType, lengthOrPrecision, scale, column);
+		if (matched && productDataType != null) {
+			String name = productDataType.strip().toUpperCase(java.util.Locale.ROOT);
+			for (String unicode : new String[] { "UNICHAR", "UNIVARCHAR" }) {
+				if (name.equals(unicode) || name.matches(unicode + "\\s*\\(.*\\)")) {
+					column.setDataTypeName(unicode);
+					if (name.equals(unicode) && lengthOrPrecision == null)
+						column.setLength(1L);
+				}
+			}
+		}
+		return matched;
 	}
 
 	@Override
@@ -85,12 +105,21 @@ public class Sybase extends Dialect {
 		});
 		// NCHAR
 		getDbDataTypes().addNChar(4000);
+		getDbDataTypes().getDbType(DataType.NCHAR).addColumnTypeMatcher(new LengthColumnTypeMatcher("UNICHAR", ""));
 		// NVARCHAR
 		getDbDataTypes().addNVarchar(4000);
+		getDbDataTypes().getDbType(DataType.NVARCHAR)
+				.addColumnTypeMatcher(new LengthColumnTypeMatcher("UNIVARCHAR", ""));
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("NTEXT", LEN_1GB - 1, type -> {
+		getDbDataTypes().addLongNVarchar("UNITEXT", LEN_1GB - 1, type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("UNITEXT");
+		});
+		getDbDataTypes().addNClob("UNITEXT", LEN_1GB - 1, type -> {
+			type.setDefaultLength(LEN_1GB - 1);
+			type.addColumnTypeMatcher("NTEXT");
 			type.addPetternColumnTypeMatcher("NATIONAL\\s+TEXT");
-			type.setCreateFormat("NTEXT");
+			type.setCreateFormat("UNITEXT");
 		});
 
 		// BINARY
@@ -109,7 +138,10 @@ public class Sybase extends Dialect {
 		getDbDataTypes().addBoolean("BIT", type -> {
 		});
 		// SByte
-		getDbDataTypes().addTinyInt(type -> {
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			type.clearColumnTypeMatchers();
+		});
+		getDbDataTypes().addUTinyInt("TINYINT", type -> {
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// SMALLINT
@@ -124,15 +156,28 @@ public class Sybase extends Dialect {
 		getDbDataTypes().addBigInt(type -> {
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
+		getDbDataTypes().addUSmallInt("UNSIGNED SMALLINT", type -> {
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
+		});
+		getDbDataTypes().addUInt("UNSIGNED INT", type -> {
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
+		});
+		getDbDataTypes().addUBigInt("UNSIGNED BIGINT", type -> {
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
+		});
 		// GUID
 		getDbDataTypes().addUUID("UNIQUEIDENTIFIER", type -> {
-			type.setLiteral("'", "'").setDefaultValueLiteral("NEWID()");
+			type.setAsVarcharType().setLiteral("'", "'");
 		});
 		// Single
 		getDbDataTypes().addReal(type -> {
 		});
 		// Single
-		getDbDataTypes().addFloat(53);
+		getDbDataTypes().addFloat(48);
+		FloatType.class.cast(getDbDataTypes().getDbType(DataType.FLOAT)).setDefaultPrecision(48);
+		getDbDataTypes().addDouble("DOUBLE PRECISION", type -> {
+			type.setColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION");
+		});
 		// SmallDateTime
 		getDbDataTypes().addSmallDateTime(type -> {
 			type.setLiteral("{ts '", "'}").setCreateFormat("SMALLDATETIME")
@@ -152,11 +197,12 @@ public class Sybase extends Dialect {
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
 			type.addColumnTypeMatcher("DEC");
-			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
+			type.setMaxPrecision(38).setDefaultPrecision(18).setDefaultScale(0);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
-			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
+			type.setMaxPrecision(38).setDefaultPrecision(18).setDefaultScale(0);
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// 行バージョン型
 		getDbDataTypes().addRowVersion("TIMESTAMP", type -> {

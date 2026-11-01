@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sybase.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;
@@ -42,6 +43,35 @@ public class SybaseSqlBuilder extends AbstractSqlBuilder<SybaseSqlBuilder> {
 	public SybaseSqlBuilder identity() {
 		appendElement("IDENTITY");
 		return instance();
+	}
+
+	@Override
+	protected SybaseSqlBuilder typeDefinition(Column column) {
+		if (column.getDomain() != null)
+			return super.typeDefinition(column);
+		DataType type = column.getDataType();
+		Long precision = column.getLength();
+		Integer scale = column.getScale();
+		if (type == DataType.NUMERIC || type == DataType.DECIMAL) {
+			long p = precision == null ? 18 : precision;
+			int s = scale == null ? 0 : scale;
+			if (p < 1 || p > 38 || s < 0 || s > p)
+				throw new IllegalArgumentException("ASE numeric precision must be 1..38 and scale 0..precision");
+		}
+		if (type == DataType.FLOAT && precision != null && (precision < 1 || precision > 48))
+			throw new IllegalArgumentException("ASE FLOAT precision must be 1..48");
+		if (type == DataType.ANY_DATA)
+			throw new IllegalArgumentException(
+					"ASE has no generic VARIANT type; select a concrete Schema data type or domain");
+		String nativeName = column.getDataTypeName();
+		if (type == DataType.NCHAR && "UNICHAR".equalsIgnoreCase(nativeName)
+				|| type == DataType.NVARCHAR && "UNIVARCHAR".equalsIgnoreCase(nativeName)) {
+			long length = precision == null ? 1 : precision;
+			if (length < 1 || length > 4000)
+				throw new IllegalArgumentException("ASE Unicode character length must be 1..4000");
+			return _add(nativeName.toUpperCase(java.util.Locale.ROOT))._add("(" + length + ")");
+		}
+		return super.typeDefinition(column);
 	}
 
 	@Override

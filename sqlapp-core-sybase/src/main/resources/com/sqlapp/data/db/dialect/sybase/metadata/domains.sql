@@ -4,6 +4,7 @@ SELECT
 , t.name AS domain_name
 , t.allownulls
 , t.length
+, @@ncharsize AS nchar_size
 , t.prec
 , t.scale
 , NULL as collation_name

@@ -46,7 +46,7 @@ class SybaseDomainPrecisionTest {
 		try {
 			Locale.setDefault(Locale.forLanguageTag("tr-TR"));
 			assertEquals(28L, SybaseUtils.getTypeLength("numeric", 17L, 28L));
-			assertEquals(40L, SybaseUtils.getMaxLength("nchar", 80L));
+			assertEquals(40L, SybaseUtils.getMaxLength("nchar", 80L, 2));
 		} finally {
 			Locale.setDefault(previous);
 		}

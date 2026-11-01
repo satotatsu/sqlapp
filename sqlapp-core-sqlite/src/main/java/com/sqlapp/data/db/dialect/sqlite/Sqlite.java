@@ -71,12 +71,15 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addBoolean();
 		// TinyInt
 		getDbDataTypes().addTinyInt("INTEGER", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// SmallInt
 		getDbDataTypes().addSmallInt("INTEGER", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// Int
 		getDbDataTypes().addInt("INTEGER", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// Int64
 		getDbDataTypes().addBigInt("INTEGER", type -> {
@@ -85,6 +88,7 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addUUID("BLOB");
 		// Double
 		getDbDataTypes().addDouble("REAL", type -> {
+			type.addColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION", "FLOAT");
 		});
 		// Decimal
 		getDbDataTypes().addNumeric(type -> {

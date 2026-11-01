@@ -7,6 +7,7 @@ SELECT
   , c.name AS column_name
   , t.name AS type_name
   , c.length AS max_length
+  , @@ncharsize AS nchar_size
   , c.prec AS precision
   , c.scale
   , NULL AS collation_name

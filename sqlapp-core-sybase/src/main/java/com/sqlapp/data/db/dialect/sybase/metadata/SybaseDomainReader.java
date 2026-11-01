@@ -70,7 +70,7 @@ public class SybaseDomainReader extends DomainReader {
 		Domain obj = new Domain(name);
 		String productDataType = getString(rs, "base_type_name");
 		Long byteLength = getLong(rs, "length");
-		Long max_length = SybaseUtils.getMaxLength(productDataType, byteLength);
+		Long max_length = SybaseUtils.getMaxLength(productDataType, byteLength, getInteger(rs, "nchar_size"));
 		Long prec = getLong(rs, "prec");
 		Integer scale = getInteger(rs, "scale");
 		obj.setNullable(rs.getBoolean("allownulls"));

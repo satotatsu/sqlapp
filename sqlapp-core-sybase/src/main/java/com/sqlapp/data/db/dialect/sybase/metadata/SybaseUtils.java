@@ -283,6 +283,20 @@ public class SybaseUtils extends ReaderUtils {
 	}
 
 	static Long getTypeLength(String productDataType, Long length, Long precision) {
+		if (productDataType != null)
+			productDataType = productDataType.strip();
+		if (productDataType != null && java.util.Set.of("TEXT", "UNITEXT", "IMAGE", "NTEXT")
+				.contains(productDataType.toUpperCase(java.util.Locale.ROOT)))
+			return null; // syscolumns.length is a LOB locator width, not the content capacity.
+		if ("FLOAT".equalsIgnoreCase(productDataType)) {
+			if (precision != null && precision > 0)
+				return precision;
+			if (Long.valueOf(4).equals(length))
+				return 15L;
+			if (Long.valueOf(8).equals(length))
+				return 48L;
+			return null;
+		}
 		if (productDataType != null && java.util.Set.of("NUMERIC", "DECIMAL", "DEC")
 				.contains(productDataType.toUpperCase(java.util.Locale.ROOT))) {
 			return precision;
@@ -291,9 +305,19 @@ public class SybaseUtils extends ReaderUtils {
 	}
 
 	public static Long getMaxLength(String productDataType, Long byteLength) {
+		return getMaxLength(productDataType, byteLength, null);
+	}
+
+	public static Long getMaxLength(String productDataType, Long byteLength, Integer nationalCharacterSize) {
 		productDataType = productDataType.toUpperCase(java.util.Locale.ROOT);
-		if (byteLength != null && (productDataType.startsWith("NTEXT") || productDataType.startsWith("NCHAR")
-				|| productDataType.startsWith("NVARCHAR"))) {
+		if (byteLength != null && byteLength > 0
+				&& (productDataType.equals("NCHAR") || productDataType.equals("NVARCHAR"))) {
+			if (nationalCharacterSize == null || nationalCharacterSize < 1 || byteLength % nationalCharacterSize != 0)
+				throw new IllegalArgumentException("ASE NCHAR/NVARCHAR length requires a valid server @@ncharsize");
+			return byteLength / nationalCharacterSize;
+		}
+		if (byteLength != null && (productDataType.startsWith("UNICHAR") || productDataType.startsWith("UNIVARCHAR")
+				|| productDataType.startsWith("UNITEXT") || productDataType.startsWith("NTEXT"))) {
 			if (byteLength.longValue() > 0) {
 				return byteLength.longValue() / 2;
 			}

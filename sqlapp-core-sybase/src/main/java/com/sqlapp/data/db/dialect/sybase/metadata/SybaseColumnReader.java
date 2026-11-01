@@ -163,7 +163,7 @@ public class SybaseColumnReader extends ColumnReader {
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		String productDataType = getString(rs, "type_name");
 		Long byteLength = getLong(rs, "max_length");
-		Long max_length = SybaseUtils.getMaxLength(productDataType, byteLength);
+		Long max_length = SybaseUtils.getMaxLength(productDataType, byteLength, getInteger(rs, "nchar_size"));
 		Long precision = getLong(rs, "precision");
 		Integer scale = getInteger(rs, "scale");
 		Column obj = new Column(getString(rs, COLUMN_NAME));

@@ -29,7 +29,7 @@ class SqliteExplainBuilderTest {
 			var node = com.sqlapp.jdbc.sql.SqlParser.getInstance().parse(dialect, explain);
 			try (var parameters = node.eval(row); var query = parameters.createStatement(connection)) {
 				assertEquals(1, parameters.getParameterSize());
-				assertEquals(com.sqlapp.data.db.datatype.DataType.INT,
+				assertEquals(com.sqlapp.data.db.datatype.DataType.BIGINT,
 						parameters.getBindParameters().get(0).stream().findFirst().orElseThrow().getDataType());
 				parameters.setBind(query);
 				try (var result = query.executeQuery()) {
