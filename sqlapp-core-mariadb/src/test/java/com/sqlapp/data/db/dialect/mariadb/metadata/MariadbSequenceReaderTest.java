@@ -18,30 +18,55 @@ class MariadbSequenceReaderTest {
 	private class Reader extends MariadbSequence11_50Reader {
 		BigDecimal start = BigDecimal.TEN;
 		int queries;
-		Reader() { super(DialectResolver.getInstance().getDialect("MariaDB", 11, 5, 0)); }
-		@Override protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+
+		Reader() {
+			super(DialectResolver.getInstance().getDialect("MariaDB", 11, 5, 0));
+		}
+
+		@Override
+		protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 			queries++;
-			try { h.handleResultSetNext(new ExResultSet(null) {
-				@Override public String getString(String name) {
-					return switch (name.toUpperCase()) {
-					case "SEQUENCE_NAME" -> "seq";
-					case "SEQUENCE_SCHEMA" -> "app";
-					case "SEQUENCE_CATALOG" -> "def";
-					case "DATA_TYPE" -> "bigint";
-					default -> null;
-					};
-				}
-				@Override public Integer getInteger(String name) { return name.equals("NUMERIC_SCALE") ? 0 : 64; }
-				@Override public int getInt(String name) { return 0; }
-				@Override public BigDecimal getBigDecimal(String name) {
-					return switch (name) {
-					case "START_VALUE" -> start;
-					case "MINIMUM_VALUE", "INCREMENT" -> BigDecimal.ONE;
-					case "MAXIMUM_VALUE" -> BigDecimal.valueOf(Long.MAX_VALUE - 1);
-					default -> null;
-					};
-				}
-			}); } catch (java.sql.SQLException e) { throw new IllegalStateException(e); }
+			try {
+				h.handleResultSetNext(new ExResultSet(null) {
+					@Override
+					public String getString(String name) {
+						return switch (name.toUpperCase()) {
+						case "SEQUENCE_NAME" -> "seq";
+						case "SEQUENCE_SCHEMA" -> "app";
+						case "SEQUENCE_CATALOG" -> "def";
+						case "DATA_TYPE" -> "bigint";
+						default -> null;
+						};
+					}
+
+					@Override
+					public Integer getInteger(String name) {
+						return name.equals("NUMERIC_SCALE") ? 0 : 64;
+					}
+
+					@Override
+					public Object getObject(String name) {
+						return getInteger(name);
+					}
+
+					@Override
+					public int getInt(String name) {
+						return 0;
+					}
+
+					@Override
+					public BigDecimal getBigDecimal(String name) {
+						return switch (name) {
+						case "START_VALUE" -> start;
+						case "MINIMUM_VALUE", "INCREMENT" -> BigDecimal.ONE;
+						case "MAXIMUM_VALUE" -> BigDecimal.valueOf(Long.MAX_VALUE - 1);
+						default -> null;
+						};
+					}
+				});
+			} catch (java.sql.SQLException e) {
+				throw new IllegalStateException(e);
+			}
 			return null;
 		}
 	}
@@ -63,7 +88,8 @@ class MariadbSequenceReaderTest {
 
 	@Test
 	void doesNotSilentlyTruncateFractionalSequenceMetadata() {
-		final var reader = new Reader(); reader.start = new BigDecimal("1.5");
+		final var reader = new Reader();
+		reader.start = new BigDecimal("1.5");
 		assertThrows(ArithmeticException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
 	}
 }
