@@ -16,16 +16,24 @@ public final class TransferNameMappingInspectionService {
 		}
 	}
 
-	public record Table(String source, String target, List<Column> columns) {
+	public record Table(String source, String target, List<Column> columns, String mappingSource) {
+		public Table(String source, String target, List<Column> columns) {
+			this(source, target, columns, source);
+		}
+
 		public Table {
 			columns = List.copyOf(columns);
+			mappingSource = mappingSource == null ? source : mappingSource;
 		}
 	}
 
 	public record Result(Path schemaFile, String schemaFingerprint, String mappingFingerprint, List<Table> tables,
 			List<String> warnings, String targetDialect) {
 		public Result(Path schemaFile, String schemaFingerprint, String mappingFingerprint, List<Table> tables,
-				List<String> warnings) { this(schemaFile, schemaFingerprint, mappingFingerprint, tables, warnings, null); }
+				List<String> warnings) {
+			this(schemaFile, schemaFingerprint, mappingFingerprint, tables, warnings, null);
+		}
+
 		public Result {
 			schemaFile = schemaFile.toAbsolutePath().normalize();
 			tables = List.copyOf(tables);
@@ -51,9 +59,13 @@ public final class TransferNameMappingInspectionService {
 		return inspect(snapshot, selected, mapping, null);
 	}
 
-	/** Optional offline target-builder preview, not live target metadata or an execution plan. */
+	/**
+	 * Optional offline target-builder preview, not live target metadata or an
+	 * execution plan.
+	 */
 	public Result inspect(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot, List<String> selected,
-			TransferNameMappingIO.Configuration mapping, com.sqlapp.data.db.dialect.Dialect targetDialect) throws Exception {
+			TransferNameMappingIO.Configuration mapping, com.sqlapp.data.db.dialect.Dialect targetDialect)
+			throws Exception {
 		Objects.requireNonNull(snapshot, "snapshot");
 		Objects.requireNonNull(mapping, "mapping");
 		if (selected == null || selected.isEmpty()
@@ -78,20 +90,32 @@ public final class TransferNameMappingInspectionService {
 				String definition = null, issue = null;
 				if (targetDialect != null) {
 					try {
-						definition = targetDialect.createSqlBuilder().definition(target.getColumns().get(index).clone(), false).toString();
-						if (definition.isBlank()) throw new IllegalArgumentException("Empty target definition preview.");
+						definition = targetDialect.createSqlBuilder()
+								.definition(target.getColumns().get(index).clone(), false).toString();
+						if (definition.isBlank())
+							throw new IllegalArgumentException("Empty target definition preview.");
 					} catch (IllegalArgumentException | UnsupportedOperationException failure) {
 						definition = null;
-						issue = "Target builder preview unavailable (" + failure.getClass().getSimpleName()
-								+ "). Inspect the full Schema SQL and compatibility warnings during database Review.";
+						String detail = Objects
+								.toString(failure.getMessage(), "No further detail from the target builder.")
+								.replaceAll("\\p{Cntrl}", " ");
+						if (detail.isBlank())
+							detail = "No further detail from the target builder.";
+						if (detail.codePointCount(0, detail.length()) > 320)
+							detail = detail.substring(0, detail.offsetByCodePoints(0, 320)) + "…";
+						issue = "Target builder preview unavailable (" + failure.getClass().getSimpleName() + "): "
+								+ detail
+								+ " Inspect the full Schema SQL and compatibility warnings during database Review.";
 					}
 				}
 				columns.add(new Column(column.getName(), target.getColumns().get(index).getName(),
 						Objects.toString(column.getDataType(), "Unknown"), keys.contains(column.getName()),
 						!column.isNotNull(), definition, issue));
 			}
-			tables.add(new Table(TransferSchemaOnlyPreparation.identity(source.getCatalogName(), source.getSchemaName(),
-					source.getName()), target.getName(), columns));
+			String identity = TransferSchemaOnlyPreparation.identity(source.getCatalogName(), source.getSchemaName(),
+					source.getName());
+			tables.add(new Table(identity, target.getName(), columns,
+					projection.sourceKeys().getOrDefault(source.getName(), identity)));
 		}
 		var warnings = new ArrayList<String>();
 		if (projection.renamedIdentifiers())

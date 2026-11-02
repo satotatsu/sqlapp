@@ -22,12 +22,15 @@ class TransferNameMappingInspectionServiceTest {
 		assertTrue(column.targetDefinition().contains("NOT NULL"));
 		assertTrue(column.targetDefinition().toUpperCase(Locale.ROOT).contains("INT"));
 		assertEquals("OWNER_ID", column.target());
-		assertTrue(column.primaryKey()); assertFalse(column.nullable()); assertNull(column.previewIssue());
+		assertTrue(column.primaryKey());
+		assertFalse(column.nullable());
+		assertNull(column.previewIssue());
 		assertEquals(target.getClass().getName(), result.targetDialect());
 		assertEquals(service.inspect(snapshot, List.of("顧客"), names).mappingFingerprint(), result.mappingFingerprint());
 		assertArrayEquals(before, Files.readAllBytes(snapshot.file()));
 		try (var files = Files.list(directory)) {
-			assertEquals(Set.of("schema.xml"), files.map(path -> path.getFileName().toString()).collect(java.util.stream.Collectors.toSet()));
+			assertEquals(Set.of("schema.xml"),
+					files.map(path -> path.getFileName().toString()).collect(java.util.stream.Collectors.toSet()));
 		}
 	}
 
@@ -35,9 +38,11 @@ class TransferNameMappingInspectionServiceTest {
 	void sourceDoubleUsesPostgresBuilderDefinitionRatherThanSourceNativeSpelling() throws Exception {
 		var schema = new Schema("PUBLIC");
 		var table = new Table("価格");
-		table.getColumns().add(new Column("金額").setDataType(DataType.DOUBLE).setDataTypeName("DOUBLE").setDefaultValue("0"));
+		table.getColumns()
+				.add(new Column("金額").setDataType(DataType.DOUBLE).setDataTypeName("DOUBLE").setDefaultValue("0"));
 		schema.getTables().add(table);
-		var file = directory.resolve("double.xml"); schema.writeXml(file.toFile());
+		var file = directory.resolve("double.xml");
+		schema.writeXml(file.toFile());
 		var result = service.inspect(new BulkMigrationJobDraftBuilder().inspect(file), List.of("価格"),
 				new TransferNameMappingIO.Configuration(1, Map.of()),
 				com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("PostgreSQL", 16, 0, null));
@@ -50,24 +55,59 @@ class TransferNameMappingInspectionServiceTest {
 	@Test
 	void unsupportedTargetPreviewRemainsVisibleWithoutLosingSourceMetadata() throws Exception {
 		var target = new com.sqlapp.data.db.dialect.Dialect(() -> null) {
-			@Override public com.sqlapp.util.AbstractSqlBuilder<?> createSqlBuilder() {
+			@Override
+			public com.sqlapp.util.AbstractSqlBuilder<?> createSqlBuilder() {
 				return new com.sqlapp.util.SqlBuilder(this) {
-					@Override public com.sqlapp.util.SqlBuilder definition(Column column, boolean withRemarks) {
-						throw new UnsupportedOperationException("test builder limitation");
+					@Override
+					public com.sqlapp.util.SqlBuilder definition(Column column, boolean withRemarks) {
+						throw new UnsupportedOperationException("test builder limitation\n" + "😀".repeat(400));
 					}
 				};
 			}
 		};
-		var result = service.inspect(schema(), List.of("顧客"), new TransferNameMappingIO.Configuration(1, Map.of()), target);
+		var result = service.inspect(schema(), List.of("顧客"), new TransferNameMappingIO.Configuration(1, Map.of()),
+				target);
 		var column = result.tables().getFirst().columns().getFirst();
 		assertNull(column.targetDefinition());
 		assertTrue(column.previewIssue().contains("UnsupportedOperationException"));
-		assertTrue(column.primaryKey()); assertEquals("INT", column.sourceType());
+		assertTrue(column.previewIssue().contains("test builder limitation"));
+		assertFalse(column.previewIssue().contains("\n"));
+		assertTrue(java.nio.charset.StandardCharsets.UTF_8.newEncoder().canEncode(column.previewIssue()));
+		assertTrue(column.previewIssue().codePointCount(0, column.previewIssue().length()) < 550);
+		assertTrue(column.primaryKey());
+		assertEquals("INT", column.sourceType());
 	}
+
 	@TempDir
 	Path directory;
 	private final TransferNameMappingInspectionService service = new TransferNameMappingInspectionService();
 	private final TransferNameMappingIO io = new TransferNameMappingIO();
+
+	@Test
+	void generatedColumnPreviewExplainsRequiredPostgresVersionAndKeepsOtherColumns() throws Exception {
+		var model = new Schema("PUBLIC");
+		var table = new Table("CALCULATIONS");
+		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getColumns()
+				.add(new Column("CALCULATED").setDataType(DataType.INT).setFormula("1 + 1").setFormulaPersisted(true));
+		model.getTables().add(table);
+		var file = directory.resolve("generated.xml");
+		model.writeXml(file.toFile());
+		var snapshot = new BulkMigrationJobDraftBuilder().inspect(file);
+		var mapping = new TransferNameMappingIO.Configuration(1, Map.of());
+		var resolver = com.sqlapp.data.db.dialect.DialectResolver.getInstance();
+		var older = service.inspect(snapshot, List.of("CALCULATIONS"), mapping,
+				resolver.getDialect("PostgreSQL", 11, 0, null));
+		assertNotNull(older.tables().getFirst().columns().getFirst().targetDefinition());
+		var unavailable = older.tables().getFirst().columns().getLast();
+		assertNull(unavailable.targetDefinition());
+		assertTrue(unavailable.previewIssue().contains("PostgreSQL 12 or later"));
+		var supported = service.inspect(snapshot, List.of("CALCULATIONS"), mapping,
+				resolver.getDialect("PostgreSQL", 12, 0, null));
+		assertNull(supported.tables().getFirst().columns().getLast().previewIssue());
+		assertTrue(supported.tables().getFirst().columns().getLast().targetDefinition().contains("GENERATED"));
+		assertEquals("PUBLIC.CALCULATIONS", older.tables().getFirst().mappingSource());
+	}
 
 	private BulkMigrationJobDraftBuilder.SchemaSnapshot schema() throws Exception {
 		var schema = new Schema("PUBLIC");
@@ -101,6 +141,7 @@ class TransferNameMappingInspectionServiceTest {
 		assertEquals(snapshot.fingerprint(), result.schemaFingerprint());
 		assertTrue(result.mappingFingerprint().matches("sha256:[0-9a-f]{64}"));
 		assertEquals(List.of("PEOPLE", "LOGS"), result.tables().stream().map(table -> table.target()).toList());
+		assertEquals(List.of("PUBLIC.顧客", "注文"), result.tables().stream().map(table -> table.mappingSource()).toList());
 		var key = result.tables().getFirst().columns().getFirst();
 		assertEquals("ID", key.source());
 		assertEquals("OWNER_ID", key.target());

@@ -10,23 +10,30 @@ import com.sqlapp.data.schemas.properties.IncludeColumnsProperty;
  * Projects selected table definitions without changing the canonical source.
  */
 final class TransferNameMappingProjection {
-	record Projection(Schema schema, Map<String, Table> bySourceName, boolean renamedIdentifiers) {
+	record Projection(Schema schema, Map<String, Table> bySourceName, boolean renamedIdentifiers,
+			Map<String, String> sourceKeys) {
 	}
 
 	private TransferNameMappingProjection() {
 	}
 
-	/** Shared identity/alias validation for projection and offline scope authoring. */
+	/**
+	 * Shared identity/alias validation for projection and offline scope authoring.
+	 */
 	static Map<String, Table> mappingSources(Schema source, TransferNameMappingIO.Configuration mapping) {
-		var resolved = new LinkedHashMap<String, Table>(); var identities = new HashSet<String>();
+		var resolved = new LinkedHashMap<String, Table>();
+		var identities = new HashSet<String>();
 		for (var name : mapping.tables().keySet()) {
 			final Table table;
-			try { table = TransferSchemaOnlyPreparation.select(source, List.of(name)).getFirst(); }
-			catch (IllegalArgumentException failure) {
-				throw new TransferSchemaPreparation.ValidationException("Mapping source table must resolve uniquely in the captured Schema: " + name);
+			try {
+				table = TransferSchemaOnlyPreparation.select(source, List.of(name)).getFirst();
+			} catch (IllegalArgumentException failure) {
+				throw new TransferSchemaPreparation.ValidationException(
+						"Mapping source table must resolve uniquely in the captured Schema: " + name);
 			}
 			if (!identities.add(table.getName()))
-				throw new TransferSchemaPreparation.ValidationException("Duplicate resolved source table mapping: " + table.getName());
+				throw new TransferSchemaPreparation.ValidationException(
+						"Duplicate resolved source table mapping: " + table.getName());
 			resolved.put(name, table);
 		}
 		return Collections.unmodifiableMap(resolved);
@@ -45,6 +52,8 @@ final class TransferNameMappingProjection {
 				.toList();
 		var rules = new LinkedHashMap<String, TransferNameMappingIO.TableMapping>();
 		var sources = mappingSources(source, mapping);
+		var sourceKeys = new LinkedHashMap<String, String>();
+		sources.forEach((key, table) -> sourceKeys.put(table.getName(), key));
 		for (var entry : mapping.tables().entrySet()) {
 			final Table table = sources.get(entry.getKey());
 			if (!canonicalSelection.contains(table))
@@ -132,7 +141,8 @@ final class TransferNameMappingProjection {
 			}
 		}
 		SchemaUtils.validate(projected);
-		return new Projection(projected, Collections.unmodifiableMap(targets), renamed);
+		return new Projection(projected, Collections.unmodifiableMap(targets), renamed,
+				Collections.unmodifiableMap(sourceKeys));
 	}
 
 	private static Column column(Table table, Map<String, String> names, String sourceName) {

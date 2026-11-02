@@ -18,7 +18,9 @@ import com.sqlapp.util.MessageDigests;
  * factories.
  */
 final class TransferSchemaDifferencePreparation {
-	private record TaskOperation(String taskId, SqlOperation operation) { }
+	private record TaskOperation(String taskId, SqlOperation operation) {
+	}
+
 	private TransferSchemaDifferencePreparation() {
 	}
 

@@ -143,7 +143,8 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 			} else {
 				final RowIteratorHandler rowIteratorHandler = FileRowIteratorFactory.create(file, getCsvEncoding(), 0,
 						0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> {
-							if (getOutputFileType().isParquet()) validateParquetValue(column, value);
+							if (getOutputFileType().isParquet())
+								validateParquetValue(column, value);
 							return value;
 						});
 				trackedInput[0] = new TrackedInput(rowIteratorHandler);
@@ -172,7 +173,8 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					} else {
 						table[0].writeXml(tempFile);
 					}
-					if (input != null) input.close();
+					if (input != null)
+						input.close();
 					moveOutput(tempFile, outputFile);
 					if (this.isRemoveOriginalFile()) {
 						Files.delete(file.toPath());
@@ -212,14 +214,19 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 	private record OutputFiles(File temporary, File output) {
 	}
 
-	/** Reject loss before text readers coerce raw values into the inferred Schema type. */
+	/**
+	 * Reject loss before text readers coerce raw values into the inferred Schema
+	 * type.
+	 */
 	private static void validateParquetValue(final Column column, final Object value) {
-		if (value == null || column.getDataType() == null) return;
+		if (value == null || column.getDataType() == null)
+			return;
 		final com.sqlapp.data.db.datatype.DataType type = column.getDataType();
 		try {
 			switch (type) {
 			case TINYINT, SMALLINT, INT, BIGINT, DECIMAL, NUMERIC -> {
-				if (!(value instanceof Number)) throw new IllegalArgumentException("expected a numeric value");
+				if (!(value instanceof Number))
+					throw new IllegalArgumentException("expected a numeric value");
 				java.math.BigDecimal decimal = new java.math.BigDecimal(value.toString());
 				switch (type) {
 				case TINYINT -> decimal.byteValueExact();
@@ -227,14 +234,16 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				case INT -> decimal.intValueExact();
 				case BIGINT -> decimal.longValueExact();
 				default -> {
-					if (column.getScale() != null) decimal = decimal.setScale(column.getScale(), java.math.RoundingMode.UNNECESSARY);
+					if (column.getScale() != null)
+						decimal = decimal.setScale(column.getScale(), java.math.RoundingMode.UNNECESSARY);
 					if (column.getLength() != null && decimal.precision() > column.getLength())
 						throw new IllegalArgumentException("decimal precision exceeded");
 				}
 				}
 			}
 			case BOOLEAN, BIT -> {
-				if (!(value instanceof Boolean)) throw new IllegalArgumentException("expected a boolean value");
+				if (!(value instanceof Boolean))
+					throw new IllegalArgumentException("expected a boolean value");
 			}
 			default -> {
 				if (type.isCharacter() && !(value instanceof CharSequence))
@@ -266,7 +275,8 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 		@Override
 		public void close() {
 			try {
-				com.sqlapp.util.iterator.IteratorCloseUtils.close(null, iterators.toArray(java.util.Iterator<?>[]::new));
+				com.sqlapp.util.iterator.IteratorCloseUtils.close(null,
+						iterators.toArray(java.util.Iterator<?>[]::new));
 			} finally {
 				iterators.clear();
 			}

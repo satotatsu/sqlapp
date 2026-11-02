@@ -197,8 +197,11 @@ public final class TransferJobPreparationService {
 							TransferKeylessChecks.CODE + " Table " + task.getEffectiveSourceTable().getName()
 									+ " uses full-scan INSERT without a usable NOT NULL primary key. Duplicate rows are preserved; verification compares externally sorted row hashes, including multiplicity. Verification chunk indexes are hash-sort positions, not source row positions. MERGE, resume and key-based repair are unavailable. Review the target key design; optional missing-table creation can add a target-only generated PK.");
 			final var copyPlan = copyWarnings.equals(compatibility.warnings()) ? compatibility
-					: TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(compatibility.fingerprint(), compatibility.statements(),
-							copyWarnings, configuration.schemaMode()), compatibility.tables());
+					: TransferSchemaPreparation
+							.withTables(
+									TransferSchemaPreparation.result(compatibility.fingerprint(),
+											compatibility.statements(), copyWarnings, configuration.schemaMode()),
+									compatibility.tables());
 			phase = "checking that the transfer definition has not changed";
 			if (!io.read(jobFile).fingerprint().equals(snapshot.fingerprint()))
 				throw new PreparationException("Transfer definition changed during preparation. Prepare it again.");
