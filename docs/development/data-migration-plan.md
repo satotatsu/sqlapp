@@ -37,6 +37,31 @@ capabilities or a commitment to implement every option.
   recorded separately; this is not live target metadata, a type override, or
   complete table-factory SQL. Existing inspection APIs/constructors and mapping
   fingerprints remain supported. Preview controls are not saved in job YAML.
+  Schema check can navigate to the exact target-name editor cell using the
+  shared projection's retained original mapping key, including short/qualified
+  aliases. Missing display rows are populated without changing existing names;
+  stale evidence is invalidated. Preview limitations retain bounded, single-line,
+  Unicode-safe builder reasons rather than only exception categories.
+  Multi-table checks now combine exact source-table selection, recorded preview
+  issue filtering and literal search. Full-result availability counts remain
+  distinct from visible-row counts. New/invalidated checks reset display scopes;
+  copying and column editing keep their verified source identity, with no change
+  to saved job scope or execution approval.
+  Recorded preview issues now lead the selected-row detail text, without losing
+  source metadata or changing table/TSV order. Plain displayed details can be
+  copied with the existing UTF-8 size boundary and retry behavior. Model changes
+  clear old column scopes/detail priorities; busy/empty selections cannot copy
+  stale evidence. These remain presentation features rather than execution rules.
+  Previous/next issue navigation now follows visible recorded preview issues in
+  sort order, preserving table/search/issue scopes and horizontal position. It
+  wraps, reports its visible position/no-match state and disables busy or stale
+  navigation. The selected issue retains the same verified edit/copy path.
+  Checked mappings can now be retained as standalone escaped HTML through shared
+  command IO. Full/subset exports retain fingerprints, resolved builder, original
+  keys, full-check warnings and explicit subset counts/order. GUI save captures
+  exact view identities, rejects invalidated results and protects inputs/existing
+  files; it writes bounded UTF-8 off the EDT. Reports may contain unsaved proposals
+  and neither save jobs nor authorize execution. No task/YAML changes are required.
   Selected-target naming rules now support keep/upper/lower case and Unicode-space
   replacement with an explicit preview/apply step and guarded last-batch undo.
   Only resolved overrides are saved; execution and Gradle use the existing format.

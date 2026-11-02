@@ -310,6 +310,70 @@ Gradle behavior or the source/mapping fingerprints. The result records the resol
 builder class separately. Java callers may pass a target `Dialect` to the
 `TransferNameMappingInspectionService.inspect(snapshot, selected, mapping, dialect)`
 overload; existing methods and result constructors remain supported.
+
+In the name editor's **Schema check** tab, select one column and choose **Edit
+selected column name** to return to its target-name cell. The common Schema
+projection retains the validated original mapping source key, so qualified and
+short table aliases are not guessed by the GUI. Existing editor values remain
+unchanged; a column not yet loaded is added as an unchanged display row with its
+captured source type. Editing still requires saving the mapping/settings and a
+fresh database Review. The navigation button is unavailable in standalone
+read-only naming-rule previews, without a single selection, or after invalidation.
+
+Unsupported builder previews retain a bounded, single-line reason as well as the
+exception category. For example, a PostgreSQL generated-column preview can explain
+that version 12 or later is required. Other column metadata stays available.
+This does not turn a preview issue into execution approval or change compatibility
+policy. Inspection results add the original `mappingSource` key per table;
+the existing three-argument `Table` constructor remains supported.
+
+Schema check also provides an exact **Source → target table** selector for
+multi-table results and **Preview issues only** for recorded builder limitations.
+Combine them with literal text search to inspect a small set of columns. Preview
+availability counts cover the full result; filtered row counts cover the visible
+rows. Clearing search retains the chosen scopes, while a new check or invalidated
+result resets them. Copy and column-name navigation use the filtered view without
+changing saved mappings, selected transfer tables, compatibility policy or any
+execution permission. General compatibility warnings remain separate.
+
+For rows with a preview issue, selected-row details put the recorded reason and
+target definition first, retaining every remaining field afterward. Ordinary
+rows, SQL order and table-copy formats are unchanged. **Copy displayed details**
+copies that plain text for inspection or sharing; **Copy selected rows** remains
+the table copy for multiple rows. Details copying is bounded to 1 MiB UTF-8,
+reports failures without partial output, and uses the current selection. Nothing
+is executed or written to the saved job by these display/copy actions.
+
+Use **Previous issue** / **Next issue** in Schema check to inspect recorded
+preview limitations one by one. Navigation follows the current sorted, filtered
+view and wraps at the ends, leaving table/search/issue filters intact. Its
+position label refers to visible issues rather than the full result. No matches
+disable navigation; no-preview, clean, busy or invalidated results cannot step
+through old evidence. From a multi-selection it uses the first selected row as
+the starting point and selects one issue. Navigation does not run SQL, grant
+execution approval or change the saved job. Existing edit/copy actions work on
+the newly selected row.
+
+After **Check Schema**, **Save preview report…** creates a portable HTML snapshot.
+Its save dialog defaults to **All checked columns** and also offers **Current
+filtered view**, preserving visible sort order. Included/total counts and the
+scope are explicit, including an empty filtered view. Full captured warnings
+remain separate from included column rows. The report retains source Schema and
+canonical mapping fingerprints, the resolved preview builder and original mapping
+keys, and escapes metadata/default expressions as text. It includes the source
+file name without its absolute path, and uses no external assets or scripts.
+
+Saving this report does not save name proposals, change the shared job or authorize
+execution. It records the checked snapshot, not live target state. Existing files
+and source/job/mapping paths are rejected as destinations; each report is a new
+UTF-8 `.html`/`.htm` file, bounded to 16 MiB. Writes use the existing atomic-file
+helper and optimistic destination checks, not a cross-process lock.
+
+Java callers can use `TransferMappingPreviewReportIO.writeNew(path, inspection)`
+for the full report, or supply exact `ColumnRef(sourceTable, sourceColumn)` values
+and extra protected input paths for a subset. `render` provides the same HTML
+without file IO. Unknown, duplicate or ambiguous column identities fail before
+writing. No Gradle task properties or job YAML fields are added.
 Use **Source table** in Columns to focus on one exact source identity, or choose
 **All tables** to see every mapping. Double-click a source-table cell in Tables
 to open that table's columns. Find and Renamed only work within the chosen table;
