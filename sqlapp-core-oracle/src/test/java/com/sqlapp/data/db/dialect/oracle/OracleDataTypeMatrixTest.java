@@ -13,6 +13,20 @@ import com.sqlapp.data.schemas.Table;
 
 class OracleDataTypeMatrixTest {
 	@org.junit.jupiter.api.Test
+	void portableIntRetainsTenDecimalDigits() {
+		var dialect = DialectResolver.getInstance().getDialect("oracle", 19, 0, null);
+		assertEquals("NUMBER(10,0)", dialect.createSqlBuilder()
+				.addTypeDefinition(new Column("C").setDataType(DataType.INT)).toString().toUpperCase(Locale.ROOT));
+	}
+
+	@org.junit.jupiter.api.Test
+	void portableSignedTinyIntRetainsItsFullRange() {
+		var dialect = DialectResolver.getInstance().getDialect("oracle", 19, 0, null);
+		assertEquals("NUMBER(3,0)", dialect.createSqlBuilder()
+				.addTypeDefinition(new Column("C").setDataType(DataType.TINYINT)).toString().toUpperCase(Locale.ROOT));
+	}
+
+	@org.junit.jupiter.api.Test
 	void generatesPortableDoubleWithoutSourceTypeName() {
 		var dialect = DialectResolver.getInstance().getDialect("oracle", 19, 0, null);
 		for (String nativeName : new String[] { null, "DOUBLE", "DOUBLE PRECISION" }) {
@@ -25,7 +39,9 @@ class OracleDataTypeMatrixTest {
 	}
 
 	@ParameterizedTest(name = "{0} -> {1}: {2}")
-	@CsvSource({ "binary_double, DOUBLE, BINARY_DOUBLE", "binary_float, REAL, BINARY_FLOAT", "float, FLOAT, FLOAT(126)",
+	@CsvSource({ "'number(3,0)', DECIMAL, 'NUMBER(3,0)'", "'number(10,0)', DECIMAL, 'NUMBER(10,0)'",
+			"'number(19,0)', DECIMAL, 'NUMBER(19,0)'",
+			"binary_double, DOUBLE, BINARY_DOUBLE", "binary_float, REAL, BINARY_FLOAT", "float, FLOAT, FLOAT(126)",
 			"varchar2(12), VARCHAR, VARCHAR2(12)", "char(7), CHAR, CHAR(7)", "nvarchar2(12), NVARCHAR, NVARCHAR2(12)",
 			"raw(12), VARBINARY, RAW(12)", "'number(12,3)', DECIMAL, 'NUMBER(12,3)'", "date, DATETIME, DATE",
 			"timestamp(3), TIMESTAMP, TIMESTAMP(3)", "clob, CLOB, CLOB", "blob, BLOB, BLOB",

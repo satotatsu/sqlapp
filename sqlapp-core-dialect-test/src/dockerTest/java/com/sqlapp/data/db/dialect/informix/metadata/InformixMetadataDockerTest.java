@@ -32,6 +32,14 @@ import com.sqlapp.util.DoubleKeyMap;
  * selected test DB.
  */
 class InformixMetadataDockerTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix", "in4mix")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"BIGINT", "REAL", "DOUBLE PRECISION", "DECIMAL", "DECIMAL(12,3)", "DATETIME HOUR TO SECOND", "VARCHAR(12)");
+		}
+	}
+
 	private static final String INFORMIX_ENVIRONMENT = "for candidate in /opt/ibm/informix /opt/ibm/informix/v*; do "
 			+ "if [ -x \"$candidate/bin/dbaccess\" ]; then export INFORMIXDIR=\"$candidate\"; break; fi; done; "
 			+ "test -n \"$INFORMIXDIR\" || exit 1; "

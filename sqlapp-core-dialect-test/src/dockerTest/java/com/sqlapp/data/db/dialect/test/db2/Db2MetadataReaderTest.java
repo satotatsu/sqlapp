@@ -33,6 +33,14 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Db2 12.1.5 integration coverage for the metadata reader tree. */
 class Db2MetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = DB2.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"DOUBLE", "REAL", "DECIMAL(12,3)", "VARCHAR(12)", "TIME", "XML");
+		}
+	}
+
 	private static final String IMAGE = "icr.io/db2_community/db2:12.1.5.0";
 	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container(IMAGE);
 

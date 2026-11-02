@@ -9,7 +9,11 @@ import com.sqlapp.util.MessageDigests;
 
 /** Offline authoring over the same Schema projection as transfer execution. */
 public final class TransferNameMappingInspectionService {
-	public record Column(String source, String target, String sourceType, boolean primaryKey, boolean nullable) {
+	public record Column(String source, String target, String sourceType, boolean primaryKey, boolean nullable,
+			String targetDefinition, String previewIssue) {
+		public Column(String source, String target, String sourceType, boolean primaryKey, boolean nullable) {
+			this(source, target, sourceType, primaryKey, nullable, null, null);
+		}
 	}
 
 	public record Table(String source, String target, List<Column> columns) {
@@ -19,7 +23,9 @@ public final class TransferNameMappingInspectionService {
 	}
 
 	public record Result(Path schemaFile, String schemaFingerprint, String mappingFingerprint, List<Table> tables,
-			List<String> warnings) {
+			List<String> warnings, String targetDialect) {
+		public Result(Path schemaFile, String schemaFingerprint, String mappingFingerprint, List<Table> tables,
+				List<String> warnings) { this(schemaFile, schemaFingerprint, mappingFingerprint, tables, warnings, null); }
 		public Result {
 			schemaFile = schemaFile.toAbsolutePath().normalize();
 			tables = List.copyOf(tables);
@@ -42,6 +48,12 @@ public final class TransferNameMappingInspectionService {
 	 */
 	public Result inspect(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot, List<String> selected,
 			TransferNameMappingIO.Configuration mapping) throws Exception {
+		return inspect(snapshot, selected, mapping, null);
+	}
+
+	/** Optional offline target-builder preview, not live target metadata or an execution plan. */
+	public Result inspect(BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot, List<String> selected,
+			TransferNameMappingIO.Configuration mapping, com.sqlapp.data.db.dialect.Dialect targetDialect) throws Exception {
 		Objects.requireNonNull(snapshot, "snapshot");
 		Objects.requireNonNull(mapping, "mapping");
 		if (selected == null || selected.isEmpty()
@@ -63,9 +75,20 @@ public final class TransferNameMappingInspectionService {
 			var columns = new ArrayList<Column>();
 			for (int index = 0; index < source.getColumns().size(); index++) {
 				var column = source.getColumns().get(index);
+				String definition = null, issue = null;
+				if (targetDialect != null) {
+					try {
+						definition = targetDialect.createSqlBuilder().definition(target.getColumns().get(index).clone(), false).toString();
+						if (definition.isBlank()) throw new IllegalArgumentException("Empty target definition preview.");
+					} catch (IllegalArgumentException | UnsupportedOperationException failure) {
+						definition = null;
+						issue = "Target builder preview unavailable (" + failure.getClass().getSimpleName()
+								+ "). Inspect the full Schema SQL and compatibility warnings during database Review.";
+					}
+				}
 				columns.add(new Column(column.getName(), target.getColumns().get(index).getName(),
 						Objects.toString(column.getDataType(), "Unknown"), keys.contains(column.getName()),
-						!column.isNotNull()));
+						!column.isNotNull(), definition, issue));
 			}
 			tables.add(new Table(TransferSchemaOnlyPreparation.identity(source.getCatalogName(), source.getSchemaName(),
 					source.getName()), target.getName(), columns));
@@ -75,6 +98,6 @@ public final class TransferNameMappingInspectionService {
 			TransferSchemaPreparation.mappingExpressions(TransferJobConfiguration.CompatibilityPolicy.WARN, warnings);
 		return new Result(snapshot.file(), snapshot.fingerprint(),
 				"sha256:" + MessageDigests.SHA256.checksumAsString(text.getBytes(StandardCharsets.UTF_8)), tables,
-				warnings);
+				warnings, targetDialect == null ? null : targetDialect.getClass().getName());
 	}
 }

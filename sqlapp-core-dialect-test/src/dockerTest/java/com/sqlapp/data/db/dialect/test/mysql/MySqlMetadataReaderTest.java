@@ -35,6 +35,14 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** MySQL 8.4 integration coverage for the metadata reader tree. */
 class MySqlMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"FLOAT", "FLOAT(53)", "REAL", "DOUBLE PRECISION", "DECIMAL(12,3)", "VARCHAR(12)", "BLOB", "JSON");
+		}
+	}
+
 	private static final MySQLContainer MYSQL = ReusableTestcontainers
 			.configure(new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1"));
 

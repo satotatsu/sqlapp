@@ -13,6 +13,13 @@ import com.sqlapp.data.schemas.Table;
 
 class Db2DataTypeMatrixTest {
 	@org.junit.jupiter.api.Test
+	void portableSignedTinyIntRetainsItsFullRange() {
+		var dialect = DialectResolver.getInstance().getDialect("db2", 12, 1, null);
+		assertEquals("SMALLINT", dialect.createSqlBuilder()
+				.addTypeDefinition(new Column("C").setDataType(DataType.TINYINT)).toString().toUpperCase(Locale.ROOT));
+	}
+
+	@org.junit.jupiter.api.Test
 	void generatesPortableDoubleWithoutSourceTypeName() {
 		var dialect = DialectResolver.getInstance().getDialect("db2", 11, 5, null);
 		for (String nativeName : new String[] { null, "DOUBLE", "DOUBLE PRECISION" }) {

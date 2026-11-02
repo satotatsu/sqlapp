@@ -36,6 +36,14 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Oracle Database integration coverage for the metadata reader tree. */
 class OracleMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = ORACLE.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE", "NUMBER(12,3)", "VARCHAR2(12)", "XMLTYPE");
+		}
+	}
+
 	private static final OracleContainer ORACLE = ReusableTestcontainers
 			.configure(new OracleContainer(OracleTestEnvironment.image()));
 

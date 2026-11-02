@@ -142,7 +142,7 @@ public class MySqlAlterTableFactoryTest2 extends AbstractMySqlSqlFactoryTest {
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				ALTER TABLE `tableA` DROP INDEX idx2, MODIFY colc DATETIME(0) AFTER colb, DROP INDEX idx1
+				ALTER TABLE `tableA` DROP INDEX idx2, DROP INDEX idx1
 				""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
@@ -174,7 +174,7 @@ public class MySqlAlterTableFactoryTest2 extends AbstractMySqlSqlFactoryTest {
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				ALTER TABLE `tableA` DROP INDEX idx2, MODIFY colc DATETIME(0) AFTER colb, DROP INDEX idx1
+				ALTER TABLE `tableA` DROP INDEX idx2, DROP INDEX idx1
 								""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
@@ -190,7 +190,7 @@ public class MySqlAlterTableFactoryTest2 extends AbstractMySqlSqlFactoryTest {
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				ALTER TABLE `tableA` MODIFY colc DATETIME(0) AFTER colb, ADD CONSTRAINT idx2 UNIQUE ( colc )
+				ALTER TABLE `tableA` ADD CONSTRAINT idx2 UNIQUE ( colc )
 								""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}

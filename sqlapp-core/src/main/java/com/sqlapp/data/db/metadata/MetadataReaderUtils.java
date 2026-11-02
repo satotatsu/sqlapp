@@ -90,8 +90,11 @@ public class MetadataReaderUtils {
 		return obj;
 	}
 
-	private final static Map<Class<?>, Set<Class<?>>> SUPPORTED_TYPE_CACHE = CommonUtils
-			.map();
+	private record SupportedTypeKey(Class<?> readerClass, Class<?> dialectClass) {
+	}
+
+	private static final Map<SupportedTypeKey, Set<Class<?>>> SUPPORTED_TYPE_CACHE =
+			new java.util.concurrent.ConcurrentHashMap<>();
 
 	/**
 	 * 指定のカタログ読み込みクラスでサポートされた型のセットを返します
@@ -99,7 +102,9 @@ public class MetadataReaderUtils {
 	 * @param reader
 	 */
 	public static Set<Class<?>> supportedSchemaTypes(final CatalogReader reader) {
-		Set<Class<?>> types = SUPPORTED_TYPE_CACHE.get(reader.getClass());
+		// One reader class may expose different children for different dialect versions.
+		final var key = new SupportedTypeKey(reader.getClass(), reader.getDialect().getClass());
+		Set<Class<?>> types = SUPPORTED_TYPE_CACHE.get(key);
 		if (types == null) {
 			types = CommonUtils.set();
 			types.add(Catalog.class);
@@ -109,7 +114,7 @@ public class MetadataReaderUtils {
 				types.add(getMetaClass(metadataReader));
 			}
 			types = Collections.unmodifiableSet(types);
-			SUPPORTED_TYPE_CACHE.put(reader.getClass(), types);
+			SUPPORTED_TYPE_CACHE.put(key, types);
 		}
 		return types;
 	}

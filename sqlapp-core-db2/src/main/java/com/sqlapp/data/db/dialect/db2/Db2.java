@@ -132,7 +132,8 @@ public class Db2 extends Dialect {
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
 		});
 		// Byte
-		getDbDataTypes().addTinyInt(type -> {
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {

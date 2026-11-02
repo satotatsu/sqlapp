@@ -23,7 +23,8 @@ class SybaseDataTypeMatrixTest {
 			"univarchar(12), NVARCHAR, UNIVARCHAR(12)", "unichar ( 12 ), NCHAR, UNICHAR(12)", "unitext, NCLOB, UNITEXT",
 			"datetime, DATETIME, DATETIME", "timestamp, ROWVERSION, TIMESTAMP",
 			"unsigned smallint, USMALLINT, UNSIGNED SMALLINT", "unsigned int, UINT, UNSIGNED INT",
-			"unsigned bigint, UBIGINT, UNSIGNED BIGINT" })
+			"unsigned bigint, UBIGINT, UNSIGNED BIGINT", "usmallint, USMALLINT, UNSIGNED SMALLINT",
+			"uint, UINT, UNSIGNED INT", "ubigint, UBIGINT, UNSIGNED BIGINT" })
 	void resolvesAndGeneratesNativeTypes(String input, DataType type, String expected) {
 		for (int major : new int[] { 15, 16 }) {
 			var dialect = DialectResolver.getInstance().getDialect("Adaptive Server Enterprise", major, 0, null);

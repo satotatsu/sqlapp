@@ -61,6 +61,7 @@ final class FileTransferPanel extends JPanel {
 			failure -> statusPanel.setDetails("SQL draft save failed.\n" + EditorStatusPanel.failureDetails(failure)));
 	final JTabbedPane resultTabs = new JTabbedPane();
 	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
+	private final TransferTablePreparationTabs tableTabs = new TransferTablePreparationTabs();
 	private final TransferSchemaStatementTabs statementTabs = new TransferSchemaStatementTabs();
 	final JTextArea summary = new JTextArea(
 			"1. Export: create or choose a job and export a CSV package.\n2. Import: choose the completed manifest and enter the target connection.\n3. Review warnings and optional table creation, then confirm import.");
@@ -87,6 +88,7 @@ final class FileTransferPanel extends JPanel {
 			java.util.function.Function<DataMigrationDraftService.Prepared, Path> presenter) {
 		super(new BorderLayout(8, 8));
 		this.backend = backend;
+		tableTabs.setStatementNavigator(task -> statementTabs.showTask(resultTabs, task));
 		draftDialog = presenter == null ? prepared -> FileTransferDraftDialog.show(this, prepared) : presenter;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var input = new JPanel(new BorderLayout(4, 4));
@@ -519,6 +521,7 @@ final class FileTransferPanel extends JPanel {
 				} catch (Exception failure) {
 					schemaDraft.clear();
 					warningTabs.clear(resultTabs);
+					tableTabs.clear(resultTabs);
 					statementTabs.clear(resultTabs);
 					final Throwable cause = failure instanceof java.util.concurrent.ExecutionException
 							? failure.getCause()
@@ -555,6 +558,7 @@ final class FileTransferPanel extends JPanel {
 		schemaDraft.clear();
 		result.showJson(value);
 		warningTabs.show(resultTabs, value);
+		tableTabs.show(resultTabs, value);
 		statementTabs.show(resultTabs, value);
 		summary.setText(FileTransferSummary.text(value));
 		summary.setCaretPosition(0);
@@ -604,6 +608,7 @@ final class FileTransferPanel extends JPanel {
 	private void clearGradle() {
 		schemaDraft.clear();
 		warningTabs.clear(resultTabs);
+		tableTabs.clear(resultTabs);
 		statementTabs.clear(resultTabs);
 		resultTabs.remove(gradle);
 		gradle.showText("");

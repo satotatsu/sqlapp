@@ -14,15 +14,17 @@ final class TransferNameMappingDialog {
 		var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Table and column names",
 				Dialog.ModalityType.APPLICATION_MODAL);
 		var editor = new TransferNameMappingPanel();
+		var targetPreview = new TransferMappingTargetPreviewPanel(editor.schemaCheck::changed);
 		var status = new JLabel("Loading mapping…");
 		var save = new JButton("Save mapping…");
 		var cancel = new JButton("Close");
 		var location = new JLabel(file == null ? "New mapping — not saved" : "Mapping: " + file);
 		location.setToolTipText(location.getText());
-		var schemaFile = new JTextField(job.getParent().resolve("source-schema.xml").toString(), 30);
+		var schemaFile = new JTextField(job.getParent().resolve("source-schema.xml").toString(), 24);
 		var browseSchema = new JButton("Browse…");
 		var loadColumns = new JButton("Load columns");
 		var checkSchema = new JButton("Check Schema");
+		var reviewScope = new JButton("Review scope…");
 		var schemaRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		var schemaLabel = new JLabel("Source Schema XML");
 		schemaLabel.setLabelFor(schemaFile);
@@ -31,6 +33,7 @@ final class TransferNameMappingDialog {
 		schemaRow.add(browseSchema);
 		schemaRow.add(loadColumns);
 		schemaRow.add(checkSchema);
+		schemaRow.add(reviewScope);
 		var footer = new JPanel(new BorderLayout());
 		var actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		actions.add(save);
@@ -41,7 +44,8 @@ final class TransferNameMappingDialog {
 		content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		var top = new JPanel(new BorderLayout(4, 4));
 		top.add(location, BorderLayout.NORTH);
-		top.add(schemaRow, BorderLayout.SOUTH);
+		top.add(schemaRow, BorderLayout.CENTER);
+		top.add(targetPreview, BorderLayout.SOUTH);
 		content.add(top, BorderLayout.NORTH);
 		content.add(editor, BorderLayout.CENTER);
 		content.add(footer, BorderLayout.SOUTH);
@@ -56,7 +60,10 @@ final class TransferNameMappingDialog {
 				throw new IllegalArgumentException("Choose a source Schema XML file.");
 			var capturedPath = Path.of(schemaFile.getText());
 			var capturedSelection = java.util.List.copyOf(selected);
-			return () -> new TransferNameMappingInspectionService().inspect(capturedPath, capturedSelection, mapping);
+			var capturedTarget = targetPreview.dialect();
+			return () -> new TransferNameMappingInspectionService().inspect(
+					new BulkMigrationJobDraftBuilder().inspect(capturedPath), capturedSelection, mapping,
+					capturedTarget);
 		});
 		var closeGuard = new TransferNameMappingCloseGuard(editor::configuration, () -> {
 			var choices = new String[] { "Keep editing", "Discard name changes" };
@@ -70,15 +77,80 @@ final class TransferNameMappingDialog {
 			cancel.setEnabled(!busy[0]);
 			loadColumns.setEnabled(save.isEnabled());
 			checkSchema.setEnabled(save.isEnabled());
+			reviewScope.setEnabled(save.isEnabled());
 			browseSchema.setEnabled(save.isEnabled());
 			schemaFile.setEnabled(save.isEnabled());
 			enable(editor, save.isEnabled());
+			enable(targetPreview, save.isEnabled());
 			editor.tableTools.refreshCounts();
 			editor.columnTools.refreshCounts();
 			editor.goToIssue.setEnabled(save.isEnabled() && editor.issueList.getSelectedValue() != null);
 			editor.preview.refreshEnabled(save.isEnabled());
 		};
 		refresh.run();
+		reviewScope.addActionListener(event -> {
+			final TransferNameMappingIO.Configuration mapping;
+			final Path schema;
+			try {
+				mapping = editor.configuration();
+				if (schemaFile.getText().isBlank())
+					throw new IllegalArgumentException("Choose a source Schema XML file.");
+				schema = Path.of(schemaFile.getText());
+			} catch (Exception failure) {
+				status.setText(message(failure));
+				return;
+			}
+			busy[0] = true;
+			refresh.run();
+			status.setText("Reviewing mapping scope against captured Schema…");
+			new SwingWorker<TransferNameMappingScopeService.Review, Void>() {
+				@Override
+				protected TransferNameMappingScopeService.Review doInBackground() throws Exception {
+					return new TransferNameMappingScopeService().review(schema, selected, mapping);
+				}
+
+				@Override
+				protected void done() {
+					try {
+						var review = get();
+						if (review.excluded().isEmpty()) {
+							status.setText("All mapping groups are within the current selection. No changes made.");
+							return;
+						}
+						var confirmed = new java.util.concurrent.atomic.AtomicBoolean();
+						var preview = new JDialog(dialog, "Mappings outside selected tables",
+								Dialog.ModalityType.APPLICATION_MODAL);
+						preview.setContentPane(new TransferMappingScopePanel(review, () -> {
+							confirmed.set(true);
+							preview.dispose();
+						}, preview::dispose));
+						preview.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+								.put(KeyStroke.getKeyStroke("ESCAPE"), "cancelScope");
+						preview.getRootPane().getActionMap().put("cancelScope", new AbstractAction() {
+							@Override
+							public void actionPerformed(java.awt.event.ActionEvent event) {
+								preview.dispose();
+							}
+						});
+						preview.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+						preview.setSize(940, 480);
+						preview.setLocationRelativeTo(dialog);
+						preview.setVisible(true);
+						if (confirmed.get()) {
+							editor.removeExcludedMappings(review);
+							status.setText("Removed " + review.excluded().size()
+									+ " excluded mapping groups from the editor. Save mapping and settings, then review again.");
+						} else
+							status.setText("Scope review cancelled. Mapping unchanged.");
+					} catch (Exception failure) {
+						status.setText(message(failure));
+					} finally {
+						busy[0] = false;
+						refresh.run();
+					}
+				}
+			}.execute();
+		});
 		schemaFile.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent event) {
 				editor.schemaCheck.changed();
@@ -95,11 +167,13 @@ final class TransferNameMappingDialog {
 		checkSchema.addActionListener(event -> {
 			final TransferNameMappingIO.Configuration mapping;
 			final Path schema;
+			final com.sqlapp.data.db.dialect.Dialect targetDialect;
 			try {
 				mapping = editor.configuration();
 				if (schemaFile.getText().isBlank())
 					throw new IllegalArgumentException("Choose a source Schema XML file.");
 				schema = Path.of(schemaFile.getText());
+				targetDialect = targetPreview.dialect();
 			} catch (Exception failure) {
 				status.setText(message(failure));
 				return;
@@ -112,7 +186,8 @@ final class TransferNameMappingDialog {
 			new SwingWorker<TransferNameMappingInspectionService.Result, Void>() {
 				@Override
 				protected TransferNameMappingInspectionService.Result doInBackground() throws Exception {
-					return new TransferNameMappingInspectionService().inspect(schema, selected, mapping);
+					return new TransferNameMappingInspectionService().inspect(
+							new BulkMigrationJobDraftBuilder().inspect(schema), selected, mapping, targetDialect);
 				}
 
 				@Override

@@ -21,6 +21,22 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class OracleSchemaParityRegressionTest {
+	@Test
+	void xmlStorageProjectionIsNotAUserGeneratedColumn() throws Exception {
+		var reader = new Oracle11gColumnReader(DialectHolder.oracle11gR2Dialect);
+		var values = Map.of("OWNER", "APP", "TABLE_NAME", "T", "COLUMN_NAME", "C", "DATA_TYPE", "XMLTYPE",
+				"VIRTUAL_COLUMN", "YES", "NULLABLE", "Y");
+		Column column = reader.createColumn(row(values));
+		assertEquals(DataType.SQLXML, column.getDataType());
+		assertNull(column.getFormula());
+		var table = new Table("T");
+		table.getColumns().add(column);
+		assertTrue(create(table).toUpperCase(java.util.Locale.ROOT).contains("XMLTYPE"));
+		var missingFormula = new HashMap<>(values);
+		missingFormula.put("DATA_TYPE", "NUMBER");
+		assertThrows(IllegalStateException.class, () -> reader.createColumn(row(missingFormula)));
+	}
+
 	private ExResultSet row(Map<String, String> values) {
 		return new ExResultSet(null) {
 			private boolean missing;

@@ -9,6 +9,29 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingInspectionService.*;
 
 class TransferNameMappingSchemaPanelTest {
+	@Test
+	void showsBuilderDefinitionAndUnavailableEvidenceAndInvalidatesItWhenTargetChanges() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new TransferNameMappingSchemaPanel();
+			var result = new Result(Path.of("schema.xml"), "source", "mapping", List.of(new Table("A", "B",
+					List.of(new Column("PRICE", "金額", "DOUBLE", false, true, "DOUBLE PRECISION DEFAULT 0", null),
+							new Column("OPAQUE", "OPAQUE", "OTHER", false, true, null, "Target preview unavailable")))),
+					List.of(), "Postgres16");
+			panel.showResult(result);
+			assertEquals("DOUBLE PRECISION DEFAULT 0", panel.model.getValueAt(0, 7));
+			assertEquals("Unavailable", panel.model.getValueAt(1, 7));
+			assertEquals("Target preview unavailable", panel.model.getValueAt(1, 8));
+			assertEquals(5, panel.details.table.convertColumnIndexToView(7));
+			assertTrue(panel.evidence.getText().contains("unavailable column previews: 1"));
+			panel.details.filter.setText("DOUBLE PRECISION");
+			assertEquals(1, panel.details.table.getRowCount());
+			var settings = new TransferMappingTargetPreviewPanel(panel::changed);
+			settings.product.setSelectedItem("PostgreSQL");
+			assertEquals(0, panel.model.getRowCount());
+			assertFalse(panel.evidence.getText().contains("Postgres16"));
+		});
+	}
+
 	private Result result() {
 		return new Result(Path.of("schema.xml"), "sha256:source", "sha256:mapping",
 				List.of(new Table("PUBLIC.顧客", "PEOPLE", List.of(new Column("識別子", "ID", "INT", true, false)))),

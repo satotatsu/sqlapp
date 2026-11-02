@@ -28,7 +28,17 @@ public final class TransferSchemaPreparation {
 	public record Statement(String taskId, String sql) {
 	}
 
-	public record Plan(String fingerprint, List<Statement> statements, List<String> warnings) {
+	/** Recorded target preparation intent, not execution status or schema equivalence. */
+	public enum TableAction { CREATE, USE_EXISTING, SKIP_EXISTING, APPLY_DIFFERENCES }
+
+	public record TablePreparation(String taskId, String targetCatalog, String targetSchema, String targetTable,
+			TableAction action) { }
+
+	public record Plan(String fingerprint, List<Statement> statements, List<String> warnings,
+			List<TablePreparation> tables) {
+		public Plan(String fingerprint, List<Statement> statements, List<String> warnings) {
+			this(fingerprint, statements, warnings, List.of());
+		}
 		public Plan(String fingerprint, List<Statement> statements) {
 			this(fingerprint, statements, List.of());
 		}
@@ -36,6 +46,7 @@ public final class TransferSchemaPreparation {
 		public Plan {
 			statements = List.copyOf(statements);
 			warnings = List.copyOf(warnings);
+			tables = tables == null ? List.of() : List.copyOf(tables);
 		}
 	}
 
@@ -106,7 +117,7 @@ public final class TransferSchemaPreparation {
 			final var base = plan(connection, projection.schema(), selections, data.getFingerprint(), mode, policy,
 					data, generatedKeyColumn);
 			warnings.addAll(base.warnings());
-			return result(base.fingerprint(), base.statements(), warnings, mode);
+			return withTables(result(base.fingerprint(), base.statements(), warnings, mode), base.tables());
 		}
 		return plan(connection, sourceSchema,
 				data.getTasks().stream()
@@ -160,7 +171,8 @@ public final class TransferSchemaPreparation {
 				compatibility(policy, warnings, check);
 		if (mode == TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING) {
 			BulkMigrationTargetValidator.validate(connection, data);
-			return result(fingerprint, List.of(), warnings, mode);
+			return withTables(result(fingerprint, List.of(), warnings, mode), tablePreparations(tasks,
+					tasks.stream().map(Selection::getTaskId).collect(java.util.stream.Collectors.toSet()), mode, data != null));
 		}
 		final Table first = tasks.getFirst().getEffectiveTargetTable();
 		boolean schemaExists = false;
@@ -278,8 +290,8 @@ public final class TransferSchemaPreparation {
 			}
 		}
 		if (mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES)
-			return TransferSchemaDifferencePreparation.plan(connection, tasks, remapped, registry, fingerprint,
-					warnings, policy);
+			return withTables(TransferSchemaDifferencePreparation.plan(connection, tasks, remapped, registry, fingerprint,
+					warnings, policy), tablePreparations(tasks, existing, mode, data != null));
 		// Access and other table-local namespaces may repeat a constraint name.
 		// Give repeated names stable target identities; retain source metadata.
 		final var constraintNames = new HashMap<String, Integer>();
@@ -331,7 +343,26 @@ public final class TransferSchemaPreparation {
 				statements.add(new Statement(task.getTaskId(), operation.getSqlText()));
 			}
 		}
-		return result(fingerprint, statements, warnings, mode);
+		return withTables(result(fingerprint, statements, warnings, mode),
+				tablePreparations(tasks, existing, mode, data != null));
+	}
+
+	private static List<TablePreparation> tablePreparations(List<Selection> tasks, Set<String> existing,
+			TransferJobConfiguration.SchemaMode mode, boolean copiesRows) {
+		return tasks.stream().map(task -> {
+			var target = task.getEffectiveTargetTable();
+			TableAction action = !existing.contains(task.getTaskId()) ? TableAction.CREATE
+					: mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES ? TableAction.APPLY_DIFFERENCES
+							: copiesRows ? TableAction.USE_EXISTING : TableAction.SKIP_EXISTING;
+			return new TablePreparation(task.getTaskId(), target.getCatalogName(), target.getSchemaName(), target.getName(), action);
+		}).toList();
+	}
+
+	static Plan withTables(Plan plan, List<TablePreparation> tables) {
+		if (tables.isEmpty()) return plan;
+		String canonical = new com.sqlapp.util.JsonConverter().toJsonString(List.of(plan.fingerprint(), tables));
+		return new Plan("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(
+				canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)), plan.statements(), plan.warnings(), tables);
 	}
 
 	private static String targetObjectName(Table table, String originalName, String prefix, Set<String> reserved)

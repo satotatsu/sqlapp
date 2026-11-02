@@ -8,6 +8,17 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /** PostgreSQL compatibility only: this container does not emulate Aurora. */
 class AuroraPostgresCompatibilityTest extends AuroraPostgresAssertions {
+	@org.junit.jupiter.api.Test
+	void verifiesPostgresFamilyDataTypes() throws Exception {
+		try (var connection = connect()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("aurora-postgresql", connection.getMetaData().getDatabaseMajorVersion(), 0, null),
+					"REAL", "DOUBLE PRECISION", "FLOAT(24)", "FLOAT(53)", "NUMERIC(12,3)",
+					"CHARACTER VARYING(12)", "TIME(3) WITHOUT TIME ZONE", "TIMESTAMP(3) WITH TIME ZONE",
+					"INTEGER[]", "DOUBLE PRECISION[]", "REAL[]");
+		}
+	}
+
 	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
 			System.getProperty("sqlapp.test.aurora.postgresImage", "postgres:17.9"));
 

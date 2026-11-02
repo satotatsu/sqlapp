@@ -18,6 +18,7 @@ import com.sqlapp.util.MessageDigests;
  * factories.
  */
 final class TransferSchemaDifferencePreparation {
+	private record TaskOperation(String taskId, SqlOperation operation) { }
 	private TransferSchemaDifferencePreparation() {
 	}
 
@@ -55,7 +56,11 @@ final class TransferSchemaDifferencePreparation {
 			}
 		}
 		final var difference = before.diff(after, new DefaultSchemaEqualsHandler());
-		final var operations = new ArrayList<SqlOperation>();
+		final var operations = new ArrayList<TaskOperation>();
+		final var taskIds = new java.util.LinkedHashMap<String, String>();
+		for (var task : tasks)
+			if (taskIds.putIfAbsent(task.getEffectiveTargetTable().getName(), task.getTaskId()) != null)
+				throw new IllegalArgumentException("Select each target table only once.");
 		// Preserve canonical parent-before-child task order, including mixed CREATE
 		// and ALTER work, and isolate unsupported vendor changes per selected table.
 		for (var target : after.getTables()) {
@@ -78,10 +83,12 @@ final class TransferSchemaDifferencePreparation {
 				TransferSchemaPreparation.compatibility(policy, warnings, TransferSchemaChangeChecks.UNRESOLVED
 						+ " Table " + target.getName()
 						+ ": metadata differs but no executable SQL was generated. Inspect unsupported properties and migrate them manually.");
-			operations.addAll(generated);
+			for (var operation : generated)
+				operations.add(new TaskOperation(taskIds.get(target.getName()), operation));
 		}
 		final var statements = new ArrayList<TransferSchemaPreparation.Statement>();
-		for (var operation : operations) {
+		for (var owned : operations) {
+			var operation = owned.operation();
 			if (operation.getSqlType() != null && !operation.getSqlType().isSql())
 				continue;
 			if (operation.getSqlText() == null || operation.getSqlText().isBlank())
@@ -97,7 +104,7 @@ final class TransferSchemaDifferencePreparation {
 						"Schema difference factory requires unsupported session/transaction operations; use a separately reviewed SQL migration.");
 			if (operation.getSqlType() == SqlType.DROP && operation.getOriginal() instanceof Table)
 				impact(warnings, policy, "Target factory rebuilds a selected table; existing data may be lost.");
-			statements.add(new TransferSchemaPreparation.Statement("schema-difference", operation.getSqlText()));
+			statements.add(new TransferSchemaPreparation.Statement(owned.taskId(), operation.getSqlText()));
 		}
 		if (difference.getState().isChanged())
 			TransferSchemaPreparation.compatibility(policy, warnings,

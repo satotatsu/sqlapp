@@ -1452,6 +1452,21 @@ against the databases before execution. Same-name columns need no YAML overrides
 removing a row removes only the rename, not the copied column. Target-type editing,
 value conversion and CSV mapping remain unsupported. See the
 [mapping format and limitations](../docs/gradle-plugin/direct-transfer.md#optionally-map-table-and-column-names-schema-only).
+The name editor's **Optional target preview** accepts a product and explicit
+version for **Check Schema** and naming-rule Schema checks. Its optional columns
+show the target SQL builder's column-definition preview and any unsupported
+preview issue beside source model types, mapped names and source PK/NULL metadata.
+They are hidden when no preview is requested. Product/version changes clear old
+evidence. Preview controls are session-only; saved mappings and Gradle jobs are
+unchanged. This does not read existing target columns, add target-only keys,
+convert values or replace the complete table-factory SQL in database Review.
+
+The Columns tab offers a **Source table** selector for exact table identities,
+with **All tables** to return to the complete list. Double-click a source-table
+cell in Tables to open its columns. Search and renamed-only filtering apply
+within that table; new column rows inherit its identity. This changes the editor
+view only and does not exclude any data from the transfer.
+
 The Tables/Columns tabs offer literal **Find**, sorting, **Renamed only**, counts
 and **Reset selected names**. Filters affect display only; saving includes hidden
 overrides. Reset/remove actions operate on the selected rows in the displayed
@@ -1495,8 +1510,13 @@ Schema XML. Read the Schema, change Include checkboxes, optionally include refer
 parents, then **Use selected tables**. Filters retain hidden selections. Changes
 stay in the settings form until **Save settings**, followed by a new Review.
 Direct keyless INSERT, Schema-only eligibility and CSV key/type restrictions reuse
-the existing picker behavior. All other settings are retained. Excluded-table name
-mapping overrides need adjustment separately. CSV changes require a new export;
+the existing picker behavior. All other settings are retained. For excluded-table
+name mappings, **Edit names… → Review scope…** previews whole table/column groups
+outside the selection. Only **Remove listed groups** changes the editor; retained
+mappings and source-type rows remain intact. Save mapping and settings afterward.
+Unknown/duplicate source aliases and stale removal proposals are rejected rather
+than silently deleted. This is scope cleanup, not a replacement for Schema checks
+or database Review. CSV changes require a new export;
 completed packages are not edited. A changed Schema/path cannot publish an old
 selection, and missing saved identities are reported instead of silently omitted.
 
@@ -1599,3 +1619,22 @@ another review; retrying never implies clearing the target. These instructions d
 not perform additional database operations.
 
 The direct-transfer and CSV import results also provide a searchable **Schema statements** table. It preserves SQL execution order and shows reviewed, completed, uncertain-attempt and unexecuted statements. Select a row to inspect its full SQL. Recorded completion does not guarantee transaction commit; uncertain attempts may have taken effect. The table does not authorize execution or provide automatic resume.
+
+After review, **Table preparation** lists target catalog/schema/table identities
+and the common planner's recorded intent: create missing, use existing for data,
+skip existing without comparison, or review/apply differences. It supports search
+and selected-row details. Direct execution results keep this reviewed intent;
+it is never shown as execution completion. Consult Schema statements for SQL
+progress and Warnings for unsupported/manual work. File import review offers the
+same table evidence; its outcome shows SQL progress separately. Input changes
+and failed actions discard stale table evidence. No additional database queries
+or row counts are performed for this display.
+
+Select a table with recorded SQL and choose **Show table SQL** to open its exact
+task in **Schema statements**. Its **Table / task** selector combines with text
+search; **Clear** keeps the selected task, and **All tasks** restores every
+statement. Global order numbers and recorded statuses are preserved. New Schema
+difference plans retain the generating table's task ID; old reports retain their
+original IDs. Tasks without SQL cannot use the navigation button and may still
+have warnings requiring manual work. This filters the display only: inspect the
+full Schema SQL and dependencies before execution, and review again after changes.

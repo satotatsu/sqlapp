@@ -134,6 +134,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 						"TOML input is not supported for data conversion because TOML has no root array: " + file);
 			}
 			Table[] table = new Table[1];
+			final TrackedInput[] trackedInput = new TrackedInput[1];
 			table[0] = new Table();
 			if (workbookFileType.isXml()) {
 				execute(() -> {
@@ -141,16 +142,22 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				});
 			} else {
 				final RowIteratorHandler rowIteratorHandler = FileRowIteratorFactory.create(file, getCsvEncoding(), 0,
-						0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> value);
-				table[0].setRowIteratorHandler(rowIteratorHandler);
+						0, getJsonConverter(), getYamlConverter(), new TomlConverter(), (row, column, value) -> {
+							if (getOutputFileType().isParquet()) validateParquetValue(column, value);
+							return value;
+						});
+				trackedInput[0] = new TrackedInput(rowIteratorHandler);
+				table[0].setRowIteratorHandler(trackedInput[0]);
 			}
 			execute(() -> {
 				File tempFile = null;
-				try {
+				try (final TrackedInput input = trackedInput[0]) {
 					final OutputFiles outputFiles = createOutputFiles(file);
 					tempFile = outputFiles.temporary();
 					final File outputFile = outputFiles.output();
-					if (this.getOutputFileType().isWorkbook()) {
+					if (this.getOutputFileType().isParquet()) {
+						com.sqlapp.data.schemas.rowiterator.ParquetTableIO.write(tempFile.toPath(), table[0]);
+					} else if (this.getOutputFileType().isWorkbook()) {
 						readAll(table[0]);
 						writeTableAsExcel(tempFile, table[0], this.getOutputFileType());
 					} else if (this.getOutputFileType().isCsv()) {
@@ -165,6 +172,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					} else {
 						table[0].writeXml(tempFile);
 					}
+					if (input != null) input.close();
 					moveOutput(tempFile, outputFile);
 					if (this.isRemoveOriginalFile()) {
 						Files.delete(file.toPath());
@@ -202,6 +210,67 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 	}
 
 	private record OutputFiles(File temporary, File output) {
+	}
+
+	/** Reject loss before text readers coerce raw values into the inferred Schema type. */
+	private static void validateParquetValue(final Column column, final Object value) {
+		if (value == null || column.getDataType() == null) return;
+		final com.sqlapp.data.db.datatype.DataType type = column.getDataType();
+		try {
+			switch (type) {
+			case TINYINT, SMALLINT, INT, BIGINT, DECIMAL, NUMERIC -> {
+				if (!(value instanceof Number)) throw new IllegalArgumentException("expected a numeric value");
+				java.math.BigDecimal decimal = new java.math.BigDecimal(value.toString());
+				switch (type) {
+				case TINYINT -> decimal.byteValueExact();
+				case SMALLINT -> decimal.shortValueExact();
+				case INT -> decimal.intValueExact();
+				case BIGINT -> decimal.longValueExact();
+				default -> {
+					if (column.getScale() != null) decimal = decimal.setScale(column.getScale(), java.math.RoundingMode.UNNECESSARY);
+					if (column.getLength() != null && decimal.precision() > column.getLength())
+						throw new IllegalArgumentException("decimal precision exceeded");
+				}
+				}
+			}
+			case BOOLEAN, BIT -> {
+				if (!(value instanceof Boolean)) throw new IllegalArgumentException("expected a boolean value");
+			}
+			default -> {
+				if (type.isCharacter() && !(value instanceof CharSequence))
+					throw new IllegalArgumentException("expected a text value");
+			}
+			}
+		} catch (RuntimeException e) {
+			throw new IllegalArgumentException("Parquet column '" + column.getName()
+					+ "' cannot preserve the input value as " + type + "; supply typed Schema XML.", e);
+		}
+	}
+
+	/** Keeps file readers scoped to conversion, including output-side failures. */
+	private static final class TrackedInput implements RowIteratorHandler, AutoCloseable {
+		private final RowIteratorHandler delegate;
+		private final java.util.List<java.util.Iterator<Row>> iterators = new java.util.ArrayList<>();
+
+		private TrackedInput(final RowIteratorHandler delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public java.util.Iterator<Row> iterator(final com.sqlapp.data.schemas.RowCollection rows) {
+			final java.util.Iterator<Row> iterator = delegate.iterator(rows);
+			iterators.add(iterator);
+			return iterator;
+		}
+
+		@Override
+		public void close() {
+			try {
+				com.sqlapp.util.iterator.IteratorCloseUtils.close(null, iterators.toArray(java.util.Iterator<?>[]::new));
+			} finally {
+				iterators.clear();
+			}
+		}
 	}
 
 	private void validateOutputFileType() {

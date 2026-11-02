@@ -31,10 +31,16 @@ class FirebirdSchemaRoundTripTest {
 	@TestFactory
 	Stream<DynamicTest> roundTripsSupportedEngines() {
 		return Stream.of("2.5", "3.0", "4.0", "5.0")
-				.map(version -> DynamicTest.dynamicTest("Firebird " + version, () -> verify(version)));
+				.map(version -> DynamicTest.dynamicTest("Firebird " + version, () -> verify(version, false)));
 	}
 
-	private void verify(String version) throws Exception {
+	@TestFactory
+	Stream<DynamicTest> dataTypeServerRoundTrips() {
+		return Stream.of("2.5", "3.0", "4.0", "5.0")
+				.map(version -> DynamicTest.dynamicTest("Firebird types " + version, () -> verify(version, true)));
+	}
+
+	private void verify(String version, boolean typesOnly) throws Exception {
 		String tag = version.equals("2.5") ? "v2.5.9-ss" : "v" + version;
 		try (var container = new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:" + tag))
 				.withEnv("ISC_PASSWORD", "masterkey").withEnv("FIREBIRD_DATABASE", "test.fdb").withExposedPorts(3050)
@@ -75,6 +81,15 @@ class FirebirdSchemaRoundTripTest {
 				int major = connection.getMetaData().getDatabaseMajorVersion();
 				assertEquals(Integer.parseInt(version.substring(0, 1)), major);
 				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				if (typesOnly) {
+					var types = new java.util.ArrayList<>(List.of("REAL", "DOUBLE PRECISION", "FLOAT(7)",
+							"FLOAT(25)", "NUMERIC", "DECIMAL(12,3)", "CHARACTER VARYING(12)",
+							"BLOB SUB_TYPE BINARY", "BLOB SUB_TYPE TEXT"));
+					if (major >= 4)
+						types.addAll(List.of("INT128", "DECFLOAT", "BINARY(12)", "VARBINARY(12)"));
+					com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, types.toArray(String[]::new));
+					return;
+				}
 				assertEquals("Firebird" + version.replace(".", ""), dialect.getClass().getSimpleName());
 				capabilityBoundaries(connection, statement, dialect);
 				nativeSchemaObjects(connection, statement, dialect);

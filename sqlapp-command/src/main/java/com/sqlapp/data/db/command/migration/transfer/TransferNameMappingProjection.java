@@ -16,6 +16,22 @@ final class TransferNameMappingProjection {
 	private TransferNameMappingProjection() {
 	}
 
+	/** Shared identity/alias validation for projection and offline scope authoring. */
+	static Map<String, Table> mappingSources(Schema source, TransferNameMappingIO.Configuration mapping) {
+		var resolved = new LinkedHashMap<String, Table>(); var identities = new HashSet<String>();
+		for (var name : mapping.tables().keySet()) {
+			final Table table;
+			try { table = TransferSchemaOnlyPreparation.select(source, List.of(name)).getFirst(); }
+			catch (IllegalArgumentException failure) {
+				throw new TransferSchemaPreparation.ValidationException("Mapping source table must resolve uniquely in the captured Schema: " + name);
+			}
+			if (!identities.add(table.getName()))
+				throw new TransferSchemaPreparation.ValidationException("Duplicate resolved source table mapping: " + table.getName());
+			resolved.put(name, table);
+		}
+		return Collections.unmodifiableMap(resolved);
+	}
+
 	static Projection project(Schema source, List<Table> selected, TransferNameMappingIO.Configuration mapping) {
 		// Runtime full-scan tables carry a lazy row handler. Resolve their identity
 		// back to the canonical metadata rather than comparing or cloning live rows.
@@ -28,20 +44,13 @@ final class TransferNameMappingProjection {
 								"Selected source table is outside the captured Schema: " + input.getName())))
 				.toList();
 		var rules = new LinkedHashMap<String, TransferNameMappingIO.TableMapping>();
+		var sources = mappingSources(source, mapping);
 		for (var entry : mapping.tables().entrySet()) {
-			final Table table;
-			try {
-				table = TransferSchemaOnlyPreparation.select(source, List.of(entry.getKey())).getFirst();
-			} catch (IllegalArgumentException failure) {
-				throw new TransferSchemaPreparation.ValidationException(
-						"Mapping source table must resolve uniquely in the captured Schema: " + entry.getKey());
-			}
+			final Table table = sources.get(entry.getKey());
 			if (!canonicalSelection.contains(table))
 				throw new TransferSchemaPreparation.ValidationException(
 						"Mapping table is outside the selected scope: " + entry.getKey());
-			if (rules.putIfAbsent(table.getName(), entry.getValue()) != null)
-				throw new TransferSchemaPreparation.ValidationException(
-						"Duplicate resolved source table mapping: " + table.getName());
+			rules.put(table.getName(), entry.getValue());
 		}
 		var projected = source.clone();
 		projected.getTables().clear();

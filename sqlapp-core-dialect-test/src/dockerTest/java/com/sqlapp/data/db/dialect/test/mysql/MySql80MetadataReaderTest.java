@@ -29,6 +29,14 @@ import com.sqlapp.data.schemas.UniqueConstraint;
  * MySQL 8.0 compatibility coverage for its version-specific metadata reader.
  */
 class MySql80MetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"FLOAT", "REAL", "DOUBLE PRECISION", "DECIMAL(12,3)");
+		}
+	}
+
 	private static final MySQLContainer MYSQL = ReusableTestcontainers
 			.configure(new MySQLContainer("mysql:8.0").withCommand("--log-bin-trust-function-creators=1"));
 

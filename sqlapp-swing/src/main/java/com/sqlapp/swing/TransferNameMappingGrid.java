@@ -53,6 +53,13 @@ final class TransferNameMappingGrid extends JPanel {
 	private final boolean blankUnchanged;
 	private final TableRowSorter<DefaultTableModel> sorter;
 	private boolean refreshPending;
+	private String sourceTable;
+
+	void showSourceTable(String sourceTable) {
+		finishEdit();
+		this.sourceTable = sourceTable;
+		refreshFilter();
+	}
 
 	TransferNameMappingGrid(JTable grid, DefaultTableModel model, int sourceColumn, int targetColumn,
 			boolean blankUnchanged) {
@@ -120,7 +127,9 @@ final class TransferNameMappingGrid extends JPanel {
 			renamedOnly.setSelected(false);
 			refreshFilter();
 			int row = model.getRowCount();
-			model.addRow(new String[model.getColumnCount()]);
+			var values = new String[model.getColumnCount()];
+			values[0] = sourceTable;
+			model.addRow(values);
 			int visible = grid.convertRowIndexToView(row);
 			grid.setRowSelectionInterval(visible, visible);
 			grid.scrollRectToVisible(grid.getCellRect(visible, 0, true));
@@ -292,6 +301,8 @@ final class TransferNameMappingGrid extends JPanel {
 		sorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
 			@Override
 			public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+				if (sourceTable != null && !sourceTable.equals(entry.getStringValue(0)))
+					return false;
 				if (changed && !renamed(entry.getIdentifier()))
 					return false;
 				for (int column = 0; column < entry.getValueCount(); column++)

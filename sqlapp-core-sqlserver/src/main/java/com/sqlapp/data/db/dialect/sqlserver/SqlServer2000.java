@@ -113,7 +113,10 @@ public class SqlServer2000 extends Dialect {
 			type.setConverter(booleanConverter);
 		});
 		// SByte
-		getDbDataTypes().addTinyInt(type -> {
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			type.clearColumnTypeMatchers();
+		});
+		getDbDataTypes().addUTinyInt("TINYINT", type -> {
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// SMALLINT

@@ -44,6 +44,16 @@ import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
  * Disposable local YSQL integration test, enabled only by the dockerTest task.
  */
 class YugabyteMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesPostgresFamilyDataTypes() throws Exception {
+		try (var connection = connect()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"REAL", "DOUBLE PRECISION", "FLOAT(24)", "FLOAT(53)", "NUMERIC(12,3)",
+					"CHARACTER VARYING(12)", "TIME(3) WITHOUT TIME ZONE", "TIMESTAMP(3) WITH TIME ZONE",
+					"INTEGER[]", "DOUBLE PRECISION[]", "REAL[]");
+		}
+	}
+
 	private static final GenericContainer<?> YSQL = ReusableTestcontainers
 			.configure(new GenericContainer<>(DockerImageName
 					.parse(System.getProperty("sqlapp.test.yugabyte.image", "yugabytedb/yugabyte:2026.1.2.0-b137")))

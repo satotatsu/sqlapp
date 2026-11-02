@@ -9,6 +9,7 @@ import com.sqlapp.data.db.dialect.mysql.sql.MySqlCreateTableFactory;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TemporalPeriod;
+import com.sqlapp.data.schemas.TemporalPeriodType;
 
 /**
  * MariaDB CREATE TABLE generator preserving vendor table options.
@@ -19,10 +20,20 @@ public class MariadbCreateTableFactory extends MySqlCreateTableFactory {
 	protected void addConstraintDefinitions(Table table, MySqlSqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
 		for (TemporalPeriod period : table.getTemporalPeriods()) {
-			if (period.getStartColumnName() == null || period.getEndColumnName() == null) {
-				continue;
+			if (period.getStartColumnName() == null || period.getEndColumnName() == null
+					|| table.getColumns().get(period.getStartColumnName()) == null
+					|| table.getColumns().get(period.getEndColumnName()) == null
+					|| period.getStartColumnName().equalsIgnoreCase(period.getEndColumnName())) {
+				throw new IllegalArgumentException("MariaDB period requires distinct existing start/end columns: "
+						+ period.getName());
 			}
-			builder.lineBreak().comma()._add("PERIOD FOR ").name(period.getName()).space()._add("(")
+			builder.lineBreak().comma()._add("PERIOD FOR ");
+			if (period.getPeriodType() == TemporalPeriodType.SYSTEM_TIME) {
+				builder._add("SYSTEM_TIME");
+			} else {
+				builder.name(period.getName());
+			}
+			builder.space()._add("(")
 					.name(period.getStartColumnName()).comma().space().name(period.getEndColumnName())._add(")");
 		}
 	}

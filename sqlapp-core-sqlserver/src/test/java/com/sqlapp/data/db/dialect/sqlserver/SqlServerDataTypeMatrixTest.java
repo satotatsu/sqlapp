@@ -13,6 +13,13 @@ import com.sqlapp.data.schemas.Table;
 
 class SqlServerDataTypeMatrixTest {
 	@org.junit.jupiter.api.Test
+	void portableSignedTinyIntRetainsItsFullRange() {
+		var dialect = DialectResolver.getInstance().getDialect("Microsoft SQL Server", 16, 0, null);
+		assertEquals("SMALLINT", dialect.createSqlBuilder()
+				.addTypeDefinition(new Column("C").setDataType(DataType.TINYINT)).toString().toUpperCase(Locale.ROOT));
+	}
+
+	@org.junit.jupiter.api.Test
 	void generatesPortableDoubleWithoutSourceTypeName() {
 		var dialect = DialectResolver.getInstance().getDialect("Microsoft SQL Server", 16, 0, null);
 		for (String nativeName : new String[] { null, "DOUBLE", "DOUBLE PRECISION" }) {
@@ -25,7 +32,7 @@ class SqlServerDataTypeMatrixTest {
 	}
 
 	@ParameterizedTest(name = "{0} -> {1}: {2}")
-	@CsvSource({ "real, REAL, REAL", "float(53), FLOAT, FLOAT(53)", "float, FLOAT, FLOAT(53)",
+	@CsvSource({ "tinyint, UTINYINT, TINYINT", "real, REAL, REAL", "float(53), FLOAT, FLOAT(53)", "float, FLOAT, FLOAT(53)",
 			"smallint, SMALLINT, SMALLINT", "int, INT, INT", "bigint, BIGINT, BIGINT",
 			"varchar(12), VARCHAR, VARCHAR(12)", "nvarchar(12), NVARCHAR, NVARCHAR(12)",
 			"varbinary(12), VARBINARY, VARBINARY(12)", "'decimal(12,3)', DECIMAL, 'DECIMAL(12,3)'", "date, DATE, DATE",

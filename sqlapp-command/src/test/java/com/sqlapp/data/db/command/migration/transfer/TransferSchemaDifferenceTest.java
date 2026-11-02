@@ -37,6 +37,7 @@ class TransferSchemaDifferenceTest {
 		assertTrue(ddl.contains("BYTEA"), ddl);
 		assertFalse(ddl.contains("BLOB"), ddl);
 		assertTrue(plan.warnings().contains("Source and target products differ"));
+		assertTrue(plan.statements().stream().allMatch(statement -> statement.taskId().equals("documents")));
 	}
 
 	@Test
@@ -53,6 +54,13 @@ class TransferSchemaDifferenceTest {
 		assertTrue(sql.contains("ALTER TABLE"), sql);
 		assertTrue(sql.contains("ADD COLUMN"), sql);
 		assertFalse(sql.contains("UNSELECTED"), sql);
+		var statements = review.prepared().schemaPreparation().statements();
+		assertEquals(List.of("schema-table-1", "schema-table-2"),
+				statements.stream().map(TransferSchemaPreparation.Statement::taskId).distinct().toList());
+		assertTrue(statements.stream().filter(statement -> statement.sql().contains("ITEMS"))
+				.allMatch(statement -> statement.taskId().equals("schema-table-1")));
+		assertTrue(statements.stream().filter(statement -> statement.sql().contains("NEW_TABLE"))
+				.allMatch(statement -> statement.taskId().equals("schema-table-2")));
 		assertFalse(TransferSchemaChangeChecks.executionBlocked(review.prepared().job().configuration(),
 				review.prepared().schemaPreparation()));
 		assertFalse(column(target, "ITEMS", "NAME"));

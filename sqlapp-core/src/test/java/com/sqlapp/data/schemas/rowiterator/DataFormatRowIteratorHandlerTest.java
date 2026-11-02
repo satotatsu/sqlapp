@@ -19,6 +19,7 @@ class DataFormatRowIteratorHandlerTest {
 
 	@Test
 	void createsHandlerForEveryDataFormat() {
+		assertInstanceOf(ParquetRowIteratorHandler.class, create(DataFormat.PARQUET));
 		assertInstanceOf(CsvRowIteratorHandler.class, DataFormat.CSV.createRowIteratorHandler(new File("items.csv")));
 		assertInstanceOf(CsvRowIteratorHandler.class, create(DataFormat.TSV));
 		assertInstanceOf(CsvRowIteratorHandler.class, create(DataFormat.SSV));

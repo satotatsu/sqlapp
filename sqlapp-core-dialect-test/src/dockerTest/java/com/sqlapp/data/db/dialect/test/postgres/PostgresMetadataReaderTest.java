@@ -44,6 +44,14 @@ import com.sqlapp.data.schemas.Table;
 
 /** PostgreSQL 18 integration coverage for the metadata reader tree. */
 class PostgresMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = POSTGRES.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"REAL", "DOUBLE PRECISION", "FLOAT(24)", "FLOAT(53)", "CHARACTER VARYING(12)", "TIME WITHOUT TIME ZONE", "TIMESTAMP WITH TIME ZONE", "XML", "INTEGER[]");
+		}
+	}
+
 	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
 			.configure(new PostgreSQLContainer("postgres:18.4").withCommand("postgres", "-c",
 					"shared_preload_libraries=pg_stat_statements", "-c", "wal_level=logical"));

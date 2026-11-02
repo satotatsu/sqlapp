@@ -17,6 +17,17 @@ import com.sqlapp.jdbc.bulk.*;
  * compatibility.
  */
 class EdbOraclePostgresCompatibilityTest {
+	@org.junit.jupiter.api.Test
+	void verifiesPostgresFamilyDataTypes() throws Exception {
+		try (var connection = POSTGRES.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("edb-oracle", connection.getMetaData().getDatabaseMajorVersion(), 0, null),
+					"REAL", "DOUBLE PRECISION", "FLOAT(24)", "FLOAT(53)", "NUMERIC(12,3)",
+					"CHARACTER VARYING(12)", "TIME(3) WITHOUT TIME ZONE", "TIMESTAMP(3) WITH TIME ZONE",
+					"INTEGER[]", "DOUBLE PRECISION[]", "REAL[]");
+		}
+	}
+
 	private static final PostgreSQLContainer POSTGRES = ReusableTestcontainers
 			.configure(new PostgreSQLContainer(System.getProperty("sqlapp.test.edb.postgresImage", "postgres:17.9")));
 

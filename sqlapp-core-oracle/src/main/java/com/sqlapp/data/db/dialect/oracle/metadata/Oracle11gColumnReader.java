@@ -41,7 +41,10 @@ public class Oracle11gColumnReader extends OracleColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
-		if ("YES".equalsIgnoreCase(getString(rs, "VIRTUAL_COLUMN"))) {
+		// XMLType's storage projection is catalogued as virtual without a user expression.
+		boolean xmlStorageProjection = column.getDataType() == com.sqlapp.data.db.datatype.DataType.SQLXML
+				&& (column.getDefaultValue() == null || column.getDefaultValue().isBlank());
+		if ("YES".equalsIgnoreCase(getString(rs, "VIRTUAL_COLUMN")) && !xmlStorageProjection) {
 			if (column.getDefaultValue() == null || column.getDefaultValue().isBlank())
 				throw new IllegalStateException(
 						"Virtual column expression unavailable: " + column.getTableName() + "." + column.getName());

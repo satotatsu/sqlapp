@@ -133,7 +133,7 @@ class MariadbModernSchemaSqlTest extends AbstractMariadbSqlFactoryTest {
 		String normalizedSql = sql.replaceAll("\\s+", " ");
 		assertTrue(normalizedSql.contains("GENERATED ALWAYS AS ROW START"), sql);
 		assertTrue(normalizedSql.contains("GENERATED ALWAYS AS ROW END"), sql);
-		assertTrue(normalizedSql.contains("PERIOD FOR `SYSTEM_TIME`"), sql);
+		assertTrue(normalizedSql.contains("PERIOD FOR SYSTEM_TIME"), sql);
 		assertTrue(normalizedSql.contains("`ROW_START`, `ROW_END`"), sql);
 		assertTrue(normalizedSql.contains("WITH SYSTEM VERSIONING"), sql);
 	}

@@ -146,7 +146,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		int i = 0;
 		SqlOperation commandText = list.get(i++);
-		assertEquals("ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(9,0) NOT NULL\n)", commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(10,0) NOT NULL\n)", commandText.getSqlText());
 		commandText = list.get(i++);
 		assertEquals("ALTER TABLE \"tableA\" ADD CONSTRAINT \"pk1\" PRIMARY KEY ( \"cola\" )",
 				commandText.getSqlText());
@@ -165,7 +165,7 @@ public class OracleAlterTableFactoryTest extends AbstractOracleSqlFactoryTest {
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		int i = 0;
 		SqlOperation commandText = list.get(i++);
-		assertEquals("ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(9,0) NOT NULL\n)", commandText.getSqlText());
+		assertEquals("ALTER TABLE \"tableA\" MODIFY (\n	  \"cola\" NUMBER(10,0) NOT NULL\n)", commandText.getSqlText());
 		commandText = list.get(i++);
 		assertEquals("ALTER TABLE \"tableA\" DROP CONSTRAINT \"pk1\"", commandText.getSqlText());
 		System.out.println(list);

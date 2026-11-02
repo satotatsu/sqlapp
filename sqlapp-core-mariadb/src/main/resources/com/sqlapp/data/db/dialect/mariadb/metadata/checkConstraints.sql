@@ -8,6 +8,7 @@ FROM information_schema.TABLE_CONSTRAINTS tc
 INNER JOIN information_schema.CHECK_CONSTRAINTS cc
   ON  tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA
   AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+  AND tc.TABLE_NAME = cc.TABLE_NAME
 WHERE tc.CONSTRAINT_TYPE = 'CHECK'
   /*if isNotEmpty(schemaName)*/
   AND tc.CONSTRAINT_SCHEMA IN /*schemaName*/('%')

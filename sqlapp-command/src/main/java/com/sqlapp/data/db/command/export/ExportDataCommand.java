@@ -170,6 +170,10 @@ public class ExportDataCommand extends AbstractExportCommand implements OutputFi
 
 	private long writeTable(final File directory, final String filename, final Table table,
 			final DataFormat workbookFileType) throws Exception {
+		if (workbookFileType.isParquet()) {
+			return com.sqlapp.data.schemas.rowiterator.ParquetTableIO.write(
+					new File(directory, filename + ".parquet").toPath(), table);
+		}
 		if (this.getOutputFileType().isTextFile()) {
 			if (this.getOutputFileType().isCsv()) {
 				return writeTableAsCsv(directory, filename, table, this.getOutputFileType());

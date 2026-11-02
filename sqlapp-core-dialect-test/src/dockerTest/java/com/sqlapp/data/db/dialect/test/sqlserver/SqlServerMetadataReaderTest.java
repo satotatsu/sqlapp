@@ -43,6 +43,14 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** SQL Server 2025 integration coverage for the full metadata reader tree. */
 class SqlServerMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = createTestDatabaseConnection()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"TINYINT", "FLOAT", "REAL", "DECIMAL(12,3)", "NVARCHAR(12)", "XML");
+		}
+	}
+
 	private static final String IMAGE = "mcr.microsoft.com/mssql/server:2025-latest";
 	private static final String DATABASE_NAME = "METADATA_READER_TEST";
 

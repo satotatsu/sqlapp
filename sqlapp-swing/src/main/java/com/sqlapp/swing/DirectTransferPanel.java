@@ -52,6 +52,7 @@ final class DirectTransferPanel extends JPanel {
 			"1. Enter source and target connections.\n2. Create a direct job and choose tables, or open a saved job.\n3. Review the transfer.\n4. Confirm execution when ready.");
 	final JTabbedPane results = new JTabbedPane();
 	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
+	private final TransferTablePreparationTabs tableTabs = new TransferTablePreparationTabs();
 	private final TransferSchemaStatementTabs statementTabs = new TransferSchemaStatementTabs();
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
@@ -78,6 +79,7 @@ final class DirectTransferPanel extends JPanel {
 			java.util.function.Function<DataMigrationDraftService.Prepared, Path> presenter) {
 		super(new BorderLayout(8, 8));
 		this.backend = backend;
+		tableTabs.setStatementNavigator(task -> statementTabs.showTask(results, task));
 		draftDialog = presenter == null ? prepared -> DirectTransferDraftDialog.show(this, prepared) : presenter;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
@@ -209,6 +211,7 @@ final class DirectTransferPanel extends JPanel {
 		revision++;
 		schemaDraft.clear();
 		warningTabs.clear(results);
+		tableTabs.clear(results);
 		statementTabs.clear(results);
 		results.remove(schemaSql);
 		schemaSql.showText("");
@@ -375,6 +378,7 @@ final class DirectTransferPanel extends JPanel {
 		if (!testing) {
 			schemaDraft.clear();
 			warningTabs.clear(results);
+			tableTabs.clear(results);
 			statementTabs.clear(results);
 			reviewed = null;
 			results.remove(gradle);
@@ -430,6 +434,7 @@ final class DirectTransferPanel extends JPanel {
 				} catch (Exception failure) {
 					schemaDraft.clear();
 					warningTabs.clear(results);
+					tableTabs.clear(results);
 					statementTabs.clear(results);
 					final var cause = failure instanceof java.util.concurrent.ExecutionException ? failure.getCause()
 							: failure;
@@ -472,6 +477,7 @@ final class DirectTransferPanel extends JPanel {
 		schemaDraft.clear();
 		result.showJson(value);
 		warningTabs.show(results, value);
+		tableTabs.show(results, value);
 		statementTabs.show(results, value);
 		results.remove(gradle);
 		gradle.showText("");

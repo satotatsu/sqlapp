@@ -34,6 +34,17 @@ final class TransferNameMappingPanel extends JPanel {
 	final TransferNameMappingGrid columnTools = new TransferNameMappingGrid(columnGrid, columns, 1, 2, false);
 	final JButton checkNames = new JButton("Check names");
 	final JButton previewYaml = new JButton("Preview YAML");
+
+	private record SourceTableChoice(String identity) {
+		@Override
+		public String toString() {
+			return identity == null ? "All tables" : identity;
+		}
+	}
+
+	final JComboBox<SourceTableChoice> columnTable = new JComboBox<>();
+	private boolean refreshingTables;
+	private boolean tableRefreshPending;
 	final TransferNameMappingPreview preview = new TransferNameMappingPreview();
 	final TransferNameMappingSchemaPanel schemaCheck = new TransferNameMappingSchemaPanel();
 	final JButton goToIssue = new JButton("Go to selected field");
@@ -67,7 +78,33 @@ final class TransferNameMappingPanel extends JPanel {
 		header.add(actions, BorderLayout.EAST);
 		add(header, BorderLayout.NORTH);
 		tabs.addTab("Tables", tableTools);
-		tabs.addTab("Columns", columnTools);
+		var columnPanel = new JPanel(new BorderLayout(4, 4));
+		var tableSelector = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		var tableLabel = new JLabel("Source table");
+		tableLabel.setLabelFor(columnTable);
+		columnTable.setPrototypeDisplayValue(new SourceTableChoice("CATALOG.SCHEMA.SOURCE_TABLE_NAME"));
+		columnTable
+				.setToolTipText("Filter editor rows by exact source identity. All tables remain in the saved mapping.");
+		tableSelector.add(tableLabel);
+		tableSelector.add(columnTable);
+		columnPanel.add(tableSelector, BorderLayout.NORTH);
+		columnPanel.add(columnTools, BorderLayout.CENTER);
+		tabs.addTab("Columns", columnPanel);
+		columnTable.addActionListener(event -> {
+			if (!refreshingTables)
+				columnTools.showSourceTable(selectedColumnTable());
+		});
+		tableGrid.setToolTipText("Double-click a source table to show its column mappings.");
+		tableGrid.addMouseListener(new java.awt.event.MouseAdapter() {
+			@Override
+			public void mouseClicked(java.awt.event.MouseEvent event) {
+				int row = tableGrid.rowAtPoint(event.getPoint());
+				int column = tableGrid.columnAtPoint(event.getPoint());
+				if (event.getClickCount() == 2 && row >= 0 && column >= 0
+						&& tableGrid.convertColumnIndexToModel(column) == 0)
+					showColumns(value(tables, tableGrid.convertRowIndexToModel(row), 0));
+			}
+		});
 		var checks = new JPanel(new BorderLayout(4, 4));
 		checks.add(checkStatus, BorderLayout.NORTH);
 		checks.add(new JScrollPane(issueList), BorderLayout.CENTER);
@@ -108,14 +145,95 @@ final class TransferNameMappingPanel extends JPanel {
 		};
 		tables.addTableModelListener(invalidated);
 		columns.addTableModelListener(invalidated);
+		tables.addTableModelListener(event -> scheduleColumnTables());
+		columns.addTableModelListener(event -> scheduleColumnTables());
+		refreshColumnTables();
 		add(tabs, BorderLayout.CENTER);
 		add(new JLabel(
 				"Use the saved job's source table identities. Database name resolution and collisions are checked during review."),
 				BorderLayout.SOUTH);
 	}
 
+	private void scheduleColumnTables() {
+		// Let JTable finish processing insert/remove events before changing its filter.
+		if (tableRefreshPending)
+			return;
+		tableRefreshPending = true;
+		SwingUtilities.invokeLater(() -> {
+			tableRefreshPending = false;
+			refreshColumnTables();
+		});
+	}
+
+	private void refreshColumnTables() {
+		if (refreshingTables)
+			return;
+		String selected = selectedColumnTable();
+		var names = new LinkedHashSet<String>();
+		for (var model : java.util.List.of(tables, columns))
+			for (int row = 0; row < model.getRowCount(); row++) {
+				String name = value(model, row, 0);
+				if (!name.isBlank())
+					names.add(name);
+			}
+		var items = new ArrayList<SourceTableChoice>();
+		items.add(new SourceTableChoice(null));
+		names.forEach(name -> items.add(new SourceTableChoice(name)));
+		if (items.equals(java.util.stream.IntStream.range(0, columnTable.getItemCount())
+				.mapToObj(columnTable::getItemAt).toList()))
+			return;
+		refreshingTables = true;
+		try {
+			columnTable.setModel(new DefaultComboBoxModel<>(items.toArray(SourceTableChoice[]::new)));
+			columnTable.setSelectedIndex(
+					selected != null && names.contains(selected) ? new ArrayList<>(names).indexOf(selected) + 1 : 0);
+			columnTools.showSourceTable(selectedColumnTable());
+		} finally {
+			refreshingTables = false;
+		}
+	}
+
+	private String selectedColumnTable() {
+		var selected = (SourceTableChoice) columnTable.getSelectedItem();
+		return selected == null ? null : selected.identity();
+	}
+
+	void showColumns(String sourceTable) {
+		for (var grid : java.util.List.of(tableGrid, columnGrid))
+			if (grid.isEditing() && !grid.getCellEditor().stopCellEditing())
+				throw new IllegalArgumentException("Finish editing the current name.");
+		refreshColumnTables();
+		columnTools.clear.doClick(0);
+		for (int index = 1; index < columnTable.getItemCount(); index++)
+			if (columnTable.getItemAt(index).identity().equals(sourceTable)) {
+				columnTable.setSelectedIndex(index);
+				break;
+			}
+		tabs.setSelectedIndex(1);
+	}
+
 	String formattedMapping() {
 		return new TransferNameMappingIO().format(configuration());
+	}
+
+	/**
+	 * Remove complete excluded groups while preserving other rows and loaded types.
+	 */
+	void removeExcludedMappings(
+			com.sqlapp.data.db.command.migration.transfer.TransferNameMappingScopeService.Review review) {
+		String text = formattedMapping();
+		String fingerprint = "sha256:" + com.sqlapp.util.MessageDigests.SHA256
+				.checksumAsString(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		if (!fingerprint.equals(review.mappingFingerprint()))
+			throw new IllegalArgumentException("Name mappings changed. Review scope again before removing groups.");
+		var keys = review.excluded().stream().map(entry -> entry.sourceKey())
+				.collect(java.util.stream.Collectors.toSet());
+		for (var model : java.util.List.of(columns, tables))
+			for (int row = model.getRowCount() - 1; row >= 0; row--)
+				if (keys.contains(value(model, row, 0)))
+					model.removeRow(row);
+		tableTools.refreshCounts();
+		columnTools.refreshCounts();
 	}
 
 	/** Build a candidate without changing editor cells or its saved mapping. */
@@ -176,6 +294,7 @@ final class TransferNameMappingPanel extends JPanel {
 			tables.addRow(new String[] { source, mapping.targetTable() });
 			mapping.columns().forEach((from, to) -> columns.addRow(new String[] { source, from, to }));
 		});
+		refreshColumnTables();
 	}
 
 	/**
@@ -200,6 +319,7 @@ final class TransferNameMappingPanel extends JPanel {
 			}
 		});
 		columnTools.refreshCounts();
+		refreshColumnTables();
 		tabs.setSelectedIndex(1);
 	}
 
@@ -262,6 +382,8 @@ final class TransferNameMappingPanel extends JPanel {
 			return;
 		var grid = issue.tab() == 0 ? tableGrid : columnGrid;
 		var tools = issue.tab() == 0 ? tableTools : columnTools;
+		if (issue.tab() == 1)
+			columnTable.setSelectedIndex(0);
 		tools.clear.doClick(0);
 		tabs.setSelectedIndex(issue.tab());
 		int row = grid.convertRowIndexToView(issue.row());

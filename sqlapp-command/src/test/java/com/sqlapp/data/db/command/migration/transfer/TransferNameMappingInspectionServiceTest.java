@@ -11,6 +11,59 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.*;
 
 class TransferNameMappingInspectionServiceTest {
+	@Test
+	void previewsTargetBuilderDefinitionsWithoutChangingSchemaOrMapping() throws Exception {
+		var snapshot = schema();
+		byte[] before = Files.readAllBytes(snapshot.file());
+		var names = mapping("  顧客: {columns: {ID: OWNER_ID}}\n");
+		var target = com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("PostgreSQL", 16, 0, null);
+		var result = service.inspect(snapshot, List.of("顧客"), names, target);
+		var column = result.tables().getFirst().columns().getFirst();
+		assertTrue(column.targetDefinition().contains("NOT NULL"));
+		assertTrue(column.targetDefinition().toUpperCase(Locale.ROOT).contains("INT"));
+		assertEquals("OWNER_ID", column.target());
+		assertTrue(column.primaryKey()); assertFalse(column.nullable()); assertNull(column.previewIssue());
+		assertEquals(target.getClass().getName(), result.targetDialect());
+		assertEquals(service.inspect(snapshot, List.of("顧客"), names).mappingFingerprint(), result.mappingFingerprint());
+		assertArrayEquals(before, Files.readAllBytes(snapshot.file()));
+		try (var files = Files.list(directory)) {
+			assertEquals(Set.of("schema.xml"), files.map(path -> path.getFileName().toString()).collect(java.util.stream.Collectors.toSet()));
+		}
+	}
+
+	@Test
+	void sourceDoubleUsesPostgresBuilderDefinitionRatherThanSourceNativeSpelling() throws Exception {
+		var schema = new Schema("PUBLIC");
+		var table = new Table("価格");
+		table.getColumns().add(new Column("金額").setDataType(DataType.DOUBLE).setDataTypeName("DOUBLE").setDefaultValue("0"));
+		schema.getTables().add(table);
+		var file = directory.resolve("double.xml"); schema.writeXml(file.toFile());
+		var result = service.inspect(new BulkMigrationJobDraftBuilder().inspect(file), List.of("価格"),
+				new TransferNameMappingIO.Configuration(1, Map.of()),
+				com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect("PostgreSQL", 16, 0, null));
+		var column = result.tables().getFirst().columns().getFirst();
+		assertEquals("DOUBLE", column.sourceType());
+		assertTrue(column.targetDefinition().toUpperCase(Locale.ROOT).contains("DOUBLE PRECISION"));
+		assertTrue(column.targetDefinition().contains("DEFAULT 0"));
+	}
+
+	@Test
+	void unsupportedTargetPreviewRemainsVisibleWithoutLosingSourceMetadata() throws Exception {
+		var target = new com.sqlapp.data.db.dialect.Dialect(() -> null) {
+			@Override public com.sqlapp.util.AbstractSqlBuilder<?> createSqlBuilder() {
+				return new com.sqlapp.util.SqlBuilder(this) {
+					@Override public com.sqlapp.util.SqlBuilder definition(Column column, boolean withRemarks) {
+						throw new UnsupportedOperationException("test builder limitation");
+					}
+				};
+			}
+		};
+		var result = service.inspect(schema(), List.of("顧客"), new TransferNameMappingIO.Configuration(1, Map.of()), target);
+		var column = result.tables().getFirst().columns().getFirst();
+		assertNull(column.targetDefinition());
+		assertTrue(column.previewIssue().contains("UnsupportedOperationException"));
+		assertTrue(column.primaryKey()); assertEquals("INT", column.sourceType());
+	}
 	@TempDir
 	Path directory;
 	private final TransferNameMappingInspectionService service = new TransferNameMappingInspectionService();

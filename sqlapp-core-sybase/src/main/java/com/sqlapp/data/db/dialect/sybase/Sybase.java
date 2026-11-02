@@ -157,12 +157,15 @@ public class Sybase extends Dialect {
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		getDbDataTypes().addUSmallInt("UNSIGNED SMALLINT", type -> {
+			type.addColumnTypeMatcher("USMALLINT");
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		getDbDataTypes().addUInt("UNSIGNED INT", type -> {
+			type.addColumnTypeMatcher("UINT");
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		getDbDataTypes().addUBigInt("UNSIGNED BIGINT", type -> {
+			type.addColumnTypeMatcher("UBIGINT");
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// GUID

@@ -36,6 +36,14 @@ import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 
 /** Exercises streaming JDBC batches against Sybase ASE 16.0 SP03. */
 class SybaseBulkInsertTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = createConnection()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"FLOAT", "FLOAT(15)", "DOUBLE PRECISION", "TINYINT", "UNSIGNED SMALLINT", "UNSIGNED INT", "UNSIGNED BIGINT", "NUMERIC", "DECIMAL", "TEXT", "UNITEXT", "UNICHAR(12)", "UNIVARCHAR(12)", "NCHAR(12)", "NVARCHAR(12)");
+		}
+	}
+
 	private static final GenericContainer<?> ASE = ReusableTestcontainers
 			.configure(new GenericContainer<>(DockerImageName.parse("blieusong/ase-server:latest"))
 					.withCreateContainerCmdModifier(command -> command.withHostName("ase-server")

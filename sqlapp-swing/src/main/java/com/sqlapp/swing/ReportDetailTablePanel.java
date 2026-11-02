@@ -50,6 +50,22 @@ final class ReportDetailTablePanel extends JPanel {
 		});
 	};
 	private final String rowNoun;
+	private final JPanel header = new JPanel(new BorderLayout(4, 4));
+	private Integer exactColumn;
+	private String exactValue;
+
+	void setScopeControls(java.awt.Component controls) {
+		header.add(controls, BorderLayout.NORTH);
+	}
+
+	void setExactFilter(int column, String value) {
+		if (column < 0 || column >= table.getModel().getColumnCount())
+			throw new IllegalArgumentException("Choose an existing report column.");
+		exactColumn = value == null ? null : column;
+		exactValue = value;
+		refreshFilter();
+	}
+
 	private final java.util.function.Consumer<String> clipboard;
 
 	ReportDetailTablePanel(final ReportReviewService.DetailTable section) {
@@ -96,7 +112,6 @@ final class ReportDetailTablePanel extends JPanel {
 		copySelected.setToolTipText("Copy selected rows with headers in the current row/column order, up to 1 MiB.");
 		actions.add(count);
 		search.add(actions, BorderLayout.EAST);
-		final var header = new JPanel(new BorderLayout(4, 4));
 		if (summary != null) {
 			final var note = new JTextArea(summary, 3, 0);
 			note.setEditable(false);
@@ -189,16 +204,19 @@ final class ReportDetailTablePanel extends JPanel {
 	private void refreshFilter() {
 		final String query = filter.getText().toLowerCase(Locale.ROOT);
 		table.clearSelection();
-		sorter.setRowFilter(query.isEmpty() ? null : new RowFilter<DefaultTableModel, Integer>() {
-			@Override
-			public boolean include(final Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-				for (int column = 0; column < entry.getValueCount(); column++) {
-					if (entry.getStringValue(column).toLowerCase(Locale.ROOT).contains(query))
-						return true;
-				}
-				return false;
-			}
-		});
+		sorter.setRowFilter(
+				query.isEmpty() && exactColumn == null ? null : new RowFilter<DefaultTableModel, Integer>() {
+					@Override
+					public boolean include(final Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+						if (exactColumn != null && !exactValue.equals(entry.getStringValue(exactColumn)))
+							return false;
+						for (int column = 0; column < entry.getValueCount(); column++) {
+							if (entry.getStringValue(column).toLowerCase(Locale.ROOT).contains(query))
+								return true;
+						}
+						return false;
+					}
+				});
 		clear.setEnabled(!query.isEmpty());
 		refreshCounts();
 		resetCopyFeedback();

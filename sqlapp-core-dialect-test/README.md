@@ -75,6 +75,16 @@ occurs before any sqlapp test or SQL Server container is started.
 
 ## Coverage order
 
+Targeted type regression tests execute generated DDL, round-trip floating and
+integer boundary values, read column metadata and recreate the resulting model:
+
+```powershell
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*verifiesDataTypeServerRoundTrips' --tests '*FirebirdSchemaRoundTripTest.dataTypeServerRoundTrips' --console=plain
+```
+
+See [data type validation](../docs/development/dialect-data-types.md) for the
+qualified engines, corrections, commands and remaining version limitations.
+
 The planned order is SQL Server, PostgreSQL, Oracle, MySQL, and then other
 supported databases. H2 and HSQLDB are included only when an actual
 version-dependent behavior needs an additional integration test.

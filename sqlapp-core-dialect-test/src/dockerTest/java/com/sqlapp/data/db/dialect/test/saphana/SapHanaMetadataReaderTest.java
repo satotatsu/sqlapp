@@ -51,6 +51,14 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 @org.junit.jupiter.api.TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 @org.junit.jupiter.api.parallel.Execution(org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD)
 class SapHanaMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = createConnection()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+					"DOUBLE", "REAL", "SMALLINT", "TIME", "DECIMAL(12,3)", "NVARCHAR(12)");
+		}
+	}
+
 	@Test
 	@org.junit.jupiter.api.Order(Integer.MAX_VALUE)
 	void testSequenceResetByAfterContainerRestart() throws Exception {

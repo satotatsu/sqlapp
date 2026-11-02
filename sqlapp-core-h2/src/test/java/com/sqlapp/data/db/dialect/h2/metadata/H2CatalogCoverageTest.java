@@ -15,6 +15,25 @@ import com.sqlapp.data.db.sql.SqlType;
 
 class H2CatalogCoverageTest {
 	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void supportedTypesAndDropFactoriesRemainVersionSpecific(boolean modernFirst) {
+		var resolver = DialectResolver.getInstance();
+		var legacy = resolver.getDialect("H2", 1, 4, 200);
+		var modern = resolver.getDialect("H2", 2, 3, 232);
+		var synonym = new com.sqlapp.data.schemas.Synonym("S").setSchemaName("PUBLIC");
+		for (var dialect : modernFirst ? java.util.List.of(modern, legacy) : java.util.List.of(legacy, modern)) {
+			boolean supported = dialect == modern;
+			assertEquals(supported, dialect.supportedSchemaTypes().contains(com.sqlapp.data.schemas.Synonym.class));
+			var registry = dialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			var operations = registry.createSql(synonym, SqlType.DROP);
+			assertEquals(supported ? 1 : 0, operations.size());
+			if (supported)
+				assertTrue(operations.get(0).getSqlText().contains("DROP SYNONYM"));
+		}
+	}
+
+	@ParameterizedTest
 	@ValueSource(strings = { "DECIMAL(18,4)", "VARCHAR(42)", "ENUM('x','it''s')", "INTEGER ARRAY[4]",
 			"INTERVAL DAY(3) TO SECOND(4)", "ROW(X INT,Y VARCHAR(3))", "JSON", "CLOB" })
 	void preservesDomainTypesAndNamedChecks(String type) throws Exception {

@@ -134,23 +134,28 @@ public class Oracle extends Dialect {
 			type.setCreateFormat("NUMBER(1,0)");
 		});
 		// TinyInt
-		getDbDataTypes().addTinyInt("NUMBER(2,0)", type -> {
-			type.setCreateFormat("NUMBER(2,0)");
+		getDbDataTypes().addTinyInt("NUMBER(3,0)", type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("NUMBER(3,0)");
 		});
 		// SmallInt
 		getDbDataTypes().addSmallInt("NUMBER(5,0)", type -> {
+			type.clearColumnTypeMatchers();
 			type.setCreateFormat("NUMBER(5,0)");
 		});
 		// MediumInt
 		getDbDataTypes().addMediumInt("NUMBER(7,0)", type -> {
+			type.clearColumnTypeMatchers();
 			type.setCreateFormat("NUMBER(7,0)");
 		});
 		// Int
-		getDbDataTypes().addInt("NUMBER(9,0)", type -> {
-			type.setCreateFormat("NUMBER(9,0)");
+		getDbDataTypes().addInt("NUMBER(10,0)", type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("NUMBER(10,0)");
 		});
 		// BigInt
 		getDbDataTypes().addBigInt("NUMBER(19,0)", type -> {
+			type.clearColumnTypeMatchers();
 			type.setCreateFormat("NUMBER(19,0)");
 		});
 		// Decimal
