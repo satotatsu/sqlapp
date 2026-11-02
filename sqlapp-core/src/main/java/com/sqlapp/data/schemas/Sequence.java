@@ -588,7 +588,7 @@ public final class Sequence extends AbstractSchemaObject<Sequence>
 	/**
 	 * UBIGINTのBigIntegerの最大値
 	 */
-	private static final BigInteger ULONG_MAX = UINT_MAX.add(BigInteger.ONE).multiply(BigInteger.valueOf(2))
+	private static final BigInteger ULONG_MAX = LONG_MAX.add(BigInteger.ONE).multiply(BigInteger.valueOf(2))
 			.subtract(BigInteger.ONE);
 
 }
