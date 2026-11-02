@@ -60,6 +60,7 @@ final class TransferNameMappingPanel extends JPanel {
 
 	TransferNameMappingPanel() {
 		super(new BorderLayout(8, 8));
+		schemaCheck.setColumnNavigator(this::editCheckedColumn);
 		for (var grid : java.util.List.of(tableTools, columnTools))
 			grid.setRuleInspector(changes -> {
 				if (schemaInspector == null)
@@ -210,6 +211,31 @@ final class TransferNameMappingPanel extends JPanel {
 				break;
 			}
 		tabs.setSelectedIndex(1);
+	}
+
+	private void editCheckedColumn(TransferNameMappingSchemaPanel.ColumnSelection selected) {
+		// Commit and validate before adding any display rows or changing the view.
+		configuration();
+		int row = -1;
+		for (int index = 0; index < columns.getRowCount(); index++)
+			if (value(columns, index, 0).equals(selected.sourceTable())
+					&& value(columns, index, 1).equals(selected.sourceColumn())) {
+				row = index;
+				break;
+			}
+		if (row < 0) {
+			row = columns.getRowCount();
+			columns.addRow(new String[] { selected.sourceTable(), selected.sourceColumn(), selected.targetColumn(),
+					selected.sourceType() });
+		}
+		showColumns(selected.sourceTable());
+		int visibleRow = columnGrid.convertRowIndexToView(row);
+		int visibleColumn = columnGrid.convertColumnIndexToView(2);
+		columnGrid.changeSelection(visibleRow, visibleColumn, false, false);
+		columnGrid.scrollRectToVisible(columnGrid.getCellRect(visibleRow, visibleColumn, true));
+		columnGrid.editCellAt(visibleRow, visibleColumn);
+		if (columnGrid.getEditorComponent() != null)
+			columnGrid.getEditorComponent().requestFocusInWindow();
 	}
 
 	String formattedMapping() {

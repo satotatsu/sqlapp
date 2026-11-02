@@ -10,6 +10,23 @@ import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingInspecti
 
 class TransferNameMappingSchemaPanelTest {
 	@Test
+	void rejectedNavigationShowsReasonAndClearsStaleColumnEvidence() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new TransferNameMappingSchemaPanel();
+			panel.setColumnNavigator(column -> {
+				throw new IllegalArgumentException("Refresh the captured Schema first.");
+			});
+			panel.showResult(result());
+			panel.details.table.setRowSelectionInterval(0, 0);
+			assertTrue(panel.editColumn.isEnabled());
+			panel.editColumn.doClick(0);
+			assertEquals(0, panel.model.getRowCount());
+			assertFalse(panel.editColumn.isEnabled());
+			assertTrue(panel.evidence.getText().contains("Refresh the captured Schema first."));
+		});
+	}
+
+	@Test
 	void showsBuilderDefinitionAndUnavailableEvidenceAndInvalidatesItWhenTargetChanges() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			var panel = new TransferNameMappingSchemaPanel();

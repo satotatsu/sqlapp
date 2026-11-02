@@ -1461,6 +1461,67 @@ evidence. Preview controls are session-only; saved mappings and Gradle jobs are
 unchanged. This does not read existing target columns, add target-only keys,
 convert values or replace the complete table-factory SQL in database Review.
 
+In the main name editor's Schema check, **Edit selected column name** returns to
+the selected column's target-name cell using the common projection's verified
+mapping key. It preserves authored names and handles filtering/reordered views.
+An unloaded column is added as an unchanged display row; name changes still need
+the usual save and database Review. Standalone read-only previews do not offer
+this action. Builder preview limitations now show a bounded reason, including
+version requirements where provided, while preserving other column metadata.
+
+For multi-table Schema checks, **Source → target table** selects one exact
+captured source identity or **All tables**. **Preview issues only** limits rows to
+recorded target-builder preview limitations, and combines with table selection
+and literal search. It does not match words in column names or treat general
+compatibility warnings as column-preview failures. The preview count summarizes
+all checked columns; the existing row count shows the current filtered view.
+**Clear** clears text search while retaining table/issue filters. New checks and
+invalidated evidence reset these filters; no-target and single-table checks hide
+irrelevant controls. Editing a selected column and copying visible rows retain
+their existing behavior and do not change the transfer scope.
+
+Selecting a column with a recorded preview issue now shows **Preview issue** and
+**Target definition preview** first in the detail text, followed by all source and
+target metadata. Ordinary rows keep their normal detail order. The table order,
+sorting and tab-separated copies are unchanged.
+
+Recorded-detail tables also provide **Copy displayed details** for the plain text
+shown below the table. With multiple selected rows, that text explicitly describes
+the first selected row; use **Copy selected rows** for all selected rows as a table.
+The same 1 MiB UTF-8 clipboard limit applies without partial output. Copy failures
+remain visible and can be retried; changed/cleared selections cannot copy stale
+details. Replacing a report's table model clears old column-based display scopes
+and detail priorities. These controls do not modify the report or saved job.
+
+When captured target previews contain issues, **Previous issue** / **Next issue**
+(Alt+P / Alt+N) move through only visible issue rows in the current sort order,
+wrapping at either end. They retain table selection, text search and the
+issue-only filter, and preserve the current horizontal scroll position. The
+position label counts issues in that filtered view. If none match, navigation
+is disabled and the view says so; filters are not automatically cleared. An
+ordinary selected row is skipped on the way to the next/previous issue. With
+multiple rows selected, navigation starts from the first selected row and ends
+with one issue selected. Reasons remain first in the detail text, and the normal
+edit/copy actions stay available. Busy, invalidated and replaced results cannot
+navigate old rows. This does not change migration scope or execution approval.
+
+After **Check Schema**, **Save preview report…** in the name editor saves a
+standalone UTF-8 HTML report that can be opened in a browser. The save dialog
+defaults to **All checked columns**; choose **Current filtered view** to retain
+only visible columns in their current sorted order. The report labels its scope
+and included/total counts, preserves source/mapping fingerprints, resolved builder,
+raw mapping keys and full-check warnings, and highlights column preview issues.
+Source file names are included without absolute source paths. Metadata and SQL
+text are escaped as text, with no external assets or scripts.
+
+Reports preserve captured evidence and can include unsaved name proposals. Saving
+one does not save mappings or jobs, verify current target state, or grant execution
+approval. Input changes invalidate the save action until a new check. File writes
+run off the UI thread; editing/closing waits for completion. Source/job/mapping
+paths and existing destinations are protected, and reports are limited to 16 MiB.
+Timestamped default names retain earlier reports. Destination checks are optimistic,
+not a cross-process file lock; choose a new filename for each retained snapshot.
+
 The Columns tab offers a **Source table** selector for exact table identities,
 with **All tables** to return to the complete list. Double-click a source-table
 cell in Tables to open its columns. Search and renamed-only filtering apply

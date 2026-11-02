@@ -107,6 +107,20 @@ public class DialectResolverTest {
 	}
 
 	@Test
+	public void testEarly11UsesCompatibleReadersWithout114Catalogs() {
+		for (int minor = 0; minor < 4; minor++) {
+			Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", 11, minor, 9);
+			assertEquals(Mariadb10_50.class, dialect.getClass());
+			assertMetadataReaders("MariadbCatalog10_27Reader", "MariadbSchema10_27Reader", "MariadbTable10_27Reader",
+					"MariadbColumn10_27Reader", 11, minor, 9);
+			assertEquals("MariadbSequence10_30Reader",
+					dialect.getCatalogReader().getSchemaReader().getSequenceReader().getClass().getSimpleName());
+			assertTrue(dialect.supportsInsertReturningResultSet());
+		}
+		assertEquals(Mariadb11_40.class, DialectResolver.getInstance().getDialect("MariaDB", 11, 4, 0).getClass());
+	}
+
+	@Test
 	public void testServiceLoader() {
 		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
 		boolean find = false;

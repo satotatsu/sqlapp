@@ -11,6 +11,129 @@ import org.junit.jupiter.api.Test;
 
 class ReportDetailTablePanelTest {
 	@Test
+	void prioritizesRecordedIssueDetailsWithoutChangingOtherRowsOrClipboardOrder() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var copied = new java.util.concurrent.atomic.AtomicReference<String>();
+			var panel = new ReportDetailTablePanel(new ReportReviewService.DetailTable("Columns", "Evidence",
+					List.of("Source", "Definition", "Issue"), List.of(List.of("B", "INT", ""),
+							List.of("A", "Unavailable", "PostgreSQL 12 or later is required"))),
+					copied::set);
+			panel.setDetailPriority(2, List.of(2, 1));
+			panel.table.getRowSorter().toggleSortOrder(0);
+			panel.table.moveColumn(2, 0);
+			panel.table.setRowSelectionInterval(0, 0);
+			assertEquals("Issue: PostgreSQL 12 or later is required\nDefinition: Unavailable\nSource: A",
+					panel.selected.getText());
+			panel.copyDetails.doClick(0);
+			assertEquals(panel.selected.getText(), copied.get());
+			panel.copySelected.doClick(0);
+			assertTrue(copied.get().startsWith("Issue\tSource\tDefinition\n"));
+			assertTrue(copied.get().contains("PostgreSQL 12 or later is required\tA\tUnavailable"));
+			panel.table.setRowSelectionInterval(1, 1);
+			assertEquals("Source: B\nDefinition: INT\nIssue: ", panel.selected.getText());
+			assertThrows(IllegalArgumentException.class, () -> panel.setDetailPriority(2, List.of(2, 2)));
+			assertThrows(IllegalArgumentException.class, () -> panel.setDetailPriority(3, List.of(1)));
+			panel.table.setRowSelectionInterval(0, 0);
+			assertTrue(panel.selected.getText().startsWith("Issue: PostgreSQL"));
+		});
+	}
+
+	@Test
+	void displayedDetailsCopyRetriesClipboardFailureAndNeverCopiesAnInvalidatedSelection() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var attempts = new java.util.concurrent.atomic.AtomicInteger();
+			var copied = new java.util.concurrent.atomic.AtomicReference<String>();
+			var panel = new ReportDetailTablePanel(new ReportReviewService.DetailTable("Reason", "Evidence",
+					List.of("Issue"), List.of(List.of("A specific reason"))), text -> {
+						if (attempts.incrementAndGet() == 1)
+							throw new IllegalStateException("Clipboard busy");
+						copied.set(text);
+					});
+			assertFalse(panel.copyDetails.isEnabled());
+			panel.table.setRowSelectionInterval(0, 0);
+			panel.refreshEnabled(false);
+			panel.copyDetails.setEnabled(true);
+			panel.copyRows.setEnabled(true);
+			panel.copyDetails.doClick(0);
+			panel.copyRows.doClick(0);
+			assertEquals(0, attempts.get());
+			panel.refreshEnabled(true);
+			panel.copyDetails.doClick(0);
+			assertNull(copied.get());
+			assertTrue(panel.copyStatus.getText().contains("Clipboard busy"));
+			assertTrue(panel.copyDetails.isEnabled());
+			panel.copyDetails.doClick(0);
+			assertEquals("Issue: A specific reason", copied.get());
+			panel.filter.setText("missing");
+			copied.set(null);
+			panel.copyDetails.doClick(0);
+			assertFalse(panel.copyDetails.isEnabled());
+			assertNull(copied.get());
+			assertEquals(2, attempts.get());
+		});
+	}
+
+	@Test
+	void oversizedUtf8DetailsCopyIsAtomicAndCurrentSmallerEvidenceCanBeCopiedAfterward() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var copied = new java.util.concurrent.atomic.AtomicReference<String>();
+			var panel = new ReportDetailTablePanel(new ReportReviewService.DetailTable("Reason", "Evidence",
+					List.of("Issue"), List.of(List.of("界".repeat(350_000)))), copied::set);
+			panel.table.setRowSelectionInterval(0, 0);
+			panel.copyDetails.doClick(0);
+			assertNull(copied.get());
+			assertTrue(panel.copyStatus.getText().contains("1 MiB"));
+			panel.table.getModel().setValueAt("短い理由", 0, 0);
+			panel.copyDetails.doClick(0);
+			assertEquals("Issue: 短い理由", copied.get());
+		});
+	}
+
+	@Test
+	void replacingModelClearsOldColumnScopesAndDetailPriority() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new ReportDetailTablePanel(new ReportReviewService.DetailTable("Old", "Evidence",
+					List.of("Source", "Definition", "Issue"), List.of(List.of("A", "Unavailable", "Old reason"))));
+			panel.setExactFilter(0, "A");
+			panel.setNonBlankFilter(2, true);
+			panel.setDetailPriority(2, List.of(2, 1));
+			panel.table.setRowSelectionInterval(0, 0);
+			panel.table.setModel(new javax.swing.table.DefaultTableModel(new Object[][] { { "Fresh value" } },
+					new String[] { "Current" }));
+			assertEquals(1, panel.table.getRowCount());
+			panel.table.setRowSelectionInterval(0, 0);
+			assertEquals("Current: Fresh value", panel.selected.getText());
+			assertFalse(panel.selected.getText().contains("Old reason"));
+		});
+	}
+
+	@Test
+	void nonBlankEvidenceScopeCombinesWithExactScopeSearchAndVisibleRowCopy() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var copied = new java.util.concurrent.atomic.AtomicReference<String>();
+			var panel = new ReportDetailTablePanel(new ReportReviewService.DetailTable("Issues", "Recorded evidence",
+					List.of("Task", "Issue"), List.of(List.of("task-1", ""), List.of("task-1", "warn A"),
+							List.of("task-10", "warn B"), List.of("task-1", "  "))),
+					copied::set);
+			panel.setExactFilter(0, "task-1");
+			panel.setNonBlankFilter(1, true);
+			assertEquals(1, panel.table.getRowCount());
+			panel.filter.setText("B");
+			assertEquals(0, panel.table.getRowCount());
+			panel.clear.doClick(0);
+			panel.copyRows.doClick(0);
+			assertTrue(copied.get().contains("warn A"));
+			assertFalse(copied.get().contains("warn B"));
+			assertThrows(IllegalArgumentException.class, () -> panel.setNonBlankFilter(2, true));
+			assertEquals(1, panel.table.getRowCount());
+			panel.setNonBlankFilter(1, false);
+			assertEquals(3, panel.table.getRowCount());
+			panel.setExactFilter(0, null);
+			assertEquals(4, panel.table.getRowCount());
+		});
+	}
+
+	@Test
 	void copiesMultipleSelectedRowsAndClearsSelectionWhenFilterChanges() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			final var copied = new java.util.concurrent.atomic.AtomicReference<String>();

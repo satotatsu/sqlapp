@@ -22,6 +22,13 @@ final class ReportTableClipboard {
 		return format(table, true);
 	}
 
+	static String formatDetails(final String details) {
+		if (details.length() > MAX_BYTES || details.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES)
+			throw new IllegalArgumentException(
+					"Displayed details exceed the 1 MiB clipboard limit. Select a smaller portion in the detail text; no text was copied.");
+		return details;
+	}
+
 	private static String format(final JTable table, final boolean selectedOnly) {
 		if (table.getRowCount() == 0 || table.getColumnCount() == 0 || selectedOnly && table.getSelectedRowCount() == 0)
 			return "";

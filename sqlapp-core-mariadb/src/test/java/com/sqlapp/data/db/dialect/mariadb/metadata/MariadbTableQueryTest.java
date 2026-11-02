@@ -11,6 +11,7 @@ class MariadbTableQueryTest {
 		Reader(int major, int minor) {
 			super(DialectResolver.getInstance().getDialect("MariaDB", major, minor, 7));
 		}
+
 		String query(ParametersContext context) {
 			return getSqlSqlNode(null).eval(context).getSql();
 		}
@@ -18,7 +19,7 @@ class MariadbTableQueryTest {
 
 	@Test
 	void separatesTablesFromViewsAndSequencesAndRetainsFilters() {
-		for (int[] version : new int[][] { {10, 2}, {10, 3}, {11, 4}, {11, 5}, {12, 1} }) {
+		for (int[] version : new int[][] { { 10, 2 }, { 10, 3 }, { 11, 4 }, { 11, 5 }, { 12, 1 } }) {
 			var reader = new Reader(version[0], version[1]);
 			String all = reader.query(new ParametersContext());
 			assertTrue(all.contains("t.TABLE_TYPE IN ('BASE TABLE', 'SYSTEM VERSIONED', 'TEMPORARY')"), all);

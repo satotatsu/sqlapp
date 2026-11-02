@@ -12,8 +12,7 @@ import com.sqlapp.jdbc.ExResultSet;
 
 class MariadbColumnReaderTest {
 	private Column read(String extra, String expression) throws Exception {
-		var reader = new MariadbColumn10_27Reader(
-				DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 7));
+		var reader = new MariadbColumn10_27Reader(DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 7));
 		return reader.createColumn(null, new ExResultSet(null) {
 			@Override
 			public String getString(String name) {
@@ -28,14 +27,26 @@ class MariadbColumnReaderTest {
 				default -> null;
 				};
 			}
+
 			@Override
-			public Object getObject(String name) { return null; }
+			public Object getObject(String name) {
+				return null;
+			}
+
 			@Override
-			public long getLong(String name) { return 0; }
+			public long getLong(String name) {
+				return 0;
+			}
+
 			@Override
-			public boolean wasNull() { return true; }
+			public boolean wasNull() {
+				return true;
+			}
+
 			@Override
-			public int getInt(String name) { return 0; }
+			public int getInt(String name) {
+				return 0;
+			}
 		});
 	}
 

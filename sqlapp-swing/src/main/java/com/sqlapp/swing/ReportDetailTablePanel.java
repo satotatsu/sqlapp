@@ -32,6 +32,7 @@ final class ReportDetailTablePanel extends JPanel {
 	final JButton clear = new JButton("Clear");
 	final JButton copyRows = new JButton("Copy visible rows");
 	final JButton copySelected = new JButton("Copy selected rows");
+	final JButton copyDetails = new JButton("Copy displayed details");
 	final JLabel copyStatus = new JLabel();
 	final JLabel count = new JLabel();
 	final JTable table;
@@ -53,6 +54,42 @@ final class ReportDetailTablePanel extends JPanel {
 	private final JPanel header = new JPanel(new BorderLayout(4, 4));
 	private Integer exactColumn;
 	private String exactValue;
+	private Integer nonBlankColumn;
+	private Integer detailEvidenceColumn;
+	private java.util.List<Integer> detailPriorityColumns = java.util.List.of();
+	private boolean controlsEnabled = true;
+
+	void refreshEnabled(boolean enabled) {
+		controlsEnabled = enabled;
+		table.setEnabled(enabled);
+		table.getTableHeader().setEnabled(enabled);
+		filter.setEnabled(enabled);
+		clear.setEnabled(enabled && !filter.getText().isEmpty());
+		refreshCounts();
+		refreshSelection();
+	}
+
+	/**
+	 * Put recorded problem details first without changing model or clipboard order.
+	 */
+	void setDetailPriority(int evidenceColumn, java.util.List<Integer> priorityColumns) {
+		var copied = java.util.List.copyOf(priorityColumns);
+		int count = table.getModel().getColumnCount();
+		if (evidenceColumn < 0 || evidenceColumn >= count
+				|| copied.stream().anyMatch(column -> column < 0 || column >= count)
+				|| new java.util.HashSet<>(copied).size() != copied.size())
+			throw new IllegalArgumentException("Choose distinct existing columns for detail priority.");
+		detailEvidenceColumn = evidenceColumn;
+		detailPriorityColumns = copied;
+		refreshSelection();
+	}
+
+	void setNonBlankFilter(int column, boolean enabled) {
+		if (column < 0 || column >= table.getModel().getColumnCount())
+			throw new IllegalArgumentException("Choose an existing report column.");
+		nonBlankColumn = enabled ? column : null;
+		refreshFilter();
+	}
 
 	void setScopeControls(java.awt.Component controls) {
 		header.add(controls, BorderLayout.NORTH);
@@ -124,6 +161,9 @@ final class ReportDetailTablePanel extends JPanel {
 		final var copyActions = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
 		copyActions.add(copyRows);
 		copyActions.add(copySelected);
+		copyActions.add(copyDetails);
+		copyDetails.setToolTipText(
+				"Copy the displayed detail text, including all fields for the first selected row, up to 1 MiB.");
 		tools.add(copyActions, BorderLayout.CENTER);
 		tools.add(copyStatus, BorderLayout.SOUTH);
 		copyStatus.setVisible(false);
@@ -171,6 +211,7 @@ final class ReportDetailTablePanel extends JPanel {
 		});
 		copyRows.addActionListener(event -> copyRows(false));
 		copySelected.addActionListener(event -> copyRows(true));
+		copyDetails.addActionListener(event -> copyDisplayedDetails());
 		for (final String keys : new String[] { "control F", "meta F" })
 			getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke(keys), "find");
 		getActionMap().put("find", new AbstractAction() {
@@ -188,6 +229,11 @@ final class ReportDetailTablePanel extends JPanel {
 	private void resetModel() {
 		if (observedModel != null)
 			observedModel.removeTableModelListener(modelListener);
+		exactColumn = null;
+		exactValue = null;
+		nonBlankColumn = null;
+		detailEvidenceColumn = null;
+		detailPriorityColumns = java.util.List.of();
 		observedModel = (DefaultTableModel) table.getModel();
 		sorter = new TableRowSorter<>((DefaultTableModel) table.getModel());
 		sorter.setSortsOnUpdates(true);
@@ -204,11 +250,14 @@ final class ReportDetailTablePanel extends JPanel {
 	private void refreshFilter() {
 		final String query = filter.getText().toLowerCase(Locale.ROOT);
 		table.clearSelection();
-		sorter.setRowFilter(
-				query.isEmpty() && exactColumn == null ? null : new RowFilter<DefaultTableModel, Integer>() {
+		sorter.setRowFilter(query.isEmpty() && exactColumn == null && nonBlankColumn == null ? null
+				: new RowFilter<DefaultTableModel, Integer>() {
 					@Override
 					public boolean include(final Entry<? extends DefaultTableModel, ? extends Integer> entry) {
 						if (exactColumn != null && !exactValue.equals(entry.getStringValue(exactColumn)))
+							return false;
+						if (nonBlankColumn != null
+								&& java.util.Objects.toString(entry.getValue(nonBlankColumn), "").isBlank())
 							return false;
 						for (int column = 0; column < entry.getValueCount(); column++) {
 							if (entry.getStringValue(column).toLowerCase(Locale.ROOT).contains(query))
@@ -217,7 +266,7 @@ final class ReportDetailTablePanel extends JPanel {
 						return false;
 					}
 				});
-		clear.setEnabled(!query.isEmpty());
+		clear.setEnabled(controlsEnabled && table.isEnabled() && !query.isEmpty());
 		refreshCounts();
 		resetCopyFeedback();
 		refreshSelection();
@@ -225,7 +274,8 @@ final class ReportDetailTablePanel extends JPanel {
 
 	private void refreshCounts() {
 		count.setText(table.getRowCount() + " / " + table.getModel().getRowCount() + " " + rowNoun);
-		copyRows.setEnabled(table.getRowCount() > 0 && table.getColumnCount() > 0);
+		copyRows.setEnabled(
+				controlsEnabled && table.isEnabled() && table.getRowCount() > 0 && table.getColumnCount() > 0);
 	}
 
 	void setNumericColumns(final java.util.List<Integer> columns) {
@@ -254,6 +304,8 @@ final class ReportDetailTablePanel extends JPanel {
 	}
 
 	private void copyRows(final boolean selectedOnly) {
+		if (!controlsEnabled || !table.isEnabled())
+			return;
 		if (!(selectedOnly ? copySelected : copyRows).isEnabled())
 			return;
 		try {
@@ -276,8 +328,30 @@ final class ReportDetailTablePanel extends JPanel {
 		repaint();
 	}
 
+	private void copyDisplayedDetails() {
+		if (!copyDetails.isEnabled())
+			return;
+		refreshSelection();
+		if (!copyDetails.isEnabled())
+			return;
+		try {
+			clipboard.accept(ReportTableClipboard.formatDetails(selected.getText()));
+			copyStatus.setText("Copied displayed row details. The saved report is unchanged.");
+			copyStatus.setToolTipText(copyStatus.getText());
+		} catch (RuntimeException failure) {
+			copyStatus.setText("Copy failed: "
+					+ (failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage()));
+			copyStatus.setToolTipText(EditorStatusPanel.failureDetails(failure));
+		}
+		copyStatus.setVisible(true);
+		revalidate();
+		repaint();
+	}
+
 	private void refreshSelection() {
-		copySelected.setEnabled(table.getSelectedRowCount() > 0 && table.getColumnCount() > 0);
+		copySelected.setEnabled(
+				controlsEnabled && table.isEnabled() && table.getSelectedRowCount() > 0 && table.getColumnCount() > 0);
+		copyDetails.setEnabled(copySelected.isEnabled());
 		final int row = table.getSelectedRow();
 		if (row < 0) {
 			selected.setText("Select a recorded row to inspect its full values.");
@@ -287,10 +361,18 @@ final class ReportDetailTablePanel extends JPanel {
 			final var text = new StringBuilder();
 			if (table.getSelectedRowCount() > 1)
 				text.append(table.getSelectedRowCount()).append(" rows selected; showing the first selected row.\n\n");
-			for (int column = 0; column < model.getColumnCount(); column++) {
-				if (column > 0)
+			var order = new java.util.LinkedHashSet<Integer>();
+			if (detailEvidenceColumn != null
+					&& !java.util.Objects.toString(model.getValueAt(modelRow, detailEvidenceColumn), "").isBlank())
+				order.addAll(detailPriorityColumns);
+			for (int column = 0; column < model.getColumnCount(); column++)
+				order.add(column);
+			boolean first = true;
+			for (int column : order) {
+				if (!first)
 					text.append('\n');
 				text.append(model.getColumnName(column)).append(": ").append(model.getValueAt(modelRow, column));
+				first = false;
 			}
 			selected.setText(text.toString());
 		}

@@ -41,6 +41,10 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 				Sequence sequence = new Sequence(getString(rs, "SEQUENCE_NAME"));
 				sequence.setCatalogName(getString(rs, "SEQUENCE_CATALOG"));
 				sequence.setSchemaName(getString(rs, "SEQUENCE_SCHEMA"));
+				sequence.setRemarks(getString(rs, "TABLE_COMMENT"));
+				String engine = getString(rs, "ENGINE");
+				if (engine != null)
+					sequence.getSpecifics().put("ENGINE", engine);
 				final var type = new com.sqlapp.data.schemas.Column();
 				getDialect().setDbType(getString(rs, "DATA_TYPE"), null, null, type);
 				sequence.setDataType(type.getDataType());

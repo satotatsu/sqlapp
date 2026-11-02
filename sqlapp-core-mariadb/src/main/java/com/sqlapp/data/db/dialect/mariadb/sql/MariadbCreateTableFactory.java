@@ -15,6 +15,8 @@ import com.sqlapp.data.schemas.TemporalPeriodType;
  * MariaDB CREATE TABLE generator preserving vendor table options.
  */
 public class MariadbCreateTableFactory extends MySqlCreateTableFactory {
+	private static final java.util.regex.Pattern CREATE_OPTION_TOKEN = java.util.regex.Pattern
+			.compile("'(?:''|\\\\.|[^'])*'|\"(?:\"\"|\\\\.|[^\"])*\"|`(?:``|[^`])*`|(?i)(?<!\\S)partitioned(?!\\S)");
 
 	@Override
 	protected void addConstraintDefinitions(Table table, MySqlSqlBuilder builder) {
@@ -24,8 +26,8 @@ public class MariadbCreateTableFactory extends MySqlCreateTableFactory {
 					|| table.getColumns().get(period.getStartColumnName()) == null
 					|| table.getColumns().get(period.getEndColumnName()) == null
 					|| period.getStartColumnName().equalsIgnoreCase(period.getEndColumnName())) {
-				throw new IllegalArgumentException("MariaDB period requires distinct existing start/end columns: "
-						+ period.getName());
+				throw new IllegalArgumentException(
+						"MariaDB period requires distinct existing start/end columns: " + period.getName());
 			}
 			builder.lineBreak().comma()._add("PERIOD FOR ");
 			if (period.getPeriodType() == TemporalPeriodType.SYSTEM_TIME) {
@@ -33,8 +35,8 @@ public class MariadbCreateTableFactory extends MySqlCreateTableFactory {
 			} else {
 				builder.name(period.getName());
 			}
-			builder.space()._add("(")
-					.name(period.getStartColumnName()).comma().space().name(period.getEndColumnName())._add(")");
+			builder.space()._add("(").name(period.getStartColumnName()).comma().space().name(period.getEndColumnName())
+					._add(")");
 		}
 	}
 
@@ -58,7 +60,15 @@ public class MariadbCreateTableFactory extends MySqlCreateTableFactory {
 		if (options.isEmpty()) {
 			return;
 		}
-		options = options.replaceAll("(?i)(^|\\s)partitioned(?=\\s|$)", " ").trim();
+		var matcher = CREATE_OPTION_TOKEN.matcher(options);
+		StringBuilder filtered = new StringBuilder();
+		while (matcher.find()) {
+			String token = matcher.group();
+			matcher.appendReplacement(filtered,
+					java.util.regex.Matcher.quoteReplacement("partitioned".equalsIgnoreCase(token) ? " " : token));
+		}
+		matcher.appendTail(filtered);
+		options = filtered.toString().trim();
 		if (!options.isEmpty()) {
 			builder.space()._add(options);
 		}

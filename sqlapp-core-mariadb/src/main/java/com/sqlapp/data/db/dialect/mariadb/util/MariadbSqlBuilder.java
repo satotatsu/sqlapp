@@ -26,6 +26,16 @@ public class MariadbSqlBuilder extends MySqlSqlBuilder {
 	@Override
 	public MySqlSqlBuilder definition(Column column, boolean withRemarks) {
 		super.definition(column, withRemarks);
+		return appendSystemPeriodRole(column);
+	}
+
+	@Override
+	public MySqlSqlBuilder definitionForAlterColumn(Column column) {
+		super.definitionForAlterColumn(column);
+		return appendSystemPeriodRole(column);
+	}
+
+	private MySqlSqlBuilder appendSystemPeriodRole(Column column) {
 		Table table = column.getTable();
 		if (table != null) {
 			for (TemporalPeriod period : table.getTemporalPeriods()) {

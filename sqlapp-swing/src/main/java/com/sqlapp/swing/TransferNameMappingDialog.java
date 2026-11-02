@@ -17,6 +17,7 @@ final class TransferNameMappingDialog {
 		var targetPreview = new TransferMappingTargetPreviewPanel(editor.schemaCheck::changed);
 		var status = new JLabel("Loading mapping…");
 		var save = new JButton("Save mapping…");
+		var saveReport = new JButton("Save preview report…");
 		var cancel = new JButton("Close");
 		var location = new JLabel(file == null ? "New mapping — not saved" : "Mapping: " + file);
 		location.setToolTipText(location.getText());
@@ -36,6 +37,7 @@ final class TransferNameMappingDialog {
 		schemaRow.add(reviewScope);
 		var footer = new JPanel(new BorderLayout());
 		var actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+		actions.add(saveReport);
 		actions.add(save);
 		actions.add(cancel);
 		footer.add(status, BorderLayout.NORTH);
@@ -55,6 +57,8 @@ final class TransferNameMappingDialog {
 		var opened = new java.util.concurrent.atomic.AtomicReference<TransferNameMappingIO.Snapshot>();
 		var busy = new boolean[] { true };
 		var available = new boolean[] { false };
+		var openReport = new SavedPreviewReportButton(() -> busy[0], status::setText);
+		actions.add(openReport, 1);
 		editor.setSchemaInspector(mapping -> {
 			if (schemaFile.getText().isBlank())
 				throw new IllegalArgumentException("Choose a source Schema XML file.");
@@ -73,8 +77,11 @@ final class TransferNameMappingDialog {
 					choices[0]) == 1;
 		});
 		Runnable refresh = () -> {
-			save.setEnabled(!busy[0] && available[0]);
-			cancel.setEnabled(!busy[0]);
+			boolean working = busy[0] || openReport.isOpening();
+			save.setEnabled(!working && available[0]);
+			saveReport.setEnabled(save.isEnabled() && editor.schemaCheck.hasCapturedResult());
+			cancel.setEnabled(!working);
+			openReport.refresh();
 			loadColumns.setEnabled(save.isEnabled());
 			checkSchema.setEnabled(save.isEnabled());
 			reviewScope.setEnabled(save.isEnabled());
@@ -86,7 +93,74 @@ final class TransferNameMappingDialog {
 			editor.columnTools.refreshCounts();
 			editor.goToIssue.setEnabled(save.isEnabled() && editor.issueList.getSelectedValue() != null);
 			editor.preview.refreshEnabled(save.isEnabled());
+			editor.schemaCheck.refreshEnabled(save.isEnabled());
 		};
+		openReport.setActivityObserver(refresh);
+		editor.schemaCheck.setCaptureObserver(
+				() -> saveReport.setEnabled(save.isEnabled() && editor.schemaCheck.hasCapturedResult()));
+		var reportFiles = new EditorFileChooser();
+		saveReport.addActionListener(event -> {
+			final TransferNameMappingInspectionService.Result snapshot;
+			final Path destination;
+			final java.util.List<TransferMappingPreviewReportIO.ColumnRef> selection;
+			final java.util.List<Path> protectedInputs;
+			try {
+				snapshot = editor.schemaCheck.reportSnapshot();
+				String filename = "column-preview-" + java.time.LocalDateTime.now()
+						.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".html";
+				var chooser = reportFiles.forOutput(
+						new javax.swing.filechooser.FileNameExtensionFilter("HTML preview report", "html", "htm"),
+						filename, snapshot.schemaFile().toString());
+				var scope = new JComboBox<>(new String[] { "All checked columns", "Current filtered view" });
+				var accessory = new JPanel(new BorderLayout(4, 4));
+				accessory.add(new JLabel("Report scope"), BorderLayout.NORTH);
+				accessory.add(scope, BorderLayout.CENTER);
+				chooser.setAccessory(accessory);
+				if (chooser.showSaveDialog(dialog) != JFileChooser.APPROVE_OPTION)
+					return;
+				if (editor.schemaCheck.reportSnapshot() != snapshot)
+					throw new IllegalArgumentException(
+							"Preview changed. Check the current result and save the report again.");
+				destination = chooser.getSelectedFile().toPath();
+				selection = scope.getSelectedIndex() == 0 ? null : editor.schemaCheck.visibleReportColumns();
+				var inputs = new java.util.ArrayList<Path>();
+				inputs.add(job);
+				if (file != null)
+					inputs.add(file);
+				if (opened.get() != null)
+					inputs.add(opened.get().file());
+				protectedInputs = java.util.List.copyOf(inputs);
+			} catch (Exception failure) {
+				status.setText(message(failure));
+				return;
+			}
+			busy[0] = true;
+			refresh.run();
+			status.setText("Saving captured column preview report…");
+			new SwingWorker<TransferMappingPreviewReportIO.Saved, Void>() {
+				@Override
+				protected TransferMappingPreviewReportIO.Saved doInBackground() throws Exception {
+					return new TransferMappingPreviewReportIO().writeNew(destination, snapshot, selection,
+							protectedInputs);
+				}
+
+				@Override
+				protected void done() {
+					try {
+						var saved = get();
+						reportFiles.remember(saved.file());
+						openReport.saved(saved);
+						status.setText("HTML preview saved (" + saved.includedColumns() + " / " + saved.totalColumns()
+								+ " columns): " + saved.file());
+					} catch (Exception failure) {
+						status.setText(message(failure));
+					} finally {
+						busy[0] = false;
+						refresh.run();
+					}
+				}
+			}.execute();
+		});
 		refresh.run();
 		reviewScope.addActionListener(event -> {
 			final TransferNameMappingIO.Configuration mapping;
@@ -253,7 +327,7 @@ final class TransferNameMappingDialog {
 			}.execute();
 		});
 		Runnable close = () -> {
-			if (!busy[0] && closeGuard.canClose())
+			if (!busy[0] && !openReport.isOpening() && closeGuard.canClose())
 				dialog.dispose();
 		};
 		cancel.addActionListener(event -> close.run());

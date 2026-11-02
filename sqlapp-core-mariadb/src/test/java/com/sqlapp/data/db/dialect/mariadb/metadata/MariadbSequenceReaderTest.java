@@ -26,6 +26,10 @@ class MariadbSequenceReaderTest {
 		@Override
 		protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 			queries++;
+			String sql = n.eval(p).getSql();
+			assertTrue(sql.contains("LEFT JOIN information_schema.TABLES"), sql);
+			assertTrue(sql.contains("t.TABLE_SCHEMA = s.SEQUENCE_SCHEMA"), sql);
+			assertTrue(sql.contains("t.TABLE_NAME = s.SEQUENCE_NAME"), sql);
 			try {
 				h.handleResultSetNext(new ExResultSet(null) {
 					@Override
@@ -35,6 +39,8 @@ class MariadbSequenceReaderTest {
 						case "SEQUENCE_SCHEMA" -> "app";
 						case "SEQUENCE_CATALOG" -> "def";
 						case "DATA_TYPE" -> "bigint";
+						case "ENGINE" -> "InnoDB";
+						case "TABLE_COMMENT" -> "owner's sequence";
 						default -> null;
 						};
 					}
@@ -79,8 +85,13 @@ class MariadbSequenceReaderTest {
 		assertEquals(DataType.BIGINT, sequence.getDataType());
 		final Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
 		assertEquals(DataType.BIGINT, restored.getDataType());
+		assertEquals("InnoDB", restored.getSpecifics().get("ENGINE"));
+		assertEquals("owner's sequence", restored.getRemarks());
 		final var registry = DialectResolver.getInstance().getDialect("MariaDB", 11, 5, 0).createSqlFactoryRegistry();
 		registry.getOptions().setCreateIfNotExists(false);
+		String ddl = registry.createSql(restored, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(ddl.contains("ENGINE =InnoDB"), ddl);
+		assertTrue(ddl.contains("owner''s sequence"), ddl);
 		assertFalse(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText().contains("IF NOT EXISTS"));
 		registry.getOptions().setCreateIfNotExists(true);
 		assertTrue(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText().contains("IF NOT EXISTS"));

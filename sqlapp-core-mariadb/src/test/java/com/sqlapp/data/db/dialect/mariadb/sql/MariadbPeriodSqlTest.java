@@ -13,14 +13,16 @@ class MariadbPeriodSqlTest {
 		Table table = new Table("history");
 		table.getColumns().add("begin", c -> c.setDataType(DataType.TIMESTAMP));
 		table.getColumns().add("end", c -> c.setDataType(DataType.TIMESTAMP));
-		table.getTemporalPeriods().add(new TemporalPeriod("valid time").setPeriodType(type)
-				.setStartColumnName("begin").setEndColumnName("end"));
+		table.getTemporalPeriods().add(new TemporalPeriod("valid time").setPeriodType(type).setStartColumnName("begin")
+				.setEndColumnName("end"));
 		return table;
 	}
+
 	private String sql(Table table) {
 		return DialectResolver.getInstance().getDialect("MariaDB", 11, 5, 0).createSqlFactoryRegistry()
 				.createSql(table, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+", " ");
 	}
+
 	@Test
 	void systemTimeIsKeywordAndApplicationTimeIsIdentifierThroughXml() throws Exception {
 		Table system = table(TemporalPeriodType.SYSTEM_TIME);
@@ -30,6 +32,7 @@ class MariadbPeriodSqlTest {
 		Table application = table(TemporalPeriodType.APPLICATION_TIME);
 		assertTrue(sql(application).contains("PERIOD FOR `valid time` ("), sql(application));
 	}
+
 	@Test
 	void incompleteMissingOrRepeatedColumnsFailClearly() {
 		Table table = table(TemporalPeriodType.APPLICATION_TIME);

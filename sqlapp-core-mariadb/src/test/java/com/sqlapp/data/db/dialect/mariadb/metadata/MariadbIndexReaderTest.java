@@ -18,11 +18,16 @@ class MariadbIndexReaderTest {
 	private static class Reader extends MySqlIndexReader {
 		int queries;
 		String ignored;
+
 		Reader(int minor, String ignored) {
 			super(DialectResolver.getInstance().getDialect("MariaDB", 10, minor, 0));
 			this.ignored = ignored;
 		}
-		List<Index> read() { return doGetAll(null, new ParametersContext(), null); }
+
+		List<Index> read() {
+			return doGetAll(null, new ParametersContext(), null);
+		}
+
 		@Override
 		protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 			queries++;
@@ -31,7 +36,8 @@ class MariadbIndexReaderTest {
 					for (int position = 1; position <= 2; position++) {
 						final int ordinal = position;
 						h.handleResultSetNext(new ExResultSet(null) {
-							@Override public String getString(String name) {
+							@Override
+							public String getString(String name) {
 								return switch (name.toUpperCase(java.util.Locale.ROOT)) {
 								case "TABLE_CATALOG" -> "def";
 								case "TABLE_SCHEMA" -> "app";
@@ -44,13 +50,27 @@ class MariadbIndexReaderTest {
 								default -> null;
 								};
 							}
-							@Override public int getInt(String name) { return 1; }
-							@Override public long getLong(String name) { return 12; }
-							@Override public boolean wasNull() { return ordinal != 1; }
+
+							@Override
+							public int getInt(String name) {
+								return 1;
+							}
+
+							@Override
+							public long getLong(String name) {
+								return 12;
+							}
+
+							@Override
+							public boolean wasNull() {
+								return ordinal != 1;
+							}
 						});
 					}
 				}
-			} catch (java.sql.SQLException e) { throw new IllegalStateException(e); }
+			} catch (java.sql.SQLException e) {
+				throw new IllegalStateException(e);
+			}
 			return null;
 		}
 	}
@@ -69,7 +89,8 @@ class MariadbIndexReaderTest {
 			assertEquals(12L, index.getColumns().get(0).getLength());
 			assertEquals("id", index.getColumns().get(1).getName());
 			Table table = new Table(index.getTableName()).setSchemaName(index.getSchemaName());
-			table.getColumns().add("payload", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setLength(100));
+			table.getColumns().add("payload",
+					c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setLength(100));
 			table.getColumns().add("id", c -> c.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
 			table.getIndexes().add(index);
 			Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
@@ -82,6 +103,7 @@ class MariadbIndexReaderTest {
 			assertTrue(ddl.contains("(12)"), ddl);
 		}
 	}
+
 	@Test
 	void absentLegacyIgnoredColumnAndExplicitNoKeepIndexEnabled() {
 		for (Reader reader : List.of(new Reader(5, null), new Reader(6, "NO"))) {

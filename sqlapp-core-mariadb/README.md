@@ -1,5 +1,10 @@
 # MariaDB dialect enhancement
 
+The prior local pass passed 88 tests. A subsequent change moves period-key
+enrichment before constraint filtering; its verification is currently blocked
+by the shared core source relocation in the workspace. See
+[ENHANCEMENT_STATUS.md](ENHANCEMENT_STATUS.md) for exact status and coverage limits.
+
 MariaDB is the next target after the Phoenix local enhancement pass. Existing
 SQL generators and MySQL inheritance are retained; this pass starts by checking
 metadata preservation and recreation rather than treating shared MySQL coverage
@@ -13,6 +18,12 @@ as proof of MariaDB behavior.
   fractional values fail rather than being silently truncated.
 - CREATE SEQUENCE honors the existing createIfNotExists option instead of
   always emitting IF NOT EXISTS.
+- CREATE SEQUENCE emits NOCACHE for cache=false or cacheSize=0. An unspecified
+  enabled cache keeps server defaults; negative sizes and cache=false with a
+  positive size fail explicitly. XML and version tests cover 10.3 through 12.1.
+- CREATE_OPTIONS strips only standalone, unquoted partitioned catalog flags;
+  quoted option strings, embedded commas/quotes and replacement characters
+  retain their original text through XML and CREATE TABLE.
 - CREATE SEQUENCE emits AS integer type only on 11.5+. On 10.3–11.4,
   explicit signed BIGINT uses the server's default type without AS; other
   explicit types fail with a version-specific error. Non-integer sequence types
@@ -27,21 +38,42 @@ as proof of MariaDB behavior.
   These generator changes apply to the MariaDB registry used from 10.3 onward;
   callers remain responsible for choosing a server version supporting the
   requested temporal feature. XML and SQL regression tests use 11.5.
+  CREATE and ALTER column-definition builder entry points both retain ROW
+  START/ROW END roles after XML; ordinary columns receive no period role.
+- MariaDB 11.4+ application-time periods use one INFORMATION_SCHEMA.PERIODS
+  query and exact catalog/schema/table matching. Period names and start/end
+  columns survive XML and CREATE TABLE. Pre-11.4 application periods remain
+  outside this implementation. KEY_PERIOD_USAGE is fetched in one additional
+  bulk query, and its period reference survives XML in constraint specifics
+  (mariadb.withoutOverlapsPeriod). On 11.4+, modeled CREATE/ALTER replaces the
+  trailing full start/end columns with the period WITHOUT OVERLAPS key part,
+  preserving primary/unique semantics without modifying the source model.
+  Unresolved periods, unsupported key shapes and older dialects fail explicitly.
+  Ordinary unique constraints retain the inherited behavior.
 - The 10.2.7+ CHECK metadata query joins by schema, constraint name and table
   name, preventing expressions from other tables with the same constraint name
   from being attached to the requested table. Retrieval remains one bulk query.
   Mocked reader/XML/DDL regression coverage includes 10.2.7, 10.5, 11.5 and 12.1.
 
-Changes stay in sqlapp-core-mariadb, preserve existing public signatures and
-Schema XML formats, and add no dependencies. The resolver and supported version
-selection are unchanged. INFORMATION_SCHEMA.SEQUENCES remains confined to 11.5+.
+Dialect changes stay in sqlapp-core-mariadb; a shared sqlapp-core XML value-element
+fix preserves commas inside ENUM/SET values after serialization. Existing public signatures and
+Schema XML formats, and add no dependencies. Resolver selection for 11.0–11.3
+now uses the compatible 10.5 dialect/10.2.7 metadata readers rather than the 11.4
+readers, avoiding unsupported PERIODS/KEY_PERIOD_USAGE and system-time columns.
+Other selections are unchanged. INFORMATION_SCHEMA.SEQUENCES remains confined to 11.5+.
 MariaDB 10.3–11.4 uses a separate reader: one filtered TABLES discovery followed
 by UNION ALL batches of at most 100 sequence storage tables. It preserves start,
 increment, bounds, cache size and cycle without advancing the sequence. Missing
 storage rows and cache sizes exceeding the shared model's Integer range fail.
 The cached allocation boundary is not treated as the last issued value.
 Sequence-specific SELECT privileges are required; query failures propagate.
-Engine/comment options and current runtime position are not reconstructed.
+Batch boundary and malformed-row tests cover duplicate/invalid IDs, missing
+rows, negative/overflowing cache sizes and fractional values. Application period
+readers reject blank identities and repeated boundary columns.
+ENGINE and COMMENT are retained by legacy discovery and by a qualified TABLES
+join on 11.5+, without extra per-object queries, and emitted by CREATE SEQUENCE.
+Invalid ENGINE tokens fail; comments use the existing SQL literal escaping.
+Other sequence table options and current runtime position are not reconstructed.
 
 Reference: [MariaDB INFORMATION_SCHEMA.SEQUENCES](https://mariadb.com/docs/server/reference/system-tables/information-schema/information-schema-tables/information-schema-sequences-table).
 Sequence syntax: [MariaDB CREATE SEQUENCE](https://mariadb.com/docs/server/reference/sql-structure/sequences/create-sequence).
@@ -54,7 +86,7 @@ BASE TABLE, SYSTEM VERSIONED and TEMPORARY. Views continue through ViewReader;
 SEQUENCE rows are no longer also exposed as ordinary tables. Sequence metadata
 before 11.5 is retrieved by the separate batched reader. Query rendering tests cover the type
 filter and optional schema/table batches across 10.2, 10.3, 11.4, 11.5 and 12.1.
-Older readers and the dialect resolver are unchanged.
+Older readers are unchanged; the 11.0–11.3 resolver boundary is corrected above.
 
 Reference: [MariaDB INFORMATION_SCHEMA.TABLES](https://mariadb.com/docs/server/reference/system-tables/information-schema/information-schema-tables/information-schema-tables-table).
 
@@ -74,3 +106,17 @@ keeps indexes enabled. No production change was required for this audit.
 See [Ignored Indexes](https://mariadb.com/docs/server/ha-and-performance/optimization-and-tuning/optimization-and-indexes/ignored-indexes)
 for the 10.6 feature boundary. Broader limitations are tracked in
 [ENHANCEMENT_STATUS.md](ENHANCEMENT_STATUS.md).
+
+Stored-object tests cover view algorithm/security/check/output names and routine
+body/security/decimal returns/INOUT ENUM values through metadata, XML and DDL on
+11.5. The shared XML fix keeps explicit value elements intact and retains legacy
+comma-separated property input; XML output format is unchanged.
+
+The MariaDB 10.3+ registry validates routine completeness before generating SQL:
+missing/blank bodies and missing function return types fail with guidance to
+check metadata privileges or supply complete CREATE definitions. Complete
+definitions remain authoritative even when supplemental components are present.
+Pre-10.3 factories are unchanged; Oracle/package syntax still requires separate
+qualification.
+Whitespace-only full definitions and function return definitions are rejected
+as invalid input, including when a supplemental body is available.
