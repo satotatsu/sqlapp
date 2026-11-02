@@ -67,7 +67,7 @@ public class Virtica extends Dialect {
 		});
 		// LONGVARCHAR(非推奨)
 		getDbDataTypes().addLongVarchar("LONG VARCHAR", SIZE_MAX2, type -> {
-			type.setDefaultLength(1).setCreateFormat("LONG VARCHAR");
+			type.setDefaultLength(1048576);
 		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
@@ -79,18 +79,21 @@ public class Virtica extends Dialect {
 		getDbDataTypes().addVarBinary("VARBINARY", SIZE_MAX, type -> {
 			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
 		});
-		// LONGVARBINARY(非推奨)
+		getDbDataTypes().addLongVarBinary("LONG VARBINARY", SIZE_MAX2, type -> {
+			type.setDefaultLength(1048576).setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+		});
+		// Legacy compatibility alias
 		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
 			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
 					.setDefaultValueLiteral("X'0'").setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt(type -> {
-			type.setColumnTypeMatcher("INTEGER", "INT", "INT8", "SMALLINT");
+			type.setColumnTypeMatcher("BIGINT", "INTEGER", "INT", "INT8", "SMALLINT");
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.setColumnTypeMatcher("FLOAT", "REAL");
+			type.setColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION", "FLOAT", "REAL");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -98,28 +101,33 @@ public class Virtica extends Dialect {
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
+			type.setDefaultPrecision(6).setMaxPrecision(6);
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
 		});
 		// Time WITH TIMEZONE
 		getDbDataTypes().addTimeWithTimeZone(type -> {
+			type.setDefaultPrecision(6).setMaxPrecision(6);
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp(type -> {
-			type.setColumnTypeMatcher("TIMESTAMP", "DATETIME", "SMALLDATETIME");
+			type.setDefaultPrecision(6).setMaxPrecision(6);
+			type.addColumnTypeMatcher(
+					new com.sqlapp.data.db.datatype.util.SimpleColumnTypeMatcher("DATETIME", "SMALLDATETIME"));
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Timestamp WITH TIMEZONE
 		getDbDataTypes().addTimestampWithTimeZone(type -> {
+			type.setDefaultPrecision(6).setMaxPrecision(6);
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
-			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
+			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(1024).setMaxScale(1024);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
-			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
+			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(1024).setMaxScale(1024);
 		});
 		// INTERVAL
 		getDbDataTypes().addInterval(type -> {

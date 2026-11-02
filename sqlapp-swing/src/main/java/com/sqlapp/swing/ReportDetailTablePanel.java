@@ -52,8 +52,7 @@ final class ReportDetailTablePanel extends JPanel {
 	};
 	private final String rowNoun;
 	private final JPanel header = new JPanel(new BorderLayout(4, 4));
-	private Integer exactColumn;
-	private String exactValue;
+	private java.util.Map<Integer, String> exactFilters = java.util.Map.of();
 	private Integer nonBlankColumn;
 	private Integer detailEvidenceColumn;
 	private java.util.List<Integer> detailPriorityColumns = java.util.List.of();
@@ -98,8 +97,14 @@ final class ReportDetailTablePanel extends JPanel {
 	void setExactFilter(int column, String value) {
 		if (column < 0 || column >= table.getModel().getColumnCount())
 			throw new IllegalArgumentException("Choose an existing report column.");
-		exactColumn = value == null ? null : column;
-		exactValue = value;
+		setExactFilters(value == null ? java.util.Map.of() : java.util.Map.of(column, value));
+	}
+
+	void setExactFilters(java.util.Map<Integer, String> values) {
+		var copied = java.util.Map.copyOf(values);
+		if (copied.keySet().stream().anyMatch(column -> column < 0 || column >= table.getModel().getColumnCount()))
+			throw new IllegalArgumentException("Choose existing report columns.");
+		exactFilters = copied;
 		refreshFilter();
 	}
 
@@ -229,8 +234,7 @@ final class ReportDetailTablePanel extends JPanel {
 	private void resetModel() {
 		if (observedModel != null)
 			observedModel.removeTableModelListener(modelListener);
-		exactColumn = null;
-		exactValue = null;
+		exactFilters = java.util.Map.of();
 		nonBlankColumn = null;
 		detailEvidenceColumn = null;
 		detailPriorityColumns = java.util.List.of();
@@ -250,12 +254,13 @@ final class ReportDetailTablePanel extends JPanel {
 	private void refreshFilter() {
 		final String query = filter.getText().toLowerCase(Locale.ROOT);
 		table.clearSelection();
-		sorter.setRowFilter(query.isEmpty() && exactColumn == null && nonBlankColumn == null ? null
+		sorter.setRowFilter(query.isEmpty() && exactFilters.isEmpty() && nonBlankColumn == null ? null
 				: new RowFilter<DefaultTableModel, Integer>() {
 					@Override
 					public boolean include(final Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-						if (exactColumn != null && !exactValue.equals(entry.getStringValue(exactColumn)))
-							return false;
+						for (var scope : exactFilters.entrySet())
+							if (!scope.getValue().equals(entry.getStringValue(scope.getKey())))
+								return false;
 						if (nonBlankColumn != null
 								&& java.util.Objects.toString(entry.getValue(nonBlankColumn), "").isBlank())
 							return false;

@@ -70,7 +70,7 @@ public class VirticaFunctionReader extends FunctionReader {
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		Function obj = new Function(getString(rs, FUNCTION_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
-		obj.setDefinition(getString(rs, "FUNCTION_DEFINITION"));
+		obj.setStatement(getString(rs, "FUNCTION_DEFINITION"));
 		obj.setRemarks(getString(rs, "COMMENT"));
 		setReturning(rs, obj);
 		String args = getString(rs, "FUNCTION_ARGUMENT_TYPE");
@@ -97,10 +97,16 @@ public class VirticaFunctionReader extends FunctionReader {
 	}
 
 	protected NamedArgument createNamedArgument(String parameter) throws SQLException {
+		// UDx signatures can contain unnamed multiword native types. Resolve the
+		// complete type before interpreting its first word as an argument name.
+		NamedArgument unnamed = new NamedArgument();
+		this.getDialect().setDbType(parameter.trim(), null, null, unnamed);
+		if (unnamed.getDataType() != null && unnamed.getDataType() != com.sqlapp.data.db.datatype.DataType.OTHER)
+			return unnamed;
 		NamedArgument obj = new NamedArgument();
 		Matcher matcher = NAMED_ARGUMENT_PATTERN.matcher(parameter);
 		if (matcher.matches()) {
-			obj.setName(matcher.group(1));
+			obj.setName(unquoteArgumentName(matcher.group(1)));
 			this.getDialect().setDbType(matcher.group(2), null, null, obj);
 		} else {
 			this.getDialect().setDbType(parameter.trim(), null, null, obj);
@@ -115,22 +121,49 @@ public class VirticaFunctionReader extends FunctionReader {
 		}
 		int start = 0;
 		int depth = 0;
+		char quote = 0;
 		for (int i = 0; i < parameters.length(); i++) {
 			char c = parameters.charAt(i);
-			if (c == '(') {
+			if (quote != 0) {
+				if (c == quote) {
+					if (i + 1 < parameters.length() && parameters.charAt(i + 1) == quote)
+						i++;
+					else
+						quote = 0;
+				}
+				continue;
+			}
+			if (c == '\'' || c == '"') {
+				quote = c;
+			} else if (c == '(') {
 				depth++;
-			} else if (c == ')' && depth > 0) {
+			} else if (c == ')') {
+				if (depth == 0)
+					throw new IllegalArgumentException("Unbalanced Vertica routine arguments: " + parameters);
 				depth--;
 			} else if (c == ',' && depth == 0) {
-				result.add(parameters.substring(start, i).trim());
+				addArgument(result, parameters.substring(start, i));
 				start = i + 1;
 			}
 		}
-		result.add(parameters.substring(start).trim());
+		if (quote != 0 || depth != 0)
+			throw new IllegalArgumentException("Unbalanced Vertica routine arguments: " + parameters);
+		addArgument(result, parameters.substring(start));
 		return result;
 	}
 
-	private static final Pattern NAMED_ARGUMENT_PATTERN = Pattern.compile("\\s*(\\S+)\\s+(.+)");
+	private static void addArgument(List<String> result, String value) {
+		if (value.isBlank())
+			throw new IllegalArgumentException("Empty Vertica routine argument");
+		result.add(value.trim());
+	}
+
+	static String unquoteArgumentName(String name) {
+		return name.startsWith("\"") && name.endsWith("\"") ? name.substring(1, name.length() - 1).replace("\"\"", "\"")
+				: name;
+	}
+
+	private static final Pattern NAMED_ARGUMENT_PATTERN = Pattern.compile("\\s*(\"(?:\"\"|[^\"])+\"|\\S+)\\s+(.+)");
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("functions.sql");

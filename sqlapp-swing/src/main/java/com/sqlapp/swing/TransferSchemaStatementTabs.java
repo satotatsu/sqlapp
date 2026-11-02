@@ -19,11 +19,23 @@ final class TransferSchemaStatementTabs {
 
 	javax.swing.JComboBox<TaskChoice> taskSelector;
 
+	private record StatusChoice(String status, long count) {
+		@Override
+		public String toString() {
+			return (status == null ? "All statuses" : status) + " (" + count + ")";
+		}
+	}
+
+	javax.swing.JComboBox<StatusChoice> statusSelector;
+	javax.swing.JButton showUncertain;
+
 	void clear(JTabbedPane tabs) {
 		if (panel != null)
 			tabs.remove(panel);
 		panel = null;
 		taskSelector = null;
+		statusSelector = null;
+		showUncertain = null;
 	}
 
 	void show(JTabbedPane tabs, Object value) {
@@ -50,12 +62,54 @@ final class TransferSchemaStatementTabs {
 		label.setLabelFor(taskSelector);
 		scope.add(label);
 		scope.add(taskSelector);
+		statusSelector = new javax.swing.JComboBox<>();
+		statusSelector.addItem(new StatusChoice(null, rows.size()));
+		rows.stream().map(row -> row.get(2)).distinct().forEach(status -> statusSelector
+				.addItem(new StatusChoice(status, rows.stream().filter(row -> row.get(2).equals(status)).count())));
+		var statusLabel = new javax.swing.JLabel("Recorded status");
+		statusLabel.setLabelFor(statusSelector);
+		statusSelector.setToolTipText("Counts cover all recorded statements, before task or text filtering.");
+		scope.add(statusLabel);
+		scope.add(statusSelector);
+		showUncertain = new javax.swing.JButton("Show uncertain attempt");
+		showUncertain.setEnabled(rows.stream().anyMatch(row -> row.get(2).equals("Uncertain attempt")));
+		showUncertain
+				.setToolTipText("Show the uncertain SQL. It may already have taken effect; this does not retry it.");
+		scope.add(showUncertain);
 		panel.setScopeControls(scope);
 		var currentPanel = panel;
 		var currentSelector = taskSelector;
-		taskSelector.addActionListener(event -> {
-			if (panel == currentPanel && taskSelector == currentSelector)
-				panel.setExactFilter(1, ((TaskChoice) taskSelector.getSelectedItem()).id());
+		var currentStatus = statusSelector;
+		var currentButton = showUncertain;
+		Runnable filter = () -> {
+			if (panel != currentPanel || taskSelector != currentSelector || statusSelector != currentStatus)
+				return;
+			var scopes = new java.util.HashMap<Integer, String>();
+			var task = ((TaskChoice) currentSelector.getSelectedItem()).id();
+			var status = ((StatusChoice) currentStatus.getSelectedItem()).status();
+			if (task != null)
+				scopes.put(1, task);
+			if (status != null)
+				scopes.put(2, status);
+			panel.setExactFilters(scopes);
+		};
+		taskSelector.addActionListener(event -> filter.run());
+		statusSelector.addActionListener(event -> filter.run());
+		showUncertain.addActionListener(event -> {
+			if (panel != currentPanel || showUncertain != currentButton || !currentButton.isEnabled()
+					|| !panel.table.isEnabled())
+				return;
+			panel.filter.setText("");
+			taskSelector.setSelectedIndex(0);
+			for (int index = 1; index < statusSelector.getItemCount(); index++)
+				if ("Uncertain attempt".equals(statusSelector.getItemAt(index).status())) {
+					statusSelector.setSelectedIndex(index);
+					if (panel.table.getRowCount() > 0) {
+						panel.table.setRowSelectionInterval(0, 0);
+						panel.table.scrollRectToVisible(panel.table.getCellRect(0, 0, true));
+					}
+					break;
+				}
 		});
 		tabs.addTab("Schema statements (" + rows.size() + ")", panel);
 	}
@@ -66,6 +120,7 @@ final class TransferSchemaStatementTabs {
 		for (int index = 1; index < taskSelector.getItemCount(); index++)
 			if (taskSelector.getItemAt(index).id().equals(taskId)) {
 				panel.filter.setText("");
+				statusSelector.setSelectedIndex(0);
 				taskSelector.setSelectedIndex(index);
 				tabs.setSelectedComponent(panel);
 				return true;

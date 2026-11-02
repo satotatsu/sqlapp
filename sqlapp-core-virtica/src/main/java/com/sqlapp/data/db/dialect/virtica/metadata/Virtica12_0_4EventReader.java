@@ -48,9 +48,15 @@ public class Virtica12_0_4EventReader extends EventReader {
 		Event event = new Event(getString(rs, "TRIGGER_NAME"));
 		event.setSchemaName(getString(rs, SCHEMA_NAME));
 		event.setDefiner(getString(rs, "OWNER"));
-		event.setEnable(rs.getBoolean("TRIGGER_ENABLED") && rs.getBoolean("SCHEDULE_ENABLED"));
-		event.setEventType(
-				"CRON".equalsIgnoreCase(getString(rs, "DATE_TIME_TYPE")) ? EventType.Recurring : EventType.OneTime);
+		boolean triggerEnabled = rs.getBoolean("TRIGGER_ENABLED");
+		boolean scheduleEnabled = rs.getBoolean("SCHEDULE_ENABLED");
+		event.setEnable(triggerEnabled && scheduleEnabled);
+		event.getSpecifics().put("TRIGGER_ENABLED", triggerEnabled);
+		event.getSpecifics().put("SCHEDULE_ENABLED", scheduleEnabled);
+		// A DATE_TIME_LIST can contain multiple instants and has no faithful
+		// single executeAt/interval representation in the shared Event model.
+		if ("CRON".equalsIgnoreCase(getString(rs, "DATE_TIME_TYPE")))
+			event.setEventType(EventType.Recurring);
 		setSpecifics(rs, "PROCEDURE_NAME", event);
 		setSpecifics(rs, "PROCEDURE_ARGS", event);
 		setSpecifics(rs, "SCHEDULE_NAME", event);

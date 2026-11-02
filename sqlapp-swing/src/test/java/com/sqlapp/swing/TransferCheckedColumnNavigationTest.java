@@ -10,6 +10,78 @@ import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingInspecti
 import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingIO;
 
 class TransferCheckedColumnNavigationTest {
+	private void enter(JTable table) {
+		var key = table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+				.get(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0));
+		table.getActionMap().get(key).actionPerformed(new java.awt.event.ActionEvent(table, 0, "enter"));
+	}
+
+	@Test
+	void keyboardAndDoubleClickUseVerifiedFilteredIdentityAndRespectInvalidation() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new TransferNameMappingSchemaPanel();
+			var selected = new java.util.ArrayList<TransferNameMappingSchemaPanel.ColumnSelection>();
+			panel.setColumnNavigator(selected::add);
+			panel.showResult(checked());
+			var grid = panel.details.table;
+			grid.setSize(1000, 200);
+			grid.getRowSorter().toggleSortOrder(1);
+			grid.moveColumn(1, 0);
+			panel.details.filter.setText("VARCHAR");
+			grid.setRowSelectionInterval(0, 0);
+			enter(grid);
+			assertEquals("A", selected.getFirst().sourceTable());
+			assertEquals("NAME", selected.getFirst().sourceColumn());
+			var cell = grid.getCellRect(0, 0, true);
+			var click = new java.awt.event.MouseEvent(grid, java.awt.event.MouseEvent.MOUSE_CLICKED, 0, 0, cell.x + 2,
+					cell.y + 2, 2, false, java.awt.event.MouseEvent.BUTTON1);
+			for (var listener : grid.getMouseListeners())
+				listener.mouseClicked(click);
+			assertEquals(2, selected.size());
+			var blank = new java.awt.event.MouseEvent(grid, java.awt.event.MouseEvent.MOUSE_CLICKED, 0, 0, 2, 150, 2,
+					false, java.awt.event.MouseEvent.BUTTON1);
+			for (var listener : grid.getMouseListeners())
+				listener.mouseClicked(blank);
+			var right = new java.awt.event.MouseEvent(grid, java.awt.event.MouseEvent.MOUSE_CLICKED, 0, 0, cell.x + 2,
+					cell.y + 2, 2, false, java.awt.event.MouseEvent.BUTTON3);
+			for (var listener : grid.getMouseListeners())
+				listener.mouseClicked(right);
+			assertEquals(2, selected.size());
+			panel.refreshEnabled(false);
+			enter(grid);
+			for (var listener : grid.getMouseListeners())
+				listener.mouseClicked(click);
+			assertEquals(2, selected.size());
+			panel.refreshEnabled(true);
+			panel.details.filter.setText("");
+			grid.setRowSelectionInterval(0, 1);
+			enter(grid);
+			assertEquals(2, selected.size());
+			panel.changed();
+			enter(grid);
+			assertEquals(2, selected.size());
+		});
+	}
+
+	@Test
+	void readOnlyPreviewRetainsItsOriginalEnterAction() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new TransferNameMappingSchemaPanel();
+			var grid = panel.details.table;
+			var original = new java.util.concurrent.atomic.AtomicInteger();
+			grid.getActionMap().put("selectNextRowCell", new AbstractAction() {
+				@Override
+				public void actionPerformed(java.awt.event.ActionEvent event) {
+					original.incrementAndGet();
+				}
+			});
+			panel.showResult(checked());
+			enter(grid);
+			assertEquals(1, original.get());
+			assertFalse(panel.editColumn.isVisible());
+		});
+	}
+
 	private TransferNameMappingPanel editor() {
 		var editor = new TransferNameMappingPanel();
 		editor.load(new TransferNameMappingIO()

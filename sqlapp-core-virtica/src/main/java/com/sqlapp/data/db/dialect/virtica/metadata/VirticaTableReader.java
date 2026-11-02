@@ -85,6 +85,8 @@ public class VirticaTableReader extends TableReader {
 		obj.setTableDataStoreType(TableDataStoreType.Column);
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		obj.setRemarks(this.getString(rs, "COMMENT"));
+		obj.getSpecifics().put("IS_TEMP_TABLE", rs.getBoolean("IS_TEMP_TABLE"));
+		obj.getSpecifics().put("IS_FLEXTABLE", rs.getBoolean("IS_FLEXTABLE"));
 		setSpecifics(rs, "COMMIT_ACTION", obj);
 		setSpecifics(rs, "IS_SHARED", obj);
 		setSpecifics(rs, "HAS_AGGREGATE_PROJECTION", obj);

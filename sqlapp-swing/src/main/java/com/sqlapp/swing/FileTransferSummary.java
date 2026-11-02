@@ -26,8 +26,8 @@ final class FileTransferSummary {
 		if (value instanceof FileTransferDesktopService.Inspected inspected) {
 			text.append("Package file integrity checked. No database connection was opened.\n")
 					.append(inspected.valuesValidated()
-							? "CSV values and recorded row counts checked. Target compatibility has not been reviewed.\n\n"
-							: "CSV values, recorded row counts and target compatibility have not been reviewed.\n\n");
+							? "Packaged values and recorded row counts checked. Target compatibility has not been reviewed.\n\n"
+							: "Packaged values, recorded row counts and target compatibility have not been reviewed.\n\n");
 			if (inspected.configuration() != null) {
 				final var configuration = inspected.configuration();
 				text.append("\nSaved target schema: ")
@@ -44,10 +44,10 @@ final class FileTransferSummary {
 					.append("\nNext: enter the target connection and choose Review package and target.\n")
 					.append("File hashes are integrity checks, not proof of authenticity or import approval.\n");
 		} else if (value instanceof TransferFilePackageIO.Snapshot exported) {
-			text.append("CSV package exported. No rows have been imported.\n\n");
+			text.append("file package exported. No rows have been imported.\n\n");
 			packageDetails(text, exported.manifest());
 			text.append("\nManifest: ").append(exported.file()).append('\n');
-			text.append("\nNext: choose Import CSV package, enter the target connection, and review.\n")
+			text.append("\nNext: choose Import file package, enter the target connection, and review.\n")
 					.append("Move the whole package if importing on another machine.\n")
 					.append("The Gradle tab contains settings for this package and optional re-export.\n");
 		} else if (value instanceof FileTransferDesktopService.Reviewed reviewed) {
@@ -94,6 +94,7 @@ final class FileTransferSummary {
 					.append(schema.planned().size()).append('\n');
 			if (schema.attemptedStatement() != null)
 				text.append("Uncertain attempted DDL statement: ").append(schema.attemptedStatement()).append('\n');
+			TransferExecutionSummary.appendSchemaProgress(text, schema);
 			if (outcome.stoppedTaskId() != null)
 				text.append("Stopped task: ").append(outcome.stoppedTaskId()).append('\n');
 			warnings(text, schema.warnings());
@@ -106,11 +107,19 @@ final class FileTransferSummary {
 				text.append(
 						"\nImport did not complete. Created objects and committed rows may remain.\nInspect Details and repair the target before another review; no automatic retry or reset.\n");
 		} else
-			throw new IllegalArgumentException("Unsupported CSV result type.");
+			throw new IllegalArgumentException("Unsupported file result type.");
 		return text.toString();
 	}
 
 	private static void packageDetails(StringBuilder text, TransferFilePackageIO.Manifest manifest) {
+		text.append("File format: ").append(manifest.files().format()).append("; encoding: ")
+				.append(manifest.files().encoding()).append('\n');
+		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
+			text.append("Header handling: ").append(switch (manifest.files().headerMode()) {
+			case VALIDATE -> "validate column names and skip one header record";
+			case SKIP -> "skip one header record without checking names; use captured column order";
+			case NONE -> "no header; first record is data in captured column order";
+			}).append('\n');
 		text.append("Tables: ").append(manifest.tables().size()).append("; exported rows: ").append(manifest.tables()
 				.stream().map(table -> BigInteger.valueOf(table.rows())).reduce(BigInteger.ZERO, BigInteger::add))
 				.append('\n');

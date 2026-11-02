@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.virtica.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -56,6 +57,8 @@ public class VirticaCreateTemporaryTableFactoryTest extends VirticaSqlFactoryTes
 	@Test
 	public void testCreateTable1() {
 		Table table1 = getTable1("tableA");
+		assertThrows(IllegalArgumentException.class, () -> operation.createSql(table1));
+		table1.getIndexes().clear();
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
@@ -64,7 +67,7 @@ public class VirticaCreateTemporaryTableFactoryTest extends VirticaSqlFactoryTes
 					  "cola" BIGINT
 					, "colb" BIGINT
 					, "colc" VARCHAR(50)
-					, "cold" TIMESTAMP(0)
+					, "cold" TIMESTAMP(6)
 				) ON COMMIT PRESERVE ROWS""";
 		assertEquals(expected, operation.getSqlText());
 	}

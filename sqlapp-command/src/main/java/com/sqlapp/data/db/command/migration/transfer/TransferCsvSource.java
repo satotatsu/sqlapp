@@ -28,17 +28,40 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 
 	TransferCsvSource(Table table, Path file, TransferJobConfiguration.FileTransfer settings, String fingerprint,
 			long expectedRows) {
+		this(table, file, settings, fingerprint, expectedRows, true);
+	}
+
+	TransferCsvSource(Table table, Path file, TransferJobConfiguration.FileTransfer settings, String fingerprint,
+			long expectedRows, boolean requireImportKeys) {
 		this.table = table;
 		this.file = file;
 		this.settings = settings;
 		this.fingerprint = fingerprint;
 		this.expectedRows = expectedRows;
-		if (table.getPrimaryKeyConstraint() == null)
+		if (requireImportKeys && table.getPrimaryKeyConstraint() == null)
 			throw new IllegalArgumentException("File import requires a modeled primary key.");
-		keys = table.getPrimaryKeyConstraint().getColumns().stream().map(ref -> table.getColumns().get(ref.getName()))
-				.toList();
-		if (keys.isEmpty() || keys.stream().anyMatch(key -> !key.isNotNull() || !numeric(key)))
+		var primary = numericKeys(table);
+		boolean importKeys = !primary.isEmpty();
+		if (requireImportKeys && !importKeys)
 			throw new IllegalArgumentException("Initial File import requires NOT NULL numeric primary keys.");
+		keys = importKeys ? primary : List.of();
+		validateColumnTypes(table);
+	}
+
+	static boolean supportsImportKeys(Table table) {
+		return !numericKeys(table).isEmpty();
+	}
+
+	private static List<Column> numericKeys(Table table) {
+		var primary = table.getPrimaryKeyConstraint() == null ? List.<Column>of()
+				: table.getPrimaryKeyConstraint().getColumns().stream()
+						.map(ref -> table.getColumns().get(ref.getName())).toList();
+		return !primary.isEmpty() && primary.stream().allMatch(key -> key != null && key.isNotNull() && numeric(key))
+				? primary
+				: List.of();
+	}
+
+	static void validateColumnTypes(Table table) {
 		for (final Column column : table.getColumns()) {
 			// Validate unsupported types even when the table is empty or the column
 			// contains only NULLs.
@@ -58,6 +81,8 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 
 	@Override
 	public String resumeToken(Row row) {
+		if (keys.isEmpty())
+			throw new IllegalArgumentException("A keyless preview cannot create a resume token.");
 		return new DefaultBulkMigrationKeysetCodec().encode(keys, row);
 	}
 
@@ -94,6 +119,8 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 		private boolean ended;
 
 		Rows(String token) throws Exception {
+			if (token != null && keys.isEmpty())
+				throw new IllegalArgumentException("A keyless preview cannot resume.");
 			seek = token;
 			reader = new java.io.BufferedReader(new java.io.InputStreamReader(Files.newInputStream(file),
 					Charset.forName(settings.encoding()).newDecoder()));
@@ -152,18 +179,23 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 						throw new IllegalArgumentException("CSV column count differs from canonical Schema.");
 					final Row row = table.newRow();
 					for (int index = 0; index < values.length; index++) {
-						if (parser != null && values[index] == null)
+						if (parser != null && values[index] == null
+								&& settings.emptyFieldMode() == TransferJobConfiguration.EmptyFieldMode.TOKEN_ONLY)
 							throw new IllegalArgumentException(
 									"CSV uses an implicit NULL instead of the configured token.");
-						boolean isNull = parser == null ? values[index] == null
-								: values[index].equals(settings.nullValue());
+						boolean isNull = values[index] == null
+								? parser == null
+										|| settings.emptyFieldMode() == TransferJobConfiguration.EmptyFieldMode.NULL
+								: settings.nullValue() != null && values[index].equals(settings.nullValue());
 						if (isNull && table.getColumns().get(index).isNotNull())
 							throw new IllegalArgumentException("File contains NULL for a NOT NULL column.");
-						row.put(index, decode(table.getColumns().get(index), isNull ? null : values[index]));
+						row.put(index, decode(table.getColumns().get(index),
+								isNull ? null : values[index] == null ? "" : values[index]));
 					}
-					if (previous != null && compare(previous, row) >= 0)
+					if (!keys.isEmpty() && previous != null && compare(previous, row) >= 0)
 						throw new IllegalArgumentException("File keys must be unique and in ascending numeric order.");
-					resumeToken(row); // Reject NULL primary keys before any write.
+					if (!keys.isEmpty())
+						resumeToken(row); // Reject NULL primary keys before any write.
 					previous = row;
 					count = Math.addExact(count, 1);
 					if (count > expectedRows)

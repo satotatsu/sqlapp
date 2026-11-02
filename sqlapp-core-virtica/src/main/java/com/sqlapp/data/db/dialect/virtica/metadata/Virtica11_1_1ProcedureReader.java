@@ -27,8 +27,8 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 /** Reads USER_PROCEDURES, available in Vertica 11.1.1 and later. */
 public class Virtica11_1_1ProcedureReader extends ProcedureReader {
 
-	private static final Pattern ARGUMENT_PATTERN = Pattern.compile("\\s*(?:(INOUT|IN|OUT)\\s+)?(\\S+)\\s+(.+)",
-			Pattern.CASE_INSENSITIVE);
+	private static final Pattern ARGUMENT_PATTERN = Pattern
+			.compile("\\s*(?:(INOUT|IN|OUT)\\s+)?(\"(?:\"\"|[^\"])+\"|\\S+)\\s+(.+)", Pattern.CASE_INSENSITIVE);
 
 	protected Virtica11_1_1ProcedureReader(Dialect dialect) {
 		super(dialect);
@@ -67,11 +67,13 @@ public class Virtica11_1_1ProcedureReader extends ProcedureReader {
 		NamedArgument argument = new NamedArgument();
 		Matcher matcher = ARGUMENT_PATTERN.matcher(text);
 		if (matcher.matches()) {
-			argument.setName(matcher.group(2));
+			argument.setName(VirticaFunctionReader.unquoteArgumentName(matcher.group(2)));
 			if (matcher.group(1) != null) {
 				argument.setDirection(matcher.group(1));
 			}
 			this.getDialect().setDbType(matcher.group(3), null, null, argument);
+		} else {
+			throw new IllegalArgumentException("Invalid Vertica procedure argument: " + text);
 		}
 		return argument;
 	}

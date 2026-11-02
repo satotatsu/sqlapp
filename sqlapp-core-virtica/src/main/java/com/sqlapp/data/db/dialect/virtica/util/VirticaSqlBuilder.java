@@ -35,6 +35,29 @@ public class VirticaSqlBuilder extends AbstractSqlBuilder<VirticaSqlBuilder> {
 		super(dialect);
 	}
 
+	@Override
+	public VirticaSqlBuilder definition(com.sqlapp.data.schemas.Column column, boolean withRemarks) {
+		if (!column.isIdentity())
+			return super.definition(column, withRemarks);
+		// Vertica IDENTITY replaces the data type rather than following BIGINT.
+		autoIncrement(column);
+		notNullDefinition(column);
+		if (!com.sqlapp.util.CommonUtils.isEmpty(column.getCheck()))
+			checkConstraintDefinition(column);
+		if (withRemarks && !com.sqlapp.util.CommonUtils.isEmpty(column.getRemarks()))
+			comment(column);
+		return this;
+	}
+
+	@Override
+	public VirticaSqlBuilder argument(com.sqlapp.data.schemas.NamedArgument argument) {
+		argumentDirection(argument);
+		if (argument.getName() != null)
+			name(argument.getName()).space();
+		typeDefinition(argument);
+		return this;
+	}
+
 	/**
 	 * serialVersionUID
 	 */

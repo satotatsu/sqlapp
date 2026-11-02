@@ -355,4 +355,29 @@ class ReportDetailTablePanelTest {
 			assertTrue(panel.selected.getText().startsWith("Select a recorded row"));
 		});
 	}
+
+	@Test
+	void combinedExactScopesAreCopiedValidatedAndReplacedByTheSingleScopeApi() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new ReportDetailTablePanel(new ReportReviewService.DetailTable("SQL", "recorded",
+					List.of("Task", "Status"), List.of(List.of("task-1", "Completed"), List.of("task-10", "Completed"),
+							List.of("task-1", "Not executed"))));
+			var scopes = new java.util.HashMap<Integer, String>();
+			scopes.put(0, "task-1");
+			scopes.put(1, "Completed");
+			panel.setExactFilters(scopes);
+			scopes.clear();
+			assertEquals(1, panel.table.getRowCount());
+			assertThrows(IllegalArgumentException.class, () -> panel.setExactFilters(java.util.Map.of(9, "bad")));
+			assertEquals(1, panel.table.getRowCount());
+			panel.filter.setText("Not executed");
+			assertEquals(0, panel.table.getRowCount());
+			panel.clear.doClick(0);
+			assertEquals(1, panel.table.getRowCount());
+			panel.setExactFilter(0, "task-1");
+			assertEquals(2, panel.table.getRowCount());
+			panel.setExactFilter(0, null);
+			assertEquals(3, panel.table.getRowCount());
+		});
+	}
 }

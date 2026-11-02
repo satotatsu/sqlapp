@@ -15,7 +15,7 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 		private static final long serialVersionUID = 1L;
 
 		PackageSelectionException() {
-			super("The selected package folder must contain manifest.json directly. Choose a completed export folder, not its parent or CSV subfolder.");
+			super("The selected package folder must contain manifest.json directly. Choose a completed export folder, not its parent or data subfolder.");
 		}
 	}
 
@@ -95,12 +95,12 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 		} catch (Exception failure) {
 			if (action == FileTransferPanel.Action.INSPECT_DATA)
 				throw new IllegalArgumentException(
-						"CSV value validation failed. Check recorded row counts, headers, types, keys and export warnings. Use package-only inspection to view warnings. No database connection was opened.");
+						"Package value validation failed. Check recorded row counts, headers, types, keys and export warnings. Use package-only inspection to view warnings. No database connection was opened.");
 			if (action.isInspection())
 				throw new IllegalArgumentException(
 						"Package inspection failed. Check manifest.json, all package members and their recorded sizes/hashes. No database connection was opened.");
 			throw new IllegalArgumentException(
-					"CSV operation failed. Check the connection, supported scalar columns/numeric keys, "
+					"File transfer operation failed. Check the connection, supported scalar columns/numeric keys, "
 							+ "existing empty target tables, file settings and package integrity. No automatic retry or target reset was performed.");
 		} finally {
 			Arrays.fill(password, '\0');

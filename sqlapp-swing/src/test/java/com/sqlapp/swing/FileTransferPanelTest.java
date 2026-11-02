@@ -270,7 +270,7 @@ class FileTransferPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = ref.get();
 			assertFalse(panel.apply.isEnabled());
-			assertTrue(panel.summary.getText().contains("CSV values and recorded row counts checked"));
+			assertTrue(panel.summary.getText().contains("Packaged values and recorded row counts checked"));
 			assertTrue(panel.summary.getText().contains("Target compatibility has not been reviewed"));
 			assertTrue(panel.summary.getText().contains("Saved target schema: ARCHIVE"));
 			assertTrue(panel.summary.getText().contains("Verification after import: disabled"));
@@ -511,7 +511,7 @@ class FileTransferPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			final var panel = reference.get();
 			panel.status.addPropertyChangeListener("text", event -> {
-				if (event.getNewValue().toString().startsWith("CSV import finished"))
+				if (event.getNewValue().toString().startsWith("File import finished"))
 					imported.countDown();
 			});
 			panel.importReviewed(() -> true);

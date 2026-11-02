@@ -40,7 +40,7 @@ final class MigrationStartPanel extends JPanel {
 		final var title = new JLabel("Move schemas and data between databases");
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
 		heading.add(title, BorderLayout.NORTH);
-		heading.add(new JLabel("Choose direct JDBC or a CSV package. Review the target before importing."),
+		heading.add(new JLabel("Choose direct JDBC or a file package. Review the target before importing."),
 				BorderLayout.SOUTH);
 		content.add(heading, BorderLayout.NORTH);
 		final var cards = new JPanel(new GridLayout(4, 1, 0, 12));
@@ -48,10 +48,10 @@ final class MigrationStartPanel extends JPanel {
 				"Create one job for GUI and Gradle from connections and selected tables, then review the plan.\n"
 						+ "No YAML preparation is needed. Choose schema only to create missing tables without copying rows.",
 				button(Destination.DATA, "Open direct transfer", navigate)));
-		cards.add(card("Transfer with a CSV package",
+		cards.add(card("Transfer with a file package",
 				"Create a shared GUI / Gradle job, export the source, then import the package when ready.\n"
 						+ "Import needs only the target connection. Review existing empty targets or optional table creation.",
-				button(Destination.FILE, "Open CSV transfer", navigate)));
+				button(Destination.FILE, "Open file transfer", navigate)));
 		cards.add(card("Migrate an Access file",
 				"Select or drop an MDB / ACCDB file, then choose tables and a target database.\n"
 						+ "No source JDBC URL is needed. Transfer schema and data, or schema only, using a shared GUI / Gradle job.",

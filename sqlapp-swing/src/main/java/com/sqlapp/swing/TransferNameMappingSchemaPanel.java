@@ -220,7 +220,33 @@ final class TransferNameMappingSchemaPanel extends JPanel {
 		previewIssuesOnly.addActionListener(event -> details.setNonBlankFilter(8, previewIssuesOnly.isSelected()));
 		details.setScopeControls(actions);
 		editColumn.setToolTipText(
-				"Open the verified source column in the name editor. No type or value conversion is applied.");
+				"Open the verified source column in the name editor (Enter or double-click a row). No type or value conversion is applied.");
+		var enter = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0);
+		var keys = details.table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+		var originalEnter = keys.get(enter);
+		keys.put(enter, "editCheckedColumn");
+		details.table.getActionMap().put("editCheckedColumn", new AbstractAction() {
+			@Override
+			public void actionPerformed(java.awt.event.ActionEvent event) {
+				if (columnNavigator != null)
+					editColumn.doClick(0);
+				else if (originalEnter != null) {
+					var original = details.table.getActionMap().get(originalEnter);
+					if (original != null && original.isEnabled())
+						original.actionPerformed(event);
+				}
+			}
+		});
+		details.table.addMouseListener(new java.awt.event.MouseAdapter() {
+			@Override
+			public void mouseClicked(java.awt.event.MouseEvent event) {
+				if (SwingUtilities.isLeftMouseButton(event) && event.getClickCount() == 2
+						&& details.table.rowAtPoint(event.getPoint()) == details.table.getSelectedRow()
+						&& details.table.rowAtPoint(event.getPoint()) >= 0
+						&& details.table.columnAtPoint(event.getPoint()) >= 0)
+					editColumn.doClick(0);
+			}
+		});
 		details.table.getSelectionModel().addListSelectionListener(event -> refreshNavigation());
 		editColumn.addActionListener(event -> {
 			refreshNavigation();

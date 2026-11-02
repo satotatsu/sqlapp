@@ -69,12 +69,18 @@ public class VirticaSequenceReader extends SequenceReader {
 	protected Sequence createSequence(ExResultSet rs) throws SQLException {
 		Sequence obj = new Sequence(getString(rs, SEQUENCE_NAME));
 		obj.setSchemaName(getString(rs, "SEQUENCE_SCHEMA"));
+		obj.setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT);
 		obj.setMinValue(rs.getLong("MINIMUM"));
 		obj.setMaxValue(rs.getLong("MAXIMUM"));
 		obj.setIncrementBy(rs.getLong("INCREMENT_BY"));
-		obj.setCacheSize(rs.getLong("SESSION_CACHE_COUNT"));
+		int cacheSize = Math.toIntExact(rs.getLong("SESSION_CACHE_COUNT"));
+		if (cacheSize < 0) {
+			throw new IllegalStateException("Negative Vertica sequence cache size: " + obj.getName());
+		}
+		obj.setCacheSize(cacheSize);
 		obj.setCache(obj.getCacheSize() > 1);
-		obj.setLastValue(rs.getLong("CURRENT_VALUE"));
+		// CURRENT_VALUE counts distributed allocations, not the last value issued.
+		obj.getSpecifics().put("CURRENT_VALUE", rs.getLong("CURRENT_VALUE"));
 		obj.setCycle(rs.getBoolean("ALLOW_CYCLE"));
 		obj.setId(rs.getString("SEQUENCE_ID"));
 		obj.setRemarks(this.getString(rs, "COMMENT"));

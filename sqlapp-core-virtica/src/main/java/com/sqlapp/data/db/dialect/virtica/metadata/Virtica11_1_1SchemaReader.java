@@ -10,6 +10,10 @@ import com.sqlapp.data.db.metadata.ProcedureReader;
 
 /** Schema reader for Vertica 11.1.1 and later. */
 public class Virtica11_1_1SchemaReader extends VirticaSchemaReader {
+	@Override
+	protected com.sqlapp.data.db.metadata.ProjectionReader newProjectionReader() {
+		return new VirticaProjectionReader(getDialect());
+	}
 
 	protected Virtica11_1_1SchemaReader(Dialect dialect) {
 		super(dialect);

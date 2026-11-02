@@ -17,6 +17,39 @@ class TransferJobSettingsPanelTest {
 	Path directory;
 	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();
 
+	@Test
+	void editsFileEncodingAndHeaderModeOfflineAndRejectsInvalidEncodingWithoutWriting() throws Exception {
+		var file = Files.writeString(directory.resolve("file-options.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ndataMode: FILE\nfiles: {directory: packages, format: TSV, nullValue: __NULL__}\n");
+		var original = Files.readString(file);
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.fileOptions.isVisible());
+			assertEquals("UTF-8", panel.fileOptions.encoding.getSelectedItem());
+			panel.fileOptions.encoding.getEditor().setItem("invalid-encoding");
+			panel.save.doClick(0);
+			assertFalse(panel.isBusy());
+			assertTrue(panel.status.getText().contains("character encoding"));
+		});
+		assertNull(saved.get());
+		assertEquals(original, Files.readString(file));
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			panel.fileOptions.encoding.getEditor().setItem("windows-31j");
+			panel.fileOptions.headerMode.setSelectedItem(TransferJobConfiguration.HeaderMode.SKIP);
+			onIdle(panel, done);
+			panel.save.doClick(0);
+			assertFalse(panel.fileOptions.encoding.isEnabled());
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertEquals("windows-31j", io.read(file).configuration().files().encoding());
+		assertEquals(TransferJobConfiguration.HeaderMode.SKIP, io.read(file).configuration().files().headerMode());
+		var reopened = load(file, new AtomicReference<>());
+		SwingUtilities.invokeAndWait(() -> assertEquals(TransferJobConfiguration.HeaderMode.SKIP,
+				reopened.fileOptions.headerMode.getSelectedItem()));
+	}
+
 	@ParameterizedTest
 	@ValueSource(strings = { "JDBC_DIRECT", "SCHEMA_ONLY", "FILE" })
 	void editsTableSelectionOnlyInMemoryUntilSaveAndPreservesOtherSettings(String route) throws Exception {

@@ -43,7 +43,7 @@ class VirticaModernSchemaSqlTest extends VirticaSqlFactoryTest {
 				.setIdentityStartValue(100).setIdentityStep(10).setIdentityCacheSize(1000));
 		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
 				" ");
-		assertTrue(sql.contains("ID BIGINT IDENTITY (100, 10, 1000)"), sql);
+		assertTrue(sql.contains("ID IDENTITY (100, 10, 1000)"), sql);
 	}
 
 	@Test

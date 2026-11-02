@@ -74,6 +74,10 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		VALIDATE, SKIP, NONE
 	}
 
+	public enum EmptyFieldMode {
+		NULL, EMPTY_STRING, TOKEN_ONLY
+	}
+
 	/**
 	 * Saved file-transport intent, not a claim that export/import is implemented.
 	 * CSV/TSV exporters must reject literal null-token collisions rather than lose
@@ -81,7 +85,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 	 */
 	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 	public record FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
-			TemporalPolicy unsupportedTemporalPolicy, HeaderMode headerMode) {
+			TemporalPolicy unsupportedTemporalPolicy, HeaderMode headerMode, EmptyFieldMode emptyFieldMode) {
 		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue) {
 			this(directory, format, encoding, nullValue, TemporalPolicy.WARN, null);
 		}
@@ -91,12 +95,22 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 			this(directory, format, encoding, nullValue, unsupportedTemporalPolicy, null);
 		}
 
+		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
+				TemporalPolicy unsupportedTemporalPolicy, HeaderMode headerMode) {
+			this(directory, format, encoding, nullValue, unsupportedTemporalPolicy, headerMode, null);
+		}
+
 		public FileTransfer {
 			unsupportedTemporalPolicy = unsupportedTemporalPolicy == null ? TemporalPolicy.WARN
 					: unsupportedTemporalPolicy;
 			if (directory == null || directory.isBlank())
 				throw new IllegalArgumentException("files.directory is required for file transport.");
 			format = format == null ? FileFormat.CSV : format;
+			emptyFieldMode = emptyFieldMode == null
+					? nullValue == null ? EmptyFieldMode.NULL : EmptyFieldMode.TOKEN_ONLY
+					: emptyFieldMode;
+			if (format == FileFormat.JSONL && emptyFieldMode != EmptyFieldMode.NULL)
+				throw new IllegalArgumentException("JSONL uses native JSON values; omit files.emptyFieldMode.");
 			headerMode = headerMode == null ? format == FileFormat.JSONL ? HeaderMode.NONE : HeaderMode.VALIDATE
 					: headerMode;
 			if (format == FileFormat.JSONL && headerMode != HeaderMode.NONE)
@@ -106,12 +120,15 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 			encoding = charset.name();
 			if (format != FileFormat.JSONL) {
 				final char delimiter = format == FileFormat.TSV ? '\t' : ',';
-				if (nullValue == null || nullValue.isBlank()
-						|| nullValue.chars().anyMatch(c -> c == delimiter || c == '"' || c == '\r' || c == '\n'))
+				if (nullValue != null && (nullValue.isBlank()
+						|| nullValue.chars().anyMatch(c -> c == delimiter || c == '"' || c == '\r' || c == '\n')))
 					throw new IllegalArgumentException(format
 							+ " files require an explicit nonblank nullValue without delimiters, quotes or line breaks.");
-				if (!charset.newEncoder().canEncode(nullValue))
+				if (nullValue != null && !charset.newEncoder().canEncode(nullValue))
 					throw new IllegalArgumentException(format + " nullValue must be representable in files.encoding.");
+				if (emptyFieldMode != EmptyFieldMode.NULL && nullValue == null)
+					throw new IllegalArgumentException(
+							"Empty text/token-only mode requires files.nullValue to distinguish exported SQL NULL.");
 			} else if (nullValue != null) {
 				throw new IllegalArgumentException("JSONL uses JSON null; omit files.nullValue.");
 			}

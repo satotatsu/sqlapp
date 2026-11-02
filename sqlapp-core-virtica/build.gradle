@@ -11,3 +11,18 @@ dependencies {
 javadoc {
 	include '**/virtica/*'
 }
+
+// Never include the destructive, explicitly authorized database qualification in
+// normal module tests, even when integration environment variables are present.
+tasks.named('test', Test) {
+	exclude '**/VirticaProjectionIntegrationTest.class'
+}
+
+tasks.register('projectionIntegrationTest', Test) {
+	description = 'Explicitly authorized disposable Vertica Projection qualification only'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform()
+	include '**/VirticaProjectionIntegrationTest.class'
+}

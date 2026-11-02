@@ -23,7 +23,7 @@ public final class TransferFileJobDraftBuilder {
 		final var schema = schema(reviewed);
 		final var choices = new ArrayList<BulkMigrationJobDraftBuilder.TableChoice>();
 		for (final var choice : reviewed.tables()) {
-			String restriction = choice.restriction();
+			String restriction = choice.insertSelectable() ? null : choice.restriction();
 			if (restriction == null) {
 				try {
 					supported(schema, choice.table());
@@ -98,7 +98,7 @@ public final class TransferFileJobDraftBuilder {
 			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema,
 			TransferJobConfiguration.FileTransfer files, Path file) throws Exception {
 		java.util.Objects.requireNonNull(files, "file settings");
-		final String draft = new BulkMigrationJobDraftBuilder().draft(reviewed, selected, "", chunkSize, verify);
+		final String draft = new BulkMigrationJobDraftBuilder().draftInsert(reviewed, selected, "", chunkSize, verify);
 		final var bulk = new BulkMigrationJobConfigurationEditorIO().validate(draft);
 		final var schema = schema(reviewed);
 		final var tables = bulk.getTasks().stream().map(task -> task.getTable()).toList();
@@ -130,8 +130,6 @@ public final class TransferFileJobDraftBuilder {
 
 	private static void supported(Schema schema, String name, TransferJobConfiguration.TemporalPolicy policy) {
 		final var table = BulkMigrationJobConfigurationResolver.resolveTable(List.copyOf(schema.getTables()), name);
-		new TransferCsvSource(TransferCsvTemporalCodec.exportView(table, policy), Path.of("unused.csv"),
-				new TransferJobConfiguration.FileTransfer("packages", null, null, "__SQLAPP_NULL__"),
-				"eligibility-only", 0); // Constructor validates keys/types without opening the placeholder file.
+		TransferCsvSource.validateColumnTypes(TransferCsvTemporalCodec.exportView(table, policy));
 	}
 }

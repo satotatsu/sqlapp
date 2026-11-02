@@ -16,15 +16,26 @@
   against incomplete catalog metadata and unsupported options.
 - Scheduled-event raw metadata and separate trigger/schedule enable states.
 
-All verification to date is local. Mocked query counts establish bulk execution
-behavior, not catalog compatibility with a live server. No Vertica instance has
-been accessed or modified by these passes.
+Projection round-trips were additionally verified on a dedicated local Vertica
+25.1.0-0 server on 2026-11-03, including single-node hash segmentation/KSAFE 0,
+encoding, sort order and quoted names. Additional live round-trips cover SQL
+function overloads, views, sequences, numeric/long/temporal columns, Identity,
+enabled CHECK and partition expressions, with composite foreign-key metadata.
+See INTEGRATION_TESTS.md. Other features retain local/mock verification only.
+Mocked query counts establish bulk execution rather than historical compatibility.
+
+Live-driven fixes: DROP FUNCTION now emits modeled argument types (including an
+empty signature for zero arguments), Identity uses IDENTITY instead of BIGINT
+IDENTITY, and temporal metadata uses DATETIME_PRECISION instead of numeric scale.
+TIME/TIMETZ/TIMESTAMP/TIMESTAMPTZ default to six fractional digits in generated
+DDL, matching Vertica. Public APIs and XML formats are unchanged; generated SQL
+and read temporal attributes are corrected for existing resolver paths.
 
 ## Unresolved implementation work
 
 | Area | Concrete limitation | Required next work |
 | --- | --- | --- |
-| Projections | Model, bulk metadata, HTML, named DROP, rename-only ALTER and a scoped bulk script exporter are implemented; per-object CREATE extraction is pending | Qualify export on a server and match per-object definitions without duplicating dependencies/buddies; CREATE currently requires separately supplied definition |
+| Projections | Model, bulk/full metadata, HTML, named DROP, rename-only ALTER and atomic CREATE mapping are implemented; single-node UNSEGMENTED and hash SEGMENTED/KSAFE 0 round-trips passed on 25.1.0-0 | Multi-node buddy/KSAFE 1+ and older versions require live qualification; session-dependent scripts, follow-up ALTER and logical base/buddy grouping remain outside the current path |
 | Existing Flex/external tables | Automatic columns, generated dependent objects and external COPY options are not faithfully represented | Model dependencies and external definition semantics, or introduce an explicit vendor-DDL artifact path; verify exported DDL against a server |
 | Procedure/UDx recreation | Catalog metadata does not provide sufficient executable body/library definition | Acquire full CREATE DDL through an authorized bulk vendor export; current full-definition input works for routines |
 | Text-index catalog recreation | Catalog omits original ID/payload list and tokenizer/stemmer signatures | Bulk vendor DDL acquisition or supplemental canonical metadata; current reader output intentionally fails CREATE when incomplete |

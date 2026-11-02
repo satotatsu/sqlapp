@@ -33,10 +33,32 @@ public class VirticaCreateTemporaryTableFactory extends AbstractCreateTemporaryT
 
 	@Override
 	protected void addCreateObject(final Table obj, final VirticaSqlBuilder builder) {
+		String external = obj.getSpecifics().get("TABLE_DEFINITION", String.class);
+		if (external != null && !external.isBlank())
+			throw new IllegalArgumentException(
+					"Vertica external COPY definitions cannot be converted to local temporary tables: "
+							+ obj.getName());
+		if (obj.getTableType() == Table.TableType.Flex
+				|| Boolean.TRUE.equals(obj.getSpecifics().get("IS_FLEXTABLE", Boolean.class)))
+			throw new IllegalArgumentException(
+					"Vertica temporary Flex table recreation requires vendor DDL: " + obj.getName());
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
 		builder.create().local().temporary().table().ifNotExists(this.getOptions().isCreateIfNotExists());
 		builder.space()._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
+	}
+
+	@Override
+	protected void addOption(final Table table, final VirticaSqlBuilder builder) {
+		String action = table.getSpecifics().get("COMMIT_ACTION", String.class);
+		if (action == null) {
+			super.addOption(table, builder);
+			return;
+		}
+		String normalized = action.trim().toUpperCase(java.util.Locale.ROOT);
+		if (!normalized.equals("DELETE") && !normalized.equals("PRESERVE"))
+			throw new IllegalArgumentException("Vertica COMMIT_ACTION must be DELETE or PRESERVE: " + action);
+		builder.on().commit().space()._add(normalized).rows();
 	}
 }

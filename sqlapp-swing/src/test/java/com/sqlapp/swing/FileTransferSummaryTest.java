@@ -26,6 +26,8 @@ class FileTransferSummaryTest {
 		assertTrue(text.contains("Committed rows / items: 3"));
 		assertTrue(text.contains("DDL statements completed: 0 / 1"));
 		assertTrue(text.contains("Uncertain attempted DDL statement: 1"));
+		assertTrue(text.contains("Uncertain SQL: order 1 / task items"));
+		assertTrue(text.contains("Schema SQL not executed: 0"));
 		assertTrue(text.contains("Vendor default requires testing"));
 		assertTrue(text.contains("Stopped task: items"));
 		assertTrue(text.contains("Audit report: unavailable"));

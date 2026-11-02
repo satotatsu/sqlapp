@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.virtica.metadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +26,16 @@ class Virtica11_1_1ProcedureReaderTest {
 		assertEquals("input_value", argument.getName());
 		assertEquals(ParameterDirection.Input, argument.getDirection());
 		assertEquals(DataType.BIGINT, argument.getDataType());
+	}
+
+	@Test
+	void parsesQuotedNameAndRejectsInvalidArgument() {
+		var argument = reader.createArgument("INOUT \"order value\" numeric(12,2)");
+		assertEquals("order value", argument.getName());
+		String sql = DialectHolder.defaultDialect11_1_1.createSqlBuilder().argument(argument).toString();
+		org.junit.jupiter.api.Assertions.assertTrue(sql.contains("\"order value\""), sql);
+		assertEquals(sql.indexOf("INOUT"), sql.lastIndexOf("INOUT"));
+		assertThrows(IllegalArgumentException.class, () -> reader.createArgument("missing_type"));
 	}
 
 	@Test

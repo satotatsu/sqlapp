@@ -13,6 +13,7 @@ import com.sqlapp.data.db.command.migration.transfer.*;
 final class TransferJobSettingsPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final JTextField targetSchema = new JTextField(24);
+	final FileTransferOptionsPanel fileOptions = new FileTransferOptionsPanel();
 	final JTextField mappingFile = new JTextField(24);
 	final JButton browseMapping = new JButton("Browse…");
 	final JButton editMapping = new JButton("Edit names…");
@@ -146,6 +147,8 @@ final class TransferJobSettingsPanel extends JPanel {
 		chunkRow.add(chunkLabel);
 		chunkRow.add(chunk);
 		fields.add(chunkRow);
+		fileOptions.setVisible(mode == TransferJobConfiguration.DataMode.FILE);
+		fields.add(fileOptions);
 		fields.add(new JLabel("Saving changes only the job, never a database or completed package."));
 		fields.add(new JLabel("YAML formatting/comments are rewritten; all other settings are retained."));
 		fields.add(new JLabel(mode == TransferJobConfiguration.DataMode.FILE
@@ -210,6 +213,8 @@ final class TransferJobSettingsPanel extends JPanel {
 					strict.setSelected(
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR);
 					chunk.setValue(configuration.chunkSize());
+					if (configuration.files() != null)
+						fileOptions.load(configuration.files());
 					identity.setText(snapshot.file().toString());
 					status.setText("Adjust settings and save, or cancel to keep the original job.");
 				} catch (Exception failure) {
@@ -229,6 +234,10 @@ final class TransferJobSettingsPanel extends JPanel {
 		try {
 			chunk.commitEdit();
 			final var original = snapshot.configuration();
+			var files = original.files();
+			if (files != null)
+				files = fileOptions.settings(files.directory(), files.format(), files.nullValue(),
+						files.unsupportedTemporalPolicy());
 			updated = new TransferJobConfiguration(original.formatVersion(), original.source(), original.target(),
 					selectedTables,
 					schemaOnly.isSelected() && applyDifferences.isSelected()
@@ -245,13 +254,15 @@ final class TransferJobSettingsPanel extends JPanel {
 					mode == TransferJobConfiguration.DataMode.FILE ? mode
 							: schemaOnly.isSelected() ? TransferJobConfiguration.DataMode.SCHEMA_ONLY
 									: TransferJobConfiguration.DataMode.JDBC_DIRECT,
-					original.files(),
+					files,
 					strict.isSelected() ? TransferJobConfiguration.CompatibilityPolicy.ERROR
 							: TransferJobConfiguration.CompatibilityPolicy.WARN,
 					schemaOnly.isSelected() && applyDifferences.isSelected() && allowDestructive.isSelected(),
 					generatedKey.isSelected() && generatedKey.isVisible() ? generatedKeyColumn.getText() : null);
 		} catch (Exception failure) {
-			status.setText("Check chunk size (1..1000000), target schema and generated PK column name before saving.");
+			status.setText(mode == TransferJobConfiguration.DataMode.FILE
+					? "Check chunk size (1..1000000), target schema, character encoding and header setting before saving."
+					: "Check chunk size (1..1000000), target schema and generated PK column name before saving.");
 			return;
 		}
 		final var opened = snapshot;
@@ -312,6 +323,9 @@ final class TransferJobSettingsPanel extends JPanel {
 	}
 
 	private void refresh() {
+		fileOptions.refreshEnabled(!busy && snapshot != null && snapshot.configuration().files() != null,
+				snapshot != null && snapshot.configuration().files() != null ? snapshot.configuration().files().format()
+						: TransferJobConfiguration.FileFormat.CSV);
 		editTables.setEnabled(!busy && snapshot != null);
 		mappingRow.setVisible(mode != TransferJobConfiguration.DataMode.FILE || !mappingFile.getText().isBlank());
 		mappingFile.setEnabled(!busy && snapshot != null);

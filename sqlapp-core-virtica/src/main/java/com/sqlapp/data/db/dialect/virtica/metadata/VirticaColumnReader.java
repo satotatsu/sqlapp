@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.virtica.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.max;
 
 import java.sql.Connection;
 import com.sqlapp.jdbc.ExResultSet;
@@ -77,14 +76,26 @@ public class VirticaColumnReader extends ColumnReader {
 		if (identity) {
 			obj.setSequenceName(getString(rs, "SEQUENCE_NAME"));
 			obj.setIdentityStep(getLong(rs, "INCREMENT_BY"));
-			obj.setIdentityCacheSize(getInteger(rs, "SESSION_CACHE_COUNT"));
+			Long cache = getLong(rs, "SESSION_CACHE_COUNT");
+			if (cache != null && cache < 0)
+				throw new IllegalStateException("Negative Vertica identity cache size: " + obj.getName());
+			obj.setIdentityCacheSize(cache == null ? null : Math.toIntExact(cache));
 			obj.setIdentityMinValue(getLong(rs, "MINIMUM"));
 			obj.setIdentityMaxValue(getLong(rs, "MAXIMUM"));
-			obj.setIdentityLastValue(getLong(rs, "CURRENT_VALUE"));
+			// Distributed allocation state is not the last value issued to a row.
+			Long allocated = getLong(rs, "CURRENT_VALUE");
+			if (allocated != null)
+				obj.getSpecifics().put("CURRENT_VALUE", allocated);
 			obj.setIdentityCycle(toBoolean(getString(rs, "ALLOW_CYCLE")));
 		}
 		this.getDialect().setDbType(data_type, maxNullable(char_maxlength, numeric_precision,
 				datetime_precision == null ? null : datetime_precision.longValue()), numeric_scale, obj);
+		// NUMERIC_SCALE is reported as zero even for temporal columns. It is not
+		// their fractional-second precision; null DATETIME_PRECISION means default.
+		if (obj.getDataType() != null && obj.getDataType().isDateTime()) {
+			obj.setLength(datetime_precision == null ? null : datetime_precision.longValue());
+			obj.setScale(datetime_precision);
+		}
 		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));

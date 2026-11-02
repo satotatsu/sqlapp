@@ -59,6 +59,15 @@ class TransferTableSqlNavigationTest {
 			assertEquals(2, sqlPanel.table.getRowCount());
 			statements.taskSelector.setSelectedIndex(0);
 			assertEquals(3, sqlPanel.table.getRowCount());
+			tables.preparationSelector.setSelectedIndex(3); // Differences
+			assertEquals(1, tablePanel.table.getRowCount());
+			tablePanel.table.setRowSelectionInterval(0, 0);
+			tables.showSql.doClick(0);
+			assertEquals(1, sqlPanel.table.getRowCount());
+			assertEquals("task-10", sqlPanel.table.getValueAt(0, 1));
+			tables.preparationSelector.setSelectedIndex(0);
+			tablePanel.table.setRowSelectionInterval(0, 1);
+			assertFalse(tables.showSql.isEnabled());
 			tablePanel.filter.setText("no-sql");
 			tablePanel.table.setRowSelectionInterval(0, 0);
 			assertFalse(tables.showSql.isEnabled());
@@ -66,6 +75,47 @@ class TransferTableSqlNavigationTest {
 			tables.clear(tabs);
 			oldButton.doClick(0);
 			assertSame(sqlPanel, tabs.getSelectedComponent());
+		});
+	}
+
+	@Test
+	void statusScopeCombinesWithTaskAndSearchAndUncertainShortcutRevealsRecordedSql() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var tabs = new JTabbedPane();
+			var view = new TransferSchemaStatementTabs();
+			var outcome = new TransferFileImportService.Outcome("hash", "hash",
+					TransferJobExecutionService.Phase.SCHEMA_PREPARATION, null, false, Map.of(), Map.of(), null, null,
+					new TransferSchemaPreparation.Progress(sql, 1, 2));
+			view.show(tabs, outcome);
+			var panel = (ReportDetailTablePanel) tabs.getComponentAt(0);
+			assertTrue(String.valueOf(view.statusSelector.getItemAt(0)).contains("(3)"));
+			assertTrue(view.showTask(tabs, "task-1"));
+			view.statusSelector.setSelectedIndex(1); // Completed
+			assertEquals(1, panel.table.getRowCount());
+			assertEquals("1", panel.table.getValueAt(0, 0));
+			panel.filter.setText("ALTER");
+			assertEquals(0, panel.table.getRowCount());
+			view.showUncertain.doClick(0);
+			assertEquals("", panel.filter.getText());
+			assertEquals(1, panel.table.getRowCount());
+			assertEquals("2", panel.table.getValueAt(0, 0));
+			assertEquals("Uncertain attempt", panel.table.getValueAt(0, 2));
+			assertEquals(0, panel.table.getSelectedRow());
+			assertTrue(panel.selected.getText().contains("ALTER TABLE B"));
+			assertTrue(view.showTask(tabs, "task-1"));
+			assertEquals(2, panel.table.getRowCount()); // status reset for task navigation
+			panel.refreshEnabled(false);
+			view.showUncertain.doClick(0);
+			assertEquals(2, panel.table.getRowCount());
+			var oldButton = view.showUncertain;
+			var oldStatus = view.statusSelector;
+			view.clear(tabs);
+			oldButton.doClick(0);
+			oldStatus.setSelectedIndex(0);
+			assertEquals(0, tabs.getTabCount());
+			view.show(tabs, reviewed());
+			assertFalse(view.showUncertain.isEnabled());
+			assertEquals(2, view.statusSelector.getItemCount());
 		});
 	}
 

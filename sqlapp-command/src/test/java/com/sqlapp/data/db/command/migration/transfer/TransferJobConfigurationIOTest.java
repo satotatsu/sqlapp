@@ -24,7 +24,7 @@ class TransferJobConfigurationIOTest {
 				.validate(yaml + "dataMode: FILE\nfiles: {directory: packages, format: TSV, nullValue: '__NULL__'}\n");
 		assertEquals(TransferJobConfiguration.FileFormat.TSV, configuration.files().format());
 		assertEquals(configuration, io.validate(io.format(configuration)));
-		for (String invalid : new String[] { null, "", "a\tb", "a\"b", "a\nb" })
+		for (String invalid : new String[] { "", "a\tb", "a\"b", "a\nb" })
 			assertThrows(IllegalArgumentException.class, () -> new TransferJobConfiguration.FileTransfer("packages",
 					TransferJobConfiguration.FileFormat.TSV, "UTF-8", invalid));
 		assertEquals(TransferJobConfiguration.FileFormat.CSV,

@@ -377,7 +377,7 @@ public final class TransferFileImportService {
 				continue;
 			final var source = new TransferCsvSource(table, directory.resolve(member.file()), configuration.files(),
 					configuration.files().format() + "-v1:" + snapshot.fingerprint() + ":" + member.fingerprint(),
-					member.rows());
+					member.rows(), sampleTask == null);
 			if (validateRows)
 				source.validate();
 			sources.put(member.taskId(), source);

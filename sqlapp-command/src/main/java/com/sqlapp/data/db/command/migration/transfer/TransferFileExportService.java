@@ -62,7 +62,9 @@ public final class TransferFileExportService {
 				final var tasks = new ArrayList<Map<String, Object>>();
 				for (int index = 0; index < configuration.tables().size(); index++)
 					tasks.add(Map.of("id", "export-table-" + (index + 1), "table", configuration.tables().get(index),
-							"mode", "INSERT", "resume", false));
+							"mode", "INSERT", "resume", false, "requireEmptyTarget", true, "fullScan",
+							TransferKeylessChecks.requiresFullScan(BulkMigrationJobConfigurationResolver.resolveTable(
+									List.copyOf(schema.getTables()), configuration.tables().get(index)))));
 				definition.put("tasks", tasks);
 				final Path selection = directory.resolve("source-selection.yaml");
 				final var selected = new BulkMigrationJobConfigurationEditorIO().write(selection,
@@ -73,6 +75,11 @@ public final class TransferFileExportService {
 				final var identities = new java.util.HashSet<List<String>>();
 				for (final var task : resolution.plan().getTasks()) {
 					final var table = task.getEffectiveSourceTable();
+					if (!TransferCsvSource.supportsImportKeys(table)) {
+						warnings.add(new TransferFilePackageIO.Warning(task.getTaskId(),
+								table.getColumns().getFirst().getName(),
+								"[FILE_IMPORT_LIMITATION] Export is allowed; automatic package import currently requires a complete NOT NULL numeric primary key. Review this table before import."));
+					}
 					final var view = TransferCsvTemporalCodec.exportView(table,
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR
 									? TransferJobConfiguration.TemporalPolicy.ERROR
@@ -94,17 +101,23 @@ public final class TransferFileExportService {
 					final Path file = directory.resolve(filename);
 					final List<String> columns = table.getColumns().stream().map(column -> column.getName()).toList();
 					long count = 0;
-					final var rows = new com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource(connection, view,
-							((com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource) task.getKeysetSource())
-									.getKeyColumnNames()) {
-						@Override
-						protected Object readColumn(java.sql.ResultSet rows, int index,
-								com.sqlapp.data.schemas.Column column, com.sqlapp.data.db.datatype.DbDataType<?> type)
-								throws java.sql.SQLException {
-							return driverText[index - 1] ? rows.getString(index)
-									: super.readColumn(rows, index, column, type);
-						}
-					}.iterator(null);
+					final java.util.Iterator<com.sqlapp.data.schemas.Row> rows;
+					if (task.isFullScan()) {
+						view.setRowIteratorHandler(
+								new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(connection));
+						rows = view.getRows().iterator();
+					} else
+						rows = new com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource(connection, view,
+								((com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource) task.getKeysetSource())
+										.getKeyColumnNames()) {
+							@Override
+							protected Object readColumn(java.sql.ResultSet rows, int index,
+									com.sqlapp.data.schemas.Column column,
+									com.sqlapp.data.db.datatype.DbDataType<?> type) throws java.sql.SQLException {
+								return driverText[index - 1] ? rows.getString(index)
+										: super.readColumn(rows, index, column, type);
+							}
+						}.iterator(null);
 					Throwable primary = null;
 					try (var text = new java.io.BufferedWriter(
 							new java.io.OutputStreamWriter(Files.newOutputStream(file),
@@ -113,7 +126,7 @@ public final class TransferFileExportService {
 								settings.setNullValue(configuration.files().nullValue());
 								settings.setEmptyValue("");
 								settings.setQuoteAllFields(true);
-								settings.setQuoteNulls(true);
+								settings.setQuoteNulls(configuration.files().nullValue() != null);
 								settings.setNormalizeLineEndingsWithinQuotes(false);
 								settings.setIgnoreLeadingWhitespaces(false);
 								settings.setIgnoreTrailingWhitespaces(false);

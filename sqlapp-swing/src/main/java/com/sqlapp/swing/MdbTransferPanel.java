@@ -49,7 +49,7 @@ final class MdbTransferPanel extends JPanel {
 		}, csvPresenter);
 		csv.useFileSource(file);
 		csv.source.driverClass.setText(MdbSourceFile.DRIVER);
-		csv.create.setText("New Access CSV job…");
+		csv.create.setText("New Access file job…");
 		transfer.useFileSource(file);
 		transfer.source.driverClass.setText(MdbSourceFile.DRIVER);
 		transfer.create.setText("New Access migration job…");
@@ -67,7 +67,7 @@ final class MdbTransferPanel extends JPanel {
 		header.add(notices, BorderLayout.SOUTH);
 		add(header, BorderLayout.NORTH);
 		modes.addTab("Direct transfer / schema only", transfer);
-		modes.addTab("CSV package transfer", csv);
+		modes.addTab("File transfer", csv);
 		add(modes, BorderLayout.CENTER);
 		modes.addChangeListener(event -> {
 			header.setVisible(modes.getSelectedComponent() != csv || csv.step.getSelectedIndex() == 0);
@@ -134,7 +134,7 @@ final class MdbTransferPanel extends JPanel {
 	private void updateSelectionHint() {
 		if (!transfer.source.jdbcUrl.getText().isBlank())
 			selection.setText(modes.getSelectedComponent() == csv
-					? "File selected. Create a CSV job and choose tables, then export. No connection has been opened."
+					? "File selected. Create a file job and choose tables, then export. No connection has been opened."
 					: "File selected. Set the target, then create a job and choose tables. No connection has been opened.");
 	}
 

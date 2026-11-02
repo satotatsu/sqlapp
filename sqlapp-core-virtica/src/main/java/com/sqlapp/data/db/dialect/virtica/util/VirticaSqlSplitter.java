@@ -19,9 +19,6 @@
 
 package com.sqlapp.data.db.dialect.virtica.util;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
@@ -33,55 +30,106 @@ public class VirticaSqlSplitter extends SqlSplitter {
 		super(dialect);
 	}
 
-	private static final Pattern CREATE_PATTERN = Pattern.compile("\\s*(CREATE|ALTER)\\s*.*",
-			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
-
-	private static final Pattern BEGIN_PATTERN = Pattern.compile("\\s*BEGIN\\s*",
-			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
-
-	private static final Pattern END_PATTERN = Pattern.compile(
-			"\\s*END\\s*(WITH\\s+CACHE\\s+RETENTION\\s+[0-9]+\\s*)?(OF\\s+[^;]+?)?;?",
-			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
-
 	@Override
 	protected SqlTokenizer createSqlTokenizer(String input) {
 		return new SqlTokenizer(input) {
 			@Override
+			protected int getQuotedTextEnd(String sql, int start) {
+				if (sql.startsWith("$$", start) && (start == 0 || !identifier(sql.charAt(start - 1)))) {
+					int end = sql.indexOf("$$", start + 2);
+					if (end < 0)
+						stringHolder.throwInvalidTextException("Closing dollar quote $$ not found");
+					return end + 2;
+				}
+				return super.getQuotedTextEnd(sql, start);
+			}
+
+			private boolean identifier(char c) {
+				return Character.isLetterOrDigit(c) || c == '_' || c == '$';
+			}
+
+			private boolean functionHeader(String sql, int offset) {
+				int state = 0;
+				for (int i = 0; i < sql.length();) {
+					var marker = getTextMarker(offset + i);
+					if (marker != null) {
+						if (!marker.getType().isComment())
+							return false;
+						i = marker.getEnd() - offset;
+						continue;
+					}
+					if (Character.isWhitespace(sql.charAt(i))) {
+						i++;
+						continue;
+					}
+					int start = i;
+					while (i < sql.length() && identifier(sql.charAt(i)))
+						i++;
+					if (i == start)
+						return false;
+					String word = sql.substring(start, i);
+					if (state == 0 && word.equalsIgnoreCase("CREATE"))
+						state = 1;
+					else if ((state == 1 || state == 3) && word.equalsIgnoreCase("FUNCTION"))
+						return true;
+					else if (state == 1 && word.equalsIgnoreCase("OR"))
+						state = 2;
+					else if (state == 2 && word.equalsIgnoreCase("REPLACE"))
+						state = 3;
+					else
+						return false;
+				}
+				return false;
+			}
+
+			@Override
 			protected boolean isStartStatement(String text, StringHolder stringHolder) {
-				Matcher matcher = CREATE_PATTERN.matcher(text);
-				if (matcher.matches()) {
-					int delPos = stringHolder.indexOf(this.getCurrentDelimiter(), stringHolder.getPosition() + 10);
-					int beginPos = stringHolder.searchLineOf(BEGIN_PATTERN, stringHolder.getPosition() + 10);
-					if (beginPos < 0) {
-						return false;
+				String sql = stringHolder.substringAt();
+				int offset = stringHolder.getPosition();
+				if (!functionHeader(sql, offset))
+					return false;
+				int depth = 0;
+				for (int i = 0; i < sql.length();) {
+					var marker = getTextMarker(offset + i);
+					if (marker != null) {
+						i = marker.getEnd() - offset;
+						continue;
 					}
-					if (delPos < beginPos) {
+					char c = sql.charAt(i);
+					if (depth == 0 && sql.startsWith(getCurrentDelimiter(), i))
 						return false;
+					if (!Character.isLetter(c) && c != '_') {
+						i++;
+						continue;
 					}
-					int i = beginPos;
-					while (true) {
-						int ePos = stringHolder.searchLineOf(END_PATTERN, i + 6);
-						if (ePos < 0) {
-							stringHolder.throwInvalidTextException(
-									"[END] element not found.[" + stringHolder.substringAt() + "]");
-						}
-						int bPos = stringHolder.searchLineOf(BEGIN_PATTERN, i + 6);
-						if (bPos >= 0) {
-							if (bPos < ePos) {
-								i = ePos + 3;
+					int start = i++;
+					while (i < sql.length() && identifier(sql.charAt(i)))
+						i++;
+					String word = sql.substring(start, i);
+					if (word.equalsIgnoreCase("BEGIN") || depth > 0 && word.equalsIgnoreCase("CASE"))
+						depth++;
+					else if (depth > 0 && word.equalsIgnoreCase("END") && --depth == 0) {
+						while (i < sql.length()) {
+							var trailing = getTextMarker(offset + i);
+							if (trailing != null && trailing.getType().isComment()) {
+								i = trailing.getEnd() - offset;
 								continue;
-							} else {
-								int last = stringHolder.indexOf(this.getCurrentDelimiter(), ePos + 3);
-								setPosition(last);
-								return true;
 							}
-						} else {
-							int last = stringHolder.indexOf(this.getCurrentDelimiter(), ePos + 3);
-							setPosition(last);
+							if (Character.isWhitespace(sql.charAt(i))) {
+								i++;
+								continue;
+							}
+							if (!sql.startsWith(getCurrentDelimiter(), i))
+								stringHolder.throwInvalidTextException("Expected delimiter after function END");
+							setPosition(offset + i);
 							return true;
 						}
+						setPosition(-1);
+						return true;
 					}
 				}
+				if (depth > 0)
+					stringHolder.throwInvalidTextException("Function END not found");
 				return false;
 			}
 		};

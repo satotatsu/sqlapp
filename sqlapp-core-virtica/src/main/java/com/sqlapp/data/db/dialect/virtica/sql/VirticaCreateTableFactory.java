@@ -16,7 +16,33 @@ public class VirticaCreateTableFactory extends AbstractCreateTableFactory<Virtic
 
 	@Override
 	protected void addCreateObject(final Table table, final VirticaSqlBuilder builder) {
-		builder.create().table().ifNotExists(getOptions().isCreateIfNotExists()).space().name(table,
+		if (table.getTableType() == Table.TableType.Temporary
+				|| Boolean.TRUE.equals(table.getSpecifics().get("IS_TEMP_TABLE", Boolean.class)))
+			throw new IllegalArgumentException(
+					"Vertica temporary tables require CREATE_TEMPORARY with explicit session semantics: "
+							+ table.getName());
+		String external = table.getSpecifics().get("TABLE_DEFINITION", String.class);
+		if (external != null && !external.isBlank())
+			throw new IllegalArgumentException(
+					"Vertica external table COPY definition requires vendor DDL; ordinary CREATE TABLE would lose it: "
+							+ table.getName());
+		builder.create();
+		if (table.getTableType() == Table.TableType.Flex
+				|| Boolean.TRUE.equals(table.getSpecifics().get("IS_FLEXTABLE", Boolean.class))) {
+			if (table.getColumns().contains("__raw__") || table.getColumns().contains("__identity__"))
+				throw new IllegalArgumentException(
+						"Vertica Flex automatic columns require vendor DDL for faithful recreation: "
+								+ table.getName());
+			builder.space()._add("FLEX");
+		}
+		builder.table().ifNotExists(getOptions().isCreateIfNotExists()).space().name(table,
 				getOptions().isDecorateSchemaName());
+	}
+
+	@Override
+	protected void addOption(final Table table, final VirticaSqlBuilder builder) {
+		String expression = table.getSpecifics().get("PARTITION_EXPRESSION", String.class);
+		if (expression != null && !expression.isBlank())
+			builder.lineBreak()._add("PARTITION BY ")._add(expression);
 	}
 }

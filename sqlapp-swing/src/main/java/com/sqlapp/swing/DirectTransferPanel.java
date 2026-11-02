@@ -575,6 +575,7 @@ final class DirectTransferPanel extends JPanel {
 			if (outcome.schemaPreparation().attemptedStatement() != null)
 				text.append("; uncertain attempted statement: ")
 						.append(outcome.schemaPreparation().attemptedStatement());
+			TransferExecutionSummary.appendSchemaProgress(text, outcome.schemaPreparation());
 			if (outcome.phase() != TransferJobExecutionService.Phase.COMPLETE)
 				text.append("\nCommitted chunks may remain. Inspect Details before retrying.");
 		}

@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.virtica.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -33,6 +35,53 @@ import com.sqlapp.data.db.dialect.virtica.DialectHolder;
 
 public class VirticaSqlSplitterTest extends AbstractTest {
 	Dialect dialect = DialectHolder.defaultDialect;
+
+	@Test
+	void generatedFunctionWithNestedCaseRemainsOneStatement() {
+		var function = new com.sqlapp.data.schemas.Function("f");
+		function.getReturning().setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT);
+		function.setStatement("RETURN CASE WHEN 1=1 THEN CASE WHEN 2=2 THEN 3 ELSE 4 END ELSE 5 END");
+		String ddl = dialect.createSqlFactoryRegistry().createSql(function, com.sqlapp.data.db.sql.SqlType.CREATE)
+				.get(0).getSqlText();
+		var statements = dialect.createSqlSplitter().parse(ddl + "\nSELECT 9;");
+		assertEquals(2, statements.size());
+		assertEquals(ddl.substring(0, ddl.length() - 1), statements.get(0).getText().trim());
+		assertEquals("SELECT 9", statements.get(1).getText().trim());
+	}
+
+	@Test
+	void inlineFunctionsIgnoreQuotedAndCommentedKeywordsAndDelimiters() {
+		String ddl = "CREATE /* header */ OR REPLACE FUNCTION \"BEGIN;END\"() RETURN VARCHAR AS BEGIN "
+				+ "RETURN CASE WHEN 1=1 THEN 'END;''BEGIN' /* END; BEGIN */ ELSE $$BEGIN; END;$$ END; END;";
+		var statements = dialect.createSqlSplitter().parse(ddl + " SELECT 9;");
+		assertEquals(2, statements.size());
+		assertEquals(ddl.substring(0, ddl.length() - 1), statements.get(0).getText().trim());
+		assertEquals("SELECT 9", statements.get(1).getText().trim());
+	}
+
+	@Test
+	void dollarQuotedProcedureAndStandaloneStringsRetainInternalSemicolons() {
+		String procedure = "CREATE PROCEDURE p() LANGUAGE PLvSQL AS $$ BEGIN RAISE NOTICE 'it''s; END'; END; $$";
+		var statements = dialect.createSqlSplitter().parse(procedure + "; SELECT $$Fred's; car$$; SELECT 9;");
+		assertEquals(3, statements.size());
+		assertEquals(procedure, statements.get(0).getText().trim());
+		assertEquals("SELECT $$Fred's; car$$", statements.get(1).getText().trim());
+	}
+
+	@Test
+	void malformedBodiesFailAndUnrelatedDdlDoesNotConsumeNextFunction() {
+		assertThrows(com.sqlapp.exceptions.InvalidTextException.class,
+				() -> dialect.createSqlSplitter().parse("SELECT $$unterminated;"));
+		assertThrows(com.sqlapp.exceptions.InvalidTextException.class,
+				() -> dialect.createSqlSplitter().parse("CREATE FUNCTION f() RETURN INT AS BEGIN RETURN 1;"));
+		String function = "CREATE FUNCTION f() RETURN INT AS BEGIN RETURN 1; END";
+		var statements = dialect.createSqlSplitter().parse("CREATE TABLE t(id INT); " + function + "; SELECT 2;");
+		assertEquals(3, statements.size());
+		assertEquals(function, statements.get(1).getText().trim());
+		var eof = dialect.createSqlSplitter().parse(function);
+		assertEquals(1, eof.size());
+		assertTrue(eof.get(0).getText().trim().endsWith("END"));
+	}
 
 	@Test
 	public void testSplitTest1() {

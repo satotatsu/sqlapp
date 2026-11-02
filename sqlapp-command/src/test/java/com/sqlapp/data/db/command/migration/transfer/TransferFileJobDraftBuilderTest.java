@@ -60,7 +60,7 @@ class TransferFileJobDraftBuilderTest {
 	}
 
 	@Test
-	void tablePickerEligibilityUsesTheSameNumericKeyAndScalarTypeRulesAsImport() throws Exception {
+	void tablePickerUsesExportTypesWithoutImportKeyRestrictions() throws Exception {
 		final var snapshot = snapshot();
 		final var builder = new TransferFileJobDraftBuilder();
 		final var inspected = builder.inspect(snapshot);
@@ -68,8 +68,13 @@ class TransferFileJobDraftBuilderTest {
 				.orElseThrow().selectable());
 		assertTrue(inspected.tables().stream().filter(table -> table.table().endsWith("DATES"))
 				.allMatch(table -> table.selectable()));
-		assertFalse(inspected.tables().stream().filter(table -> table.table().endsWith("TEXT_KEYS")).findFirst()
+		assertTrue(inspected.tables().stream().filter(table -> table.table().endsWith("TEXT_KEYS")).findFirst()
 				.orElseThrow().selectable());
+		assertTrue(inspected.tables().stream().filter(table -> table.table().endsWith("KEYLESS")).findFirst()
+				.orElseThrow().selectable());
+		var keyless = builder.save(inspected, List.of("PUBLIC.KEYLESS"), 100, true, "__NULL__",
+				directory.resolve("keyless.yaml"));
+		assertEquals(List.of("PUBLIC.KEYLESS"), keyless.configuration().tables());
 		assertThrows(Exception.class,
 				() -> builder.save(snapshot, List.of("PUBLIC.DATES"), 100, true, "__NULL__",
 						TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING,
@@ -114,12 +119,13 @@ class TransferFileJobDraftBuilderTest {
 
 	private BulkMigrationJobDraftBuilder.SchemaSnapshot snapshot(String schemaName) throws Exception {
 		final var schema = new Schema(schemaName);
-		for (String name : List.of("ITEMS", "DATES", "TEXT_KEYS")) {
+		for (String name : List.of("ITEMS", "DATES", "TEXT_KEYS", "KEYLESS")) {
 			final var table = new Table(name);
 			final var key = new Column("ID").setDataType(name.equals("TEXT_KEYS") ? DataType.VARCHAR : DataType.INT)
-					.setNotNull(true);
+					.setNotNull(!name.equals("KEYLESS"));
 			table.getColumns().add(key);
-			table.setPrimaryKey(key);
+			if (!name.equals("KEYLESS"))
+				table.setPrimaryKey(key);
 			if (name.equals("DATES"))
 				table.getColumns().add(new Column("DAY_VALUE").setDataType(DataType.TIME).setLength(6));
 			schema.getTables().add(table);

@@ -107,7 +107,7 @@ public final class MigrationApplication {
 				tabs.setSelectedComponent(sqlEditor);
 				return true;
 			});
-			tabs.addTab("CSV package transfer", fileTransfer);
+			tabs.addTab("File transfer", fileTransfer);
 			tabs.addTab("Access file migration", mdbTransfer);
 			tabs.addTab("JDBC drivers", drivers);
 			final java.util.function.BooleanSupplier activity = () -> comparison.isBusy() || schemaPlan.isBusy()
@@ -133,8 +133,8 @@ public final class MigrationApplication {
 			tabs.insertTab("Direct JDBC transfer", null, directTransfer,
 					"Copy directly between source and target connections, or create tables only", 0);
 			tabs.remove(fileTransfer);
-			tabs.insertTab("CSV package transfer", null, fileTransfer,
-					"Create a shared job, export, review and import CSV", 1);
+			tabs.insertTab("File transfer", null, fileTransfer, "Create a shared job, export, review and import CSV",
+					1);
 			MigrationStartPanel.install(tabs, java.util.Map.of(MigrationStartPanel.Destination.DATA, directTransfer,
 					MigrationStartPanel.Destination.LEGACY_DATA, dataPlan, MigrationStartPanel.Destination.FILE,
 					fileTransfer, MigrationStartPanel.Destination.MDB, mdbTransfer,

@@ -784,7 +784,7 @@ final class JobDraftPanel extends JPanel {
 		for (var component : ((JPanel) panel.jobId.getParent()).getComponents())
 			if (component instanceof JLabel label && "Job ID (optional)".equals(label.getText()))
 				label.setVisible(false);
-		panel.create.setText("Save CSV transfer job");
+		panel.create.setText("Save file transfer job");
 		panel.actions.add(panel.cancel);
 		panel.cancel.addActionListener(event -> {
 			if (!panel.isBusy())

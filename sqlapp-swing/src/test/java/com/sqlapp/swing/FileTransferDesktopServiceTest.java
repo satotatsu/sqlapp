@@ -138,7 +138,7 @@ class FileTransferDesktopServiceTest {
 				service.perform(FileTransferPanel.Action.INSPECT, exported.file(), null, null, new char[0], "", null));
 		final var failure = assertThrows(IllegalArgumentException.class, () -> service
 				.perform(FileTransferPanel.Action.INSPECT_DATA, exported.file(), null, null, new char[0], "", null));
-		assertTrue(failure.getMessage().contains("CSV value validation failed"));
+		assertTrue(failure.getMessage().contains("Package value validation failed"));
 		assertNull(failure.getCause());
 		assertFalse(failure.getMessage().contains("not-an-integer"));
 	}
