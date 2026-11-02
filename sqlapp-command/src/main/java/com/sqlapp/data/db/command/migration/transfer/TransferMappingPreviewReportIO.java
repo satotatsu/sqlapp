@@ -63,7 +63,7 @@ public final class TransferMappingPreviewReportIO {
 			throw new IOException(
 					"Saved preview report was not found. Save a new report or locate the original file: " + file);
 		String current = com.sqlapp.data.db.command.migration.internal.BoundedMigrationFile.sha256(file,
-				(long) MAX_BYTES, "maxPreviewReportBytes", "Saved preview report");
+				(long) MAX_BYTES, "the 16 MiB preview-report limit", "Saved preview report");
 		if (!saved.fingerprint().equals(current))
 			throw new IOException(
 					"Saved preview report changed after saving. Save a new preview report before opening: " + file);

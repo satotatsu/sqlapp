@@ -21,6 +21,86 @@ class TransferFileImportServiceTest {
 	Path directory;
 	private final TransferFileImportService service = new TransferFileImportService();
 
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.EnumSource(TransferJobConfiguration.FileFormat.class)
+	void roundTripsScalarValuesAndRelationshipsWithOnlyTargetBinding(TransferJobConfiguration.FileFormat format)
+			throws Exception {
+		roundTrip(format, "UTF-8", null);
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({ "CSV, UTF-8, VALIDATE", "CSV, windows-31j, SKIP",
+			"CSV, UTF-16LE, NONE", "TSV, windows-31j, VALIDATE", "TSV, UTF-8, SKIP", "TSV, UTF-16LE, NONE" })
+	void roundTripsConfiguredEncodingAndHeaders(TransferJobConfiguration.FileFormat format, String encoding,
+			TransferJobConfiguration.HeaderMode headerMode) throws Exception {
+		roundTrip(format, encoding, headerMode);
+	}
+
+	private void roundTrip(TransferJobConfiguration.FileFormat format, String encoding,
+			TransferJobConfiguration.HeaderMode headerMode) throws Exception {
+		var source = database();
+		var target = database();
+		try {
+			roundTrip(source, target, format, encoding, headerMode);
+		} finally {
+			try {
+				sql(source, "SHUTDOWN");
+			} finally {
+				sql(target, "SHUTDOWN");
+			}
+		}
+	}
+
+	private void roundTrip(JDBCDataSource source, JDBCDataSource target, TransferJobConfiguration.FileFormat format,
+			String encoding, TransferJobConfiguration.HeaderMode headerMode) throws Exception {
+		sql(source,
+				"CREATE TABLE ITEMS(ID BIGINT NOT NULL PRIMARY KEY, NAME VARCHAR(100), AMOUNT DECIMAL(30,12), FLAG BOOLEAN, TS TIMESTAMP(9))",
+				"CREATE TABLE ORDERS(ID INTEGER NOT NULL PRIMARY KEY, ITEM_ID BIGINT REFERENCES ITEMS(ID))",
+				"CREATE TABLE EMPTY_ITEMS(ID INTEGER NOT NULL PRIMARY KEY)");
+		String[] names = { null, "", " 日本語,\t\"文字\"\r\n\\N " };
+		try (var connection = source.getConnection();
+				var insert = connection.prepareStatement("INSERT INTO ITEMS VALUES(?,?,?,?,?)")) {
+			for (int index = 0; index < names.length; index++) {
+				insert.setLong(1, 9007199254740993L + index);
+				insert.setString(2, names[index]);
+				insert.setBigDecimal(3, new java.math.BigDecimal("123456789012345678.123456789012"));
+				insert.setBoolean(4, index != 0);
+				insert.setTimestamp(5, java.sql.Timestamp.valueOf("2024-02-29 23:59:59.123456789"));
+				insert.executeUpdate();
+			}
+		}
+		sql(source, "INSERT INTO ORDERS VALUES(1,9007199254740993)");
+		var job = Files.writeString(directory.resolve("transfer.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ORDERS, ITEMS, EMPTY_ITEMS]\n"
+						+ "schemaMode: CREATE_MISSING\ndataMode: FILE\nchunkSize: 1\nfiles: {directory: packages, format: "
+						+ format + ", encoding: " + encoding + (headerMode == null ? "" : ", headerMode: " + headerMode)
+						+ (format != TransferJobConfiguration.FileFormat.JSONL ? ", nullValue: __NULL__" : "") + "}\n");
+		var exported = new TransferFileExportService().export(job, Map.of("from", source));
+		assertEquals(format, exported.manifest().files().format());
+		assertTrue(exported.manifest().tables().stream()
+				.allMatch(table -> table.file().endsWith("." + format.name().toLowerCase(java.util.Locale.ROOT))));
+		var review = service.review(exported.file(), exported.fingerprint(), Map.of("to", target));
+		var outcome = service.execute(review, Map.of("to", target), directory);
+		assertEquals(TransferJobExecutionService.Phase.COMPLETE, outcome.phase());
+		assertEquals(3, count(target, "ITEMS"));
+		assertEquals(0, count(target, "EMPTY_ITEMS"));
+		assertEquals(3, outcome.verification().size());
+		assertTrue(outcome.verification().values().stream().allMatch(result -> result.isMatch()));
+		try (var connection = target.getConnection();
+				var statement = connection.createStatement();
+				var rows = statement.executeQuery("SELECT * FROM ITEMS ORDER BY ID")) {
+			for (int index = 0; index < names.length; index++) {
+				assertTrue(rows.next());
+				assertEquals(9007199254740993L + index, rows.getLong("ID"));
+				assertEquals(names[index], rows.getString("NAME"));
+				assertEquals(new java.math.BigDecimal("123456789012345678.123456789012"), rows.getBigDecimal("AMOUNT"));
+				assertEquals(index != 0, rows.getBoolean("FLAG"));
+				assertEquals(123456789, rows.getTimestamp("TS").getNanos());
+			}
+		}
+		assertThrows(Exception.class, () -> sql(target, "INSERT INTO ORDERS VALUES(2,999)"));
+	}
+
 	@Test
 	void createsMissingTablesAndForeignKeysInReviewedOrderBeforeCopyWithoutSourceConnection() throws Exception {
 		final var source = database();

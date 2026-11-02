@@ -15,8 +15,8 @@ import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.MessageDigests;
 
 /**
- * Completion marker and byte-integrity checks for a portable CSV export
- * package.
+ * Completion marker and byte-integrity checks for a portable CSV/TSV/JSONL
+ * export package.
  */
 public final class TransferFilePackageIO {
 	public record TableFile(String taskId, String catalog, String schema, String table, List<String> columns,
@@ -26,7 +26,7 @@ public final class TransferFilePackageIO {
 			if (taskId == null || taskId.isBlank() || table == null || table.isBlank() || columns == null
 					|| columns.isEmpty() || columns.stream().anyMatch(value -> value == null || value.isBlank())
 					|| new HashSet<>(columns).size() != columns.size() || file == null
-					|| !file.matches("table-[0-9]+\\.csv") || rows < 0 || bytes < 0 || !hash(fingerprint))
+					|| !file.matches("table-[0-9]+\\.(csv|tsv|jsonl)") || rows < 0 || bytes < 0 || !hash(fingerprint))
 				throw new IllegalArgumentException("Invalid exported table descriptor.");
 			columns = List.copyOf(columns);
 		}
@@ -45,9 +45,12 @@ public final class TransferFilePackageIO {
 		public Manifest {
 			warnings = warnings == null ? List.of() : List.copyOf(warnings);
 			if (formatVersion != 1 || !hash(jobFingerprint) || !hash(schemaFingerprint) || files == null
-					|| files.format() != TransferJobConfiguration.FileFormat.CSV || tables == null || tables.isEmpty())
-				throw new IllegalArgumentException("Invalid CSV package manifest.");
+					|| tables == null || tables.isEmpty())
+				throw new IllegalArgumentException("Invalid file package manifest.");
 			tables = List.copyOf(tables);
+			String extension = "." + files.format().name().toLowerCase(java.util.Locale.ROOT);
+			if (tables.stream().anyMatch(table -> !table.file().endsWith(extension)))
+				throw new IllegalArgumentException("Package data extension differs from its file format.");
 			if (tables.stream().map(TableFile::file).distinct().count() != tables.size()
 					|| tables.stream().map(TableFile::taskId).distinct().count() != tables.size())
 				throw new IllegalArgumentException("Duplicate exported file or task identity.");
@@ -117,9 +120,9 @@ public final class TransferFilePackageIO {
 			throw new IllegalArgumentException("Package Schema changed.");
 		for (final TableFile table : manifest.tables()) {
 			final Path data = member(directory, table.file());
-			if (Files.size(data) != table.bytes()
-					|| !BoundedMigrationFile.sha256(data, null, "maxDataBytes", "CSV data").equals(table.fingerprint()))
-				throw new IllegalArgumentException("Package CSV data changed or is incomplete.");
+			if (Files.size(data) != table.bytes() || !BoundedMigrationFile
+					.sha256(data, null, "maxDataBytes", "File data").equals(table.fingerprint()))
+				throw new IllegalArgumentException("Package file data changed or is incomplete.");
 		}
 	}
 

@@ -15,8 +15,8 @@ import com.sqlapp.jdbc.bulk.BulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.DefaultBulkMigrationKeysetCodec;
 
 /**
- * Package-owned CSV source; no database access. Numeric keys have a portable
- * ordering.
+ * Package-owned CSV/TSV/JSONL source; no database access. Numeric keys have a
+ * portable ordering.
  */
 final class TransferCsvSource implements BulkMigrationKeysetSource {
 	private final Table table;
@@ -34,11 +34,11 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 		this.fingerprint = fingerprint;
 		this.expectedRows = expectedRows;
 		if (table.getPrimaryKeyConstraint() == null)
-			throw new IllegalArgumentException("CSV import requires a modeled primary key.");
+			throw new IllegalArgumentException("File import requires a modeled primary key.");
 		keys = table.getPrimaryKeyConstraint().getColumns().stream().map(ref -> table.getColumns().get(ref.getName()))
 				.toList();
 		if (keys.isEmpty() || keys.stream().anyMatch(key -> !key.isNotNull() || !numeric(key)))
-			throw new IllegalArgumentException("Initial CSV import requires NOT NULL numeric primary keys.");
+			throw new IllegalArgumentException("Initial File import requires NOT NULL numeric primary keys.");
 		for (final Column column : table.getColumns()) {
 			// Validate unsupported types even when the table is empty or the column
 			// contains only NULLs.
@@ -66,7 +66,7 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 		try {
 			return new Rows(resumeToken);
 		} catch (Exception failure) {
-			throw new IllegalArgumentException("Unable to open packaged CSV.");
+			throw new IllegalArgumentException("Unable to open packaged data.");
 		}
 	}
 
@@ -95,6 +95,12 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 
 		Rows(String token) throws Exception {
 			seek = token;
+			reader = new java.io.BufferedReader(new java.io.InputStreamReader(Files.newInputStream(file),
+					Charset.forName(settings.encoding()).newDecoder()));
+			if (settings.format() == TransferJobConfiguration.FileFormat.JSONL) {
+				parser = null;
+				return;
+			}
 			final var options = new com.univocity.parsers.csv.CsvParserSettings();
 			options.setEmptyValue("");
 			options.setIgnoreLeadingWhitespaces(false);
@@ -107,15 +113,18 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 			options.setReadInputOnSeparateThread(false);
 			options.setSkipEmptyLines(false);
 			options.getFormat().setLineSeparator("\n");
+			options.getFormat().setDelimiter(settings.format() == TransferJobConfiguration.FileFormat.TSV ? '\t' : ',');
 			parser = new com.univocity.parsers.csv.CsvParser(options);
-			reader = new java.io.InputStreamReader(Files.newInputStream(file),
-					Charset.forName(settings.encoding()).newDecoder());
 			try {
 				parser.beginParsing(reader);
-				final String[] header = parser.parseNext();
-				if (header == null || !java.util.Arrays.equals(header,
-						table.getColumns().stream().map(Column::getName).toArray(String[]::new)))
-					throw new IllegalArgumentException("CSV header differs from canonical Schema.");
+				if (settings.headerMode() != TransferJobConfiguration.HeaderMode.NONE) {
+					final String[] header = parser.parseNext();
+					if (header == null)
+						throw new IllegalArgumentException("The configured header row is missing.");
+					if (settings.headerMode() == TransferJobConfiguration.HeaderMode.VALIDATE && !java.util.Arrays
+							.equals(header, table.getColumns().stream().map(Column::getName).toArray(String[]::new)))
+						throw new IllegalArgumentException("Delimited header differs from canonical Schema.");
+				}
 			} catch (Exception failure) {
 				close();
 				throw failure;
@@ -130,33 +139,35 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 				return false;
 			try {
 				while (true) {
-					final String[] values = parser.parseNext();
+					final String[] values = parser == null ? TransferJsonlCodec.read(reader, table)
+							: parser.parseNext();
 					if (values == null) {
 						ended = true;
 						if (count != expectedRows || seek != null)
 							throw new IllegalArgumentException(
-									"CSV row count or resume token differs from its manifest.");
+									"File row count or resume token differs from its manifest.");
 						return false;
 					}
 					if (values.length != table.getColumns().size())
 						throw new IllegalArgumentException("CSV column count differs from canonical Schema.");
 					final Row row = table.newRow();
 					for (int index = 0; index < values.length; index++) {
-						if (values[index] == null)
+						if (parser != null && values[index] == null)
 							throw new IllegalArgumentException(
 									"CSV uses an implicit NULL instead of the configured token.");
-						if (values[index].equals(settings.nullValue()) && table.getColumns().get(index).isNotNull())
-							throw new IllegalArgumentException("CSV contains NULL for a NOT NULL column.");
-						row.put(index, decode(table.getColumns().get(index),
-								values[index].equals(settings.nullValue()) ? null : values[index]));
+						boolean isNull = parser == null ? values[index] == null
+								: values[index].equals(settings.nullValue());
+						if (isNull && table.getColumns().get(index).isNotNull())
+							throw new IllegalArgumentException("File contains NULL for a NOT NULL column.");
+						row.put(index, decode(table.getColumns().get(index), isNull ? null : values[index]));
 					}
 					if (previous != null && compare(previous, row) >= 0)
-						throw new IllegalArgumentException("CSV keys must be unique and in ascending numeric order.");
+						throw new IllegalArgumentException("File keys must be unique and in ascending numeric order.");
 					resumeToken(row); // Reject NULL primary keys before any write.
 					previous = row;
 					count = Math.addExact(count, 1);
 					if (count > expectedRows)
-						throw new IllegalArgumentException("CSV exceeds manifest row count.");
+						throw new IllegalArgumentException("File exceeds manifest row count.");
 					if (seek != null) {
 						if (seek.equals(resumeToken(row)))
 							seek = null;
@@ -165,8 +176,9 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 					next = row;
 					return true;
 				}
-			} catch (RuntimeException failure) {
-				throw new IllegalArgumentException("Invalid CSV rows, types, header, key order or recorded count.");
+			} catch (RuntimeException | java.io.IOException failure) {
+				throw new IllegalArgumentException(
+						"Invalid " + settings.format() + " rows, types, fields, key order or recorded count.");
 			}
 		}
 
@@ -182,7 +194,8 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 		@Override
 		public void close() throws java.io.IOException {
 			try {
-				parser.stopParsing();
+				if (parser != null)
+					parser.stopParsing();
 			} finally {
 				reader.close();
 			}
@@ -216,7 +229,7 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 				&& type != java.sql.JDBCType.NVARCHAR && type != java.sql.JDBCType.LONGNVARCHAR
 				&& type != java.sql.JDBCType.REAL && type != java.sql.JDBCType.FLOAT
 				&& type != java.sql.JDBCType.DOUBLE)
-			throw new IllegalArgumentException("CSV import does not support this canonical column type.");
+			throw new IllegalArgumentException("File import does not support this canonical column type.");
 		if (value == null)
 			return null;
 		return switch (type) {

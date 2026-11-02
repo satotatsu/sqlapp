@@ -24,8 +24,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.*;
 
 /**
- * Target-only review/import of a completed CSV package; never reconnects to its
- * source.
+ * Target-only review/import of a completed CSV/TSV/JSONL package; never
+ * reconnects to its source.
  */
 public final class TransferFileImportService {
 	public record Review(Path manifestFile, String manifestFingerprint, DatabaseIdentity targetIdentity,
@@ -62,7 +62,7 @@ public final class TransferFileImportService {
 		private final Outcome outcome;
 
 		ImportException(Outcome outcome) {
-			super("CSV import failed during " + outcome.phase()
+			super("File import failed during " + outcome.phase()
 					+ ". Committed work may remain; inspect the outcome before retrying. "
 					+ (outcome.auditFile() == null ? "Audit report unavailable." : "Audit report saved."));
 			this.outcome = outcome;
@@ -80,6 +80,82 @@ public final class TransferFileImportService {
 	/** Complete offline preflight; never borrows a target connection. */
 	public void validatePackage(Path manifest, String expectedFingerprint) throws Exception {
 		load(manifest, expectedFingerprint);
+	}
+
+	public record PreviewCell(String text, boolean sqlNull, boolean truncated) {
+		@Override
+		public String toString() {
+			return text + (truncated ? " … [truncated]" : "");
+		}
+	}
+
+	/**
+	 * Display-only sample; recorded totals are not a full value check or import
+	 * approval.
+	 */
+	public record Preview(TransferFilePackageIO.Snapshot snapshot, TransferFilePackageIO.TableFile table,
+			List<String> sourceTypes, List<List<PreviewCell>> rows, int rowLimit, boolean moreRecordedRows) {
+		public Preview {
+			sourceTypes = List.copyOf(sourceTypes);
+			rows = rows.stream().map(List::copyOf).toList();
+		}
+	}
+
+	/**
+	 * Offline typed preview using the import reader; validates integrity but parses
+	 * only this sample.
+	 */
+	public Preview preview(Path manifest, String expectedFingerprint, String taskId) throws Exception {
+		return preview(manifest, expectedFingerprint, taskId, 20);
+	}
+
+	public Preview preview(Path manifest, String expectedFingerprint, String taskId, int rowLimit) throws Exception {
+		if (taskId == null || taskId.isBlank() || rowLimit < 1 || rowLimit > 100)
+			throw new IllegalArgumentException("Choose an exact package task and a preview limit from 1 to 100 rows.");
+		var loaded = load(manifest, expectedFingerprint, taskId, false);
+		var source = loaded.sources().get(taskId);
+		if (source == null)
+			throw new IllegalArgumentException("The selected task is not in this package. Reopen the package preview.");
+		var member = loaded.snapshot().manifest().tables().stream().filter(table -> table.taskId().equals(taskId))
+				.findFirst().orElseThrow();
+		var sampled = new ArrayList<List<PreviewCell>>();
+		var rows = source.iterator(null);
+		Throwable primary = null;
+		long characters = 0;
+		var json = new com.sqlapp.util.JsonConverter();
+		try {
+			while (sampled.size() < rowLimit && rows.hasNext()) {
+				var row = rows.next();
+				var cells = new ArrayList<PreviewCell>();
+				for (var column : source.getTable().getColumns()) {
+					Object value = row.get(column);
+					boolean quoted = value instanceof String || TransferCsvTemporalCodec.temporal(column);
+					String text = value == null ? "null"
+							: TransferCsvTemporalCodec.temporal(column) ? TransferCsvTemporalCodec.encode(column, value)
+									: value.toString();
+					boolean truncated = text.codePointCount(0, text.length()) > 512;
+					if (truncated)
+						text = text.substring(0, text.offsetByCodePoints(0, 512));
+					if (value != null && quoted)
+						text = json.toJsonString(text);
+					characters += text.length();
+					if (characters > 1_048_576)
+						throw new IllegalArgumentException(
+								"Preview exceeds its 1 MiB display limit. Choose fewer sample rows.");
+					cells.add(new PreviewCell(text, value == null, truncated));
+				}
+				sampled.add(cells);
+			}
+		} catch (Exception | Error failure) {
+			primary = failure;
+			throw failure;
+		} finally {
+			com.sqlapp.util.iterator.IteratorCloseUtils.close(primary, rows);
+		}
+		new TransferFilePackageIO().read(manifest, loaded.snapshot().fingerprint());
+		return new Preview(loaded.snapshot(), member,
+				source.getTable().getColumns().stream().map(column -> column.getDataType().toString()).toList(),
+				sampled, rowLimit, member.rows() > sampled.size());
 	}
 
 	public Review review(Path manifest, String expectedFingerprint, Map<String, ? extends DataSource> connections)
@@ -120,7 +196,7 @@ public final class TransferFileImportService {
 			throw failure;
 		} catch (Exception failure) {
 			throw new IllegalArgumentException(
-					"Unable to review CSV import. Check target binding, product, schema, columns, keys and empty tables.");
+					"Unable to review File import. Check target binding, product, schema, columns, keys and empty tables.");
 		}
 	}
 
@@ -161,7 +237,7 @@ public final class TransferFileImportService {
 						loaded.configuration().schemaMode(), loaded.configuration().compatibilityPolicy());
 				if (!schemaPlan.fingerprint().equals(review.planFingerprint())
 						|| !schemaPlan.equals(review.schemaPreparation()))
-					throw new IllegalArgumentException("CSV import plan changed. Review again.");
+					throw new IllegalArgumentException("File import plan changed. Review again.");
 				if (!target.getMetaData().supportsTransactions() || verificationRequested
 						&& !target.getMetaData().supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE))
 					throw new IllegalArgumentException(
@@ -221,7 +297,7 @@ public final class TransferFileImportService {
 							verified.put(task.getTaskId(), comparison);
 						}
 						if (verified.values().stream().anyMatch(value -> !value.isMatch()))
-							throw new IllegalArgumentException("Imported data differs from CSV package.");
+							throw new IllegalArgumentException("Imported data differs from file package.");
 					} finally {
 						target.rollback();
 					}
@@ -255,17 +331,22 @@ public final class TransferFileImportService {
 	private static DataSource binding(Loaded loaded, Map<String, ? extends DataSource> connections) {
 		final var target = connections == null ? null : connections.get(loaded.configuration().target());
 		if (target == null)
-			throw new IllegalArgumentException("Supply only the target runtime connection for CSV import.");
+			throw new IllegalArgumentException("Supply only the target runtime connection for File import.");
 		return target;
 	}
 
 	private static Loaded load(Path manifest, String expected) throws Exception {
+		return load(manifest, expected, null, true);
+	}
+
+	private static Loaded load(Path manifest, String expected, String sampleTask, boolean validateRows)
+			throws Exception {
 		final var snapshot = new TransferFilePackageIO().read(manifest, expected);
 		final Path directory = snapshot.file().getParent();
 		final var configuration = new TransferJobConfigurationIO().read(directory.resolve("transfer.yaml"))
 				.configuration();
 		if (configuration.mappingFile() != null)
-			throw new IllegalArgumentException("Initial CSV import does not support an explicit mapping file.");
+			throw new IllegalArgumentException("Initial File import does not support an explicit mapping file.");
 		new BulkMigrationJobDraftBuilder().inspect(directory.resolve("source-schema.xml")); // Reject DTDs and embedded
 																							// row data.
 		final byte[] bytes = BoundedMigrationFile.read(directory.resolve("source-schema.xml"), 16_777_216L,
@@ -292,9 +373,13 @@ public final class TransferFileImportService {
 					|| !table.getName().equals(member.table())
 					|| !table.getColumns().stream().map(column -> column.getName()).toList().equals(member.columns()))
 				throw new IllegalArgumentException("Package table/column identities differ from canonical Schema.");
+			if (sampleTask != null && !sampleTask.equals(member.taskId()))
+				continue;
 			final var source = new TransferCsvSource(table, directory.resolve(member.file()), configuration.files(),
-					"CSV-v1:" + snapshot.fingerprint() + ":" + member.fingerprint(), member.rows());
-			source.validate();
+					configuration.files().format() + "-v1:" + snapshot.fingerprint() + ":" + member.fingerprint(),
+					member.rows());
+			if (validateRows)
+				source.validate();
 			sources.put(member.taskId(), source);
 		}
 		new TransferFilePackageIO().read(manifest, snapshot.fingerprint());

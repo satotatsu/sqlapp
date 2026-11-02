@@ -85,6 +85,7 @@ public abstract class SchemaReader extends AbstractCatalogNamedObjectMetadataRea
 		loadFull(connection, getMviewReader(), schema);
 		loadFull(connection, getMviewLogReader(), schema);
 		loadFull(connection, getMaskReader(), schema);
+		loadFull(connection, getProjectionReader(), schema);
 		loadFull(connection, getSequenceReader(), schema);
 		loadFull(connection, getTriggerReader(), schema);
 		loadFull(connection, getDbLinkReader(), schema);
@@ -125,6 +126,7 @@ public abstract class SchemaReader extends AbstractCatalogNamedObjectMetadataRea
 		load(connection, getMviewReader(), schema);
 		load(connection, getMviewLogReader(), schema);
 		load(connection, getMaskReader(), schema);
+		load(connection, getProjectionReader(), schema);
 		load(connection, getSequenceReader(), schema);
 		load(connection, getTriggerReader(), schema);
 		load(connection, getDbLinkReader(), schema);
@@ -530,6 +532,14 @@ public abstract class SchemaReader extends AbstractCatalogNamedObjectMetadataRea
 	}
 
 	protected abstract MaskReader newMaskReader();
+
+	/** Optional extension; existing dialect readers remain source-compatible. */
+	protected ProjectionReader newProjectionReader() { return null; }
+	public ProjectionReader getProjectionReader() {
+		ProjectionReader reader = newProjectionReader();
+		setReaderParameter(reader);
+		return reader;
+	}
 
 	/*
 	 * (non-Javadoc)

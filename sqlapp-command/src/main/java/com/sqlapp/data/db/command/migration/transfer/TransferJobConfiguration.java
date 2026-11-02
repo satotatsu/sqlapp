@@ -62,23 +62,33 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 	}
 
 	public enum FileFormat {
-		CSV, JSONL
+		CSV, JSONL, TSV
 	}
 
 	public enum TemporalPolicy {
 		WARN, ERROR
 	}
 
+	/** A header is one parsed record, including any quoted line breaks. */
+	public enum HeaderMode {
+		VALIDATE, SKIP, NONE
+	}
+
 	/**
 	 * Saved file-transport intent, not a claim that export/import is implemented.
-	 * CSV exporters must reject literal null-token collisions rather than lose
+	 * CSV/TSV exporters must reject literal null-token collisions rather than lose
 	 * data.
 	 */
 	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 	public record FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
-			TemporalPolicy unsupportedTemporalPolicy) {
+			TemporalPolicy unsupportedTemporalPolicy, HeaderMode headerMode) {
 		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue) {
-			this(directory, format, encoding, nullValue, TemporalPolicy.WARN);
+			this(directory, format, encoding, nullValue, TemporalPolicy.WARN, null);
+		}
+
+		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
+				TemporalPolicy unsupportedTemporalPolicy) {
+			this(directory, format, encoding, nullValue, unsupportedTemporalPolicy, null);
 		}
 
 		public FileTransfer {
@@ -87,16 +97,21 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 			if (directory == null || directory.isBlank())
 				throw new IllegalArgumentException("files.directory is required for file transport.");
 			format = format == null ? FileFormat.CSV : format;
+			headerMode = headerMode == null ? format == FileFormat.JSONL ? HeaderMode.NONE : HeaderMode.VALIDATE
+					: headerMode;
+			if (format == FileFormat.JSONL && headerMode != HeaderMode.NONE)
+				throw new IllegalArgumentException("JSONL has no header row; omit files.headerMode or use NONE.");
 			encoding = encoding == null ? "UTF-8" : encoding;
 			final java.nio.charset.Charset charset = java.nio.charset.Charset.forName(encoding);
 			encoding = charset.name();
-			if (format == FileFormat.CSV) {
+			if (format != FileFormat.JSONL) {
+				final char delimiter = format == FileFormat.TSV ? '\t' : ',';
 				if (nullValue == null || nullValue.isBlank()
-						|| nullValue.chars().anyMatch(c -> c == ',' || c == '"' || c == '\r' || c == '\n'))
-					throw new IllegalArgumentException(
-							"CSV files require an explicit nonblank nullValue without commas, quotes or line breaks.");
+						|| nullValue.chars().anyMatch(c -> c == delimiter || c == '"' || c == '\r' || c == '\n'))
+					throw new IllegalArgumentException(format
+							+ " files require an explicit nonblank nullValue without delimiters, quotes or line breaks.");
 				if (!charset.newEncoder().canEncode(nullValue))
-					throw new IllegalArgumentException("CSV nullValue must be representable in files.encoding.");
+					throw new IllegalArgumentException(format + " nullValue must be representable in files.encoding.");
 			} else if (nullValue != null) {
 				throw new IllegalArgumentException("JSONL uses JSON null; omit files.nullValue.");
 			}

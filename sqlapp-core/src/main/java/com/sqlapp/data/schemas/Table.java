@@ -1282,6 +1282,11 @@ public class Table extends AbstractSchemaObject<Table>
 		@JsonCreator
 		public static TableType parse(final String text) {
 			for (final TableType enm : values()) {
+				if (enm.name().equalsIgnoreCase(text) || enm.text.equalsIgnoreCase(text)) {
+					return enm;
+				}
+			}
+			for (final TableType enm : values()) {
 				final Matcher matcher = enm.pattern.matcher(text);
 				if (matcher.matches()) {
 					return enm;

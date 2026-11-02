@@ -106,6 +106,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * SQLOperationを登録します
 	 */
 	protected void initializeAllSqls() {
+		registerSqlFactory(com.sqlapp.data.schemas.Projection.class, SqlType.CREATE, CreateProjectionFactory.class);
 		// Table
 		initializeTableSqls();
 		// TableRelation

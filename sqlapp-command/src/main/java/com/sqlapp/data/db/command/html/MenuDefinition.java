@@ -353,6 +353,28 @@ public enum MenuDefinition {
 			return MenuDefinition.Schemas;
 		}
 	},
+	Projections() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			return !getDatas(catalog).isEmpty();
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			return (List<S>) getSchemaObjectList(catalog, s -> s.getProjections().stream());
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
 	Masks() {
 		@Override
 		public boolean hasData(Catalog catalog) {

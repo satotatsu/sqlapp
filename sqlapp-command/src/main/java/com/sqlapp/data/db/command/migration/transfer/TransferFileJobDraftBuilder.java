@@ -15,8 +15,8 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.util.MessageDigests;
 
 /**
- * Offline authoring of the common CSV initial-copy job using shared eligibility
- * and ordering.
+ * Offline authoring of the common CSV/TSV/JSONL initial-copy job using shared
+ * eligibility and ordering.
  */
 public final class TransferFileJobDraftBuilder {
 	public SchemaSnapshot inspect(SchemaSnapshot reviewed) throws Exception {
@@ -73,18 +73,40 @@ public final class TransferFileJobDraftBuilder {
 			TransferJobConfiguration.TemporalPolicy policy,
 			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema, Path file)
 			throws Exception {
+		return save(reviewed, selected, chunkSize, verify, nullValue, schemaMode, policy, compatibilityPolicy,
+				targetSchema, TransferJobConfiguration.FileFormat.CSV, file);
+	}
+
+	/**
+	 * Shared file format selection; CSV overloads retain their existing defaults.
+	 */
+	public TransferJobConfigurationIO.Snapshot save(SchemaSnapshot reviewed, List<String> selected, int chunkSize,
+			boolean verify, String nullValue, TransferJobConfiguration.SchemaMode schemaMode,
+			TransferJobConfiguration.TemporalPolicy policy,
+			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema,
+			TransferJobConfiguration.FileFormat format, Path file) throws Exception {
+		return save(reviewed, selected, chunkSize, verify, schemaMode, compatibilityPolicy, targetSchema,
+				new TransferJobConfiguration.FileTransfer("packages", format, "UTF-8", nullValue, policy), file);
+	}
+
+	/**
+	 * File settings shared by GUI and Gradle; existing overloads retain UTF-8
+	 * defaults.
+	 */
+	public TransferJobConfigurationIO.Snapshot save(SchemaSnapshot reviewed, List<String> selected, int chunkSize,
+			boolean verify, TransferJobConfiguration.SchemaMode schemaMode,
+			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema,
+			TransferJobConfiguration.FileTransfer files, Path file) throws Exception {
+		java.util.Objects.requireNonNull(files, "file settings");
 		final String draft = new BulkMigrationJobDraftBuilder().draft(reviewed, selected, "", chunkSize, verify);
 		final var bulk = new BulkMigrationJobConfigurationEditorIO().validate(draft);
 		final var schema = schema(reviewed);
 		final var tables = bulk.getTasks().stream().map(task -> task.getTable()).toList();
 		for (String table : tables)
-			supported(schema, table, policy);
+			supported(schema, table, files.unsupportedTemporalPolicy());
 		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, schemaMode,
 				schema.getName() == null || schema.getName().isBlank() ? null : schema.getName(), targetSchema, null,
-				chunkSize, verify, TransferJobConfiguration.DataMode.FILE,
-				new TransferJobConfiguration.FileTransfer("packages", TransferJobConfiguration.FileFormat.CSV, "UTF-8",
-						nullValue, policy),
-				compatibilityPolicy);
+				chunkSize, verify, TransferJobConfiguration.DataMode.FILE, files, compatibilityPolicy);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(configuration), null);
 	}

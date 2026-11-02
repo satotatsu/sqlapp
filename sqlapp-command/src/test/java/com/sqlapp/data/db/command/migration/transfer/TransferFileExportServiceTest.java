@@ -17,6 +17,49 @@ class TransferFileExportServiceTest {
 	Path directory;
 
 	@Test
+	void legacyManifestWithoutHeaderModeRetainsValidateAndSkipDefault() throws Exception {
+		var source = database();
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)");
+			statement.execute("INSERT INTO ITEMS VALUES(1)");
+		}
+		var exported = new TransferFileExportService().export(job("REQUIRE_EXISTING", "__NULL__", "UTF-8"),
+				Map.of("from", source));
+		String manifest = Files.readString(exported.file());
+		String legacy = manifest.replaceAll(",\\s*\"headerMode\"\\s*:\\s*\"VALIDATE\"", "");
+		assertNotEquals(manifest, legacy);
+		Files.writeString(exported.file(), legacy);
+		var reopened = new TransferFilePackageIO().read(exported.file(), null);
+		assertEquals(TransferJobConfiguration.HeaderMode.VALIDATE, reopened.manifest().files().headerMode());
+		new TransferFileImportService().validatePackage(reopened.file(), reopened.fingerprint());
+	}
+
+	@Test
+	void tsvUsesTabsAndQuotedFieldsAndRefusesNullTokenCollisions() throws Exception {
+		var source = database();
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY, NAME VARCHAR(100))");
+			try (var insert = connection.prepareStatement("INSERT INTO ITEMS VALUES(1,?)")) {
+				insert.setString(1, " 日\t本,\"語\"\r\n");
+				insert.executeUpdate();
+			}
+		}
+		var file = job("REQUIRE_EXISTING", "__NULL__", "UTF-8");
+		Files.writeString(file, Files.readString(file).replace("files:\n", "files:\n  format: TSV\n"));
+		var exported = new TransferFileExportService().export(file, Map.of("from", source));
+		var data = exported.file().getParent().resolve("table-1.tsv");
+		var text = Files.readString(data);
+		assertTrue(text.startsWith("\"ID\"\t\"NAME\"\n"));
+		new TransferFileImportService().validatePackage(exported.file(), exported.fingerprint());
+		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
+			statement.execute("UPDATE ITEMS SET NAME='__NULL__'");
+		}
+		assertThrows(IllegalArgumentException.class,
+				() -> new TransferFileExportService().export(file, Map.of("from", source)));
+		assertEquals(exported, new TransferFilePackageIO().read(exported.file(), exported.fingerprint()));
+	}
+
+	@Test
 	void exportsWithOnlySourceBindingPreservingNullEmptyWhitespaceUnicodeAndExactRowCount() throws Exception {
 		final var source = database();
 		try (var connection = source.getConnection(); var statement = connection.createStatement()) {
@@ -116,6 +159,11 @@ class TransferFileExportServiceTest {
 				"ITEMS", java.util.List.of("ID"), "../outside.csv", 0, 0, "sha256:" + "a".repeat(64)));
 		final var table = new TransferFilePackageIO.TableFile("task", null, "PUBLIC", "ITEMS", java.util.List.of("ID"),
 				"table-1.csv", 0, 0, "sha256:" + "a".repeat(64));
+		assertThrows(IllegalArgumentException.class,
+				() -> new TransferFilePackageIO.Manifest(1, "sha256:" + "a".repeat(64), "sha256:" + "b".repeat(64),
+						new TransferJobConfiguration.FileTransfer("packages", TransferJobConfiguration.FileFormat.JSONL,
+								"UTF-8", null),
+						java.util.List.of(table)));
 		assertThrows(IllegalArgumentException.class,
 				() -> new TransferFilePackageIO.Manifest(1, "sha256:" + "a".repeat(64), "sha256:" + "b".repeat(64),
 						new TransferJobConfiguration.FileTransfer("packages", null, null, "\\N"),

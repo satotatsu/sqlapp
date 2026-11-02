@@ -83,7 +83,7 @@ import com.sqlapp.util.ToStringBuilder;
 public final class Schema extends AbstractNamedObject<Schema>
 		implements ProductProperties<Schema>, CharacterSemanticsProperty<Schema>, CollationProperty<Schema>,
 		CharacterSetProperty<Schema>, Sortable, HasParent<SchemaCollection>, Mergeable<Schema>,
-		RowIteratorHandlerProperty, TablesProperty<Schema>, ViewsProperty<Schema>, MviewsProperty<Schema>,
+		RowIteratorHandlerProperty, com.sqlapp.data.schemas.properties.object.ProjectionsProperty<Schema>, TablesProperty<Schema>, ViewsProperty<Schema>, MviewsProperty<Schema>,
 		ExternalTablesProperty<Schema>, MviewLogsProperty<Schema>, MasksProperty<Schema>, ProceduresProperty<Schema>,
 		FunctionsProperty<Schema>, PackagesProperty<Schema>, PackageBodiesProperty<Schema>, TriggersProperty<Schema>,
 		SequencesProperty<Schema>, DbLinksProperty<Schema>, TableLinksProperty<Schema>, SynonymsProperty<Schema>,
@@ -97,6 +97,8 @@ public final class Schema extends AbstractNamedObject<Schema>
 	private static final long serialVersionUID = 9009394768890692341L;
 	/** テーブルのコレクション */
 	private TableCollection tables = new TableCollection(this);
+	private ProjectionCollection projections = new ProjectionCollection(this);
+	@Override public ProjectionCollection getProjections() { return projections; }
 	/** ビューのコレクション */
 	private ViewCollection views = new ViewCollection(this);
 	/** マテリアライズドビューのコレクション */

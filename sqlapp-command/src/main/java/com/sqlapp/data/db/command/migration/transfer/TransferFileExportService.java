@@ -20,8 +20,8 @@ import com.sqlapp.util.file.CsvWriter;
 import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /**
- * Source-only streaming CSV export. No target connection, import or DDL is
- * performed.
+ * Source-only streaming CSV/TSV/JSONL export. No target connection, import or
+ * DDL is performed.
  */
 public final class TransferFileExportService {
 	private static final int MAX_FIELD_CHARS = 1_048_576;
@@ -43,7 +43,7 @@ public final class TransferFileExportService {
 		try (var connection = source.getConnection()) {
 			connection.setReadOnly(true);
 			if (!connection.getMetaData().supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE))
-				throw new IllegalArgumentException("CSV export requires SERIALIZABLE read isolation.");
+				throw new IllegalArgumentException("File export requires SERIALIZABLE read isolation.");
 			connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 			connection.setAutoCommit(false);
 			try {
@@ -88,7 +88,9 @@ public final class TransferFileExportService {
 					if (!identities.add(
 							java.util.Arrays.asList(table.getCatalogName(), table.getSchemaName(), table.getName())))
 						throw new IllegalArgumentException("Multiple selections resolve to the same source table.");
-					final String filename = "table-" + (exported.size() + 1) + ".csv";
+					final boolean jsonl = configuration.files().format() == TransferJobConfiguration.FileFormat.JSONL;
+					final String filename = "table-" + (exported.size() + 1) + "."
+							+ configuration.files().format().name().toLowerCase(java.util.Locale.ROOT);
 					final Path file = directory.resolve(filename);
 					final List<String> columns = table.getColumns().stream().map(column -> column.getName()).toList();
 					long count = 0;
@@ -107,7 +109,7 @@ public final class TransferFileExportService {
 					try (var text = new java.io.BufferedWriter(
 							new java.io.OutputStreamWriter(Files.newOutputStream(file),
 									Charset.forName(configuration.files().encoding()).newEncoder()));
-							var writer = new CsvWriter(text, settings -> {
+							var writer = jsonl ? null : new CsvWriter(text, settings -> {
 								settings.setNullValue(configuration.files().nullValue());
 								settings.setEmptyValue("");
 								settings.setQuoteAllFields(true);
@@ -117,15 +119,24 @@ public final class TransferFileExportService {
 								settings.setIgnoreTrailingWhitespaces(false);
 								settings.setMaxCharsPerColumn(MAX_FIELD_CHARS);
 								settings.getFormat().setLineSeparator("\n");
+								settings.getFormat().setDelimiter(
+										configuration.files().format() == TransferJobConfiguration.FileFormat.TSV ? '\t'
+												: ',');
 							})) {
-						writer.writeHeader(columns.toArray(String[]::new));
+						if (writer != null
+								&& configuration.files().headerMode() != TransferJobConfiguration.HeaderMode.NONE)
+							writer.writeHeader(columns.toArray(String[]::new));
 						while (rows.hasNext()) {
 							final var values = rows.next().getValuesAsMap();
 							final String[] fields = new String[columns.size()];
 							for (int index = 0; index < fields.length; index++)
 								fields[index] = scalar(table.getColumns().get(index), values.get(columns.get(index)),
 										configuration.files().nullValue(), driverText[index]);
-							writer.writeRow(fields);
+							if (jsonl) {
+								text.write(TransferJsonlCodec.write(table, fields));
+								text.write('\n');
+							} else
+								writer.writeRow(fields);
 							count = Math.addExact(count, 1);
 						}
 					} catch (Exception | Error failure) {
@@ -136,14 +147,14 @@ public final class TransferFileExportService {
 					}
 					exported.add(new TransferFilePackageIO.TableFile(task.getTaskId(), table.getCatalogName(),
 							table.getSchemaName(), table.getName(), columns, filename, count, Files.size(file),
-							BoundedMigrationFile.sha256(file, null, "maxDataBytes", "CSV data")));
+							BoundedMigrationFile.sha256(file, null, "maxDataBytes", "File data")));
 				}
 			} finally {
 				connection.rollback();
 			}
 		} catch (Exception failure) {
 			throw new IllegalArgumentException(
-					"CSV export failed. No completed manifest was published. Check source keys, "
+					"File export failed. No completed manifest was published. Check source keys, "
 							+ "supported scalar values, null-token collisions, encoding and SERIALIZABLE transaction support.");
 		}
 		if (!io.read(jobFile).fingerprint().equals(job.fingerprint()))
@@ -157,9 +168,8 @@ public final class TransferFileExportService {
 	/** Offline input validation, usable before a runtime pool is constructed. */
 	public TransferJobConfigurationIO.Snapshot inspectConfiguration(Path file) throws java.io.IOException {
 		final var job = new TransferJobConfigurationIO().read(file);
-		if (job.configuration().dataMode() != TransferJobConfiguration.DataMode.FILE
-				|| job.configuration().files().format() != TransferJobConfiguration.FileFormat.CSV)
-			throw new IllegalArgumentException("This exporter requires FILE dataMode with CSV format.");
+		if (job.configuration().dataMode() != TransferJobConfiguration.DataMode.FILE)
+			throw new IllegalArgumentException("This exporter requires FILE dataMode with CSV, TSV or JSONL format.");
 		if (job.configuration().mappingFile() != null)
 			throw new IllegalArgumentException("File export with explicit mappingFile is not implemented yet.");
 		return job;
@@ -184,9 +194,9 @@ public final class TransferFileExportService {
 		else if (value instanceof Double number && Double.isFinite(number))
 			text = number.toString();
 		else
-			throw new IllegalArgumentException("CSV export does not support this value type.");
+			throw new IllegalArgumentException("File export does not support this value type.");
 		if (text.length() > MAX_FIELD_CHARS)
-			throw new IllegalArgumentException("CSV field exceeds the 1 MiB character limit.");
+			throw new IllegalArgumentException("File field exceeds the 1 MiB character limit.");
 		if (text.equals(nullValue))
 			throw new IllegalArgumentException("CSV null-token collision.");
 		return text;

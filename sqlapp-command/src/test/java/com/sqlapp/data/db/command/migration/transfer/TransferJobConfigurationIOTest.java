@@ -16,6 +16,22 @@ import org.junit.jupiter.api.io.TempDir;
 /** Offline contract tests: no JDBC driver, connection or database is needed. */
 class TransferJobConfigurationIOTest {
 	@Test
+	void tsvUsesAnExplicitNullTokenAndRejectsItsDelimiterWithoutChangingCsvDefaults() {
+		var settings = new TransferJobConfiguration.FileTransfer("packages", TransferJobConfiguration.FileFormat.TSV,
+				"UTF-8", "null,value");
+		assertEquals("null,value", settings.nullValue());
+		var configuration = io
+				.validate(yaml + "dataMode: FILE\nfiles: {directory: packages, format: TSV, nullValue: '__NULL__'}\n");
+		assertEquals(TransferJobConfiguration.FileFormat.TSV, configuration.files().format());
+		assertEquals(configuration, io.validate(io.format(configuration)));
+		for (String invalid : new String[] { null, "", "a\tb", "a\"b", "a\nb" })
+			assertThrows(IllegalArgumentException.class, () -> new TransferJobConfiguration.FileTransfer("packages",
+					TransferJobConfiguration.FileFormat.TSV, "UTF-8", invalid));
+		assertEquals(TransferJobConfiguration.FileFormat.CSV,
+				new TransferJobConfiguration.FileTransfer("packages", null, null, "__NULL__").format());
+	}
+
+	@Test
 	void temporalExportDefaultsToWarningsAndAllowsExplicitErrorPolicy() {
 		final var io = new TransferJobConfigurationIO();
 		final String yaml = "formatVersion: 1\nsource: source\ntarget: target\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ndataMode: FILE\nfiles: {directory: packages, nullValue: __NULL__}";

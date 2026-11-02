@@ -30,6 +30,16 @@ import com.sqlapp.util.StringUtils;
 import com.sqlapp.util.ToStringBuilder;
 
 public enum DbObjects {
+	PROJECTIONS(ProjectionCollection.class) {
+		@Override public boolean isCollection() { return true; }
+		@Override public DbObjects getParentType() { return SCHEMA; }
+		@Override public ProjectionCollection newInstance() { return new ProjectionCollection(); }
+	},
+	PROJECTION(Projection.class) {
+		@Override public DbObjects getCollectionType() { return PROJECTIONS; }
+		@Override public DbObjects[] getDepends() { return array(TABLE); }
+		@Override public Projection newInstance() { return new Projection(); }
+	},
 	CATALOG(Catalog.class) {
 		@Override
 		public Catalog newInstance() {

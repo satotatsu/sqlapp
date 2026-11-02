@@ -30,6 +30,18 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.util.DateUtils;
 
 public class TableTest extends AbstractDbObjectTest<Table> {
+	@Test
+	public void tableTypeExactNamesTakePrecedenceOverLegacyPatterns() throws Exception {
+		for (Table.TableType type : Table.TableType.values()) {
+			assertEquals(type, Table.TableType.parse(type.name()));
+			Table table = new Table("typed");
+			table.setTableType(type);
+			Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			assertEquals(type, restored.getTableType());
+		}
+		assertEquals(Table.TableType.File, Table.TableType.parse("F"));
+		assertEquals(Table.TableType.Temporary, Table.TableType.parse("T"));
+	}
 
 	@Test
 	public void testIdentityCacheSizeDoesNotOverwriteStartValue() {
