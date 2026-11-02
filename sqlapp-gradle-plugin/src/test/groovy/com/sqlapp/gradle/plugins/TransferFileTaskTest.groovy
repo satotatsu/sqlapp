@@ -4,7 +4,7 @@ package com.sqlapp.gradle.plugins
 import static org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.CsvSource
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 
@@ -39,8 +39,8 @@ class TransferFileTaskTest extends AbstractTaskTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(booleans = [false, true])
-	void testKitExportsAndImportsInSeparateRunsWithSharedJobAndNeverSkipsReplayValidation(boolean createMissing) {
+	@CsvSource(['false, CSV', 'true, CSV', 'false, JSONL', 'true, JSONL', 'false, TSV', 'true, TSV'])
+	void testKitExportsAndImportsInSeparateRunsWithSharedJobAndNeverSkipsReplayValidation(boolean createMissing, String format) {
 		def sourceUrl = 'jdbc:hsqldb:file:' + new File(testProjectDir, 'source/db').path.replace('\\', '/') + ';shutdown=true'
 		def targetUrl = 'jdbc:hsqldb:file:' + new File(testProjectDir, 'target/db').path.replace('\\', '/') + ';shutdown=true'
 		for (def url : [sourceUrl, targetUrl]) {
@@ -60,6 +60,7 @@ dataMode: FILE
 chunkSize: 1
 files: {directory: packages, nullValue: __NULL__}
 '''.replace('REQUIRE_EXISTING', createMissing ? 'CREATE_MISSING' : 'REQUIRE_EXISTING')
+				.replace('nullValue: __NULL__', format == 'JSONL' ? 'format: JSONL' : "format: ${format}, nullValue: __NULL__")
 		new File(testProjectDir, 'build.gradle').text = """plugins { id 'com.sqlapp.db' }
 tasks.named('exportTransferFile') {
     configurationFile.set(layout.projectDirectory.file('transfer.yaml'))
