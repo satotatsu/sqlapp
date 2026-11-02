@@ -1,41 +1,34 @@
-# MariaDB real-server qualification
+# MariaDB Testcontainers qualification
 
-`mariadbIntegrationTest` is separate from `test`. It is not part of the default
-build and never runs unless explicitly selected. It requires all of:
+Tests live in `sqlapp-core-dialect-test/src/dockerTest` and use the shared
+`ReusableTestcontainers` lifecycle. They connect only to the MariaDB container
+started by the test; no external JDBC URL or credentials are accepted.
 
-- `SQLAPP_MARIADB_ALLOW_SCHEMA_CREATE=true` (explicit permission to create and
-  drop the test schema on the selected target).
-- `SQLAPP_MARIADB_INTEGRATION_URL`: the explicitly authorized MariaDB JDBC URL.
-- `SQLAPP_MARIADB_INTEGRATION_USER` and optionally
-  `SQLAPP_MARIADB_INTEGRATION_PASSWORD`.
-- MariaDB 10.3+ and privileges to create/drop a database and its sequences,
-  tables and routines, read required INFORMATION_SCHEMA/storage metadata, and
-  execute the test function. The application-period scenario requires 11.4+.
+Normal `test`, `check` and `build` do not start these containers. Docker must be
+available to Gradle. Run the fixed, disposable 10.5/11.4/11.8 matrix explicitly:
 
-The test creates a unique `sqlapp_mariadb_it_<random>` database and deletes only
-that database through try-with-resources cleanup. Cleanup failures propagate and
-are suppressed onto an earlier failure when applicable. Forced JVM termination
-can leave the disposable database behind. No existing database is cleared.
-
-After explicitly choosing and authorizing a disposable server, run:
-
-```powershell
-# Set the four environment variables above for the selected test target first.
-.\gradlew.bat :sqlapp-core-mariadb:mariadbIntegrationTest
+```shell
+./gradlew :sqlapp-core-dialect-test:mariadbIntegrationTest
 ```
 
-No endpoint or credentials are supplied by this repository. Normal unit tests
-remain:
+Run one baseline using `:sqlapp-core-dialect-test:mariadb105CompatibilityTest`,
+`mariadb114CompatibilityTest`, or `mariadb118CompatibilityTest`.
+The general `:sqlapp-core-dialect-test:dockerTest` task includes these scenarios
+on MariaDB 11.8 and supports the existing optional `-PtestcontainersReuse=true`.
+The matrix disables reuse regardless of that option.
 
-```powershell
-.\gradlew.bat :sqlapp-core-mariadb:test
+Compile without starting Docker:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava
+./gradlew :sqlapp-core-dialect-test:mariadbIntegrationTest --dry-run
 ```
 
-For task configuration inspection without connecting to any server:
-
-```powershell
-.\gradlew.bat :sqlapp-core-mariadb:mariadbIntegrationTest --dry-run
-```
+Each test creates a unique `sqlapp_mariadb_it_<random>` database and drops it
+through try-with-resources. Cleanup failures propagate. Testcontainers manages
+container startup, mapped ports, readiness and cleanup. Root access is used only
+inside the test-owned container for schema creation and metadata reads.
+No PowerShell runner or `SQLAPP_MARIADB_*` environment variables are required.
 
 ## Current real-server scenarios
 
@@ -73,44 +66,12 @@ paths require SELECT access to their storage tables.
 Suggested targets: 10.3 or 10.11 for storage reads, 11.3 for the pre-11.4 reader
 boundary, 11.4 for the newer dialect path, and 11.5/12.1 for SEQUENCES catalog
 joins. The matrix executed so far is 10.5/11.4/11.8. All scenarios use
-the same explicit authorization gate and independent disposable schemas.
+test-owned containers and independent disposable schemas.
 
-## Verification performed locally
+## Historical qualification
 
-- Dedicated task configuration checked with Gradle `--dry-run`.
-- Integration source compiled by the ordinary test task.
-- Ordinary unit tests executed with the integration tag excluded.
-- Authorized disposable Docker runs on 10.5, 11.4 and 11.8 were performed.
-
-| Local image | Passed | Version-inapplicable skipped | Failed |
-| --- | ---: | ---: | ---: |
-| mariadb:10.5 | 3 | 3 | 0 |
-| mariadb:11.4 | 5 | 1 | 0 |
-| mariadb:11.8 | 6 | 0 | 0 |
-
-Initial runs exposed four issues, now fixed with regressions: batch SQL parameter
-initialization, catalog NULL defaults on generated columns, reversed internal
-period-bound order, and the shared model's incorrect UBIGINT maximum.
-
-## Repeating the local Docker run
-
-Local image inventory includes mariadb:10.5, mariadb:11.4 and mariadb:11.8.
-The runner starts each image
-sequentially as a uniquely named temporary container, bind an automatically
-assigned port only on 127.0.0.1, use a generated temporary root password and no
-host bind mounts, and execute the six tagged test methods. Version-specific
-cases skip with explicit reasons on older servers. Afterwards, remove only the
-created containers and their anonymous storage volumes. No existing databases
-or user volumes are included. The generated credentials are for these temporary
-targets only and are not stored in repository files.
-
-These three targets and their disposable schema/container cleanup were explicitly
-authorized and executed in this session. To repeat with authorization:
-
-```powershell
-.\sqlapp-core-mariadb\scripts\Test-MariaDbDocker.ps1 -AllowSchemaCreate
-```
-
-The script restores process environment values on exit and retains per-version
-Gradle logs and copied JUnit XML under the process TEMP directory. All containers
-and anonymous volumes created by the completed runs were removed.
+Before conversion to Testcontainers, the six scenarios passed on local disposable
+Docker targets: 10.5 (3 passed, 3 version-inapplicable skips), 11.4 (5 passed,
+1 skip), and 11.8 (6 passed). These historical results do not establish that the
+new Testcontainers runner has been executed. Other versions, restricted
+privileges, concurrency and failure recovery remain outside this qualification.

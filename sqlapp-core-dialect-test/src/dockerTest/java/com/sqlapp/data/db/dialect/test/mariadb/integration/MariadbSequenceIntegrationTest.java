@@ -1,31 +1,18 @@
 /* Copyright (C) 2026 Tatsuo Satoh <multisqllib@gmail.com> */
-package com.sqlapp.data.db.dialect.mariadb.integration;
+package com.sqlapp.data.db.dialect.test.mariadb.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.UUID;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Sequence;
 
-/**
- * Real-server test. Excluded from test; only run against an authorized
- * disposable target.
- */
-@Tag("mariadb-integration")
-class MariadbSequenceIntegrationTest {
-	private static String required(String name) {
-		String value = System.getenv(name);
-		if (value == null || value.isBlank())
-			throw new IllegalArgumentException("Missing integration setting: " + name);
-		return value;
-	}
-
+/** Metadata/XML/DDL round trips against a disposable MariaDB container. */
+class MariadbSequenceIntegrationTest extends MariadbContainerTest {
 	static void execute(Connection connection, String sql) throws SQLException {
 		try (var statement = connection.createStatement()) {
 			statement.execute(sql);
@@ -90,17 +77,6 @@ class MariadbSequenceIntegrationTest {
 				assertEquals(0, recreated.getCacheSize());
 			}
 		}
-	}
-
-	static Connection connect() throws SQLException {
-		if (!"true".equals(System.getenv("SQLAPP_MARIADB_ALLOW_SCHEMA_CREATE"))) {
-			throw new IllegalStateException("Explicit authorization required: SQLAPP_MARIADB_ALLOW_SCHEMA_CREATE=true");
-		}
-		String url = required("SQLAPP_MARIADB_INTEGRATION_URL");
-		if (!url.startsWith("jdbc:mariadb:"))
-			throw new IllegalArgumentException("Expected a MariaDB JDBC URL");
-		return DriverManager.getConnection(url, required("SQLAPP_MARIADB_INTEGRATION_USER"),
-				System.getenv().getOrDefault("SQLAPP_MARIADB_INTEGRATION_PASSWORD", ""));
 	}
 
 	@Test

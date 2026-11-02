@@ -1,12 +1,11 @@
 # MariaDB dialect enhancement
 
-Real-server tests are available through the explicit `mariadbIntegrationTest`
-task and excluded from ordinary `test`. See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md)
-for the required target authorization, environment variables and disposable-schema
-lifecycle. The six real-server cases have been run on isolated local Docker
-MariaDB 10.5, 11.4 and 11.8. Version-applicable cases all pass; containers and
-anonymous storage were removed. Scenarios cover sequence settings, application periods with generated/
-invisible columns and ignored indexes, and ordinary procedure/function replay.
+Real-server tests live in `sqlapp-core-dialect-test` and use Testcontainers.
+Run `:sqlapp-core-dialect-test:mariadbIntegrationTest` for the disposable
+10.5/11.4/11.8 matrix, or `:sqlapp-core-dialect-test:dockerTest` for the general
+suite including these scenarios on 11.8. Normal builds do not start Docker.
+See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md) for scenarios, lifecycle and
+historical qualification results.
 
 The local pass includes period-key enrichment within the 11.4+ unique-constraint
 reader, supporting direct reader use and optional filter extensions without

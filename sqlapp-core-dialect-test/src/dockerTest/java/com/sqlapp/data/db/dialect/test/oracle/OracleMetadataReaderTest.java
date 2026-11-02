@@ -39,8 +39,8 @@ class OracleMetadataReaderTest {
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = ORACLE.createConnection("")) {
-			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
-					"FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE", "NUMBER(12,3)", "VARCHAR2(12)", "XMLTYPE");
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "FLOAT", "BINARY_FLOAT",
+					"BINARY_DOUBLE", "NUMBER(12,3)", "VARCHAR2(12)", "XMLTYPE");
 		}
 	}
 

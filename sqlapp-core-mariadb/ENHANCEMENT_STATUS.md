@@ -96,7 +96,7 @@ Final regression commands and results:
   1261 core, 306 MySQL and 96 MariaDB tests; zero failures/skips.
 - `gradlew.bat :sqlapp-command:test --tests '*TransferSchemaDifferenceTest'`:
   16 passed, zero failures/skips; embedded HSQL only.
-- `scripts/Test-MariaDbDocker.ps1 -AllowSchemaCreate`: applicable live cases pass
+- Historical PowerShell runner (now replaced by Testcontainers): applicable live cases passed
   on 10.5/11.4/11.8; see INTEGRATION_TESTS.md for the per-version counts.
   Created containers and anonymous volumes were removed; final container
   inventory has no sqlapp-mariadb-it-* containers.
@@ -119,14 +119,14 @@ Final regression commands and results:
 
 ## Follow-up scope
 
-An opt-in `mariadbIntegrationTest` task and sequence, period-table and routine
-metadata/XML/replay scenarios are prepared. The task requires explicit schema-create authorization and target
-environment variables; ordinary test excludes its tag. Task dry-run and source
+An opt-in `sqlapp-core-dialect-test:mariadbIntegrationTest` task and sequence, period-table and routine
+metadata/XML/replay scenarios are prepared. The task runs the fixed 10.5/11.4/11.8 matrix in test-owned disposable containers;
+the general `dockerTest` task includes these scenarios on 11.8. Task dry-run and source
 compilation pass. See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md) for exact scope,
 including required sequence storage/routine privileges and the period scenario's
 11.4+ boundary. Six cases include WITHOUT OVERLAPS behavior, view CHECK OPTION
 and unsigned sequence ranges and have passed on the applicable authorized local
-Docker versions. A repeatable isolated runner is provided in scripts/Test-MariaDbDocker.ps1.
+Docker versions. The matrix now uses Testcontainers; the PowerShell runner has been removed.
 
 The remaining items above are explicit coverage limits and follow-up work;
 they do not form part of the completed local pass. Full MariaDB completion

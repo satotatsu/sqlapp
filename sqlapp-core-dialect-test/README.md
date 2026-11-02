@@ -15,7 +15,22 @@ Compile the Docker tests without starting containers:
 ./gradlew :sqlapp-core-dialect-test:compileDockerTestJava
 ```
 
-Run all Docker tests explicitly:
+The MariaDB metadata/XML/DDL round-trip tests use Testcontainers like the other
+Docker tests. `dockerTest` runs them on MariaDB 11.8. Run the fixed
+10.5/11.4/11.8 matrix with:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:mariadbIntegrationTest
+```
+
+To run one baseline, select `mariadb105CompatibilityTest`,
+`mariadb114CompatibilityTest`, or `mariadb118CompatibilityTest` in this module.
+The matrix always uses disposable containers. No connection environment
+variables or PowerShell scripts are needed. See
+[MariaDB integration tests](../sqlapp-core-mariadb/INTEGRATION_TESTS.md) for
+scenarios and cleanup details.
+
+Run all Testcontainers tests explicitly:
 
 ```shell
 ./gradlew :sqlapp-core-dialect-test:dockerTest

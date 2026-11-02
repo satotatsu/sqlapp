@@ -82,12 +82,13 @@ class FirebirdSchemaRoundTripTest {
 				assertEquals(Integer.parseInt(version.substring(0, 1)), major);
 				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 				if (typesOnly) {
-					var types = new java.util.ArrayList<>(List.of("REAL", "DOUBLE PRECISION", "FLOAT(7)",
-							"FLOAT(25)", "NUMERIC", "DECIMAL(12,3)", "CHARACTER VARYING(12)",
-							"BLOB SUB_TYPE BINARY", "BLOB SUB_TYPE TEXT"));
+					var types = new java.util.ArrayList<>(
+							List.of("REAL", "DOUBLE PRECISION", "FLOAT(7)", "FLOAT(25)", "NUMERIC", "DECIMAL(12,3)",
+									"CHARACTER VARYING(12)", "BLOB SUB_TYPE BINARY", "BLOB SUB_TYPE TEXT"));
 					if (major >= 4)
 						types.addAll(List.of("INT128", "DECFLOAT", "BINARY(12)", "VARBINARY(12)"));
-					com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, types.toArray(String[]::new));
+					com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
+							types.toArray(String[]::new));
 					return;
 				}
 				assertEquals("Firebird" + version.replace(".", ""), dialect.getClass().getSimpleName());

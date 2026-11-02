@@ -54,8 +54,8 @@ class SapHanaMetadataReaderTest {
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = createConnection()) {
-			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
-					"DOUBLE", "REAL", "SMALLINT", "TIME", "DECIMAL(12,3)", "NVARCHAR(12)");
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "DOUBLE", "REAL", "SMALLINT",
+					"TIME", "DECIMAL(12,3)", "NVARCHAR(12)");
 		}
 	}
 

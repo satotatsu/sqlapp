@@ -47,8 +47,9 @@ class PostgresMetadataReaderTest {
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = POSTGRES.createConnection("")) {
-			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
-					"REAL", "DOUBLE PRECISION", "FLOAT(24)", "FLOAT(53)", "CHARACTER VARYING(12)", "TIME WITHOUT TIME ZONE", "TIMESTAMP WITH TIME ZONE", "XML", "INTEGER[]");
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "REAL", "DOUBLE PRECISION",
+					"FLOAT(24)", "FLOAT(53)", "CHARACTER VARYING(12)", "TIME WITHOUT TIME ZONE",
+					"TIMESTAMP WITH TIME ZONE", "XML", "INTEGER[]");
 		}
 	}
 

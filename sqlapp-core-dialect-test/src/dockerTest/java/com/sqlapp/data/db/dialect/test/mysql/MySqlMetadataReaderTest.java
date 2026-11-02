@@ -38,8 +38,8 @@ class MySqlMetadataReaderTest {
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = MYSQL.createConnection("")) {
-			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
-					"FLOAT", "FLOAT(53)", "REAL", "DOUBLE PRECISION", "DECIMAL(12,3)", "VARCHAR(12)", "BLOB", "JSON");
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "FLOAT", "FLOAT(53)", "REAL",
+					"DOUBLE PRECISION", "DECIMAL(12,3)", "VARCHAR(12)", "BLOB", "JSON");
 		}
 	}
 

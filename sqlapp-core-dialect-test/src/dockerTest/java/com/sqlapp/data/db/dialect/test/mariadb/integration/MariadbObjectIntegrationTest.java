@@ -1,20 +1,18 @@
 /* Copyright (C) 2026 Tatsuo Satoh <multisqllib@gmail.com> */
-package com.sqlapp.data.db.dialect.mariadb.integration;
+package com.sqlapp.data.db.dialect.test.mariadb.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static com.sqlapp.data.db.dialect.mariadb.integration.MariadbSequenceIntegrationTest.*;
+import static com.sqlapp.data.db.dialect.test.mariadb.integration.MariadbSequenceIntegrationTest.*;
 import java.sql.Connection;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb11_40;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
-/** Explicit real-server qualification, excluded from ordinary test. */
-@Tag("mariadb-integration")
-class MariadbObjectIntegrationTest {
+/** Metadata/XML/DDL round trips against a disposable MariaDB container. */
+class MariadbObjectIntegrationTest extends MariadbContainerTest {
 	private void checkServer(Connection connection) throws Exception {
 		assertTrue(connection.getMetaData().getDatabaseProductName().contains("MariaDB"), "Expected MariaDB server");
 	}

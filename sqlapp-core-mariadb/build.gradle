@@ -12,26 +12,3 @@ dependencies {
 javadoc {
 	include '**/mariadb/*'
 }
-
-tasks.named('test') {
-	useJUnitPlatform { excludeTags 'mariadb-integration' }
-}
-
-tasks.register('mariadbIntegrationTest', Test) {
-	group = 'verification'
-	description = 'Explicitly authorized MariaDB test: creates and drops a random disposable schema.'
-	testClassesDirs = sourceSets.test.output.classesDirs
-	classpath = sourceSets.test.runtimeClasspath
-	useJUnitPlatform { includeTags 'mariadb-integration' }
-	outputs.upToDateWhen { false }
-	doFirst {
-		if (System.getenv('SQLAPP_MARIADB_ALLOW_SCHEMA_CREATE') != 'true') {
-			throw new GradleException('MariaDB integration requires SQLAPP_MARIADB_ALLOW_SCHEMA_CREATE=true; the test creates and drops a disposable schema.')
-		}
-		['SQLAPP_MARIADB_INTEGRATION_URL', 'SQLAPP_MARIADB_INTEGRATION_USER'].each { name ->
-			if (!System.getenv(name)?.trim()) {
-				throw new GradleException("MariaDB integration requires ${name}")
-			}
-		}
-	}
-}

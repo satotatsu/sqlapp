@@ -36,8 +36,8 @@ class Db2MetadataReaderTest {
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = DB2.createConnection("")) {
-			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
-					"DOUBLE", "REAL", "DECIMAL(12,3)", "VARCHAR(12)", "TIME", "XML");
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "DOUBLE", "REAL",
+					"DECIMAL(12,3)", "VARCHAR(12)", "TIME", "XML");
 		}
 	}
 

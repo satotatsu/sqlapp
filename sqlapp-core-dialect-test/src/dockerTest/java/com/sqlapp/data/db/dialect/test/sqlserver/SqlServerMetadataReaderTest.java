@@ -46,8 +46,8 @@ class SqlServerMetadataReaderTest {
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = createTestDatabaseConnection()) {
-			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection,
-					"TINYINT", "FLOAT", "REAL", "DECIMAL(12,3)", "NVARCHAR(12)", "XML");
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "TINYINT", "FLOAT", "REAL",
+					"DECIMAL(12,3)", "NVARCHAR(12)", "XML");
 		}
 	}
 

@@ -367,3 +367,31 @@ tasks.register('firebirdCompatibilityTest', Test) {
 	jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
 	testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
 }
+
+// Fixed, disposable MariaDB metadata/XML/DDL compatibility matrix.
+['105': '10.5', '114': '11.4', '118': '11.8'].each { baseline, version ->
+	tasks.register("mariadb${baseline}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Runs MariaDB ${version} metadata/XML/DDL round trips in disposable containers."
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.mariadb.integration.*'
+		systemProperty 'sqlapp.test.mariadb.image', "mariadb:${version}"
+		systemProperty 'sqlapp.testcontainers.reuse', false
+		outputs.upToDateWhen { false }
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+tasks.named('mariadb114CompatibilityTest') { mustRunAfter tasks.named('mariadb105CompatibilityTest') }
+tasks.named('mariadb118CompatibilityTest') { mustRunAfter tasks.named('mariadb114CompatibilityTest') }
+tasks.register('mariadbIntegrationTest') {
+	group = 'verification'
+	description = 'Runs the MariaDB 10.5/11.4/11.8 Testcontainers compatibility matrix.'
+	dependsOn tasks.named('mariadb105CompatibilityTest'), tasks.named('mariadb114CompatibilityTest'),
+			tasks.named('mariadb118CompatibilityTest')
+}

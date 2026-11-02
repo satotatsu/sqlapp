@@ -15,7 +15,9 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
-/** Generated DDL, real catalog reading and recreation in owned test containers. */
+/**
+ * Generated DDL, real catalog reading and recreation in owned test containers.
+ */
 public final class DataTypeServerAssertions {
 	private DataTypeServerAssertions() {
 	}
@@ -24,8 +26,8 @@ public final class DataTypeServerAssertions {
 		verify(connection, DialectResolver.getInstance().getDialect(connection), nativeTypes);
 	}
 
-	public static void verify(Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
-			String... nativeTypes) throws Exception {
+	public static void verify(Connection connection, com.sqlapp.data.db.dialect.Dialect dialect, String... nativeTypes)
+			throws Exception {
 		System.out.println("Data type server: " + connection.getMetaData().getDatabaseProductVersion());
 		List<Executable> checks = new ArrayList<>();
 		for (String nativeType : nativeTypes) {
@@ -37,15 +39,17 @@ public final class DataTypeServerAssertions {
 		}
 		for (String source : new String[] { null, "DOUBLE", "DOUBLE PRECISION" }) {
 			checks.add(() -> verifyColumn(connection, dialect,
-					new Column("C").setDataType(DataType.DOUBLE).setDataTypeName(source), "portable DOUBLE: " + source));
+					new Column("C").setDataType(DataType.DOUBLE).setDataTypeName(source),
+					"portable DOUBLE: " + source));
 		}
 		for (var type : List.of(DataType.TINYINT, DataType.SMALLINT, DataType.INT, DataType.BIGINT))
-			checks.add(() -> verifyColumn(connection, dialect, new Column("C").setDataType(type), "portable signed " + type));
+			checks.add(() -> verifyColumn(connection, dialect, new Column("C").setDataType(type),
+					"portable signed " + type));
 		assertAll(dialect.getClass().getSimpleName(), checks);
 	}
 
-	private static void verifyColumn(Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
-			Column column, String context) throws Exception {
+	private static void verifyColumn(Connection connection, com.sqlapp.data.db.dialect.Dialect dialect, Column column,
+			String context) throws Exception {
 		System.out.println("Checking data type: " + context);
 		var registry = dialect.createSqlFactoryRegistry();
 		var name = "SQLAPP_DT_" + Long.toUnsignedString(System.nanoTime(), 36).toUpperCase(java.util.Locale.ROOT);
@@ -66,20 +70,23 @@ public final class DataTypeServerAssertions {
 					}
 				}
 				long[] bounds = switch (column.getDataType()) {
-					case TINYINT -> new long[] { Byte.MIN_VALUE, Byte.MAX_VALUE };
-					case UTINYINT -> new long[] { 0, 255 };
-					case SMALLINT -> new long[] { Short.MIN_VALUE, Short.MAX_VALUE };
-					case USMALLINT -> new long[] { 0, 65535 };
-					case INT -> new long[] { Integer.MIN_VALUE, Integer.MAX_VALUE };
-					case UINT -> new long[] { 0, 4294967295L };
-					case BIGINT -> new long[] { Long.MIN_VALUE, Long.MAX_VALUE };
-					default -> new long[0];
+				case TINYINT -> new long[] { Byte.MIN_VALUE, Byte.MAX_VALUE };
+				case UTINYINT -> new long[] { 0, 255 };
+				case SMALLINT -> new long[] { Short.MIN_VALUE, Short.MAX_VALUE };
+				case USMALLINT -> new long[] { 0, 65535 };
+				case INT -> new long[] { Integer.MIN_VALUE, Integer.MAX_VALUE };
+				case UINT -> new long[] { 0, 4294967295L };
+				case BIGINT -> new long[] { Long.MIN_VALUE, Long.MAX_VALUE };
+				default -> new long[0];
 				};
 				if (column.getArrayDimension() > 0)
 					bounds = new long[0];
 				// Informix's documented native ranges start at Java's minimum + 1.
-				if (bounds.length > 0 && connection.getMetaData().getDatabaseProductName().toLowerCase(java.util.Locale.ROOT).contains("informix")
-						&& java.util.Set.of(DataType.SMALLINT, DataType.INT, DataType.BIGINT).contains(column.getDataType()))
+				if (bounds.length > 0
+						&& connection.getMetaData().getDatabaseProductName().toLowerCase(java.util.Locale.ROOT)
+								.contains("informix")
+						&& java.util.Set.of(DataType.SMALLINT, DataType.INT, DataType.BIGINT)
+								.contains(column.getDataType()))
 					bounds[0]++;
 				for (long value : bounds) {
 					try (var insert = connection.prepareStatement("INSERT INTO " + qualified + " VALUES (?)")) {
@@ -88,7 +95,8 @@ public final class DataTypeServerAssertions {
 					}
 				}
 				if (bounds.length > 0) {
-					try (var rows = statement.executeQuery("SELECT " + valueColumn + " FROM " + qualified + " ORDER BY " + valueColumn)) {
+					try (var rows = statement.executeQuery(
+							"SELECT " + valueColumn + " FROM " + qualified + " ORDER BY " + valueColumn)) {
 						for (long value : bounds) {
 							assertTrue(rows.next(), context);
 							assertEquals(value, rows.getLong(1), context);
@@ -113,7 +121,8 @@ public final class DataTypeServerAssertions {
 					contextParameters.put("columnName", rows.getMetaData().getColumnName(1));
 				}
 				int matches = 0;
-				try (var tables = connection.getMetaData().getTables(connection.getCatalog(), null, "%", new String[] { "TABLE" })) {
+				try (var tables = connection.getMetaData().getTables(connection.getCatalog(), null, "%",
+						new String[] { "TABLE" })) {
 					while (tables.next()) {
 						if (!name.equalsIgnoreCase(tables.getString("TABLE_NAME")))
 							continue;
@@ -131,10 +140,12 @@ public final class DataTypeServerAssertions {
 				var columns = reader.getAllFull(connection, contextParameters);
 				assertEquals(1, columns.size(), context);
 				assertNotNull(columns.getFirst().getDataType(), context);
-				assertEquals(column.getArrayDimension(), columns.getFirst().getArrayDimension(), context + " array dimension");
+				assertEquals(column.getArrayDimension(), columns.getFirst().getArrayDimension(),
+						context + " array dimension");
 				if (java.util.Set.of(DataType.UTINYINT, DataType.USMALLINT, DataType.UINT, DataType.UBIGINT)
 						.contains(column.getDataType()))
-					assertEquals(column.getDataType(), columns.getFirst().getDataType(), context + " unsigned metadata type");
+					assertEquals(column.getDataType(), columns.getFirst().getDataType(),
+							context + " unsigned metadata type");
 				if (java.util.Set.of(DataType.CHAR, DataType.VARCHAR, DataType.NCHAR, DataType.NVARCHAR)
 						.contains(column.getDataType()) && column.getLength() != null)
 					assertEquals(column.getLength(), columns.getFirst().getLength(), context + " character length");
