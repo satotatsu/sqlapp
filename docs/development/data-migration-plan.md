@@ -28,6 +28,38 @@ capabilities or a commitment to implement every option.
   invalidates generated content when names change. Previewing never writes files.
   The editor protects unsaved mapping intent on close and attaches saved mappings
   using job-relative references where path roots permit it.
+  Check Schema now reuses execution's Schema projection against a bounded captured
+  Schema and returns resolved names/PK/NULL/type metadata, warnings and fingerprints.
+  The offline result does not claim current target state or authorize execution.
+  An optional explicit product/version now previews column definitions through
+  the target SQL builder over cloned mapped columns, retaining source key/NULL
+  evidence and visible per-column preview limitations. The resolved builder is
+  recorded separately; this is not live target metadata, a type override, or
+  complete table-factory SQL. Existing inspection APIs/constructors and mapping
+  fingerprints remain supported. Preview controls are not saved in job YAML.
+  Selected-target naming rules now support keep/upper/lower case and Unicode-space
+  replacement with an explicit preview/apply step and guarded last-batch undo.
+  Only resolved overrides are saved; execution and Gradle use the existing format.
+  Naming previews can check a complete proposed mapping against captured Schema
+  before applying. The check is asynchronous, retains warnings/failure evidence
+  and rejects stale results while allowing draft refinement before database Review.
+  Saved jobs can now reopen the shared table picker from Job settings using captured
+  Schema, retain hidden selections and include referenced parents, then save the
+  changed scope while preserving other options. CSV changes require a new export.
+  Excluded mapping groups can be reviewed against captured Schema and explicitly
+  removed from the name editor, preserving retained overrides/types. Identity
+  resolution is shared with execution; unknown aliases and stale removal plans
+  do not silently discard configuration.
+- Shared Schema preparation now records per-table target identities and reviewed
+  create/use/skip/difference intent in its immutable plan and fingerprint. Direct,
+  schema-only and file import review use the same evidence. GUI table preparation
+  is searchable and distinct from recorded SQL execution progress; it neither
+  parses SQL nor adds per-table metadata queries. Existing Plan constructors and
+  job YAML remain supported.
+  Difference SQL now retains the generating table task ID instead of a shared
+  generic task. Table preparation can navigate to an exact task in Schema
+  statements, combining task selection and text search while preserving global
+  order/status. Display filtering never changes execution scope or SQL order.
 - Lower-level bulk configuration already has target-table identities and column
   mappings. Reuse those facilities where appropriate rather than create a
   separate GUI executor.

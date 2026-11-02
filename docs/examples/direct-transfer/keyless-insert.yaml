@@ -1,0 +1,12 @@
+formatVersion: 1
+source: from
+target: to
+tables: [T_order]
+dataMode: JDBC_DIRECT
+schemaMode: CREATE_MISSING_WITH_IDENTITY
+# Change to CREATE_MISSING to retain a keyless target definition.
+# Existing targets must be empty and compatible; this mode adds keys to new tables only.
+# The source is unchanged. ID is generated only in the target by default.
+# generatedKeyColumn: ROW_ID  # Optional unused name; SQLAPP_ROW_ID retains the earlier name.
+# verify defaults to true; full-scan verification retains duplicate multiplicity.
+# No MERGE, incremental update, resume or automatic target cleanup.

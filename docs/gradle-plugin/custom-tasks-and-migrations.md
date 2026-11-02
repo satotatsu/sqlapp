@@ -47,6 +47,10 @@ behavior. Exported rows are distinct from the metadata-only workflow in the
 
 ## Convert saved data files
 
+For typed Parquet export/import and conversion, use
+`outputFileType = 'PARQUET'`; see [Parquet data files](../data/parquet.md)
+for supported types, precision checks and dependency impact.
+
 ```groovy
 import com.sqlapp.gradle.plugins.ConvertDataTask
 

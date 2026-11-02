@@ -9,6 +9,69 @@ Set `allowExecution=true` and supply the exact configuration fingerprint to copy
 and verify. It composes `TransferJobExecutionService`; the task adds no migration
 rules. Existing Data Job tasks and formats are unchanged.
 
+## Review target preparation per table
+
+After a direct, schema-only or file-package import review, the GUI's **Table
+preparation** tab lists the resolved target catalog/schema/table and its shared
+planner action: create a missing table, use an existing table for data transfer,
+skip an existing table without comparison, or review/apply selected-table
+differences. Search by task, target name or action and select a row for details.
+An existing difference target is not a claim that SQL is needed or that all
+differences can be generated. Inspect **Warnings** and **Schema SQL** as well.
+
+Select a table with recorded SQL and choose **Show table SQL** to open its exact
+task in **Schema statements**. The task selector also works directly in that
+tab. Text search applies within the chosen task; **Clear** clears the search,
+while **All tasks** restores the complete SQL list. Original statement order
+numbers and recorded completion/uncertain-attempt states remain unchanged.
+Tasks with no SQL cannot navigate through this button; warnings may still
+require manual work. Filtering is a display aid, not an executable subset or a
+resume plan: dependencies and session operations can span tasks.
+
+New difference plans retain each generating table's task ID instead of assigning
+every statement the generic `schema-difference` ID. The SQL, validation and
+execution order are unchanged. This association participates in the existing
+plan fingerprint, so review again before execution. Older reports retain their
+recorded IDs and remain readable; they are not rewritten or guessed from SQL.
+
+These are recorded review decisions, not execution statuses. Direct execution
+results retain the reviewed intent; **Schema statements** contains recorded SQL
+progress. File import outcomes retain SQL progress separately. Editing inputs or
+a failed action clears the old table view. No extra metadata queries are issued
+to populate the view, and no automatic row count or SQL parsing is involved.
+
+The same command plan is available to GUI and Gradle as
+`schemaPreparation.tables` in the review report. Existing Java `Plan`
+constructors remain available and produce an empty table-evidence list. The new
+evidence participates in the preparation fingerprint; create a fresh review
+before execution. Job YAML and Gradle task properties are unchanged.
+
+## Change tables in a saved job
+
+Open **Job settings… → Edit tables…**, choose/drop the captured source Schema XML
+(default: `source-schema.xml` beside the job), then **Read Schema**. Existing table
+identities are resolved and preselected. Use Include checkboxes, literal filtering,
+**Select visible eligible**, **Clear visible**, or **Include referenced tables**.
+Hidden selections remain included. **Use selected tables** rechecks the Schema
+fingerprint and returns the canonical selection to the settings form without
+writing the job or accessing a database. **Save settings** persists it; review
+the changed job before executing. Canceling the form leaves the saved job intact.
+
+Direct JDBC allows keyless INSERT with the existing warnings; Schema-only selection
+does not require copy keys. CSV retains its key/type restrictions. Unavailable
+saved selections remain visible and can be removed; they cannot silently become
+eligible. If a saved identity is missing from the captured Schema, choose the
+matching capture instead of silently discarding it. Changing the Schema path
+invalidates the old chooser and retains selected names for the next read.
+
+The selected tables change independently of target schema, chunk size, verification,
+compatibility policy, generated-key name and other saved settings. Excluding a table
+does not drop it or delete data. If `mappingFile` includes a removed table, use
+**Edit names… → Review scope…** to review and remove its table/column override group;
+the ordinary scope checks still apply.
+CSV selection changes apply to the original job and require a new export; completed
+packages retain their original selection and remain protected from editing.
+
 ## Copy only table definitions, including between different database products
 
 In the GUI table picker, **Include referenced tables** can expand a selection to
@@ -229,6 +292,29 @@ The bulk execution plan fingerprint retains its existing semantics. See the
 CSV export/import still reject `mappingFile` explicitly.
 In **Job settings… → Edit names…**, edit target table names in the Tables tab
 and source-to-target column names in the Columns tab without writing YAML.
+For an optional offline column-definition preview, choose **Optional target
+preview** and enter its explicit product version, then use **Check Schema**.
+The result places the shared target SQL builder's definition beside the source
+model type and mapped column name, with source PK/NULL metadata and per-column
+preview issues. No target selection is required for ordinary name checks.
+Changing product/version invalidates the displayed result. Naming-rule Schema
+checks use the same selected preview dialect.
+
+This is a builder preview, not live target metadata or the final table-factory
+CREATE/ALTER SQL. Table factories can add or change syntax. Existing target
+columns, target-only generated keys, value conversion and full-data verification
+are outside this view. A preview limitation remains visible without discarding
+source metadata; inspect full Schema SQL and warnings in database Review.
+Preview controls are session-only and do not alter mapping YAML, job settings,
+Gradle behavior or the source/mapping fingerprints. The result records the resolved
+builder class separately. Java callers may pass a target `Dialect` to the
+`TransferNameMappingInspectionService.inspect(snapshot, selected, mapping, dialect)`
+overload; existing methods and result constructors remain supported.
+Use **Source table** in Columns to focus on one exact source identity, or choose
+**All tables** to see every mapping. Double-click a source-table cell in Tables
+to open that table's columns. Find and Renamed only work within the chosen table;
+Clear filter keeps that table selected. New column rows inherit the selected
+source table. These display controls do not exclude tables or columns from the job.
 A new mapping starts with the job's selected source table identities. Blank
 target table names and unlisted columns keep their original names. Column rows
 require both names; remove a row to remove its override. Names retain case,
@@ -261,6 +347,63 @@ tables or columns from the transfer. Use the job's table selection to exclude
 tables. **Add row** clears filters so the new editable row is visible. Clear the
 filter to inspect unchanged columns again.
 
+For bulk naming changes, select rows in Tables or Columns and choose **Naming
+rules…**. Keep, uppercase or lowercase the current target names and optionally
+replace Unicode spaces with underscores. Case conversion uses `Locale.ROOT`;
+Japanese and other uncased characters are retained. A blank table target starts
+from the final table-name component of its source identity; the job's target
+schema is unchanged. Column rules use the current target column names. Load
+source columns first if you want to change columns not yet listed in the editor.
+
+**Preview selected names** shows current/proposed names without editing the
+mapping. Only **Apply preview** changes selected rows, including after sorting or
+filtering; hidden/unselected overrides stay intact. Changing rules requires a new
+preview. Preview and undo check the affected rows before changing any of them,
+so stale previews cannot overwrite later edits or apply only part of a batch.
+**Undo last rules** restores the last naming batch for that tab if those rows
+still match. Cancel, Escape or the window close button leaves previews unapplied.
+Check Schema for collisions and FK consistency, then perform database Review;
+rules do not invent unique suffixes, change types or transform row values.
+
+From this preview, **Check proposed Schema** resolves the proposed mapping using
+the Source Schema XML chosen in the parent name editor and the saved job's table
+selection. It includes hidden/unselected overrides when checking for collisions
+and uses the same shared projection as execution. The **Schema check** tab shows
+resolved names, source PK/NULL/type metadata, warnings and fingerprints before
+the names have been applied to editor cells. The editor and files remain unchanged.
+
+This check runs in the background. Editing rules invalidates old results, and late
+results cannot replace newer previews. Controls and closing are disabled during
+the bounded metadata read. A failed check is shown with its reason; you may still
+apply the names as an unfinished draft and correct them in the name editor before
+normal database Review. This preserves try/inspect/refine behavior and does not
+authorize execution, infer target objects or bypass the job's compatibility policy.
+
+After editing the job's table selection, **Review scope…** in the parent name
+editor resolves mapping source identities against the captured Schema and lists
+groups outside the current selection. The list shows original/resolved source
+names, target names and column override counts, together with source/mapping
+fingerprints. Only **Remove listed groups** removes complete table and column
+groups from the editor, including displayed unchanged columns; retained groups
+and loaded source types stay intact. Cancel, Escape or closing the preview makes
+no change. Editing after scope review invalidates the removal proposal before any
+rows are removed.
+
+Unknown source names and duplicate resolved aliases are reported instead of
+being guessed away. Scope review does not validate retained column rules, target
+collisions or FKs; run Check Schema and normal database Review afterward. The
+operation writes no files and deletes no database tables or row data. Save the
+mapping and settings to retain the editor change. The command module exposes the
+same offline authoring preview through `TransferNameMappingScopeService.review`;
+execution retains its existing out-of-scope validation and mapping format.
+The mapping fingerprint here identifies the formatted editor configuration;
+normal saves still check the original file's raw-byte fingerprint separately.
+
+Resolved names are saved in the existing mapping YAML; no runtime/global rule
+settings are introduced. GUI and Gradle therefore use the same explicit mapping.
+The command module also exposes pure `TransferNameRules.apply(name)` authoring
+with the shared Unicode/name validation contract.
+
 **Check names** lists input problems together in the **Input checks** tab. It
 uses the shared name rules for blank/invalid identifiers and reports repeated
 source table/column entries. Choose **Go to selected field**, double-click a
@@ -278,6 +421,24 @@ run a transfer. Editing names clears the old preview and disables copying until
 **Refresh preview** regenerates it. Invalid input opens Input checks instead of
 leaving an old valid preview available. Copy failures can be retried. Save the
 mapping and job settings, then perform the normal database Review before running.
+
+To check names against the captured model, choose **Source Schema XML → Check
+Schema**. The **Schema check** tab shows resolved source-to-target table/column
+names, source logical types, source PK participation and NULL allowance. It uses
+the same Schema projection as execution: unknown columns, mappings outside the
+saved job selection, duplicate resolved identities, target-name collisions and
+missing referenced parents are reported before any database connection. Atomic
+column-name swaps retain the ordinary execution semantics. Existing expression
+warnings are retained because opaque expressions cannot be rewritten reliably.
+
+The check reads bounded metadata-only XML and rechecks the inspected fingerprint;
+it writes no files and reads no row data. Evidence includes the source file and
+fingerprint plus a fingerprint of the formatted mapping. Editing names or the
+Schema path clears the displayed result. External changes to the file require
+another check; this is a snapshot, not a live database check or execution approval.
+Current target objects, target types, generated target-only keys, compatibility
+policy and actual DDL remain part of normal database Review. The check does not
+prevent saving an unfinished mapping for later correction.
 
 Closing the name editor with **Close**, the window close button or Escape checks
 for unsaved mapping changes. Choose **Keep editing** to retain them or explicitly
@@ -516,3 +677,12 @@ See the [runnable example](../examples/direct-transfer/README.md). The companion
 `sqlapp-gradle-example` checkout is outside this task's authorized writable
 workspace. The proposed companion change is to add the same `transferDatabase`
 configuration, environment bindings and review/execute commands; it was not edited.
+
+## Troubleshooting Access to PostgreSQL floating-point DDL
+
+Access `DOUBLE` columns are generated as PostgreSQL `DOUBLE PRECISION`, using the
+target dialect rather than the source type spelling. If an earlier run failed on
+`DOUBLE DEFAULT 0`, use the corrected build and review the saved job again. A
+recorded **Uncertain attempt** means that statement's completion was not confirmed;
+inspect retained Schema progress and target tables before retrying. The tool does
+not automatically drop partially created objects or replay a failed transfer.

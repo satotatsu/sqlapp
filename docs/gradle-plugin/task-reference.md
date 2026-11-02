@@ -7,6 +7,11 @@ The `com.sqlapp.db` plugin registers the tasks in the first table. Additional
 public task types can be registered by a consuming build. Task names and
 property names are user-facing API.
 
+Data export and conversion accept `outputFileType = 'PARQUET'`; import detects
+`.parquet`. See [Parquet data files](../data/parquet.md) for the supported types,
+limitations and an executable task definition. Verified CSV transfer packages
+remain a separate format.
+
 “Database effect” describes the task's intended behavior. A read-only task may
 still open a connection and execute metadata or SELECT statements. A mutating
 task can issue DDL or DML and must be configured with the intended target.
