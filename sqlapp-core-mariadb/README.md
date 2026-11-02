@@ -1,8 +1,16 @@
 # MariaDB dialect enhancement
 
-The prior local pass passed 88 tests. A subsequent change moves period-key
-enrichment before constraint filtering; its verification is currently blocked
-by the shared core source relocation in the workspace. See
+Real-server tests are available through the explicit `mariadbIntegrationTest`
+task and excluded from ordinary `test`. See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md)
+for the required target authorization, environment variables and disposable-schema
+lifecycle. The six real-server cases have been run on isolated local Docker
+MariaDB 10.5, 11.4 and 11.8. Version-applicable cases all pass; containers and
+anonymous storage were removed. Scenarios cover sequence settings, application periods with generated/
+invisible columns and ignored indexes, and ordinary procedure/function replay.
+
+The local pass includes period-key enrichment within the 11.4+ unique-constraint
+reader, supporting direct reader use and optional filter extensions without
+changing the shared default predicate policy. See
 [ENHANCEMENT_STATUS.md](ENHANCEMENT_STATUS.md) for exact status and coverage limits.
 
 MariaDB is the next target after the Phoenix local enhancement pass. Existing
@@ -67,6 +75,11 @@ increment, bounds, cache size and cycle without advancing the sequence. Missing
 storage rows and cache sizes exceeding the shared model's Integer range fail.
 The cached allocation boundary is not treated as the last issued value.
 Sequence-specific SELECT privileges are required; query failures propagate.
+On 11.5+, the catalog header query is followed by UNION ALL batches of 100 to
+read cache_size from sequence storage, retaining signed/unsigned catalog types.
+The full reader therefore uses one catalog query plus ceil(count / 100) storage
+queries on both legacy and modern paths. Cache values must fit the shared
+Integer model; invalid/missing rows and values fail explicitly.
 Batch boundary and malformed-row tests cover duplicate/invalid IDs, missing
 rows, negative/overflowing cache sizes and fractional values. Application period
 readers reject blank identities and repeated boundary columns.
@@ -95,9 +108,9 @@ Reference: [MariaDB INFORMATION_SCHEMA.TABLES](https://mariadb.com/docs/server/r
 - Type, default, quoting and version boundaries inherited from MySQL.
 - Metadata-to-XML-to-DDL behavior and explicit validation boundaries.
 
-Local tests use mocked metadata and SQL generation. No Docker/container or
-external database was used in this initial work; live compatibility remains
-unverified.
+Unit tests use mocked metadata and SQL generation. Authorized local Docker
+qualification covers 10.5, 11.4 and 11.8; other versions and production-like
+privilege configurations remain unqualified.
 
 The inherited index reader has dedicated MariaDB metadata/XML/DDL tests for
 IGNORED state, same-named indexes on separate tables, compound key order and

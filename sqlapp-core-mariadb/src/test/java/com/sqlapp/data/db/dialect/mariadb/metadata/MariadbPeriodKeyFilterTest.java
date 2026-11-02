@@ -23,6 +23,13 @@ class MariadbPeriodKeyFilterTest {
 		}
 
 		@Override
+		protected boolean filterObject(UniqueConstraint object) {
+			// TableObjectReader deliberately accepts all objects by default. Model an
+			// extension that opts into predicate filtering without changing that default.
+			return getReadDbObjectPredicate() == null || getReadDbObjectPredicate().test(object, this);
+		}
+
+		@Override
 		public ProductVersionInfo getProductVersionInfo(Connection c) {
 			return new ProductVersionInfo().setName("MariaDB").setMajorVersion(11).setMinorVersion(4).setRevision(0);
 		}

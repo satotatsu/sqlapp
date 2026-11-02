@@ -20,7 +20,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * them.
  */
 class MariadbSequence10_30Reader extends SequenceReader {
-	private static final int BATCH_SIZE = 100;
+	static final int BATCH_SIZE = 100;
 
 	MariadbSequence10_30Reader(Dialect dialect) {
 		super(dialect);
@@ -57,7 +57,9 @@ class MariadbSequence10_30Reader extends SequenceReader {
 						.append("`increment`, cache_size, cycle_option FROM ").append(quote(sequence.getSchemaName()))
 						.append('.').append(quote(sequence.getName()));
 			}
-			execute(connection, new SqlNode(sql.toString()), new ParametersContext(), new ResultSetNextHandler() {
+			SqlNode storageQuery = new SqlNode(sql.toString());
+			storageQuery.setParameters(java.util.Collections.emptySet());
+			execute(connection, storageQuery, new ParametersContext(), new ResultSetNextHandler() {
 				@Override
 				public void handleResultSetNext(ExResultSet rs) throws SQLException {
 					int id = rs.getInt("sequence_id");
@@ -88,7 +90,7 @@ class MariadbSequence10_30Reader extends SequenceReader {
 		return sequences;
 	}
 
-	private String quote(String identifier) {
+	static String quote(String identifier) {
 		if (identifier == null || identifier.isEmpty()) {
 			throw new IllegalArgumentException("MariaDB sequence requires schema and name");
 		}

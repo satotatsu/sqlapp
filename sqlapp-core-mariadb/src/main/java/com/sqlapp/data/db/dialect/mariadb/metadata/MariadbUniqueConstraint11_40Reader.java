@@ -13,7 +13,8 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /**
- * Enriches period keys before the shared object predicate filters constraints.
+ * Enriches direct and table-loaded period keys before optional object
+ * filtering.
  */
 class MariadbUniqueConstraint11_40Reader extends MySqlUniqueConstraintReader {
 	MariadbUniqueConstraint11_40Reader(Dialect dialect) {

@@ -28,16 +28,19 @@ public class MariadbCreateUniqueConstraintFactory extends MySqlCreateUniqueConst
 		}
 		var columns = constraint.getColumns();
 		int size = columns.size();
-		if (size < 3 || !columns.get(size - 2).getName().equalsIgnoreCase(period.getStartColumnName())
-				|| !columns.get(size - 1).getName().equalsIgnoreCase(period.getEndColumnName())
-				|| columns.get(size - 2).getLength() != null || columns.get(size - 1).getLength() != null
+		boolean matchingBounds = size >= 3
+				&& ((columns.get(size - 2).getName().equalsIgnoreCase(period.getStartColumnName())
+						&& columns.get(size - 1).getName().equalsIgnoreCase(period.getEndColumnName()))
+						|| (columns.get(size - 2).getName().equalsIgnoreCase(period.getEndColumnName())
+								&& columns.get(size - 1).getName().equalsIgnoreCase(period.getStartColumnName())));
+		if (!matchingBounds || columns.get(size - 2).getLength() != null || columns.get(size - 1).getLength() != null
 				|| columns.get(size - 2).getOrder() == com.sqlapp.data.schemas.Order.Desc
 				|| columns.get(size - 1).getOrder() == com.sqlapp.data.schemas.Order.Desc
 				|| (constraint.getIndexType() != null
 						&& constraint.getIndexType() != com.sqlapp.data.schemas.IndexType.BTree)) {
 			throw new IllegalArgumentException(
-					"MariaDB WITHOUT OVERLAPS requires scalar keys followed by full start/end columns: "
-							+ constraint.getName());
+					"MariaDB WITHOUT OVERLAPS requires scalar keys followed by full period bounds: "
+							+ constraint.getName() + " columns=" + columns);
 		}
 		// Reuse the ordinary constraint path for all shared key validation, without
 		// mutating the model.

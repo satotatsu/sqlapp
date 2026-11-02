@@ -34,6 +34,8 @@ class MariadbLegacySequenceReaderTest {
 		protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 			queries++;
 			String sql = n.eval(p).getSql();
+			if (queries > 1)
+				assertNull(n.getRowParameter());
 			sqls.add(sql);
 			try {
 				int size = queries == 1 ? count : sql.split(" UNION ALL ").length;

@@ -1,15 +1,11 @@
 # MariaDB enhancement status
 
-The prior local enhancement pass passed 88 tests. The latest working-tree change
-moves period-key enrichment into the 11.4 unique-constraint reader, before the
-shared read predicate runs. Its added filter-integration tests have NOT run:
-the attempted focused Gradle command failed in sqlapp-core-mysql:compileJava
-because shared core classes are absent from the current core source layout.
-The workspace currently places those sources under sqlapp-core-aurora-postgres/java.
-This unrelated source relocation was not changed by the MariaDB work.
-Re-run MariadbPeriodKeyFilterTest/MariadbPeriodKeyReaderTest and then the full
-MariaDB module once the shared core build is restored. This is not live-server
-qualification or a claim of full MariaDB feature coverage.
+The local enhancement pass includes period-key enrichment in the 11.4 unique
+constraint reader, so direct constraint retrieval retains the same period
+references as table loading. Enrichment precedes optional object filtering;
+the shared TableObjectReader default of accepting all constraints is unchanged.
+Unit regressions and the six scoped live-server cases now pass on the executed
+matrix below. This is not a claim of full MariaDB feature coverage.
 
 ## Implemented local coverage
 
@@ -20,6 +16,10 @@ qualification or a claim of full MariaDB feature coverage.
   batch row IDs, missing rows, negative cache sizes, integer overflow and
   fractional numeric metadata fail rather than yielding partial definitions.
 - 11.5+ INFORMATION_SCHEMA.SEQUENCES type mapping and exact numeric conversion.
+- 11.5+ cache sizes are read from sequence storage in UNION ALL batches of 100.
+  Query count is one catalog query plus ceil(sequence count / 100), including
+  the unsigned-type path. Invalid/duplicate IDs, missing rows/cache values,
+  negative values, fractional values and Integer overflow fail explicitly.
 - Sequence ENGINE and COMMENT are read from TABLES during legacy discovery or
   through a qualified TABLES join on 11.5+. Query counts are unchanged; both
   options survive XML and CREATE SEQUENCE. Invalid ENGINE tokens fail explicitly.
@@ -53,11 +53,11 @@ qualification or a claim of full MariaDB feature coverage.
   unique keys reuse inherited key validation. The source model is not mutated.
   Unsupported versions, unresolved periods and unsupported boundary key shapes
   fail explicitly. A complete CREATE TABLE definition remains an alternative.
-  Latest pending change enriches constraints before ReadDbObjectPredicate so
-  deliberately excluded constraints do not cause unresolved-key errors.
-  It also supports direct constraint-reader retrieval and constraintName query
-  filtering. Empty constraint sets skip the period query. Verification pending
-  as described above.
+  Enrichment takes place inside the unique-constraint reader before optional
+  filter extensions, rather than after table attachment. Direct constraint
+  retrieval retains period metadata; constraintName filters apply to the
+  additional query. Empty constraint sets skip that query. The default shared
+  table-object predicate policy remains unchanged.
 - Inherited index metadata audit: ignored/enabled state, same-named indexes on
   different tables, compound key order and prefix lengths survive XML/DDL.
   Multiple indexes use one metadata query. Tests cover absent IGNORED on 10.5,
@@ -76,39 +76,66 @@ qualification or a claim of full MariaDB feature coverage.
   cannot bypass completeness validation. Full executable definitions continue
   to take precedence over optional supplemental components.
 
-Changes are in sqlapp-core-mariadb plus a shared sqlapp-core XML fix preserving
-each explicit values/value element as a single value. Public signatures, dependency
+Live qualification on local Docker 10.5, 11.4 and 11.8 is complete for the six
+integration cases. All applicable cases pass; see INTEGRATION_TESTS.md for counts.
+It exposed and fixed uninitialized batch SqlNode parameters, generated-column
+catalog NULL defaults, reversed physical period bounds, and a shared Sequence
+UBIGINT limit calculation using a 32-bit bound instead of the signed 64-bit bound.
+
+Changes are in sqlapp-core-mariadb plus shared sqlapp-core fixes for XML value
+elements and the unsigned 64-bit sequence bound (2^64 - 1). Public signatures, dependency
 versions are unchanged. Resolver selection changes only for 11.0–11.3 as above.
 Regression coverage uses mocked
 JDBC metadata, rendered catalog SQL and Schema XML/DDL generation.
 
 ## Remaining limitations
 
-- No live MariaDB/container tests were run. Batch storage reads, privileges,
-  generated DDL and supported version boundaries require live verification.
+Final regression commands and results:
+
+- `gradlew.bat :sqlapp-core:test :sqlapp-core-mysql:test :sqlapp-core-mariadb:test`:
+  1261 core, 306 MySQL and 96 MariaDB tests; zero failures/skips.
+- `gradlew.bat :sqlapp-command:test --tests '*TransferSchemaDifferenceTest'`:
+  16 passed, zero failures/skips; embedded HSQL only.
+- `scripts/Test-MariaDbDocker.ps1 -AllowSchemaCreate`: applicable live cases pass
+  on 10.5/11.4/11.8; see INTEGRATION_TESTS.md for the per-version counts.
+  Created containers and anonymous volumes were removed; final container
+  inventory has no sqlapp-mariadb-it-* containers.
+
+- Only local Docker 10.5, 11.4 and 11.8 with disposable root credentials were
+  qualified. Other versions, restricted privileges, concurrency and failure
+  recovery still require qualification.
 - Sequence runtime allocation state and table options beyond engine/comment are not read.
-  The 11.5+ catalog path does not expose cache size; it is not inferred.
-  Pre-11.5 cache values outside Integer range cannot fit the shared Schema model
+  Cache values outside Integer range cannot fit the shared Schema model
   and fail exact conversion. This is a definition reader, not a runtime sequence
   position backup/restore facility.
 - Application-time periods before 11.4 are not discovered. WITHOUT OVERLAPS
   generation is scoped to 11.4+ with a resolved application period and scalar
-  key columns followed by full ascending start/end columns. Older temporal metadata
+  key columns followed by both full ascending period bounds in either physical
+  order. Older temporal metadata
   and all inherited MySQL reader paths have not been qualified end to end.
-- Routine/view variants beyond the covered 11.5 cases, parameter discovery
-  integration, Oracle-mode/package routines and uncommon table options remain
-  unqualified. The mocked cases do not establish every metadata round trip.
+- Routine/view variants beyond the six live cases, Oracle-mode/package routines
+  and uncommon table options remain unqualified. Successful scenarios do not
+  establish every metadata round trip.
 
 ## Follow-up scope
 
+An opt-in `mariadbIntegrationTest` task and sequence, period-table and routine
+metadata/XML/replay scenarios are prepared. The task requires explicit schema-create authorization and target
+environment variables; ordinary test excludes its tag. Task dry-run and source
+compilation pass. See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md) for exact scope,
+including required sequence storage/routine privileges and the period scenario's
+11.4+ boundary. Six cases include WITHOUT OVERLAPS behavior, view CHECK OPTION
+and unsigned sequence ranges and have passed on the applicable authorized local
+Docker versions. A repeatable isolated runner is provided in scripts/Test-MariaDbDocker.ps1.
+
 The remaining items above are explicit coverage limits and follow-up work;
 they do not form part of the completed local pass. Full MariaDB completion
-still requires resolving the required coverage limits and live qualification.
+still requires resolving any additional required coverage limits.
 
 A useful live test matrix is 10.3/10.11 (storage sequences), 11.3 (no 11.4
 catalogs), 11.4 (periods and keys), 11.5 (typed sequences), and 12.1 (same-named
 constraints). Use a disposable database with explicitly authorized credentials
-and object cleanup; none was accessed during this pass. Verify catalog query
+and object cleanup. The executed matrix is 10.5/11.4/11.8. Verify catalog query
 counts and replay generated DDL on each applicable version.
 
 ## References

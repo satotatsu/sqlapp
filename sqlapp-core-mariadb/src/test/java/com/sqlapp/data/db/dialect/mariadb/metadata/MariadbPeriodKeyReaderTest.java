@@ -112,6 +112,20 @@ class MariadbPeriodKeyReaderTest {
 	}
 
 	@Test
+	void reversedPhysicalPeriodBoundsRecreateWithoutMutatingModel() {
+		Table table = table("app");
+		var key = (UniqueConstraint) table.getConstraints().get(0);
+		key.getColumns().remove("valid_from");
+		key.getColumns().add("valid_from");
+		key.getSpecifics().put("mariadb.withoutOverlapsPeriod", "valid_time");
+		var registry = DialectResolver.getInstance().getDialect("MariaDB", 11, 4, 0).createSqlFactoryRegistry();
+		String ddl = registry.createSql(key, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(ddl.contains("valid_time WITHOUT OVERLAPS"), ddl);
+		assertFalse(ddl.contains("valid_until"), ddl);
+		assertEquals("valid_until", key.getColumns().get(1).getName());
+	}
+
+	@Test
 	void emptySelectionSkipsQueryAndUnresolvedKeyFails() {
 		var reader = new Reader();
 		reader.readTables(List.of());

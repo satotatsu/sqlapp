@@ -12,6 +12,10 @@ import com.sqlapp.jdbc.ExResultSet;
 
 class MariadbColumnReaderTest {
 	private Column read(String extra, String expression) throws Exception {
+		return read(extra, expression, "(1 + 2)");
+	}
+
+	private Column read(String extra, String expression, String defaultValue) throws Exception {
 		var reader = new MariadbColumn10_27Reader(DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 7));
 		return reader.createColumn(null, new ExResultSet(null) {
 			@Override
@@ -23,7 +27,7 @@ class MariadbColumnReaderTest {
 				case "IS_NULLABLE" -> "YES";
 				case "EXTRA" -> extra;
 				case "GENERATION_EXPRESSION" -> expression;
-				case "COLUMN_DEFAULT" -> "(1 + 2)";
+				case "COLUMN_DEFAULT" -> defaultValue;
 				default -> null;
 				};
 			}
@@ -65,6 +69,13 @@ class MariadbColumnReaderTest {
 		} finally {
 			Locale.setDefault(original);
 		}
+	}
+
+	@Test
+	void generatedCatalogNullDefaultDoesNotBlockRecreation() throws Exception {
+		assertNull(read("STORED GENERATED", "`id` * 2", "NULL").getDefaultValue());
+		assertEquals("NULL", read(null, null, "NULL").getDefaultValue());
+		assertEquals("'NULL'", read(null, null, "'NULL'").getDefaultValue());
 	}
 
 	@Test
