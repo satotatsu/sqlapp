@@ -38,7 +38,7 @@ class TransferFileExportEligibilityTest {
 			assertEquals(4, exported.manifest().tables().stream().filter(table -> table.table().equals("LOGS"))
 					.findFirst().orElseThrow().rows());
 			assertEquals(2, exported.manifest().warnings().stream()
-					.filter(warning -> warning.message().contains("[FILE_IMPORT_LIMITATION]")).count());
+					.filter(warning -> warning.message().contains("[FILE_FULL_SCAN_INSERT]")).count());
 			var service = new TransferFileImportService();
 			var preview = service.preview(exported.file(), exported.fingerprint(), "export-table-1");
 			assertEquals(4, preview.rows().size());
@@ -49,8 +49,7 @@ class TransferFileExportEligibilityTest {
 			assertEquals(1, preview.rows().stream()
 					.filter(row -> row.get(0).sqlNull() && row.get(1).text().equals("\"\"")).count());
 			assertEquals(1, service.preview(exported.file(), exported.fingerprint(), "export-table-2").rows().size());
-			assertThrows(IllegalArgumentException.class,
-					() -> service.validatePackage(exported.file(), exported.fingerprint()));
+			service.validatePackage(exported.file(), exported.fingerprint());
 		} finally {
 			try (var connection = source.getConnection(); var sql = connection.createStatement()) {
 				sql.execute("SHUTDOWN");

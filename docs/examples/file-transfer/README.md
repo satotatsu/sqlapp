@@ -40,3 +40,23 @@ failure behavior and current type limits. Automated TestKit coverage exercises
 equivalent export/import task wiring in separate Gradle runs against disposable
 HSQL file databases; these environment-based examples are not run against an
 external database by repository tests.
+
+## Optional target names
+
+For an ITEMS source with an ID column, the included names.yaml maps the target
+table to ITEMS_COPY and ID to ITEM_ID, leaving all other fields unchanged. Add
+these settings to transfer.yaml before a fresh export:
+
+```yaml
+schemaMode: CREATE_MISSING
+mappingFile: names.yaml
+```
+
+Replace the existing schemaMode entry rather than adding a duplicate YAML key.
+The target schema must exist. Review the generated DDL before authorizing import;
+existing targets instead need the mapped names and empty-table shape. Export
+captures/pins the mapping inside the package and keeps source data field names.
+Move the whole package for import; the original names.yaml and source connection
+are not required there. Changing the original mapping needs a new export. The
+same task invocations above apply. This optional example adds no task properties
+or external database test execution.

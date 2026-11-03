@@ -97,6 +97,17 @@ public final class TransferFileJobDraftBuilder {
 			boolean verify, TransferJobConfiguration.SchemaMode schemaMode,
 			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema,
 			TransferJobConfiguration.FileTransfer files, Path file) throws Exception {
+		return save(reviewed, selected, chunkSize, verify, schemaMode, compatibilityPolicy, targetSchema, files, null,
+				file);
+	}
+
+	/**
+	 * Optional target-only key name; the shared Schema planner validates creation.
+	 */
+	public TransferJobConfigurationIO.Snapshot save(SchemaSnapshot reviewed, List<String> selected, int chunkSize,
+			boolean verify, TransferJobConfiguration.SchemaMode schemaMode,
+			TransferJobConfiguration.CompatibilityPolicy compatibilityPolicy, String targetSchema,
+			TransferJobConfiguration.FileTransfer files, String generatedKeyColumn, Path file) throws Exception {
 		java.util.Objects.requireNonNull(files, "file settings");
 		final String draft = new BulkMigrationJobDraftBuilder().draftInsert(reviewed, selected, "", chunkSize, verify);
 		final var bulk = new BulkMigrationJobConfigurationEditorIO().validate(draft);
@@ -106,7 +117,8 @@ public final class TransferFileJobDraftBuilder {
 			supported(schema, table, files.unsupportedTemporalPolicy());
 		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, schemaMode,
 				schema.getName() == null || schema.getName().isBlank() ? null : schema.getName(), targetSchema, null,
-				chunkSize, verify, TransferJobConfiguration.DataMode.FILE, files, compatibilityPolicy);
+				chunkSize, verify, TransferJobConfiguration.DataMode.FILE, files, compatibilityPolicy, false,
+				generatedKeyColumn);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(configuration), null);
 	}

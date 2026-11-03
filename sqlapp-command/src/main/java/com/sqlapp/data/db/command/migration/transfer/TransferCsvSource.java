@@ -179,10 +179,6 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 						throw new IllegalArgumentException("CSV column count differs from canonical Schema.");
 					final Row row = table.newRow();
 					for (int index = 0; index < values.length; index++) {
-						if (parser != null && values[index] == null
-								&& settings.emptyFieldMode() == TransferJobConfiguration.EmptyFieldMode.TOKEN_ONLY)
-							throw new IllegalArgumentException(
-									"CSV uses an implicit NULL instead of the configured token.");
 						boolean isNull = values[index] == null
 								? parser == null
 										|| settings.emptyFieldMode() == TransferJobConfiguration.EmptyFieldMode.NULL

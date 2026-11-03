@@ -47,9 +47,6 @@ class TransferJobTransportTest {
 		if (policy == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY) {
 			var schemaOnly = io.validate(intent + "dataMode: SCHEMA_ONLY\n");
 			assertEquals(schemaOnly, io.validate(io.format(schemaOnly)));
-			assertThrows(IllegalArgumentException.class,
-					() -> io.validate(intent + "dataMode: FILE\nfiles: {directory: packages, nullValue: NULL}\n"));
-			return;
 		}
 		final var file = io.validate(intent + "dataMode: FILE\nfiles:\n  directory: packages\n  nullValue: '\\N'\n");
 		assertEquals(TransferJobConfiguration.DataMode.FILE, file.dataMode());
@@ -80,7 +77,8 @@ class TransferJobTransportTest {
 	@Test
 	void rejectsConflictingMissingAndUnknownFileSettings() {
 		final String file = BASE + "schemaMode: REQUIRE_EXISTING\ndataMode: FILE\n";
-		for (String options : List.of("", "files: {}\n", "files: {directory: packages}\n",
+		assertNull(io.validate(file + "files: {directory: packages}\n").files().nullValue());
+		for (String options : List.of("", "files: {}\n", "files: {directory: packages, emptyFieldMode: EMPTY_STRING}\n",
 				"files: {directory: packages, nullValue: ''}\n",
 				"files: {directory: packages, nullValue: ',', format: CSV}\n",
 				"files: {directory: packages, nullValue: token, encoding: unknown-encoding}\n",

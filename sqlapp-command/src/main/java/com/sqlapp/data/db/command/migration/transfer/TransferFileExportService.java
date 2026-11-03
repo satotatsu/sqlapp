@@ -31,6 +31,8 @@ public final class TransferFileExportService {
 		final var io = new TransferJobConfigurationIO();
 		final var job = inspectConfiguration(jobFile);
 		final var configuration = job.configuration();
+		final var mapping = configuration.mappingFile() == null ? null
+				: new TransferNameMappingIO().read(job.mappingFile());
 		final DataSource source = connections == null ? null : connections.get(configuration.source());
 		if (source == null)
 			throw new IllegalArgumentException("Supply the source runtime connection for file export.");
@@ -72,13 +74,17 @@ public final class TransferFileExportService {
 				final var resolution = new BulkMigrationJobConfigurationResolver().resolveJob(selection.toFile(),
 						connection, selected.fingerprint(), 1_048_576L, 16_777_216L);
 				Files.delete(selection);
+				if (mapping != null)
+					TransferNameMappingProjection.project(schema,
+							resolution.plan().getTasks().stream().map(task -> task.getEffectiveSourceTable()).toList(),
+							mapping.configuration());
 				final var identities = new java.util.HashSet<List<String>>();
 				for (final var task : resolution.plan().getTasks()) {
 					final var table = task.getEffectiveSourceTable();
 					if (!TransferCsvSource.supportsImportKeys(table)) {
 						warnings.add(new TransferFilePackageIO.Warning(task.getTaskId(),
 								table.getColumns().getFirst().getName(),
-								"[FILE_IMPORT_LIMITATION] Export is allowed; automatic package import currently requires a complete NOT NULL numeric primary key. Review this table before import."));
+								"[FILE_FULL_SCAN_INSERT] This table has no portable numeric import key. Import uses non-resumable INSERT and unordered verification, preserving duplicate rows. Review the target key design and warnings before import."));
 					}
 					final var view = TransferCsvTemporalCodec.exportView(table,
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR
@@ -125,6 +131,7 @@ public final class TransferFileExportService {
 							var writer = jsonl ? null : new CsvWriter(text, settings -> {
 								settings.setNullValue(configuration.files().nullValue());
 								settings.setEmptyValue("");
+								settings.setSkipEmptyLines(false);
 								settings.setQuoteAllFields(true);
 								settings.setQuoteNulls(configuration.files().nullValue() != null);
 								settings.setNormalizeLineEndingsWithinQuotes(false);
@@ -165,6 +172,8 @@ public final class TransferFileExportService {
 			} finally {
 				connection.rollback();
 			}
+		} catch (TransferSchemaPreparation.ValidationException failure) {
+			throw failure;
 		} catch (Exception failure) {
 			throw new IllegalArgumentException(
 					"File export failed. No completed manifest was published. Check source keys, "
@@ -173,9 +182,20 @@ public final class TransferFileExportService {
 		if (!io.read(jobFile).fingerprint().equals(job.fingerprint()))
 			throw new IllegalArgumentException(
 					"Transfer definition changed during export. No completed manifest was published.");
-		io.write(directory.resolve("transfer.yaml"), job.text(), null);
-		return new TransferFilePackageIO().publish(directory, new TransferFilePackageIO.Manifest(1, job.fingerprint(),
-				schemaFingerprint, configuration.files(), exported, warnings));
+		String capturedText = job.text();
+		if (mapping != null) {
+			TransferNameMappingIO.capture(mapping, directory);
+			var captured = new TransferJobConfiguration(configuration.formatVersion(), configuration.source(),
+					configuration.target(), configuration.tables(), configuration.schemaMode(),
+					configuration.sourceSchema(), configuration.targetSchema(), TransferNameMappingIO.CAPTURED_FILE,
+					configuration.chunkSize(), configuration.verify(), configuration.dataMode(), configuration.files(),
+					configuration.compatibilityPolicy(), configuration.allowDestructiveSchemaChanges(),
+					configuration.generatedKeyColumn());
+			capturedText = TransferNameMappingIO.pinDataJob(io.format(captured), mapping);
+		}
+		var captured = io.write(directory.resolve("transfer.yaml"), capturedText, null);
+		return new TransferFilePackageIO().publish(directory, new TransferFilePackageIO.Manifest(1,
+				captured.fingerprint(), schemaFingerprint, configuration.files(), exported, warnings));
 	}
 
 	/** Offline input validation, usable before a runtime pool is constructed. */
@@ -184,7 +204,7 @@ public final class TransferFileExportService {
 		if (job.configuration().dataMode() != TransferJobConfiguration.DataMode.FILE)
 			throw new IllegalArgumentException("This exporter requires FILE dataMode with CSV, TSV or JSONL format.");
 		if (job.configuration().mappingFile() != null)
-			throw new IllegalArgumentException("File export with explicit mappingFile is not implemented yet.");
+			new TransferNameMappingIO().read(job.mappingFile());
 		return job;
 	}
 

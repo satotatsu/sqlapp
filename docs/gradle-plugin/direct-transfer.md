@@ -750,3 +750,73 @@ target dialect rather than the source type spelling. If an earlier run failed on
 recorded **Uncertain attempt** means that statement's completion was not confirmed;
 inspect retained Schema progress and target tables before retrying. The tool does
 not automatically drop partially created objects or replay a failed transfer.
+
+**Open saved preview** opens the last successfully saved HTML report after an
+asynchronous fingerprint check. Missing or modified files are reported without
+opening them; save a new report and retry. Current name edits remain separate
+from the saved snapshot. When browser integration is unavailable, open the path
+shown in the message manually. The additive command API
+`TransferMappingPreviewReportIO.verifySaved(Saved)` performs the same bounded
+byte check; it does not lock files or validate the database and grants no
+execution approval. Job YAML and Gradle task configuration are unchanged.
+
+## Execution failure diagnostics
+
+Direct transfer outcomes now include optional `failureDiagnostic` evidence. The
+same diagnostic appears in the GUI Summary, the execution exception and
+`transfer-result.json` when the command can write the audit. It records a
+self-authored cause category, a validated SQLState and a numeric vendor code,
+without retaining raw driver messages, values, URLs or exception causes.
+
+Known SQLStates distinguish unique/FK/NOT NULL/CHECK constraints, conversion,
+permissions, authentication, connection, database/schema selection, SQL/object
+resolution, unsupported operations, transaction failures and timeout/cancellation.
+Batch wrappers and chained SQL exceptions are searched with a bounded,
+cycle-safe traversal; a specific constraint code takes precedence over a generic
+constraint wrapper. Vendor codes remain available even when no SQLState is usable.
+Unknown causes are reported as unknown, rather than inferred from driver text.
+A recorded verification mismatch has its own diagnostic and directs users to
+mismatched tables/chunks and target precision.
+
+Summary guidance does not identify a failed source row or prove rollback. Retain
+completed/uncertain DDL, committed progress and verification evidence when fixing
+the target; this information does not authorize retry or resume. Successful
+outcomes and legacy Java constructors have no failure diagnostic. Existing
+constructors/accessors, YAML keys and Gradle task properties remain available;
+the optional component is an additive change to the Java outcome record and JSON
+shape. Java record patterns matching the complete outcome must include it.
+
+No companion example checkout was modified. Existing examples need no property
+changes; after a failed authorized run, inspect `outcome.failureDiagnostic` in
+the saved result alongside `phase` and `committedProgress`.
+
+## GUI inspection of recorded verification
+
+The GUI's Verification tab presents the same task comparisons retained by direct
+execution, including partial failure outcomes. It lists reviewed target names,
+counts and mismatches; Show chunks opens a selected task's comparisons in pages
+of 200, with a mismatches-only filter. Searching/sorting/copying is page-scoped.
+This does not rerun database queries or change job/task settings. Multiset-hash
+positions are not source row numbers. See the
+[GUI guide](../../sqlapp-swing/README.md#inspect-recorded-verification-by-table-and-chunk).
+
+## GUI view of retained task progress
+
+Execution progress combines the direct result's task IDs, completion events,
+returned copy results, last committed chunk records, Schema SQL progress and
+verification. It distinguishes missing evidence from zero/never-started tasks.
+Stopped tasks, uncertain SQL and mismatches can be filtered and opened in the
+existing task SQL/verification views. Schema-only runs show copy as not requested.
+This is a read-only GUI view of the same retained result; no result/YAML/task
+property changes or extra database queries are introduced. See the
+[GUI guide](../../sqlapp-swing/README.md#inspect-retained-execution-progress).
+
+## GUI warning filters
+
+Warnings can be filtered by recorded category and structured task ID as well as
+literal message search. Selector counts cover all retained records before
+filtering; Show all warnings clears category, task and text filters. Messages
+without an explicit task ID stay unassigned, preserving the original evidence.
+This is a GUI-only display improvement; policies, saved jobs and task properties
+are unchanged. See the
+[GUI guide](../../sqlapp-swing/README.md#filter-warnings-and-retain-package-context-after-import).

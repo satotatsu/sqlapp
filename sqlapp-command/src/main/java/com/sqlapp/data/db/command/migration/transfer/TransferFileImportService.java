@@ -41,7 +41,16 @@ public final class TransferFileImportService {
 			BulkMigrationJobResult copyResult, boolean verificationRequested,
 			Map<String, BulkMigrationVerificationResult> verification,
 			Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId, Path auditFile,
-			TransferSchemaPreparation.Progress schemaPreparation) {
+			TransferSchemaPreparation.Progress schemaPreparation, TransferFailureDiagnostic failureDiagnostic) {
+		public Outcome(String manifestFingerprint, String planFingerprint, TransferJobExecutionService.Phase phase,
+				BulkMigrationJobResult copyResult, boolean verificationRequested,
+				Map<String, BulkMigrationVerificationResult> verification,
+				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId, Path auditFile,
+				TransferSchemaPreparation.Progress schemaPreparation) {
+			this(manifestFingerprint, planFingerprint, phase, copyResult, verificationRequested, verification,
+					committedProgress, stoppedTaskId, auditFile, schemaPreparation, null);
+		}
+
 		public Outcome(String manifestFingerprint, String planFingerprint, TransferJobExecutionService.Phase phase,
 				BulkMigrationJobResult copyResult, boolean verificationRequested,
 				Map<String, BulkMigrationVerificationResult> verification,
@@ -62,8 +71,11 @@ public final class TransferFileImportService {
 		private final Outcome outcome;
 
 		ImportException(Outcome outcome) {
-			super("File import failed during " + outcome.phase()
-					+ ". Committed work may remain; inspect the outcome before retrying. "
+			super("File import failed during " + outcome.phase() + ". "
+					+ (outcome.failureDiagnostic() == null ? ""
+							: outcome.failureDiagnostic().reason() + " "
+									+ outcome.failureDiagnostic().technicalDetails() + ". ")
+					+ "Committed work may remain; inspect the outcome before retrying. "
 					+ (outcome.auditFile() == null ? "Audit report unavailable." : "Audit report saved."));
 			this.outcome = outcome;
 		}
@@ -74,7 +86,62 @@ public final class TransferFileImportService {
 	}
 
 	private record Loaded(TransferFilePackageIO.Snapshot snapshot, TransferJobConfiguration configuration,
-			Schema schema, Map<String, TransferCsvSource> sources) {
+			Schema schema, Map<String, TransferCsvSource> sources, TransferNameMappingProjection.Projection projection,
+			Map<String, Table> tables, String mappingFingerprint) {
+	}
+
+	public record PackageColumn(String sourceName, String targetName, String sourceType, boolean notNull,
+			boolean primaryKey) {
+	}
+
+	public record PackageTable(String taskId, String sourceCatalog, String sourceSchema, String sourceTable,
+			String targetTable, String file, long recordedRows, boolean fullScanInsert, boolean generatedKeyIfCreated,
+			List<PackageColumn> columns) {
+		public PackageTable {
+			columns = List.copyOf(columns);
+		}
+	}
+
+	/**
+	 * Recorded intent only; no value check, target lookup or execution approval.
+	 */
+	public record PackageDescription(TransferFilePackageIO.Snapshot snapshot, TransferJobConfiguration configuration,
+			String mappingFingerprint, List<PackageTable> tables) {
+		public PackageDescription {
+			tables = List.copyOf(tables);
+		}
+	}
+
+	/**
+	 * Metadata overview, including unsupported value types, without constructing
+	 * row readers.
+	 */
+	public PackageDescription describePackage(Path manifest, String expectedFingerprint) throws Exception {
+		var loaded = load(manifest, expectedFingerprint, null, false, false);
+		var tables = new ArrayList<PackageTable>();
+		for (var member : loaded.snapshot().manifest().tables()) {
+			var source = loaded.tables().get(member.taskId());
+			var target = loaded.projection() == null ? source
+					: loaded.projection().bySourceName().get(source.getName());
+			var key = source.getPrimaryKeyConstraint();
+			var keys = key == null ? java.util.Set.<String>of()
+					: key.getColumns().stream().map(column -> column.getName())
+							.collect(java.util.stream.Collectors.toSet());
+			var columns = new ArrayList<PackageColumn>();
+			for (int index = 0; index < source.getColumns().size(); index++) {
+				var column = source.getColumns().get(index);
+				columns.add(new PackageColumn(column.getName(), target.getColumns().get(index).getName(),
+						Objects.toString(column.getDataType(), "not modeled"), column.isNotNull(),
+						keys.contains(column.getName())));
+			}
+			tables.add(new PackageTable(member.taskId(), member.catalog(), member.schema(), member.table(),
+					target.getName(), member.file(), member.rows(), !TransferCsvSource.supportsImportKeys(source),
+					loaded.configuration()
+							.schemaMode() == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
+							&& keys.isEmpty(),
+					columns));
+		}
+		return new PackageDescription(loaded.snapshot(), loaded.configuration(), loaded.mappingFingerprint(), tables);
 	}
 
 	/** Complete offline preflight; never borrows a target connection. */
@@ -184,8 +251,7 @@ public final class TransferFileImportService {
 		try (var target = binding(loaded, connections).getConnection()) {
 			target.setReadOnly(true);
 			final var plan = plan(loaded, target);
-			final var schemaPlan = TransferSchemaPreparation.plan(target, loaded.schema(), plan,
-					loaded.configuration().schemaMode(), loaded.configuration().compatibilityPolicy());
+			final var schemaPlan = schemaPlan(loaded, target, plan);
 			new TransferFilePackageIO().read(manifest, loaded.snapshot().fingerprint());
 			if (draft != null)
 				draft.accept(TransferSchemaSqlScript.render(schemaPlan, TransferJobPreparationService.dialect(target),
@@ -223,6 +289,9 @@ public final class TransferFileImportService {
 			final var original = new TransferFilePackageIO().read(review.manifestFile(), review.manifestFingerprint());
 			directory = Files.createTempDirectory(workspace.toAbsolutePath().normalize(), "import-");
 			final var members = new ArrayList<>(List.of("manifest.json", "transfer.yaml", "source-schema.xml"));
+			if (new TransferJobConfigurationIO().read(original.file().getParent().resolve("transfer.yaml"))
+					.configuration().mappingFile() != null)
+				members.add(TransferNameMappingIO.CAPTURED_FILE);
 			original.manifest().tables().forEach(table -> members.add(table.file()));
 			for (String name : members)
 				Files.copy(original.file().getParent().resolve(name), directory.resolve(name),
@@ -233,8 +302,7 @@ public final class TransferFileImportService {
 				if (!MigrationPlanCommand.databaseIdentity(target).equals(review.targetIdentity()))
 					throw new IllegalArgumentException("Target database identity changed.");
 				final var plan = plan(loaded, target);
-				final var schemaPlan = TransferSchemaPreparation.plan(target, loaded.schema(), plan,
-						loaded.configuration().schemaMode(), loaded.configuration().compatibilityPolicy());
+				final var schemaPlan = schemaPlan(loaded, target, plan);
 				if (!schemaPlan.fingerprint().equals(review.planFingerprint())
 						|| !schemaPlan.equals(review.schemaPreparation()))
 					throw new IllegalArgumentException("File import plan changed. Review again.");
@@ -288,12 +356,25 @@ public final class TransferFileImportService {
 						if (target.getTransactionIsolation() != Connection.TRANSACTION_SERIALIZABLE)
 							throw new IllegalArgumentException("Target did not retain requested isolation.");
 						for (var task : plan.getTasks()) {
+							var columns = task.getEffectiveSourceTable().getColumns().stream()
+									.map(column -> column.getName()).toList();
+							var actualColumns = columns.stream()
+									.map(name -> task.getColumnMappings().getOrDefault(name, name)).toList();
+							if (task.isFullScan()) {
+								var actual = task.getEffectiveTargetTable().clone();
+								actual.setRowIteratorHandler(
+										new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(target));
+								verified.put(task.getTaskId(),
+										BulkMigrationUnorderedVerifier.verify(task.getEffectiveSourceTable(),
+												task.getEffectiveSourceTable().getRows().iterator(), actual,
+												actual.getRows().iterator(), columns, actualColumns,
+												loaded.configuration().chunkSize()));
+								continue;
+							}
 							final var targetSource = new JdbcBulkMigrationKeysetSource(target,
 									task.getEffectiveTargetTable());
-							final var comparison = BulkMigrationVerifier.verify(
-									task.getKeysetSource(), targetSource, task.getEffectiveSourceTable().getColumns()
-											.stream().map(column -> column.getName()).toList(),
-									loaded.configuration().chunkSize());
+							final var comparison = BulkMigrationVerifier.verify(task.getKeysetSource(), targetSource,
+									columns, actualColumns, loaded.configuration().chunkSize());
 							verified.put(task.getTaskId(), comparison);
 						}
 						if (verified.values().stream().anyMatch(value -> !value.isMatch()))
@@ -314,14 +395,16 @@ public final class TransferFileImportService {
 			Outcome outcome = new Outcome(review.manifestFingerprint(), review.planFingerprint(), phase, result,
 					verificationRequested, verified, progress, active[0],
 					directory == null ? null : directory.resolve("import-result.json"),
-					new TransferSchemaPreparation.Progress(ddl, completedDdl, attemptedDdl, schemaWarnings));
+					new TransferSchemaPreparation.Progress(ddl, completedDdl, attemptedDdl, schemaWarnings),
+					TransferFailureDiagnostic.capture(failure, phase == TransferJobExecutionService.Phase.VERIFICATION
+							&& verified.values().stream().anyMatch(value -> !value.isMatch())));
 			if (outcome.auditFile() != null) {
 				try {
 					writeAudit(outcome);
 				} catch (Exception reportFailure) {
 					outcome = new Outcome(outcome.manifestFingerprint(), outcome.planFingerprint(), outcome.phase(),
 							result, verificationRequested, verified, progress, active[0], null,
-							outcome.schemaPreparation());
+							outcome.schemaPreparation(), outcome.failureDiagnostic());
 				}
 			}
 			throw new ImportException(outcome);
@@ -341,16 +424,26 @@ public final class TransferFileImportService {
 
 	private static Loaded load(Path manifest, String expected, String sampleTask, boolean validateRows)
 			throws Exception {
+		return load(manifest, expected, sampleTask, validateRows, true);
+	}
+
+	private static Loaded load(Path manifest, String expected, String sampleTask, boolean validateRows, boolean readers)
+			throws Exception {
 		final var snapshot = new TransferFilePackageIO().read(manifest, expected);
 		final Path directory = snapshot.file().getParent();
-		final var configuration = new TransferJobConfigurationIO().read(directory.resolve("transfer.yaml"))
-				.configuration();
-		if (configuration.mappingFile() != null)
-			throw new IllegalArgumentException("Initial File import does not support an explicit mapping file.");
-		new BulkMigrationJobDraftBuilder().inspect(directory.resolve("source-schema.xml")); // Reject DTDs and embedded
-																							// row data.
+		final var job = new TransferJobConfigurationIO().read(directory.resolve("transfer.yaml"));
+		if (!job.fingerprint().equals(snapshot.manifest().jobFingerprint()))
+			throw new IllegalArgumentException("Package definition changed.");
+		final var configuration = job.configuration();
+		final var mapping = TransferFilePackageIO.mapping(job);
+		var inspected = new BulkMigrationJobDraftBuilder().inspect(directory.resolve("source-schema.xml"));
+		if (!inspected.fingerprint().equals(snapshot.manifest().schemaFingerprint()))
+			throw new IllegalArgumentException("Package Schema changed.");
 		final byte[] bytes = BoundedMigrationFile.read(directory.resolve("source-schema.xml"), 16_777_216L,
 				"maxSchemaBytes", "Schema");
+		if (!("sha256:" + com.sqlapp.util.MessageDigests.SHA256.checksumAsString(bytes))
+				.equals(snapshot.manifest().schemaFingerprint()))
+			throw new IllegalArgumentException("Package Schema changed.");
 		final var root = SchemaUtils.readXml(new java.io.ByteArrayInputStream(bytes));
 		if (!(root instanceof Schema schema))
 			throw new IllegalArgumentException("Package must contain one canonical source Schema.");
@@ -365,6 +458,9 @@ public final class TransferFileImportService {
 		}
 		if (expectedTables.size() != snapshot.manifest().tables().size())
 			throw new IllegalArgumentException("Package table set differs from its job.");
+		final var projection = mapping == null ? null
+				: TransferNameMappingProjection.project(schema, List.copyOf(expectedTables.values()),
+						mapping.configuration());
 		final var sources = new LinkedHashMap<String, TransferCsvSource>();
 		for (final var member : snapshot.manifest().tables()) {
 			final var table = expectedTables.get(member.taskId());
@@ -373,17 +469,19 @@ public final class TransferFileImportService {
 					|| !table.getName().equals(member.table())
 					|| !table.getColumns().stream().map(column -> column.getName()).toList().equals(member.columns()))
 				throw new IllegalArgumentException("Package table/column identities differ from canonical Schema.");
-			if (sampleTask != null && !sampleTask.equals(member.taskId()))
+			if (!readers || sampleTask != null && !sampleTask.equals(member.taskId()))
 				continue;
 			final var source = new TransferCsvSource(table, directory.resolve(member.file()), configuration.files(),
 					configuration.files().format() + "-v1:" + snapshot.fingerprint() + ":" + member.fingerprint(),
-					member.rows(), sampleTask == null);
+					member.rows(), false);
 			if (validateRows)
 				source.validate();
 			sources.put(member.taskId(), source);
 		}
-		new TransferFilePackageIO().read(manifest, snapshot.fingerprint());
-		return new Loaded(snapshot, configuration, schema, Map.copyOf(sources));
+		if (readers)
+			new TransferFilePackageIO().read(manifest, snapshot.fingerprint());
+		return new Loaded(snapshot, configuration, schema, Map.copyOf(sources), projection, Map.copyOf(expectedTables),
+				mapping == null ? null : mapping.fingerprint());
 	}
 
 	private static BulkMigrationJobPlan plan(Loaded loaded, Connection connection) throws Exception {
@@ -396,21 +494,57 @@ public final class TransferFileImportService {
 		final var tasks = new ArrayList<BulkMigrationJobTask>();
 		for (final var member : loaded.snapshot().manifest().tables()) {
 			final var source = loaded.sources().get(member.taskId());
-			final var target = new Table(source.getTable().getName()).setCatalogName(connection.getCatalog())
+			final var mapped = loaded.projection() == null ? source.getTable()
+					: loaded.projection().bySourceName().get(source.getTable().getName());
+			final var target = new Table(mapped.getName()).setCatalogName(connection.getCatalog())
 					.setSchemaName(schema);
-			source.getTable().getColumns().forEach(column -> target.getColumns().add(column.clone()));
-			target.setPrimaryKey(source.getTable().getPrimaryKeyConstraint().getName(),
-					source.getTable().getPrimaryKeyConstraint().getColumns().stream()
-							.map(ref -> target.getColumns().get(ref.getName()))
-							.toArray(com.sqlapp.data.schemas.Column[]::new));
-			tasks.add(BulkMigrationJobTask.builder().taskId(member.taskId()).keysetSource(source).targetTable(target)
+			mapped.getColumns().forEach(column -> target.getColumns().add(column.clone()));
+			if (mapped.getPrimaryKeyConstraint() != null)
+				target.setPrimaryKey(mapped.getPrimaryKeyConstraint().getName(),
+						mapped.getPrimaryKeyConstraint().getColumns().stream()
+								.map(ref -> target.getColumns().get(ref.getName()))
+								.toArray(com.sqlapp.data.schemas.Column[]::new));
+			var task = BulkMigrationJobTask.builder().taskId(member.taskId()).targetTable(target)
 					.requireEmptyTarget(true)
 					.options(ChunkedBulkMigrationOption.builder().migrationId(member.taskId())
 							.mode(BulkMigrationMode.INSERT).resume(false).chunkSize(loaded.configuration().chunkSize())
-							.bulkOption(BulkOption.builder().keepIdentity(true).keepNulls(true).build()).build())
-					.build());
+							.bulkOption(BulkOption.builder().keepIdentity(true).keepNulls(true).build()).build());
+			var columns = new LinkedHashMap<String, String>();
+			for (int index = 0; index < source.getTable().getColumns().size(); index++) {
+				String original = source.getTable().getColumns().get(index).getName();
+				String renamed = mapped.getColumns().get(index).getName();
+				if (!original.equals(renamed))
+					columns.put(original, renamed);
+			}
+			task.columnMappings(columns);
+			if (TransferCsvSource.supportsImportKeys(source.getTable()))
+				task.keysetSource(source);
+			else {
+				// Keep the canonical table identity: FK dependency ordering compares related
+				// tables.
+				var input = source.getTable();
+				input.setRowIteratorHandler(rows -> source.iterator(null));
+				task.sourceTable(input).fullScan(true);
+			}
+			tasks.add(task.build());
 		}
 		return BulkMigrationJobPlanner.plan(tasks);
+	}
+
+	private static TransferSchemaPreparation.Plan schemaPlan(Loaded loaded, Connection target,
+			BulkMigrationJobPlan plan) throws Exception {
+		var schema = TransferSchemaPreparation.plan(target, loaded.schema(), plan, loaded.configuration().schemaMode(),
+				loaded.configuration().compatibilityPolicy(), loaded.projection(),
+				loaded.configuration().effectiveGeneratedKeyColumn());
+		var warnings = new ArrayList<>(schema.warnings());
+		for (var task : plan.getTasks())
+			if (task.isFullScan())
+				TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings,
+						"[FILE_FULL_SCAN_INSERT] Table " + task.getEffectiveSourceTable().getName()
+								+ " uses non-resumable INSERT without portable numeric-key ordering. Duplicates are preserved; verification compares unordered row hashes including multiplicity. Hash-sort chunk positions are not file row positions. MERGE, resume and key-based repair are unavailable.");
+		return warnings.equals(schema.warnings()) ? schema
+				: TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(schema.fingerprint(),
+						schema.statements(), warnings, loaded.configuration().schemaMode()), schema.tables());
 	}
 
 	private static void writeAudit(Outcome outcome) throws java.io.IOException {

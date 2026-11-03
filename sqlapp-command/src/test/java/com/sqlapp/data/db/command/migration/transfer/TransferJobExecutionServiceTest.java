@@ -124,6 +124,8 @@ class TransferJobExecutionServiceTest {
 		final var failure = assertThrows(TransferJobExecutionService.ExecutionException.class,
 				() -> service.execute(review, bindings));
 		assertEquals(TransferJobExecutionService.Phase.COPY, failure.outcome().phase());
+		assertEquals(TransferFailureDiagnostic.Kind.CHECK_CONSTRAINT, failure.outcome().failureDiagnostic().kind());
+		assertEquals("23513", failure.outcome().failureDiagnostic().sqlState());
 		assertEquals("transfer-table-1", failure.outcome().stoppedTaskId());
 		assertEquals(1, failure.outcome().committedProgress().get("transfer-table-1").getProcessedRowsAfter());
 		assertTrue(failure.outcome().completedTasks().isEmpty());

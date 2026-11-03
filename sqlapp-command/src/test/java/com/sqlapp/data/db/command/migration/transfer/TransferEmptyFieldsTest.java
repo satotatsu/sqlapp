@@ -30,6 +30,27 @@ class TransferEmptyFieldsTest {
 
 	@ParameterizedTest
 	@EnumSource(value = FileFormat.class, names = { "CSV", "TSV" })
+	void singleColumnKeylessNullRecordsAreNotDroppedAsEmptyLines(FileFormat format) throws Exception {
+		var source = database();
+		try {
+			sql(source, "CREATE TABLE ITEMS(NAME VARCHAR(30))");
+			sql(source, "INSERT INTO ITEMS VALUES(NULL),(''),('text')");
+			var job = Files.writeString(directory.resolve("single.yaml"),
+					"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ndataMode: FILE\nfiles: {directory: packages, format: "
+							+ format + ", headerMode: NONE}\n");
+			var exported = new TransferFileExportService().export(job, Map.of("from", source));
+			var preview = new TransferFileImportService().preview(exported.file(), exported.fingerprint(),
+					"export-table-1");
+			assertEquals(3, preview.rows().size());
+			assertEquals(1, preview.rows().stream().filter(row -> row.getFirst().sqlNull()).count());
+			assertEquals(1, preview.rows().stream().filter(row -> row.getFirst().text().equals("\"\"")).count());
+		} finally {
+			sql(source, "SHUTDOWN");
+		}
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = FileFormat.class, names = { "CSV", "TSV" })
 	void defaultUnquotedNullAndQuotedEmptyRoundTripWithoutAToken(FileFormat format) throws Exception {
 		var source = database();
 		var target = database();
@@ -74,7 +95,7 @@ class TransferEmptyFieldsTest {
 
 	@ParameterizedTest
 	@EnumSource(value = FileFormat.class, names = { "CSV", "TSV" })
-	void emptyTextChoiceAndLegacyTokenOnlyModeAreExplicit(FileFormat format) throws Exception {
+	void emptyTextChoiceAndOptionalTokenDoNotChangeQuotedEmptyText(FileFormat format) throws Exception {
 		var table = new com.sqlapp.data.schemas.Table("ITEMS");
 		var id = new com.sqlapp.data.schemas.Column("ID").setDataType(com.sqlapp.data.db.datatype.DataType.INT)
 				.setNotNull(true);
@@ -96,8 +117,17 @@ class TransferEmptyFieldsTest {
 		} finally {
 			com.sqlapp.util.iterator.IteratorCloseUtils.close(null, rows);
 		}
-		assertThrows(IllegalArgumentException.class, () -> new TransferCsvSource(table, file,
-				new FileTransfer("packages", format, "UTF-8", "__NULL__"), "test", 3).validate());
+		var defaultSource = new TransferCsvSource(table, file,
+				new FileTransfer("packages", format, "UTF-8", "__NULL__"), "test", 3);
+		defaultSource.validate();
+		var defaultRows = defaultSource.iterator(null);
+		try {
+			assertNull(defaultRows.next().get("NAME"));
+			assertEquals("", defaultRows.next().get("NAME"));
+			assertNull(defaultRows.next().get("NAME"));
+		} finally {
+			com.sqlapp.util.iterator.IteratorCloseUtils.close(null, defaultRows);
+		}
 		assertThrows(IllegalArgumentException.class, () -> new FileTransfer("packages", format, "UTF-8", null,
 				TemporalPolicy.WARN, null, EmptyFieldMode.EMPTY_STRING));
 	}

@@ -51,7 +51,16 @@ public final class TransferJobExecutionService {
 	public record Outcome(TransferJobPreparationService.Prepared prepared, Phase phase,
 			BulkMigrationJobResult copyResult, BulkMigrationJobVerificationResult verificationResult,
 			List<String> completedTasks, Map<String, ChunkedBulkMigrationProgress> committedProgress,
-			String stoppedTaskId, TransferSchemaPreparation.Progress schemaPreparation) {
+			String stoppedTaskId, TransferSchemaPreparation.Progress schemaPreparation,
+			TransferFailureDiagnostic failureDiagnostic) {
+		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
+				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
+				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId,
+				TransferSchemaPreparation.Progress schemaPreparation) {
+			this(prepared, phase, copyResult, verificationResult, completedTasks, committedProgress, stoppedTaskId,
+					schemaPreparation, null);
+		}
+
 		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
 				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
 				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId) {
@@ -70,7 +79,11 @@ public final class TransferJobExecutionService {
 		private final Outcome outcome;
 
 		private ExecutionException(Outcome outcome) {
-			super("Transfer failed during " + outcome.phase() + ". Inspect the outcome before retrying; "
+			super("Transfer failed during " + outcome.phase() + ". "
+					+ (outcome.failureDiagnostic() == null ? ""
+							: outcome.failureDiagnostic().reason() + " "
+									+ outcome.failureDiagnostic().technicalDetails() + ". ")
+					+ "Inspect the outcome before retrying; "
 					+ (outcome.prepared().job().configuration()
 							.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
 									? "created objects may remain. "
@@ -226,7 +239,9 @@ public final class TransferJobExecutionService {
 					|| command.getVerificationResult() != null && command.getVerificationResult().isMatch()))
 				phase[0] = Phase.FINALIZATION;
 			throw new ExecutionException(new Outcome(current, phase[0], command.getResult(),
-					command.getVerificationResult(), completed, progress, activeTask[0], schemaProgress[0]));
+					command.getVerificationResult(), completed, progress, activeTask[0], schemaProgress[0],
+					TransferFailureDiagnostic.capture(failure, phase[0] == Phase.VERIFICATION
+							&& command.getVerificationResult() != null && !command.getVerificationResult().isMatch())));
 		}
 	}
 

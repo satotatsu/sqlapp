@@ -17,6 +17,7 @@ the input. Depending on the database and captured metadata, this can include:
 
 - schemas, tables, columns, indexes and relationships;
 - views, materialized views and logs, external tables and table links;
+- physical projections, their output/sort columns, SELECT/DDL and source-table links;
 - functions, procedures, packages, triggers, rules and events;
 - sequences, synonyms, database links, domains and user-defined types;
 - tablespaces, partition functions and partition schemes;

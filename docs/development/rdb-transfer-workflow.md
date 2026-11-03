@@ -231,8 +231,8 @@ No connection, Schema mutation or data transfer occurs during read/write.
 `TransferJobPreparationService.prepare(jobFile, connections, workspace)` is the
 shared command-module entry for the first preparation path. It supports
 `REQUIRE_EXISTING` or `CREATE_MISSING`. Missing runtime
-bindings and explicit `mappingFile` settings are rejected
-before borrowing connections. Product-name differences are warnings by default;
+bindings are rejected before borrowing connections. Optional name mappings use
+the shared captured-Schema projection and target-dialect factories. Product-name differences are warnings by default;
 `compatibilityPolicy: ERROR` rejects them. Shared Schema types and target-dialect
 execution are best-effort and do not certify complete vendor-specific conversion.
 Warnings and the shared target Schema plan are returned in `Prepared` and retained
@@ -329,10 +329,10 @@ in-memory results, not a persistent aggregate execution report or recovery plan.
 
 ### Implemented source-only CSV export
 
-`TransferFileExportService.export(jobFile, connections)` accepts a FILE/CSV job
+`TransferFileExportService.export(jobFile, connections)` accepts a FILE job in CSV or JSONL format
 and only requires its source runtime binding. The target binding is never used;
 either Schema policy is accepted because target preparation belongs to import.
-JSONL execution and explicit mapping files are currently rejected. The exporter
+Explicit mapping files are currently rejected by file transfer. The exporter
 reuses the shared source metadata reader, bulk configuration resolver, dependency
 ordering, JDBC keyset iterator and CSV writer. The initial implementation therefore
 requires source tables with modeled NOT NULL unique keys; it is not an arbitrary
@@ -387,7 +387,8 @@ validates package bytes and CSV semantics before borrowing the target. It checks
 table membership against the original job using the existing resolver, exact
 catalog/schema/table and ordered column identities against canonical Schema,
 header, width, strict value conversion, NULL constraints, actual record counts
-and numeric ascending unique primary keys. Text primary keys and unsupported
+and ascending unique numeric primary keys when eligible. Text-key and keyless
+tables use full-scan INSERT with unordered multiset verification; unsupported
 canonical column types are rejected rather than guessed. Review validates live
 existing empty target tables and binds the plan to the target connection identity.
 With `CREATE_MISSING`, `TransferSchemaPreparation` generates a reviewed ordered
@@ -429,8 +430,10 @@ See the [task guide](../gradle-plugin/file-transfer.md) and
 [runnable example](../examples/file-transfer/README.md). The separate companion
 example checkout is outside this task's authorized writable scope; no external repository was changed. CSV import
 currently attempts same/different product pairs, with existing targets or optional missing
-ordinary-table preparation, numeric keys and the documented scalar types.
-Full Schema recreation, vendor-specific heterogeneous mapping and JSONL execution
+ordinary-table preparation and the documented scalar types. Numeric keys use
+keyset copy; other tables use non-resumable INSERT with duplicate-preserving
+unordered verification. WARN permits that route; ERROR rejects it before writes.
+Full Schema recreation and vendor-specific heterogeneous mapping
 remain incomplete; product-name mismatch alone is a warning in the CSV path.
 
 CSV temporal support now uses `TransferCsvTemporalCodec` for canonical local DATE,
@@ -521,3 +524,9 @@ policies and require explicit decisions where no safe default exists.
 Track product support explicitly. Embedded integration tests do not establish
 compatibility for every pair of supported database dialects. External database
 validation remains separate and requires authorization for the target and writes.
+
+JSONL file execution now shares CSV's package integrity, Schema, scalar/temporal
+conversion, keyset copy and verification path. GUI authoring selects CSV/JSONL
+and persists the existing `files.format`; Gradle consumes that same job. CSV
+remains the default. Name-only file mappings now use the same projection; binary/LOB and value-conversion restrictions remain. JSONL rows are flat typed objects, bounded and validated
+before target review; no arbitrary schema inference is performed.

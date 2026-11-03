@@ -12,6 +12,11 @@ The model is provided by `com.sqlapp:sqlapp-core`. See
 and [Published artifacts](../artifacts.md) when live JDBC or database-specific SQL
 also requires a dialect module.
 
+Schema XML attribute values preserve line feeds, carriage returns and tabs using
+numeric character references. This retains multiline SQL expressions, including
+line-comment boundaries, without changing attribute names or XML structure.
+Previously written XML that already lost these characters cannot recover them.
+
 ## Object hierarchy
 
 The common relational hierarchy is:
@@ -25,6 +30,7 @@ Catalog
     │   ├── Index
     │   └── Row data (when loaded)
     ├── View and materialized view
+    ├── Projection (physical storage representation; separate from views/indexes)
     ├── Sequence
     ├── Routine
     ├── Function
@@ -58,6 +64,9 @@ mutable child instance in multiple parent collections; create or clone an
 independent model when two workflows need separate ownership.
 
 ## Tables and columns
+
+Physical projections have their own Schema collection, XML and reference
+semantics. See [Physical projections](projections.md).
 
 Columns use the database-neutral `DataType` enum for types that sqlapp can
 represent across dialects. Length, precision, scale, nullability, identity,

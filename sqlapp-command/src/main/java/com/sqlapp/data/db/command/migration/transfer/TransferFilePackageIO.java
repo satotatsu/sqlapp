@@ -114,6 +114,7 @@ public final class TransferFilePackageIO {
 				|| job.configuration().dataMode() != TransferJobConfiguration.DataMode.FILE
 				|| !manifest.files().equals(job.configuration().files()))
 			throw new IllegalArgumentException("Package definition or file settings changed.");
+		mapping(job);
 		final Path schema = member(directory, "source-schema.xml");
 		if (!BoundedMigrationFile.sha256(schema, 16_777_216L, "maxSchemaBytes", "Schema")
 				.equals(manifest.schemaFingerprint()))
@@ -124,6 +125,19 @@ public final class TransferFilePackageIO {
 					.sha256(data, null, "maxDataBytes", "File data").equals(table.fingerprint()))
 				throw new IllegalArgumentException("Package file data changed or is incomplete.");
 		}
+	}
+
+	/** A mapping is local and pinned through the already-pinned job text. */
+	static TransferNameMappingIO.Snapshot mapping(TransferJobConfigurationIO.Snapshot job) throws IOException {
+		if (job.configuration().mappingFile() == null)
+			return null;
+		if (!TransferNameMappingIO.CAPTURED_FILE.equals(job.configuration().mappingFile()))
+			throw new IllegalArgumentException(
+					"Package name mapping must use the captured transfer-mapping.yaml member.");
+		var mapping = new TransferNameMappingIO()
+				.read(member(job.file().getParent(), TransferNameMappingIO.CAPTURED_FILE));
+		TransferNameMappingIO.checkDataJobPin(job.text(), mapping.fingerprint());
+		return mapping;
 	}
 
 	private static Path member(Path directory, String name) throws IOException {

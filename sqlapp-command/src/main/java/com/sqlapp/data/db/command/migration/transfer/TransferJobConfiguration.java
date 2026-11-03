@@ -75,7 +75,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 	}
 
 	public enum EmptyFieldMode {
-		NULL, EMPTY_STRING, TOKEN_ONLY
+		NULL, EMPTY_STRING
 	}
 
 	/**
@@ -106,9 +106,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 			if (directory == null || directory.isBlank())
 				throw new IllegalArgumentException("files.directory is required for file transport.");
 			format = format == null ? FileFormat.CSV : format;
-			emptyFieldMode = emptyFieldMode == null
-					? nullValue == null ? EmptyFieldMode.NULL : EmptyFieldMode.TOKEN_ONLY
-					: emptyFieldMode;
+			emptyFieldMode = emptyFieldMode == null ? EmptyFieldMode.NULL : emptyFieldMode;
 			if (format == FileFormat.JSONL && emptyFieldMode != EmptyFieldMode.NULL)
 				throw new IllegalArgumentException("JSONL uses native JSON values; omit files.emptyFieldMode.");
 			headerMode = headerMode == null ? format == FileFormat.JSONL ? HeaderMode.NONE : HeaderMode.VALIDATE
@@ -128,7 +126,7 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 					throw new IllegalArgumentException(format + " nullValue must be representable in files.encoding.");
 				if (emptyFieldMode != EmptyFieldMode.NULL && nullValue == null)
 					throw new IllegalArgumentException(
-							"Empty text/token-only mode requires files.nullValue to distinguish exported SQL NULL.");
+							"Empty text mode requires files.nullValue to distinguish exported SQL NULL.");
 			} else if (nullValue != null) {
 				throw new IllegalArgumentException("JSONL uses JSON null; omit files.nullValue.");
 			}
@@ -196,9 +194,6 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 					"allowDestructiveSchemaChanges requires SCHEMA_ONLY and APPLY_DIFFERENCES.");
 		if (dataMode == DataMode.FILE && files == null)
 			throw new IllegalArgumentException("FILE dataMode requires files settings.");
-		if (dataMode == DataMode.FILE && schemaMode == SchemaMode.CREATE_MISSING_WITH_IDENTITY)
-			throw new IllegalArgumentException(
-					"CREATE_MISSING_WITH_IDENTITY currently supports JDBC_DIRECT and SCHEMA_ONLY, not FILE.");
 		if (dataMode == DataMode.JDBC_DIRECT && files != null)
 			throw new IllegalArgumentException(
 					"files settings require FILE dataMode; they cannot be ignored in JDBC_DIRECT mode.");

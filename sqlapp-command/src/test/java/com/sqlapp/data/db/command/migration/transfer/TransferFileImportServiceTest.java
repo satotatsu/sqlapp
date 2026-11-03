@@ -415,6 +415,9 @@ class TransferFileImportServiceTest {
 		final var failure = assertThrows(TransferFileImportService.ImportException.class,
 				() -> service.execute(review, Map.of("to", target), directory));
 		assertEquals(TransferJobExecutionService.Phase.COPY, failure.outcome().phase());
+		assertEquals(TransferFailureDiagnostic.Kind.CHECK_CONSTRAINT, failure.outcome().failureDiagnostic().kind());
+		assertEquals("23513", failure.outcome().failureDiagnostic().sqlState());
+		assertTrue(Files.readString(failure.outcome().auditFile()).contains("failureDiagnostic"));
 		assertEquals(1, failure.outcome().committedProgress().get("export-table-1").getProcessedRowsAfter());
 		assertEquals("export-table-1", failure.outcome().stoppedTaskId());
 		assertTrue(Files.isRegularFile(failure.outcome().auditFile()));
@@ -430,6 +433,8 @@ class TransferFileImportServiceTest {
 		final var mismatch = assertThrows(TransferFileImportService.ImportException.class,
 				() -> service.execute(roundedReview, Map.of("to", roundedTarget), directory));
 		assertEquals(TransferJobExecutionService.Phase.VERIFICATION, mismatch.outcome().phase());
+		assertEquals(TransferFailureDiagnostic.Kind.VERIFICATION_MISMATCH,
+				mismatch.outcome().failureDiagnostic().kind());
 		assertEquals(1, mismatch.outcome().copyResult().getProcessedRows());
 		assertFalse(mismatch.outcome().verification().get("export-table-1").isMatch());
 		assertEquals(1, count(roundedTarget, "ITEMS"));

@@ -1,7 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.command.migration.transfer;
 
-/** Source-only command adapter for GUI-independent CSV package creation. */
+/** Source-only command adapter for GUI-independent CSV/TSV/JSONL packages. */
 @lombok.Getter
 @lombok.Setter
 public class ExportTransferFileCommand extends AbstractTransferFileCommand {
@@ -26,10 +26,10 @@ public class ExportTransferFileCommand extends AbstractTransferFileCommand {
 					java.util.Map.of(definition.configuration().source(), getDataSource()));
 			return null;
 		});
-		info("CSV manifest: ", result.file(), " fingerprint=", result.fingerprint());
+		info("File package manifest: ", result.file(), " fingerprint=", result.fingerprint());
 		if (!result.manifest().warnings().isEmpty())
 			logger.warn(
-					"CSV export completed with {} temporal warning(s). Inspect manifest.warnings before conversion/import.",
+					"File export completed with {} compatibility warning(s). Inspect manifest.warnings before import.",
 					result.manifest().warnings().size());
 	}
 }
