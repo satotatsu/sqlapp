@@ -38,6 +38,20 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 class OracleMetadataReaderTest {
 	@Test
 	void externalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		verifyExternalLocations(0);
+	}
+
+	@Test
+	void partitionedExternalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		verifyExternalLocations(1);
+	}
+
+	@Test
+	void subpartitionedExternalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		verifyExternalLocations(2);
+	}
+
+	private void verifyExternalLocations(int partitionMode) throws Exception {
 		try (Connection connection = ORACLE.createConnection("")) {
 			grantDirectoryAccess();
 			String name = "EXT_MULTI_"
@@ -46,9 +60,15 @@ class OracleMetadataReaderTest {
 			boolean created = false;
 			try {
 				try (Statement statement = connection.createStatement()) {
-					statement.execute("CREATE TABLE " + name + " (ID NUMBER) ORGANIZATION EXTERNAL (TYPE ORACLE_LOADER "
+					String locations = partitionMode == 0
+							? "LOCATION ('a,''quoted.csv', DATA_PUMP_DIR:'b.csv')) REJECT LIMIT 10"
+							: ") REJECT LIMIT 10 PARTITION BY RANGE(ID) " + (partitionMode == 1
+									? "(PARTITION P1 VALUES LESS THAN(100) LOCATION ('a,''quoted.csv'), PARTITION P2 VALUES LESS THAN(MAXVALUE) LOCATION ('b.csv'))"
+									: "SUBPARTITION BY LIST(BUCKET) (PARTITION P1 VALUES LESS THAN(MAXVALUE) "
+											+ "(SUBPARTITION S1 VALUES(1) LOCATION ('a,''quoted.csv'), SUBPARTITION S2 VALUES(DEFAULT) LOCATION ('b.csv')))");
+					statement.execute("CREATE TABLE " + name + " (ID NUMBER, BUCKET NUMBER) ORGANIZATION EXTERNAL (TYPE ORACLE_LOADER "
 							+ "DEFAULT DIRECTORY DATA_PUMP_DIR ACCESS PARAMETERS (RECORDS DELIMITED BY NEWLINE) "
-							+ "LOCATION ('a,''quoted.csv', DATA_PUMP_DIR:'b.csv')) REJECT LIMIT 10");
+							+ locations);
 					created = true;
 				}
 				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -62,6 +82,14 @@ class OracleMetadataReaderTest {
 				assertEquals("2", externalXml.getSpecifics().get("oracle.external.locationCount"));
 				assertEquals("a,'quoted.csv", externalXml.getSpecifics().get("oracle.external.location.0.file"));
 				assertEquals("b.csv", externalXml.getSpecifics().get("oracle.external.location.1.file"));
+				if (partitionMode > 0) {
+					assertEquals("P1", externalXml.getSpecifics().get("oracle.external.location.0.partition"));
+					assertEquals(partitionMode == 1 ? "P2" : "P1", externalXml.getSpecifics().get("oracle.external.location.1.partition"));
+				}
+				if (partitionMode == 2) {
+					assertEquals("S1", externalXml.getSpecifics().get("oracle.external.location.0.subpartition"));
+					assertEquals("S2", externalXml.getSpecifics().get("oracle.external.location.1.subpartition"));
+				}
 				var tableReader = schemaReader.getTableReader();
 				tableReader.setSchemaName(schemaName);
 				tableReader.setObjectName(name);
@@ -73,7 +101,9 @@ class OracleMetadataReaderTest {
 					statement.execute("DROP TABLE " + name);
 					for (var operation : registry.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE))
 						statement.execute(operation.getSqlText());
-					try (var result = statement.executeQuery("SELECT COUNT(*) FROM ALL_EXTERNAL_LOCATIONS WHERE OWNER='"
+					String locationView = partitionMode == 0 ? "ALL_EXTERNAL_LOCATIONS WHERE OWNER" : partitionMode == 1
+							? "ALL_XTERNAL_LOC_PARTITIONS WHERE OWNER" : "ALL_XTERNAL_LOC_SUBPARTITIONS WHERE TABLE_OWNER";
+					try (var result = statement.executeQuery("SELECT COUNT(*) FROM " + locationView + "='"
 							+ schemaName + "' AND TABLE_NAME='" + name + "'")) {
 						assertTrue(result.next());
 						assertEquals(2, result.getInt(1));

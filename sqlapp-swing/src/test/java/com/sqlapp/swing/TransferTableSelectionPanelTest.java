@@ -92,23 +92,19 @@ class TransferTableSelectionPanelTest {
 	}
 
 	@Test
-	void fileRouteRetainsKeyRequirementsAndUnavailableSelectionsCanBeRemoved() throws Exception {
+	void fileRouteAllowsKeylessExportSelection() throws Exception {
 		schema();
 		var chosen = new AtomicReference<List<String>>();
 		var panel = load(DataMode.FILE, List.of("PARENTS"), chosen);
 		SwingUtilities.invokeAndWait(() -> {
 			int child = row(panel.selector, "PUBLIC.CHILDREN");
-			assertFalse(panel.selector.model.isCellEditable(child, 0));
+			assertTrue(panel.selector.model.isCellEditable(child, 0));
 			panel.selector.model.setValueAt(true, child, 0);
 			assertTrue(panel.selector.model.isCellEditable(child, 0));
 			panel.selector.create.doClick(0);
-			assertNull(chosen.get());
-			assertTrue(panel.selector.status.getText().contains("unavailable"));
-			panel.selector.model.setValueAt(false, child, 0);
-			panel.selector.create.doClick(0);
 		});
 		idle(panel::isBusy);
-		assertEquals(List.of("PUBLIC.PARENTS"), chosen.get());
+		assertEquals(List.of("PUBLIC.PARENTS", "PUBLIC.CHILDREN"), chosen.get());
 	}
 
 	@Test

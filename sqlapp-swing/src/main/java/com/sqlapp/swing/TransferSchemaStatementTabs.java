@@ -122,6 +122,17 @@ final class TransferSchemaStatementTabs {
 				panel.filter.setText("");
 				statusSelector.setSelectedIndex(0);
 				taskSelector.setSelectedIndex(index);
+				if (panel.table.getRowCount() > 0) {
+					int selected = 0;
+					for (int row = 0; row < panel.table.getRowCount(); row++)
+						if ("Uncertain attempt".equals(
+								panel.table.getModel().getValueAt(panel.table.convertRowIndexToModel(row), 2))) {
+							selected = row;
+							break;
+						}
+					panel.table.setRowSelectionInterval(selected, selected);
+					panel.table.scrollRectToVisible(panel.table.getCellRect(selected, 0, true));
+				}
 				tabs.setSelectedComponent(panel);
 				return true;
 			}

@@ -10,21 +10,31 @@ import java.util.concurrent.atomic.*;
 import javax.swing.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.sqlapp.data.db.command.migration.transfer.*;
 import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentity;
 
 class FileTransferPanelTest {
-	@Test
-	void importResultRetainsMatchingDraftWithAppliedStatementWarning() throws Exception {
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void importResultRetainsMatchingDraftWithAppliedStatementWarning(boolean hasExportWarnings) throws Exception {
 		var base = reviewed();
+		var original = base.manifest();
+		var manifest = hasExportWarnings ? original
+				: new TransferFilePackageIO.Manifest(original.formatVersion(), original.jobFingerprint(),
+						original.schemaFingerprint(), original.files(), original.tables());
 		String draft = "-- review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
 		var statements = List.of(new TransferSchemaPreparation.Statement("task", "CREATE TABLE ITEMS(ID INTEGER)"));
 		var review = new FileTransferDesktopService.Reviewed(
 				new TransferFileImportService.Review(base.review().manifestFile(), HASH, base.review().targetIdentity(),
 						HASH, new TransferSchemaPreparation.Plan(HASH, statements)),
-				base.manifest(), draft);
+				manifest, draft);
 		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COMPLETE,
-				null, false, Map.of(), Map.of(), null, directory.resolve("import-result.json"),
+				null, true,
+				Map.of("task", new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 1, 1,
+						List.of(new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "same", "same")))),
+				Map.of(), null, directory.resolve("import-result.json"),
 				new TransferSchemaPreparation.Progress(statements, 1, null));
 		var ref = new AtomicReference<FileTransferPanel>();
 		var ready = new CountDownLatch(1);
@@ -61,12 +71,22 @@ class FileTransferPanelTest {
 			assertTrue(panel.schemaSql.editor.getText().startsWith("-- RECORDED IMPORT: COMPLETE"));
 			assertTrue(panel.schemaSql.editor.getText().contains("FULL planned SQL"));
 			assertTrue(panel.schemaSql.editor.getText().contains("completed statements: 1"));
+			assertEquals(hasExportWarnings, panel.summary.getText().contains("Retained package export warnings: 1"));
+			assertEquals(hasExportWarnings, java.util.stream.IntStream.range(0, panel.resultTabs.getTabCount())
+					.anyMatch(index -> panel.resultTabs.getTitleAt(index).startsWith("Warnings (")));
+			assertTrue(panel.summary.getText().contains("Open Execution progress"));
+			assertTrue(java.util.stream.IntStream.range(0, panel.resultTabs.getTabCount())
+					.anyMatch(index -> panel.resultTabs.getTitleAt(index).startsWith("Execution progress (")));
+			assertTrue(java.util.stream.IntStream.range(0, panel.resultTabs.getTabCount())
+					.anyMatch(index -> panel.resultTabs.getTitleAt(index).equals("Verification (1)")));
 		});
 	}
 
-	@Test
-	void schemaDraftSavesOpensEditorAndProtectsCsvPackageMembers() throws Exception {
-		for (var member : List.of("manifest.json", "transfer.yaml", "source-schema.xml", "table-1.csv"))
+	@ParameterizedTest
+	@ValueSource(strings = { "table-1.csv", "transfer-mapping.yaml" })
+	void schemaDraftSavesOpensEditorAndProtectsPackageMembers(String protectedMember) throws Exception {
+		for (var member : List.of("manifest.json", "transfer.yaml", "source-schema.xml", "table-1.csv",
+				"transfer-mapping.yaml"))
 			java.nio.file.Files.writeString(directory.resolve(member), "protected " + member);
 		var base = reviewed();
 		String draft = "-- review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
@@ -108,7 +128,7 @@ class FileTransferPanelTest {
 		assertTrue(saved.await(5, TimeUnit.SECONDS));
 		assertEquals(draft, java.nio.file.Files.readString(file));
 		var alias = java.nio.file.Files.createLink(directory.resolve("csv-alias.sql"),
-				directory.resolve("table-1.csv"));
+				directory.resolve(protectedMember));
 		var failed = new CountDownLatch(1);
 		SwingUtilities.invokeAndWait(() -> {
 			var panel = ref.get();
@@ -119,7 +139,8 @@ class FileTransferPanelTest {
 			panel.schemaDraft.saveTo(alias);
 		});
 		assertTrue(failed.await(5, TimeUnit.SECONDS));
-		assertEquals("protected table-1.csv", java.nio.file.Files.readString(directory.resolve("table-1.csv")));
+		assertEquals("protected " + protectedMember,
+				java.nio.file.Files.readString(directory.resolve(protectedMember)));
 		SwingUtilities.invokeAndWait(() -> {
 			var panel = ref.get();
 			assertTrue(panel.status.getText().contains("save failed"));

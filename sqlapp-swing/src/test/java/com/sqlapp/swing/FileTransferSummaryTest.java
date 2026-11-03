@@ -13,6 +13,21 @@ class FileTransferSummaryTest {
 	private static final String HASH = "sha256:" + "a".repeat(64);
 
 	@Test
+	void failureExplainsDatabaseCauseBeforeProgressWithoutLosingUncertainty() {
+		var diagnostic = new TransferFailureDiagnostic(TransferFailureDiagnostic.Kind.FOREIGN_KEY, "23503", 17);
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COPY, null,
+				true, Map.of(), Map.of(), "items", null, new TransferSchemaPreparation.Progress(List.of(), 0, null),
+				diagnostic);
+		var text = FileTransferSummary.text(outcome);
+		assertTrue(text.contains("Reason: A foreign key constraint rejected a row."));
+		assertTrue(text.contains("Check selected parent tables"));
+		assertTrue(text.contains("SQLState: 23503; vendor code: 17"));
+		assertTrue(text.indexOf("Reason:") < text.indexOf("Copy result:"));
+		assertTrue(text.contains("Committed rows may remain"));
+		assertTrue(text.contains("do not identify a failed row or authorize retry"));
+	}
+
+	@Test
 	void failureRetainsDdlUncertaintyCommittedRowsAndMissingAuditWithoutClaimingVerification() {
 		final var ddl = new TransferSchemaPreparation.Progress(
 				List.of(new TransferSchemaPreparation.Statement("items", "CREATE TABLE ITEMS(ID INTEGER)")), 0, 1,
@@ -58,6 +73,7 @@ class FileTransferSummaryTest {
 				Map.of("items", new BulkMigrationVerificationResult(10, 0, 0, List.of())), Map.of(), "orders", null);
 		final var text = FileTransferSummary.text(outcome);
 		assertTrue(text.contains("matched for 1 recorded tables"));
+		assertTrue(text.contains("Open Verification for recorded table counts"));
 		assertTrue(text.contains("Import did not complete"));
 	}
 

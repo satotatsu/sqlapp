@@ -11,6 +11,19 @@ class FileTransferOptionsPanelTest {
 	void validatesEditableEncodingKeepsSafeDefaultsAndDisablesJsonlHeadersAndBusyInputs() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			var options = new FileTransferOptionsPanel();
+			var implicit = options.settings("packages", FileFormat.CSV, TemporalPolicy.WARN);
+			assertNull(implicit.nullValue());
+			assertEquals(EmptyFieldMode.NULL, implicit.emptyFieldMode());
+			assertFalse(options.nullValue.isEnabled());
+			options.useNullToken.doClick(0);
+			assertTrue(options.nullValue.isEnabled());
+			options.emptyFieldMode.setSelectedItem(EmptyFieldMode.EMPTY_STRING);
+			assertEquals(EmptyFieldMode.EMPTY_STRING,
+					options.settings("packages", FileFormat.TSV, TemporalPolicy.WARN).emptyFieldMode());
+			options.useNullToken.doClick(0);
+			assertThrows(IllegalArgumentException.class,
+					() -> options.settings("packages", FileFormat.TSV, TemporalPolicy.WARN));
+			options.emptyFieldMode.setSelectedItem(EmptyFieldMode.NULL);
 			var defaults = options.settings("packages", FileFormat.CSV, "__NULL__", TemporalPolicy.WARN);
 			assertEquals("UTF-8", defaults.encoding());
 			assertEquals(HeaderMode.VALIDATE, defaults.headerMode());
@@ -32,6 +45,8 @@ class FileTransferOptionsPanelTest {
 					HeaderMode.NONE));
 			assertEquals("UTF-16LE", options.encoding.getSelectedItem());
 			assertEquals(HeaderMode.NONE, options.headerMode.getSelectedItem());
+			assertTrue(options.useNullToken.isSelected());
+			assertEquals(EmptyFieldMode.NULL, options.emptyFieldMode.getSelectedItem());
 			options.refreshEnabled(false, FileFormat.CSV);
 			assertFalse(options.encoding.isEnabled());
 			assertFalse(options.headerMode.isEnabled());

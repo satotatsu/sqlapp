@@ -463,6 +463,14 @@ class DirectTransferPanelTest {
 		SwingUtilities.invokeAndWait(() -> {
 			assertFalse(ref.get().execute.isEnabled());
 			assertTrue(ref.get().result.editor.getText().contains("COPY"));
+			assertTrue(ref.get().summary.getText().contains("A primary key or unique constraint rejected a row."));
+			assertTrue(ref.get().summary.getText().contains("SQLState: 23505; vendor code: 17"));
+			assertTrue(ref.get().result.editor.getText().contains("failureDiagnostic"));
+			assertTrue(ref.get().summary.getText().contains("Open Execution progress"));
+			assertTrue(java.util.stream.IntStream.range(0, ref.get().results.getTabCount())
+					.anyMatch(index -> ref.get().results.getTitleAt(index).startsWith("Execution progress (")));
+			assertTrue(java.util.stream.IntStream.range(0, ref.get().results.getTabCount())
+					.anyMatch(index -> ref.get().results.getTitleAt(index).equals("Verification (1)")));
 			assertTrue(ref.get().result.editor.getText().contains("transfer-result.json"));
 		});
 	}
@@ -531,9 +539,16 @@ class DirectTransferPanelTest {
 	}
 
 	private DirectTransferDesktopService.Executed executed(TransferJobExecutionService.Phase phase) {
-		return new DirectTransferDesktopService.Executed(
-				new TransferJobExecutionService.Outcome(reviewed().review().prepared(), phase, null, null, List.of(),
-						Map.of(), null),
+		var prepared = reviewed().review().prepared();
+		var verification = new com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult(
+				List.of(new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult("task", List.of("ID"),
+						new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 1, 1, List.of(
+								new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "same", "same"))))));
+		return new DirectTransferDesktopService.Executed(new TransferJobExecutionService.Outcome(prepared, phase, null,
+				verification, List.of(), Map.of(), null,
+				new TransferSchemaPreparation.Progress(List.of(), 0, null, prepared.warnings()),
+				phase == TransferJobExecutionService.Phase.COMPLETE ? null
+						: new TransferFailureDiagnostic(TransferFailureDiagnostic.Kind.UNIQUE_CONSTRAINT, "23505", 17)),
 				directory.resolve("transfer-result.json"));
 	}
 

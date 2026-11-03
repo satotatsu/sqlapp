@@ -66,6 +66,7 @@ final class FileTransferSummary {
 		} else if (value instanceof TransferFileImportService.Outcome outcome) {
 			TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Import execution phase: ").append(outcome.phase()).append('\n');
+			TransferExecutionSummary.appendFailure(text, outcome.failureDiagnostic());
 			TransferGeneratedKeyNotice.append(text, outcome.schemaPreparation().warnings());
 			TransferNameAdjustmentNotice.append(text, outcome.schemaPreparation().warnings());
 			TransferNextSteps.append(text, outcome.phase(), outcome.verificationRequested(),
@@ -86,6 +87,8 @@ final class FileTransferSummary {
 			else
 				text.append("matched for ").append(outcome.verification().size()).append(" recorded tables");
 			text.append('\n');
+			if (!outcome.verification().isEmpty())
+				TransferExecutionSummary.appendVerificationGuide(text);
 			outcome.committedProgress().entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
 					.forEach(entry -> text.append("Committed rows / ").append(entry.getKey()).append(": ")
 							.append(entry.getValue().getProcessedRowsAfter()).append('\n'));
@@ -114,6 +117,11 @@ final class FileTransferSummary {
 	private static void packageDetails(StringBuilder text, TransferFilePackageIO.Manifest manifest) {
 		text.append("File format: ").append(manifest.files().format()).append("; encoding: ")
 				.append(manifest.files().encoding()).append('\n');
+		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
+			text.append("Unquoted empty fields: ").append(manifest.files().emptyFieldMode()).append("; NULL token: ")
+					.append(manifest.files().nullValue() == null ? "not used"
+							: new com.sqlapp.util.JsonConverter().toJsonString(manifest.files().nullValue()))
+					.append('\n');
 		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
 			text.append("Header handling: ").append(switch (manifest.files().headerMode()) {
 			case VALIDATE -> "validate column names and skip one header record";

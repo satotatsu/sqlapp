@@ -54,6 +54,8 @@ final class DirectTransferPanel extends JPanel {
 	private final TransferWarningTabs warningTabs = new TransferWarningTabs();
 	private final TransferTablePreparationTabs tableTabs = new TransferTablePreparationTabs();
 	private final TransferSchemaStatementTabs statementTabs = new TransferSchemaStatementTabs();
+	private final TransferVerificationTabs verificationTabs = new TransferVerificationTabs();
+	private final TransferExecutionProgressTabs progressTabs = new TransferExecutionProgressTabs();
 	final ReadOnlyCodePanel schemaSql = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_SQL, false));
 	final GeneratedSqlDraftActions schemaDraft = new GeneratedSqlDraftActions(schemaSql, this::isBusy, this::setBusy,
@@ -80,6 +82,8 @@ final class DirectTransferPanel extends JPanel {
 		super(new BorderLayout(8, 8));
 		this.backend = backend;
 		tableTabs.setStatementNavigator(task -> statementTabs.showTask(results, task));
+		progressTabs.setNavigators(task -> statementTabs.showTask(results, task),
+				task -> verificationTabs.showTask(results, task));
 		draftDialog = presenter == null ? prepared -> DirectTransferDraftDialog.show(this, prepared) : presenter;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
@@ -213,6 +217,8 @@ final class DirectTransferPanel extends JPanel {
 		warningTabs.clear(results);
 		tableTabs.clear(results);
 		statementTabs.clear(results);
+		verificationTabs.clear(results);
+		progressTabs.clear(results);
 		results.remove(schemaSql);
 		schemaSql.showText("");
 		results.remove(gradle);
@@ -380,6 +386,8 @@ final class DirectTransferPanel extends JPanel {
 			warningTabs.clear(results);
 			tableTabs.clear(results);
 			statementTabs.clear(results);
+			verificationTabs.clear(results);
+			progressTabs.clear(results);
 			reviewed = null;
 			results.remove(gradle);
 			gradle.showText("");
@@ -436,6 +444,8 @@ final class DirectTransferPanel extends JPanel {
 					warningTabs.clear(results);
 					tableTabs.clear(results);
 					statementTabs.clear(results);
+					verificationTabs.clear(results);
+					progressTabs.clear(results);
 					final var cause = failure instanceof java.util.concurrent.ExecutionException ? failure.getCause()
 							: failure;
 					reviewed = null;
@@ -479,6 +489,8 @@ final class DirectTransferPanel extends JPanel {
 		warningTabs.show(results, value);
 		tableTabs.show(results, value);
 		statementTabs.show(results, value);
+		verificationTabs.show(results, value);
+		progressTabs.show(results, value, null);
 		results.remove(gradle);
 		gradle.showText("");
 		final var text = new StringBuilder();
@@ -543,6 +555,9 @@ final class DirectTransferPanel extends JPanel {
 			else
 				TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Execution phase: ").append(outcome.phase()).append('\n');
+			TransferExecutionSummary.appendFailure(text, outcome.failureDiagnostic());
+			if (progressTabs.panel != null)
+				TransferExecutionSummary.appendProgressGuide(text);
 			TransferGeneratedKeyNotice.append(text, outcome.prepared().warnings());
 			TransferNameAdjustmentNotice.append(text, outcome.prepared().warnings());
 			if (schemaOnly)
@@ -564,6 +579,8 @@ final class DirectTransferPanel extends JPanel {
 										: outcome.verificationResult() == null ? "not completed"
 												: outcome.verificationResult().isMatch() ? "matched" : "mismatch")
 						.append('\n');
+			if (outcome.verificationResult() != null && !outcome.verificationResult().getTasks().isEmpty())
+				TransferExecutionSummary.appendVerificationGuide(text);
 			warnings(text, outcome.prepared().warnings());
 			text.append("\nResult report: ").append(execution.report() == null ? "unavailable" : execution.report());
 			text.append(outcome.prepared().job().configuration()

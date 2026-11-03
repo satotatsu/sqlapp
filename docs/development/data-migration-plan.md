@@ -92,7 +92,7 @@ capabilities or a commitment to implement every option.
   execution and externally sorted multiset-hash verification. Missing PKs warn;
   MERGE/resume/repair stay disabled. Optional missing-table creation can add a
   target-only generated PK, defaulting to `ID` with optional `generatedKeyColumn`
-  in the shared job and both GUI authoring forms. CSV keyless transport remains a separate next step.
+  in the shared job and both GUI authoring forms. CSV/TSV/JSONL keyless and text-key package import now uses full-scan INSERT with unordered multiset verification, empty-target checks and WARN/ERROR review policy. File packages can also opt into the same target-only generated PK creation, with default ID or an explicit generatedKeyColumn; source headers/values and original FK columns remain unchanged.
 - The common settings form exposes target schema, Schema preparation, chunk
   size, verification and compatibility policy. More extraction/load controls
   require shared configuration and execution support first.
@@ -151,3 +151,16 @@ and integrity mismatches retain their failure evidence.
 
 Implementation status is stated separately from planned work. Performance and
 database compatibility claims require their own execution evidence.
+
+- Saved preview reports can be opened explicitly from the name editor, with a
+  background fingerprint check, missing/changed-file diagnostics, retry support
+  and a manual file path when browser integration is unavailable. Current edits
+  remain separate from the last saved snapshot; opening grants no execution
+  approval.
+
+- Offline file-package previews now reuse import's typed reader and pinned Schema
+  for CSV/TSV/JSONL, with table choice, 1..100 sampled rows, explicit NULL/empty
+  display and bounded, marked cell truncation. Integrity hashing can read full
+  member bytes; value parsing stays scoped to the sample. No database is opened,
+  and full value validation/target review remain separate. Direct JDBC sampling
+  and live target conversion previews are still outstanding.

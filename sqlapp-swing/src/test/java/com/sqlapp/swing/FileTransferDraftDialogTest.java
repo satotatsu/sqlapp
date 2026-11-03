@@ -20,6 +20,57 @@ class FileTransferDraftDialogTest {
 	Path directory;
 
 	@ParameterizedTest
+	@CsvSource({ "CSV, ''", "TSV, Row ID", "JSONL, 移行ID" })
+	void optionalImportSettingsSaveGeneratedTargetKeyWithoutChangingCapturedSource(FileFormat format, String name)
+			throws Exception {
+		var schema = new Schema("PUBLIC");
+		var table = new Table("EVENTS");
+		table.getColumns().add(new Column("VALUE").setDataType(DataType.VARCHAR));
+		schema.getTables().add(table);
+		var xml = directory.resolve("source-schema.xml");
+		schema.writeXml(xml.toFile());
+		var captured = new com.sqlapp.data.db.command.migration.transfer.TransferFileJobDraftBuilder()
+				.inspect(new BulkMigrationJobDraftBuilder().inspect(xml));
+		var saved = new AtomicReference<Path>();
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			var form = FileTransferDraftDialog.form(new DataMigrationDraftService.Prepared(directory, captured),
+					path -> {
+						saved.set(path);
+						done.countDown();
+					}, () -> fail("Not cancelled"));
+			assertFalse(form.generatedKey().isVisible());
+			form.showImportSettings().doClick(0);
+			form.createMissing().doClick(0);
+			assertTrue(form.generatedKey().isVisible());
+			form.generatedKey().doClick(0);
+			assertEquals("ID", form.generatedKeyColumn().getText());
+			form.createMissing().doClick(0);
+			assertFalse(form.generatedKey().isSelected());
+			assertFalse(form.generatedKeyColumn().isEnabled());
+			form.createMissing().doClick(0);
+			form.generatedKey().doClick(0);
+			if (!name.isEmpty())
+				form.generatedKeyColumn().setText(name);
+			form.format().setSelectedItem(format);
+			form.picker().select.doClick(0);
+			form.picker().create.doClick(0);
+			assertTrue(form.picker().isBusy());
+			assertFalse(form.generatedKey().isEnabled());
+			assertFalse(form.generatedKeyColumn().isEnabled());
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		var configuration = new TransferJobConfigurationIO().read(saved.get()).configuration();
+		assertEquals(
+				com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY,
+				configuration.schemaMode());
+		assertEquals(name.isEmpty() ? "ID" : name, configuration.effectiveGeneratedKeyColumn());
+		assertEquals(format, configuration.files().format());
+		assertEquals(java.util.List.of("PUBLIC.EVENTS"), configuration.tables());
+		assertEquals(captured.fingerprint(), new BulkMigrationJobDraftBuilder().inspect(xml).fingerprint());
+	}
+
+	@ParameterizedTest
 	@CsvSource({ "'', CSV", "Archive Data, CSV", "'', JSONL", "Archive Data, JSONL", "'', TSV", "Archive Data, TSV" })
 	void formSavesSelectedTargetSchemaWithoutConnectingOrChangingSourceSelection(String targetSchema, FileFormat format)
 			throws Exception {
@@ -41,7 +92,14 @@ class FileTransferDraftDialogTest {
 						done.countDown();
 					}, () -> fail("No cancellation requested"));
 			assertEquals("", form.targetSchema().getText());
+			assertFalse(form.showImportSettings().isSelected());
+			assertFalse(form.importSettings().isVisible());
+			form.showImportSettings().doClick(0);
+			assertTrue(form.importSettings().isVisible());
 			assertEquals(FileFormat.CSV, form.format().getSelectedItem());
+			assertFalse(form.fileOptions().useNullToken.isSelected());
+			assertFalse(form.nullValue().isEnabled());
+			form.fileOptions().useNullToken.doClick(0);
 			assertEquals("UTF-8", form.fileOptions().encoding.getSelectedItem());
 			assertEquals(com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.HeaderMode.VALIDATE,
 					form.fileOptions().headerMode.getSelectedItem());

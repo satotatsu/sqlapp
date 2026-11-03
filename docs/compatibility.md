@@ -56,6 +56,7 @@ release checklist must record which integration suites were actually run.
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | PostgreSQL engine 11 and 15 baselines | Module tests and local containers 2024.2.11.0-b36 / 2026.1.2.0-b137 | Supported relational compatibility scope: schema recreation, COPY/upsert, checkpoint/resume and conflict handling verified on both baselines. Physical/distributed extensions and multi-node failover excluded; see [scope and limits](../sqlapp-core-yugabyte/README.md). |
 | EDB Postgres Advanced Server | `sqlapp-core-edb-oracle` | EPAS 14–18 | Module tests; upstream PostgreSQL 14–18 controls passed, no EPAS execution | Experimental PostgreSQL baseline for the Oracle-compatible product. EPAS and Oracle-specific objects unverified. See [scope](../sqlapp-core-edb-oracle/README.md). |
 | Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
+| Aurora MySQL | `sqlapp-core-aurora-mysql` | Aurora 3.x (MySQL 8.0) and 8.4 | Upstream MySQL 8.0.46 / 8.4.11 containers; no Aurora execution | Experimental; [scope and tests](../sqlapp-core-aurora-mysql/README.md). |
 | PostgreSQL | `sqlapp-core-postgres` | Explicit branches from 8.2 through 18 | PostgreSQL 14 and 18.4 test images | Historical branches are preserved, but current containers do not rerun every major release. |
 | SAP HANA | `sqlapp-core-saphana` | Platform and HANA Cloud split | SAP HANA Express 2.0 (`2.00.088`) image | HANA Cloud vector-index and fuzzy-search catalog behavior requires a HANA Cloud tenant. |
 | Google Cloud Spanner | `sqlapp-core-spanner` | Generic Cloud Spanner resolver | Cloud Spanner emulator | Search/vector index, locality/storage, and some service-only metadata require a real service environment. |
@@ -107,6 +108,7 @@ are not a declaration that applications must use exactly these versions.
 | MySQL | `com.mysql:mysql-connector-j:9.7.0` |
 | Oracle | `com.oracle.database.jdbc:ojdbc11:23.26.2.0.0` |
 | Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
+| Aurora MySQL | `sqlapp-core-aurora-mysql` | Aurora 3.x (MySQL 8.0) and 8.4 | Upstream MySQL 8.0.46 / 8.4.11 containers; no Aurora execution | Experimental; [scope and tests](../sqlapp-core-aurora-mysql/README.md). |
 | PostgreSQL | `org.postgresql:postgresql:42.7.11` |
 | SAP HANA | `com.sap.cloud.db.jdbc:ngdbc:2.29.7` |
 | Cloud Spanner | `com.google.cloud:google-cloud-spanner-jdbc:2.41.0` |
@@ -2760,3 +2762,26 @@ No registry credentials/licenses, external databases or remote link targets were
 accessed. Existing public APIs/Schema XML/dependency versions remain unchanged.
 See the [current EDB guide](../sqlapp-core-edb-oracle/README.md) for usage,
 qualification boundaries and official references.
+
+## Aurora MySQL implementation boundary
+
+`sqlapp-core-aurora-mysql` supports Aurora 3.x / MySQL 8.0 and Aurora 8.4 / MySQL 8.4
+through inherited MySQL readers and factories. Actual Aurora execution is unverified.
+See [usage, detection and limitations](../sqlapp-core-aurora-mysql/README.md).
+
+Aurora MySQL upstream validation on 2026-11-03 (Java 25 / repository wrapper):
+
+```powershell
+.\gradlew.bat :sqlapp-core-dialect-test:auroraMySqlCompatibilityTest :sqlapp-core-aurora-mysql:test --console=plain
+```
+
+MySQL 8.0.46 and 8.4.11 each passed all six integration tests (12 total), with no
+failures, errors or skips. Coverage includes native/portable type metadata and DDL
+recreation, table primary-key enforcement and view recreation, bulk text/binary
+preservation, caller-owned INSERT/UPSERT rollback, owned UPSERT commit visibility,
+and ordinary MySQL detection without transaction changes. The Aurora unit test
+task was UP-TO-DATE from its prior 21-test successful run. Real AWS Aurora was not
+accessed; positive AWS identification remains mock-tested. No production APIs,
+configuration formats or dependency versions changed in this validation step.
+See the [validation record](../sqlapp-core-aurora-mysql/README.md) for image digests
+and remaining Aurora-specific qualification. Build outputs are ignored.

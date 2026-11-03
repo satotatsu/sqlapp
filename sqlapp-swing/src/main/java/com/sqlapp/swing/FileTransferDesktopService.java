@@ -100,7 +100,7 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 				throw new IllegalArgumentException(
 						"Package inspection failed. Check manifest.json, all package members and their recorded sizes/hashes. No database connection was opened.");
 			throw new IllegalArgumentException(
-					"File transfer operation failed. Check the connection, supported scalar columns/numeric keys, "
+					"File transfer operation failed. Check the connection, supported scalar columns, compatibility policy, "
 							+ "existing empty target tables, file settings and package integrity. No automatic retry or target reset was performed.");
 		} finally {
 			Arrays.fill(password, '\0');

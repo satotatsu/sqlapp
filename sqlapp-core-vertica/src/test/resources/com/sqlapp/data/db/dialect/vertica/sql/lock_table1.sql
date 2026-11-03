@@ -1,0 +1,1 @@
+LOCK "tableA" IN EXCLUSIVE MODE

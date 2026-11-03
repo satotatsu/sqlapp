@@ -96,6 +96,11 @@ final class JobDraftPanel extends JPanel {
 	}
 
 	private boolean fullScanInsert;
+	private boolean fileExport;
+
+	JPanel fileImportOptions() {
+		return optionsRow;
+	}
 
 	void fullScanInsert(boolean enabled) {
 		fullScanInsert = enabled;
@@ -476,8 +481,8 @@ final class JobDraftPanel extends JPanel {
 		if (snapshot != null) {
 			long available = snapshot.tables().stream()
 					.filter(table -> fullScanInsert ? table.insertSelectable() : table.selectable()).count();
-			count.setText(count.getText() + "; data-copy eligible: " + available + "; unavailable: "
-					+ (snapshot.tables().size() - available));
+			count.setText(count.getText() + (fileExport ? "; export eligible: " : "; data-copy eligible: ") + available
+					+ "; unavailable: " + (snapshot.tables().size() - available));
 		}
 		if (snapshot == null)
 			selectionHelp.setText("Read Schema to see the tables available for selection.");
@@ -485,8 +490,8 @@ final class JobDraftPanel extends JPanel {
 			selectionHelp.setText("No tables in this Schema. Choose another Schema or source schema.");
 		else if (!schemaOnly && snapshot.tables().stream()
 				.noneMatch(table -> fullScanInsert ? table.insertSelectable() : table.selectable()))
-			selectionHelp.setText(
-					"No eligible tables. Review Availability: primary keys and supported copy types are required.");
+			selectionHelp.setText(fileExport ? "No exportable tables. Review Availability for supported file types."
+					: "No eligible tables. Review Availability: primary keys and supported copy types are required.");
 		else if (unavailableOnly.isSelected())
 			selectionHelp.setText(
 					"Review Availability for each restriction. Existing selections remain included; this filter changes no copy rules.");
@@ -496,7 +501,8 @@ final class JobDraftPanel extends JPanel {
 			selectionHelp.setText(selected == 0 ? "No tables match. Clear the filter to see available tables."
 					: "No tables match. Selected tables are hidden and will still be included; clear the filter to review them.");
 		else if (selected == 0)
-			selectionHelp.setText("Tick Include for each table to copy, or use Select visible eligible.");
+			selectionHelp.setText(fileExport ? "Tick Include for each table to export; a primary key is not required."
+					: "Tick Include for each table to copy, or use Select visible eligible.");
 		else if (hidden > 0)
 			selectionHelp.setText(
 					"Hidden selections will also be included. Clear the filter to review every selected table.");
@@ -775,6 +781,8 @@ final class JobDraftPanel extends JPanel {
 	static JobDraftPanel fileTransfer(SchemaSnapshot schema, java.util.function.Supplier<FileDraftWriter> saver,
 			Consumer<Path> ready, Runnable cancelled) {
 		final var panel = new JobDraftPanel(path -> ready.accept(Path.of(path)));
+		panel.fileExport = true;
+		panel.unavailableOnly.setText("Unavailable for export");
 		panel.schemaFile.setText(schema.file().toString());
 		panel.showSnapshot(schema);
 		panel.fileDraftWriter = saver;

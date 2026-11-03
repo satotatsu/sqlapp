@@ -26,6 +26,11 @@ class TransferJobSettingsPanelTest {
 		var panel = load(file, saved);
 		SwingUtilities.invokeAndWait(() -> {
 			assertTrue(panel.fileOptions.isVisible());
+			assertFalse(panel.importSettings.isVisible());
+			assertTrue(panel.editMapping.isEnabled());
+			assertTrue(SwingUtilities.isDescendingFrom(panel.mappingFile, panel.importSettings));
+			panel.showImportSettings.doClick(0);
+			assertTrue(panel.importSettings.isVisible());
 			assertEquals("UTF-8", panel.fileOptions.encoding.getSelectedItem());
 			panel.fileOptions.encoding.getEditor().setItem("invalid-encoding");
 			panel.save.doClick(0);
@@ -54,7 +59,7 @@ class TransferJobSettingsPanelTest {
 	@ValueSource(strings = { "JDBC_DIRECT", "SCHEMA_ONLY", "FILE" })
 	void editsTableSelectionOnlyInMemoryUntilSaveAndPreservesOtherSettings(String route) throws Exception {
 		String options = route.equals("FILE")
-				? "schemaMode: CREATE_MISSING\nfiles: {directory: packages, nullValue: __NULL__, unsupportedTemporalPolicy: ERROR}\n"
+				? "schemaMode: CREATE_MISSING\nmappingFile: names.yaml\nfiles: {directory: packages, nullValue: __NULL__, unsupportedTemporalPolicy: ERROR}\n"
 				: route.equals("SCHEMA_ONLY")
 						? "schemaMode: APPLY_DIFFERENCES\nallowDestructiveSchemaChanges: true\nmappingFile: names.yaml\n"
 						: "schemaMode: CREATE_MISSING_WITH_IDENTITY\ngeneratedKeyColumn: ROW_ID\nmappingFile: names.yaml\n";
@@ -97,12 +102,12 @@ class TransferJobSettingsPanelTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void generatedKeyColumnCanBeEditedInDirectAndSchemaOnlyJobs(boolean schemaOnly) throws Exception {
+	@ValueSource(strings = { "JDBC_DIRECT", "SCHEMA_ONLY", "FILE" })
+	void generatedKeyColumnCanBeEditedInEveryTransport(String route) throws Exception {
 		var file = Files.writeString(directory.resolve("custom-key.yaml"),
 				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n"
-						+ "generatedKeyColumn: SQLAPP_ROW_ID\ndataMode: " + (schemaOnly ? "SCHEMA_ONLY" : "JDBC_DIRECT")
-						+ "\n");
+						+ "generatedKeyColumn: SQLAPP_ROW_ID\ndataMode: " + route + "\n"
+						+ (route.equals("FILE") ? "files: {directory: packages}\n" : ""));
 		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
 		var panel = load(file, saved);
 		var done = new CountDownLatch(1);

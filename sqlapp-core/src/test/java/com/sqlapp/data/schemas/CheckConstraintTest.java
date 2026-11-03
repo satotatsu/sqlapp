@@ -20,6 +20,15 @@
 package com.sqlapp.data.schemas;
 
 public class CheckConstraintTest extends AbstractDbObjectTest<CheckConstraint> {
+	@org.junit.jupiter.api.Test
+	public void preservesMultilineExpressionThroughXml() throws Exception {
+		final var table = new Table("Orders");
+		final String expression = "quantity > 0 -- keep this comment\r\n\tAND label <> '𠮷'\nAND quantity < 10";
+		table.getConstraints().add(new CheckConstraint("valid", expression));
+		final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		org.junit.jupiter.api.Assertions.assertEquals(expression,
+				((CheckConstraint) restored.getConstraints().get(0)).getExpression());
+	}
 
 	@Override
 	protected CheckConstraint getObject() {

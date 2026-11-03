@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.sqlapp.data.db.command.migration.transfer.*;
 
 class TransferWarningTabsTest {
@@ -18,6 +20,94 @@ class TransferWarningTabsTest {
 				List.of(new TransferFilePackageIO.TableFile("customers", null, "PUBLIC", "CUSTOMERS", List.of("ID"),
 						"table-1.csv", 0, 0, HASH)),
 				List.of(new TransferFilePackageIO.Warning("customers", "ID", "Review precision\nFull detail"))));
+	}
+
+	private FileTransferDesktopService.Reviewed review(String manifestFingerprint, String planFingerprint) {
+		return new FileTransferDesktopService.Reviewed(
+				new TransferFileImportService.Review(snapshot().file(), manifestFingerprint, null, planFingerprint),
+				snapshot().manifest());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "COMPLETE", "COPY", "VERIFICATION" })
+	void importResultsRetainMatchingExportWarningsWithOriginalOriginAndDuplicates(String phase) {
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH,
+				TransferJobExecutionService.Phase.valueOf(phase), null, true, Map.of(), Map.of(), null, null,
+				new TransferSchemaPreparation.Progress(List.of(), 0, null,
+						List.of("Target warning", "Target warning")));
+		var rows = TransferWarningTabs.rows(outcome, review(HASH, HASH));
+		assertEquals(3, rows.size());
+		assertEquals(List.of("Package export", "customers", "ID", "Review precision\nFull detail"),
+				rows.getFirst().subList(0, 4));
+		assertEquals(rows.get(1), rows.get(2));
+		assertEquals(2, TransferWarningTabs.rows(outcome).size());
+		assertEquals(2, TransferWarningTabs.rows(outcome, review("other", HASH)).size());
+		assertEquals(2, TransferWarningTabs.rows(outcome, review(HASH, "other")).size());
+		assertEquals(2, TransferWarningTabs
+				.rows(outcome,
+						new FileTransferDesktopService.Reviewed(
+								new TransferFileImportService.Review(Path.of("missing.json"), HASH, null, HASH), null))
+				.size());
+	}
+
+	@Test
+	void fileInsertGuidanceExplainsPermittedImportAndDoesNotParseOrdinaryMessages() {
+		var packageWarning = new TransferFilePackageIO.Manifest(1, HASH, HASH, snapshot().manifest().files(),
+				snapshot().manifest().tables(),
+				List.of(new TransferFilePackageIO.Warning("customers", "ID", "[FILE_FULL_SCAN_INSERT] fixture")));
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COMPLETE,
+				null, true, Map.of(), Map.of(), null, null,
+				new TransferSchemaPreparation.Progress(List.of(), 0, null, List.of("[FILE_FULL_SCAN_INSERT] fixture",
+						"This file INSERT mentions customers without a stable code")));
+		var prior = new FileTransferDesktopService.Reviewed(review(HASH, HASH).review(), packageWarning);
+		var rows = TransferWarningTabs.rows(outcome, prior);
+		assertEquals(List.of("Package export / File INSERT", "Import / File INSERT", "Target compatibility"),
+				rows.stream().map(row -> row.getFirst()).toList());
+		assertTrue(rows.getFirst().get(4).contains("WARN permits this route"));
+		assertTrue(rows.get(1).get(4).contains("ERROR stops target review before writes"));
+		assertTrue(rows.get(1).get(4).contains("hash positions are not source row numbers"));
+		assertEquals("", rows.get(1).get(1));
+	}
+
+	@Test
+	void categoryAndTaskFiltersCombineWithLiteralSearchAndClearWithoutChangingEvidence() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COPY,
+					null, true, Map.of(), Map.of(), null, null,
+					new TransferSchemaPreparation.Progress(List.of(), 0, null,
+							List.of(TransferSchemaChangeChecks.DATA_IMPACT + " fixture", "Other target warning")));
+			var warnings = new TransferWarningTabs();
+			var tabs = new JTabbedPane();
+			warnings.show(tabs, outcome, review(HASH, HASH));
+			var panel = (ReportDetailTablePanel) tabs.getComponentAt(0);
+			assertEquals(4, warnings.categorySelector.getItemCount());
+			assertEquals(3, warnings.taskSelector.getItemCount());
+			assertEquals("All categories (3)", warnings.categorySelector.getSelectedItem().toString());
+			warnings.categorySelector.setSelectedIndex(1);
+			assertEquals(1, panel.table.getRowCount());
+			warnings.taskSelector.setSelectedIndex(2);
+			assertEquals(0, panel.table.getRowCount());
+			warnings.showAll.doClick(0);
+			assertEquals(3, panel.table.getRowCount());
+			warnings.taskSelector.setSelectedIndex(1);
+			assertEquals(1, panel.table.getRowCount());
+			panel.filter.setText("Full detail");
+			panel.table.moveColumn(1, 4);
+			panel.table.setRowSelectionInterval(0, 0);
+			assertTrue(panel.selected.getText().contains("Full detail"));
+			warnings.showAll.doClick(0);
+			assertEquals("", panel.filter.getText());
+			assertEquals(3, panel.table.getRowCount());
+			assertEquals("All categories (3)", warnings.categorySelector.getSelectedItem().toString());
+			var category = warnings.categorySelector;
+			var task = warnings.taskSelector;
+			var all = warnings.showAll;
+			warnings.clear(tabs);
+			category.setSelectedIndex(1);
+			task.setSelectedIndex(1);
+			all.doClick(0);
+			assertEquals(0, tabs.getTabCount());
+		});
 	}
 
 	@Test

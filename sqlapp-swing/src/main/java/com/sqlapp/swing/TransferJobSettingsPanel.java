@@ -14,6 +14,8 @@ final class TransferJobSettingsPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final JTextField targetSchema = new JTextField(24);
 	final FileTransferOptionsPanel fileOptions = new FileTransferOptionsPanel();
+	final JCheckBox showImportSettings = new JCheckBox("Optional import settings (no target access during Export)");
+	final JPanel importSettings = new JPanel(new GridLayout(0, 1, 4, 4));
 	final JTextField mappingFile = new JTextField(24);
 	final JButton browseMapping = new JButton("Browse…");
 	final JButton editMapping = new JButton("Edit names…");
@@ -147,6 +149,22 @@ final class TransferJobSettingsPanel extends JPanel {
 		chunkRow.add(chunkLabel);
 		chunkRow.add(chunk);
 		fields.add(chunkRow);
+		if (mode == TransferJobConfiguration.DataMode.FILE) {
+			fields.setLayout(new BoxLayout(fields, BoxLayout.Y_AXIS));
+			for (var field : new Component[] { schemaRow, mappingRow, createMissing, generatedKey, generatedKeyRow,
+					verify, chunkRow }) {
+				fields.remove(field);
+				importSettings.add(field);
+			}
+			importSettings.setVisible(false);
+			fields.add(showImportSettings);
+			fields.add(importSettings);
+			showImportSettings.addActionListener(event -> {
+				importSettings.setVisible(showImportSettings.isSelected());
+				fields.revalidate();
+				fields.repaint();
+			});
+		}
 		fileOptions.setVisible(mode == TransferJobConfiguration.DataMode.FILE);
 		fields.add(fileOptions);
 		fields.add(new JLabel("Saving changes only the job, never a database or completed package."));
@@ -154,6 +172,10 @@ final class TransferJobSettingsPanel extends JPanel {
 		fields.add(new JLabel(mode == TransferJobConfiguration.DataMode.FILE
 				? "After saving, export a new package; existing packages keep their original settings."
 				: "After saving, review again in the GUI or Gradle before execution."));
+		if (mode == TransferJobConfiguration.DataMode.FILE)
+			for (var component : fields.getComponents())
+				if (component instanceof JComponent field)
+					field.setAlignmentX(Component.LEFT_ALIGNMENT);
 		add(new JScrollPane(fields), BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout(4, 4));
 		footer.add(status, BorderLayout.NORTH);
@@ -236,8 +258,7 @@ final class TransferJobSettingsPanel extends JPanel {
 			final var original = snapshot.configuration();
 			var files = original.files();
 			if (files != null)
-				files = fileOptions.settings(files.directory(), files.format(), files.nullValue(),
-						files.unsupportedTemporalPolicy());
+				files = fileOptions.settings(files.directory(), files.format(), files.unsupportedTemporalPolicy());
 			updated = new TransferJobConfiguration(original.formatVersion(), original.source(), original.target(),
 					selectedTables,
 					schemaOnly.isSelected() && applyDifferences.isSelected()
@@ -261,7 +282,7 @@ final class TransferJobSettingsPanel extends JPanel {
 					generatedKey.isSelected() && generatedKey.isVisible() ? generatedKeyColumn.getText() : null);
 		} catch (Exception failure) {
 			status.setText(mode == TransferJobConfiguration.DataMode.FILE
-					? "Check chunk size (1..1000000), target schema, character encoding and header setting before saving."
+					? "Check chunk size (1..1000000), target schema, generated PK column name, character encoding, header and NULL/empty-field settings before saving."
 					: "Check chunk size (1..1000000), target schema and generated PK column name before saving.");
 			return;
 		}
@@ -323,14 +344,15 @@ final class TransferJobSettingsPanel extends JPanel {
 	}
 
 	private void refresh() {
+		showImportSettings.setEnabled(!busy && snapshot != null);
 		fileOptions.refreshEnabled(!busy && snapshot != null && snapshot.configuration().files() != null,
 				snapshot != null && snapshot.configuration().files() != null ? snapshot.configuration().files().format()
 						: TransferJobConfiguration.FileFormat.CSV);
 		editTables.setEnabled(!busy && snapshot != null);
-		mappingRow.setVisible(mode != TransferJobConfiguration.DataMode.FILE || !mappingFile.getText().isBlank());
+		mappingRow.setVisible(true);
 		mappingFile.setEnabled(!busy && snapshot != null);
 		browseMapping.setEnabled(mappingFile.isEnabled());
-		editMapping.setEnabled(mappingFile.isEnabled() && mode != TransferJobConfiguration.DataMode.FILE);
+		editMapping.setEnabled(mappingFile.isEnabled());
 		for (var field : new java.awt.Component[] { targetSchema, createMissing, verify, strict, chunk })
 			field.setEnabled(!busy && snapshot != null);
 		schemaOnly.setEnabled(!busy && snapshot != null);
@@ -338,8 +360,8 @@ final class TransferJobSettingsPanel extends JPanel {
 		applyDifferences.setEnabled(!busy && snapshot != null && schemaOnly.isSelected());
 		allowDestructive.setVisible(applyDifferences.isVisible() && applyDifferences.isSelected());
 		allowDestructive.setEnabled(applyDifferences.isEnabled() && applyDifferences.isSelected());
-		generatedKey.setVisible(mode != TransferJobConfiguration.DataMode.FILE && createMissing.isSelected()
-				&& !(schemaOnly.isSelected() && applyDifferences.isSelected()));
+		generatedKey
+				.setVisible(createMissing.isSelected() && !(schemaOnly.isSelected() && applyDifferences.isSelected()));
 		generatedKey.setEnabled(!busy && snapshot != null && generatedKey.isVisible());
 		generatedKeyRow.setVisible(generatedKey.isVisible() && generatedKey.isSelected());
 		generatedKeyColumn.setEnabled(!busy && snapshot != null && generatedKeyRow.isVisible());
