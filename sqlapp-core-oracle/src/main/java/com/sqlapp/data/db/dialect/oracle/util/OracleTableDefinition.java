@@ -8,8 +8,8 @@ import java.util.HexFormat;
 import com.sqlapp.data.schemas.Table;
 
 /**
- * Complete IOT/composite table DDL; modeled components remain supplemental
- * metadata.
+ * Complete IOT/composite/external table DDL; modeled components remain
+ * supplemental metadata.
  */
 public final class OracleTableDefinition {
 	private OracleTableDefinition() {

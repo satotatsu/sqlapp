@@ -40,12 +40,11 @@ class OracleDataTypeMatrixTest {
 
 	@ParameterizedTest(name = "{0} -> {1}: {2}")
 	@CsvSource({ "'number(3,0)', DECIMAL, 'NUMBER(3,0)'", "'number(10,0)', DECIMAL, 'NUMBER(10,0)'",
-			"'number(19,0)', DECIMAL, 'NUMBER(19,0)'",
-			"binary_double, DOUBLE, BINARY_DOUBLE", "binary_float, REAL, BINARY_FLOAT", "float, FLOAT, FLOAT(126)",
-			"varchar2(12), VARCHAR, VARCHAR2(12)", "char(7), CHAR, CHAR(7)", "nvarchar2(12), NVARCHAR, NVARCHAR2(12)",
-			"raw(12), VARBINARY, RAW(12)", "'number(12,3)', DECIMAL, 'NUMBER(12,3)'", "date, DATETIME, DATE",
-			"timestamp(3), TIMESTAMP, TIMESTAMP(3)", "clob, CLOB, CLOB", "blob, BLOB, BLOB",
-			"XMLType, SQLXML, XMLTYPE" })
+			"'number(19,0)', DECIMAL, 'NUMBER(19,0)'", "binary_double, DOUBLE, BINARY_DOUBLE",
+			"binary_float, REAL, BINARY_FLOAT", "float, FLOAT, FLOAT(126)", "varchar2(12), VARCHAR, VARCHAR2(12)",
+			"char(7), CHAR, CHAR(7)", "nvarchar2(12), NVARCHAR, NVARCHAR2(12)", "raw(12), VARBINARY, RAW(12)",
+			"'number(12,3)', DECIMAL, 'NUMBER(12,3)'", "date, DATETIME, DATE", "timestamp(3), TIMESTAMP, TIMESTAMP(3)",
+			"clob, CLOB, CLOB", "blob, BLOB, BLOB", "XMLType, SQLXML, XMLTYPE" })
 	void resolvesAndGeneratesNativeTypes(String input, DataType expectedType, String expectedSql) {
 		for (int[] version : new int[][] { { 11, 2 }, { 19, 0 }, { 23, 0 } }) {
 			var dialect = DialectResolver.getInstance().getDialect("oracle", version[0], version[1], null);

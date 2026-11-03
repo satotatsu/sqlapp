@@ -84,6 +84,8 @@ public class OracleTableReader extends TableReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g)
+			return getSqlNodeCache().getString("tables10g.sql");
 		return getSqlNodeCache().getString("tables.sql");
 	}
 
@@ -93,6 +95,9 @@ public class OracleTableReader extends TableReader {
 		Table table = createTable(getString(rs, TABLE_NAME));
 		table.setSchemaName(getString(rs, "OWNER"));
 		table.setRemarks(comments);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g
+				&& "YES".equals(getString(rs, "IS_EXTERNAL")))
+			table.getSpecifics().put("oracle.table.external", true);
 		if ("ENABLED".equalsIgnoreCase(compression)) {
 			table.setCompression(true);
 		}
@@ -161,6 +166,7 @@ public class OracleTableReader extends TableReader {
 		var targets = new java.util.LinkedHashMap<List<String>, Table>();
 		for (Table table : tables)
 			if ("INDEX".equals(table.getSpecifics().get("oracle.table.organization"))
+					|| "true".equals(table.getSpecifics().get("oracle.table.external"))
 					|| table.getPartitioning() != null && table.getPartitioning().getSubPartitioningType() != null)
 				targets.put(List.of(table.getSchemaName(), table.getName()), table);
 		if (targets.isEmpty())
@@ -182,13 +188,16 @@ public class OracleTableReader extends TableReader {
 			if (!OracleMetadataAccess.isDenied(error))
 				throw error;
 			logger.warn(
-					"Oracle DBMS_METADATA access denied or object inaccessible; IOT/composite table definitions skipped, catalog metadata retained.");
+					"Oracle DBMS_METADATA access denied or object inaccessible; IOT/composite/external table definitions skipped, catalog metadata retained.");
 			return;
 		}
 		for (var entry : targets.entrySet()) {
 			String ddl = definitions.get(entry.getKey());
 			if (ddl == null || ddl.isBlank())
 				throw new IllegalStateException("Oracle table DDL unavailable: " + entry.getKey());
+		}
+		for (var entry : targets.entrySet()) {
+			String ddl = definitions.get(entry.getKey());
 			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(entry.getValue(), ddl);
 		}
 	}
