@@ -264,6 +264,9 @@ see [EDB Oracle dialect scope and validation](sqlapp-core-edb-oracle/README.md).
 For Aurora PostgreSQL 14–17 (experimental; Aurora execution unverified), see the
 [usage and verification boundary](sqlapp-core-aurora-postgres/README.md).
 
+For Aurora MySQL 3.x / 8.4 (experimental; Aurora execution unverified), see the
+[usage and verification boundary](sqlapp-core-aurora-mysql/README.md).
+
 For CockroachDB 24.3/25.4, see the [usage, verified scope and limits](sqlapp-core-cockroach/README.md).
 
 For YSQL 11/15, see the [usage, verified scope and limits](sqlapp-core-yugabyte/README.md).
