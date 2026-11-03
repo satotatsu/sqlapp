@@ -87,7 +87,7 @@ class PhoenixIndexReaderTest {
 					var column = identity(tenant, "idx" + i);
 					column.put("column_name", ordinal == 3 ? "F:payload" : ordinal == 1 ? "F:value" : ":id");
 					column.put("ordinal_position", ordinal);
-					column.put("sort_order", ordinal == 1 ? -1 : 1);
+					column.put("sort_order", ordinal == 1 ? 1 : 2);
 					if (ordinal == 3)
 						column.put("column_family", "0");
 					reader.columns.add(column);
@@ -100,6 +100,7 @@ class PhoenixIndexReaderTest {
 			assertEquals(2, index.getColumns().size());
 			assertEquals("value", index.getColumns().get(0).getName());
 			assertEquals(Order.Desc, index.getColumns().get(0).getOrder());
+			assertEquals(Order.Asc, index.getColumns().get(1).getOrder());
 			assertEquals(1, index.getIncludes().size());
 			final var table = new Table(index.getTableName()).setCatalogName(index.getCatalogName())
 					.setSchemaName(index.getSchemaName());
@@ -112,6 +113,35 @@ class PhoenixIndexReaderTest {
 			assertTrue(sql.matches("(?s).*INCLUDE \\(\\s*F\\.\"payload\"\\s*\\).*"), sql);
 			assertEquals("LOCAL".equals(index.getSpecifics().get("phoenix.indexType")),
 					sql.startsWith("CREATE LOCAL INDEX"), sql);
+		}
+	}
+
+	@Test
+	void preservesCatalogSortDirectionsAcrossVersionsAndRejectsUnknownValues() {
+		for (var version : List.of(new ProductVersionInfo().setMajorVersion(3).setMinorVersion(0),
+				new ProductVersionInfo().setMajorVersion(4).setMinorVersion(0),
+				new ProductVersionInfo().setMajorVersion(4).setMinorVersion(1),
+				new ProductVersionInfo().setMajorVersion(5).setMinorVersion(3))) {
+			for (Integer value : Arrays.asList(null, 1, 2, -1, 0, 3)) {
+				final var reader = new Reader();
+				final var header = identity("a", "idx");
+				header.put("table_name", "t");
+				reader.headers.add(header);
+				final var column = identity("a", "idx");
+				column.put("column_name", ":id");
+				column.put("ordinal_position", 1);
+				column.put("sort_order", value);
+				reader.columns.add(column);
+				if (value != null && value != 1 && value != 2) {
+					assertThrows(IllegalStateException.class,
+							() -> reader.doGetAll(null, new ParametersContext(), version));
+				} else {
+					final var index = reader.doGetAll(null, new ParametersContext(), version).get(0);
+					assertEquals(value != null && value == 1 ? Order.Desc : Order.Asc,
+							index.getColumns().get(0).getOrder());
+				}
+				assertEquals(2, reader.queries);
+			}
 		}
 	}
 

@@ -1,5 +1,178 @@
 # Apache Phoenix dialect enhancement
 
+## Index diffs for tables and views
+
+The ordinary Table/View diff entry point now delegates index additions,
+deletions and replacements to the same native CREATE/DROP factories used by
+standalone index operations. DROP includes Phoenix's required ON parent-table
+or parent-view clause. Changed indexes are dropped before column operations
+and recreated after new columns, avoiding generic DROP syntax and incorrect
+replacement order. LOCAL/GLOBAL, families, descending keys, INCLUDE, salting,
+state validation and existence options retain the native factory semantics.
+Existing active-index recreation restrictions still apply.
+
+Unsupported modeled index types, predicates and blank names now fail rather
+than silently losing declarations. Constraint-owned additions that yield no
+CREATE operation require a separate migration. A target index still referencing
+a column explicitly deleted by the diff fails; remove or update that index in
+the target model. Phoenix can automatically drop indexes or remove covered
+columns when their data-table columns are removed, so the target Schema model
+must describe the intended final indexes. This validation does not discover
+unmodeled server indexes or parse functional-key expressions.
+
+Index changes can accompany supported column changes for both tables and
+views. View query/property/key restrictions below are unchanged. Replacements
+use DROP/CREATE rather than in-place ALTER INDEX or state-transition inference;
+they are not atomic, and a failed recreation may leave the index absent.
+Phoenix/HBase checks permissions, dependencies, index-build state and tenant
+visibility at execution. No cluster is contacted by SQL generation.
+
+The module's legacy, 4.9 and 5.3.1 paths are tested locally. This does not
+certify LOCAL or other features on older servers. No existing signatures,
+configuration/XML, dependencies, metadata queries or resolver boundaries are
+changed by this batch. Live cluster tests remain unperformed.
+
+References: [Phoenix index grammar](https://phoenix.apache.org/docs/grammar/),
+[index removal](https://phoenix.apache.org/docs/single-page/).
+
+## DEFAULT version boundary
+
+Column DEFAULT declarations require Phoenix 4.9+. Version resolution now selects
+the legacy Phoenix dialect before 4.9 (also for unknown versions), Phoenix4_9
+from 4.9 through 5.3.0, and Phoenix5_3_1 from 5.3.1 onward. The 5.3.1 boundary
+for multi-row VALUES is unchanged. Phoenix5_3_1 inherits the nearer 4.9 dialect.
+This supersedes earlier batch statements below about an unchanged resolver.
+
+Use the ordinary resolver with the actual server version:
+
+```java
+Dialect dialect = DialectResolver.getInstance()
+        .getDialect("Apache Phoenix", 4, 9, 0);
+```
+
+Existing method signatures and XML formats are unchanged. Phoenix4_9,
+DialectHolder.defaultDialect4_9 and Phoenix.supportsColumnDefault() are additive.
+The legacy defaultDialect deliberately refuses DEFAULT rather than guessing
+a modern server. Existing users explicitly selecting that dialect for DEFAULT
+must select a known 4.9+ server version instead. Versions without DEFAULT still
+generate ordinary column definitions. Metadata readers remain inherited and
+their existing runtime catalog/version fallbacks are unchanged.
+
+CREATE TABLE and ALTER ADD share validation and emit NULL/NOT NULL before
+DEFAULT according to Phoenix's parser grammar, without rewriting the model.
+Column ON UPDATE and CHECK declarations now fail instead of being ignored or
+emitted as unsupported syntax. View-specific DEFAULT/constraint limitations
+remain as documented below. Expression validity, constant-expression rules,
+types and actual execution remain Phoenix's responsibility; no expression
+parser, dependency, new setting or database connection is added.
+
+References: [4.9 release](https://blogsarchive.apache.org/phoenix/entry/announcing_phoenix_4_9_released),
+[column grammar](https://github.com/apache/phoenix/blob/master/phoenix-core-client/src/main/antlr3/PhoenixSQL.g).
+
+## ALTER VIEW columns
+
+The standard table-diff entry point also supports View column additions and
+deletions, emitting native ALTER VIEW rather than ALTER TABLE or a view rebuild:
+
+```java
+View original = new View("extended");
+original.setStatement("SELECT * FROM base WHERE id = 100");
+Table target = original.clone();
+target.getColumns().add(new Column("extra").setDataType(DataType.VARCHAR));
+var operations = dialect.createSqlFactoryRegistry()
+        .createSql(original.diff(target), SqlType.ALTER);
+```
+
+ADD uses the shared CREATE VIEW column validator/type renderer, with nullable
+non-key columns, optional column families and arrays. ADD IF NOT EXISTS and
+DROP COLUMN IF EXISTS follow the existing factory options. Both baseline
+common 4.1+ syntax and the existing 5.3.1 dialect use the same implementation.
+No configuration, XML, dependency or resolver change is required. The new
+factory and protected rendering hooks in PhoenixAlterTableFactory are additive.
+
+Column-only diffs of metadata-derived views can be altered without supplying a
+complete CREATE definition: the existing view is changed, not recreated.
+The metadata-only recreation guard remains in place for CREATE. An unchanged
+view emits no operations. Changes to SELECT/definition, names, properties,
+constraints/keys, existing column types or column names fail explicitly; these
+require a separate native migration. A modeled primary-key column cannot be
+dropped. Mixed unsupported changes fail instead of returning a partial plan.
+Index additions/deletions/replacements use the shared native path described above.
+
+The factory does not parse SELECT or traverse the base/view hierarchy. Phoenix
+must validate WHERE-column dependencies, inherited keys missing from the model,
+base/child view rules, permissions and column-family conflicts. Dropping a view
+column does not delete underlying data according to Phoenix's ALTER semantics;
+no additional data operations or commits are generated. Multiple ALTER statements
+are not promised to be atomic. Live cluster compatibility remains unverified.
+
+Reference: [Phoenix ALTER and CREATE VIEW](https://phoenix.apache.org/docs/grammar/).
+
+## User-authored views with additional columns
+
+A user-authored view may now declare nullable non-key columns through the
+existing Schema model:
+
+```java
+View view = new View("extended");
+view.setStatement("SELECT * FROM base WHERE id = 100");
+view.getColumns().add(new Column("extra").setDataType(DataType.VARCHAR));
+var operations = dialect.createSqlFactoryRegistry().createSql(view, SqlType.CREATE);
+```
+
+Here `view.columns` lists only newly declared columns, not inherited columns
+from the base. The factory emits native column definitions before AS SELECT,
+reusing table type/array and column-family rendering, quoting and IF NOT EXISTS.
+There is no new configuration or XML field. Both the baseline common 4.1+
+syntax and the existing 5.3.1 dialect use this path.
+
+Metadata-derived views remain guarded: VIEW_STATEMENT alone cannot distinguish
+inherited and declared columns. Such views still require a complete executable
+CREATE VIEW in `definition`. Do not remove the metadata-only marker to bypass
+this requirement. Mapped HBase views, constraints/primary-key extensions, NOT
+NULL, DEFAULT, CHECK, ON UPDATE, identity and computed declarations require
+complete native DDL; incomplete modeled requests fail explicitly. Parent-query
+restrictions, column-name conflicts and actual updatability are checked by
+Phoenix, not by parsing the SELECT in this factory. Local XML/SQL tests do not
+establish live cluster compatibility.
+
+Reference: [Phoenix CREATE VIEW](https://phoenix.apache.org/docs/grammar/).
+
+## Mutable/immutable ALTER
+
+The existing table-diff entry point now supports changing
+`PhoenixDdlOptions.IMMUTABLE_ROWS` via `ALTER TABLE ... SET IMMUTABLE_ROWS=TRUE`
+or `FALSE`. It shares boolean validation with CREATE; mixed-case booleans are
+accepted and equivalent values produce no SQL. Removing the key from a model
+that explicitly contained it fails: set true or false to state the intended
+server value. No implicit reset is inferred.
+
+This applies to the baseline common 4.1+ syntax and the existing 5.3.1 dialect;
+resolver boundaries, signatures, dependencies and Schema XML are unchanged.
+Changes may be combined with supported column additions/deletions. Salting,
+tenant mode and default-family alterations remain explicitly unsupported.
+IMMUTABLE_ROWS changes the application's write/index-maintenance contract;
+the caller must ensure its writes satisfy the selected mode. Local XML/diff/SQL
+tests do not establish live server or transaction-provider compatibility.
+Reference: [Phoenix ALTER and CREATE INDEX](https://phoenix.apache.org/docs/grammar/).
+
+## Delete-all and explicit locking
+
+`SqlType.TRUNCATE` now emits Phoenix `DELETE FROM <table>` through the existing
+factory entry point, preserving optional schema decoration and quoting. This is
+DML, subject to the connection's commit mode, transaction configuration and
+normal deletion costs; it does not truncate the underlying HBase table or add
+an implicit commit. Both the baseline dialect (common 4.1+ syntax) and the
+existing 5.3.1 dialect use this path. Resolver boundaries are unchanged.
+
+`SqlType.LOCK` now throws UnsupportedOperationException instead of generating
+unsupported LOCK TABLE SQL. Transaction isolation must be designed using the
+chosen Phoenix transaction provider and connection; no table lock is emulated.
+This is an intentional failure-behavior correction with no signature/XML change.
+Local tests cover both dialects and direct/diff locking entry points. Live
+HBase/Phoenix execution remains unverified.
+Reference: [Phoenix SQL grammar](https://phoenix.apache.org/docs/grammar/).
+
 Phoenix is the next enhancement target after the Docker-free SAP ASE work.
 Changes in this batch stay in sqlapp-core-phoenix; public APIs, Schema XML,
 dependencies and resolver boundaries are unchanged.
@@ -18,8 +191,8 @@ dependencies and resolver boundaries are unchanged.
   expression uses CURRENT_DATE(), whose Phoenix DATE includes time. Timestamp
   uses CAST(CURRENT_DATE() AS TIMESTAMP); this preserves the source's millisecond
   precision and does not invent nanosecond clock precision. DATE/TIME/TIMESTAMP
-  registered default expressions and XML-to-column-DDL are tested in both
-  dialect versions.
+  registered expressions are tested on the legacy and modern dialects.
+  DEFAULT DDL is gated at 4.9 as described above.
 
 Reference: [Apache Phoenix data types](https://phoenix.apache.org/docs/datatypes/).
 Function reference: [Apache Phoenix SQL functions](https://phoenix.apache.org/docs/functions/).
@@ -138,8 +311,9 @@ Optional `PhoenixDdlOptions` keys in the existing specifics map configure CREATE
 | phoenix.defaultColumnFamily | Table | Nonblank string, emitted as an escaped SQL literal |
 
 Absent keys emit no extra properties. No server settings or defaults are changed.
-Malformed values fail rather than being inserted as raw SQL. ALTER of these
-properties currently fails explicitly; this batch covers CREATE. Enabling
+Malformed values fail rather than being inserted as raw SQL. ALTER of
+IMMUTABLE_ROWS is supported as described above; other property changes fail
+explicitly. Enabling
 multi-tenancy still requires an appropriate tenant key and connection design.
 Header readers now recover salting, immutable-row and multi-tenant properties
 where exposed. DEFAULT_COLUMN_FAMILY recovery remains outside this pass.
@@ -219,8 +393,9 @@ VIEW_TYPE. Both text options disabled permit header-only reads.
 VIEW_STATEMENT is not a complete CREATE definition: it cannot distinguish
 inherited columns from columns declared by the view or recreate mapped HBase
 views. Metadata-derived views therefore require a complete user-supplied native
-CREATE definition before recreation. User-authored simple views with a SELECT
-statement and no modeled columns can generate CREATE VIEW IF NOT EXISTS.
+CREATE definition before recreation. User-authored views with a SELECT
+statement can generate CREATE VIEW IF NOT EXISTS, optionally with additional
+nullable columns as described above.
 DROP VIEW honors IF EXISTS. Missing view source fails instead of returning
 empty SQL. This intentionally does not claim general view recreation coverage.
 
@@ -232,6 +407,15 @@ recreation failures. Sources:
 [native grammar](https://phoenix.apache.org/docs/grammar/).
 
 ## Completion boundary
+
+Index metadata interprets SYSTEM.CATALOG SORT_ORDER as Phoenix serialization
+IDs: 1 is DESC and 2 is ASC. A missing value retains the default ASC; other
+non-null values fail explicitly instead of silently reversing or inventing a
+key direction. This corrects the former comparison-sign interpretation (-1).
+The reader still uses two bulk queries. Local tests cover the 3.0, 4.0, 4.1 and
+5.3 version paths, XML/DDL retention and invalid IDs. Live catalog execution on
+these versions remains unverified; no catalog columns or resolver paths changed.
+Reference: [Apache Phoenix SortOrder](https://github.com/apache/phoenix/blob/master/phoenix-core-client/src/main/java/org/apache/phoenix/schema/SortOrder.java).
 
 The Docker-free enhancement pass is complete within the tested scope. See
 [ENHANCEMENT_STATUS.md](ENHANCEMENT_STATUS.md) for remaining live-server checks

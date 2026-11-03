@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.spanner.sql;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,15 +40,13 @@ class SpannerCreateViewFactoryTest extends SpannerSqlFactoryTest {
 	}
 
 	@Test
-	void testIgnoreUnsupportedSecurityType() {
+	void testRejectUnsupportedSecurityType() {
 		final View view = new View("ACTIVE_USERS");
 		view.setDialect(dialect);
 		view.setStatement("SELECT ID AS ID FROM USERS");
 		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, "UNSUPPORTED");
 
-		final String sql = sqlFactoryRegistry.createSql(view, SqlType.CREATE).get(0).getSqlText().replaceAll("\\s+",
-				" ");
-		assertTrue(sql.contains("SQL SECURITY INVOKER"), sql);
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(view, SqlType.CREATE));
 	}
 
 	@Test

@@ -36,5 +36,6 @@ public class SpannerTruncateTableFactory extends AbstractTruncateTableFactory<Sp
 		builder.delete().from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
+		builder.where().space()._add("TRUE");
 	}
 }

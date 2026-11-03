@@ -307,4 +307,9 @@ public class Phoenix extends Dialect {
 	public PhoenixSqlBuilder createSqlBuilder() {
 		return new PhoenixSqlBuilder(this);
 	}
+
+	/** Whether column DEFAULT declarations are available on this version. */
+	public boolean supportsColumnDefault() {
+		return false;
+	}
 }

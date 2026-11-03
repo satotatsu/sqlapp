@@ -86,8 +86,17 @@ public class PhoenixIndexReader extends IndexReader {
 				if (family != null)
 					column.getSpecifics().put(PhoenixCreateTableFactory.COLUMN_FAMILY, family);
 				final boolean included = rs.getString("column_family") != null;
-				if (!included)
-					column.setOrder(rs.getInt("sort_order") == -1 ? Order.Desc : Order.Asc);
+				if (!included) {
+					final Integer sortOrder = rs.getInteger("sort_order");
+					// Phoenix SortOrder serialization IDs, not comparison signs.
+					if (sortOrder == null || sortOrder == 2)
+						column.setOrder(Order.Asc);
+					else if (sortOrder == 1)
+						column.setOrder(Order.Desc);
+					else
+						throw new IllegalStateException("Unknown Phoenix index sort order for "
+								+ source.index().getName() + "." + nativeName + ": " + sortOrder);
+				}
 				final int ordinal = rs.getInt("ordinal_position");
 				if (ordinal <= 0 || (included ? source.includes() : source.keys()).putIfAbsent(ordinal, column) != null)
 					throw new IllegalStateException("Invalid Phoenix index column ordinal: " + ordinal);

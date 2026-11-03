@@ -24,4 +24,9 @@ import com.sqlapp.data.db.sql.AbstractLockTableFactory;
 
 public class PhoenixLockTableFactory extends AbstractLockTableFactory<PhoenixSqlBuilder> {
 
+	@Override
+	protected void addLockTable(final com.sqlapp.data.schemas.Table table, final PhoenixSqlBuilder builder) {
+		throw new UnsupportedOperationException("Apache Phoenix does not support LOCK TABLE; "
+				+ "configure transaction isolation on the connection instead");
+	}
 }

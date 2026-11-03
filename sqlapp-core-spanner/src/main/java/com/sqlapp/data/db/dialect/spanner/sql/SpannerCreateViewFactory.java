@@ -25,14 +25,29 @@ public class SpannerCreateViewFactory extends AbstractCreateViewFactory<SpannerS
 			builder._add(view.getDefinition());
 			return;
 		}
-		if (CommonUtils.isEmpty(view.getStatement())) {
-			return;
+		addStatementView(view, builder, false);
+	}
+
+	protected void addStatementView(final View view, final SpannerSqlBuilder builder, final boolean replace) {
+		if (view.getName() == null || view.getName().isBlank() || CommonUtils.isEmpty(view.getStatement())
+				|| String.join("\n", view.getStatement()).isBlank()) {
+			throw new IllegalArgumentException("Cloud Spanner view requires a name and query statement");
 		}
-		String securityType = view.getSpecifics().get(SECURITY_TYPE);
-		if (!"DEFINER".equalsIgnoreCase(securityType) && !"INVOKER".equalsIgnoreCase(securityType)) {
-			securityType = "INVOKER";
+		final String securityType = securityType(view);
+		builder.create();
+		if (replace)
+			builder.space()._add("OR REPLACE");
+		builder.view().space().name(view, getOptions().isDecorateSchemaName()).space()._add("SQL SECURITY").space()
+				._add(securityType).lineBreak().as().lineBreak()._add(view.getStatement());
+	}
+
+	protected String securityType(final View view) {
+		final String value = view.getSpecifics().get(SECURITY_TYPE);
+		if (value == null)
+			return "INVOKER";
+		if (!"DEFINER".equalsIgnoreCase(value) && !"INVOKER".equalsIgnoreCase(value)) {
+			throw new IllegalArgumentException("Cloud Spanner " + SECURITY_TYPE + " must be INVOKER or DEFINER");
 		}
-		builder.create().view().space().name(view, getOptions().isDecorateSchemaName()).space()._add("SQL SECURITY")
-				.space()._add(securityType.toUpperCase()).lineBreak().as().lineBreak()._add(view.getStatement());
+		return value.toUpperCase(java.util.Locale.ROOT);
 	}
 }

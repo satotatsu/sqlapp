@@ -25,7 +25,11 @@ class PhoenixFunctionSqlTest {
 			assertEquals(expected, expression);
 			final Column column = new Column("created").setDataType(type).setDefaultValue(expression);
 			final Column restored = SchemaUtils.readXml(new java.io.StringReader(column.asXml()));
-			assertTrue(dialect.createSqlBuilder().definition(restored).toString().contains("DEFAULT " + expected));
+			if (modern)
+				assertTrue(dialect.createSqlBuilder().definition(restored).toString().contains("DEFAULT " + expected));
+			else
+				assertThrows(UnsupportedOperationException.class,
+						() -> dialect.createSqlBuilder().definition(restored));
 		}
 	}
 }

@@ -61,6 +61,9 @@ public class PhoenixDialectResolver extends ProductNameDialectResolver {
 					&& (minorVersion > 3 || (minorVersion == 3 && revision != null && revision >= 1)))) {
 				return DialectHolder.defaultDialect5_3_1;
 			}
+			if (majorVersion > 4 || (majorVersion == 4 && minorVersion >= 9)) {
+				return DialectHolder.defaultDialect4_9;
+			}
 			return DialectHolder.defaultDialect;
 		}
 	}

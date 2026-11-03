@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 
 /** Apache Phoenix 5.3.1. */
-public class Phoenix5_3_1 extends Phoenix {
+public class Phoenix5_3_1 extends Phoenix4_9 {
 
 	private static final long serialVersionUID = 1L;
 

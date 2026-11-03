@@ -31,7 +31,29 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 	public static final String COLUMNAR_POLICY = "COLUMNAR_POLICY";
 
 	@Override
+	protected boolean createIndex(final Index index) {
+		if (index.getTable() == null) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner CREATE INDEX requires a parent table: " + index.getName());
+		}
+		return super.createIndex(index);
+	}
+
+	@Override
 	public void addObjectDetail(final Index index, final Table table, final SpannerSqlBuilder builder) {
+		SpannerIndexValidation.identity(index);
+		if (table == null || index.getColumns().isEmpty()) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner index requires a parent table and key columns: " + index.getName());
+		}
+		if (index.getIndexType() == IndexType.Vector || index.getIndexType() == IndexType.FullText) {
+			if (index.isUnique() || Boolean.TRUE.equals(index.getSpecifics().get(IS_NULL_FILTERED, Boolean.class))
+					|| index.getColumns().stream()
+							.anyMatch(column -> column.getOrder() != null && column.getOrder() != Order.Asc)) {
+				throw new UnsupportedOperationException("Cloud Spanner SEARCH/VECTOR indexes cannot preserve "
+						+ "UNIQUE, NULL_FILTERED or descending key declarations: " + index.getName());
+			}
+		}
 		if (index.getIndexType() == IndexType.Vector) {
 			addVectorIndex(index, table, builder);
 			return;
@@ -47,7 +69,8 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 			}
 			builder._add("NULL_FILTERED").space();
 		}
-		builder.index().ifNotExists(table != null && getOptions().isCreateIfNotExists()).space().name(index, false);
+		builder.index().ifNotExists(getOptions().isCreateIfNotExists()).space().name(index,
+				getOptions().isDecorateSchemaName());
 		if (table != null) {
 			builder.on().name(table, getOptions().isDecorateSchemaName());
 		}
@@ -69,6 +92,9 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 				i++;
 			}
 			builder.space()._add(")");
+		}
+		if (index.getWhere() != null && !index.getWhere().isBlank()) {
+			builder.space().where().space()._add(index.getWhere());
 		}
 		addStorageOptions(index, builder);
 	}
@@ -95,7 +121,8 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 	private void addVectorIndex(final Index index, final Table table, final SpannerSqlBuilder builder) {
 		validateVectorIndex(index, table);
 		builder.space()._add("VECTOR").space().index().ifNotExists(getOptions().isCreateIfNotExists()).space()
-				.name(index, false).on().name(table, getOptions().isDecorateSchemaName()).space()._add("(");
+				.name(index, getOptions().isDecorateSchemaName()).on().name(table, getOptions().isDecorateSchemaName())
+				.space()._add("(");
 		int i = 0;
 		for (ReferenceColumn column : index.getColumns()) {
 			builder.comma(i > 0).name(column);
@@ -128,7 +155,7 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 
 	private void addSearchIndex(final Index index, final Table table, final SpannerSqlBuilder builder) {
 		validateSearchIndex(index, table);
-		builder.space()._add("SEARCH").space().index().space().name(index, false).on()
+		builder.space()._add("SEARCH").space().index().space().name(index, getOptions().isDecorateSchemaName()).on()
 				.name(table, getOptions().isDecorateSchemaName()).space()._add("(");
 		int i = 0;
 		for (ReferenceColumn column : index.getColumns()) {

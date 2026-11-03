@@ -51,11 +51,18 @@ public final class PhoenixDdlOptions {
 
 	private static void booleanOption(DbInfo specifics, String key, String sqlName, AbstractSqlBuilder<?> builder,
 			List<Runnable> options) {
-		final String value = specifics.get(key);
+		final Boolean value = booleanValue(specifics, key);
 		if (value == null)
 			return;
+		options.add(() -> builder._add(sqlName)._add("=")._add(value ? "TRUE" : "FALSE"));
+	}
+
+	static Boolean booleanValue(DbInfo specifics, String key) {
+		final String value = specifics.get(key);
+		if (value == null)
+			return null;
 		if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false"))
 			throw new IllegalArgumentException(key + " must be true or false");
-		options.add(() -> builder._add(sqlName)._add("=")._add(value.toUpperCase(java.util.Locale.ROOT)));
+		return Boolean.valueOf(value);
 	}
 }

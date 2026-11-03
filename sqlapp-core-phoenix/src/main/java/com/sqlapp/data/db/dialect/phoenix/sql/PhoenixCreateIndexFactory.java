@@ -7,6 +7,7 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.IndexType;
 
 public class PhoenixCreateIndexFactory extends AbstractCreateIndexFactory<PhoenixSqlBuilder> {
 	@Override
@@ -16,9 +17,13 @@ public class PhoenixCreateIndexFactory extends AbstractCreateIndexFactory<Phoeni
 	}
 
 	private void validate(Index index, Table table) {
-		if (table == null || index.getColumns().isEmpty())
+		if (table == null || index.getName() == null || index.getName().isBlank() || index.getColumns().isEmpty())
 			throw new IllegalArgumentException(
-					"Phoenix CREATE INDEX requires a parent table and key columns: " + index.getName());
+					"Phoenix CREATE INDEX requires a name, parent table and key columns: " + index.getName());
+		if ((index.getIndexType() != null && index.getIndexType() != IndexType.BTree)
+				|| (index.getWhere() != null && !index.getWhere().isBlank()))
+			throw new UnsupportedOperationException(
+					"Phoenix modeled index type/predicate cannot be preserved by this factory: " + index.getName());
 	}
 
 	@Override

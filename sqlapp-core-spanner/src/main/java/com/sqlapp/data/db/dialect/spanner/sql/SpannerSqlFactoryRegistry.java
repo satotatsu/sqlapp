@@ -38,11 +38,18 @@ public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 
 		registerSqlFactory(Table.class, SqlType.CREATE, SpannerCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SpannerAlterTableFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.CREATE,
+				SpannerCreateCheckConstraintFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ForeignKeyConstraint.class, SqlType.CREATE,
+				SpannerCreateForeignKeyConstraintFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, SpannerCreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.DROP, SpannerDropIndexFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.CREATE, SpannerCreateSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, SpannerSequenceNextValuesFactory.class);
 		registerSqlFactory(View.class, SqlType.CREATE, SpannerCreateViewFactory.class);
 		registerSqlFactory(View.class, SqlType.DROP, SpannerDropViewFactory.class);
+		registerSqlFactory(View.class, SqlType.ALTER, SpannerAlterViewFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SpannerCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE, SpannerTruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SpannerTruncateTemporaryTableFactory.class);

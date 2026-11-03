@@ -71,7 +71,7 @@ public class Spanner extends Dialect {
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar("STRING(MAX)", SIZE_MAX, type -> {
-			type.setDefaultLength(SIZE_MAX);
+			type.setCreateFormat("STRING(MAX)").setDefaultLength(SIZE_MAX);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// BOOLEAN

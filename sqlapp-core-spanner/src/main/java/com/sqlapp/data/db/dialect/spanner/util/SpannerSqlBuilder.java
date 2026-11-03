@@ -57,7 +57,16 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
 	@Override
 	public SpannerSqlBuilder definition(final Column column, final boolean withRemarks) {
-		super.definition(column, withRemarks);
+		// GoogleSQL orders NOT NULL before DEFAULT and requires a parenthesized
+		// expression.
+		final Column structural = column.clone().setDefaultValue(null).setOnUpdate(null);
+		super.definition(structural, false);
+		if (!column.isIdentity() && !CommonUtils.isEmpty(column.getDefaultValue())) {
+			space().default_().space()._add("(")._add(column.getDefaultValue())._add(")");
+		}
+		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
+			onUpdateDefinition(column);
+		}
 		if (!CommonUtils.isEmpty(column.getFormula())) {
 			space().as().space()._add("(")._add(column.getFormula())._add(")");
 			if (column.isFormulaPersisted()) {
@@ -67,14 +76,10 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 		if (column.isHidden()) {
 			space()._add("HIDDEN");
 		}
-		final Boolean allowCommitTimestamp = column.getSpecifics().get(ALLOW_COMMIT_TIMESTAMP, Boolean.class);
+		final Boolean allowCommitTimestamp = allowCommitTimestamp(column);
 		final String localityGroup = column.getSpecifics().get(LOCALITY_GROUP);
 		boolean hasOption = false;
 		if (Boolean.TRUE.equals(allowCommitTimestamp)) {
-			if (column.getDataType() != DataType.TIMESTAMP) {
-				throw new IllegalArgumentException(
-						"Cloud Spanner allow_commit_timestamp requires " + "a TIMESTAMP column: " + column.getName());
-			}
 			space()._add("OPTIONS").space()._add("(")._add("allow_commit_timestamp=true");
 			hasOption = true;
 		}
@@ -89,6 +94,46 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 		}
 		if (hasOption) {
 			_add(')');
+		}
+		if (withRemarks && !CommonUtils.isEmpty(column.getRemarks())) {
+			comment(column);
+		}
+		return this;
+	}
+
+	/**
+	 * Reads the optional column flag without coercing malformed values to false.
+	 */
+	public static Boolean allowCommitTimestamp(final Column column) {
+		final String value = column.getSpecifics().get(ALLOW_COMMIT_TIMESTAMP);
+		if (value == null)
+			return null;
+		if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value)) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner " + ALLOW_COMMIT_TIMESTAMP + " must be true or false: " + column.getName());
+		}
+		if (column.getDataType() != DataType.TIMESTAMP || column.getArrayDimension() != 0) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner allow_commit_timestamp requires a scalar TIMESTAMP column: " + column.getName());
+		}
+		return Boolean.valueOf(value);
+	}
+
+	@Override
+	public SpannerSqlBuilder definitionForAlterColumn(final Column column) {
+		if (column.isIdentity() || !CommonUtils.isEmpty(column.getFormula())) {
+			throw new UnsupportedOperationException(
+					"Cloud Spanner identity/generated columns require a separate ALTER migration: " + column.getName());
+		}
+		typeDefinition(column);
+		notNullDefinition(column);
+		// These clauses are removed by a typed ALTER if omitted, so restate the target
+		// values.
+		if (!CommonUtils.isEmpty(column.getDefaultValue())) {
+			space().default_().space()._add("(")._add(column.getDefaultValue())._add(")");
+		}
+		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
+			onUpdateDefinition(column);
 		}
 		return this;
 	}

@@ -21,6 +21,8 @@ package com.sqlapp.data.db.dialect.phoenix.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.db.dialect.phoenix.Phoenix;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -82,10 +84,25 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 
 	@Override
 	public PhoenixSqlBuilder definition(final Column column, final boolean withRemarks) {
+		if (!CommonUtils.isEmpty(column.getOnUpdate()) || !CommonUtils.isEmpty(column.getCheck()))
+			throw new UnsupportedOperationException(
+					"Phoenix column ON UPDATE and CHECK clauses are unsupported: " + column.getName());
+		if (!CommonUtils.isEmpty(column.getDefaultValue())
+				&& (!(getDialect() instanceof Phoenix phoenix) || !phoenix.supportsColumnDefault()))
+			throw new UnsupportedOperationException("Phoenix column DEFAULT requires version 4.9 or later: "
+					+ column.getName() + "; select a versioned dialect using the known server version");
 		if (column.isIdentity() || column.getFormula() != null)
 			throw new UnsupportedOperationException(
 					"Phoenix columns do not support generic IDENTITY or computed formulas; "
 							+ "use an explicit sequence or view expression: " + column.getName());
+		if (!CommonUtils.isEmpty(column.getDefaultValue())) {
+			// Phoenix's column grammar places NULL/NOT NULL before DEFAULT.
+			super.definition(column.clone().setDefaultValue(null), false);
+			defaultDefinition(column);
+			if (withRemarks && !CommonUtils.isEmpty(column.getRemarks()))
+				comment(column);
+			return this;
+		}
 		return super.definition(column, withRemarks);
 	}
 

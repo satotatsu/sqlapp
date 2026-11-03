@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateIndexFactory;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -84,7 +85,9 @@ public class SpannerIndexReader extends IndexReader {
 				}
 			}
 		});
-		setIndexOptions(connection, context, productVersionInfo, map);
+		if (!result.isEmpty()) {
+			setIndexOptions(connection, context, productVersionInfo, map);
+		}
 		return result;
 	}
 
@@ -106,11 +109,42 @@ public class SpannerIndexReader extends IndexReader {
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
 				final Index index = map.get(getString(rs, TABLE_CATALOG), getString(rs, TABLE_SCHEMA),
 						getString(rs, INDEX_NAME));
-				if (index != null && "distance_type".equalsIgnoreCase(getString(rs, "option_name"))) {
-					index.setVectorDistanceType(toVectorDistanceType(getString(rs, "option_value")));
-				}
+				if (index != null)
+					setIndexOption(index, getString(rs, "option_name"), getString(rs, "option_value"));
 			}
 		});
+	}
+
+	private void setIndexOption(final Index index, final String name, final String value) {
+		if (name == null || value == null)
+			return;
+		final String key = name.toUpperCase(java.util.Locale.ROOT);
+		if ("DISTANCE_TYPE".equals(key)) {
+			final VectorDistanceType distance = toVectorDistanceType(value);
+			if (distance == null)
+				throw new UnsupportedOperationException("Unrepresentable Cloud Spanner vector distance: " + value);
+			index.setVectorDistanceType(distance);
+		} else if (java.util.Set.of(SpannerCreateIndexFactory.TREE_DEPTH, SpannerCreateIndexFactory.NUM_LEAVES,
+				SpannerCreateIndexFactory.NUM_BRANCHES).contains(key)) {
+			try {
+				Integer.parseInt(value);
+			} catch (NumberFormatException exception) {
+				throw new IllegalArgumentException(
+						"Cloud Spanner index option exceeds the supported integer format: " + name + "=" + value,
+						exception);
+			}
+			index.getSpecifics().put(key, value);
+		} else if (java.util.Set
+				.of(SpannerCreateIndexFactory.DISABLE_SEARCH, SpannerCreateIndexFactory.SORT_ORDER_SHARDING)
+				.contains(key)) {
+			if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
+				throw new IllegalArgumentException(
+						"Cloud Spanner index option requires true or false: " + name + "=" + value);
+			index.getSpecifics().put(key, value.toLowerCase(java.util.Locale.ROOT));
+		} else if (java.util.Set.of(SpannerCreateIndexFactory.LOCALITY_GROUP, SpannerCreateIndexFactory.COLUMNAR_POLICY)
+				.contains(key)) {
+			index.getSpecifics().put(key, value);
+		}
 	}
 
 	static IndexType toIndexType(final String productIndexType) {

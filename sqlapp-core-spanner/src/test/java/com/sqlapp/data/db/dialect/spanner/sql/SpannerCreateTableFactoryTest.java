@@ -25,6 +25,19 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 
 class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 	@Test
+	void ordersNotNullBeforeParenthesizedDefaultWithoutChangingTheModel() {
+		final var table = new Table("defaults");
+		final var column = new Column("count").setDataType(DataType.BIGINT).setNotNull(true).setDefaultValue("0");
+		table.getColumns().add(column);
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("INT64 NOT NULL DEFAULT (0)"), sql);
+		assertEquals("0", column.getDefaultValue());
+		column.setDefaultValue("(1 + 2)");
+		assertTrue(sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText()
+				.contains("INT64 NOT NULL DEFAULT ((1 + 2))"));
+	}
+
+	@Test
 	void omitsUnsupportedNumericPrecisionAndScale() {
 		final Table table = new Table("CHECKPOINTS");
 		table.setDialect(dialect);
@@ -145,7 +158,7 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 		table.setDialect(dialect);
 		final Column id = new Column("ID").setDataType(DataType.BIGINT);
 		final Column updatedAt = new Column("UPDATED_AT").setDataType(DataType.TIMESTAMP)
-				.setDefaultValue("(PENDING_COMMIT_TIMESTAMP())").setOnUpdate("PENDING_COMMIT_TIMESTAMP()");
+				.setDefaultValue("PENDING_COMMIT_TIMESTAMP()").setOnUpdate("PENDING_COMMIT_TIMESTAMP()");
 		updatedAt.getSpecifics().put(SpannerSqlBuilder.ALLOW_COMMIT_TIMESTAMP, true);
 		table.getColumns().add(id);
 		table.getColumns().add(updatedAt);
