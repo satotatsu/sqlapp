@@ -9,6 +9,44 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 
 class TransferDatabaseTaskTest extends AbstractTaskTest {
+	@Test
+	void failedCopyRetainsCauseCodesAndCommittedProgressInTaskResultAndAudit() {
+		def source = new org.hsqldb.jdbc.JDBCDataSource()
+		source.setUrl('jdbc:hsqldb:mem:diagnostic_source_' + UUID.randomUUID()); source.setUser('SA'); source.setPassword('')
+		def target = new org.hsqldb.jdbc.JDBCDataSource()
+		target.setUrl('jdbc:hsqldb:mem:diagnostic_target_' + UUID.randomUUID()); target.setUser('SA'); target.setPassword('')
+		try {
+			source.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+				s.execute('CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)'); s.execute('INSERT INTO ITEMS VALUES(1),(2)')
+			} }
+			target.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+				s.execute('CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY CHECK(ID < 2))')
+			} }
+			def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
+			def task = project.tasks.named('transferDatabase', TransferDatabaseTask).get()
+			def file = new File(testProjectDir, 'diagnostic.yaml')
+			file.text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nchunkSize: 1\n'
+			task.configurationFile.set(file)
+			task.sourceDataSource.jdbcUrl.set(source.url); task.sourceDataSource.username.set('SA'); task.sourceDataSource.password.set('')
+			task.dataSource.jdbcUrl.set(target.url); task.dataSource.username.set('SA'); task.dataSource.password.set('')
+			task.exec()
+			task.allowExecution.set(true)
+			task.expectedConfigurationFingerprint.set(task.internalCommand().review.prepared().job().fingerprint())
+			assertThrows(RuntimeException, { task.exec() })
+			def result = task.internalCommand().result
+			assertEquals('COPY', result.phase().name())
+			assertEquals('CHECK_CONSTRAINT', result.failureDiagnostic().kind().name())
+			assertEquals('23513', result.failureDiagnostic().sqlState())
+			assertEquals(1, result.committedProgress().get('transfer-table-1').processedRowsAfter)
+			def audit = task.internalCommand().resultFile.toFile().text
+			assertTrue(audit.contains('failureDiagnostic')); assertTrue(audit.contains('23513'))
+		} finally {
+			for (def db : [source, target]) db.connection.withCloseable { c ->
+				c.createStatement().withCloseable { s -> s.execute('SHUTDOWN') }
+			}
+		}
+	}
+
 	@ParameterizedTest @ValueSource(booleans=[false,true])
 	void insertsKeylessDuplicatesWithOptionalTargetOnlyIdentity(boolean generatedKey) {
 		def sourceUrl='jdbc:hsqldb:mem:keyless_task_source_'+UUID.randomUUID()
