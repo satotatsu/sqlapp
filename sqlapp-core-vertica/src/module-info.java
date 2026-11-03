@@ -17,10 +17,18 @@
  * along with sqlapp-core-virtica.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.dialect.virtica.metadata;
-
-import com.sqlapp.data.db.metadata.ReaderUtils;
-
-public class VirticaUtils extends ReaderUtils {
-
+module com.sqlapp.core.vertica {
+	requires java.xml;
+	requires java.sql;
+	requires com.sqlapp.core;
+	exports com.sqlapp.data.db.dialect.vertica;
+	exports com.sqlapp.data.db.dialect.vertica.bulk;
+	exports com.sqlapp.data.db.dialect.vertica.metadata;
+	exports com.sqlapp.data.db.dialect.vertica.resolver;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+			com.sqlapp.data.db.dialect.vertica.bulk.VirticaBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+			com.sqlapp.data.db.dialect.vertica.bulk.VirticaBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+			com.sqlapp.data.db.dialect.vertica.bulk.VirticaSetBasedMigrationSnapshotProvider;
 }
