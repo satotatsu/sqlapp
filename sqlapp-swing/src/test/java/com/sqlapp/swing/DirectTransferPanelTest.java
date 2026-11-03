@@ -540,15 +540,15 @@ class DirectTransferPanelTest {
 
 	private DirectTransferDesktopService.Executed executed(TransferJobExecutionService.Phase phase) {
 		var prepared = reviewed().review().prepared();
-		var verification = new com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult(
-				List.of(new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult("task", List.of("ID"),
+		var verification = new com.sqlapp.jdbc.bulk.BulkMigrationJobVerificationResult(List.of(
+				new com.sqlapp.jdbc.bulk.BulkMigrationJobTaskVerificationResult("task", List.of("ID"),
 						new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 1, 1, List.of(
 								new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "same", "same"))))));
-		return new DirectTransferDesktopService.Executed(new TransferJobExecutionService.Outcome(prepared, phase, null,
-				verification, List.of(), Map.of(), null,
-				new TransferSchemaPreparation.Progress(List.of(), 0, null, prepared.warnings()),
-				phase == TransferJobExecutionService.Phase.COMPLETE ? null
-						: new TransferFailureDiagnostic(TransferFailureDiagnostic.Kind.UNIQUE_CONSTRAINT, "23505", 17)),
+		return new DirectTransferDesktopService.Executed(
+				new TransferJobExecutionService.Outcome(prepared, phase, null, verification, List.of(), Map.of(), null,
+						new TransferSchemaPreparation.Progress(List.of(), 0, null, prepared.warnings()),
+						phase == TransferJobExecutionService.Phase.COMPLETE ? null
+								: new TransferFailureDiagnostic(TransferFailureDiagnostic.Kind.UNIQUE_CONSTRAINT, "23505", 17)),
 				directory.resolve("transfer-result.json"));
 	}
 

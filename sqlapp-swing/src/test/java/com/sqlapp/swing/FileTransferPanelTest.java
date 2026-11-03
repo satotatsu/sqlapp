@@ -17,13 +17,12 @@ import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentit
 
 class FileTransferPanelTest {
 	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
+	@ValueSource(booleans = {false, true})
 	void importResultRetainsMatchingDraftWithAppliedStatementWarning(boolean hasExportWarnings) throws Exception {
 		var base = reviewed();
 		var original = base.manifest();
-		var manifest = hasExportWarnings ? original
-				: new TransferFilePackageIO.Manifest(original.formatVersion(), original.jobFingerprint(),
-						original.schemaFingerprint(), original.files(), original.tables());
+		var manifest = hasExportWarnings ? original : new TransferFilePackageIO.Manifest(original.formatVersion(),
+				original.jobFingerprint(), original.schemaFingerprint(), original.files(), original.tables());
 		String draft = "-- review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
 		var statements = List.of(new TransferSchemaPreparation.Statement("task", "CREATE TABLE ITEMS(ID INTEGER)"));
 		var review = new FileTransferDesktopService.Reviewed(
@@ -31,9 +30,8 @@ class FileTransferPanelTest {
 						HASH, new TransferSchemaPreparation.Plan(HASH, statements)),
 				manifest, draft);
 		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COMPLETE,
-				null, true,
-				Map.of("task", new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 1, 1,
-						List.of(new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "same", "same")))),
+				null, true, Map.of("task", new com.sqlapp.jdbc.bulk.BulkMigrationVerificationResult(1, 1, 1, List.of(
+						new com.sqlapp.jdbc.bulk.BulkMigrationVerificationChunk(0, 1, 1, "same", "same")))),
 				Map.of(), null, directory.resolve("import-result.json"),
 				new TransferSchemaPreparation.Progress(statements, 1, null));
 		var ref = new AtomicReference<FileTransferPanel>();
@@ -85,8 +83,7 @@ class FileTransferPanelTest {
 	@ParameterizedTest
 	@ValueSource(strings = { "table-1.csv", "transfer-mapping.yaml" })
 	void schemaDraftSavesOpensEditorAndProtectsPackageMembers(String protectedMember) throws Exception {
-		for (var member : List.of("manifest.json", "transfer.yaml", "source-schema.xml", "table-1.csv",
-				"transfer-mapping.yaml"))
+		for (var member : List.of("manifest.json", "transfer.yaml", "source-schema.xml", "table-1.csv", "transfer-mapping.yaml"))
 			java.nio.file.Files.writeString(directory.resolve(member), "protected " + member);
 		var base = reviewed();
 		String draft = "-- review before use\nCREATE TABLE ITEMS(ID INTEGER)\n;\n";
@@ -139,8 +136,7 @@ class FileTransferPanelTest {
 			panel.schemaDraft.saveTo(alias);
 		});
 		assertTrue(failed.await(5, TimeUnit.SECONDS));
-		assertEquals("protected " + protectedMember,
-				java.nio.file.Files.readString(directory.resolve(protectedMember)));
+		assertEquals("protected " + protectedMember, java.nio.file.Files.readString(directory.resolve(protectedMember)));
 		SwingUtilities.invokeAndWait(() -> {
 			var panel = ref.get();
 			assertTrue(panel.status.getText().contains("save failed"));

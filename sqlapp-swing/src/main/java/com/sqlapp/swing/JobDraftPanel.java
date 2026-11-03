@@ -98,9 +98,7 @@ final class JobDraftPanel extends JPanel {
 	private boolean fullScanInsert;
 	private boolean fileExport;
 
-	JPanel fileImportOptions() {
-		return optionsRow;
-	}
+	JPanel fileImportOptions() { return optionsRow; }
 
 	void fullScanInsert(boolean enabled) {
 		fullScanInsert = enabled;
@@ -481,8 +479,8 @@ final class JobDraftPanel extends JPanel {
 		if (snapshot != null) {
 			long available = snapshot.tables().stream()
 					.filter(table -> fullScanInsert ? table.insertSelectable() : table.selectable()).count();
-			count.setText(count.getText() + (fileExport ? "; export eligible: " : "; data-copy eligible: ") + available
-					+ "; unavailable: " + (snapshot.tables().size() - available));
+			count.setText(count.getText() + (fileExport ? "; export eligible: " : "; data-copy eligible: ") + available + "; unavailable: "
+					+ (snapshot.tables().size() - available));
 		}
 		if (snapshot == null)
 			selectionHelp.setText("Read Schema to see the tables available for selection.");

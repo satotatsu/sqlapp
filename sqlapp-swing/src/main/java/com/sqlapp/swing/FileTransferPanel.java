@@ -556,10 +556,8 @@ final class FileTransferPanel extends JPanel {
 						show(imported.outcome(), prior);
 					else if (cause instanceof TransferPreparationFailure validation) {
 						summary.setText((action == Action.EXPORT ? "Export preparation needs attention:\n\n"
-								: "Target preparation needs attention:\n\n")
-								+ validation.getMessage()
-								+ (action == Action.EXPORT
-										? "\n\nFix the source selection or name mapping, then export a new package."
+								: "Target preparation needs attention:\n\n") + validation.getMessage()
+								+ (action == Action.EXPORT ? "\n\nFix the source selection or name mapping, then export a new package."
 										: "\n\nFix the target or job settings and review again."));
 						summary.setCaretPosition(0);
 						resultTabs.setSelectedIndex(0);
@@ -592,13 +590,11 @@ final class FileTransferPanel extends JPanel {
 		verificationTabs.show(resultTabs, value, prior);
 		progressTabs.show(resultTabs, value, prior);
 		var summaryText = new StringBuilder(FileTransferSummary.text(value));
-		if (value instanceof TransferFileImportService.Outcome outcome
-				&& TransferRecordedTargets.matches(outcome, prior) && prior.manifest() != null
-				&& !prior.manifest().warnings().isEmpty())
+		if (value instanceof TransferFileImportService.Outcome outcome && TransferRecordedTargets.matches(outcome, prior)
+				&& prior.manifest() != null && !prior.manifest().warnings().isEmpty())
 			summaryText.append("\nRetained package export warnings: ").append(prior.manifest().warnings().size())
 					.append(". See Warnings alongside the recorded import warnings.\n");
-		if (progressTabs.panel != null)
-			TransferExecutionSummary.appendProgressGuide(summaryText);
+		if (progressTabs.panel != null) TransferExecutionSummary.appendProgressGuide(summaryText);
 		summary.setText(summaryText.toString());
 		summary.setCaretPosition(0);
 		hasSummary = true;
@@ -674,8 +670,7 @@ final class FileTransferPanel extends JPanel {
 
 	private static void protectPackage(java.util.List<Path> inputs, Path folder,
 			TransferFilePackageIO.Manifest manifest) {
-		for (var name : java.util.List.of("manifest.json", "transfer.yaml", "source-schema.xml",
-				"transfer-mapping.yaml"))
+		for (var name : java.util.List.of("manifest.json", "transfer.yaml", "source-schema.xml", "transfer-mapping.yaml"))
 			inputs.add(folder.resolve(name));
 		for (var table : manifest.tables())
 			inputs.add(folder.resolve(table.file()));

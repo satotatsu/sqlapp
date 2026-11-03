@@ -16,8 +16,7 @@ class TransferVerificationTabsTest {
 		var chunks = new ArrayList<BulkMigrationVerificationChunk>();
 		for (int index = 0; index < size; index++) {
 			String hash = (unordered ? "multiset-sha256-v1:" : "sha256:") + index;
-			chunks.add(new BulkMigrationVerificationChunk(index, 1, 1, hash,
-					index == badIndex ? hash + "-different" : hash));
+			chunks.add(new BulkMigrationVerificationChunk(index, 1, 1, hash, index == badIndex ? hash + "-different" : hash));
 		}
 		return new BulkMigrationVerificationResult(1, size, size, chunks);
 	}
@@ -122,18 +121,16 @@ class TransferVerificationTabsTest {
 	@Test
 	void directResultsUseTheSameViewWithoutOpeningArtifactsOrConnections() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var configuration = new TransferJobConfiguration("from", "to", List.of("ITEMS"),
-					TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
+			var configuration = new TransferJobConfiguration("from", "to", List.of("ITEMS"), TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
 			var job = new TransferJobConfigurationIO.Snapshot(Path.of("missing.yaml"), "", "hash", configuration);
-			var prepared = new TransferJobPreparationService.Prepared(Path.of("missing"), job, Path.of("missing.xml"),
-					null, "hash", List.of("direct"), List.of(),
-					new TransferSchemaPreparation.Plan("hash", List.of(), List.of(),
+			var prepared = new TransferJobPreparationService.Prepared(Path.of("missing"), job, Path.of("missing.xml"), null,
+					"hash", List.of("direct"), List.of(), new TransferSchemaPreparation.Plan("hash", List.of(), List.of(),
 							List.of(new TransferSchemaPreparation.TablePreparation("direct", "catalog", "Target", "日本語",
 									TransferSchemaPreparation.TableAction.USE_EXISTING))));
-			var verification = new BulkMigrationJobVerificationResult(List
-					.of(new BulkMigrationJobTaskVerificationResult("direct", List.of("ID"), comparison(3, 2, false))));
-			var outcome = new TransferJobExecutionService.Outcome(prepared,
-					TransferJobExecutionService.Phase.VERIFICATION, null, verification, List.of(), Map.of(), null);
+			var verification = new BulkMigrationJobVerificationResult(List.of(
+					new BulkMigrationJobTaskVerificationResult("direct", List.of("ID"), comparison(3, 2, false))));
+			var outcome = new TransferJobExecutionService.Outcome(prepared, TransferJobExecutionService.Phase.VERIFICATION,
+					null, verification, List.of(), Map.of(), null);
 			var view = new TransferVerificationTabs();
 			var tabs = new JTabbedPane();
 			view.show(tabs, new DirectTransferDesktopService.Executed(outcome, Path.of("missing-result.json")));
@@ -147,8 +144,8 @@ class TransferVerificationTabsTest {
 	@Test
 	void fileTargetNamesRequireTheMatchingRecordedReview() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var plan = new TransferSchemaPreparation.Plan("hash", List.of(), List.of(),
-					List.of(new TransferSchemaPreparation.TablePreparation("file", null, "Mixed.Case", "表\"名",
+			var plan = new TransferSchemaPreparation.Plan("hash", List.of(), List.of(), List.of(
+					new TransferSchemaPreparation.TablePreparation("file", null, "Mixed.Case", "表\"名",
 							TransferSchemaPreparation.TableAction.USE_EXISTING)));
 			var review = new TransferFileImportService.Review(Path.of("missing.json"), "hash", null, "hash", plan);
 			var prior = new FileTransferDesktopService.Reviewed(review, null);

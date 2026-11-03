@@ -18,27 +18,24 @@ class TransferExecutionProgressTabsTest {
 			new TransferSchemaPreparation.Statement("pending", "CREATE TABLE NEXT(ID INTEGER)"));
 
 	private FileTransferDesktopService.Reviewed prior(String fingerprint) {
-		var tables = List.of("parent", "child", "pending").stream()
-				.map(id -> new TransferSchemaPreparation.TablePreparation(id, null, "Target", id,
-						TransferSchemaPreparation.TableAction.CREATE))
-				.toList();
+		var tables = List.of("parent", "child", "pending").stream().map(id ->
+				new TransferSchemaPreparation.TablePreparation(id, null, "Target", id,
+						TransferSchemaPreparation.TableAction.CREATE)).toList();
 		return new FileTransferDesktopService.Reviewed(new TransferFileImportService.Review(Path.of("missing.json"),
 				fingerprint, null, "hash", new TransferSchemaPreparation.Plan("hash", SQL, List.of(), tables)), null);
 	}
 
-	private TransferFileImportService.Outcome partial(TransferJobExecutionService.Phase phase, int completed,
-			Integer uncertain) {
-		return new TransferFileImportService.Outcome("hash", "hash", phase, null, true, Map.of(),
-				Map.of("parent", new ChunkedBulkMigrationProgress("parent", 1, 5, 5, 10), "child",
-						new ChunkedBulkMigrationProgress("child", 0, 3, 0, 3)),
-				"child", null, new TransferSchemaPreparation.Progress(SQL, completed, uncertain));
+	private TransferFileImportService.Outcome partial(TransferJobExecutionService.Phase phase, int completed, Integer uncertain) {
+		return new TransferFileImportService.Outcome("hash", "hash", phase, null, true, Map.of(), Map.of(
+				"parent", new ChunkedBulkMigrationProgress("parent", 1, 5, 5, 10),
+				"child", new ChunkedBulkMigrationProgress("child", 0, 3, 0, 3)), "child", null,
+				new TransferSchemaPreparation.Progress(SQL, completed, uncertain));
 	}
 
 	@Test
 	void partialCopyDistinguishesCommittedEvidenceFromCompletionAndMissingRecords() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var view = new TransferExecutionProgressTabs();
-			var tabs = new JTabbedPane();
+			var view = new TransferExecutionProgressTabs(); var tabs = new JTabbedPane();
 			var navigated = new AtomicReference<String>();
 			view.setNavigators(navigated::set, id -> fail("No recorded verification"));
 			view.show(tabs, partial(TransferJobExecutionService.Phase.COPY, 3, null), prior("hash"));
@@ -52,10 +49,8 @@ class TransferExecutionProgressTabsTest {
 			view.panel.table.moveColumn(0, 5);
 			view.showStopped.doClick(0);
 			assertEquals(1, view.panel.table.getRowCount());
-			assertTrue(view.showSql.isEnabled());
-			assertFalse(view.showVerification.isEnabled());
-			view.showSql.doClick(0);
-			assertEquals("child", navigated.get());
+			assertTrue(view.showSql.isEnabled()); assertFalse(view.showVerification.isEnabled());
+			view.showSql.doClick(0); assertEquals("child", navigated.get());
 			assertTrue(view.panel.selected.getText().contains("Stopped task during COPY"));
 			assertTrue(view.panel.selected.getText().contains("\"Target\".\"child\""));
 		});
@@ -90,28 +85,22 @@ class TransferExecutionProgressTabsTest {
 	private DirectTransferDesktopService.Executed direct(boolean schemaOnly) {
 		var configuration = new TransferJobConfiguration(1, "from", "to", List.of("ITEMS"),
 				TransferJobConfiguration.SchemaMode.CREATE_MISSING, null, null, null, null, null,
-				schemaOnly ? TransferJobConfiguration.DataMode.SCHEMA_ONLY
-						: TransferJobConfiguration.DataMode.JDBC_DIRECT,
-				null);
+				schemaOnly ? TransferJobConfiguration.DataMode.SCHEMA_ONLY : TransferJobConfiguration.DataMode.JDBC_DIRECT, null);
 		var job = new TransferJobConfigurationIO.Snapshot(Path.of("missing.yaml"), "", "hash", configuration);
 		var prepared = new TransferJobPreparationService.Prepared(Path.of("missing"), job, Path.of("missing.xml"), null,
 				"hash", List.of("parent", "child", "pending"));
-		var verification = new BulkMigrationJobVerificationResult(List.of(
-				new BulkMigrationJobTaskVerificationResult("parent", List.of("ID"), new BulkMigrationVerificationResult(
-						1, 1, 1, List.of(new BulkMigrationVerificationChunk(0, 1, 1, "a", "b"))))));
-		return new DirectTransferDesktopService.Executed(
-				new TransferJobExecutionService.Outcome(prepared, TransferJobExecutionService.Phase.VERIFICATION, null,
-						schemaOnly ? null : verification, schemaOnly ? List.of() : List.of("parent"), Map.of(), null),
-				Path.of("missing-result.json"));
+		var verification = new BulkMigrationJobVerificationResult(List.of(new BulkMigrationJobTaskVerificationResult("parent",
+				List.of("ID"), new BulkMigrationVerificationResult(1, 1, 1, List.of(new BulkMigrationVerificationChunk(0, 1, 1, "a", "b"))))));
+		return new DirectTransferDesktopService.Executed(new TransferJobExecutionService.Outcome(prepared,
+				TransferJobExecutionService.Phase.VERIFICATION, null, schemaOnly ? null : verification,
+				schemaOnly ? List.of() : List.of("parent"), Map.of(), null), Path.of("missing-result.json"));
 	}
 
 	@Test
 	void directCompletionAndMismatchRemainIndependentAndNavigationClearsOtherTaskFilters() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var tabs = new JTabbedPane();
-			var view = new TransferExecutionProgressTabs();
-			var verification = new TransferVerificationTabs();
-			var value = direct(false);
+			var tabs = new JTabbedPane(); var view = new TransferExecutionProgressTabs();
+			var verification = new TransferVerificationTabs(); var value = direct(false);
 			verification.show(tabs, value);
 			view.setNavigators(null, id -> verification.showTask(tabs, id));
 			view.show(tabs, value, null);
@@ -119,8 +108,7 @@ class TransferExecutionProgressTabsTest {
 			assertEquals("Mismatch", view.panel.table.getValueAt(0, 5));
 			assertEquals("not recorded", view.panel.table.getValueAt(0, 4));
 			assertFalse(view.showStopped.isEnabled());
-			view.showIssues.doClick(0);
-			view.panel.table.setRowSelectionInterval(0, 0);
+			view.showIssues.doClick(0); view.panel.table.setRowSelectionInterval(0, 0);
 			verification.tables.filter.setText("hidden");
 			view.showVerification.doClick(0);
 			assertEquals(verification.tables, tabs.getSelectedComponent());
@@ -132,8 +120,7 @@ class TransferExecutionProgressTabsTest {
 	@Test
 	void schemaOnlyAndMismatchedReviewsDoNotInventCopyOrTargetEvidence() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var tabs = new JTabbedPane();
-			var view = new TransferExecutionProgressTabs();
+			var tabs = new JTabbedPane(); var view = new TransferExecutionProgressTabs();
 			view.show(tabs, direct(true), null);
 			assertEquals("Not requested (schema only)", view.panel.table.getValueAt(0, 3));
 			assertEquals("Not applicable", view.panel.table.getValueAt(0, 5));
@@ -145,12 +132,11 @@ class TransferExecutionProgressTabsTest {
 	@Test
 	void completedCopyResultAndZeroRowsAreExplicitButDoNotInventChunkProgress() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var copy = new BulkMigrationJobResult(
-					List.of(new BulkMigrationJobTaskResult("empty", new ChunkedBulkMigrationResult(0, 0, 0, false))));
-			var outcome = new TransferFileImportService.Outcome("hash", "hash",
-					TransferJobExecutionService.Phase.COMPLETE, copy, false, Map.of(), Map.of(), null, null);
-			var view = new TransferExecutionProgressTabs();
-			var tabs = new JTabbedPane();
+			var copy = new BulkMigrationJobResult(List.of(new BulkMigrationJobTaskResult("empty",
+					new ChunkedBulkMigrationResult(0, 0, 0, false))));
+			var outcome = new TransferFileImportService.Outcome("hash", "hash", TransferJobExecutionService.Phase.COMPLETE,
+					copy, false, Map.of(), Map.of(), null, null);
+			var view = new TransferExecutionProgressTabs(); var tabs = new JTabbedPane();
 			view.show(tabs, outcome, null);
 			assertEquals("Copy completed; processed rows: 0", view.panel.table.getValueAt(0, 3));
 			assertEquals("not recorded", view.panel.table.getValueAt(0, 4));
@@ -161,19 +147,13 @@ class TransferExecutionProgressTabsTest {
 	@Test
 	void removedResultsAndStaleButtonsCannotNavigateOrRestoreEvidence() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var view = new TransferExecutionProgressTabs();
-			var tabs = new JTabbedPane();
+			var view = new TransferExecutionProgressTabs(); var tabs = new JTabbedPane();
 			tabs.addTab("Summary", new JPanel());
 			view.setNavigators(id -> fail("Stale navigation"), null);
 			view.show(tabs, partial(TransferJobExecutionService.Phase.COPY, 3, null), prior("hash"));
 			view.showStopped.doClick(0);
-			var stopped = view.showStopped;
-			var sql = view.showSql;
-			var issues = view.showIssues;
-			view.clear(tabs);
-			stopped.doClick(0);
-			sql.doClick(0);
-			issues.doClick(0);
+			var stopped = view.showStopped; var sql = view.showSql; var issues = view.showIssues;
+			view.clear(tabs); stopped.doClick(0); sql.doClick(0); issues.doClick(0);
 			assertEquals(1, tabs.getTabCount());
 			view.show(tabs, new Object(), null);
 			assertEquals(1, tabs.getTabCount());

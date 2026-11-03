@@ -45,24 +45,17 @@ final class FileTransferOptionsPanel extends JPanel {
 				"Export writes a header for VALIDATE/SKIP. Import consumes one parsed header record; NONE keeps the first row as data. SKIP/NONE use captured Schema column order and do not remap columns. JSONL has no header.");
 		row.add(headerMode);
 		var nulls = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
-		var emptyLabel = new JLabel("Unquoted empty fields");
-		emptyLabel.setLabelFor(emptyFieldMode);
-		nulls.add(emptyLabel);
-		nulls.add(emptyFieldMode);
-		nulls.add(useNullToken);
-		nulls.add(nullValue);
+		var emptyLabel = new JLabel("Unquoted empty fields"); emptyLabel.setLabelFor(emptyFieldMode);
+		nulls.add(emptyLabel); nulls.add(emptyFieldMode); nulls.add(useNullToken); nulls.add(nullValue);
 		emptyFieldMode.setRenderer(new DefaultListCellRenderer() {
-			@Override
-			public java.awt.Component getListCellRendererComponent(JList<?> list, Object value, int index,
-					boolean selected, boolean focus) {
+			@Override public java.awt.Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus) {
 				return super.getListCellRendererComponent(list, value instanceof EmptyFieldMode mode ? switch (mode) {
 				case NULL -> "SQL NULL (default)";
 				case EMPTY_STRING -> "Empty text";
 				} : value, index, selected, focus);
 			}
 		});
-		emptyFieldMode.setToolTipText(
-				"Quoted empty fields remain empty text. Empty-text mode requires a NULL token for exported SQL NULL.");
+		emptyFieldMode.setToolTipText("Quoted empty fields remain empty text. Empty-text mode requires a NULL token for exported SQL NULL.");
 		useNullToken.addActionListener(event -> {
 			refreshEnabled(inputsEnabled, activeFormat);
 		});
@@ -84,8 +77,7 @@ final class FileTransferOptionsPanel extends JPanel {
 	}
 
 	void refreshEnabled(boolean enabled, FileFormat format) {
-		inputsEnabled = enabled;
-		activeFormat = format;
+		inputsEnabled = enabled; activeFormat = format;
 		encoding.setEnabled(enabled);
 		headerMode.setEnabled(enabled && format != FileFormat.JSONL);
 		emptyFieldMode.setEnabled(enabled && format != FileFormat.JSONL);
@@ -94,8 +86,7 @@ final class FileTransferOptionsPanel extends JPanel {
 	}
 
 	FileTransfer settings(String directory, FileFormat format, TemporalPolicy policy) {
-		return settings(directory, format,
-				format != FileFormat.JSONL && useNullToken.isSelected() ? nullValue.getText() : null, policy);
+		return settings(directory, format, format != FileFormat.JSONL && useNullToken.isSelected() ? nullValue.getText() : null, policy);
 	}
 
 	FileTransfer settings(String directory, FileFormat format, String nullValue, TemporalPolicy policy) {

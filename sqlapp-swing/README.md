@@ -1,5 +1,63 @@
 # sqlapp Swing RDB transfer
 
+## Windows distribution (Java included)
+
+Build a portable ZIP on Windows with a Java 25 JDK, from the repository root:
+
+```powershell
+.\gradlew.bat :sqlapp-swing:desktopZip
+```
+
+The ZIP is written to `sqlapp-swing/build/distributions/` as
+`sqlapp-swing-<version>-windows-<architecture>-portable.zip`.
+Extract the entire ZIP and open `sqlapp-swing/sqlapp-swing.exe`.
+No system Java installation or Gradle is needed on the recipient's computer.
+Keep the `app` and `runtime` folders beside the EXE. This is a portable folder,
+not a standalone executable. Build and run on the same Windows architecture;
+the Java 25 toolchain must match the build JVM architecture.
+
+Both ZIP and installer tasks first run `verifyDesktopImage`: it compares the
+packaged JARs with the input JARs, checks launcher settings, and uses the bundled
+Java to check JDBC service discovery, SQLite native loading with an in-memory
+query, HSQLDB and UI-library initialization. Run it separately with
+`./gradlew.bat :sqlapp-swing:verifyDesktopImage`. These headless checks do not
+replace a graphical launch check on a clean recipient machine or testing each
+external database/driver combination.
+
+For a per-user EXE installer with Start Menu and desktop shortcuts:
+
+```powershell
+.\gradlew.bat :sqlapp-swing:desktopInstaller
+```
+
+Install a WiX version supported by the selected JDK's `jpackage` and expose its
+tools on `PATH` first. WiX is not needed for the portable ZIP. The installer is
+written to `sqlapp-swing/build/desktop/installer/`. Its upgrade UUID remains
+stable between releases. Use increasing numeric `major.minor.patch` versions;
+the default is the project version. For snapshot builds, supply for example
+`-PdesktopVersion=0.80.1`. Windows Installer version limits apply (major/minor
+0–255, patch 0–65535). Packages are unsigned; signing and automatic updates are
+not configured by these tasks.
+
+`desktopImage` creates the unpacked application in
+`sqlapp-swing/build/desktop/image/sqlapp-swing/`. `desktopRuntime` uses `jlink`
+with all modules and service bindings from the Java 25 JDK, deliberately keeping
+optional JDBC-driver functionality instead of inferring a minimal runtime from
+the bundled drivers. Native access uses the same JVM options as Gradle `run`.
+Dependency JARs, their service descriptors, native libraries and embedded license
+notices remain intact. sqlapp license texts are included under `app/legal/sqlapp`;
+the runtime retains its own legal notices. Before publishing, review the chosen
+JDK and dependency redistribution terms and provide any additional required
+source/notice material. Rebuild packages when the bundled Java needs updating.
+
+The **JDBC drivers** screen still accepts additional local driver JARs. They are
+session-only, as in the Gradle-launched application. Oracle's driver remains a
+separate addition. Choose writable user folders for jobs, profiles and results;
+do not use the installation folder for working data. No database is contacted
+by the packaging tasks. Existing `run`, `installDist` and `distZip` remain
+available; the latter distributions require Java 25 on the recipient's machine.
+Single-JAR packaging is not part of these native distribution tasks.
+
 Run on a Java 25 graphical desktop from the repository root:
 
 ```powershell
@@ -34,7 +92,7 @@ selection itself does not open a connection. The MDB dialect and its existing
 UCanAccess 5.2.0 dependency are bundled with the desktop distribution, so this
 source does not require adding a driver JAR manually.
 
-Inside **Access file migration**, choose **CSV package transfer** to export the
+Inside **Access file migration**, choose **File transfer** to export the
 selected Access file through the common CSV workflow. Create **New Access CSV
 job…**, choose tables and optional target-table creation, then export. Use
 **Continue to import this package…** to select the exported package automatically.
@@ -211,7 +269,7 @@ their existing redaction. Review failures do not authorize execution.
 ## CSV transfer without preparing YAML
 
 Open **CSV package**, choose **Export source to CSV**, and enter or load the
-source connection. **New CSV job…** asks for a working folder, reads source
+source connection. **New file job…** asks for a working folder, reads source
 metadata, and opens the existing searchable table picker. Unsupported tables
 show a reason and cannot be selected. Choose tables, review the visible CSV NULL
 token, and save. Chunk size and verification remain optional adjustments.
@@ -249,7 +307,7 @@ package reader. Summary shows recorded tables/rows and export warnings, and
 Details retains the complete manifest. This opens no database connection and
 does not read the target password. Select **Also validate CSV values during inspection**
 for the shared offline import preflight, including headers, value types, recorded
-row counts, non-null columns and ascending unique numeric keys. This may scan
+row counts, non-null columns and ascending unique numeric keys when eligible. This may scan
 large CSV files and still opens no connection. Export-only types that require
 conversion can fail this optional check; package-only inspection remains available
 to view warnings. Summary distinguishes file integrity from validated values and
@@ -318,7 +376,7 @@ Gradle validates the target afresh. Input changes or a new operation clear the
 guide; connection tests leave the current guide available.
 
 The current CSV path supports pre-existing empty
-targets or explicit creation of missing ordinary tables, numeric primary keys
+targets or explicit creation of missing ordinary tables, ordered numeric keys or full-scan INSERT
 and supported scalar columns. Product differences and missing-table features
 such as identity/default/generated/domain columns or partitioning/inheritance
 are warnings by default, and strict policy can reject them. The target dialect
@@ -327,8 +385,7 @@ failures. Unresolved external-schema FK references require explicit resolution.
 DATE, second-precision TIME and standard
 TIMESTAMP (up to nanoseconds) support typed CSV import. Unsupported temporal
 types can be exported as JDBC text with warnings. Full Schema cloning,
-complete vendor-specific cross-product conversion, binary/LOB columns and JSONL
-execution are not implemented. Direct JDBC transfer retains its existing
+complete vendor-specific cross-product conversion, binary/LOB columns are not implemented. Direct JDBC transfer retains its existing
 Data Job workflow in the advanced tool; the primary direct-transfer screen uses
 the common transfer-definition format described above.
 
@@ -1582,7 +1639,8 @@ completed packages are not edited. A changed Schema/path cannot publish an old
 selection, and missing saved identities are reported instead of silently omitted.
 
 For target-only generated primary keys, **Generated PK column** defaults to `ID`
-and can be changed in New direct job or Job settings. The shared YAML option is
+and can be changed in New direct job, New file job (optional import settings),
+or Job settings. The shared YAML option is
 `generatedKeyColumn`; it requires `CREATE_MISSING_WITH_IDENTITY`. Choose an unused
 name if the source already contains `ID`. Set `SQLAPP_ROW_ID` explicitly to retain
 the earlier default; existing target tables are unchanged.
@@ -1699,3 +1757,354 @@ difference plans retain the generating table's task ID; old reports retain their
 original IDs. Tasks without SQL cannot use the navigation button and may still
 have warnings requiring manual work. This filters the display only: inspect the
 full Schema SQL and dependencies before execution, and review again after changes.
+
+After saving, **Open saved preview** opens that HTML snapshot in the default
+browser. Its saved fingerprint is checked in the background before opening;
+missing or changed files produce an actionable message and can be retried after
+saving a new report. The editor waits for this check before allowing other
+operations or closing. Current name edits do not replace the last saved snapshot.
+If browser integration is unavailable, the message includes the file to open
+manually. This check is neither a file lock nor database validation or execution
+approval.
+
+In the Schema check table, double-click a selected row or press **Enter** to
+open its verified target column name in the mapping editor. This uses the same
+identity checks as **Edit selected column name**, including filtered/sorted
+views. Multiple selections, busy controls and invalidated checks cannot open an
+editor. Read-only previews retain ordinary Enter navigation. These shortcuts do
+not apply type conversions, save mapping files or approve execution.
+
+Schema statements can be filtered by **Recorded status**, together with the
+exact table/task and text search. Status counts describe all recorded SQL,
+before display filters. After a partial Schema preparation failure, **Show
+uncertain attempt** clears the task/text scopes, shows the uncertain SQL and
+selects it for inspection. It never retries SQL: an uncertain statement may
+already have taken effect. **Show table SQL** resets the status scope so all
+recorded statements for that task are visible. Global statement order, recorded
+statuses and the execution plan remain unchanged.
+
+Direct transfer and CSV import summaries now show the number of unexecuted
+Schema statements, the uncertain statement's global order/task (when recorded),
+and the first unexecuted statement's order/task. These use the same recorded
+status classification as the Schema statements table. Uncertain SQL is separate
+from unexecuted SQL and may already have taken effect; the summary points to
+**Show uncertain attempt** for inspection. The displayed boundary is not a
+restart instruction and does not query or reset the target database.
+
+The **Table preparation** tab shows full-review counts for create, use-existing,
+skip and difference preparation. Choose **Reviewed preparation** to filter a
+category, then combine it with text search, sorting and **Show table SQL**.
+Counts remain totals for the captured review; filtering changes only the display
+and never excludes tables from the job. SQL navigation requires one selected
+row with recorded SQL. A skipped table has not been compared, and recorded
+preparation is not proof of successful execution or schema equivalence.
+
+## CSV, TSV and JSONL file transfer
+
+The **File transfer** screen supports CSV, TSV and JSONL. Use **New file job…**, select
+**File format → JSONL**, choose tables and save. The same choice is available
+from Access file migration. CSV remains the default. JSONL uses JSON `null`;
+the CSV/TSV NULL-token field is disabled and its value is omitted from the job.
+Export, inspect/review and confirmed import use the same package workflow;
+import requires only the target connection. The package summary shows its format.
+The GUI-saved YAML works unchanged with `exportTransferFile` / `importTransferFile`.
+
+JSONL has one flat object per data row, using captured source column names as
+keys and native JSON numbers, booleans, strings and null. Integers and decimals
+are read without floating-point rounding. Text line breaks are escaped inside
+the object; NULL, empty text and literal CSV NULL tokens remain distinct. Empty
+tables have empty data files. Export defaults to UTF-8 and stores the encoding in
+the manifest. Field limits are 1 MiB characters and JSONL rows are bounded at
+16 MiB characters. Missing/extra/duplicate fields, nested values, wrong scalar
+types, invalid Unicode, invalid keys/counts and altered package members fail
+validation. These checks do not authorize import or reconnect to the source.
+
+Automatic import retains these constraints across formats: empty existing targets or explicit missing-table creation, supported scalar
+and temporal values, optional pinned name-only mappings, and no binary/LOB transport.
+This feature reads completed sqlapp packages; it does not infer a schema from
+arbitrary standalone JSONL files. JSONL support adds no dependencies or task
+properties. Existing CSV jobs/packages and Java save overloads retain defaults.
+
+## TSV packages
+
+**File transfer → New file job… → File format → TSV** saves a tab-delimited
+package job usable unchanged by the Gradle file-transfer tasks. TSV shares CSV's
+quoted-field parser, scalar/temporal conversion, NULL-token collision checks,
+package integrity, target review, missing-table creation and row verification.
+Tabs, quotes and line breaks inside text are quoted and retained. The package
+contains `table-N.tsv` members with a header; it is not a plain split-on-tab
+format. Input and output use the encoding recorded in the package (UTF-8 by
+default). A NULL token is optional; when configured it cannot contain a tab, quote or
+line break. Empty text and NULL remain distinct. CSV stays the default; JSONL
+continues to use native null without a token. Existing key/type/mapping/LOB
+constraints still apply. Filtering or choosing a format never starts migration.
+
+## Character encoding and CSV/TSV headers
+
+**New file job…** and **Job settings…** expose **Character encoding** (default
+**UTF-8**) and **CSV / TSV header**. Choose an encoding such as windows-31j,
+Shift_JIS or UTF-16LE, or type another Java-supported charset name. Invalid
+encodings prevent saving, and unrepresentable characters fail export rather
+than being replaced silently. The saved encoding applies to both export and
+import and is displayed in the package summary.
+
+Header choices are:
+
+- **Validate names and skip (default)**: write a header on export; check its exact
+  captured column names/order and consume it on import.
+- **Skip without checking names**: write a header on export and consume one
+  parsed header record on import, without using its names for column mapping.
+- **No header row**: omit the export header and retain the first import record
+  as data. Empty tables then produce empty data files.
+
+A header record may contain quoted line breaks; this is not a physical-line
+skip. SKIP/NONE use captured Schema column order. Missing expected headers and
+invalid row counts still fail; no arbitrary rows are discarded. JSONL has no
+header and disables this control. Existing jobs/packages without `headerMode`
+retain name validation for CSV/TSV and NONE for JSONL. Existing Java constructors
+remain available. Changing an original saved job requires a new export; completed
+packages keep their recorded settings and cannot be edited through Job settings.
+
+## Preview packaged data before import
+
+In **File transfer → Import**, choose a completed package or its manifest, then
+**Preview package data…**. Select a table and **Load sample**. The default is 20
+rows, adjustable from 1 to 100. Reading runs off the UI thread and opens no source
+or target connection. It uses the same captured Schema, encoding, header mode,
+NULL decoding, scalar/temporal conversion and key ordering as import.
+
+The grid shows source column names/types and sampled values. SQL NULL is `null`,
+empty text is `""`, and literal text `null` is `"null"`. Embedded whitespace and
+line breaks in text are escaped. Values longer than 512 Unicode code points are
+marked truncated; total rendered cell text is limited to 1 MiB characters.
+Search, sorting and copy actions operate only on the displayed sample. Changing
+the table or limit clears old evidence; failures permit retry and late results
+cannot replace a newer selection.
+
+The displayed total is the manifest's recorded row count, not a new row-count
+query. Package hashes are checked before/after sampling, which can read every
+file's bytes even though only the selected table's leading rows are parsed.
+Preview does not validate unsampled rows or target conversion and grants no
+import approval. Use full packaged-value validation and target Review before
+import. Existing warnings remain in package inspection/review. The package is
+never modified and saved jobs/Gradle task settings are unchanged.
+
+### Recheck a package without closing the preview
+
+**Reload package** rechecks the selected package and refreshes the table list.
+It clears the old sample, fingerprint display and full-check evidence immediately;
+if the same task and catalog/schema/table identity remain, the selection is restored even when table order changes.
+An inspection failure keeps Reload available so repaired files can be checked
+again without closing the dialog.
+
+**Validate all values** invokes the shared import validator on the pinned
+manifest. It checks every packaged row, type, key and recorded count off the UI
+thread, without opening a source or target connection. Success is recorded only
+for that fingerprint and displayed separately from the sample. Failure clears
+old sample/check evidence and permits retry. Table controls and copy buttons are disabled
+while checking; duplicate clicks cannot start overlapping work. Reloading clears
+the recorded success, and a later sample failure also withdraws it.
+
+Full file-value validation does not check live target compatibility, authorize
+import or prove target row equality. Use target Review and the existing explicit
+import confirmation afterward. These controls change no package, saved job,
+command API or Gradle setting.
+
+Full-check evidence distinguishes **not run**, **in progress**, **passed for this
+fingerprint**, and **failed**. A sample read is never labeled as a successful
+whole-package check. Reload resets the state to not run; a failed full check
+keeps a failure state until retry or reload.
+
+## Export eligibility is separate from import eligibility
+
+File export does not require a primary key or a numeric key. Keyless/incomplete-key
+tables use the shared streaming full-table reader and retain duplicate rows,
+NULLs and empty strings; output order is not a restart/keyset guarantee. Complete
+keys retain the existing keyed export path. All formats (CSV/TSV/JSONL) keep the
+same encoding/header/NULL-token and scalar conversion checks. No target connection
+is opened, and target schema/preparation settings do not affect export.
+
+**New file job…** and file **Job settings…** now keep target schema, Create Missing
+Target, copy verification and chunk controls under **Optional import settings
+(no target access during Export)**, collapsed by default. Existing saved settings are
+retained; opening or closing the group does not change them. Export-related file
+settings and table selection remain visible. A key is not required in the export
+table picker, including Edit tables on saved jobs.
+
+Package import also accepts tables without a PK or with a text PK. Numeric NOT
+NULL primary keys keep ordered keyset reads; other tables use full-scan INSERT
+into empty targets. `[FILE_FULL_SCAN_INSERT]` warns about this route; WARN permits
+import and ERROR rejects it at target Review before any writes. Optional missing
+table creation preserves foreign-key dependency order. Every row is retained,
+including duplicates and NULLs. Verification compares unordered SHA-256 hashes
+with duplicate counts; hash-sort chunk positions are not file row positions.
+This route does not provide MERGE, resume or key-based repair. Preview and full
+package validation use the same value rules without requiring a numeric key.
+
+## Default NULL and empty-text handling
+
+New CSV/TSV jobs default to **Unquoted empty fields → SQL NULL**, with **Use
+explicit NULL token** unchecked. An unquoted empty field (`,,` or adjacent tabs)
+is SQL NULL; a quoted empty field (`""`) is empty text. Export leaves SQL NULL
+unquoted and quotes empty strings, including single-column NULL records. NULL
+rows are not discarded as empty lines. UTF-8 remains the default encoding.
+
+Choose **Empty text** to read unquoted empty fields as empty strings instead.
+This enables an explicit NULL token so exported SQL NULL still has a distinct
+representation. A configured token is reserved: matching real text fails export
+rather than silently losing the distinction. Quoted empty strings remain empty
+strings in both modes. Non-text columns do not infer zero/false from empty text.
+JSONL keeps native JSON null and disables these controls.
+
+The shared YAML supports only `emptyFieldMode: NULL` or `EMPTY_STRING`. A
+configured token does not change empty-field interpretation. New token-free jobs
+need no extra NULL settings.
+
+## Understand execution failures
+
+Direct JDBC transfer, schema-only execution and file-package import show a
+**Reason** and **What to check next** near the top of Summary when an execution
+fails. Known SQLStates distinguish constraint violations, value conversion,
+permissions, authentication, connection loss, SQL/object resolution, transaction
+failures and timeout/cancellation. SQLState and the vendor code remain visible
+for investigation. A recorded verification mismatch points to the mismatched
+tables/chunks and target precision. Unknown causes are explicitly described as
+unknown; messages are not guessed from driver text.
+
+Details and the saved result JSON retain the same structured `failureDiagnostic`.
+Raw driver messages, SQL values and exception causes are omitted. Existing DDL
+uncertainty and committed progress remain visible. The cause category does not
+identify a failed source row, prove rollback or approve a retry; inspect the
+retained target state and review again after correcting the problem. No new job
+settings are needed, and successful results have no failure diagnostic.
+
+## Inspect recorded verification by table and chunk
+
+After direct JDBC execution or file-package import, **Verification** lists the
+recorded tasks, reviewed target names when available, status, expected/actual row
+counts, chunk counts and mismatched chunk counts. Search or sort the table, choose
+**Show mismatched tables**, then select a task and **Show chunks**. Summary links
+to this workflow. Schema-only runs and results without comparisons do not create
+verification tabs. Missing tasks are not inferred to have matched or zero rows.
+
+**Verification chunks** shows at most 200 records per page, with **Previous page**,
+**Next page**, and **Mismatched chunks only**. Search, sort and copy affect the
+current page. Changing page/filter/task resets the page search and selection.
+Select a chunk to read full hashes in the existing detail pane. Indexes are zero
+based, not source row numbers; unordered multiset hashes compare duplicate counts
+and their sorted positions cannot locate source records or drive repair.
+
+These tabs display captured results without opening files or database connections,
+rerunning verification, or approving execution/retry. A partially verified result
+can contain matched recorded tasks even though the transfer failed. Target labels
+come from the recorded review, not live metadata; file imports use them only when
+the retained review's manifest and plan fingerprints match the outcome. Missing
+identity evidence is shown as **not recorded**. Existing JSON evidence remains in
+Details. Job YAML, Gradle properties and public result APIs are unchanged.
+
+## Inspect retained execution progress
+
+After direct JDBC transfer, schema-only execution or file import, **Execution
+progress** collects recorded task evidence in one searchable table. It shows
+reviewed target names, the stopped task, copy completion evidence, last recorded
+committed chunk counts, verification and Schema SQL progress. **Show stopped
+task** and **Show recorded issues** narrow the display; **Show all tasks** restores
+it. Select a task and use **Show task SQL** or **Show task verification** to open
+the matching recorded details. An uncertain SQL attempt is selected automatically
+when navigating to that task's statements.
+
+Copy completion, committed progress and verification are separate evidence.
+Missing chunk progress is shown as **not recorded**, not zero. A completion event
+without a returned copy result remains distinguishable from a returned result
+with a recorded processed-row count. No copy completion record does not prove a
+task never started. In schema-only runs, row copy is **not requested** and row
+verification is **not applicable**. SQL status comes from the existing recorded
+statement sequence; later tasks are not marked as failed merely because a prior
+task stopped.
+
+Known tasks and target names are read only from the retained outcome/review.
+File-review context must match the outcome's manifest and plan fingerprints;
+unrelated review context cannot supply target names or additional planned tasks.
+No file or database connection is opened. Filtering/navigation does not approve
+execution, retry, resume, rollback or target cleanup. Inspect the retained
+uncertainty and target state before correcting settings and reviewing again.
+Existing job YAML, result formats, public APIs and Gradle properties are unchanged.
+
+## Filter warnings and retain package context after import
+
+Warnings now has **Category** and **Task** filters in addition to the literal
+text search. Filters combine, and **Show all warnings** resets them together with
+search. Choice counts cover all retained warning records before filtering, not
+the number of tasks. **No recorded task** selects warnings without a structured
+task ID; task names are never inferred by parsing English message text. Select a
+row to read/copy the complete original message and suggested next action.
+
+After successful or failed file import, the GUI also retains the original package
+export warnings when the prior review's manifest and plan fingerprints match the
+outcome. Original export task/column identities and duplicate records remain
+intact, alongside import compatibility warnings. Summary states the retained package-export warning count when nonzero. An unrelated review, absent package context or an
+outcome displayed alone cannot supply these export warnings. No package is
+reopened and no database connection is used to populate the view.
+
+`[FILE_FULL_SCAN_INSERT]` is classified separately as **Package export / File
+INSERT** or **Import / File INSERT**. Its guidance explains non-resumable INSERT
+into empty targets, duplicate-preserving unordered verification, default WARN
+permission for this route and ERROR rejection during target review. It does not
+ask users to repair a valid PK-free package merely to satisfy numeric-key rules.
+Other warnings and future unknown codes retain their original messages and
+existing general guidance. Filtering/display never changes job settings,
+compatibility policy or execution approval. Result JSON, package manifests,
+public APIs, YAML and Gradle properties are unchanged.
+
+## Generated primary keys for file imports
+
+CSV/TSV/JSONL file jobs now offer the same optional target-only generated PK as
+direct transfer. In New file job, expand Optional import settings, enable Create
+missing target tables and Add target-only generated PK, then keep ID or enter an
+unused column name. File Job settings supports the same controls inside its
+optional import group. Export still needs no target connection, and these options
+remain collapsed by default.
+
+Before export, choose the intended import settings. A completed package retains
+its captured job; edit the saved job and export a new package to change them.
+Review package and target shows the generated CREATE SQL and warnings before
+confirmation. Only newly created tables without a source PK receive the extra
+BIGINT identity key. Existing target tables and source files/data are unchanged;
+original PK/FK/UNIQUE relationships are retained. A name collision stops review
+with guidance to choose another name. WARN permits generated-key warnings; ERROR
+rejects them before DDL or row writes.
+
+Generated values come from the target and are excluded from source-value
+verification. Duplicates, NULLs and source field names still follow the ordinary
+file import rules. These target IDs do not enable MERGE, resume or automatic
+repair and do not establish new FK mappings. The existing
+schemaMode: CREATE_MISSING_WITH_IDENTITY and optional generatedKeyColumn are
+shared with Java and Gradle; no new Gradle task properties are needed.
+
+## Rename target tables and columns in file transfers
+
+CSV, TSV and JSONL jobs can now reuse the same table/column name editor as direct
+JDBC transfer. Save a file job, open Job settings, expand Optional import settings
+and choose Edit names. Load the captured source Schema when needed, check mapping
+scope and target previews, save the mapping, then save job settings. Export a new
+package and review it against the target before confirming import. Ordinary jobs
+need no mapping and retain their current defaults.
+
+The package keeps original source headers/JSONL fields, Schema and values. The
+same pinned name-only mapping is applied to target DDL, INSERT and verification,
+including PK/FK/UNIQUE column references. Existing empty targets, new tables,
+keyless/text-key tables and optional generated PK creation are supported. Generated
+names are checked against projected target column names. This does not introduce
+value conversions, expression rewriting, MERGE or resume. Check/default/generated
+SQL expressions retain source text; inspect the existing mapping-expression
+warnings and Schema SQL before execution. ERROR policy can reject these warnings.
+
+Mapped packages carry transfer-mapping.yaml and a fingerprint pin inside the
+captured job, which is covered by the manifest fingerprint chain. The original
+job and mapping file are unchanged; the package uses only its captured local
+mapping. Moving the entire package and disconnecting the source/original mapping
+is supported. Missing or modified mappings fail preflight before target access;
+execution stages the mapping with the rest of the immutable input files. Completed
+packages cannot adopt later edits to the original mapping: export a new package.
+SQL draft saving protects the mapping member as well as the job, Schema and data.
+No public result/configuration record shapes or Gradle task properties change.

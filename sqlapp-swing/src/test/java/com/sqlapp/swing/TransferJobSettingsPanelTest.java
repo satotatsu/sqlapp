@@ -106,8 +106,8 @@ class TransferJobSettingsPanelTest {
 	void generatedKeyColumnCanBeEditedInEveryTransport(String route) throws Exception {
 		var file = Files.writeString(directory.resolve("custom-key.yaml"),
 				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n"
-						+ "generatedKeyColumn: SQLAPP_ROW_ID\ndataMode: " + route + "\n"
-						+ (route.equals("FILE") ? "files: {directory: packages}\n" : ""));
+						+ "generatedKeyColumn: SQLAPP_ROW_ID\ndataMode: " + route
+						+ "\n" + (route.equals("FILE") ? "files: {directory: packages}\n" : ""));
 		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
 		var panel = load(file, saved);
 		var done = new CountDownLatch(1);

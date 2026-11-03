@@ -118,10 +118,9 @@ final class FileTransferSummary {
 		text.append("File format: ").append(manifest.files().format()).append("; encoding: ")
 				.append(manifest.files().encoding()).append('\n');
 		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
-			text.append("Unquoted empty fields: ").append(manifest.files().emptyFieldMode()).append("; NULL token: ")
-					.append(manifest.files().nullValue() == null ? "not used"
-							: new com.sqlapp.util.JsonConverter().toJsonString(manifest.files().nullValue()))
-					.append('\n');
+			text.append("Unquoted empty fields: ").append(manifest.files().emptyFieldMode())
+					.append("; NULL token: ").append(manifest.files().nullValue() == null ? "not used"
+							: new com.sqlapp.util.JsonConverter().toJsonString(manifest.files().nullValue())).append('\n');
 		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
 			text.append("Header handling: ").append(switch (manifest.files().headerMode()) {
 			case VALIDATE -> "validate column names and skip one header record";
