@@ -10,7 +10,7 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
 public class Db2SetBasedMigrationSnapshotProvider implements SetBasedMigrationSnapshotProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect instanceof Db2;
+		return dialect instanceof Db2 && "DB2".equals(dialect.getProductName());
 	}
 
 	@Override

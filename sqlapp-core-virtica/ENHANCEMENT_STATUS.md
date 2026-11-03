@@ -36,14 +36,21 @@ and read temporal attributes are corrected for existing resolver paths.
 | Area | Concrete limitation | Required next work |
 | --- | --- | --- |
 | Projections | Model, bulk/full metadata, HTML, named DROP, rename-only ALTER and atomic CREATE mapping are implemented; single-node UNSEGMENTED and hash SEGMENTED/KSAFE 0 round-trips passed on 25.1.0-0 | Multi-node buddy/KSAFE 1+ and older versions require live qualification; session-dependent scripts, follow-up ALTER and logical base/buddy grouping remain outside the current path |
-| Existing Flex/external tables | Automatic columns, generated dependent objects and external COPY options are not faithfully represented | Model dependencies and external definition semantics, or introduce an explicit vendor-DDL artifact path; verify exported DDL against a server |
-| Procedure/UDx recreation | Catalog metadata does not provide sufficient executable body/library definition | Acquire full CREATE DDL through an authorized bulk vendor export; current full-definition input works for routines |
-| Text-index catalog recreation | Catalog omits original ID/payload list and tokenizer/stemmer signatures | Bulk vendor DDL acquisition or supplemental canonical metadata; current reader output intentionally fails CREATE when incomplete |
-| Scheduled triggers | Event is not a complete representation of schedule + trigger + procedure binding/owner | Define separate reusable schedule identity/lifecycle and reliable procedure-call representation before generating CREATE/DROP |
+| Existing Flex/external tables | Native Flex batch restore now preserves unchanged generated defaults by bulk-export/exact-DDL verification, with source __raw__ length/nullability stored in Table/Column and compared at runtime. Multiple Flex tables, custom added projection, keys/view links, INSERT/view rebuild and implicit Identity passed on 25.1.0-0 without AHM changes | Requires a contiguous Flex CREATE batch before generated child/projection DDL and matching generated definitions/raw attributes. Modified generated designs fail without replacement; populated keys/data, external Flex, older/multi-node configurations remain outside qualification. Generic CREATE still rejects unsafe direct replay |
+| Procedure recreation | 11.1.1+ full reads now bulk-export exact native overload signatures and atomically assign complete CREATE DDL; 25.1.0-0 INT/VARCHAR XML/DROP/CREATE/CALL passed | Older live qualification and non-native argument types remain outside this path |
+| UDx recreation | Kind/raw signatures retained; kind-specific DROP and complete-definition CREATE guards tested. Parser metadata/XML/DROP/CREATE passed on 25.1 using its installed FlexTableLib | Library/dependency artifacts and grants still require a separate explicit path; other UDx kinds and historical servers lack live qualification |
+| Text-index recreation | 25+ full reads bulk-export complete CREATE definitions; XML/DROP/CREATE/search with payload passed on 25.1.0-0 | Older full reads remain catalog-only pending live export qualification; custom tokenizer/library deployment and privileges remain prerequisites |
+| Scheduled triggers | Existing-object state restore and the high-level VirticaSchemaRestorer fresh-schema DDL + state restore passed on 25.1.0-0, including XML, disabled states, unattached schedules and recreated Procedure CALL | Requires a stopped scheduler, exclusive drained maintenance window, absent target schema and a complete state snapshot. Bare procedure references require explicit Event.PROCEDURE_SCHEMA_NAME; external schedules and unsupported statement kinds are rejected. Generic CREATE generation retains its scheduling guard; no standalone shared Schedule model was added |
 | Sequence/identity runtime | Original START and last-issued value cannot be inferred from CURRENT_VALUE | Keep allocation state separate; require an explicit runtime-state capture policy if restoration is needed |
 | Older catalogs | Local version-boundary tests do not validate real 7.x/8.x catalog availability | Qualify representative older servers before claiming historical live compatibility |
 
 These are genuine remaining features, not completed by validation guards.
+UDx metadata follow-up passed 129 module unit tests: the one-query reader and
+Schema XML retain same-name/same-signature objects of different kinds. Raw
+multi-column return signatures are preserved without inventing a single scalar
+return type. Polymorphic transform signatures retain their empty DROP signature.
+This follow-up did not run a real database; the 25.1 Parser qualification above
+belongs to the preceding integration run.
 EXPORT_OBJECTS can export a scoped object set in one top-level SELECT. Integrating
 that output must preserve dependencies, prevent duplicate creation of generated
 objects, and retain a clear distinction between model metadata and executable DDL.

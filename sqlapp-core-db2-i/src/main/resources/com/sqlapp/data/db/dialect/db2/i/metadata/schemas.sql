@@ -1,0 +1,5 @@
+SELECT SCHEMA_NAME FROM QSYS2.SYSSCHEMAS WHERE 1=1
+/*if isNotEmpty(schemaName)*/
+ AND RTRIM(SCHEMA_NAME) IN /*schemaName*/('%')
+/*end*/
+ORDER BY SCHEMA_NAME

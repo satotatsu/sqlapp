@@ -13,6 +13,36 @@ import com.sqlapp.data.schemas.Table;
  * Vertica CREATE TABLE.
  */
 public class VirticaCreateTableFactory extends AbstractCreateTableFactory<VirticaSqlBuilder> {
+	@Override
+	protected void addCreateIndexDefinition(com.sqlapp.data.schemas.Index index, VirticaSqlBuilder builder) {
+		if (index.getDefinition() != null && !index.getDefinition().isEmpty()) {
+			builder._add(getSqlFactoryRegistry().createSql(index, com.sqlapp.data.db.sql.SqlType.CREATE).get(0)
+					.getSqlText());
+			return;
+		}
+		super.addCreateIndexDefinition(index, builder);
+	}
+
+	/**
+	 * A complete CREATE definition is authoritative; catalog components are
+	 * supplemental.
+	 */
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Table table) {
+		if (table.getDefinition() == null || table.getDefinition().isEmpty())
+			return super.createSql(table);
+		if (table.getDefinition().stream().allMatch(s -> s == null || s.isBlank()))
+			throw new IllegalArgumentException("Vertica table CREATE definition must not be blank: " + table.getName());
+		if (table.getTableType() == Table.TableType.Temporary
+				|| Boolean.TRUE.equals(table.getSpecifics().get("IS_TEMP_TABLE", Boolean.class)))
+			throw new IllegalArgumentException(
+					"Vertica temporary definitions require explicit session semantics: " + table.getName());
+		var result = new java.util.ArrayList<com.sqlapp.data.db.sql.SqlOperation>();
+		var builder = createSqlBuilder();
+		builder._add(table.getDefinition());
+		addSql(result, builder, com.sqlapp.data.db.sql.SqlType.CREATE, table);
+		return result;
+	}
 
 	@Override
 	protected void addCreateObject(final Table table, final VirticaSqlBuilder builder) {

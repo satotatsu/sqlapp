@@ -39,6 +39,31 @@ import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
 	@Test
+	public void hostNamesDoNotResolveAsLuw() {
+		var resolver = new Db2DialectResolver();
+		for (String name : java.util.List.of("Db2 for z/OS", "Db2 for z/OS VUE", "DB2 UDB for AS/400", "Db2 for i",
+				"Db2 for IBM i")) {
+			org.junit.jupiter.api.Assertions.assertNull(resolver.getDialect(name, 13, 0));
+		}
+		assertTrue(resolver.getDialect("DB2/LINUXX8664", 12, 1) instanceof Db2_1210);
+	}
+
+	@Test
+	public void hostMetadataRequiresHostModuleInsteadOfFallingBackToLuw() {
+		var resolver = new Db2DialectResolver();
+		var metadata = (java.sql.DatabaseMetaData) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { java.sql.DatabaseMetaData.class }, (p, m, a) -> {
+					if (m.getName().equals("getDatabaseProductName"))
+						return "DB2";
+					if (m.getName().equals("getDatabaseProductVersion"))
+						return "DSN13015";
+					throw new AssertionError(m.getName());
+				});
+		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+				() -> resolver.resolveDatabaseMetaData(metadata));
+	}
+
+	@Test
 	public void securityAdministratorVersionBoundary() {
 		var resolver = DialectResolver.getInstance();
 		assertTrue(!(resolver.getDialect("DB2", 9, 0, 0) instanceof com.sqlapp.data.db.dialect.db2.Db2_910));

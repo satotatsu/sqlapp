@@ -75,6 +75,17 @@ public class VirticaFunctionReader extends FunctionReader {
 		setReturning(rs, obj);
 		String args = getString(rs, "FUNCTION_ARGUMENT_TYPE");
 		obj.setSpecificName(createSpecificName(obj.getName(), args));
+		String kind = getString(rs, "PROCEDURE_TYPE");
+		if (kind != null && !kind.isBlank()) {
+			obj.getSpecifics().put("PROCEDURE_TYPE", kind);
+			if (!kind.trim().equalsIgnoreCase("User Defined Function"))
+				obj.setSpecificName(obj.getSpecificName() + " [" + kind + "]");
+		}
+		if (args != null)
+			obj.getSpecifics().put("FUNCTION_ARGUMENT_TYPE", args);
+		String returns = getString(rs, "FUNCTION_RETURN_TYPE");
+		if (returns != null)
+			obj.getSpecifics().put("FUNCTION_RETURN_TYPE", returns);
 		for (String split : splitArguments(args)) {
 			NamedArgument argument = createNamedArgument(split);
 			obj.getArguments().add(argument);
@@ -91,6 +102,13 @@ public class VirticaFunctionReader extends FunctionReader {
 
 	protected void setReturning(ExResultSet rs, Function obj) throws SQLException {
 		String data_type = getString(rs, "FUNCTION_RETURN_TYPE");
+		if (data_type == null || data_type.isBlank())
+			return;
+		// A transform can return several columns. FunctionReturning represents one
+		// value; retain the complete catalog signature in specifics instead of
+		// coercing a return-column list into a single scalar type.
+		if (splitArguments(data_type).size() > 1)
+			return;
 		FunctionReturning ret = obj.getReturning();
 		ret.setDataTypeName(data_type);
 		this.getDialect().setDbType(data_type, null, null, ret);

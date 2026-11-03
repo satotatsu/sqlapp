@@ -469,3 +469,21 @@ disposable writable target, credential environment variables and
 with CASCADE and writes test rows/checkpoints. See the
 [AlloyDB guide](../sqlapp-core-alloydb/README.md) for prerequisites and remaining
 cloud qualification work.
+
+## Aurora MySQL: upstream compatibility only
+
+```shell
+./gradlew :sqlapp-core-dialect-test:auroraMySqlCompatibilityTest
+```
+
+Runs `AuroraMySqlCompatibilityTest` separately on disposable local `mysql:8.0`
+and `mysql:8.4` containers with local-infile enabled. Individual tasks are
+`auroraMySql80CompatibilityTest` and `auroraMySql84CompatibilityTest`.
+The Aurora dialect is selected explicitly for metadata/DDL and bulk execution;
+ordinary connection-based detection must still resolve MySQL and preserve the
+caller's transaction. Coverage includes type metadata and DDL round trips,
+table/view recreation, escaped text/Unicode/NULL/empty/binary bulk values,
+and INSERT/UPSERT rollback, plus owned UPSERT commit visibility and autocommit
+restoration. Executed on 2026-11-03: MySQL 8.0.46 and 8.4.11 each passed six
+tests with no failures/errors/skips. The tests do not contact or emulate Aurora.
+See [scope and limitations](../sqlapp-core-aurora-mysql/README.md).

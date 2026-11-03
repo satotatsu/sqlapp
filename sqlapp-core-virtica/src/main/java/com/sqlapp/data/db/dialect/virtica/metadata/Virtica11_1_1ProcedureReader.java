@@ -79,6 +79,13 @@ public class Virtica11_1_1ProcedureReader extends ProcedureReader {
 	}
 
 	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Procedure> procedures)
+			throws SQLException {
+		if (!procedures.isEmpty())
+			new VirticaDdlExporter().exportProcedureDefinitions(connection, procedures);
+	}
+
+	@Override
 	protected RoutineArgumentReader<?> newRoutineArgumentReader() {
 		return null;
 	}

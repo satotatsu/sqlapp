@@ -30,6 +30,32 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		super("DB2.*", new Db2VersionResolver());
 	}
 
+	@Override
+	protected boolean match(String productName) {
+		if (productName != null && productName.toUpperCase(java.util.Locale.ROOT)
+				.matches(".*(Z/OS|OS/390|AS/400|ISERIES|FOR (?:IBM )?I(?:\\s.*)?).*")) {
+			return false;
+		}
+		return super.match(productName);
+	}
+
+	@Override
+	public Dialect resolveDatabaseMetaData(java.sql.DatabaseMetaData metadata) {
+		try {
+			String name = metadata.getDatabaseProductName();
+			if (name == null || !name.toUpperCase(java.util.Locale.ROOT).startsWith("DB2"))
+				return null;
+			String version = metadata.getDatabaseProductVersion();
+			if (version != null && version.matches("(?i)\\s*(DSN|QSQ).*")) {
+				throw new IllegalArgumentException("Db2 host server requires sqlapp-core-db2-"
+						+ (version.stripLeading().toUpperCase(java.util.Locale.ROOT).startsWith("DSN") ? "zos" : "i"));
+			}
+			return null;
+		} catch (java.sql.SQLException e) {
+			throw new IllegalStateException("Cannot identify Db2 server", e);
+		}
+	}
+
 	/**
 	 * DB2用のバージョンResolver
 	 * 

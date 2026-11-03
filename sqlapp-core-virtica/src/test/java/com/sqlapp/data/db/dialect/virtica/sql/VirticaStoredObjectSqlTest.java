@@ -9,6 +9,48 @@ import com.sqlapp.data.schemas.*;
 
 class VirticaStoredObjectSqlTest {
 	@Test
+	void udxKindsUseTheirOwnDropSyntaxAndRequireCompleteCreate() {
+		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
+		registry.getOptions().setDropIfExists(false);
+		for (String kind : new String[] { "Transform Function", "Aggregate Function", "Analytic Function", "Parser",
+				"Filter", "Source" }) {
+			Function function = new Function("udx");
+			function.getSpecifics().put("PROCEDURE_TYPE", "User Defined " + kind);
+			String drop = registry.createSql(function, SqlType.DROP).get(0).getSqlText();
+			assertTrue(drop.contains("DROP " + kind.toUpperCase(java.util.Locale.ROOT)), drop);
+			assertTrue(drop.contains("\"udx\"()"), drop);
+			function.setStatement("RETURN 1");
+			function.getReturning().setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT);
+			assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.CREATE));
+			function.setDefinition("CREATE " + kind + " udx AS LANGUAGE 'C++' NAME 'Factory' LIBRARY lib");
+			assertEquals(String.join("\n", function.getDefinition()),
+					registry.createSql(function, SqlType.CREATE).get(0).getSqlText());
+		}
+		Function parser = new Function("p");
+		parser.getSpecifics().put("PROCEDURE_TYPE", "User Defined Parser");
+		registry.getOptions().setDropIfExists(true);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(parser, SqlType.DROP));
+	}
+
+	@Test
+	void dropUsesBaseTypesAndPolymorphicTransformHasEmptySignature() {
+		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
+		Function function = new Function("f");
+		function.getArguments()
+				.add(new NamedArgument().setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR).setLength(123L));
+		String sql = registry.createSql(function, SqlType.DROP).get(0).getSqlText();
+		assertTrue(sql.contains("(VARCHAR)"), sql);
+		function.getArguments().clear();
+		function.getSpecifics().put("PROCEDURE_TYPE", "User Defined Transform");
+		function.getSpecifics().put("FUNCTION_ARGUMENT_TYPE", "Any");
+		assertTrue(registry.createSql(function, SqlType.DROP).get(0).getSqlText().contains("\"f\"()"));
+		function.getArguments().add(new NamedArgument().setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.DROP));
+		function.getSpecifics().put("PROCEDURE_TYPE", "Unknown kind");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.DROP));
+	}
+
+	@Test
 	void dropFunctionUsesExactTypesWithoutNamesAndRejectsIncompleteSignatures() {
 		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
 		registry.getOptions().setDecorateSchemaName(true);

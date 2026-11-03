@@ -35,6 +35,7 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.CREATE, VirticaCreateSchemaFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Projection.class, SqlType.DROP, VirticaDropProjectionFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Projection.class, SqlType.ALTER,
 				VirticaAlterProjectionFactory.class);
@@ -43,6 +44,7 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(com.sqlapp.data.schemas.CheckConstraint.class, SqlType.CREATE,
 				VirticaCreateCheckConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE, VirticaCreateIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.DROP, VirticaDropIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, VirticaCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, VirticaDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, VirticaCreateTemporaryTableFactory.class);
@@ -56,6 +58,7 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.DROP, VirticaDropFunctionFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, SqlType.CREATE,
 				VirticaCreateProcedureFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, SqlType.DROP, VirticaDropProcedureFactory.class);
 		registerSqlFactory(View.class, SqlType.DROP, VirticaDropViewFactory.class);
 	}
 

@@ -120,6 +120,15 @@ class VirticaProjectionIntegrationTest {
 				assertEquals(segmented.getSortColumns(), reader.getAllFull(connection).get(0).getSortColumns());
 				verifyRelatedObjects(connection, dialect, schemaName);
 				verifyTables(connection, dialect, schemaName);
+				verifyProcedures(connection, dialect, schemaName);
+				verifyDefinitionTables(connection, dialect, schemaName);
+				verifyTextIndex(connection, dialect, schemaName);
+				createScheduledObjects(connection, schemaName);
+				verifyScheduledObjects(connection, dialect, schemaName);
+				verifySchedulingStateRestorer(connection, dialect, schemaName);
+				verifySchemaDefinition(connection, dialect, schemaName);
+				verifyFlexSchemaRestore(connection, dialect);
+				verifyUdxParser(connection, dialect, schemaName);
 			} catch (Exception | AssertionError failure) {
 				primaryFailure = failure;
 				throw failure;
@@ -134,6 +143,32 @@ class VirticaProjectionIntegrationTest {
 					}
 			}
 		}
+	}
+
+	private void verifyUdxParser(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
+			String schemaName) throws Exception {
+		String ddl = "CREATE PARSER " + schemaName
+				+ ".test_json_parser AS LANGUAGE 'C++' NAME 'FJsonParserFactory' LIBRARY public.FlexTableLib NOT FENCED";
+		try (var statement = connection.createStatement()) {
+			statement.execute(ddl);
+		}
+		var reader = dialect.getCatalogReader().getSchemaReader().getFunctionReader();
+		reader.setSchemaName(schemaName);
+		Function function = reader.getAllFull(connection).stream().filter(f -> "test_json_parser".equals(f.getName()))
+				.findFirst().orElseThrow();
+		assertEquals("User Defined Parser", function.getSpecifics().get("PROCEDURE_TYPE"));
+		assertTrue(function.getArguments().isEmpty());
+		var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		registry.getOptions().setDropIfExists(false);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(function, SqlType.CREATE));
+		function.setDefinition(ddl);
+		Function restored = SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+		try (var statement = connection.createStatement()) {
+			statement.execute(registry.createSql(restored, SqlType.DROP).get(0).getSqlText());
+			statement.execute(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText());
+		}
+		assertTrue(reader.getAll(connection).stream().anyMatch(f -> "test_json_parser".equals(f.getName())));
 	}
 
 	private void verifyRelatedObjects(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
@@ -244,6 +279,337 @@ class VirticaProjectionIntegrationTest {
 		assertEquals(2, foreignKey.getColumns().size());
 		assertEquals("a", foreignKey.getColumns().get(0).getName());
 		assertEquals("b", foreignKey.getColumns().get(1).getName());
+	}
+
+	private void verifyProcedures(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
+			String schemaName) throws Exception {
+		try (var statement = connection.createStatement()) {
+			statement.execute("CREATE PROCEDURE " + schemaName
+					+ ".test_procedure(x INT) LANGUAGE PLvSQL AS $$ BEGIN PERFORM INSERT INTO " + schemaName
+					+ ".source_table VALUES (x, 'procedure; body'); END; $$;");
+			statement.execute("CREATE PROCEDURE " + schemaName
+					+ ".test_procedure(x VARCHAR) LANGUAGE PLvSQL AS $$ BEGIN PERFORM INSERT INTO " + schemaName
+					+ ".source_table VALUES (99, x); END; $$;");
+		}
+		var reader = dialect.getCatalogReader().getSchemaReader().getProcedureReader();
+		reader.setSchemaName(schemaName);
+		var procedures = reader.getAllFull(connection);
+		assertEquals(2, procedures.size());
+		var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		for (var procedure : procedures) {
+			assertFalse(procedure.getDefinition().isEmpty());
+			Procedure restored = SchemaUtils.readXml(new java.io.StringReader(procedure.asXml()));
+			try (var statement = connection.createStatement()) {
+				statement.execute(registry.createSql(restored, SqlType.DROP).get(0).getSqlText());
+				statement.execute(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText());
+			}
+		}
+		try (var statement = connection.createStatement()) {
+			statement.execute("CALL " + schemaName + ".test_procedure(42)");
+			statement.execute("CALL " + schemaName + ".test_procedure('varchar overload'::VARCHAR)");
+			try (var result = statement
+					.executeQuery("SELECT count(*) FROM " + schemaName + ".source_table WHERE id IN (42,99)")) {
+				assertTrue(result.next());
+				assertEquals(2, result.getInt(1));
+			}
+		}
+	}
+
+	private void verifyDefinitionTables(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
+			String schemaName) throws Exception {
+		var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		for (String name : java.util.List.of("flex_table", "external_table")) {
+			String ddl = name.equals("flex_table") ? "CREATE FLEX TABLE " + schemaName + "." + name + "(id INT)"
+					: "CREATE EXTERNAL TABLE " + schemaName + "." + name + "(id INT) AS COPY FROM '/dev/null'";
+			try (var statement = connection.createStatement()) {
+				statement.execute(ddl);
+			}
+			var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+			reader.setSchemaName(schemaName);
+			reader.setObjectName(name);
+			Table table = reader.getAllFull(connection).get(0);
+			// Explicit complete CREATE, never the dependency export assigned wholesale.
+			table.setDefinition(ddl);
+			Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			try (var statement = connection.createStatement()) {
+				statement.execute(registry.createSql(restored, SqlType.DROP).get(0).getSqlText());
+				statement.execute(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText());
+				try (var result = statement.executeQuery("SELECT count(*) FROM " + schemaName + "." + name)) {
+					assertTrue(result.next());
+					assertEquals(0, result.getInt(1));
+				}
+			}
+		}
+	}
+
+	private void verifyTextIndex(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
+			String schemaName) throws Exception {
+		try (var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE " + schemaName
+					+ ".text_source(id INT PRIMARY KEY, body LONG VARCHAR, payload VARCHAR(20))");
+			statement.execute("INSERT INTO " + schemaName + ".text_source VALUES(1, 'hello world', 'payload value')");
+		}
+		String ddl = "CREATE TEXT INDEX " + schemaName + ".\"text.index\" ON " + schemaName
+				+ ".text_source(id,body,payload) TOKENIZER v_txtindex.StringTokenizer(LONG VARCHAR) STEMMER NONE";
+		try (var statement = connection.createStatement()) {
+			statement.execute(ddl);
+		}
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+		reader.setSchemaName(schemaName);
+		reader.setObjectName("text_source");
+		Index index = reader.getAllFull(connection).get(0).getIndexes().get(0);
+		assertEquals("text.index", index.getName());
+		assertFalse(index.getDefinition().isEmpty());
+		Index restored = SchemaUtils.readXml(new java.io.StringReader(index.asXml()));
+		var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		try (var statement = connection.createStatement()) {
+			statement.execute(registry.createSql(restored, SqlType.DROP).get(0).getSqlText());
+			statement.execute(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText());
+			try (var result = statement
+					.executeQuery("SELECT doc_id,payload FROM " + schemaName + ".\"text.index\" WHERE token='hello'")) {
+				assertTrue(result.next());
+				assertEquals(1, result.getInt(1));
+				assertEquals("payload value", result.getString(2));
+			}
+		}
+	}
+
+	private void verifySchemaDefinition(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
+			String schemaName) throws Exception {
+		Schema schema = new Schema(schemaName);
+		String script = new VirticaDdlExporter().exportSchemaDefinition(connection, schema);
+		assertTrue(script.contains("flex_table"));
+		var registry = dialect.createSqlFactoryRegistry();
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(schema, SqlType.CREATE));
+		// Qualify ordinary schema replay separately, without hiding the Flex blocker.
+		try (var statement = connection.createStatement()) {
+			statement.execute("DROP TABLE " + schemaName + ".flex_table");
+		}
+		new VirticaDdlExporter().exportSchemaDefinition(connection, schema);
+		assertTrue(schema.getSpecifics().get("VERTICA_SCHEDULING_STATES").contains("ENABLED=false"));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(schema, SqlType.CREATE));
+		verifyScheduledSchemaRestore(connection, dialect, schema);
+		try (var statement = connection.createStatement()) {
+			statement.execute("DROP TRIGGER " + schemaName + ".trigger_one");
+			statement.execute("DROP TRIGGER " + schemaName + ".trigger_two");
+			for (String schedule : java.util.List.of("schedule_one", "schedule_two", "unattached_schedule"))
+				statement.execute("DROP SCHEDULE " + schemaName + "." + schedule);
+		}
+		new VirticaDdlExporter().exportSchemaDefinition(connection, schema);
+		// Supplemental objects must not duplicate the dependency script's CREATEs.
+		schema.getTables().add(new Table("supplemental_not_created"));
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
+		try (var statement = connection.createStatement()) {
+			statement.execute("DROP SCHEMA " + schemaName + " CASCADE");
+			for (var operation : registry.createSql(restored, SqlType.CREATE))
+				assertDoesNotThrow(() -> statement.execute(operation.getSqlText()), operation.getSqlText());
+			try (var result = statement.executeQuery("SELECT count(*) FROM v_catalog.tables WHERE table_schema='"
+					+ schemaName + "' AND table_name IN ('flex_table_keys','supplemental_not_created')")) {
+				assertTrue(result.next());
+				assertEquals(0, result.getInt(1));
+			}
+			try (var result = statement.executeQuery("SELECT count(*) FROM v_catalog.views WHERE table_schema='"
+					+ schemaName + "' AND table_name='flex_table_view'")) {
+				assertTrue(result.next());
+				assertEquals(0, result.getInt(1));
+			}
+		}
+	}
+
+	private void createScheduledObjects(java.sql.Connection connection, String schemaName) throws Exception {
+		try (var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEDULE " + schemaName + ".schedule_one USING DATETIMES('2099-01-01 00:00:00')");
+			statement.execute("CREATE SCHEDULE " + schemaName
+					+ ".schedule_two USING DATETIMES('2099-02-01 00:00:00','2099-03-01 00:00:00')");
+			statement.execute("CREATE SCHEDULE " + schemaName + ".unattached_schedule USING CRON '0 0 1 1 *'");
+			statement.execute("CREATE TRIGGER " + schemaName + ".trigger_one ON SCHEDULE " + schemaName
+					+ ".schedule_one EXECUTE PROCEDURE " + schemaName + ".test_procedure(10) AS DEFINER");
+			statement.execute("CREATE TRIGGER " + schemaName + ".trigger_two ON SCHEDULE " + schemaName
+					+ ".schedule_two EXECUTE PROCEDURE " + schemaName + ".test_procedure(20) AS DEFINER");
+			statement.execute("SELECT ENABLE_TRIGGER('" + schemaName + ".trigger_one',FALSE)");
+			statement.execute("SELECT ENABLE_SCHEDULE('" + schemaName + ".schedule_two',FALSE)");
+		}
+	}
+
+	private void verifyScheduledObjects(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect,
+			String schemaName) throws Exception {
+		var reader = dialect.getCatalogReader().getSchemaReader().getEventReader();
+		reader.setSchemaName(schemaName);
+		var events = reader.getAll(connection);
+		assertEquals(2, events.size());
+		Event first = SchemaUtils.readXml(new java.io.StringReader(
+				events.stream().filter(e -> "trigger_one".equals(e.getName())).findFirst().orElseThrow().asXml()));
+		Event second = SchemaUtils.readXml(new java.io.StringReader(
+				events.stream().filter(e -> "trigger_two".equals(e.getName())).findFirst().orElseThrow().asXml()));
+		assertEquals(Boolean.FALSE, first.getSpecifics().get("TRIGGER_ENABLED", Boolean.class));
+		assertEquals(Boolean.TRUE, second.getSpecifics().get("TRIGGER_ENABLED", Boolean.class));
+		assertEquals(Boolean.FALSE, second.getSpecifics().get("SCHEDULE_ENABLED", Boolean.class));
+		assertTrue(second.getSpecifics().get("DATE_TIME_STRING").contains("2099"));
+		try (var statement = connection.createStatement();
+				var result = statement.executeQuery("SELECT count(*) FROM v_catalog.user_schedules WHERE schema_name='"
+						+ schemaName + "' AND schedule_name='unattached_schedule'")) {
+			assertTrue(result.next());
+			assertEquals(1, result.getInt(1));
+		}
+	}
+
+	private void verifySchedulingStateRestorer(java.sql.Connection connection,
+			com.sqlapp.data.db.dialect.Dialect dialect, String schemaName) throws Exception {
+		Schema snapshot = new Schema(schemaName);
+		new VirticaDdlExporter().exportSchemaDefinition(connection, snapshot);
+		Schema restored = SchemaUtils.readXml(new java.io.StringReader(snapshot.asXml()));
+		var restorer = new VirticaSchedulingStateRestorer();
+		try (var statement = connection.createStatement()) {
+			statement.execute("SELECT ENABLE_TRIGGER('" + schemaName + ".trigger_one',TRUE)");
+			statement.execute("SELECT ENABLE_SCHEDULE('" + schemaName + ".schedule_two',TRUE)");
+		}
+		assertThrows(java.sql.SQLException.class, () -> restorer.restore(connection, restored));
+		// This test owns the entire disposable VMart container. Production API only
+		// checks this prerequisite; it never changes scheduler-global configuration.
+		try (var statement = connection.createStatement()) {
+			statement.execute("SELECT SET_CONFIG_PARAMETER('EnableStoredProcedureScheduler',0)");
+			try {
+				var result = restorer.restore(connection, restored);
+				assertTrue(result.applied().size() >= 2);
+				verifyScheduledObjects(connection, dialect, schemaName);
+				assertEquals(0, restorer.restore(connection, restored).applied().size());
+			} finally {
+				statement.execute("SELECT SET_CONFIG_PARAMETER('EnableStoredProcedureScheduler',1)");
+			}
+		}
+	}
+
+	private void verifyScheduledSchemaRestore(java.sql.Connection connection,
+			com.sqlapp.data.db.dialect.Dialect dialect, Schema schema) throws Exception {
+		var restorer = new VirticaSchemaRestorer();
+		assertThrows(IllegalArgumentException.class, () -> restorer.preview(schema));
+		var events = dialect.getCatalogReader().getSchemaReader().getEventReader();
+		events.setSchemaName(schema.getName());
+		for (Event event : events.getAll(connection)) {
+			// The fixture explicitly created both references to this schema. Catalog
+			// export omits that qualification; production code must not guess it.
+			event.getSpecifics().put("PROCEDURE_SCHEMA_NAME", schema.getName());
+			schema.getEvents().add(event);
+		}
+		Schema xml = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
+		assertTrue(restorer.preview(xml).stream()
+				.anyMatch(sql -> sql.contains("EXECUTE PROCEDURE \"" + schema.getName() + "\".")));
+		assertThrows(java.sql.SQLException.class, () -> restorer.restore(connection, xml));
+		try (var statement = connection.createStatement()) {
+			statement.execute("SELECT SET_CONFIG_PARAMETER('EnableStoredProcedureScheduler',0)");
+			try {
+				assertThrows(java.sql.SQLException.class, () -> restorer.restore(connection, xml));
+				statement.execute("DROP SCHEMA " + schema.getName() + " CASCADE");
+				var result = restorer.restore(connection, xml);
+				assertTrue(result.completedStatements().size() > 5);
+				verifyScheduledObjects(connection, dialect, schema.getName());
+				try (var rows = statement.executeQuery("SELECT count(*) FROM " + schema.getName() + ".source_table")) {
+					assertTrue(rows.next());
+					assertEquals(0, rows.getInt(1));
+				}
+				statement.execute("CALL " + schema.getName() + ".test_procedure(42)");
+				try (var rows = statement
+						.executeQuery("SELECT count(*) FROM " + schema.getName() + ".source_table WHERE id=42")) {
+					assertTrue(rows.next());
+					assertEquals(1, rows.getInt(1));
+				}
+			} finally {
+				statement.execute("SELECT SET_CONFIG_PARAMETER('EnableStoredProcedureScheduler',1)");
+			}
+		}
+	}
+
+	private void verifyFlexSchemaRestore(java.sql.Connection connection, com.sqlapp.data.db.dialect.Dialect dialect)
+			throws Exception {
+		String name = "sqlapp_projection_it_" + java.util.UUID.randomUUID().toString().replace("-", "");
+		boolean created = false;
+		Throwable primaryFailure = null;
+		try {
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE SCHEMA " + name);
+				created = true;
+				statement.execute("CREATE FLEX TABLE " + name + ".f(id INT)");
+				statement.execute("CREATE FLEX TABLE " + name + ".g()");
+				statement.execute("CREATE PROJECTION " + name + ".custom_projection AS SELECT id FROM " + name
+						+ ".f ORDER BY id UNSEGMENTED ALL NODES");
+			}
+			Schema source = new Schema(name);
+			new VirticaDdlExporter().exportSchemaDefinition(connection, source);
+			Schema xml = SchemaUtils.readXml(new java.io.StringReader(source.asXml()));
+			var projections = dialect.getCatalogReader().getSchemaReader().getProjectionReader();
+			projections.setSchemaName(name);
+			var expectedNames = projections.getAll(connection).stream().map(p -> p.getName())
+					.collect(java.util.stream.Collectors.toSet());
+			var restorer = new VirticaSchemaRestorer();
+			assertTrue(restorer.preview(xml).stream()
+					.noneMatch(sql -> sql.contains("MAKE_AHM") || sql.startsWith("DROP")));
+			try (var statement = connection.createStatement()) {
+				statement.execute("SELECT SET_CONFIG_PARAMETER('EnableStoredProcedureScheduler',0)");
+				try {
+					statement.execute("DROP SCHEMA " + name + " CASCADE");
+					Schema differentWidth = xml.clone();
+					var raw = differentWidth.getTables().get("f").getColumns().get("__raw__");
+					raw.setLength(raw.getLength() + 1);
+					var mismatch = assertThrows(VirticaSchemaRestorer.RestorationException.class,
+							() -> restorer.restoreWithDetails(connection, differentWidth));
+					assertEquals(VirticaSchemaRestorer.Phase.GENERATED_OBJECTS, mismatch.getPhase());
+					assertTrue(mismatch.getCompletedStatements().stream()
+							.noneMatch(sql -> sql.contains("custom_projection")));
+					statement.execute("DROP SCHEMA " + name + " CASCADE");
+					var result = restorer.restoreWithDetails(connection, xml);
+					assertFalse(result.verifiedGeneratedStatements().isEmpty());
+					assertTrue(result.result().completedStatements().stream()
+							.anyMatch(sql -> sql.contains("custom_projection")));
+					assertEquals(expectedNames, projections.getAll(connection).stream().map(p -> p.getName())
+							.collect(java.util.stream.Collectors.toSet()));
+					try (var rows = statement
+							.executeQuery("SELECT RESTORE_FLEXTABLE_DEFAULT_KEYS_TABLE_AND_VIEW('" + name + ".f')")) {
+						assertTrue(rows.next());
+						String status = rows.getString(1);
+						assertTrue(status.contains("already exists and is linked"), status);
+						assertFalse(status.contains("restored successfully"), status);
+					}
+					statement.execute("INSERT INTO " + name + ".f(id,payload) VALUES(7,'after restore')");
+					statement.execute("SELECT COMPUTE_FLEXTABLE_KEYS_AND_BUILD_VIEW('" + name + ".f')");
+					try (var rows = statement.executeQuery("SELECT payload FROM " + name + ".f_view WHERE id=7")) {
+						assertTrue(rows.next());
+						assertEquals("after restore", rows.getString(1));
+					}
+					statement.execute("INSERT INTO " + name + ".g(payload) VALUES('implicit identity')");
+					try (var rows = statement
+							.executeQuery("SELECT __identity__,payload::VARCHAR FROM " + name + ".g")) {
+						assertTrue(rows.next());
+						assertTrue(rows.getLong(1) > 0);
+						assertEquals("implicit identity", rows.getString(2));
+					}
+					statement.execute("DROP TABLE " + name + ".f CASCADE");
+					try (var rows = statement
+							.executeQuery("SELECT (SELECT count(*) FROM v_catalog.tables WHERE table_schema='" + name
+									+ "' AND table_name='f_keys') + (SELECT count(*) FROM v_catalog.views WHERE table_schema='"
+									+ name + "' AND table_name='f_view')")) {
+						assertTrue(rows.next());
+						assertEquals(0, rows.getInt(1));
+					}
+				} finally {
+					statement.execute("SELECT SET_CONFIG_PARAMETER('EnableStoredProcedureScheduler',1)");
+				}
+			}
+		} catch (Exception | AssertionError failure) {
+			primaryFailure = failure;
+			throw failure;
+		} finally {
+			if (created)
+				try (var statement = connection.createStatement()) {
+					statement.execute("DROP SCHEMA " + name + " CASCADE");
+				} catch (java.sql.SQLException cleanupFailure) {
+					if (primaryFailure == null)
+						throw cleanupFailure;
+					primaryFailure.addSuppressed(cleanupFailure);
+				}
+		}
 	}
 
 	private String required(String name) {

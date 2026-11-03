@@ -8,6 +8,37 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class VirticaIndexSqlTest {
+	@Test
+	void completeTextDdlIsAuthoritativeThroughXmlAndTableCreate() throws Exception {
+		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
+		Table table = table();
+		Index index = table.getIndexes().get(0);
+		index.getColumns().clear();
+		index.getSpecifics().put("TOKENIZER_NAME", "custom");
+		String ddl = "CREATE TEXT INDEX app.idx ON app.source(id,body,payload) TOKENIZER app.custom(LONG VARCHAR) STEMMER NONE;";
+		index.setDefinition(ddl);
+		Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		assertEquals(ddl, registry.createSql(restored.getIndexes().get(0), SqlType.CREATE).get(0).getSqlText());
+		assertTrue(registry.createSql(restored, SqlType.CREATE).stream().anyMatch(o -> ddl.equals(o.getSqlText())));
+		index.setDefinition("  ");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(index, SqlType.CREATE));
+	}
+
+	@Test
+	void dropUsesOwnSchemaQuotingAndOptionalIfExistsWithoutSourceTable() {
+		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		registry.getOptions().setDropIfExists(true);
+		Index index = table().getIndexes().get(0).clone();
+		String sql = registry.createSql(index, SqlType.DROP).get(0).getSqlText();
+		assertEquals("DROP TEXT INDEX IF EXISTS \"index schema\".\"text index\"", sql);
+		registry.getOptions().setDecorateSchemaName(false);
+		registry.getOptions().setDropIfExists(false);
+		assertEquals("DROP TEXT INDEX \"text index\"", registry.createSql(index, SqlType.DROP).get(0).getSqlText());
+		index.setIndexType(IndexType.BTree);
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(index, SqlType.DROP));
+	}
+
 	private Table table() {
 		Table table = new Table("source table");
 		table.setSchemaName("source schema");

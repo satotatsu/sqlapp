@@ -8,12 +8,113 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.schemas.Projection;
 
 class VirticaDdlExporterTest {
+	@Test
+	void schemaSchedulingStatesAreBulkCapturedAndInvalidRowsKeepOldDefinition() throws Exception {
+		var schema = new com.sqlapp.data.schemas.Schema("app");
+		Jdbc jdbc = new Jdbc();
+		jdbc.states = List.<Object[]>of(new Object[] { "TRIGGER", "app", "t'quote", false },
+				new Object[] { "SCHEDULE", "app", "orphan", true });
+		String script = new VirticaDdlExporter().exportSchemaDefinition(jdbc.connection(), schema);
+		assertEquals(2, jdbc.queries);
+		String states = schema.getSpecifics().get("VERTICA_SCHEDULING_STATES");
+		assertTrue(states.contains("TRIGGER \"app\".\"t'quote\" ENABLED=false"), states);
+		assertTrue(states.contains("SCHEDULE \"app\".\"orphan\" ENABLED=true"), states);
+		com.sqlapp.data.schemas.Schema xml = com.sqlapp.data.schemas.SchemaUtils
+				.readXml(new java.io.StringReader(schema.asXml()));
+		assertEquals(states, xml.getSpecifics().get("VERTICA_SCHEDULING_STATES"));
+		for (Object[] invalid : List.<Object[]>of(new Object[] { "TRIGGER", "other", "t", true },
+				new Object[] { "UNKNOWN", "app", "t", true }, new Object[] { "TRIGGER", "app", "t", null })) {
+			Jdbc failed = new Jdbc();
+			failed.states = List.<Object[]>of(invalid);
+			assertThrows(SQLException.class,
+					() -> new VirticaDdlExporter().exportSchemaDefinition(failed.connection(), schema));
+			assertEquals(script, String.join("\n", schema.getDefinition()));
+			assertEquals(states, schema.getSpecifics().get("VERTICA_SCHEDULING_STATES"));
+		}
+		Jdbc older = new Jdbc();
+		older.major = 24;
+		new VirticaDdlExporter().exportSchemaDefinition(older.connection(), schema);
+		assertEquals(1, older.queries);
+		assertFalse(schema.getSpecifics().containsKey("VERTICA_SCHEDULING_STATES"));
+	}
+
+	@Test
+	void schemaExportCapturesOneScopedScriptAndFailurePreservesDefinition() throws Exception {
+		var schema = new com.sqlapp.data.schemas.Schema("app_schema");
+		Jdbc jdbc = new Jdbc();
+		String script = new VirticaDdlExporter().exportSchemaDefinition(jdbc.connection(), schema);
+		assertEquals(2, jdbc.queries);
+		assertEquals("app_schema", jdbc.scope);
+		assertEquals(script, String.join("\n", schema.getDefinition()));
+		Jdbc failed = new Jdbc();
+		failed.script = " ";
+		assertThrows(SQLException.class,
+				() -> new VirticaDdlExporter().exportSchemaDefinition(failed.connection(), schema));
+		assertEquals(script, String.join("\n", schema.getDefinition()));
+		schema.setName(" ");
+		assertThrows(IllegalArgumentException.class,
+				() -> new VirticaDdlExporter().exportSchemaDefinition(null, schema));
+	}
+
+	@Test
+	void textIndexesExportOnceUsingOwnSchemasAndAssignOnlyTheirCreates() throws Exception {
+		Jdbc jdbc = new Jdbc();
+		var first = new com.sqlapp.data.schemas.Index("one");
+		first.setIndexType(com.sqlapp.data.schemas.IndexType.FullText);
+		first.setSchemaName("source");
+		first.setTableName("data");
+		first.getSpecifics().put("INDEX_SCHEMA_NAME", "indexes");
+		var second = first.clone();
+		second.setName("two");
+		jdbc.script = "CREATE TEXT INDEX indexes.one ON source.data(id,body) TOKENIZER v_txtindex.StringTokenizer(LONG VARCHAR);"
+				+ "CREATE TEXT INDEX indexes.two ON source.data(id,body) TOKENIZER v_txtindex.StringTokenizer(LONG VARCHAR);";
+		new VirticaIndexReader(com.sqlapp.data.db.dialect.virtica.DialectHolder.defaultDialect11_1_1).setMetadataDetail(
+				jdbc.connection(), new com.sqlapp.data.parameter.ParametersContext(), List.of(first, second));
+		assertEquals(1, jdbc.queries);
+		assertEquals("\"indexes\".\"one\",\"indexes\".\"two\"", jdbc.scope);
+		assertFalse(first.getDefinition().isEmpty());
+		assertEquals("", new VirticaDdlExporter().exportTextIndexDefinitions(null, List.of()));
+		Jdbc older = new Jdbc();
+		older.major = 24;
+		var reader = new VirticaIndexReader(com.sqlapp.data.db.dialect.virtica.DialectHolder.defaultDialect11_1_1);
+		reader.setMetadataDetail(older.connection(), new com.sqlapp.data.parameter.ParametersContext(), List.of(first));
+		assertEquals(0, older.queries);
+		reader.setMetadataDetail(null, new com.sqlapp.data.parameter.ParametersContext(), List.of());
+	}
+
+	@Test
+	void procedureOverloadsUseOneBoundExportAndEmptySetsUseNone() throws Exception {
+		Jdbc jdbc = new Jdbc();
+		jdbc.script = "CREATE PROCEDURE app.p(x int) LANGUAGE 'PL/vSQL' AS $$ BEGIN NULL; END; $$;"
+				+ "CREATE PROCEDURE app.p(x varchar) LANGUAGE 'PL/vSQL' AS $$ BEGIN NULL; END; $$;";
+		var integer = new com.sqlapp.data.schemas.Procedure("p");
+		integer.setSchemaName("app");
+		integer.getArguments().add(new com.sqlapp.data.schemas.NamedArgument("x")
+				.setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT));
+		var string = integer.clone();
+		string.getArguments().get(0).setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR);
+		var reader = new Virtica11_1_1ProcedureReader(
+				com.sqlapp.data.db.dialect.virtica.DialectHolder.defaultDialect11_1_1);
+		reader.setMetadataDetail(jdbc.connection(), new com.sqlapp.data.parameter.ParametersContext(),
+				List.of(integer, string));
+		assertEquals(1, jdbc.queries);
+		assertTrue(jdbc.scope.contains("\"app\".\"p\"(BIGINT)"), jdbc.scope);
+		assertTrue(jdbc.scope.contains("\"app\".\"p\"(VARCHAR)"), jdbc.scope);
+		assertFalse(jdbc.scope.contains("VARCHAR(1)"), jdbc.scope);
+		assertFalse(integer.getDefinition().isEmpty());
+		assertFalse(string.getDefinition().isEmpty());
+		assertEquals("", new VirticaDdlExporter().exportProcedureDefinitions(null, List.of()));
+		reader.setMetadataDetail(null, new com.sqlapp.data.parameter.ParametersContext(), List.of());
+	}
+
 	@SuppressWarnings("unchecked")
 	private static <T> T proxy(Class<T> type, InvocationHandler handler) {
 		return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] { type }, handler);
 	}
 
 	private static class Jdbc {
+		List<Object[]> states = List.of();
+		int major = 25;
 		int prepares;
 		int queries;
 		int rows = 1;
@@ -27,6 +128,12 @@ class VirticaDdlExporterTest {
 
 		Connection connection() {
 			return proxy(Connection.class, (p, m, args) -> {
+				if (m.getName().equals("getMetaData"))
+					return proxy(DatabaseMetaData.class, (mp, mm, ma) -> {
+						if (mm.getName().equals("getDatabaseMajorVersion"))
+							return major;
+						throw new AssertionError(mm.getName());
+					});
 				if (m.getName().equals("close")) {
 					connectionClosed = true;
 					return null;
@@ -35,6 +142,29 @@ class VirticaDdlExporterTest {
 					throw new AssertionError(m.getName());
 				prepares++;
 				sql = (String) args[0];
+				if (sql.contains("v_catalog.user_schedules")) {
+					int[] statePosition = { -1 };
+					return proxy(PreparedStatement.class, (sp, sm, sa) -> switch (sm.getName()) {
+					case "setString" -> {
+						assertTrue(sa[0].equals(1) || sa[0].equals(2));
+						assertEquals(scope, sa[1]);
+						yield null;
+					}
+					case "close" -> null;
+					case "executeQuery" -> {
+						queries++;
+						yield proxy(ResultSet.class, (rp, rm, ra) -> switch (rm.getName()) {
+						case "next" -> ++statePosition[0] < states.size();
+						case "getString" -> (String) states.get(statePosition[0])[(Integer) ra[0] - 1];
+						case "getBoolean" -> Boolean.TRUE.equals(states.get(statePosition[0])[3]);
+						case "wasNull" -> states.get(statePosition[0])[3] == null;
+						case "close" -> null;
+						default -> throw new AssertionError(rm.getName());
+						});
+					}
+					default -> throw new AssertionError(sm.getName());
+					});
+				}
 				return proxy(PreparedStatement.class, (sp, sm, sa) -> switch (sm.getName()) {
 				case "setString" -> {
 					assertEquals(1, sa[0]);

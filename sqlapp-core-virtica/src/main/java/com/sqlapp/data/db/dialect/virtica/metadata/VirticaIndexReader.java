@@ -30,6 +30,15 @@ public class VirticaIndexReader extends IndexReader {
 	}
 
 	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Index> indexes)
+			throws SQLException {
+		// Automatic text-index export is qualified on 25.x only; older full reads
+		// keep their previous catalog-only behavior until their export is verified.
+		if (!indexes.isEmpty() && connection.getMetaData().getDatabaseMajorVersion() >= 25)
+			new VirticaDdlExporter().exportTextIndexDefinitions(connection, indexes);
+	}
+
+	@Override
 	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNodeCache().getString("indexes.sql");

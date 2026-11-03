@@ -36,6 +36,61 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Oracle Database integration coverage for the metadata reader tree. */
 class OracleMetadataReaderTest {
+	@Test
+	void externalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			grantDirectoryAccess();
+			String name = "EXT_MULTI_"
+					+ java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
+			String schemaName = ORACLE.getUsername().toUpperCase(Locale.ROOT);
+			boolean created = false;
+			try {
+				try (Statement statement = connection.createStatement()) {
+					statement.execute("CREATE TABLE " + name + " (ID NUMBER) ORGANIZATION EXTERNAL (TYPE ORACLE_LOADER "
+							+ "DEFAULT DIRECTORY DATA_PUMP_DIR ACCESS PARAMETERS (RECORDS DELIMITED BY NEWLINE) "
+							+ "LOCATION ('a,''quoted.csv', DATA_PUMP_DIR:'b.csv')) REJECT LIMIT 10");
+					created = true;
+				}
+				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				var externalReader = schemaReader.getExternalTableReader();
+				externalReader.setSchemaName(schemaName);
+				var external = externalReader.getAll(connection).stream().filter(t -> name.equals(t.getName()))
+						.findFirst().orElseThrow();
+				com.sqlapp.data.schemas.ExternalTable externalXml = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(external.asXml()));
+				assertEquals("2", externalXml.getSpecifics().get("oracle.external.locationCount"));
+				assertEquals("a,'quoted.csv", externalXml.getSpecifics().get("oracle.external.location.0.file"));
+				assertEquals("b.csv", externalXml.getSpecifics().get("oracle.external.location.1.file"));
+				var tableReader = schemaReader.getTableReader();
+				tableReader.setSchemaName(schemaName);
+				tableReader.setObjectName(name);
+				Table table = tableReader.getAllFull(connection).get(0);
+				assertEquals("true", table.getSpecifics().get("oracle.table.external"));
+				Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+				var registry = dialect.createSqlFactoryRegistry();
+				try (Statement statement = connection.createStatement()) {
+					statement.execute("DROP TABLE " + name);
+					for (var operation : registry.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE))
+						statement.execute(operation.getSqlText());
+					try (var result = statement.executeQuery("SELECT COUNT(*) FROM ALL_EXTERNAL_LOCATIONS WHERE OWNER='"
+							+ schemaName + "' AND TABLE_NAME='" + name + "'")) {
+						assertTrue(result.next());
+						assertEquals(2, result.getInt(1));
+					}
+				}
+				var recreated = externalReader.getAll(connection).stream().filter(t -> name.equals(t.getName()))
+						.findFirst().orElseThrow();
+				assertEquals(externalXml.getSpecifics(), recreated.getSpecifics());
+			} finally {
+				if (created)
+					try (Statement statement = connection.createStatement()) {
+						drop(statement, "DROP TABLE " + name, 942);
+					}
+			}
+		}
+	}
+
 	@org.junit.jupiter.api.Test
 	void verifiesDataTypeServerRoundTrips() throws Exception {
 		try (var connection = ORACLE.createConnection("")) {

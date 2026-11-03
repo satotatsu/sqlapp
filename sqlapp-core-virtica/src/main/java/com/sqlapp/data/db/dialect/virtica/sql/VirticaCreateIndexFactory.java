@@ -12,6 +12,20 @@ import com.sqlapp.data.schemas.Table;
  * columns.
  */
 public class VirticaCreateIndexFactory extends AbstractCreateIndexFactory<VirticaSqlBuilder> {
+	@Override
+	public void addCreateObject(Index index, VirticaSqlBuilder builder) {
+		if (index.getDefinition() != null && !index.getDefinition().isEmpty()) {
+			if (index.getIndexType() != IndexType.FullText)
+				throw new IllegalArgumentException(
+						"Vertica index definitions require a text index: " + index.getName());
+			if (index.getDefinition().stream().allMatch(s -> s == null || s.isBlank()))
+				throw new IllegalArgumentException(
+						"Vertica text index CREATE definition must not be blank: " + index.getName());
+			builder._add(index.getDefinition());
+			return;
+		}
+		super.addCreateObject(index, builder);
+	}
 
 	@Override
 	protected boolean createIndex(Index index) {

@@ -19,6 +19,11 @@ public class VirticaCreateFunctionFactory extends AbstractCreateFunctionFactory<
 			builder._add(function.getDefinition());
 			return;
 		}
+		if (com.sqlapp.data.db.dialect.virtica.util.VirticaFunctionKind
+				.of(function) != com.sqlapp.data.db.dialect.virtica.util.VirticaFunctionKind.SCALAR)
+			throw new IllegalArgumentException(
+					"Vertica UDx CREATE requires a complete executable definition and its deployed library: "
+							+ function.getName());
 		if (CommonUtils.isEmpty(function.getStatement()))
 			throw new IllegalArgumentException(
 					"Vertica function requires RETURN body or complete CREATE definition: " + function.getName());

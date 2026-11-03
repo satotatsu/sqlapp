@@ -9,6 +9,22 @@ import com.sqlapp.data.schemas.*;
 
 class VirticaTableAttributeSqlTest {
 	@Test
+	void fullTableDefinitionIsAuthoritativeForSpecialTablesAndSurvivesXml() throws Exception {
+		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
+		Table table = table();
+		table.setTableType(Table.TableType.Flex);
+		table.getColumns().add("__raw__");
+		table.getSpecifics().put("TABLE_DEFINITION", "COPY FROM '/dev/null'");
+		String ddl = "CREATE FLEX EXTERNAL TABLE app.events() AS COPY FROM '/dev/null' PARSER fjsonparser();";
+		table.setDefinition(ddl);
+		Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		assertEquals(1, registry.createSql(restored, SqlType.CREATE).size());
+		assertEquals(ddl, registry.createSql(restored, SqlType.CREATE).get(0).getSqlText());
+		restored.setDefinition("  ");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(restored, SqlType.CREATE));
+	}
+
+	@Test
 	void identityReplacesTypeAndKeepsOptionsWithoutMutatingColumn() throws Exception {
 		var registry = DialectResolver.getInstance().getDialect("Vertica", 25, 1, 0).createSqlFactoryRegistry();
 		Table table = table();

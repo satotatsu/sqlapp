@@ -105,6 +105,7 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-aurora-postgres')
+	implementation project(':sqlapp-core-aurora-mysql')
 	implementation project(':sqlapp-core-edb-oracle')
 	implementation project(':sqlapp-core-alloydb')
 	implementation project(':sqlapp-core-yugabyte')
@@ -394,4 +395,29 @@ tasks.register('mariadbIntegrationTest') {
 	description = 'Runs the MariaDB 10.5/11.4/11.8 Testcontainers compatibility matrix.'
 	dependsOn tasks.named('mariadb105CompatibilityTest'), tasks.named('mariadb114CompatibilityTest'),
 			tasks.named('mariadb118CompatibilityTest')
+}
+
+// Upstream MySQL compatibility only; these containers do not emulate AWS Aurora.
+['80': 'mysql:8.0', '84': 'mysql:8.4'].each { baseline, image ->
+	tasks.register("auroraMySql${baseline}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Checks the Aurora MySQL dialect on ${image}; no Aurora service verification."
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.mysql.AuroraMySqlCompatibilityTest'
+		systemProperty 'sqlapp.test.aurora.mysqlImage', image
+		systemProperty 'sqlapp.test.aurora.mysqlMinor', baseline == '80' ? '0' : '4'
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+tasks.named('auroraMySql84CompatibilityTest') { mustRunAfter tasks.named('auroraMySql80CompatibilityTest') }
+tasks.register('auroraMySqlCompatibilityTest') {
+	group = 'verification'
+	description = 'Runs upstream MySQL 8.0/8.4 checks for Aurora MySQL. Does not connect to AWS.'
+	dependsOn tasks.named('auroraMySql80CompatibilityTest'), tasks.named('auroraMySql84CompatibilityTest')
 }

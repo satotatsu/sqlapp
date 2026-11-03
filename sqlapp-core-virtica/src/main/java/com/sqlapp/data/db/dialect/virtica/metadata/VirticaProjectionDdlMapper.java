@@ -129,12 +129,17 @@ final class VirticaProjectionDdlMapper {
 	 * Header-only lexer; statement splitting and literal handling use the dialect
 	 * splitter.
 	 */
-	private static final class Cursor {
+	static final class Cursor {
 		private final String sql;
 		private int position;
 
 		Cursor(String sql) {
 			this.sql = sql;
+		}
+
+		int offset() {
+			skip();
+			return position;
 		}
 
 		private void skip() {
@@ -218,6 +223,14 @@ final class VirticaProjectionDdlMapper {
 				}
 			}
 			throw new IllegalArgumentException("Projection column list is not closed");
+		}
+
+		String argumentList() {
+			if (!openParenthesis())
+				throw new IllegalArgumentException("Procedure signature is missing");
+			int start = position;
+			finishColumnList();
+			return sql.substring(start, position - 1);
 		}
 
 		boolean atEnd() {
