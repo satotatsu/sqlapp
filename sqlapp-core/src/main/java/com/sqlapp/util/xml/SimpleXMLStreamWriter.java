@@ -83,9 +83,9 @@ public class SimpleXMLStreamWriter implements XMLStreamWriter {
 			return text;
 		}
 		StringBuilder builder = new StringBuilder((int) (text.length() * 1.2));
-		int size = text.codePointCount(0, text.length());
-		for (int i = 0; i < size; i++) {
+		for (int i = 0; i < text.length();) {
 			int codePoint = text.codePointAt(i);
+			i += Character.charCount(codePoint);
 			if (codePoint == '<') {
 				builder.append("&lt;");
 			} else if (codePoint == '&') {

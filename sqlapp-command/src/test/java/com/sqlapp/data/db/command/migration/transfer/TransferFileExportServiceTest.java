@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 import org.hsqldb.jdbc.JDBCDataSource;
@@ -218,6 +219,10 @@ class TransferFileExportServiceTest {
 		assertTrue(csv.contains("12:34:56.123456"));
 		assertTrue(csv.contains(".123456789+9:00") || csv.contains(".123456789+09:00"), csv);
 		assertEquals(exported, new TransferFilePackageIO().read(exported.file(), exported.fingerprint()));
+		var overview = new TransferFileImportService().describePackage(exported.file(), exported.fingerprint());
+		assertEquals(3, overview.tables().getFirst().columns().size());
+		assertEquals(List.of("ID", "T", "TS"), overview.tables().getFirst().columns().stream()
+				.map(TransferFileImportService.PackageColumn::sourceName).toList());
 		assertThrows(Exception.class,
 				() -> new TransferFileImportService().validatePackage(exported.file(), exported.fingerprint()));
 	}

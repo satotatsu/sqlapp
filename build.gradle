@@ -83,7 +83,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-sqlite"))
 	nmcpAggregation(project(":sqlapp-core-sqlserver"))
 	nmcpAggregation(project(":sqlapp-core-sybase"))
-	nmcpAggregation(project(":sqlapp-core-virtica"))
+	nmcpAggregation(project(":sqlapp-core-vertica"))
 	nmcpAggregation(project(":sqlapp-core-phoenix"))
 //	nmcpAggregation(project(":sqlapp-core-dialect-test"))
 	nmcpAggregation(project(":sqlapp-core-hsql"))

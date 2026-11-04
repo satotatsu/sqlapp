@@ -29,6 +29,25 @@ import com.sqlapp.util.StaxWriter;
 
 public class SimpleXMLStreamWriterTest {
 	@Test
+	public void preservesSupplementaryCharactersInTextAndCdata() throws Exception {
+		final String value = "𠮷-start\n\t<& end-😀";
+		for (boolean cdata : java.util.List.of(false, true)) {
+			final var output = new StringWriter();
+			final var writer = new SimpleXMLStreamWriter(output);
+			writer.writeStartElement("test");
+			if (cdata) writer.writeCData(value);
+			else writer.writeCharacters(value);
+			writer.writeEndElement();
+			writer.flush();
+			final var reader = javax.xml.stream.XMLInputFactory.newFactory()
+					.createXMLStreamReader(new java.io.StringReader(output.toString()));
+			try {
+				reader.nextTag();
+				org.junit.jupiter.api.Assertions.assertEquals(value, reader.getElementText());
+			} finally { reader.close(); }
+		}
+	}
+	@Test
 	public void preservesAttributeWhitespaceAndSupplementaryCharacters() throws Exception {
 		final String value = "𠮷<&\"\tfirst\r\nsecond\nthird\rfourth";
 		final var output = new StringWriter();

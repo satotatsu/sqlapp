@@ -36,4 +36,9 @@ public class Oracle23aiSchemaReader extends Oracle12cSchemaReader {
 	protected MviewReader newMviewReader() {
 		return new Oracle23aiMviewReader(getDialect());
 	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.EventReader newEventReader() {
+		return new Oracle23aiEventReader(getDialect());
+	}
 }

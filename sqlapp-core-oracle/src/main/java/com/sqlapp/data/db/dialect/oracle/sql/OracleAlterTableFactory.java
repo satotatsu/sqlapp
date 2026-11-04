@@ -95,6 +95,16 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 				|| java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())))
 			throw new IllegalArgumentException("ONLINE partition maintenance requires a partition change");
 		if (before != null && after != null
+				&& (OracleExternalTableOptions.isExternal(before) || OracleExternalTableOptions.isExternal(after))) {
+			if (difference.getState().isChanged())
+				throw new IllegalArgumentException(
+						"Oracle external table ALTER requires an explicit external-table migration plan: "
+								+ before.getName());
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(after);
+			return List.of();
+		}
+		if (before != null && after != null
 				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
 				&& (before.getPartitioning() != null || after.getPartitioning() != null)) {
 			if (before.getPartitioning() == null || after.getPartitioning() == null)

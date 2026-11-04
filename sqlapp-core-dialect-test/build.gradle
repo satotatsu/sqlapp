@@ -115,7 +115,7 @@ dependencies {
 	implementation project(':sqlapp-core-sqlite')
 	implementation project(':sqlapp-core-sqlserver')
 	implementation project(':sqlapp-core-sybase')
-	implementation project(':sqlapp-core-virtica')
+	implementation project(':sqlapp-core-vertica')
 	implementation fileTree(dir: 'lib', include: '*.jar')
 	//hsql
 	testImplementation('org.hsqldb:hsqldb:2.7.4')

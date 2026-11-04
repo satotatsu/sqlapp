@@ -49,13 +49,14 @@ class Db2Zos13Test {
 	}
 
 	@Test
-	void readsMultipleTablesAndOrderedKeysInFourQueriesAndRecreates() throws Exception {
+	void readsMultipleTablesAndOrderedKeysInSixQueriesAndRecreates() throws Exception {
 		var calls = new AtomicInteger();
 		var connection = connection(calls, false);
 		var reader = new Db2Zos13().getCatalogReader().getSchemaReader().getTableReader();
 		reader.setSchemaName("APP");
 		var tables = reader.getAllFull(connection);
-		assertEquals(4, calls.get(), "one query each for tables, columns, unique keys and foreign keys");
+		assertEquals(6, calls.get(),
+				"one query each for tables, columns, indexes, checks, unique keys and foreign keys");
 		assertEquals(2, tables.size());
 		var second = tables.stream().filter(t -> t.getName().equals("SECOND")).findFirst().orElseThrow();
 		assertTrue(second.getColumns().get("A").isIdentity());
@@ -108,7 +109,7 @@ class Db2Zos13Test {
 		assertThrows(RuntimeException.class, () -> reader.getAllFull(connection(new AtomicInteger(), true)));
 	}
 
-	private static DatabaseMetaData metadata(String product, String version) {
+	static DatabaseMetaData metadata(String product, String version) {
 		return proxy(DatabaseMetaData.class, (p, m, a) -> switch (m.getName()) {
 		case "getDatabaseProductName" -> product;
 		case "getDatabaseProductVersion" -> version;
@@ -130,6 +131,8 @@ class Db2Zos13Test {
 		return proxy(PreparedStatement.class, (p, m, a) -> {
 			if (m.getName().equals("executeQuery")) {
 				calls.incrementAndGet();
+				if (sql.contains("host:indexes") || sql.contains("host:checks"))
+					return rows(List.of());
 				if (sql.contains("REF_COLUMN_NAME")) {
 					var arow = row("SCHEMA_NAME", "APP", "TABLE_NAME", "CHILD", "CONSTRAINT_NAME", "FK", "COLUMN_NAME",
 							"A", "REF_SCHEMA_NAME", "OTHER", "REF_TABLE_NAME", "PARENT", "REF_COLUMN_NAME",
@@ -169,15 +172,18 @@ class Db2Zos13Test {
 		});
 	}
 
-	private static CachedRowSet rows(List<Map<String, Object>> values) throws Exception {
+	static CachedRowSet rows(List<Map<String, Object>> values) throws Exception {
 		var rs = RowSetProvider.newFactory().createCachedRowSet();
 		var md = new RowSetMetaDataImpl();
-		var names = new ArrayList<>(values.get(0).keySet());
+		var names = new ArrayList<>((values.isEmpty() ? Map.of("EMPTY", "").keySet() : values.get(0).keySet()));
 		md.setColumnCount(names.size());
 		for (int i = 0; i < names.size(); i++) {
 			md.setColumnName(i + 1, names.get(i));
 			md.setColumnLabel(i + 1, names.get(i));
-			md.setColumnType(i + 1, Types.JAVA_OBJECT);
+			String column = names.get(i);
+			md.setColumnType(i + 1,
+					values.stream().anyMatch(row -> row.get(column) instanceof java.sql.Timestamp) ? Types.TIMESTAMP
+							: Types.JAVA_OBJECT);
 		}
 		rs.setMetaData(md);
 		for (int n = values.size() - 1; n >= 0; n--) {
@@ -191,18 +197,18 @@ class Db2Zos13Test {
 		return rs;
 	}
 
-	private static Map<String, Object> row(Object... pairs) {
+	static Map<String, Object> row(Object... pairs) {
 		var row = new LinkedHashMap<String, Object>();
 		for (int i = 0; i < pairs.length; i += 2)
 			row.put((String) pairs[i], pairs[i + 1]);
 		return row;
 	}
 
-	private static <T> T proxy(Class<T> type, java.lang.reflect.InvocationHandler handler) {
+	static <T> T proxy(Class<T> type, java.lang.reflect.InvocationHandler handler) {
 		return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] { type }, handler));
 	}
 
-	private static Object fallback(Class<?> type) {
+	static Object fallback(Class<?> type) {
 		if (type == boolean.class)
 			return false;
 		if (type == int.class)

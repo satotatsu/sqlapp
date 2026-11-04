@@ -39,9 +39,7 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		String definition = com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(table);
-		if (definition == null && ("true".equals(table.getSpecifics().get("oracle.table.external"))
-				|| table.getParent() != null && table.getParent().getSchema() != null
-						&& table.getParent().getSchema().getExternalTables().get(table.getName()) != null))
+		if (definition == null && OracleExternalTableOptions.isExternal(table))
 			throw new IllegalArgumentException(
 					"Oracle external table CREATE requires a complete captured table definition: " + table.getName());
 		if (definition == null)

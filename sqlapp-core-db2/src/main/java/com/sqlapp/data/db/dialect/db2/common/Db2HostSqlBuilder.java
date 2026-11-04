@@ -20,7 +20,23 @@ public class Db2HostSqlBuilder extends Db2SqlBuilder {
 	}
 
 	@Override
+	public Db2SqlBuilder definition(Column column, boolean withRemarks) {
+		if (column.getDataType() == DataType.DOMAIN)
+			throw new IllegalArgumentException(
+					"Db2 host DISTINCT columns require Column.domain with explicit schema/name");
+		return super.definition(column, withRemarks);
+	}
+
+	@Override
 	protected Db2SqlBuilder typeDefinition(Column column) {
+		if (column.getDomain() != null) {
+			var domain = column.getDomain();
+			if (column.isIdentity() || column.getArrayDimension() != 0 || domain.getArrayDimension() != 0
+					|| column.getLength() != null || column.getScale() != null || column.getDomainColumnName() != null)
+				throw new IllegalArgumentException("Unsupported Db2 host DISTINCT column options: " + column.getName());
+			return _add(com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.qualified(domain.getSchemaName(),
+					domain.getName()));
+		}
 		var dialect = (AbstractDb2HostDialect) getDialect();
 		var type = column.getDataType();
 		if (type == null || getDialect().getDbDataTypes().getDbTypeStrict(type) == null)

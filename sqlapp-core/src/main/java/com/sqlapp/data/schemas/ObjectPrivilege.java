@@ -81,9 +81,7 @@ public final class ObjectPrivilege extends
 	@Override
 	protected void writeAttributeXml(StaxWriter stax) throws XMLStreamException {
 		super.writeAttributeXml(stax);
-		if (isHierachy()) {
-			stax.writeAttribute(SchemaProperties.HIERACHY.getLabel(), this.isHierachy());
-		}
+		stax.writeAttribute(SchemaProperties.HIERACHY.getLabel(), this.isHierachy());
 	}
 
 	@Override

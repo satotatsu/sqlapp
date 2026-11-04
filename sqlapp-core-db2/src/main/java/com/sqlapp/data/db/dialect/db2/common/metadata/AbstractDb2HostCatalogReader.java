@@ -43,12 +43,17 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 
 	@Override
 	protected ObjectPrivilegeReader newObjectPrivilegeReader() {
-		return null;
+		return new Db2HostProgrammableReaders.ObjectGrants(getDialect(), resources);
 	}
 
 	@Override
 	protected ColumnPrivilegeReader newColumnPrivilegeReader() {
-		return null;
+		return new Db2HostProgrammableReaders.ColumnGrants(getDialect(), resources);
+	}
+
+	@Override
+	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
+		return new Db2HostProgrammableReaders.RoutineGrants(getDialect(), resources);
 	}
 
 	private static class HostSchemaReader extends JdbcSchemaReader {
@@ -79,27 +84,37 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 
 		@Override
 		protected ViewReader newViewReader() {
-			return null;
+			return new Db2HostSupplementalReaders.Views(getDialect(), resources);
+		}
+
+		@Override
+		protected SequenceReader newSequenceReader() {
+			return new Db2HostSupplementalReaders.Sequences(getDialect(), resources);
 		}
 
 		@Override
 		protected DomainReader newDomainReader() {
-			return null;
+			return new Db2HostDomainReader(getDialect(), resources);
 		}
 
 		@Override
 		protected SynonymReader newSynonymReader() {
-			return null;
+			return new Db2HostSynonymReader(getDialect(), resources);
 		}
 
 		@Override
 		protected FunctionReader newFunctionReader() {
-			return null;
+			return new Db2HostProgrammableReaders.Functions(getDialect(), resources);
 		}
 
 		@Override
 		protected ProcedureReader newProcedureReader() {
-			return null;
+			return new Db2HostProgrammableReaders.Procedures(getDialect(), resources);
+		}
+
+		@Override
+		protected TriggerReader newTriggerReader() {
+			return new Db2HostProgrammableReaders.Triggers(getDialect(), resources);
 		}
 
 		@Override
@@ -145,7 +160,12 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 
 		@Override
 		protected IndexReader newIndexReader() {
-			return null;
+			return new Db2HostSupplementalReaders.Indexes(getDialect(), resources);
+		}
+
+		@Override
+		protected CheckConstraintReader newCheckConstraintReader() {
+			return new Db2HostSupplementalReaders.Checks(getDialect(), resources);
 		}
 
 		@Override
@@ -168,6 +188,12 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 		}
 
 		@Override
+		protected void doGetAllAfter(Connection connection, List<Column> columns) {
+			// Built-ins are resolved and DISTINCT references have explicit schema/name
+			// identities from the column query. No all-domain/type lookup is needed.
+		}
+
+		@Override
 		protected List<Column> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
 			List<Column> result = new ArrayList<>();
 			execute(connection, getSqlNodeCache(resources).getString("columns.sql"), context,
@@ -184,7 +210,17 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 							case "TIMESTMP" -> "TIMESTAMP";
 							default -> type;
 							};
-							if (!getDialect().setDbType(type, rs.getLongValue("TYPE_LENGTH"),
+							String udtSchema = identifier(rs, "UDT_SCHEMA"), udtName = identifier(rs, "UDT_NAME");
+							boolean named = "DISTINCT".equals(type) || (udtSchema != null && !udtSchema.isBlank())
+									|| (udtName != null && !udtName.isBlank());
+							if (named) {
+								if (udtSchema == null || udtSchema.isBlank() || udtName == null || udtName.isBlank()
+										|| "ARRAY".equals(type))
+									throw new SQLException(
+											"Missing/unsupported host DISTINCT column identity: " + column.getName());
+								column.setDataType(com.sqlapp.data.db.datatype.DataType.OTHER);
+								column.setDomain(new Domain(udtName).setSchemaName(udtSchema));
+							} else if (!getDialect().setDbType(type, rs.getLongValue("TYPE_LENGTH"),
 									rs.getInteger("TYPE_SCALE"), column))
 								throw new SQLException(
 										"Unsupported Db2 host type " + type + " for " + column.getName());
@@ -194,7 +230,14 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 							if (unsupported != null && !unsupported.isBlank())
 								throw new SQLException("Unsupported generated Db2 host column: " + column.getName()
 										+ " (" + unsupported + ")");
-							column.setDefaultValue(rs.getString("DEFAULT_SQL"));
+							String defaultSql = rs.getString("DEFAULT_SQL");
+							if (named && "Y".equals(identifier(rs, "UDT_DEFAULT_CAST"))) {
+								if (defaultSql == null || defaultSql.isBlank())
+									throw new SQLException("Missing DISTINCT default literal: " + column.getName());
+								defaultSql = com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.qualified(udtSchema,
+										udtName) + "(" + defaultSql + ")";
+							}
+							column.setDefaultValue(defaultSql);
 							String mode = identifier(rs, "IDENTITY_MODE");
 							if (mode != null && !mode.isBlank()) {
 								if (!"A".equals(mode) && !"D".equals(mode))

@@ -88,6 +88,28 @@ class TransferFileNameMappingTest {
 			var moved = Files.move(saved.file().getParent(), directory.resolve("moved-package"));
 			var manifest = moved.resolve("manifest.json");
 			var service = new TransferFileImportService();
+			var description = service.describePackage(manifest, saved.fingerprint());
+			assertNotNull(description.mappingFingerprint());
+			assertEquals(3, description.tables().size());
+			var describedChild = description.tables().stream().filter(value -> value.sourceTable().equals("CHILD"))
+					.findFirst().orElseThrow();
+			assertEquals("Children Copy", describedChild.targetTable());
+			assertEquals(4, describedChild.recordedRows());
+			assertTrue(describedChild.fullScanInsert());
+			assertEquals(mode.equals("CREATE_MISSING_WITH_IDENTITY"), describedChild.generatedKeyIfCreated());
+			assertEquals(List.of("PARENT_ID", "PAYLOAD"), describedChild.columns().stream()
+					.map(TransferFileImportService.PackageColumn::sourceName).toList());
+			assertEquals(List.of("Parent Key", "Text Value"), describedChild.columns().stream()
+					.map(TransferFileImportService.PackageColumn::targetName).toList());
+			assertThrows(UnsupportedOperationException.class, () -> description.tables().clear());
+			assertThrows(UnsupportedOperationException.class, () -> describedChild.columns().clear());
+			var describedParent = description.tables().stream().filter(value -> value.sourceTable().equals("PARENT"))
+					.findFirst().orElseThrow();
+			assertFalse(describedParent.fullScanInsert());
+			assertFalse(describedParent.generatedKeyIfCreated());
+			assertTrue(describedParent.columns().getFirst().primaryKey());
+			assertTrue(describedParent.columns().getFirst().notNull());
+
 			var child = saved.manifest().tables().stream().filter(table -> table.table().equals("CHILD")).findFirst()
 					.orElseThrow();
 			assertEquals(List.of("PARENT_ID", "PAYLOAD"), child.columns());
@@ -175,6 +197,7 @@ class TransferFileNameMappingTest {
 						throw new AssertionError("Changed mapping must fail before target access");
 					});
 			assertThrows(Exception.class, () -> service.preview(saved.file(), saved.fingerprint(), "export-table-1"));
+			assertThrows(Exception.class, () -> service.describePackage(saved.file(), saved.fingerprint()));
 			assertThrows(Exception.class, () -> service.review(saved.file(), saved.fingerprint(), Map.of("to", never)));
 			assertThrows(Exception.class, () -> service.execute(review, Map.of("to", never), directory));
 			assertThrows(Exception.class, () -> count(target, "COPIED"));

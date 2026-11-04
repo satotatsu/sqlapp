@@ -87,6 +87,37 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 		var registry = new SimpleSqlFactoryRegistry(this);
 		registry.getOptions().setCreateIfNotExists(false);
 		registry.registerSqlFactory(Table.class, SqlType.CREATE, Db2HostCreateTableFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE,
+				com.sqlapp.data.db.dialect.db2.sql.Db2CreateViewFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, SqlType.CREATE,
+				Db2HostCreateSequenceFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, SqlType.CREATE,
+				Db2HostCreateSynonymFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, SqlType.DROP,
+				Db2HostCreateSynonymFactory.Drop.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.CREATE, Db2HostDomainFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.DROP,
+				Db2HostDomainFactory.Drop.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE,
+				Db2HostCreateIndexFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, SqlType.CREATE,
+				Db2HostDefinitionFactories.ProcedureCreate.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.CREATE,
+				Db2HostDefinitionFactories.FunctionCreate.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.CREATE,
+				Db2HostDefinitionFactories.TriggerCreate.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.GRANT,
+				Db2HostPrivilegeFactories.GrantObject.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.REVOKE,
+				Db2HostPrivilegeFactories.RevokeObject.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.GRANT,
+				Db2HostPrivilegeFactories.GrantColumn.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.REVOKE,
+				Db2HostPrivilegeFactories.RevokeColumn.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.RoutinePrivilege.class, SqlType.GRANT,
+				Db2HostPrivilegeFactories.GrantRoutine.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.RoutinePrivilege.class, SqlType.REVOKE,
+				Db2HostPrivilegeFactories.RevokeRoutine.class);
 		return registry;
 	}
 
