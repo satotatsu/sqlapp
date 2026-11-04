@@ -38,6 +38,9 @@ final class FileTransferSummary {
 						.append(configuration.verify() ? "enabled" : "disabled").append('\n')
 						.append("Compatibility policy: ").append(configuration.compatibilityPolicy()).append('\n');
 			}
+			if (inspected.description() != null)
+				text.append(
+						"\nPackage tables shows requested names and source metadata. Select a table and Show columns for the name correspondence.\n");
 			packageDetails(text, inspected.snapshot().manifest());
 			text.append("\nManifest: ").append(inspected.snapshot().file()).append('\n').append("\nFingerprint: ")
 					.append(inspected.snapshot().fingerprint()).append('\n')
@@ -118,9 +121,10 @@ final class FileTransferSummary {
 		text.append("File format: ").append(manifest.files().format()).append("; encoding: ")
 				.append(manifest.files().encoding()).append('\n');
 		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
-			text.append("Unquoted empty fields: ").append(manifest.files().emptyFieldMode())
-					.append("; NULL token: ").append(manifest.files().nullValue() == null ? "not used"
-							: new com.sqlapp.util.JsonConverter().toJsonString(manifest.files().nullValue())).append('\n');
+			text.append("Unquoted empty fields: ").append(manifest.files().emptyFieldMode()).append("; NULL token: ")
+					.append(manifest.files().nullValue() == null ? "not used"
+							: new com.sqlapp.util.JsonConverter().toJsonString(manifest.files().nullValue()))
+					.append('\n');
 		if (manifest.files().format() != TransferJobConfiguration.FileFormat.JSONL)
 			text.append("Header handling: ").append(switch (manifest.files().headerMode()) {
 			case VALIDATE -> "validate column names and skip one header record";

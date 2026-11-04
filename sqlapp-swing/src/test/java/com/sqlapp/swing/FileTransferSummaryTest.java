@@ -15,9 +15,9 @@ class FileTransferSummaryTest {
 	@Test
 	void failureExplainsDatabaseCauseBeforeProgressWithoutLosingUncertainty() {
 		var diagnostic = new TransferFailureDiagnostic(TransferFailureDiagnostic.Kind.FOREIGN_KEY, "23503", 17);
-		var outcome = new TransferFileImportService.Outcome(HASH, HASH,
-				TransferJobExecutionService.Phase.COPY, null, true, Map.of(), Map.of(), "items", null,
-				new TransferSchemaPreparation.Progress(List.of(), 0, null), diagnostic);
+		var outcome = new TransferFileImportService.Outcome(HASH, HASH, TransferJobExecutionService.Phase.COPY, null,
+				true, Map.of(), Map.of(), "items", null, new TransferSchemaPreparation.Progress(List.of(), 0, null),
+				diagnostic);
 		var text = FileTransferSummary.text(outcome);
 		assertTrue(text.contains("Reason: A foreign key constraint rejected a row."));
 		assertTrue(text.contains("Check selected parent tables"));

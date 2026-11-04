@@ -47,6 +47,9 @@ final class FileTransferPreviewPanel extends JPanel {
 	private final Inspector inspector;
 	private final Validator validator;
 	private final Path input;
+	private final String expectedFingerprint;
+	private final String initialTask;
+	private final TransferFileImportService.PackageDescription description;
 	private TransferFilePackageIO.Snapshot snapshot;
 	private boolean busy;
 	private long revision;
@@ -59,12 +62,22 @@ final class FileTransferPreviewPanel extends JPanel {
 	ReportDetailTablePanel sample;
 
 	static void show(Component owner, Path input) {
+		show(owner, input, null, null);
+	}
+
+	static void show(Component owner, Path input, String expectedFingerprint, String task) {
+		show(owner, input, expectedFingerprint, task, null);
+	}
+
+	static void show(Component owner, Path input, String expectedFingerprint, String task,
+			TransferFileImportService.PackageDescription description) {
 		var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Package data preview",
 				Dialog.ModalityType.APPLICATION_MODAL);
-		var panel = new FileTransferPreviewPanel(
-				input, path -> new TransferFilePackageIO()
-						.read(Files.isDirectory(path) ? path.resolve("manifest.json") : path, null),
-				new TransferFileImportService()::preview, dialog::dispose);
+		var panel = new FileTransferPreviewPanel(input,
+				path -> new TransferFilePackageIO().read(Files.isDirectory(path) ? path.resolve("manifest.json") : path,
+						expectedFingerprint),
+				new TransferFileImportService()::preview, new TransferFileImportService()::validatePackage,
+				dialog::dispose, expectedFingerprint, task, description);
 		dialog.setContentPane(panel);
 		dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
@@ -84,11 +97,24 @@ final class FileTransferPreviewPanel extends JPanel {
 	}
 
 	FileTransferPreviewPanel(Path input, Inspector inspector, Sampler sampler, Validator validator, Runnable closed) {
+		this(input, inspector, sampler, validator, closed, null, null);
+	}
+
+	FileTransferPreviewPanel(Path input, Inspector inspector, Sampler sampler, Validator validator, Runnable closed,
+			String expectedFingerprint, String initialTask) {
+		this(input, inspector, sampler, validator, closed, expectedFingerprint, initialTask, null);
+	}
+
+	FileTransferPreviewPanel(Path input, Inspector inspector, Sampler sampler, Validator validator, Runnable closed,
+			String expectedFingerprint, String initialTask, TransferFileImportService.PackageDescription description) {
 		super(new BorderLayout(8, 8));
 		this.sampler = sampler;
 		this.inspector = inspector;
 		this.validator = validator;
 		this.input = input;
+		this.expectedFingerprint = expectedFingerprint;
+		this.initialTask = initialTask;
+		this.description = description;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		var controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		var tableLabel = new JLabel("Package table");
@@ -143,7 +169,7 @@ final class FileTransferPreviewPanel extends JPanel {
 		if (busy)
 			return;
 		var selected = (Choice) tables.getSelectedItem();
-		String selectedTask = selected == null ? null : selected.table().taskId();
+		String selectedTask = selected == null ? initialTask : selected.table().taskId();
 		clearSample();
 		valueCheck = ValueCheck.NOT_CHECKED;
 		snapshot = null;
@@ -161,9 +187,25 @@ final class FileTransferPreviewPanel extends JPanel {
 			@Override
 			protected void done() {
 				try {
-					snapshot = get();
+					var inspected = get();
+					if (expectedFingerprint != null && !expectedFingerprint.equals(inspected.fingerprint()))
+						throw new IllegalArgumentException(
+								"Package changed since the overview. Inspect it again before opening a selected-table preview.");
+					if (initialTask != null && inspected.manifest().tables().stream()
+							.noneMatch(table -> table.taskId().equals(selectedTask)))
+						throw new IllegalArgumentException(
+								"The selected task is absent from this package. Inspect it again before previewing.");
+					if (description != null && (description.snapshot() == null
+							|| !inspected.fingerprint().equals(description.snapshot().fingerprint())))
+						throw new IllegalArgumentException(
+								"Name correspondence belongs to a different package. Inspect it again.");
+					snapshot = inspected;
 					for (var table : snapshot.manifest().tables())
 						tables.addItem(new Choice(table));
+					if (selected == null && initialTask != null)
+						for (int index = 0; index < tables.getItemCount(); index++)
+							if (tables.getItemAt(index).table().taskId().equals(initialTask))
+								tables.setSelectedIndex(index);
 					for (int index = 0; index < tables.getItemCount(); index++)
 						if (selected != null && tables.getItemAt(index).table().taskId().equals(selectedTask)
 								&& java.util.Objects.equals(tables.getItemAt(index).table().catalog(),
@@ -177,7 +219,8 @@ final class FileTransferPreviewPanel extends JPanel {
 							"Choose a table and Load sample. Hashes checked; full values have not been validated.");
 				} catch (Exception failure) {
 					status.setText("Could not inspect package: " + EditorStatusPanel.failureMessage(failure)
-							+ " Fix the package selection or files, then Reload package.");
+							+ (expectedFingerprint == null ? " Fix the package selection or files, then Reload package."
+									: " This preview is pinned to the overview. If the package changed, close this preview and inspect the package again."));
 				} finally {
 					busy = false;
 					refresh();
@@ -302,10 +345,17 @@ final class FileTransferPreviewPanel extends JPanel {
 						status.setText("Selection changed while reading. Load a new sample.");
 						return;
 					}
+					if (description != null && !choice.table().taskId().equals(value.table().taskId()))
+						throw new IllegalArgumentException("Sample task differs from the selected table.");
+					var mapped = requestedTable(value);
 					var columns = new java.util.ArrayList<String>();
 					columns.add("Sample row");
-					for (int index = 0; index < value.table().columns().size(); index++)
-						columns.add(value.table().columns().get(index) + " / " + value.sourceTypes().get(index));
+					for (int index = 0; index < value.table().columns().size(); index++) {
+						String source = value.table().columns().get(index);
+						String target = mapped == null ? source : mapped.columns().get(index).targetName();
+						columns.add(source + (source.equals(target) ? "" : " → " + target) + " / "
+								+ value.sourceTypes().get(index));
+					}
 					var rows = new java.util.ArrayList<java.util.List<String>>();
 					for (var row : value.rows()) {
 						var fields = new java.util.ArrayList<String>();
@@ -320,10 +370,35 @@ final class FileTransferPreviewPanel extends JPanel {
 							return false;
 						}
 					};
-					sample = new ReportDetailTablePanel(new JTable(model),
-							"null is SQL NULL; quoted strings distinguish empty text and literal null. Long values are marked truncated. Only sampled values are checked; this is not target conversion or full row verification.",
+					sample = new ReportDetailTablePanel(new JTable(model), (mapped == null ? ""
+							: "Requested target table: " + mapped.targetTable()
+									+ ". Column arrows show requested names; types and values are from the source. Target compatibility is not checked. ")
+							+ "null is SQL NULL; quoted strings distinguish empty text and literal null. Long values are marked truncated. Only sampled values are checked; this is not target conversion or full row verification.",
 							"Find sample", "sampled rows");
 					sample.setNumericColumns(java.util.List.of(0));
+					TransferSampleTableLayout.apply(sample.table);
+					var currentSample = sample;
+					var columnSearch = new TransferSampleColumnSearch(sample.table, modelColumn -> {
+						if (busy || sample != currentSample)
+							return;
+						var details = new JTextArea(TransferSampleColumnDetails.text(value, mapped, modelColumn), 12,
+								54);
+						details.setEditable(false);
+						details.setLineWrap(true);
+						details.setWrapStyleWord(true);
+						details.setCaretPosition(0);
+						JOptionPane.showMessageDialog(FileTransferPreviewPanel.this, new JScrollPane(details),
+								"Sample column details", JOptionPane.INFORMATION_MESSAGE);
+					});
+					columnSearch.setColumnsAction(() -> {
+						if (busy || sample != currentSample)
+							return;
+						TransferSampleColumnsPanel.show(FileTransferPreviewPanel.this, value, mapped, column -> {
+							if (!busy && sample == currentSample)
+								columnSearch.revealColumn(column);
+						});
+					});
+					sample.setScopeControls(columnSearch);
 					results.add(sample, BorderLayout.CENTER);
 					results.revalidate();
 					results.repaint();
@@ -343,4 +418,22 @@ final class FileTransferPreviewPanel extends JPanel {
 			}
 		}.execute();
 	}
+
+	private TransferFileImportService.PackageTable requestedTable(TransferFileImportService.Preview value) {
+		if (description == null)
+			return null;
+		if (!description.snapshot().fingerprint().equals(value.snapshot().fingerprint()))
+			throw new IllegalArgumentException("Sample belongs to a different package than the name correspondence.");
+		var table = description.tables().stream().filter(candidate -> candidate.taskId().equals(value.table().taskId()))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Sample task is absent from the name correspondence."));
+		if (!java.util.Objects.equals(table.sourceCatalog(), value.table().catalog())
+				|| !java.util.Objects.equals(table.sourceSchema(), value.table().schema())
+				|| !table.sourceTable().equals(value.table().table())
+				|| !table.columns().stream().map(TransferFileImportService.PackageColumn::sourceName).toList()
+						.equals(value.table().columns()))
+			throw new IllegalArgumentException("Sample columns differ from the recorded name correspondence.");
+		return table;
+	}
+
 }

@@ -21,33 +21,48 @@ class FileTransferDraftDialogTest {
 
 	@ParameterizedTest
 	@CsvSource({ "CSV, ''", "TSV, Row ID", "JSONL, 移行ID" })
-	void optionalImportSettingsSaveGeneratedTargetKeyWithoutChangingCapturedSource(FileFormat format, String name) throws Exception {
+	void optionalImportSettingsSaveGeneratedTargetKeyWithoutChangingCapturedSource(FileFormat format, String name)
+			throws Exception {
 		var schema = new Schema("PUBLIC");
-		var table = new Table("EVENTS"); table.getColumns().add(new Column("VALUE").setDataType(DataType.VARCHAR));
+		var table = new Table("EVENTS");
+		table.getColumns().add(new Column("VALUE").setDataType(DataType.VARCHAR));
 		schema.getTables().add(table);
-		var xml = directory.resolve("source-schema.xml"); schema.writeXml(xml.toFile());
+		var xml = directory.resolve("source-schema.xml");
+		schema.writeXml(xml.toFile());
 		var captured = new com.sqlapp.data.db.command.migration.transfer.TransferFileJobDraftBuilder()
 				.inspect(new BulkMigrationJobDraftBuilder().inspect(xml));
-		var saved = new AtomicReference<Path>(); var done = new CountDownLatch(1);
+		var saved = new AtomicReference<Path>();
+		var done = new CountDownLatch(1);
 		SwingUtilities.invokeAndWait(() -> {
 			var form = FileTransferDraftDialog.form(new DataMigrationDraftService.Prepared(directory, captured),
-					path -> { saved.set(path); done.countDown(); }, () -> fail("Not cancelled"));
+					path -> {
+						saved.set(path);
+						done.countDown();
+					}, () -> fail("Not cancelled"));
 			assertFalse(form.generatedKey().isVisible());
 			form.showImportSettings().doClick(0);
-			form.createMissing().doClick(0); assertTrue(form.generatedKey().isVisible());
-			form.generatedKey().doClick(0); assertEquals("ID", form.generatedKeyColumn().getText());
-			form.createMissing().doClick(0); assertFalse(form.generatedKey().isSelected());
+			form.createMissing().doClick(0);
+			assertTrue(form.generatedKey().isVisible());
+			form.generatedKey().doClick(0);
+			assertEquals("ID", form.generatedKeyColumn().getText());
+			form.createMissing().doClick(0);
+			assertFalse(form.generatedKey().isSelected());
 			assertFalse(form.generatedKeyColumn().isEnabled());
-			form.createMissing().doClick(0); form.generatedKey().doClick(0);
-			if (!name.isEmpty()) form.generatedKeyColumn().setText(name);
+			form.createMissing().doClick(0);
+			form.generatedKey().doClick(0);
+			if (!name.isEmpty())
+				form.generatedKeyColumn().setText(name);
 			form.format().setSelectedItem(format);
-			form.picker().select.doClick(0); form.picker().create.doClick(0);
+			form.picker().select.doClick(0);
+			form.picker().create.doClick(0);
 			assertTrue(form.picker().isBusy());
-			assertFalse(form.generatedKey().isEnabled()); assertFalse(form.generatedKeyColumn().isEnabled());
+			assertFalse(form.generatedKey().isEnabled());
+			assertFalse(form.generatedKeyColumn().isEnabled());
 		});
 		assertTrue(done.await(5, TimeUnit.SECONDS));
 		var configuration = new TransferJobConfigurationIO().read(saved.get()).configuration();
-		assertEquals(com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY,
+		assertEquals(
+				com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY,
 				configuration.schemaMode());
 		assertEquals(name.isEmpty() ? "ID" : name, configuration.effectiveGeneratedKeyColumn());
 		assertEquals(format, configuration.files().format());

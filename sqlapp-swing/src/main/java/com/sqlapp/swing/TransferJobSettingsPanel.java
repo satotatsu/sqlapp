@@ -151,13 +151,18 @@ final class TransferJobSettingsPanel extends JPanel {
 		fields.add(chunkRow);
 		if (mode == TransferJobConfiguration.DataMode.FILE) {
 			fields.setLayout(new BoxLayout(fields, BoxLayout.Y_AXIS));
-			for (var field : new Component[] { schemaRow, mappingRow, createMissing, generatedKey, generatedKeyRow, verify, chunkRow }) {
-				fields.remove(field); importSettings.add(field);
+			for (var field : new Component[] { schemaRow, mappingRow, createMissing, generatedKey, generatedKeyRow,
+					verify, chunkRow }) {
+				fields.remove(field);
+				importSettings.add(field);
 			}
 			importSettings.setVisible(false);
-			fields.add(showImportSettings); fields.add(importSettings);
+			fields.add(showImportSettings);
+			fields.add(importSettings);
 			showImportSettings.addActionListener(event -> {
-				importSettings.setVisible(showImportSettings.isSelected()); fields.revalidate(); fields.repaint();
+				importSettings.setVisible(showImportSettings.isSelected());
+				fields.revalidate();
+				fields.repaint();
 			});
 		}
 		fileOptions.setVisible(mode == TransferJobConfiguration.DataMode.FILE);
@@ -169,7 +174,8 @@ final class TransferJobSettingsPanel extends JPanel {
 				: "After saving, review again in the GUI or Gradle before execution."));
 		if (mode == TransferJobConfiguration.DataMode.FILE)
 			for (var component : fields.getComponents())
-				if (component instanceof JComponent field) field.setAlignmentX(Component.LEFT_ALIGNMENT);
+				if (component instanceof JComponent field)
+					field.setAlignmentX(Component.LEFT_ALIGNMENT);
 		add(new JScrollPane(fields), BorderLayout.CENTER);
 		final var footer = new JPanel(new BorderLayout(4, 4));
 		footer.add(status, BorderLayout.NORTH);
@@ -252,8 +258,7 @@ final class TransferJobSettingsPanel extends JPanel {
 			final var original = snapshot.configuration();
 			var files = original.files();
 			if (files != null)
-				files = fileOptions.settings(files.directory(), files.format(),
-						files.unsupportedTemporalPolicy());
+				files = fileOptions.settings(files.directory(), files.format(), files.unsupportedTemporalPolicy());
 			updated = new TransferJobConfiguration(original.formatVersion(), original.source(), original.target(),
 					selectedTables,
 					schemaOnly.isSelected() && applyDifferences.isSelected()
@@ -355,8 +360,8 @@ final class TransferJobSettingsPanel extends JPanel {
 		applyDifferences.setEnabled(!busy && snapshot != null && schemaOnly.isSelected());
 		allowDestructive.setVisible(applyDifferences.isVisible() && applyDifferences.isSelected());
 		allowDestructive.setEnabled(applyDifferences.isEnabled() && applyDifferences.isSelected());
-		generatedKey.setVisible(createMissing.isSelected()
-				&& !(schemaOnly.isSelected() && applyDifferences.isSelected()));
+		generatedKey
+				.setVisible(createMissing.isSelected() && !(schemaOnly.isSelected() && applyDifferences.isSelected()));
 		generatedKey.setEnabled(!busy && snapshot != null && generatedKey.isVisible());
 		generatedKeyRow.setVisible(generatedKey.isVisible() && generatedKey.isSelected());
 		generatedKeyColumn.setEnabled(!busy && snapshot != null && generatedKeyRow.isVisible());

@@ -11,8 +11,8 @@ import com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.Fi
 /** Reuses the existing table picker; saving never exports or imports rows. */
 final class FileTransferDraftDialog {
 	record Form(JPanel content, JobDraftPanel picker, JTextField targetSchema, JComboBox<FileFormat> format,
-			JTextField nullValue, FileTransferOptionsPanel fileOptions, JCheckBox showImportSettings, JPanel importSettings,
-			JCheckBox createMissing, JCheckBox generatedKey, JTextField generatedKeyColumn) {
+			JTextField nullValue, FileTransferOptionsPanel fileOptions, JCheckBox showImportSettings,
+			JPanel importSettings, JCheckBox createMissing, JCheckBox generatedKey, JTextField generatedKeyColumn) {
 	}
 
 	static Path show(java.awt.Component owner, DataMigrationDraftService.Prepared prepared) {
@@ -51,7 +51,8 @@ final class FileTransferDraftDialog {
 		final var generatedKeyRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
 		var generatedKeyLabel = new JLabel("Generated PK column (default: ID)");
 		generatedKeyLabel.setLabelFor(generatedKeyColumn);
-		generatedKeyRow.add(generatedKeyLabel); generatedKeyRow.add(generatedKeyColumn);
+		generatedKeyRow.add(generatedKeyLabel);
+		generatedKeyRow.add(generatedKeyColumn);
 		final var showImportSettings = new JCheckBox("Optional import settings (no target access during Export)");
 		final var importSettings = new JPanel(new java.awt.GridLayout(0, 1, 4, 4));
 		importSettings.setVisible(false);
@@ -60,10 +61,9 @@ final class FileTransferDraftDialog {
 		final var panel = JobDraftPanel.fileTransfer(prepared.schema(), () -> {
 			final var selectedFormat = (FileFormat) format.getSelectedItem();
 			final String destinationSchema = targetSchema.getText().isBlank() ? null : targetSchema.getText();
-			final var mode = createMissing.isSelected()
-					? generatedKey.isSelected()
-							? com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
-							: com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING
+			final var mode = createMissing.isSelected() ? generatedKey.isSelected()
+					? com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
+					: com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.CREATE_MISSING
 					: com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING;
 			final var policy = temporalErrors.isSelected()
 					? com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.TemporalPolicy.ERROR
@@ -72,10 +72,11 @@ final class FileTransferDraftDialog {
 					? com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.CompatibilityPolicy.ERROR
 					: com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration.CompatibilityPolicy.WARN;
 			final var files = fileOptions.settings("packages", selectedFormat, policy);
-			final String keyColumn = createMissing.isSelected() && generatedKey.isSelected() ? generatedKeyColumn.getText() : null;
+			final String keyColumn = createMissing.isSelected() && generatedKey.isSelected()
+					? generatedKeyColumn.getText()
+					: null;
 			return (schema, tables, chunk, verify) -> new TransferFileJobDraftBuilder()
-					.save(schema, tables, chunk, verify, mode, compatibilityPolicy, destinationSchema, files,
-							keyColumn,
+					.save(schema, tables, chunk, verify, mode, compatibilityPolicy, destinationSchema, files, keyColumn,
 							prepared.directory().resolve("transfer.yaml"))
 					.file().toString();
 		}, saved, cancelled);
@@ -112,14 +113,27 @@ final class FileTransferDraftDialog {
 			generatedKeyColumn.setEnabled(generatedKeyRow.isVisible() && !panel.isBusy());
 		};
 		createMissing.addActionListener(event -> {
-			if (!createMissing.isSelected()) generatedKey.setSelected(false);
-			refreshKey.run(); panel.draftOptionsChanged();
+			if (!createMissing.isSelected())
+				generatedKey.setSelected(false);
+			refreshKey.run();
+			panel.draftOptionsChanged();
 		});
-		generatedKey.addActionListener(event -> { refreshKey.run(); panel.draftOptionsChanged(); });
+		generatedKey.addActionListener(event -> {
+			refreshKey.run();
+			panel.draftOptionsChanged();
+		});
 		generatedKeyColumn.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-			public void insertUpdate(javax.swing.event.DocumentEvent event) { panel.draftOptionsChanged(); }
-			public void removeUpdate(javax.swing.event.DocumentEvent event) { panel.draftOptionsChanged(); }
-			public void changedUpdate(javax.swing.event.DocumentEvent event) { panel.draftOptionsChanged(); }
+			public void insertUpdate(javax.swing.event.DocumentEvent event) {
+				panel.draftOptionsChanged();
+			}
+
+			public void removeUpdate(javax.swing.event.DocumentEvent event) {
+				panel.draftOptionsChanged();
+			}
+
+			public void changedUpdate(javax.swing.event.DocumentEvent event) {
+				panel.draftOptionsChanged();
+			}
 		});
 		showImportSettings.addActionListener(event -> {
 			importSettings.setVisible(showImportSettings.isSelected());
@@ -158,7 +172,8 @@ final class FileTransferDraftDialog {
 		importSettings.add(generatedKey);
 		importSettings.add(generatedKeyRow);
 		importSettings.add(panel.fileImportOptions());
-		importSettings.add(new JLabel("To rename target tables or columns, save the job and use Job settings → Edit names."));
+		importSettings
+				.add(new JLabel("To rename target tables or columns, save the job and use Job settings → Edit names."));
 		heading.add(temporalErrors);
 		var formatRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
 		var formatLabel = new JLabel("File format");
@@ -174,12 +189,13 @@ final class FileTransferDraftDialog {
 		destination.setEditable(false);
 		heading.add(destination);
 		for (var component : heading.getComponents())
-			if (component instanceof JComponent field) field.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+			if (component instanceof JComponent field)
+				field.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
 		content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		content.add(heading, BorderLayout.NORTH);
 		content.add(panel, BorderLayout.CENTER);
 		refreshKey.run();
-		return new Form(content, panel, targetSchema, format, nullValue, fileOptions, showImportSettings, importSettings,
-				createMissing, generatedKey, generatedKeyColumn);
+		return new Form(content, panel, targetSchema, format, nullValue, fileOptions, showImportSettings,
+				importSettings, createMissing, generatedKey, generatedKeyColumn);
 	}
 }

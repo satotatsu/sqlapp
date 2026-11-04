@@ -12,6 +12,126 @@ import com.sqlapp.data.db.command.migration.transfer.*;
 
 class FileTransferPreviewPanelTest {
 	@Test
+	void pinnedCorrespondenceLabelsRequestedNamesWithoutChangingSourceValues() throws Exception {
+		var snapshot = snapshot();
+		var description = new TransferFileImportService.PackageDescription(snapshot, null, null,
+				List.of(new TransferFileImportService.PackageTable("task-1", null, "PUBLIC", "ITEMS", "Items copy",
+						"table-1.csv", 3, false, false,
+						List.of(new TransferFileImportService.PackageColumn("ID", "ITEM_ID", "INT", true, true),
+								new TransferFileImportService.PackageColumn("NAME", "NAME", "VARCHAR", false,
+										false)))));
+		var mismatch = new AtomicBoolean();
+		var holder = new FileTransferPreviewPanel[1];
+		SwingUtilities.invokeAndWait(() -> holder[0] = new FileTransferPreviewPanel(snapshot.file(), path -> snapshot,
+				(path, hash, task, limit) -> {
+					var value = preview(snapshot, limit);
+					if (!mismatch.get())
+						return value;
+					var changed = new TransferFilePackageIO.TableFile("task-1", null, "PUBLIC", "ITEMS",
+							List.of("NAME", "ID"), "table-1.csv", 3, 0, "sha256:" + "a".repeat(64));
+					return new TransferFileImportService.Preview(snapshot, changed, value.sourceTypes(), value.rows(),
+							limit, true);
+				}, (path, hash) -> {
+				}, () -> {
+				}, snapshot.fingerprint(), "task-1", description));
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> holder[0].preview.doClick(0));
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals("ID → ITEM_ID / INT", holder[0].sample.table.getColumnName(1));
+			assertEquals("NAME / VARCHAR", holder[0].sample.table.getColumnName(2));
+			assertEquals("1", holder[0].sample.table.getValueAt(0, 1));
+			assertEquals("null", holder[0].sample.table.getValueAt(0, 2));
+			assertFalse(holder[0].sample.table.isCellEditable(0, 1));
+			mismatch.set(true);
+			holder[0].preview.doClick(0);
+		});
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> {
+			assertNull(holder[0].sample);
+			assertTrue(holder[0].status.getText().contains("columns differ"));
+		});
+	}
+
+	@Test
+	void nameCorrespondenceFromAnotherPackageCannotEnableSampling() throws Exception {
+		var snapshot = snapshot();
+		var wrong = new TransferFileImportService.PackageDescription(
+				new TransferFilePackageIO.Snapshot(snapshot.file(), "wrong", snapshot.manifest()), null, null,
+				List.of());
+		var holder = new FileTransferPreviewPanel[1];
+		SwingUtilities.invokeAndWait(() -> holder[0] = new FileTransferPreviewPanel(snapshot.file(), path -> snapshot,
+				(path, hash, task, limit) -> {
+					throw new AssertionError("Wrong correspondence");
+				}, (path, hash) -> {
+				}, () -> {
+				}, snapshot.fingerprint(), "task-1", wrong));
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(holder[0].preview.isEnabled());
+			assertTrue(holder[0].status.getText().contains("different package"));
+		});
+	}
+
+	@Test
+	void selectedTaskOpensFromPinnedOverviewAndReloadRejectsChangedPackage() throws Exception {
+		var first = snapshot();
+		var second = new TransferFilePackageIO.TableFile("task-2", null, "PUBLIC", "OTHER", List.of("ID", "NAME"),
+				"table-2.csv", 0, 0, "sha256:" + "a".repeat(64));
+		var manifest = first.manifest();
+		var selected = new TransferFilePackageIO.Snapshot(first.file(), first.fingerprint(),
+				new TransferFilePackageIO.Manifest(1, manifest.jobFingerprint(), manifest.schemaFingerprint(),
+						manifest.files(), List.of(manifest.tables().getFirst(), second)));
+		var inspections = new AtomicInteger();
+		var calls = new AtomicInteger();
+		var holder = new FileTransferPreviewPanel[1];
+		SwingUtilities.invokeAndWait(() -> holder[0] = new FileTransferPreviewPanel(first.file(), path -> {
+			assertFalse(SwingUtilities.isEventDispatchThread());
+			return inspections.incrementAndGet() == 1 ? selected
+					: new TransferFilePackageIO.Snapshot(first.file(), "changed", selected.manifest());
+		}, (path, hash, task, limit) -> {
+			assertEquals(first.file(), path);
+			assertEquals(first.fingerprint(), hash);
+			assertEquals("task-2", task);
+			calls.incrementAndGet();
+			return preview(first, limit);
+		}, (path, hash) -> fail("Preview must not validate all values automatically"), () -> {
+		}, first.fingerprint(), "task-2"));
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(1, holder[0].tables.getSelectedIndex());
+			holder[0].preview.doClick(0);
+		});
+		idle(holder[0]);
+		assertEquals(1, calls.get());
+		SwingUtilities.invokeAndWait(() -> holder[0].reload.doClick(0));
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> {
+			assertNull(holder[0].sample);
+			assertFalse(holder[0].preview.isEnabled());
+			assertFalse(holder[0].validate.isEnabled());
+			assertTrue(holder[0].status.getText().contains("Package changed since the overview"));
+		});
+	}
+
+	@Test
+	void missingRequestedTaskNeverFallsBackToFirstTable() throws Exception {
+		var first = snapshot();
+		var holder = new FileTransferPreviewPanel[1];
+		SwingUtilities.invokeAndWait(() -> holder[0] = new FileTransferPreviewPanel(first.file(), path -> first,
+				(path, hash, task, limit) -> {
+					throw new AssertionError("No fallback sample");
+				}, (path, hash) -> fail("No fallback validation"), () -> {
+				}, first.fingerprint(), "absent-task"));
+		idle(holder[0]);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(0, holder[0].tables.getItemCount());
+			assertFalse(holder[0].preview.isEnabled());
+			assertTrue(holder[0].status.getText().contains("selected task is absent"));
+		});
+	}
+
+	@Test
 	void reloadPreservesExactTaskSelectionWhenManifestOrderAndFingerprintChange() throws Exception {
 		var first = snapshot();
 		var secondTable = new TransferFilePackageIO.TableFile("task-2", null, "PUBLIC", "OTHER", List.of("ID", "NAME"),

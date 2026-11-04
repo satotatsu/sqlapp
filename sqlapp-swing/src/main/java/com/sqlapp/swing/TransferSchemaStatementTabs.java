@@ -125,7 +125,8 @@ final class TransferSchemaStatementTabs {
 				if (panel.table.getRowCount() > 0) {
 					int selected = 0;
 					for (int row = 0; row < panel.table.getRowCount(); row++)
-						if ("Uncertain attempt".equals(panel.table.getModel().getValueAt(panel.table.convertRowIndexToModel(row), 2))) {
+						if ("Uncertain attempt".equals(
+								panel.table.getModel().getValueAt(panel.table.convertRowIndexToModel(row), 2))) {
 							selected = row;
 							break;
 						}

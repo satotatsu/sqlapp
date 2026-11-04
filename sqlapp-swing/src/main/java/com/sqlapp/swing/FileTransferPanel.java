@@ -66,6 +66,7 @@ final class FileTransferPanel extends JPanel {
 	private final TransferSchemaStatementTabs statementTabs = new TransferSchemaStatementTabs();
 	private final TransferVerificationTabs verificationTabs = new TransferVerificationTabs();
 	private final TransferExecutionProgressTabs progressTabs = new TransferExecutionProgressTabs();
+	private final TransferPackageTablesTabs packageTabs = new TransferPackageTablesTabs();
 	final JTextArea summary = new JTextArea(
 			"1. Export: create or choose a job and export a file package.\n2. Import: choose the completed manifest and enter the target connection.\n3. Review warnings and optional table creation, then confirm import.");
 	private boolean hasSummary;
@@ -92,6 +93,8 @@ final class FileTransferPanel extends JPanel {
 		super(new BorderLayout(8, 8));
 		this.backend = backend;
 		tableTabs.setStatementNavigator(task -> statementTabs.showTask(resultTabs, task));
+		packageTabs.setPreviewNavigator(selection -> openPackagePreview(selection.manifest(), selection.fingerprint(),
+				selection.task(), selection.description()));
 		progressTabs.setNavigators(task -> statementTabs.showTask(resultTabs, task),
 				task -> verificationTabs.showTask(resultTabs, task));
 		draftDialog = presenter == null ? prepared -> FileTransferDraftDialog.show(this, prepared) : presenter;
@@ -189,13 +192,9 @@ final class FileTransferPanel extends JPanel {
 			if (isBusy() || manifest.getText().isBlank())
 				return;
 			try {
-				var inputPath = Path.of(manifest.getText());
-				setBusy(true);
-				FileTransferPreviewPanel.show(this, inputPath);
+				openPackagePreview(Path.of(manifest.getText()), null, null, null);
 			} catch (Exception failure) {
 				status.setText(EditorStatusPanel.failureMessage(failure));
-			} finally {
-				setBusy(false);
 			}
 		});
 		apply.addActionListener(event -> {
@@ -322,6 +321,20 @@ final class FileTransferPanel extends JPanel {
 
 	boolean isBusy() {
 		return busy || source.profile.isBusy() || target.profile.isBusy();
+	}
+
+	private void openPackagePreview(Path input, String fingerprint, String task,
+			TransferFileImportService.PackageDescription description) {
+		if (isBusy())
+			return;
+		try {
+			setBusy(true);
+			FileTransferPreviewPanel.show(this, input, fingerprint, task, description);
+		} catch (Exception failure) {
+			status.setText(EditorStatusPanel.failureMessage(failure));
+		} finally {
+			setBusy(false);
+		}
 	}
 
 	private void setBusy(boolean value) {
@@ -547,6 +560,7 @@ final class FileTransferPanel extends JPanel {
 					statementTabs.clear(resultTabs);
 					verificationTabs.clear(resultTabs);
 					progressTabs.clear(resultTabs);
+					packageTabs.clear(resultTabs);
 					final Throwable cause = failure instanceof java.util.concurrent.ExecutionException
 							? failure.getCause()
 							: failure;
@@ -556,8 +570,10 @@ final class FileTransferPanel extends JPanel {
 						show(imported.outcome(), prior);
 					else if (cause instanceof TransferPreparationFailure validation) {
 						summary.setText((action == Action.EXPORT ? "Export preparation needs attention:\n\n"
-								: "Target preparation needs attention:\n\n") + validation.getMessage()
-								+ (action == Action.EXPORT ? "\n\nFix the source selection or name mapping, then export a new package."
+								: "Target preparation needs attention:\n\n")
+								+ validation.getMessage()
+								+ (action == Action.EXPORT
+										? "\n\nFix the source selection or name mapping, then export a new package."
 										: "\n\nFix the target or job settings and review again."));
 						summary.setCaretPosition(0);
 						resultTabs.setSelectedIndex(0);
@@ -589,12 +605,15 @@ final class FileTransferPanel extends JPanel {
 		statementTabs.show(resultTabs, value);
 		verificationTabs.show(resultTabs, value, prior);
 		progressTabs.show(resultTabs, value, prior);
+		packageTabs.show(resultTabs, value);
 		var summaryText = new StringBuilder(FileTransferSummary.text(value));
-		if (value instanceof TransferFileImportService.Outcome outcome && TransferRecordedTargets.matches(outcome, prior)
-				&& prior.manifest() != null && !prior.manifest().warnings().isEmpty())
+		if (value instanceof TransferFileImportService.Outcome outcome
+				&& TransferRecordedTargets.matches(outcome, prior) && prior.manifest() != null
+				&& !prior.manifest().warnings().isEmpty())
 			summaryText.append("\nRetained package export warnings: ").append(prior.manifest().warnings().size())
 					.append(". See Warnings alongside the recorded import warnings.\n");
-		if (progressTabs.panel != null) TransferExecutionSummary.appendProgressGuide(summaryText);
+		if (progressTabs.panel != null)
+			TransferExecutionSummary.appendProgressGuide(summaryText);
 		summary.setText(summaryText.toString());
 		summary.setCaretPosition(0);
 		hasSummary = true;
@@ -647,6 +666,7 @@ final class FileTransferPanel extends JPanel {
 		statementTabs.clear(resultTabs);
 		verificationTabs.clear(resultTabs);
 		progressTabs.clear(resultTabs);
+		packageTabs.clear(resultTabs);
 		resultTabs.remove(gradle);
 		gradle.showText("");
 	}
@@ -670,7 +690,8 @@ final class FileTransferPanel extends JPanel {
 
 	private static void protectPackage(java.util.List<Path> inputs, Path folder,
 			TransferFilePackageIO.Manifest manifest) {
-		for (var name : java.util.List.of("manifest.json", "transfer.yaml", "source-schema.xml", "transfer-mapping.yaml"))
+		for (var name : java.util.List.of("manifest.json", "transfer.yaml", "source-schema.xml",
+				"transfer-mapping.yaml"))
 			inputs.add(folder.resolve(name));
 		for (var table : manifest.tables())
 			inputs.add(folder.resolve(table.file()));

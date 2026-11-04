@@ -36,7 +36,13 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 	}
 
 	record Inspected(TransferFilePackageIO.Snapshot snapshot, boolean valuesValidated,
-			TransferJobConfiguration configuration) {
+			TransferJobConfiguration configuration,
+			@com.fasterxml.jackson.annotation.JsonIgnore TransferFileImportService.PackageDescription description) {
+		Inspected(TransferFilePackageIO.Snapshot snapshot, boolean valuesValidated,
+				TransferJobConfiguration configuration) {
+			this(snapshot, valuesValidated, configuration, null);
+		}
+
 		Inspected(TransferFilePackageIO.Snapshot snapshot) {
 			this(snapshot, false, null);
 		}
@@ -63,6 +69,14 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 			final var manifestPath = java.nio.file.Files.isDirectory(input) ? input.resolve("manifest.json") : input;
 			if (java.nio.file.Files.isDirectory(input) && !java.nio.file.Files.isRegularFile(manifestPath))
 				throw new PackageSelectionException();
+			if (action.isInspection()) {
+				var service = new TransferFileImportService();
+				var description = service.describePackage(manifestPath, null);
+				if (action == FileTransferPanel.Action.INSPECT_DATA)
+					service.validatePackage(description.snapshot().file(), description.snapshot().fingerprint());
+				return new Inspected(description.snapshot(), action == FileTransferPanel.Action.INSPECT_DATA,
+						description.configuration(), description);
+			}
 			final var manifest = action == FileTransferPanel.Action.IMPORT
 					? new TransferFilePackageIO().read(manifestPath, reviewed.review().manifestFingerprint())
 					: new TransferFilePackageIO().read(manifestPath, null);
@@ -70,12 +84,6 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 					.read(manifest.file().getParent().resolve("transfer.yaml"));
 			if (!definition.fingerprint().equals(manifest.manifest().jobFingerprint()))
 				throw new IllegalArgumentException("Package job changed.");
-			if (action.isInspection()) {
-				if (action == FileTransferPanel.Action.INSPECT_DATA)
-					new TransferFileImportService().validatePackage(manifest.file(), manifest.fingerprint());
-				return new Inspected(manifest, action == FileTransferPanel.Action.INSPECT_DATA,
-						definition.configuration());
-			}
 			try (var pool = action == FileTransferPanel.Action.IMPORT
 					? PlanningJdbc.openForDataExecution(spec, password)
 					: PlanningJdbc.open(spec, password)) {

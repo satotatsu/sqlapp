@@ -11,9 +11,14 @@ final class TransferWarningTabs {
 	private static final String FILE_INSERT = "[FILE_FULL_SCAN_INSERT]";
 	private static final String FILE_INSERT_GUIDANCE = "Import uses non-resumable INSERT into empty targets, preserving duplicates. WARN permits this route; ERROR stops target review before writes. Verification compares unordered hashes including duplicate counts; hash positions are not source row numbers. MERGE, resume and key-based repair are unavailable.";
 	private ReportDetailTablePanel panel;
+
 	private record Choice(String value, String label, long count) {
-		@Override public String toString() { return label + " (" + count + ")"; }
+		@Override
+		public String toString() {
+			return label + " (" + count + ")";
+		}
 	}
+
 	javax.swing.JComboBox<Choice> categorySelector;
 	javax.swing.JComboBox<Choice> taskSelector;
 	javax.swing.JButton showAll;
@@ -52,28 +57,41 @@ final class TransferWarningTabs {
 		categorySelector.setPrototypeDisplayValue(new Choice(null, "Target / Name mapping", 9999));
 		taskSelector.setPrototypeDisplayValue(new Choice(null, "export-table-123456", 9999));
 		var controls = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
-		var categoryLabel = new javax.swing.JLabel("Category"); categoryLabel.setLabelFor(categorySelector);
-		var taskLabel = new javax.swing.JLabel("Task"); taskLabel.setLabelFor(taskSelector);
-		controls.add(categoryLabel); controls.add(categorySelector); controls.add(taskLabel); controls.add(taskSelector);
-		showAll = new javax.swing.JButton("Show all warnings"); controls.add(showAll);
+		var categoryLabel = new javax.swing.JLabel("Category");
+		categoryLabel.setLabelFor(categorySelector);
+		var taskLabel = new javax.swing.JLabel("Task");
+		taskLabel.setLabelFor(taskSelector);
+		controls.add(categoryLabel);
+		controls.add(categorySelector);
+		controls.add(taskLabel);
+		controls.add(taskSelector);
+		showAll = new javax.swing.JButton("Show all warnings");
+		controls.add(showAll);
 		categorySelector.setToolTipText("Counts cover all retained warnings, before category, task or text filtering.");
-		taskSelector.setToolTipText("Only explicitly recorded task IDs are used. Unassigned warnings are not linked by parsing message text.");
+		taskSelector.setToolTipText(
+				"Only explicitly recorded task IDs are used. Unassigned warnings are not linked by parsing message text.");
 		panel.setScopeControls(controls);
 		long current = generation;
 		Runnable filter = () -> {
-			if (current != generation || !panel.table.isEnabled()) return;
+			if (current != generation || !panel.table.isEnabled())
+				return;
 			var scopes = new java.util.HashMap<Integer, String>();
 			String category = ((Choice) categorySelector.getSelectedItem()).value();
 			String task = ((Choice) taskSelector.getSelectedItem()).value();
-			if (category != null) scopes.put(0, category);
-			if (task != null) scopes.put(1, task);
+			if (category != null)
+				scopes.put(0, category);
+			if (task != null)
+				scopes.put(1, task);
 			panel.setExactFilters(scopes);
 		};
 		categorySelector.addActionListener(event -> filter.run());
 		taskSelector.addActionListener(event -> filter.run());
 		showAll.addActionListener(event -> {
-			if (current != generation || !panel.table.isEnabled()) return;
-			panel.filter.setText(""); categorySelector.setSelectedIndex(0); taskSelector.setSelectedIndex(0);
+			if (current != generation || !panel.table.isEnabled())
+				return;
+			panel.filter.setText("");
+			categorySelector.setSelectedIndex(0);
+			taskSelector.setSelectedIndex(0);
 			panel.setExactFilters(java.util.Map.of());
 		});
 		tabs.addTab("Warnings (" + rows.size() + ")", panel);
@@ -84,7 +102,8 @@ final class TransferWarningTabs {
 		choices.addItem(new Choice(null, all, rows.size()));
 		var counts = rows.stream().collect(java.util.stream.Collectors.groupingBy(row -> row.get(column),
 				java.util.LinkedHashMap::new, java.util.stream.Collectors.counting()));
-		counts.forEach((value, count) -> choices.addItem(new Choice(value, value.isEmpty() ? "No recorded task" : value, count)));
+		counts.forEach((value, count) -> choices
+				.addItem(new Choice(value, value.isEmpty() ? "No recorded task" : value, count)));
 		return choices;
 	}
 
@@ -102,7 +121,8 @@ final class TransferWarningTabs {
 			export(rows, reviewed.manifest());
 			compatibility(rows, reviewed.review().schemaPreparation().warnings());
 		} else if (value instanceof TransferFileImportService.Outcome outcome) {
-			if (TransferRecordedTargets.matches(outcome, prior) && prior.manifest() != null) export(rows, prior.manifest());
+			if (TransferRecordedTargets.matches(outcome, prior) && prior.manifest() != null)
+				export(rows, prior.manifest());
 			compatibility(rows, outcome.schemaPreparation().warnings());
 		} else if (value instanceof TransferFilePackageIO.Snapshot snapshot)
 			export(rows, snapshot.manifest());
@@ -153,8 +173,10 @@ final class TransferWarningTabs {
 
 	private static void export(List<List<String>> rows, TransferFilePackageIO.Manifest manifest) {
 		for (var warning : manifest.warnings())
-			rows.add(List.of(warning.message().startsWith(FILE_INSERT) ? "Package export / File INSERT" : "Package export",
-					warning.taskId(), warning.column(), warning.message(), warning.message().startsWith(FILE_INSERT) ? FILE_INSERT_GUIDANCE
+			rows.add(List.of(
+					warning.message().startsWith(FILE_INSERT) ? "Package export / File INSERT" : "Package export",
+					warning.taskId(), warning.column(), warning.message(),
+					warning.message().startsWith(FILE_INSERT) ? FILE_INSERT_GUIDANCE
 							: "Inspect export warnings and resolve unsupported value/type conversions before importing."));
 	}
 }

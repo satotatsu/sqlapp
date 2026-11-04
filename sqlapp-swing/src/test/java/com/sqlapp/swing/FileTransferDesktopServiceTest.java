@@ -60,6 +60,9 @@ class FileTransferDesktopServiceTest {
 					.perform(FileTransferPanel.Action.INSPECT, selected, null, null, new char[0], "", null);
 			assertEquals(exported, inspected.snapshot());
 			assertFalse(inspected.valuesValidated());
+			assertNotNull(inspected.description());
+			assertEquals("ITEMS", inspected.description().tables().getFirst().sourceTable());
+			assertEquals(2, inspected.description().tables().getFirst().recordedRows());
 			assertEquals(job.configuration(), inspected.configuration());
 			final var validated = (FileTransferDesktopService.Inspected) service
 					.perform(FileTransferPanel.Action.INSPECT_DATA, selected, null, null, new char[0], "", null);

@@ -10,19 +10,21 @@ final class TransferExecutionSummary {
 	}
 
 	static void appendProgressGuide(StringBuilder text) {
-		text.append("Open Execution progress to inspect the stopped task, recorded issues and last committed chunk counts; select a task to open its SQL or verification.\n");
+		text.append(
+				"Open Execution progress to inspect the stopped task, recorded issues and last committed chunk counts; select a task to open its SQL or verification.\n");
 	}
 
 	static void appendVerificationGuide(StringBuilder text) {
-		text.append("Open Verification for recorded table counts and mismatches; select a task and Show chunks for paged details.\n");
+		text.append(
+				"Open Verification for recorded table counts and mismatches; select a task and Show chunks for paged details.\n");
 	}
 
 	static void appendFailure(StringBuilder text,
 			com.sqlapp.data.db.command.migration.transfer.TransferFailureDiagnostic diagnostic) {
-		if (diagnostic == null) return;
-		text.append("\nReason: ").append(diagnostic.reason())
-				.append("\nWhat to check next: ").append(diagnostic.nextStep())
-				.append('\n').append(diagnostic.technicalDetails())
+		if (diagnostic == null)
+			return;
+		text.append("\nReason: ").append(diagnostic.reason()).append("\nWhat to check next: ")
+				.append(diagnostic.nextStep()).append('\n').append(diagnostic.technicalDetails())
 				.append("\nThese diagnostics do not identify a failed row or authorize retry.\n\n");
 	}
 

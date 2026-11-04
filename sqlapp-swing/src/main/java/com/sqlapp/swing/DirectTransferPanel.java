@@ -556,7 +556,8 @@ final class DirectTransferPanel extends JPanel {
 				TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Execution phase: ").append(outcome.phase()).append('\n');
 			TransferExecutionSummary.appendFailure(text, outcome.failureDiagnostic());
-			if (progressTabs.panel != null) TransferExecutionSummary.appendProgressGuide(text);
+			if (progressTabs.panel != null)
+				TransferExecutionSummary.appendProgressGuide(text);
 			TransferGeneratedKeyNotice.append(text, outcome.prepared().warnings());
 			TransferNameAdjustmentNotice.append(text, outcome.prepared().warnings());
 			if (schemaOnly)

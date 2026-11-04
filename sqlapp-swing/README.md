@@ -304,7 +304,59 @@ and confirm. Changing the connection or manifest requires another review.
 Before entering any connection, **Inspect package (no connection)** checks the
 completed package members, recorded byte sizes and hashes through the shared
 package reader. Summary shows recorded tables/rows and export warnings, and
-Details retains the complete manifest. This opens no database connection and
+Details retains the complete manifest. **Package tables** shows source identities,
+requested target names, recorded row totals and conditional generated-PK settings.
+Select a table and **Show columns** to inspect original and requested column names,
+source types and source PK/NOT NULL flags. These are recorded source metadata and
+requested settings, not resolved target types or proof that values can be imported.
+**Show renamed columns** focuses on changed column names; **Show all columns**
+clears that filter and the search. The overview remains available after a review
+or import result for the same package fingerprint, so requested names can be
+compared with recorded target preparation and execution results. It still shows
+package metadata, not live target state. Changing inputs, a failed operation or
+a different package discards the retained overview.
+Select a row in **Package tables** and choose **Preview selected table…** to open
+the offline preview with that exact task selected. Choose **Load sample** to read
+its bounded sample. This handoff pins the package fingerprint; if the package
+changes, inspect it again rather than using the old overview. Reloading this
+preview continues to require the pinned fingerprint. Missing tasks never fall
+back to a different table. The separate **Preview package data…** action remains
+available without an overview.
+When opened from the overview, sample headers show **source column → requested
+target column** for renamed columns, and the sample description shows the
+requested target table. Unchanged names remain concise. Types and values are
+from the source; this does not simulate target conversion or approve import.
+The name correspondence is tied to the same package fingerprint and exact
+source table/column identities. The standalone preview continues to show source
+names when no overview was supplied.
+Sample columns size themselves to their headers within a bounded width; longer
+names remain horizontally scrollable. Hover over a header to read its full
+source/target name correspondence and source type, including after reordering
+columns. Selected-row details and copying retain the complete header text.
+**Find column** and **Next column** (or Enter) navigate matching headers in the
+current column order, wrapping to the first match. The search is literal and
+case-insensitive and includes requested target names and source types. It only
+scrolls horizontally: row filters, values and row selection are preserved, and
+no file reread or database connection is required.
+**Previous column** (Shift+Enter in the search field) moves backward through
+matches, wrapping at the start. **Match n / total** reports the current match in
+the current column order, so reordered columns remain easy to navigate.
+After finding a column, **Column details…** opens selectable text with the source
+column and value type. When the preview came from **Package tables**, it also
+shows the recorded Schema type, source PK/NOT NULL flags and requested target
+table/column names. Standalone previews explicitly identify unavailable metadata.
+These details do not infer target types or constraints; target Review remains
+separate. Column details also work for a sample with no rows.
+**Columns…** opens a searchable, sortable list of all packaged columns, including
+recorded source constraints and requested target names when available. Select a
+row and **Go to column** to return to that exact column in the sample, even after
+sorting the list or reordering sample columns. This works for an empty sample
+and never reads additional data or changes the sample's row filter or selection.
+Returning with **Go to column** also updates the current-column indicator and
+the **Column details…** target. It clears the previous column-search text and
+match count, so an earlier search result cannot be mistaken for the column now
+being inspected. The row search remains unchanged.
+This opens no database connection and
 does not read the target password. Select **Also validate CSV values during inspection**
 for the shared offline import preflight, including headers, value types, recorded
 row counts, non-null columns and ascending unique numeric keys when eligible. This may scan

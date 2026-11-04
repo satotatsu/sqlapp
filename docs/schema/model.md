@@ -16,6 +16,8 @@ Schema XML attribute values preserve line feeds, carriage returns and tabs using
 numeric character references. This retains multiline SQL expressions, including
 line-comment boundaries, without changing attribute names or XML structure.
 Previously written XML that already lost these characters cannot recover them.
+XML text and CDATA also preserve supplementary Unicode characters, including
+characters in SQL view statements, without splitting their surrogate pairs.
 
 ## Object hierarchy
 
