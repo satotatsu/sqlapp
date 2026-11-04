@@ -54,6 +54,10 @@ final class Db2HostDomainReader extends DomainReader {
 					type.setLength(length);
 					type.setScale(scale);
 				}
+				// Generic BLOB mappings omit size; a DISTINCT source requires its catalog
+				// length.
+				if ("SYSIBM".equals(schema) && "BLOB".equals(source))
+					type.setLength(length);
 				if (!"T".equals(kind)) {
 					type.setArrayDimension(1);
 					Long cardinality = rs.getLongValue("ARRAY_CARDINALITY");

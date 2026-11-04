@@ -19,6 +19,32 @@ class Db2Zos13TypeTest {
 	private static final boolean ZOS = true;
 
 	@Test
+	void recreatesBlobDistinctAfterXmlAndValidatesInlineLength() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("blob").asXml()));
+		assertEquals(DataType.BLOB, type.getDataType());
+		assertTrue(create(type).contains("AS BLOB(12) INLINE LENGTH 8"));
+		for (String inline : List.of("0", "12")) {
+			type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", inline);
+			assertTrue(create(type).contains("INLINE LENGTH " + inline));
+		}
+		type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", "-1");
+		assertFalse(create(type).contains("INLINE LENGTH"));
+		for (String inline : List.of("13", "32681", "-2", "invalid")) {
+			type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", inline);
+			assertThrows(IllegalArgumentException.class, () -> create(type));
+		}
+		type.getSpecifics().remove("DB2_HOST_INLINE_LENGTH");
+		assertThrows(IllegalArgumentException.class, () -> create(type));
+		type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", "0");
+		for (long length : new long[] { 0L, 2147483648L }) {
+			type.setLength(length);
+			assertThrows(IllegalArgumentException.class, () -> create(type));
+		}
+		type.setLength(2147483647L);
+		assertTrue(create(type).contains("BLOB(2147483647)"));
+	}
+
+	@Test
 	void changedModelTypeCannotBeSilentlyOverriddenByCatalogSpecifics() {
 		Domain type = read("distinct");
 		type.setDataType(DataType.VARCHAR);
@@ -134,7 +160,9 @@ class Db2Zos13TypeTest {
 					return fallback(sm.getReturnType());
 				calls.incrementAndGet();
 				var first = row("SCHEMA_NAME", "App", "DOMAIN_NAME", "Amount", "SOURCE_SCHEMA", "SYSIBM", "SOURCE_TYPE",
-						mode.equals("missing") ? null : mode.equals("character") ? "VARCHAR" : "DECIMAL", "METATYPE",
+						mode.equals("missing") ? null
+								: mode.equals("character") ? "VARCHAR" : mode.equals("blob") ? "BLOB" : "DECIMAL",
+						"METATYPE",
 						mode.equals("unknown") ? "?"
 								: mode.equals("associative") ? "L" : mode.contains("array") ? "A" : "T",
 						"TYPE_RULES", mode.equals("weak") ? "W" : "S", "NATIVE_LENGTH", 12L, "TYPE_LENGTH", 12L,
@@ -142,8 +170,8 @@ class Db2Zos13TypeTest {
 						"SUBTYPE", null, "ENCODING_SCHEME", null, "ARRAY_CARDINALITY",
 						mode.equals("large-array") ? 2147483648L : mode.equals("array") ? 17L : 0L, "ARRAY_INDEX_TYPE",
 						mode.equals("associative") ? "opaque-id" : null, "ARRAY_INDEX_LENGTH", null,
-						"ARRAY_INDEX_SUBTYPE", null, "INLINE_LENGTH", null, "CREATED_AT", null, "REMARKS",
-						"Owner's type  ");
+						"ARRAY_INDEX_SUBTYPE", null, "INLINE_LENGTH", mode.equals("blob") ? 8 : null, "CREATED_AT",
+						null, "REMARKS", "Owner's type  ");
 				var second = new java.util.LinkedHashMap<>(first);
 				second.put("DOMAIN_NAME", "Amount2");
 				return rows(List.of(first, second));

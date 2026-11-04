@@ -17,6 +17,34 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class Oracle23aiEventReaderTest {
+	@Test
+	void textRepresentationIsModernOnlyAndInvalidFlagsFail() throws Exception {
+		var modern = new Oracle23aiEventReader(DialectHolder.oracle26aiDialect);
+		assertEquals("schedulerJobs23ai.sql", modern.jobSql());
+		assertEquals("schedulerJobs10g.sql", new Oracle10gEventReader(DialectHolder.oracle19cDialect).jobSql());
+		for (String flag : List.of("TEXT", "UNSUPPORTED")) {
+			Event event = event("J1");
+			modern.readArgumentRepresentation(new ExResultSet(null) {
+				@Override
+				public String getString(String name) {
+					return flag;
+				}
+			}, event, "oracle.scheduler.argument.1.");
+			Event restored = SchemaUtils.readXml(new java.io.StringReader(event.asXml()));
+			assertEquals(flag, restored.getSpecifics().get("oracle.scheduler.argument.1.representation"));
+		}
+		assertThrows(SQLException.class, () -> modern.readArgumentRepresentation(new ExResultSet(null) {
+			@Override
+			public String getString(String name) {
+				return "unknown";
+			}
+		}, event("J1"), "oracle.scheduler.argument.1."));
+		try (var oldSql = Oracle10gEventReader.class.getResourceAsStream("schedulerJobs10g.sql")) {
+			assertFalse(new String(oldSql.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+					.contains("STANDARD_HASH"));
+		}
+	}
+
 	private Event event(String name) {
 		Event event = new Event(name).setSchemaName("APP").setEnable(false);
 		event.setStatement("BEGIN NULL; END;");

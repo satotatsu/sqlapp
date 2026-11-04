@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.sqlapp.data.schemas.Event;
 
-/** Restores the qualified argument-free inline job subset, always disabled. */
+/** Restores the qualified inline job subset, always disabled. */
 public final class OracleDisabledSchedulerJobRestorer {
 	private OracleDisabledSchedulerJobRestorer() {
 	}
@@ -46,13 +46,15 @@ public final class OracleDisabledSchedulerJobRestorer {
 	 * Restores one absent job in its original owner using an Oracle 23ai/26ai
 	 * connection with auto-commit enabled. Session user, current user and current
 	 * schema must all equal that owner. The source must have current full metadata,
-	 * no arguments or Program/Schedule references, and a supported native base
-	 * script. Unsupported scripts are rejected before any SQL is executed.
+	 * no Program/Schedule references, only verified text arguments, and a supported
+	 * native base script. Unsupported scripts are rejected before any SQL is
+	 * executed.
 	 *
-	 * Only CREATE_JOB(enabled=FALSE) and setting the captured NLS environment are
-	 * executed, with values bound as data. Original scripts, COMMIT, ENABLE and job
-	 * actions are never executed. Requires an exclusive maintenance window: no
-	 * concurrent actor may create, alter, enable or drop the target job.
+	 * Only CREATE_JOB(enabled=FALSE), the captured NLS environment and verified
+	 * text arguments are executed, with values bound as data. Original scripts,
+	 * COMMIT, ENABLE and job actions are never executed. Requires an exclusive
+	 * maintenance window: no concurrent actor may create, alter, enable or drop the
+	 * target job.
 	 *
 	 * Scheduler changes may commit independently; failures retain completed
 	 * operation names and do not delete partial objects. No grants are issued.
@@ -92,6 +94,11 @@ public final class OracleDisabledSchedulerJobRestorer {
 				}
 				completed.add(operation);
 			}
+			if (OracleSchedulerJobScript.argumentCount(event) > 0) {
+				operation = "VERIFY_ARGUMENTS";
+				verifyArguments(connection, event);
+				completed.add(operation);
+			}
 			operation = "VERIFY_DISABLED";
 			if (!"FALSE".equals(enabled(connection, event)))
 				throw new SQLException("Restored Scheduler job is missing or not disabled");
@@ -100,6 +107,24 @@ public final class OracleDisabledSchedulerJobRestorer {
 		} catch (SQLException failure) {
 			throw new RestorationException(failure, new Result(event.getSchemaName(), event.getName(), completed),
 					operation);
+		}
+	}
+
+	private static void verifyArguments(Connection connection, Event event) throws SQLException {
+		int count = OracleSchedulerJobScript.argumentCount(event);
+		try (var statement = connection.prepareStatement("SELECT ARGUMENT_POSITION, VALUE FROM ALL_SCHEDULER_JOB_ARGS "
+				+ "WHERE OWNER=? AND JOB_NAME=? ORDER BY ARGUMENT_POSITION")) {
+			statement.setString(1, event.getSchemaName());
+			statement.setString(2, event.getName());
+			try (var result = statement.executeQuery()) {
+				for (int index = 1; index <= count; index++) {
+					if (!result.next() || !Integer.toString(index).equals(result.getString(1)) || !event.getSpecifics()
+							.get("oracle.scheduler.argument." + index + ".value").equals(result.getString(2)))
+						throw new SQLException("Restored Scheduler argument value/position mismatch: " + index);
+				}
+				if (result.next())
+					throw new SQLException("Unexpected restored Scheduler arguments");
+			}
 		}
 	}
 

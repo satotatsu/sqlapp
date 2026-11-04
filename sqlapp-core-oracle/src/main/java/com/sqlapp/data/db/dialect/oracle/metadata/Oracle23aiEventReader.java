@@ -21,6 +21,19 @@ public class Oracle23aiEventReader extends Oracle10gEventReader {
 		super(dialect);
 	}
 
+	@Override
+	protected String jobSql() {
+		return "schedulerJobs23ai.sql";
+	}
+
+	@Override
+	protected void readArgumentRepresentation(ExResultSet rs, Event event, String prefix) throws SQLException {
+		String representation = rs.getString("ARGUMENT_REPRESENTATION");
+		if (!"TEXT".equals(representation) && !"UNSUPPORTED".equals(representation))
+			throw new SQLException("Invalid Scheduler argument representation: " + representation);
+		event.getSpecifics().put(prefix + "representation", representation);
+	}
+
 	private record Destination(Event event, String prefix) {
 	}
 

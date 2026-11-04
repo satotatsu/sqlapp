@@ -172,6 +172,8 @@ class OracleMetadataReaderTest {
 						"GRANT CREATE JOB, CREATE PROCEDURE TO " + ORACLE.getUsername().toUpperCase(Locale.ROOT));
 			}
 			boolean procedureCreated = false, jobCreated = false;
+			boolean restorationAttempted = false;
+			Throwable primary = null;
 			try {
 				try (Statement statement = connection.createStatement()) {
 					statement.execute("CREATE PROCEDURE " + procedureName
@@ -211,6 +213,8 @@ class OracleMetadataReaderTest {
 				assertEquals("2", job.getSpecifics().get("oracle.scheduler.argumentCount"));
 				assertEquals(text, job.getSpecifics().get("oracle.scheduler.argument.1.value"));
 				assertEquals("42", job.getSpecifics().get("oracle.scheduler.argument.2.value"));
+				assertEquals("TEXT", job.getSpecifics().get("oracle.scheduler.argument.1.representation"));
+				assertEquals("TEXT", job.getSpecifics().get("oracle.scheduler.argument.2.representation"));
 				try (var statement = connection
 						.prepareStatement("SELECT CASE WHEN A.ANYDATA_VALUE IS NULL THEN 'FALSE' ELSE 'TRUE' END "
 								+ "FROM ALL_SCHEDULER_JOB_ARGS A WHERE A.OWNER=? AND A.JOB_NAME=? AND A.ARGUMENT_POSITION=1")) {
@@ -222,13 +226,52 @@ class OracleMetadataReaderTest {
 								job.getSpecifics().get("oracle.scheduler.argument.1.hasAnydataValue"));
 					}
 				}
+				try (var statement = connection
+						.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
+					statement.setString(1, jobName);
+					statement.execute();
+					jobCreated = false;
+				}
+				restorationAttempted = true;
+				var result = com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+						.restore(connection, job);
+				assertEquals(java.util.List.of("CREATE_JOB", "SET_NLS_ENV", "SET_ARGUMENT_1", "SET_ARGUMENT_2",
+						"VERIFY_ARGUMENTS", "VERIFY_DISABLED"), result.completedOperations());
+				var recreated = reader.getAllFull(connection);
+				assertEquals(1, recreated.size());
+				org.junit.jupiter.api.Assertions.assertFalse(recreated.getFirst().isEnable());
+				assertEquals(job.getStatement(), recreated.getFirst().getStatement());
+				for (String field : java.util.List.of("JOB_TYPE", "NUMBER_OF_ARGUMENTS", "argumentCount", "NLS_ENV",
+						"argument.1.value", "argument.2.value", "argument.1.representation",
+						"argument.2.representation"))
+					assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+							recreated.getFirst().getSpecifics().get("oracle.scheduler." + field), field);
+				try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.SET_JOB_ANYDATA_VALUE(job_name=>?, "
+						+ "argument_position=>2, argument_value=>SYS.ANYDATA.ConvertNumber(42)); END;")) {
+					statement.setString(1, jobName);
+					statement.execute();
+				}
+				var opaque = reader.getAllFull(connection).getFirst();
+				assertEquals("UNSUPPORTED", opaque.getSpecifics().get("oracle.scheduler.argument.2.representation"));
+				org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+						() -> com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+								.restore(connection, opaque));
+			} catch (Exception | AssertionError failure) {
+				primary = failure;
+				throw failure;
 			} finally {
 				try {
-					if (jobCreated)
+					if (jobCreated || restorationAttempted)
 						try (var statement = connection
 								.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
 							statement.setString(1, jobName);
 							statement.execute();
+						} catch (SQLException cleanup) {
+							if (!(restorationAttempted && cleanup.getErrorCode() == 27475)) {
+								if (primary == null)
+									throw cleanup;
+								primary.addSuppressed(cleanup);
+							}
 						}
 				} finally {
 					if (procedureCreated)

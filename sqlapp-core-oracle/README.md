@@ -184,8 +184,8 @@ check). Public APIs, resolver boundaries and dependencies were unchanged.
 ## Disabled job restoration
 
 `OracleDisabledSchedulerJobRestorer.restore(connection, exportedJob)` restores
-one **absent, disabled, argument-free inline job** from a current full-read Event
-or its XML round-trip. This initial subset supports `PLSQL_BLOCK` and
+one **absent, disabled inline job** from a current full-read Event
+or its XML round-trip. This subset supports argument-free `PLSQL_BLOCK` and
 `STORED_PROCEDURE`, on Oracle 23ai/26ai engines reporting database major version
 23. The generic Event CREATE/ALTER/DROP factories remain blocked.
 
@@ -209,12 +209,11 @@ CREATE_JOB with explicit `enabled=>FALSE`, the captured NLS_ENV setter and the
 native COMMIT/END wrapper. It rejects additional calls, dynamic expressions,
 comments outside literals, unsupported attributes and ambiguous syntax before
 even inspecting the target connection. Only newly constructed, SYS-qualified
-CREATE_JOB and NLS_ENV calls run; string values (including action bodies and date
+CREATE_JOB, NLS_ENV and verified text argument calls run; string values (including action bodies and date
 text/format/NLS arguments) are bound parameters. The original COMMIT is omitted.
 The job action remains stored data and is never run.
 
-Source inventory must have zero declared and observed arguments, no argument
-payload fields or Program/Schedule references, no destination, default priority
+Source inventory must have no Program/Schedule references, no destination, default priority
 3, restartable FALSE and no max-runs/max-failures limits. Unsupported native
 attribute setters also fail. Full reads now add
 `oracle.scheduler.definitionFingerprint`, covering the captured Event, native
@@ -226,8 +225,65 @@ Scheduler operations are not atomic. On failure after writes start,
 `RestorationException.getPartialResult()` identifies completed operations and
 `getFailedOperation()` identifies the attempted operation. A failed call may
 already have taken effect. Inspect the target before retrying; no automatic
-cleanup or rollback is attempted. Program/Schedule restoration, argument/ANYDATA
+cleanup or rollback is attempted. Program/Schedule restoration, arbitrary ANYDATA
 restoration, non-default execution attributes and enabling jobs remain unsupported.
+
+### Text arguments
+
+Inline `STORED_PROCEDURE` jobs may have 0–255 arguments. Declared and observed
+counts must agree, all positions must be present exactly once, and each argument
+must have a nonempty text value and `representation=TEXT`. Names, OUT arguments
+and unrecognized payload fields are rejected. Type metadata may be absent,
+UNDEFINED (observed for inline job arguments), VARCHAR2 or SYS.VARCHAR2; other
+types are rejected. UNDEFINED alone never establishes text safety: the bulk
+query's payload/value check is still mandatory.
+
+On 23ai/26ai, the same bulk job/argument SELECT now classifies each argument as
+`TEXT` or `UNSUPPORTED`. A non-null VALUE with no ANYDATA payload is text. When
+ANYDATA is present, only SYS.VARCHAR2 with matching SHA-256 hashes of VALUE and
+AccessVarchar2() is text. This compares contents independently of linguistic
+collation without exporting the opaque payload. Null/missing values, mismatching
+payloads and other ANYDATA types stay unsupported. Pre-23ai queries are unchanged;
+no per-argument SELECT was added. Old exports without representation markers
+must be refreshed to restore arguments.
+
+Verified text arguments are recreated with bound SET_JOB_ARGUMENT_VALUE calls in
+position order while the job stays disabled. One additional SELECT checks all
+restored positions/values before the final disabled-state check. The result adds
+SET_ARGUMENT_N and VERIFY_ARGUMENTS operation names; partial-failure details
+identify a failed setter or verification. Text semantics are preserved; this is
+not a guarantee of identical internal ANYDATA storage when the source had no
+ANYDATA payload. Procedures are dependencies supplied by the caller, not created
+or run by the restorer.
+
+Text-argument follow-up verification (2026-11-04): the changed reader/restorer
+scope passed 29 tests; the full Oracle scope passed 583 and the selected Command
+generator scope passed 142. All final scopes had zero failures/errors/skips.
+The three previously authorized disabled-Scheduler cases passed on each of the
+Oracle 23 and fixed 26ai images (six final cases). The stored-procedure fixture
+was recreated from XML with two text values, including quotes/newlines/leading
+and trailing spaces, and retained its action, NLS environment and disabled state.
+Changing its second argument to NUMBER ANYDATA made the reader report
+UNSUPPORTED and the restorer reject it before target access. Neither the jobs
+nor their procedures were run or enabled. Dedicated objects were cleaned up and
+all runs' dedicated Oracle/Ryuk containers were checked absent.
+
+The initial Oracle 23 run failed the argument case at the strict type guard;
+a diagnostic retry established the actual catalog label as UNDEFINED, rather
+than VARCHAR2. Both other initial cases passed. The guard was corrected without
+weakening the payload/value proof, and all final cases passed; an intermediate
+three-case Oracle 23 run also passed before adding the NUMBER rejection check.
+No task exclusions, new dependencies or shared Schema APIs were introduced.
+Reader query counts remain at most three for inventory/four for modern full
+reads; restoration adds one argument-verification SELECT for an argument-bearing
+job, regardless of argument count. The new representation specific is additive;
+pre-23ai SQL remains unchanged.
+
+The final live commands use the same image/dialect properties below, with
+`--tests '*OracleMetadataReaderTest.disabledScheduler*'` to include all three
+cases. The final unit command is unchanged. Arbitrary ANYDATA payloads,
+null/unset/default argument semantics, named Program/Schedule restoration and
+enabling jobs remain unsupported.
 
 Verification (2026-11-04): eight restorer tests cover bound values, quoted names,
 Unicode/action lookalikes, unsupported syntax, argument/ANYDATA rejection,
@@ -257,8 +313,9 @@ Commands used for the final scopes:
 Public changes are additive Oracle utility APIs and one full-read fingerprint
 specific. No shared Schema API, resolver boundary, dependency or pre-23ai metadata
 query changed. Live restoration qualification covers the inline PLSQL_BLOCK
-calendar fixture; STORED_PROCEDURE syntax is accepted but not yet live-qualified
-by a zero-argument procedure fixture. Broader restoration remains unsupported.
+calendar fixture in that initial phase. The text-argument follow-up above also
+qualifies the two-argument STORED_PROCEDURE fixture; a separate zero-argument
+procedure fixture has not been run. Broader restoration remains unsupported.
 
 ### Native Scheduler script verification
 

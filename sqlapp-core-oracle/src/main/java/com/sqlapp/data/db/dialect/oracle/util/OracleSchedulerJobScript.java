@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import com.sqlapp.data.schemas.Event;
 
-/** Strict parser for the qualified, argument-free native job export subset. */
+/** Strict parser for the qualified inline native job export subset. */
 final class OracleSchedulerJobScript {
 	private record Token(String text, boolean literal) {
 	}
@@ -74,12 +74,34 @@ final class OracleSchedulerJobScript {
 			throw new IllegalArgumentException(
 					"Scheduler metadata changed or has no fingerprint; refresh a full read before restoration");
 		var review = OracleSchedulerScriptReview.collect(List.of(event));
-		if (review.scripts().size() != 1 || !"JOB".equals(field(event, "kind"))
-				|| !"0".equals(field(event, "argumentCount")) || !"0".equals(field(event, "NUMBER_OF_ARGUMENTS")))
-			throw new IllegalArgumentException("Only argument-free inline Scheduler jobs can be restored");
-		for (String key : event.getSpecifics().keySet())
-			if (key.toLowerCase(Locale.ROOT).startsWith("oracle.scheduler.argument."))
+		if (review.scripts().size() != 1 || !"JOB".equals(field(event, "kind")))
+			throw new IllegalArgumentException("Only inline Scheduler jobs can be restored");
+		int count = argumentCount(event);
+		if (count != number(field(event, "argumentCount"))
+				|| count > 0 && !"STORED_PROCEDURE".equals(field(event, "JOB_TYPE")))
+			throw new IllegalArgumentException(
+					"Scheduler arguments must be complete inline stored-procedure arguments");
+		for (String key : event.getSpecifics().keySet()) {
+			String normalized = key.toLowerCase(Locale.ROOT);
+			if (!normalized.startsWith("oracle.scheduler.argument."))
+				continue;
+			String[] parts = normalized.substring("oracle.scheduler.argument.".length()).split("\\.", -1);
+			if (parts.length != 2 || number(parts[0]) < 1 || number(parts[0]) > count || !Set
+					.of("name", "type", "value", "outargument", "hasanydatavalue", "representation").contains(parts[1]))
 				throw invalid();
+		}
+		for (int position = 1; position <= count; position++) {
+			String prefix = "argument." + position + ".";
+			String type = field(event, prefix + "type"), out = field(event, prefix + "outArgument");
+			if (!"TEXT".equals(field(event, prefix + "representation")) || field(event, prefix + "value") == null
+					|| field(event, prefix + "value").isEmpty()
+					|| !Set.of("TRUE", "FALSE").contains(required(field(event, prefix + "hasAnydataValue")))
+					|| type != null && !Set.of("UNDEFINED", "VARCHAR2", "SYS.VARCHAR2").contains(type)
+					|| out != null && !"FALSE".equals(out) || field(event, prefix + "name") != null)
+				throw new IllegalArgumentException("Unsupported or unverifiable Scheduler argument: " + position
+						+ "; representation=" + field(event, prefix + "representation") + ", type=" + type + ", OUT="
+						+ out + ", name=" + field(event, prefix + "name"));
+		}
 		if (!Set.of("PLSQL_BLOCK", "STORED_PROCEDURE").contains(required(field(event, "JOB_TYPE")))
 				|| field(event, "DESTINATION") != null || !"FALSE".equals(field(event, "RESTARTABLE"))
 				|| !"3".equals(field(event, "JOB_PRIORITY")) || field(event, "MAX_RUNS") != null
@@ -116,7 +138,8 @@ final class OracleSchedulerJobScript {
 		if (arguments.size() != 11)
 			throw invalid();
 		identity(arguments.get("JOB_NAME"), event);
-		if (!"FALSE".equals(arguments.get("ENABLED").sql()) || !"0".equals(arguments.get("NUMBER_OF_ARGUMENTS").sql())
+		if (!"FALSE".equals(arguments.get("ENABLED").sql())
+				|| !Integer.toString(argumentCount(event)).equals(arguments.get("NUMBER_OF_ARGUMENTS").sql())
 				|| !text(arguments.get("JOB_TYPE")).equals(field(event, "JOB_TYPE"))
 				|| !text(arguments.get("JOB_ACTION")).replace("\r\n", "\n")
 						.equals(String.join("\n", event.getStatement()))
@@ -167,6 +190,11 @@ final class OracleSchedulerJobScript {
 		accept("/");
 		if (position != tokens.size())
 			throw invalid();
+		for (int index = 1; index <= argumentCount(event); index++)
+			calls.add(new Call("SET_ARGUMENT_" + index,
+					"BEGIN SYS.DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE(job_name=>?,argument_position=>" + index
+							+ ",argument_value=>?); END;",
+					List.of(text(job), field(event, "argument." + index + ".value"))));
 		return List.copyOf(calls);
 	}
 
@@ -174,8 +202,10 @@ final class OracleSchedulerJobScript {
 		Token token = next();
 		if (token.literal())
 			return new Value("?", List.of(token.text()));
-		if (Set.of("NULL", "TRUE", "FALSE", "0").contains(token.text()))
+		if (Set.of("NULL", "TRUE", "FALSE").contains(token.text()))
 			return new Value(token.text(), List.of());
+		if (token.text().matches("[0-9]+"))
+			return new Value(Integer.toString(number(token.text())), List.of());
 		if (!token.text().equals("TO_TIMESTAMP_TZ"))
 			throw invalid();
 		expect("(");
@@ -227,6 +257,19 @@ final class OracleSchedulerJobScript {
 		if (value == null)
 			throw invalid();
 		return value;
+	}
+
+	static int argumentCount(Event event) {
+		return number(field(event, "NUMBER_OF_ARGUMENTS"));
+	}
+
+	private static int number(String value) {
+		if (value == null || !value.matches("0|[1-9][0-9]{0,2}"))
+			throw invalid();
+		int result = Integer.parseInt(value);
+		if (result > 255)
+			throw invalid();
+		return result;
 	}
 
 	private Token peek() {

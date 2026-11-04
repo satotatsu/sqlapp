@@ -43,6 +43,70 @@ class OracleDisabledSchedulerJobRestorerTest {
 		event.getSpecifics().put(OracleSchedulerDefinition.FINGERPRINT, OracleSchedulerDefinition.fingerprint(event));
 	}
 
+	private Event argumentsJob() {
+		Event event = job();
+		event.setStatement("APP.PROC");
+		event.getSpecifics().put("oracle.scheduler.JOB_TYPE", "STORED_PROCEDURE");
+		event.getSpecifics().put("oracle.scheduler.NUMBER_OF_ARGUMENTS", "2");
+		event.getSpecifics().put("oracle.scheduler.argumentCount", "2");
+		for (int index = 1; index <= 2; index++) {
+			String prefix = "oracle.scheduler.argument." + index + ".";
+			event.getSpecifics().put(prefix + "value", index == 1 ? "  first\n'quoted'; second  " : "42");
+			event.getSpecifics().put(prefix + "representation", "TEXT");
+			event.getSpecifics().put(prefix + "hasAnydataValue", "TRUE");
+			event.getSpecifics().put(prefix + "type", index == 1 ? "UNDEFINED" : "VARCHAR2");
+		}
+		script(event,
+				script(event).replace("job_type=>'PLSQL_BLOCK'", "job_type=>'STORED_PROCEDURE'")
+						.replace("job_action=>'BEGIN NULL; END;'", "job_action=>'APP.PROC'")
+						.replace("number_of_arguments=>0", "number_of_arguments=>2"));
+		return event;
+	}
+
+	@Test
+	void restoresVerifiedTextArgumentsInPositionOrderAndChecksThemInOneQuery() throws Exception {
+		State state = new State();
+		state.argumentRows = List.of(new String[] { "1", "  first\n'quoted'; second  " }, new String[] { "2", "42" });
+		var result = OracleDisabledSchedulerJobRestorer.restore(state.connection(), argumentsJob());
+		assertEquals(List.of("CREATE_JOB", "SET_NLS_ENV", "SET_ARGUMENT_1", "SET_ARGUMENT_2", "VERIFY_ARGUMENTS",
+				"VERIFY_DISABLED"), result.completedOperations());
+		assertEquals(4, state.queries);
+		assertEquals(List.of("\"J\"\"1\"", "  first\n'quoted'; second  "), state.bound.get(2));
+		assertFalse(state.executed.get(2).contains("quoted"));
+	}
+
+	@Test
+	void rejectsMissingAmbiguousAndNonTextArgumentsBeforeConnectionAccess() {
+		for (String[] change : new String[][] { { "argument.1.representation", "UNSUPPORTED" },
+				{ "argument.1.representation", "" }, { "argument.1.value", "" }, { "argument.1.type", "NUMBER" },
+				{ "argument.1.hasAnydataValue", "unknown" }, { "argument.1.outArgument", "TRUE" },
+				{ "argument.1.name", "NAME" }, { "argument.3.value", "extra" }, { "argument.01.value", "noncanonical" },
+				{ "argumentCount", "1" }, { "NUMBER_OF_ARGUMENTS", "256" }, { "argument.1.payload", "unknown" } }) {
+			Event event = argumentsJob();
+			event.getSpecifics().put("oracle.scheduler." + change[0], change[1]);
+			seal(event);
+			State state = new State();
+			assertThrows(IllegalArgumentException.class,
+					() -> OracleDisabledSchedulerJobRestorer.restore(state.connection(), event));
+			assertEquals(0, state.accesses);
+		}
+	}
+
+	@Test
+	void reportsArgumentVerificationAndSetterFailuresWithoutCleanup() {
+		State state = new State();
+		var verification = assertThrows(OracleDisabledSchedulerJobRestorer.RestorationException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restore(state.connection(), argumentsJob()));
+		assertEquals("VERIFY_ARGUMENTS", verification.getFailedOperation());
+		assertEquals(4, verification.getPartialResult().completedOperations().size());
+		State setterState = new State();
+		setterState.failAtCall = 3;
+		var setter = assertThrows(OracleDisabledSchedulerJobRestorer.RestorationException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restore(setterState.connection(), argumentsJob()));
+		assertEquals("SET_ARGUMENT_1", setter.getFailedOperation());
+		assertEquals(List.of("CREATE_JOB", "SET_NLS_ENV"), setter.getPartialResult().completedOperations());
+	}
+
 	@Test
 	void restoresOnlyBoundDisabledCallsAndVerifiesState() throws Exception {
 		State state = new State();
@@ -178,7 +242,8 @@ class OracleDisabledSchedulerJobRestorerTest {
 	private static final class State {
 		boolean autoCommit = true, present, failSecondCall;
 		String sessionUser = "APP", schema = "APP", product = "Oracle", enabled = "FALSE";
-		int major = 23, accesses, queries;
+		int major = 23, accesses, queries, failAtCall;
+		List<String[]> argumentRows = List.of();
 		List<String> executed = new ArrayList<>();
 		List<List<String>> bound = new ArrayList<>();
 
@@ -209,7 +274,7 @@ class OracleDisabledSchedulerJobRestorerTest {
 			case "execute" -> {
 				executed.add(sql);
 				bound.add(List.copyOf(bindings));
-				if (failSecondCall && executed.size() == 2)
+				if (failSecondCall && executed.size() == 2 || executed.size() == failAtCall)
 					throw new SQLException("denied", "", 1031);
 				present = true;
 				yield false;
@@ -218,7 +283,8 @@ class OracleDisabledSchedulerJobRestorerTest {
 				queries++;
 				yield rows(sql.contains("SYS_CONTEXT")
 						? List.<String[]>of(new String[] { sessionUser, sessionUser, schema })
-						: present ? List.<String[]>of(new String[] { enabled }) : List.of());
+						: sql.contains("ALL_SCHEDULER_JOB_ARGS") ? argumentRows
+								: present ? List.<String[]>of(new String[] { enabled }) : List.of());
 			}
 			case "close" -> null;
 			default -> throw new UnsupportedOperationException(method);

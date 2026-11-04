@@ -41,10 +41,11 @@ public class Db2HostDomainFactory extends SimpleSqlFactory<Domain, Db2SqlBuilder
 			var fields = type.getSpecifics();
 			String kind = fields.get("DB2_HOST_METATYPE"), source = fields.get("DB2_HOST_SOURCE_TYPE");
 			boolean zos = "db2-zos".equals(getDialect().getSimpleName());
+			boolean blob = zos && "T".equals(kind) && "BLOB".equals(source);
 			if (!"SYSIBM".equals(fields.get("DB2_HOST_SOURCE_SCHEMA")) || source == null
 					|| !Set.of("T", "A").contains(kind == null ? "" : kind)
-					|| !Set.of("SMALLINT", "INTEGER", "BIGINT", "DECIMAL", "NUMERIC", "REAL", "DOUBLE",
-							"DOUBLE PRECISION").contains(source)
+					|| (!Set.of("SMALLINT", "INTEGER", "BIGINT", "DECIMAL", "NUMERIC", "REAL", "DOUBLE",
+							"DOUBLE PRECISION").contains(source) && !blob)
 					|| type.isNotNull() || type.getDefaultValue() != null || type.getCheck() != null
 					|| !type.getChecks().isEmpty() || !type.getColumns().isEmpty() || type.getOnUpdate() != null)
 				throw unsupported(type);
@@ -53,6 +54,31 @@ public class Db2HostDomainFactory extends SimpleSqlFactory<Domain, Db2SqlBuilder
 					|| expected.getDataType() != type.getDataType())
 				throw unsupported(type);
 			String base = source;
+			if (blob) {
+				Long length = type.getLength();
+				// Schema XML omits BLOB sizes; retain the native DISTINCT source length.
+				if (length == null) {
+					try {
+						length = Long.valueOf(fields.get("DB2_HOST_NATIVE_LENGTH"));
+					} catch (NumberFormatException e) {
+						throw unsupported(type);
+					}
+				}
+				String inline = fields.get("DB2_HOST_INLINE_LENGTH");
+				if (length == null || length < 1 || length > 2147483647L || inline == null)
+					throw unsupported(type);
+				int inlineLength;
+				try {
+					inlineLength = Integer.parseInt(inline);
+				} catch (NumberFormatException e) {
+					throw unsupported(type);
+				}
+				if (inlineLength < -1 || inlineLength > 32680 || inlineLength > length)
+					throw unsupported(type);
+				base += "(" + length + ")";
+				if (inlineLength >= 0)
+					base += " INLINE LENGTH " + inlineLength;
+			}
 			if (Set.of("DECIMAL", "NUMERIC").contains(source)) {
 				Long precision = type.getLength();
 				Integer scale = type.getScale();

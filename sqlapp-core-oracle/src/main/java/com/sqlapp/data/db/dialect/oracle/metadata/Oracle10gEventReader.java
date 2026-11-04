@@ -23,7 +23,7 @@ public class Oracle10gEventReader extends EventReader {
 	@Override
 	protected List<Event> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
 		Map<List<String>, Event> result = new LinkedHashMap<>();
-		execute(connection, getSqlNodeCache().getString("schedulerJobs10g.sql"), context, new ResultSetNextHandler() {
+		execute(connection, getSqlNodeCache().getString(jobSql()), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				var key = java.util.Arrays.asList(getString(rs, "OWNER"), getString(rs, "JOB_NAME"));
@@ -40,6 +40,13 @@ public class Oracle10gEventReader extends EventReader {
 		readPrograms(connection, events);
 		readSchedules(connection, events);
 		return events;
+	}
+
+	protected String jobSql() {
+		return "schedulerJobs10g.sql";
+	}
+
+	protected void readArgumentRepresentation(ExResultSet rs, Event event, String prefix) throws SQLException {
 	}
 
 	private Map<List<String>, List<Event>> dependencyTargets(List<Event> events, String kind) {
@@ -192,6 +199,7 @@ public class Oracle10gEventReader extends EventReader {
 				event.getSpecifics().put(prefix + field[1], value);
 		}
 		int count = Integer.parseInt(event.getSpecifics().get("oracle.scheduler.argumentCount"));
+		readArgumentRepresentation(rs, event, prefix);
 		event.getSpecifics().put("oracle.scheduler.argumentCount", Integer.toString(count + 1));
 	}
 
