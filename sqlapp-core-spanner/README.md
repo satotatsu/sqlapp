@@ -3,6 +3,14 @@
 This module targets GoogleSQL, using the existing single-version resolver.
 It does not implement the Spanner PostgreSQL interface.
 
+The local enhancement pass and final audit are summarized in
+[ENHANCEMENT_STATUS.md](ENHANCEMENT_STATUS.md), including a support matrix,
+compatibility boundaries and remaining live-server checks. CREATE TABLE now
+fails for interleaved metadata instead of silently dropping its parent. Optional
+newer column metadata is obtained from `col.*` without explicitly naming newer
+physical catalog columns. UNIQUE index names honor schema decoration. Live
+service compatibility is not certified by the local tests.
+
 ## Column migrations
 
 Use the ordinary table-diff entry point; no additional configuration is needed:
@@ -336,6 +344,102 @@ older service/emulator compatibility remain unverified. No database is required
 for these tests. Existing APIs, dependencies and Schema XML are unchanged.
 
 Reference: [GoogleSQL DML](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/dml-syntax).
+
+## Index-column metadata validation
+
+Index headers accept only INDEX, SEARCH and VECTOR types and explicit true/false
+UNIQUE/NULL_FILTERED values. Unknown or missing values and contradictory types
+or flags across rows fail before option retrieval. Tests retain true flags
+through XML and UNIQUE NULL_FILTERED DDL and reject conflicting/malformed
+headers. Existing catalog queries and resolver paths are unchanged; these
+reader checks apply to all currently supported Spanner paths. Live driver
+representations and older-service compatibility remain unverified.
+
+Index keys are assembled by ORDINAL_POSITION independently of result row order;
+NULL positions remain STORING columns. Missing names/owners, owner conflicts,
+invalid/duplicate/gapped positions, missing keys and repeated columns across
+keys/STORING fail explicitly. Normal indexes require a recognized direction;
+SEARCH/VECTOR retain the existing allowance for absent directions. Tests read
+40 composite indexes across two schemas, interleave STORING with reversed key
+rows and retain keys/direction/includes through XML and CREATE DDL. Invalid
+rows fail before option queries. Existing option-query counts, catalog SQL,
+public APIs, XML structure, dependencies and resolver paths are unchanged.
+Live catalog and older-service behavior remain unverified.
+
+## Primary-key metadata validation
+
+The primary-key reader uses the existing INDEX_COLUMNS.ORDINAL_POSITION to
+assemble columns explicitly rather than depending on result row order. Missing,
+duplicate or gapped positions, repeated columns, missing identities and unknown
+sort directions fail explicitly. Local tests read 40 composite keys in one
+query across two schemas, reverse the incoming rows and retain key order and
+DESC through XML and CREATE TABLE DDL. Only PRIMARY_KEY indexes are read by
+this reader; unique secondary index handling is unchanged. No new physical
+catalog columns, JDBC calls, APIs, XML structure, dependencies or resolver
+boundaries are introduced. Live catalog/older-service behavior remains
+unverified.
+
+## View metadata validation
+
+Metadata-derived views require nonblank names and query statements and an
+explicit INVOKER or DEFINER security type. Missing or unknown security is an
+error rather than silently becoming INVOKER during recreation. Duplicate
+catalog/schema/name identities are rejected. This reader-only validation uses
+the existing catalog query on all existing resolver paths; user-authored view
+defaults, public APIs, dependencies and XML structure are unchanged. Local
+tests retrieve 40 views across two schemas in one query and check multiline
+queries, comments, identifiers and both security types through XML and CREATE
+DDL. Live catalog/permission behavior and older-service compatibility remain
+unverified. A shared XML fix preserves supplementary Unicode characters in
+view statement CDATA and ordinary XML text; this also benefits other dialects.
+
+Reference: [GoogleSQL VIEWS metadata](https://docs.cloud.google.com/spanner/docs/information-schema#views).
+
+## Sequence metadata validation
+
+Sequence reads reject missing names, duplicate catalog/schema/name identities,
+nonpositive explicit start counters, incomplete skip ranges and reversed skip
+bounds. Missing optional values retain their existing defaults. A skip range
+whose minimum equals its maximum remains valid. Local mock tests retrieve 40
+sequences across two schemas in one query and preserve start/skip options
+through XML and CREATE DDL.
+
+The same query now reads sequence_kind from the existing SEQUENCE_OPTIONS
+table. Raw bit_reversed_positive and the corresponding single/double-quoted
+SQL literals normalize to specifics SEQUENCE_KIND=bit_reversed_positive and
+survive XML. Other non-null values fail explicitly; a missing option retains
+the prior behavior. No new physical catalog columns, JDBC calls, public APIs,
+dependencies or resolver boundaries are introduced. The CREATE factory keeps
+its existing BIT_REVERSED_POSITIVE generation. Tests cover 40 sequences,
+quoted/raw kind values, unknown/malformed values and bound schema/name filters.
+Reference: [Google emulator sequence options](https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/blob/master/backend/query/information_schema_catalog.cc).
+Live catalog execution, older-service compatibility and restoration of the
+current allocation counter remain unverified.
+
+## Column metadata validation
+
+IDENTITY metadata accepts YES/NO flags and known generation modes (BY DEFAULT,
+BY_DEFAULT and ALWAYS). Unknown non-null flags, modes and sequence kinds fail
+explicitly rather than becoming BY DEFAULT or bit-reversed sequences. The
+recognized explicit kind is BIT_REVERSED_POSITIVE_SEQUENCE, matching the
+[Google emulator catalog implementation](https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/blob/master/backend/query/information_schema_catalog.cc).
+NULL optional identity metadata retains its existing behavior, including an
+unspecified kind that depends on the destination database default. Local tests
+cover generation mode, start counter and skip range through XML and CREATE
+DDL; they do not certify live execution or restore the current sequence counter.
+Catalog SQL, version resolution and public APIs are unchanged.
+
+The column reader rejects missing table/column names, missing native types,
+unknown or absent YES/NO nullability, duplicate catalog/schema/table/column
+identities and generated columns without an expression. These checks use the
+existing query and catalog columns on all existing Spanner resolver paths.
+Local mock coverage reads 40 columns in one query across two schemas and checks
+type, nullability, multiline DEFAULT and stored generated expressions through
+Schema XML and CREATE DDL. Missing optional generated/identity fields retain
+their existing behavior; live catalog and older-service compatibility remain
+unverified. No public APIs, dependencies or XML structure changed.
+
+Reference: [GoogleSQL information schema](https://docs.cloud.google.com/spanner/docs/information-schema).
 
 ## CHECK metadata validation
 

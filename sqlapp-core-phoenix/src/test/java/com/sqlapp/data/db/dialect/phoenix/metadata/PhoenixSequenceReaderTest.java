@@ -143,4 +143,77 @@ class PhoenixSequenceReaderTest {
 					dialect.getCatalogReader().getSchemaReader().getSequenceReader());
 		}
 	}
+
+	@Test
+	void rejectsMissingNamesAndContradictoryNumericMetadata() {
+		final var reader = new PhoenixSequenceReader(DialectHolder.defaultDialect);
+		for (int mode = 0; mode < 8; mode++) {
+			final var values = new HashMap<String, Object>();
+			values.put("sequence_name", "ids");
+			switch (mode) {
+			case 0 -> values.remove("sequence_name");
+			case 1 -> values.put("sequence_name", "  ");
+			case 2 -> values.put("increment_by", 0L);
+			case 3 -> values.put("cache_size", -1L);
+			case 4 -> {
+				values.put("min_value", 10L);
+				values.put("max_value", 9L);
+			}
+			case 5 -> {
+				values.put("min_value", 10L);
+				values.put("start_with", 9L);
+			}
+			case 6 -> {
+				values.put("max_value", 10L);
+				values.put("start_with", 11L);
+			}
+			case 7 -> values.put("sequence_name", "");
+			}
+			assertThrows(IllegalArgumentException.class, () -> reader.createSequence(row(values)));
+		}
+	}
+
+	@Test
+	void retainsDescendingAndBoundaryValuesThroughXmlAndDdl() throws Exception {
+		final var reader = new PhoenixSequenceReader(DialectHolder.defaultDialect);
+		for (long start : List.of(-10L, 10L)) {
+			final var values = new HashMap<String, Object>();
+			values.put("sequence_name", "descending");
+			values.put("start_with", start);
+			values.put("increment_by", -2L);
+			values.put("min_value", -10L);
+			values.put("max_value", 10L);
+			values.put("cache_size", 0L);
+			values.put("cycle_flag", false);
+			final var sequence = reader.createSequence(row(values));
+			final Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
+			assertEquals(BigInteger.valueOf(start), restored.getStartValue());
+			assertEquals(BigInteger.valueOf(-2), restored.getIncrementBy());
+			assertFalse(restored.isCycle());
+			final String ddl = DialectHolder.defaultDialect.createSqlFactoryRegistry()
+					.createSql(restored, SqlType.CREATE).get(0).getSqlText();
+			assertTrue(ddl.contains("INCREMENT BY -2 MINVALUE -10 MAXVALUE 10"), ddl);
+			assertTrue(ddl.contains("CACHE 0"), ddl);
+		}
+	}
+
+	@Test
+	void rejectsDuplicateSequenceIdentitiesInOneRead() {
+		final int[] queries = { 0 };
+		final var reader = new PhoenixSequenceReader(DialectHolder.defaultDialect) {
+			@Override
+			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
+				queries[0]++;
+				try {
+					for (int i = 0; i < 2; i++)
+						h.handleResultSetNext(row(Map.of("sequence_name", "ids")));
+				} catch (java.sql.SQLException e) {
+					throw new IllegalStateException(e);
+				}
+				return null;
+			}
+		};
+		assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+		assertEquals(1, queries[0]);
+	}
 }

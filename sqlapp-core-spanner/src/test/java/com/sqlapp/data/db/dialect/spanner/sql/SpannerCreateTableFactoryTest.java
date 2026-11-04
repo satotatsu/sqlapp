@@ -25,6 +25,31 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 
 class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 	@Test
+	void rejectsInterleavedRecreationInsteadOfDroppingParentAndRejectsMissingNames() {
+		final var table = new Table("Child");
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT));
+		table.getSpecifics().put("parent_table_name", "Parent");
+		assertThrows(UnsupportedOperationException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(new Table(" "), SqlType.CREATE));
+	}
+
+	@Test
+	void decoratesUniqueConstraintIndexesAndRejectsEmptyKeys() {
+		final var table = new Table("Orders").setSchemaName("Sales");
+		final var id = new Column("id").setDataType(DataType.BIGINT);
+		table.getColumns().add(id);
+		final var unique = new com.sqlapp.data.schemas.UniqueConstraint("unique_id", false);
+		unique.getColumns().add(id);
+		table.getConstraints().add(unique);
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		final var operations = sqlFactoryRegistry.createSql(table, SqlType.CREATE);
+		assertTrue(operations.get(1).getSqlText().contains("`Sales`.`unique_id`"), operations.get(1).getSqlText());
+		unique.getColumns().clear();
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+	}
+
+	@Test
 	void ordersNotNullBeforeParenthesizedDefaultWithoutChangingTheModel() {
 		final var table = new Table("defaults");
 		final var column = new Column("count").setDataType(DataType.BIGINT).setNotNull(true).setDefaultValue("0");

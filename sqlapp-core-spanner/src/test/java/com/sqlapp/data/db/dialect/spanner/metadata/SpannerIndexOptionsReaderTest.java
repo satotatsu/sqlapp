@@ -17,6 +17,123 @@ import com.sqlapp.jdbc.sql.*;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class SpannerIndexOptionsReaderTest {
+	@Test
+	void retainsTrueHeaderFlagsThroughXmlAndDdl() throws Exception {
+		final var reader = new Reader();
+		reader.available = false;
+		header(reader, "app", "idx", "INDEX");
+		reader.headers.get(0).put("is_unique", true);
+		reader.headers.get(0).put("is_null_filtered", true);
+		final var index = reader.doGetAll(null, new ParametersContext(), null).get(0);
+		final var table = new Table("events");
+		table.getIndexes().add(index);
+		final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		assertTrue(restored.getIndexes().get(0).isUnique());
+		assertEquals(Boolean.TRUE, restored.getIndexes().get(0).getSpecifics()
+				.get(SpannerCreateIndexFactory.IS_NULL_FILTERED, Boolean.class));
+		final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.createSql(restored.getIndexes().get(0), SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("UNIQUE") && sql.contains("NULL_FILTERED"), sql);
+		assertEquals(2, reader.queries);
+	}
+
+	@Test
+	void rejectsConflictingAttributesBeforeReadingOptions() {
+		for (String field : List.of("index_type", "is_unique", "is_null_filtered")) {
+			final var reader = new Reader();
+			header(reader, "app", "idx", "INDEX");
+			final var second = new HashMap<>(reader.headers.get(0));
+			second.put("column_name", "other");
+			second.put("ordinal_position", 2L);
+			second.put(field, field.equals("index_type") ? "SEARCH" : true);
+			reader.headers.add(second);
+			assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			assertEquals(1, reader.queries);
+		}
+	}
+
+	@Test
+	void rejectsMissingOrInvalidHeaderAttributes() {
+		for (String field : List.of("index_type", "is_unique", "is_null_filtered"))
+			for (String invalid : Arrays.asList(null, "", "unknown")) {
+				final var reader = new Reader();
+				header(reader, "app", "idx", "INDEX");
+				reader.headers.get(0).put(field, invalid);
+				assertThrows(IllegalArgumentException.class,
+						() -> reader.doGetAll(null, new ParametersContext(), null));
+				assertEquals(1, reader.queries);
+			}
+	}
+
+	@Test
+	void reordersFortyCompositeIndexesAndSeparatesStoringThroughXmlAndDdl() throws Exception {
+		final var reader = new Reader();
+		reader.available = false;
+		for (String schema : List.of("a", "b"))
+			for (int i = 0; i < 20; i++) {
+				header(reader, schema, "idx" + i, "INDEX");
+				final var first = reader.headers.get(reader.headers.size() - 1);
+				first.put("column_name", "later");
+				first.put("ordinal_position", 2L);
+				first.put("column_ordering", "DESC");
+				final var storing = new HashMap<>(first);
+				storing.put("column_name", "payload");
+				storing.remove("ordinal_position");
+				storing.remove("column_ordering");
+				reader.headers.add(storing);
+				final var second = new HashMap<>(first);
+				second.put("column_name", "first");
+				second.put("ordinal_position", 1L);
+				second.put("column_ordering", "ASC");
+				reader.headers.add(second);
+			}
+		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(40, indexes.size());
+		assertEquals(2, reader.queries);
+		for (var index : indexes) {
+			assertEquals(List.of("first", "later"), index.getColumns().stream().map(ReferenceColumn::getName).toList());
+			assertEquals(List.of("payload"), index.getIncludes().stream().map(ReferenceColumn::getName).toList());
+			final var table = new Table(index.getTableName()).setSchemaName(index.getSchemaName());
+			table.getIndexes().add(index);
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			assertEquals(Order.Desc, restored.getIndexes().get(0).getColumns().get(1).getOrder());
+			final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry()
+					.createSql(restored.getIndexes().get(0), SqlType.CREATE).get(0).getSqlText();
+			assertTrue(sql.contains("`first`") && sql.contains("`later` DESC"), sql);
+			assertTrue(sql.contains("STORING") && sql.contains("`payload`"), sql);
+		}
+	}
+
+	@Test
+	void rejectsMalformedIndexColumnsBeforeOptionQueries() {
+		for (int mode = 0; mode < 10; mode++) {
+			final var reader = new Reader();
+			header(reader, "app", "idx", "INDEX");
+			final var first = reader.headers.get(0);
+			final var second = new HashMap<>(first);
+			second.put("ordinal_position", 2L);
+			second.put("column_name", "other");
+			switch (mode) {
+			case 0 -> second.put("ordinal_position", 0L);
+			case 1 -> second.put("ordinal_position", 1L);
+			case 2 -> second.put("ordinal_position", 3L);
+			case 3 -> second.put("column_name", "embedding");
+			case 4 -> second.put("column_name", " ");
+			case 5 -> second.remove("table_name");
+			case 6 -> second.put("table_name", "other");
+			case 7 -> second.remove("column_ordering");
+			case 8 -> second.put("column_ordering", "unknown");
+			case 9 -> {
+				second.remove("ordinal_position");
+				second.put("column_name", "embedding");
+			}
+			}
+			reader.headers.add(second);
+			assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			assertEquals(1, reader.queries);
+		}
+	}
+
 	private ExResultSet row(Map<String, Object> values) {
 		return new ExResultSet(null) {
 			private Object last;

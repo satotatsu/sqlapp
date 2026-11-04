@@ -408,6 +408,35 @@ recreation failures. Sources:
 
 ## Completion boundary
 
+JDBC table/view headers reject missing names and duplicate tenant/schema/name
+identities in the existing single getTables call. Same-named objects in other
+tenants or schemas remain distinct. Incomplete view headers and header-only
+reads remain available, with the metadata-only marker retained through XML so
+CREATE still requires a complete native definition. Local tests cover 40 table
+and view headers, multiline/Unicode query retention, missing/blank source,
+invalid identities and result closure on failure. Existing version paths,
+public APIs, catalog queries, dependencies and XML structure are unchanged;
+live driver and mapped/inherited-view reconstruction remain unverified.
+
+Sequence metadata rejects missing names, duplicate tenant/schema/name
+identities, zero increments, negative caches, reversed bounds and explicit
+starts outside known bounds. Negative increments, boundary starts and zero
+caches remain representable. Missing numeric metadata is still retained as
+unknown instead of being replaced by inferred counters. All existing version
+paths use the same reader checks; legacy/modern catalog SQL and resolver
+selection are unchanged. Local tests cover descending XML/DDL recreation,
+invalid metadata, 40 sequences in one query and duplicate rejection. No
+sequence values are allocated, and live-server behavior remains unverified.
+
+Primary-key metadata requires nonblank owning table and column names. Repeated
+column names, inconsistent constraint names, duplicate positions and sequence
+gaps fail explicitly. Unnamed primary keys remain supported. Column identity
+is case-sensitive, preserving distinct quoted names such as Id and id. These
+checks apply to the shared Phoenix reader on all existing resolver paths and
+use the existing single JDBC metadata call; no catalog columns were added.
+Mock tests verify resource closure on failure and separation across tenants
+and schemas. Live driver behavior remains unverified.
+
 Index metadata interprets SYSTEM.CATALOG SORT_ORDER as Phoenix serialization
 IDs: 1 is DESC and 2 is ASC. A missing value retains the default ASC; other
 non-null values fail explicitly instead of silently reversing or inventing a

@@ -44,9 +44,11 @@ public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("Virtica", 0, 0, 0);
+		Dialect dialect = DialectResolver.getInstance().getDialect("Vertica", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Vertica);
+		assertEquals("Vertica", dialect.getProductName());
+		assertTrue(DialectResolver.getInstance().getDialect("Virtica", 0, 0, 0) instanceof Vertica);
 		dialect = DialectResolver.getInstance().getDialect("Vertica", 12, 0, 0);
 		assertTrue(dialect instanceof Vertica90);
 		dialect = DialectResolver.getInstance().getDialect("Vertica Analytic Database", 12, 0, 0);
@@ -87,15 +89,15 @@ public class DialectResolverTest {
 		Dialect dialect = DialectResolver.getInstance().getDialect("Vertica", major, minor, revision);
 		boolean supportsScheduledEvents = major > 12 || (major == 12 && (minor > 0 || (minor == 0 && revision >= 4)));
 		assertEquals(
-				supportsScheduledEvents ? "Virtica12_0_4CatalogReader"
-						: supportsStoredProcedures ? "Virtica11_1_1CatalogReader" : "VirticaCatalogReader",
+				supportsScheduledEvents ? "Vertica12_0_4CatalogReader"
+						: supportsStoredProcedures ? "Vertica11_1_1CatalogReader" : "VerticaCatalogReader",
 				dialect.getCatalogReader().getClass().getSimpleName());
-		assertEquals("VirticaRoleMemberReader",
+		assertEquals("VerticaRoleMemberReader",
 				dialect.getCatalogReader().getRoleMemberReader().getClass().getSimpleName());
-		assertEquals("VirticaObjectPrivilegeReader",
+		assertEquals("VerticaObjectPrivilegeReader",
 				dialect.getCatalogReader().getObjectPrivilegeReader().getClass().getSimpleName());
-		assertEquals("VirticaSettingReader", dialect.getCatalogReader().getSettingReader().getClass().getSimpleName());
-		assertEquals("VirticaTableSpaceReader",
+		assertEquals("VerticaSettingReader", dialect.getCatalogReader().getSettingReader().getClass().getSimpleName());
+		assertEquals("VerticaTableSpaceReader",
 				dialect.getCatalogReader().getTableSpaceReader().getClass().getSimpleName());
 		if (supportsStoredProcedures) {
 			assertNotNull(dialect.getCatalogReader().getSchemaReader().getProcedureReader());

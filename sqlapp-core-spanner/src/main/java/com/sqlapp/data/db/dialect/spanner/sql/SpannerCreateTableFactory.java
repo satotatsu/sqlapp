@@ -28,6 +28,11 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 
 	@Override
 	protected void addCreateObject(final Table table, final SpannerSqlBuilder builder) {
+		if (table.getName() == null || table.getName().isBlank())
+			throw new IllegalArgumentException("Cloud Spanner CREATE TABLE requires a name");
+		if (!CommonUtils.isEmpty(table.getSpecifics().get("parent_table_name")))
+			throw new UnsupportedOperationException(
+					"Cloud Spanner interleaved table recreation is not supported: " + table.getName());
 		builder.create().table().ifNotExists(getOptions().isCreateIfNotExists()).space().name(table,
 				getOptions().isDecorateSchemaName());
 	}
@@ -48,12 +53,13 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 	}
 
 	private void addUniqueIndex(final Table table, final UniqueConstraint constraint, final List<SqlOperation> result) {
-		if (CommonUtils.isEmpty(constraint.getName())) {
+		if (constraint.getName() == null || constraint.getName().isBlank() || constraint.getColumns().isEmpty()) {
 			throw new IllegalArgumentException("Cloud Spanner UNIQUE constraint requires a name: " + table.getName());
 		}
 		final SpannerSqlBuilder builder = createSqlBuilder();
 		builder.create().unique().index().ifNotExists(getOptions().isCreateIfNotExists()).space()
-				.name(constraint, false).on().name(table, getOptions().isDecorateSchemaName()).space()._add("(");
+				.name(constraint, getOptions().isDecorateSchemaName()).on()
+				.name(table, getOptions().isDecorateSchemaName()).space()._add("(");
 		int i = 0;
 		for (ReferenceColumn column : constraint.getColumns()) {
 			builder.comma(i > 0).name(column);

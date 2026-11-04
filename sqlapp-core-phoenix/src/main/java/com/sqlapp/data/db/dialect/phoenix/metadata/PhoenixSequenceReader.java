@@ -5,6 +5,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.SequenceReader;
@@ -33,10 +36,15 @@ public class PhoenixSequenceReader extends SequenceReader {
 	@Override
 	protected List<Sequence> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
 		final List<Sequence> result = new ArrayList<>();
+		final Set<List<String>> identities = new HashSet<>();
 		execute(connection, getSqlNodeCache().getString(sqlResource(version)), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				result.add(createSequence(rs));
+				final var sequence = createSequence(rs);
+				if (!identities
+						.add(Arrays.asList(sequence.getCatalogName(), sequence.getSchemaName(), sequence.getName())))
+					throw new IllegalArgumentException("Duplicate Phoenix sequence metadata: " + sequence.getName());
+				result.add(sequence);
 			}
 		});
 		return result;
@@ -46,6 +54,8 @@ public class PhoenixSequenceReader extends SequenceReader {
 		final var sequence = new Sequence(getString(rs, "sequence_name"));
 		sequence.setCatalogName(getString(rs, "catalog_name"));
 		sequence.setSchemaName(getString(rs, "schema_name"));
+		if (sequence.getName() == null || sequence.getName().isBlank())
+			throw new IllegalArgumentException("Phoenix sequence metadata requires a name");
 		sequence.setDialect(getDialect());
 		sequence.setDataType(DataType.BIGINT);
 		final Long start = rs.getLongValue("start_with");
@@ -53,6 +63,14 @@ public class PhoenixSequenceReader extends SequenceReader {
 		final Long minimum = rs.getLongValue("min_value");
 		final Long maximum = rs.getLongValue("max_value");
 		final Long cache = rs.getLongValue("cache_size");
+		if (increment != null && increment == 0)
+			throw new IllegalArgumentException("Phoenix sequence increment must not be zero: " + sequence.getName());
+		if (cache != null && cache < 0)
+			throw new IllegalArgumentException("Phoenix sequence cache must not be negative: " + sequence.getName());
+		if (minimum != null && maximum != null && minimum > maximum)
+			throw new IllegalArgumentException("Phoenix sequence minimum exceeds maximum: " + sequence.getName());
+		if (start != null && ((minimum != null && start < minimum) || (maximum != null && start > maximum)))
+			throw new IllegalArgumentException("Phoenix sequence start is outside its bounds: " + sequence.getName());
 		if (start != null)
 			sequence.setStartValue(start);
 		if (increment != null)

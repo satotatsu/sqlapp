@@ -3,12 +3,41 @@
 Status: the Docker-free pass is complete for the scope below. This is not a
 claim of complete Phoenix support or live HBase/Phoenix compatibility.
 
-Latest local verification (2026-11-03): Index metadata now decodes native
+Latest local verification (2026-11-04): JDBC table/view headers reject missing
+names and duplicate tenant/schema/name identities. Tests cover 40 headers,
+source/marker XML retention, incomplete view recreation rejection and resource
+closure. Header-only and incomplete-source metadata reads remain supported.
+Targeted PhoenixHeaderReaderTest passed, followed by
+`./gradlew.bat :sqlapp-core-phoenix:test` on Java 25: 92 tests, no failures,
+errors or skips. No public APIs, XML structure, dependencies, JDBC call count,
+version boundaries or catalog queries changed. No external database was used.
+
+Previous local verification (2026-11-04): Sequence metadata rejects missing names,
+duplicate tenant/schema/name identities, zero increments, negative caches and
+contradictory known start/bound values. Missing numeric values retain their
+prior unknown representation. Descending sequences and boundary starts retain
+XML/DDL coverage. Targeted PhoenixSequenceReaderTest passed, followed by
+`./gradlew.bat :sqlapp-core-phoenix:test` on Java 25: 89 tests, no failures,
+errors or skips. No catalog SQL, version boundaries, APIs, XML structure or
+dependencies changed. No external database or sequence allocation was used.
+
+Previous local verification (2026-11-04): Primary-key metadata rejects missing
+table/column identities and repeated columns, with regression coverage for
+inconsistent names, resource closure, unnamed keys and case-sensitive columns
+across schemas. Targeted PhoenixPrimaryKeyReaderTest passed, followed by
+`./gradlew.bat :sqlapp-core-phoenix:test` on Java 25: 86 tests, no failures,
+errors or skips. Existing single-call retrieval, APIs, XML, resolver paths and
+dependencies are unchanged. No external database was used.
+
+Previous local verification (2026-11-04): Index metadata now decodes native
 SORT_ORDER serialization IDs (1 DESC, 2 ASC), retains ASC for missing values,
 and rejects unknown non-null IDs. Tests use native IDs rather than comparison
 signs and cover version paths, bulk query count and XML/DDL retention. Live
 catalog behavior remains unverified. No signatures, XML format, dependencies,
-resolver selection or catalog SQL changed.
+resolver selection or catalog SQL changed. Targeted PhoenixIndexReaderTest
+passed, followed by `./gradlew.bat :sqlapp-core-phoenix:test` on Java 25:
+83 tests, no failures/errors/skips. The full run was completed after the prior
+approval-service usage limit was cleared. No external database was used.
 
 Previous local verification (2026-11-03): Table/View index diffs now use native
 CREATE/DROP factories, retain the required DROP ON clause and remove modified

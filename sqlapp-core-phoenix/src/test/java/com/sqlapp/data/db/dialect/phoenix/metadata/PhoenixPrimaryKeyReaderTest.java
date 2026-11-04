@@ -77,4 +77,56 @@ class PhoenixPrimaryKeyReaderTest {
 			assertInstanceOf(PhoenixPrimaryKeyReader.class,
 					dialect.getCatalogReader().getSchemaReader().getTableReader().getUniqueConstraintReader());
 	}
+
+	@Test
+	void rejectsMissingTableOrColumnIdentityAndClosesResult() {
+		for (String field : List.of("TABLE_NAME", "COLUMN_NAME"))
+			for (String value : Arrays.asList(null, "", " \t")) {
+				final var values = row("a", "t", "id", 1, "A");
+				values.put(field, value);
+				final var jdbc = new PhoenixColumnReaderTest.Jdbc(List.of(values), "getPrimaryKeys");
+				assertThrows(IllegalStateException.class,
+						() -> new PhoenixPrimaryKeyReader(DialectHolder.defaultDialect).doGetAll(jdbc.connection,
+								new ParametersContext(), null));
+				assertEquals(1, jdbc.queries);
+				assertTrue(jdbc.closed);
+			}
+	}
+
+	@Test
+	void rejectsRepeatedColumnsAndInconsistentConstraintNames() {
+		for (boolean repeatedColumn : List.of(true, false)) {
+			final var first = row("a", "t", "id", 1, "A");
+			final var second = row("a", "t", repeatedColumn ? "id" : "other", 2, "D");
+			if (!repeatedColumn)
+				second.put("PK_NAME", "other_pk");
+			final var jdbc = new PhoenixColumnReaderTest.Jdbc(List.of(second, first), "getPrimaryKeys");
+			assertThrows(IllegalStateException.class, () -> new PhoenixPrimaryKeyReader(DialectHolder.defaultDialect)
+					.doGetAll(jdbc.connection, new ParametersContext(), null));
+			assertEquals(1, jdbc.queries);
+			assertTrue(jdbc.closed);
+		}
+	}
+
+	@Test
+	void retainsUnnamedKeysAndCaseSensitiveColumnIdentityAcrossSchemas() {
+		final var rows = new ArrayList<Map<String, Object>>();
+		for (String schema : List.of("a", "b"))
+			for (int sequence : List.of(2, 1)) {
+				final var values = row("tenant", "t", sequence == 1 ? "Id" : "id", sequence, "A");
+				values.put("PK_NAME", null);
+				values.put("TABLE_SCHEM", schema);
+				rows.add(values);
+			}
+		final var jdbc = new PhoenixColumnReaderTest.Jdbc(rows, "getPrimaryKeys");
+		final var keys = new PhoenixPrimaryKeyReader(DialectHolder.defaultDialect).doGetAll(jdbc.connection,
+				new ParametersContext(), null);
+		assertEquals(2, keys.size());
+		for (var key : keys) {
+			assertNull(key.getName());
+			assertEquals(List.of("Id", "id"), key.getColumns().stream().map(ReferenceColumn::getName).toList());
+		}
+		assertEquals(1, jdbc.queries);
+		assertTrue(jdbc.closed);
+	}
 }

@@ -75,4 +75,75 @@ class PhoenixHeaderReaderTest {
 		assertTrue(registry.createSql(view, SqlType.DROP).get(0).getSqlText().startsWith("DROP VIEW IF EXISTS"));
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new View("empty"), SqlType.CREATE));
 	}
+
+	@Test
+	void rejectsMissingNamesAndDuplicatesForTablesAndViewsAndClosesResults() {
+		for (boolean views : List.of(false, true))
+			for (int mode = 0; mode < 4; mode++) {
+				final var values = row();
+				final var rows = new ArrayList<Map<String, Object>>();
+				switch (mode) {
+				case 0 -> values.remove("TABLE_NAME");
+				case 1 -> values.put("TABLE_NAME", "");
+				case 2 -> values.put("TABLE_NAME", "  ");
+				case 3 -> rows.add(row());
+				}
+				rows.add(values);
+				final var jdbc = new PhoenixColumnReaderTest.Jdbc(rows, "getTables");
+				assertThrows(IllegalStateException.class,
+						() -> PhoenixJdbcHeaders.read(jdbc.connection, null, null, null, views, new ReaderOptions()));
+				assertEquals(1, jdbc.queries);
+				assertTrue(jdbc.closed);
+			}
+	}
+
+	@Test
+	void retainsFortyHeadersSeparatedByTenantAndSchemaInOneRead() throws Exception {
+		for (boolean views : List.of(false, true)) {
+			final var rows = new ArrayList<Map<String, Object>>();
+			for (String tenant : List.of("a", "b"))
+				for (String schema : List.of("x", "y"))
+					for (int i = 0; i < 10; i++) {
+						final var values = row();
+						values.put("TABLE_CAT", tenant);
+						values.put("TABLE_SCHEM", schema);
+						values.put("TABLE_NAME", "object " + i);
+						values.put("VIEW_STATEMENT", "SELECT id -- retain boundary\nFROM base WHERE label <> '𠮷'");
+						rows.add(values);
+					}
+			final var jdbc = new PhoenixColumnReaderTest.Jdbc(rows, "getTables");
+			final var headers = PhoenixJdbcHeaders.read(jdbc.connection, null, null, null, views, new ReaderOptions());
+			assertEquals(40, headers.size());
+			assertEquals(1, jdbc.queries);
+			assertTrue(jdbc.closed);
+			for (var header : headers) {
+				final Table restored = SchemaUtils.readXml(new java.io.StringReader(header.asXml()));
+				assertEquals(header.getCatalogName(), restored.getCatalogName());
+				assertEquals(header.getSchemaName(), restored.getSchemaName());
+				assertEquals(header.getName(), restored.getName());
+				assertEquals(header.getStatement(), restored.getStatement());
+				if (views) {
+					assertEquals("true", restored.getSpecifics().get("phoenix.viewMetadataOnly"));
+					assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect
+							.createSqlFactoryRegistry().createSql((View) restored, SqlType.CREATE));
+				}
+			}
+		}
+	}
+
+	@Test
+	void retainsIncompleteViewHeadersWithoutAllowingIncompleteRecreation() throws Exception {
+		for (String statement : Arrays.asList(null, "", "  ")) {
+			final var values = row();
+			values.put("VIEW_STATEMENT", statement);
+			final var jdbc = new PhoenixColumnReaderTest.Jdbc(List.of(values), "getTables");
+			final var header = PhoenixJdbcHeaders.read(jdbc.connection, null, null, null, true, new ReaderOptions())
+					.get(0);
+			final View restored = SchemaUtils.readXml(new java.io.StringReader(header.asXml()));
+			assertTrue(restored.getStatement().isEmpty());
+			assertThrows(UnsupportedOperationException.class,
+					() -> DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE));
+			assertTrue(jdbc.closed);
+		}
+	}
 }

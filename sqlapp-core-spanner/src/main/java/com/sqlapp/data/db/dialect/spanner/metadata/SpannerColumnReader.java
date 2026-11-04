@@ -28,6 +28,9 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
@@ -54,10 +57,15 @@ public class SpannerColumnReader extends ColumnReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Column> result = list();
+		final Set<List<String>> identities = new HashSet<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				Column obj = createColumn(rs);
+				if (!identities.add(
+						Arrays.asList(obj.getCatalogName(), obj.getSchemaName(), obj.getTableName(), obj.getName())))
+					throw new IllegalArgumentException(
+							"Duplicate Spanner column metadata: " + obj.getTableName() + "." + obj.getName());
 				result.add(obj);
 			}
 		});
@@ -69,32 +77,67 @@ public class SpannerColumnReader extends ColumnReader {
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
 		obj.setTableName(getString(rs, TABLE_NAME));
-		boolean nullable = toBoolean(getString(rs, "is_nullable"));
+		if (obj.getName() == null || obj.getName().isBlank() || obj.getTableName() == null
+				|| obj.getTableName().isBlank())
+			throw new IllegalArgumentException("Spanner column metadata requires table and column names");
+		final String nullability = getString(rs, "is_nullable");
+		if (!"YES".equalsIgnoreCase(nullability) && !"NO".equalsIgnoreCase(nullability))
+			throw new IllegalArgumentException(
+					"Unknown Spanner column nullability for " + obj.getName() + ": " + nullability);
+		boolean nullable = "YES".equalsIgnoreCase(nullability);
 		String data_type = getString(rs, "spanner_type");
+		if (data_type == null || data_type.isBlank())
+			throw new IllegalArgumentException("Missing Spanner column type: " + obj.getName());
 		obj.setNullable(nullable);
 		this.getDialect().setDbType(data_type, null, null, obj);
 		obj.setDefaultValue(getString(rs, "column_default"));
 		obj.setOnUpdate(getString(rs, "on_update_expression"));
-		if ("ALWAYS".equalsIgnoreCase(getString(rs, "is_generated"))) {
+		final String generated = getString(rs, "is_generated");
+		if (generated != null && !"ALWAYS".equalsIgnoreCase(generated) && !"NEVER".equalsIgnoreCase(generated))
+			throw new IllegalArgumentException("Unknown Spanner generated-column flag: " + obj.getName());
+		if ("ALWAYS".equalsIgnoreCase(generated)) {
 			obj.setFormula(getString(rs, "generation_expression"));
-			obj.setFormulaPersisted("YES".equalsIgnoreCase(getString(rs, "is_stored")));
+			if (obj.getFormula() == null || obj.getFormula().isBlank())
+				throw new IllegalArgumentException("Missing Spanner generated-column expression: " + obj.getName());
+			final String stored = getString(rs, "is_stored");
+			if (!"YES".equalsIgnoreCase(stored) && !"NO".equalsIgnoreCase(stored))
+				throw new IllegalArgumentException("Unknown Spanner generated-column storage: " + obj.getName());
+			obj.setFormulaPersisted("YES".equalsIgnoreCase(stored));
 		}
-		obj.setHidden("TRUE".equalsIgnoreCase(getString(rs, "is_hidden")));
+		final String hidden = getString(rs, "is_hidden");
+		if (hidden != null && !"TRUE".equalsIgnoreCase(hidden) && !"FALSE".equalsIgnoreCase(hidden))
+			throw new IllegalArgumentException("Unknown Spanner hidden-column flag: " + obj.getName());
+		obj.setHidden("TRUE".equalsIgnoreCase(hidden));
 		setSpecifics(rs, "allow_commit_timestamp", obj);
 		setSpecifics(rs, "vector_length", obj);
 		setSpecifics(rs, "locality_group", obj);
-		if ("YES".equalsIgnoreCase(getString(rs, "is_identity"))) {
+		final String identity = getString(rs, "is_identity");
+		if (identity != null && !"YES".equalsIgnoreCase(identity) && !"NO".equalsIgnoreCase(identity))
+			throw new IllegalArgumentException("Unknown Spanner identity flag for " + obj.getName() + ": " + identity);
+		if ("YES".equalsIgnoreCase(identity)) {
 			obj.setIdentity(true);
-			obj.setIdentityGenerationType(IdentityGenerationType.parse(getString(rs, "identity_generation")));
-			final Long start = getLong(rs, "identity_start_with_counter");
+			final String generation = getString(rs, "identity_generation");
+			if (generation != null && !"BY DEFAULT".equalsIgnoreCase(generation)
+					&& !"BY_DEFAULT".equalsIgnoreCase(generation) && !"ALWAYS".equalsIgnoreCase(generation))
+				throw new IllegalArgumentException(
+						"Unknown Spanner identity generation for " + obj.getName() + ": " + generation);
+			obj.setIdentityGenerationType(IdentityGenerationType.parse(generation));
+			final Long start = getString(rs, "identity_start_with_counter") == null ? null
+					: getLong(rs, "identity_start_with_counter");
 			if (start != null) {
 				obj.setIdentityStartValue(start);
 			}
-			if (getString(rs, "identity_kind") != null) {
+			final String kind = getString(rs, "identity_kind");
+			if (kind != null) {
+				if (!"BIT_REVERSED_POSITIVE_SEQUENCE".equalsIgnoreCase(kind))
+					throw new IllegalArgumentException(
+							"Unknown Spanner identity kind for " + obj.getName() + ": " + kind);
 				obj.getSpecifics().put(SpannerSqlBuilder.IDENTITY_BIT_REVERSED_POSITIVE, true);
 			}
-			final Long skipMin = getLong(rs, "identity_skip_range_min");
-			final Long skipMax = getLong(rs, "identity_skip_range_max");
+			final Long skipMin = getString(rs, "identity_skip_range_min") == null ? null
+					: getLong(rs, "identity_skip_range_min");
+			final Long skipMax = getString(rs, "identity_skip_range_max") == null ? null
+					: getLong(rs, "identity_skip_range_max");
 			if (skipMin != null) {
 				obj.getSpecifics().put(SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN, skipMin);
 			}

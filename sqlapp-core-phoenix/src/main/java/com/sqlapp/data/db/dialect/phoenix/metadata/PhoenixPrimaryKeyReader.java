@@ -37,6 +37,8 @@ public class PhoenixPrimaryKeyReader extends UniqueConstraintReader {
 			while (rs.next()) {
 				final var identity = new Identity(rs.getString("TABLE_CAT"), rs.getString("TABLE_SCHEM"),
 						rs.getString("TABLE_NAME"));
+				if (identity.table() == null || identity.table().isBlank())
+					throw new IllegalStateException("Missing Phoenix primary-key table identity: " + identity);
 				final Key key = keys.computeIfAbsent(identity, id -> {
 					final var constraint = new UniqueConstraint();
 					constraint.setPrimaryKey(true).setCatalogName(id.catalog()).setSchemaName(id.schema())
@@ -51,7 +53,11 @@ public class PhoenixPrimaryKeyReader extends UniqueConstraintReader {
 				if (ordinal <= 0)
 					throw new IllegalStateException(
 							"Invalid Phoenix primary-key sequence for " + identity + ": " + ordinal);
-				final var column = new ReferenceColumn(rs.getString("COLUMN_NAME"));
+				final String columnName = rs.getString("COLUMN_NAME");
+				if (columnName == null || columnName.isBlank())
+					throw new IllegalStateException(
+							"Missing Phoenix primary-key column for " + identity + " at sequence " + ordinal);
+				final var column = new ReferenceColumn(columnName);
 				final String direction = rs.getString("ASC_OR_DESC");
 				if (direction != null && !direction.isBlank()) {
 					final var order = Order.parse(direction.strip().toUpperCase(Locale.ROOT));
@@ -69,10 +75,14 @@ public class PhoenixPrimaryKeyReader extends UniqueConstraintReader {
 		final List<UniqueConstraint> result = new ArrayList<>();
 		for (var key : keys.values()) {
 			int expected = 1;
+			final Set<String> names = new HashSet<>();
 			for (var column : key.columns().entrySet()) {
 				if (column.getKey() != expected++)
 					throw new IllegalStateException(
 							"Incomplete Phoenix primary-key sequence: " + key.constraint().getTableName());
+				if (!names.add(column.getValue().getName()))
+					throw new IllegalStateException("Repeated Phoenix primary-key column for "
+							+ key.constraint().getTableName() + ": " + column.getValue().getName());
 				key.constraint().getColumns().add(column.getValue());
 			}
 			result.add(key.constraint());

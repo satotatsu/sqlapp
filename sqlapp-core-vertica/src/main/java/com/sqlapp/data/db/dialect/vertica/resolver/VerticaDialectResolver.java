@@ -27,7 +27,7 @@ import com.sqlapp.data.db.dialect.vertica.DialectHolder;
 public class VerticaDialectResolver extends ProductNameDialectResolver {
 
 	public VerticaDialectResolver() {
-		super(".*(vertica|virtica).*", new VirticaVersionResolver());
+		super(".*(vertica|virtica).*", new VerticaVersionResolver());
 	}
 
 	/**
@@ -36,7 +36,7 @@ public class VerticaDialectResolver extends ProductNameDialectResolver {
 	 * @author satoh
 	 * 
 	 */
-	static class VirticaVersionResolver implements VersionResolver {
+	static class VerticaVersionResolver implements VersionResolver {
 
 		/**
 		 * serialVersionUID
@@ -46,7 +46,7 @@ public class VerticaDialectResolver extends ProductNameDialectResolver {
 		/**
 		 * コンストラクタ
 		 */
-		public VirticaVersionResolver() {
+		public VerticaVersionResolver() {
 		}
 
 		/*

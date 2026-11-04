@@ -5,6 +5,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import com.sqlapp.data.db.metadata.ReaderOptions;
 import com.sqlapp.data.db.dialect.phoenix.sql.PhoenixDdlOptions;
 import com.sqlapp.data.schemas.*;
@@ -19,6 +22,7 @@ final class PhoenixJdbcHeaders {
 	static List<Table> read(Connection connection, String catalog, String schema, String name, boolean views,
 			ReaderOptions options) {
 		final List<Table> result = new ArrayList<>();
+		final Set<List<String>> identities = new HashSet<>();
 		try (var rs = new ExResultSet(connection.getMetaData().getTables(CommonUtils.emptyToNull(catalog),
 				CommonUtils.emptyToNull(schema), CommonUtils.emptyToNull(name),
 				views ? new String[] { "VIEW" } : new String[] { "TABLE", "SYSTEM TABLE" }))) {
@@ -27,6 +31,11 @@ final class PhoenixJdbcHeaders {
 						: new Table(rs.getString("TABLE_NAME"));
 				table.setCatalogName(rs.getString("TABLE_CAT"));
 				table.setSchemaName(rs.getString("TABLE_SCHEM"));
+				if (table.getName() == null || table.getName().isBlank())
+					throw new IllegalStateException("Phoenix table/view metadata requires a name");
+				if (!identities.add(Arrays.asList(table.getCatalogName(), table.getSchemaName(), table.getName())))
+					throw new IllegalStateException("Duplicate Phoenix table/view metadata: " + table.getCatalogName()
+							+ "." + table.getSchemaName() + "." + table.getName());
 				table.setRemarks(rs.getString("REMARKS"));
 				final Long salt = rs.getLongValue("SALT_BUCKETS");
 				if (salt != null && (salt < 0 || salt > 256))

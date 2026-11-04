@@ -25,12 +25,18 @@ import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.IdentityHashMap;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.HashSet;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateIndexFactory;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
@@ -58,6 +64,7 @@ public class SpannerIndexReader extends IndexReader {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
+		final Map<Index, SortedMap<Long, ReferenceColumn>> keys = new IdentityHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -65,26 +72,62 @@ public class SpannerIndexReader extends IndexReader {
 				String schema_name = getString(rs, TABLE_SCHEMA);
 				String name = getString(rs, INDEX_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
+				final String tableName = getString(rs, TABLE_NAME);
+				if (name == null || name.isBlank() || tableName == null || tableName.isBlank() || columnName == null
+						|| columnName.isBlank())
+					throw new IllegalArgumentException("Spanner index metadata requires index, table and column names");
 				Index index = map.get(catalog_name, schema_name, name);
+				final IndexType type = toIndexType(getString(rs, "index_type"));
+				final boolean unique = requiredBoolean(rs, "is_unique", name);
+				final boolean nullFiltered = requiredBoolean(rs, "is_null_filtered", name);
 				if (index == null) {
 					index = new Index(name);
 					index.setCatalogName(catalog_name);
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
-					index.setUnique(rs.getBoolean("is_unique"));
-					index.setIndexType(toIndexType(getString(rs, "index_type")));
-					setSpecifics(rs, "is_null_filtered", index);
+					index.setUnique(unique);
+					index.setIndexType(type);
+					index.getSpecifics().put("is_null_filtered", nullFiltered);
 					result.add(index);
 					map.put(catalog_name, schema_name, name, index);
+					keys.put(index, new TreeMap<>());
 				}
-				if (getLong(rs, "ordinal_position") == null) {
+				if (!java.util.Objects.equals(index.getTableName(), tableName))
+					throw new IllegalArgumentException("Inconsistent Spanner index owner: " + name);
+				if (index.getIndexType() != type || index.isUnique() != unique
+						|| index.getSpecifics().get("is_null_filtered", Boolean.class) != nullFiltered)
+					throw new IllegalArgumentException("Inconsistent Spanner index attributes: " + name);
+				final Long ordinal = getLong(rs, "ordinal_position");
+				if (ordinal == null) {
+					if (index.getIncludes().stream().anyMatch(c -> columnName.equals(c.getName())))
+						throw new IllegalArgumentException("Duplicate Spanner STORING column: " + columnName);
 					index.getIncludes().add(new Column(columnName));
 				} else {
-					index.getColumns().add(new Column(columnName),
-							SpannerUtils.parseOrder(getString(rs, "column_ordering")));
+					if (ordinal <= 0 || ordinal > Integer.MAX_VALUE)
+						throw new IllegalArgumentException("Invalid Spanner index ordinal: " + name + "=" + ordinal);
+					final String ordering = getString(rs, "column_ordering");
+					final var order = SpannerUtils.parseOrder(ordering);
+					if (order == null && (ordering != null || index.getIndexType() == IndexType.BTree))
+						throw new IllegalArgumentException("Unknown Spanner index ordering: " + name + "=" + ordering);
+					if (keys.get(index).putIfAbsent(ordinal, new ReferenceColumn(columnName).setOrder(order)) != null)
+						throw new IllegalArgumentException("Duplicate Spanner index ordinal: " + name + "=" + ordinal);
 				}
 			}
 		});
+		for (var index : result) {
+			long expected = 1;
+			final var names = new HashSet<String>();
+			index.getIncludes().forEach(c -> names.add(c.getName()));
+			for (var column : keys.get(index).entrySet()) {
+				if (column.getKey() != expected++)
+					throw new IllegalArgumentException("Incomplete Spanner index key sequence: " + index.getName());
+				if (!names.add(column.getValue().getName()))
+					throw new IllegalArgumentException("Repeated Spanner index column: " + column.getValue().getName());
+				index.getColumns().add(column.getValue());
+			}
+			if (index.getColumns().isEmpty())
+				throw new IllegalArgumentException("Missing Spanner index keys: " + index.getName());
+		}
 		if (!result.isEmpty()) {
 			setIndexOptions(connection, context, productVersionInfo, map);
 		}
@@ -147,6 +190,15 @@ public class SpannerIndexReader extends IndexReader {
 		}
 	}
 
+	private boolean requiredBoolean(final ExResultSet rs, final String field, final String index) throws SQLException {
+		final String value = getString(rs, field);
+		if ("true".equalsIgnoreCase(value))
+			return true;
+		if ("false".equalsIgnoreCase(value))
+			return false;
+		throw new IllegalArgumentException("Unknown Spanner index " + field + " for " + index + ": " + value);
+	}
+
 	static IndexType toIndexType(final String productIndexType) {
 		if ("SEARCH".equalsIgnoreCase(productIndexType)) {
 			return IndexType.FullText;
@@ -154,7 +206,9 @@ public class SpannerIndexReader extends IndexReader {
 		if ("VECTOR".equalsIgnoreCase(productIndexType)) {
 			return IndexType.Vector;
 		}
-		return IndexType.BTree;
+		if ("INDEX".equalsIgnoreCase(productIndexType))
+			return IndexType.BTree;
+		throw new IllegalArgumentException("Unknown Spanner index type: " + productIndexType);
 	}
 
 	static VectorDistanceType toVectorDistanceType(final String distanceType) {
