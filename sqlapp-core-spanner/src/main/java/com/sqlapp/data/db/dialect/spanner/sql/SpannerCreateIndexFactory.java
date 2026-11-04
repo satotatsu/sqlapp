@@ -22,6 +22,7 @@ import com.sqlapp.data.schemas.VectorDistanceType;
 public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<SpannerSqlBuilder> {
 
 	public static final String IS_NULL_FILTERED = "IS_NULL_FILTERED";
+	public static final String SPANNER_IS_MANAGED = "SPANNER_IS_MANAGED";
 	public static final String TREE_DEPTH = "TREE_DEPTH";
 	public static final String NUM_LEAVES = "NUM_LEAVES";
 	public static final String NUM_BRANCHES = "NUM_BRANCHES";
@@ -29,9 +30,13 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 	public static final String SORT_ORDER_SHARDING = "SORT_ORDER_SHARDING";
 	public static final String LOCALITY_GROUP = "LOCALITY_GROUP";
 	public static final String COLUMNAR_POLICY = "COLUMNAR_POLICY";
+	public static final String PARENT_TABLE_NAME = "PARENT_TABLE_NAME";
+	public static final String SEARCH_ORDER_BY_COLUMN = "SEARCH_ORDER_BY_COLUMN";
+	public static final String SEARCH_ORDER_BY_DIRECTION = "SEARCH_ORDER_BY_DIRECTION";
 
 	@Override
 	protected boolean createIndex(final Index index) {
+		SpannerIndexValidation.requireUserIndex(index);
 		if (index.getTable() == null) {
 			throw new IllegalArgumentException(
 					"Cloud Spanner CREATE INDEX requires a parent table: " + index.getName());
@@ -41,6 +46,8 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 
 	@Override
 	public void addObjectDetail(final Index index, final Table table, final SpannerSqlBuilder builder) {
+		SpannerIndexValidation.requireUserIndex(index);
+		validateLayout(index);
 		SpannerIndexValidation.identity(index);
 		if (table == null || index.getColumns().isEmpty()) {
 			throw new IllegalArgumentException(
@@ -96,6 +103,7 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 		if (index.getWhere() != null && !index.getWhere().isBlank()) {
 			builder.space().where().space()._add(index.getWhere());
 		}
+		addInterleave(index, builder);
 		addStorageOptions(index, builder);
 	}
 
@@ -172,13 +180,72 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 			}
 			builder.space()._add(")");
 		}
+		addSearchLayout(index, table, builder);
 		if (index.getWhere() != null && !index.getWhere().isBlank()) {
 			builder.space().where().space()._add(index.getWhere());
 		}
+		addInterleave(index, builder);
 		final Boolean sortOrderSharding = index.getSpecifics().get(SORT_ORDER_SHARDING, Boolean.class);
 		if (sortOrderSharding != null) {
 			builder.space()._add("OPTIONS").space()._add("(")._add("sort_order_sharding = ")
 					._add(sortOrderSharding.booleanValue()).space()._add(")");
+		}
+	}
+
+	private void validateLayout(final Index index) {
+		final String orderColumn = index.getSpecifics().get(SEARCH_ORDER_BY_COLUMN);
+		final String orderDirection = index.getSpecifics().get(SEARCH_ORDER_BY_DIRECTION);
+		if (index.getIndexType() != IndexType.FullText
+				&& (index.getPartitioning() != null || orderColumn != null || orderDirection != null))
+			throw new UnsupportedOperationException(
+					"PARTITION/ORDER BY layout requires a SEARCH index: " + index.getName());
+		if (orderDirection != null && (orderColumn == null || orderColumn.isBlank()))
+			throw new IllegalArgumentException("SEARCH ORDER BY direction requires a column");
+		if (index.getIndexType() == IndexType.Vector && index.getSpecifics().get(PARENT_TABLE_NAME) != null)
+			throw new UnsupportedOperationException("Spanner VECTOR INTERLEAVE is not supported: " + index.getName());
+	}
+
+	private void addInterleave(final Index index, final SpannerSqlBuilder builder) {
+		final String parent = index.getSpecifics().get(PARENT_TABLE_NAME);
+		if (parent == null)
+			return;
+		if (parent.isBlank())
+			throw new IllegalArgumentException("INTERLEAVE requires a parent table name");
+		if (index.getIndexType() == IndexType.FullText
+				&& Boolean.FALSE.equals(index.getSpecifics().get(SORT_ORDER_SHARDING, Boolean.class)))
+			throw new IllegalArgumentException("Interleaved SEARCH index requires sort-order sharding");
+		builder._add(", INTERLEAVE IN ").name(new Table(parent).setSchemaName(index.getSchemaName()),
+				getOptions().isDecorateSchemaName());
+	}
+
+	private void addSearchLayout(final Index index, final Table table, final SpannerSqlBuilder builder) {
+		final var partitioning = index.getPartitioning();
+		if (partitioning != null) {
+			if (partitioning.getPartitioningType() != null || partitioning.getSubPartitioningType() != null
+					|| partitioning.getPartitionSize() != null || partitioning.getSubPartitionSize() != null
+					|| partitioning.getPartitionSchemeName() != null || !partitioning.getPartitions().isEmpty()
+					|| !partitioning.getSubPartitioningColumns().isEmpty()
+					|| partitioning.getPartitioningColumns().isEmpty())
+				throw new UnsupportedOperationException("SEARCH PARTITION BY accepts only partitioning columns");
+			builder._add(" PARTITION BY ");
+			int count = 0;
+			for (var column : partitioning.getPartitioningColumns()) {
+				if (table.getColumns().get(column.getName()) == null)
+					throw new IllegalArgumentException("Missing SEARCH partition column: " + column.getName());
+				builder.comma(count++ > 0).name(column);
+			}
+		}
+		final String columnName = index.getSpecifics().get(SEARCH_ORDER_BY_COLUMN);
+		if (columnName != null) {
+			final Column column = table.getColumns().get(columnName);
+			if (columnName.isBlank() || column == null || column.getDataType() != DataType.BIGINT
+					|| column.getArrayDimension() > 0)
+				throw new IllegalArgumentException("SEARCH ORDER BY requires an INT64 column: " + columnName);
+			final String value = index.getSpecifics().get(SEARCH_ORDER_BY_DIRECTION);
+			final Order order = value == null ? Order.Asc : Order.parse(value.toUpperCase(java.util.Locale.ROOT));
+			if (order == null)
+				throw new IllegalArgumentException("Unknown SEARCH ORDER BY direction: " + value);
+			builder._add(" ORDER BY ").name(column)._add(" ")._add(order);
 		}
 	}
 

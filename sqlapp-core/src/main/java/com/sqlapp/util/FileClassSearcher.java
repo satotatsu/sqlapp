@@ -49,7 +49,7 @@ public class FileClassSearcher extends AbstractClassSearcher {
 			Class<T> clazz;
 			String name = packageName + "." + fileNameToClassName(file.getName()).replace("/", ".");
 			try {
-				clazz = (Class<T>) getClassLoader().loadClass(name);
+				clazz = (Class<T>) loadDiscoveryClass(name);
 				if (this.getFilter().test(clazz)) {
 					resources.add(clazz);
 				}
@@ -77,7 +77,7 @@ public class FileClassSearcher extends AbstractClassSearcher {
 				String name = packageName + "." + fileNameToClassName(entry.getName()).replace("/", ".");
 				Class<T> clazz;
 				try {
-					clazz = (Class<T>) getClassLoader().loadClass(name);
+					clazz = (Class<T>) loadDiscoveryClass(name);
 					if (this.getFilter().test(clazz)) {
 						resources.add(clazz);
 					}

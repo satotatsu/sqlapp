@@ -10,6 +10,7 @@ import com.sqlapp.data.schemas.IndexType;
 public class SpannerDropIndexFactory extends AbstractDropNamedObjectFactory<Index, SpannerSqlBuilder> {
 	@Override
 	protected void addDropObject(final Index index, final SpannerSqlBuilder builder) {
+		SpannerIndexValidation.requireUserIndex(index);
 		SpannerIndexValidation.identity(index);
 		if (index.getTable() != null && index.getTable().getConstraints().contains(index.getName())) {
 			throw new UnsupportedOperationException(

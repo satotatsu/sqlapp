@@ -14,6 +14,33 @@ import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentit
 
 class DirectTransferPanelTest {
 	@Test
+	void binaryLinkageErrorDuringReviewShowsCallSitesAndRebuildGuidanceWithoutApprovingExecution() throws Exception {
+		var ready = new CountDownLatch(1);
+		var ref = new AtomicReference<DirectTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new DirectTransferPanel((action, request, from, to) -> {
+				var failure = new IncompatibleClassChangeError("driver-secret jdbc:private password=secret");
+				failure.setStackTrace(new StackTraceElement[] {
+						new StackTraceElement("com.sqlapp.Example", "review", "Example.java", 123) });
+				throw failure;
+			}, ignored -> null);
+			ref.set(panel);
+			configure(panel);
+			onEnabled(panel.review, ready);
+			panel.review.doClick(0);
+		});
+		assertTrue(ready.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = ref.get();
+			assertTrue(panel.summary.getText().contains("binary-compatible"));
+			assertTrue(panel.summary.getText().contains("com.sqlapp.Example.review (line 123)"));
+			assertTrue(panel.summary.getText().contains("Project > Clean"));
+			assertFalse(panel.summary.getText().contains("driver-secret"));
+			assertFalse(panel.execute.isEnabled());
+		});
+	}
+
+	@Test
 	void dataImpactReviewKeepsSqlVisibleButDisablesExecutionUntilPermissionIsSavedAndReviewed() throws Exception {
 		var base = reviewed();
 		var original = base.review().prepared();

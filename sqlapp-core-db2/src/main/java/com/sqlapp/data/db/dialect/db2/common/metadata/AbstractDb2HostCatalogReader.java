@@ -56,6 +56,19 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 		return new Db2HostProgrammableReaders.RoutineGrants(getDialect(), resources);
 	}
 
+	/** Normal full-catalog loading includes schema grants automatically. */
+	public com.sqlapp.data.db.dialect.db2.metadata.Db2SchemaPrivilegeReader getSchemaPrivilegeReader() {
+		var reader = new Db2HostProgrammableReaders.SchemaGrants(getDialect(), resources);
+		setReaderParameter(reader);
+		return reader;
+	}
+
+	@Override
+	protected void setCommonAfter(Connection connection, Catalog catalog) {
+		super.setCommonAfter(connection, catalog);
+		load(connection, getSchemaPrivilegeReader(), catalog);
+	}
+
 	private static class HostSchemaReader extends JdbcSchemaReader {
 		private final Class<?> resources;
 

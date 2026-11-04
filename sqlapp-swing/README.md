@@ -79,6 +79,31 @@ classpath libraries; they do not disable native functionality or suppress other
 JVM warnings. No machine-wide environment variable or Eclipse installation
 setting is required.
 
+If a direct-transfer action reports `IncompatibleClassChangeError` (including
+`NoSuchMethodError` or `AbstractMethodError`), the loaded Java classes are not
+binary-compatible. Stop the application, refresh the Gradle project in Eclipse,
+use **Project → Clean**, and restart. Check the launch classpath for duplicate or
+older sqlapp/JDBC JARs. Rebuild all sqlapp modules together rather than replacing
+one library in an existing distribution. Summary and Details retain the failure
+stage, Java version and bounded call-site information without raw driver messages
+or connection values. Share those call sites if a clean restart still fails;
+the error type alone cannot identify the incompatible dependency. A failed review
+does not authorize transfer execution. No automatic retry is performed.
+For failures during file/JAR/VFS class discovery, the diagnostic also identifies
+the **Failed class candidate** and underlying linkage-error type. Discovery keeps
+failing rather than silently skipping an incompatible class. The shared core
+exposes this context through the additive `ClassSearchLinkageError` subtype of
+`IncompatibleClassChangeError`, with the original error retained as its cause.
+An obsolete Eclipse output directory can survive an incremental rebuild. If
+`bin/default` precedes `bin/main` on the launch classpath, stale generated enum
+subclasses such as `DbObjects$*.class` can fail the JVM's permitted-subclass
+check. Check the actual source-folder output paths; when they use `bin/main`
+and `bin/test`, stop the application and move the unused generated `bin/default`
+directory outside the classpath, retaining a backup. Restart with consistent
+outputs. Cleaning only the active output folders may leave that obsolete folder
+behind. Changes to output files do not replace classes already loaded by a
+running JVM.
+
 ## Appearance and code views
 
 ### Access MDB / ACCDB migration

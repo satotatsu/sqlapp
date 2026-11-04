@@ -37,13 +37,18 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 /** Oracle Database integration coverage for the metadata reader tree. */
 class OracleMetadataReaderTest {
 	private void assertCapturedSchedulerScript(com.sqlapp.data.schemas.Event source,
-			com.sqlapp.data.schemas.Event restored) {
+			com.sqlapp.data.schemas.Event restored) throws Exception {
 		assertEquals("AVAILABLE", restored.getSpecifics().get("oracle.scheduler.definitionStatus"));
 		assertEquals(source.getDefinition(), restored.getDefinition());
-		String ddl = String.join("\n", restored.getDefinition());
+		assertTrue(restored.getDefinition().isEmpty(), "Native PROCOBJ script is not a complete Event definition");
+		String ddl = restored.getSpecifics().get("oracle.scheduler.definition");
+		assertEquals(source.getSpecifics().get("oracle.scheduler.definition"), ddl);
 		assertTrue(ddl.toUpperCase(Locale.ROOT).contains("CREATE_JOB"));
 		assertTrue(ddl.contains(restored.getName()));
 		assertEquals("SOURCE_OWNER", restored.getSpecifics().get("oracle.scheduler.definitionContext"));
+		var review = com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview
+				.collect(java.util.List.of(restored));
+		assertEquals(restored.asXml(), review.jobs().getFirst().xml());
 	}
 
 	@Test
@@ -103,6 +108,9 @@ class OracleMetadataReaderTest {
 				var jobs = reader.getAllFull(connection).stream()
 						.filter(job -> first.equals(job.getName()) || second.equals(job.getName())).toList();
 				assertEquals(2, jobs.size());
+				var review = com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview.collect(jobs);
+				assertEquals(4, review.scripts().size());
+				assertEquals(2, review.jobs().size());
 				for (var source : jobs) {
 					com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
 							.readXml(new java.io.StringReader(source.asXml()));
@@ -242,6 +250,8 @@ class OracleMetadataReaderTest {
 			String name = "SCHED_INV_"
 					+ java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
 			boolean created = false;
+			boolean restorationAttempted = false;
+			Throwable primary = null;
 			try {
 				try (var statement = connection
 						.prepareCall("BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, job_type=>'PLSQL_BLOCK', "
@@ -271,12 +281,41 @@ class OracleMetadataReaderTest {
 				assertTrue(job.getSpecifics().get("oracle.scheduler.START_DATE_TEXT").contains("+09:00"));
 				org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
 						() -> dialect.createSqlFactoryRegistry().createSql(job, com.sqlapp.data.db.sql.SqlType.CREATE));
+				try (var statement = connection
+						.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
+					statement.setString(1, name);
+					statement.execute();
+					created = false;
+				}
+				restorationAttempted = true;
+				var result = com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+						.restore(connection, job);
+				assertEquals(java.util.List.of("CREATE_JOB", "SET_NLS_ENV", "VERIFY_DISABLED"),
+						result.completedOperations());
+				var recreated = reader.getAllFull(connection);
+				assertEquals(1, recreated.size());
+				org.junit.jupiter.api.Assertions.assertFalse(recreated.getFirst().isEnable());
+				assertEquals(job.getStatement(), recreated.getFirst().getStatement());
+				for (String field : java.util.List.of("JOB_TYPE", "NUMBER_OF_ARGUMENTS", "argumentCount",
+						"START_DATE_TEXT", "END_DATE_TEXT", "REPEAT_INTERVAL", "JOB_CLASS", "AUTO_DROP", "NLS_ENV"))
+					assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+							recreated.getFirst().getSpecifics().get("oracle.scheduler." + field), field);
+			} catch (Exception | AssertionError failure) {
+				primary = failure;
+				throw failure;
 			} finally {
-				if (created)
+				if (created || restorationAttempted)
 					try (var statement = connection
 							.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
 						statement.setString(1, name);
 						statement.execute();
+					} catch (SQLException cleanup) {
+						// A rejected/failed restoration may not have created the target.
+						if (!(restorationAttempted && cleanup.getErrorCode() == 27475)) {
+							if (primary == null)
+								throw cleanup;
+							primary.addSuppressed(cleanup);
+						}
 					}
 			}
 		}

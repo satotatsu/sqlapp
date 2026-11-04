@@ -616,3 +616,20 @@ SQL draft saving also protects the captured mapping member, including file alias
 
 The separate companion example repository was not modified. Existing examples
 can add mappingFile and the names.yaml shown above without new Gradle properties.
+
+### Offline package metadata
+
+`TransferFileImportService.describePackage(manifest, expectedFingerprint)` checks
+package integrity and returns immutable table/column lists from the canonical
+source Schema and pinned name mapping, without a database connection or row
+decoder. The overview remains available for export-only value types. Recorded
+row totals, requested names, source types and conditional generated-PK settings
+are not a value check, resolved target metadata or execution approval. Use
+`validatePackage` for offline value validation and `review` for target checks.
+In the GUI, **Inspect package** exposes this information in **Package tables**;
+select a table and **Show columns** for its source-to-target name correspondence.
+The GUI retains this overview alongside a target review or import outcome only
+when its package fingerprint matches. It is discarded on input changes or
+operation failure. **Show renamed columns** filters the selected table's column
+list; **Show all columns** resets this filter and the text search. Neither view
+performs a target lookup or grants execution approval.

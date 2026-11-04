@@ -94,7 +94,8 @@ implementations. Disabled triggers require a separate restoration plan and are
 rejected by CREATE. Stored catalog statements can become stale after changes;
 this implementation does not repair or infer missing options.
 
-Explicit table and column privileges each use one bulk query. Table GRANT/REVOKE
+Explicit table/sequence/type privileges share one bulk query; column privileges use
+one separate bulk query. Table GRANT/REVOKE
 and column UPDATE/REFERENCES preserve identifier quoting and known grant options.
 z/OS role grantees are distinguished from authorization IDs; package grantees
 are retained but cannot be replayed. z/OS column grantability is not exposed by
@@ -107,6 +108,71 @@ not inferred. These readers do not cover every object/system privilege.
 
 The shared Schema XML writer now preserves `hierachy=false` for object privileges.
 The legacy default for XML without that attribute remains unchanged.
+
+## Schema privileges
+
+Full catalog loading automatically includes schema privileges in
+`Catalog.schemaPrivileges`, using one bulk QSYS2.SYSSCHEMAAUTH query independent of
+schema count. CREATEIN and USAGE retain known grant options; *PUBLIC becomes PUBLIC
+and reserved GRANTOR remains null. ALTERIN, DROPIN and LUW-only schema authorities
+are not enabled. For a schema-privilege-only request:
+
+```java
+var metadata = (AbstractDb2HostCatalogReader) dialect.getCatalogReader();
+var privileges = metadata.getSchemaPrivilegeReader();
+privileges.setSchemaName("APP"); // optional; omit to read all visible grants
+List<SchemaPrivilege> grants = privileges.getAllFull(connection);
+```
+
+The existing ParametersContext overload also supports a set of schema names.
+GRANT/REVOKE use ON SCHEMA with quoted identifiers; schema REVOKE does not append
+RESTRICT. XML, clone and Catalog CREATE retain schema grants. Authorization-list
+rows and unknown grantability require explicit resolution before SQL generation.
+No group/special-authority or effective-permission expansion is performed.
+SYSSCHEMAAUTH visibility depends on the connection's schema authorization or
+QIBM_LIST_ALL_OBJS_SQL function usage authority; missing rows do not establish
+that no permissions exist. The host reader getter is additive and does not change
+the existing reader API or configuration.
+
+## Type privileges
+
+The object privilege reader includes ALTER and USAGE on user-defined types from
+QSYS2.SYSUDTAUTH in the same bulk query as table and sequence privileges. Existing
+schema/name filters apply to all branches. *PUBLIC becomes PUBLIC; known
+IS_GRANTABLE values determine WITH GRANT OPTION, and reserved GRANTOR remains null.
+
+The native schema/name stays in `ObjectPrivilege`, object kind TYPE in
+`specifics["DB2_HOST_OBJECT_KIND"]`, and logical identity `TYPE:<object-name>` in
+`specificName`. Same-named table, sequence and type grants remain distinct through
+XML, clone and collection lookup. Catalog CREATE emits type grants too.
+GRANT/REVOKE use ON TYPE and REVOKE emits RESTRICT. Only ALTER and USAGE are
+supported; no additional routine privileges are synthesized from type grants.
+
+Authorization-list rows and unknown grantability remain available for inspection
+but require explicit resolution before SQL generation. Group profiles, special
+authorities and effective permissions are not inferred. Generated grants use the
+executing principal and do not reconstruct original grantor chains.
+
+## Sequence privileges
+
+`reader.getObjectPrivilegeReader().getAllFull(connection)` includes explicit
+ALTER and USAGE grants from QSYS2.SYSSEQUENCEAUTH in the same bulk query as table/type
+grants. Schema and object-name filters apply to both branches. *PUBLIC becomes
+PUBLIC, known IS_GRANTABLE values determine WITH GRANT OPTION, and the reserved
+GRANTOR column remains null. Authorization-list and unknown-grantability rows are
+retained but require explicit resolution before SQL generation.
+
+The shared `ObjectPrivilege` model keeps the native schema/object name.
+`specifics["DB2_HOST_OBJECT_KIND"]` identifies SEQUENCE; its logical `specificName`
+is `SEQUENCE:<object-name>` so same-named table and sequence grants remain distinct
+through XML, clone and collection lookup. This is a sqlapp identity, not a native
+sequence-specific name. Untagged legacy table grants remain supported; removing
+the tag from a scoped grant cannot silently turn it into a table grant.
+
+GRANT/REVOKE use ON SEQUENCE; REVOKE emits RESTRICT. Catalog CREATE includes its
+object grants after creating schema objects. SQL generation uses the executing
+principal and does not recreate authorization lists, group membership, special
+authorities or effective permissions. No external database is used by unit tests.
 
 ## Routine privileges
 
@@ -159,8 +225,9 @@ Modeled CREATE supports numeric DISTINCT types with explicit STRONG or WEAK TYPE
 RULES and ordinary numeric arrays. DROP uses TYPE with RESTRICT. Character/LOB
 sources and unsupported attributes require an authoritative complete CREATE TYPE
 in `definition`, so CCSID and normalization are not inferred. Missing or excessive
-array bounds cannot silently become unbounded arrays. Type privileges,
-generated cast functions and IBM i system object names are not recreated.
+array bounds cannot silently become unbounded arrays. Generated cast-function
+ownership and IBM i system object names are not recreated. Type grants are handled
+by the object privilege reader above.
 
 Table/view DISTINCT columns retain a schema-qualified `Column.domain` reference
 from SYSCOLUMNS.USER_DEFINED_TYPE_SCHEMA/NAME. This includes weak types even when
@@ -208,6 +275,15 @@ No external database is accessed by the unit tests or the default Gradle test ta
 
 ### Supplemental catalog specifications
 
+- [IBM i schema privilege catalog](https://www.ibm.com/docs/en/i/7.5?topic=views-sysschemaauth)
+- [IBM i schema GRANT](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-grant-schema-privileges)
+- [IBM i schema REVOKE](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-revoke-schema-privileges)
+- [IBM i type privileges](https://www.ibm.com/docs/en/i/7.5.0?topic=views-sysudtauth)
+- [IBM i type GRANT](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-grant-type-privileges)
+- [IBM i type REVOKE](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-revoke-type-privileges)
+- [IBM i sequence privileges](https://www.ibm.com/docs/en/i/7.5.0?topic=views-syssequenceauth)
+- [IBM i sequence GRANT](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-grant-sequence-privileges)
+- [IBM i sequence REVOKE](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-revoke-sequence-privileges)
 - [IBM i routine privileges](https://www.ibm.com/docs/en/i/7.5.0?topic=views-sysroutineauth)
 - [IBM i routine GRANT](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-grant-function-procedure-privileges)
 - [IBM i routine REVOKE](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-revoke-function-procedure-privileges)

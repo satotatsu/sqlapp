@@ -21,12 +21,35 @@ public final class Db2HostPrivilegeFactories {
 		@Override
 		public List<SqlOperation> createSql(ObjectPrivilege privilege) {
 			if (privilege.isHierachy())
-				throw new IllegalArgumentException("Host table privileges do not support hierarchy");
+				throw new IllegalArgumentException("Host object privileges do not support hierarchy");
 			checkState(privilege.getState(), grant());
 			var result = new java.util.ArrayList<SqlOperation>();
 			var builder = createSqlBuilder();
-			render(builder, grant(), privilege.getPrivilege(), privilege.getSchemaName(), privilege.getObjectName(),
-					null, privilege.getGranteeName(), privilege.isGrantable(), privilege.getSpecifics());
+			String kind = privilege.getSpecifics().getOrDefault("DB2_HOST_OBJECT_KIND", "TABLE");
+			if ("SEQUENCE".equals(kind) || "TYPE".equals(kind)) {
+				String action = privilege.getPrivilege();
+				boolean zos = "db2-zos".equals(getDialect().getSimpleName());
+				Set<String> actions = "TYPE".equals(kind) && zos ? Set.of("USAGE") : Set.of("ALTER", "USAGE");
+				if (!actions.contains(action == null ? "" : action))
+					throw new IllegalArgumentException("Unsupported host " + kind + " privilege: " + action);
+				String target = com.sqlapp.data.db.dialect.db2.util.Db2CreationContext
+						.qualified(privilege.getSchemaName(), privilege.getObjectName());
+				builder._add(grant() ? "GRANT " : "REVOKE ")._add(action)._add(" ON ")._add(kind)._add(" ")._add(target)
+						._add(grant() ? " TO " : " FROM ");
+				grantee(builder, privilege.getGranteeName(), privilege.getSpecifics());
+				if (grant() && privilege.isGrantable())
+					builder._add(" WITH GRANT OPTION");
+				if (!grant())
+					builder._add(" RESTRICT");
+			} else if ("TABLE".equals(kind)) {
+				if (privilege.getSpecificName() != null)
+					throw new IllegalArgumentException(
+							"A type-scoped host privilege cannot be replayed as a table grant");
+				render(builder, grant(), privilege.getPrivilege(), privilege.getSchemaName(), privilege.getObjectName(),
+						null, privilege.getGranteeName(), privilege.isGrantable(), privilege.getSpecifics());
+			} else {
+				throw new IllegalArgumentException("Unsupported host privilege object kind: " + kind);
+			}
 			addSql(result, builder, grant() ? SqlType.GRANT : SqlType.REVOKE, privilege);
 			return result;
 		}
@@ -47,6 +70,9 @@ public final class Db2HostPrivilegeFactories {
 		@Override
 		public List<SqlOperation> createSql(ColumnPrivilege privilege) {
 			checkState(privilege.getState(), grant());
+			String kind = privilege.getSpecifics().get("DB2_HOST_OBJECT_KIND");
+			if (kind != null && !"TABLE".equals(kind))
+				throw new IllegalArgumentException("Column grants require a table target");
 			if (privilege.getColumnName() == null || privilege.getColumnName().isBlank())
 				throw new IllegalArgumentException("Host column grant requires a column name");
 			var result = new java.util.ArrayList<SqlOperation>();
@@ -106,6 +132,43 @@ public final class Db2HostPrivilegeFactories {
 	}
 
 	public static class RevokeRoutine extends GrantRoutine {
+		@Override
+		protected boolean grant() {
+			return false;
+		}
+	}
+
+	public static class GrantSchema extends SimpleSqlFactory<SchemaPrivilege, Db2SqlBuilder> {
+		protected boolean grant() {
+			return true;
+		}
+
+		@Override
+		public List<SqlOperation> createSql(SchemaPrivilege privilege) {
+			checkState(privilege.getState(), grant());
+			if ("*".equals(privilege.getSchemaName()) || privilege.getSpecifics().containsKey("DB2_HOST_SCHEMA_SCOPE"))
+				throw new IllegalArgumentException(
+						"All-schema grants require explicit resolution before SQL generation");
+			boolean zos = "db2-zos".equals(getDialect().getSimpleName());
+			String action = privilege.getPrivilege();
+			Set<String> actions = zos ? Set.of("CREATEIN", "ALTERIN", "DROPIN") : Set.of("CREATEIN", "USAGE");
+			if (!actions.contains(action == null ? "" : action))
+				throw new IllegalArgumentException("Unsupported host schema privilege: " + action);
+			String schema = com.sqlapp.data.db.dialect.db2.util.Db2CreationContext
+					.identifier(privilege.getSchemaName());
+			var builder = createSqlBuilder();
+			builder._add(grant() ? "GRANT " : "REVOKE ")._add(action)._add(" ON SCHEMA ")._add(schema)
+					._add(grant() ? " TO " : " FROM ");
+			grantee(builder, privilege.getGranteeName(), privilege.getSpecifics());
+			if (grant() && privilege.isGrantable())
+				builder._add(" WITH GRANT OPTION");
+			var result = new java.util.ArrayList<SqlOperation>();
+			addSql(result, builder, grant() ? SqlType.GRANT : SqlType.REVOKE, privilege);
+			return result;
+		}
+	}
+
+	public static class RevokeSchema extends GrantSchema {
 		@Override
 		protected boolean grant() {
 			return false;

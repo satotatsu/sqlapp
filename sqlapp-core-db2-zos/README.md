@@ -94,7 +94,8 @@ implementations. Disabled triggers require a separate restoration plan and are
 rejected by CREATE. Stored catalog statements can become stale after changes;
 this implementation does not repair or infer missing options.
 
-Explicit table and column privileges each use one bulk query. Table GRANT/REVOKE
+Explicit table/sequence/type privileges share one bulk query; column privileges use
+one separate bulk query. Table GRANT/REVOKE
 and column UPDATE/REFERENCES preserve identifier quoting and known grant options.
 z/OS role grantees are distinguished from authorization IDs; package grantees
 are retained but cannot be replayed. z/OS column grantability is not exposed by
@@ -107,6 +108,78 @@ not inferred. These readers do not cover every object/system privilege.
 
 The shared Schema XML writer now preserves `hierachy=false` for object privileges.
 The legacy default for XML without that attribute remains unchanged.
+
+## Schema privileges
+
+Full catalog loading automatically includes schema privileges in
+`Catalog.schemaPrivileges`. It uses one bulk SYSIBM.SYSSCHEMAAUTH query, independent
+of the number of schemas. CREATEIN, ALTERIN and DROPIN retain grant options,
+grantor/grantee identity and native authorization provenance. No LUW-only schema
+authorities are inferred. For a schema-privilege-only request, use the existing
+Db2 reader API through the host catalog reader:
+
+```java
+var metadata = (AbstractDb2HostCatalogReader) dialect.getCatalogReader();
+var privileges = metadata.getSchemaPrivilegeReader();
+privileges.setSchemaName("APP"); // optional; omit to read all visible grants
+List<SchemaPrivilege> grants = privileges.getAllFull(connection);
+```
+
+The optional ParametersContext overload can select a set of named schemas.
+`SCHEMANAME='*'` is retained as an all-schema scope with
+`specifics["DB2_HOST_SCHEMA_SCOPE"]="ALL"`; it cannot silently become an individual
+schema grant. GRANT/REVOKE use ON SCHEMA with quoted names and native PUBLIC/ROLE
+syntax. Schema REVOKE does not append RESTRICT. XML, clone and Catalog CREATE
+include schema grants. Unknown grantability and unsupported grantees require
+explicit resolution; generated SQL does not restore original grantor chains or
+effective permissions. The new getter is additive; the existing reader API and
+configuration remain compatible.
+
+## Type privileges
+
+The object privilege reader includes USAGE on user-defined types from
+SYSIBM.SYSRESAUTH, restricted to OBTYPE='D'. Buffer-pool, collection, storage-group,
+table-space and JAR rows from that catalog are not interpreted as type grants.
+The existing schema/name filters also apply to this branch of the single bulk
+query; no per-type catalog lookup is needed.
+
+Type grants retain native schema/name in `ObjectPrivilege`, object kind TYPE in
+`specifics["DB2_HOST_OBJECT_KIND"]`, and logical identity `TYPE:<object-name>` in
+`specificName`. Table, sequence and type grants with the same SQL name remain
+distinct through XML, clone and collection lookup. Catalog CREATE includes these
+grants. GRANT/REVOKE use ON TYPE, known WITH GRANT OPTION and RESTRICT for REVOKE.
+ALTER on a type is not enabled for z/OS. USAGE does not grant EXECUTE on generated
+cast functions; those are separate routine privileges.
+
+Authorization IDs, PUBLIC and native role grantees are supported. Internal grantee
+codes are retained as unsupported inventory and cannot be misread as roles;
+this distinction also applies to table, column, sequence and routine grants.
+Unknown grantability requires explicit resolution before SQL generation. The
+executing principal issues generated grants; original grantor chains and effective
+permissions are not reconstructed.
+
+## Sequence privileges
+
+`reader.getObjectPrivilegeReader().getAllFull(connection)` includes explicit
+ALTER and USAGE grants from SYSIBM.SYSSEQUENCEAUTH in the same bulk query as table/type
+grants. Schema and object-name filters apply to both branches. Grant options,
+authorization IDs, roles and PUBLIC retain their native meaning. Package/plan
+grantees remain inventory only, with collection/token and authorization provenance
+retained where exposed.
+
+The shared `ObjectPrivilege` model keeps the native schema/object name.
+`specifics["DB2_HOST_OBJECT_KIND"]` identifies SEQUENCE; its logical `specificName`
+is `SEQUENCE:<object-name>` to distinguish a sequence from a same-named table in
+collection identities. This is a sqlapp identity, not a native sequence-specific
+name. XML, clone and collection lookup preserve the distinction. Untagged legacy
+table grants remain supported. Removing the object-kind tag from a scoped grant
+is rejected rather than silently targeting a table.
+
+GRANT uses ON SEQUENCE and known WITH GRANT OPTION; REVOKE uses ON SEQUENCE with
+RESTRICT. Catalog CREATE now includes its object grants after object creation.
+Generated SQL uses the executing principal and does not reconstruct original
+grantor chains, plan/package authorization or effective permissions. No external
+database is used by the unit tests.
 
 ## Routine privileges
 
@@ -167,8 +240,8 @@ are quoted. Associative arrays, character/LOB sources, named sources and other
 unsupported attributes require an authoritative complete CREATE TYPE in
 `definition`. Cardinalities that cannot fit the shared integer bound are retained
 in specifics and cannot silently become an unbounded modeled array.
-Type privileges, generated cast-function ownership and physical attributes are
-not recreated by this reader.
+Generated cast-function ownership and physical attributes are not recreated by
+this reader. Type USAGE grants are handled by the object privilege reader above.
 
 Table/view DISTINCT columns retain a schema-qualified `Column.domain` reference
 from SYSCOLUMNS.TYPESCHEMA/TYPENAME, using the existing column query. CREATE TABLE
@@ -219,6 +292,15 @@ No external database is accessed by the unit tests or the default Gradle test ta
 
 ### Supplemental catalog specifications
 
+- [z/OS schema privilege catalog](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=tables-sysschemaauth)
+- [z/OS schema GRANT](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-grant-schema-privileges)
+- [z/OS schema REVOKE](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-revoke-schema-privileges)
+- [z/OS type privilege catalog](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=tables-sysresauth)
+- [z/OS type GRANT](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-grant-type-jar-file-privileges)
+- [z/OS type REVOKE](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-revoke-type-jar-file-privileges)
+- [z/OS sequence privileges](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=spaces-syssequenceauth)
+- [z/OS sequence GRANT](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-grant-sequence-privileges)
+- [z/OS sequence REVOKE](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-revoke-sequence-privileges)
 - [z/OS routine privileges](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=tables-sysroutineauth)
 - [z/OS routine GRANT](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-grant-function-procedure-privileges)
 - [z/OS routine REVOKE](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-revoke-function-procedure-privileges)

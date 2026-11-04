@@ -32,8 +32,9 @@ is left unset: the creator can differ from the owner, and external/credentialed
 jobs have execution identities that this baseline inventory does not resolve.
 
 This is read-only inventory, not a complete job deployment representation.
-Modern full reads preserve the job script in `Event.definition` using the shared
-definition line-list format. Accessible referenced Program/Schedule scripts are
+Modern full reads preserve the job base script in `oracle.scheduler.definition`;
+`Event.definition` is empty because the native script can omit arguments and
+cannot serve as a complete executable definition. Accessible referenced Program/Schedule scripts are
 stored in `oracle.scheduler.program.definition` and
 `oracle.scheduler.schedule.definition`. `definitionStatus=AVAILABLE` marks a
 captured script, and `definitionContext=SOURCE_OWNER` records its original-owner
@@ -179,6 +180,204 @@ check). Public APIs, resolver boundaries and dependencies were unchanged.
 .\gradlew.bat :sqlapp-core-oracle:test --tests '*Oracle10gEventReaderTest'
 .\gradlew.bat :sqlapp-core-oracle:test :sqlapp-core-dialect-test:compileDockerTestJava :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*'
 ```
+
+## Disabled job restoration
+
+`OracleDisabledSchedulerJobRestorer.restore(connection, exportedJob)` restores
+one **absent, disabled, argument-free inline job** from a current full-read Event
+or its XML round-trip. This initial subset supports `PLSQL_BLOCK` and
+`STORED_PROCEDURE`, on Oracle 23ai/26ai engines reporting database major version
+23. The generic Event CREATE/ALTER/DROP factories remain blocked.
+
+```java
+// exportedJob is the Event read in full from the source, or imported from its XML.
+// connection is a dedicated auto-commit connection to an absent target job.
+var result = OracleDisabledSchedulerJobRestorer.restore(connection, exportedJob);
+System.out.println(result.completedOperations());
+```
+
+Connect as the original owner, with session user, current user and current schema
+all equal to that owner. No owner mapping, grants, existing-object replacement,
+DROP, ENABLE or RUN_JOB operations are performed. Use an exclusive maintenance
+window with no concurrent target changes. The service checks target absence and
+verifies disabled state after creation; it is not a transaction or concurrency
+lock. Use a dedicated connection with auto-commit already enabled so caller
+transactions are not silently committed.
+
+The original script is never executed. A strict parser accepts one native
+CREATE_JOB with explicit `enabled=>FALSE`, the captured NLS_ENV setter and the
+native COMMIT/END wrapper. It rejects additional calls, dynamic expressions,
+comments outside literals, unsupported attributes and ambiguous syntax before
+even inspecting the target connection. Only newly constructed, SYS-qualified
+CREATE_JOB and NLS_ENV calls run; string values (including action bodies and date
+text/format/NLS arguments) are bound parameters. The original COMMIT is omitted.
+The job action remains stored data and is never run.
+
+Source inventory must have zero declared and observed arguments, no argument
+payload fields or Program/Schedule references, no destination, default priority
+3, restartable FALSE and no max-runs/max-failures limits. Unsupported native
+attribute setters also fail. Full reads now add
+`oracle.scheduler.definitionFingerprint`, covering the captured Event, native
+scripts and supplemental metadata. XML round-trips retain it; changed metadata
+or old exports without this fingerprint require a fresh full read. The
+fingerprint detects edits, not authenticity or malicious tampering.
+
+Scheduler operations are not atomic. On failure after writes start,
+`RestorationException.getPartialResult()` identifies completed operations and
+`getFailedOperation()` identifies the attempted operation. A failed call may
+already have taken effect. Inspect the target before retrying; no automatic
+cleanup or rollback is attempted. Program/Schedule restoration, argument/ANYDATA
+restoration, non-default execution attributes and enabling jobs remain unsupported.
+
+Verification (2026-11-04): eight restorer tests cover bound values, quoted names,
+Unicode/action lookalikes, unsupported syntax, argument/ANYDATA rejection,
+context/version/transaction/target guards, partial failure, disabled-state failure
+and fingerprint integrity. The final focused run also checked Schema XML import.
+The full Oracle scope passed 579 tests and the Command generator scope passed
+142, all with zero failures/errors/skips. The reader/restorer focused scope passed
+14 tests before the final Schema-XML assertion was added to an existing test.
+
+The previously authorized disabled inline calendar fixture was dropped and
+recreated from its exported Event XML on both disposable Oracle 23 and fixed
+26ai images. Both final cases passed, comparing body, calendar, timezone-bearing
+dates, class, auto-drop, NLS environment, argument counts and disabled state.
+An initial Oracle 23 smoke run also passed before fingerprint enforcement was
+added. No job was enabled or run; only the dedicated test job was dropped and
+recreated. Test objects were cleaned up, and the runs' dedicated Oracle/Ryuk
+containers were checked absent. No task exclusions were used.
+
+Commands used for the final scopes:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*'
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*OracleMetadataReaderTest.disabledSchedulerJobsRetainCalendarAndTimezoneThroughXml' -PtestcontainersReuse=false -PoracleTestImage=gvenzl/oracle-free:23-slim-faststart -PoracleExpectedDialect=23ai
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*OracleMetadataReaderTest.disabledSchedulerJobsRetainCalendarAndTimezoneThroughXml' -PtestcontainersReuse=false -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai
+```
+
+Public changes are additive Oracle utility APIs and one full-read fingerprint
+specific. No shared Schema API, resolver boundary, dependency or pre-23ai metadata
+query changed. Live restoration qualification covers the inline PLSQL_BLOCK
+calendar fixture; STORED_PROCEDURE syntax is accepted but not yet live-qualified
+by a zero-argument procedure fixture. Broader restoration remains unsupported.
+
+### Native Scheduler script verification
+
+#### Collecting scripts for review
+
+`OracleSchedulerScriptReview.collect(events)` collects native scripts from full
+Oracle 23ai/26ai metadata reads into an immutable list, ordered as Program,
+Schedule, then Job. Shared dependencies with identical owner/name and script
+are included once. Owners and names are compared exactly, including case.
+
+**PROCOBJ scripts are base scripts, not complete recreation DDL.** A live Oracle
+23 follow-up found that a job with two explicit argument values exported neither
+value, and a Program with one argument/default exported neither the argument
+declaration nor its default. These are retained in the structured specifics, not
+in the native script. Job scripts are now stored as
+`oracle.scheduler.definition`, alongside Program/Schedule script specifics;
+`Event.definition` remains empty. `definitionStatus=AVAILABLE` means a base script
+was retrieved, not that the object is recreatable from that script alone.
+
+Follow-up qualification (2026-11-04): Oracle module tests passed 571 cases;
+the focused reader/review scope passed 12. The three authorized disabled-Scheduler
+cases passed on both Oracle 23 and 26ai (six cases total), including XML retention
+of base scripts, source identities and supplemental model snapshots. No task
+exclusions were needed. A separate Oracle 23 run of the same three fixtures was
+used to inspect native output. None of these runs replayed a script or enabled
+or ran a job. Their dedicated Oracle/Ryuk containers were checked absent.
+
+The Command generator scope initially had one failure out of 142:
+`NoClassDefFoundError: com/sqlapp/util/iterator/IntegerIterator`. The cause was
+not established; no shared source was changed for it. An independent retry
+passed all 142 cases. The ordinary Scheduler SQL-generation guard remains in
+place: reconstructing argument values/defaults and validating disabled-state
+execution are still required before implementing automatic restoration.
+
+```java
+var review = OracleSchedulerScriptReview.collect(schema.getEvents());
+for (var script : review.scripts()) {
+    // Display/store each identity and original definition for manual review.
+    System.out.println(script.kind() + " " + script.owner() + "." + script.name());
+    System.out.println(script.definition());
+}
+for (var job : review.jobs()) {
+    // Keep the full source model with the scripts: arguments/defaults are here.
+    System.out.println(job.xml());
+}
+```
+
+The collector requires disabled jobs and disabled referenced Programs, available
+dependency snapshots, native scripts and their source-owner context. It fails
+on duplicate jobs or conflicting shared scripts, rather than choosing a version.
+Captured `definitionOwner` and `definitionName` specifics accompany each script;
+changing a modeled identity without refreshing its script is rejected. Older XML
+exports without these identity fields must be refreshed before collection.
+Exports from the earlier canonical `Event.definition` representation also require
+a fresh full read; the collector does not mistake that older script for a complete
+definition. `jobs()` contains immutable XML snapshots of the selected Events so
+argument/default metadata is available even after the caller changes its models.
+
+This is a **manual review bundle, not an executable restoration plan**. It does
+not validate PL/SQL contents, establish script authenticity, detect arbitrary
+edits to other modeled attributes, inspect target objects, guarantee job state
+after replay, remap owners or restore additional dependencies such as procedures,
+job classes and credentials. Native scripts can enable objects or change session
+state even when catalog inventory says disabled. Generic Event CREATE/ALTER/DROP
+remain blocked. No database connection or execution is performed by this API.
+
+Verification (2026-11-04): the focused review/reader scope passed 11 tests;
+`:sqlapp-core-oracle:test` passed 570 tests; `:sqlapp-command:test --tests
+'com.sqlapp.data.db.command.generator.*'` passed 142 tests. All had zero
+failures/errors/skips. No live database tests were run for this collection-only
+change. Public API additions are confined to the Oracle module; existing APIs and
+pre-23ai reader selection are unchanged.
+
+Refreshing an existing Event clears previously captured job, Program and Schedule
+scripts and their definition context/status before requesting the new batch. A
+denied or failed refresh cannot leave an earlier executable script attached to
+the refreshed metadata. Dependencies that are no longer available also lose their
+previous scripts. Inventory fields remain intact. This does not authorize or
+implement automatic script replay.
+
+On 2026-11-04, four new native-script tests and the eleven baseline Scheduler
+tests passed. The Oracle module scope passed 563 tests and the selected Command
+generator scope passed 142 tests with zero failures/errors/skips; Docker-test
+compilation also passed. This historical check originally used the shared
+definition line-list representation; the follow-up above moves incomplete base
+scripts into specifics. Native enable calls, quotes and Unicode remain
+in the captured content, and CREATE generation still rejects replay.
+
+The three previously authorized disabled-Scheduler cases were rerun on each of
+`gvenzl/oracle-free:23-slim-faststart` and
+`gvenzl/oracle-free:23.26.3-slim-faststart`: six engine/case combinations passed
+with zero final failures/errors/skips. Full reads captured job scripts and shared
+Program/Schedule scripts, preserved them through XML, and retained disabled
+state. Neither the captured scripts nor the jobs were executed. Created objects
+were cleaned up, each run's Oracle/Ryuk containers were checked absent, and
+neither image declares anonymous volumes. Existing containers/data were not used.
+
+The first 26ai invocation did not reach tests: unrelated in-progress DB2 source
+`Db2HostProgrammableReaders.RoutineGrants` failed compilation at a no-argument
+`getSchemaName()` call. DB2 sources were left untouched. The 26ai retry reused
+the existing DB2 jar and Docker test classes that had just passed on Oracle23,
+excluding `:sqlapp-core-db2:compileJava`, `:sqlapp-core-db2:jar` and
+`:sqlapp-core-dialect-test:compileDockerTestJava`. All three Oracle26ai cases then
+passed. This qualifies the Oracle implementation, not the current full workspace
+build or the unrelated DB2 changes. Public entry points, resolver boundaries,
+dependencies and shared Schema APIs were unchanged.
+
+Use the three `OracleMetadataReaderTest.disabledScheduler*` cases for this
+matrix. The 26ai retry used the following additional task exclusions:
+
+```powershell
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*OracleMetadataReaderTest.disabledScheduler*' -PtestcontainersReuse=false -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai -x :sqlapp-core-db2:compileJava -x :sqlapp-core-db2:jar -x :sqlapp-core-dialect-test:compileDockerTestJava
+```
+
+Pre-23ai full-read compatibility remains inventory-only. Live qualification used
+disabled inline and named Program/Schedule fixtures only; enabled-source scripts,
+window/chain/credential deployment, owner remapping and actual script replay or
+enable-state restoration remain unqualified. The SOURCE_OWNER context marker is
+a deployment prerequisite, not a guarantee that scripts can be run in any schema.
 
 ## External tables
 

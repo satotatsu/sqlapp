@@ -58,8 +58,7 @@ public class VfsClassSearcher extends AbstractClassSearcher {
 			}
 			try {
 				@SuppressWarnings("unchecked")
-				Class<T> clazz = (Class<T>) this.getClassLoader()
-						.loadClass(
+				Class<T> clazz = (Class<T>) loadDiscoveryClass(
 								packageName + "."
 										+ fileNameToClassName(file.getName()));
 				if (this.getFilter().test(clazz)) {
@@ -83,8 +82,7 @@ public class VfsClassSearcher extends AbstractClassSearcher {
 				}
 				try {
 					@SuppressWarnings("unchecked")
-					Class<T> clazz = (Class<T>) this.getClassLoader()
-							.loadClass(
+					Class<T> clazz = (Class<T>) loadDiscoveryClass(
 									packageName
 											+ "."
 											+ fileNameToClassName(file

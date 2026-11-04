@@ -5,11 +5,48 @@ It does not implement the Spanner PostgreSQL interface.
 
 The local enhancement pass and final audit are summarized in
 [ENHANCEMENT_STATUS.md](ENHANCEMENT_STATUS.md), including a support matrix,
-compatibility boundaries and remaining live-server checks. CREATE TABLE now
-fails for interleaved metadata instead of silently dropping its parent. Optional
+compatibility boundaries and remaining live-server checks. CREATE TABLE renders
+known INTERLEAVE relationships and rejects ambiguous metadata. Optional
 newer column metadata is obtained from `col.*` without explicitly naming newer
 physical catalog columns. UNIQUE index names honor schema decoration. Live
 service compatibility is not certified by the local tests.
+
+## Interleaved table creation
+
+Table metadata retains parent_table_name, on_delete_action and optional
+interleave_type from TABLES.*. CREATE emits INTERLEAVE IN PARENT with CASCADE or
+NO ACTION, or INTERLEAVE IN without an ON DELETE clause. Older catalogs without
+INTERLEAVE_TYPE are supported when a known ON DELETE action unambiguously
+identifies IN PARENT. A parent with neither type nor delete metadata is ambiguous
+and fails; unknown values, self-parenting and IN plus ON DELETE also fail.
+Metadata explicitly reporting IN PARENT must include its ON DELETE value.
+
+For a user-authored relationship, specify the parent and relationship kind:
+
+```java
+table.getSpecifics().put(SpannerCreateTableFactory.PARENT_TABLE_NAME, "Parents");
+table.getSpecifics().put(SpannerCreateTableFactory.INTERLEAVE_TYPE, "IN PARENT");
+// Optional for user-authored IN PARENT; NO ACTION is the default.
+table.getSpecifics().put(SpannerCreateTableFactory.ON_DELETE_ACTION, "CASCADE");
+```
+
+Parent names are quoted and use the child's schema when schema decoration is
+enabled. Cross-schema parent naming and primary-key prefix/type compatibility
+remain server verification requirements. In a CREATE table collection, modeled
+interleave parents and FK dependencies precede children; cycles and duplicate
+identities fail. Parents outside the collection must already exist. Calls for
+ordinary tables without interleaving keep the existing shared ordering path.
+INTERLEAVE changes through ALTER remain unsupported and fail explicitly.
+
+Table OPTIONS now use the native comma separator, including when combined with
+INTERLEAVE. Tests read 40 legacy/current table headers in one query, round-trip
+Schema XML, generate parents first, preserve deletion behavior, reject cycles
+and retain FK ordering. No new physical catalog columns, per-table queries,
+module dependencies, existing signatures, XML structure or resolver boundary
+are added. Actual service/older-emulator behavior remains unverified.
+
+Sources: [TABLES metadata](https://docs.cloud.google.com/spanner/docs/information-schema),
+[GoogleSQL CREATE TABLE](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language).
 
 ## Column migrations
 
@@ -167,9 +204,9 @@ No existing API signatures, Schema XML fields or dependencies change.
 
 Tests use mocked result rows, not live catalog SQL. Permissions, actual JDBC
 OPTION_VALUE formatting and option exposure on older services/emulators still
-need live verification. This does not claim full index reconstruction: predicate,
-partition/order/interleave metadata and unmodeled options remain outside this
-reader; VECTOR recreation also needs complete column metadata, including fixed
+need live verification. This does not claim full index reconstruction:
+optional catalog layout fields are handled as described below, but unmodeled
+options remain outside this reader. VECTOR recreation needs complete column metadata, including fixed
 embedding length and nullability. No database was contacted.
 
 Reference: [GoogleSQL index options](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language).
@@ -346,6 +383,118 @@ for these tests. Existing APIs, dependencies and Schema XML are unchanged.
 Reference: [GoogleSQL DML](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/dml-syntax).
 
 ## Index-column metadata validation
+
+### Spanner-managed backing indexes
+
+Optional SPANNER_IS_MANAGED metadata is retained in index specifics and XML.
+Known true/false values are validated across all rows; a missing field retains
+the old path without guessing ownership from names. The existing INDEXES.*
+query supplies it without newer physical-column references or extra SELECTs.
+
+CREATE TABLE retains the managed index in the Schema model but omits its
+CREATE INDEX operation: the modeled foreign-key constraint controls backing
+index creation. User indexes still emit normally, regardless of name prefix.
+Direct CREATE/DROP, detail rendering and table-diff operations that modify
+managed index objects fail with an instruction to change the constraint.
+The optional constant is SpannerCreateIndexFactory.SPANNER_IS_MANAGED; an
+invalid explicit value fails instead of becoming user-owned.
+
+Foreign-key changes with unchanged derived index metadata continue through the
+constraint factory, without independent backing-index SQL. No one-to-one
+constraint ownership is inferred: Spanner may share a backing index between
+foreign keys. A diff that also explicitly changes/removes managed index objects
+is conservatively rejected, even when a constraint changes in the same diff;
+coordinating those derived snapshot changes requires a separate plan.
+
+Tests cover 40 index flags in three queries, XML retention, complete foreign-key
+and user-index table recreation, direct/diff rejection and unrelated column
+changes. Live backing-index lifecycle and historical flag exposure remain
+unverified. Existing public signatures, XML structure, dependencies, resolver
+paths and query counts are unchanged.
+Reference: [Spanner foreign-key backing indexes](https://docs.cloud.google.com/spanner/docs/foreign-keys/overview).
+
+### WHERE reconstruction
+
+When available, the native INDEXES.FILTER value is now retained directly in
+Index.where, ahead of nullability-based reconstruction. This preserves the
+catalog expression and works even if base nullability metadata is unavailable.
+Optional FILTER and SEARCH layout fields come from INDEXES.*; they are not
+explicitly referenced physical columns, so older catalogs without them retain
+the legacy path. The following nullability reconstruction applies when no
+nonblank native FILTER is exposed.
+
+The existing bulk index query joins base COLUMNS on catalog/schema/table/column
+identity and reads IS_NULLABLE from both the base and index column. A base
+column that permits NULL while its index column rejects NULL contributes a
+quoted `column IS NOT NULL` term to shared `Index.where`. Terms are ordered
+deterministically and joined with AND. This reconstructs the effective null
+exclusion condition, not the original SQL spelling; redundant predicates on
+base NOT NULL columns cannot be distinguished and are unnecessary for the
+effective condition. The approach follows the catalog's index nullability
+representation, also used for NULL_FILTERED keys in the official emulator.
+
+Normal, SEARCH and VECTOR use the same reader path, including STORING columns.
+Global NULL_FILTERED key exclusions remain modeled by IS_NULL_FILTERED rather
+than duplicated in WHERE; additional STORING exclusions still become WHERE.
+No nullability is guessed: missing/unknown base or index values fail with an
+actionable error, including when permissions hide needed base metadata.
+
+Local tests retrieve 40 indexes of each type across two schemas in three total
+queries (rows, option availability, bulk options), retain predicates through
+XML/CREATE and replace changed indexes through table diffs. Existing empty and
+unavailable-option-table counts remain one and two. Only existing catalog
+columns are joined; no new physical columns, version assumptions, public APIs,
+XML structure or dependencies are added. This is tested SQL generation and
+mocked metadata reconstruction; live partial-index nullability, permissions and
+older service/emulator behavior still need verification.
+
+Sources: [GoogleSQL index grammar](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language),
+[index/base column metadata](https://docs.cloud.google.com/spanner/docs/information-schema),
+[emulator catalog implementation](https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/blob/master/backend/query/information_schema_catalog.cc).
+
+### SEARCH layout and index interleave
+
+Optional SEARCH_PARTITION_BY and SEARCH_ORDER_BY JDBC string arrays are read
+in the existing index-row query. Their columns are separated from TOKENLIST
+keys using their names; the sort direction comes from INDEX_COLUMNS order and
+ordinal metadata. JDBC arrays are freed on successful and failed decoding.
+Malformed arrays, missing layout columns and contradictory row headers fail
+explicitly. A native SEARCH header's internal IS_UNIQUE=true does not become
+a user-declared UNIQUE index.
+
+PARTITION BY uses shared Index.partitioning.partitioningColumns, with no
+partition type, bounds, subpartitions or partition count. It is a SEARCH grouping
+layout, not a physical HASH/RANGE table partition definition. ORDER BY currently
+supports one INT64 column using optional specifics SEARCH_ORDER_BY_COLUMN and
+SEARCH_ORDER_BY_DIRECTION (ASC by default for user-authored models). Other
+layout shapes fail rather than being dropped. These optional keys are exposed
+as constants on SpannerCreateIndexFactory; no existing API signatures or Schema
+XML structure change.
+
+PARENT_TABLE_NAME retains the index's native interleave parent. Ordinary and
+SEARCH CREATE emit `, INTERLEAVE IN <parent>` after WHERE and before OPTIONS.
+The name is quoted as one identifier and uses the index schema when schema
+decoration is requested. Parent key-prefix/type compatibility and ancestry are
+left to Spanner. Explicit false sort-order sharding on an interleaved SEARCH
+index is rejected. VECTOR interleave is rejected. Table INTERLEAVE creation is
+described above; table INTERLEAVE ALTER remains unsupported.
+
+For a user-authored SEARCH index, add only the optional layout needed:
+
+```java
+Partitioning grouping = new Partitioning();
+grouping.getPartitioningColumns().add(new ReferenceColumn("tenantId"));
+index.setPartitioning(grouping);
+index.getSpecifics().put(SpannerCreateIndexFactory.SEARCH_ORDER_BY_COLUMN, "createdAtMicros");
+index.getSpecifics().put(SpannerCreateIndexFactory.SEARCH_ORDER_BY_DIRECTION, "DESC");
+```
+
+Metadata tests cover 40 SEARCH layouts across two schemas with native FILTER,
+STORING, descending order, interleave, XML and table-diff recreation in three
+queries. Additional tests cover ordinary interleave, array lifecycle, invalid
+layouts and user-authored defaults. Actual array/field exposure, cross-schema
+parent naming, DDL execution and older service/emulator behavior remain live
+verification items. No per-index query, dependency or resolver boundary is added.
 
 Index headers accept only INDEX, SEARCH and VECTOR types and explicit true/false
 UNIQUE/NULL_FILTERED values. Unknown or missing values and contradictory types

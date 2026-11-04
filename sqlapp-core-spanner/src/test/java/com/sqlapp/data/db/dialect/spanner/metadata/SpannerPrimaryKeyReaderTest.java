@@ -18,26 +18,46 @@ class SpannerPrimaryKeyReaderTest {
 	private class Reader extends SpannerUniqueConstraintReader {
 		final List<Map<String, Object>> rows = new ArrayList<>();
 		int queries;
-		Reader() { super(DialectHolder.defaultDialect); }
+
+		Reader() {
+			super(DialectHolder.defaultDialect);
+		}
+
 		@Override
 		protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
 			queries++;
 			try {
-				for (var values : rows) h.handleResultSetNext(new ExResultSet(null) {
-					private Object last;
-					@Override public String getString(String name) { return Objects.toString(values.get(name), null); }
-					@Override public long getLong(String name) { last = values.get(name); return last == null ? 0 : ((Number) last).longValue(); }
-					@Override public boolean wasNull() { return last == null; }
-				});
-			} catch (java.sql.SQLException exception) { throw new IllegalStateException(exception); }
+				for (var values : rows)
+					h.handleResultSetNext(new ExResultSet(null) {
+						private Object last;
+
+						@Override
+						public String getString(String name) {
+							return Objects.toString(values.get(name), null);
+						}
+
+						@Override
+						public long getLong(String name) {
+							last = values.get(name);
+							return last == null ? 0 : ((Number) last).longValue();
+						}
+
+						@Override
+						public boolean wasNull() {
+							return last == null;
+						}
+					});
+			} catch (java.sql.SQLException exception) {
+				throw new IllegalStateException(exception);
+			}
 			return null;
 		}
 	}
 
 	private Map<String, Object> row(String schema, String table, long ordinal) {
-		return new HashMap<>(Map.of("table_catalog", "", "table_schema", schema, "table_name", table,
-				"constraint_name", "PRIMARY_KEY", "column_name", ordinal == 1 ? "z" : "a",
-				"column_ordering", ordinal == 1 ? "ASC" : "DESC", "ordinal_position", ordinal));
+		return new HashMap<>(Map.of("table_catalog", "", "table_schema", schema, "table_name", table, "constraint_name",
+				"PRIMARY_KEY", "column_name", ordinal == 1 ? "z" : "a", "column_ordering",
+				ordinal == 1 ? "ASC" : "DESC", "ordinal_position", ordinal));
 	}
 
 	@Test
@@ -59,7 +79,8 @@ class SpannerPrimaryKeyReaderTest {
 			table.getColumns().add(new Column("a").setDataType(DataType.BIGINT).setNullable(false));
 			table.getConstraints().add(key);
 			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
-			assertEquals(Order.Desc, restored.getConstraints().getPrimaryKeyConstraint().getColumns().get(1).getOrder());
+			assertEquals(Order.Desc,
+					restored.getConstraints().getPrimaryKeyConstraint().getColumns().get(1).getOrder());
 			final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry()
 					.createSql(restored, SqlType.CREATE).get(0).getSqlText();
 			assertTrue(sql.contains("PRIMARY KEY"), sql);

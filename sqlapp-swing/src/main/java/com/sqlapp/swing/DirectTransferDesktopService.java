@@ -113,6 +113,11 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 			throw TransferActionFailure.preparation(failure);
 		} catch (TransferSchemaPreparation.ValidationException failure) {
 			throw new TransferPreparationFailure(failure);
+		} catch (LinkageError failure) {
+			if (completed != null)
+				throw new ExecutionFailure(completed,
+						"Copy result retained, but Java library linkage failed during report publication or cleanup. Inspect the result before retrying.");
+			throw TransferActionFailure.linkage(phase, failure);
 		} catch (Exception failure) {
 			if (completed != null)
 				throw new ExecutionFailure(completed,

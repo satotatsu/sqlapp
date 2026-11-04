@@ -12,6 +12,32 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.sqlapp.data.db.command.migration.transfer.TransferJobPreparationService;
 
 class TransferActionFailureTest {
+	@org.junit.jupiter.api.Test
+	void classDiscoveryFailureNamesTheCandidateAndKeepsUnderlyingTypeWithoutRawMessages() {
+		var cause = new IncompatibleClassChangeError("driver-secret jdbc:private");
+		var failure = new com.sqlapp.util.ClassSearchLinkageError("fixture.Broken", cause);
+		var diagnostic = TransferActionFailure.linkage("review", failure);
+		assertTrue(diagnostic.summary().contains("Failed class candidate: fixture.Broken"));
+		assertTrue(diagnostic.summary().contains("Underlying error type: IncompatibleClassChangeError"));
+		assertTrue(diagnostic.summary().contains("binary-compatible"));
+		assertFalse(diagnostic.summary().contains("driver-secret"));
+		assertNull(diagnostic.getCause());
+	}
+
+	@org.junit.jupiter.api.Test
+	void binaryLinkageGuidanceRetainsCallSitesWithoutRawMessagesOrCauses() {
+		var failure = new IncompatibleClassChangeError("driver-secret jdbc:private password=secret");
+		failure.setStackTrace(
+				new StackTraceElement[] { new StackTraceElement("com.sqlapp.Example", "review", "Example.java", 123) });
+		var diagnostic = TransferActionFailure.linkage("reviewing source metadata and target tables", failure);
+		assertTrue(diagnostic.summary().contains("binary-compatible"));
+		assertTrue(diagnostic.summary().contains("Project > Clean"));
+		assertTrue(diagnostic.summary().contains("com.sqlapp.Example.review (line 123)"));
+		assertFalse(diagnostic.summary().contains("driver-secret"));
+		assertFalse(diagnostic.summary().contains("jdbc:private"));
+		assertNull(diagnostic.getCause());
+	}
+
 	@TempDir
 	Path directory;
 

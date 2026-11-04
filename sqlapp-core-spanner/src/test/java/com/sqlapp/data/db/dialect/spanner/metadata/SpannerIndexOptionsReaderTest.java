@@ -18,6 +18,289 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 class SpannerIndexOptionsReaderTest {
 	@Test
+	void retainsManagedFlagsForFortyIndexesThroughXmlWithoutExtraQueries() throws Exception {
+		final var reader = new Reader();
+		for (String schema : List.of("a", "b"))
+			for (int i = 0; i < 20; i++) {
+				header(reader, schema, "idx" + i, "INDEX");
+				reader.headers.get(reader.headers.size() - 1).put("spanner_is_managed", i % 2 == 0);
+			}
+		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(40, indexes.size());
+		assertEquals(3, reader.queries);
+		for (var index : indexes) {
+			final var table = new Table("events");
+			table.getIndexes().add(index);
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			assertEquals(index.getSpecifics().get(SpannerCreateIndexFactory.SPANNER_IS_MANAGED),
+					restored.getIndexes().get(0).getSpecifics().get(SpannerCreateIndexFactory.SPANNER_IS_MANAGED));
+		}
+	}
+
+	@Test
+	void rejectsInvalidAndInconsistentManagedFlags() {
+		for (String value : List.of("", "unknown")) {
+			final var reader = new Reader();
+			header(reader, "app", "idx", "INDEX");
+			reader.headers.get(0).put("spanner_is_managed", value);
+			assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			assertEquals(1, reader.queries);
+		}
+		final var reader = new Reader();
+		header(reader, "app", "idx", "INDEX");
+		reader.headers.get(0).put("spanner_is_managed", true);
+		final var second = new HashMap<>(reader.headers.get(0));
+		second.put("ordinal_position", 2L);
+		second.put("column_name", "other");
+		second.put("spanner_is_managed", false);
+		reader.headers.add(second);
+		assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+		assertEquals(1, reader.queries);
+	}
+
+	@Test
+	void retainsFortySearchLayoutsNativeFiltersAndInterleaveThroughXmlAndDiff() throws Exception {
+		final var reader = new Reader();
+		for (String schema : List.of("a", "b"))
+			for (int i = 0; i < 20; i++) {
+				final String name = "search" + i;
+				header(reader, schema, name, "SEARCH");
+				final var token = reader.headers.get(reader.headers.size() - 1);
+				token.put("is_unique", true); // native SEARCH header, not a UNIQUE declaration
+				token.put("parent_table_name", "Parents");
+				token.put("filter", "`sort key` IS NOT NULL AND `payload one` IS NOT NULL");
+				token.put("search_partition_by", new String[] { "tenant" });
+				token.put("search_order_by", new String[] { "sort key" });
+				final var partition = new HashMap<>(token);
+				partition.put("column_name", "tenant");
+				partition.put("ordinal_position", 2L);
+				reader.headers.add(partition);
+				final var order = new HashMap<>(token);
+				order.put("column_name", "sort key");
+				order.put("ordinal_position", 3L);
+				order.put("column_ordering", "DESC");
+				reader.headers.add(order);
+				final var storing = new HashMap<>(token);
+				storing.put("column_name", "payload one");
+				storing.remove("ordinal_position");
+				storing.remove("column_ordering");
+				reader.headers.add(storing);
+				option(reader, schema, name, "sort_order_sharding", "true");
+			}
+		Collections.reverse(reader.headers);
+		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(40, indexes.size());
+		assertEquals(3, reader.queries);
+		for (var index : indexes) {
+			assertFalse(index.isUnique());
+			assertEquals(List.of("embedding"), index.getColumns().stream().map(ReferenceColumn::getName).toList());
+			assertEquals("tenant", index.getPartitioning().getPartitioningColumns().get(0).getName());
+			final var table = new Table("events").setSchemaName(index.getSchemaName());
+			table.getColumns().add(new Column("embedding").setDataType(DataType.OTHER).setDataTypeName("TOKENLIST"));
+			table.getColumns().add(new Column("tenant").setDataType(DataType.BIGINT).setNotNull(true));
+			table.getColumns().add(new Column("sort key").setDataType(DataType.BIGINT));
+			table.getColumns().add(new Column("payload one").setDataType(DataType.VARCHAR).setLength(100));
+			table.getIndexes().add(index);
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			final String sql = registry.createSql(restored.getIndexes().get(0), SqlType.CREATE).get(0).getSqlText();
+			assertTrue(sql.contains("PARTITION BY `tenant` ORDER BY `sort key` DESC WHERE " + index.getWhere()), sql);
+			assertTrue(sql.contains(", INTERLEAVE IN `" + index.getSchemaName() + "`.`Parents` OPTIONS"), sql);
+			final var target = restored.clone();
+			target.getIndexes().get(0).getSpecifics().put(SpannerCreateIndexFactory.SEARCH_ORDER_BY_DIRECTION, "ASC");
+			final var changes = registry.createSql(restored.diff(target), SqlType.ALTER);
+			assertEquals(2, changes.size());
+			assertTrue(changes.get(0).getSqlText().startsWith("DROP SEARCH INDEX"));
+			assertTrue(changes.get(1).getSqlText().contains("ORDER BY `sort key` ASC"));
+		}
+	}
+
+	@Test
+	void nativeFilterWinsWithoutGuessingFromUnavailableNullabilityAndRetainsOrdinaryInterleave() throws Exception {
+		final var reader = new Reader();
+		reader.available = false;
+		header(reader, "app", "idx", "INDEX");
+		final var values = reader.headers.get(0);
+		values.put("filter", "embedding IS NOT NULL");
+		values.put("parent_table_name", "Parents");
+		values.remove("base_is_nullable");
+		values.remove("index_is_nullable");
+		final var index = reader.doGetAll(null, new ParametersContext(), null).get(0);
+		assertEquals("embedding IS NOT NULL", index.getWhere());
+		final var table = new Table("events").setSchemaName("app");
+		table.getIndexes().add(index);
+		final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		final String sql = registry.createSql(restored.getIndexes().get(0), SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("WHERE embedding IS NOT NULL, INTERLEAVE IN `app`.`Parents`"), sql);
+		assertEquals(2, reader.queries);
+	}
+
+	@Test
+	void rejectsMalformedMissingAndConflictingSearchLayoutMetadata() {
+		for (int mode = 0; mode < 7; mode++) {
+			final var reader = new Reader();
+			header(reader, "app", "idx", "SEARCH");
+			final var values = reader.headers.get(0);
+			switch (mode) {
+			case 0 -> values.put("search_partition_by", "tenant");
+			case 1 -> values.put("search_partition_by", new String[] { "tenant", "tenant" });
+			case 2 -> values.put("search_partition_by", new Object[] { 42 });
+			case 3 -> values.put("search_partition_by", new String[] { "missing" });
+			case 4 -> values.put("search_order_by", new String[] { "missing" });
+			case 5 -> values.put("search_order_by", new String[] { " " });
+			case 6 -> {
+				final var second = new HashMap<>(values);
+				second.put("filter", "embedding IS NOT NULL");
+				second.put("ordinal_position", 2L);
+				second.put("column_name", "other");
+				reader.headers.add(second);
+			}
+			}
+			assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+			assertEquals(1, reader.queries);
+		}
+	}
+
+	@Test
+	void releasesJdbcLayoutArraysOnSuccessAndFailure() {
+		for (boolean invalid : List.of(false, true)) {
+			final int[] frees = { 0 };
+			final var array = (java.sql.Array) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+					new Class<?>[] { java.sql.Array.class }, (p, method, args) -> switch (method.getName()) {
+					case "getArray" -> new String[] { invalid ? " " : "tenant" };
+					case "free" -> {
+						frees[0]++;
+						yield null;
+					}
+					default -> throw new UnsupportedOperationException(method.getName());
+					});
+			final var reader = new Reader();
+			reader.available = false;
+			header(reader, "app", "idx", "SEARCH");
+			reader.headers.get(0).put("search_partition_by", array);
+			if (invalid) {
+				assertThrows(IllegalArgumentException.class,
+						() -> reader.doGetAll(null, new ParametersContext(), null));
+			} else {
+				final var partition = new HashMap<>(reader.headers.get(0));
+				partition.put("search_partition_by", new String[] { "tenant" });
+				partition.put("column_name", "tenant");
+				partition.put("ordinal_position", 2L);
+				reader.headers.add(partition);
+				assertEquals(1, reader.doGetAll(null, new ParametersContext(), null).size());
+			}
+			assertEquals(1, frees[0]);
+		}
+	}
+
+	@Test
+	void reconstructsWhereForFortyIndexesOfEachTypeThroughXmlAndDdl() throws Exception {
+		final var reader = new Reader();
+		for (String type : List.of("INDEX", "SEARCH", "VECTOR"))
+			for (String schema : List.of("a", "b"))
+				for (int i = 0; i < 20; i++) {
+					final String name = type + i;
+					header(reader, schema, name, type);
+					final var key = reader.headers.get(reader.headers.size() - 1);
+					key.put("index_is_nullable", "NO");
+					if (type.equals("SEARCH"))
+						key.put("base_is_nullable", "NO");
+					final var storing = new HashMap<>(key);
+					storing.put("column_name", "payload one");
+					storing.put("base_is_nullable", "YES");
+					storing.remove("ordinal_position");
+					storing.remove("column_ordering");
+					reader.headers.add(storing);
+					if (type.equals("VECTOR"))
+						option(reader, schema, name, "distance_type", "COSINE");
+				}
+		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
+		assertEquals(120, indexes.size());
+		assertEquals(3, reader.queries);
+		for (var index : indexes) {
+			final String expected = (index.getIndexType() == IndexType.FullText ? "" : "`embedding` IS NOT NULL AND ")
+					+ "`payload one` IS NOT NULL";
+			assertEquals(expected, index.getWhere());
+			final var table = new Table("events").setSchemaName(index.getSchemaName());
+			final var key = new Column("embedding");
+			if (index.getIndexType() == IndexType.FullText)
+				key.setDataType(DataType.OTHER).setDataTypeName("TOKENLIST");
+			else if (index.getIndexType() == IndexType.Vector) {
+				key.setDataType(DataType.DOUBLE).setArrayDimension(1);
+				key.getSpecifics().put(SpannerSqlBuilder.VECTOR_LENGTH, 8);
+			} else
+				key.setDataType(DataType.BIGINT);
+			table.getColumns().add(key);
+			table.getColumns().add(new Column("payload one").setDataType(DataType.VARCHAR).setLength(100));
+			table.getIndexes().add(index);
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			assertEquals(expected, restored.getIndexes().get(0).getWhere());
+			final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+			final String sql = registry.createSql(restored.getIndexes().get(0), SqlType.CREATE).get(0).getSqlText();
+			assertTrue(sql.contains("WHERE " + expected), sql);
+			final var target = restored.clone();
+			target.getIndexes().get(0).setWhere("`payload one` IS NOT NULL");
+			if (index.getIndexType() != IndexType.FullText) {
+				final var changes = registry.createSql(restored.diff(target), SqlType.ALTER);
+				assertEquals(2, changes.size());
+				assertTrue(changes.get(0).getSqlText().startsWith("DROP"));
+				assertTrue(changes.get(1).getSqlText().contains("WHERE `payload one` IS NOT NULL"));
+			}
+		}
+	}
+
+	@Test
+	void doesNotInventFiltersFromBaseNotNullOrDuplicateGlobalNullFiltering() {
+		final var reader = new Reader();
+		reader.available = false;
+		header(reader, "app", "not_null", "INDEX");
+		reader.headers.get(0).put("base_is_nullable", "NO");
+		reader.headers.get(0).put("index_is_nullable", "NO");
+		header(reader, "app", "global_filter", "INDEX");
+		reader.headers.get(1).put("is_null_filtered", true);
+		reader.headers.get(1).put("index_is_nullable", "NO");
+		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
+		assertNull(indexes.get(0).getWhere());
+		assertNull(indexes.get(1).getWhere());
+		assertEquals(Boolean.TRUE,
+				indexes.get(1).getSpecifics().get(SpannerCreateIndexFactory.IS_NULL_FILTERED, Boolean.class));
+		assertEquals(2, reader.queries);
+	}
+
+	@Test
+	void rejectsUnavailableOrUnknownNullabilityRatherThanDroppingWhere() {
+		for (String field : List.of("base_is_nullable", "index_is_nullable"))
+			for (String invalid : Arrays.asList(null, "", "unknown")) {
+				final var reader = new Reader();
+				header(reader, "app", "idx", "INDEX");
+				reader.headers.get(0).put(field, invalid);
+				assertThrows(IllegalArgumentException.class,
+						() -> reader.doGetAll(null, new ParametersContext(), null));
+				assertEquals(1, reader.queries);
+			}
+	}
+
+	@Test
+	void queryJoinsBaseColumnsOnFullIdentityAndBindsFilters() {
+		final var context = new ParametersContext();
+		context.put("schemaName", List.of("app' OR TRUE"));
+		context.put("tableName", List.of("events"));
+		context.put("indexName", List.of("idx"));
+		final var parameters = new SqlParameterCollection();
+		new Reader().getSqlSqlNode(null).eval(context, parameters);
+		assertTrue(parameters.getSql().contains("LEFT JOIN INFORMATION_SCHEMA.COLUMNS bc"));
+		assertTrue(parameters.getSql().contains("bc.TABLE_CATALOG=cc.TABLE_CATALOG"));
+		assertTrue(parameters.getSql().contains("bc.TABLE_SCHEMA=cc.TABLE_SCHEMA"));
+		assertTrue(parameters.getSql().contains("bc.TABLE_NAME=cc.TABLE_NAME"));
+		assertTrue(parameters.getSql().contains("bc.COLUMN_NAME=cc.COLUMN_NAME"));
+		assertFalse(parameters.getSql().contains("app' OR TRUE"));
+		assertEquals(3, parameters.getParameterSize());
+	}
+
+	@Test
 	void retainsTrueHeaderFlagsThroughXmlAndDdl() throws Exception {
 		final var reader = new Reader();
 		reader.available = false;
@@ -213,6 +496,8 @@ class SpannerIndexOptionsReaderTest {
 		header.put("is_unique", false);
 		header.put("is_null_filtered", false);
 		header.put("column_ordering", "ASC");
+		header.put("base_is_nullable", "YES");
+		header.put("index_is_nullable", "YES");
 		reader.headers.add(header);
 	}
 

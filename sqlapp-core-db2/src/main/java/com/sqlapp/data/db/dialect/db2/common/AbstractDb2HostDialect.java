@@ -108,6 +108,8 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 				Db2HostDefinitionFactories.TriggerCreate.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.GRANT,
 				Db2HostPrivilegeFactories.GrantObject.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.CREATE,
+				Db2HostPrivilegeFactories.GrantObject.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.REVOKE,
 				Db2HostPrivilegeFactories.RevokeObject.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.GRANT,
@@ -118,6 +120,12 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 				Db2HostPrivilegeFactories.GrantRoutine.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.RoutinePrivilege.class, SqlType.REVOKE,
 				Db2HostPrivilegeFactories.RevokeRoutine.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.CREATE,
+				Db2HostPrivilegeFactories.GrantSchema.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.GRANT,
+				Db2HostPrivilegeFactories.GrantSchema.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.REVOKE,
+				Db2HostPrivilegeFactories.RevokeSchema.class);
 		return registry;
 	}
 

@@ -249,7 +249,7 @@ final class Db2HostProgrammableReaders {
 				ProductVersionInfo version) {
 			List<ObjectPrivilege> result = new ArrayList<>();
 			context = context.clone();
-			if (!context.containsKey("schemaName"))
+			if (context.get("schemaName") == null)
 				context.put("schemaName", getSchemaName());
 			execute(connection, getSqlNodeCache(resources).getString("objectGrants.sql"), context,
 					new ResultSetNextHandler() {
@@ -275,7 +275,7 @@ final class Db2HostProgrammableReaders {
 				ProductVersionInfo version) {
 			List<ColumnPrivilege> result = new ArrayList<>();
 			context = context.clone();
-			if (!context.containsKey("schemaName"))
+			if (context.get("schemaName") == null)
 				context.put("schemaName", getSchemaName());
 			execute(connection, getSqlNodeCache(resources).getString("columnGrants.sql"), context,
 					new ResultSetNextHandler() {
@@ -340,10 +340,57 @@ final class Db2HostProgrammableReaders {
 		}
 	}
 
+	static class SchemaGrants extends com.sqlapp.data.db.dialect.db2.metadata.Db2SchemaPrivilegeReader {
+		private final Class<?> resources;
+
+		SchemaGrants(Dialect dialect, Class<?> resources) {
+			super(dialect);
+			this.resources = resources;
+		}
+
+		@Override
+		protected List<SchemaPrivilege> doGetAll(Connection connection, ParametersContext context,
+				ProductVersionInfo version) {
+			List<SchemaPrivilege> result = new ArrayList<>();
+			context = context.clone();
+			if (context.get("schemaName") == null)
+				context.put("schemaName", getSchemaName());
+			execute(connection, getSqlNodeCache(resources).getString("schemaGrants.sql"), context,
+					new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rs) throws SQLException {
+							var object = objectGrant(rs);
+							var privilege = new SchemaPrivilege();
+							privilege.setSchemaName(required(object.getSchemaName(), "schema privilege target"));
+							privilege.setGrantorName(object.getGrantorName()).setGranteeName(object.getGranteeName());
+							privilege.setPrivilege(object.getPrivilege()).setGrantable(object.isGrantable());
+							privilege.getSpecifics().putAll(object.getSpecifics());
+							if ("*".equals(privilege.getSchemaName()))
+								privilege.getSpecifics().put("DB2_HOST_SCHEMA_SCOPE", "ALL");
+							result.add(privilege);
+						}
+					});
+			return result;
+		}
+	}
+
 	private static ObjectPrivilege objectGrant(ExResultSet rs) throws SQLException {
 		var privilege = new ObjectPrivilege();
 		privilege.setHierachy(false);
 		privilege.setSchemaName(id(rs, "SCHEMA_NAME")).setObjectName(id(rs, "OBJECT_NAME"));
+		String objectKind = id(rs, "OBJECT_KIND");
+		if (objectKind != null) {
+			if (!List.of("TABLE", "SEQUENCE", "TYPE").contains(objectKind))
+				throw new SQLException("Unknown host privilege object kind: " + objectKind);
+			privilege.getSpecifics().put("DB2_HOST_OBJECT_KIND", objectKind);
+			if (!"TABLE".equals(objectKind)) {
+				required(privilege.getSchemaName(), "typed privilege schema");
+				required(privilege.getObjectName(), "typed privilege object name");
+				// ObjectPrivilege identity includes specificName, unlike its specifics map.
+				// A prefixed identity remains distinct even when the SQL name equals its kind.
+				privilege.setSpecificName(objectKind + ":" + privilege.getObjectName());
+			}
+		}
 		privilege.setGrantorName(id(rs, "GRANTOR_NAME")).setGranteeName(id(rs, "GRANTEE_NAME"));
 		privilege.setPrivilege(id(rs, "PRIVILEGE_NAME"));
 		String grantable = id(rs, "GRANTABLE_FLAG");
@@ -351,7 +398,8 @@ final class Db2HostProgrammableReaders {
 			privilege.getSpecifics().put("DB2_HOST_GRANTABILITY_UNKNOWN", "Y");
 		else
 			privilege.setGrantable(flag(rs, "GRANTABLE_FLAG"));
-		for (String field : List.of("GRANTEE_TYPE", "GRANTOR_TYPE", "AUTHORIZATION_LIST")) {
+		for (String field : List.of("GRANTEE_TYPE", "GRANTOR_TYPE", "AUTHORIZATION_LIST", "PACKAGE_COLLECTION",
+				"PACKAGE_TOKEN", "AUTHHOWGOT")) {
 			String value = id(rs, field);
 			if (value != null && !value.isBlank())
 				privilege.getSpecifics().put("DB2_HOST_" + field, value);

@@ -460,6 +460,8 @@ final class DirectTransferPanel extends JPanel {
 						gradle.showText("");
 						if (cause instanceof TransferActionFailure diagnostic)
 							summary.setText(diagnostic.summary());
+						else if (cause instanceof LinkageError linkage)
+							summary.setText(TransferActionFailure.linkage(action.toString(), linkage).summary());
 						else if (cause instanceof TransferPreparationFailure validation)
 							summary.setText("Target preparation needs attention:\n\n" + validation.getMessage()
 									+ "\n\nFix the target or job settings and review again.");

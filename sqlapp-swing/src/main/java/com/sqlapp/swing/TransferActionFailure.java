@@ -22,6 +22,32 @@ final class TransferActionFailure extends IllegalArgumentException {
 		this.technical = technical;
 	}
 
+	static TransferActionFailure linkage(String phase, LinkageError failure) {
+		var technical = new StringBuilder("Exception type: ").append(failure.getClass().getSimpleName())
+				.append("\nJava: ").append(System.getProperty("java.version"))
+				.append("\nCall sites (no exception messages or connection values):");
+		var frames = failure.getStackTrace();
+		if (failure instanceof com.sqlapp.util.ClassSearchLinkageError search) {
+			technical.append("\nFailed class candidate: ").append(search.getClassName());
+			if (search.getCause() != null) {
+				technical.append("\nUnderlying error type: ").append(search.getCause().getClass().getSimpleName());
+				frames = search.getCause().getStackTrace();
+			}
+		}
+		for (int index = 0; index < Math.min(32, frames.length); index++) {
+			var frame = frames[index];
+			technical.append("\n  ").append(frame.getClassName()).append('.').append(frame.getMethodName())
+					.append(" (line ").append(frame.getLineNumber()).append(')');
+		}
+		if (frames.length == 0)
+			technical.append("\n  not available");
+		return new TransferActionFailure(phase, failure instanceof IncompatibleClassChangeError
+				? "Loaded Java classes are not binary-compatible. This is an application/library linkage failure."
+				: "A required Java class could not be linked or initialized.",
+				"Stop the application and rebuild the sqlapp modules together, then restart. In Eclipse, refresh the Gradle project and use Project > Clean. Check the launch classpath for duplicate or older sqlapp/JDBC JARs. Share the call sites below if the error persists.",
+				technical.toString());
+	}
+
 	static TransferActionFailure preparation(PreparationException failure) {
 		final String state = failure.sqlState();
 		String reason = failure.validationDetail();

@@ -25,11 +25,11 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 
 class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 	@Test
-	void rejectsInterleavedRecreationInsteadOfDroppingParentAndRejectsMissingNames() {
+	void rejectsAmbiguousInterleavedRecreationAndMissingNames() {
 		final var table = new Table("Child");
 		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT));
 		table.getSpecifics().put("parent_table_name", "Parent");
-		assertThrows(UnsupportedOperationException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
 		assertThrows(IllegalArgumentException.class,
 				() -> sqlFactoryRegistry.createSql(new Table(" "), SqlType.CREATE));
 	}
