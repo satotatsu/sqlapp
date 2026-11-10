@@ -13,6 +13,24 @@ import com.sqlapp.jdbc.bulk.AtomicTableReplacementProvider;
  */
 public final class HsqlAtomicTableReplacementProvider implements AtomicTableReplacementProvider {
 	@Override
+	public void validateTables(Connection connection, List<Table> tables) throws SQLException {
+		if (tables.isEmpty())
+			return;
+		var selected = new java.util.HashSet<List<String>>();
+		for (var table : tables)
+			selected.add(List.of(table.getSchemaName(), table.getName()));
+		try (var statement = connection.createStatement();
+				var rows = statement.executeQuery(
+						"SELECT EVENT_OBJECT_SCHEMA, EVENT_OBJECT_TABLE FROM INFORMATION_SCHEMA.TRIGGERS")) {
+			while (rows.next()) {
+				if (selected.contains(List.of(rows.getString(1), rows.getString(2))))
+					throw new IllegalArgumentException(
+							"HSQLDB staged replacement requires tables without user triggers.");
+			}
+		}
+	}
+
+	@Override
 	public boolean supports(Dialect dialect) {
 		return dialect instanceof Hsql2_0_0;
 	}
@@ -27,8 +45,8 @@ public final class HsqlAtomicTableReplacementProvider implements AtomicTableRepl
 						"SELECT PROPERTY_VALUE FROM INFORMATION_SCHEMA.SYSTEM_PROPERTIES WHERE PROPERTY_NAME = 'hsqldb.tx'")) {
 			if (!rows.next() || !java.util.Set.of("LOCKS", "MVLOCKS")
 					.contains(rows.getString(1).toUpperCase(java.util.Locale.ROOT)))
-				throw new SQLException(
-						"HSQLDB staged replacement requires LOCKS or MVLOCKS transaction control; MVCC does not honor explicit table exclusion locks.");
+				throw new IllegalArgumentException(
+						"HSQLDB staged replacement requires LOCKS or MVLOCKS transaction control. MVCC does not honor explicit table exclusion locks.");
 		}
 	}
 

@@ -406,7 +406,7 @@ public final class ChunkedBulkMigrationExecutor {
 			final Table source, final ChunkedBulkMigrationOption options,
 			final boolean requireAtomicity) throws SQLException {
 		if (options.getMode() == BulkMigrationMode.INSERT) {
-			final BulkInsertExecutor executor = BulkInsertResolver.resolve(connection);
+			final BulkInsertExecutor executor = BulkInsertResolver.resolve(connection, options.getBulkOption());
 			if (requireAtomicity && !executor.supportsCallerTransactionAtomicity()) {
 				throw new IllegalStateException("The selected bulk insert provider does not participate in the "
 						+ "caller transaction; use FILE checkpoint mode");

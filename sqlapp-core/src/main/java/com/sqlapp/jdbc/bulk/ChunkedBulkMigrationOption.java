@@ -79,6 +79,8 @@ public class ChunkedBulkMigrationOption implements Serializable {
 	}
 
 	private void validateStructure() {
+		if (mode != BulkMigrationMode.INSERT && bulkOption != null && bulkOption.getInsertMethod() != BulkInsertMethod.AUTO)
+			throw new IllegalArgumentException("Explicit insertMethod currently requires INSERT mode.");
 		BulkMigrationCheckpoint.validateMigrationId(migrationId);
 		if (chunkSize <= 0) {
 			throw new IllegalArgumentException("chunkSize must be greater than zero");

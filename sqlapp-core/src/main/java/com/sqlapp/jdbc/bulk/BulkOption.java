@@ -19,6 +19,10 @@ public class BulkOption implements Serializable {
 		return builder().build();
 	}
 	private final Integer batchSize;
+
+	public BulkInsertMethod getInsertMethod() {
+		return insertMethod == null ? BulkInsertMethod.AUTO : insertMethod;
+	}
 	private final Integer bulkCopyTimeout;
 	private final boolean checkConstraints;
 	private final boolean fireTriggers;
@@ -27,12 +31,14 @@ public class BulkOption implements Serializable {
 	private final boolean tableLock;
 	private final boolean useTransaction;
 	private final boolean allowEncryptedValueModifications;
+	private final BulkInsertMethod insertMethod;
 
 	private BulkOption(final Integer batchSize, final Integer bulkCopyTimeout,
 			final boolean checkConstraints, final boolean fireTriggers,
 			final boolean keepIdentity, final boolean keepNulls, final boolean tableLock,
 			final boolean useTransaction,
-			final boolean allowEncryptedValueModifications) {
+			final boolean allowEncryptedValueModifications, final BulkInsertMethod insertMethod) {
+		this.insertMethod = insertMethod == null ? BulkInsertMethod.AUTO : insertMethod;
 		if (batchSize != null && batchSize <= 0) {
 			throw new IllegalArgumentException("batchSize must be greater than zero");
 		}
