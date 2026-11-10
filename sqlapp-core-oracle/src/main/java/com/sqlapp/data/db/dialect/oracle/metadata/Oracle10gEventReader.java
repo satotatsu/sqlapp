@@ -49,6 +49,14 @@ public class Oracle10gEventReader extends EventReader {
 	protected void readArgumentRepresentation(ExResultSet rs, Event event, String prefix) throws SQLException {
 	}
 
+	protected String programSql() {
+		return "schedulerPrograms10g.sql";
+	}
+
+	protected void readProgramDefaultRepresentation(ExResultSet rs, Map<String, String> values, String prefix)
+			throws SQLException {
+	}
+
 	private Map<List<String>, List<Event>> dependencyTargets(List<Event> events, String kind) {
 		Map<List<String>, List<Event>> targets = new LinkedHashMap<>();
 		String prefix = "oracle.scheduler." + kind.toLowerCase(java.util.Locale.ROOT) + ".";
@@ -89,8 +97,8 @@ public class Oracle10gEventReader extends EventReader {
 			return;
 		String prefix = "oracle.scheduler.program.";
 		Map<List<String>, Map<String, String>> snapshots = new LinkedHashMap<>();
-		execute(connection, getSqlNodeCache().getString("schedulerPrograms10g.sql"),
-				dependencyContext(targets, "programName"), new ResultSetNextHandler() {
+		execute(connection, getSqlNodeCache().getString(programSql()), dependencyContext(targets, "programName"),
+				new ResultSetNextHandler() {
 					@Override
 					public void handleResultSetNext(ExResultSet rs) throws SQLException {
 						var key = java.util.Arrays.asList(getString(rs, "OWNER"), getString(rs, "PROGRAM_NAME"));
@@ -137,6 +145,7 @@ public class Oracle10gEventReader extends EventReader {
 							if (value != null)
 								values.put(argPrefix + field[1], value);
 						}
+						readProgramDefaultRepresentation(rs, values, argPrefix);
 						int count = Integer.parseInt(values.get(prefix + "argumentCount"));
 						values.put(prefix + "argumentCount", Integer.toString(count + 1));
 					}

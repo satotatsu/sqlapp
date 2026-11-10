@@ -3,10 +3,15 @@ package com.sqlapp.data.db.dialect.oracle.util;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import com.sqlapp.data.schemas.Event;
+import com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview.Kind;
+import com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview.Script;
 
-/** Restores the qualified inline job subset, always disabled. */
+/** Restores supported inline or named-dependency jobs in a disabled state. */
 public final class OracleDisabledSchedulerJobRestorer {
 	private OracleDisabledSchedulerJobRestorer() {
 	}
@@ -46,24 +51,37 @@ public final class OracleDisabledSchedulerJobRestorer {
 	 * Restores one absent job in its original owner using an Oracle 23ai/26ai
 	 * connection with auto-commit enabled. Session user, current user and current
 	 * schema must all equal that owner. The source must have current full metadata,
-	 * no Program/Schedule references, only verified text arguments, and a supported
-	 * native base script. Unsupported scripts are rejected before any SQL is
-	 * executed.
+	 * verified text arguments and a supported native base script. Named jobs
+	 * require each referenced Program or Schedule to exist and match in the same
+	 * owner.
 	 *
 	 * Only CREATE_JOB(enabled=FALSE), the captured NLS environment and verified
 	 * text arguments are executed, with values bound as data. Original scripts,
 	 * COMMIT, ENABLE and job actions are never executed. Requires an exclusive
 	 * maintenance window: no concurrent actor may create, alter, enable or drop the
-	 * target job.
+	 * target job or its dependencies.
 	 *
 	 * Scheduler changes may commit independently; failures retain completed
 	 * operation names and do not delete partial objects. No grants are issued.
 	 */
 	public static Result restore(Connection connection, Event source) throws SQLException {
+		return restore(connection, source, false);
+	}
+
+	/**
+	 * Restores the job and creates absent same-owner dependencies after checking
+	 * all existing dependencies. Newly created Programs and the job are disabled.
+	 * The connection and maintenance requirements of {@link #restore} apply.
+	 */
+	public static Result restoreWithDependencies(Connection connection, Event source) throws SQLException {
+		return restore(connection, source, true);
+	}
+
+	private static Result restore(Connection connection, Event source, boolean createDependencies) throws SQLException {
 		if (connection == null || source == null)
 			throw new IllegalArgumentException("Connection and source Event are required");
 		Event event = source.clone();
-		var calls = OracleSchedulerJobScript.parse(event);
+		var plan = OracleSchedulerJobScript.parse(event);
 		if (!connection.getAutoCommit())
 			throw new IllegalArgumentException("Use a dedicated auto-commit connection for Scheduler restoration");
 		var metadata = connection.getMetaData();
@@ -82,21 +100,36 @@ public final class OracleDisabledSchedulerJobRestorer {
 		if (enabled(connection, event) != null)
 			throw new IllegalArgumentException("Scheduler target already exists; no replacement is performed: "
 					+ event.getSchemaName() + "." + event.getName());
+		var missing = new LinkedHashMap<Script, List<OracleSchedulerJobScript.Call>>();
+		for (Script dependency : plan.dependencies()) {
+			if (!verifyDependency(connection, event, dependency)) {
+				if (!createDependencies)
+					throw dependencyMismatch(dependency);
+				missing.put(dependency, OracleSchedulerJobScript.createDependency(event, dependency));
+			}
+		}
 		List<String> completed = new ArrayList<>();
 		String operation = "CREATE_JOB";
 		try {
-			for (var call : calls) {
-				operation = call.operation();
-				try (var statement = connection.prepareCall(call.sql())) {
-					for (int index = 0; index < call.bindings().size(); index++)
-						statement.setString(index + 1, call.bindings().get(index));
-					statement.execute();
+			for (var dependency : missing.entrySet()) {
+				for (var call : dependency.getValue()) {
+					operation = call.operation();
+					execute(connection, call);
+					completed.add(operation);
 				}
+				operation = "VERIFY_" + dependency.getKey().kind();
+				if (!verifyDependency(connection, event, dependency.getKey()))
+					throw dependencyMismatch(dependency.getKey());
 				completed.add(operation);
 			}
-			if (OracleSchedulerJobScript.argumentCount(event) > 0) {
+			for (var call : plan.calls()) {
+				operation = call.operation();
+				execute(connection, call);
+				completed.add(operation);
+			}
+			if (!plan.arguments().isEmpty() || !plan.dependencies().isEmpty()) {
 				operation = "VERIFY_ARGUMENTS";
-				verifyArguments(connection, event);
+				verifyArguments(connection, event, plan.arguments());
 				completed.add(operation);
 			}
 			operation = "VERIFY_DISABLED";
@@ -107,20 +140,100 @@ public final class OracleDisabledSchedulerJobRestorer {
 		} catch (SQLException failure) {
 			throw new RestorationException(failure, new Result(event.getSchemaName(), event.getName(), completed),
 					operation);
+		} catch (IllegalArgumentException failure) {
+			throw new RestorationException(new SQLException(failure.getMessage(), failure),
+					new Result(event.getSchemaName(), event.getName(), completed), operation);
 		}
 	}
 
-	private static void verifyArguments(Connection connection, Event event) throws SQLException {
-		int count = OracleSchedulerJobScript.argumentCount(event);
+	private static void execute(Connection connection, OracleSchedulerJobScript.Call call) throws SQLException {
+		try (var statement = connection.prepareCall(call.sql())) {
+			for (int index = 0; index < call.bindings().size(); index++)
+				statement.setString(index + 1, call.bindings().get(index));
+			statement.execute();
+		}
+	}
+
+	private static boolean verifyDependency(Connection connection, Event event, Script dependency) throws SQLException {
+		boolean program = dependency.kind() == Kind.PROGRAM;
+		String catalog = program ? "SYS.ALL_SCHEDULER_PROGRAMS WHERE OWNER=? AND PROGRAM_NAME=?"
+				: "SYS.ALL_SCHEDULER_SCHEDULES WHERE OWNER=? AND SCHEDULE_NAME=?";
+		String ddl = "SYS.DBMS_METADATA.GET_DDL('PROCOBJ', ?, OWNER)";
+		if (program)
+			ddl = "CASE WHEN ENABLED='FALSE' THEN " + ddl + " END";
+		try (var statement = connection.prepareStatement("SELECT " + ddl + " FROM " + catalog)) {
+			statement.setString(1, dependency.name());
+			statement.setString(2, dependency.owner());
+			statement.setString(3, dependency.name());
+			try (var result = statement.executeQuery()) {
+				if (!result.next())
+					return false;
+				if (!dependency.definition().equals(result.getString(1)) || result.next())
+					throw dependencyMismatch(dependency);
+			}
+		}
+		if (program)
+			verifyProgramArguments(connection, event, dependency);
+		return true;
+	}
+
+	private static IllegalArgumentException dependencyMismatch(Script dependency) {
+		return new IllegalArgumentException("Missing or different Scheduler " + dependency.kind() + ": "
+				+ dependency.owner() + "." + dependency.name());
+	}
+
+	private static void verifyProgramArguments(Connection connection, Event event, Script dependency)
+			throws SQLException {
+		String prefix = "oracle.scheduler.program.";
+		int count = Integer.parseInt(event.getSpecifics().get(prefix + "argumentCount"));
+		try (var statement = connection.prepareStatement("""
+				SELECT ARGUMENT_POSITION, ARGUMENT_NAME, ARGUMENT_TYPE, DEFAULT_VALUE,
+				       METADATA_ATTRIBUTE, OUT_ARGUMENT,
+				       CASE WHEN DEFAULT_ANYDATA_VALUE IS NULL THEN 'FALSE' ELSE 'TRUE' END,
+				       CASE WHEN DEFAULT_ANYDATA_VALUE IS NOT NULL THEN
+				         CASE WHEN A.DEFAULT_ANYDATA_VALUE.GetTypeName()='SYS.VARCHAR2'
+				              THEN A.DEFAULT_ANYDATA_VALUE.AccessVarchar2() END
+				       END
+				FROM SYS.ALL_SCHEDULER_PROGRAM_ARGS A
+				WHERE OWNER=? AND PROGRAM_NAME=? ORDER BY ARGUMENT_POSITION
+				""")) {
+			statement.setString(1, dependency.owner());
+			statement.setString(2, dependency.name());
+			try (var result = statement.executeQuery()) {
+				var fields = List.of("name", "type", "defaultValue", "metadataAttribute", "outArgument",
+						"hasDefaultAnydataValue");
+				for (int index = 1; index <= count; index++) {
+					if (!result.next() || !Integer.toString(index).equals(result.getString(1)))
+						throw new IllegalArgumentException("Missing Scheduler Program argument at position " + index);
+					for (int column = 0; column < fields.size(); column++) {
+						String key = prefix + "argument." + index + "." + fields.get(column);
+						if (!Objects.equals(event.getSpecifics().get(key), result.getString(column + 2)))
+							throw new IllegalArgumentException("Different Scheduler Program argument at position "
+									+ index + ": " + fields.get(column));
+					}
+					if ("TRUE".equals(result.getString(7)) && !event.getSpecifics()
+							.get(prefix + "argument." + index + ".defaultValue").equals(result.getString(8)))
+						throw new IllegalArgumentException(
+								"Different Scheduler Program default payload at position " + index);
+				}
+				if (result.next())
+					throw new IllegalArgumentException("Unexpected target Scheduler Program arguments");
+			}
+		}
+	}
+
+	private static void verifyArguments(Connection connection, Event event, Map<Integer, String> arguments)
+			throws SQLException {
 		try (var statement = connection.prepareStatement("SELECT ARGUMENT_POSITION, VALUE FROM ALL_SCHEDULER_JOB_ARGS "
 				+ "WHERE OWNER=? AND JOB_NAME=? ORDER BY ARGUMENT_POSITION")) {
 			statement.setString(1, event.getSchemaName());
 			statement.setString(2, event.getName());
 			try (var result = statement.executeQuery()) {
-				for (int index = 1; index <= count; index++) {
-					if (!result.next() || !Integer.toString(index).equals(result.getString(1)) || !event.getSpecifics()
-							.get("oracle.scheduler.argument." + index + ".value").equals(result.getString(2)))
-						throw new SQLException("Restored Scheduler argument value/position mismatch: " + index);
+				for (var argument : arguments.entrySet()) {
+					if (!result.next() || !argument.getKey().toString().equals(result.getString(1))
+							|| !argument.getValue().equals(result.getString(2)))
+						throw new SQLException(
+								"Restored Scheduler argument value/position mismatch: " + argument.getKey());
 				}
 				if (result.next())
 					throw new SQLException("Unexpected restored Scheduler arguments");

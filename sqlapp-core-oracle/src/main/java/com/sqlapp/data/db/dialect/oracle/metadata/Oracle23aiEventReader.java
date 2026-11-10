@@ -22,6 +22,21 @@ public class Oracle23aiEventReader extends Oracle10gEventReader {
 	}
 
 	@Override
+	protected String programSql() {
+		return "schedulerPrograms23ai.sql";
+	}
+
+	@Override
+	protected void readProgramDefaultRepresentation(ExResultSet rs, Map<String, String> values, String prefix)
+			throws SQLException {
+		if ("TRUE".equals(values.get(prefix + "hasDefaultAnydataValue"))) {
+			String text = values.get(prefix + "defaultValue");
+			values.put(prefix + "defaultRepresentation",
+					text != null && text.equals(rs.getString("DEFAULT_ANYDATA_TEXT")) ? "TEXT" : "UNSUPPORTED");
+		}
+	}
+
+	@Override
 	protected String jobSql() {
 		return "schedulerJobs23ai.sql";
 	}

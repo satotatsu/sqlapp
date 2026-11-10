@@ -43,6 +43,144 @@ class OracleDisabledSchedulerJobRestorerTest {
 		event.getSpecifics().put(OracleSchedulerDefinition.FINGERPRINT, OracleSchedulerDefinition.fingerprint(event));
 	}
 
+	private Event namedJob() {
+		return namedJob("PROGRAM", "SCHEDULE");
+	}
+
+	private Event namedJob(String... kinds) {
+		Event event = job();
+		var specifics = event.getSpecifics();
+		for (String kind : kinds) {
+			String prefix = "oracle.scheduler." + kind.toLowerCase(java.util.Locale.ROOT) + ".";
+			specifics.put("oracle.scheduler." + kind + "_OWNER", "APP");
+			specifics.put("oracle.scheduler." + kind + "_NAME", kind);
+			specifics.put(prefix + "status", "AVAILABLE");
+			specifics.put(prefix + "definitionStatus", "AVAILABLE");
+			specifics.put(prefix + "definitionContext", "SOURCE_OWNER");
+			specifics.put(prefix + "definitionOwner", "APP");
+			specifics.put(prefix + "definitionName", kind);
+			specifics.put(prefix + "definition", kind + " captured DDL");
+		}
+		specifics.put("oracle.scheduler.program.ENABLED", "FALSE");
+		specifics.put("oracle.scheduler.program.PROGRAM_TYPE", "STORED_PROCEDURE");
+		specifics.put("oracle.scheduler.program.NUMBER_OF_ARGUMENTS", "1");
+		specifics.put("oracle.scheduler.program.argumentCount", "1");
+		specifics.put("oracle.scheduler.program.argument.1.name", "ARG");
+		specifics.put("oracle.scheduler.program.argument.1.type", "VARCHAR2");
+		specifics.put("oracle.scheduler.program.argument.1.defaultValue", "default");
+		specifics.put("oracle.scheduler.program.argument.1.hasDefaultAnydataValue", "FALSE");
+		String original = script(event);
+		if (List.of(kinds).contains("PROGRAM"))
+			original = original.substring(0, original.indexOf("job_type")) + "program_name=>'\"PROGRAM\"',"
+					+ original.substring(original.indexOf("start_date"));
+		if (List.of(kinds).contains("SCHEDULE"))
+			original = original.substring(0, original.indexOf("start_date")) + "schedule_name=>'\"SCHEDULE\"',"
+					+ original.substring(original.indexOf("job_class"));
+		script(event, original);
+		return event;
+	}
+
+	@Test
+	void independentlyValidatesNamedProgramAndScheduleOverloads() {
+		var program = OracleSchedulerJobScript.parse(namedJob("PROGRAM"));
+		assertTrue(program.arguments().isEmpty());
+		assertEquals("PROGRAM", program.dependencies().getFirst().name());
+		String programSql = program.calls().getFirst().sql();
+		assertTrue(programSql.contains("PROGRAM_NAME=>?") && programSql.contains("START_DATE=>TO_TIMESTAMP_TZ"));
+		assertFalse(programSql.contains("JOB_ACTION") || programSql.contains("SCHEDULE_NAME"));
+
+		Event scheduleJob = namedJob("SCHEDULE");
+		var schedule = OracleSchedulerJobScript.parse(scheduleJob);
+		assertEquals("SCHEDULE", schedule.dependencies().getFirst().name());
+		String scheduleSql = schedule.calls().getFirst().sql();
+		assertTrue(scheduleSql.contains("SCHEDULE_NAME=>?") && scheduleSql.contains("JOB_ACTION=>?"));
+		assertFalse(scheduleSql.contains("START_DATE") || scheduleSql.contains("PROGRAM_NAME"));
+		script(scheduleJob, script(scheduleJob).replace("number_of_arguments=>0", "number_of_arguments=>1"));
+		assertThrows(IllegalArgumentException.class, () -> OracleSchedulerJobScript.parse(scheduleJob));
+	}
+
+	@Test
+	void checksNamedDependenciesAndDefaultsBeforeCreatingTheJob() throws Exception {
+		Event event = namedJob();
+		event.getSpecifics().put("oracle.scheduler.program.argument.1.hasDefaultAnydataValue", "TRUE");
+		event.getSpecifics().put("oracle.scheduler.program.argument.1.defaultRepresentation", "TEXT");
+		seal(event);
+		State state = new State();
+		state.programArgumentRows = List
+				.<String[]>of(new String[] { "1", "ARG", "VARCHAR2", "default", null, null, "TRUE", "default" });
+		var result = OracleDisabledSchedulerJobRestorer.restore(state.connection(), event);
+		assertEquals(List.of("CREATE_JOB", "SET_NLS_ENV", "VERIFY_ARGUMENTS", "VERIFY_DISABLED"),
+				result.completedOperations());
+		assertTrue(state.bound.getFirst().containsAll(List.of("\"PROGRAM\"", "\"SCHEDULE\"")));
+		assertEquals(7, state.queries);
+
+		State drift = new State();
+		drift.programArgumentRows = List
+				.<String[]>of(new String[] { "1", "ARG", "VARCHAR2", "default", null, null, "TRUE", "different" });
+		assertThrows(IllegalArgumentException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restore(drift.connection(), event));
+		assertTrue(drift.executed.isEmpty());
+
+		State missing = new State();
+		missing.programArgumentRows = state.programArgumentRows;
+		missing.scheduleDefinition = null;
+		assertThrows(IllegalArgumentException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restore(missing.connection(), event));
+		assertTrue(missing.executed.isEmpty());
+	}
+
+	@Test
+	void createsAnAbsentScheduleThroughValidatedCallsAndReportsReadbackFailure() throws Exception {
+		Event event = namedJob();
+		String definition = "BEGIN DBMS_SCHEDULER.DISABLE1_CALENDAR_CHECK(); "
+				+ "DBMS_SCHEDULER.CREATE_SCHEDULE('\"SCHEDULE\"',NULL,'FREQ=DAILY',NULL,NULL); COMMIT; END;";
+		event.getSpecifics().put("oracle.scheduler.schedule.definition", definition);
+		event.getSpecifics().put("oracle.scheduler.schedule.REPEAT_INTERVAL", "FREQ=DAILY");
+		seal(event);
+		State state = new State();
+		state.programArgumentRows = List
+				.<String[]>of(new String[] { "1", "ARG", "VARCHAR2", "default", null, null, "FALSE" });
+		state.scheduleDefinition = null;
+		state.createdScheduleDefinition = "different definition";
+		var failure = assertThrows(OracleDisabledSchedulerJobRestorer.RestorationException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restoreWithDependencies(state.connection(), event));
+		assertEquals("VERIFY_SCHEDULE", failure.getFailedOperation());
+		assertEquals(List.of("CREATE_SCHEDULE"), failure.getPartialResult().completedOperations());
+		assertEquals(List.of("BEGIN SYS.DBMS_SCHEDULER.CREATE_SCHEDULE(?,NULL,?,NULL,NULL); END;"), state.executed);
+
+		state.executed.clear();
+		state.scheduleDefinition = null;
+		event.getSpecifics().put("oracle.scheduler.schedule.definition",
+				definition.replace("COMMIT;", "DBMS_SCHEDULER.ENABLE('\"J\"'); COMMIT;"));
+		seal(event);
+		assertThrows(IllegalArgumentException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restoreWithDependencies(state.connection(), event));
+		assertTrue(state.executed.isEmpty());
+
+		String combined = "FREQ=DAILY;INCLUDE=HOLIDAY";
+		event.getSpecifics().put("oracle.scheduler.schedule.definition", definition.replace("FREQ=DAILY", combined));
+		event.getSpecifics().put("oracle.scheduler.schedule.REPEAT_INTERVAL", combined);
+		seal(event);
+		assertThrows(IllegalArgumentException.class,
+				() -> OracleDisabledSchedulerJobRestorer.restoreWithDependencies(state.connection(), event));
+		assertTrue(state.executed.isEmpty());
+	}
+
+	@Test
+	void rejectsDifferentNativeReferenceAndOpaqueProgramDefaultBeforeTargetAccess() {
+		Event different = namedJob();
+		script(different, script(different).replace("schedule_name=>'\"SCHEDULE\"'", "schedule_name=>'\"OTHER\"'"));
+		Event opaque = namedJob();
+		opaque.getSpecifics().put("oracle.scheduler.program.argument.1.hasDefaultAnydataValue", "TRUE");
+		seal(opaque);
+		for (Event event : List.of(different, opaque)) {
+			State state = new State();
+			assertThrows(IllegalArgumentException.class,
+					() -> OracleDisabledSchedulerJobRestorer.restore(state.connection(), event));
+			assertEquals(0, state.accesses);
+		}
+	}
+
 	private Event argumentsJob() {
 		Event event = job();
 		event.setStatement("APP.PROC");
@@ -146,7 +284,7 @@ class OracleDisabledSchedulerJobRestorerTest {
 		String action = "BEGIN -- 日本語\n dbms_scheduler.enable('other'); END;";
 		event.setStatement(action);
 		script(event, script(event).replace("'BEGIN NULL; END;'", "'" + action.replace("'", "''") + "'"));
-		var calls = OracleSchedulerJobScript.parse(event);
+		var calls = OracleSchedulerJobScript.parse(event).calls();
 		assertTrue(calls.getFirst().bindings().contains(action));
 		assertFalse(calls.getFirst().sql().contains("enable('other')"));
 	}
@@ -172,12 +310,12 @@ class OracleDisabledSchedulerJobRestorerTest {
 		Event event = job();
 		Event restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(event.asXml()));
 		assertEquals(OracleSchedulerDefinition.fingerprint(event), OracleSchedulerDefinition.fingerprint(restored));
-		assertEquals(2, OracleSchedulerJobScript.parse(restored).size());
+		assertEquals(2, OracleSchedulerJobScript.parse(restored).calls().size());
 		var schema = new com.sqlapp.data.schemas.Schema("APP");
 		schema.getEvents().add(event);
 		com.sqlapp.data.schemas.Schema importedSchema = com.sqlapp.data.schemas.SchemaUtils
 				.readXml(new java.io.StringReader(schema.asXml()));
-		assertEquals(2, OracleSchedulerJobScript.parse(importedSchema.getEvents().getFirst()).size());
+		assertEquals(2, OracleSchedulerJobScript.parse(importedSchema.getEvents().getFirst()).calls().size());
 		for (String[] change : new String[][] { { "START_DATE_TEXT", "changed" }, { "REPEAT_INTERVAL", "changed" },
 				{ "definition", "changed" }, { "definitionFingerprint", "" } }) {
 			Event changed = event.clone();
@@ -244,6 +382,9 @@ class OracleDisabledSchedulerJobRestorerTest {
 		String sessionUser = "APP", schema = "APP", product = "Oracle", enabled = "FALSE";
 		int major = 23, accesses, queries, failAtCall;
 		List<String[]> argumentRows = List.of();
+		List<String[]> programArgumentRows = List.of();
+		String scheduleDefinition = "SCHEDULE captured DDL";
+		String createdScheduleDefinition;
 		List<String> executed = new ArrayList<>();
 		List<List<String>> bound = new ArrayList<>();
 
@@ -276,11 +417,21 @@ class OracleDisabledSchedulerJobRestorerTest {
 				bound.add(List.copyOf(bindings));
 				if (failSecondCall && executed.size() == 2 || executed.size() == failAtCall)
 					throw new SQLException("denied", "", 1031);
-				present = true;
+				if (sql.contains("CREATE_SCHEDULE"))
+					scheduleDefinition = createdScheduleDefinition;
+				else
+					present = true;
 				yield false;
 			}
 			case "executeQuery" -> {
 				queries++;
+				if (sql.contains("ALL_SCHEDULER_PROGRAM_ARGS"))
+					yield rows(programArgumentRows);
+				if (sql.contains("ALL_SCHEDULER_PROGRAMS"))
+					yield rows(List.<String[]>of(new String[] { "PROGRAM captured DDL" }));
+				if (sql.contains("ALL_SCHEDULER_SCHEDULES"))
+					yield rows(scheduleDefinition == null ? List.of()
+							: List.<String[]>of(new String[] { scheduleDefinition }));
 				yield rows(sql.contains("SYS_CONTEXT")
 						? List.<String[]>of(new String[] { sessionUser, sessionUser, schema })
 						: sql.contains("ALL_SCHEDULER_JOB_ARGS") ? argumentRows

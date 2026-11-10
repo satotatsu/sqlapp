@@ -7,8 +7,85 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import com.sqlapp.data.db.command.migration.transfer.TransferJobExecutionService
+import com.sqlapp.data.db.command.migration.transfer.TransferJobReportIO
+import com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement
+import com.sqlapp.data.db.command.migration.transfer.TransferStagingComparisonReportIO
 
 class TransferDatabaseTaskTest extends AbstractTaskTest {
+	@Test
+	void runsStagedReplacementFromTheSharedYaml() {
+		def source = new org.hsqldb.jdbc.JDBCDataSource(url: 'jdbc:hsqldb:mem:staged_from_' + UUID.randomUUID(), user: 'SA')
+		def target = new org.hsqldb.jdbc.JDBCDataSource(url: 'jdbc:hsqldb:mem:staged_to_' + UUID.randomUUID(), user: 'SA')
+		try {
+			[source, target].eachWithIndex { db, i ->
+				db.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+					s.execute('CREATE TABLE ITEMS(ID INTEGER NOT NULL PRIMARY KEY)')
+					s.execute('INSERT INTO ITEMS VALUES(' + (i + 1) + ')')
+				} }
+			}
+			def project = createProject(testProjectDir); project.plugins.apply(DbPlugin)
+			def task = project.tasks.named('transferDatabase', TransferDatabaseTask).get()
+			def file = new File(testProjectDir, 'staged.yaml')
+			file.setText('formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ntargetPreparation: STAGED_REPLACE\n', 'UTF-8')
+			task.configurationFile.set(file)
+			task.sourceDataSource.jdbcUrl.set(source.url); task.sourceDataSource.username.set('SA'); task.sourceDataSource.password.set('')
+			task.dataSource.jdbcUrl.set(target.url); task.dataSource.username.set('SA'); task.dataSource.password.set('')
+			task.exec()
+			assertNull(task.internalCommand().result)
+			task.allowExecution.set(true)
+			task.expectedConfigurationFingerprint.set(task.internalCommand().review.prepared().job().fingerprint())
+			task.exec()
+			assertEquals('COMMITTED', task.internalCommand().result.staging().state().name())
+			target.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+				s.executeQuery('SELECT ID FROM ITEMS').withCloseable { r ->
+					assertTrue(r.next()); assertEquals(1, r.getInt(1)); assertFalse(r.next())
+				}
+			} }
+
+			def review = task.internalCommand().review
+			def outcome = task.internalCommand().result
+			def stage = outcome.staging().targets().first().stageTable()
+			target.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+				s.execute('CREATE TABLE "' + stage + '"(ID INTEGER)')
+				s.execute('INSERT INTO "' + stage + '" VALUES(1)')
+			} }
+			def uncertain = new TransferJobExecutionService.Outcome(outcome.prepared(),
+					TransferJobExecutionService.Phase.FINALIZATION, null, outcome.verificationResult(),
+					[], [:], null, outcome.schemaPreparation(), null,
+					new TransferStagedReplacement.Status(TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+							outcome.staging().targets(), outcome.staging().stageOutcome(), [:], []))
+			def resultFile = new TransferJobReportIO().writeOutcome(review, uncertain).toFile()
+			def recorded = resultFile.getText('UTF-8')
+			def compare = project.tasks.named('compareTransferStaging', CompareTransferStagingTask).get()
+			compare.resultFile.set(resultFile)
+			compare.dataSource.jdbcUrl.set(target.url); compare.dataSource.username.set('SA'); compare.dataSource.password.set('')
+			assertFalse(compare.failOnDifference.get())
+			assertEquals(4, compare.companionFiles.get().size())
+			compare.exec()
+			assertTrue(compare.internalCommand().result.tables().first().matchesTarget())
+			def firstReport = compare.internalCommand().comparisonReport
+			def recordedComparison = new TransferStagingComparisonReportIO().read(firstReport)
+			assertEquals(compare.internalCommand().result, recordedComparison.comparison())
+			assertEquals(TransferStagedReplacement.State.COMMIT_UNCERTAIN, recordedComparison.recordedCommitState())
+
+			target.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+				s.execute('UPDATE ITEMS SET ID=2')
+			} }
+			compare.exec()
+			assertFalse(compare.internalCommand().result.tables().first().matchesTarget())
+			compare.failOnDifference.set(true)
+			assertThrows(IllegalStateException, { compare.exec() })
+			assertNotEquals(firstReport, compare.internalCommand().comparisonReport)
+			assertTrue(compare.internalCommand().comparisonReport.toFile().isFile())
+			assertEquals(recorded, resultFile.getText('UTF-8'))
+		} finally {
+			[source, target].each { db -> db.connection.withCloseable { c ->
+				c.createStatement().withCloseable { s -> s.execute('SHUTDOWN') }
+			} }
+		}
+	}
+
 	@Test
 	void failedCopyRetainsCauseCodesAndCommittedProgressInTaskResultAndAudit() {
 		def source = new org.hsqldb.jdbc.JDBCDataSource()
@@ -153,6 +230,7 @@ class TransferDatabaseTaskTest extends AbstractTaskTest {
 		}
 		new File(testProjectDir,'settings.gradle').text = "rootProject.name='direct-transfer-test'\n"
 		new File(testProjectDir,'transfer.yaml').text = 'formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nchunkSize: 1\n'.replace('REQUIRE_EXISTING',createMissing?'CREATE_MISSING':'REQUIRE_EXISTING')
+		if (createMissing) new File(testProjectDir,'transfer.yaml').append('insertMethod: JDBC_BATCH\n')
 		new File(testProjectDir,'build.gradle').text = """plugins { id 'com.sqlapp.db' }
 tasks.named('transferDatabase') {
  configurationFile.set(layout.projectDirectory.file('transfer.yaml'))
