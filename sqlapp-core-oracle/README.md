@@ -184,7 +184,7 @@ check). Public APIs, resolver boundaries and dependencies were unchanged.
 ## Disabled job restoration
 
 `OracleDisabledSchedulerJobRestorer.restore(connection, exportedJob)` restores
-one **absent, disabled inline job** from a current full-read Event
+one **absent, disabled job** from a current full-read Event
 or its XML round-trip. This subset supports argument-free `PLSQL_BLOCK` and
 `STORED_PROCEDURE`, on Oracle 23ai/26ai engines reporting database major version
 23. The generic Event CREATE/ALTER/DROP factories remain blocked.
@@ -208,12 +208,13 @@ The original script is never executed. A strict parser accepts one native
 CREATE_JOB with explicit `enabled=>FALSE`, the captured NLS_ENV setter and the
 native COMMIT/END wrapper. It rejects additional calls, dynamic expressions,
 comments outside literals, unsupported attributes and ambiguous syntax before
-even inspecting the target connection. Only newly constructed, SYS-qualified
-CREATE_JOB, NLS_ENV and verified text argument calls run; string values (including action bodies and date
-text/format/NLS arguments) are bound parameters. The original COMMIT is omitted.
+even inspecting the target connection. Job creation uses newly constructed,
+SYS-qualified calls for CREATE_JOB, NLS_ENV and verified text arguments. String
+values, including action bodies and date, format, and NLS arguments, are bound
+parameters. The original COMMIT is omitted.
 The job action remains stored data and is never run.
 
-Source inventory must have no Program/Schedule references, no destination, default priority
+Source inventory must have no destination, default priority
 3, restartable FALSE and no max-runs/max-failures limits. Unsupported native
 attribute setters also fail. Full reads now add
 `oracle.scheduler.definitionFingerprint`, covering the captured Event, native
@@ -225,8 +226,76 @@ Scheduler operations are not atomic. On failure after writes start,
 `RestorationException.getPartialResult()` identifies completed operations and
 `getFailedOperation()` identifies the attempted operation. A failed call may
 already have taken effect. Inspect the target before retrying; no automatic
-cleanup or rollback is attempted. Program/Schedule restoration, arbitrary ANYDATA
-restoration, non-default execution attributes and enabling jobs remain unsupported.
+cleanup or rollback is attempted. Arbitrary ANYDATA restoration, non-default
+execution attributes and enabling jobs remain unsupported.
+
+### Jobs using named dependencies
+
+`OracleDisabledSchedulerJobRestorer.restoreWithDependencies(connection, exportedJob)`
+also creates absent same-owner dependencies. The original `restore` entry point
+requires existing dependencies. The opt-in method checks all existing definitions
+and validates every missing dependency script before writing. It creates a disabled
+Program, defines its captured arguments, and creates a Schedule as needed. Each
+new dependency is read back before job creation. Shared dependencies can be reused
+by later jobs.
+
+Creation supports captured local PL/SQL or stored-procedure Programs with ordinary
+input arguments, including verified VARCHAR2 defaults, and independent calendar
+Schedules. Combined calendars, user-defined frequencies, opaque ANYDATA defaults
+and metadata arguments require separate deployment. Oracle validates the calendar
+during creation. The export's internal calendar-check bypass is omitted. Procedure
+objects must be supplied separately. The partial result includes completed
+dependency calls and identifies a failed creation or verification.
+
+Dependency creation verification covered 14 focused restorer tests, 586
+Oracle module tests and 142 Command generator tests. The three Scheduler Docker
+cases passed on Oracle 23 and 26ai with the filter below. The named fixture
+recreated the Program, its text default, the Schedule and the first disabled
+job from XML. The second job reused the shared dependencies. The initial
+26ai run lost a Gradle intermediate results file. The retry used an isolated
+results directory and passed all three cases. All dedicated containers were
+removed.
+
+A job can reference a Program, a Schedule, or both in its original owner.
+A Program-only job keeps its inline dates and repeat interval. A Schedule-only
+job keeps its inline action and argument declarations. The restorer checks each
+referenced object's native definition and compares all Program argument rows,
+including text defaults and argument names, before
+creating the job. The Program must be disabled. Missing objects, differences in
+definitions or arguments, and opaque ANYDATA defaults cause preflight failure.
+On 23ai/26ai the bulk Program query records a text match when a VARCHAR2
+ANYDATA default exactly equals its catalog text. The target check compares
+both representations. Full exports made before that marker was introduced
+need a refresh when the Program has ANYDATA defaults.
+Native definitions are compared as captured, so formatting differences also
+cause rejection.
+
+The restorer binds the references and applies the captured job argument rows.
+Unset positions on jobs with a named Program keep its defaults. Jobs with an
+inline action require all declared arguments. Readback checks the argument
+rows and disabled state. Plan for an exclusive maintenance window covering the
+job and its dependencies. Preflight uses one SELECT per referenced definition
+and one additional SELECT for all argument rows of a referenced Program.
+See [Oracle's CREATE_JOB overloads](https://docs.oracle.com/en/database/oracle/oracle-database/26/arpls/DBMS_SCHEDULER.html).
+
+Mixed-reference verification on 2026-11-10 passed 15 focused restorer tests,
+587 Oracle module tests and 142 Command generator tests. The Scheduler Docker
+filter below passed all three cases on each of Oracle 23 and 26ai. The dependency
+fixture reused its two job identities for the mixed-reference cases, removed the
+referenced objects, and restored them from XML with the jobs disabled. Readback
+verified the inline date and repeat interval for the Program-only job, and the
+inline action for the Schedule-only job. The test output directory was isolated
+and the dedicated containers were removed.
+
+Verification on 2026-11-10 covered 31 focused reader and restorer tests, 585
+Oracle module tests, and 142 Command generator tests. The three existing
+Scheduler Docker cases passed on each of Oracle 23 and 26ai. Each dependency
+fixture recreated two disabled jobs from XML, one with a text override and one
+using the Program default. The initial Oracle 23 run stopped before creation
+because the catalog also populated ANYDATA for a text default. The final runs
+verified the matching payload. Jobs stayed disabled throughout the tests, and
+the dedicated containers were removed. The commands below apply with the
+three-case filter `--tests '*OracleMetadataReaderTest.disabledScheduler*'`.
 
 ### Text arguments
 
@@ -281,9 +350,8 @@ pre-23ai SQL remains unchanged.
 
 The final live commands use the same image/dialect properties below, with
 `--tests '*OracleMetadataReaderTest.disabledScheduler*'` to include all three
-cases. The final unit command is unchanged. Arbitrary ANYDATA payloads,
-null/unset/default argument semantics, named Program/Schedule restoration and
-enabling jobs remain unsupported.
+cases. The final unit command is unchanged. Arbitrary ANYDATA payloads, explicit
+null job overrides and enabling jobs remain unsupported.
 
 Verification (2026-11-04): eight restorer tests cover bound values, quoted names,
 Unicode/action lookalikes, unsupported syntax, argument/ANYDATA rejection,
@@ -435,6 +503,21 @@ disabled inline and named Program/Schedule fixtures only; enabled-source scripts
 window/chain/credential deployment, owner remapping and actual script replay or
 enable-state restoration remain unqualified. The SOURCE_OWNER context marker is
 a deployment prerequisite, not a guarantee that scripts can be run in any schema.
+
+### Deferred Scheduler work
+
+- Calendars that reference other schedules need dependency discovery and
+  ordering for INCLUDE, EXCLUDE, INTERSECT and user-defined frequencies.
+- Arbitrary ANYDATA and explicit null job overrides need a representation that
+  preserves the Oracle type and distinguishes null from an inherited default.
+- Chains, event and window schedules, credentials, and cross-owner deployment
+  need their own catalog coverage, recreation rules and verification.
+- Enabling or running jobs belongs to a separate deployment operation with
+  explicit lifecycle requirements.
+
+The disabled-job baseline has been verified on Oracle 23 and 26ai, including
+inline and named Program/Schedule combinations, same-owner dependency creation,
+and verified text argument values.
 
 ## External tables
 
