@@ -19,6 +19,18 @@ class Db2Zos13TypeTest {
 	private static final boolean ZOS = true;
 
 	@Test
+	void preservesEditedLobSizesAndRejectsIgnoredScale() throws Exception {
+		for (String source : List.of("blob", "clob")) {
+			Domain type = read(source).setLength(9L);
+			Domain restored = SchemaUtils.readXml(new StringReader(type.asXml()));
+			assertEquals(9L, restored.getLength());
+			assertTrue(create(restored).contains("(9)"));
+			restored.setScale(1);
+			assertThrows(IllegalArgumentException.class, () -> create(restored));
+		}
+	}
+
+	@Test
 	void recreatesBlobDistinctAfterXmlAndValidatesInlineLength() throws Exception {
 		Domain type = SchemaUtils.readXml(new StringReader(read("blob").asXml()));
 		assertEquals(DataType.BLOB, type.getDataType());
@@ -84,6 +96,152 @@ class Db2Zos13TypeTest {
 		assertFalse(create(type).contains("TYPE RULES"));
 		type.setArrayDimensionUpperBound(0);
 		assertThrows(IllegalArgumentException.class, () -> create(type));
+	}
+
+	@Test
+	void restoresVarcharBitArrayAfterXml() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("varchar-bit-array").asXml()));
+		assertEquals("B", type.getSpecifics().get("DB2_HOST_SUBTYPE"));
+		String ddl = create(type);
+		assertTrue(ddl.contains("AS VARCHAR(12) CCSID EBCDIC FOR BIT DATA ARRAY[17]\n"), ddl);
+		type.getSpecifics().put("DB2_HOST_METATYPE", "T");
+		type.setArrayDimension(0);
+		assertTrue(create(type).contains("AS VARCHAR(12) CCSID EBCDIC FOR BIT DATA\n"));
+	}
+
+	@Test
+	void restoresRowidDistinctAfterXmlAndRejectsArray() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("rowid").asXml()));
+		assertEquals(DataType.ROWID, type.getDataType());
+		String ddl = create(type);
+		assertTrue(ddl.contains("AS ROWID\n"), ddl);
+		assertThrows(IllegalArgumentException.class, () -> create(read("rowid-array")));
+	}
+
+	@Test
+	void restoresClobArrayAfterXmlWithEncodingAndSubtype() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("clob-array").asXml()));
+		String ddl = create(type);
+		assertTrue(ddl.contains("AS CLOB(12) CCSID ASCII FOR MIXED DATA ARRAY[17]\n"), ddl);
+		type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", "0");
+		assertThrows(IllegalArgumentException.class, () -> create(type));
+		type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", "-1");
+		type.getSpecifics().remove("DB2_HOST_ENCODING_SCHEME");
+		assertThrows(IllegalArgumentException.class, () -> create(type));
+	}
+
+	@Test
+	void restoresBlobArrayAfterXmlAndRejectsInlineLength() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("blob-array").asXml()));
+		assertTrue(create(type).contains("AS BLOB(12) ARRAY[17]\n"));
+		type.getSpecifics().put("DB2_HOST_INLINE_LENGTH", "0");
+		assertThrows(IllegalArgumentException.class, () -> create(type));
+	}
+
+	@Test
+	void recreatesVarcharArrayWithCatalogEncodingAndSubtypeAfterXml() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("varchar-array").asXml()));
+		assertEquals(DataType.VARCHAR, type.getDataType());
+		String ddl = create(type);
+		assertTrue(ddl.contains("AS VARCHAR(12) CCSID UNICODE FOR MIXED DATA ARRAY[17]\n"), ddl);
+		type.getSpecifics().put("DB2_HOST_ENCODING_SCHEME", "E");
+		type.getSpecifics().put("DB2_HOST_SUBTYPE", "S");
+		assertTrue(create(type).contains("AS VARCHAR(12) CCSID EBCDIC FOR SBCS DATA ARRAY[17]\n"));
+		type.getSpecifics().remove("DB2_HOST_SUBTYPE");
+		assertThrows(IllegalArgumentException.class, () -> create(type));
+	}
+
+	@Test
+	void recreatesBinaryArrayAfterXml() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("varbinary-array").asXml()));
+		assertEquals(DataType.VARBINARY, type.getDataType());
+		String ddl = create(type);
+		assertTrue(ddl.contains("AS VARBINARY(12) ARRAY[17]\n"), ddl);
+	}
+
+	@Test
+	void recreatesDatetimeArrayWithPrecisionAndBoundAfterXml() throws Exception {
+		Domain type = SchemaUtils.readXml(new StringReader(read("timestamp-array").asXml()));
+		assertEquals(DataType.TIMESTAMP, type.getDataType());
+		assertEquals(1, type.getArrayDimension());
+		assertEquals(17, type.getArrayDimensionUpperBound());
+		String ddl = create(type);
+		assertTrue(ddl.contains("AS TIMESTAMP(12) ARRAY[17]\n"), ddl);
+		type.setArrayDimensionUpperBound(16);
+		assertThrows(IllegalArgumentException.class, () -> create(type));
+	}
+
+	@Test
+	void timestampModelPrecisionChangesAreReflectedAfterXml() throws Exception {
+		Domain type = read("timestamp");
+		assertEquals(12L, type.getLength());
+		assertNull(type.getScale());
+		type.setLength(3L);
+		Domain restored = SchemaUtils.readXml(new StringReader(type.asXml()));
+		assertTrue(create(restored).contains("AS TIMESTAMP(3)"));
+		restored.setLength(13L);
+		assertThrows(IllegalArgumentException.class, () -> create(restored));
+		type.getSpecifics().remove("DB2_HOST_LENGTH_UNIT");
+		type.setLength(10L);
+		type.getSpecifics().put("DB2_HOST_TIMESTAMP_PRECISION", "6");
+		assertTrue(create(type).contains("AS TIMESTAMP(6)"));
+	}
+
+	@Test
+	void recreatesDatetimeDistinctTypesFromCatalogPrecision() throws Exception {
+		assertTrue(create(read("date")).contains("AS DATE\n"));
+		assertTrue(create(read("time")).contains("AS TIME\n"));
+		Domain timestamp = SchemaUtils.readXml(new StringReader(read("timestamp").asXml()));
+		assertEquals(DataType.TIMESTAMP, timestamp.getDataType());
+		assertTrue(create(timestamp).contains("AS TIMESTAMP(12)\n"));
+		Domain seconds = SchemaUtils.readXml(new StringReader(read("timestamp-zero").asXml()));
+		assertTrue(create(seconds).contains("AS TIMESTAMP(0)\n"));
+		timestamp.getSpecifics().put("DB2_HOST_TIMESTAMP_PRECISION", "13");
+		assertThrows(IllegalArgumentException.class, () -> create(timestamp));
+		timestamp.getSpecifics().remove("DB2_HOST_TIMESTAMP_PRECISION");
+		assertThrows(IllegalArgumentException.class, () -> create(timestamp));
+	}
+
+	@Test
+	void recreatesBinaryDistinctTypesWithZosByteLimits() throws Exception {
+		Domain binary = read("binary");
+		assertEquals(DataType.BINARY, binary.getDataType());
+		binary.setLength(255L);
+		assertTrue(create(binary).contains("AS BINARY(255)\n"));
+		binary.setLength(256L);
+		assertThrows(IllegalArgumentException.class, () -> create(binary));
+
+		Domain varying = SchemaUtils.readXml(new StringReader(read("varbinary").asXml()));
+		assertEquals(DataType.VARBINARY, varying.getDataType());
+		assertTrue(create(varying).contains("AS VARBINARY(12)\n"));
+		varying.setLength(32704L);
+		assertTrue(create(varying).contains("AS VARBINARY(32704)\n"));
+		varying.setLength(32705L);
+		assertThrows(IllegalArgumentException.class, () -> create(varying));
+	}
+
+	@Test
+	void recreatesCharacterDistinctTypesWithCatalogEncodingAndSubtype() throws Exception {
+		Domain varchar = SchemaUtils.readXml(new StringReader(read("varchar").asXml()));
+		assertTrue(create(varchar).contains("AS VARCHAR(12) CCSID UNICODE FOR MIXED DATA"));
+		varchar.setLength(32705L);
+		assertThrows(IllegalArgumentException.class, () -> create(varchar));
+
+		Domain character = read("char");
+		assertTrue(create(character).contains("AS CHAR(12) CCSID EBCDIC FOR SBCS DATA"));
+		character.getSpecifics().put("DB2_HOST_SUBTYPE", "B");
+		assertTrue(create(character).contains("AS CHAR(12) CCSID EBCDIC FOR BIT DATA"));
+		character.getSpecifics().put("DB2_HOST_SUBTYPE", "S");
+		character.getSpecifics().remove("DB2_HOST_ENCODING_SCHEME");
+		assertThrows(IllegalArgumentException.class, () -> create(character));
+	}
+
+	@Test
+	void recreatesClobDistinctAfterXmlWithInlineLength() throws Exception {
+		Domain clob = SchemaUtils.readXml(new StringReader(read("clob").asXml()));
+		assertTrue(create(clob).contains("AS CLOB(12) CCSID ASCII FOR MIXED DATA INLINE LENGTH 8"));
+		clob.getSpecifics().put("DB2_HOST_INLINE_LENGTH", "13");
+		assertThrows(IllegalArgumentException.class, () -> create(clob));
 	}
 
 	@Test
@@ -159,19 +317,44 @@ class Db2Zos13TypeTest {
 				if (!sm.getName().equals("executeQuery"))
 					return fallback(sm.getReturnType());
 				calls.incrementAndGet();
+				String source = switch (mode) {
+				case "missing" -> null;
+				case "character", "varchar", "varchar-array", "varchar-bit-array" -> "VARCHAR";
+				case "char" -> "CHAR";
+				case "blob", "blob-array" -> "BLOB";
+				case "clob", "clob-array" -> "CLOB";
+				case "binary" -> "BINARY";
+				case "varbinary", "varbinary-array" -> "VARBINARY";
+				case "rowid", "rowid-array" -> "ROWID";
+				case "date" -> "DATE";
+				case "time" -> "TIME";
+				case "timestamp", "timestamp-zero", "timestamp-array" -> "TIMESTAMP";
+				default -> "DECIMAL";
+				};
+				String encoding = switch (mode) {
+				case "char" -> "E";
+				case "varchar-bit-array" -> "E";
+				case "varchar", "varchar-array" -> "U";
+				case "clob", "clob-array" -> "A";
+				default -> null;
+				};
 				var first = row("SCHEMA_NAME", "App", "DOMAIN_NAME", "Amount", "SOURCE_SCHEMA", "SYSIBM", "SOURCE_TYPE",
-						mode.equals("missing") ? null
-								: mode.equals("character") ? "VARCHAR" : mode.equals("blob") ? "BLOB" : "DECIMAL",
-						"METATYPE",
+						source, "METATYPE",
 						mode.equals("unknown") ? "?"
 								: mode.equals("associative") ? "L" : mode.contains("array") ? "A" : "T",
 						"TYPE_RULES", mode.equals("weak") ? "W" : "S", "NATIVE_LENGTH", 12L, "TYPE_LENGTH", 12L,
-						"TYPE_SCALE", 0, "CCSID", mode.equals("character") ? "1208" : null, "NORMALIZE_DATA", null,
-						"SUBTYPE", null, "ENCODING_SCHEME", null, "ARRAY_CARDINALITY",
-						mode.equals("large-array") ? 2147483648L : mode.equals("array") ? 17L : 0L, "ARRAY_INDEX_TYPE",
-						mode.equals("associative") ? "opaque-id" : null, "ARRAY_INDEX_LENGTH", null,
-						"ARRAY_INDEX_SUBTYPE", null, "INLINE_LENGTH", mode.equals("blob") ? 8 : null, "CREATED_AT",
-						null, "REMARKS", "Owner's type  ");
+						"TYPE_SCALE", mode.equals("timestamp") || mode.equals("timestamp-array") ? 12 : 0, "CCSID",
+						mode.equals("character") ? "1208" : null, "NORMALIZE_DATA", null, "SUBTYPE",
+						mode.equals("varchar-bit-array") ? "B"
+								: encoding == null ? null : mode.equals("char") ? "S" : "M",
+						"ENCODING_SCHEME", encoding, "ARRAY_CARDINALITY",
+						mode.equals("large-array") ? 2147483648L : mode.endsWith("array") ? 17L : 0L,
+						"ARRAY_INDEX_TYPE", mode.equals("associative") ? "opaque-id" : null, "ARRAY_INDEX_LENGTH", null,
+						"ARRAY_INDEX_SUBTYPE", null, "INLINE_LENGTH", switch (mode) {
+						case "blob-array", "clob-array" -> -1;
+						case "blob", "clob" -> 8;
+						default -> null;
+						}, "CREATED_AT", null, "REMARKS", "Owner's type  ");
 				var second = new java.util.LinkedHashMap<>(first);
 				second.put("DOMAIN_NAME", "Amount2");
 				return rows(List.of(first, second));

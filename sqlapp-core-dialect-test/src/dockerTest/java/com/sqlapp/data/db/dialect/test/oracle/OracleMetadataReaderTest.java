@@ -64,6 +64,7 @@ class OracleMetadataReaderTest {
 			String first = "SCHED_J1_" + suffix, second = "SCHED_J2_" + suffix;
 			String defaultValue = " default\n'quoted' ";
 			var created = new java.util.ArrayList<String[]>();
+			var droppedForRestore = new java.util.HashSet<String>();
 			Throwable primary = null;
 			try {
 				try (var statement = connection.prepareCall(
@@ -111,6 +112,15 @@ class OracleMetadataReaderTest {
 				var review = com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview.collect(jobs);
 				assertEquals(4, review.scripts().size());
 				assertEquals(2, review.jobs().size());
+				for (String[] object : created.reversed()) {
+					try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.DROP_" + object[0] + "("
+							+ object[0].toLowerCase(Locale.ROOT) + "_name=>?, force=>FALSE); END;")) {
+						statement.setString(1, object[1]);
+						statement.execute();
+						droppedForRestore.add(object[1]);
+					}
+				}
+				boolean createDependencies = true;
 				for (var source : jobs) {
 					com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
 							.readXml(new java.io.StringReader(source.asXml()));
@@ -132,6 +142,76 @@ class OracleMetadataReaderTest {
 					assertTrue(job.getSpecifics().get("oracle.scheduler.schedule.START_DATE_TEXT").contains("+09:00"));
 					if (first.equals(job.getName()))
 						assertEquals("override", job.getSpecifics().get("oracle.scheduler.argument.1.value"));
+					var result = createDependencies
+							? com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+									.restoreWithDependencies(connection, job)
+							: com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+									.restore(connection, job);
+					assertEquals(createDependencies, result.completedOperations().contains("CREATE_PROGRAM"));
+					assertEquals(createDependencies, result.completedOperations().contains("CREATE_SCHEDULE"));
+					if (createDependencies) {
+						droppedForRestore.remove(program);
+						droppedForRestore.remove(schedule);
+						createDependencies = false;
+					}
+					droppedForRestore.remove(job.getName());
+					assertEquals(first.equals(job.getName()), result.completedOperations().contains("SET_ARGUMENT_1"));
+					var restored = reader.getAllFull(connection).stream()
+							.filter(candidate -> job.getName().equals(candidate.getName())).findFirst().orElseThrow();
+					org.junit.jupiter.api.Assertions.assertFalse(restored.isEnable());
+					for (String field : java.util.List.of("PROGRAM_NAME", "SCHEDULE_NAME", "argumentCount",
+							"argument.1.value", "program.argument.1.defaultValue", "program.ENABLED",
+							"schedule.START_DATE_TEXT", "schedule.REPEAT_INTERVAL"))
+						assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+								restored.getSpecifics().get("oracle.scheduler." + field), field);
+				}
+				for (String name : java.util.List.of(first, second))
+					dropSchedulerFixture(connection, "JOB", name, droppedForRestore);
+				try (var statement = connection.prepareCall("""
+						BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, program_name=>?,
+						 start_date=>TO_TIMESTAMP_TZ('2050-01-01 10:00:00 Asia/Tokyo', 'YYYY-MM-DD HH24:MI:SS TZR'),
+						 repeat_interval=>'FREQ=DAILY', enabled=>FALSE, auto_drop=>FALSE); END;
+						""")) {
+					statement.setString(1, first);
+					statement.setString(2, program);
+					statement.execute();
+					droppedForRestore.remove(first);
+				}
+				try (var statement = connection.prepareCall("""
+						BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, schedule_name=>?,
+						 job_type=>'PLSQL_BLOCK', job_action=>'BEGIN NULL; END;',
+						 enabled=>FALSE, auto_drop=>FALSE); END;
+						""")) {
+					statement.setString(1, second);
+					statement.setString(2, schedule);
+					statement.execute();
+					droppedForRestore.remove(second);
+				}
+				var mixed = reader.getAllFull(connection).stream()
+						.filter(job -> first.equals(job.getName()) || second.equals(job.getName())).toList();
+				assertEquals(2, mixed.size());
+				for (var source : mixed)
+					dropSchedulerFixture(connection, "JOB", source.getName(), droppedForRestore);
+				dropSchedulerFixture(connection, "PROGRAM", program, droppedForRestore);
+				dropSchedulerFixture(connection, "SCHEDULE", schedule, droppedForRestore);
+				for (var source : mixed) {
+					com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
+							.readXml(new java.io.StringReader(source.asXml()));
+					boolean namedProgram = first.equals(job.getName());
+					var result = com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+							.restoreWithDependencies(connection, job);
+					assertEquals(namedProgram, result.completedOperations().contains("CREATE_PROGRAM"));
+					assertEquals(!namedProgram, result.completedOperations().contains("CREATE_SCHEDULE"));
+					droppedForRestore.remove(job.getName());
+					droppedForRestore.remove(namedProgram ? program : schedule);
+					var restored = reader.getAllFull(connection).stream()
+							.filter(candidate -> job.getName().equals(candidate.getName())).findFirst().orElseThrow();
+					org.junit.jupiter.api.Assertions.assertFalse(restored.isEnable());
+					assertEquals(job.getStatement(), restored.getStatement());
+					for (String field : java.util.List.of("PROGRAM_NAME", "SCHEDULE_NAME", "START_DATE_TEXT",
+							"REPEAT_INTERVAL", "program.argument.1.defaultValue"))
+						assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+								restored.getSpecifics().get("oracle.scheduler." + field), field);
 				}
 			} catch (Exception | AssertionError failure) {
 				primary = failure;
@@ -144,6 +224,9 @@ class OracleMetadataReaderTest {
 						statement.setString(1, object[1]);
 						statement.execute();
 					} catch (SQLException failure) {
+						if (droppedForRestore.contains(object[1])
+								&& java.util.Set.of(27475, 27476).contains(failure.getErrorCode()))
+							continue;
 						if (cleanup == null)
 							cleanup = failure;
 						else
@@ -157,6 +240,16 @@ class OracleMetadataReaderTest {
 						throw cleanup;
 				}
 			}
+		}
+	}
+
+	private static void dropSchedulerFixture(Connection connection, String kind, String name,
+			java.util.Set<String> dropped) throws SQLException {
+		try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.DROP_" + kind + "("
+				+ kind.toLowerCase(Locale.ROOT) + "_name=>?, force=>FALSE); END;")) {
+			statement.setString(1, name);
+			statement.execute();
+			dropped.add(name);
 		}
 	}
 

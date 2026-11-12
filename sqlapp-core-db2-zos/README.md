@@ -234,9 +234,29 @@ Native attributes use `specifics["DB2_HOST_..."]`; internal index type IDs are
 preserved without guessing an undocumented mapping. Schema discovery includes
 schemas containing only user-defined types.
 
-Modeled CREATE supports numeric DISTINCT types and ordinary numeric arrays.
+Modeled CREATE supports ordinary numeric, binary, datetime, VARCHAR, BLOB, and
+CLOB arrays. LOB arrays require the catalog's unspecified inline length (-1).
+VARCHAR arrays also support the catalog BIT subtype, emitting FOR BIT DATA
+with the recorded encoding scheme.
+CHAR and VARCHAR DISTINCT sources also support FOR BIT DATA.
+Supported DISTINCT sources include numeric types, CHAR, VARCHAR, BINARY,
+VARBINARY, BLOB, CLOB, DATE, TIME, and TIMESTAMP. TIMESTAMP without time zone
+uses the catalog fractional-second precision
+(0 through 12), including the catalog's legacy representation of precision 6.
+Newly read TIMESTAMP domains store fractional-second precision in `length`,
+with `DB2_HOST_LENGTH_UNIT=FRACTIONAL_SECOND_DIGITS`. Edits survive XML and
+change generated DDL. Legacy XML without the marker retains catalog-based precision.
+ROWID DISTINCT types use the shared ROWID model and recreate the native source
+without a length parameter. ROWID array definitions are rejected.
+Character sources require a catalog
+encoding scheme and a supported character subtype. BLOB and CLOB use the catalog
+inline length, including -1 for an unspecified inline length. Length and inline
+length are validated against the z/OS 13 limits and retained through XML round trips.
+Edited LOB source lengths also survive XML serialization and change generated
+DDL. Unsupported scale attributes and lengths on ROWID are rejected instead of
+being silently omitted.
 DROP uses TYPE rather than SQL-standard DOMAIN, with RESTRICT. Names and comments
-are quoted. Associative arrays, character/LOB sources, named sources and other
+are quoted. Associative arrays, graphic sources, named sources and other
 unsupported attributes require an authoritative complete CREATE TYPE in
 `definition`. Cardinalities that cannot fit the shared integer bound are retained
 in specifics and cannot silently become an unbounded modeled array.

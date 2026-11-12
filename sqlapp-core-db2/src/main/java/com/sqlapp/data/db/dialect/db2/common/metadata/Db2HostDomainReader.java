@@ -40,24 +40,58 @@ final class Db2HostDomainReader extends DomainReader {
 				var fields = type.getSpecifics();
 				fields.put("DB2_OBJECT_TYPE", "DATA_TYPE");
 				for (String field : List.of("METATYPE", "SOURCE_TYPE", "SOURCE_SCHEMA", "TYPE_RULES", "NATIVE_LENGTH",
-						"CCSID", "NORMALIZE_DATA", "SUBTYPE", "ENCODING_SCHEME", "ARRAY_CARDINALITY",
-						"ARRAY_INDEX_TYPE", "ARRAY_INDEX_LENGTH", "ARRAY_INDEX_SUBTYPE", "INLINE_LENGTH")) {
+						"CCSID", "NORMALIZE_DATA", "ALLOCATED_LENGTH", "SUBTYPE", "ENCODING_SCHEME",
+						"ARRAY_CARDINALITY", "ARRAY_INDEX_TYPE", "ARRAY_INDEX_LENGTH", "ARRAY_INDEX_SUBTYPE",
+						"INLINE_LENGTH")) {
 					String value = id(rs, field);
 					if (value != null)
 						fields.put("DB2_HOST_" + field, value);
 				}
 				Long length = rs.getLongValue("TYPE_LENGTH");
 				Integer scale = rs.getInteger("TYPE_SCALE");
-				if (!"SYSIBM".equals(schema) || !getDialect().setDbType(source, length, scale, type)) {
+				if ("SYSIBM".equals(schema) && "TIMESTAMP".equals(source) && scale != null) {
+					fields.put("DB2_HOST_TIMESTAMP_PRECISION", scale.toString());
+					fields.put("DB2_HOST_LENGTH_UNIT", "FRACTIONAL_SECOND_DIGITS");
+					length = scale.longValue();
+					scale = null;
+				}
+				String mappedSource = source;
+				if ("db2-i".equals(getDialect().getSimpleName())) {
+					if ("DECFLOAT".equals(source)) {
+						mappedSource = DataType.DECIMALFLOAT.getTypeName();
+						length = switch (fields.get("DB2_HOST_NATIVE_LENGTH")) {
+						case "8" -> 16L;
+						case "16" -> 34L;
+						case null, default -> null;
+						};
+						if (length == null)
+							mappedSource = null;
+						else
+							fields.put("DB2_HOST_LENGTH_UNIT", "DECIMAL_DIGITS");
+					}
+					if ("FLOAT".equals(source))
+						mappedSource = switch (fields.get("DB2_HOST_NATIVE_LENGTH")) {
+						case "4" -> "REAL";
+						case "8" -> "DOUBLE";
+						case null, default -> null;
+						};
+				}
+				if ("SYSIBM".equals(schema) && "db2-i".equals(getDialect().getSimpleName())
+						&& "DATALINK".equals(source)) {
+					type.setDataType(DataType.DATALINK);
+					type.setLength(length);
+				} else if (!"SYSIBM".equals(schema) || mappedSource == null
+						|| !getDialect().setDbType(mappedSource, length, scale, type)) {
 					type.setDataType(DataType.OTHER);
 					type.setDataTypeName(Db2CreationContext.qualified(schema, source));
 					type.setLength(length);
 					type.setScale(scale);
 				}
-				// Generic BLOB mappings omit size; a DISTINCT source requires its catalog
-				// length.
-				if ("SYSIBM".equals(schema) && "BLOB".equals(source))
+				// Preserve the source length even for native mappings with no size.
+				if ("SYSIBM".equals(schema) && Set.of("BLOB", "CLOB", "DBCLOB").contains(source))
 					type.setLength(length);
+				if ("SYSIBM".equals(schema) && "DBCLOB".equals(source))
+					type.setDataType(DataType.NCLOB);
 				if (!"T".equals(kind)) {
 					type.setArrayDimension(1);
 					Long cardinality = rs.getLongValue("ARRAY_CARDINALITY");

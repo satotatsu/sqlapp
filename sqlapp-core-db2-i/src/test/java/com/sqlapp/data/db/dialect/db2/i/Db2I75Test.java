@@ -18,6 +18,21 @@ import com.sqlapp.data.db.dialect.db2.i.resolver.Db2I75DialectResolver;
 
 class Db2I75Test {
 	@Test
+	void createsNativeBooleanColumns() {
+		var dialect = new Db2I75();
+		var column = new Column("Flag").setDataType(DataType.BOOLEAN).setDefaultValue("TRUE");
+		var table = new Table("Flags");
+		table.getColumns().add(column);
+		String ddl = dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(ddl.matches("(?s).*\\bBOOLEAN\\s+DEFAULT\\s+TRUE\\b.*"), ddl);
+		Domain legacy = new Domain();
+		assertTrue(dialect.setDbType("CHAR(1) FOR BIT DATA", 1L, null, legacy));
+		Domain luw = new Domain();
+		assertTrue(new com.sqlapp.data.db.dialect.db2.Db2_1110(null).setDbType("CHAR(1) FOR BIT DATA", 1L, null, luw));
+		assertEquals(luw.getDataType(), legacy.getDataType());
+	}
+
+	@Test
 	void resolvesHostSeparatelyFromLuwAndChecksVersion() {
 		var resolver = new Db2I75DialectResolver();
 		assertInstanceOf(Db2I75.class, resolver.getDialect("DB2 UDB for AS/400", 7, 5));

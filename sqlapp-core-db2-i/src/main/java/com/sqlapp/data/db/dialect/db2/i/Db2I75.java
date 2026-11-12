@@ -17,6 +17,12 @@ public class Db2I75 extends AbstractDb2HostDialect {
 	}
 
 	@Override
+	protected void registerDataType() {
+		super.registerDataType();
+		getDbDataTypes().addBoolean();
+	}
+
+	@Override
 	public String getProductName() {
 		return "Db2 for i";
 	}

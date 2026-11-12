@@ -88,6 +88,116 @@ class CockroachMetadataReaderTest {
 	}
 
 	@Test
+	void changesMaterializedViewOwnerToAnExistingRole() throws Exception {
+		withSchema((c, sql, name) -> {
+			String role = name + "_owner";
+			sql.execute("CREATE ROLE " + role);
+			try {
+				sql.execute("GRANT CREATE ON SCHEMA " + name + " TO " + role);
+				sql.execute("CREATE MATERIALIZED VIEW " + name + ".totals AS SELECT 7 AS total");
+				var view = read(c, name).getMviews().get("totals");
+				var dialect = (CockroachDB) DialectResolver.getInstance().getDialect(c);
+				sql.execute(dialect.createMaterializedViewOwnerChangeSql(view, role).getSqlText());
+				var reread = read(c, name);
+				Schema restored = SchemaUtils.readXml(new StringReader(reread.asXml()));
+				restored.setDialect(dialect);
+				assertEquals(role, restored.getMviews().get("totals").getOwnerName());
+				var target = restored.clone();
+				target.getMviews().get("totals").setOwnerName("root");
+				apply(c, reread.diff(target));
+				assertEquals("root", read(c, name).getMviews().get("totals").getOwnerName());
+				apply(c, target.diff(restored));
+				try (var query = c.prepareStatement(
+						"SELECT matviewowner FROM pg_catalog.pg_matviews WHERE schemaname=? AND matviewname='totals'")) {
+					query.setString(1, name);
+					try (var rows = query.executeQuery()) {
+						assertTrue(rows.next());
+						assertEquals(role, rows.getString(1));
+					}
+				}
+			} finally {
+				sql.execute("DROP SCHEMA " + name + " CASCADE");
+				sql.execute("DROP ROLE " + role);
+			}
+		});
+	}
+
+	@Test
+	void movesMaterializedViewWithItsIndexToAnotherSchema() throws Exception {
+		withSchema((c, sql, source) -> withSchema((targetConnection, targetSql, target) -> {
+			sql.execute("CREATE MATERIALIZED VIEW " + source + ".totals AS SELECT 7 AS total");
+			sql.execute("CREATE INDEX by_total ON " + source + ".totals (total)");
+			var view = read(c, source).getMviews().get("totals").clone();
+			apply(c, view.diff(view.clone().setSchemaName(target)));
+			assertNull(read(c, source).getMviews().get("totals"));
+			assertNotNull(read(targetConnection, target).getMviews().get("totals").getIndexes().get("by_total"));
+			try (var rows = targetSql.executeQuery("SELECT total FROM " + target + ".totals")) {
+				assertTrue(rows.next());
+				assertEquals(7, rows.getInt(1));
+			}
+		}));
+	}
+
+	@Test
+	void recreatesMaterializedViewWithExplicitColumnAlias() throws Exception {
+		withSchema((c, sql, name) -> {
+			sql.execute("CREATE TABLE " + name + ".items (id INT8 PRIMARY KEY)");
+			sql.execute("INSERT INTO " + name + ".items VALUES (7)");
+			sql.execute("CREATE VIEW " + name + ".source_view AS SELECT id FROM " + name + ".items");
+			sql.execute("CREATE MATERIALIZED VIEW " + name + ".\"Daily Totals\" (\"Result ID\") AS SELECT id FROM "
+					+ name + ".source_view");
+			sql.execute("CREATE INDEX \"By Result\" ON " + name + ".\"Daily Totals\" (\"Result ID\" DESC)");
+			Schema original = read(c, name);
+			assertEquals(1, original.getTables().size());
+			assertEquals(1, original.getViews().size());
+			assertNotNull(original.getViews().get("source_view"));
+			assertEquals(1, original.getMviews().size());
+			var reader = DialectResolver.getInstance().getDialect(c).getCatalogReader().getSchemaReader()
+					.getMviewReader();
+			reader.setSchemaName(name);
+			reader.setObjectName("missing_view");
+			assertTrue(reader.getAllFull(c).isEmpty());
+			Schema restored = SchemaUtils.readXml(new StringReader(original.asXml()));
+			var view = restored.getMviews().get("Daily Totals");
+			assertNotNull(view.getColumns().get("Result ID"));
+			assertEquals(1, view.getIndexes().size());
+			assertNotNull(view.getIndexes().get("By Result"));
+			drop(c, view);
+			create(c, view);
+			assertNotNull(read(c, name).getMviews().get("Daily Totals").getIndexes().get("By Result"));
+			var changed = restored.clone();
+			var indexes = changed.getMviews().get("Daily Totals").getIndexes();
+			indexes.remove(indexes.get("By Result"));
+			var replacement = new Index("new_result");
+			replacement.setDefinition("CREATE INDEX new_result ON " + name + ".\"Daily Totals\" (\"Result ID\")");
+			indexes.add(replacement);
+			apply(c, restored.diff(changed));
+			var actualIndexes = read(c, name).getMviews().get("Daily Totals").getIndexes();
+			assertNull(actualIndexes.get("By Result"));
+			assertNotNull(actualIndexes.get("new_result"));
+			try (var rows = sql.executeQuery("SELECT \"Result ID\" FROM " + name + ".\"Daily Totals\"")) {
+				assertTrue(rows.next());
+				assertEquals(7, rows.getInt(1));
+				assertFalse(rows.next());
+			}
+			sql.execute("INSERT INTO " + name + ".items VALUES (8)");
+			var registry = new CockroachDB().createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			sql.execute(registry.createSql(view, SqlType.REFRESH).getFirst().getSqlText());
+			try (var rows = sql.executeQuery("SELECT max(\"Result ID\") FROM " + name + ".\"Daily Totals\"")) {
+				assertTrue(rows.next());
+				assertEquals(8, rows.getInt(1));
+			}
+			var beforeRename = read(c, name).getMviews().get("Daily Totals");
+			assertNotNull(beforeRename.getId());
+			apply(c, beforeRename.diff(beforeRename.clone().setName("Weekly Totals")));
+			var renamed = read(c, name).getMviews();
+			assertNull(renamed.get("Daily Totals"));
+			assertNotNull(renamed.get("Weekly Totals").getIndexes().get("new_result"));
+		});
+	}
+
+	@Test
 	void roundTripsSchemaConstraintsIndexesViewAndSequence() throws Exception {
 		String name = schema();
 		try (var c = connect(); var sql = c.createStatement()) {
@@ -642,6 +752,7 @@ class CockroachMetadataReaderTest {
 			sql.execute("CREATE SEQUENCE " + name + ".seq START 10 INCREMENT 3 MINVALUE 1 MAXVALUE 1000");
 			var original = read(c, name).getSequences().get("seq");
 			assertEquals(java.math.BigInteger.TEN, original.getStartValue());
+			assertEquals(1, original.getCacheSize());
 			try (var rows = sql.executeQuery("SELECT nextval('" + name + ".seq')")) {
 				assertTrue(rows.next());
 				assertEquals(10, rows.getInt(1));
@@ -657,8 +768,112 @@ class CockroachMetadataReaderTest {
 				assertTrue(rows.next());
 				assertEquals(15, rows.getInt(1));
 			}
+			apply(c, actual.diff(actual.clone().setCacheSize(8)));
+			actual = read(c, name).getSequences().get("seq");
+			assertEquals(8, actual.getCacheSize());
+			try (var rows = sql.executeQuery("SELECT nextval('" + name + ".seq')")) {
+				assertTrue(rows.next());
+				assertEquals(20, rows.getInt(1));
+			}
 			drop(c, actual);
 			assertTrue(read(c, name).getSequences().isEmpty());
+		});
+	}
+
+	@Test
+	void changesSequenceOwnerToAnExistingRole() throws Exception {
+		withSchema((c, sql, name) -> {
+			String role = name + "_owner";
+			sql.execute("CREATE ROLE " + role);
+			try {
+				sql.execute("GRANT CREATE ON SCHEMA " + name + " TO " + role);
+				sql.execute("CREATE SEQUENCE " + name + ".seq");
+				var sequence = read(c, name).getSequences().get("seq");
+				var dialect = (com.sqlapp.data.db.dialect.cockroach.CockroachDB) DialectResolver.getInstance()
+						.getDialect(c);
+				sql.execute(dialect.createSequenceOwnerChangeSql(sequence, role).getSqlText());
+				try (var query = c.prepareStatement(
+						"SELECT sequenceowner FROM pg_catalog.pg_sequences WHERE schemaname=? AND sequencename=?")) {
+					query.setString(1, name);
+					query.setString(2, "seq");
+					try (var rows = query.executeQuery()) {
+						assertTrue(rows.next());
+						assertEquals(role, rows.getString(1));
+					}
+				}
+			} finally {
+				sql.execute("DROP SCHEMA " + name + " CASCADE");
+				sql.execute("DROP ROLE " + role);
+			}
+		});
+	}
+
+	@Test
+	void explicitlyRestartsASequenceAtTheRequestedNextValue() throws Exception {
+		withSchema((c, sql, name) -> {
+			sql.execute("CREATE SEQUENCE " + name + ".seq START 10 INCREMENT 3 CACHE 1");
+			var sequence = read(c, name).getSequences().get("seq");
+			try (var rows = sql.executeQuery("SELECT nextval('" + name + ".seq')")) {
+				assertTrue(rows.next());
+				assertEquals(10, rows.getInt(1));
+			}
+			var dialect = (com.sqlapp.data.db.dialect.cockroach.CockroachDB) DialectResolver.getInstance()
+					.getDialect(c);
+			sql.execute(dialect.createSequenceRestartSql(sequence, 42).getSqlText());
+			try (var rows = sql.executeQuery("SELECT nextval('" + name + ".seq')")) {
+				assertTrue(rows.next());
+				assertEquals(42, rows.getInt(1));
+			}
+			try (var rows = sql.executeQuery("SELECT nextval('" + name + ".seq')")) {
+				assertTrue(rows.next());
+				assertEquals(45, rows.getInt(1));
+			}
+		});
+	}
+
+	@Test
+	void movesSequenceToAnotherSchemaWithoutRestarting() throws Exception {
+		withSchema((c, sql, name) -> {
+			String destination = name + "_moved";
+			sql.execute("CREATE SCHEMA " + destination);
+			try {
+				sql.execute("CREATE SEQUENCE " + name + ".seq START 10 INCREMENT 3");
+				try (var rows = sql.executeQuery("SELECT nextval('" + name + ".seq')")) {
+					assertTrue(rows.next());
+					assertEquals(10, rows.getInt(1));
+				}
+				var source = read(c, name).getSequences().get("seq");
+				apply(c, source.diff(source.clone().setSchemaName(destination)));
+				assertTrue(read(c, name).getSequences().isEmpty());
+				assertEquals(java.math.BigInteger.TEN, read(c, destination).getSequences().get("seq").getStartValue());
+				try (var rows = sql.executeQuery("SELECT nextval('" + destination + ".seq')")) {
+					assertTrue(rows.next());
+					assertEquals(13, rows.getInt(1));
+				}
+			} finally {
+				sql.execute("DROP SCHEMA " + destination + " CASCADE");
+			}
+		});
+	}
+
+	@Test
+	void sequenceOwnershipCanBeAttachedAndDetached() throws Exception {
+		withSchema((c, sql, name) -> {
+			String definition = "CREATE SEQUENCE " + name + ".seq START 10";
+			sql.execute(definition);
+			sql.execute("CREATE TABLE " + name + ".items (id INT8 PRIMARY KEY)");
+			var original = read(c, name).getSequences().get("seq").setDefinition(definition);
+			var owned = original.clone().setDefinition(definition + " OWNED BY " + name + ".items.id");
+			apply(c, original.diff(owned));
+			sql.execute("DROP TABLE " + name + ".items");
+			assertTrue(read(c, name).getSequences().isEmpty());
+
+			sql.execute(definition);
+			sql.execute("CREATE TABLE " + name + ".items (id INT8 PRIMARY KEY)");
+			apply(c, original.diff(owned));
+			apply(c, owned.diff(owned.clone().setDefinition(definition + " OWNED BY NONE")));
+			sql.execute("DROP TABLE " + name + ".items");
+			assertEquals(java.math.BigInteger.TEN, read(c, name).getSequences().get("seq").getStartValue());
 		});
 	}
 

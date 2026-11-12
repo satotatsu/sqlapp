@@ -216,15 +216,58 @@ entries. IBM i sequence/module aliases are not enabled by this implementation.
 `reader.getSchemaReader().getDomainReader()` reads QSYS2.SYSTYPES with one bulk
 query, excluding built-in types. As in the LUW dialect, the shared `Domain` model
 represents DISTINCT and ordinary array types. Source schema/name, semantic
-precision/scale, string length, datetime precision, CCSID, normalization, type
+precision/scale, string length, datetime precision, CCSID, normalization, allocated length, type
 rules and exact cardinality are retained. Storage length is preserved separately
 from decimal precision and datetime precision. Native attributes use
 `specifics["DB2_HOST_..."]` and survive XML.
 
-Modeled CREATE supports numeric DISTINCT types with explicit STRONG or WEAK TYPE
-RULES and ordinary numeric arrays. DROP uses TYPE with RESTRICT. Character/LOB
-sources and unsupported attributes require an authoritative complete CREATE TYPE
-in `definition`, so CCSID and normalization are not inferred. Missing or excessive
+Modeled CREATE supports numeric, CHAR, VARCHAR, GRAPHIC, VARGRAPHIC, BINARY,
+and VARBINARY DISTINCT types with explicit STRONG or WEAK TYPE RULES, and
+ordinary arrays with the same built-in element types. DATE, TIME, and TIMESTAMP are also supported as
+DISTINCT sources and ordinary array elements. TIMESTAMP requires the catalog
+fractional-second precision (0 through 12). Newly read TIMESTAMP domains store
+that precision in `length`, with `DB2_HOST_LENGTH_UNIT=FRACTIONAL_SECOND_DIGITS`.
+Editing this model value changes generated DDL and survives XML. Legacy XML
+without the unit marker retains its catalog-based precision behavior.
+DECFLOAT DISTINCT types and ordinary arrays use the catalog storage length
+of 8 or 16 bytes to recreate precision 16 or 34, respectively.
+New metadata stores the precision in model `length`, marked with
+`DB2_HOST_LENGTH_UNIT=DECIMAL_DIGITS`; editing it to 16 or 34 survives XML
+serialization and changes generated DDL. Snapshots without the marker retain
+their catalog storage-length interpretation.
+LOB source lengths also survive model edits and XML serialization. DBCLOB maps
+to NCLOB; older CLOB representations remain accepted for DDL. Unsupported scale
+attributes and lengths on BOOLEAN or ROWID are rejected instead of ignored.
+FLOAT sources use the catalog storage length of 4 or 8 bytes to recreate
+REAL or DOUBLE, respectively.
+Native BOOLEAN, introduced in IBM i 7.5, is mapped to the shared BOOLEAN type
+and supported for DISTINCT sources and ordinary array elements.
+ROWID DISTINCT types use the shared ROWID model and recreate the native source
+without a length parameter. ROWID array definitions are rejected.
+DATALINK DISTINCT types retain the shared DATALINK representation and recreate
+the catalog maximum length (1 through 32717 bytes) and CCSID. Positive allocation
+metadata requires a complete definition. DATALINK array definitions are rejected.
+XML ordinary arrays recreate the catalog CCSID and UTF-8/UTF-16 normalization
+without a length parameter. They accept only absent or zero allocation.
+XML DISTINCT types additionally recreate an explicit catalog allocation and
+STRONG or WEAK TYPE RULES. Missing allocation metadata requires a complete definition.
+Ordinary arrays also support BLOB and CLOB up to 1048576 bytes and DBCLOB up
+to 524288 double-byte characters. Character LOBs use the catalog CCSID and,
+for UTF-8 or UTF-16, the normalization flag. LOB arrays accept only absent or
+zero allocation.
+LOB DISTINCT types support BLOB and CLOB up to 2147483647 bytes and DBCLOB up
+to 1073741823 double-byte characters. They require an explicit catalog allocated
+length, including 0 for no allocation. Character LOBs also require CCSID and,
+for UTF-8 or UTF-16, normalization metadata.
+Character and graphic sources require an explicit
+CCSID and a normalization flag for UTF-8 or UTF-16. VARCHAR, VARGRAPHIC, and
+VARBINARY DISTINCT types require a catalog allocated length (0 means no
+ALLOCATE clause). VARCHAR, VARGRAPHIC, and VARBINARY arrays accept an absent
+or zero allocation and emit no ALLOCATE clause. Graphic lengths and VARGRAPHIC allocation count double-byte
+characters. Older XML without this metadata can be refreshed from the catalog or
+supplied with a complete CREATE TYPE definition. DROP uses TYPE with RESTRICT.
+Graphic sources with CCSID 65535 and unsupported attributes require
+an authoritative complete CREATE TYPE in `definition`. Missing or excessive
 array bounds cannot silently become unbounded arrays. Generated cast-function
 ownership and IBM i system object names are not recreated. Type grants are handled
 by the object privilege reader above.

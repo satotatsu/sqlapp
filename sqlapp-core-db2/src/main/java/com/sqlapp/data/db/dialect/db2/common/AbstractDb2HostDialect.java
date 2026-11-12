@@ -44,6 +44,7 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		getDbDataTypes().addRowId(type -> type.setOctetSize(40L));
 		getDbDataTypes().addChar(maxCharLength());
 		getDbDataTypes().addVarchar(maxVarcharLength());
 		getDbDataTypes().addNChar("GRAPHIC", maxGraphicLength(), type -> type.setLiteral("G'", "'"));
