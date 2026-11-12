@@ -61,7 +61,7 @@ class SpannerColumnReaderTest {
 
 	private Map<String, String> row(String schema, String name) {
 		return new HashMap<>(Map.of("table_catalog", "", "table_schema", schema, "table_name", "Orders", "column_name",
-				name, "spanner_type", "INT64", "is_nullable", "NO", "is_generated", "NEVER"));
+				name, "spanner_type", "INT64", "is_nullable", "NO", "IS_GENERATED", "NEVER"));
 	}
 
 	@Test
@@ -73,9 +73,9 @@ class SpannerColumnReaderTest {
 				if (i % 2 == 0)
 					values.put("column_default", "1 +\n 2");
 				else {
-					values.put("is_generated", "ALWAYS");
-					values.put("generation_expression", "c0 + -- keep this boundary\n 1");
-					values.put("is_stored", "YES");
+					values.put("IS_GENERATED", "ALWAYS");
+					values.put("GENERATION_EXPRESSION", "c0 + -- keep this boundary\n 1");
+					values.put("IS_STORED", "YES");
 				}
 				reader.rows.add(values);
 			}
@@ -103,14 +103,45 @@ class SpannerColumnReaderTest {
 	}
 
 	@Test
+	void retainsAnnotatedAndOptionVectorLengthsThroughXmlAndDdl() throws Exception {
+		final var reader = new Reader();
+		final var annotated = row("app", "embedding");
+		annotated.put("spanner_type", "ARRAY<FLOAT32>(vector_length=>3)");
+		final var option = row("app", "other_embedding");
+		option.put("spanner_type", "ARRAY<FLOAT64>");
+		option.put("vector_length", "5");
+		reader.rows.addAll(List.of(annotated, option));
+		final var table = new Table("Orders");
+		reader.doGetAll(null, new ParametersContext(), null).forEach(table.getColumns()::add);
+		assertEquals(1, reader.queries);
+		final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+		final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.createSql(restored, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("ARRAY<FLOAT32> (vector_length=>3)"), sql);
+		assertTrue(sql.contains("ARRAY<FLOAT64> (vector_length=>5)"), sql);
+	}
+
+	@Test
+	void rejectsConflictingAndInvalidVectorLengthMetadata() {
+		for (String value : List.of("4", "-1", "2147483648")) {
+			final var reader = new Reader();
+			final var annotated = row("app", "embedding");
+			annotated.put("spanner_type", "ARRAY<FLOAT32>(vector_length=>3)");
+			annotated.put("vector_length", value);
+			reader.rows.add(annotated);
+			assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+		}
+	}
+
+	@Test
 	void rejectsMissingNamesTypesNullabilityAndGeneratedExpressions() {
 		for (String field : List.of("table_name", "column_name", "spanner_type", "is_nullable",
-				"generation_expression"))
+				"GENERATION_EXPRESSION"))
 			for (String value : Arrays.asList(null, "", "  ")) {
 				final var reader = new Reader();
 				final var values = row("app", "id");
-				if (field.equals("generation_expression"))
-					values.put("is_generated", "ALWAYS");
+				if (field.equals("GENERATION_EXPRESSION"))
+					values.put("IS_GENERATED", "ALWAYS");
 				values.put(field, value);
 				reader.rows.add(values);
 				assertThrows(IllegalArgumentException.class,
@@ -137,12 +168,12 @@ class SpannerColumnReaderTest {
 		for (String generation : List.of("BY DEFAULT", "BY_DEFAULT", "ALWAYS")) {
 			final var reader = new Reader();
 			final var values = row("app", "id");
-			values.put("is_identity", "YES");
-			values.put("identity_generation", generation);
-			values.put("identity_kind", "BIT_REVERSED_POSITIVE_SEQUENCE");
-			values.put("identity_start_with_counter", "3000");
-			values.put("identity_skip_range_min", "100");
-			values.put("identity_skip_range_max", "200");
+			values.put("IS_IDENTITY", "YES");
+			values.put("IDENTITY_GENERATION", generation);
+			values.put("IDENTITY_KIND", "BIT_REVERSED_POSITIVE_SEQUENCE");
+			values.put("IDENTITY_START_WITH_COUNTER", "3000");
+			values.put("IDENTITY_SKIP_RANGE_MIN", "100");
+			values.put("IDENTITY_SKIP_RANGE_MAX", "200");
 			reader.rows.add(values);
 			final var column = reader.doGetAll(null, new ParametersContext(), null).get(0);
 			assertTrue(column.isIdentity());
@@ -168,11 +199,11 @@ class SpannerColumnReaderTest {
 
 	@Test
 	void rejectsUnknownIdentityFlagsGenerationAndKinds() {
-		for (String field : List.of("is_identity", "identity_generation", "identity_kind"))
+		for (String field : List.of("IS_IDENTITY", "IDENTITY_GENERATION", "IDENTITY_KIND"))
 			for (String invalid : List.of("unknown", "", "NOT DEFAULT")) {
 				final var reader = new Reader();
 				final var values = row("app", "id");
-				values.put("is_identity", "YES");
+				values.put("IS_IDENTITY", "YES");
 				values.put(field, invalid);
 				reader.rows.add(values);
 				assertThrows(IllegalArgumentException.class,
@@ -185,7 +216,7 @@ class SpannerColumnReaderTest {
 		final var reader = new Reader();
 		reader.rows.add(row("app", "plain"));
 		final var values = row("app", "identity");
-		values.put("is_identity", "YES");
+		values.put("IS_IDENTITY", "YES");
 		reader.rows.add(values);
 		final var columns = reader.doGetAll(null, new ParametersContext(), null);
 		assertFalse(columns.get(0).isIdentity());

@@ -40,6 +40,12 @@ final class SavedReportButton extends JButton {
 		refresh();
 	}
 
+	void clear() {
+		file = null;
+		type = null;
+		refresh();
+	}
+
 	void refresh() {
 		setEnabled(file != null && receiver != null && !blocked.getAsBoolean());
 		setToolTipText(file == null ? "Save a supported report first."

@@ -71,8 +71,8 @@ class SpannerViewReaderTest {
 	}
 
 	@Test
-	void rejectsMissingNameQueryAndSecurityInsteadOfDefaultingMetadata() {
-		for (String field : List.of("table_name", "view_definition", "security_type"))
+	void rejectsMissingNameQueryAndInvalidSecurity() {
+		for (String field : List.of("table_name", "view_definition"))
 			for (String value : Arrays.asList(null, "", "  ")) {
 				final var reader = new Reader();
 				final var values = row("app", "v", "INVOKER");
@@ -84,6 +84,17 @@ class SpannerViewReaderTest {
 		final var reader = new Reader();
 		reader.rows.add(row("app", "v", "unknown"));
 		assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
+	}
+
+	@Test
+	void retainsUnknownSecurityFromOlderCatalogsAndBlocksRecreationAfterXml() throws Exception {
+		final var reader = new Reader();
+		reader.rows.add(row("app", "v", ""));
+		final View view = (View) reader.doGetAll(null, new ParametersContext(), null).get(0);
+		final View restored = SchemaUtils.readXml(new java.io.StringReader(view.asXml()));
+		assertEquals("UNKNOWN", restored.getSpecifics().get(SpannerCreateViewFactory.SECURITY_TYPE));
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(restored, SqlType.CREATE));
 	}
 
 	@Test

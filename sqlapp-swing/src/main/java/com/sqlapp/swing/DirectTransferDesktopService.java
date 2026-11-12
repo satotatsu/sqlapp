@@ -19,10 +19,19 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 	}
 
 	record Executed(TransferJobExecutionService.Outcome outcome, Path report,
-			@com.fasterxml.jackson.annotation.JsonIgnore String schemaSqlDraft) {
+			@com.fasterxml.jackson.annotation.JsonIgnore String schemaSqlDraft,
+			@com.fasterxml.jackson.annotation.JsonIgnore String resultFingerprint) {
 		Executed(TransferJobExecutionService.Outcome outcome, Path report) {
-			this(outcome, report, null);
+			this(outcome, report, null, null);
 		}
+
+		Executed(TransferJobExecutionService.Outcome outcome, Path report, String schemaSqlDraft) {
+			this(outcome, report, schemaSqlDraft, null);
+		}
+	}
+
+	record Recovery(TransferJobExecutionService.Review review, TransferJobExecutionService.Outcome outcome,
+			String resultFingerprint) {
 	}
 
 	static final class ExecutionFailure extends IllegalStateException {
@@ -62,6 +71,18 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 				phase = "testing target connection";
 				return new JdbcConnectionTestService().test(request.target(), targetPassword);
 			}
+			if (action == DirectTransferPanel.Action.COMPARE_STAGING) {
+				phase = "comparing retained staging with the current target";
+				try (var target = PlanningJdbc.open(request.target(), targetPassword)) {
+					if (request.savedResult() != null)
+						return TransferStagedReplacement.compareRetainedStageReport(request.savedResult(), target);
+					var recovery = request.recovery();
+					var comparison = TransferStagedReplacement.compareRetainedStage(recovery.review(), recovery.outcome(), target);
+					return recovery.resultFingerprint() == null ? comparison : new TransferStagingComparisonReportIO.Report(
+							1, recovery.resultFingerprint(), TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+							recovery.review().targetIdentity(), comparison);
+				}
+			}
 			final var validation = new TransferDatabaseCommand();
 			validation.setConfigurationFile(request.job().toFile());
 			validation.setWorkspaceDirectory(request.workspace().toFile());
@@ -95,13 +116,14 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 							completed.schemaSqlDraft());
 					return completed;
 				} catch (TransferJobExecutionService.ExecutionException failure) {
-					Path report = null;
+					TransferJobReportIO.SavedOutcome report = null;
 					try {
-						report = reports.writeOutcome(review, failure.outcome());
+						report = reports.writeOutcomeSnapshot(review, failure.outcome());
 					} catch (java.io.IOException unavailable) {
 						/* Exposed by a null report path. */ }
 					throw new ExecutionFailure(
-							new Executed(failure.outcome(), report, draftFor(failure.outcome(), request.reviewed())),
+							new Executed(failure.outcome(), report == null ? null : report.file(),
+									draftFor(failure.outcome(), request.reviewed()), report == null ? null : report.fingerprint()),
 							"Direct transfer failed. Inspect committed work, verification and audit availability before retrying.");
 				}
 			}

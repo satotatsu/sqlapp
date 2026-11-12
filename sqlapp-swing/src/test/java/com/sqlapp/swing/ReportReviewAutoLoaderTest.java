@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.db.command.migration.bulk.*;
 import com.sqlapp.data.db.command.migration.schema.*;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagingComparisonReportIO;
 import com.sqlapp.util.JsonConverter;
 
 class ReportReviewAutoLoaderTest {
@@ -19,7 +21,7 @@ class ReportReviewAutoLoaderTest {
 	private final ReportReviewAutoLoader loader = new ReportReviewAutoLoader();
 
 	@Test
-	void detectsAllSixFormatsAndUsesExistingValidatedReviewsWithoutChangingSource() throws Exception {
+	void detectsAllFormatsAndUsesValidatedReviewsWithoutChangingSource() throws Exception {
 		final var files = fixtures();
 		for (var entry : files.entrySet()) {
 			final byte[] original = Files.readAllBytes(entry.getValue());
@@ -30,6 +32,63 @@ class ReportReviewAutoLoaderTest {
 			assertEquals(new ReportReviewService().read(entry.getValue(), entry.getKey()), detected.review());
 			assertArrayEquals(original, Files.readAllBytes(entry.getValue()));
 		}
+	}
+
+	@Test
+	void stagingComparisonSeparatesTargetDifferencesFromStagingChanges() throws Exception {
+		var file = fixtures().get(ReportReviewService.Type.STAGING_COMPARISON);
+		var view = loader.read(file).review();
+		assertTrue(view.summary().contains("Recorded commit: COMMIT_UNCERTAIN"));
+		assertTrue(view.summary().contains("Target differences: 1. Staging changes: 1."));
+		assertTrue(view.summary().contains("Staging data has changed since the recorded verification"));
+		assertTrue(view.summary().contains("The prior commit remains unconfirmed"));
+		assertEquals(3, view.rows().size());
+		assertEquals(List.of(3, 4), view.numericColumns());
+		var differences = view.tables().getFirst();
+		assertEquals("Differences", differences.title());
+		assertEquals(List.of("Different", "Unchanged"), differences.rows().get(0).subList(5, 7));
+		assertEquals(List.of("Match", "Changed"), differences.rows().get(1).subList(5, 7));
+
+		var mapper = tools.jackson.databind.json.JsonMapper.builder().build();
+		var json = mapper.readTree(Files.readString(file));
+		var row = (tools.jackson.databind.node.ObjectNode) json.path("comparison").path("tables").get(0);
+		row.remove("matchesTarget");
+		Files.writeString(file, mapper.writeValueAsString(json));
+		assertThrows(IllegalArgumentException.class, () -> loader.read(file));
+	}
+
+	@Test
+	void stagingComparisonDistinguishesSameNamedTablesByCatalogAndTaskWithoutLosingNumericSort() throws Exception {
+		var comparison = new TransferStagedReplacement.Comparison(List.of(
+				new TransferStagedReplacement.TableComparison(
+						new TransferStagedReplacement.Target("task-a", "catalog-a", "PUBLIC", "ITEMS", "STAGE_A"),
+						12, 12, true, true),
+				new TransferStagedReplacement.TableComparison(
+						new TransferStagedReplacement.Target("task-b", "catalog-b", "PUBLIC", "ITEMS", "STAGE_B"),
+						2, 1, false, true)));
+		var hash = "sha256:" + "a".repeat(64);
+		var report = new TransferStagingComparisonReportIO.Report(1, hash,
+				TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+				new MigrationPlan.DatabaseIdentity("HSQL", "2.7", hash), comparison);
+		var file = directory.resolve("comparison.json");
+		new TransferStagingComparisonReportIO().write(file, report);
+		var view = loader.read(file).review();
+		assertEquals(List.of("Catalog", "Task ID"), view.columns().subList(7, 9));
+		assertEquals(List.of("catalog-a", "task-a"), view.rows().getFirst().subList(7, 9));
+		assertEquals(List.of("catalog-b", "task-b"), view.tables().getFirst().rows().getFirst().subList(7, 9));
+		assertEquals(view.columns(), view.tables().getFirst().columns());
+		javax.swing.SwingUtilities.invokeAndWait(() -> {
+			var panel = new ReportReviewView();
+			panel.showReview(view);
+			panel.tasks.getRowSorter().toggleSortOrder(3);
+			assertEquals("task-b", panel.tasks.getValueAt(0, 8));
+			panel.taskTable.filter.setText("catalog-a");
+			assertEquals(1, panel.tasks.getRowCount());
+			assertEquals("task-a", panel.tasks.getValueAt(0, 8));
+			panel.taskTable.filter.setText("task-b");
+			assertEquals(1, panel.tasks.getRowCount());
+			assertEquals("catalog-b", panel.tasks.getValueAt(0, 7));
+		});
 	}
 
 	@Test
@@ -123,6 +182,22 @@ class ReportReviewAutoLoaderTest {
 						null);
 		new BulkMigrationVerificationReportIO().write(files.get(ReportReviewService.Type.BULK_VERIFICATION),
 				new BulkMigrationVerificationReport(6, Instant.now(), "plan", "DEFAULT", true, 0, 0, 0, List.of()));
+		var comparisons = List.of(
+				comparison("MATCHED", 7, 7, true, true),
+				comparison("TARGET_DIFFERS", 12, 2, false, true),
+				comparison("STAGING_CHANGED", 10, 10, true, false));
+		new TransferStagingComparisonReportIO().write(files.get(ReportReviewService.Type.STAGING_COMPARISON),
+				new TransferStagingComparisonReportIO.Report(1, "sha256:" + "a".repeat(64),
+						TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+						new MigrationPlan.DatabaseIdentity("HSQL", "2.7", "sha256:" + "b".repeat(64)),
+						new TransferStagedReplacement.Comparison(comparisons)));
 		return files;
+	}
+
+	private static TransferStagedReplacement.TableComparison comparison(String name, long stagingRows, long targetRows,
+			boolean matches, boolean stagingUnchanged) {
+		return new TransferStagedReplacement.TableComparison(
+				new TransferStagedReplacement.Target(name, null, "PUBLIC", name, "STG_" + name),
+				stagingRows, targetRows, matches, stagingUnchanged);
 	}
 }

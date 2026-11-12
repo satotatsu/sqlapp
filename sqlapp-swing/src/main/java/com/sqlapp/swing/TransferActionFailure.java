@@ -72,7 +72,7 @@ final class TransferActionFailure extends IllegalArgumentException {
 		} else if (reason.contains("target table was not found"))
 			next = "If you want to create the table, enable Create missing target tables in Job settings. Otherwise prepare the matching empty target table, then review again.";
 		else if (reason.contains("must be empty"))
-			next = "Choose an empty target table or a different destination schema, then review again. Existing rows are never cleared automatically.";
+			next = "Choose an empty target or a different destination schema. To replace existing rows, enable staged replacement in Job settings and review again.";
 		else if (reason.contains("missing columns"))
 			next = "Align the existing target columns with the source, or choose another empty target. This workflow does not alter existing tables.";
 		else

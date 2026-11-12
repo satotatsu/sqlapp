@@ -14,6 +14,45 @@ import org.junit.jupiter.api.Test;
 
 class ReportReviewViewTest {
 	@Test
+	void comparisonScopesCombineWithTextSearchAndResetAcrossReports() throws Exception {
+		SwingUtilities.invokeAndWait(() -> {
+			var view = new ReportReviewView();
+			var review = new ReportReviewService.Review("Comparison",
+					List.of("Task", "Target vs staging", "Staging vs recorded"), List.of(
+							List.of("matched", "Match", "Unchanged"),
+							List.of("target-only", "Different", "Unchanged"),
+							List.of("stage-only", "Match", "Changed"),
+							List.of("both", "Different", "Changed")), "{}");
+			view.showReview(review);
+			assertTrue(view.comparisonScope.getParent().isVisible());
+			view.comparisonScope.setSelectedIndex(1);
+			assertEquals(2, view.tasks.getRowCount());
+			view.taskTable.filter.setText("target-only");
+			assertEquals(1, view.tasks.getRowCount());
+			view.comparisonScope.setSelectedIndex(2);
+			assertEquals(0, view.tasks.getRowCount());
+			view.taskTable.clear.doClick(0);
+			assertEquals(2, view.tasks.getRowCount());
+			view.comparisonScope.setSelectedIndex(3);
+			assertEquals(1, view.tasks.getRowCount());
+			assertEquals("both", view.tasks.getValueAt(0, 0));
+			assertEquals("Task\tTarget vs staging\tStaging vs recorded\nboth\tDifferent\tChanged\n",
+					ReportTableClipboard.format(view.tasks));
+			view.showReview(review);
+			assertEquals(0, view.comparisonScope.getSelectedIndex());
+			assertEquals(4, view.tasks.getRowCount());
+			view.comparisonScope.setSelectedIndex(2);
+			view.showReview(new ReportReviewService.Review("Other", List.of("Task"),
+					List.of(List.of("unrelated")), "{}"));
+			assertFalse(view.comparisonScope.getParent().isVisible());
+			assertEquals(1, view.tasks.getRowCount());
+			view.clear();
+			assertEquals(0, view.tasks.getRowCount());
+			assertFalse(view.comparisonScope.getParent().isVisible());
+		});
+	}
+
+	@Test
 	void jsonNavigationSearchesCountsAndNavigatesWithoutEditingAndResetsForNextReport() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
 			final var view = new ReportReviewView();

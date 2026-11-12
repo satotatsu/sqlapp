@@ -52,7 +52,11 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 		builder.unique(obj.isUnique()).index();
 		boolean conc = table != null && this.getTableOptions().getOnlineIndex().test(table, obj);
 		builder.concurrently(conc);
-		builder.ifNotExists(table != null && this.getOptions().isCreateIfNotExists()).space();
+		builder.ifNotExists(supportsIfNotExists() && table != null && this.getOptions().isCreateIfNotExists()).space();
+	}
+
+	protected boolean supportsIfNotExists() {
+		return false;
 	}
 
 	@Override
@@ -175,9 +179,8 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 	public List<SqlOperation> createSql(final Index obj) {
 		List<SqlOperation> result = super.createSql(obj);
 		if (!result.isEmpty() && obj.getRemarks() != null) {
-			PostgresSqlBuilder builder = createSqlBuilder();
-			builder.comment().on().index().space().name(obj, getOptions().isDecorateSchemaName()).is()
-					.sqlChar(obj.getRemarks());
+			var builder = Postgres93AlterMviewFactory.indexComment(obj, createSqlBuilder(),
+					getOptions().isDecorateSchemaName());
 			addSql(result, builder, SqlType.SET_COMMENT, obj);
 		}
 		return result;

@@ -6,7 +6,10 @@
 package com.sqlapp.data.db.dialect.spanner.sql;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +17,27 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
 
 class SpannerCreateSequenceFactoryTest extends SpannerSqlFactoryTest {
+	@Test
+	void dropsNamedSequencesWithOptionalIfExists() {
+		final var sequence = new Sequence("OrdersSeq").setSchemaName("Sales");
+		sqlFactoryRegistry.getOptions().setDropIfExists(true);
+		assertEquals("DROP SEQUENCE IF EXISTS `Sales`.`OrdersSeq`",
+				sqlFactoryRegistry.createSql(sequence, SqlType.DROP).getFirst().getSqlText());
+		sqlFactoryRegistry.getOptions().setDropIfExists(false);
+		assertEquals("DROP SEQUENCE `Sales`.`OrdersSeq`",
+				sqlFactoryRegistry.createSql(sequence, SqlType.DROP).getFirst().getSqlText());
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(new Sequence(" "), SqlType.DROP));
+	}
+	@Test
+	void validatesStartCounterInt64Boundary() {
+		final var maximum = BigInteger.valueOf(Long.MAX_VALUE);
+		final var sequence = new Sequence("sequence_boundary").setStartValue(maximum);
+		assertTrue(sqlFactoryRegistry.createSql(sequence, SqlType.CREATE).getFirst().getSqlText()
+				.contains("START COUNTER WITH " + maximum));
+		sequence.setStartValue(maximum.add(BigInteger.ONE));
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(sequence, SqlType.CREATE));
+	}
 
 	@Test
 	void testCreateBitReversedSequence() {

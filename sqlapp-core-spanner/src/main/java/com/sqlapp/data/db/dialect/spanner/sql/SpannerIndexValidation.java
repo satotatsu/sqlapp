@@ -23,6 +23,15 @@ final class SpannerIndexValidation {
 					+ "change the constraint instead: " + index.getName());
 	}
 
+	static void requireStandaloneIndex(final Index index) {
+		requireUserIndex(index);
+		identity(index);
+		if (index.getTable() != null && index.getTable().getConstraints().contains(index.getName())) {
+			throw new UnsupportedOperationException(
+					"Cloud Spanner constraint-owned index requires a constraint migration: " + index.getName());
+		}
+	}
+
 	static void identity(final Index index) {
 		if (index.getName() == null || index.getName().isBlank()) {
 			throw new IllegalArgumentException("Cloud Spanner index requires a name");

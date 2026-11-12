@@ -13,6 +13,52 @@ import org.junit.jupiter.api.io.TempDir;
 import com.sqlapp.data.db.command.migration.transfer.*;
 
 class TransferJobSettingsPanelTest {
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void savesStagedReplacementWithMandatoryVerification(boolean fileRoute) throws Exception {
+		var file = Files.writeString(directory.resolve("staged.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nverify: false\n"
+						+ (fileRoute ? "dataMode: FILE\nfiles: {directory: packages}\n" : ""));
+		var panel = load(file, new AtomicReference<>());
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(panel.stagedReplace.isSelected());
+			if (fileRoute) assertTrue(SwingUtilities.isDescendingFrom(panel.stagedReplace, panel.importSettings));
+			panel.stagedReplace.doClick(0);
+			assertTrue(panel.verify.isSelected());
+			assertFalse(panel.verify.isEnabled());
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		var config = io.read(file).configuration();
+		assertEquals(TransferJobConfiguration.TargetPreparation.STAGED_REPLACE, config.targetPreparation());
+		assertTrue(config.verify());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void insertMethodRoundTripsForDirectAndFileJobsWithoutChangingOtherSettings(boolean fileRoute) throws Exception {
+		var file = Files.writeString(directory.resolve("insert-method.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nchunkSize: 123\n"
+						+ (fileRoute ? "dataMode: FILE\nfiles: {directory: packages, format: CSV}\n" : ""));
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO, panel.insertMethod.getSelectedItem());
+			if (fileRoute) assertTrue(SwingUtilities.isDescendingFrom(panel.insertMethod, panel.importSettings));
+			panel.insertMethod.setSelectedItem(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH);
+			onIdle(panel, done); panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		var result = io.read(file).configuration();
+		assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH, result.effectiveInsertMethod());
+		assertEquals(123, result.chunkSize());
+		assertEquals(java.util.List.of("ITEMS"), result.tables());
+		var reopened = load(file, new AtomicReference<>());
+		SwingUtilities.invokeAndWait(() -> assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH, reopened.insertMethod.getSelectedItem()));
+	}
 	@TempDir
 	Path directory;
 	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();

@@ -80,8 +80,9 @@ public class SpannerTableReader extends TableReader {
 		obj.setSchemaName(getString(rs, "table_schema"));
 		setSpecifics(rs, "parent_table_name", obj);
 		setSpecifics(rs, "on_delete_action", obj);
-		setSpecifics(rs, "interleave_type", obj);
-		if ("IN PARENT".equalsIgnoreCase(getString(rs, "interleave_type")) && getString(rs, "on_delete_action") == null)
+		setSpecifics(rs, "INTERLEAVE_TYPE", obj);
+		setSpecifics(rs, "ROW_DELETION_POLICY_EXPRESSION", obj);
+		if ("IN PARENT".equalsIgnoreCase(getString(rs, "INTERLEAVE_TYPE")) && getString(rs, "on_delete_action") == null)
 			throw new IllegalArgumentException(
 					"Missing Spanner interleaved-table ON DELETE metadata: " + obj.getName());
 		return obj;

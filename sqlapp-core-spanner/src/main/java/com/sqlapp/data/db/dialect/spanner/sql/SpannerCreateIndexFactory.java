@@ -285,6 +285,9 @@ public class SpannerCreateIndexFactory extends AbstractCreateIndexFactory<Spanne
 			throw new IllegalArgumentException("Cloud Spanner VECTOR index requires a fixed-length "
 					+ "FLOAT32 or FLOAT64 array as its first column: " + reference.getName());
 		}
+		if (index.getVectorDistanceType() == null)
+			throw new IllegalArgumentException("Spanner VECTOR index " + index.getName()
+					+ " requires an explicit distance type when it is unavailable in INDEX_OPTIONS");
 		toSpannerDistance(index.getVectorDistanceType());
 		final Integer treeDepth = integerOption(index, TREE_DEPTH);
 		final Integer leaves = integerOption(index, NUM_LEAVES);

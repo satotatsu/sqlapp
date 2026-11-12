@@ -36,7 +36,7 @@ final class MdbTransferPanel extends JPanel {
 			java.util.function.Function<DataMigrationDraftService.Prepared, Path> csvPresenter) {
 		super(new BorderLayout(4, 4));
 		transfer = new DirectTransferPanel((action, request, sourcePassword, targetPassword) -> {
-			if (action != DirectTransferPanel.Action.TEST_TARGET)
+			if (action != DirectTransferPanel.Action.TEST_TARGET && action != DirectTransferPanel.Action.COMPARE_STAGING)
 				MdbSourceFile.validate(request.source());
 			return backend.perform(action, request, sourcePassword, targetPassword);
 		}, presenter);

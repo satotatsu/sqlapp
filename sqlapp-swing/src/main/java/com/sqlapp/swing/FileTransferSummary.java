@@ -36,6 +36,7 @@ final class FileTransferSummary {
 						.append('\n').append("Target table preparation: ").append(configuration.schemaMode())
 						.append('\n').append("Verification after import: ")
 						.append(configuration.verify() ? "enabled" : "disabled").append('\n')
+						.append("Insert method: ").append(configuration.effectiveInsertMethod()).append('\n')
 						.append("Compatibility policy: ").append(configuration.compatibilityPolicy()).append('\n');
 			}
 			if (inspected.description() != null)
@@ -60,6 +61,8 @@ final class FileTransferSummary {
 			text.append("Target: ").append(reviewed.review().targetIdentity().productName()).append(" / ")
 					.append(reviewed.review().targetIdentity().productVersion()).append('\n');
 			packageDetails(text, reviewed.manifest());
+			if (reviewed.review().staging() != null)
+				text.append("\nExisting rows: replace after staging and verification.\n");
 			text.append("\nMissing-table DDL statements: ")
 					.append(reviewed.review().schemaPreparation().statements().size()).append('\n');
 			warnings(text, reviewed.review().schemaPreparation().warnings());
@@ -67,6 +70,23 @@ final class FileTransferSummary {
 					.append("\nNext: inspect warnings and Schema SQL, then confirm Import reviewed package.\n")
 					.append("The source connection is not needed. The Gradle tab provides target-only settings.\n");
 		} else if (value instanceof TransferFileImportService.Outcome outcome) {
+			if (outcome.staging() != null) {
+				var staging = outcome.staging();
+				text.append(staging.state().summary()).append('\n');
+				text.append("Import execution phase: ").append(outcome.phase()).append('\n');
+				TransferExecutionSummary.appendFailure(text, outcome.failureDiagnostic());
+				if (staging.state().committed())
+					text.append("Rows committed: ").append(staging.committedRows().values().stream().mapToLong(Long::longValue).sum()).append('\n');
+				if (staging.state() != TransferStagedReplacement.State.COMMITTED
+						&& staging.state() != TransferStagedReplacement.State.NOT_STARTED)
+					staging.targets().stream().filter(table -> !staging.cleanedStages().contains(table.stageTable()))
+							.forEach(table -> text.append("Staging table to check: ").append(table.schema()).append('.').append(table.stageTable()).append('\n'));
+				if (outcome.stoppedTaskId() != null)
+					text.append("Stopped task: ").append(outcome.stoppedTaskId()).append('\n');
+				if (!outcome.verification().isEmpty())
+					TransferExecutionSummary.appendVerificationGuide(text);
+				return text.append("\nAudit report: ").append(outcome.auditFile() == null ? "unavailable" : outcome.auditFile()).toString();
+			}
 			TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Import execution phase: ").append(outcome.phase()).append('\n');
 			TransferExecutionSummary.appendFailure(text, outcome.failureDiagnostic());

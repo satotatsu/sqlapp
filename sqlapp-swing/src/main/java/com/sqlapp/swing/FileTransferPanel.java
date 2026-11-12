@@ -10,6 +10,7 @@ import javax.swing.*;
 
 import com.sqlapp.data.db.command.migration.transfer.TransferFilePackageIO;
 import com.sqlapp.data.db.command.migration.transfer.TransferFileImportService;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagingComparisonReportIO;
 
 /**
  * GUI authoring/export/review/import adapter; shared services own all migration
@@ -19,7 +20,7 @@ final class FileTransferPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
 	enum Action {
-		DISCOVER, EXPORT, INSPECT, INSPECT_DATA, REVIEW, IMPORT, TEST;
+		DISCOVER, EXPORT, INSPECT, INSPECT_DATA, REVIEW, IMPORT, TEST, COMPARE_STAGING;
 
 		boolean isInspection() {
 			return this == INSPECT || this == INSPECT_DATA;
@@ -48,10 +49,17 @@ final class FileTransferPanel extends JPanel {
 	final JCheckBox inspectValues = new JCheckBox(
 			"Also validate packaged values during inspection (offline; may take longer)");
 	final JButton apply = new JButton("Import reviewed package…");
+	final JButton compareStaging = new JButton("Compare staging…");
+	private final ReportReviewView stagingComparison = new ReportReviewView();
+	private final StagingComparisonHistory comparisonHistory = new StagingComparisonHistory();
+	private Path retainedImportResult;
 	final JButton nextImport = new JButton("Continue to import this package…");
 	final JToggleButton drivers = new JToggleButton("Driver class");
 	final JLabel status = new JLabel(
 			"Choose Export to create a job without YAML, or Import to use a completed package.");
+	final StagingComparisonSaveActions comparisonActions = new StagingComparisonSaveActions(this::isBusy,
+			this::setBusy, status::setText, workspace::getText);
+	final SavedReportButton savedComparison = comparisonActions.saved;
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	final ReadOnlyCodePanel result = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_JSON, false));
@@ -131,6 +139,21 @@ final class FileTransferPanel extends JPanel {
 		actions.add(previewPackage);
 		actions.add(review);
 		actions.add(apply);
+		actions.add(compareStaging);
+		stagingComparison.add(comparisonActions, BorderLayout.SOUTH);
+		compareStaging.addActionListener(event -> {
+			if (isBusy() || !validConnection(target)) return;
+			if (retainedImportResult != null) {
+				compareStaging(retainedImportResult);
+				return;
+			}
+			var chooser = files.forOutputDirectory(new javax.swing.filechooser.FileNameExtensionFilter("Import result JSON", "json"),
+					"import-result.json", workspace.getText());
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
+				compareStaging(chooser.getSelectedFile().toPath());
+		});
+		FileDropHandler.file(compareStaging, List.of("json"), () -> !isBusy() && step.getSelectedIndex() == 1,
+				path -> compareStaging(path), FileDropHandler.errors(status, statusPanel));
 		actions.add(drivers);
 		summary.setEditable(false);
 		summary.setLineWrap(true);
@@ -210,7 +233,7 @@ final class FileTransferPanel extends JPanel {
 			importReviewed(() -> JOptionPane.showConfirmDialog(this,
 					"Import the reviewed file package into the checked target?\nPackage fingerprint: "
 							+ reviewed.review().manifestFingerprint()
-							+ "\nRows may remain committed if copying or verification later fails. Existing rows are never cleared."
+							+ (reviewed.review().staging() == null ? "\nRows may remain committed if copying or verification later fails." : "\nAfter staging and verification, replace all rows in the selected target tables in one transaction.")
 							+ "\nMissing-table DDL statements: "
 							+ reviewed.review().schemaPreparation().statements().size() + ". Compatibility warnings: "
 							+ reviewed.review().schemaPreparation().warnings().size()
@@ -293,6 +316,10 @@ final class FileTransferPanel extends JPanel {
 
 	private void changed() {
 		revision++;
+		retainedImportResult = null;
+		comparisonActions.clear();
+		comparisonHistory.clear();
+		resultTabs.remove(stagingComparison);
 		exportedForImport = null;
 		if (hasSummary && !summary.getText().startsWith("Inputs changed."))
 			summary.setText(
@@ -317,6 +344,7 @@ final class FileTransferPanel extends JPanel {
 		inspectPackage.setVisible(importing);
 		previewPackage.setVisible(importing);
 		apply.setVisible(importing);
+		compareStaging.setVisible(importing);
 	}
 
 	boolean isBusy() {
@@ -362,6 +390,8 @@ final class FileTransferPanel extends JPanel {
 		inspectPackage.setEnabled(!busy);
 		previewPackage.setEnabled(!isBusy() && !manifest.getText().isBlank());
 		apply.setEnabled(!busy && reviewed != null);
+		compareStaging.setEnabled(!busy && step.getSelectedIndex() == 1);
+		comparisonActions.refresh();
 		drivers.setEnabled(!busy);
 		nextImport.setVisible(exportedForImport != null && step.getSelectedIndex() == 0);
 		nextImport.setEnabled(!busy && exportedForImport != null && step.getSelectedIndex() == 0);
@@ -445,6 +475,58 @@ final class FileTransferPanel extends JPanel {
 		run(Action.IMPORT, directory);
 	}
 
+	private record Compared(TransferStagingComparisonReportIO.Report report, ReportReviewService.Review view) {
+	}
+
+	private boolean compareStaging(Path report) {
+		if (isBusy() || step.getSelectedIndex() != 1 || !validConnection(target)) return false;
+		var spec = target.snapshot().spec();
+		var password = target.password.getPassword();
+		var requested = revision;
+		resultTabs.remove(stagingComparison);
+		comparisonActions.beginComparison();
+		setBusy(true);
+		comparisonActions.setRepeatAction(() -> compareStaging(report));
+		status.setText("Comparing staging and target rows (read-only)…");
+		new SwingWorker<Compared, Void>() {
+			@Override protected Compared doInBackground() throws Exception {
+				try {
+					var comparison = (com.sqlapp.data.db.command.migration.transfer.TransferStagingComparisonReportIO.Report)
+							backend.perform(Action.COMPARE_STAGING, report, null, spec, password, null, null);
+					return new Compared(comparison, new ReportReviewService().stagingComparison(comparison));
+				} finally {
+					Arrays.fill(password, '\0');
+				}
+			}
+
+			@Override protected void done() {
+				try {
+					var comparison = get();
+					if (requested != revision) return;
+					stagingComparison.showReview(comparisonHistory.show(comparison.report(), comparison.view()));
+					comparisonActions.show(comparison.report());
+					resultTabs.addTab("Staging comparison", stagingComparison);
+					resultTabs.setSelectedComponent(stagingComparison);
+					status.setText("Read-only staging comparison finished.");
+				} catch (Exception failure) {
+					if (requested == revision) {
+						var cause = failure instanceof java.util.concurrent.ExecutionException ? failure.getCause() : failure;
+						status.setText("Staging comparison failed. See Details.");
+						statusPanel.setDetails(EditorStatusPanel.failureMessage(cause));
+						stagingComparison.clear();
+						stagingComparison.summary.setText("Staging comparison failed. See Details, check the target connection "
+								+ "and retained staging, then use Compare again. No rows were changed by this check.");
+						resultTabs.addTab("Staging comparison", stagingComparison);
+						resultTabs.setSelectedComponent(stagingComparison);
+					}
+				} finally {
+					setBusy(false);
+				}
+			}
+		}.execute();
+		return true;
+	}
+
 	private void run(Action action, Path directory) {
 		if (isBusy())
 			return;
@@ -472,6 +554,10 @@ final class FileTransferPanel extends JPanel {
 		final long requested = revision;
 		final String schema = sourceSchema.getText();
 		if (action != Action.TEST) {
+			retainedImportResult = null;
+			comparisonActions.clear();
+			comparisonHistory.clear();
+			resultTabs.remove(stagingComparison);
 			clearGradle();
 			exportedForImport = null;
 		}
@@ -566,9 +652,13 @@ final class FileTransferPanel extends JPanel {
 							: failure;
 					if (action == Action.REVIEW || action == Action.IMPORT)
 						reviewed = null;
-					if (cause instanceof TransferFileImportService.ImportException imported)
+					if (cause instanceof TransferFileImportService.ImportException imported) {
+						var outcome = imported.outcome();
+						if (requested == revision && outcome.staging() != null && outcome.staging().state()
+								== com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.State.COMMIT_UNCERTAIN)
+							retainedImportResult = outcome.auditFile();
 						show(imported.outcome(), prior);
-					else if (cause instanceof TransferPreparationFailure validation) {
+					} else if (cause instanceof TransferPreparationFailure validation) {
 						summary.setText((action == Action.EXPORT ? "Export preparation needs attention:\n\n"
 								: "Target preparation needs attention:\n\n")
 								+ validation.getMessage()
@@ -622,7 +712,9 @@ final class FileTransferPanel extends JPanel {
 				? review.review().schemaPreparation().statements()
 				: value instanceof TransferFileImportService.Outcome outcome ? outcome.schemaPreparation().planned()
 						: List.<com.sqlapp.data.db.command.migration.transfer.TransferSchemaPreparation.Statement>of();
-		if (!statements.isEmpty()) {
+		if (!statements.isEmpty()
+				|| value instanceof FileTransferDesktopService.Reviewed review && review.review().staging() != null
+				|| value instanceof TransferFileImportService.Outcome outcome && outcome.staging() != null) {
 			final var text = new StringBuilder(
 					"-- Reviewed missing-table preparation. DDL may remain applied after failure.\n\n");
 			final var warnings = value instanceof FileTransferDesktopService.Reviewed review

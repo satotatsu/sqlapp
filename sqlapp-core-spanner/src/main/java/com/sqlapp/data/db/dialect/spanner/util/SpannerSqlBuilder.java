@@ -193,21 +193,12 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
 		final Boolean bitReversed = column.getSpecifics().get(IDENTITY_BIT_REVERSED_POSITIVE, Boolean.class);
 		final Long start = column.getIdentityStartValue();
-		final Long skipMin = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MIN, Long.class);
-		final Long skipMax = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MAX, Long.class);
-		if ((skipMin == null) != (skipMax == null)) {
-			throw new IllegalArgumentException("Cloud Spanner identity skip range requires both "
-					+ "minimum and maximum values: " + column.getName());
-		}
-		if (skipMin != null && skipMin.longValue() > skipMax.longValue()) {
-			throw new IllegalArgumentException(
-					"Cloud Spanner identity skip range minimum must not " + "exceed maximum: " + column.getName());
-		}
+		final var range = identitySkipRange(column);
 		if (start != null && start.longValue() <= 0L) {
 			throw new IllegalArgumentException(
 					"Cloud Spanner identity start counter must be positive: " + column.getName());
 		}
-		if (Boolean.TRUE.equals(bitReversed) || start != null || skipMin != null) {
+		if (Boolean.TRUE.equals(bitReversed) || start != null || range.minimum() != null) {
 			space()._add("(");
 			boolean delimiter = false;
 			if (Boolean.TRUE.equals(bitReversed)) {
@@ -218,12 +209,40 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 				space(delimiter)._add("START COUNTER WITH").space()._add(start);
 				delimiter = true;
 			}
-			if (skipMin != null) {
-				space(delimiter)._add("SKIP RANGE").space()._add(skipMin)._add(",").space()._add(skipMax);
+			if (range.minimum() != null) {
+				space(delimiter);
+				appendIdentitySkipRange(range);
 			}
 			space()._add(")");
 		}
 		return this;
+	}
+
+	public SpannerSqlBuilder alterIdentitySkipRange(final Column column) {
+		final var range = identitySkipRange(column);
+		space()._add("ALTER IDENTITY SET").space();
+		if (range.minimum() == null)
+			return _add("NO SKIP RANGE");
+		return appendIdentitySkipRange(range);
+	}
+
+	private SpannerSqlBuilder appendIdentitySkipRange(final IdentitySkipRange range) {
+		return _add("SKIP RANGE").space()._add(range.minimum())._add(",").space()._add(range.maximum());
+	}
+
+	private static IdentitySkipRange identitySkipRange(final AbstractColumn<?> column) {
+		final Long minimum = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MIN, Long.class);
+		final Long maximum = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MAX, Long.class);
+		if ((minimum == null) != (maximum == null))
+			throw new IllegalArgumentException("Cloud Spanner identity skip range requires both "
+					+ "minimum and maximum values: " + column.getName());
+		if (minimum != null && minimum > maximum)
+			throw new IllegalArgumentException(
+					"Cloud Spanner identity skip range minimum must not exceed maximum: " + column.getName());
+		return new IdentitySkipRange(minimum, maximum);
+	}
+
+	private record IdentitySkipRange(Long minimum, Long maximum) {
 	}
 
 	@Override

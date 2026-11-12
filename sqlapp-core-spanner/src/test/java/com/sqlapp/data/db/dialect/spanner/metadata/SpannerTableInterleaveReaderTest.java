@@ -55,13 +55,15 @@ class SpannerTableInterleaveReaderTest {
 				final var row = new HashMap<>(Map.of("table_catalog", "", "table_schema", schema, "table_name",
 						"Child" + i, "parent_table_name", "Parent"));
 				if (i % 3 == 2)
-					row.put("interleave_type", "IN");
+					row.put("INTERLEAVE_TYPE", "IN");
 				else {
 					row.put("on_delete_action", i % 3 == 0 ? "CASCADE" : "NO ACTION");
 					if (i % 3 == 1)
-						row.put("interleave_type", "IN PARENT");
+						row.put("INTERLEAVE_TYPE", "IN PARENT");
 				}
 				reader.rows.add(row);
+				if (i % 2 == 0)
+					row.put("ROW_DELETION_POLICY_EXPRESSION", "OLDER_THAN(CreatedAt, INTERVAL 7 DAY)");
 			}
 		final var tables = reader.doGetAll(null, new ParametersContext(), null);
 		assertEquals(40, tables.size());
@@ -76,6 +78,7 @@ class SpannerTableInterleaveReaderTest {
 				schema.getTables().add(table);
 			}
 			child.getSpecifics().put(SpannerCreateTableFactory.LOCALITY_GROUP, "hot");
+			child.getColumns().add(new Column("CreatedAt").setDataType(DataType.TIMESTAMP));
 			final Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
 			final var restoredChild = restored.getTables().get(child.getName());
 			final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
@@ -98,6 +101,12 @@ class SpannerTableInterleaveReaderTest {
 								"ON DELETE " + child.getSpecifics().get(SpannerCreateTableFactory.ON_DELETE_ACTION)),
 						sql);
 			assertTrue(sql.contains(", OPTIONS"), sql);
+			assertEquals(child.getSpecifics().get(SpannerCreateTableFactory.ROW_DELETION_POLICY_EXPRESSION) != null,
+					sql.contains(", ROW DELETION POLICY (OLDER_THAN(CreatedAt, INTERVAL 7 DAY))"), sql);
+			if (sql.contains("ROW DELETION POLICY")) {
+				assertTrue(sql.indexOf("INTERLEAVE") < sql.indexOf("ROW DELETION POLICY"), sql);
+				assertTrue(sql.indexOf("ROW DELETION POLICY") < sql.indexOf(", OPTIONS"), sql);
+			}
 		}
 	}
 
@@ -117,7 +126,7 @@ class SpannerTableInterleaveReaderTest {
 	@Test
 	void refusesMissingDeleteMetadataForAnEnforcedParentRelationship() {
 		final var reader = new Reader();
-		reader.rows.add(Map.of("table_name", "Child", "parent_table_name", "Parent", "interleave_type", "IN PARENT"));
+		reader.rows.add(Map.of("table_name", "Child", "parent_table_name", "Parent", "INTERLEAVE_TYPE", "IN PARENT"));
 		assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
 	}
 }

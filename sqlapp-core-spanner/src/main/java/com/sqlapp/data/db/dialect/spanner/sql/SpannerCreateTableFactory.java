@@ -29,9 +29,13 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 	public static final String PARENT_TABLE_NAME = "PARENT_TABLE_NAME";
 	public static final String INTERLEAVE_TYPE = "INTERLEAVE_TYPE";
 	public static final String ON_DELETE_ACTION = "ON_DELETE_ACTION";
+	public static final String ROW_DELETION_POLICY_EXPRESSION = "ROW_DELETION_POLICY_EXPRESSION";
 
 	@Override
 	protected void addCreateObject(final Table table, final SpannerSqlBuilder builder) {
+		if (table.getColumns().stream().anyMatch(column ->
+				column.getSpecifics().get(SpannerAlterTableFactory.IDENTITY_RESTART_COUNTER_WITH) != null))
+			throw new IllegalArgumentException("Spanner identity restart requests require ALTER; use identityStartValue for CREATE");
 		if (table.getName() == null || table.getName().isBlank())
 			throw new IllegalArgumentException("Cloud Spanner CREATE TABLE requires a name");
 		interleaveType(table); // Validate before generating any part of the statement.
@@ -96,6 +100,9 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 		}
 		builder.space()._add(")");
 		addInterleave(table, builder);
+		final String policy = SpannerRowDeletionPolicy.expression(table);
+		if (policy != null)
+			builder._add(", ROW DELETION POLICY (")._add(policy)._add(")");
 		addTableOptions(table, builder);
 	}
 
@@ -140,13 +147,20 @@ public class SpannerCreateTableFactory extends AbstractCreateTableFactory<Spanne
 		final String type = interleaveType(table);
 		if (type == null)
 			return;
-		builder._add(", INTERLEAVE ")._add(type).space().name(
-				new Table(table.getSpecifics().get(PARENT_TABLE_NAME)).setSchemaName(table.getSchemaName()),
-				getOptions().isDecorateSchemaName());
+		builder._add(", INTERLEAVE ")._add(type).space()
+				.name(interleaveParent(table), getOptions().isDecorateSchemaName());
 		if ("IN PARENT".equals(type)) {
-			final String action = table.getSpecifics().get(ON_DELETE_ACTION);
-			builder._add(" ON DELETE ")._add(action == null ? "NO ACTION" : action.toUpperCase(java.util.Locale.ROOT));
+			builder._add(" ON DELETE ")._add(interleaveDeleteAction(table));
 		}
+	}
+
+	static Table interleaveParent(final Table table) {
+		return new Table(table.getSpecifics().get(PARENT_TABLE_NAME)).setSchemaName(table.getSchemaName());
+	}
+
+	static String interleaveDeleteAction(final Table table) {
+		final String action = table.getSpecifics().get(ON_DELETE_ACTION);
+		return action == null ? "NO ACTION" : action.toUpperCase(java.util.Locale.ROOT);
 	}
 
 	private void addTableOptions(final Table table, final SpannerSqlBuilder builder) {

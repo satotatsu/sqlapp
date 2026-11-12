@@ -21,6 +21,10 @@ characters in SQL view statements, without splitting their surrogate pairs.
 
 ## Object hierarchy
 
+Domain XML retains source `length` and `octetLength`, including LOB sizes and
+decimal floating-point precision. This also applies to array domains, so editing
+the model before saving XML preserves the source size used for DDL generation.
+
 The common relational hierarchy is:
 
 ```text

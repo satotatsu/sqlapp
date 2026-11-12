@@ -104,6 +104,70 @@ class SpannerIndexMigrationTest {
 	}
 
 	@Test
+	void changesStoredColumnsInPlaceAroundTheTableColumnChanges() throws Exception {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		for (final var type : java.util.List.of(IndexType.BTree, IndexType.Vector)) {
+			final var original = table();
+			final var index = new Index("idx").setIndexType(type);
+			index.getColumns().add("a");
+			index.getIncludes().add("b");
+			original.getIndexes().add(index);
+			final var target = original.clone();
+			target.getIndexes().getFirst().getIncludes().clear();
+			target.getColumns().remove("b");
+			final Table restored = SchemaUtils.readXml(new java.io.StringReader(target.asXml()));
+			final var operations = registry.createSql(original.diff(restored), SqlType.ALTER);
+			final String alter = "ALTER " + (type == IndexType.Vector ? "VECTOR INDEX" : "INDEX")
+					+ " `Sales`.`idx`";
+			assertEquals(2, operations.size());
+			assertEquals(alter + " DROP STORED COLUMN `b`", operations.get(0).getSqlText());
+			assertTrue(operations.get(1).getSqlText().contains("DROP COLUMN `b`"));
+			final var restoredColumn = registry.createSql(restored.diff(original), SqlType.ALTER);
+			assertEquals(2, restoredColumn.size());
+			assertTrue(restoredColumn.get(0).getSqlText().contains("ADD COLUMN"));
+			assertEquals(alter + " ADD STORED COLUMN `b`", restoredColumn.get(1).getSqlText());
+		}
+	}
+
+	@Test
+	void rejectsInPlaceChangesToManagedIndexesAndMissingStoredColumns() {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		final var original = table();
+		final var index = new Index("idx");
+		index.getColumns().add("a");
+		original.getIndexes().add(index);
+		final var invalid = original.clone();
+		invalid.getIndexes().getFirst().getIncludes().add("missing");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(invalid), SqlType.ALTER));
+		index.getSpecifics().put(SpannerCreateIndexFactory.SPANNER_IS_MANAGED, true);
+		final var target = original.clone();
+		target.getIndexes().getFirst().getIncludes().add("b");
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target), SqlType.ALTER));
+	}
+
+	@Test
+	void setsAndResetsVectorSearchWithoutRequiringTheDistanceType() {
+		final var original = table();
+		final var vector = new Index("vector_idx").setIndexType(IndexType.Vector);
+		vector.getColumns().add("a");
+		original.getIndexes().add(vector);
+		final var changed = original.clone();
+		final var options = changed.getIndexes().getFirst().getSpecifics();
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		for (final String value : java.util.List.of("TRUE", "false")) {
+			options.put("disable_search", value);
+			final var operations = registry.createSql(original.diff(changed), SqlType.ALTER);
+			assertEquals(1, operations.size());
+			assertEquals("ALTER VECTOR INDEX `Sales`.`vector_idx` SET OPTIONS (disable_search = "
+					+ value.toLowerCase(java.util.Locale.ROOT) + ")", operations.getFirst().getSqlText());
+		}
+		assertEquals("ALTER VECTOR INDEX `Sales`.`vector_idx` SET OPTIONS (disable_search = NULL)",
+				registry.createSql(changed.diff(original), SqlType.ALTER).getFirst().getSqlText());
+		options.put("disable_search", "unknown");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(original.diff(changed), SqlType.ALTER));
+	}
+
+	@Test
 	void usesSearchDropSyntaxAndSupportsVectorDrop() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		registry.getOptions().setDropIfExists(true);

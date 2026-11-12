@@ -34,7 +34,10 @@ class SpannerFinalAuditTest {
 				return metadata;
 			if (method.getName().equals("wasNull"))
 				return wasNull[0];
-			final String value = values.get(args[0].toString().toUpperCase(Locale.ROOT));
+			final String label = args[0].toString();
+			if (!values.containsKey(label))
+				throw new SQLException("Unknown exact JDBC label: " + label);
+			final String value = values.get(label);
 			wasNull[0] = value == null;
 			return switch (method.getName()) {
 			case "getString", "getObject" -> value;
@@ -47,8 +50,8 @@ class SpannerFinalAuditTest {
 	@Test
 	void legacyAndModernJdbcColumnLabelsSurviveSchemaXmlAndDdl() throws Exception {
 		for (boolean modern : List.of(false, true)) {
-			final var values = new HashMap<>(Map.of("TABLE_CATALOG", "", "TABLE_SCHEMA", "Sales", "TABLE_NAME",
-					"Orders", "COLUMN_NAME", "id", "SPANNER_TYPE", "INT64", "IS_NULLABLE", "NO"));
+			final var values = new HashMap<>(Map.of("table_catalog", "", "table_schema", "Sales", "table_name",
+					"Orders", "column_name", "id", "spanner_type", "INT64", "is_nullable", "NO"));
 			if (modern) {
 				values.put("IS_IDENTITY", "YES");
 				values.put("IDENTITY_GENERATION", "BY DEFAULT");
@@ -87,8 +90,8 @@ class SpannerFinalAuditTest {
 	@Test
 	void rejectsUnknownGeneratedStorageAndHiddenFlags() {
 		for (String field : List.of("IS_GENERATED", "IS_STORED", "IS_HIDDEN")) {
-			final var values = new HashMap<>(Map.of("TABLE_CATALOG", "", "TABLE_SCHEMA", "Sales", "TABLE_NAME",
-					"Orders", "COLUMN_NAME", "computed", "SPANNER_TYPE", "INT64", "IS_NULLABLE", "YES"));
+			final var values = new HashMap<>(Map.of("table_catalog", "", "table_schema", "Sales", "table_name",
+					"Orders", "column_name", "computed", "spanner_type", "INT64", "is_nullable", "YES"));
 			if (field.equals("IS_STORED")) {
 				values.put("IS_GENERATED", "ALWAYS");
 				values.put("GENERATION_EXPRESSION", "1 + 2");

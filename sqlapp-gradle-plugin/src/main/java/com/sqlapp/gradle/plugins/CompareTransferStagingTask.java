@@ -31,6 +31,10 @@ public abstract class CompareTransferStagingTask extends AbstractDbTask<CompareT
 	public Provider<List<File>> getCompanionFiles() {
 		return getResultFile().map(result -> {
 			var directory = result.getAsFile().getParentFile();
+			if (result.getAsFile().getName().equals("import-result.json")) {
+				var members = directory.listFiles(file -> file.isFile() && !file.equals(result.getAsFile()));
+				return members == null ? List.of() : List.of(members);
+			}
 			return List.of("transfer-review.json", "transfer.yaml", "data-job.yaml", "source-schema.xml")
 					.stream().map(name -> new File(directory, name)).toList();
 		});

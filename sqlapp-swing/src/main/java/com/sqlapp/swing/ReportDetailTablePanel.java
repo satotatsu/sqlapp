@@ -36,6 +36,7 @@ final class ReportDetailTablePanel extends JPanel {
 	final JLabel copyStatus = new JLabel();
 	final JLabel count = new JLabel();
 	final JTable table;
+	final ReportTableCsvSaveActions csv;
 	final JTextArea selected = new JTextArea();
 	private TableRowSorter<DefaultTableModel> sorter;
 	private DefaultTableModel observedModel;
@@ -141,6 +142,7 @@ final class ReportDetailTablePanel extends JPanel {
 			final java.util.function.Consumer<String> clipboard) {
 		super(new BorderLayout(4, 4));
 		this.table = java.util.Objects.requireNonNull(table);
+		csv = new ReportTableCsvSaveActions(table, () -> controlsEnabled && table.isEnabled());
 		this.rowNoun = rowNoun;
 		this.clipboard = java.util.Objects.requireNonNull(clipboard);
 		final var search = new JPanel(new BorderLayout(6, 0));
@@ -167,6 +169,7 @@ final class ReportDetailTablePanel extends JPanel {
 		copyActions.add(copyRows);
 		copyActions.add(copySelected);
 		copyActions.add(copyDetails);
+		copyActions.add(csv);
 		copyDetails.setToolTipText(
 				"Copy the displayed detail text, including all fields for the first selected row, up to 1 MiB.");
 		tools.add(copyActions, BorderLayout.CENTER);
@@ -278,6 +281,7 @@ final class ReportDetailTablePanel extends JPanel {
 	}
 
 	private void refreshCounts() {
+		csv.refresh();
 		count.setText(table.getRowCount() + " / " + table.getModel().getRowCount() + " " + rowNoun);
 		copyRows.setEnabled(
 				controlsEnabled && table.isEnabled() && table.getRowCount() > 0 && table.getColumnCount() > 0);

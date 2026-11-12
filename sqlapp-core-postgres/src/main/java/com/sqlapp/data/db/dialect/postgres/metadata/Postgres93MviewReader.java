@@ -76,10 +76,11 @@ public class Postgres93MviewReader extends MviewReader {
 	}
 
 	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = createTable(getString(rs, "matviewname"));
+		var table = createTable(getString(rs, "matviewname"));
+		table.setOwnerName(getString(rs, "matviewowner"));
 		table.setSchemaName(getString(rs, "schemaname"));
 		table.setTableSpaceName(getString(rs, "tablespace"));
-		table.setRemarks("remarks");
+		table.setRemarks(getString(rs, "remarks"));
 		table.setStatement(getString(rs, "definition"));
 		return table;
 	}
@@ -91,7 +92,7 @@ public class Postgres93MviewReader extends MviewReader {
 
 	@Override
 	protected ColumnReader newColumnReader() {
-		return new PostgresColumnReader(this.getDialect());
+		return getDialect().getCatalogReader().getSchemaReader().getTableReader().getColumnReader();
 	}
 
 	@Override

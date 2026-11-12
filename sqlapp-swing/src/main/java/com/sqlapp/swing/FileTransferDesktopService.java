@@ -54,6 +54,11 @@ final class FileTransferDesktopService implements FileTransferPanel.Backend {
 		try {
 			if (action == FileTransferPanel.Action.TEST)
 				return new JdbcConnectionTestService().test(spec, password);
+			if (action == FileTransferPanel.Action.COMPARE_STAGING) {
+				try (var pool = PlanningJdbc.open(spec, password)) {
+					return TransferStagedReplacement.compareRetainedStageReport(input, pool);
+				}
+			}
 			if (action == FileTransferPanel.Action.DISCOVER) {
 				final var prepared = new DataMigrationDraftService().discover(spec, password, schema, workspace);
 				return new DataMigrationDraftService.Prepared(prepared.directory(),

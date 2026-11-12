@@ -88,7 +88,9 @@ public class PostgresAlterSchemaFactory extends AlterSchemaFactory {
 
 	private static boolean isView(SqlOperation operation) {
 		return operation.getOriginal() instanceof com.sqlapp.data.schemas.View
-				|| operation.getTarget() instanceof com.sqlapp.data.schemas.View;
+				|| operation.getTarget() instanceof com.sqlapp.data.schemas.View
+				|| operation.getOriginal() instanceof com.sqlapp.data.schemas.Mview
+				|| operation.getTarget() instanceof com.sqlapp.data.schemas.Mview;
 	}
 
 	private static void move(List<SqlOperation> source, List<SqlOperation> target,

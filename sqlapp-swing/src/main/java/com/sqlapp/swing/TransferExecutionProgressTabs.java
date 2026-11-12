@@ -177,6 +177,7 @@ final class TransferExecutionProgressTabs {
 		boolean verify;
 		if (value instanceof DirectTransferDesktopService.Executed execution) {
 			var outcome = execution.outcome();
+			if (outcome.staging() != null) return null;
 			ids.addAll(outcome.prepared().taskIds());
 			completed.addAll(outcome.completedTasks());
 			if (outcome.verificationResult() != null)
@@ -191,6 +192,7 @@ final class TransferExecutionProgressTabs {
 					.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY;
 			verify = outcome.prepared().job().configuration().verify();
 		} else if (value instanceof TransferFileImportService.Outcome outcome) {
+			if (outcome.staging() != null) return null;
 			if (TransferRecordedTargets.matches(outcome, prior) && prior.manifest() != null)
 				prior.manifest().tables().forEach(table -> ids.add(table.taskId()));
 			copy = outcome.copyResult();

@@ -86,9 +86,13 @@ public final class MigrationApplication {
 			};
 			schemaPlan.savedReport.setReceiver(openReport);
 			dataPlan.savedReport.setReceiver(openReport);
+			directTransfer.savedComparison.setReceiver(openReport);
 			final var drivers = new JdbcDriverPanel();
 			final var fileTransfer = new FileTransferPanel();
+			fileTransfer.savedComparison.setReceiver(openReport);
 			final var mdbTransfer = new MdbTransferPanel();
+			mdbTransfer.transfer.savedComparison.setReceiver(openReport);
+			mdbTransfer.csv.savedComparison.setReceiver(openReport);
 			mdbTransfer.transfer.setSqlEditor(path -> {
 				if (!sqlEditor.requestOpen(path))
 					return false;

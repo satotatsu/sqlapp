@@ -9,6 +9,32 @@ Set `allowExecution=true` and supply the exact configuration fingerprint to copy
 and verify. It composes `TransferJobExecutionService`; the task adds no migration
 rules. Existing Data Job tasks and formats are unchanged.
 
+## Insert transport
+
+Optional `insertMethod` selects how each INSERT chunk is written:
+
+| Value | Behavior |
+| --- | --- |
+| `AUTO` (omitted) | Prefer the registered database provider; use portable JDBC batches when no provider exists. |
+| `NATIVE` | Require a registered database provider; fail if none is available. |
+| `JDBC_BATCH` | Use `PreparedStatement.addBatch()` / `executeBatch()` with shared SQL factories and the parameter binder. |
+
+Add `insertMethod: JDBC_BATCH` to the same job used by the GUI and
+`transferDatabase`. PostgreSQL's database provider streams COPY FROM STDIN;
+`JDBC_BATCH` explicitly selects the portable alternative. The selection is part
+of the reviewed plan fingerprint. Changing it requires a fresh review. Chunk
+commit, verification, NULL values and identity preservation retain their existing
+semantics. This option does not enable deleting target rows or merging them.
+Schema-only jobs reject the option because no data is copied.
+
+GUI **Job settings → Insert method (advanced)** edits this field. File-package
+jobs keep it under **Optional import settings**: export captures it without
+opening a target connection, and import applies the captured choice.
+
+Existing YAML may omit the field, and the prior Java constructors remain
+available. `TransferJobConfiguration` adds an `insertMethod` record component;
+Java record deconstruction patterns must include the additional component.
+
 ## Review target preparation per table
 
 After a direct, schema-only or file-package import review, the GUI's **Table
@@ -820,3 +846,153 @@ without an explicit task ID stay unassigned, preserving the original evidence.
 This is a GUI-only display improvement; policies, saved jobs and task properties
 are unchanged. See the
 [GUI guide](../../sqlapp-swing/README.md#filter-warnings-and-retain-package-context-after-import).
+
+### Replace existing rows after staging
+
+Direct JDBC jobs stop at a nonempty target by default. To opt into full
+replacement, enable **Stage and verify data before replacing existing target
+rows** in Direct JDBC transfer → Job settings. The GUI and the Gradle
+`transferDatabase` task use the same YAML option:
+
+```yaml
+targetPreparation: STAGED_REPLACE
+verify: true
+```
+
+The job copies into ordinary staging tables in the target schema and verifies
+the copy. The final step locks the selected tables, deletes old rows in
+child-first order, inserts verified rows in parent-first order and verifies
+the result before committing one transaction. A failure before commit rolls
+back the final changes if rollback succeeds. Review and result reports
+identify the staging tables and distinguish a rollback from an uncertain
+commit. If the commit acknowledgment is lost, a matching verification result
+describes rows seen inside the transaction. The result records
+`COMMIT_UNCERTAIN`, retains the staging tables and omits committed row counts.
+In the same GUI session, enter the target password if needed and select
+**Compare retained staging**. The comparison reads the retained staging and
+the current target in one read-only snapshot, with no source connection.
+For each table it shows the row counts, whether the copied columns match,
+and whether staging still matches the verification recorded before commit.
+A match describes the current data. The recorded commit outcome stays
+uncertain and the staging tables remain available.
+
+After restarting the GUI, enter the original target connection and choose
+**Compare saved staging…**, or drop `transfer-result.json` onto that button.
+Keep the result with
+`transfer-review.json`, `transfer.yaml`, `data-job.yaml` and
+`source-schema.xml` in the same folder. The files can move together.
+The comparison checks the captured fingerprints and target identity.
+The source connection and the original job file are unnecessary. Each JSON
+report can be up to 32 MiB. Java callers can use
+`TransferStagedReplacement.compareRetainedStage` with either the saved result
+path or the in-memory review and outcome, plus the target DataSource.
+
+When the database rejects an individual replacement operation, the result identifies
+the target task that stopped. The job rechecks target columns and foreign-key
+scope before staging and again before the final DELETE.
+
+Existing staging tables are never reused. Stages are dropped after
+a successful commit and are retained for inspection after a failed run.
+Newly created empty target tables can remain after rollback.
+
+Supported targets are PostgreSQL and HSQLDB 2.x in LOCKS or MVLOCKS mode.
+This mode requires privileges to create and drop staging tables, lock the
+selected targets, and read, delete and insert their rows. The job stops if
+an unselected table references a selected target or if the selected
+relationships cannot be ordered. PostgreSQL requires ordinary standalone
+tables without row-level security, rewrite rules or user triggers. HSQLDB
+requires tables without user triggers. Sequence allocations can advance
+even if row changes roll back. Prepare a stable source before the transfer.
+Use the normal `insertMethod` setting to select the PostgreSQL COPY provider
+or JDBC batch. The staged SQL shown in the GUI is a review outline.
+
+`STAGED_REPLACE` applies to verified JDBC and [file transfers](file-transfer.md#replace-existing-rows-after-staging).
+This mode uses transactional DELETE and INSERT. Existing
+transfer YAML and constructors remain valid. Java record patterns for
+`TransferJobConfiguration`, `Review` and `Outcome` must account for the added
+components.
+
+#### Compare retained staging with Gradle
+
+Configure `compareTransferStaging` with the saved `transfer-result.json` and the
+original target connection. Use the same companion files as in the GUI.
+
+```groovy
+tasks.named('compareTransferStaging') {
+    resultFile.set(layout.projectDirectory.file('reviewed-run/transfer-result.json'))
+    dataSource {
+        jdbcUrl.set(providers.environmentVariable('TRANSFER_TARGET_URL'))
+        username.set(providers.environmentVariable('TRANSFER_TARGET_USER'))
+        password.set(providers.environmentVariable('TRANSFER_TARGET_PASSWORD'))
+    }
+    // Optional: fail the build when target data differs or retained staging has changed.
+    failOnDifference.set(true)
+}
+```
+
+Run `./gradlew compareTransferStaging`. Each comparison writes a separate
+`staging-comparison.json` under `build/sqlapp-transfer/compare` by default.
+The report records the input result fingerprint, target identity and per-table
+counts and comparisons. A difference is reported without failing the task by
+default. With `failOnDifference: true` the task writes the comparison report
+before failing. The saved transfer result remains `COMMIT_UNCERTAIN`.
+
+In the GUI's **Migration reports** tab, select or drop `staging-comparison.json`
+and choose **Detect and load**. The table shows both row counts
+and separates differences in the target from changes to the retained staging.
+The **Catalog** and **Task ID** columns distinguish same-named tables in
+different catalogs and link each row to its original transfer task. Both can
+be searched with the table filter.
+Use **Show** to select all tables, target differences, staging changes, or
+tables with both kinds of difference. This selection combines with the text
+filter and limits the rows copied by **Copy visible rows**. Loading another
+report resets the selection to all tables.
+Use **Save visible CSV…** on a report table to export the current filtered rows
+and displayed column order with headers as UTF-8 CSV. Select a destination
+folder; each save creates `report-table-*/visible-rows.csv`. Hover over the
+saved status to see the full path, or use **Open saved folder** to open the
+last successful snapshot's folder. If opening is unavailable, the saved file
+and its path remain available for manual access and retry. This is a snapshot of report rows for
+investigation and sharing. The original report is preserved. A snapshot above
+16 MiB requires filtering fewer rows before saving.
+When differences exist, the **Differences** tab lists just those tables.
+Viewing the report uses the saved snapshot and requires no database connection.
+Direct JDBC comparisons also use this table view, including filtering, numeric
+row-count sorting and the **Differences** tab. Changing connection or job inputs
+removes the previous comparison so it cannot be mistaken for a current result.
+Use **Compare again** in the comparison tab to re-read the current target and
+retained staging using the same result file (or current retained execution).
+A saved result is read and validated again without selecting it again; the
+previous comparison is not reused.
+It does not rerun the transfer or change the original recorded commit state.
+Changing connection or job inputs clears this shortcut as well.
+After a successful repeat, **Changes since previous comparison** lists tables
+whose row counts or match statuses changed since the previous successful
+comparison in this session. It requires the same original result fingerprint,
+target identity and resolved table set. Failed comparisons do not replace the
+baseline. This compares counts and statuses, not historical row contents;
+unchanged values do not prove unchanged data. Input changes clear the history.
+The **Change** column distinguishes improved match statuses, new mismatches,
+mixed status changes, and row-count-only changes. Mixed changes mean one match
+status improved while the other worsened. An improvement can still leave a
+mismatch in the other status; inspect both current match columns.
+In the history tab, **Show** filters these change categories. It combines with
+text search, numeric sorting, copying visible rows and CSV export. Loading
+another comparison resets the history scope to **All changes**.
+The history tab is session-only; saving a comparison retains the latest report
+in the existing format. Its visible history rows can be exported as CSV.
+After a comparison in the GUI, use **Save comparison…** and choose a folder to
+write the same report format. **Open last saved comparison** opens it in **Migration reports**.
+The shortcut keeps the last successfully saved snapshot when you compare again,
+including when the new comparison fails. Saving the new comparison updates the
+shortcut without overwriting the earlier file. Connection or job input changes
+clear the shortcut.
+An in-session comparison can still display its findings if saving the original
+transfer result failed. Saving the comparison requires that result's fingerprint.
+
+The comparison summary distinguishes matching targets, target differences and
+changes to staging since its recorded verification. A match with changed staging
+does not establish a match with the original copied data. Keep retained staging
+and the original result while investigating differences. Even when all compared
+rows match, the original commit remains uncertain; the comparison describes the
+copied columns at comparison time.

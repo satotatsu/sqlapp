@@ -55,10 +55,16 @@ public class SpannerViewReader extends AbstractISViewReader {
 			throw new IllegalArgumentException("Spanner view metadata requires a name and query statement");
 		view.setStatement(statement);
 		final String security = getString(rs, "security_type");
-		if (!"INVOKER".equalsIgnoreCase(security) && !"DEFINER".equalsIgnoreCase(security))
+		if (security == null || security.isBlank()) {
+			// Older catalogs can leave this unset. Keep it distinct from the
+			// default used for user-authored views so recreation cannot guess.
+			view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, "UNKNOWN");
+		} else if ("INVOKER".equalsIgnoreCase(security) || "DEFINER".equalsIgnoreCase(security)) {
+			view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, security);
+		} else {
 			throw new IllegalArgumentException(
 					"Unknown Spanner view security type for " + view.getName() + ": " + security);
-		view.getSpecifics().put(SpannerCreateViewFactory.SECURITY_TYPE, security);
+		}
 		view.setDialect(getDialect());
 		return view;
 	}

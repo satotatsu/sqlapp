@@ -16,6 +16,88 @@ import com.sqlapp.data.db.command.migration.transfer.*;
 import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentity;
 
 class FileTransferPanelTest {
+	@Test
+	void comparesDroppedImportResultUsingOnlyTargetAndKeepsImportDisabled() throws Exception {
+		var input = java.nio.file.Files.writeString(directory.resolve("import-result.json"), "{}");
+		var done = new CountDownLatch(1);
+		var compared = new CountDownLatch(2);
+		var failed = new CountDownLatch(1);
+		var calls = new AtomicInteger();
+		var saved = new CountDownLatch(1);
+		var opened = new AtomicReference<Path>();
+		var panelRef = new AtomicReference<FileTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new FileTransferPanel((action, file, workspace, spec, password, schema, review) -> {
+				assertEquals(FileTransferPanel.Action.COMPARE_STAGING, action);
+				assertEquals(input, file);
+				assertEquals("jdbc:target", spec.jdbcUrl());
+				assertNull(review);
+				if (calls.incrementAndGet() == 2) throw new java.io.IOException("temporary comparison failure");
+				var hash = "sha256:" + "a".repeat(64);
+				var target = new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "STAGE_ITEMS");
+				long targetRows = calls.get() == 3 ? 0 : 1;
+				return new TransferStagingComparisonReportIO.Report(1, hash, TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+						new DatabaseIdentity("HSQL", "2.7", hash), new TransferStagedReplacement.Comparison(
+								List.of(new TransferStagedReplacement.TableComparison(target, 1, targetRows, targetRows == 1, true))));
+			}, null);
+			panelRef.set(panel);
+			panel.savedComparison.setReceiver((file, type) -> {
+				assertEquals(ReportReviewService.Type.STAGING_COMPARISON, type);
+				opened.set(file);
+				return true;
+			});
+			panel.step.setSelectedIndex(1);
+			panel.target.jdbcUrl.setText("jdbc:target");
+			panel.status.addPropertyChangeListener("text", event -> {
+				if ("Read-only staging comparison finished.".equals(event.getNewValue())) {
+					done.countDown();
+					compared.countDown();
+				}
+				if ("Staging comparison failed. See Details.".equals(event.getNewValue())) failed.countDown();
+				if (event.getNewValue().toString().startsWith("Saved staging comparison:")) saved.countDown();
+			});
+			assertTrue(FileDropHandlerTest.drop(panel.compareStaging, input));
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> panelRef.get().comparisonActions.repeat.doClick(0));
+		assertTrue(failed.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = panelRef.get();
+			assertFalse(panel.comparisonActions.save.isEnabled());
+			assertEquals(0, ((ReportReviewView) panel.resultTabs.getSelectedComponent()).tasks.getRowCount());
+			assertTrue(panel.comparisonActions.repeat.isEnabled());
+			panel.comparisonActions.repeat.doClick(0);
+		});
+		assertTrue(compared.await(5, TimeUnit.SECONDS));
+		assertEquals(3, calls.get());
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = panelRef.get();
+			assertEquals("Staging comparison", panel.resultTabs.getTitleAt(panel.resultTabs.getSelectedIndex()));
+			var table = ((ReportReviewView) panel.resultTabs.getSelectedComponent()).tasks;
+			assertEquals("0", table.getValueAt(0, 4));
+			assertEquals("Different", table.getValueAt(0, 5));
+			assertTrue(((ReportReviewView) panel.resultTabs.getSelectedComponent()).tabs
+					.indexOfTab("Changes since previous comparison") >= 0);
+			assertFalse(panel.apply.isEnabled());
+			assertTrue(panel.comparisonActions.save.isEnabled());
+			panel.comparisonActions.saveTo(directory);
+		});
+		assertTrue(saved.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = panelRef.get();
+			assertTrue(panel.savedComparison.isEnabled());
+			panel.savedComparison.doClick(0);
+			panel.target.jdbcUrl.setText("jdbc:changed");
+			assertFalse(panel.savedComparison.isEnabled());
+			assertFalse(panel.comparisonActions.save.isEnabled());
+			assertFalse(panel.comparisonActions.repeat.isEnabled());
+		});
+		assertNotNull(opened.get());
+		assertEquals("sha256:" + "a".repeat(64),
+				new TransferStagingComparisonReportIO().read(opened.get()).sourceResultFingerprint());
+		assertEquals("{}", java.nio.file.Files.readString(input));
+	}
+
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
 	void importResultRetainsMatchingDraftWithAppliedStatementWarning(boolean hasExportWarnings) throws Exception {

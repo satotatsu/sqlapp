@@ -11,7 +11,89 @@ newer column metadata is obtained from `col.*` without explicitly naming newer
 physical catalog columns. UNIQUE index names honor schema decoration. Live
 service compatibility is not certified by the local tests.
 
-## Interleaved table creation
+## Emulator verification
+
+The opt-in integration test reads a schema through JDBC, round-trips it
+through XML, applies the generated DDL to a separate disposable emulator
+database and reads it back. It checks a TTL policy, a partial index, search
+partitioning and descending order, primary key order and the two-step
+interleave change to CASCADE.
+The test also checks vector length, the index filter and stored column, and
+confirms the distance type, tree depth and leaf count in the target's
+database DDL. Where the emulator does not expose those options through
+`INDEX_OPTIONS`, the test supplies the known source values before XML export.
+Another test recreates same-named tables and indexes in two named schemas
+with schema decoration enabled. It verifies parent-first creation and
+preserves each schema's own delete action, index ordering and filter.
+
+Generate the schema and its objects together with
+`registry.createSql(schema, SqlType.CREATE)`. Named schemas emit
+`CREATE SCHEMA` before their objects. Keep schema decoration enabled when
+recreating a named schema. For the unnamed default schema, generation starts
+with its objects because the namespace already exists. Use a target where the
+named namespace does not yet exist, since GoogleSQL's schema statement does
+not support `IF NOT EXISTS`.
+
+Use `registry.createSql(schema, SqlType.DROP)` to generate `DROP SCHEMA` for
+a named user schema. Remove its objects first. The generator honors the
+existing `dropIfExists` option and rejects the default and system schemas.
+
+```
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*spanner.SpannerMetadataReaderTest' -PtestcontainersReuse=false
+```
+
+GoogleSQL catalog fields selected through `*` use their native uppercase
+JDBC labels. The CHECK reader skips reserved `CK_IS_NOT_NULL_` entries
+because their semantics are already represented by column nullability.
+Hosted-service option discovery requires separate verification.
+
+## Table synonyms
+
+Add a table alias to a Schema with its target table name:
+
+```java
+schema.getSynonyms().add(new Synonym("LegacyOrders").setObjectName("Orders"));
+```
+
+Schema CREATE emits `ALTER TABLE … ADD SYNONYM` after creating its tables.
+Use the same Synonym with `SqlType.DROP` to emit
+`ALTER TABLE … DROP SYNONYM`. An omitted target schema means the synonym's
+own schema. Cross-schema targets and database links are outside this path.
+Spanner allows one synonym per table.
+
+Use `registry.createSql(original.diff(target))` to change a modeled synonym's
+target table or alias name. The models must retain their Spanner dialect.
+Generation validates both sides and composes the native DROP and ADD factories,
+in that order. An equivalent explicit target schema produces no SQL. Namespace
+moves and other unrepresented changes fail explicitly. This is a two-statement
+replacement: the alias is unavailable between statements, and failure of ADD
+can leave it absent. No atomicity or automatic rollback is implied. A destination
+table must exist and have no other synonym; the service checks those conditions.
+
+For a containing Schema diff, all changed or removed synonyms are dropped before
+the shared schema operations, and all new or replacement synonyms are added
+afterwards. This permits swapping aliases between tables and changing an alias's
+target while removing its old table and creating its new table in the same
+schema migration. Table deletion still deletes its data; this ordering does not
+copy data between the tables. Unchanged aliases are left in place.
+
+The documented `INFORMATION_SCHEMA.TABLES` can identify a synonym but
+does not specify a target table field, so the reader cannot reconstruct
+that relationship. Specify the target explicitly in the model or Schema XML.
+See [Manage table names](https://docs.cloud.google.com/spanner/docs/table-name-synonym)
+and [GoogleSQL catalog metadata](https://docs.cloud.google.com/spanner/docs/information-schema#tables).
+
+## Interleaved tables
+
+Schema differences containing interleaved tables or foreign keys order new tables by their
+modeled parent and foreign-key dependencies and remove deleted tables in reverse
+dependency order. This uses the same Spanner ordering as batch creation, including
+cycle rejection. Dependencies outside the changed table set are not created or
+removed automatically. Existing-table modifications retain their usual phase
+after removals and additions. This does not copy table data or remove unrelated
+dependent objects. Foreign-key-only chains use the same ordering even when no
+table has INTERLEAVE metadata; referencing tables are removed before the tables
+they reference. Self references do not create a dependency on another table.
 
 Table metadata retains parent_table_name, on_delete_action and optional
 interleave_type from TABLES.*. CREATE emits INTERLEAVE IN PARENT with CASCADE or
@@ -31,12 +113,28 @@ table.getSpecifics().put(SpannerCreateTableFactory.ON_DELETE_ACTION, "CASCADE");
 ```
 
 Parent names are quoted and use the child's schema when schema decoration is
-enabled. Cross-schema parent naming and primary-key prefix/type compatibility
-remain server verification requirements. In a CREATE table collection, modeled
+enabled. The emulator test verifies same-schema parent resolution with two
+named schemas. Cross-schema parent naming and other primary-key compatibility
+cases require separate verification. In a CREATE table collection, modeled
 interleave parents and FK dependencies precede children; cycles and duplicate
 identities fail. Parents outside the collection must already exist. Calls for
 ordinary tables without interleaving keep the existing shared ordering path.
-INTERLEAVE changes through ALTER remain unsupported and fail explicitly.
+
+An ON DELETE-only difference on an existing IN PARENT relationship emits
+`ALTER TABLE … SET ON DELETE CASCADE` or `SET ON DELETE NO ACTION`. Removing
+the action restores NO ACTION when IN PARENT is explicit. For legacy metadata
+without INTERLEAVE_TYPE, supply NO ACTION explicitly to retain the relationship.
+
+With the same parent, changing INTERLEAVE_TYPE between IN and IN PARENT emits
+`ALTER TABLE … SET INTERLEAVE`. When the target is IN PARENT with CASCADE,
+the generator emits SET INTERLEAVE IN PARENT with NO ACTION first, then SET ON
+DELETE CASCADE. Apply the operations in order, proceeding to CASCADE only after
+Spanner successfully validates the parent relationship. If the second operation
+fails, the relationship remains IN PARENT with NO ACTION.
+
+Adding, removing or changing the parent requires a separate migration. An
+interleave change cannot be combined with unrelated table changes.
+See the [GoogleSQL ALTER TABLE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_table).
 
 Table OPTIONS now use the native comma separator, including when combined with
 INTERLEAVE. Tests read 40 legacy/current table headers in one query, round-trip
@@ -47,6 +145,39 @@ are added. Actual service/older-emulator behavior remains unverified.
 
 Sources: [TABLES metadata](https://docs.cloud.google.com/spanner/docs/information-schema),
 [GoogleSQL CREATE TABLE](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language).
+
+## Table deletion
+
+`registry.createSql(table, SqlType.DROP)` drops the table's modeled user indexes
+before emitting native DROP TABLE. Schema differences use the same factory.
+Ordinary, SEARCH and VECTOR indexes reuse the existing DROP INDEX generators;
+modeled non-primary UNIQUE constraints are treated as unique indexes. Duplicate
+index/constraint names emit one drop. Managed foreign-key indexes are left to
+the service. Standalone index drops retain their constraint-ownership checks.
+The existing `dropIfExists` option applies to the indexes and the table.
+
+The DROP TABLE factory's `createSql(Collection<Table>)` and
+`createDiffSql(Collection<DbObjectDifference>)` paths also order modeled
+INTERLEAVE and foreign-key dependencies with referencing/child tables first.
+Each table's indexes are removed before that table. Duplicate table identities
+and cyclic dependencies fail before a plan is returned. Dependencies outside
+the supplied batch remain unchanged.
+
+For detached tables, DROP batch ordering can use a named foreign-key target
+without binding its referenced columns to the target Table. An explicit target
+schema distinguishes same-named tables in different schemas. The shared Schema
+model preserves that explicit schema for unresolved reference columns; when
+actual target columns are bound, their table's schema remains authoritative.
+Existing resolved column references remain usable when the redundant target
+name is omitted. This changes dependency ordering only: CREATE still requires
+the referenced table and columns to be reliably resolved by the Schema model.
+
+Supply complete index metadata, for example from a full Schema read. Unmodeled
+indexes are not discovered during generation, and unrelated referencing views,
+foreign keys or interleaved objects are not removed automatically. Use a Schema
+diff to order deleted INTERLEAVE children before parents. Dropping a table removes
+its data; the emitted statements do not provide an atomic transaction or rollback.
+See the [GoogleSQL DROP TABLE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#drop_table).
 
 ## Column migrations
 
@@ -69,12 +200,33 @@ NOT NULL array additions are rejected. Identity additions and key-column changes
 require a separate migration. DROP COLUMN does not emit unsupported IF EXISTS.
 
 Other column changes and table-level differences (including primary-key/UNIQUE constraints,
-placement options and renames) fail explicitly rather than falling back
+placement options) fail explicitly rather than falling back
 to generic SQL or losing changes. Index changes use the native factories as
 described below. DEFAULT changes on identity, generated or ON UPDATE columns also
 fail explicitly. Dependency checks, expression type checks and asynchronous
 backfill remain the service's responsibility; no online/atomic migration or
 data-validation guarantee is implied by SQL generation.
+
+A table diff limited to its name emits `ALTER TABLE old_name RENAME TO new_name`,
+with schema qualification and identifier quoting controlled by the usual options.
+Pass the original and renamed Table models to the registry; collection-level
+matching does not infer that an added and a removed table are a rename. Schema
+moves and renames combined with structural changes require separate migrations.
+The operation does not add an alias for the old name or rewrite view statements.
+Update dependent queries and views as needed. This applies to GoogleSQL services
+supporting table renaming; the single-version resolver is unchanged.
+When a modeled self-referencing foreign key follows the table's new name, that
+reference-name difference is accepted as part of the rename. Changes to its
+referenced columns, target schema/table or deletion rule still require a
+separate migration. Comparison uses copies and leaves the supplied models intact.
+See [table name management](https://docs.cloud.google.com/spanner/docs/table-name-synonym).
+
+Local emulator tests verify that renaming an INTERLEAVE parent retains its child
+rows, updates the child's parent metadata and continues to enforce parent-row
+existence. Renaming a table referenced by a foreign key currently hits an
+internal `foreign_key_validator.cc` check in the tested emulator. That case is
+recorded as a skipped integration test only for the observed error; other errors
+fail the test. Foreign-key rename behavior still requires service verification.
 
 CREATE and ADD render NOT NULL before DEFAULT and parenthesize default
 expressions. Existing parenthesized expressions remain valid; the Schema model
@@ -113,6 +265,35 @@ resolver selection or metadata queries. Live-service and older-emulator
 compatibility remain unverified.
 
 Reference: [Spanner schema updates](https://docs.cloud.google.com/spanner/docs/schema-updates).
+
+## Commit timestamp ON UPDATE
+
+An ON UPDATE-only difference on an existing non-key scalar TIMESTAMP column
+emits `ALTER COLUMN … SET ON UPDATE` or `DROP ON UPDATE`. To set the
+expression, the column must already have `allow_commit_timestamp=true` and
+a `PENDING_COMMIT_TIMESTAMP()` default. The generator uses the stored
+default expression's spelling for the update expression. Removing ON UPDATE
+alone keeps the existing default.
+
+Setting the matching default and ON UPDATE together, or removing both, emits
+one typed ALTER COLUMN. The statement retains the column's nullability and
+existing options. Changes to column options or other column properties need
+a separate diff.
+
+See the [GoogleSQL ALTER TABLE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_table).
+
+## Identity column skip range
+
+In a table diff, set `IDENTITY_SKIP_RANGE_MIN` and
+`IDENTITY_SKIP_RANGE_MAX` on the target column to change the skip range,
+or remove both to clear it. The column must already be a scalar INT64
+identity column. The bounds are inclusive and must be ordered.
+
+The diff emits `ALTER COLUMN … ALTER IDENTITY SET SKIP RANGE` or
+`SET NO SKIP RANGE`. Identity columns in primary keys are supported.
+Changing the start counter, identity generation mode or other properties
+of the same column requires a separate migration.
+See the [GoogleSQL ALTER TABLE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_table).
 
 ## Commit timestamp option changes
 
@@ -208,6 +389,13 @@ need live verification. This does not claim full index reconstruction:
 optional catalog layout fields are handled as described below, but unmodeled
 options remain outside this reader. VECTOR recreation needs complete column metadata, including fixed
 embedding length and nullability. No database was contacted.
+
+The column reader preserves vector length from either the annotation in
+`COLUMNS.SPANNER_TYPE` (for example, `ARRAY<FLOAT32>(vector_length=>3)`)
+or the existing `COLUMN_OPTIONS` lookup. If both supply a length, they
+must agree. When `INDEX_OPTIONS` does not supply the distance type, set
+the model's `Index.vectorDistanceType` to the source index's known value
+before generating DDL. The distance type is required by GoogleSQL.
 
 Reference: [GoogleSQL index options](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language).
 
@@ -352,7 +540,22 @@ explicitly. Modeled SEARCH/VECTOR requests cannot carry UNIQUE, NULL_FILTERED
 or descending-key declarations that the renderer cannot preserve. Indexes
 sharing a modeled constraint's name require a constraint migration; server-side
 managed indexes and other dependencies still require server validation.
-Key/type/options changes use replacement, not an in-place ALTER optimization.
+When the only index difference is the stored column list, table migrations
+emit `ALTER INDEX` or `ALTER VECTOR INDEX` with
+`ADD STORED COLUMN` or `DROP STORED COLUMN`. A drop precedes removal of
+the underlying table column. An add follows creation of the table column.
+Managed indexes and indexes owned by constraints reject direct changes.
+Search indexes retain the replacement path for emulator compatibility.
+This applies to GoogleSQL services that support the corresponding ALTER syntax.
+
+A vector index difference limited to `DISABLE_SEARCH` uses
+`ALTER VECTOR INDEX … SET OPTIONS (disable_search = true|false|NULL)`.
+Removing the setting emits `NULL`. This does not need the index's original
+distance type and does not recreate the index. The local emulator rejects
+this SET OPTIONS action. Execution requires a GoogleSQL service that supports
+it.
+
+Changes to index keys, type, filter or other options use replacement.
 Replacement is not atomic, can remove uniqueness temporarily and may leave an
 index absent if recreation fails. No execution/backfill guarantee is implied.
 
@@ -477,7 +680,7 @@ The name is quoted as one identifier and uses the index schema when schema
 decoration is requested. Parent key-prefix/type compatibility and ancestry are
 left to Spanner. Explicit false sort-order sharding on an interleaved SEARCH
 index is rejected. VECTOR interleave is rejected. Table INTERLEAVE creation is
-described above; table INTERLEAVE ALTER remains unsupported.
+described above, including ALTER of the delete action on an existing IN PARENT relationship.
 
 For a user-authored SEARCH index, add only the optional layout needed:
 
@@ -530,10 +733,11 @@ unverified.
 
 ## View metadata validation
 
-Metadata-derived views require nonblank names and query statements and an
-explicit INVOKER or DEFINER security type. Missing or unknown security is an
-error rather than silently becoming INVOKER during recreation. Duplicate
-catalog/schema/name identities are rejected. This reader-only validation uses
+Metadata-derived views require nonblank names and query statements. The reader
+retains INVOKER or DEFINER when the catalog supplies it. Older catalogs that
+return no security type are recorded as UNKNOWN. Set the correct security type
+before generating DDL for those views. Invalid nonblank security types and
+duplicate catalog/schema/name identities are rejected. This validation uses
 the existing catalog query on all existing resolver paths; user-authored view
 defaults, public APIs, dependencies and XML structure are unchanged. Local
 tests retrieve 40 views across two schemas in one query and check multiline
@@ -543,6 +747,25 @@ unverified. A shared XML fix preserves supplementary Unicode characters in
 view statement CDATA and ordinary XML text; this also benefits other dialects.
 
 Reference: [GoogleSQL VIEWS metadata](https://docs.cloud.google.com/spanner/docs/information-schema#views).
+
+## Sequence migrations
+
+Use `SqlType.DROP` with a named Sequence to generate `DROP SEQUENCE`.
+The generator honors `dropIfExists` and schema decoration. Remove any
+column-default or view references before dropping a sequence.
+
+To set or clear an existing sequence's skip range, use the before/after
+Sequence models with the normal SQL factory diff entry point. Set
+`SKIP_RANGE_MIN` and `SKIP_RANGE_MAX` together, or remove both to clear
+the range. Set `SEQUENCE_DDL_STYLE` on either model to `CLAUSES` for a
+sequence created with native clauses or `OPTIONS` for one created with
+an OPTIONS list. The catalog does not disclose which form created the
+sequence. The Spanner CREATE factory uses `CLAUSES`.
+
+The generator emits SKIP RANGE / NO SKIP RANGE for CLAUSES and
+SET OPTIONS for OPTIONS. It requires a diff and rejects changes to the
+start counter or other sequence properties. See the
+[GoogleSQL ALTER SEQUENCE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_sequence).
 
 ## Sequence metadata validation
 
@@ -605,3 +828,49 @@ CHECK expressions remain XML attributes. The shared XML writer preserves LF,
 CR and tab characters using numeric character references. Round-trip coverage
 includes a multiline expression with a line comment, CRLF and indentation.
 
+
+## Table option migrations
+
+GoogleSQL table diffs use `ALTER TABLE … SET OPTIONS` for changes to
+`LOCALITY_GROUP`, `COLUMNAR_POLICY` and `FULLTEXT_DICTIONARY_STALENESS` in
+existing table specifics. The statement includes only changed options.
+Removing `COLUMNAR_POLICY` emits SQL `NULL`, restoring inheritance from the
+database. To change the locality group or dictionary staleness, supply an
+explicit replacement value. Changing the creation-only
+`FULLTEXT_DICTIONARY_TABLE` flag fails with an unsupported migration error.
+
+The options require a GoogleSQL service and edition that supports them. The
+resolver and metadata queries are unchanged. Set these table specifics
+explicitly when building a migration from catalog snapshots, because the
+documented `INFORMATION_SCHEMA.TABLES` does not expose these options.
+See the [GoogleSQL ALTER TABLE reference](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language#alter_table)
+and [columnar engine configuration](https://docs.cloud.google.com/spanner/docs/configure-columnar-engine).
+
+## Row deletion policies (TTL)
+
+GoogleSQL TABLES metadata retains optional ROW_DELETION_POLICY_EXPRESSION
+through the existing table specifics and Schema XML. TABLES.* exposes the field
+when available without requiring it in older catalogs or adding per-table queries.
+CREATE TABLE emits the policy after INTERLEAVE and before OPTIONS.
+
+Set SpannerCreateTableFactory.ROW_DELETION_POLICY_EXPRESSION to, for example,
+`OLDER_THAN(CreatedAt, INTERVAL 7 DAY)`. The referenced column must be an existing
+scalar TIMESTAMP, using the exact casing of its name. Quote reserved words
+with backticks. Zero days is supported; malformed expressions, negative days,
+other units and missing or incorrectly typed columns fail explicitly.
+Table differences produce ADD, REPLACE or DROP ROW DELETION POLICY. An ADD
+or DROP can share a migration with column changes. The policy is added after
+the columns are available or removed before any columns are dropped. Keeping
+a policy that references a missing column is rejected. REPLACE follows column
+changes when the old timestamp column remains available. Remove the old column
+in a subsequent migration. Changes to other table properties
+must be separate from TTL changes. Escaped backticks in column identifiers are
+currently unsupported by the TTL expression validator.
+
+This applies to GoogleSQL services supporting TTL; the existing single-version
+resolver is unchanged. Absent metadata leaves legacy behavior unchanged. Live
+service capability boundaries, generated-column dependencies and asynchronous
+TTL execution are not verified by local tests.
+
+Sources: [TTL management](https://docs.cloud.google.com/spanner/docs/ttl/working-with-ttl)
+and [GoogleSQL DDL](https://docs.cloud.google.com/spanner/docs/reference/standard-sql/data-definition-language).

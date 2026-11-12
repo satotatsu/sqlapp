@@ -502,3 +502,17 @@ For `FILE` lease mode, replace `tableName` with `directory`. A relative lease
 directory is resolved from the job YAML location. Lease configuration may be
 supplied either in YAML or through the task's `leaseConfiguration` property,
 but not both.
+
+### INSERT transport selection
+
+For INSERT tasks, optional `bulk.insertMethod` accepts `AUTO` (default),
+`NATIVE`, and `JDBC_BATCH`. AUTO prefers a database provider and otherwise uses
+portable JDBC batches; NATIVE requires a provider; JDBC_BATCH selects the shared
+prepared-statement executor. Explicit transport selection is currently rejected
+for UPSERT tasks rather than being silently ignored. Existing bulk options are
+validated by the selected executor. The choice is included in plan fingerprints;
+omitting it preserves the previous default fingerprint encoding. Java callers
+can use `BulkOption.builder().insertMethod(...)` and the new resolver overloads.
+Existing one-argument `BulkInsertResolver.resolve` overloads retain their previous
+provider-required behavior. The high-level transfer definition uses the concise
+`insertMethod` field instead of requiring generated bulk-task configuration.

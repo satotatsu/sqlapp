@@ -61,6 +61,8 @@ final class ReportReviewAutoLoader {
 				candidates.add(ReportReviewService.Type.BULK_FAILURE);
 			if (json.has("match") || json.has("expectedRows") || json.has("isolation"))
 				candidates.add(ReportReviewService.Type.BULK_VERIFICATION);
+			if (json.has("recordedCommitState") || json.has("sourceResultFingerprint"))
+				candidates.add(ReportReviewService.Type.STAGING_COMPARISON);
 			if (candidates.size() != 1)
 				throw new IllegalArgumentException((candidates.isEmpty() ? "Unknown" : "Ambiguous")
 						+ " report format. Use Choose format to select the intended reader explicitly.");

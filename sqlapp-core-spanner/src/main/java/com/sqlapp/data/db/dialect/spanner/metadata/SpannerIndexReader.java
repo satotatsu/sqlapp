@@ -89,10 +89,10 @@ public class SpannerIndexReader extends IndexReader {
 				final IndexType type = toIndexType(getString(rs, "index_type"));
 				final boolean unique = requiredBoolean(rs, "is_unique", name);
 				final boolean nullFiltered = requiredBoolean(rs, "is_null_filtered", name);
-				final var header = new Header(unique, getString(rs, "parent_table_name"), getString(rs, "filter"),
-						columnNames(rs, "search_partition_by"), columnNames(rs, "search_order_by"),
-						getString(rs, "spanner_is_managed") == null ? null
-								: requiredBoolean(rs, "spanner_is_managed", name));
+				final var header = new Header(unique, getString(rs, "PARENT_TABLE_NAME"), getString(rs, "FILTER"),
+						columnNames(rs, "SEARCH_PARTITION_BY"), columnNames(rs, "SEARCH_ORDER_BY"),
+						getString(rs, "SPANNER_IS_MANAGED") == null ? null
+								: requiredBoolean(rs, "SPANNER_IS_MANAGED", name));
 				if ((!header.partition().isEmpty() || !header.order().isEmpty()) && type != IndexType.FullText)
 					throw new IllegalArgumentException("SEARCH layout metadata on a non-SEARCH index: " + name);
 				if (header.order().size() > 1)

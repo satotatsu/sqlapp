@@ -86,7 +86,7 @@ final class DirectTransferDraftDialog {
 		});
 		picker.offerSchemaOnly(() -> schemaOnly.doClick(0));
 		picker.status
-				.setText("Select tables. Existing targets must be empty; saving never creates tables or copies rows.");
+				.setText("Select tables. The job requires empty targets by default. Job settings can enable staged replacement after saving.");
 		strict.addActionListener(event -> picker.draftOptionsChanged());
 		createMissing.addActionListener(event -> picker.draftOptionsChanged());
 		applyDifferences.addActionListener(event -> {
@@ -118,7 +118,7 @@ final class DirectTransferDraftDialog {
 				allowDestructive.setSelected(false);
 			picker.status.setText(schemaOnly.isSelected()
 					? "Schema only: existing target tables are skipped with warnings. No rows are copied. The target schema must exist."
-					: "Select tables to copy; existing targets must be empty.");
+					: "Select tables to copy. Job settings can enable staged replacement after saving.");
 		});
 		targetSchema.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
 			public void insertUpdate(javax.swing.event.DocumentEvent e) {

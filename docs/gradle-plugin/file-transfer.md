@@ -250,8 +250,10 @@ component. The audit envelope remains version 1 with additive Schema progress.
 
 ## Current boundaries
 
-The automatic file import path requires existing empty targets or explicit missing-table creation,
-an optional pinned name-only mapping file. Numeric NOT NULL primary keys use ordered keysets;
+File import requires empty targets by default, with optional missing-table creation.
+Verified jobs can opt into [staged replacement](#replace-existing-rows-after-staging)
+for occupied targets. Jobs can also use a pinned name-only mapping file.
+Numeric NOT NULL primary keys use ordered keysets;
 other tables use full-scan INSERT and unordered verification. Strings,
 booleans, integer/decimal values and finite float/double values are supported.
 Other temporal types are exportable with warnings but require conversion for
@@ -633,3 +635,78 @@ when its package fingerprint matches. It is discarded on input changes or
 operation failure. **Show renamed columns** filters the selected table's column
 list; **Show all columns** resets this filter and the text search. Neither view
 performs a target lookup or grants execution approval.
+
+### Choosing the import INSERT transport
+
+Optional `insertMethod: AUTO` (the default), `NATIVE`, or `JDBC_BATCH` applies to
+file-package import. Export captures the choice in the fingerprinted job without
+opening a target connection. The same shared resolver used by direct JDBC
+transfer selects the database provider or portable prepared-statement batches.
+Changing a captured job invalidates package integrity; export a new package to
+change the method. See [Insert transport](direct-transfer.md#insert-transport).
+
+### Replace existing rows after staging
+
+For CSV, TSV or JSONL packages, set `targetPreparation: STAGED_REPLACE` and
+`verify: true` in the shared transfer job before exporting. In Swing the option
+is under **Job settings → Optional import settings → Stage and verify data
+before replacing existing target rows**. The exported manifest pins the job
+configuration. Use the same package with **Import reviewed package** or
+Gradle's `importTransferFile` task.
+
+Import reads the captured package into staging tables in the target schema.
+It verifies those rows before replacing the selected target rows in one
+transaction. PostgreSQL and HSQLDB 2.x in LOCKS or MVLOCKS mode support this
+option. The target pool needs two connections during finalization. Target
+table and foreign-key restrictions are the same as for
+[direct JDBC replacement](direct-transfer.md#replace-existing-rows-after-staging).
+The import audit records the staging and final outcomes, including uncertain
+commit and retained staging table names.
+
+If the commit result is uncertain, keep `import-result.json` with the captured
+package in its import run folder. In **File transfer → Import file package**,
+use **Compare staging…** with the original target connection configured.
+The button opens the current uncertain result when available. To compare an
+earlier run, drop its `import-result.json` onto the button. The same file can
+be passed as `resultFile` to Gradle's `compareTransferStaging`.
+After comparing, use **Compare again** in the comparison tab to repeat the
+read-only check against the same import result. If the check fails, the tab
+retains the retry action and clears the old table and save action. Changes to
+connection or job inputs clear the shortcut; choose or drop the result again.
+Successful repeats also show **Changes since previous comparison** for changed
+row counts or match statuses against the last successful comparison in this
+session. Only the same original result, target identity and resolved table set
+are compared. This is a comparison of counts and statuses, not historical row
+contents. Failed checks keep the last successful baseline; input changes clear
+it. The saved JSON remains a snapshot of the latest comparison.
+The history's **Change** column distinguishes improved match statuses, new
+mismatches, mixed changes and row-count-only changes. Mixed changes are not
+classified as an improvement. Check both current match statuses even when one
+has improved.
+Use the history tab's **Show** selector to filter by change category alongside
+text search. Copying visible rows and saving CSV use the filtered view. The
+selector resets to **All changes** when another comparison is displayed.
+The check reads the current target and retained staging. The recorded commit
+state remains uncertain. File import results created before the comparison
+metadata was added cannot be reopened for this check.
+The comparison summary explains whether the target matches, differs, or staging
+has changed since the recorded verification. Matching changed staging does not
+establish a match with the original imported data. Keep the original result and
+staging tables while investigating differences.
+Use **Save visible CSV…** on the comparison table to save its filtered rows
+with headers as a separate UTF-8 report snapshot for investigation or sharing.
+After saving, **Open saved folder** opens the last successfully saved CSV's
+folder. The saved path remains available in the status tooltip if opening fails.
+
+After comparing, choose **Save comparison…** to write a new
+`comparison-* / staging-comparison.json` report under the selected folder.
+**Open last saved comparison** opens it in **Migration reports** for filtering and
+inspection. Saving preserves the original import result and package. The
+report records the current comparison; it does not change the uncertain
+commit state of the original import.
+The last saved snapshot stays available after **Compare again**, even if the
+new comparison fails. A successful new save updates the shortcut and preserves
+the earlier file. Changing connection or job inputs clears the shortcut.
+If saving fails, the comparison stays available. The status message identifies
+common destination problems; choose another writable folder and save again
+without repeating the database comparison.

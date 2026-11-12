@@ -5,7 +5,10 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -26,6 +29,9 @@ final class ReportReviewView extends JPanel {
 	final ReportDetailTablePanel taskTable = new ReportDetailTablePanel(tasks, null, "Filter tasks / migrations",
 			"rows");
 	final JTabbedPane tabs = new JTabbedPane();
+	final JComboBox<String> comparisonScope = new JComboBox<>(new String[] {
+			"All tables", "Target differs", "Staging changed", "Target differs and staging changed" });
+	private final JPanel comparisonControls = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
 	ReportReviewView() {
 		super(new BorderLayout());
@@ -33,6 +39,11 @@ final class ReportReviewView extends JPanel {
 		summary.setWrapStyleWord(true);
 		summary.setRows(7);
 		tasks.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		comparisonControls.add(new JLabel("Show"));
+		comparisonControls.add(comparisonScope);
+		comparisonControls.setVisible(false);
+		taskTable.setScopeControls(comparisonControls);
+		comparisonScope.addActionListener(event -> filterComparison());
 		tabs.addTab("Tasks / migrations", taskTable);
 		tabs.addTab("Parsed report JSON", json);
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(summary), tabs);
@@ -41,6 +52,8 @@ final class ReportReviewView extends JPanel {
 	}
 
 	void clear() {
+		comparisonControls.setVisible(false);
+		comparisonScope.setSelectedIndex(0);
 		summary.setText("");
 		resetDetails("");
 		tasks.setModel(new DefaultTableModel());
@@ -54,9 +67,28 @@ final class ReportReviewView extends JPanel {
 		resetDetails(review.details());
 		showTable(tasks, review.columns(), review.rows());
 		taskTable.setNumericColumns(review.numericColumns());
+		comparisonControls.setVisible(review.columns().contains("Target vs staging")
+				&& review.columns().contains("Staging vs recorded"));
+		comparisonScope.setSelectedIndex(0);
+		filterComparison();
 		for (final var section : review.tables()) {
-			tabs.insertTab(section.title(), null, new ReportDetailTablePanel(section), null, tabs.getTabCount() - 1);
+			var panel = new ReportDetailTablePanel(section);
+			int change = section.columns().indexOf("Change");
+			if (section.title().equals("Changes since previous comparison") && change >= 0)
+				panel.setScopeControls(new StagingComparisonHistoryFilters(panel, change));
+			tabs.insertTab(section.title(), null, panel, null, tabs.getTabCount() - 1);
 		}
+	}
+
+	private void filterComparison() {
+		if (!comparisonControls.isVisible()) return;
+		var filters = new java.util.HashMap<Integer, String>();
+		int selected = comparisonScope.getSelectedIndex();
+		if (selected == 1 || selected == 3)
+			filters.put(tasks.getColumn("Target vs staging").getModelIndex(), "Different");
+		if (selected == 2 || selected == 3)
+			filters.put(tasks.getColumn("Staging vs recorded").getModelIndex(), "Changed");
+		taskTable.setExactFilters(filters);
 	}
 
 	private void resetDetailTabs() {

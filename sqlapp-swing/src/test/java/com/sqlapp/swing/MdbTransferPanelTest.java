@@ -3,6 +3,9 @@ package com.sqlapp.swing;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.*;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
@@ -52,6 +55,27 @@ class MdbTransferPanelTest {
 			assertTrue(panel.transfer.status.getText().contains("source database file"));
 			assertEquals(0, calls.get());
 		});
+	}
+
+	@Test
+	void comparesSavedStagingWithoutAnAccessSourceFile() throws Exception {
+		var report = Files.writeString(directory.resolve("transfer-result.json"), "{}");
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new MdbTransferPanel((action, request, from, to) -> {
+				assertEquals(DirectTransferPanel.Action.COMPARE_STAGING, action);
+				assertEquals(report, request.savedResult());
+				assertNull(request.source());
+				return new com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Comparison(List.of());
+			}, null);
+			panel.transfer.target.jdbcUrl.setText("jdbc:target");
+			panel.transfer.status.addPropertyChangeListener("text", event -> {
+				if (event.getNewValue().toString().startsWith("Read-only staging comparison finished"))
+					done.countDown();
+			});
+			assertTrue(FileDropHandlerTest.drop(panel.transfer.compareSavedStaging, report));
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test

@@ -18,6 +18,8 @@ import com.sqlapp.data.db.command.migration.schema.MigrationExecutionReportIO;
 import com.sqlapp.data.db.command.migration.schema.MigrationExecutionReport;
 import com.sqlapp.data.db.command.migration.schema.MigrationPlanIO;
 import com.sqlapp.data.db.command.migration.schema.MigrationPlanArtifact;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagingComparisonReportIO;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Comparison;
 import com.sqlapp.util.JsonConverter;
 
 /** Uses existing artifact readers without connecting to a database. */
@@ -25,7 +27,8 @@ final class ReportReviewService {
 	enum Type {
 		SCHEMA_PLAN("Schema migration plan"), SCHEMA_EXECUTION("Schema execution result"),
 		BULK_OPERATIONAL("Data migration status / dry run"), BULK_EXECUTION("Data execution result"),
-		BULK_FAILURE("Data failure / pause result"), BULK_VERIFICATION("Data verification result");
+		BULK_FAILURE("Data failure / pause result"), BULK_VERIFICATION("Data verification result"),
+		STAGING_COMPARISON("Staging comparison");
 
 		private final String label;
 
@@ -87,7 +90,47 @@ final class ReportReviewService {
 		case BULK_EXECUTION -> execution(file);
 		case BULK_FAILURE -> failure(file);
 		case BULK_VERIFICATION -> verification(file);
+		case STAGING_COMPARISON -> stagingComparison(new TransferStagingComparisonReportIO().read(file));
 		};
+	}
+
+	Review stagingComparison(TransferStagingComparisonReportIO.Report report) {
+		return stagingComparison(report.comparison(), report.recordedCommitState().toString(), "\nTarget database: "
+				+ report.targetIdentity().productName() + " " + report.targetIdentity().productVersion()
+				+ "\nSource result fingerprint: " + report.sourceResultFingerprint(), report);
+	}
+
+	Review stagingComparison(Comparison comparison) {
+		return stagingComparison(comparison, "COMMIT_UNCERTAIN", "\nSaving requires a recorded transfer result.", comparison);
+	}
+
+	private Review stagingComparison(
+			Comparison comparison, String recordedCommit, String context, Object details) {
+		var tables = comparison.tables();
+		var rows = new ArrayList<List<String>>();
+		var differences = new ArrayList<List<String>>();
+		int targetDifferences = 0;
+		int stagingChanges = 0;
+		for (var table : tables) {
+			var names = table.target();
+			var row = row(names.schema(), names.table(), names.stageTable(), table.stagingRows(), table.targetRows(),
+					table.matchesTarget() ? "Match" : "Different",
+					table.matchesRecordedStaging() ? "Unchanged" : "Changed", names.catalog(), names.taskId());
+			rows.add(row);
+			if (!table.matchesTarget()) targetDifferences++;
+			if (!table.matchesRecordedStaging()) stagingChanges++;
+			if (!table.matchesTarget() || !table.matchesRecordedStaging()) differences.add(row);
+		}
+		var columns = List.of("Schema", "Target table", "Staging table", "Staging rows", "Target rows",
+				"Target vs staging", "Staging vs recorded", "Catalog", "Task ID");
+		var base = review("Staging comparison: " + tables.size() + " table(s). Target differences: " + targetDifferences
+				+ ". Staging changes: " + stagingChanges + ".\nRecorded commit: " + recordedCommit
+				+ ". This report shows data from the comparison run. The prior commit remains unconfirmed.\n"
+				+ StagingComparisonGuidance.describe(comparison) + context, columns, rows, details, 3, 4);
+		if (differences.isEmpty()) return base;
+		return new Review(base.summary(), columns, rows, base.details(),
+				List.of(new DetailTable("Differences", "Tables with a target difference or a staging change.", columns,
+						differences, base.numericColumns())), base.numericColumns());
 	}
 
 	private Review schemaPlan(final Path file) {

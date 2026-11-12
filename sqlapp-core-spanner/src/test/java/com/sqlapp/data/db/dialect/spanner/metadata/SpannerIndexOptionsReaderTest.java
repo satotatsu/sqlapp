@@ -23,7 +23,7 @@ class SpannerIndexOptionsReaderTest {
 		for (String schema : List.of("a", "b"))
 			for (int i = 0; i < 20; i++) {
 				header(reader, schema, "idx" + i, "INDEX");
-				reader.headers.get(reader.headers.size() - 1).put("spanner_is_managed", i % 2 == 0);
+				reader.headers.get(reader.headers.size() - 1).put("SPANNER_IS_MANAGED", i % 2 == 0);
 			}
 		final var indexes = reader.doGetAll(null, new ParametersContext(), null);
 		assertEquals(40, indexes.size());
@@ -42,17 +42,17 @@ class SpannerIndexOptionsReaderTest {
 		for (String value : List.of("", "unknown")) {
 			final var reader = new Reader();
 			header(reader, "app", "idx", "INDEX");
-			reader.headers.get(0).put("spanner_is_managed", value);
+			reader.headers.get(0).put("SPANNER_IS_MANAGED", value);
 			assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
 			assertEquals(1, reader.queries);
 		}
 		final var reader = new Reader();
 		header(reader, "app", "idx", "INDEX");
-		reader.headers.get(0).put("spanner_is_managed", true);
+		reader.headers.get(0).put("SPANNER_IS_MANAGED", true);
 		final var second = new HashMap<>(reader.headers.get(0));
 		second.put("ordinal_position", 2L);
 		second.put("column_name", "other");
-		second.put("spanner_is_managed", false);
+		second.put("SPANNER_IS_MANAGED", false);
 		reader.headers.add(second);
 		assertThrows(IllegalArgumentException.class, () -> reader.doGetAll(null, new ParametersContext(), null));
 		assertEquals(1, reader.queries);
@@ -67,10 +67,10 @@ class SpannerIndexOptionsReaderTest {
 				header(reader, schema, name, "SEARCH");
 				final var token = reader.headers.get(reader.headers.size() - 1);
 				token.put("is_unique", true); // native SEARCH header, not a UNIQUE declaration
-				token.put("parent_table_name", "Parents");
-				token.put("filter", "`sort key` IS NOT NULL AND `payload one` IS NOT NULL");
-				token.put("search_partition_by", new String[] { "tenant" });
-				token.put("search_order_by", new String[] { "sort key" });
+				token.put("PARENT_TABLE_NAME", "Parents");
+				token.put("FILTER", "`sort key` IS NOT NULL AND `payload one` IS NOT NULL");
+				token.put("SEARCH_PARTITION_BY", new String[] { "tenant" });
+				token.put("SEARCH_ORDER_BY", new String[] { "sort key" });
 				final var partition = new HashMap<>(token);
 				partition.put("column_name", "tenant");
 				partition.put("ordinal_position", 2L);
@@ -122,8 +122,8 @@ class SpannerIndexOptionsReaderTest {
 		reader.available = false;
 		header(reader, "app", "idx", "INDEX");
 		final var values = reader.headers.get(0);
-		values.put("filter", "embedding IS NOT NULL");
-		values.put("parent_table_name", "Parents");
+		values.put("FILTER", "embedding IS NOT NULL");
+		values.put("PARENT_TABLE_NAME", "Parents");
 		values.remove("base_is_nullable");
 		values.remove("index_is_nullable");
 		final var index = reader.doGetAll(null, new ParametersContext(), null).get(0);
@@ -145,15 +145,15 @@ class SpannerIndexOptionsReaderTest {
 			header(reader, "app", "idx", "SEARCH");
 			final var values = reader.headers.get(0);
 			switch (mode) {
-			case 0 -> values.put("search_partition_by", "tenant");
-			case 1 -> values.put("search_partition_by", new String[] { "tenant", "tenant" });
-			case 2 -> values.put("search_partition_by", new Object[] { 42 });
-			case 3 -> values.put("search_partition_by", new String[] { "missing" });
-			case 4 -> values.put("search_order_by", new String[] { "missing" });
-			case 5 -> values.put("search_order_by", new String[] { " " });
+			case 0 -> values.put("SEARCH_PARTITION_BY", "tenant");
+			case 1 -> values.put("SEARCH_PARTITION_BY", new String[] { "tenant", "tenant" });
+			case 2 -> values.put("SEARCH_PARTITION_BY", new Object[] { 42 });
+			case 3 -> values.put("SEARCH_PARTITION_BY", new String[] { "missing" });
+			case 4 -> values.put("SEARCH_ORDER_BY", new String[] { "missing" });
+			case 5 -> values.put("SEARCH_ORDER_BY", new String[] { " " });
 			case 6 -> {
 				final var second = new HashMap<>(values);
-				second.put("filter", "embedding IS NOT NULL");
+				second.put("FILTER", "embedding IS NOT NULL");
 				second.put("ordinal_position", 2L);
 				second.put("column_name", "other");
 				reader.headers.add(second);
@@ -180,13 +180,13 @@ class SpannerIndexOptionsReaderTest {
 			final var reader = new Reader();
 			reader.available = false;
 			header(reader, "app", "idx", "SEARCH");
-			reader.headers.get(0).put("search_partition_by", array);
+			reader.headers.get(0).put("SEARCH_PARTITION_BY", array);
 			if (invalid) {
 				assertThrows(IllegalArgumentException.class,
 						() -> reader.doGetAll(null, new ParametersContext(), null));
 			} else {
 				final var partition = new HashMap<>(reader.headers.get(0));
-				partition.put("search_partition_by", new String[] { "tenant" });
+				partition.put("SEARCH_PARTITION_BY", new String[] { "tenant" });
 				partition.put("column_name", "tenant");
 				partition.put("ordinal_position", 2L);
 				reader.headers.add(partition);

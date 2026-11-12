@@ -2185,3 +2185,20 @@ execution stages the mapping with the rest of the immutable input files. Complet
 packages cannot adopt later edits to the original mapping: export a new package.
 SQL draft saving protects the mapping member as well as the job, Schema and data.
 No public result/configuration record shapes or Gradle task properties change.
+
+### Choosing the INSERT transport
+
+**Job settings → Insert method (advanced)** selects `AUTO`, `NATIVE`, or
+`JDBC_BATCH`. AUTO prefers the database provider and falls back to portable JDBC
+batches when none is registered. NATIVE requires the provider; PostgreSQL uses
+COPY FROM STDIN. JDBC_BATCH explicitly uses prepared-statement batches. File
+jobs capture the setting during export and apply it during import; no target is
+accessed during export. Source values, chunk commits and verification retain
+their existing semantics. Schema-only jobs omit this setting. A method change
+requires another review and never grants permission to clear target rows.
+
+Direct JDBC transfer → **Job settings** offers **Stage and verify data before
+replacing existing target rows**. Review lists the staging and final tables.
+The execution summary distinguishes a committed replacement, a rollback, and
+an uncertain outcome. See [Direct transfer](../docs/gradle-plugin/direct-transfer.md#replace-existing-rows-after-staging)
+for supported targets and the shared Gradle YAML option.

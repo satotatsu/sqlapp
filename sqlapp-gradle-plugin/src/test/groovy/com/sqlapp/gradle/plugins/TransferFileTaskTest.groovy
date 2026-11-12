@@ -10,6 +10,39 @@ import org.gradle.testkit.runner.TaskOutcome
 
 class TransferFileTaskTest extends AbstractTaskTest {
 	@Test
+	void replacesOccupiedTargetFromPinnedFilePackage() {
+		def source = new org.hsqldb.jdbc.JDBCDataSource(url: 'jdbc:hsqldb:mem:file_staged_source_' + UUID.randomUUID(), user: 'SA')
+		def target = new org.hsqldb.jdbc.JDBCDataSource(url: 'jdbc:hsqldb:mem:file_staged_target_' + UUID.randomUUID(), user: 'SA')
+		try {
+			[source, target].eachWithIndex { db, i ->
+				db.connection.withCloseable { c -> c.createStatement().withCloseable { s ->
+					s.execute('CREATE TABLE ITEMS(ID INTEGER PRIMARY KEY)')
+					s.execute('INSERT INTO ITEMS VALUES(' + (i + 1) + ')')
+				} }
+			}
+			def job = new File(testProjectDir, 'transfer.yaml')
+			job.setText('formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ndataMode: FILE\ntargetPreparation: STAGED_REPLACE\nfiles: {directory: packages}\n', 'UTF-8')
+			def exported = new com.sqlapp.data.db.command.migration.transfer.TransferFileExportService().export(job.toPath(), [from: source])
+			def project = createProject(testProjectDir)
+			project.plugins.apply(DbPlugin)
+			def task = project.tasks.named('importTransferFile', ImportTransferFileTask).get()
+			task.manifestFile.set(exported.file().toFile())
+			task.expectedManifestFingerprint.set(exported.fingerprint())
+			task.allowExecution.set(true)
+			task.dataSource.jdbcUrl.set(target.url)
+			task.dataSource.username.set('SA')
+			task.dataSource.password.set('')
+			task.exec()
+			assertEquals('COMMITTED', task.internalCommand().result.staging().state().name())
+			assertEquals([1L], task.internalCommand().result.staging().committedRows().values().toList())
+		} finally {
+			[source, target].each { db -> db.connection.withCloseable { c ->
+				c.createStatement().withCloseable { s -> s.execute('SHUTDOWN') }
+			} }
+		}
+	}
+
+	@Test
 	void registersMapsPropertiesAndRejectsUnauthorizedImportBeforePoolConstruction() {
 		def project = createProject(testProjectDir)
 		project.plugins.apply(DbPlugin)

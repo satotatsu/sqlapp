@@ -1,5 +1,47 @@
 # PostgreSQL dialect
 
+## Materialized view ownership
+
+PostgreSQL 9.3+ reads `pg_matviews.matviewowner` into the shared
+`Mview.ownerName` property. Schema XML writes an optional `ownerName`
+attribute, and cloning and differences retain it.
+
+CREATE generates the view followed by `ALTER MATERIALIZED VIEW … OWNER TO`
+when an owner is specified. An ownership-only view diff generates the same
+ALTER statement. The owner role must already exist. Removing the owner from
+a diff requires an explicit replacement role.
+For a modeled query, CREATE emits visible column names as an explicit column
+list, preserving aliases through XML recreation. A full `definition` takes
+precedence over the query and columns.
+Materialized view comments are read into `remarks` with the same catalog
+query and restored with `COMMENT ON MATERIALIZED VIEW` before ownership
+is transferred.
+Comment differences also generate `COMMENT ON MATERIALIZED VIEW`; a null
+target comment generates `IS NULL`. When both the comment and owner change,
+the comment is applied before transferring ownership.
+CREATE also restores the modeled tablespace, indexes and column comments.
+Index and column comments preserve literal quote characters. Column-comment
+differences and index additions, removals and comment changes are supported
+alongside view comments, tablespace changes and ownership changes.
+`SET TABLESPACE` requires an explicit existing tablespace, and is applied
+before ownership is transferred. Structural changes to existing indexes or
+to view columns require an explicit migration.
+
+The disposable `PostgresMviewRoundTripTest` covers PostgreSQL 9.3.25 and 18.4.
+It recreates the view through XML, verifies comments and indexes, applies
+differences and refreshes the result. It uses UUID schemas, a dedicated role,
+random test credentials and a loopback-only published port.
+HTML documentation displays the escaped owner name.
+The standard registry also supports `SqlType.DROP` and `SqlType.REFRESH`
+for materialized views on PostgreSQL 9.3+. DROP uses the default dependency
+checks. REFRESH performs an ordinary refresh.
+Schema differences place materialized view drops before source table drops
+and create them after table prerequisites. Arbitrary dependencies among views
+require explicit ordering.
+See the PostgreSQL 9.3 references for
+[catalog ownership](https://www.postgresql.org/docs/9.3/view-pg-matviews.html)
+and [ownership changes](https://www.postgresql.org/docs/9.3/sql-altermaterializedview.html).
+
 ## Floating-point SQL generation
 
 The canonical `DataType.DOUBLE` model emits `DOUBLE PRECISION`, including array
