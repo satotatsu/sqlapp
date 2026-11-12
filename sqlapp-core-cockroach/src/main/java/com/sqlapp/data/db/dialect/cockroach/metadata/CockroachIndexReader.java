@@ -13,8 +13,20 @@ import com.sqlapp.data.schemas.*;
  * keys/includes/predicates.
  */
 public class CockroachIndexReader extends PostgresIndexReader {
+	private final boolean includePrimaryIndexes;
+
 	public CockroachIndexReader(Dialect dialect) {
+		this(dialect, true);
+	}
+
+	CockroachIndexReader(Dialect dialect, boolean includePrimaryIndexes) {
 		super(dialect);
+		this.includePrimaryIndexes = includePrimaryIndexes;
+	}
+
+	@Override
+	protected boolean includePrimaryIndexes() {
+		return includePrimaryIndexes;
 	}
 
 	@Override

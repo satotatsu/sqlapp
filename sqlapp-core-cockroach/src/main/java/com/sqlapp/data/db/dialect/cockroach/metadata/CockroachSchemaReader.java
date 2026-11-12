@@ -25,7 +25,7 @@ public class CockroachSchemaReader extends SchemaReader {
 
 	@Override
 	protected MviewReader newMviewReader() {
-		return null;
+		return new CockroachMviewReader(getDialect());
 	}
 
 	@Override

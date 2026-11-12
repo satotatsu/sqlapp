@@ -11,7 +11,7 @@ import com.sqlapp.data.schemas.*;
  * dependents.
  */
 public class CockroachAlterSchemaFactory extends AbstractAlterSchemaFactory<PostgresSqlBuilder> {
-	private static final List<String> ORDER = List.of("sequences", "types", "tables", "functions", "views");
+	private static final List<String> ORDER = List.of("sequences", "types", "tables", "functions", "views", "mviews");
 
 	@Override
 	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
@@ -20,14 +20,16 @@ public class CockroachAlterSchemaFactory extends AbstractAlterSchemaFactory<Post
 		unsupported.removeAll(ORDER);
 		if (!unsupported.isEmpty())
 			throw new UnsupportedOperationException("Unsupported CockroachDB schema changes: " + unsupported);
-		if (changes.get("tables") instanceof DbObjectDifferenceCollection tables) {
+		for (String objectKind : List.of("tables", "mviews")) {
+			if (!(changes.get(objectKind) instanceof DbObjectDifferenceCollection tables))
+				continue;
 			for (var removed : tables.getList(State.Deleted))
 				for (var added : tables.getList(State.Added)) {
 					var original = (Table) removed.getOriginal();
 					var target = (Table) added.getTarget();
 					if (original.getId() != null && original.getId().equals(target.getId()))
-						throw new UnsupportedOperationException(
-								"Possible CockroachDB table rename: generate originalTable.diff(targetTable) explicitly to preserve data");
+						throw new UnsupportedOperationException("Possible CockroachDB " + objectKind
+								+ " rename: generate an object-level diff explicitly to preserve data");
 				}
 		}
 		var result = new ArrayList<SqlOperation>();

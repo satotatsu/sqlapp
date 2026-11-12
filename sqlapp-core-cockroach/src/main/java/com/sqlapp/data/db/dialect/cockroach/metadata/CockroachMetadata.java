@@ -55,7 +55,7 @@ final class CockroachMetadata {
 		return result;
 	}
 
-	private static void addFilter(StringBuilder query, List<String> parameters, String column, Object filter) {
+	static void addFilter(StringBuilder query, List<String> parameters, String column, Object filter) {
 		if (filter == null)
 			return;
 		Collection<?> values = filter instanceof Collection<?> collection ? collection

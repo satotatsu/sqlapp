@@ -8,12 +8,224 @@ import java.io.StringReader;
 import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.cockroach.resolver.CockroachDialectResolver;
+import com.sqlapp.data.db.dialect.cockroach.util.CockroachSequenceOptions;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 import com.sqlapp.jdbc.bulk.*;
 
 class CockroachDialectTest {
+	@Test
+	void restoresLegacyOwnerSpecificsAndPrefersCommonOwnerName() throws Exception {
+		var schema = new Schema("reports");
+		var view = new Mview("totals");
+		view.setStatement("SELECT 7");
+		view.getSpecifics().put("COCKROACH_OWNER", "legacy_owner");
+		view.getIndexes()
+				.add(new Index("legacy_idx").setDefinition("CREATE INDEX legacy_idx ON reports.totals (total)"));
+		schema.getMviews().add(view);
+		Schema restored = SchemaUtils.readXml(new StringReader(schema.asXml()));
+		var legacy = restored.getMviews().get("totals");
+		restored.setDialect(new CockroachDB());
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		var operations = registry.createSql(legacy, SqlType.CREATE);
+		assertEquals(3, operations.size());
+		assertTrue(operations.get(1).getSqlText().startsWith("CREATE INDEX"));
+		assertTrue(operations.getLast().getSqlText().endsWith("OWNER TO \"legacy_owner\""));
+		legacy.setOwnerName("common_owner");
+		assertTrue(registry.createSql(legacy, SqlType.CREATE).getLast().getSqlText()
+				.endsWith("OWNER TO \"common_owner\""));
+		var target = (Mview) legacy.clone();
+		target.setOwnerName("new_owner");
+		assertTrue(registry.createSql(legacy.diff(target)).getFirst().getSqlText().endsWith("OWNER TO \"new_owner\""));
+	}
+
+	@Test
+	void rejectsMaterializedViewCommentsThatCannotBeRecreated() {
+		var view = new Mview("totals");
+		view.setStatement("SELECT 7").setRemarks("report");
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view, SqlType.CREATE));
+		view.setDefinition("CREATE MATERIALIZED VIEW totals AS SELECT 7");
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view, SqlType.CREATE));
+		view.setRemarks(null);
+		view.setOwnerName("root").setSchemaName("reports");
+		var changed = (Mview) view.clone();
+		changed.setRemarks("changed");
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view.diff(changed)));
+		changed.setOwnerName("Reporting Owners");
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view.diff(changed)));
+		view.setTableSpaceName("pg_default");
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view, SqlType.CREATE));
+		view.setTableSpaceName(null);
+		view.getColumns().add(new Column("total").setRemarks("column note"));
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(view, SqlType.CREATE));
+	}
+
+	@Test
+	void rejectsMaterializedViewRenameAsSchemaDeleteAndCreate() throws Exception {
+		var original = new Schema("reports");
+		original.setDialect(new CockroachDB());
+		var view = new Mview("old_name");
+		view.setId("123").setStatement("SELECT 7");
+		original.getMviews().add(view);
+		Schema restored = SchemaUtils.readXml(new StringReader(original.asXml()));
+		restored.setDialect(new CockroachDB());
+		var target = restored.clone();
+		target.getMviews().get("old_name").setName("new_name");
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(restored.diff(target)));
+		assertEquals(1, registry
+				.createSql(restored.getMviews().get("old_name").diff(target.getMviews().get("new_name"))).size());
+	}
+
+	@Test
+	void generatesMaterializedViewOwnershipChangeToALiteralRole() {
+		var dialect = new CockroachDB();
+		var view = new Mview("Daily Totals");
+		view.setSchemaName("Reports");
+		var operation = dialect.createMaterializedViewOwnerChangeSql(view, "Report \"Owners\"");
+		assertEquals(SqlType.ALTER, operation.getSqlType());
+		assertEquals("ALTER MATERIALIZED VIEW \"Reports\".\"Daily Totals\" OWNER TO \"Report \"\"Owners\"\"\"",
+				operation.getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> dialect.createMaterializedViewOwnerChangeSql(view, " "));
+		assertThrows(IllegalArgumentException.class,
+				() -> dialect.createMaterializedViewOwnerChangeSql(new Mview("totals"), "owner"));
+	}
+
+	@Test
+	void movesMaterializedViewOnlyWithinTheSameDatabase() {
+		var attached = new Mview("Daily Totals");
+		attached.getIndexes().add(new Index("by_total"));
+		var sourceSchema = new Schema("Reports");
+		sourceSchema.setDialect(new CockroachDB());
+		sourceSchema.setCatalogName("db");
+		sourceSchema.getMviews().add(attached);
+		var original = attached.clone();
+		var target = original.clone().setSchemaName("Archive");
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		var operations = registry.createSql(original.diff(target));
+		assertEquals(1, operations.size());
+		assertEquals("ALTER MATERIALIZED VIEW \"Reports\".\"Daily Totals\" SET SCHEMA \"Archive\"",
+				operations.getFirst().getSqlText());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setCatalogName("other"))));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setName("renamed"))));
+	}
+
+	@Test
+	void renamesMaterializedViewWithQualifiedOriginalAndUnqualifiedTarget() {
+		var original = new Mview("Daily Totals").setSchemaName("Reports");
+		original.getIndexes().add(
+				new Index("by_total").setDefinition("CREATE INDEX by_total ON \"Reports\".\"Daily Totals\" (total)"));
+		var target = original.clone().setName("Weekly Totals");
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		var operations = registry.createSql(original.diff(target));
+		assertEquals(1, operations.size());
+		assertEquals("ALTER MATERIALIZED VIEW \"Reports\".\"Daily Totals\" RENAME TO \"Weekly Totals\"",
+				operations.getFirst().getSqlText());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setStatement("SELECT 8"))));
+	}
+
+	@Test
+	void generatesExplicitMaterializedViewRefreshWithQuotedName() {
+		var view = new Mview("Daily Totals");
+		view.setSchemaName("Reports");
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		var operations = registry.createSql(view, SqlType.REFRESH);
+		assertEquals(1, operations.size());
+		assertEquals(SqlType.REFRESH, operations.getFirst().getSqlType());
+		assertEquals("REFRESH MATERIALIZED VIEW \"Reports\".\"Daily Totals\"", operations.getFirst().getSqlText());
+	}
+
+	@Test
+	void appliesMaterializedViewIndexDiffThroughSchemaRegistry() {
+		var original = new Schema("reports");
+		var view = new Mview("totals");
+		view.setStatement("SELECT 7 AS total");
+		var index = new Index("old_idx");
+		index.setDefinition("CREATE INDEX old_idx ON reports.totals (total)");
+		view.getIndexes().add(index);
+		original.getMviews().add(view);
+		var target = original.clone();
+		var targetView = target.getMviews().get("totals");
+		targetView.getIndexes().remove(targetView.getIndexes().get("old_idx"));
+		var replacement = new Index("new_idx");
+		String create = "CREATE INDEX new_idx ON reports.totals (total DESC)";
+		replacement.setDefinition(create);
+		targetView.getIndexes().add(replacement);
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		var operations = registry.createSql(original.diff(target));
+		assertEquals(2, operations.size());
+		assertEquals(SqlType.DROP, operations.getFirst().getSqlType());
+		assertEquals("DROP INDEX reports.totals@old_idx", operations.getFirst().getSqlText());
+		assertEquals(create, operations.getLast().getSqlText());
+		targetView.setStatement("SELECT 8 AS total");
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(target)));
+
+		var modified = original.clone();
+		modified.getMviews().get("totals").getIndexes().get("old_idx")
+				.setDefinition("CREATE INDEX old_idx ON reports.totals (total DESC)");
+		assertEquals(2, registry.createSql(original.diff(modified)).size());
+	}
+
+	@Test
+	void roundTripsMaterializedViewAliasesAndGeneratesCreateAndDrop() throws Exception {
+		var schema = new Schema("Reports");
+		var view = new Mview("Daily Totals");
+		view.setStatement("SELECT 7");
+		view.getColumns().add(new Column("Total \"USD\""));
+		view.getColumns().add(new Column("rowid").setHidden(true));
+		var index = new Index("by_total");
+		String indexDdl = "CREATE INDEX by_total ON \"Reports\".\"Daily Totals\" (\"Total \"\"USD\"\"\" DESC)";
+		index.setDefinition(indexDdl);
+		index.setRemarks("'index'");
+		view.getIndexes().add(index);
+		schema.getMviews().add(view);
+		Schema restoredSchema = SchemaUtils.readXml(new StringReader(schema.asXml()));
+		var restored = restoredSchema.getMviews().get("Daily Totals");
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+
+		var operations = registry.createSql(restored, SqlType.CREATE);
+		assertEquals(3, operations.size());
+		assertEquals(indexDdl, operations.get(1).getSqlText());
+		assertTrue(operations.get(2).getSqlText().endsWith(" IS '''index'''"));
+		String create = operations.getFirst().getSqlText().replaceAll("\\s+", " ");
+		assertEquals("CREATE MATERIALIZED VIEW \"Reports\".\"Daily Totals\" (\"Total \"\"USD\"\"\") AS SELECT 7",
+				create);
+		assertEquals("DROP MATERIALIZED VIEW \"Reports\".\"Daily Totals\"",
+				registry.createSql(restored, SqlType.DROP).getFirst().getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Mview("empty"), SqlType.CREATE));
+	}
+
+	@Test
+	void ordersMaterializedViewDiffsAndRejectsImplicitReplacement() {
+		var empty = new Schema("reports");
+		var schema = empty.clone();
+		var source = new View("source_view");
+		source.setDefinition("CREATE VIEW reports.source_view AS SELECT 7 AS total");
+		schema.getViews().add(source);
+		var view = new Mview("totals");
+		view.setStatement("SELECT total FROM reports.source_view");
+		schema.getMviews().add(view);
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		var create = registry.createSql(empty.diff(schema));
+		assertEquals(2, create.size());
+		assertTrue(create.get(0).getSqlText().startsWith("CREATE VIEW"));
+		assertTrue(create.get(1).getSqlText().startsWith("CREATE MATERIALIZED VIEW"));
+		var drop = registry.createSql(schema.diff(empty));
+		assertEquals(2, drop.size());
+		assertTrue(drop.get(0).getSqlText().startsWith("DROP MATERIALIZED VIEW"));
+		assertTrue(drop.get(1).getSqlText().startsWith("DROP VIEW"));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(view.diff(view.clone().setStatement("SELECT 8"))));
+	}
+
 	private DatabaseMetaData metadata(String name, String version) {
 		return (DatabaseMetaData) Proxy.newProxyInstance(DatabaseMetaData.class.getClassLoader(),
 				new Class<?>[] { DatabaseMetaData.class }, (p, m, a) -> switch (m.getName()) {
@@ -180,6 +392,135 @@ class CockroachDialectTest {
 				.createSql(before.diff(before.clone().setDefinition("CREATE TYPE s.mood AS ENUM ('ok')"))));
 		assertThrows(UnsupportedOperationException.class, () -> registry
 				.createSql(before.diff(before.clone().setDefinition("CREATE TYPE s.mood AS ENUM ('done','ok')"))));
+	}
+
+	@Test
+	void sequenceOwnershipDiffEmitsOnlyAnExplicitQualifiedChange() throws Exception {
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		String definition = "CREATE SEQUENCE \"App Schema\".\"Owned Seq\" START 10 /* OWNED BY other.t.c */";
+		var original = new Sequence("Owned Seq").setSchemaName("App Schema").setDefinition(definition);
+		var target = original.clone().setDefinition(definition + " OWNED BY \"App Schema\".Items.\"Key\"\"Column\";");
+		Sequence restored = SchemaUtils.readXml(new StringReader(target.asXml()));
+		assertEquals("ALTER SEQUENCE \"App Schema\".\"Owned Seq\" OWNED BY \"App Schema\".\"items\".\"Key\"\"Column\"",
+				registry.createSql(original.diff(restored)).getFirst().getSqlText());
+		assertEquals("ALTER SEQUENCE \"App Schema\".\"Owned Seq\" OWNED BY NONE",
+				registry.createSql(target.diff(target.clone().setDefinition(definition + " OWNED BY NONE"))).getFirst()
+						.getSqlText());
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(target.diff(original)));
+		assertThrows(UnsupportedOperationException.class, () -> registry
+				.createSql(original.diff(original.clone().setDefinition(definition + " OWNED BY items.id"))));
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(
+				original.diff(original.clone().setDefinition(definition + " OWNED BY items.id").setCacheSize(8))));
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(original.diff(
+				target.clone().setDefinition(definition.replace("START 10", "START 20") + " OWNED BY s.items.id"))));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setCacheSize(8))));
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(
+				original.diff(original.clone().setDefinition(definition + " OWNED BY s.items.id; DROP TABLE items"))));
+	}
+
+	@Test
+	void sequenceCachePreservesExplicitScopeAndRejectsImplicitReset() throws Exception {
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		String definition = "CREATE SEQUENCE \"CACHE 900\".\"seq\" /* /* ignored */ CACHE 99 */ PER SESSION CACHE 8";
+		var cache = CockroachSequenceOptions.cache(definition);
+		assertEquals(8, cache.size());
+		assertEquals(1, CockroachSequenceOptions
+				.cache("CREATE SEQUENCE \"CACHE 900\"; COMMENT ON SEQUENCE seq IS 'CACHE 99'").size());
+		assertNull(CockroachSequenceOptions.cache("CREATE SEQUENCE seq CACHE 2147483648").size());
+		var original = new Sequence("seq").setSchemaName("CACHE 900").setDefinition(definition)
+				.setCacheSize(cache.size());
+		Sequence restored = SchemaUtils.readXml(new StringReader(original.asXml()));
+		assertEquals(8, restored.getCacheSize());
+		assertEquals(original.getDefinition(), restored.getDefinition());
+		var modeled = new Sequence("seq").setCacheSize(8);
+		assertTrue(registry.createSql(modeled, SqlType.CREATE).getFirst().getSqlText().endsWith(" CACHE 8"));
+		assertTrue(registry.createSql(modeled.diff(modeled.clone().setCacheSize(32))).getFirst().getSqlText()
+				.endsWith(" CACHE 32"));
+		var target = original.clone().setCacheSize(32);
+		assertEquals("ALTER SEQUENCE \"CACHE 900\".seq PER SESSION CACHE 32",
+				registry.createSql(original.diff(target)).getFirst().getSqlText());
+		assertTrue(registry.createSql(original.diff(original.clone().setCacheSize(1))).getFirst().getSqlText()
+				.endsWith(" PER SESSION CACHE 1"));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(original.diff(original.clone().setCacheSize(null))));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(original.diff(original.clone().setCacheSize(0))));
+		assertThrows(UnsupportedOperationException.class, () -> registry
+				.createSql(original.diff(target.clone().setDefinition(definition.replace("PER SESSION", "PER NODE")))));
+	}
+
+	@Test
+	void sequenceRoleOwnershipQuotesTheNamedRoleAsAnIdentifier() {
+		var dialect = new CockroachDB();
+		var sequence = new Sequence("Order Seq").setSchemaName("App Schema");
+		var operation = dialect.createSequenceOwnerChangeSql(sequence, "Report \"Owners\"");
+		assertEquals(SqlType.ALTER, operation.getSqlType());
+		assertEquals("ALTER SEQUENCE \"App Schema\".\"Order Seq\" OWNER TO \"Report \"\"Owners\"\"\"",
+				operation.getSqlText());
+		assertTrue(dialect.createSequenceOwnerChangeSql(sequence, "CURRENT_USER").getSqlText()
+				.endsWith(" OWNER TO \"CURRENT_USER\""));
+		assertThrows(IllegalArgumentException.class, () -> dialect.createSequenceOwnerChangeSql(sequence, " "));
+		assertThrows(IllegalArgumentException.class, () -> dialect.createSequenceOwnerChangeSql(sequence, "bad\0role"));
+		assertThrows(IllegalArgumentException.class,
+				() -> dialect.createSequenceOwnerChangeSql(sequence.clone().setSchemaName(null), "report"));
+	}
+
+	@Test
+	void sequenceRestartRequiresAnExplicitNextValueWithinModeledBounds() {
+		var dialect = new CockroachDB();
+		var sequence = new Sequence("Mixed Seq").setSchemaName("App Schema")
+				.setMinValue(java.math.BigInteger.valueOf(-100)).setMaxValue(java.math.BigInteger.valueOf(100))
+				.setLastValue(java.math.BigInteger.TEN);
+		assertEquals("ALTER SEQUENCE \"App Schema\".\"Mixed Seq\" RESTART WITH -100",
+				dialect.createSequenceRestartSql(sequence, -100).getSqlText());
+		assertEquals("ALTER SEQUENCE \"App Schema\".\"Mixed Seq\" RESTART WITH 100",
+				dialect.createSequenceRestartSql(sequence, 100).getSqlText());
+		assertThrows(IllegalArgumentException.class, () -> dialect.createSequenceRestartSql(sequence, -101));
+		assertThrows(IllegalArgumentException.class, () -> dialect.createSequenceRestartSql(sequence, 101));
+		assertThrows(IllegalArgumentException.class,
+				() -> dialect.createSequenceRestartSql(sequence.clone().setSchemaName(null), 10));
+		assertEquals(java.math.BigInteger.TEN, sequence.getLastValue());
+	}
+
+	@Test
+	void sequenceMoveAlwaysQualifiesSourceAndRejectsCombinedChanges() {
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(false);
+		var original = new Sequence("Order Seq").setCatalogName("db").setSchemaName("Old Schema")
+				.setDefinition("CREATE SEQUENCE \"Old Schema\".\"Order Seq\" START 10");
+		var target = original.clone().setSchemaName("New \"Schema\"");
+		var operations = registry.createSql(original.diff(target));
+		assertEquals(1, operations.size());
+		assertEquals("ALTER SEQUENCE \"Old Schema\".\"Order Seq\" SET SCHEMA \"New \"\"Schema\"\"\"",
+				operations.getFirst().getSqlText());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setCatalogName("other"))));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setName("renamed"))));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setCacheSize(4))));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(original.diff(original.clone().setSchemaName(null))));
+	}
+
+	@Test
+	void sequenceRenameUsesQualifiedOriginalAndUnqualifiedNewName() {
+		var registry = new CockroachDB().createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		var original = new Sequence("Old Seq").setSchemaName("Mixed Schema")
+				.setDefinition("CREATE SEQUENCE \"Mixed Schema\".\"Old Seq\" START 10");
+		var target = original.clone().setName("New Seq");
+		var operations = registry.createSql(original.diff(target));
+		assertEquals(1, operations.size());
+		assertEquals("ALTER SEQUENCE \"Mixed Schema\".\"Old Seq\" RENAME TO \"New Seq\"",
+				operations.getFirst().getSqlText());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setSchemaName("other"))));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target.clone().setIncrementBy(java.math.BigInteger.TWO))));
 	}
 
 	@Test
