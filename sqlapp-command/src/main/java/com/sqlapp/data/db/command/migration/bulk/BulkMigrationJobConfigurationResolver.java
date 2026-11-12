@@ -436,10 +436,10 @@ public class BulkMigrationJobConfigurationResolver {
 		if (value == null) {
 			return BulkOption.defaults();
 		}
-		return BulkOption.builder().batchSize(value.getBatchSize()).bulkCopyTimeout(value.getBulkCopyTimeout())
-				.checkConstraints(value.isCheckConstraints()).fireTriggers(value.isFireTriggers())
-				.keepIdentity(value.isKeepIdentity()).keepNulls(value.isKeepNulls()).tableLock(value.isTableLock())
-				.useTransaction(value.isUseTransaction())
+		return BulkOption.builder().insertMethod(value.getInsertMethod()).batchSize(value.getBatchSize())
+				.bulkCopyTimeout(value.getBulkCopyTimeout()).checkConstraints(value.isCheckConstraints())
+				.fireTriggers(value.isFireTriggers()).keepIdentity(value.isKeepIdentity())
+				.keepNulls(value.isKeepNulls()).tableLock(value.isTableLock()).useTransaction(value.isUseTransaction())
 				.allowEncryptedValueModifications(value.isAllowEncryptedValueModifications()).build();
 	}
 

@@ -70,7 +70,7 @@ public final class TransferJobConfigurationIO {
 			// Parser exceptions may contain credentials mistakenly pasted into the job.
 			throw new IllegalArgumentException("Invalid transfer job. Require formatVersion: 1, runtime source/target "
 					+ "connection names, a nonempty unique tables list and schemaMode (CREATE_MISSING, CREATE_MISSING_WITH_IDENTITY, REQUIRE_EXISTING, or SCHEMA_ONLY's APPLY_DIFFERENCES). "
-					+ "Check field names, types, paths and chunkSize (1..1000000). Optional generatedKeyColumn requires CREATE_MISSING_WITH_IDENTITY and a nonblank Unicode name without control or surrounding whitespace (default: ID). FILE dataMode requires files.directory, "
+					+ "Check field names, types, paths and chunkSize (1..1000000). Optional targetPreparation is REQUIRE_EMPTY or STAGED_REPLACE (data copy with verify: true). Optional insertMethod is AUTO, NATIVE or JDBC_BATCH for data-copy jobs. Optional generatedKeyColumn requires CREATE_MISSING_WITH_IDENTITY and a nonblank Unicode name without control or surrounding whitespace (default: ID). FILE dataMode requires files.directory, "
 					+ "a supported encoding. CSV/TSV allow optional nullValue and emptyFieldMode (NULL or EMPTY_STRING); empty-text mode requires a token. JSONL uses JSON null. SCHEMA_ONLY requires a creation mode or APPLY_DIFFERENCES, "
 					+ "verify: false (or omitted), and no files settings. allowDestructiveSchemaChanges is an optional boolean for SCHEMA_ONLY/APPLY_DIFFERENCES only. Credentials are runtime inputs.");
 		}

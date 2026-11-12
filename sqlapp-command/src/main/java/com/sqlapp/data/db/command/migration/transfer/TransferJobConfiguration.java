@@ -13,7 +13,40 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
 		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
 		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges,
-		String generatedKeyColumn) {
+		String generatedKeyColumn, com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod,
+		TargetPreparation targetPreparation) {
+	public enum TargetPreparation {
+		REQUIRE_EMPTY, STAGED_REPLACE
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges, String generatedKeyColumn,
+			com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, generatedKeyColumn,
+				insertMethod, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public TargetPreparation effectiveTargetPreparation() {
+		return targetPreparation == null ? TargetPreparation.REQUIRE_EMPTY : targetPreparation;
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges, String generatedKeyColumn) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, generatedKeyColumn, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public com.sqlapp.jdbc.bulk.BulkInsertMethod effectiveInsertMethod() {
+		return insertMethod == null ? com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO : insertMethod;
+	}
+
 	/**
 	 * Retains the previous constructor; an omitted generated key name defaults to
 	 * ID.
@@ -182,7 +215,13 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		if (chunkSize < 1 || chunkSize > 1_000_000)
 			throw new IllegalArgumentException("chunkSize must be between 1 and 1000000.");
 		dataMode = dataMode == null ? DataMode.JDBC_DIRECT : dataMode;
+		if (dataMode == DataMode.SCHEMA_ONLY && insertMethod != null)
+			throw new IllegalArgumentException("insertMethod requires a data-copy job.");
 		verify = verify == null ? dataMode != DataMode.SCHEMA_ONLY : verify;
+		if (targetPreparation == TargetPreparation.STAGED_REPLACE && (dataMode == DataMode.SCHEMA_ONLY || !verify))
+			throw new IllegalArgumentException("STAGED_REPLACE requires a data-copy job and verify: true.");
+		if (dataMode == DataMode.SCHEMA_ONLY && targetPreparation != null)
+			throw new IllegalArgumentException("targetPreparation requires a data-copy job.");
 		if (dataMode == DataMode.SCHEMA_ONLY && (schemaMode == SchemaMode.REQUIRE_EXISTING || verify || files != null))
 			throw new IllegalArgumentException(
 					"SCHEMA_ONLY requires CREATE_MISSING, CREATE_MISSING_WITH_IDENTITY or APPLY_DIFFERENCES, verify: false and no files settings.");

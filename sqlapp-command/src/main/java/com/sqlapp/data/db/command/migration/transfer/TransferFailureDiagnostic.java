@@ -17,7 +17,7 @@ public record TransferFailureDiagnostic(Kind kind, String sqlState, Integer vend
 	public enum Kind {
 		UNIQUE_CONSTRAINT, FOREIGN_KEY, NOT_NULL, CHECK_CONSTRAINT, CONSTRAINT, VALUE_CONVERSION, PERMISSION,
 		AUTHENTICATION, CONNECTION, DATABASE, SCHEMA, SQL_OR_METADATA, UNSUPPORTED, TRANSACTION,
-		TIMEOUT_OR_CANCELLATION, VERIFICATION_MISMATCH, UNKNOWN
+		TIMEOUT_OR_CANCELLATION, VERIFICATION_MISMATCH, REPLACEMENT_TARGET_CHANGED, UNKNOWN
 	}
 
 	public TransferFailureDiagnostic {
@@ -110,6 +110,8 @@ public record TransferFailureDiagnostic(Kind kind, String sqlState, Integer vend
 		case TRANSACTION -> "The database rejected the transaction, for example because of concurrent work.";
 		case TIMEOUT_OR_CANCELLATION -> "The database operation timed out or was cancelled.";
 		case VERIFICATION_MISMATCH -> "Copied data did not match the source or file package during verification.";
+		case REPLACEMENT_TARGET_CHANGED ->
+			"The reviewed target structure or foreign-key scope changed before replacement.";
 		case UNKNOWN ->
 			"No recognized database cause code was available. Inspect the failed phase and retained results.";
 		};
@@ -140,6 +142,8 @@ public record TransferFailureDiagnostic(Kind kind, String sqlState, Integer vend
 			"Check locks, concurrent work and timeout settings; inspect committed progress before retrying.";
 		case VERIFICATION_MISMATCH ->
 			"Inspect the mismatched tables and chunks, conversion warnings and target precision. Copied rows may already be committed.";
+		case REPLACEMENT_TARGET_CHANGED ->
+			"Review the selected tables and referencing foreign keys again before executing.";
 		case UNKNOWN ->
 			"Inspect verification, Schema SQL and committed progress; check the database server log if needed.";
 		};

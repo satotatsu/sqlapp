@@ -112,9 +112,25 @@ public final class TransferSchemaPreparation {
 	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			TransferNameMappingProjection.Projection projection, String generatedKeyColumn) throws Exception {
+		return plan(connection, sourceSchema, data, mode, policy, projection, generatedKeyColumn, false);
+	}
+
+	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			TransferNameMappingProjection.Projection projection, String generatedKeyColumn, boolean structuralOnly)
+			throws Exception {
+		return plan(connection, sourceSchema, data, mode, policy, projection, generatedKeyColumn, structuralOnly,
+				false);
+	}
+
+	static Plan plan(Connection connection, Schema sourceSchema, BulkMigrationJobPlan data,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			TransferNameMappingProjection.Projection projection, String generatedKeyColumn, boolean structuralOnly,
+			boolean stagingBuffer) throws Exception {
 		if (projection != null) {
 			final var warnings = new ArrayList<String>();
-			if (projection.renamedIdentifiers() && mode != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING)
+			if (projection.renamedIdentifiers() && !stagingBuffer
+					&& mode != TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING)
 				mappingExpressions(policy, warnings);
 			final var selections = data.getTasks().stream()
 					.map(task -> new Selection(task.getTaskId(),
@@ -122,7 +138,7 @@ public final class TransferSchemaPreparation {
 							task.getEffectiveTargetTable()))
 					.toList();
 			final var base = plan(connection, projection.schema(), selections, data.getFingerprint(), mode, policy,
-					data, generatedKeyColumn);
+					data, generatedKeyColumn, structuralOnly);
 			warnings.addAll(base.warnings());
 			return withTables(result(base.fingerprint(), base.statements(), warnings, mode), base.tables());
 		}
@@ -131,7 +147,7 @@ public final class TransferSchemaPreparation {
 						.map(task -> new Selection(task.getTaskId(), task.getEffectiveSourceTable(),
 								task.getEffectiveTargetTable()))
 						.toList(),
-				data.getFingerprint(), mode, policy, data, generatedKeyColumn);
+				data.getFingerprint(), mode, policy, data, generatedKeyColumn, structuralOnly);
 	}
 
 	/**
@@ -168,6 +184,12 @@ public final class TransferSchemaPreparation {
 	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
 			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
 			BulkMigrationJobPlan data, String generatedKeyColumn) throws Exception {
+		return plan(connection, sourceSchema, tasks, fingerprint, mode, policy, data, generatedKeyColumn, false);
+	}
+
+	private static Plan plan(Connection connection, Schema sourceSchema, List<Selection> tasks, String fingerprint,
+			TransferJobConfiguration.SchemaMode mode, TransferJobConfiguration.CompatibilityPolicy policy,
+			BulkMigrationJobPlan data, String generatedKeyColumn, boolean structuralOnly) throws Exception {
 		final var warnings = new ArrayList<String>();
 		if (!Objects.equals(sourceSchema.getProductName(), connection.getMetaData().getDatabaseProductName()))
 			compatibility(policy, warnings,
@@ -177,7 +199,10 @@ public final class TransferSchemaPreparation {
 			for (String check : TransferGeneratedKeyChecks.required(data))
 				compatibility(policy, warnings, check);
 		if (mode == TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING) {
-			BulkMigrationTargetValidator.validate(connection, data);
+			if (structuralOnly)
+				BulkMigrationTargetValidator.validateStructure(connection, data);
+			else
+				BulkMigrationTargetValidator.validate(connection, data);
 			return withTables(result(fingerprint, List.of(), warnings, mode),
 					tablePreparations(tasks,
 							tasks.stream().map(Selection::getTaskId).collect(java.util.stream.Collectors.toSet()), mode,
@@ -230,8 +255,12 @@ public final class TransferSchemaPreparation {
 				throw new ValidationException(
 						"Target identifier collides by case or is ambiguous. Resolve it before Schema preparation.");
 		}
-		if (!existing.isEmpty() && data != null)
-			BulkMigrationTargetValidator.validate(connection, data.selectTasks(existing));
+		if (!existing.isEmpty() && data != null) {
+			if (structuralOnly)
+				BulkMigrationTargetValidator.validateStructure(connection, data.selectTasks(existing));
+			else
+				BulkMigrationTargetValidator.validate(connection, data.selectTasks(existing));
+		}
 		if (data == null) {
 			compatibility(policy, warnings,
 					"Schema-only scope: selected tables, constraints and indexes only. Views, independent sequences, routines, triggers and other schema objects are not copied. Review vendor-specific properties in generated DDL.");

@@ -31,7 +31,13 @@ import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationProgress;
  */
 public final class TransferJobExecutionService {
 	public record Review(Path definitionFile, TransferJobPreparationService.Prepared prepared,
-			DatabaseIdentity sourceIdentity, DatabaseIdentity targetIdentity) {
+			DatabaseIdentity sourceIdentity, DatabaseIdentity targetIdentity, TransferStagedReplacement.Plan staging,
+			boolean stagingBuffer) {
+		public Review(Path definitionFile, TransferJobPreparationService.Prepared prepared,
+				DatabaseIdentity sourceIdentity, DatabaseIdentity targetIdentity) {
+			this(definitionFile, prepared, sourceIdentity, targetIdentity, null, false);
+		}
+
 		public Review {
 			definitionFile = Objects.requireNonNull(definitionFile, "definitionFile").toAbsolutePath().normalize();
 			Objects.requireNonNull(prepared, "prepared");
@@ -52,7 +58,15 @@ public final class TransferJobExecutionService {
 			BulkMigrationJobResult copyResult, BulkMigrationJobVerificationResult verificationResult,
 			List<String> completedTasks, Map<String, ChunkedBulkMigrationProgress> committedProgress,
 			String stoppedTaskId, TransferSchemaPreparation.Progress schemaPreparation,
-			TransferFailureDiagnostic failureDiagnostic) {
+			TransferFailureDiagnostic failureDiagnostic, TransferStagedReplacement.Status staging) {
+		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
+				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
+				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId,
+				TransferSchemaPreparation.Progress schemaPreparation, TransferFailureDiagnostic failureDiagnostic) {
+			this(prepared, phase, copyResult, verificationResult, completedTasks, committedProgress, stoppedTaskId,
+					schemaPreparation, failureDiagnostic, null);
+		}
+
 		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
 				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
 				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId,
@@ -83,11 +97,11 @@ public final class TransferJobExecutionService {
 					+ (outcome.failureDiagnostic() == null ? ""
 							: outcome.failureDiagnostic().reason() + " "
 									+ outcome.failureDiagnostic().technicalDetails() + ". ")
-					+ "Inspect the outcome before retrying; "
-					+ (outcome.prepared().job().configuration()
-							.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
-									? "created objects may remain. "
-									: "committed copy work may remain. ")
+					+ (outcome.staging() != null ? outcome.staging().state().summary() + " "
+							: "Inspect the outcome before retrying; " + (outcome.prepared().job().configuration()
+									.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+											? "created objects may remain. "
+											: "committed copy work may remain. "))
 					+ "Raw driver exceptions are omitted from this exception.");
 			this.outcome = outcome;
 		}
@@ -118,13 +132,32 @@ public final class TransferJobExecutionService {
 
 	private Review review(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace,
 			java.util.function.Consumer<String> draft) throws java.io.IOException {
+		return review(jobFile, connections, workspace, draft, false);
+	}
+
+	Review reviewBuffer(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace)
+			throws java.io.IOException {
+		return review(jobFile, connections, workspace, null, true);
+	}
+
+	private Review review(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace,
+			java.util.function.Consumer<String> draft, boolean stagingBuffer) throws java.io.IOException {
 		final var definition = new TransferJobConfigurationIO().read(jobFile);
 		final var bindings = bindings(definition.configuration(), connections, null, null);
 		final var prepared = new TransferJobPreparationService().prepare(jobFile, bindings.connections(), workspace,
-				draft);
+				draft, stagingBuffer);
 		if (!definition.fingerprint().equals(prepared.job().fingerprint()))
 			throw new IllegalArgumentException("Transfer definition changed during review. Review it again.");
-		return new Review(jobFile, prepared, bindings.source().identity, bindings.target().identity);
+		var review = new Review(jobFile, prepared, bindings.source().identity, bindings.target().identity, null,
+				stagingBuffer);
+		if (definition.configuration()
+				.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE) {
+			var staging = TransferStagedReplacement.prepare(review, bindings.connections());
+			if (draft != null)
+				draft.accept(TransferStagedReplacement.sqlDraft(review, staging));
+			return new Review(jobFile, prepared, review.sourceIdentity(), review.targetIdentity(), staging, false);
+		}
+		return review;
 	}
 
 	/**
@@ -135,6 +168,11 @@ public final class TransferJobExecutionService {
 	 */
 	public Outcome execute(Review review, Map<String, ? extends DataSource> connections) {
 		Objects.requireNonNull(review, "review");
+		if (review.staging() != null)
+			return TransferStagedReplacement.execute(review, connections);
+		if (review.prepared().job().configuration()
+				.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE)
+			throw failed(new Outcome(review.prepared(), Phase.REVALIDATION, null, null, List.of(), Map.of(), null));
 		final var command = new ExecuteBulkMigrationJobCommand();
 		final var completed = new ArrayList<String>();
 		final var progress = new LinkedHashMap<String, ChunkedBulkMigrationProgress>();
@@ -147,15 +185,7 @@ public final class TransferJobExecutionService {
 			checkArtifacts(review);
 			final var bindings = bindings(review.prepared().job().configuration(), connections, review.sourceIdentity(),
 					review.targetIdentity());
-			current = new TransferJobPreparationService().prepare(review.definitionFile(), bindings.connections(),
-					review.prepared().directory().getParent());
-			if (!current.job().fingerprint().equals(review.prepared().job().fingerprint())
-					|| current.dataJob() != null
-							&& !current.dataJob().fingerprint().equals(review.prepared().dataJob().fingerprint())
-					|| !current.planFingerprint().equals(review.prepared().planFingerprint())
-					|| !current.warnings().equals(review.prepared().warnings())
-					|| !current.schemaPreparation().equals(review.prepared().schemaPreparation()))
-				throw new IllegalArgumentException("Definition or plan changed. Review again before executing.");
+			current = revalidate(review, bindings);
 			schemaProgress[0] = new TransferSchemaPreparation.Progress(current.schemaPreparation().statements(), 0,
 					null, current.warnings());
 			if (TransferSchemaChangeChecks.executionBlocked(current.job().configuration(), current.schemaPreparation()))
@@ -245,7 +275,24 @@ public final class TransferJobExecutionService {
 		}
 	}
 
-	private static void checkArtifacts(Review review) throws Exception {
+	static ExecutionException failed(Outcome outcome) {
+		return new ExecutionException(outcome);
+	}
+
+	static TransferJobPreparationService.Prepared revalidate(Review review, Bindings bindings) throws Exception {
+		var current = new TransferJobPreparationService().prepare(review.definitionFile(), bindings.connections(),
+				review.prepared().directory().getParent(), null, review.stagingBuffer());
+		if (!current.job().fingerprint().equals(review.prepared().job().fingerprint())
+				|| current.dataJob() != null
+						&& !current.dataJob().fingerprint().equals(review.prepared().dataJob().fingerprint())
+				|| !current.planFingerprint().equals(review.prepared().planFingerprint())
+				|| !current.warnings().equals(review.prepared().warnings())
+				|| !current.schemaPreparation().equals(review.prepared().schemaPreparation()))
+			throw new IllegalArgumentException("Definition or plan changed. Review again before executing.");
+		return current;
+	}
+
+	static void checkArtifacts(Review review) throws Exception {
 		final var prepared = review.prepared();
 		final var io = new TransferJobConfigurationIO();
 		if (!io.read(review.definitionFile()).fingerprint().equals(prepared.job().fingerprint())
@@ -280,10 +327,10 @@ public final class TransferJobExecutionService {
 			throw new IllegalArgumentException("Reviewed Schema artifact changed.");
 	}
 
-	private record Bindings(Map<String, DataSource> connections, BoundDataSource source, BoundDataSource target) {
+	static record Bindings(Map<String, DataSource> connections, BoundDataSource source, BoundDataSource target) {
 	}
 
-	private static Bindings bindings(TransferJobConfiguration configuration, Map<String, ? extends DataSource> supplied,
+	static Bindings bindings(TransferJobConfiguration configuration, Map<String, ? extends DataSource> supplied,
 			DatabaseIdentity sourceIdentity, DatabaseIdentity targetIdentity) {
 		Objects.requireNonNull(supplied, "connections");
 		final var from = supplied.get(configuration.source());
@@ -305,7 +352,7 @@ public final class TransferJobExecutionService {
 	 * Checks every borrowed connection, including those opened after fresh
 	 * preparation.
 	 */
-	private static final class BoundDataSource implements DataSource {
+	static final class BoundDataSource implements DataSource {
 		private final DataSource delegate;
 		private DatabaseIdentity identity;
 

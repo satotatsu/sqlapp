@@ -78,6 +78,7 @@ public class BulkMigrationJobConfiguration {
 	@Getter
 	@Setter
 	public static class Bulk {
+		private com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod = com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO;
 		private Integer batchSize;
 		private Integer bulkCopyTimeout;
 		private boolean checkConstraints;

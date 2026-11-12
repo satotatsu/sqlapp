@@ -19,9 +19,26 @@
 
 package com.sqlapp.data.schemas;
 
+import static org.junit.jupiter.api.Assertions.*;
+import java.io.StringReader;
+import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 
 public class MviewTest extends AbstractDbObjectTest<Mview> {
+	@Test
+	void retainsOwnerThroughXmlCloneAndDifference() throws Exception {
+		var schema = new Schema("reports");
+		var view = new Mview("totals").setOwnerName("Report \"Owners\"");
+		schema.getMviews().add(view);
+		Schema restored = SchemaUtils.readXml(new StringReader(schema.asXml()));
+		assertEquals(view.getOwnerName(), restored.getMviews().get("totals").getOwnerName());
+		var clone = (Mview) view.clone();
+		assertEquals(view.getOwnerName(), clone.getOwnerName());
+		clone.setOwnerName("other");
+		assertTrue(view.diff(clone).getChangedProperties().containsKey("ownerName"));
+		assertNull(new Mview("old").getOwnerName());
+	}
+
 
 	public static Mview getMview(String tableName) {
 		Mview table = new Mview(tableName);

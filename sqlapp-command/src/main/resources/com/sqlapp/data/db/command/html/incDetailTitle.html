@@ -18,4 +18,10 @@
 	<a class="schema-badge" href="../schemas/@{obj.schemaName}.html">@{coalesce(obj.?schema.?displayName, obj.schemaName)}</a></dd>
 	</div>
 	@end{}
+	@if{obj instanceof com.sqlapp.data.schemas.Mview && isNotEmpty(obj.ownerName)}
+	<div class="object-meta">
+	<span class="object-meta-label">@{getMessage("OwnerName")}</span>
+	<span>@{escape(obj.ownerName)}</span>
+	</div>
+	@end{}
 </header>

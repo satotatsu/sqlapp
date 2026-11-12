@@ -366,8 +366,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		}
 	}
 
-	static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan, final Connection targetConnection,
-			final int chunkSize) throws SQLException {
+	public static BulkMigrationJobVerificationResult verify(final BulkMigrationJobPlan plan,
+			final Connection targetConnection, final int chunkSize) throws SQLException {
 		return verify(plan, targetConnection, chunkSize, Map.of());
 	}
 

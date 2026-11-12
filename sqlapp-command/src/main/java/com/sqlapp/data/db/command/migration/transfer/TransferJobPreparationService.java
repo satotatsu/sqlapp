@@ -70,6 +70,11 @@ public final class TransferJobPreparationService {
 
 	Prepared prepare(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace,
 			java.util.function.Consumer<String> draft) throws IOException {
+		return prepare(jobFile, connections, workspace, draft, false);
+	}
+
+	Prepared prepare(Path jobFile, Map<String, ? extends DataSource> connections, Path workspace,
+			java.util.function.Consumer<String> draft, boolean stagingBuffer) throws IOException {
 		final var io = new TransferJobConfigurationIO();
 		final var snapshot = io.read(jobFile);
 		final var configuration = snapshot.configuration();
@@ -96,8 +101,12 @@ public final class TransferJobPreparationService {
 			phase = "checking supported database products";
 			final Dialect sourceDialect = dialect(from);
 			final Dialect targetDialect = dialect(to);
+			if (configuration.dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY)
+				validateInsertMethod(targetDialect, configuration);
 			phase = "resolving source Schema metadata";
 			final Schema schema = readSchema(from, sourceDialect, configuration.sourceSchema());
+			if (stagingBuffer)
+				prepareStagingSchema(schema, snapshot.fingerprint());
 			final String targetSchema = configuration.targetSchema() == null
 					? targetDialect.getCatalogReader().getSchemaReader().getCurrentSchemaName(to)
 					: configuration.targetSchema();
@@ -137,7 +146,11 @@ public final class TransferJobPreparationService {
 				task.put("chunkSize", configuration.chunkSize());
 				// Initial-copy jobs preserve source values, including identity keys used by
 				// FKs.
-				task.put("bulk", Map.of("keepIdentity", true, "keepNulls", true));
+				task.put("bulk",
+						configuration.effectiveInsertMethod() == com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO
+								? Map.of("keepIdentity", true, "keepNulls", true)
+								: Map.of("keepIdentity", true, "keepNulls", true, "insertMethod",
+										configuration.effectiveInsertMethod().name()));
 				final var selectedTable = TransferSchemaOnlyPreparation
 						.select(schema, List.of(configuration.tables().get(index))).getFirst();
 				if (TransferKeylessChecks.requiresFullScan(selectedTable))
@@ -189,7 +202,10 @@ public final class TransferJobPreparationService {
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
 			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
 					configuration.schemaMode(), configuration.compatibilityPolicy(), projection,
-					configuration.effectiveGeneratedKeyColumn());
+					configuration.effectiveGeneratedKeyColumn(),
+					configuration
+							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE,
+					stagingBuffer);
 			final var copyWarnings = new ArrayList<>(compatibility.warnings());
 			for (var task : resolved.plan().getTasks())
 				if (task.isFullScan())
@@ -238,6 +254,16 @@ public final class TransferJobPreparationService {
 		if (dialect == null || dialect.getClass() == Dialect.class)
 			throw new IllegalArgumentException("A supported database dialect is required.");
 		return dialect;
+	}
+
+	static void validateInsertMethod(Dialect dialect, TransferJobConfiguration configuration) {
+		try {
+			com.sqlapp.jdbc.bulk.BulkInsertResolver.resolve(dialect, configuration.effectiveInsertMethod());
+		} catch (IllegalArgumentException | IllegalStateException unavailable) {
+			throw new TransferSchemaPreparation.ValidationException("Selected insertMethod "
+					+ configuration.effectiveInsertMethod()
+					+ " cannot be resolved for the target. Check registered bulk providers or choose JDBC_BATCH, then review again before execution.");
+		}
 	}
 
 	static Schema readSchema(Connection connection, Dialect dialect, String requested) throws Exception {
@@ -388,6 +414,31 @@ public final class TransferJobPreparationService {
 				return null;
 			final String safe = message.replaceAll("(?i)jdbc:[^\\s]*", "[JDBC URL]").replaceAll("\\p{Cntrl}", " ");
 			return safe.length() > 2048 ? safe.substring(0, 2048) + "…" : safe;
+		}
+	}
+
+	/**
+	 * Keep a staging table's copy columns and primary key without target-side
+	 * generation.
+	 */
+	static void prepareStagingSchema(Schema schema, String fingerprint) {
+		for (var table : schema.getTables()) {
+			for (var constraint : java.util.List.copyOf(table.getConstraints()))
+				if (!(constraint instanceof com.sqlapp.data.schemas.UniqueConstraint unique && unique.isPrimaryKey()))
+					table.getConstraints().remove(constraint);
+			var primaryKey = table.getPrimaryKeyConstraint();
+			if (primaryKey != null) {
+				var keyIdentity = fingerprint + ":" + table.getName();
+				primaryKey.setName("sqlapp_stage_pk_" + com.sqlapp.util.MessageDigests.SHA256
+						.checksumAsString(keyIdentity.getBytes(StandardCharsets.UTF_8)).substring(0, 20));
+			}
+			table.getChildRelations().clear();
+			table.getIndexes().clear();
+			for (var column : table.getColumns()) {
+				column.setIdentity(false).setDefaultValue(null).setFormula(null);
+				if (column.getDataType().isAutoIncrementable())
+					column.setDataType(column.getDataType().getSurrogate());
+			}
 		}
 	}
 }

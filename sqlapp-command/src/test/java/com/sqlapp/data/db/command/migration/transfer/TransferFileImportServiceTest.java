@@ -440,6 +440,114 @@ class TransferFileImportServiceTest {
 		assertEquals(1, count(roundedTarget, "ITEMS"));
 	}
 
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({ "CSV,false", "TSV,false", "JSONL,false", "CSV,true" })
+	void stagedFileImportReplacesRelatedRowsOrRollsBackEveryTable(TransferJobConfiguration.FileFormat format,
+			boolean reject) throws Exception {
+		var source = database();
+		var target = database();
+		try {
+			sql(source, "CREATE TABLE PARENT(ID INTEGER PRIMARY KEY)",
+					"CREATE TABLE CHILD(PARENT_ID INTEGER REFERENCES PARENT(ID), TXT VARCHAR(20))",
+					"INSERT INTO PARENT VALUES(1)", "INSERT INTO CHILD VALUES(1,'new'),(1,'new')");
+			sql(target, "CREATE TABLE PARENT(ID INTEGER PRIMARY KEY)",
+					"CREATE TABLE CHILD(PARENT_ID INTEGER REFERENCES PARENT(ID), TXT VARCHAR(20)"
+							+ (reject ? " CHECK(TXT <> 'new')" : "") + ")",
+					"INSERT INTO PARENT VALUES(99)", "INSERT INTO CHILD VALUES(99,'old')");
+			var exported = export(source, "[CHILD, PARENT]", "targetPreparation: STAGED_REPLACE\n", "REQUIRE_EXISTING",
+					format);
+			var service = new TransferFileImportService();
+			var bindings = Map.of("to", target);
+			var reviewed = service.reviewWithSqlDraft(exported.file(), exported.fingerprint(), bindings);
+			assertNotNull(reviewed.review().staging());
+			assertTrue(reviewed.schemaSqlDraft().contains("-- DELETE"));
+			assertEquals(1, count(target, "CHILD"));
+			if (reject) {
+				var failure = assertThrows(TransferFileImportService.ImportException.class,
+						() -> service.execute(reviewed.review(), bindings, directory));
+				assertEquals(TransferStagedReplacement.State.ROLLED_BACK, failure.outcome().staging().state());
+				assertEquals(1, count(target, "CHILD WHERE PARENT_ID=99"));
+				assertEquals(1, count(target, "PARENT WHERE ID=99"));
+				assertTrue(failure.outcome().staging().committedRows().isEmpty());
+			} else {
+				var outcome = service.execute(reviewed.review(), bindings, directory);
+				assertEquals(TransferStagedReplacement.State.COMMITTED, outcome.staging().state());
+				assertEquals(2, count(target, "CHILD WHERE PARENT_ID=1"));
+				assertEquals(0, count(target, "PARENT WHERE ID=99"));
+				assertEquals(2, outcome.staging().cleanedStages().size());
+			}
+		} finally {
+			try {
+				sql(source, "SHUTDOWN");
+			} finally {
+				sql(target, "SHUTDOWN");
+			}
+		}
+	}
+
+	@Test
+	void stagedFileImportCreatesMappedMissingTargetAfterStaging() throws Exception {
+		var source = database();
+		var target = database();
+		try {
+			sql(source, "CREATE TABLE ITEMS(ID INTEGER PRIMARY KEY)", "INSERT INTO ITEMS VALUES(17)");
+			Files.writeString(directory.resolve("names.yaml"),
+					"formatVersion: 1\ntables: {ITEMS: {targetTable: MAPPED_ITEMS, columns: {ID: ITEM_ID}}}\n");
+			var exported = export(source, "[ITEMS]", "targetPreparation: STAGED_REPLACE\nmappingFile: names.yaml\n",
+					"CREATE_MISSING");
+			var service = new TransferFileImportService();
+			var bindings = Map.of("to", target);
+			var review = service.review(exported.file(), exported.fingerprint(), bindings);
+			var outcome = service.execute(review, bindings, directory);
+			assertEquals(TransferStagedReplacement.State.COMMITTED, outcome.staging().state());
+			assertEquals(1, count(target, "MAPPED_ITEMS WHERE ITEM_ID=17"));
+		} finally {
+			try {
+				sql(source, "SHUTDOWN");
+			} finally {
+				sql(target, "SHUTDOWN");
+			}
+		}
+	}
+
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(booleans = { false, true })
+	void comparesSavedFileImportAfterUnconfirmedCommit(boolean committed) throws Exception {
+		var source = database();
+		var target = database();
+		try {
+			sql(source, "CREATE TABLE ITEMS(ID INTEGER PRIMARY KEY)", "INSERT INTO ITEMS VALUES(17)");
+			sql(target, "CREATE TABLE ITEMS(ID INTEGER PRIMARY KEY)", "INSERT INTO ITEMS VALUES(99)");
+			var exported = export(source, "[ITEMS]", "targetPreparation: STAGED_REPLACE\n");
+			var service = new TransferFileImportService();
+			var review = service.review(exported.file(), exported.fingerprint(), Map.of("to", target));
+			var failure = assertThrows(TransferFileImportService.ImportException.class, () -> service.execute(review,
+					Map.of("to", TransferStagedReplacementTest.lostCommitReply(target, committed)), directory));
+			assertEquals(TransferStagedReplacement.State.COMMIT_UNCERTAIN, failure.outcome().staging().state());
+			var report = failure.outcome().auditFile();
+			var saved = Files.readString(report);
+			var comparison = TransferStagedReplacement.compareRetainedStageReport(report, target);
+			assertEquals(committed, comparison.comparison().tables().getFirst().matchesTarget());
+			assertTrue(comparison.comparison().tables().getFirst().matchesRecordedStaging());
+			assertEquals(saved, Files.readString(report));
+			assertThrows(IllegalArgumentException.class,
+					() -> TransferStagedReplacement.compareRetainedStageReport(report, source));
+			var command = new CompareTransferStagingCommand();
+			command.setResultFile(report.toFile());
+			command.setWorkspaceDirectory(directory.toFile());
+			command.setDataSource(target);
+			command.setCloseDataSource(false);
+			command.run();
+			assertEquals(comparison, new TransferStagingComparisonReportIO().read(command.getComparisonReport()));
+		} finally {
+			try {
+				sql(source, "SHUTDOWN");
+			} finally {
+				sql(target, "SHUTDOWN");
+			}
+		}
+	}
+
 	private TransferFilePackageIO.Snapshot export(JDBCDataSource source, String tables) throws Exception {
 		return export(source, tables, "");
 	}
@@ -451,10 +559,16 @@ class TransferFileImportServiceTest {
 
 	private TransferFilePackageIO.Snapshot export(JDBCDataSource source, String tables, String options,
 			String schemaMode) throws Exception {
+		return export(source, tables, options, schemaMode, TransferJobConfiguration.FileFormat.CSV);
+	}
+
+	private TransferFilePackageIO.Snapshot export(JDBCDataSource source, String tables, String options,
+			String schemaMode, TransferJobConfiguration.FileFormat format) throws Exception {
 		final Path job = Files.writeString(directory.resolve("transfer.yaml"),
 				"formatVersion: 1\nsource: from\ntarget: to\n" + "schemaMode: " + schemaMode
 						+ "\ndataMode: FILE\nchunkSize: 1\ntables: " + tables + "\n" + options
-						+ "files: {directory: packages, nullValue: '\\N'}\n");
+						+ "files: {directory: packages, format: " + format
+						+ (format == TransferJobConfiguration.FileFormat.JSONL ? "" : ", nullValue: '\\N'") + "}\n");
 		return new TransferFileExportService().export(job, Map.of("from", source));
 	}
 

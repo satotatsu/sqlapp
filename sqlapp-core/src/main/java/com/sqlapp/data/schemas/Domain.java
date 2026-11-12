@@ -140,6 +140,13 @@ public final class Domain extends AbstractColumn<Domain> implements
 	protected void writeXmlOptionalAttributes(StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
+		// A domain's source length or precision remains part of its definition,
+		// including types whose ordinary columns do not serialize a size.
+		if (getDataType() != null && !getDataType().isFixedSize() && !getDataType().isInterval()) {
+			stax.writeAttribute(SchemaProperties.LENGTH.getLabel(), getLength());
+			if (!java.util.Objects.equals(getLength(), getOctetLength()))
+				stax.writeAttribute(SchemaProperties.OCTET_LENGTH.getLabel(), getOctetLength());
+		}
 		stax.writeAttribute(SchemaProperties.CHECK.getLabel(), this.getCheck());
 		stax.writeAttribute(SchemaProperties.ON_UPDATE.getLabel(), this.getOnUpdate());
 		if (!isEmpty(this.getCheck())) {
