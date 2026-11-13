@@ -72,6 +72,15 @@ final class DataMigrationExecutionActions {
 		panel.showExecution.setEnabled(!busy && execution != null);
 		panel.showVerification.setEnabled(!busy && execution != null && execution.verificationReport() != null);
 		panel.saveVerification.setEnabled(panel.showVerification.isEnabled());
+		// Result and progress rows only appear once there is something to show.
+		setRowVisible(panel.showExecution, execution != null);
+		setRowVisible(panel.progress, executing || execution != null);
+	}
+
+	private static void setRowVisible(final java.awt.Component member, final boolean visible) {
+		final var row = member.getParent();
+		if (row != null)
+			row.setVisible(visible);
 	}
 
 	void confirmExecution() {

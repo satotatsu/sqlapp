@@ -76,8 +76,12 @@ final class SchemaComparisonPanel extends JPanel {
 		this.saver = java.util.Objects.requireNonNull(saver, "saver");
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var inputs = new JPanel(new GridLayout(2, 1, 4, 4));
-		inputs.add(fileRow("Before Schema XML", original, beforeBrowse, beforeDatabase));
-		inputs.add(fileRow("After Schema XML", target, afterBrowse, afterDatabase));
+		inputs.add(fileRow("Before Schema XML",
+				FieldHints.placeholder(original, "Schema XML of the current state; or use Read DB… to capture it"),
+				beforeBrowse, beforeDatabase));
+		inputs.add(fileRow("After Schema XML",
+				FieldHints.placeholder(target, "Schema XML of the desired state; or use Read DB… to capture it"),
+				afterBrowse, afterDatabase));
 		add(inputs, BorderLayout.NORTH);
 		preview.setEditable(false);
 		sqlPreview.setEditable(false);
@@ -100,6 +104,13 @@ final class SchemaComparisonPanel extends JPanel {
 		saveSql.setEnabled(false);
 		useDirectory.setEnabled(false);
 		useDirectory.addActionListener(event -> useSavedDirectory());
+		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Compare first.");
+		DisabledReason.install(saveSql, () -> busy ? "Wait for the current operation to finish."
+				: result == null ? "Choose Compare first." : "The comparison found no SQL changes to save.");
+		DisabledReason.install(useDirectory, () -> busy ? "Wait for the current operation to finish."
+				: result == null ? "Choose Compare first." : savedSql == null ? "Save the SQL draft first." : null);
+		DisabledReason.install(editSql, () -> busy ? "Wait for the current operation to finish."
+				: result == null ? "Choose Compare first." : savedSql == null ? "Save the SQL draft first." : null);
 		final DocumentListener changed = new DocumentListener() {
 			public void insertUpdate(final DocumentEvent event) {
 				invalidatePreview();

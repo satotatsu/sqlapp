@@ -119,8 +119,11 @@ final class FileTransferPanel extends JPanel {
 		connections.add(source, "0");
 		connections.add(target, "1");
 		final var exportSettings = new JPanel(new GridLayout(0, 1, 4, 4));
-		exportSettings.add(row("Saved file job (optional for New job)", job, false, List.of("yaml", "yml")));
-		exportSettings.add(row("Source schema (blank: current)", sourceSchema, null, List.of()));
+		exportSettings.add(row("Saved file job",
+				FieldHints.placeholder(job, "Optional when creating a New file job; choose a saved job to reuse it"), false,
+				List.of("yaml", "yml")));
+		exportSettings.add(row("Source schema",
+				FieldHints.placeholder(sourceSchema, "Blank uses the source connection's current schema"), null, List.of()));
 		final var importSettings = new JPanel(new GridLayout(0, 1, 4, 4));
 		importSettings.add(row("Completed package (manifest or folder)", manifest, false, List.of("json")));
 		importSettings.add(row("Save import results to", workspace, true, List.of()));
@@ -266,6 +269,10 @@ final class FileTransferPanel extends JPanel {
 		listen(job);
 		listen(manifest);
 		listen(sourceSchema);
+		DisabledReason.install(apply, () -> busy ? "Wait for the current operation to finish."
+				: reviewed == null ? "Choose Review package and target first. Only the current review can be imported." : null);
+		DisabledReason.install(previewPackage, () -> isBusy() ? "Wait for the current operation to finish."
+				: manifest.getText().isBlank() ? "Choose a completed package manifest first." : null);
 		cards();
 		refresh();
 	}

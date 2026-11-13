@@ -106,9 +106,12 @@ final class DirectTransferPanel extends JPanel {
 		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
 		settings.add(new JLabel(
 				"One job for GUI and Gradle. New direct job offers data transfer or schema only (no row copy)."));
-		settings.add(row("Shared job (optional for New job)", job, false));
-		settings.add(row("Working folder and reports", workspace, true));
-		settings.add(row("Source schema for New job (blank: current)", sourceSchema, null));
+		settings.add(row("Shared job",
+				FieldHints.placeholder(job, "Optional when creating a New direct job; choose a saved job to reuse it"), false));
+		settings.add(row("Working folder (required)",
+				FieldHints.placeholder(workspace, "Existing writable folder for the job, reviews and reports"), true));
+		settings.add(row("Source schema",
+				FieldHints.placeholder(sourceSchema, "Used by New direct job; blank uses the source connection's current schema"), null));
 		form.add(settings, BorderLayout.NORTH);
 		final var endpoints = new JPanel(new GridLayout(1, 2, 8, 8));
 		endpoints.add(source);
@@ -212,6 +215,8 @@ final class DirectTransferPanel extends JPanel {
 		listen(job);
 		listen(workspace);
 		listen(sourceSchema);
+		DisabledReason.install(execute, () -> busy ? "Wait for the current operation to finish."
+				: reviewed == null ? "Choose Review transfer first. Only the current review can be executed." : null);
 		refresh();
 	}
 

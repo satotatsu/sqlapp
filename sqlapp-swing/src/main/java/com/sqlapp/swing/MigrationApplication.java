@@ -30,7 +30,8 @@ public final class MigrationApplication {
 	private static void show() {
 		DesktopAppearance.install();
 		final var frame = new JFrame("sqlapp — RDB transfer");
-		final var tabs = new JTabbedPane();
+		// One row: wrapped rows reorder themselves on selection, which moves tabs under the pointer.
+		final var tabs = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
 		final var comparison = new SchemaComparisonPanel();
 		final var schemaPlan = new SchemaMigrationPlanPanel();

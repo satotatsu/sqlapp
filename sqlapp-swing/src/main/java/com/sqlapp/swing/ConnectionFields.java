@@ -18,6 +18,8 @@ final class ConnectionFields extends JPanel {
 
 	ConnectionFields(String title) {
 		super(new GridBagLayout());
+		FieldHints.placeholder(jdbcUrl, "Required, e.g. jdbc:postgresql://host:5432/db");
+		FieldHints.placeholder(password, "Not saved; enter for this session");
 		setBorder(BorderFactory.createTitledBorder(title));
 		row(0, new JLabel("JDBC URL"), jdbcUrl);
 		row(1, new JLabel("Username"), username);

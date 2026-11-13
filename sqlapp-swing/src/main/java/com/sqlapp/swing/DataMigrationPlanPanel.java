@@ -170,10 +170,12 @@ final class DataMigrationPlanPanel extends JPanel {
 		chooseSourceSchema.addActionListener(event -> chooseSourceSchema(new SourceSchemaDiscoveryService()::list,
 				names -> SourceSchemaSelectionPanel.showDialog(this, names, sourceSchema.getText())));
 		final var advanced = new JPanel(new BorderLayout(8, 0));
-		advanced.add(new JLabel("Expected configuration SHA-256 (optional)"), BorderLayout.WEST);
+		advanced.add(new JLabel("Expected configuration SHA-256"), BorderLayout.WEST);
+		FieldHints.placeholder(expectedFingerprint, "Optional: stop if the job YAML no longer has this fingerprint");
 		advanced.add(expectedFingerprint, BorderLayout.CENTER);
 		final var schemaRow = new JPanel(new BorderLayout(8, 0));
-		schemaRow.add(new JLabel("Source schema (blank: current)"), BorderLayout.WEST);
+		schemaRow.add(new JLabel("Source schema"), BorderLayout.WEST);
+		FieldHints.placeholder(sourceSchema, "Blank uses the source connection's current schema");
 		schemaRow.add(sourceSchema, BorderLayout.CENTER);
 		advanced.add(schemaRow, BorderLayout.SOUTH);
 		advanced.setVisible(false);
@@ -300,6 +302,12 @@ final class DataMigrationPlanPanel extends JPanel {
 		apply.setEnabled(false);
 		saveExecution.setEnabled(false);
 		apply.addActionListener(event -> executionActions.confirmExecution());
+		DisabledReason.install(editJob, () -> jobEditor == null ? null
+				: !configurationFile.isEnabled() ? "Wait for the current operation to finish." : "Choose a saved migration YAML first.");
+		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Connect and inspect plan first.");
+		DisabledReason.install(apply,
+				() -> busy || isExecuting() ? "Wait for the current operation to finish." : DataMigrationExecutionService.restriction(result));
+		executionActions.refreshActions(false);
 	}
 
 	void setJobEditor(final java.util.function.Predicate<Path> jobEditor) {

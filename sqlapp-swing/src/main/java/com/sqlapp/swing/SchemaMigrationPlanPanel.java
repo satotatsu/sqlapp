@@ -3,7 +3,6 @@ package com.sqlapp.swing;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -215,6 +214,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		save.setEnabled(false);
 		apply.setEnabled(false);
 		saveExecution.setEnabled(false);
+		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Connect and build plan first.");
 	}
 
 	private void row(final JPanel panel, final int row, final String label, final Component field) {
@@ -286,7 +286,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	private void busy(final boolean busy) {
 		this.busy = busy;
 		savedReport.refresh();
-		enable(form, !busy);
+		ComponentEnablement.setTreeEnabled(form, !busy);
 		reviewFocus.setBusy(busy);
 		build.setEnabled(!busy);
 		save.setEnabled(!busy && result != null);
@@ -294,15 +294,6 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		apply.setEnabled(!busy && restriction == null);
 		apply.setToolTipText(restriction);
 		saveExecution.setEnabled(!busy && execution != null && execution.report() != null);
-	}
-
-	private void enable(final Container container, final boolean enabled) {
-		for (final var child : container.getComponents()) {
-			child.setEnabled(enabled);
-			if (child instanceof Container nested) {
-				enable(nested, enabled);
-			}
-		}
 	}
 
 	void buildConnectionUrl(final java.util.function.Function<String, String> dialog) {
