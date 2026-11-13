@@ -21,6 +21,16 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 		super(null);
 	}
 
+	/** Host product family; selects platform-specific catalog and DDL grammar. */
+	public enum Platform {
+		ZOS, IBM_I
+	}
+
+	/**
+	 * @return the host product family of this dialect
+	 */
+	public abstract Platform getPlatform();
+
 	protected long maxCharLength() {
 		return 255;
 	}
@@ -101,6 +111,9 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 				Db2HostDomainFactory.Drop.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE,
 				Db2HostCreateIndexFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Mask.class, SqlType.CREATE, Db2HostCreateMaskFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.CREATE,
+				Db2HostCreateSchemaFactory.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, SqlType.CREATE,
 				Db2HostDefinitionFactories.ProcedureCreate.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.CREATE,

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.db2.common.Db2HostTables;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcCatalogReader;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcSchemaReader;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcTableReader;
@@ -134,30 +135,75 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 		protected TypeReader newTypeReader() {
 			return null;
 		}
+
+		@Override
+		protected MaskReader newMaskReader() {
+			return new Db2HostSecurityReaders.Masks(getDialect(), resources);
+		}
+
+		@Override
+		protected void setSchemaAfter(Connection connection, Schema schema) {
+			super.setSchemaAfter(connection, schema);
+			var permissions = new ArrayList<com.sqlapp.data.db.dialect.db2.Db2RowPermissions.Permission>();
+			var context = new ParametersContext();
+			context.put("schemaName", schema.getName());
+			execute(connection, getSqlNodeCache(resources).getString("permissions.sql"), context,
+					new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rs) throws SQLException {
+							permissions.add(Db2HostSecurityReaders.permission(rs));
+						}
+					});
+			Db2HostSecurityReaders.apply(schema, permissions);
+		}
 	}
 
 	private static class HostTableReader extends JdbcTableReader {
 		private final Class<?> resources;
+		/** Attributes completed after the columns are attached. */
+		private final Map<Table, Db2HostTableAssembler.Pending> pending = new java.util.IdentityHashMap<>();
 
 		HostTableReader(Dialect dialect, Class<?> resources) {
 			super(dialect);
 			this.resources = resources;
 		}
 
+		private com.sqlapp.data.db.dialect.db2.common.AbstractDb2HostDialect.Platform platform() {
+			return ((com.sqlapp.data.db.dialect.db2.common.AbstractDb2HostDialect) getDialect()).getPlatform();
+		}
+
 		@Override
 		protected List<Table> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
-			List<Table> result = new ArrayList<>();
+			Map<List<String>, Table> result = new LinkedHashMap<>();
+			var platform = platform();
 			execute(connection, getSqlNodeCache(resources).getString("tables.sql"), context,
 					new ResultSetNextHandler() {
 						@Override
 						public void handleResultSetNext(ExResultSet rs) throws SQLException {
-							Table table = new Table(identifier(rs, "TABLE_NAME"));
-							table.setSchemaName(identifier(rs, "SCHEMA_NAME"));
-							table.setRemarks(rs.getString("REMARKS"));
-							result.add(table);
+							String schema = identifier(rs, "SCHEMA_NAME"), name = identifier(rs, "TABLE_NAME");
+							var key = java.util.Arrays.asList(schema, name);
+							Table table = result.get(key);
+							if (table == null) {
+								table = new Table(name);
+								table.setSchemaName(schema);
+								table.setRemarks(rs.getString("REMARKS"));
+								pending.put(table, Db2HostTableAssembler.readTable(rs, table, platform));
+								result.put(key, table);
+							}
+							// Partitioned tables return one row per partition.
+							Db2HostTableAssembler.readPartition(rs, table, pending.get(table), platform);
 						}
 					});
-			return result;
+			return new ArrayList<>(result.values());
+		}
+
+		@Override
+		protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> tableList)
+				throws SQLException {
+			super.setMetadataDetail(connection, context, tableList);
+			var platform = platform();
+			for (Table table : tableList)
+				Db2HostTableAssembler.complete(table, pending.remove(table), platform);
 		}
 
 		@Override
@@ -273,10 +319,83 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 								column.setIdentityCacheSize(rs.getInteger("IDENTITY_CACHE"));
 								column.setIdentityOrder("Y".equals(rs.getString("IDENTITY_ORDER")));
 							}
+							readHostAttributes(rs, column, named);
 							result.add(column);
 						}
 					});
 			return result;
+		}
+
+		private void readHostAttributes(ExResultSet rs, Column column, boolean named) throws SQLException {
+			var platform = ((com.sqlapp.data.db.dialect.db2.common.AbstractDb2HostDialect) getDialect()).getPlatform();
+			String generation = Db2HostSupplementalReaders.optional(rs, "GENERATION_KIND");
+			if (generation != null && !generation.isBlank()) {
+				if (column.isIdentity() || column.getDefaultValue() != null)
+					throw new SQLException(
+							"Generated column cannot also be identity or have DEFAULT: " + column.getName());
+				switch (generation) {
+				case "ROW_BEGIN", "ROW_END", "TRANSACTION_START_ID" ->
+					column.getSpecifics().put(Db2HostTables.GENERATION, generation);
+				case "ROW_CHANGE_ALWAYS" -> column.getSpecifics().put(Db2HostTables.ROW_CHANGE, "A");
+				case "ROW_CHANGE_DEFAULT" -> column.getSpecifics().put(Db2HostTables.ROW_CHANGE, "D");
+				default ->
+					throw new SQLException("Unsupported generated column kind " + generation + ": " + column.getName());
+				}
+			}
+			String hidden = Db2HostSupplementalReaders.optional(rs, "HIDDEN_FLAG");
+			if (hidden != null && !hidden.isBlank() && !"N".equals(hidden)) {
+				if (!"Y".equals(hidden))
+					throw new SQLException("Unsupported hidden column attribute: " + column.getName());
+				column.getSpecifics().put(Db2HostTables.HIDDEN, "Y");
+			}
+			String period = Db2HostSupplementalReaders.optional(rs, "PERIOD_ROLE");
+			if (period != null && !period.isBlank()) {
+				if (!List.of("S", "T", "B", "C").contains(period))
+					throw new SQLException("Unsupported period column role " + period + ": " + column.getName());
+				column.getSpecifics().put(Db2HostTables.TMP_PERIOD, period);
+			}
+			if (Db2HostSupplementalReaders.has(rs, "PARTITION_KEY_SEQ")) {
+				Integer seq = rs.getInteger("PARTITION_KEY_SEQ");
+				if (seq != null && seq > 0) {
+					String order = identifier(rs, "PARTITION_KEY_ORDER");
+					if (!"A".equals(order) && !"D".equals(order))
+						throw new SQLException("Unsupported partition key order " + order + ": " + column.getName());
+					column.getSpecifics().put(Db2HostTables.TMP_PARTITION_KEY_SEQ, String.valueOf(seq));
+					column.getSpecifics().put(Db2HostTables.TMP_PARTITION_KEY_ORDER, order);
+				}
+			}
+			if (named)
+				return;
+			var type = column.getDataType();
+			boolean fixedOrVarying = type == com.sqlapp.data.db.datatype.DataType.CHAR
+					|| type == com.sqlapp.data.db.datatype.DataType.VARCHAR;
+			boolean character = fixedOrVarying || type == com.sqlapp.data.db.datatype.DataType.CLOB;
+			boolean graphic = type == com.sqlapp.data.db.datatype.DataType.NCHAR
+					|| type == com.sqlapp.data.db.datatype.DataType.NVARCHAR
+					|| type == com.sqlapp.data.db.datatype.DataType.NCLOB;
+			String subtype = Db2HostSupplementalReaders.optional(rs, "CHARACTER_SUBTYPE");
+			if (platform == com.sqlapp.data.db.dialect.db2.common.AbstractDb2HostDialect.Platform.ZOS && character
+					&& subtype != null && !subtype.isBlank()) {
+				switch (subtype) {
+				case "B" -> {
+					if (!fixedOrVarying)
+						throw new SQLException("Unsupported FOR BIT DATA column type: " + column.getName());
+					column.getSpecifics().put("CODEPAGE", "0");
+				}
+				case "S", "M" -> column.getSpecifics().put(Db2HostTables.SUBTYPE, subtype);
+				default -> throw new SQLException("Unknown character subtype " + subtype + ": " + column.getName());
+				}
+			}
+			if (platform == com.sqlapp.data.db.dialect.db2.common.AbstractDb2HostDialect.Platform.IBM_I
+					&& (character || graphic) && Db2HostSupplementalReaders.has(rs, "COLUMN_CCSID")) {
+				Integer ccsid = rs.getInteger("COLUMN_CCSID");
+				if (ccsid != null && ccsid == 65535) {
+					if (!fixedOrVarying)
+						throw new SQLException("CCSID 65535 requires CHAR or VARCHAR: " + column.getName());
+					column.getSpecifics().put("CODEPAGE", "0");
+				} else if (ccsid != null && ccsid > 0)
+					column.getSpecifics().put(Db2HostTables.CCSID, String.valueOf(ccsid));
+			}
 		}
 	}
 
@@ -298,6 +417,10 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 						public void handleResultSetNext(ExResultSet rs) throws SQLException {
 							String schema = identifier(rs, "SCHEMA_NAME"), table = identifier(rs, "TABLE_NAME"),
 									name = identifier(rs, "CONSTRAINT_NAME");
+							String unsupported = Db2HostSupplementalReaders.optional(rs, "UNSUPPORTED_KEY");
+							if (unsupported != null && !unsupported.isBlank())
+								throw new SQLException(
+										"Unsupported key attributes: " + unsupported + " (" + name + ")");
 							var key = List.of(schema, table, name);
 							var constraint = result.get(key);
 							if (constraint == null) {

@@ -41,6 +41,7 @@ import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
+import com.sqlapp.gradle.plugins.util.CreatedDataSources;
 import com.sqlapp.gradle.plugins.util.JarNameUtils;
 
 @DisableCachingByDefault
@@ -75,7 +76,7 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 			final ClassLoader cls = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(createCls);
-				try {
+				try (CreatedDataSources.Scope dataSources = CreatedDataSources.open()) {
 					initializeCommand(command);
 					beforeRun(command);
 					command.run();

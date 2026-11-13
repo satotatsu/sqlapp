@@ -7,7 +7,7 @@ import com.sqlapp.data.db.dialect.db2.i.metadata.Db2I75CatalogReader;
 
 /**
  * Experimental Db2 for i 7.5 basic table/key support; not verified against a
- * server.
+ * server. {@link Db2I74} and {@link Db2I76} share the same catalog resources.
  */
 public class Db2I75 extends AbstractDb2HostDialect {
 	private static final long serialVersionUID = 1L;
@@ -19,7 +19,18 @@ public class Db2I75 extends AbstractDb2HostDialect {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
-		getDbDataTypes().addBoolean();
+		if (supportsNativeBoolean())
+			getDbDataTypes().addBoolean();
+	}
+
+	/** Native BOOLEAN was introduced in IBM i 7.5. Called during construction. */
+	protected boolean supportsNativeBoolean() {
+		return true;
+	}
+
+	@Override
+	public Platform getPlatform() {
+		return Platform.IBM_I;
 	}
 
 	@Override

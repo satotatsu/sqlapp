@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.db2.common.Db2HostIndexes;
 import com.sqlapp.data.db.metadata.*;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.*;
@@ -202,21 +203,63 @@ final class Db2HostSupplementalReaders {
 								index.setTableName(table);
 								index.setUnique(flag(rs, "UNIQUE_FLAG"));
 								index.getSpecifics().put("INDEX_SCHEMA", owner);
+								if ("Y".equals(optional(rs, "UNIQUE_WHERE_NOT_NULL"))) {
+									if (!index.isUnique())
+										throw new SQLException(
+												"UNIQUE WHERE NOT NULL requires a unique index: " + name);
+									index.getSpecifics().put(Db2HostIndexes.UNIQUE_WHERE_NOT_NULL, "Y");
+								}
+								String where = optionalText(rs, "WHERE_TEXT");
+								if (where != null)
+									index.setWhere(where);
+								String cluster = optional(rs, "CLUSTER_FLAG");
+								if (cluster != null && !cluster.isBlank()) {
+									if (!List.of("Y", "N").contains(cluster))
+										throw new SQLException("Invalid index CLUSTER flag: " + cluster);
+									if ("Y".equals(cluster))
+										index.getSpecifics().put(Db2HostIndexes.CLUSTER, "Y");
+								}
+								String partitioned = optional(rs, "PARTITIONED_FLAG");
+								if (partitioned != null && !partitioned.isBlank()) {
+									if (!List.of("Y", "N").contains(partitioned))
+										throw new SQLException("Unknown index partitioning state: " + partitioned);
+									index.getSpecifics().put(Db2HostIndexes.PARTITIONED, partitioned);
+								}
 								index.setRemarks(rs.getString("REMARKS"));
 								result.put(key, index);
 								keyCounts.put(key, keyCount);
 							}
-							if (!keyCount.equals(keyCounts.get(key)) || position != index.getColumns().size() + 1)
+							int read = index.getColumns().size() + index.getIncludes().size();
+							if (!keyCount.equals(keyCounts.get(key)) || position != read + 1)
 								throw new SQLException("Incomplete or unordered index keys: " + name);
 							String order = id(rs, "COLUMN_ORDER"), column = id(rs, "COLUMN_NAME");
-							if (column == null || column.isBlank()
-									|| (order == null || !List.of("A", "D").contains(order)))
-								throw new SQLException("Unsupported index expression/include/order: " + name);
+							String expression = optionalText(rs, "KEY_EXPRESSION");
+							if ("Y".equals(optional(rs, "KEY_INCLUDE"))) {
+								if (!index.isUnique() || expression != null || column == null || column.isBlank())
+									throw new SQLException("Unsupported index INCLUDE key: " + name);
+								index.getIncludes().add(new Column(column)).setIncludedColumn(true);
+								return;
+							}
+							if (!index.getIncludes().isEmpty())
+								throw new SQLException("Index key follows an INCLUDE column: " + name);
+							if (order == null || !List.of("A", "D").contains(order))
+								throw new SQLException("Unsupported index key order: " + order + " (" + name + ")");
+							if (expression != null) {
+								// Index-on-expression key; the native text is replayed verbatim.
+								var reference = new com.sqlapp.data.schemas.ReferenceColumn(expression);
+								reference.setStatement(expression);
+								reference.setOrder("A".equals(order) ? Order.Asc : Order.Desc);
+								index.getColumns().add(reference);
+								return;
+							}
+							if (column == null || column.isBlank())
+								throw new SQLException("Index key has neither a column nor an expression: " + name);
 							index.getColumns().add(new Column(column), "A".equals(order) ? Order.Asc : Order.Desc);
 						}
 					});
 			for (var entry : result.entrySet())
-				if (entry.getValue().getColumns().size() != keyCounts.get(entry.getKey()))
+				if (entry.getValue().getColumns().size() + entry.getValue().getIncludes().size() != keyCounts
+						.get(entry.getKey()) || entry.getValue().getColumns().isEmpty())
 					throw new IllegalStateException("Incomplete index keys: " + entry.getValue().getName());
 			return new ArrayList<>(result.values());
 		}
@@ -227,6 +270,34 @@ final class Db2HostSupplementalReaders {
 		if (value == null || value.isBlank() || value.indexOf('\0') >= 0)
 			throw new SQLException("Missing or truncated catalog text: " + name);
 		return value;
+	}
+
+	/**
+	 * Reads a column added by later catalog SQL revisions. Callers validate the
+	 * value; absence means the attribute is not reported by the resource.
+	 */
+	static String optional(ExResultSet rs, String name) throws SQLException {
+		return has(rs, name) ? id(rs, name) : null;
+	}
+
+	/** Optional catalog text; blank becomes null, embedded NUL is rejected. */
+	static String optionalText(ExResultSet rs, String name) throws SQLException {
+		if (!has(rs, name))
+			return null;
+		String value = rs.getString(name);
+		if (value == null || value.isBlank())
+			return null;
+		if (value.indexOf('\0') >= 0)
+			throw new SQLException("Truncated catalog text: " + name);
+		return value.strip();
+	}
+
+	static boolean has(ExResultSet rs, String name) throws SQLException {
+		var metadata = rs.getMetaData();
+		for (int i = 1; i <= metadata.getColumnCount(); i++)
+			if (name.equalsIgnoreCase(metadata.getColumnLabel(i)))
+				return true;
+		return false;
 	}
 
 	private static String id(ExResultSet rs, String name) throws SQLException {

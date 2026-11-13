@@ -34,6 +34,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
 import com.sqlapp.gradle.plugins.ConfigUtils;
+import com.sqlapp.gradle.plugins.util.CreatedDataSources;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 import com.zaxxer.hikari.HikariConfig;
@@ -50,7 +51,8 @@ public abstract class DataSourceExtension {
 	}
 
 	public DataSource createDataSource() {
-		final DataSource ds = new HikariDataSource(toConfig());
+		// Closed by AbstractTask when the task action finishes.
+		final DataSource ds = CreatedDataSources.register(new HikariDataSource(toConfig()));
 		return ds;
 	}
 

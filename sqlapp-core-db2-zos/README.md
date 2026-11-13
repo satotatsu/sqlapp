@@ -1,4 +1,4 @@
-# Db2 for z/OS 13 (experimental)
+# Db2 12 and 13 for z/OS (experimental)
 
 This separate Gradle/Maven artifact depends on `sqlapp-core-db2`, following the
 PostgreSQL/MySQL derivative dialect pattern. No `sqlapp-core-db2-common` artifact
@@ -22,8 +22,11 @@ List<Schema> model = schemas.getAllFull(connection);
 List<SqlOperation> ddl = dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE);
 ```
 
-The concrete entry point is `Db2Zos13`. Only Db2 for z/OS 13 is an initial target;
-older and newer versions are rejected rather than mapped speculatively. No JDBC
+The concrete entry points are `Db2Zos12` and `Db2Zos13`; the resolver selects
+one from the JDBC version. Db2 12 reuses the Db2 13 catalog SQL because every
+catalog column read here also exists in Db2 12. Features that depend on a
+function level still require that level on the subsystem. Other releases are
+rejected rather than mapped speculatively. No JDBC
 driver is bundled. Supply the appropriate driver and connection credentials.
 
 ## Initial coverage
@@ -45,7 +48,7 @@ driver is bundled. Supply the appropriate driver and connection credentials.
 | --- | --- | --- |
 | Views | Ordered columns plus query body (IBM i) or complete `STATEMENT` DDL (z/OS) | Reuses the Db2 view factory, including column aliases, CHECK OPTION and stored creation context |
 | Checks | Predicate text and enabled state | Shared check constraint factory and table CREATE; disabled constraints are rejected by table CREATE |
-| Ordinary indexes | Ordered ASC/DESC column keys, uniqueness and index schema | CREATE INDEX after table creation, including a different index schema |
+| Indexes | Ordered ASC/DESC column or expression keys, uniqueness and index schema, plus the options listed below | CREATE INDEX after table creation, including a different index schema |
 | Sequences | Exact start, increment, minimum, maximum, cache, cycle and order | IBM i native types; z/OS requires an explicitly resolved type as described below |
 
 A view request uses two bulk queries (definitions and columns). A sequence request
@@ -59,12 +62,13 @@ a stored ALTER statement cannot be treated as a complete CREATE and is rejected.
 IBM warns that this stored statement may not reflect every subsequent dependent
 object change; verification against a real database remains necessary.
 
-Ordinary indexes are supported; incomplete key lists, expressions, INCLUDE keys,
-unsupported ordering and special uniqueness/encoded-vector semantics fail. z/OS
-constraint-backed and implicitly generated indexes are excluded from standalone
-index creation; primary/unique constraints remain represented separately.
-Physical index storage options and clustering are not recreated. IBM i catalog
-views here cover SQL-created indexes, not DDS logical files.
+Ordinary and extended indexes are supported as described in the extended
+indexes section below; incomplete key lists, random ordering, encoded-vector
+and other special uniqueness semantics fail. z/OS constraint-backed and
+implicitly generated indexes are excluded from standalone index creation;
+primary/unique constraints remain represented separately. Physical index
+storage options are not recreated. IBM i catalog views here cover SQL-created
+indexes, not DDS logical files.
 
 For z/OS, SYSSEQUENCES exposes an internal DATATYPEID instead of a documented
 built-in type name. The reader preserves it in `specifics["DB2_HOST_DATATYPE_ID"]`
@@ -276,6 +280,75 @@ non-null DISTINCT default cannot be safely reconstructed from the
 current column query and is rejected. Explicit default SQL remains opaque and
 is not rewritten when referenced objects are renamed.
 
+## Extended indexes, physical attributes, temporal tables and access control
+
+These additions keep the bulk-query design: tables still load in six queries
+(partitions and temporal state are joined into the table query), and a full
+schema read adds one mask query and one row-permission query per schema.
+Each attribute is stored in the shared Schema model where one exists
+(`Index.where`, `Index.includes`, `ReferenceColumn.statement`,
+`Table.partitioning`, `Table.temporalPeriods`, `Table.systemVersioning`,
+`Schema.masks`) and otherwise in documented specifics
+(`Db2HostIndexes`, `Db2HostTables`). All of it survives XML and clone.
+Catalog values that cannot be represented fail instead of being dropped.
+
+| Area | Db2 for z/OS 12/13 | Db2 for i 7.4/7.5/7.6 |
+| --- | --- | --- |
+| Index keys | Expression keys from SYSKEYTARGETS.DERIVED_FROM | Expression keys from SYSKEYS.KEY_EXPRESSION |
+| Index options | INCLUDE (unique indexes), CLUSTER, PARTITIONED, UNIQUE WHERE NOT NULL | Sparse `WHERE`, PARTITIONED / NOT PARTITIONED, UNIQUE WHERE NOT NULL |
+| Placement | `IN db.ts` for an explicit table space, `IN DATABASE db` for an implicit one | `FOR SYSTEM NAME` when the system name differs |
+| Encoding | Table `CCSID EBCDIC/ASCII/UNICODE`; column `FOR BIT/SBCS/MIXED DATA` | Column `CCSID n`; CCSID 65535 becomes `FOR BIT DATA` |
+| Partitioning | Table-controlled RANGE (`PARTITION n ENDING AT (...)`) | RANGE (`STARTING FROM ... ENDING AT ...`) and `HASH ... INTO n PARTITIONS` |
+| Temporal | SYSTEM_TIME and BUSINESS_TIME periods, history tables (TYPE H), versioning incl. ON DELETE ADD EXTRA ROW | SYSTEM_TIME period and versioning from SYSPERIODS |
+| Generated columns | ROW BEGIN/END, TRANSACTION START ID, ROW CHANGE TIMESTAMP, IMPLICITLY HIDDEN | Same |
+| Access control | Column masks, explicit row permissions, ACTIVATE ROW/COLUMN ACCESS CONTROL | Same |
+
+DDL notes:
+
+- Table CREATE emits `PERIOD` clauses and a separate
+  `ALTER TABLE ... ADD VERSIONING USE HISTORY TABLE ...`. Schema CREATE moves
+  every ADD VERSIONING after all tables, so history tables exist first.
+- Schema CREATE emits masks after the other objects, then row permissions,
+  then ACTIVATE statements, so a table is never activated before its rules
+  exist. Implicit default permissions are not read; activation recreates them.
+  Masks are created without OR REPLACE because z/OS does not accept it.
+- z/OS table spaces and databases are referenced, not created. Implicitly
+  created ones are omitted so Db2 creates them again.
+- Platform-specific attributes are validated against the target dialect: for
+  example `INCLUDE`/`CLUSTER`/BUSINESS_TIME on IBM i, or a sparse index, a
+  column CCSID or HASH partitioning on z/OS, fail explicitly.
+
+Behavior changes for existing users:
+
+- Host TIMESTAMP precision is now read from SYSCOLUMNS.SCALE (z/OS) and
+  SYSCOLUMNS.DATETIME_PRECISION (IBM i). It was previously taken from the
+  storage length, which produced invalid precisions such as `TIMESTAMP(10)`.
+- z/OS table reads include history tables (SYSTABLES.TYPE H); schema
+  discovery includes schemas that contain them.
+- Tables with row-begin/end, transaction-start-ID or row change timestamp
+  columns, z/OS FOR BIT DATA columns and IBM i explicit CCSIDs used to fail or
+  lose these attributes; they are now read and recreated.
+
+Not covered, or verified only by unit tests:
+
+- z/OS `LIMITKEY` and IBM i `LOWVALUE`/`HIGHVALUE` are replayed verbatim as
+  partition bounds. Their external format has not been checked against a
+  server for every key type.
+- IBM i partitioning is read from the statistical views SYSTABLESTAT and
+  SYSPARTITIONSTAT, joined only when SYSTABLES.PARTITION_TABLE is not `NO`.
+  These views can be slow on large partitioned tables. The PARTITIONING_KEYS
+  list must name existing columns. Distributed (DB2 Multisystem) tables fail.
+- IBM i IS_SPANNING_INDEX is mapped from `YES`/`NO`; any other value fails.
+- z/OS EXCLUDE NULL KEYS, PADDED, COMPRESS, buffer pools, storage groups,
+  EDITPROC/VALIDPROC and archive relationships are not recreated. Db2 does not
+  expose EXCLUDE NULL KEYS in SYSINDEXES, so it cannot be detected.
+- z/OS BUSINESS_TIME WITHOUT OVERLAPS keys and indexes, inclusive period ends,
+  and row-begin/end columns outside a SYSTEM_TIME period fail.
+- IBM i record format names (RCDFMT) are not available from the SQL catalog
+  views used here and are not recreated. IBM i versioning that is defined but
+  not established (VERSIONING_STATUS `D`) fails.
+- Index-controlled partitioning (z/OS legacy) fails explicitly.
+
 ## Limits and verification
 
 **No real Db2 for z/OS server has been used to validate this implementation.**
@@ -283,18 +356,18 @@ Unit tests exercise JDBC product identification, resource loading and SQL bindin
 mocked catalog row conversion, query counts and generated DDL. They do not prove
 that the catalog queries execute or that the DDL is accepted by a server.
 
-This is a basic logical-table baseline, not a full-fidelity database backup or
-migration implementation. Physical placement/encoding (including CCSID), table
-spaces, partitioning, temporal/security attributes, DDS/system names,
-expression/partial/encoded-vector indexes and unlisted privilege categories
-remain outside coverage. Routine/trigger recreation has the limits above. Unrepresented physical attributes cannot be recreated.
-Schema discovery on z/OS lists schemas containing ordinary tables, views, user
+This is a logical-table baseline with the selected physical, temporal and
+security attributes listed above; it is not a full-fidelity database backup or
+migration implementation. Storage options (buffer pools, storage groups,
+compression), table space creation, DDS file attributes, encoded-vector
+indexes and unlisted privilege categories remain outside coverage. Routine/trigger recreation has the limits above. Unrepresented physical attributes cannot be recreated.
+Schema discovery on z/OS lists schemas containing ordinary or history tables, views, user
 sequences, active user routines, triggers, aliases, legacy synonyms or types. IBM i uses
 SQL naming and ordinary SQL tables; DDS physical/logical file recreation is not supported.
 
 Unsupported generated columns and unresolved referenced keys fail explicitly.
-Non-enforced/disabled constraints and explicit physical options are rejected by
-the basic CREATE path. Unsupported types and versions fail explicitly. Advanced
+Non-enforced/disabled constraints and physical options that are not modeled
+are rejected by the CREATE path. Unsupported types and versions fail explicitly. Advanced
 metadata categories have no reader in this initial implementation; do not interpret
 their absence as proof that no such objects exist on the server.
 
@@ -312,6 +385,11 @@ No external database is accessed by the unit tests or the default Gradle test ta
 
 ### Supplemental catalog specifications
 
+- [z/OS SYSTABLES (partitioning, versioning, access control)](https://www.ibm.com/support/knowledgecenter/en/SSEPEK_12.0.0/cattab/src/tpc/db2z_sysibmsystablestable.html)
+- [z/OS SYSCOLUMNS (DEFAULT, PERIOD, HIDDEN, partition keys)](https://www.ibm.com/support/knowledgecenter/en/SSEPEK_10.0.0/cattab/src/tpc/db2z_sysibmsyscolumnstable.html)
+- [z/OS SYSTABLEPART (LIMITKEY)](https://www.ibm.com/support/knowledgecenter/SSEPEK_12.0.0/cattab/src/tpc/db2z_sysibmsystableparttable.html)
+- [z/OS SYSKEYTARGETS (index on expression)](https://www.ibm.com/support/knowledgecenter/en/SSEPEK_12.0.0/cattab/src/tpc/db2z_sysibmsyskeytargetstable.html)
+- [z/OS SYSCONTROLS (masks and permissions)](https://ibm.com/docs/SSEPEK_13.0.0/cattab/src/tpc/db2z_sysibmsyscontrolstable.html)
 - [z/OS schema privilege catalog](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=tables-sysschemaauth)
 - [z/OS schema GRANT](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-grant-schema-privileges)
 - [z/OS schema REVOKE](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-revoke-schema-privileges)

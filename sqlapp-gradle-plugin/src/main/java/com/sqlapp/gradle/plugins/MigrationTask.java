@@ -28,6 +28,12 @@ import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 @DisableCachingByDefault
 public abstract class MigrationTask extends AbstractExtensionTask<MigrationCommand, MigrationExtension> {
 
+	public MigrationTask() {
+		// Migration inputs live on the shared extension and the applied history
+		// lives in the database; neither is visible to Gradle's up-to-date check.
+		getOutputs().upToDateWhen(task -> false);
+	}
+
 	@Override
 	protected MigrationCommand createCommand() {
 		return new MigrationCommand();

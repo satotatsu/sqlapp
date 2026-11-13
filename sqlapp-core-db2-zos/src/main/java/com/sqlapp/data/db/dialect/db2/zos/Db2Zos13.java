@@ -17,6 +17,11 @@ public class Db2Zos13 extends AbstractDb2HostDialect {
 	}
 
 	@Override
+	public Platform getPlatform() {
+		return Platform.ZOS;
+	}
+
+	@Override
 	public String getProductName() {
 		return "Db2 for z/OS";
 	}

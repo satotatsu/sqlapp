@@ -7,14 +7,19 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.db2.zos.Db2Zos13;
 
-/** Uses DRDA server identifiers as well as explicit JDBC product names. */
+/**
+ * Uses DRDA server identifiers as well as explicit JDBC product names. Resolves
+ * Db2 12 and 13 for z/OS; other releases are rejected.
+ */
 public class Db2Zos13DialectResolver extends ProductNameDialectResolver {
 	public Db2Zos13DialectResolver() {
 		super("(?:DB2.*(?:Z/OS|OS/390).*|db2-zos)", (major, minor, revision) -> {
-			if (major != 13)
-				throw new IllegalArgumentException(
-						"Supported experimental target: Db2 for z/OS 13.0; received " + major + "." + minor);
-			return new Db2Zos13();
+			if (major == 12)
+				return new com.sqlapp.data.db.dialect.db2.zos.Db2Zos12();
+			if (major == 13)
+				return new Db2Zos13();
+			throw new IllegalArgumentException(
+					"Supported experimental targets: Db2 12 and 13 for z/OS; received " + major + "." + minor);
 		});
 	}
 
