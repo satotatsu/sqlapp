@@ -58,22 +58,79 @@ public class DialectResolver extends AbstractDialectResolver {
 
 	private final Map<String, ProductNameDialectResolver> resolverMap = new ConcurrentHashMap<String, ProductNameDialectResolver>();
 
-	private static volatile DialectResolver instance;
+	/**
+	 * Resolvers per class loader used to discover dialect implementations.
+	 */
+	private static final Map<ClassLoader, DialectResolver> INSTANCES = new ConcurrentHashMap<ClassLoader, DialectResolver>();
 
 	private static final Dialect DEFAULT_DIALECT = new Dialect(null);
 
+	private final ClassLoader classLoader;
+
+	/**
+	 * Returns the resolver for the current thread's context class loader.
+	 * 
+	 * @return the resolver whose dialects are discovered through the context
+	 *         class loader
+	 */
 	public static DialectResolver getInstance() {
-		if (instance == null) {
-			synchronized (DialectResolver.class) {
-				if (instance == null) {
-					instance = new DialectResolver();
-				}
-			}
-		}
-		return instance;
+		return getInstance(Thread.currentThread().getContextClassLoader());
 	}
 
-	private DialectResolver() {
+	/**
+	 * Returns the resolver whose dialects are discovered through the specified
+	 * class loader. The resolver is cached until {@link #release(ClassLoader)}
+	 * is called for the class loader.
+	 * 
+	 * @param classLoader class loader used to discover dialects. {@code null}
+	 *                    means the class loader of this class.
+	 * @return the resolver
+	 */
+	public static DialectResolver getInstance(final ClassLoader classLoader) {
+		final ClassLoader key = toKey(classLoader);
+		DialectResolver resolver = INSTANCES.get(key);
+		if (resolver != null) {
+			return resolver;
+		}
+		synchronized (INSTANCES) {
+			resolver = INSTANCES.get(key);
+			if (resolver == null) {
+				// Not computeIfAbsent: a resolver may call getInstance while it is
+				// being constructed.
+				resolver = new DialectResolver(key);
+				final DialectResolver existing = INSTANCES.putIfAbsent(key, resolver);
+				if (existing != null) {
+					resolver = existing;
+				}
+			}
+			return resolver;
+		}
+	}
+
+	/**
+	 * Discards the resolver cached for the specified class loader. Call this
+	 * before closing a class loader that was used to resolve dialects, so that
+	 * its classes are no longer referenced and a later call discovers dialects
+	 * again.
+	 * 
+	 * @param classLoader the class loader
+	 */
+	public static void release(final ClassLoader classLoader) {
+		if (classLoader != null) {
+			INSTANCES.remove(classLoader);
+		}
+	}
+
+	private static ClassLoader toKey(final ClassLoader classLoader) {
+		if (classLoader != null) {
+			return classLoader;
+		}
+		final ClassLoader own = DialectResolver.class.getClassLoader();
+		return own != null ? own : ClassLoader.getSystemClassLoader();
+	}
+
+	private DialectResolver(final ClassLoader classLoader) {
+		this.classLoader = classLoader;
 		initializeResolverList();
 	}
 
@@ -103,7 +160,8 @@ public class DialectResolver extends AbstractDialectResolver {
 	}
 
 	private List<ProductNameDialectResolver> getResolversByServiceLoader() {
-		final ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		final ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class,
+				classLoader);
 		final List<ProductNameDialectResolver> list = CommonUtils.list();
 		for (ProductNameDialectResolver resolver : loader) {
 			list.add(resolver);
@@ -116,8 +174,7 @@ public class DialectResolver extends AbstractDialectResolver {
 	}
 
 	private List<ProductNameDialectResolver> getResolvers() {
-		List<Class<? extends ProductNameDialectResolver>> classes = getResolvers(
-				Thread.currentThread().getContextClassLoader());
+		List<Class<? extends ProductNameDialectResolver>> classes = getResolvers(classLoader);
 		if (classes.size() == 0) {
 			// classes = getResolvers(Thread.class.getClassLoader());
 			classes = getResolvers(DialectResolver.class.getClassLoader());
