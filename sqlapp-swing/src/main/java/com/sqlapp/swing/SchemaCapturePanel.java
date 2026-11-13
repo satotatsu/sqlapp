@@ -19,7 +19,7 @@ final class SchemaCapturePanel extends JPanel {
 	final JButton chooseSchema = new JButton("Choose schema…");
 	final JButton capture = new JButton("Read and use Schema XML");
 	final JButton cancel = new JButton("Cancel");
-	final JToggleButton driverOptions = new JToggleButton("Driver class");
+	final JToggleButton driverOptions = new JToggleButton("Show driver class");
 	final JLabel status = new JLabel("Read metadata only. No table rows are read and no migration SQL is executed.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	private final Path parent;

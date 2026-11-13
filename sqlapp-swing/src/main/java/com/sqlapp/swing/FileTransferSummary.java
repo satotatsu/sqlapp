@@ -17,7 +17,7 @@ final class FileTransferSummary {
 		final var text = new StringBuilder("Ready for target review. No import has started.\n\n");
 		packageDetails(text, exported.manifest());
 		return text.append("\nManifest: ").append(exported.file())
-				.append("\n\nNext: enter or load the target connection, then choose Review package and target.\n")
+				.append("\n\nNext: enter or load the target connection, then choose Review import.\n")
 				.append("The source connection is not needed. The Gradle tab provides target-only import settings.\n")
 				.toString();
 	}
@@ -46,7 +46,7 @@ final class FileTransferSummary {
 			packageDetails(text, inspected.snapshot().manifest());
 			text.append("\nManifest: ").append(inspected.snapshot().file()).append('\n').append("\nFingerprint: ")
 					.append(inspected.snapshot().fingerprint()).append('\n')
-					.append("\nNext: enter the target connection and choose Review package and target.\n")
+					.append("\nNext: enter the target connection and choose Review import.\n")
 					.append("File hashes are integrity checks, not proof of authenticity or import approval.\n");
 		} else if (value instanceof TransferFilePackageIO.Snapshot exported) {
 			text.append("file package exported. No rows have been imported.\n\n");
@@ -68,7 +68,7 @@ final class FileTransferSummary {
 					.append(reviewed.review().schemaPreparation().statements().size()).append('\n');
 			warnings(text, reviewed.review().schemaPreparation().warnings());
 			text.append("\nManifest: ").append(reviewed.review().manifestFile()).append('\n')
-					.append("\nNext: inspect warnings and Schema SQL, then confirm Import reviewed package.\n")
+					.append("\nNext: inspect warnings and Schema SQL, then confirm Execute reviewed import.\n")
 					.append("The source connection is not needed. The Gradle tab provides target-only settings.\n");
 		} else if (value instanceof TransferFileImportService.Outcome outcome) {
 			if (outcome.staging() != null) {

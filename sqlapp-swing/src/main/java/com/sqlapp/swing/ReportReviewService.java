@@ -269,7 +269,7 @@ final class ReportReviewService {
 				+ (omitted > 0 ? "; omitted: " + omitted + " (report detail limit)." : "; none omitted.");
 		final String keysets = report.tasks().stream()
 				.anyMatch(task -> !Objects.equals(task.expectedKeysetFingerprint(), task.actualKeysetFingerprint()))
-						? "\nKeyset fingerprints differ. See Parsed report JSON for the expected and actual fingerprints."
+						? "\nKeyset fingerprints differ. See Raw JSON for the expected and actual fingerprints."
 						: "";
 		final var base = review(
 				"Verification: " + (report.match() ? "MATCH" : "MISMATCH") + "; mismatched tasks: "

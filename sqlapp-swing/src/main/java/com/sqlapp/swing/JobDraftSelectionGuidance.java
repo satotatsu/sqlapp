@@ -67,7 +67,7 @@ final class JobDraftSelectionGuidance {
 			return "Hidden selections will also be included. Clear the filter to review every selected table.";
 		return switch (state.purpose()) {
 		case TABLE_SELECTION -> "Selection ready. Use selected tables, then save job settings and review.";
-		case FILE_JOB -> "Selection ready. Save the shared transfer job; saving does not move data.";
+		case FILE_JOB -> "Selection ready. Save the job; saving does not move data.";
 		case EDITOR_DRAFT -> "Selection ready. Create a draft to review the generated settings in the editor.";
 		case SAVED_MIGRATION -> "Selection ready. Save and review plan checks the target; it does not copy rows.";
 		};

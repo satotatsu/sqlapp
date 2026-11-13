@@ -45,7 +45,7 @@ final class ReportReviewView extends JPanel {
 		taskTable.setScopeControls(comparisonControls);
 		comparisonScope.addActionListener(event -> filterComparison());
 		tabs.addTab("Tasks / migrations", taskTable);
-		tabs.addTab("Parsed report JSON", json);
+		tabs.addTab("Raw JSON", json);
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(summary), tabs);
 		split.setResizeWeight(0.3);
 		add(split, BorderLayout.CENTER);

@@ -53,7 +53,7 @@ class JobDraftSelectionGuidanceTest {
 		assertTrue(help(state(3, 2, 0, 3, false, false, false, false, Purpose.TABLE_SELECTION))
 				.contains("Use selected tables"));
 		assertTrue(help(state(3, 2, 0, 3, true, false, false, false, Purpose.FILE_JOB))
-				.contains("Save the shared transfer job"));
+				.contains("Save the job"));
 		assertTrue(help(state(3, 2, 0, 3, false, false, false, false, Purpose.EDITOR_DRAFT))
 				.contains("Create a draft"));
 		assertTrue(help(state(3, 2, 0, 3, false, false, false, false, Purpose.SAVED_MIGRATION))

@@ -23,7 +23,7 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 	private static final long serialVersionUID = 1L;
 	final JButton load = new JButton("Load…");
 	final JButton save = new JButton("Save…");
-	final JLabel status = new JLabel("Password excluded");
+	final JLabel status = new JLabel("Passwords are never saved");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	private final JTextField jdbcUrl;
 	private final JTextField username;

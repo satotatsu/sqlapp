@@ -73,7 +73,7 @@ final class DataMigrationInputActions {
 						if (!selected.isEmpty() && !names.contains(selected))
 							throw new IllegalArgumentException("Choose a schema from the current source list.");
 						panel.sourceSchema.setText(selected);
-						panel.status.setText("Source schema selected for New migration: "
+						panel.status.setText("Source schema selected for New job: "
 								+ (selected.isEmpty() ? "current schema" : selected) + ". Saved jobs are unchanged.");
 					}
 				} catch (InterruptedException failure) {
@@ -219,7 +219,7 @@ final class DataMigrationInputActions {
 				try {
 					final var prepared = get();
 					if (requested != panel.revision) {
-						panel.status.setText("Connection inputs changed. Start New migration again.");
+						panel.status.setText("Connection inputs changed. Start New job again.");
 						return;
 					}
 					workspaceDialogs.rememberDirectory(parent);
@@ -229,7 +229,7 @@ final class DataMigrationInputActions {
 						panel.expectedFingerprint.setText(saved.fingerprint());
 						inspect = true;
 					} else
-						panel.status.setText("New migration cancelled or inputs changed. Previous settings retained.");
+						panel.status.setText("New job cancelled or inputs changed. Previous settings retained.");
 				} catch (InterruptedException failure) {
 					Thread.currentThread().interrupt();
 					creationFailed(failure);
@@ -247,7 +247,7 @@ final class DataMigrationInputActions {
 	}
 
 	private void creationFailed(final Throwable failure) {
-		panel.status.setText("New migration could not be created. Existing settings retained.");
+		panel.status.setText("New job could not be created. Existing settings retained.");
 		panel.statusPanel.setDetails(panel.status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
 	}
 
@@ -257,7 +257,7 @@ final class DataMigrationInputActions {
 				fields.snapshot().spec();
 			} catch (IllegalArgumentException failure) {
 				final String name = fields == panel.source ? "Source" : "Target";
-				panel.status.setText(name + " connection: enter a JDBC URL starting with jdbc: before New migration.");
+				panel.status.setText(name + " connection: enter a JDBC URL starting with jdbc: before New job.");
 				panel.statusPanel.setDetails(panel.status.getText()
 						+ "\nYou can also load a saved connection profile. Passwords must be entered for this session.");
 				fields.jdbcUrl.requestFocusInWindow();
@@ -271,7 +271,7 @@ final class DataMigrationInputActions {
 			final DataMigrationDraftService.Prepared prepared) {
 		final var saved = new java.util.concurrent.atomic.AtomicReference<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot>();
 		final var dialog = new javax.swing.JDialog(javax.swing.SwingUtilities.getWindowAncestor(panel),
-				"New migration — select tables", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+				"New job — select tables", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
 		final var draft = new JobDraftPanel(prepared.schema(), prepared.directory(), snapshot -> {
 			saved.set(snapshot);
 			dialog.dispose();

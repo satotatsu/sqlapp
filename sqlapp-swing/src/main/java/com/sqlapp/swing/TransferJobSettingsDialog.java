@@ -11,7 +11,7 @@ final class TransferJobSettingsDialog {
 	static TransferJobConfigurationIO.Snapshot show(Component owner, Path file,
 			TransferJobConfiguration.DataMode mode) {
 		final var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
-		final var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Shared transfer job settings",
+		final var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Job settings",
 				Dialog.ModalityType.APPLICATION_MODAL);
 		final var panel = new TransferJobSettingsPanel(mode, value -> {
 			saved.set(value);

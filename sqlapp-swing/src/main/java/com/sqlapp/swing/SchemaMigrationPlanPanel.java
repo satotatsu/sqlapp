@@ -52,13 +52,13 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	final JCheckBox requireDown = new JCheckBox("Require rollback SQL");
 	final JCheckBox repeatables = new JCheckBox("Enable R__ repeatable migrations");
 	final JCheckBox recursive = new JCheckBox("Search SQL directories recursively");
-	final JButton build = new JButton("Connect and build plan");
-	final JToggleButton focusReview = new JToggleButton("Focus on results");
+	final JButton build = new JButton("Review plan");
+	final JToggleButton focusReview = new JToggleButton("Show results only");
 	private final ReviewFocusControl reviewFocus;
 	final JButton buildUrl = new JButton("Build URL…");
 	final JButton test = new JButton("Test connection");
 	final JButton save = new JButton("Save plan JSON…");
-	final JButton apply = new JButton("Apply reviewed plan…");
+	final JButton apply = new JButton("Execute reviewed plan…");
 	final JButton saveExecution = new JButton("Save last result JSON…");
 	final ReportReviewView view = new ReportReviewView();
 	final JLabel status = new JLabel("Connect to read migration history. Migration SQL is not executed.");
@@ -214,7 +214,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		save.setEnabled(false);
 		apply.setEnabled(false);
 		saveExecution.setEnabled(false);
-		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Connect and build plan first.");
+		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Review plan first.");
 	}
 
 	private void row(final JPanel panel, final int row, final String label, final Component field) {

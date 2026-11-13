@@ -44,15 +44,15 @@ final class DirectTransferPanel extends JPanel {
 	final JTextField job = new JTextField();
 	final JTextField workspace = new JTextField();
 	final JTextField sourceSchema = new JTextField();
-	final JButton create = new JButton("New direct job…");
+	final JButton create = new JButton("New job…");
 	final JButton review = new JButton("Review transfer");
 	final JButton execute = new JButton("Execute reviewed transfer…");
 	final JButton compareStaging = new JButton("Compare retained staging");
 	final JButton compareSavedStaging = new JButton("Compare saved staging…");
 	final JButton jobSettings = new JButton("Job settings…");
-	final JToggleButton drivers = new JToggleButton("Driver class");
+	final JToggleButton drivers = new JToggleButton("Show driver class");
 	final JLabel status = new JLabel(
-			"Create a shared job from tables, or choose a saved job. Review never copies rows.");
+			"Create a job from tables, or choose a saved job. Review never copies rows.");
 	private final StagingComparisonSaveActions comparisonActions = new StagingComparisonSaveActions(this::isBusy,
 			this::setBusy, status::setText, workspace::getText);
 	final JButton saveComparison = comparisonActions.save;
@@ -105,13 +105,13 @@ final class DirectTransferPanel extends JPanel {
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
 		settings.add(new JLabel(
-				"One job for GUI and Gradle. New direct job offers data transfer or schema only (no row copy)."));
-		settings.add(row("Shared job",
-				FieldHints.placeholder(job, "Optional when creating a New direct job; choose a saved job to reuse it"), false));
+				"One job for GUI and Gradle. New job offers data transfer or schema only (no row copy)."));
+		settings.add(row("Saved job",
+				FieldHints.placeholder(job, "Optional when creating a New job; choose a saved job to reuse it"), false));
 		settings.add(row("Working folder (required)",
 				FieldHints.placeholder(workspace, "Existing writable folder for the job, reviews and reports"), true));
 		settings.add(row("Source schema",
-				FieldHints.placeholder(sourceSchema, "Used by New direct job; blank uses the source connection's current schema"), null));
+				FieldHints.placeholder(sourceSchema, "Used by New job; blank uses the source connection's current schema"), null));
 		form.add(settings, BorderLayout.NORTH);
 		final var endpoints = new JPanel(new GridLayout(1, 2, 8, 8));
 		endpoints.add(source);
@@ -331,7 +331,7 @@ final class DirectTransferPanel extends JPanel {
 				throw new IllegalArgumentException();
 			file = Path.of(job.getText());
 		} catch (RuntimeException failure) {
-			status.setText("Choose a saved shared job before opening settings.");
+			status.setText("Choose a saved job before opening settings.");
 			return;
 		}
 		final long requested = revision;
@@ -426,7 +426,7 @@ final class DirectTransferPanel extends JPanel {
 			if (input != null && job.getText().isBlank())
 				throw new IllegalArgumentException();
 		} catch (RuntimeException failure) {
-			status.setText("Choose a shared job and an existing writable working folder first.");
+			status.setText("Choose a saved job and an existing writable working folder first.");
 			return;
 		}
 		final var request = new Request(input, folder, needSource ? source.snapshot().spec() : null,
@@ -485,7 +485,7 @@ final class DirectTransferPanel extends JPanel {
 						if (saved != null && requested == revision) {
 							job.setText(saved.toString());
 							status.setText(
-									"Shared direct job saved. Choose Review transfer; no rows have been copied.");
+									"Job saved. Choose Review transfer; no rows have been copied.");
 						} else
 							status.setText("Job creation cancelled or inputs changed. No rows copied.");
 					} else if (action == Action.REVIEW) {

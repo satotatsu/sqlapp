@@ -32,12 +32,12 @@ final class DataMigrationPlanPanel extends JPanel {
 	final ConnectionFields source = new ConnectionFields("Source database");
 	final ConnectionFields target = new ConnectionFields("Target database");
 	final JButton editJob = new JButton("Edit job…");
-	final JButton newMigration = new JButton("New migration…");
+	final JButton newMigration = new JButton("New job…");
 	final JTextField sourceSchema = new JTextField();
 	final JButton chooseSourceSchema = new JButton("Choose schema…");
 	final JTextField sourceSchemaSummary = new JTextField("Current schema (default)");
-	final JButton build = new JButton("Connect and inspect plan");
-	final JToggleButton focusReview = new JToggleButton("Focus on results");
+	final JButton build = new JButton("Review plan");
+	final JToggleButton focusReview = new JToggleButton("Show results only");
 	private final ReviewFocusControl reviewFocus;
 	final JButton apply = new JButton("Execute reviewed job…");
 	final JButton saveExecution = new JButton("Save last audit…");
@@ -50,7 +50,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	final JButton save = new JButton("Save status JSON…");
 	final ReportReviewView view = new ReportReviewView();
 	final JLabel status = new JLabel(
-			"Enter source and target connections, then New migration; or open saved settings. Inspection does not copy rows.");
+			"Enter source and target connections, then New job; or open saved settings. Inspection does not copy rows.");
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	final SavedReportButton savedReport = new SavedReportButton(this::isBusy);
 	private final EditorFileChooser inputDialogs = new EditorFileChooser();
@@ -146,7 +146,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var fileRow = new JPanel(new BorderLayout(8, 0));
 		final var browse = new JButton("Browse…");
-		fileRow.add(new JLabel("Saved migration"), BorderLayout.WEST);
+		fileRow.add(new JLabel("Saved job"), BorderLayout.WEST);
 		fileRow.add(configurationFile, BorderLayout.CENTER);
 		FileDropHandler.path(configurationFile, false, java.util.List.of("yaml", "yml"), () -> !isBusy(),
 				FileDropHandler.errors(status, statusPanel));
@@ -303,8 +303,8 @@ final class DataMigrationPlanPanel extends JPanel {
 		saveExecution.setEnabled(false);
 		apply.addActionListener(event -> executionActions.confirmExecution());
 		DisabledReason.install(editJob, () -> jobEditor == null ? null
-				: !configurationFile.isEnabled() ? "Wait for the current operation to finish." : "Choose a saved migration YAML first.");
-		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Connect and inspect plan first.");
+				: !configurationFile.isEnabled() ? "Wait for the current operation to finish." : "Choose a saved job YAML first.");
+		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Review plan first.");
 		DisabledReason.install(apply,
 				() -> busy || isExecuting() ? "Wait for the current operation to finish." : DataMigrationExecutionService.restriction(result));
 		executionActions.refreshActions(false);

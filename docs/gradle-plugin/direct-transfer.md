@@ -145,7 +145,7 @@ schemaMode: CREATE_MISSING
 
 Use the same `transferDatabase` task, runtime connections, review-only default,
 explicit execution flag and configuration pin shown below. The GUI creates this
-job through **Direct JDBC transfer → New direct job… → Schema only**, or changes
+job through **Direct JDBC transfer → New job… → Schema only**, or changes
 an existing job with **Job settings… → Schema only**. GUI and Gradle share the
 same service, Schema model, target-dialect CREATE factories, warning policy and
 DDL progress/audit handling. Review the **Schema SQL** and **Warnings** tabs
@@ -214,7 +214,7 @@ schemaMode: CREATE_MISSING_WITH_IDENTITY
 # dataMode: JDBC_DIRECT   # default
 ```
 
-In **New direct job…** or **Job settings…**, enable missing-table creation, then
+In **New job…** or **Job settings…**, enable missing-table creation, then
 **Add target-only generated PK to new tables without a primary key**. The same
 saved job works with Gradle. By default this mode creates an additional `ID`
 BIGINT identity column and stable named PK through the target dialect's shared

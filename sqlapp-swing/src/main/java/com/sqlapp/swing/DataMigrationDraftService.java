@@ -36,7 +36,7 @@ final class DataMigrationDraftService {
 						|| selectedName.isBlank() || schema.getName().equals(selectedName)).toList();
 				if (choices.size() != 1)
 					throw new IllegalArgumentException(
-							"Source schema could not be resolved uniquely. Enter its exact name in Advanced options, then try New migration again.");
+							"Source schema could not be resolved uniquely. Enter its exact name in Advanced options, then try New job again.");
 				final Schema schema = choices.getFirst();
 				final var tables = reader.getTableReader();
 				tables.setCatalogName(schema.getCatalogName());

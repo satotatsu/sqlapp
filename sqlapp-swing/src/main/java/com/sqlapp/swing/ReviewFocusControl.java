@@ -25,7 +25,7 @@ final class ReviewFocusControl {
 			inputViewport.setVisible(!toggle.isSelected());
 			inputViewport.getParent().revalidate();
 			split.setDividerLocation(toggle.isSelected() ? controls.getPreferredSize().height + 4 : inputDivider);
-			toggle.setText(toggle.isSelected() ? "Show input settings" : "Focus on results");
+			toggle.setText(toggle.isSelected() ? "Show input settings" : "Show results only");
 			advanced.setEnabled(!toggle.isSelected());
 		});
 	}

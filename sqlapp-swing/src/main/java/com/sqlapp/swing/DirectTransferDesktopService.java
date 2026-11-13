@@ -92,7 +92,7 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 			final var definition = new TransferJobConfigurationIO().read(request.job());
 			if (definition.configuration().source().equals(definition.configuration().target()))
 				throw new TransferActionFailure(phase, "Source and target logical connection names are identical.",
-						"Use different source/target names in the shared job for separate connections.",
+						"Use different source/target names in the saved job for separate connections.",
 						"Configuration validation");
 			phase = "configuring runtime JDBC drivers";
 			try (var source = PlanningJdbc.open(request.source(), sourcePassword);
@@ -151,7 +151,7 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 			final String next;
 			if (failure instanceof java.nio.file.NoSuchFileException) {
 				reason = "The saved job or a required file was not found.";
-				next = "Choose the existing shared job YAML and check its referenced files.";
+				next = "Choose the existing saved job YAML and check its referenced files.";
 			} else if (phase.equals("checking the saved job and working folder")) {
 				reason = failure instanceof IllegalArgumentException && failure.getMessage() != null
 						? failure.getMessage()

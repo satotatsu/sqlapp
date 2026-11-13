@@ -205,7 +205,7 @@ class ReportReviewViewTest {
 			view.showReview(new ReportReviewService.Review("Plan", List.of(), List.of(), "plan"));
 			assertEquals(2, view.tabs.getTabCount());
 			assertEquals(0, view.tabs.getSelectedIndex());
-			assertEquals("Parsed report JSON", view.tabs.getTitleAt(1));
+			assertEquals("Raw JSON", view.tabs.getTitleAt(1));
 			view.showReview(review);
 			assertTrue(((ReportDetailTablePanel) view.tabs.getComponentAt(1)).filter.getText().isEmpty());
 			view.tabs.setSelectedIndex(2);

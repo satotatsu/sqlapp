@@ -58,7 +58,7 @@ public final class MigrationApplication {
 
 		tabs.addTab("Direct JDBC transfer", null, directTransfer,
 				"Copy directly between source and target connections, or create tables only");
-		tabs.addTab("File transfer", null, fileTransfer, "Create a shared job, export, review and import CSV");
+		tabs.addTab("File transfer", null, fileTransfer, "Create a job, export, review and import CSV");
 		tabs.addTab("Schema comparison", comparison);
 		tabs.addTab("Schema migration plan", schemaPlan);
 		tabs.addTab("SQL editor", sqlEditor);

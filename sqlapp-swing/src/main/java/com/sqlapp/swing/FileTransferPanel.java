@@ -40,21 +40,21 @@ final class FileTransferPanel extends JPanel {
 	final JTextField manifest = new JTextField();
 	final JTextField workspace = new JTextField();
 	final JTextField sourceSchema = new JTextField();
-	final JButton create = new JButton("New file job…");
+	final JButton create = new JButton("New job…");
 	final JButton jobSettings = new JButton("Job settings…");
 	final JButton export = new JButton("Export source to files");
-	final JButton review = new JButton("Review package and target");
+	final JButton review = new JButton("Review import");
 	final JButton inspectPackage = new JButton("Inspect package (no connection)");
 	final JButton previewPackage = new JButton("Preview package data…");
 	final JCheckBox inspectValues = new JCheckBox(
 			"Also validate packaged values during inspection (offline; may take longer)");
-	final JButton apply = new JButton("Import reviewed package…");
+	final JButton apply = new JButton("Execute reviewed import…");
 	final JButton compareStaging = new JButton("Compare staging…");
 	private final ReportReviewView stagingComparison = new ReportReviewView();
 	private final StagingComparisonHistory comparisonHistory = new StagingComparisonHistory();
 	private Path retainedImportResult;
 	final JButton nextImport = new JButton("Continue to import this package…");
-	final JToggleButton drivers = new JToggleButton("Driver class");
+	final JToggleButton drivers = new JToggleButton("Show driver class");
 	final JLabel status = new JLabel(
 			"Choose Export to create a job without YAML, or Import to use a completed package.");
 	final StagingComparisonSaveActions comparisonActions = new StagingComparisonSaveActions(this::isBusy, this::setBusy,
@@ -119,8 +119,8 @@ final class FileTransferPanel extends JPanel {
 		connections.add(source, "0");
 		connections.add(target, "1");
 		final var exportSettings = new JPanel(new GridLayout(0, 1, 4, 4));
-		exportSettings.add(row("Saved file job",
-				FieldHints.placeholder(job, "Optional when creating a New file job; choose a saved job to reuse it"), false,
+		exportSettings.add(row("Saved job",
+				FieldHints.placeholder(job, "Optional when creating a New job; choose a saved job to reuse it"), false,
 				List.of("yaml", "yml")));
 		exportSettings.add(row("Source schema",
 				FieldHints.placeholder(sourceSchema, "Blank uses the source connection's current schema"), null, List.of()));
@@ -270,7 +270,7 @@ final class FileTransferPanel extends JPanel {
 		listen(manifest);
 		listen(sourceSchema);
 		DisabledReason.install(apply, () -> busy ? "Wait for the current operation to finish."
-				: reviewed == null ? "Choose Review package and target first. Only the current review can be imported." : null);
+				: reviewed == null ? "Choose Review import first. Only the current review can be imported." : null);
 		DisabledReason.install(previewPackage, () -> isBusy() ? "Wait for the current operation to finish."
 				: manifest.getText().isBlank() ? "Choose a completed package manifest first." : null);
 		cards();
@@ -430,7 +430,7 @@ final class FileTransferPanel extends JPanel {
 				throw new IllegalArgumentException();
 			file = Path.of(job.getText());
 		} catch (RuntimeException failure) {
-			status.setText("Choose a saved file job before opening settings.");
+			status.setText("Choose a saved job before opening settings.");
 			return;
 		}
 		setBusy(true);
@@ -554,7 +554,7 @@ final class FileTransferPanel extends JPanel {
 				throw new IllegalArgumentException();
 			input = action == Action.TEST || action == Action.DISCOVER ? null : Path.of(path);
 		} catch (RuntimeException failure) {
-			status.setText("Choose a saved file job or completed package manifest first.");
+			status.setText("Choose a saved job or completed package manifest first.");
 			return;
 		}
 		final var spec = action.isInspection() ? null : fields.snapshot().spec();
@@ -593,7 +593,7 @@ final class FileTransferPanel extends JPanel {
 					final Object value = get();
 					if (action == Action.DISCOVER) {
 						if (requested != revision) {
-							status.setText("Inputs changed. Start New file job again.");
+							status.setText("Inputs changed. Start New job again.");
 							return;
 						}
 						final Path saved = draftDialog.apply((DataMigrationDraftService.Prepared) value);

@@ -195,7 +195,7 @@ Return to **Start** at any time to choose another task.
 ## Direct JDBC transfer without preparing YAML
 
 Open **Direct JDBC transfer** and enter or load the source and target connection
-profiles. Choose a working folder. **New direct job…** reads source metadata and
+profiles. Choose a working folder. **New job…** reads source metadata and
 opens the shared searchable table picker; it needs only the source connection.
 Select tables, optionally change chunk size, verification, target schema or the
 strict compatibility option, and save. **Create missing target tables before copying**
@@ -294,7 +294,7 @@ their existing redaction. Review failures do not authorize execution.
 ## CSV transfer without preparing YAML
 
 Open **CSV package**, choose **Export source to CSV**, and enter or load the
-source connection. **New file job…** asks for a working folder, reads source
+source connection. **New job…** asks for a working folder, reads source
 metadata, and opens the existing searchable table picker. Unsupported tables
 show a reason and cannot be selected. Choose tables, review the visible CSV NULL
 token, and save. Chunk size and verification remain optional adjustments.
@@ -322,9 +322,9 @@ Choose **Export source to CSV** explicitly to create the completed package.
 Its manifest path is displayed and selected for later import. Switch to
 **Import CSV package**, select or drop `manifest.json` or its containing package
 folder, and provide the target
-connection. **Review package and target** checks package integrity and existing
+connection. **Review import** checks package integrity and existing
 empty target tables and displays generated DDL for missing tables when requested.
-Review that SQL, choose a results folder, then **Import reviewed package…**
+Review that SQL, choose a results folder, then **Execute reviewed import…**
 and confirm. Changing the connection or manifest requires another review.
 Before entering any connection, **Inspect package (no connection)** checks the
 completed package members, recorded byte sizes and hashes through the shared
@@ -389,7 +389,7 @@ large CSV files and still opens no connection. Export-only types that require
 conversion can fail this optional check; package-only inspection remains available
 to view warnings. Summary distinguishes file integrity from validated values and
 shows saved target schema, table preparation, verification and compatibility settings.
-Target compatibility still requires **Review package and target**, which repeats
+Target compatibility still requires **Review import**, which repeats
 the required package checks. Inspection is not an
 import approval or proof of authenticity; it clears an earlier target review.
 Changing the selected package discards an in-progress inspection result.
@@ -714,7 +714,7 @@ filters and the selection. These view changes do not save settings or connect
 to a database.
 An inline hint explains empty schemas, unavailable tables, unmatched filters and
 the next selection step. When selections are hidden, it reminds you that they
-will still be included. In **New migration**, the ready hint also distinguishes
+will still be included. In **New job**, the ready hint also distinguishes
 saving and inspecting the plan from copying rows.
 **Select visible eligible** and **Clear visible** affect only currently displayed
 tables, even after sorting; ineligible tables remain unselectable. **Clear all
@@ -882,7 +882,7 @@ and saves. Search and line navigation do not change the buffer or validation sta
 
 ## Open saved reports
 
-In **Parsed report JSON**, use the read-only navigation bar to search literal
+In **Raw JSON**, use the read-only navigation bar to search literal
 text, move to the next/previous match, count non-overlapping matches, go to a
 one-based line/optional Unicode column, or wrap long lines visually. Ctrl+F,
 F3/Shift+F3 and Ctrl+L operate while the JSON view has focus. The position label
@@ -1060,7 +1060,7 @@ next database version or generate rollback SQL.
 
 ## Build a Schema migration plan
 
-Both connected plan screens offer **Focus on results**. This temporarily hides
+Both connected plan screens offer **Show results only**. This temporarily hides
 the input settings and gives the reviewed summary, task tables and details more
 space, especially in smaller windows. **Show input settings** restores the form
 and its previous divider position. Inputs, review, audit results and execution
@@ -1083,7 +1083,7 @@ the field remains available for the next action. Errors are shown in **Details�
 with the supplied JDBC URL and password redacted.
 
 Open **Schema migration plan**, enter the JDBC URL, username, password and
-**Up SQL directory**, then click **Connect and build plan**. This action
+**Up SQL directory**, then click **Review plan**. This action
 connects to the chosen database and reads its metadata and migration history.
 It calls the existing `MigrationPlanCommand`: up, setup and finalize SQL are
 not executed, and missing history tables are not created. The connection pool
@@ -1142,7 +1142,7 @@ unapplied. This in-memory database exists only in the running Java process.
 ## Apply a reviewed Schema migration plan
 
 After building a connected plan, review the pending SQL files and the displayed
-plan. **Apply reviewed plan** becomes available when the plan has pending
+plan. **Execute reviewed plan** becomes available when the plan has pending
 versioned/repeatable migrations, no known blockers, and no setup/finalize
 directories. The confirmation dialog shows the connection, selected plan and
 fingerprint and asks for the password again. **Cancel** is the default choice.
@@ -1189,7 +1189,7 @@ Custom history column layouts and live Schema drift checks remain unavailable.
 ## Inspect a data migration plan
 
 For an initial copy, open **Data migration plan** and enter the source and target
-JDBC connections. Choose **New migration…**, select a folder for the migration
+JDBC connections. Choose **New job…**, select a folder for the migration
 settings, and select the source tables to copy. **Save and review plan** saves
 the settings and opens the connected plan review. Preparing YAML or Schema XML
 by hand is unnecessary. This flow reads metadata and inspects the plan; copying
@@ -1236,7 +1236,7 @@ opens a literal-filtered list. No target connection or job is required. Select
 current choice is always shown below the source connection. Alternatively enter
 the exact **Source schema** in **Advanced options**.
 
-This selection affects **New migration** only; it does not rewrite a saved job.
+This selection affects **New job** only; it does not rewrite a saved job.
 Editing the source URL, username or driver clears the choice back to the current
 schema. Cancellation or discovery failure retains the previous choice and review.
 Listing schemas uses a short-lived read-only pool, does not read table metadata
@@ -1263,7 +1263,7 @@ Missing JDBC URLs identify the source or target field to complete; a saved
 connection profile can also supply that connection's non-secret settings.
 
 Alternatively, select an existing job YAML and enter the source and target
-JDBC connections. **Connect and inspect plan** resolves the job
+JDBC connections. **Review plan** resolves the job
 through `BulkMigrationJobConfigurationResolver`, validates the live target's
 tables/columns/keys through `BulkMigrationTargetValidator`, and reads the
 configured checkpoints. `requireEmptyTarget`, when configured in YAML, is
@@ -1397,7 +1397,7 @@ current migration and include previously saved progress when resuming. The GUI
 samples the latest snapshot rather than queuing every event. No total-row count
 or percentage is estimated, and in-flight rows are not counted as committed.
 After copying, the phase changes to report publication and verification. The last
-committed counters remain on screen and in the GUI's **Parsed report JSON** view.
+committed counters remain on screen and in the GUI's **Raw JSON** view.
 The exported standard copy/pause audit keeps its existing format.
 
 **Pause after chunk** requests a stop at the next completed chunk after its
@@ -1497,7 +1497,7 @@ not modified. Changing the selected path/type discards an in-flight result.
 
 The summary shows the saved outcome and plan fingerprint;
 **Tasks / migrations** lists migrations or tables in artifact order. Columns
-can be sorted. **Parsed report JSON** retains the known model's detailed
+can be sorted. **Raw JSON** retains the known model's detailed
 fields, including evidence, failure and provenance information. This tab is
 a formatted view of the parsed model, not the original file bytes; unknown
 fields ignored by existing readers are not displayed.
@@ -1564,7 +1564,7 @@ table selection and saving separately.
 ### Schema-only transfer between database products
 
 Open **Direct JDBC transfer**, enter source and target connections, and choose
-**New direct job…**. Select **Schema only**, choose tables and save the job.
+**New job…**. Select **Schema only**, choose tables and save the job.
 
 For optional table/column name changes, open **Job settings…** and select or drop
 a **Name mapping YAML**. Unspecified names stay unchanged; PK/FK/index references
@@ -1716,7 +1716,7 @@ completed packages are not edited. A changed Schema/path cannot publish an old
 selection, and missing saved identities are reported instead of silently omitted.
 
 For target-only generated primary keys, **Generated PK column** defaults to `ID`
-and can be changed in New direct job, New file job (optional import settings),
+and can be changed in New job (for file jobs, under optional import settings),
 or Job settings. The shared YAML option is
 `generatedKeyColumn`; it requires `CREATE_MISSING_WITH_IDENTITY`. Choose an unused
 name if the source already contains `ID`. Set `SQLAPP_ROW_ID` explicitly to retain
@@ -1878,7 +1878,7 @@ preparation is not proof of successful execution or schema equivalence.
 
 ## CSV, TSV and JSONL file transfer
 
-The **File transfer** screen supports CSV, TSV and JSONL. Use **New file job…**, select
+The **File transfer** screen supports CSV, TSV and JSONL. Use **New job…**, select
 **File format → JSONL**, choose tables and save. The same choice is available
 from Access file migration. CSV remains the default. JSONL uses JSON `null`;
 the CSV/TSV NULL-token field is disabled and its value is omitted from the job.
@@ -1904,7 +1904,7 @@ properties. Existing CSV jobs/packages and Java save overloads retain defaults.
 
 ## TSV packages
 
-**File transfer → New file job… → File format → TSV** saves a tab-delimited
+**File transfer → New job… → File format → TSV** saves a tab-delimited
 package job usable unchanged by the Gradle file-transfer tasks. TSV shares CSV's
 quoted-field parser, scalar/temporal conversion, NULL-token collision checks,
 package integrity, target review, missing-table creation and row verification.
@@ -1918,7 +1918,7 @@ constraints still apply. Filtering or choosing a format never starts migration.
 
 ## Character encoding and CSV/TSV headers
 
-**New file job…** and **Job settings…** expose **Character encoding** (default
+**New job…** and **Job settings…** expose **Character encoding** (default
 **UTF-8**) and **CSV / TSV header**. Choose an encoding such as windows-31j,
 Shift_JIS or UTF-16LE, or type another Java-supported charset name. Invalid
 encodings prevent saving, and unrepresentable characters fail export rather
@@ -2001,7 +2001,7 @@ keys retain the existing keyed export path. All formats (CSV/TSV/JSONL) keep the
 same encoding/header/NULL-token and scalar conversion checks. No target connection
 is opened, and target schema/preparation settings do not affect export.
 
-**New file job…** and file **Job settings…** now keep target schema, Create Missing
+**New job…** and file **Job settings…** now keep target schema, Create Missing
 Target, copy verification and chunk controls under **Optional import settings
 (no target access during Export)**, collapsed by default. Existing saved settings are
 retained; opening or closing the group does not change them. Export-related file
@@ -2136,7 +2136,7 @@ public APIs, YAML and Gradle properties are unchanged.
 ## Generated primary keys for file imports
 
 CSV/TSV/JSONL file jobs now offer the same optional target-only generated PK as
-direct transfer. In New file job, expand Optional import settings, enable Create
+direct transfer. In New job, expand Optional import settings, enable Create
 missing target tables and Add target-only generated PK, then keep ID or enter an
 unused column name. File Job settings supports the same controls inside its
 optional import group. Export still needs no target connection, and these options
@@ -2144,7 +2144,7 @@ remain collapsed by default.
 
 Before export, choose the intended import settings. A completed package retains
 its captured job; edit the saved job and export a new package to change them.
-Review package and target shows the generated CREATE SQL and warnings before
+Review import shows the generated CREATE SQL and warnings before
 confirmation. Only newly created tables without a source PK receive the extra
 BIGINT identity key. Existing target tables and source files/data are unchanged;
 original PK/FK/UNIQUE relationships are retained. A name collision stops review

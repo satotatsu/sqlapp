@@ -40,7 +40,7 @@ only a target connection; the original Access file is not required during import
 The generated job can be used unchanged by these Gradle tasks, with source and
 target connections supplied externally as usual.
 
-In the GUI, a successful **Review package and target** exposes **Schema SQL**
+In the GUI, a successful **Review import** exposes **Schema SQL**
 when missing-table DDL exists. **Save SQL draft…** writes the displayed UTF-8
 snapshot with the actual target delimiter policy, warnings and job/plan pins;
 **Edit saved SQL…** opens it in the existing SQL editor. These actions open no
@@ -260,14 +260,14 @@ Other temporal types are exportable with warnings but require conversion for
 automatic import. Binary/LOB values, full target Schema
 recreation and complete vendor-specific cross-product conversion are not implemented. Export requires
 SERIALIZABLE source reads; JDBC driver buffering still depends on runtime settings.
-The Swing **File transfer** screen uses these same services. **New file job…** reads
+The Swing **File transfer** screen uses these same services. **New job…** reads
 source metadata and saves this format from a table picker without handwritten
 YAML. Export, target review and confirmed import are separate actions. See the
 [GUI guide](../../sqlapp-swing/README.md#csv-transfer-without-preparing-yaml).
 
 ## JSONL packages
 
-Choose **File transfer → New file job… → File format → JSONL** in the GUI, or
+Choose **File transfer → New job… → File format → JSONL** in the GUI, or
 use the same shared job with these settings:
 
 ```yaml
@@ -333,7 +333,7 @@ task property, dependency or database query is introduced.
 ## Character encoding and headers
 
 CSV/TSV export and import share these optional file settings, also editable in
-**New file job…** and **Job settings…**:
+**New job…** and **Job settings…**:
 
 ```yaml
 files:
@@ -542,7 +542,7 @@ a business identifier, source row identity, resume key or repair key. Keyless
 imports retain non-resumable INSERT, empty-target checks and unordered multiset
 verification. Inspect verification and target definitions before application use.
 
-Use New file job → Optional import settings → Create missing target tables → Add
+Use New job → Optional import settings → Create missing target tables → Add
 target-only generated PK, or edit these options in file Job settings. The name
 field defaults to ID. Changing a saved job requires a new export; completed
 packages keep their captured configuration and fingerprints. Existing task
@@ -651,7 +651,7 @@ For CSV, TSV or JSONL packages, set `targetPreparation: STAGED_REPLACE` and
 `verify: true` in the shared transfer job before exporting. In Swing the option
 is under **Job settings → Optional import settings → Stage and verify data
 before replacing existing target rows**. The exported manifest pins the job
-configuration. Use the same package with **Import reviewed package** or
+configuration. Use the same package with **Execute reviewed import** or
 Gradle's `importTransferFile` task.
 
 Import reads the captured package into staging tables in the target schema.
