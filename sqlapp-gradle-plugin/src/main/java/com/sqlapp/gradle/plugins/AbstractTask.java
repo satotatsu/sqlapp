@@ -20,19 +20,15 @@
 package com.sqlapp.gradle.plugins;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Classpath;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -41,6 +37,7 @@ import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
+import com.sqlapp.gradle.plugins.util.ClassLoaderCacheService;
 import com.sqlapp.gradle.plugins.util.CreatedDataSources;
 import com.sqlapp.gradle.plugins.util.JarNameUtils;
 
@@ -51,8 +48,19 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 	@Classpath
 	public abstract ConfigurableFileCollection getRuntimeClasspath();
 
+	/**
+	 * Build-scoped cache of the class loaders used to run commands. The class
+	 * loaders are closed when the build finishes.
+	 */
+	@Internal
+	public abstract Property<ClassLoaderCacheService> getClassLoaderCache();
+
 	public AbstractTask() {
 		TaskPropertiesEnum.initializeAll(getProject().getObjects(), this);
+		final Provider<ClassLoaderCacheService> classLoaderCache = ClassLoaderCacheService
+				.register(getProject().getGradle());
+		getClassLoaderCache().convention(classLoaderCache);
+		usesService(classLoaderCache);
 		this.command = createCommand();
 		// Configuration Phase で取得
 		final Configuration conf = getProject().getConfigurations().findByName("runtimeClasspath");
@@ -72,7 +80,8 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 
 	protected void run(T command) {
 		if (this.getEnabled()) {
-			final ClassLoader createCls = getClassLoaderInstance(getRuntimeClasspath().getFiles());
+			final ClassLoader createCls = getClassLoaderCache().get()
+					.getClassLoader(getRuntimeClasspath().getFiles());
 			final ClassLoader cls = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(createCls);
@@ -106,26 +115,22 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 		return command;
 	}
 
-	private static final Map<String, ClassLoader> CACHE = new ConcurrentHashMap<>();
-
+	/**
+	 * Creates a new class loader for the files. It is no longer cached across
+	 * builds; the caller is responsible for closing it.
+	 * 
+	 * @param resolvedFiles runtime classpath
+	 * @return a new class loader
+	 * @deprecated use {@link #getClassLoaderCache()}, which closes its class
+	 *             loaders when the build finishes.
+	 */
+	@Deprecated
 	protected static ClassLoader getClassLoaderInstance(Set<File> resolvedFiles) {
-		String key = resolvedFiles.stream().map(File::getAbsolutePath).sorted().collect(Collectors.joining(";"));
-		return CACHE.computeIfAbsent(key, p -> createClassLoader(resolvedFiles));
+		return createClassLoader(resolvedFiles);
 	}
 
 	protected static ClassLoader createClassLoader(Set<File> resolvedFiles) {
-		final Set<File> files = new HashSet<>(resolvedFiles);
-		files.removeIf(f -> isDeleteTarget(f));
-		final URL[] urls = files.stream().map(File::toURI).map(t -> {
-			try {
-				return t.toURL();
-			} catch (MalformedURLException e) {
-				throw new RuntimeException(e);
-			}
-		}).toArray(URL[]::new);
-		final ClassLoader parent = AbstractTask.class.getClassLoader();
-		final ClassLoader cl = new URLClassLoader(urls, parent);
-		return cl;
+		return ClassLoaderCacheService.createClassLoader(resolvedFiles);
 	}
 
 	protected static boolean isDeleteTarget(File f) {

@@ -19,7 +19,6 @@
 
 package com.sqlapp.gradle.plugins.extension;
 
-import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -33,10 +32,8 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
-import com.sqlapp.gradle.plugins.ConfigUtils;
+import com.sqlapp.data.db.command.datasource.DataSourceConfigFiles;
 import com.sqlapp.gradle.plugins.util.CreatedDataSources;
-import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.SimpleBeanUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -110,6 +107,14 @@ public abstract class DataSourceExtension {
 	@Input
 	@Optional
 	public abstract Property<String> getPassword();
+
+	/**
+	 * Name of an environment variable holding the JDBC password. An explicit
+	 * {@code password} takes precedence.
+	 */
+	@Input
+	@Optional
+	public abstract Property<String> getPasswordEnv();
 
 	/**
 	 * Default Catalog
@@ -246,11 +251,20 @@ public abstract class DataSourceExtension {
 
 	private void setConfig(final HikariConfig config) {
 		if (!getProperties().isEmpty()) {
-			Map<String, Object> map = CommonUtils.map();
-			ConfigUtils.readConfig(null, map, this.getProperties().getFiles());
-			for (Map.Entry<String, Object> entry : map.entrySet()) {
-				SimpleBeanUtils.setValueCI(config, entry.getKey(), entry.getValue());
-			}
+			// Shared with the desktop application: same formats, merge order and errors.
+			final var unknown = DataSourceConfigFiles.applyTo(config, DataSourceConfigFiles
+					.read(getProperties().getFiles().stream().map(java.io.File::toPath).toList()), System::getenv);
+			if (!unknown.isEmpty())
+				org.gradle.api.logging.Logging.getLogger(DataSourceExtension.class).warn(
+						"Ignored unknown data source setting(s): {}. Use HikariCP names such as jdbcUrl, username or passwordEnv.",
+						String.join(", ", unknown));
+		}
+		if (getPasswordEnv().isPresent()) {
+			final String variable = getPasswordEnv().get();
+			final String value = System.getenv(variable);
+			if (value == null)
+				throw new IllegalArgumentException("Environment variable " + variable + " named by passwordEnv is not set.");
+			config.setPassword(value);
 		}
 		if (getJdbcUrl().isPresent()) {
 			config.setJdbcUrl(getJdbcUrl().get());
@@ -305,7 +319,8 @@ public abstract class DataSourceExtension {
 		}
 		if (getMaximumPoolSize().isPresent()) {
 			config.setMaximumPoolSize(getMaximumPoolSize().get());
-		} else {
+		} else if (config.getMaximumPoolSize() < 1) {
+			// default only when no properties file set it
 			config.setMaximumPoolSize(5);
 		}
 		if (getMaxLifetime().isPresent()) {
@@ -313,7 +328,8 @@ public abstract class DataSourceExtension {
 		}
 		if (getMinimumIdle().isPresent()) {
 			config.setMinimumIdle(getMinimumIdle().get());
-		} else {
+		} else if (config.getMinimumIdle() < 0) {
+			// default only when no properties file set it
 			config.setMinimumIdle(0);
 		}
 		if (getPoolName().isPresent()) {
