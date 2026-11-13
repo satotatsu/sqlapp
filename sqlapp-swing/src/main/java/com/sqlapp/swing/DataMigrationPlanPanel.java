@@ -166,7 +166,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		sourceSchemaSummary.setEditable(false);
 		schemaSelection.add(sourceSchemaSummary, BorderLayout.CENTER);
 		schemaSelection.add(chooseSourceSchema, BorderLayout.EAST);
-		source.row(6, new JLabel("Schema"), schemaSelection);
+		source.row(7, new JLabel("Schema"), schemaSelection);
 		chooseSourceSchema.addActionListener(event -> chooseSourceSchema(new SourceSchemaDiscoveryService()::list,
 				names -> SourceSchemaSelectionPanel.showDialog(this, names, sourceSchema.getText())));
 		final var advanced = new JPanel(new BorderLayout(8, 0));

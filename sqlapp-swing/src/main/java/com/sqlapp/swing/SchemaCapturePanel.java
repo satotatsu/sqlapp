@@ -57,10 +57,10 @@ final class SchemaCapturePanel extends JPanel {
 		final var schemaRow = new JPanel(new BorderLayout(4, 0));
 		schemaRow.add(schema);
 		schemaRow.add(chooseSchema, BorderLayout.EAST);
-		connection.row(6, new JLabel("Schema (blank: current)"), schemaRow);
+		connection.row(7, new JLabel("Schema (blank: current)"), schemaRow);
 		final var destination = new JTextField(parent.toAbsolutePath().normalize().toString());
 		destination.setEditable(false);
-		connection.row(7, new JLabel("New schema-* folder in"), destination);
+		connection.row(8, new JLabel("New schema-* folder in"), destination);
 		driverOptions.addActionListener(event -> {
 			connection.showDriver(driverOptions.isSelected());
 			connection.revalidate();

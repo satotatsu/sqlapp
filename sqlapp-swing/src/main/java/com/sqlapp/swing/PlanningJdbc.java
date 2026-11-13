@@ -3,6 +3,7 @@ package com.sqlapp.swing;
 
 import java.sql.Connection;
 
+import com.sqlapp.data.db.command.datasource.DataSourceConfigFiles;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.zaxxer.hikari.HikariConfig;
@@ -13,13 +14,26 @@ import com.zaxxer.hikari.HikariDataSource;
  * credentials.
  */
 final class PlanningJdbc {
-	record Spec(String jdbcUrl, String username, String driverClass) {
+	/**
+	 * @param settingsFile data source settings file the form was loaded from and
+	 *                     still matches; its other settings (schema, catalog,
+	 *                     driver properties …) are applied. Null for none.
+	 */
+	record Spec(String jdbcUrl, String username, String driverClass, java.nio.file.Path settingsFile) {
 		Spec {
 			if (jdbcUrl == null || !jdbcUrl.startsWith("jdbc:")) {
 				throw new IllegalArgumentException("Enter a JDBC URL starting with jdbc:.");
 			}
 		}
+
+		Spec(String jdbcUrl, String username, String driverClass) {
+			this(jdbcUrl, username, driverClass, null);
+		}
 	}
+
+	/** Settings taken from the form, not from the settings file (lower case). */
+	private static final java.util.Set<String> FORM_KEYS = java.util.Set.of("jdbcurl", "username", "password",
+			"passwordenv", "driverclassname");
 
 	private PlanningJdbc() {
 	}
@@ -45,6 +59,12 @@ final class PlanningJdbc {
 	static HikariDataSource open(final Spec spec, final char[] password, final boolean readOnly, final int size,
 			final JdbcDriverLibraries libraries) {
 		final var configuration = new HikariConfig();
+		if (spec.settingsFile() != null) {
+			// The form owns endpoint and credentials; the file supplies everything else.
+			final var settings = new java.util.LinkedHashMap<>(DataSourceConfigFiles.read(spec.settingsFile()));
+			settings.keySet().removeIf(key -> FORM_KEYS.contains(key.toLowerCase(java.util.Locale.ROOT)));
+			DataSourceConfigFiles.applyTo(configuration, settings, name -> null);
+		}
 		final var added = libraries.resolve(spec);
 		if (added != null)
 			configuration.setDataSource(new AddedDriverDataSource(added, spec, password));

@@ -922,7 +922,30 @@ the transfer screens' **Gradle** tab references that file with `properties`
 instead of `SOURCE_JDBC_*` / `TARGET_JDBC_*` environment variables.
 
 Loading also invalidates any reviewed plan, so connect and inspect again before
-execution. Loading never opens a DB
+execution.
+
+### Named connections
+
+The **Saved** row of every source/target connection form lists named
+connections from one connection folder shared by all screens. Choose the folder
+with **Folder…**, typically a Gradle project's `src/main/config`; it is
+remembered for the next start. Each subfolder holding a
+`dataSource.yaml`, `.yml`, `.properties`, `.json` or `.xml` file is one
+connection, named after the subfolder, which is the layout a build script
+references with `properties "src/main/config/<name>/dataSource.properties"`.
+
+- Selecting a name loads that file like **Load…**, including a password from the
+  file or its `passwordEnv` variable for this session.
+- **Save as…** writes the form's URL, username and driver class to
+  `<folder>/<name>/dataSource.yaml` without a password. Names use letters,
+  digits, `.`, `_` and `-`.
+- Editing the URL, username or driver class detaches the form from the named
+  connection; the row then shows `(none)`.
+- While a form still matches its settings file, connections opened by the GUI
+  also apply the file's other settings, such as `schema`, `catalog` and
+  `dataSource.*` driver properties. The form's URL, username, driver class and
+  password, and the GUI's own read-only, pool-size and timeout limits, take
+  precedence over the file. Loading never opens a DB
 connection, runs migration SQL or changes SQL/YAML paths and execution policies.
 A profile saved from any of these forms can be loaded into the others.
 
