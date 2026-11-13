@@ -81,6 +81,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-saphana"))
 	nmcpAggregation(project(":sqlapp-core-spanner"))
 	nmcpAggregation(project(":sqlapp-core-sqlite"))
+	nmcpAggregation(project(":sqlapp-core-duckdb"))
 	nmcpAggregation(project(":sqlapp-core-sqlserver"))
 	nmcpAggregation(project(":sqlapp-core-sybase"))
 	nmcpAggregation(project(":sqlapp-core-vertica"))

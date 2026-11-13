@@ -1,0 +1,13 @@
+plugins {
+	id ('com.sqlapp.maven-deploy')
+}
+
+dependencies {
+	implementation project(':sqlapp-core')
+	testImplementation('org.duckdb:duckdb_jdbc:2.0.0.1')
+	testImplementation project(':sqlapp-core-test')
+}
+
+javadoc {
+	include '**/duckdb/**'
+}

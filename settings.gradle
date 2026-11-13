@@ -47,6 +47,7 @@ include(
 , 'sqlapp-core-saphana'
 , 'sqlapp-core-spanner'
 , 'sqlapp-core-sqlite'
+, 'sqlapp-core-duckdb'
 , 'sqlapp-core-sqlserver'
 , 'sqlapp-core-sybase'
 , 'sqlapp-core-vertica'
