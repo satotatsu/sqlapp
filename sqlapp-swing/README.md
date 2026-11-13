@@ -502,7 +502,7 @@ Drag local files from the file manager to these targets instead of using Browse/
 | Schema-based job builder Schema path | One XML file | Select the Schema; Read Schema remains explicit |
 | SQL / Job YAML editor, filename label or Open button | One SQL / YAML/YML file | Open through the normal unsaved-edit confirmation |
 | Migration reports JSON path | One JSON file | Select the file; Detect and load or choose a format explicitly |
-| Connection profile Load button | One JSON file | Load the profile through the existing validation |
+| Connection profile Load button | One YAML, YML, properties, JSON or XML file | Load the connection settings through the existing validation |
 | JDBC drivers list or Load button | One or more JAR files | Load the batch with the optional driver-class setting |
 
 Single-file targets reject multiple files. Wrong extensions, files dropped on
@@ -909,23 +909,34 @@ Changing the file or format clears these details with the previous result.
 ## Reuse connection profiles
 
 The **Connection profile** / **Profile** row in Schema planning and both data
-connection forms provides **Load…** and **Save…**. Save writes the current JDBC
-URL, username and optional driver class to a JSON file you choose. Load fills
-those three fields and clears the password. It also invalidates any reviewed
-plan, so connect and inspect again before execution. Loading never opens a DB
+connection forms provides **Load…** and **Save…**. These read and write the same
+data source settings files that Gradle tasks load with
+`dataSource { properties ... }` (`.yaml`, `.yml`, `.properties`, `.json`, `.xml`;
+for example `src/main/config/local/dataSource.properties`). Save writes the JDBC
+URL, username and optional driver class as YAML (default `dataSource.yaml`) and
+keeps other settings already in that file. Load fills those three fields. When
+the file provides a password, directly or through `passwordEnv`, it is placed in
+the password field for this session only; otherwise the field is cleared and the
+status asks for it. When a form still matches a loaded or saved settings file,
+the transfer screens' **Gradle** tab references that file with `properties`
+instead of `SOURCE_JDBC_*` / `TARGET_JDBC_*` environment variables.
+
+Loading also invalidates any reviewed plan, so connect and inspect again before
+execution. Loading never opens a DB
 connection, runs migration SQL or changes SQL/YAML paths and execution policies.
 A profile saved from any of these forms can be loaded into the others.
 
-Passwords are neither read nor stored by profile saving. They remain available
-for the next explicit connection attempt, and must be entered again after
-loading. Common embedded URL credentials, including password/token properties,
+Saving never writes a password; a password typed or loaded into the form is
+used only for the next explicit connection attempt. Common embedded URL credentials, including password/token properties,
 URL userinfo and Oracle user/password syntax, are rejected on both read and
 write. Remove secrets from URLs before saving; custom driver properties must
 also be reviewed because arbitrary vendor URL formats cannot be exhaustively
-classified. Profile files are ordinary unencrypted UTF-8 JSON and can contain
-sensitive host and account names.
+classified. Settings files are ordinary unencrypted text and can contain
+sensitive host and account names; a file holding a password belongs outside
+version control.
 
-A concise profile is:
+Legacy JSON profiles (with `formatVersion`) can still be loaded. A concise
+legacy profile is:
 
 ```json
 {

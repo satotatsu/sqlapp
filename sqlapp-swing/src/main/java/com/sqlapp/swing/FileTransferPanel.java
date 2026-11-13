@@ -81,6 +81,11 @@ final class FileTransferPanel extends JPanel {
 	final ReadOnlyCodePanel gradle = new ReadOnlyCodePanel(
 			CodeEditors.create(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_GROOVY, false));
 	private final JPanel connections = new JPanel(new CardLayout());
+	// Numbered steps; their order and titles follow the Export / Import choice.
+	private final JPanel steps = new JPanel();
+	private final StepSection connectStep = new StepSection("");
+	private final StepSection packageStep = new StepSection("");
+	private final StepSection runStep = new StepSection("");
 	private final JPanel settings = new JPanel(new CardLayout());
 	private final Backend backend;
 	private final java.util.function.Function<DataMigrationDraftService.Prepared, Path> draftDialog;
@@ -123,18 +128,25 @@ final class FileTransferPanel extends JPanel {
 				FieldHints.placeholder(job, "Optional when creating a New job; choose a saved job to reuse it"), false,
 				List.of("yaml", "yml")));
 		exportSettings.add(row("Source schema",
-				FieldHints.placeholder(sourceSchema, "Blank uses the source connection's current schema"), null, List.of()));
+				FieldHints.placeholder(sourceSchema, "Blank uses the source connection's current schema"), null,
+				List.of()));
 		final var importSettings = new JPanel(new GridLayout(0, 1, 4, 4));
 		importSettings.add(row("Completed package (manifest or folder)", manifest, false, List.of("json")));
 		importSettings.add(row("Save import results to", workspace, true, List.of()));
 		importSettings.add(inspectValues);
-		settings.add(exportSettings, "0");
-		settings.add(importSettings, "1");
-		final var form = new JPanel(new BorderLayout(4, 4));
-		form.add(settings, BorderLayout.NORTH);
-		form.add(connections, BorderLayout.CENTER);
-		input.add(form, BorderLayout.CENTER);
-		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		// Cards share the tallest card's height; keep rows at their natural height.
+		settings.add(top(exportSettings), "0");
+		settings.add(top(importSettings), "1");
+		connectStep.add(connections, BorderLayout.CENTER);
+		final var connectActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		connectActions.add(drivers);
+		connectStep.add(connectActions, BorderLayout.SOUTH);
+		packageStep.add(settings, BorderLayout.CENTER);
+		steps.setLayout(new BoxLayout(steps, BoxLayout.Y_AXIS));
+		input.add(steps, BorderLayout.CENTER);
+		// All actions stay in the fixed bottom step so scrolling the form never hides
+		// them.
+		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
 		actions.add(create);
 		actions.add(jobSettings);
 		actions.add(export);
@@ -143,6 +155,7 @@ final class FileTransferPanel extends JPanel {
 		actions.add(review);
 		actions.add(apply);
 		actions.add(compareStaging);
+		runStep.add(actions, BorderLayout.CENTER);
 		stagingComparison.add(comparisonActions, BorderLayout.SOUTH);
 		compareStaging.addActionListener(event -> {
 			if (isBusy() || !validConnection(target))
@@ -159,7 +172,6 @@ final class FileTransferPanel extends JPanel {
 		});
 		FileDropHandler.file(compareStaging, List.of("json"), () -> !isBusy() && step.getSelectedIndex() == 1,
 				path -> compareStaging(path), FileDropHandler.errors(status, statusPanel));
-		actions.add(drivers);
 		summary.setEditable(false);
 		summary.setLineWrap(true);
 		summary.setWrapStyleWord(true);
@@ -173,7 +185,7 @@ final class FileTransferPanel extends JPanel {
 		resultTabs.addTab("Details", result);
 		final var controls = new JPanel(new BorderLayout(4, 4));
 		controls.add(new JScrollPane(input), BorderLayout.CENTER);
-		controls.add(actions, BorderLayout.SOUTH);
+		controls.add(runStep, BorderLayout.SOUTH);
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, controls, resultTabs);
 		split.setResizeWeight(0.55);
 		add(split, BorderLayout.CENTER);
@@ -277,6 +289,12 @@ final class FileTransferPanel extends JPanel {
 		refresh();
 	}
 
+	private static JPanel top(final java.awt.Component content) {
+		final var panel = new JPanel(new BorderLayout());
+		panel.add(content, BorderLayout.NORTH);
+		return panel;
+	}
+
 	private JPanel row(String text, JTextField field, Boolean directory, List<String> extensions) {
 		final var panel = new JPanel(new BorderLayout(6, 0));
 		final var label = new JLabel(text);
@@ -348,6 +366,14 @@ final class FileTransferPanel extends JPanel {
 		((CardLayout) connections.getLayout()).show(connections, Integer.toString(step.getSelectedIndex()));
 		((CardLayout) settings.getLayout()).show(settings, Integer.toString(step.getSelectedIndex()));
 		final boolean importing = step.getSelectedIndex() == 1;
+		steps.removeAll();
+		steps.add(importing ? packageStep : connectStep);
+		steps.add(importing ? connectStep : packageStep);
+		connectStep.setTitle(importing ? "2. Connect the target" : "1. Connect the source");
+		packageStep.setTitle(importing ? "1. Choose the package" : "2. Job");
+		runStep.setTitle(importing ? "3. Inspect, review and import" : "3. Create or open the job, then export");
+		steps.revalidate();
+		steps.repaint();
 		create.setVisible(!importing);
 		jobSettings.setVisible(!importing);
 		export.setVisible(!importing);
@@ -398,6 +424,9 @@ final class FileTransferPanel extends JPanel {
 		drivers.setEnabled(!busy);
 		nextImport.setVisible(exportedForImport != null && step.getSelectedIndex() == 0);
 		nextImport.setEnabled(!busy && exportedForImport != null && step.getSelectedIndex() == 0);
+		final JButton next = step.getSelectedIndex() == 1 ? apply.isEnabled() ? apply : review
+				: nextImport.isVisible() ? nextImport : job.getText().isBlank() ? create : export;
+		PrimaryAction.highlight(next, create, export, review, apply, nextImport);
 	}
 
 	private boolean validConnection(ConnectionFields fields) {
@@ -752,10 +781,10 @@ final class FileTransferPanel extends JPanel {
 	}
 
 	private void showGradle(Path exportJob, Path manifest, String fingerprint) {
-		gradle.showText(FileTransferGradleGuide.text(exportJob, manifest, fingerprint));
+		gradle.showText(FileTransferGradleGuide.text(exportJob, manifest, fingerprint, source.profile.settingsFile(),
+				target.profile.settingsFile()));
 		resultTabs.addTab("Gradle", gradle);
 	}
-
 
 	void setSqlEditor(java.util.function.Predicate<Path> receiver) {
 		schemaDraft.setEditor(receiver);

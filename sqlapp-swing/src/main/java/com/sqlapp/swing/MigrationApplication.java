@@ -30,7 +30,8 @@ public final class MigrationApplication {
 	private static void show() {
 		DesktopAppearance.install();
 		final var frame = new JFrame("sqlapp — RDB transfer");
-		// One row: wrapped rows reorder themselves on selection, which moves tabs under the pointer.
+		// One row: wrapped rows reorder themselves on selection, which moves tabs under
+		// the pointer.
 		final var tabs = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
 		final var comparison = new SchemaComparisonPanel();
@@ -49,7 +50,7 @@ public final class MigrationApplication {
 			dataPlan.showInputs();
 			dataPlan.configurationFile.setText(snapshot.file().toString());
 			dataPlan.expectedFingerprint.setText(snapshot.fingerprint());
-			tabs.setSelectedComponent(dataPlan);
+			NestedTabs.select(tabs, dataPlan);
 		});
 		final var reports = new ReportReviewPanel();
 		final var drivers = new JdbcDriverPanel();
@@ -59,14 +60,19 @@ public final class MigrationApplication {
 		tabs.addTab("Direct JDBC transfer", null, directTransfer,
 				"Copy directly between source and target connections, or create tables only");
 		tabs.addTab("File transfer", null, fileTransfer, "Create a job, export, review and import CSV");
-		tabs.addTab("Schema comparison", comparison);
-		tabs.addTab("Schema migration plan", schemaPlan);
-		tabs.addTab("SQL editor", sqlEditor);
-		tabs.addTab("Advanced Data Job", dataPlan);
-		tabs.addTab("Job YAML editor", jobEditor);
-		tabs.addTab("Migration reports", reports);
-		tabs.addTab("Access file migration", mdbTransfer);
-		tabs.addTab("JDBC drivers", drivers);
+		tabs.addTab("Access file migration", null, mdbTransfer, "Move an MDB / ACCDB file into a database");
+		tabs.addTab("Migration reports", null, reports, "Open saved migration and verification reports");
+		// Tools mirror the Start screen's "More tools"; the main tasks stay on the top
+		// row.
+		final var tools = new JTabbedPane(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
+		tools.addTab("Schema comparison", comparison);
+		tools.addTab("Schema migration plan", schemaPlan);
+		tools.addTab("SQL editor", sqlEditor);
+		tools.addTab("Job YAML editor", jobEditor);
+		tools.addTab("JDBC drivers", drivers);
+		tools.addTab("Advanced Data Job", dataPlan);
+		tabs.addTab("Tools", null, tools,
+				"Schema comparison and migration, editors, JDBC drivers and advanced data jobs");
 
 		comparison.setDirectoryReceiver(useSchemaDirectory);
 		comparison.setSqlEditor(openSql);
@@ -79,7 +85,7 @@ public final class MigrationApplication {
 		final BiPredicate<Path, ReportReviewService.Type> openReport = (path, type) -> {
 			if (!reports.requestOpen(path, type))
 				return false;
-			tabs.setSelectedComponent(reports);
+			NestedTabs.select(tabs, reports);
 			return true;
 		};
 		schemaPlan.savedReport.setReceiver(openReport);
@@ -135,7 +141,7 @@ public final class MigrationApplication {
 		return value -> {
 			if (!action.test(value))
 				return false;
-			tabs.setSelectedComponent(tab);
+			NestedTabs.select(tabs, tab);
 			return true;
 		};
 	}

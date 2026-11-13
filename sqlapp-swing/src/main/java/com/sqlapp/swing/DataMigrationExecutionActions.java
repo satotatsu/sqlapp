@@ -16,9 +16,10 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingWorker;
 
 /**
- * Confirmed execution of a reviewed data job for {@link DataMigrationPlanPanel}:
- * password prompt, background run, progress and pause, and saving the last
- * execution audit and verification report. Inputs and buttons stay on the panel.
+ * Confirmed execution of a reviewed data job for
+ * {@link DataMigrationPlanPanel}: password prompt, background run, progress and
+ * pause, and saving the last execution audit and verification report. Inputs
+ * and buttons stay on the panel.
  */
 final class DataMigrationExecutionActions {
 	private final DataMigrationPlanPanel panel;
@@ -66,7 +67,10 @@ final class DataMigrationExecutionActions {
 		return executing;
 	}
 
-	/** Enables the last-result actions; called whenever the panel's busy state changes. */
+	/**
+	 * Enables the last-result actions; called whenever the panel's busy state
+	 * changes.
+	 */
 	void refreshActions(final boolean busy) {
 		panel.saveExecution.setEnabled(!busy && execution != null && execution.hasAudit());
 		panel.showExecution.setEnabled(!busy && execution != null);
@@ -91,13 +95,13 @@ final class DataMigrationExecutionActions {
 			return;
 		final var sourceSecret = new JPasswordField();
 		final var targetSecret = new JPasswordField();
-		final var message = new javax.swing.JTextArea(
-				"Execute job: " + confirmed.report().jobId() + "\nSource: " + panel.reviewedSource.jdbcUrl() + "\nTarget: "
-						+ panel.reviewedTarget.jdbcUrl() + "\nPlan: " + confirmed.report().planFingerprint()
-						+ "\nConfiguration: " + confirmed.report().provenance().configurationFingerprint()
-						+ "\nYAML checkpoint, lease, report and verification settings apply."
-						+ "\nEach chunk commits separately. Failure can leave committed rows."
-						+ "\nReview configured output files in the plan before continuing.");
+		final var message = new javax.swing.JTextArea("Execute job: " + confirmed.report().jobId() + "\nSource: "
+				+ panel.reviewedSource.jdbcUrl() + "\nTarget: " + panel.reviewedTarget.jdbcUrl() + "\nPlan: "
+				+ confirmed.report().planFingerprint() + "\nConfiguration: "
+				+ confirmed.report().provenance().configurationFingerprint()
+				+ "\nYAML checkpoint, lease, report and verification settings apply."
+				+ "\nEach chunk commits separately. Failure can leave committed rows."
+				+ "\nReview configured output files in the plan before continuing.");
 		message.setEditable(false);
 		final var content = new JPanel(new GridLayout(0, 1, 4, 4));
 		content.add(new JScrollPane(message));
@@ -188,7 +192,8 @@ final class DataMigrationExecutionActions {
 		final var snapshot = control.progress();
 		final boolean requested = control.pauseRequested();
 		panel.pause.setEnabled(snapshot.pauseAvailable() && !requested);
-		panel.pause.setToolTipText("Stops after a committed chunk and saved checkpoint; does not interrupt JDBC calls.");
+		panel.pause
+				.setToolTipText("Stops after a committed chunk and saved checkpoint; does not interrupt JDBC calls.");
 		panel.progress.setText((requested ? "Pause requested; waiting for a committed chunk. " : "") + snapshot.phase()
 				+ (snapshot.migrationId().isEmpty() ? ""
 						: " | " + snapshot.migrationId() + ": " + snapshot.checkpointRows() + " checkpoint rows; "
@@ -211,8 +216,9 @@ final class DataMigrationExecutionActions {
 				try {
 					get();
 					panel.status.setText("Saved execution audit: " + destination);
-					panel.savedReport.saved(destination, snapshot.failure() == null ? ReportReviewService.Type.BULK_EXECUTION
-							: ReportReviewService.Type.BULK_FAILURE);
+					panel.savedReport.saved(destination,
+							snapshot.failure() == null ? ReportReviewService.Type.BULK_EXECUTION
+									: ReportReviewService.Type.BULK_FAILURE);
 					panel.outputDialogs.remember(destination);
 				} catch (final InterruptedException exception) {
 					Thread.currentThread().interrupt();

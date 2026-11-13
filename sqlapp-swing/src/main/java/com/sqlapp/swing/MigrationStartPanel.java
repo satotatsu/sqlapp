@@ -155,11 +155,11 @@ final class MigrationStartPanel extends JPanel {
 		final var targets = new EnumMap<Destination, Component>(Destination.class);
 		for (var destination : Destination.values()) {
 			final var target = destinations.get(destination);
-			if (target == null || tabs.indexOfComponent(target) < 0)
+			if (target == null || !NestedTabs.contains(tabs, target))
 				throw new IllegalArgumentException("Missing tool tab for " + destination);
 			targets.put(destination, target);
 		}
-		final var start = new MigrationStartPanel(destination -> tabs.setSelectedComponent(targets.get(destination)));
+		final var start = new MigrationStartPanel(destination -> NestedTabs.select(tabs, targets.get(destination)));
 		tabs.insertTab("Start", null, start, "Choose a migration task", 0);
 		tabs.setSelectedComponent(start);
 		return start;

@@ -1,7 +1,10 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.swing;
 
-/** Table count and next-step guidance shown under the {@link JobDraftPanel} table. */
+/**
+ * Table count and next-step guidance shown under the {@link JobDraftPanel}
+ * table.
+ */
 final class JobDraftSelectionGuidance {
 	/** What the selection is used for once it is ready. */
 	enum Purpose {

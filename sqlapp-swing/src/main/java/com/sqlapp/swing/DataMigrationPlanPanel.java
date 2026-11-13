@@ -302,11 +302,14 @@ final class DataMigrationPlanPanel extends JPanel {
 		apply.setEnabled(false);
 		saveExecution.setEnabled(false);
 		apply.addActionListener(event -> executionActions.confirmExecution());
-		DisabledReason.install(editJob, () -> jobEditor == null ? null
-				: !configurationFile.isEnabled() ? "Wait for the current operation to finish." : "Choose a saved job YAML first.");
-		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Review plan first.");
-		DisabledReason.install(apply,
-				() -> busy || isExecuting() ? "Wait for the current operation to finish." : DataMigrationExecutionService.restriction(result));
+		DisabledReason.install(editJob,
+				() -> jobEditor == null ? null
+						: !configurationFile.isEnabled() ? "Wait for the current operation to finish."
+								: "Choose a saved job YAML first.");
+		DisabledReason.install(save,
+				() -> busy ? "Wait for the current operation to finish." : "Choose Review plan first.");
+		DisabledReason.install(apply, () -> busy || isExecuting() ? "Wait for the current operation to finish."
+				: DataMigrationExecutionService.restriction(result));
 		executionActions.refreshActions(false);
 	}
 

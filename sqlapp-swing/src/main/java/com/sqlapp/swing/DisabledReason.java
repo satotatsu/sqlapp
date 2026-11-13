@@ -7,8 +7,9 @@ import javax.swing.AbstractButton;
 
 /**
  * Explains why a button cannot be used: while it is disabled its tooltip shows
- * the reason; when it is enabled again its own tooltip is restored. Screens keep
- * enabling buttons as before; the reason is read whenever the state changes.
+ * the reason; when it is enabled again its own tooltip is restored. Screens
+ * keep enabling buttons as before; the reason is read whenever the state
+ * changes.
  */
 final class DisabledReason {
 	private static final String NORMAL = DisabledReason.class.getName() + ".normal";
@@ -18,8 +19,8 @@ final class DisabledReason {
 	}
 
 	/**
-	 * @param reason the reason while disabled; null keeps the button's own
-	 *               tooltip, for example a more specific one set by the screen
+	 * @param reason the reason while disabled; null keeps the button's own tooltip,
+	 *               for example a more specific one set by the screen
 	 */
 	static void install(final AbstractButton button, final Supplier<String> reason) {
 		button.putClientProperty(NORMAL, button.getToolTipText());

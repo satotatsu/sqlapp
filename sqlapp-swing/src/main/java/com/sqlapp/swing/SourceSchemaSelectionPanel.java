@@ -52,8 +52,7 @@ final class SourceSchemaSelectionPanel extends JPanel {
 			for (var name : choices)
 				if (name.toLowerCase(Locale.ROOT).contains(query))
 					model.addElement(name);
-			count.setText(
-					model.size() + " / " + choices.size() + " schemas. Selection is used for New job only.");
+			count.setText(model.size() + " / " + choices.size() + " schemas. Selection is used for New job only.");
 			use.setEnabled(false);
 		};
 		filter.getDocument().addDocumentListener(new DocumentListener() {

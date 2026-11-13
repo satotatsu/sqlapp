@@ -103,7 +103,7 @@ class ConnectionProfilePanelTest {
 			assertEquals("Loaded; enter password", view.status.getText());
 			assertFalse(view.isBusy());
 			assertEquals(directory.toFile(), view.chooser(false).getCurrentDirectory());
-			assertEquals(directory.resolve("connection.json").toFile(), view.chooser(true).getSelectedFile());
+			assertEquals(directory.resolve("dataSource.yaml").toFile(), view.chooser(true).getSelectedFile());
 			assertTrue(view.statusPanel.detailsText().contains("profile.json"));
 			// Check all associated inputs after the asynchronous load.
 			assertEquals(loaded.jdbcUrl(), fields[0].getText());

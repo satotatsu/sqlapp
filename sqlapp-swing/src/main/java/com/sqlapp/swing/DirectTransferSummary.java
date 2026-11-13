@@ -137,7 +137,10 @@ final class DirectTransferSummary {
 		return text.toString();
 	}
 
-	/** Schema SQL tab content, or null when the result has no target preparation SQL. */
+	/**
+	 * Schema SQL tab content, or null when the result has no target preparation
+	 * SQL.
+	 */
 	static TransferSchemaSql schemaSql(final Object value, final Path definitionFile, final List<Path> sourceFiles) {
 		final var statements = value instanceof DirectTransferDesktopService.Reviewed review
 				? review.review().prepared().schemaPreparation().statements()
@@ -151,8 +154,7 @@ final class DirectTransferSummary {
 		final var sql = new StringBuilder(
 				"-- Reviewed target preparation. Created objects may remain after failure.\n\n");
 		TransferSchemaSql.appendStatements(sql, statements);
-		final var prepared = value instanceof DirectTransferDesktopService.Reviewed review
-				? review.review().prepared()
+		final var prepared = value instanceof DirectTransferDesktopService.Reviewed review ? review.review().prepared()
 				: ((DirectTransferDesktopService.Executed) value).outcome().prepared();
 		String draft = value instanceof DirectTransferDesktopService.Reviewed review ? review.schemaSqlDraft()
 				: ((DirectTransferDesktopService.Executed) value).schemaSqlDraft();

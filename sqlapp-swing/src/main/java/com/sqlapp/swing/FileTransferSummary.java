@@ -175,8 +175,8 @@ final class FileTransferSummary {
 	}
 
 	/**
-	 * Schema SQL tab content, or null when the result has no target preparation SQL.
-	 * Protected inputs are null when the draft cannot be offered for editing.
+	 * Schema SQL tab content, or null when the result has no target preparation
+	 * SQL. Protected inputs are null when the draft cannot be offered for editing.
 	 */
 	static TransferSchemaSql schemaSql(final Object value, final FileTransferDesktopService.Reviewed prior,
 			final java.util.List<Path> sourceFiles) {
@@ -209,8 +209,7 @@ final class FileTransferSummary {
 		java.util.List<Path> inputs = null;
 		if (draft != null && context != null) {
 			inputs = new java.util.ArrayList<>();
-			protectPackage(inputs, context.review().manifestFile().toAbsolutePath().getParent(),
-					context.manifest());
+			protectPackage(inputs, context.review().manifestFile().toAbsolutePath().getParent(), context.manifest());
 			if (value instanceof TransferFileImportService.Outcome outcome && outcome.auditFile() != null) {
 				inputs.add(outcome.auditFile());
 				protectPackage(inputs, outcome.auditFile().toAbsolutePath().getParent(), context.manifest());

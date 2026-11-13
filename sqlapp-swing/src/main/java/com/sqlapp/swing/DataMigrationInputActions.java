@@ -20,7 +20,9 @@ final class DataMigrationInputActions {
 	private final DataMigrationPlanPanel.ConnectionTester connectionTester;
 	private final EditorFileChooser workspaceDialogs = new EditorFileChooser();
 
-	/** @param dialog New migration table selection; null shows the standard dialog */
+	/**
+	 * @param dialog New migration table selection; null shows the standard dialog
+	 */
 	DataMigrationInputActions(final DataMigrationPlanPanel panel, final DataMigrationPlanPanel.DraftDiscovery discovery,
 			final java.util.function.Function<DataMigrationDraftService.Prepared, com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> dialog,
 			final DataMigrationPlanPanel.ConnectionTester tester) {
@@ -188,7 +190,8 @@ final class DataMigrationInputActions {
 			}
 
 			private void testFailed(final Throwable failure) {
-				panel.status.setText(name + " connection failed. Check the URL, credentials and JDBC driver; see Details.");
+				panel.status
+						.setText(name + " connection failed. Check the URL, credentials and JDBC driver; see Details.");
 				panel.statusPanel.setDetails(panel.status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
 			}
 		}.execute();

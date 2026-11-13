@@ -51,8 +51,7 @@ final class DirectTransferPanel extends JPanel {
 	final JButton compareSavedStaging = new JButton("Compare saved staging…");
 	final JButton jobSettings = new JButton("Job settings…");
 	final JToggleButton drivers = new JToggleButton("Show driver class");
-	final JLabel status = new JLabel(
-			"Create a job from tables, or choose a saved job. Review never copies rows.");
+	final JLabel status = new JLabel("Create a job from tables, or choose a saved job. Review never copies rows.");
 	private final StagingComparisonSaveActions comparisonActions = new StagingComparisonSaveActions(this::isBusy,
 			this::setBusy, status::setText, workspace::getText);
 	final JButton saveComparison = comparisonActions.save;
@@ -103,29 +102,44 @@ final class DirectTransferPanel extends JPanel {
 				task -> verificationTabs.showTask(results, task));
 		draftDialog = presenter == null ? prepared -> DirectTransferDraftDialog.show(this, prepared) : presenter;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
-		settings.add(new JLabel(
-				"One job for GUI and Gradle. New job offers data transfer or schema only (no row copy)."));
-		settings.add(row("Saved job",
-				FieldHints.placeholder(job, "Optional when creating a New job; choose a saved job to reuse it"), false));
-		settings.add(row("Working folder (required)",
-				FieldHints.placeholder(workspace, "Existing writable folder for the job, reviews and reports"), true));
-		settings.add(row("Source schema",
-				FieldHints.placeholder(sourceSchema, "Used by New job; blank uses the source connection's current schema"), null));
-		form.add(settings, BorderLayout.NORTH);
+		// Numbered steps in the order the Summary describes them.
+		final var connect = new StepSection("1. Connect source and target");
 		final var endpoints = new JPanel(new GridLayout(1, 2, 8, 8));
 		endpoints.add(source);
 		endpoints.add(target);
-		form.add(endpoints, BorderLayout.CENTER);
-		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
-		actions.add(create);
-		actions.add(jobSettings);
+		connect.add(endpoints, BorderLayout.CENTER);
+		final var connectActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		connectActions.add(drivers);
+		connect.add(connectActions, BorderLayout.SOUTH);
+		final var jobStep = new StepSection("2. Create or choose a job");
+		final var settings = new JPanel(new GridLayout(0, 1, 4, 4));
+		settings.add(
+				new JLabel("One job for GUI and Gradle. New job offers data transfer or schema only (no row copy)."));
+		settings.add(row("Saved job",
+				FieldHints.placeholder(job, "Optional when creating a New job; choose a saved job to reuse it"),
+				false));
+		settings.add(row("Working folder (required)",
+				FieldHints.placeholder(workspace, "Existing writable folder for the job, reviews and reports"), true));
+		settings.add(row("Source schema", FieldHints.placeholder(sourceSchema,
+				"Used by New job; blank uses the source connection's current schema"), null));
+		jobStep.add(settings, BorderLayout.CENTER);
+		final var jobActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		jobActions.add(create);
+		jobActions.add(jobSettings);
+		jobStep.add(jobActions, BorderLayout.SOUTH);
+		final var runStep = new StepSection("3. Review and execute");
+		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
 		actions.add(review);
 		actions.add(execute);
 		actions.add(compareStaging);
 		actions.add(compareSavedStaging);
-		actions.add(drivers);
-		form.add(actions, BorderLayout.SOUTH);
+		runStep.add(actions, BorderLayout.CENTER);
+		final var steps = new JPanel();
+		steps.setLayout(new BoxLayout(steps, BoxLayout.Y_AXIS));
+		steps.add(connect);
+		steps.add(jobStep);
+		steps.add(runStep);
+		form.add(steps, BorderLayout.NORTH);
 		summary.setEditable(false);
 		summary.setLineWrap(true);
 		summary.setWrapStyleWord(true);
@@ -319,6 +333,8 @@ final class DirectTransferPanel extends JPanel {
 						? "Inspect Schema SQL; enable data-impacting changes in Job settings and review again."
 						: null);
 		drivers.setEnabled(!busy);
+		PrimaryAction.highlight(execute.isEnabled() ? execute : !job.getText().isBlank() ? review : create, create,
+				review, execute);
 	}
 
 	void editSettings(
@@ -484,8 +500,7 @@ final class DirectTransferPanel extends JPanel {
 						final var saved = draftDialog.apply((DataMigrationDraftService.Prepared) value);
 						if (saved != null && requested == revision) {
 							job.setText(saved.toString());
-							status.setText(
-									"Job saved. Choose Review transfer; no rows have been copied.");
+							status.setText("Job saved. Choose Review transfer; no rows have been copied.");
 						} else
 							status.setText("Job creation cancelled or inputs changed. No rows copied.");
 					} else if (action == Action.REVIEW) {
@@ -621,8 +636,10 @@ final class DirectTransferPanel extends JPanel {
 		final String text = DirectTransferSummary.text(value, recovery != null, progressTabs.panel != null);
 		if (value instanceof DirectTransferDesktopService.Reviewed reviewed) {
 			final var saved = reviewed.review().prepared().job();
-			gradle.showText(DirectTransferGradleGuide.text(new TransferJobConfigurationIO.Snapshot(
-					reviewed.review().definitionFile(), saved.text(), saved.fingerprint(), saved.configuration())));
+			gradle.showText(DirectTransferGradleGuide.text(
+					new TransferJobConfigurationIO.Snapshot(reviewed.review().definitionFile(), saved.text(),
+							saved.fingerprint(), saved.configuration()),
+					source.profile.settingsFile(), target.profile.settingsFile()));
 			results.addTab("Gradle", gradle);
 		}
 		results.remove(schemaSql);

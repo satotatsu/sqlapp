@@ -214,7 +214,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		save.setEnabled(false);
 		apply.setEnabled(false);
 		saveExecution.setEnabled(false);
-		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Review plan first.");
+		DisabledReason.install(save,
+				() -> busy ? "Wait for the current operation to finish." : "Choose Review plan first.");
 	}
 
 	private void row(final JPanel panel, final int row, final String label, final Component field) {

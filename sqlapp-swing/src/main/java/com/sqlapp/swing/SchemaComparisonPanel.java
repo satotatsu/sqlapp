@@ -104,7 +104,8 @@ final class SchemaComparisonPanel extends JPanel {
 		saveSql.setEnabled(false);
 		useDirectory.setEnabled(false);
 		useDirectory.addActionListener(event -> useSavedDirectory());
-		DisabledReason.install(save, () -> busy ? "Wait for the current operation to finish." : "Choose Compare first.");
+		DisabledReason.install(save,
+				() -> busy ? "Wait for the current operation to finish." : "Choose Compare first.");
 		DisabledReason.install(saveSql, () -> busy ? "Wait for the current operation to finish."
 				: result == null ? "Choose Compare first." : "The comparison found no SQL changes to save.");
 		DisabledReason.install(useDirectory, () -> busy ? "Wait for the current operation to finish."

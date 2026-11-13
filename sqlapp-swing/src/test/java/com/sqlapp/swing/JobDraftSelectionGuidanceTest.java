@@ -29,15 +29,19 @@ class JobDraftSelectionGuidanceTest {
 
 	@Test
 	void helpFollowsTheFirstApplicableCondition() {
-		assertTrue(JobDraftSelectionGuidance.help(new State(true, 0, 0, 0, 0, 0, 0, false, false, false, false,
-				Purpose.EDITOR_DRAFT)).startsWith("No tables in this Schema"));
-		assertTrue(help(state(5, 0, 0, 0, false, false, false, false, Purpose.EDITOR_DRAFT)).startsWith("No eligible tables"));
-		assertTrue(help(state(5, 0, 0, 0, true, false, false, false, Purpose.FILE_JOB)).startsWith("No exportable tables"));
+		assertTrue(JobDraftSelectionGuidance
+				.help(new State(true, 0, 0, 0, 0, 0, 0, false, false, false, false, Purpose.EDITOR_DRAFT))
+				.startsWith("No tables in this Schema"));
+		assertTrue(help(state(5, 0, 0, 0, false, false, false, false, Purpose.EDITOR_DRAFT))
+				.startsWith("No eligible tables"));
+		assertTrue(help(state(5, 0, 0, 0, true, false, false, false, Purpose.FILE_JOB))
+				.startsWith("No exportable tables"));
 		assertTrue(help(state(5, 0, 0, 0, false, true, false, false, Purpose.EDITOR_DRAFT))
 				.startsWith("Tick Include for each table to copy"), "schema only ignores eligibility");
 		assertTrue(help(state(2, 1, 0, 3, false, false, true, false, Purpose.EDITOR_DRAFT))
 				.startsWith("Review Availability for each restriction"));
-		assertTrue(help(state(0, 0, 0, 3, false, false, false, true, Purpose.EDITOR_DRAFT)).startsWith("No tables selected"));
+		assertTrue(help(state(0, 0, 0, 3, false, false, false, true, Purpose.EDITOR_DRAFT))
+				.startsWith("No tables selected"));
 		assertTrue(help(state(0, 0, 0, 3, false, false, false, false, Purpose.EDITOR_DRAFT))
 				.equals("No tables match. Clear the filter to see available tables."));
 		assertTrue(help(state(0, 2, 2, 3, false, false, false, false, Purpose.EDITOR_DRAFT))
@@ -52,10 +56,9 @@ class JobDraftSelectionGuidanceTest {
 	void readySelectionNamesTheNextStepForEachPurpose() {
 		assertTrue(help(state(3, 2, 0, 3, false, false, false, false, Purpose.TABLE_SELECTION))
 				.contains("Use selected tables"));
-		assertTrue(help(state(3, 2, 0, 3, true, false, false, false, Purpose.FILE_JOB))
-				.contains("Save the job"));
-		assertTrue(help(state(3, 2, 0, 3, false, false, false, false, Purpose.EDITOR_DRAFT))
-				.contains("Create a draft"));
+		assertTrue(help(state(3, 2, 0, 3, true, false, false, false, Purpose.FILE_JOB)).contains("Save the job"));
+		assertTrue(
+				help(state(3, 2, 0, 3, false, false, false, false, Purpose.EDITOR_DRAFT)).contains("Create a draft"));
 		assertTrue(help(state(3, 2, 0, 3, false, false, false, false, Purpose.SAVED_MIGRATION))
 				.contains("Save and review plan"));
 	}

@@ -29,11 +29,26 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 	private final JTextField username;
 	private final JTextField driverClass;
 	private final JPasswordField password;
-	private final Reader reader;
+	private final SettingsReader reader;
+	/**
+	 * Settings file the form was loaded from or saved to, with the values it held
+	 * then.
+	 */
+	private Path settingsFile;
+	private String settingsValues;
 	private final Writer writer;
 	private long revision;
 	private boolean busy;
 	private final EditorFileChooser fileDialogs = new EditorFileChooser();
+
+	/**
+	 * Reads a data source settings file or a legacy profile, with an optional
+	 * session password.
+	 */
+	@FunctionalInterface
+	interface SettingsReader {
+		ConnectionProfileService.Loaded read(Path file) throws Exception;
+	}
 
 	@FunctionalInterface
 	interface Reader {
@@ -47,12 +62,18 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 
 	ConnectionProfilePanel(final JTextField jdbcUrl, final JTextField username, final JTextField driverClass,
 			final JPasswordField password) {
-		this(jdbcUrl, username, driverClass, password, new ConnectionProfileService()::read,
+		this(new ConnectionProfileService()::readAny, jdbcUrl, username, driverClass, password,
 				new ConnectionProfileService()::write);
 	}
 
 	ConnectionProfilePanel(final JTextField jdbcUrl, final JTextField username, final JTextField driverClass,
 			final JPasswordField password, final Reader reader, final Writer writer) {
+		this(file -> ConnectionProfileService.Loaded.profileOnly(reader.read(file)), jdbcUrl, username, driverClass,
+				password, writer);
+	}
+
+	ConnectionProfilePanel(final SettingsReader reader, final JTextField jdbcUrl, final JTextField username,
+			final JTextField driverClass, final JPasswordField password, final Writer writer) {
 		super(new java.awt.BorderLayout(4, 0));
 		this.jdbcUrl = jdbcUrl;
 		this.username = username;
@@ -96,7 +117,7 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 				saveTo(file);
 		});
 		for (final var target : new javax.swing.JComponent[] { this, load })
-			FileDropHandler.file(target, java.util.List.of("json"), () -> !busy && isEnabled() && jdbcUrl.isEnabled(),
+			FileDropHandler.file(target, SETTINGS_EXTENSIONS, () -> !busy && isEnabled() && jdbcUrl.isEnabled(),
 					this::droppedProfile, FileDropHandler.errors(status, statusPanel));
 	}
 
@@ -105,9 +126,33 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 		return busy;
 	}
 
+	/** Data source settings shared with Gradle, plus legacy profile JSON. */
+	static final java.util.List<String> SETTINGS_EXTENSIONS = java.util.List.of("yaml", "yml", "properties", "json",
+			"xml");
+
 	JFileChooser chooser(final boolean saving) {
-		return fileDialogs.create(new FileNameExtensionFilter("Connection profile JSON", "json"),
-				saving ? "connection.json" : null);
+		return saving
+				? fileDialogs.create(new FileNameExtensionFilter("Connection settings YAML", "yaml", "yml"),
+						"dataSource.yaml")
+				: fileDialogs.create(new FileNameExtensionFilter("Connection settings (YAML, properties, JSON, XML)",
+						SETTINGS_EXTENSIONS.toArray(String[]::new)), null);
+	}
+
+	/**
+	 * The data source settings file that still matches the form, for reuse in
+	 * Gradle settings; null after the URL, user or driver was edited.
+	 */
+	Path settingsFile() {
+		return settingsFile != null && currentValues().equals(settingsValues) ? settingsFile : null;
+	}
+
+	private String currentValues() {
+		return jdbcUrl.getText().trim() + "\n" + username.getText().trim() + "\n" + driverClass.getText().trim();
+	}
+
+	private void rememberSettings(final Path file) {
+		settingsFile = file;
+		settingsValues = file == null ? null : currentValues();
 	}
 
 	private void inputsChanged() {
@@ -121,15 +166,18 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 			return;
 		final long requestedRevision = revision;
 		busy(true);
-		new SwingWorker<ConnectionProfileService.Profile, Void>() {
-			protected ConnectionProfileService.Profile doInBackground() throws Exception {
+		new SwingWorker<ConnectionProfileService.Loaded, Void>() {
+			protected ConnectionProfileService.Loaded doInBackground() throws Exception {
 				return reader.read(file);
 			}
 
 			protected void done() {
 				try {
-					final var profile = get();
+					final var loaded = get();
+					final var profile = loaded.profile();
 					if (requestedRevision != revision || !isEnabled() || !jdbcUrl.isEnabled()) {
+						if (loaded.password() != null)
+							java.util.Arrays.fill(loaded.password(), '\0');
 						status.setText("Inputs changed; load again");
 						return;
 					}
@@ -137,7 +185,13 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 					jdbcUrl.setText(profile.jdbcUrl());
 					username.setText(profile.username());
 					driverClass.setText(profile.driverClass());
-					status.setText("Loaded; enter password");
+					if (loaded.password() != null) {
+						// Session only: the form never saves passwords.
+						password.setText(new String(loaded.password()));
+						java.util.Arrays.fill(loaded.password(), '\0');
+					}
+					rememberSettings(loaded.settingsFile());
+					status.setText(loaded.note());
 					fileDialogs.remember(file);
 					statusPanel.setDetails(status.getText() + "\nFile: " + file);
 				} catch (final InterruptedException exception) {
@@ -170,6 +224,9 @@ final class ConnectionProfilePanel extends JPanel implements ComponentEnablement
 							&& driver.equals(driverClass.getText());
 					status.setText(
 							unchanged ? "Profile saved" : "Profile saved; newer connection inputs are not saved");
+					final String name = file.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+					if (unchanged && (name.endsWith(".yaml") || name.endsWith(".yml")))
+						rememberSettings(file.toAbsolutePath().normalize());
 					fileDialogs.remember(file);
 					statusPanel.setDetails(status.getText() + "\nFile: " + file);
 				} catch (final InterruptedException exception) {
