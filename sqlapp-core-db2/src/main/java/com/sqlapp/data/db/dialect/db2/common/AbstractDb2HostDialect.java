@@ -111,6 +111,13 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 				Db2HostDomainFactory.Drop.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE,
 				Db2HostCreateIndexFactory.class);
+		registerAlterAndDrop(registry);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
+				Db2HostSequenceNextValuesFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Mview.class, SqlType.CREATE,
+				com.sqlapp.data.db.dialect.db2.sql.Db2CreateMviewFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Mview.class, SqlType.DROP,
+				com.sqlapp.data.db.dialect.db2.sql.Db2DropMviewFactory.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Mask.class, SqlType.CREATE, Db2HostCreateMaskFactory.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Schema.class, SqlType.CREATE,
 				Db2HostCreateSchemaFactory.class);
@@ -141,6 +148,42 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 		registry.registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.REVOKE,
 				Db2HostPrivilegeFactories.RevokeSchema.class);
 		return registry;
+	}
+
+	/**
+	 * Diff support: host-correct ALTER and DROP. Additions and removals reuse the
+	 * registered CREATE/DROP factories; unsupported in-place changes fail.
+	 */
+	private static void registerAlterAndDrop(SimpleSqlFactoryRegistry registry) {
+		registry.registerSqlFactory(Table.class, SqlType.ALTER, Db2HostAlterTableFactory.class);
+		registry.registerSqlFactory(Table.class, SqlType.DROP,
+				com.sqlapp.data.db.dialect.db2.sql.Db2DropTableFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.ALTER,
+				Db2HostAlterFactories.AlterIndex.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.DROP,
+				com.sqlapp.data.db.dialect.db2.sql.Db2DropIndexFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, SqlType.ALTER,
+				Db2HostAlterFactories.AlterSequence.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, SqlType.DROP,
+				com.sqlapp.data.db.dialect.db2.sql.Db2DropSequenceFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.ALTER,
+				Db2HostAlterFactories.CommentOnly.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.DROP,
+				com.sqlapp.data.db.dialect.db2.sql.Db2DropViewFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Mview.class, SqlType.ALTER,
+				Db2HostAlterFactories.CommentOnly.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.ALTER,
+				Db2HostAlterFactories.CommentOnly.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.DROP,
+				com.sqlapp.data.db.dialect.db2.sql.Db2DropTriggerFactory.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Domain.class, SqlType.ALTER,
+				Db2HostAlterFactories.CommentOnly.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, SqlType.ALTER,
+				Db2HostAlterFactories.CommentOnly.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Mask.class, SqlType.ALTER,
+				Db2HostAlterFactories.AlterMask.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Mask.class, SqlType.DROP,
+				Db2HostAlterFactories.DropMask.class);
 	}
 
 	@Override

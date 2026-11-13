@@ -180,7 +180,7 @@ final class Db2HostSupplementalReaders {
 		@Override
 		protected List<Index> doGetAll(Connection connection, ParametersContext context, ProductVersionInfo version) {
 			Map<List<String>, Index> result = new LinkedHashMap<>();
-			Map<List<String>, Integer> keyCounts = new LinkedHashMap<>();
+			Map<List<String>, Integer> keyCounts = new LinkedHashMap<>(), periodKeys = new LinkedHashMap<>();
 			execute(connection, getSqlNodeCache(resources).getString("indexes.sql"), context,
 					new ResultSetNextHandler() {
 						@Override
@@ -228,12 +228,26 @@ final class Db2HostSupplementalReaders {
 								index.setRemarks(rs.getString("REMARKS"));
 								result.put(key, index);
 								keyCounts.put(key, keyCount);
+								periodKeys.put(key, 0);
 							}
-							int read = index.getColumns().size() + index.getIncludes().size();
+							int read = index.getColumns().size() + index.getIncludes().size() + periodKeys.get(key);
 							if (!keyCount.equals(keyCounts.get(key)) || position != read + 1)
 								throw new SQLException("Incomplete or unordered index keys: " + name);
 							String order = id(rs, "COLUMN_ORDER"), column = id(rs, "COLUMN_NAME");
 							String expression = optionalText(rs, "KEY_EXPRESSION");
+							String period = optional(rs, "KEY_PERIOD");
+							if (period != null && !period.isBlank()) {
+								// BUSINESS_TIME WITHOUT OVERLAPS: the period start (B) and exclusive end (C)
+								// are stored as the trailing key columns.
+								if ((!"B".equals(period) && !"C".equals(period)) || !index.isUnique()
+										|| !index.getIncludes().isEmpty())
+									throw new SQLException("Unsupported index period key " + period + ": " + name);
+								index.getSpecifics().put(Db2HostIndexes.BUSINESS_TIME_WITHOUT_OVERLAPS, "Y");
+								periodKeys.merge(key, 1, Integer::sum);
+								return;
+							}
+							if (periodKeys.get(key) > 0)
+								throw new SQLException("Index key follows BUSINESS_TIME WITHOUT OVERLAPS: " + name);
 							if ("Y".equals(optional(rs, "KEY_INCLUDE"))) {
 								if (!index.isUnique() || expression != null || column == null || column.isBlank())
 									throw new SQLException("Unsupported index INCLUDE key: " + name);
@@ -258,8 +272,10 @@ final class Db2HostSupplementalReaders {
 						}
 					});
 			for (var entry : result.entrySet())
-				if (entry.getValue().getColumns().size() + entry.getValue().getIncludes().size() != keyCounts
-						.get(entry.getKey()) || entry.getValue().getColumns().isEmpty())
+				if (entry.getValue().getColumns().size() + entry.getValue().getIncludes().size()
+						+ periodKeys.get(entry.getKey()) != keyCounts.get(entry.getKey())
+						|| entry.getValue().getColumns().isEmpty()
+						|| (periodKeys.get(entry.getKey()) != 0 && periodKeys.get(entry.getKey()) != 2))
 					throw new IllegalStateException("Incomplete index keys: " + entry.getValue().getName());
 			return new ArrayList<>(result.values());
 		}

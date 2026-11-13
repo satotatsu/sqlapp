@@ -44,6 +44,12 @@ public class Db2HostCreateIndexFactory extends CreateIndexFactory {
 			throw new IllegalArgumentException("Sparse (WHERE) indexes require Db2 for i: " + index.getName());
 		if (cluster && platform != Platform.ZOS)
 			throw new IllegalArgumentException("CLUSTER indexes require Db2 for z/OS: " + index.getName());
+		boolean withoutOverlaps = flag(index, Db2HostIndexes.BUSINESS_TIME_WITHOUT_OVERLAPS);
+		if (withoutOverlaps && (platform != Platform.ZOS || !index.isUnique() || !index.getIncludes().isEmpty()
+				|| !Db2HostCreateTableFactory.hasBusinessTime(table)))
+			throw new IllegalArgumentException(
+					"BUSINESS_TIME WITHOUT OVERLAPS requires a unique z/OS index on a BUSINESS_TIME table: "
+							+ index.getName());
 		if (partitioned != null && !List.of("Y", "N").contains(partitioned))
 			throw new IllegalArgumentException("Invalid index partitioning state: " + partitioned);
 		builder.unique(index.isUnique());
@@ -59,6 +65,8 @@ public class Db2HostCreateIndexFactory extends CreateIndexFactory {
 			builder.comma(count++ > 0);
 			key(column, builder);
 		}
+		if (withoutOverlaps)
+			builder._add(", BUSINESS_TIME WITHOUT OVERLAPS");
 		builder._add(")");
 		if (!index.getIncludes().isEmpty()) {
 			builder._add(" INCLUDE (");

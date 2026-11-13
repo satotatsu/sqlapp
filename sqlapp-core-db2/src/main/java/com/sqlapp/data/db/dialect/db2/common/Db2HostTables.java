@@ -14,8 +14,25 @@ public final class Db2HostTables {
 	public static final String SYSTEM_NAME = "DB2_HOST_SYSTEM_NAME";
 	/** Table: "Y" when versioning uses ON DELETE ADD EXTRA ROW. */
 	public static final String VERSIONING_EXTRA_ROW = "DB2_HOST_VERSIONING_EXTRA_ROW";
-	/** Table: "HISTORY" for a z/OS history table (SYSTABLES.TYPE H). */
+	/**
+	 * Table: "HISTORY" or "ARCHIVE" for a z/OS history (SYSTABLES.TYPE H) or
+	 * archive (TYPE R) table.
+	 */
 	public static final String TABLE_KIND = "DB2_HOST_TABLE_KIND";
+	/** Table: z/OS archive table schema of an archive-enabled table. */
+	public static final String ARCHIVE_SCHEMA = "DB2_HOST_ARCHIVE_SCHEMA";
+	/** Table: z/OS archive table name of an archive-enabled table. */
+	public static final String ARCHIVE_TABLE = "DB2_HOST_ARCHIVE_TABLE";
+	/** Table: "Y" for z/OS APPEND YES. */
+	public static final String APPEND = "DB2_HOST_APPEND";
+	/** Table: "Y" for a z/OS VOLATILE table. */
+	public static final String VOLATILE = "DB2_HOST_VOLATILE";
+	/** Table: "Y" for z/OS DATA CAPTURE CHANGES. */
+	public static final String DATA_CAPTURE = "DB2_HOST_DATA_CAPTURE";
+	/** Table: z/OS AUDIT option, "CHANGES" or "ALL". */
+	public static final String AUDIT = "DB2_HOST_AUDIT";
+	/** Table: z/OS validation procedure program name (VALIDPROC). */
+	public static final String VALIDPROC = "DB2_HOST_VALIDPROC";
 	/**
 	 * Column: ROW_BEGIN, ROW_END or TRANSACTION_START_ID. DDL comes from the
 	 * table's SYSTEM_TIME period and versioning; the marker guards against a model

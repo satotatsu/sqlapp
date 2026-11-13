@@ -16,7 +16,8 @@ import com.sqlapp.data.schemas.SchemaObjectProperties;
  * Host schema CREATE: column masks follow the other schema objects, then row
  * permissions, then explicit ACTIVATE ROW/COLUMN ACCESS CONTROL. Activation
  * comes last so tables are never activated before their permissions exist. ADD
- * VERSIONING statements follow all tables so history tables exist first.
+ * VERSIONING and ENABLE ARCHIVE follow all tables so history and archive tables
+ * exist first.
  */
 public class Db2HostCreateSchemaFactory extends CreateSchemaFactory {
 	@Override
@@ -32,11 +33,12 @@ public class Db2HostCreateSchemaFactory extends CreateSchemaFactory {
 		// Validate the snapshot before returning any partial plan.
 		Db2RowPermissions.createSql(schema);
 		List<SqlOperation> created = super.createSql(schema);
-		// History tables must exist before ADD VERSIONING, whatever the table order.
+		// History/archive tables must exist before the linking ALTER, whatever the
+		// order.
 		List<SqlOperation> result = new java.util.ArrayList<>();
 		List<SqlOperation> versioning = new java.util.ArrayList<>();
 		for (SqlOperation operation : created)
-			(Db2HostCreateTableFactory.isVersioning(operation) ? versioning : result).add(operation);
+			(Db2HostCreateTableFactory.isTableLink(operation) ? versioning : result).add(operation);
 		result.addAll(versioning);
 		for (String sql : Db2RowPermissions.permissionSql(schema))
 			addSql(result, createSqlBuilder()._add(sql), SqlType.CREATE, schema);

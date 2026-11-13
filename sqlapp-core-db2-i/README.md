@@ -304,15 +304,21 @@ Catalog values that cannot be represented fail instead of being dropped.
 | Placement | `IN db.ts` for an explicit table space, `IN DATABASE db` for an implicit one | `FOR SYSTEM NAME` when the system name differs |
 | Encoding | Table `CCSID EBCDIC/ASCII/UNICODE`; column `FOR BIT/SBCS/MIXED DATA` | Column `CCSID n`; CCSID 65535 becomes `FOR BIT DATA` |
 | Partitioning | Table-controlled RANGE (`PARTITION n ENDING AT (...)`) | RANGE (`STARTING FROM ... ENDING AT ...`) and `HASH ... INTO n PARTITIONS` |
-| Temporal | SYSTEM_TIME and BUSINESS_TIME periods, history tables (TYPE H), versioning incl. ON DELETE ADD EXTRA ROW | SYSTEM_TIME period and versioning from SYSPERIODS |
+| Temporal | SYSTEM_TIME and BUSINESS_TIME periods, history tables (TYPE H), versioning incl. ON DELETE ADD EXTRA ROW, BUSINESS_TIME WITHOUT OVERLAPS keys and unique indexes | SYSTEM_TIME period and versioning from SYSPERIODS |
+| Table options | APPEND YES, VOLATILE, DATA CAPTURE CHANGES, AUDIT CHANGES/ALL, VALIDPROC | — |
+| Archiving | Archive tables (TYPE R) and `ALTER TABLE ... ENABLE ARCHIVE USE ...` | — |
 | Generated columns | ROW BEGIN/END, TRANSACTION START ID, ROW CHANGE TIMESTAMP, IMPLICITLY HIDDEN | Same |
 | Access control | Column masks, explicit row permissions, ACTIVATE ROW/COLUMN ACCESS CONTROL | Same |
 
 DDL notes:
 
-- Table CREATE emits `PERIOD` clauses and a separate
-  `ALTER TABLE ... ADD VERSIONING USE HISTORY TABLE ...`. Schema CREATE moves
-  every ADD VERSIONING after all tables, so history tables exist first.
+- Table CREATE emits `PERIOD` clauses before the keys, and separate
+  `ALTER TABLE ... ADD VERSIONING USE HISTORY TABLE ...` and
+  `ALTER TABLE ... ENABLE ARCHIVE USE ...` statements. Schema CREATE moves
+  these ALTERs after all tables, so history and archive tables exist first.
+- BUSINESS_TIME WITHOUT OVERLAPS is stored as
+  `specifics["DB2_HOST_BUSINESS_TIME_WITHOUT_OVERLAPS"]` on the key or index;
+  the period columns are not repeated in its column list.
 - Schema CREATE emits masks after the other objects, then row permissions,
   then ACTIVATE statements, so a table is never activated before its rules
   exist. Implicit default permissions are not read; activation recreates them.
@@ -328,8 +334,10 @@ Behavior changes for existing users:
 - Host TIMESTAMP precision is now read from SYSCOLUMNS.SCALE (z/OS) and
   SYSCOLUMNS.DATETIME_PRECISION (IBM i). It was previously taken from the
   storage length, which produced invalid precisions such as `TIMESTAMP(10)`.
-- z/OS table reads include history tables (SYSTABLES.TYPE H); schema
-  discovery includes schemas that contain them.
+- z/OS table reads include history and archive tables (SYSTABLES.TYPE H
+  and R); schema discovery includes schemas that contain them.
+- z/OS tables with an edit procedure (EDITPROC) now fail explicitly. They were
+  previously read without it, which silently dropped the procedure.
 - Tables with row-begin/end, transaction-start-ID or row change timestamp
   columns, z/OS FOR BIT DATA columns and IBM i explicit CCSIDs used to fail or
   lose these attributes; they are now read and recreated.
@@ -344,11 +352,13 @@ Not covered, or verified only by unit tests:
   These views can be slow on large partitioned tables. The PARTITIONING_KEYS
   list must name existing columns. Distributed (DB2 Multisystem) tables fail.
 - IBM i IS_SPANNING_INDEX is mapped from `YES`/`NO`; any other value fails.
-- z/OS EXCLUDE NULL KEYS, PADDED, COMPRESS, buffer pools, storage groups,
-  EDITPROC/VALIDPROC and archive relationships are not recreated. Db2 does not
-  expose EXCLUDE NULL KEYS in SYSINDEXES, so it cannot be detected.
-- z/OS BUSINESS_TIME WITHOUT OVERLAPS keys and indexes, inclusive period ends,
-  and row-begin/end columns outside a SYSTEM_TIME period fail.
+- z/OS EXCLUDE NULL KEYS, PADDED, COMPRESS, buffer pools and storage groups
+  are not recreated. Db2 does not expose EXCLUDE NULL KEYS in SYSINDEXES, so
+  it cannot be detected.
+- z/OS EDITPROC fails because WITH/WITHOUT ROW ATTRIBUTES cannot be
+  determined from the catalog columns read here.
+- z/OS inclusive BUSINESS_TIME ends (key period role `I`) and row-begin/end
+  columns outside a SYSTEM_TIME period fail.
 - IBM i record format names (RCDFMT) are not available from the SQL catalog
   views used here and are not recreated. IBM i versioning that is defined but
   not established (VERSIONING_STATUS `D`) fails.
@@ -366,7 +376,7 @@ security attributes listed above; it is not a full-fidelity database backup or
 migration implementation. Storage options (buffer pools, storage groups,
 compression), table space creation, DDS file attributes, encoded-vector
 indexes and unlisted privilege categories remain outside coverage. Routine/trigger recreation has the limits above. Unrepresented physical attributes cannot be recreated.
-Schema discovery on z/OS lists schemas containing ordinary or history tables, views, user
+Schema discovery on z/OS lists schemas containing ordinary, history or archive tables, views, user
 sequences, active user routines, triggers, aliases, legacy synonyms or types. IBM i uses
 SQL naming and ordinary SQL tables; DDS physical/logical file recreation is not supported.
 

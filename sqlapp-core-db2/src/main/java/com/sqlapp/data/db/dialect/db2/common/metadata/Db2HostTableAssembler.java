@@ -48,8 +48,11 @@ final class Db2HostTableAssembler {
 		if (unsupported != null && !unsupported.isBlank())
 			throw new SQLException("Unsupported table attributes: " + unsupported + " (" + table.getName() + ")");
 		var pending = new Pending();
-		if ("H".equals(Db2HostSupplementalReaders.optional(rs, "TABLE_KIND")))
+		String kind = Db2HostSupplementalReaders.optional(rs, "TABLE_KIND");
+		if ("H".equals(kind))
 			table.getSpecifics().put(Db2HostTables.TABLE_KIND, "HISTORY");
+		else if ("R".equals(kind))
+			table.getSpecifics().put(Db2HostTables.TABLE_KIND, "ARCHIVE");
 		String control = Db2HostSupplementalReaders.optional(rs, "ACCESS_CONTROL");
 		if (control != null)
 			table.getSpecifics().put(Db2HostSecurityReaders.ACCESS_CONTROL, control.strip());
@@ -90,6 +93,30 @@ final class Db2HostTableAssembler {
 			if (tableSpace != null && !implicitSpace)
 				table.setTableSpaceName(tableSpace);
 		}
+		String archive = blankToNull(Db2HostSupplementalReaders.optional(rs, "ARCHIVE_TABLE"));
+		if (archive != null) {
+			String archiveSchema = blankToNull(Db2HostSupplementalReaders.optional(rs, "ARCHIVE_SCHEMA"));
+			if (archiveSchema == null)
+				throw new SQLException("Archive table without schema: " + table.getName());
+			table.getSpecifics().put(Db2HostTables.ARCHIVE_SCHEMA, archiveSchema);
+			table.getSpecifics().put(Db2HostTables.ARCHIVE_TABLE, archive);
+		}
+		if (yes(rs, "APPEND_FLAG", "N"))
+			table.getSpecifics().put(Db2HostTables.APPEND, "Y");
+		if (yes(rs, "VOLATILE_FLAG", "N"))
+			table.getSpecifics().put(Db2HostTables.VOLATILE, "Y");
+		if (yes(rs, "DATA_CAPTURE", " "))
+			table.getSpecifics().put(Db2HostTables.DATA_CAPTURE, "Y");
+		String audit = Db2HostSupplementalReaders.optional(rs, "AUDIT_MODE");
+		if (audit != null && !audit.isBlank())
+			table.getSpecifics().put(Db2HostTables.AUDIT, switch (audit) {
+			case "C" -> "CHANGES";
+			case "A" -> "ALL";
+			default -> throw new SQLException("Unknown audit option " + audit + ": " + table.getName());
+			});
+		String validproc = blankToNull(Db2HostSupplementalReaders.optional(rs, "VALIDPROC"));
+		if (validproc != null)
+			table.getSpecifics().put(Db2HostTables.VALIDPROC, validproc);
 		String encoding = Db2HostSupplementalReaders.optional(rs, "ENCODING_SCHEME");
 		if (encoding != null && !encoding.isBlank())
 			table.getSpecifics().put(Db2HostTables.ENCODING_SCHEME, switch (encoding) {
@@ -98,6 +125,19 @@ final class Db2HostTableAssembler {
 			case "U" -> "UNICODE";
 			default -> throw new SQLException("Unsupported table encoding scheme: " + encoding);
 			});
+	}
+
+	/**
+	 * Reads a Y/no flag; {@code no} is the catalog's negative value (blank is also
+	 * accepted). Any other value fails.
+	 */
+	private static boolean yes(ExResultSet rs, String name, String no) throws SQLException {
+		String value = Db2HostSupplementalReaders.optional(rs, name);
+		if (value == null || value.isBlank() || value.equals(no.strip()))
+			return false;
+		if (!"Y".equals(value))
+			throw new SQLException("Invalid catalog flag " + name + ": " + value);
+		return true;
 	}
 
 	/** Adds the partition described by one tables.sql row, if any. */

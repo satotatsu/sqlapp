@@ -16,6 +16,7 @@ import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TemporalPeriod;
 import com.sqlapp.data.schemas.TemporalPeriodType;
+import com.sqlapp.data.schemas.UniqueConstraint;
 
 /**
  * Host CREATE TABLE. Besides columns and keys it recreates the modeled physical
@@ -28,6 +29,9 @@ import com.sqlapp.data.schemas.TemporalPeriodType;
 public class Db2HostCreateTableFactory extends Db2CreateTableFactory {
 	private static final String SYSTEM_TIME = "SYSTEM_TIME";
 	private static final String BUSINESS_TIME = "BUSINESS_TIME";
+	private static final List<String> ZOS_ONLY = List.of(Db2HostTables.APPEND, Db2HostTables.VOLATILE,
+			Db2HostTables.DATA_CAPTURE, Db2HostTables.AUDIT, Db2HostTables.VALIDPROC, Db2HostTables.ARCHIVE_TABLE,
+			Db2HostTables.ARCHIVE_SCHEMA);
 
 	private Platform platform() {
 		return ((AbstractDb2HostDialect) getDialect()).getPlatform();
@@ -49,6 +53,10 @@ public class Db2HostCreateTableFactory extends Db2CreateTableFactory {
 						|| table.getSpecifics().get(Db2HostTables.ENCODING_SCHEME) != null))
 			throw new IllegalArgumentException(
 					"Table spaces and CCSID encoding schemes require Db2 for z/OS: " + table.getName());
+		if (platform != Platform.ZOS && ZOS_ONLY.stream().anyMatch(key -> table.getSpecifics().get(key) != null))
+			throw new IllegalArgumentException(
+					"APPEND, VOLATILE, DATA CAPTURE, AUDIT, VALIDPROC and archiving require Db2 for z/OS: "
+							+ table.getName());
 		if (platform != Platform.IBM_I && table.getSpecifics().get(Db2HostTables.SYSTEM_NAME) != null)
 			throw new IllegalArgumentException("FOR SYSTEM NAME requires Db2 for i: " + table.getName());
 		if (table.getTableSpaceName() != null && table.getSpecifics().get(Db2HostTables.DATABASE) == null)
@@ -96,6 +104,31 @@ public class Db2HostCreateTableFactory extends Db2CreateTableFactory {
 				throw new IllegalArgumentException("Invalid z/OS encoding scheme: " + encoding);
 			builder.lineBreak()._add("CCSID ")._add(encoding);
 		}
+		String validproc = table.getSpecifics().get(Db2HostTables.VALIDPROC);
+		if (validproc != null) {
+			if (!validproc.matches("[A-Z#@$][A-Z0-9#@$]{0,7}"))
+				throw new IllegalArgumentException("Invalid VALIDPROC program name: " + validproc);
+			builder.lineBreak()._add("VALIDPROC ")._add(validproc);
+		}
+		String audit = table.getSpecifics().get(Db2HostTables.AUDIT);
+		if (audit != null) {
+			if (!List.of("CHANGES", "ALL").contains(audit))
+				throw new IllegalArgumentException("Invalid AUDIT option: " + audit);
+			builder.lineBreak()._add("AUDIT ")._add(audit);
+		}
+		if (flag(table, Db2HostTables.DATA_CAPTURE))
+			builder.lineBreak()._add("DATA CAPTURE CHANGES");
+		if (flag(table, Db2HostTables.APPEND))
+			builder.lineBreak()._add("APPEND YES");
+		if (flag(table, Db2HostTables.VOLATILE))
+			builder.lineBreak()._add("VOLATILE");
+	}
+
+	private static boolean flag(Table table, String key) {
+		String value = table.getSpecifics().get(key);
+		if (value != null && !"Y".equals(value))
+			throw new IllegalArgumentException("Invalid " + key + ": " + value);
+		return value != null;
 	}
 
 	private void addPartitioning(Partitioning partitioning, Db2SqlBuilder builder) {
@@ -170,16 +203,55 @@ public class Db2HostCreateTableFactory extends Db2CreateTableFactory {
 
 	@Override
 	protected void addConstraintDefinitions(final Table table, final Db2SqlBuilder builder) {
-		super.addConstraintDefinitions(table, builder);
+		// Periods precede the keys that may reference BUSINESS_TIME.
 		for (final TemporalPeriod period : table.getTemporalPeriods()) {
 			builder.lineBreak().comma()._add("PERIOD ")._add(period.getName()).space()._add("(")
 					.name(period.getStartColumnName()).comma().name(period.getEndColumnName())._add(")");
 		}
+		super.addConstraintDefinitions(table, builder);
+	}
+
+	@Override
+	protected void addUniqueConstraintDefinitions(final Table table, final Db2SqlBuilder builder) {
+		for (UniqueConstraint constraint : table.getConstraints().getUniqueConstraints()) {
+			String withoutOverlaps = constraint.getSpecifics().get(Db2HostIndexes.BUSINESS_TIME_WITHOUT_OVERLAPS);
+			if (withoutOverlaps == null) {
+				addConstraintDefinition(constraint, builder);
+				continue;
+			}
+			if (!"Y".equals(withoutOverlaps) || platform() != Platform.ZOS || constraint.getColumns().isEmpty()
+					|| !hasBusinessTime(table))
+				throw new IllegalArgumentException(
+						"BUSINESS_TIME WITHOUT OVERLAPS requires Db2 for z/OS, key columns and a BUSINESS_TIME period: "
+								+ constraint.getName());
+			builder.lineBreak().comma();
+			if (constraint.getName() != null && !constraint.getName().isBlank())
+				builder._add("CONSTRAINT ").name(constraint.getName()).space();
+			builder._add(constraint.isPrimaryKey() ? "PRIMARY KEY (" : "UNIQUE (");
+			int count = 0;
+			for (var column : constraint.getColumns())
+				builder.comma(count++ > 0).name(column.getName());
+			builder._add(", BUSINESS_TIME WITHOUT OVERLAPS)");
+		}
+	}
+
+	static boolean hasBusinessTime(Table table) {
+		return table != null && table.getTemporalPeriods().stream().anyMatch(
+				p -> p.getPeriodType() == TemporalPeriodType.APPLICATION_TIME && BUSINESS_TIME.equals(p.getName()));
 	}
 
 	@Override
 	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
 		super.addOtherDefinitions(table, result);
+		String archive = table.getSpecifics().get(Db2HostTables.ARCHIVE_TABLE);
+		if (archive != null) {
+			String archiveSchema = table.getSpecifics().get(Db2HostTables.ARCHIVE_SCHEMA);
+			var archiveTable = new Table(archive);
+			archiveTable.setSchemaName(archiveSchema == null ? table.getSchemaName() : archiveSchema);
+			Db2SqlBuilder builder = createSqlBuilder();
+			builder._add("ALTER TABLE ").name(table, true)._add(" ENABLE ARCHIVE USE ").name(archiveTable, true);
+			addSql(result, builder, SqlType.ALTER, table);
+		}
 		var versioning = table.getSystemVersioning();
 		if (versioning == null || !versioning.isEnable())
 			return;
@@ -193,10 +265,14 @@ public class Db2HostCreateTableFactory extends Db2CreateTableFactory {
 		addSql(result, builder, SqlType.ALTER, table);
 	}
 
-	/** Versioning ALTERs; schema CREATE moves them after every table. */
-	static boolean isVersioning(SqlOperation operation) {
+	/**
+	 * ADD VERSIONING and ENABLE ARCHIVE ALTERs reference a second table; schema
+	 * CREATE moves them after every table.
+	 */
+	static boolean isTableLink(SqlOperation operation) {
 		return operation.getSqlType() == SqlType.ALTER && operation.getSqlText() != null
-				&& operation.getSqlText().contains(" ADD VERSIONING USE HISTORY TABLE ");
+				&& (operation.getSqlText().contains(" ADD VERSIONING USE HISTORY TABLE ")
+						|| operation.getSqlText().contains(" ENABLE ARCHIVE USE "));
 	}
 
 	private void validateTemporal(Table table, Platform platform) {

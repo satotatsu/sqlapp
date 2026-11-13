@@ -16,6 +16,13 @@ public final class Db2HostIndexes {
 	 */
 	public static final String PARTITIONED = "DB2_HOST_PARTITIONED";
 
+	/**
+	 * "Y" when a z/OS unique index, primary key or unique constraint ends with
+	 * BUSINESS_TIME WITHOUT OVERLAPS. The period columns are not repeated in the
+	 * key column list.
+	 */
+	public static final String BUSINESS_TIME_WITHOUT_OVERLAPS = "DB2_HOST_BUSINESS_TIME_WITHOUT_OVERLAPS";
+
 	private Db2HostIndexes() {
 	}
 }

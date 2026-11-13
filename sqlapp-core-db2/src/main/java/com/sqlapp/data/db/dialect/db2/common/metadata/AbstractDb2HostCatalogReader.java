@@ -137,6 +137,11 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 		}
 
 		@Override
+		protected MviewReader newMviewReader() {
+			return new Db2HostMviewReader(getDialect(), resources);
+		}
+
+		@Override
 		protected MaskReader newMaskReader() {
 			return new Db2HostSecurityReaders.Masks(getDialect(), resources);
 		}
@@ -429,6 +434,20 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 								constraint.setTableName(table);
 								result.put(key, constraint);
 							}
+							String period = Db2HostSupplementalReaders.optional(rs, "KEY_PERIOD");
+							if (period != null && !period.isBlank()) {
+								// BUSINESS_TIME WITHOUT OVERLAPS stores the period's start (B) and
+								// exclusive end (C) as trailing key columns.
+								if (!"B".equals(period) && !"C".equals(period))
+									throw new SQLException("Unsupported key period role " + period + ": " + name);
+								constraint.getSpecifics().put(
+										com.sqlapp.data.db.dialect.db2.common.Db2HostIndexes.BUSINESS_TIME_WITHOUT_OVERLAPS,
+										"Y");
+								return;
+							}
+							if (constraint.getSpecifics().get(
+									com.sqlapp.data.db.dialect.db2.common.Db2HostIndexes.BUSINESS_TIME_WITHOUT_OVERLAPS) != null)
+								throw new SQLException("Key column follows BUSINESS_TIME WITHOUT OVERLAPS: " + name);
 							constraint.getColumns().add(new Column(identifier(rs, "COLUMN_NAME")));
 						}
 					});
