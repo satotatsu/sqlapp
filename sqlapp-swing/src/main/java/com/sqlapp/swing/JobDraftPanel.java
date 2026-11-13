@@ -476,44 +476,23 @@ final class JobDraftPanel extends JPanel {
 			if (tables.convertRowIndexToView(row) < 0)
 				hidden++;
 		}
-		count.setText(tables.getRowCount() + " / " + model.getRowCount() + " tables; " + selected + " selected ("
-				+ hidden + " hidden)");
-		if (snapshot != null) {
-			long available = snapshot.tables().stream()
-					.filter(table -> fullScanInsert ? table.insertSelectable() : table.selectable()).count();
-			count.setText(count.getText() + (fileExport ? "; export eligible: " : "; data-copy eligible: ") + available
-					+ "; unavailable: " + (snapshot.tables().size() - available));
-		}
-		if (snapshot == null)
-			selectionHelp.setText("Read Schema to see the tables available for selection.");
-		else if (model.getRowCount() == 0)
-			selectionHelp.setText("No tables in this Schema. Choose another Schema or source schema.");
-		else if (!schemaOnly && snapshot.tables().stream()
-				.noneMatch(table -> fullScanInsert ? table.insertSelectable() : table.selectable()))
-			selectionHelp.setText(fileExport ? "No exportable tables. Review Availability for supported file types."
-					: "No eligible tables. Review Availability: primary keys and supported copy types are required.");
-		else if (unavailableOnly.isSelected())
-			selectionHelp.setText(
-					"Review Availability for each restriction. Existing selections remain included; this filter changes no copy rules.");
-		else if (selectedOnly.isSelected() && selected == 0)
-			selectionHelp.setText("No tables selected. Turn off Selected tables only to choose tables.");
-		else if (tables.getRowCount() == 0)
-			selectionHelp.setText(selected == 0 ? "No tables match. Clear the filter to see available tables."
-					: "No tables match. Selected tables are hidden and will still be included; clear the filter to review them.");
-		else if (selected == 0)
-			selectionHelp.setText(fileExport ? "Tick Include for each table to export; a primary key is not required."
-					: "Tick Include for each table to copy, or use Select visible eligible.");
-		else if (hidden > 0)
-			selectionHelp.setText(
-					"Hidden selections will also be included. Clear the filter to review every selected table.");
-		else
-			selectionHelp.setText(selectionReady != null
-					? "Selection ready. Use selected tables, then save job settings and review."
-					: fileDraftWriter != null
-							? "Selection ready. Save the shared transfer job; saving does not move data."
-							: managedDirectory == null
-									? "Selection ready. Create a draft to review the generated settings in the editor."
-									: "Selection ready. Save and review plan checks the target; it does not copy rows.");
+		final long eligible = snapshot == null ? 0
+				: snapshot.tables().stream()
+						.filter(table -> fullScanInsert ? table.insertSelectable() : table.selectable()).count();
+		final var state = new JobDraftSelectionGuidance.State(snapshot != null, tables.getRowCount(),
+				model.getRowCount(), selected, hidden, eligible, snapshot == null ? 0 : snapshot.tables().size(),
+				fileExport, schemaOnly, unavailableOnly.isSelected(), selectedOnly.isSelected(), purpose());
+		count.setText(JobDraftSelectionGuidance.count(state));
+		selectionHelp.setText(JobDraftSelectionGuidance.help(state));
+	}
+
+	private JobDraftSelectionGuidance.Purpose purpose() {
+		if (selectionReady != null)
+			return JobDraftSelectionGuidance.Purpose.TABLE_SELECTION;
+		if (fileDraftWriter != null)
+			return JobDraftSelectionGuidance.Purpose.FILE_JOB;
+		return managedDirectory == null ? JobDraftSelectionGuidance.Purpose.EDITOR_DRAFT
+				: JobDraftSelectionGuidance.Purpose.SAVED_MIGRATION;
 	}
 
 	private void updateSelection(final boolean include, final boolean all) {

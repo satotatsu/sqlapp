@@ -2,6 +2,7 @@
 package com.sqlapp.swing;
 
 import java.math.BigInteger;
+import java.nio.file.Path;
 import com.sqlapp.data.db.command.migration.transfer.*;
 
 /**
@@ -171,5 +172,60 @@ final class FileTransferSummary {
 	private static void warnings(StringBuilder text, java.util.List<String> warnings) {
 		text.append("\nCompatibility warnings: ").append(warnings.size()).append('\n');
 		warnings.forEach(warning -> text.append("  ").append(warning).append('\n'));
+	}
+
+	/**
+	 * Schema SQL tab content, or null when the result has no target preparation SQL.
+	 * Protected inputs are null when the draft cannot be offered for editing.
+	 */
+	static TransferSchemaSql schemaSql(final Object value, final FileTransferDesktopService.Reviewed prior,
+			final java.util.List<Path> sourceFiles) {
+		final var statements = value instanceof FileTransferDesktopService.Reviewed review
+				? review.review().schemaPreparation().statements()
+				: value instanceof TransferFileImportService.Outcome outcome ? outcome.schemaPreparation().planned()
+						: java.util.List.<com.sqlapp.data.db.command.migration.transfer.TransferSchemaPreparation.Statement>of();
+		final boolean hasSql = !statements.isEmpty()
+				|| value instanceof FileTransferDesktopService.Reviewed review && review.review().staging() != null
+				|| value instanceof TransferFileImportService.Outcome outcome && outcome.staging() != null;
+		if (!hasSql)
+			return null;
+		final var text = new StringBuilder(
+				"-- Reviewed missing-table preparation. DDL may remain applied after failure.\n\n");
+		final var warnings = value instanceof FileTransferDesktopService.Reviewed review
+				? review.review().schemaPreparation().warnings()
+				: ((TransferFileImportService.Outcome) value).schemaPreparation().warnings();
+		for (String warning : warnings)
+			text.append("-- WARNING: ").append(warning.replace('\n', ' ').replace('\r', ' ')).append('\n');
+		TransferSchemaSql.appendStatements(text, statements);
+		final var context = value instanceof FileTransferDesktopService.Reviewed review ? review : prior;
+		String draft = value instanceof FileTransferDesktopService.Reviewed review ? review.schemaSqlDraft()
+				: FileTransferDesktopService.draftFor((TransferFileImportService.Outcome) value, prior);
+		if (draft != null && value instanceof TransferFileImportService.Outcome outcome)
+			draft = "-- RECORDED IMPORT: " + outcome.phase() + "; completed statements: "
+					+ outcome.schemaPreparation().completedStatements() + "; uncertain attempt: "
+					+ outcome.schemaPreparation().attemptedStatement()
+					+ "\n-- FULL planned SQL includes statements that may already be applied. Inspect and repair the target before retrying.\n"
+					+ "-- This is not an automatic resume script.\n\n" + draft;
+		java.util.List<Path> inputs = null;
+		if (draft != null && context != null) {
+			inputs = new java.util.ArrayList<>();
+			protectPackage(inputs, context.review().manifestFile().toAbsolutePath().getParent(),
+					context.manifest());
+			if (value instanceof TransferFileImportService.Outcome outcome && outcome.auditFile() != null) {
+				inputs.add(outcome.auditFile());
+				protectPackage(inputs, outcome.auditFile().toAbsolutePath().getParent(), context.manifest());
+			}
+			inputs.addAll(sourceFiles);
+		}
+		return new TransferSchemaSql(draft == null ? text.toString() : draft, draft, inputs);
+	}
+
+	private static void protectPackage(java.util.List<Path> inputs, Path folder,
+			TransferFilePackageIO.Manifest manifest) {
+		for (var name : java.util.List.of("manifest.json", "transfer.yaml", "source-schema.xml",
+				"transfer-mapping.yaml"))
+			inputs.add(folder.resolve(name));
+		for (var table : manifest.tables())
+			inputs.add(folder.resolve(table.file()));
 	}
 }

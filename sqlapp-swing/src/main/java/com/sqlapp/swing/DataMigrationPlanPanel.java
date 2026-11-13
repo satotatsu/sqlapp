@@ -15,7 +15,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
@@ -55,27 +54,19 @@ final class DataMigrationPlanPanel extends JPanel {
 	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
 	final SavedReportButton savedReport = new SavedReportButton(this::isBusy);
 	private final EditorFileChooser inputDialogs = new EditorFileChooser();
-	private final EditorFileChooser outputDialogs = new EditorFileChooser();
+	final EditorFileChooser outputDialogs = new EditorFileChooser();
 	private final JPanel settings = new JPanel(new BorderLayout(4, 4));
 	private final JToggleButton advancedToggle = new JToggleButton("Advanced options");
 	private final Planner planner;
+	private final DataMigrationInputActions inputActions;
+	private final DataMigrationExecutionActions executionActions;
 	private final Saver saver;
-	private DataMigrationPlanningService.Result result;
-	private long revision;
+	DataMigrationPlanningService.Result result;
+	long revision;
 	private java.util.function.Predicate<Path> jobEditor;
-	private PlanningJdbc.Spec reviewedSource;
-	private PlanningJdbc.Spec reviewedTarget;
-	private DataMigrationExecutionService.Outcome execution;
-	private boolean executing;
-	private boolean busy;
-	private DataMigrationExecutionControl control;
-	private final javax.swing.Timer progressTimer = new javax.swing.Timer(250, event -> refreshProgress());
-	private final Executor executor;
-	private final ExecutionSaver executionSaver;
-	private final DraftDiscovery draftDiscovery;
-	private final java.util.function.Function<DataMigrationDraftService.Prepared, com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> draftDialog;
-	private final EditorFileChooser workspaceDialogs = new EditorFileChooser();
-	private final ConnectionTester connectionTester;
+	PlanningJdbc.Spec reviewedSource;
+	PlanningJdbc.Spec reviewedTarget;
+	boolean busy;
 
 	@FunctionalInterface
 	interface ConnectionTester {
@@ -145,13 +136,13 @@ final class DataMigrationPlanPanel extends JPanel {
 			final java.util.function.Function<DataMigrationDraftService.Prepared, com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot> dialog,
 			final ConnectionTester tester) {
 		super(new BorderLayout(8, 8));
-		connectionTester = java.util.Objects.requireNonNull(tester);
-		draftDiscovery = java.util.Objects.requireNonNull(discovery);
-		draftDialog = dialog == null ? this::showNewMigration : dialog;
-		this.executor = java.util.Objects.requireNonNull(executor, "executor");
-		this.executionSaver = java.util.Objects.requireNonNull(executionSaver, "executionSaver");
+		inputActions = new DataMigrationInputActions(this, java.util.Objects.requireNonNull(discovery), dialog,
+				java.util.Objects.requireNonNull(tester));
 		this.planner = java.util.Objects.requireNonNull(planner, "planner");
 		this.saver = java.util.Objects.requireNonNull(saver, "saver");
+		executionActions = new DataMigrationExecutionActions(this,
+				java.util.Objects.requireNonNull(executor, "executor"),
+				java.util.Objects.requireNonNull(executionSaver, "executionSaver"));
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var fileRow = new JPanel(new BorderLayout(8, 0));
 		final var browse = new JButton("Browse…");
@@ -201,18 +192,6 @@ final class DataMigrationPlanPanel extends JPanel {
 		showExecution.setEnabled(false);
 		showVerification.setEnabled(false);
 		saveVerification.setEnabled(false);
-		showExecution.addActionListener(event -> view.showReview(execution.review()));
-		showVerification.addActionListener(
-				event -> view.showReview(new ReportReviewService().verification(execution.verificationReport())));
-		saveVerification.addActionListener(event -> {
-			final var chooser = outputChooser("data-verification.json");
-			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-				final var destination = chooser.getSelectedFile().toPath();
-				if (!Files.exists(destination) || JOptionPane.showConfirmDialog(this, "Replace " + destination + "?",
-						"Replace verification report", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION)
-					saveVerificationTo(destination);
-			}
-		});
 		final var input = new JPanel(new BorderLayout());
 		final var inputViewport = new JScrollPane(settings);
 		input.add(inputViewport, BorderLayout.CENTER);
@@ -227,10 +206,6 @@ final class DataMigrationPlanPanel extends JPanel {
 		controls.add(executionRow, BorderLayout.SOUTH);
 		input.add(controls, BorderLayout.SOUTH);
 		pause.setEnabled(false);
-		pause.addActionListener(event -> {
-			if (executing && control != null && control.requestPause())
-				refreshProgress();
-		});
 		final var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, input, view);
 		split.setResizeWeight(0.25);
 		split.setDividerLocation(355);
@@ -306,7 +281,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		for (final var fields : new ConnectionFields[] { source, target }) {
 			fields.test.addActionListener(event -> testConnection(fields));
 			fields.buildUrl.addActionListener(event -> buildConnectionUrl(fields,
-					url -> showUrlBuilder(url, fields == source ? "Source" : "Target")));
+					url -> inputActions.showUrlBuilder(url, fields == source ? "Source" : "Target")));
 			for (final var field : new JTextField[] { fields.jdbcUrl, fields.username, fields.password,
 					fields.driverClass }) {
 				field.getDocument().addDocumentListener(changed);
@@ -319,22 +294,12 @@ final class DataMigrationPlanPanel extends JPanel {
 			}
 		});
 		build.addActionListener(event -> build());
-		newMigration.addActionListener(event -> chooseNewMigration());
+		newMigration.addActionListener(event -> inputActions.chooseNewMigration());
 		save.addActionListener(event -> chooseSave());
 		save.setEnabled(false);
 		apply.setEnabled(false);
 		saveExecution.setEnabled(false);
-		apply.addActionListener(event -> confirmExecution());
-		saveExecution.addActionListener(event -> {
-			final var chooser = outputChooser("data-execution-audit.json");
-			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-				final var destination = chooser.getSelectedFile().toPath();
-				if (!Files.exists(destination) || JOptionPane.showConfirmDialog(this, "Replace " + destination + "?",
-						"Replace audit", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-					saveExecutionTo(destination);
-				}
-			}
-		});
+		apply.addActionListener(event -> executionActions.confirmExecution());
 	}
 
 	void setJobEditor(final java.util.function.Predicate<Path> jobEditor) {
@@ -385,7 +350,7 @@ final class DataMigrationPlanPanel extends JPanel {
 				configurationFile.getText());
 	}
 
-	private void busy(final boolean busy) {
+	void busy(final boolean busy) {
 		this.busy = busy;
 		savedReport.refresh();
 		ComponentEnablement.setTreeEnabled(settings, !busy);
@@ -395,274 +360,27 @@ final class DataMigrationPlanPanel extends JPanel {
 		refreshEditAction();
 		save.setEnabled(!busy && result != null);
 		apply.setEnabled(!busy && result != null && DataMigrationExecutionService.restriction(result) == null);
-		saveExecution.setEnabled(!busy && execution != null && execution.hasAudit());
-		showExecution.setEnabled(!busy && execution != null);
-		showVerification.setEnabled(!busy && execution != null && execution.verificationReport() != null);
-		saveVerification.setEnabled(showVerification.isEnabled());
+		executionActions.refreshActions(busy);
 	}
 
 	void chooseSourceSchema(final SchemaLister lister,
 			final java.util.function.Function<java.util.List<String>, String> picker) {
-		if (isBusy())
-			return;
-		final PlanningJdbc.Spec connection;
-		try {
-			connection = source.snapshot().spec();
-		} catch (IllegalArgumentException failure) {
-			status.setText("Source connection: enter a JDBC URL starting with jdbc: before choosing a schema.");
-			source.jdbcUrl.requestFocusInWindow();
-			return;
-		}
-		final char[] password = source.password.getPassword();
-		final long requested = revision;
-		busy(true);
-		status.setText("Reading source schema names. No table rows are read or written.");
-		new SwingWorker<java.util.List<String>, Void>() {
-			@Override
-			protected java.util.List<String> doInBackground() {
-				try {
-					return java.util.List.copyOf(lister.list(connection, password));
-				} finally {
-					Arrays.fill(password, '\0');
-				}
-			}
-
-			@Override
-			protected void done() {
-				try {
-					if (requested != revision) {
-						status.setText("Connection inputs changed. Choose the source schema again.");
-						return;
-					}
-					final var names = get();
-					final String selected = picker.apply(names);
-					if (requested != revision)
-						status.setText("Connection inputs changed. Choose the source schema again.");
-					else if (selected == null)
-						status.setText("Schema selection cancelled. Existing settings retained.");
-					else {
-						if (!selected.isEmpty() && !names.contains(selected))
-							throw new IllegalArgumentException("Choose a schema from the current source list.");
-						sourceSchema.setText(selected);
-						status.setText("Source schema selected for New migration: "
-								+ (selected.isEmpty() ? "current schema" : selected) + ". Saved jobs are unchanged.");
-					}
-				} catch (InterruptedException failure) {
-					Thread.currentThread().interrupt();
-					failed(failure);
-				} catch (ExecutionException failure) {
-					failed(failure.getCause());
-				} catch (RuntimeException failure) {
-					failed(failure);
-				} finally {
-					busy(false);
-				}
-			}
-
-			private void failed(Throwable failure) {
-				status.setText("Unable to read source schemas. Existing settings retained; see Details.");
-				statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
-			}
-		}.execute();
-	}
-
-	private void chooseNewMigration() {
-		if (isBusy())
-			return;
-		if (!validateNewMigrationConnections())
-			return;
-		final var chooser = workspaceDialogs.forDirectory("");
-		chooser.setDialogTitle("Choose a folder for migration settings");
-		if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
-			createMigration(chooser.getSelectedFile().toPath());
+		inputActions.chooseSourceSchema(lister, picker);
 	}
 
 	void buildConnectionUrl(final ConnectionFields fields, final java.util.function.Function<String, String> dialog) {
-		if (isBusy())
-			return;
-		if (fields != source && fields != target)
-			throw new IllegalArgumentException("Unknown connection fields.");
-		final long requested = revision;
-		busy(true);
-		try {
-			final String url = dialog.apply(fields.jdbcUrl.getText());
-			if (requested != revision)
-				status.setText("Connection inputs changed. Open Build URL again.");
-			else if (url == null)
-				status.setText("URL builder cancelled. Existing connection retained.");
-			else {
-				new PlanningJdbc.Spec(url, "", "");
-				fields.jdbcUrl.setText(url);
-				status.setText(
-						"JDBC URL updated. Enter credentials and use Test connection; no connection was opened.");
-			}
-		} catch (RuntimeException failure) {
-			status.setText("Unable to build the JDBC URL. Existing connection retained.");
-			statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
-		} finally {
-			busy(false);
-		}
-	}
-
-	private String showUrlBuilder(final String currentUrl, final String connectionName) {
-		return JdbcUrlBuilderPanel.showDialog(this, currentUrl, connectionName);
+		inputActions.buildConnectionUrl(fields, dialog);
 	}
 
 	void testConnection(final ConnectionFields fields) {
-		if (isBusy())
-			return;
-		if (fields != source && fields != target)
-			throw new IllegalArgumentException("Unknown connection fields.");
-		final String name = fields == source ? "Source" : "Target";
-		final PlanningJdbc.Spec connection;
-		try {
-			connection = fields.snapshot().spec();
-		} catch (IllegalArgumentException failure) {
-			status.setText(name + " connection: enter a JDBC URL starting with jdbc: before testing.");
-			fields.jdbcUrl.requestFocusInWindow();
-			return;
-		}
-		final char[] password = fields.password.getPassword();
-		final long requested = revision;
-		busy(true);
-		status.setText("Testing " + name.toLowerCase(java.util.Locale.ROOT)
-				+ " connection. No table rows are read or written.");
-		new SwingWorker<String, Void>() {
-			@Override
-			protected String doInBackground() {
-				try {
-					return connectionTester.test(connection, password);
-				} finally {
-					Arrays.fill(password, '\0');
-				}
-			}
-
-			@Override
-			protected void done() {
-				try {
-					if (requested != revision) {
-						status.setText("Connection inputs changed. Test the connection again.");
-						return;
-					}
-					final String product = get();
-					status.setText(name + " connection succeeded: " + product);
-					statusPanel.setDetails(status.getText()
-							+ "\nConnection and supported dialect checked. Inspect the migration plan to validate tables, keys and checkpoint state. This test does not approve execution.");
-				} catch (InterruptedException failure) {
-					Thread.currentThread().interrupt();
-					testFailed(failure);
-				} catch (ExecutionException failure) {
-					testFailed(failure.getCause());
-				} finally {
-					busy(false);
-				}
-			}
-
-			private void testFailed(final Throwable failure) {
-				status.setText(name + " connection failed. Check the URL, credentials and JDBC driver; see Details.");
-				statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
-			}
-		}.execute();
+		inputActions.testConnection(fields);
 	}
 
 	void createMigration(final Path parent) {
-		if (isBusy())
-			return;
-		if (!validateNewMigrationConnections())
-			return;
-		final PlanningJdbc.Spec connection = source.snapshot().spec();
-		final char[] password = source.password.getPassword();
-		final String schemaName = sourceSchema.getText();
-		final long requested = revision;
-		busy(true);
-		status.setText("Reading source tables for a new migration. No rows are copied.");
-		new SwingWorker<DataMigrationDraftService.Prepared, Void>() {
-			protected DataMigrationDraftService.Prepared doInBackground() {
-				try {
-					return draftDiscovery.discover(connection, password, schemaName, parent);
-				} finally {
-					Arrays.fill(password, '\0');
-				}
-			}
-
-			protected void done() {
-				boolean inspect = false;
-				try {
-					final var prepared = get();
-					if (requested != revision) {
-						status.setText("Connection inputs changed. Start New migration again.");
-						return;
-					}
-					workspaceDialogs.rememberDirectory(parent);
-					final var saved = draftDialog.apply(prepared);
-					if (saved != null && requested == revision) {
-						configurationFile.setText(saved.file().toString());
-						expectedFingerprint.setText(saved.fingerprint());
-						inspect = true;
-					} else
-						status.setText("New migration cancelled or inputs changed. Previous settings retained.");
-				} catch (InterruptedException failure) {
-					Thread.currentThread().interrupt();
-					creationFailed(failure);
-				} catch (ExecutionException failure) {
-					creationFailed(failure.getCause());
-				} catch (RuntimeException failure) {
-					creationFailed(failure);
-				} finally {
-					busy(false);
-				}
-				if (inspect)
-					build();
-			}
-		}.execute();
+		inputActions.createMigration(parent);
 	}
 
-	private void creationFailed(final Throwable failure) {
-		status.setText("New migration could not be created. Existing settings retained.");
-		statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
-	}
-
-	private boolean validateNewMigrationConnections() {
-		for (final var fields : new ConnectionFields[] { source, target }) {
-			try {
-				fields.snapshot().spec();
-			} catch (IllegalArgumentException failure) {
-				final String name = fields == source ? "Source" : "Target";
-				status.setText(name + " connection: enter a JDBC URL starting with jdbc: before New migration.");
-				statusPanel.setDetails(status.getText()
-						+ "\nYou can also load a saved connection profile. Passwords must be entered for this session.");
-				fields.jdbcUrl.requestFocusInWindow();
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot showNewMigration(
-			final DataMigrationDraftService.Prepared prepared) {
-		final var saved = new java.util.concurrent.atomic.AtomicReference<com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEditorIO.Snapshot>();
-		final var dialog = new javax.swing.JDialog(javax.swing.SwingUtilities.getWindowAncestor(this),
-				"New migration — select tables", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
-		final var draft = new JobDraftPanel(prepared.schema(), prepared.directory(), snapshot -> {
-			saved.set(snapshot);
-			dialog.dispose();
-		}, dialog::dispose);
-		dialog.setContentPane(draft);
-		dialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
-		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
-			@Override
-			public void windowClosing(java.awt.event.WindowEvent event) {
-				if (!draft.isBusy())
-					dialog.dispose();
-			}
-		});
-		dialog.setSize(1000, 620);
-		dialog.setLocationRelativeTo(this);
-		dialog.setVisible(true);
-		return saved.get();
-	}
-
-	private void build() {
+	void build() {
 		if (busy || blockedByProfile())
 			return;
 		final String path = configurationFile.getText().trim();
@@ -723,11 +441,27 @@ final class DataMigrationPlanPanel extends JPanel {
 	}
 
 	boolean isExecuting() {
-		return executing;
+		return executionActions.isExecuting();
+	}
+
+	void executeReviewed(final char[] sourcePassword, final char[] targetPassword) {
+		executionActions.executeReviewed(sourcePassword, targetPassword);
+	}
+
+	void refreshProgress() {
+		executionActions.refreshProgress();
+	}
+
+	void saveExecutionTo(final Path destination) {
+		executionActions.saveExecutionTo(destination);
+	}
+
+	void saveVerificationTo(final Path destination) {
+		executionActions.saveVerificationTo(destination);
 	}
 
 	boolean isBusy() {
-		return busy || executing || source.profile.isBusy() || target.profile.isBusy();
+		return busy || isExecuting() || source.profile.isBusy() || target.profile.isBusy();
 	}
 
 	boolean selectDriverClass(final String name, final boolean sourceConnection) {
@@ -744,183 +478,11 @@ final class DataMigrationPlanPanel extends JPanel {
 		reviewFocus.showInputs();
 	}
 
-	private boolean blockedByProfile() {
+	boolean blockedByProfile() {
 		if (!source.profile.isBusy() && !target.profile.isBusy())
 			return false;
 		status.setText("Wait for the connection profile operations to finish, then try again.");
 		return true;
-	}
-
-	private void confirmExecution() {
-		if (busy || blockedByProfile())
-			return;
-		final var confirmed = result;
-		if (confirmed == null || !apply.isEnabled())
-			return;
-		final var sourceSecret = new JPasswordField();
-		final var targetSecret = new JPasswordField();
-		final var message = new javax.swing.JTextArea(
-				"Execute job: " + confirmed.report().jobId() + "\nSource: " + reviewedSource.jdbcUrl() + "\nTarget: "
-						+ reviewedTarget.jdbcUrl() + "\nPlan: " + confirmed.report().planFingerprint()
-						+ "\nConfiguration: " + confirmed.report().provenance().configurationFingerprint()
-						+ "\nYAML checkpoint, lease, report and verification settings apply."
-						+ "\nEach chunk commits separately. Failure can leave committed rows."
-						+ "\nReview configured output files in the plan before continuing.");
-		message.setEditable(false);
-		final var content = new JPanel(new GridLayout(0, 1, 4, 4));
-		content.add(new JScrollPane(message));
-		content.add(new JLabel("Source password (not saved)"));
-		content.add(sourceSecret);
-		content.add(new JLabel("Target password (not saved)"));
-		content.add(targetSecret);
-		final Object[] options = { "Execute", "Cancel" };
-		final int choice = JOptionPane.showOptionDialog(this, content, "Execute data migration",
-				JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]);
-		final char[] sourcePassword = sourceSecret.getPassword();
-		final char[] targetPassword = targetSecret.getPassword();
-		sourceSecret.setText("");
-		targetSecret.setText("");
-		try {
-			if (choice == 0 && result == confirmed)
-				executeReviewed(sourcePassword, targetPassword);
-		} finally {
-			Arrays.fill(sourcePassword, '\0');
-			Arrays.fill(targetPassword, '\0');
-		}
-	}
-
-	void executeReviewed(final char[] sourcePassword, final char[] targetPassword) {
-		try {
-			if (!apply.isEnabled() || result == null || executing || busy || blockedByProfile())
-				return;
-			final var confirmed = result;
-			final var sourceSpec = reviewedSource;
-			final var targetSpec = reviewedTarget;
-			final char[] sourceCopy = sourcePassword.clone();
-			final char[] targetCopy = targetPassword.clone();
-			result = null;
-			execution = null;
-			executing = true;
-			control = new DataMigrationExecutionControl();
-			final var executionControl = control;
-			activity.setIndeterminate(true);
-			refreshProgress();
-			progressTimer.start();
-			busy(true);
-			status.setText("Executing reviewed data job. Wait for the outcome before closing.");
-			new SwingWorker<DataMigrationExecutionService.Outcome, Void>() {
-				protected DataMigrationExecutionService.Outcome doInBackground() {
-					try {
-						return executor.execute(confirmed, sourceSpec, sourceCopy, targetSpec, targetCopy,
-								executionControl);
-					} finally {
-						Arrays.fill(sourceCopy, '\0');
-						Arrays.fill(targetCopy, '\0');
-					}
-				}
-
-				protected void done() {
-					try {
-						execution = get();
-						view.showReview(execution.review());
-						status.setText(execution.statusMessage());
-						statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
-					} catch (final InterruptedException exception) {
-						Thread.currentThread().interrupt();
-						failure(exception);
-					} catch (final ExecutionException exception) {
-						failure(exception.getCause());
-					} finally {
-						executing = false;
-						progressTimer.stop();
-						activity.setIndeterminate(false);
-						pause.setEnabled(false);
-						final var last = executionControl.progress();
-						progress.setText("Execution ended." + (last.migrationId().isEmpty() ? ""
-								: " Last checkpoint: " + last.migrationId() + ": " + last.checkpointRows() + " rows; "
-										+ last.completedChunks() + " chunks"));
-						progress.setToolTipText(progress.getText());
-						busy(false);
-					}
-				}
-			}.execute();
-		} finally {
-			Arrays.fill(sourcePassword, '\0');
-			Arrays.fill(targetPassword, '\0');
-		}
-	}
-
-	void refreshProgress() {
-		if (!executing || control == null)
-			return;
-		final var snapshot = control.progress();
-		final boolean requested = control.pauseRequested();
-		pause.setEnabled(snapshot.pauseAvailable() && !requested);
-		pause.setToolTipText("Stops after a committed chunk and saved checkpoint; does not interrupt JDBC calls.");
-		progress.setText((requested ? "Pause requested; waiting for a committed chunk. " : "") + snapshot.phase()
-				+ (snapshot.migrationId().isEmpty() ? ""
-						: " | " + snapshot.migrationId() + ": " + snapshot.checkpointRows() + " checkpoint rows; "
-								+ snapshot.completedChunks() + " chunks"));
-		progress.setToolTipText(progress.getText());
-	}
-
-	void saveExecutionTo(final Path destination) {
-		if (execution == null || !saveExecution.isEnabled() || busy || blockedByProfile())
-			return;
-		final var snapshot = execution;
-		busy(true);
-		new SwingWorker<Void, Void>() {
-			protected Void doInBackground() throws Exception {
-				executionSaver.save(snapshot, destination);
-				return null;
-			}
-
-			protected void done() {
-				try {
-					get();
-					status.setText("Saved execution audit: " + destination);
-					savedReport.saved(destination, snapshot.failure() == null ? ReportReviewService.Type.BULK_EXECUTION
-							: ReportReviewService.Type.BULK_FAILURE);
-					outputDialogs.remember(destination);
-				} catch (final InterruptedException exception) {
-					Thread.currentThread().interrupt();
-					failure(exception);
-				} catch (final ExecutionException exception) {
-					failure(exception.getCause());
-				} finally {
-					busy(false);
-				}
-			}
-		}.execute();
-	}
-
-	void saveVerificationTo(final Path destination) {
-		if (execution == null || !saveVerification.isEnabled() || busy || blockedByProfile())
-			return;
-		final var snapshot = execution;
-		busy(true);
-		new SwingWorker<Void, Void>() {
-			protected Void doInBackground() {
-				new DataMigrationExecutionService().saveVerification(snapshot, destination);
-				return null;
-			}
-
-			protected void done() {
-				try {
-					get();
-					status.setText("Saved verification report: " + destination);
-					savedReport.saved(destination, ReportReviewService.Type.BULK_VERIFICATION);
-					outputDialogs.remember(destination);
-				} catch (final InterruptedException exception) {
-					Thread.currentThread().interrupt();
-					failure(exception);
-				} catch (final ExecutionException exception) {
-					failure(exception.getCause());
-				} finally {
-					busy(false);
-				}
-			}
-		}.execute();
 	}
 
 	private void chooseSave() {
@@ -968,7 +530,7 @@ final class DataMigrationPlanPanel extends JPanel {
 		}.execute();
 	}
 
-	private void failure(final Throwable failure) {
+	void failure(final Throwable failure) {
 		view.summary.setText("Operation failed.\n" + EditorStatusPanel.failureDetails(failure));
 		status.setText("Operation failed. Check job YAML, Schema XML, connections and drivers.");
 		statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
