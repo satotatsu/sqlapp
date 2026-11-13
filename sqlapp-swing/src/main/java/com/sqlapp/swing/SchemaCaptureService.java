@@ -49,9 +49,7 @@ final class SchemaCaptureService {
 				return output;
 			}
 		} catch (Exception failure) {
-			String message = EditorStatusPanel.failureDetails(failure).replace(source.jdbcUrl(), "[JDBC URL]");
-			if (password.length > 0)
-				message = message.replace(new String(password), "[redacted]");
+			final String message = SecretRedaction.redact(EditorStatusPanel.failureDetails(failure), source, password);
 			throw new IllegalArgumentException("Unable to capture Schema metadata: " + message);
 		} finally {
 			Arrays.fill(password, '\0');

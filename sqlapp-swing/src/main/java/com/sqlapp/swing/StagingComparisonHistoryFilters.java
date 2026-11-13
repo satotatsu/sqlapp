@@ -6,7 +6,9 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-/** Optional history scope composed with the report table's existing text filter. */
+/**
+ * Optional history scope composed with the report table's existing text filter.
+ */
 final class StagingComparisonHistoryFilters extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final JComboBox<String> scope = new JComboBox<>(new String[] { "All changes", "New mismatch",
@@ -20,11 +22,12 @@ final class StagingComparisonHistoryFilters extends JPanel {
 		scope.setToolTipText("Filter recorded change categories. An improvement can still leave another mismatch.");
 		scope.setEnabled(panel.table.isEnabled());
 		scope.addActionListener(event -> {
-			if (panel.table.getModel() != originalModel || !scope.isEnabled() || !panel.table.isEnabled()) return;
+			if (panel.table.getModel() != originalModel || !scope.isEnabled() || !panel.table.isEnabled())
+				return;
 			panel.setExactFilter(changeColumn, scope.getSelectedIndex() == 0 ? null : (String) scope.getSelectedItem());
 		});
 		panel.table.addPropertyChangeListener("model", event -> scope.setEnabled(false));
-		panel.table.addPropertyChangeListener("enabled", event ->
-				scope.setEnabled(panel.table.isEnabled() && panel.table.getModel() == originalModel));
+		panel.table.addPropertyChangeListener("enabled",
+				event -> scope.setEnabled(panel.table.isEnabled() && panel.table.getModel() == originalModel));
 	}
 }

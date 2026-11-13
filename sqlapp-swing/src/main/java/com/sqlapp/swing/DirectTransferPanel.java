@@ -27,7 +27,8 @@ final class DirectTransferPanel extends JPanel {
 	}
 
 	record Request(Path job, Path workspace, PlanningJdbc.Spec source, PlanningJdbc.Spec target, String schema,
-			DirectTransferDesktopService.Reviewed reviewed, DirectTransferDesktopService.Recovery recovery, Path savedResult) {
+			DirectTransferDesktopService.Reviewed reviewed, DirectTransferDesktopService.Recovery recovery,
+			Path savedResult) {
 		Request(Path job, Path workspace, PlanningJdbc.Spec source, PlanningJdbc.Spec target, String schema,
 				DirectTransferDesktopService.Reviewed reviewed) {
 			this(job, workspace, source, target, schema, reviewed, null, null);
@@ -130,18 +131,23 @@ final class DirectTransferPanel extends JPanel {
 		results.addTab("Summary", new JScrollPane(summary));
 		results.addTab("Details", result);
 		comparisonTab.add(comparisonActions, BorderLayout.SOUTH);
-		compareStaging.setToolTipText("Read the current target and retained staging. Re-enter the target password if needed.");
+		compareStaging.setToolTipText(
+				"Read the current target and retained staging. Re-enter the target password if needed.");
 		compareStaging.addActionListener(event -> run(Action.COMPARE_STAGING));
-		compareSavedStaging.setToolTipText("Choose or drop transfer-result.json or import-result.json from an earlier unconfirmed commit. Uses the target connection above.");
+		compareSavedStaging.setToolTipText(
+				"Choose or drop transfer-result.json or import-result.json from an earlier unconfirmed commit. Uses the target connection above.");
 		compareSavedStaging.addActionListener(event -> {
-			if (isBusy() || !valid(target)) return;
-			var chooser = files.forOutputDirectory(new javax.swing.filechooser.FileNameExtensionFilter("Transfer result JSON", "json"),
+			if (isBusy() || !valid(target))
+				return;
+			var chooser = files.forOutputDirectory(
+					new javax.swing.filechooser.FileNameExtensionFilter("Transfer result JSON", "json"),
 					"transfer-result.json", workspace.getText());
 			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION)
 				compareSaved(chooser.getSelectedFile().toPath());
 		});
 		FileDropHandler.file(compareSavedStaging, List.of("json"), () -> !isBusy(), path -> {
-			if (!valid(target)) return false;
+			if (!valid(target))
+				return false;
 			compareSaved(path);
 			return true;
 		}, FileDropHandler.errors(status, statusPanel));
@@ -170,7 +176,9 @@ final class DirectTransferPanel extends JPanel {
 								.schemaMode() == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
 										? "Apply reviewed Schema SQL, including ALTER/DROP? Target data may change if explicitly allowed. No source rows are transferred.\nConfiguration: "
 										: "Create the reviewed target tables without copying rows?\nConfiguration: "
-						: reviewed.review().staging() != null ? "Replace all rows in the reviewed target tables after staging and verification?\nConfiguration: " : "Copy into the reviewed target?\nConfiguration: ")
+						: reviewed.review().staging() != null
+								? "Replace all rows in the reviewed target tables after staging and verification?\nConfiguration: "
+								: "Copy into the reviewed target?\nConfiguration: ")
 				+ reviewed.review().prepared().job().fingerprint() + "\nCompatibility warnings: "
 				+ reviewed.review().prepared().warnings().size() + "\nDDL statements: "
 				+ reviewed.review().prepared().schemaPreparation().statements().size()
@@ -286,16 +294,8 @@ final class DirectTransferPanel extends JPanel {
 
 	private void setBusy(boolean value) {
 		busy = value;
-		enable(form, !value);
+		ComponentEnablement.setTreeEnabled(form, !value);
 		refresh();
-	}
-
-	private static void enable(Container parent, boolean value) {
-		for (var child : parent.getComponents()) {
-			child.setEnabled(value);
-			if (child instanceof Container container)
-				enable(container, value);
-		}
 	}
 
 	private void refresh() {
@@ -404,7 +404,8 @@ final class DirectTransferPanel extends JPanel {
 
 	private void run(Action action, Path savedResult) {
 		final boolean comparing = action == Action.COMPARE_STAGING;
-		if (isBusy() || action == Action.EXECUTE && reviewed == null || comparing && recovery == null && savedResult == null)
+		if (isBusy() || action == Action.EXECUTE && reviewed == null
+				|| comparing && recovery == null && savedResult == null)
 			return;
 		final boolean needSource = action != Action.TEST_TARGET && !comparing;
 		final boolean needTarget = action != Action.DISCOVER && action != Action.TEST_SOURCE;
@@ -426,7 +427,8 @@ final class DirectTransferPanel extends JPanel {
 		}
 		final var request = new Request(input, folder, needSource ? source.snapshot().spec() : null,
 				needTarget ? target.snapshot().spec() : null, sourceSchema.getText(), reviewed, recovery, savedResult);
-		final char[] from = needSource ? source.password.getPassword() : new char[0], to = target.password.getPassword();
+		final char[] from = needSource ? source.password.getPassword() : new char[0],
+				to = target.password.getPassword();
 		final long requested = revision;
 		if (comparing) {
 			comparisonActions.beginComparison();
@@ -451,10 +453,10 @@ final class DirectTransferPanel extends JPanel {
 		setBusy(true);
 		status.setText(comparing ? "Comparing staging and current target rows (read-only)…"
 				: action == Action.EXECUTE ? request.reviewed().review().prepared().job().configuration()
-				.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
-						? "Applying reviewed Schema SQL; completed statements may remain on failure. No source rows are transferred."
-						: "Copying and verifying; committed chunks may remain on failure."
-				: "Working: " + action + ". This action does not copy rows.");
+						.dataMode() == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+								? "Applying reviewed Schema SQL; completed statements may remain on failure. No source rows are transferred."
+								: "Copying and verifying; committed chunks may remain on failure."
+						: "Working: " + action + ". This action does not copy rows.");
 		new SwingWorker<Object, Void>() {
 			@Override
 			protected Object doInBackground() throws Exception {
@@ -497,12 +499,14 @@ final class DirectTransferPanel extends JPanel {
 					} else if (comparing) {
 						if (value instanceof TransferStagingComparisonReportIO.Report report) {
 							comparisonActions.show(report);
-							comparisonTab.showReview(comparisonHistory.show(report, new ReportReviewService().stagingComparison(report)));
+							comparisonTab.showReview(comparisonHistory.show(report,
+									new ReportReviewService().stagingComparison(report)));
 							selectComparison();
 						} else {
 							showComparison((TransferStagedReplacement.Comparison) value);
 						}
-						status.setText("Read-only staging comparison finished. The recorded commit outcome is unchanged.");
+						status.setText(
+								"Read-only staging comparison finished. The recorded commit outcome is unchanged.");
 					} else
 						status.setText("Connection check: " + value);
 				} catch (Exception failure) {
@@ -514,6 +518,10 @@ final class DirectTransferPanel extends JPanel {
 									: "Check the reviewed target connection and retained staging tables.";
 							showComparisonText("Staging comparison failed.\n\n" + detail);
 							status.setText("Staging comparison failed. The recorded transfer result is retained.");
+						} else {
+							// changed() leaves the status alone while busy; do not keep showing
+							// "Comparing…".
+							status.setText("Inputs changed during the staging comparison. Start the comparison again.");
 						}
 						return;
 					}
@@ -525,8 +533,9 @@ final class DirectTransferPanel extends JPanel {
 					progressTabs.clear(results);
 					reviewed = null;
 					if (cause instanceof DirectTransferDesktopService.ExecutionFailure execution) {
-						if (action == Action.EXECUTE && requested == revision && execution.result.outcome().staging() != null
-								&& execution.result.outcome().staging().state() == TransferStagedReplacement.State.COMMIT_UNCERTAIN)
+						if (action == Action.EXECUTE && requested == revision
+								&& execution.result.outcome().staging() != null && execution.result.outcome().staging()
+										.state() == TransferStagedReplacement.State.COMMIT_UNCERTAIN)
 							recovery = new DirectTransferDesktopService.Recovery(request.reviewed().review(),
 									execution.result.outcome(), execution.result.resultFingerprint());
 						show(execution.result, request.job());
@@ -638,12 +647,14 @@ final class DirectTransferPanel extends JPanel {
 				text.append("  ").append(table).append('\n');
 			if (config.dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY) {
 				text.append("\nInsert method: ").append(config.effectiveInsertMethod());
-			if (review.staging() != null) {
-				text.append("\nExisting rows: preserved until staging is verified, then replaced in one transaction.\n");
-				review.staging().targets().forEach(target -> text.append("  ")
-						.append(target.schema()).append('.').append(target.stageTable()).append(" → ")
-						.append(target.schema()).append('.').append(target.table()).append('\n'));
-			}
+				if (review.staging() != null) {
+					text.append(
+							"\nExisting rows: preserved until staging is verified, then replaced in one transaction.\n");
+					review.staging().targets()
+							.forEach(target -> text.append("  ").append(target.schema()).append('.')
+									.append(target.stageTable()).append(" → ").append(target.schema()).append('.')
+									.append(target.table()).append('\n'));
+				}
 				text.append("\nChunk rows: ").append(config.chunkSize()).append("; verification: ")
 						.append(config.verify() ? "enabled" : "disabled").append('\n');
 			}
@@ -726,7 +737,8 @@ final class DirectTransferPanel extends JPanel {
 				: ((DirectTransferDesktopService.Executed) value).outcome().schemaPreparation().planned();
 		if (!statements.isEmpty()
 				|| value instanceof DirectTransferDesktopService.Reviewed review && review.review().staging() != null
-				|| value instanceof DirectTransferDesktopService.Executed execution && execution.outcome().staging() != null) {
+				|| value instanceof DirectTransferDesktopService.Executed execution
+						&& execution.outcome().staging() != null) {
 			final var sql = new StringBuilder(
 					"-- Reviewed target preparation. Created objects may remain after failure.\n\n");
 			for (int index = 0; index < statements.size(); index++)
@@ -794,10 +806,12 @@ final class DirectTransferPanel extends JPanel {
 	}
 
 	private static void appendStagingOutcome(StringBuilder text,
-			com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Status staging, String stoppedTask) {
+			com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Status staging,
+			String stoppedTask) {
 		text.append(staging.state().summary()).append('\n');
 		if (staging.state().committed())
-			text.append("Rows committed: ").append(staging.appliedRows().values().stream().mapToLong(Long::longValue).sum()).append('\n');
+			text.append("Rows committed: ")
+					.append(staging.appliedRows().values().stream().mapToLong(Long::longValue).sum()).append('\n');
 		staging.targets().stream().filter(target -> target.taskId().equals(stoppedTask)).findFirst()
 				.ifPresent(target -> text.append("Stopped at target: ").append(target.schema()).append('.')
 						.append(target.table()).append('\n'));

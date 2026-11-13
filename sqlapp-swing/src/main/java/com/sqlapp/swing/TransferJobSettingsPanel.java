@@ -28,7 +28,8 @@ final class TransferJobSettingsPanel extends JPanel {
 	final JTextField generatedKeyColumn = new JTextField("ID", 20);
 	private final JPanel generatedKeyRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 	final JCheckBox verify = new JCheckBox("Verify copied data");
-	final JComboBox<com.sqlapp.jdbc.bulk.BulkInsertMethod> insertMethod = new JComboBox<>(com.sqlapp.jdbc.bulk.BulkInsertMethod.values());
+	final JComboBox<com.sqlapp.jdbc.bulk.BulkInsertMethod> insertMethod = new JComboBox<>(
+			com.sqlapp.jdbc.bulk.BulkInsertMethod.values());
 	final JCheckBox stagedReplace = new JCheckBox("Stage and verify data before replacing existing target rows");
 	final JCheckBox schemaOnly = new JCheckBox("Schema only (no row copy)");
 	final JCheckBox applyDifferences = new JCheckBox(
@@ -143,7 +144,8 @@ final class TransferJobSettingsPanel extends JPanel {
 				allowDestructive.setSelected(false);
 			refresh();
 		});
-		stagedReplace.setToolTipText("When cleared, a nonempty target stops the transfer. Replacement requires verification.");
+		stagedReplace.setToolTipText(
+				"When cleared, a nonempty target stops the transfer. Replacement requires verification.");
 		stagedReplace.addActionListener(event -> refresh());
 		fields.add(stagedReplace);
 		fields.add(verify);
@@ -157,8 +159,10 @@ final class TransferJobSettingsPanel extends JPanel {
 		var insertRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		var insertLabel = new JLabel("Insert method (advanced)");
 		insertLabel.setLabelFor(insertMethod);
-		insertRow.add(insertLabel); insertRow.add(insertMethod);
-		insertMethod.setToolTipText("AUTO: prefer the database provider, otherwise JDBC batch. NATIVE: require the database provider. JDBC_BATCH: portable PreparedStatement batches.");
+		insertRow.add(insertLabel);
+		insertRow.add(insertMethod);
+		insertMethod.setToolTipText(
+				"AUTO: prefer the database provider, otherwise JDBC batch. NATIVE: require the database provider. JDBC_BATCH: portable PreparedStatement batches.");
 		fields.add(insertRow);
 		if (mode == TransferJobConfiguration.DataMode.FILE) {
 			fields.setLayout(new BoxLayout(fields, BoxLayout.Y_AXIS));
@@ -243,7 +247,8 @@ final class TransferJobSettingsPanel extends JPanel {
 							.schemaMode() == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY);
 					generatedKeyColumn.setText(configuration.effectiveGeneratedKeyColumn());
 					verify.setSelected(configuration.verify());
-					stagedReplace.setSelected(configuration.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
+					stagedReplace.setSelected(configuration
+							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
 					insertMethod.setSelectedItem(configuration.effectiveInsertMethod());
 					strict.setSelected(
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR);
@@ -293,11 +298,13 @@ final class TransferJobSettingsPanel extends JPanel {
 							: TransferJobConfiguration.CompatibilityPolicy.WARN,
 					schemaOnly.isSelected() && applyDifferences.isSelected() && allowDestructive.isSelected(),
 					generatedKey.isSelected() && generatedKey.isVisible() ? generatedKeyColumn.getText() : null,
-					schemaOnly.isSelected() || insertMethod.getSelectedItem() == com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO
-							? null : (com.sqlapp.jdbc.bulk.BulkInsertMethod) insertMethod.getSelectedItem(),
+					schemaOnly.isSelected()
+							|| insertMethod.getSelectedItem() == com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO ? null
+									: (com.sqlapp.jdbc.bulk.BulkInsertMethod) insertMethod.getSelectedItem(),
 					!schemaOnly.isSelected() && stagedReplace.isSelected()
-							? TransferJobConfiguration.TargetPreparation.STAGED_REPLACE : original.targetPreparation() == TransferJobConfiguration.TargetPreparation.REQUIRE_EMPTY && !schemaOnly.isSelected()
-									? original.targetPreparation() : null);
+							? TransferJobConfiguration.TargetPreparation.STAGED_REPLACE
+							: original.targetPreparation() == TransferJobConfiguration.TargetPreparation.REQUIRE_EMPTY
+									&& !schemaOnly.isSelected() ? original.targetPreparation() : null);
 		} catch (Exception failure) {
 			status.setText(mode == TransferJobConfiguration.DataMode.FILE
 					? "Check chunk size (1..1000000), target schema, generated PK column name, character encoding, header and NULL/empty-field settings before saving."

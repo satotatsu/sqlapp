@@ -19,7 +19,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /** The same explicit file actions for Schema, data source and data target. */
-final class ConnectionProfilePanel extends JPanel {
+final class ConnectionProfilePanel extends JPanel implements ComponentEnablement.SelfManaged {
 	private static final long serialVersionUID = 1L;
 	final JButton load = new JButton("Load…");
 	final JButton save = new JButton("Save…");
@@ -195,6 +195,10 @@ final class ConnectionProfilePanel extends JPanel {
 	public void setEnabled(final boolean enabled) {
 		super.setEnabled(enabled);
 		// Swing constructors may call this before the action fields are initialized.
+		if (statusPanel != null) {
+			statusPanel.setEnabled(enabled);
+			ComponentEnablement.setTreeEnabled(statusPanel, enabled);
+		}
 		if (load != null && save != null)
 			refreshActions();
 	}

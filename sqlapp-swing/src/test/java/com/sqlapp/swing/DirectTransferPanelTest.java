@@ -509,22 +509,25 @@ class DirectTransferPanelTest {
 		var table = new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "SQLAPP_STG_ITEMS");
 		var staging = new TransferStagedReplacement.Status(TransferStagedReplacement.State.COMMIT_UNCERTAIN,
 				List.of(table), null, Map.of(), List.of());
-		var outcome = new TransferJobExecutionService.Outcome(base.prepared(), base.phase(), null, base.verificationResult(),
-				List.of(), Map.of(), null, base.schemaPreparation(), null, staging);
+		var outcome = new TransferJobExecutionService.Outcome(base.prepared(), base.phase(), null,
+				base.verificationResult(), List.of(), Map.of(), null, base.schemaPreparation(), null, staging);
 		var ready = new CountDownLatch(1);
 		var comparisonOffered = new CountDownLatch(1);
 		var comparisonDone = new CountDownLatch(1);
 		var ref = new AtomicReference<DirectTransferPanel>();
 		SwingUtilities.invokeAndWait(() -> {
 			var panel = new DirectTransferPanel((action, request, from, to) -> {
-				if (action == DirectTransferPanel.Action.REVIEW) return reviewResult;
+				if (action == DirectTransferPanel.Action.REVIEW)
+					return reviewResult;
 				if (action == DirectTransferPanel.Action.EXECUTE)
-					throw new DirectTransferDesktopService.ExecutionFailure(new DirectTransferDesktopService.Executed(outcome, null), "Commit uncertain.");
+					throw new DirectTransferDesktopService.ExecutionFailure(
+							new DirectTransferDesktopService.Executed(outcome, null), "Commit uncertain.");
 				assertEquals(DirectTransferPanel.Action.COMPARE_STAGING, action);
 				assertNull(request.source());
 				assertEquals(0, from.length);
 				assertSame(outcome, request.recovery().outcome());
-				return new TransferStagedReplacement.Comparison(List.of(new TransferStagedReplacement.TableComparison(table, 2, 1, false, true)));
+				return new TransferStagedReplacement.Comparison(
+						List.of(new TransferStagedReplacement.TableComparison(table, 2, 1, false, true)));
 			}, ignored -> null);
 			ref.set(panel);
 			configure(panel);
@@ -567,6 +570,39 @@ class DirectTransferPanelTest {
 	}
 
 	@Test
+	void failedStagingComparisonAfterInputChangeDoesNotLeaveComparingStatus() throws Exception {
+		var report = java.nio.file.Files.writeString(directory.resolve("transfer-result.json"), "{}");
+		var started = new CountDownLatch(1);
+		var release = new CountDownLatch(1);
+		var finished = new CountDownLatch(1);
+		var ref = new AtomicReference<DirectTransferPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new DirectTransferPanel((action, request, from, to) -> {
+				assertEquals(DirectTransferPanel.Action.COMPARE_STAGING, action);
+				started.countDown();
+				if (!release.await(5, TimeUnit.SECONDS))
+					throw new IllegalStateException("Timeout");
+				throw new IllegalStateException("target unavailable");
+			}, ignored -> null);
+			ref.set(panel);
+			panel.target.jdbcUrl.setText("jdbc:target");
+			panel.status.addPropertyChangeListener("text", event -> {
+				if (event.getNewValue().toString().startsWith("Inputs changed during the staging comparison"))
+					finished.countDown();
+			});
+			assertTrue(FileDropHandlerTest.drop(panel.compareSavedStaging, report));
+		});
+		assertTrue(started.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(ref.get().status.getText().startsWith("Comparing staging"));
+			ref.get().target.jdbcUrl.setText("jdbc:changed");
+		});
+		release.countDown();
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> assertFalse(ref.get().isBusy()));
+	}
+
+	@Test
 	void savedStagingComparisonCanBeSavedAndOpenedWithoutAnActiveJobOrSourceConnection() throws Exception {
 		var report = java.nio.file.Files.writeString(directory.resolve("transfer-result.json"), "{}");
 		var done = new CountDownLatch(1);
@@ -586,9 +622,11 @@ class DirectTransferPanelTest {
 				assertEquals(0, from.length);
 				var target = new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "SQLAPP_STG_ITEMS");
 				long targetRows = calls.get() == 2 ? 3 : 2;
-				return new TransferStagingComparisonReportIO.Report(1, HASH, TransferStagedReplacement.State.COMMIT_UNCERTAIN,
-						new DatabaseIdentity("HSQL", "2.7", HASH), new TransferStagedReplacement.Comparison(List.of(
-								new TransferStagedReplacement.TableComparison(target, 2, targetRows, targetRows == 2, true))));
+				return new TransferStagingComparisonReportIO.Report(
+						1, HASH, TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+						new DatabaseIdentity("HSQL", "2.7", HASH), new TransferStagedReplacement.Comparison(
+								List.of(new TransferStagedReplacement.TableComparison(target, 2, targetRows,
+										targetRows == 2, true))));
 			}, ignored -> null);
 			ref.set(panel);
 			panel.target.jdbcUrl.setText("jdbc:target");

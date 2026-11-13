@@ -108,7 +108,8 @@ final class JdbcDriverLibraries implements AutoCloseable {
 				failure.addSuppressed(close);
 			}
 			throw new IllegalArgumentException(
-					"Unable to load JDBC driver JARs. Check the driver class, dependencies and Java 21 compatibility.",
+					"Unable to load JDBC driver JARs. Check the driver class, dependencies and Java "
+							+ Runtime.version().feature() + " compatibility.",
 					failure);
 		} finally {
 			thread.setContextClassLoader(previousLoader);
@@ -131,6 +132,7 @@ final class JdbcDriverLibraries implements AutoCloseable {
 				/* Try the explicitly added session libraries. */ }
 		}
 		final var matches = new ArrayList<Driver>();
+		RuntimeException skipped = null;
 		for (final var library : libraries)
 			for (final var driver : library.drivers()) {
 				if (!name.isEmpty() && !driver.getClass().getName().equals(name))
@@ -145,12 +147,22 @@ final class JdbcDriverLibraries implements AutoCloseable {
 						throw new IllegalArgumentException(
 								"Selected JDBC driver does not accept this JDBC URL: " + name);
 				} catch (final SQLException | LinkageError failure) {
-					throw new IllegalArgumentException("JDBC driver URL check failed. Check driver dependencies.",
-							failure);
+					final var problem = new IllegalArgumentException("JDBC driver URL check failed: "
+							+ driver.getClass().getName() + ". Check driver dependencies.", failure);
+					// A selected class must work. Without one, another added driver may still
+					// accept the URL.
+					if (!name.isEmpty())
+						throw problem;
+					if (skipped == null)
+						skipped = problem;
+					else
+						skipped.addSuppressed(problem);
 				} finally {
 					thread.setContextClassLoader(previousLoader);
 				}
 			}
+		if (matches.isEmpty() && skipped != null)
+			throw skipped;
 		if (matches.size() > 1)
 			throw new IllegalArgumentException(
 					"Multiple added JDBC drivers accept this URL. Specify the driver class in Advanced options.");

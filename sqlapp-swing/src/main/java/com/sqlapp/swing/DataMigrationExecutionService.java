@@ -46,6 +46,27 @@ final class DataMigrationExecutionService {
 			return failure != null && "PAUSED".equals(failure.status());
 		}
 
+		/**
+		 * True when post-copy verification ran and reported differences. A job with
+		 * failOnMismatch: false can complete successfully while this is true.
+		 */
+		boolean verificationMismatch() {
+			if (verificationResult != null)
+				return !verificationResult.isMatch();
+			return verificationReport != null && !verificationReport.match();
+		}
+
+		/** One-line outcome for the desktop status bar. */
+		String statusMessage() {
+			if (successful()) {
+				return verificationMismatch()
+						? "Data execution completed, but verification found mismatches. Review mismatched tasks and save the verification report before another run."
+						: "Data execution completed. Save the audit; inspect again before another run.";
+			}
+			return paused() ? "Data execution paused. Save the audit, inspect checkpoints and confirm again to resume."
+					: "Data execution failed. Review committed chunks and checkpoints before retrying.";
+		}
+
 		boolean hasAudit() {
 			return execution != null || failure != null;
 		}
@@ -173,16 +194,8 @@ final class DataMigrationExecutionService {
 			String message = problem == null ? null
 					: problem.toString() + (problem.getSuppressed().length == 0 ? ""
 							: "; additional failures: " + Arrays.toString(problem.getSuppressed()));
-			if (message != null) {
-				for (final char[] secret : new char[][] { sourcePassword, targetPassword }) {
-					if (secret.length > 0)
-						message = message.replace(new String(secret), "[redacted]");
-				}
-				for (final var spec : new PlanningJdbc.Spec[] { source, target }) {
-					if (spec != null)
-						message = message.replace(spec.jdbcUrl(), "[JDBC URL]");
-				}
-			}
+			message = SecretRedaction.redact(message, new PlanningJdbc.Spec[] { source, target }, sourcePassword,
+					targetPassword);
 			if (review == null) {
 				review = new ReportReviewService.Review(
 						"No execution audit is available. Check target and checkpoints before retrying.", List.of(),

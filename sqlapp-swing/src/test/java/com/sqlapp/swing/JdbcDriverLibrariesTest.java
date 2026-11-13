@@ -130,6 +130,21 @@ class JdbcDriverLibrariesTest {
 	}
 
 	@Test
+	void failingUrlCheckDoesNotHideAnotherAddedDriver() throws Exception {
+		final var jars = new JdbcDriverJarFixture(directory);
+		libraries.add(List.of(jars.broken), "");
+		libraries.add(List.of(jars.driver, jars.dependency), "");
+		assertEquals("fixture.ChildDriver",
+				libraries.resolve(new PlanningJdbc.Spec("jdbc:gui-added:other", "SA", "")).getClass().getName());
+		final var unmatched = assertThrows(IllegalArgumentException.class,
+				() -> libraries.resolve(new PlanningJdbc.Spec("jdbc:unknown:test", "SA", "")));
+		assertTrue(unmatched.getMessage().contains("fixture.BrokenDriver"), unmatched.getMessage());
+		final var selected = assertThrows(IllegalArgumentException.class,
+				() -> libraries.resolve(new PlanningJdbc.Spec("jdbc:gui-added:other", "SA", "fixture.BrokenDriver")));
+		assertTrue(selected.getMessage().contains("URL check failed"), selected.getMessage());
+	}
+
+	@Test
 	void ambiguousUrlRequiresExplicitDriverClass() throws Exception {
 		final var jars = new JdbcDriverJarFixture(directory);
 		libraries.add(List.of(jars.driver, jars.dependency), "");

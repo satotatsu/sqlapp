@@ -30,11 +30,13 @@ class DirectTransferDesktopServiceTest {
 					"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ntargetPreparation: STAGED_REPLACE\n");
 			var service = new DirectTransferDesktopService();
 			var review = (DirectTransferDesktopService.Reviewed) service.perform(DirectTransferPanel.Action.REVIEW,
-					new DirectTransferPanel.Request(job, directory, source, target, "", null), new char[0], new char[0]);
+					new DirectTransferPanel.Request(job, directory, source, target, "", null), new char[0],
+					new char[0]);
 			assertEquals(1, count(target));
 			assertTrue(review.schemaSqlDraft().contains("-- DELETE"));
 			var result = (DirectTransferDesktopService.Executed) service.perform(DirectTransferPanel.Action.EXECUTE,
-					new DirectTransferPanel.Request(job, directory, source, target, "", review), new char[0], new char[0]);
+					new DirectTransferPanel.Request(job, directory, source, target, "", review), new char[0],
+					new char[0]);
 			assertEquals(TransferStagedReplacement.State.COMMITTED, result.outcome().staging().state());
 			assertTrue(result.outcome().verificationResult().isMatch());
 			assertEquals(2, count(target));
@@ -46,7 +48,6 @@ class DirectTransferDesktopServiceTest {
 			}
 		}
 	}
-
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })

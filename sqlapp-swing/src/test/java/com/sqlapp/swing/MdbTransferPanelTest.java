@@ -66,7 +66,8 @@ class MdbTransferPanelTest {
 				assertEquals(DirectTransferPanel.Action.COMPARE_STAGING, action);
 				assertEquals(report, request.savedResult());
 				assertNull(request.source());
-				return new com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Comparison(List.of());
+				return new com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Comparison(
+						List.of());
 			}, null);
 			panel.transfer.target.jdbcUrl.setText("jdbc:target");
 			panel.transfer.status.addPropertyChangeListener("text", event -> {

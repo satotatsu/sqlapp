@@ -85,8 +85,8 @@ final class DirectTransferDraftDialog {
 			dialog.revalidate();
 		});
 		picker.offerSchemaOnly(() -> schemaOnly.doClick(0));
-		picker.status
-				.setText("Select tables. The job requires empty targets by default. Job settings can enable staged replacement after saving.");
+		picker.status.setText(
+				"Select tables. The job requires empty targets by default. Job settings can enable staged replacement after saving.");
 		strict.addActionListener(event -> picker.draftOptionsChanged());
 		createMissing.addActionListener(event -> picker.draftOptionsChanged());
 		applyDifferences.addActionListener(event -> {

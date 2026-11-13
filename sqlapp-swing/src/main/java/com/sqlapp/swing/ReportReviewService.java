@@ -95,17 +95,19 @@ final class ReportReviewService {
 	}
 
 	Review stagingComparison(TransferStagingComparisonReportIO.Report report) {
-		return stagingComparison(report.comparison(), report.recordedCommitState().toString(), "\nTarget database: "
-				+ report.targetIdentity().productName() + " " + report.targetIdentity().productVersion()
-				+ "\nSource result fingerprint: " + report.sourceResultFingerprint(), report);
+		return stagingComparison(report.comparison(), report.recordedCommitState().toString(),
+				"\nTarget database: " + report.targetIdentity().productName() + " "
+						+ report.targetIdentity().productVersion() + "\nSource result fingerprint: "
+						+ report.sourceResultFingerprint(),
+				report);
 	}
 
 	Review stagingComparison(Comparison comparison) {
-		return stagingComparison(comparison, "COMMIT_UNCERTAIN", "\nSaving requires a recorded transfer result.", comparison);
+		return stagingComparison(comparison, "COMMIT_UNCERTAIN", "\nSaving requires a recorded transfer result.",
+				comparison);
 	}
 
-	private Review stagingComparison(
-			Comparison comparison, String recordedCommit, String context, Object details) {
+	private Review stagingComparison(Comparison comparison, String recordedCommit, String context, Object details) {
 		var tables = comparison.tables();
 		var rows = new ArrayList<List<String>>();
 		var differences = new ArrayList<List<String>>();
@@ -117,9 +119,12 @@ final class ReportReviewService {
 					table.matchesTarget() ? "Match" : "Different",
 					table.matchesRecordedStaging() ? "Unchanged" : "Changed", names.catalog(), names.taskId());
 			rows.add(row);
-			if (!table.matchesTarget()) targetDifferences++;
-			if (!table.matchesRecordedStaging()) stagingChanges++;
-			if (!table.matchesTarget() || !table.matchesRecordedStaging()) differences.add(row);
+			if (!table.matchesTarget())
+				targetDifferences++;
+			if (!table.matchesRecordedStaging())
+				stagingChanges++;
+			if (!table.matchesTarget() || !table.matchesRecordedStaging())
+				differences.add(row);
 		}
 		var columns = List.of("Schema", "Target table", "Staging table", "Staging rows", "Target rows",
 				"Target vs staging", "Staging vs recorded", "Catalog", "Task ID");
@@ -127,10 +132,11 @@ final class ReportReviewService {
 				+ ". Staging changes: " + stagingChanges + ".\nRecorded commit: " + recordedCommit
 				+ ". This report shows data from the comparison run. The prior commit remains unconfirmed.\n"
 				+ StagingComparisonGuidance.describe(comparison) + context, columns, rows, details, 3, 4);
-		if (differences.isEmpty()) return base;
-		return new Review(base.summary(), columns, rows, base.details(),
-				List.of(new DetailTable("Differences", "Tables with a target difference or a staging change.", columns,
-						differences, base.numericColumns())), base.numericColumns());
+		if (differences.isEmpty())
+			return base;
+		return new Review(base.summary(), columns, rows, base.details(), List.of(new DetailTable("Differences",
+				"Tables with a target difference or a staging change.", columns, differences, base.numericColumns())),
+				base.numericColumns());
 	}
 
 	private Review schemaPlan(final Path file) {

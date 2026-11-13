@@ -147,18 +147,10 @@ final class SchemaCapturePanel extends JPanel {
 
 	private void busy(boolean value) {
 		busy = value;
-		enable(connection, !value);
+		ComponentEnablement.setTreeEnabled(connection, !value);
 		capture.setEnabled(!value);
 		cancel.setEnabled(!value);
 		driverOptions.setEnabled(!value);
-	}
-
-	private static void enable(Container container, boolean enabled) {
-		for (var child : container.getComponents()) {
-			child.setEnabled(enabled);
-			if (child instanceof Container nested)
-				enable(nested, enabled);
-		}
 	}
 
 	void run(Action action) {

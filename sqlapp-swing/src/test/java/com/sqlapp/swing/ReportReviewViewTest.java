@@ -18,11 +18,10 @@ class ReportReviewViewTest {
 		SwingUtilities.invokeAndWait(() -> {
 			var view = new ReportReviewView();
 			var review = new ReportReviewService.Review("Comparison",
-					List.of("Task", "Target vs staging", "Staging vs recorded"), List.of(
-							List.of("matched", "Match", "Unchanged"),
-							List.of("target-only", "Different", "Unchanged"),
-							List.of("stage-only", "Match", "Changed"),
-							List.of("both", "Different", "Changed")), "{}");
+					List.of("Task", "Target vs staging", "Staging vs recorded"),
+					List.of(List.of("matched", "Match", "Unchanged"), List.of("target-only", "Different", "Unchanged"),
+							List.of("stage-only", "Match", "Changed"), List.of("both", "Different", "Changed")),
+					"{}");
 			view.showReview(review);
 			assertTrue(view.comparisonScope.getParent().isVisible());
 			view.comparisonScope.setSelectedIndex(1);
@@ -42,8 +41,8 @@ class ReportReviewViewTest {
 			assertEquals(0, view.comparisonScope.getSelectedIndex());
 			assertEquals(4, view.tasks.getRowCount());
 			view.comparisonScope.setSelectedIndex(2);
-			view.showReview(new ReportReviewService.Review("Other", List.of("Task"),
-					List.of(List.of("unrelated")), "{}"));
+			view.showReview(
+					new ReportReviewService.Review("Other", List.of("Task"), List.of(List.of("unrelated")), "{}"));
 			assertFalse(view.comparisonScope.getParent().isVisible());
 			assertEquals(1, view.tasks.getRowCount());
 			view.clear();

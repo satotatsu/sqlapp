@@ -53,9 +53,7 @@ final class DataMigrationDraftService {
 			}
 		} catch (final Exception failure) {
 			String message = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
-			if (password.length > 0)
-				message = message.replace(new String(password), "[redacted]");
-			message = message.replace(source.jdbcUrl(), "[JDBC URL]");
+			message = SecretRedaction.redact(message, source, password);
 			throw new IllegalArgumentException("Unable to read source tables: " + message);
 		} finally {
 			Arrays.fill(password, '\0');

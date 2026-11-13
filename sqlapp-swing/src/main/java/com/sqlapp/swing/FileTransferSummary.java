@@ -35,9 +35,9 @@ final class FileTransferSummary {
 								: configuration.targetSchema())
 						.append('\n').append("Target table preparation: ").append(configuration.schemaMode())
 						.append('\n').append("Verification after import: ")
-						.append(configuration.verify() ? "enabled" : "disabled").append('\n')
-						.append("Insert method: ").append(configuration.effectiveInsertMethod()).append('\n')
-						.append("Compatibility policy: ").append(configuration.compatibilityPolicy()).append('\n');
+						.append(configuration.verify() ? "enabled" : "disabled").append('\n').append("Insert method: ")
+						.append(configuration.effectiveInsertMethod()).append('\n').append("Compatibility policy: ")
+						.append(configuration.compatibilityPolicy()).append('\n');
 			}
 			if (inspected.description() != null)
 				text.append(
@@ -76,16 +76,20 @@ final class FileTransferSummary {
 				text.append("Import execution phase: ").append(outcome.phase()).append('\n');
 				TransferExecutionSummary.appendFailure(text, outcome.failureDiagnostic());
 				if (staging.state().committed())
-					text.append("Rows committed: ").append(staging.committedRows().values().stream().mapToLong(Long::longValue).sum()).append('\n');
+					text.append("Rows committed: ")
+							.append(staging.committedRows().values().stream().mapToLong(Long::longValue).sum())
+							.append('\n');
 				if (staging.state() != TransferStagedReplacement.State.COMMITTED
 						&& staging.state() != TransferStagedReplacement.State.NOT_STARTED)
 					staging.targets().stream().filter(table -> !staging.cleanedStages().contains(table.stageTable()))
-							.forEach(table -> text.append("Staging table to check: ").append(table.schema()).append('.').append(table.stageTable()).append('\n'));
+							.forEach(table -> text.append("Staging table to check: ").append(table.schema()).append('.')
+									.append(table.stageTable()).append('\n'));
 				if (outcome.stoppedTaskId() != null)
 					text.append("Stopped task: ").append(outcome.stoppedTaskId()).append('\n');
 				if (!outcome.verification().isEmpty())
 					TransferExecutionSummary.appendVerificationGuide(text);
-				return text.append("\nAudit report: ").append(outcome.auditFile() == null ? "unavailable" : outcome.auditFile()).toString();
+				return text.append("\nAudit report: ")
+						.append(outcome.auditFile() == null ? "unavailable" : outcome.auditFile()).toString();
 			}
 			TransferExecutionSummary.append(text, outcome.phase());
 			text.append("Import execution phase: ").append(outcome.phase()).append('\n');

@@ -69,12 +69,11 @@ final class SchemaMigrationPlanningService {
 		} catch (final RuntimeException exception) {
 			String message = exception.getMessage() == null ? exception.getClass().getSimpleName()
 					: exception.getMessage();
-			if (!secret.isEmpty()) {
-				message = message.replace(secret, "[redacted]");
-			}
+			// The URL may be invalid here, so it cannot always be wrapped in a Spec.
 			if (jdbcUrl != null && !jdbcUrl.isEmpty()) {
-				message = message.replace(jdbcUrl, "[JDBC URL]");
+				message = message.replace(jdbcUrl, SecretRedaction.URL);
 			}
+			message = SecretRedaction.redact(message, (PlanningJdbc.Spec[]) null, secret.toCharArray());
 			throw new IllegalArgumentException("Unable to build migration plan: " + message);
 		} finally {
 			Arrays.fill(password, '\0');

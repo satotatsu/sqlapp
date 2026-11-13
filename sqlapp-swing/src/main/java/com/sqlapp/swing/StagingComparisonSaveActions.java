@@ -13,7 +13,10 @@ import javax.swing.SwingWorker;
 
 import com.sqlapp.data.db.command.migration.transfer.TransferStagingComparisonReportIO;
 
-/** Saves the displayed comparison snapshot and offers the saved report to the viewer. */
+/**
+ * Saves the displayed comparison snapshot and offers the saved report to the
+ * viewer.
+ */
 final class StagingComparisonSaveActions extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final JButton save = new JButton("Save comparison…");
@@ -38,12 +41,15 @@ final class StagingComparisonSaveActions extends JPanel {
 		add(repeat);
 		add(save);
 		add(saved);
-		repeat.setToolTipText("Read the current target and retained staging again using the same result. No rows are changed.");
+		repeat.setToolTipText(
+				"Read the current target and retained staging again using the same result. No rows are changed.");
 		repeat.addActionListener(event -> {
-			if (!busy.getAsBoolean() && repeatAction != null) repeatAction.run();
+			if (!busy.getAsBoolean() && repeatAction != null)
+				repeatAction.run();
 		});
 		save.addActionListener(event -> {
-			if (busy.getAsBoolean() || report == null) return;
+			if (busy.getAsBoolean() || report == null)
+				return;
 			var chooser = files.forDirectory(folderHint.get());
 			chooser.setDialogTitle("Choose a folder for the staging comparison");
 			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION)
@@ -80,17 +86,20 @@ final class StagingComparisonSaveActions extends JPanel {
 	}
 
 	void saveTo(Path folder) {
-		if (busy.getAsBoolean() || report == null) return;
+		if (busy.getAsBoolean() || report == null)
+			return;
 		var snapshot = report;
 		var requested = revision;
 		setBusy.accept(true);
 		refresh();
 		new SwingWorker<Path, Void>() {
-			@Override protected Path doInBackground() throws Exception {
+			@Override
+			protected Path doInBackground() throws Exception {
 				return new TransferStagingComparisonReportIO().writeNew(folder, snapshot);
 			}
 
-			@Override protected void done() {
+			@Override
+			protected void done() {
 				try {
 					var file = get();
 					files.rememberDirectory(folder);

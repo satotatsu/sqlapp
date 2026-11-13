@@ -14,8 +14,8 @@ class StagingComparisonGuidanceTest {
 			"true,false,Staging data has changed", "false,false,Staging data has changed" })
 	void interpretsTargetAndRecordedStagingIndependently(boolean matchesTarget, boolean matchesRecorded,
 			String expected) {
-		var comparison = new Comparison(List.of(table("matched", true, true),
-				table("checked", matchesTarget, matchesRecorded)));
+		var comparison = new Comparison(
+				List.of(table("matched", true, true), table("checked", matchesTarget, matchesRecorded)));
 		assertTrue(StagingComparisonGuidance.describe(comparison).startsWith(expected));
 		if (!matchesRecorded)
 			assertTrue(StagingComparisonGuidance.describe(comparison).contains("does not establish a match"));
@@ -27,7 +27,7 @@ class StagingComparisonGuidanceTest {
 	}
 
 	private TableComparison table(String id, boolean matchesTarget, boolean matchesRecorded) {
-		return new TableComparison(new Target(id, null, "PUBLIC", id, "STAGE_" + id), 1, 1,
-				matchesTarget, matchesRecorded);
+		return new TableComparison(new Target(id, null, "PUBLIC", id, "STAGE_" + id), 1, 1, matchesTarget,
+				matchesRecorded);
 	}
 }

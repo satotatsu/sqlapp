@@ -32,13 +32,16 @@ class FileTransferPanelTest {
 				assertEquals(input, file);
 				assertEquals("jdbc:target", spec.jdbcUrl());
 				assertNull(review);
-				if (calls.incrementAndGet() == 2) throw new java.io.IOException("temporary comparison failure");
+				if (calls.incrementAndGet() == 2)
+					throw new java.io.IOException("temporary comparison failure");
 				var hash = "sha256:" + "a".repeat(64);
 				var target = new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "STAGE_ITEMS");
 				long targetRows = calls.get() == 3 ? 0 : 1;
-				return new TransferStagingComparisonReportIO.Report(1, hash, TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+				return new TransferStagingComparisonReportIO.Report(
+						1, hash, TransferStagedReplacement.State.COMMIT_UNCERTAIN,
 						new DatabaseIdentity("HSQL", "2.7", hash), new TransferStagedReplacement.Comparison(
-								List.of(new TransferStagedReplacement.TableComparison(target, 1, targetRows, targetRows == 1, true))));
+								List.of(new TransferStagedReplacement.TableComparison(target, 1, targetRows,
+										targetRows == 1, true))));
 			}, null);
 			panelRef.set(panel);
 			panel.savedComparison.setReceiver((file, type) -> {
@@ -53,8 +56,10 @@ class FileTransferPanelTest {
 					done.countDown();
 					compared.countDown();
 				}
-				if ("Staging comparison failed. See Details.".equals(event.getNewValue())) failed.countDown();
-				if (event.getNewValue().toString().startsWith("Saved staging comparison:")) saved.countDown();
+				if ("Staging comparison failed. See Details.".equals(event.getNewValue()))
+					failed.countDown();
+				if (event.getNewValue().toString().startsWith("Saved staging comparison:"))
+					saved.countDown();
 			});
 			assertTrue(FileDropHandlerTest.drop(panel.compareStaging, input));
 		});

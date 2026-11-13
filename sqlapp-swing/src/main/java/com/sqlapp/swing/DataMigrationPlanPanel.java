@@ -2,7 +2,6 @@
 package com.sqlapp.swing;
 
 import java.awt.BorderLayout;
-import java.awt.Container;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.nio.file.Files;
@@ -389,7 +388,7 @@ final class DataMigrationPlanPanel extends JPanel {
 	private void busy(final boolean busy) {
 		this.busy = busy;
 		savedReport.refresh();
-		enable(settings, !busy);
+		ComponentEnablement.setTreeEnabled(settings, !busy);
 		reviewFocus.setBusy(busy);
 		build.setEnabled(!busy);
 		newMigration.setEnabled(!busy);
@@ -400,15 +399,6 @@ final class DataMigrationPlanPanel extends JPanel {
 		showExecution.setEnabled(!busy && execution != null);
 		showVerification.setEnabled(!busy && execution != null && execution.verificationReport() != null);
 		saveVerification.setEnabled(showVerification.isEnabled());
-	}
-
-	private static void enable(final Container parent, final boolean enabled) {
-		for (final var child : parent.getComponents()) {
-			child.setEnabled(enabled);
-			if (child instanceof Container nested) {
-				enable(nested, enabled);
-			}
-		}
 	}
 
 	void chooseSourceSchema(final SchemaLister lister,
@@ -833,11 +823,7 @@ final class DataMigrationPlanPanel extends JPanel {
 					try {
 						execution = get();
 						view.showReview(execution.review());
-						status.setText(execution.successful()
-								? "Data execution completed. Save the audit; inspect again before another run."
-								: execution.paused()
-										? "Data execution paused. Save the audit, inspect checkpoints and confirm again to resume."
-										: "Data execution failed. Review committed chunks and checkpoints before retrying.");
+						status.setText(execution.statusMessage());
 						statusPanel.setDetails(status.getText() + "\n\n" + view.summary.getText());
 					} catch (final InterruptedException exception) {
 						Thread.currentThread().interrupt();

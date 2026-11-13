@@ -14,7 +14,8 @@ import com.sqlapp.data.db.command.migration.schema.MigrationPlan.DatabaseIdentit
 import com.sqlapp.data.db.command.migration.transfer.*;
 
 class StagingComparisonSaveActionsTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void failedSaveRetainsComparisonAndAllowsRetryWithoutChangingInput() throws Exception {
@@ -29,15 +30,20 @@ class StagingComparisonSaveActionsTest {
 				if (message.startsWith("Could not save")) {
 					assertTrue(message.contains("is a file"));
 					failed.countDown();
-				} else if (message.startsWith("Saved staging comparison:")) saved.countDown();
+				} else if (message.startsWith("Saved staging comparison:"))
+					saved.countDown();
 			}, directory::toString);
 			ref.set(actions);
-			actions.saved.setReceiver((file, type) -> { opened.set(file); return true; });
+			actions.saved.setReceiver((file, type) -> {
+				opened.set(file);
+				return true;
+			});
 			var hash = "sha256:" + "a".repeat(64);
 			actions.show(new TransferStagingComparisonReportIO.Report(1, hash,
 					TransferStagedReplacement.State.COMMIT_UNCERTAIN, new DatabaseIdentity("HSQL", "2.7", hash),
 					new TransferStagedReplacement.Comparison(List.of(new TransferStagedReplacement.TableComparison(
-							new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "STAGE"), 1, 1, true, true)))));
+							new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "STAGE"), 1, 1, true,
+							true)))));
 			actions.saveTo(input);
 		});
 		assertTrue(failed.await(5, TimeUnit.SECONDS));
@@ -50,7 +56,8 @@ class StagingComparisonSaveActionsTest {
 		assertTrue(saved.await(5, TimeUnit.SECONDS));
 		SwingUtilities.invokeAndWait(() -> ref.get().saved.doClick(0));
 		assertNotNull(opened.get());
-		assertTrue(new TransferStagingComparisonReportIO().read(opened.get()).comparison().tables().getFirst().matchesTarget());
+		assertTrue(new TransferStagingComparisonReportIO().read(opened.get()).comparison().tables().getFirst()
+				.matchesTarget());
 		assertEquals("original", Files.readString(input));
 	}
 
@@ -65,12 +72,17 @@ class StagingComparisonSaveActionsTest {
 		SwingUtilities.invokeAndWait(() -> {
 			var actions = new StagingComparisonSaveActions(busy::get, busy::set, message -> {
 				if (message.startsWith("Saved staging comparison:")) {
-					if (saves.incrementAndGet() == 1) firstSaved.countDown();
-					else secondSaved.countDown();
+					if (saves.incrementAndGet() == 1)
+						firstSaved.countDown();
+					else
+						secondSaved.countDown();
 				}
 			}, directory::toString);
 			ref.set(actions);
-			actions.saved.setReceiver((file, type) -> { opened.set(file); return true; });
+			actions.saved.setReceiver((file, type) -> {
+				opened.set(file);
+				return true;
+			});
 			actions.show(report(true));
 			actions.saveTo(directory);
 		});
@@ -109,16 +121,16 @@ class StagingComparisonSaveActionsTest {
 	private TransferStagingComparisonReportIO.Report report(boolean matches) {
 		var hash = "sha256:" + "a".repeat(64);
 		return new TransferStagingComparisonReportIO.Report(1, hash, TransferStagedReplacement.State.COMMIT_UNCERTAIN,
-				new DatabaseIdentity("HSQL", "2.7", hash), new TransferStagedReplacement.Comparison(List.of(
-						new TransferStagedReplacement.TableComparison(
-								new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "STAGE"),
-								1, matches ? 1 : 0, matches, true))));
+				new DatabaseIdentity("HSQL", "2.7", hash),
+				new TransferStagedReplacement.Comparison(List.of(new TransferStagedReplacement.TableComparison(
+						new TransferStagedReplacement.Target("task", null, "PUBLIC", "ITEMS", "STAGE"), 1,
+						matches ? 1 : 0, matches, true))));
 	}
 
 	@Test
 	void permissionFailureShowsActionableGuidanceWithoutRawExceptionMessage() {
-		var text = StagingComparisonSaveActions.saveFailure(new ExecutionException(
-				new java.nio.file.AccessDeniedException("private-secret-path")));
+		var text = StagingComparisonSaveActions
+				.saveFailure(new ExecutionException(new java.nio.file.AccessDeniedException("private-secret-path")));
 		assertTrue(text.contains("writable folder"));
 		assertTrue(text.contains("AccessDeniedException"));
 		assertFalse(text.contains("private-secret-path"));

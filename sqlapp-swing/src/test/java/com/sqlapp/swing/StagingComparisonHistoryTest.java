@@ -32,21 +32,16 @@ class StagingComparisonHistoryTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({
-		"false,true,true,true,Match status improved",
-		"false,false,false,true,Match status improved",
-		"false,false,true,false,Match status improved",
-		"true,true,false,true,New mismatch",
-		"true,true,true,false,New mismatch",
-		"false,true,false,false,New mismatch",
-		"false,true,true,false,Mixed status changes",
-		"true,false,false,true,Mixed status changes"
-	})
+	@CsvSource({ "false,true,true,true,Match status improved", "false,false,false,true,Match status improved",
+			"false,false,true,false,Match status improved", "true,true,false,true,New mismatch",
+			"true,true,true,false,New mismatch", "false,true,false,false,New mismatch",
+			"false,true,true,false,Mixed status changes", "true,false,false,true,Mixed status changes" })
 	void classifiesBothMatchStatusesWithoutTreatingMixedChangesAsSuccess(boolean oldTarget, boolean oldStaging,
 			boolean newTarget, boolean newStaging, String expected) {
 		var target = new Target("a", "CAT", "PUBLIC", "ITEMS", "STAGE_a");
 		show(report(HASH, "one", List.of(new TableComparison(target, 2, oldTarget ? 2 : 1, oldTarget, oldStaging))));
-		var current = report(HASH, "one", List.of(new TableComparison(target, 2, newTarget ? 2 : 1, newTarget, newStaging)));
+		var current = report(HASH, "one",
+				List.of(new TableComparison(target, 2, newTarget ? 2 : 1, newTarget, newStaging)));
 		var view = show(current);
 		var section = view.tables().getLast();
 		assertEquals("Change", section.columns().get(12));
@@ -90,15 +85,19 @@ class StagingComparisonHistoryTest {
 	}
 
 	private void assertNoHistory(ReportReviewService.Review review) {
-		assertTrue(review.tables().stream().noneMatch(table -> table.title().equals("Changes since previous comparison")));
+		assertTrue(
+				review.tables().stream().noneMatch(table -> table.title().equals("Changes since previous comparison")));
 	}
+
 	private ReportReviewService.Review show(Report report) {
 		return history.show(report, new ReportReviewService().stagingComparison(report));
 	}
+
 	private TableComparison table(String id, long targetRows, boolean recordedMatch) {
-		return new TableComparison(new Target(id, null, "PUBLIC", "ITEMS", "STAGE_" + id),
-				2, targetRows, targetRows == 2, recordedMatch);
+		return new TableComparison(new Target(id, null, "PUBLIC", "ITEMS", "STAGE_" + id), 2, targetRows,
+				targetRows == 2, recordedMatch);
 	}
+
 	private Report report(String fingerprint, String target, List<TableComparison> tables) {
 		return new Report(1, fingerprint, State.COMMIT_UNCERTAIN,
 				new DatabaseIdentity("HSQL", "2.7", "sha256:" + (target.equals("one") ? "1" : "2").repeat(64)),

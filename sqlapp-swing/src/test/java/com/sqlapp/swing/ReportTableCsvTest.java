@@ -11,18 +11,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class ReportTableCsvTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@Test
 	void formatsFilteredSortedAndReorderedViewWithQuotedMultilineUnicodeFields() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var table = new JTable(new DefaultTableModel(new Object[][] {
-					{ "z", "excluded" }, { "b", "日,\"本\"\r\n語" }, { "a", "" } }, new Object[] { "Task", "Note" }));
+			var table = new JTable(
+					new DefaultTableModel(new Object[][] { { "z", "excluded" }, { "b", "日,\"本\"\r\n語" }, { "a", "" } },
+							new Object[] { "Task", "Note" }));
 			table.setAutoCreateRowSorter(true);
 			((javax.swing.table.TableRowSorter<?>) table.getRowSorter()).setRowFilter(RowFilter.regexFilter("[ab]", 0));
 			table.getRowSorter().toggleSortOrder(0);
 			table.moveColumn(1, 0);
-			assertEquals("\"Note\",\"Task\"\r\n\"\",\"a\"\r\n\"日,\"\"本\"\"\r\n語\",\"b\"\r\n", ReportTableCsv.format(table));
+			assertEquals("\"Note\",\"Task\"\r\n\"\",\"a\"\r\n\"日,\"\"本\"\"\r\n語\",\"b\"\r\n",
+					ReportTableCsv.format(table));
 			assertEquals(3, table.getModel().getRowCount());
 		});
 	}
@@ -30,9 +33,10 @@ class ReportTableCsvTest {
 	@Test
 	void rejectsOversizedSnapshotBeforeWriting() throws Exception {
 		SwingUtilities.invokeAndWait(() -> {
-			var table = new JTable(new Object[][] { { "あ".repeat(ReportTableCsv.MAX_BYTES / 3) } }, new String[] { "Task" });
-			assertTrue(assertThrows(IllegalArgumentException.class, () -> ReportTableCsv.format(table))
-					.getMessage().contains("16 MiB"));
+			var table = new JTable(new Object[][] { { "あ".repeat(ReportTableCsv.MAX_BYTES / 3) } },
+					new String[] { "Task" });
+			assertTrue(assertThrows(IllegalArgumentException.class, () -> ReportTableCsv.format(table)).getMessage()
+					.contains("16 MiB"));
 		});
 	}
 
@@ -53,15 +57,20 @@ class ReportTableCsvTest {
 			tableRef.set(table);
 			var actions = new ReportTableCsvSaveActions(table, enabled::get, folder -> {
 				assertFalse(SwingUtilities.isEventDispatchThread());
-				if (openAttempts.incrementAndGet() == 1) throw new java.io.IOException("unavailable");
+				if (openAttempts.incrementAndGet() == 1)
+					throw new java.io.IOException("unavailable");
 				openedFolder.set(folder);
 			});
 			actionsRef.set(actions);
 			actions.status.addPropertyChangeListener("text", event -> {
-				if (event.getNewValue().toString().startsWith("Could not save")) failure.countDown();
-				if (event.getNewValue().toString().startsWith("Saved CSV snapshot")) saved.countDown();
-				if (event.getNewValue().toString().startsWith("Could not open folder")) openFailed.countDown();
-				if ("Opened saved CSV folder".equals(event.getNewValue())) opened.countDown();
+				if (event.getNewValue().toString().startsWith("Could not save"))
+					failure.countDown();
+				if (event.getNewValue().toString().startsWith("Saved CSV snapshot"))
+					saved.countDown();
+				if (event.getNewValue().toString().startsWith("Could not open folder"))
+					openFailed.countDown();
+				if ("Opened saved CSV folder".equals(event.getNewValue()))
+					opened.countDown();
 			});
 			assertFalse(actions.openFolder.isEnabled());
 			actions.saveTo(input);

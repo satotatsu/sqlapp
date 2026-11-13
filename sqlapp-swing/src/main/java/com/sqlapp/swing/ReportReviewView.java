@@ -29,8 +29,8 @@ final class ReportReviewView extends JPanel {
 	final ReportDetailTablePanel taskTable = new ReportDetailTablePanel(tasks, null, "Filter tasks / migrations",
 			"rows");
 	final JTabbedPane tabs = new JTabbedPane();
-	final JComboBox<String> comparisonScope = new JComboBox<>(new String[] {
-			"All tables", "Target differs", "Staging changed", "Target differs and staging changed" });
+	final JComboBox<String> comparisonScope = new JComboBox<>(
+			new String[] { "All tables", "Target differs", "Staging changed", "Target differs and staging changed" });
 	private final JPanel comparisonControls = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
 	ReportReviewView() {
@@ -67,8 +67,8 @@ final class ReportReviewView extends JPanel {
 		resetDetails(review.details());
 		showTable(tasks, review.columns(), review.rows());
 		taskTable.setNumericColumns(review.numericColumns());
-		comparisonControls.setVisible(review.columns().contains("Target vs staging")
-				&& review.columns().contains("Staging vs recorded"));
+		comparisonControls.setVisible(
+				review.columns().contains("Target vs staging") && review.columns().contains("Staging vs recorded"));
 		comparisonScope.setSelectedIndex(0);
 		filterComparison();
 		for (final var section : review.tables()) {
@@ -81,7 +81,8 @@ final class ReportReviewView extends JPanel {
 	}
 
 	private void filterComparison() {
-		if (!comparisonControls.isVisible()) return;
+		if (!comparisonControls.isVisible())
+			return;
 		var filters = new java.util.HashMap<Integer, String>();
 		int selected = comparisonScope.getSelectedIndex();
 		if (selected == 1 || selected == 3)

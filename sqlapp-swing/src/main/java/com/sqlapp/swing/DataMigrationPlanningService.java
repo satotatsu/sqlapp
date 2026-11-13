@@ -159,16 +159,8 @@ final class DataMigrationPlanningService {
 					rows, base.details(), List.of(), List.of(0, 5)), snapshot, resolution.verificationConfiguration());
 		} catch (final Exception failure) {
 			String message = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
-			for (final char[] password : new char[][] { sourcePassword, targetPassword }) {
-				if (password.length > 0) {
-					message = message.replace(new String(password), "[redacted]");
-				}
-			}
-			for (final var spec : new PlanningJdbc.Spec[] { source, target }) {
-				if (spec != null) {
-					message = message.replace(spec.jdbcUrl(), "[JDBC URL]");
-				}
-			}
+			message = SecretRedaction.redact(message, new PlanningJdbc.Spec[] { source, target }, sourcePassword,
+					targetPassword);
 			throw new IllegalArgumentException("Unable to build data migration plan: " + message);
 		} finally {
 			Arrays.fill(sourcePassword, '\0');

@@ -3,7 +3,10 @@ package com.sqlapp.swing;
 
 import com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement.Comparison;
 
-/** Interprets current data evidence without inferring the outcome of a past commit. */
+/**
+ * Interprets current data evidence without inferring the outcome of a past
+ * commit.
+ */
 final class StagingComparisonGuidance {
 	private StagingComparisonGuidance() {
 	}

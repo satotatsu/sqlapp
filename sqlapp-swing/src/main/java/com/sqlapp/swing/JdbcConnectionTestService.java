@@ -22,9 +22,6 @@ final class JdbcConnectionTestService {
 	}
 
 	private static String redact(final String text, final PlanningJdbc.Spec spec, final char[] password) {
-		String result = text.replace(spec.jdbcUrl(), "[JDBC URL]");
-		if (password.length > 0)
-			result = result.replace(new String(password), "[redacted]");
-		return result;
+		return SecretRedaction.redact(text, spec, password);
 	}
 }

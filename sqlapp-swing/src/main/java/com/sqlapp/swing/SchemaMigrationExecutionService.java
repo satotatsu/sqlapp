@@ -103,14 +103,7 @@ final class SchemaMigrationExecutionService {
 		final var report = command == null ? null : command.getExecutionReport();
 		String message = failure == null ? null
 				: failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
-		if (message != null) {
-			if (!secret.isEmpty()) {
-				message = message.replace(secret, "[redacted]");
-			}
-			if (connection != null) {
-				message = message.replace(connection.jdbcUrl(), "[JDBC URL]");
-			}
-		}
+		message = SecretRedaction.redact(message, connection, secret.toCharArray());
 		final var base = report == null ? new ReportReviewService.Review(
 				"Execution did not complete. No execution audit report is available.\nInspect the database before retrying.",
 				List.of(), List.of(), "") : new ReportReviewService().schemaExecution(report);

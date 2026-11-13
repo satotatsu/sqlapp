@@ -22,9 +22,7 @@ final class SourceSchemaDiscoveryService {
 						"No source schemas are visible. Check the selected database and metadata permissions.");
 			return names.stream().sorted().toList();
 		} catch (Exception failure) {
-			String message = EditorStatusPanel.failureDetails(failure).replace(source.jdbcUrl(), "[JDBC URL]");
-			if (password.length > 0)
-				message = message.replace(new String(password), "[redacted]");
+			final String message = SecretRedaction.redact(EditorStatusPanel.failureDetails(failure), source, password);
 			throw new IllegalArgumentException(message);
 		} finally {
 			Arrays.fill(password, '\0');

@@ -61,11 +61,11 @@ class ReportReviewAutoLoaderTest {
 	void stagingComparisonDistinguishesSameNamedTablesByCatalogAndTaskWithoutLosingNumericSort() throws Exception {
 		var comparison = new TransferStagedReplacement.Comparison(List.of(
 				new TransferStagedReplacement.TableComparison(
-						new TransferStagedReplacement.Target("task-a", "catalog-a", "PUBLIC", "ITEMS", "STAGE_A"),
-						12, 12, true, true),
+						new TransferStagedReplacement.Target("task-a", "catalog-a", "PUBLIC", "ITEMS", "STAGE_A"), 12,
+						12, true, true),
 				new TransferStagedReplacement.TableComparison(
-						new TransferStagedReplacement.Target("task-b", "catalog-b", "PUBLIC", "ITEMS", "STAGE_B"),
-						2, 1, false, true)));
+						new TransferStagedReplacement.Target("task-b", "catalog-b", "PUBLIC", "ITEMS", "STAGE_B"), 2, 1,
+						false, true)));
 		var hash = "sha256:" + "a".repeat(64);
 		var report = new TransferStagingComparisonReportIO.Report(1, hash,
 				TransferStagedReplacement.State.COMMIT_UNCERTAIN,
@@ -182,10 +182,8 @@ class ReportReviewAutoLoaderTest {
 						null);
 		new BulkMigrationVerificationReportIO().write(files.get(ReportReviewService.Type.BULK_VERIFICATION),
 				new BulkMigrationVerificationReport(6, Instant.now(), "plan", "DEFAULT", true, 0, 0, 0, List.of()));
-		var comparisons = List.of(
-				comparison("MATCHED", 7, 7, true, true),
-				comparison("TARGET_DIFFERS", 12, 2, false, true),
-				comparison("STAGING_CHANGED", 10, 10, true, false));
+		var comparisons = List.of(comparison("MATCHED", 7, 7, true, true),
+				comparison("TARGET_DIFFERS", 12, 2, false, true), comparison("STAGING_CHANGED", 10, 10, true, false));
 		new TransferStagingComparisonReportIO().write(files.get(ReportReviewService.Type.STAGING_COMPARISON),
 				new TransferStagingComparisonReportIO.Report(1, "sha256:" + "a".repeat(64),
 						TransferStagedReplacement.State.COMMIT_UNCERTAIN,
@@ -197,7 +195,7 @@ class ReportReviewAutoLoaderTest {
 	private static TransferStagedReplacement.TableComparison comparison(String name, long stagingRows, long targetRows,
 			boolean matches, boolean stagingUnchanged) {
 		return new TransferStagedReplacement.TableComparison(
-				new TransferStagedReplacement.Target(name, null, "PUBLIC", name, "STG_" + name),
-				stagingRows, targetRows, matches, stagingUnchanged);
+				new TransferStagedReplacement.Target(name, null, "PUBLIC", name, "STG_" + name), stagingRows,
+				targetRows, matches, stagingUnchanged);
 	}
 }

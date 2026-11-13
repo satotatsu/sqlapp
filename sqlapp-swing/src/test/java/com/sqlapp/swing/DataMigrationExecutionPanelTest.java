@@ -219,6 +219,38 @@ class DataMigrationExecutionPanelTest {
 		});
 	}
 
+	@Test
+	void completedExecutionWithVerificationMismatchIsNotReportedAsPlainCompletion() {
+		final var audit = new BulkMigrationJobExecutionReport(1, Instant.now(), "job", "plan", 0, 0, List.of(), null);
+		final var review = new ReportReviewService.Review("Finished", List.of(), List.of(), "audit");
+		final var mismatch = new DataMigrationExecutionService.Outcome(audit, null, review, null, null, null,
+				verificationReport(false));
+		assertTrue(mismatch.successful());
+		assertTrue(mismatch.verificationMismatch());
+		assertTrue(mismatch.statusMessage().contains("verification found mismatches"), mismatch.statusMessage());
+
+		final var matched = new DataMigrationExecutionService.Outcome(audit, null, review, null, null, null,
+				verificationReport(true));
+		assertFalse(matched.verificationMismatch());
+		assertTrue(matched.statusMessage().startsWith("Data execution completed. Save the audit"));
+
+		final var unverified = new DataMigrationExecutionService.Outcome(audit, null, review, null);
+		assertFalse(unverified.verificationMismatch());
+
+		final var failed = new DataMigrationExecutionService.Outcome(null, null, review, "mismatch", null, null,
+				verificationReport(false));
+		assertFalse(failed.successful());
+		assertTrue(failed.statusMessage().startsWith("Data execution failed"));
+	}
+
+	private static com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReport verificationReport(
+			final boolean match) {
+		return new com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReport(6, Instant.now(), "plan",
+				"DEFAULT", match, 2, match ? 2 : 1, match ? 0 : 1,
+				List.of(new com.sqlapp.data.db.command.migration.bulk.BulkMigrationVerificationReport.Task("items",
+						List.of("ID"), null, null, match, 2, match ? 2 : 1, match ? 0 : 1, List.of())));
+	}
+
 	private static void onEnabled(final javax.swing.JButton button, final CountDownLatch latch) {
 		button.addPropertyChangeListener("enabled", event -> {
 			if (Boolean.TRUE.equals(event.getNewValue()))

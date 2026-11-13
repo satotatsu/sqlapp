@@ -47,9 +47,11 @@ final class ReportTableCsvSaveActions extends JPanel {
 		add(openFolder);
 		add(status);
 		openFolder.addActionListener(event -> openSavedFolder());
-		save.setToolTipText("Save visible report rows with headers in current row/column order as UTF-8 CSV, up to 16 MiB.");
+		save.setToolTipText(
+				"Save visible report rows with headers in current row/column order as UTF-8 CSV, up to 16 MiB.");
 		save.addActionListener(event -> {
-			if (!save.isEnabled()) return;
+			if (!save.isEnabled())
+				return;
 			var chooser = files.forDirectory(null);
 			chooser.setDialogTitle("Choose a folder for the report CSV snapshot");
 			if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION)
@@ -59,14 +61,16 @@ final class ReportTableCsvSaveActions extends JPanel {
 	}
 
 	void refresh() {
-		save.setEnabled(!saving && !opening && enabled.getAsBoolean() && table.getRowCount() > 0 && table.getColumnCount() > 0);
+		save.setEnabled(
+				!saving && !opening && enabled.getAsBoolean() && table.getRowCount() > 0 && table.getColumnCount() > 0);
 		openFolder.setEnabled(!saving && !opening && enabled.getAsBoolean() && savedOutput != null);
 		openFolder.setToolTipText(savedOutput == null ? "Save a CSV snapshot first."
 				: "Open the last successfully saved CSV folder: " + savedOutput.getParent());
 	}
 
 	void saveTo(Path folder) {
-		if (!save.isEnabled()) return;
+		if (!save.isEnabled())
+			return;
 		final String snapshot;
 		try {
 			snapshot = ReportTableCsv.format(table);
@@ -79,14 +83,18 @@ final class ReportTableCsvSaveActions extends JPanel {
 		status.setToolTipText(null);
 		status.setText("Saving CSV snapshot…");
 		new SwingWorker<Path, Void>() {
-			@Override protected Path doInBackground() throws Exception {
-				var directory = Files.createTempDirectory(Files.createDirectories(folder.toAbsolutePath().normalize()), "report-table-");
+			@Override
+			protected Path doInBackground() throws Exception {
+				var directory = Files.createTempDirectory(Files.createDirectories(folder.toAbsolutePath().normalize()),
+						"report-table-");
 				var output = directory.resolve("visible-rows.csv");
-				AtomicMigrationFile.write(output, temporary -> Files.writeString(temporary, snapshot, StandardCharsets.UTF_8));
+				AtomicMigrationFile.write(output,
+						temporary -> Files.writeString(temporary, snapshot, StandardCharsets.UTF_8));
 				return output;
 			}
 
-			@Override protected void done() {
+			@Override
+			protected void done() {
 				try {
 					var output = get();
 					savedOutput = output;
@@ -105,20 +113,23 @@ final class ReportTableCsvSaveActions extends JPanel {
 	}
 
 	private void openSavedFolder() {
-		if (saving || opening || !enabled.getAsBoolean() || savedOutput == null) return;
+		if (saving || opening || !enabled.getAsBoolean() || savedOutput == null)
+			return;
 		var output = savedOutput;
 		opening = true;
 		refresh();
 		status.setText("Opening saved CSV folder…");
 		new SwingWorker<Void, Void>() {
-			@Override protected Void doInBackground() throws Exception {
+			@Override
+			protected Void doInBackground() throws Exception {
 				if (!Files.isDirectory(output.getParent()))
 					throw new IOException("Saved CSV folder is unavailable.");
 				opener.open(output.getParent());
 				return null;
 			}
 
-			@Override protected void done() {
+			@Override
+			protected void done() {
 				try {
 					get();
 					status.setText("Opened saved CSV folder");

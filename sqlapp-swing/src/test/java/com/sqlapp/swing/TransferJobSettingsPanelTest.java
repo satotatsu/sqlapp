@@ -23,7 +23,8 @@ class TransferJobSettingsPanelTest {
 		var done = new CountDownLatch(1);
 		SwingUtilities.invokeAndWait(() -> {
 			assertFalse(panel.stagedReplace.isSelected());
-			if (fileRoute) assertTrue(SwingUtilities.isDescendingFrom(panel.stagedReplace, panel.importSettings));
+			if (fileRoute)
+				assertTrue(SwingUtilities.isDescendingFrom(panel.stagedReplace, panel.importSettings));
 			panel.stagedReplace.doClick(0);
 			assertTrue(panel.verify.isSelected());
 			assertFalse(panel.verify.isEnabled());
@@ -47,9 +48,11 @@ class TransferJobSettingsPanelTest {
 		var done = new CountDownLatch(1);
 		SwingUtilities.invokeAndWait(() -> {
 			assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO, panel.insertMethod.getSelectedItem());
-			if (fileRoute) assertTrue(SwingUtilities.isDescendingFrom(panel.insertMethod, panel.importSettings));
+			if (fileRoute)
+				assertTrue(SwingUtilities.isDescendingFrom(panel.insertMethod, panel.importSettings));
 			panel.insertMethod.setSelectedItem(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH);
-			onIdle(panel, done); panel.save.doClick(0);
+			onIdle(panel, done);
+			panel.save.doClick(0);
 		});
 		assertTrue(done.await(5, TimeUnit.SECONDS));
 		var result = io.read(file).configuration();
@@ -57,8 +60,10 @@ class TransferJobSettingsPanelTest {
 		assertEquals(123, result.chunkSize());
 		assertEquals(java.util.List.of("ITEMS"), result.tables());
 		var reopened = load(file, new AtomicReference<>());
-		SwingUtilities.invokeAndWait(() -> assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH, reopened.insertMethod.getSelectedItem()));
+		SwingUtilities.invokeAndWait(() -> assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH,
+				reopened.insertMethod.getSelectedItem()));
 	}
+
 	@TempDir
 	Path directory;
 	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();

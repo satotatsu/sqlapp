@@ -12,11 +12,12 @@ import org.junit.jupiter.api.Test;
 class StagingComparisonHistoryFiltersTest {
 	private ReportReviewService.DetailTable section() {
 		return new ReportReviewService.DetailTable("Changes since previous comparison", "Counts and statuses only",
-				List.of("Task", "Change", "Rows"), List.of(
-						List.of("new-a", "New mismatch", "12"), List.of("new-b", "New mismatch", "2"),
+				List.of("Task", "Change", "Rows"),
+				List.of(List.of("new-a", "New mismatch", "12"), List.of("new-b", "New mismatch", "2"),
 						List.of("mixed", "Mixed status changes", "3"),
 						List.of("improved", "Match status improved", "4"),
-						List.of("counts", "Row counts changed", "5")), List.of(2));
+						List.of("counts", "Row counts changed", "5")),
+				List.of(2));
 	}
 
 	@Test
@@ -40,7 +41,8 @@ class StagingComparisonHistoryFiltersTest {
 			filters.scope.setSelectedIndex(3);
 			assertEquals("improved", panel.table.getValueAt(0, 0));
 			filters.scope.setSelectedIndex(4);
-			assertEquals("Task\tChange\tRows\ncounts\tRow counts changed\t5\n", ReportTableClipboard.format(panel.table));
+			assertEquals("Task\tChange\tRows\ncounts\tRow counts changed\t5\n",
+					ReportTableClipboard.format(panel.table));
 			filters.scope.setSelectedIndex(0);
 			assertEquals(5, panel.table.getRowCount());
 			panel.refreshEnabled(false);
@@ -66,17 +68,20 @@ class StagingComparisonHistoryFiltersTest {
 			view.showReview(review);
 			assertEquals(0, find(view.tabs.getComponentAt(1)).scope.getSelectedIndex());
 			view.showReview(new ReportReviewService.Review("Other", List.of(), List.of(), "{}",
-					List.of(new ReportReviewService.DetailTable("Other details", "Other", section().columns(), section().rows()))));
+					List.of(new ReportReviewService.DetailTable("Other details", "Other", section().columns(),
+							section().rows()))));
 			assertNull(find(view.tabs.getComponentAt(1)));
 		});
 	}
 
 	private StagingComparisonHistoryFilters find(Component component) {
-		if (component instanceof StagingComparisonHistoryFilters filters) return filters;
+		if (component instanceof StagingComparisonHistoryFilters filters)
+			return filters;
 		if (component instanceof Container container)
 			for (var child : container.getComponents()) {
 				var found = find(child);
-				if (found != null) return found;
+				if (found != null)
+					return found;
 			}
 		return null;
 	}

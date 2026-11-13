@@ -77,10 +77,12 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 					if (request.savedResult() != null)
 						return TransferStagedReplacement.compareRetainedStageReport(request.savedResult(), target);
 					var recovery = request.recovery();
-					var comparison = TransferStagedReplacement.compareRetainedStage(recovery.review(), recovery.outcome(), target);
-					return recovery.resultFingerprint() == null ? comparison : new TransferStagingComparisonReportIO.Report(
-							1, recovery.resultFingerprint(), TransferStagedReplacement.State.COMMIT_UNCERTAIN,
-							recovery.review().targetIdentity(), comparison);
+					var comparison = TransferStagedReplacement.compareRetainedStage(recovery.review(),
+							recovery.outcome(), target);
+					return recovery.resultFingerprint() == null ? comparison
+							: new TransferStagingComparisonReportIO.Report(1, recovery.resultFingerprint(),
+									TransferStagedReplacement.State.COMMIT_UNCERTAIN,
+									recovery.review().targetIdentity(), comparison);
 				}
 			}
 			final var validation = new TransferDatabaseCommand();
@@ -123,7 +125,8 @@ final class DirectTransferDesktopService implements DirectTransferPanel.Backend 
 						/* Exposed by a null report path. */ }
 					throw new ExecutionFailure(
 							new Executed(failure.outcome(), report == null ? null : report.file(),
-									draftFor(failure.outcome(), request.reviewed()), report == null ? null : report.fingerprint()),
+									draftFor(failure.outcome(), request.reviewed()),
+									report == null ? null : report.fingerprint()),
 							"Direct transfer failed. Inspect committed work, verification and audit availability before retrying.");
 				}
 			}
