@@ -45,6 +45,17 @@ public class BulkMigrationJobConfiguration {
 		/** Optional qualified write target; columns retain their source names. */
 		private String targetTable;
 		private Map<String, String> columnMappings = new LinkedHashMap<>();
+		/**
+		 * Optional MVEL expression by source column name, applied to source values
+		 * before copy, verification and repair. Key columns cannot be converted.
+		 */
+		private Map<String, String> columnConversions = new LinkedHashMap<>();
+		/**
+		 * Optional copy type by source column name, such as {@code VARCHAR(10)}: the
+		 * sqlapp DataType used for converted values, the target model and verification.
+		 * Key columns cannot change type.
+		 */
+		private Map<String, String> columnTypes = new LinkedHashMap<>();
 		/** Reject execution when the target already contains rows. */
 		private boolean requireEmptyTarget;
 		/**

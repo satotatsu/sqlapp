@@ -211,10 +211,15 @@ public final class TransferStagedReplacement {
 				target.setReadOnly(true);
 				var original = resolve(review, source);
 				plan = prepareTargets(target, original, review.prepared().job().fingerprint(), cfg);
+				// The staged copy re-derives its data job; carry reviewed copy types and
+				// conversions.
+				var reviewed = new HashMap<String, BulkMigrationJobConfiguration.Task>();
+				new BulkMigrationJobConfigurationEditorIO().validate(review.prepared().dataJob().text()).getTasks()
+						.forEach(task -> reviewed.put(task.getId(), task));
 				for (int index = 0; index < original.getTasks().size(); index++) {
 					var task = original.getTasks().get(index);
-					mappings.put(task.getEffectiveSourceTable().getName(), new TransferNameMappingIO.TableMapping(
-							plan.targets().get(index).stageTable(), task.getColumnMappings()));
+					mappings.put(task.getEffectiveSourceTable().getName(),
+							stageMapping(plan.targets().get(index).stageTable(), reviewed.get(task.getTaskId())));
 				}
 			}
 			Path directory = Files.createDirectory(review.prepared().directory().resolve("staging"));
@@ -244,6 +249,23 @@ public final class TransferStagedReplacement {
 			throw new TransferSchemaPreparation.ValidationException(
 					"Staged replacement review failed. Check transaction/locking support and selected target foreign keys.");
 		}
+	}
+
+	/**
+	 * Stage table mapping that repeats the reviewed names, copy types and
+	 * conversions.
+	 */
+	static TransferNameMappingIO.TableMapping stageMapping(String stageTable, BulkMigrationJobConfiguration.Task task) {
+		var names = task.getColumnMappings() == null ? Map.<String, String>of() : task.getColumnMappings();
+		var types = task.getColumnTypes() == null ? Map.<String, String>of() : task.getColumnTypes();
+		var conversions = task.getColumnConversions() == null ? Map.<String, String>of() : task.getColumnConversions();
+		var sources = new LinkedHashSet<String>(names.keySet());
+		sources.addAll(types.keySet());
+		sources.addAll(conversions.keySet());
+		var columns = new LinkedHashMap<String, TransferNameMappingIO.ColumnMapping>();
+		sources.forEach(source -> columns.put(source, new TransferNameMappingIO.ColumnMapping(names.get(source),
+				types.get(source), conversions.get(source))));
+		return new TransferNameMappingIO.TableMapping(stageTable, columns);
 	}
 
 	static TargetPlan prepareTargets(Connection target, BulkMigrationJobPlan original, String inputFingerprint,

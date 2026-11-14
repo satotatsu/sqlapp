@@ -99,6 +99,7 @@ final class MigrationTargetMappingResolver {
 				}
 				final String defaultExpression = defaultExpression(configuredColumn.defaultExpression(), table, column,
 						configuredColumn.identity());
+				conversion(configuredColumn.conversion(), table, column);
 				columns.add(new ResolvedMigrationTargetMapping.ColumnMapping(
 						new ObjectId(schema.getCatalogName(), schema.getName(), "column", column.getName(),
 								table.getName()),
@@ -173,6 +174,26 @@ final class MigrationTargetMappingResolver {
 			throw new CommandException(property + " must not contain control characters for " + sourceObject);
 		}
 		return value;
+	}
+
+	/**
+	 * A conversion is an MVEL expression applied by the generated data load, so it
+	 * must compile and must not change primary-key values used for resumable reads.
+	 */
+	private static void conversion(final String value, final Table table, final Column column) {
+		if (value == null) {
+			return;
+		}
+		try {
+			final var conversions = com.sqlapp.jdbc.bulk.BulkMigrationColumnConversions.mvel(table,
+					java.util.Map.of(column.getName(), value));
+			if (table.getPrimaryKeyConstraint() != null) {
+				conversions.requireUnconverted(table.getPrimaryKeyConstraint().getColumns().stream()
+						.map(reference -> reference.getName()).toList(), "primary key");
+			}
+		} catch (final IllegalArgumentException e) {
+			throw new CommandException("Invalid conversion: " + e.getMessage(), e);
+		}
 	}
 
 	private static String defaultExpression(final String value, final Table table, final Column column,

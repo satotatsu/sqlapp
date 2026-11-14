@@ -437,7 +437,7 @@ public final class TransferFileImportService {
 		for (int i = 0; i < original.getTasks().size(); i++) {
 			var task = original.getTasks().get(i);
 			String sourceName = task.getEffectiveSourceTable().getName();
-			names.put(sourceName, new TransferNameMappingIO.TableMapping(destination.targets().get(i).stageTable(),
+			names.put(sourceName, TransferNameMappingIO.TableMapping.names(destination.targets().get(i).stageTable(),
 					task.getColumnMappings()));
 			selected.add(schema.getTables().get(sourceName));
 		}

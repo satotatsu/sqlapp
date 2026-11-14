@@ -192,6 +192,12 @@ public final class TransferJobPreparationService {
 							columns.put(sourceName, targetName);
 					}
 					task.put("columnMappings", columns);
+					var conversions = projection.conversions(table.getName());
+					if (!conversions.isEmpty())
+						task.put("columnConversions", new LinkedHashMap<>(conversions));
+					var copyTypes = projection.copyTypes(table.getName());
+					if (!copyTypes.isEmpty())
+						task.put("columnTypes", new LinkedHashMap<>(copyTypes));
 				}
 			}
 			bulk = bulkIO.write(bulk.file(),

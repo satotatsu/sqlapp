@@ -137,6 +137,7 @@ public final class TransferFilePackageIO {
 		var mapping = new TransferNameMappingIO()
 				.read(member(job.file().getParent(), TransferNameMappingIO.CAPTURED_FILE));
 		TransferNameMappingIO.checkDataJobPin(job.text(), mapping.fingerprint());
+		TransferNameMappingIO.requireNamesOnly(mapping, "FILE package import");
 		return mapping;
 	}
 

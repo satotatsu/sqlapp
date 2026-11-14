@@ -86,7 +86,7 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * CLUSTERED COLUMN STORE
 	 */
-	ClusteredColumnStore("CLUSTERED", "CLUSTERED\\s*COLUMN\\s*STORE") {
+	ClusteredColumnStore("CLUSTERED COLUMNSTORE", "CLUSTERED\\s*COLUMN\\s*STORE") {
 		@Override
 		public boolean isClusterd() {
 			return true;
@@ -100,7 +100,7 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * NON CLUSTERED COLUMNSTORE
 	 */
-	NonClusteredColumnStore("NONCLUSTERED COLUMNSTORE", "CLUSTERED\\s*COLUMN\\s*STORE") {
+	NonClusteredColumnStore("NONCLUSTERED COLUMNSTORE", "NON\\s*CLUSTERED\\s*COLUMN\\s*STORE") {
 		@Override
 		public boolean isColumnStore() {
 			return true;

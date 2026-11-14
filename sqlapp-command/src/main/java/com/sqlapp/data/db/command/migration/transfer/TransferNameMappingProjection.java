@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.migration.transfer;
 
 import java.util.*;
+import com.sqlapp.data.db.command.migration.bulk.BulkMigrationColumnType;
 import com.sqlapp.data.schemas.*;
 import com.sqlapp.data.schemas.properties.object.ReferenceColumnsProperty;
 import com.sqlapp.data.schemas.properties.IncludeColumnsProperty;
@@ -11,7 +12,21 @@ import com.sqlapp.data.schemas.properties.IncludeColumnsProperty;
  */
 final class TransferNameMappingProjection {
 	record Projection(Schema schema, Map<String, Table> bySourceName, boolean renamedIdentifiers,
-			Map<String, String> sourceKeys) {
+			Map<String, String> sourceKeys, Map<String, Map<String, String>> conversions,
+			Map<String, Map<String, String>> copyTypes) {
+		/** Resolved MVEL conversions by canonical source column name. */
+		Map<String, String> conversions(String sourceTable) {
+			return conversions.getOrDefault(sourceTable, Map.of());
+		}
+
+		/**
+		 * Canonical target types of non-key columns by canonical source column name.
+		 * Key columns keep their source type while copying; their mapped type changes
+		 * only the target definition.
+		 */
+		Map<String, String> copyTypes(String sourceTable) {
+			return copyTypes.getOrDefault(sourceTable, Map.of());
+		}
 	}
 
 	private TransferNameMappingProjection() {
@@ -66,9 +81,11 @@ final class TransferNameMappingProjection {
 		var targets = new LinkedHashMap<String, Table>();
 		var columnNames = new LinkedHashMap<String, Map<String, String>>();
 		var targetNames = new HashSet<String>();
+		var conversions = new LinkedHashMap<String, Map<String, String>>();
+		var copyTypes = new LinkedHashMap<String, Map<String, String>>();
 		boolean renamed = false;
 		for (var table : canonicalSelection) {
-			var rule = rules.getOrDefault(table.getName(), new TransferNameMappingIO.TableMapping(null, Map.of()));
+			var rule = rules.getOrDefault(table.getName(), new TransferNameMappingIO.TableMapping(null, null));
 			String targetName = rule.targetTable() == null ? table.getName() : rule.targetTable();
 			renamed |= !targetName.equals(table.getName());
 			if (!targetNames.add(targetName.toUpperCase(Locale.ROOT)))
@@ -76,13 +93,33 @@ final class TransferNameMappingProjection {
 			var names = new LinkedHashMap<String, String>();
 			table.getColumns().forEach(column -> names.put(column.getName(), column.getName()));
 			var configuredColumns = new HashSet<String>();
+			var types = new HashMap<String, BulkMigrationColumnType>();
+			var converted = new LinkedHashMap<String, String>();
+			var copied = new LinkedHashMap<String, String>();
+			var keys = new HashSet<String>();
+			if (table.getPrimaryKeyConstraint() != null)
+				table.getPrimaryKeyConstraint().getColumns().forEach(key -> keys.add(key.getName()));
 			for (var entry : rule.columns().entrySet()) {
 				var column = table.getColumns().get(entry.getKey());
 				if (column == null || !configuredColumns.add(column.getName()))
 					throw new TransferSchemaPreparation.ValidationException(
 							"Source column is missing or mapped twice: " + table.getName() + "." + entry.getKey());
-				names.put(column.getName(), entry.getValue());
+				var definition = entry.getValue();
+				if (definition.name() != null)
+					names.put(column.getName(), definition.name());
+				if (definition.type() != null) {
+					var type = BulkMigrationColumnType.parse(definition.type());
+					types.put(column.getName(), type);
+					if (!keys.contains(column.getName()))
+						copied.put(column.getName(), type.toString());
+				}
+				if (definition.conversion() != null)
+					converted.put(column.getName(), definition.conversion());
 			}
+			if (!converted.isEmpty())
+				conversions.put(table.getName(), Collections.unmodifiableMap(converted));
+			if (!copied.isEmpty())
+				copyTypes.put(table.getName(), Collections.unmodifiableMap(copied));
 			var unique = new HashSet<String>();
 			for (var name : names.values())
 				if (!unique.add(name.toUpperCase(Locale.ROOT)))
@@ -93,7 +130,10 @@ final class TransferNameMappingProjection {
 			for (var column : table.getColumns()) {
 				String name = names.get(column.getName());
 				renamed |= !column.getName().equals(name);
-				target.getColumns().add(column.clone().setName(name));
+				var output = column.clone().setName(name);
+				if (types.containsKey(column.getName()))
+					types.get(column.getName()).applyTo(output);
+				target.getColumns().add(output);
 			}
 			projected.getTables().add(target);
 			targets.put(table.getName(), target);
@@ -142,7 +182,8 @@ final class TransferNameMappingProjection {
 		}
 		SchemaUtils.validate(projected);
 		return new Projection(projected, Collections.unmodifiableMap(targets), renamed,
-				Collections.unmodifiableMap(sourceKeys));
+				Collections.unmodifiableMap(sourceKeys), Collections.unmodifiableMap(conversions),
+				Collections.unmodifiableMap(copyTypes));
 	}
 
 	private static Column column(Table table, Map<String, String> names, String sourceName) {

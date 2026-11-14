@@ -24,7 +24,7 @@ class TransferNameRulesTest {
 			assertThrows(IllegalArgumentException.class, () -> rule.apply(invalid));
 		var io = new TransferNameMappingIO();
 		var configuration = new TransferNameMappingIO.Configuration(1,
-				Map.of("PUBLIC.CUSTOMERS", new TransferNameMappingIO.TableMapping(rule.apply("CUSTOMER DATA"),
+				Map.of("PUBLIC.CUSTOMERS", TransferNameMappingIO.TableMapping.names(rule.apply("CUSTOMER DATA"),
 						Map.of("NAME", rule.apply("Customer NAME")))));
 		String yaml = io.format(configuration);
 		assertEquals(configuration, io.validate(yaml));

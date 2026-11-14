@@ -18,7 +18,7 @@ public record TransferNameRules(NameCase letterCase, boolean replaceSpaces) {
 	 */
 	public String apply(String name) {
 		// Reuse the shared Unicode/name contract instead of inventing a naming grammar.
-		new TransferNameMappingIO.TableMapping(null, Map.of(Objects.requireNonNull(name, "name"), name));
+		TransferNameMappingIO.TableMapping.names(null, Map.of(Objects.requireNonNull(name, "name"), name));
 		String resolved = name;
 		if (replaceSpaces) {
 			var text = new StringBuilder();
@@ -31,7 +31,7 @@ public record TransferNameRules(NameCase letterCase, boolean replaceSpaces) {
 		case UPPER -> resolved.toUpperCase(Locale.ROOT);
 		case LOWER -> resolved.toLowerCase(Locale.ROOT);
 		};
-		new TransferNameMappingIO.TableMapping(null, Map.of(name, resolved));
+		TransferNameMappingIO.TableMapping.names(null, Map.of(name, resolved));
 		return resolved;
 	}
 }

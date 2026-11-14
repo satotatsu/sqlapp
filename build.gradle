@@ -121,6 +121,18 @@ subprojects {
 		google()
 	}
 
+	// On Linux the JVM takes the file-name encoding (sun.jnu.encoding) from the locale. Under a
+	// POSIX/C locale (minimal CI images, containers) tests that use non-ASCII file names fail,
+	// so test JVMs get a UTF-8 locale unless one is already configured.
+	tasks.withType(Test).configureEach {
+		if (System.getProperty('os.name', '').toLowerCase(Locale.ROOT).contains('linux')) {
+			def locale = (System.getenv('LC_ALL') ?: System.getenv('LC_CTYPE') ?: System.getenv('LANG') ?: '').toUpperCase(Locale.ROOT)
+			if (!locale.contains('UTF-8') && !locale.contains('UTF8')) {
+				environment 'LC_ALL', 'C.UTF-8'
+			}
+		}
+	}
+
 }
 
 eclipse {

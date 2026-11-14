@@ -22,6 +22,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableCollection;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.bulk.BulkMigrationColumnConversions;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlan;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobPlanner;
 import com.sqlapp.jdbc.bulk.BulkMigrationJobTask;
@@ -30,6 +31,7 @@ import com.sqlapp.jdbc.bulk.BulkMigrationRetryOption;
 import com.sqlapp.jdbc.bulk.BulkOption;
 import com.sqlapp.jdbc.bulk.BulkUpsertOption;
 import com.sqlapp.jdbc.bulk.ChunkedBulkMigrationOption;
+import com.sqlapp.jdbc.bulk.ConvertingJdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationKeysetSource;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationJobLeaseStore;
 import com.sqlapp.util.MessageDigests;
@@ -145,8 +147,12 @@ public class BulkMigrationJobConfigurationResolver {
 		validateTasks(configuration.getTasks());
 		for (final var task : configuration.getTasks()) {
 			final Table table = findTable(tables, task.getTable());
-			final Table targetTable = targetTable(table, task.getTargetTable(), task.getColumnMappings());
 			validateVerificationColumns(configuration.getVerification(), task, table);
+			final BulkMigrationColumnConversions conversions = conversions(table, task);
+			// Copy types: target model, chunk hashes and verification use the logical
+			// table.
+			final Table targetTable = targetTable(conversions.getTable(), task.getTargetTable(),
+					task.getColumnMappings());
 			final BulkOption bulk = bulk(task.getBulk());
 			final BulkMigrationRetryOption retry = retry(task.getRetry());
 			final var upsert = BulkUpsertOption.builder()
@@ -162,8 +168,9 @@ public class BulkMigrationJobConfigurationResolver {
 					.mode(task.getIncrementalStrategy() == null ? task.getMode() : task.getIncrementalStrategy().mode())
 					.incrementalStrategy(task.getIncrementalStrategy()).resume(task.isResume())
 					.checkpointMode(task.getCheckpointMode()).checkpointTableName(task.getCheckpointTableName())
-					.sourceFingerprint(task.getSourceFingerprint()).targetFingerprint(task.getTargetFingerprint())
-					.bulkOption(bulk).bulkUpsertOption(upsert).retryOption(retry).build();
+					.sourceFingerprint(sourceFingerprint(task.getSourceFingerprint(), conversions))
+					.targetFingerprint(task.getTargetFingerprint()).bulkOption(bulk).bulkUpsertOption(upsert)
+					.retryOption(retry).build();
 			final var builder = BulkMigrationJobTask.builder().taskId(task.getId()).fullScan(task.isFullScan())
 					.targetTable(targetTable).columnMappings(task.getColumnMappings())
 					.requireEmptyTarget(task.isRequireEmptyTarget()).options(options);
@@ -175,13 +182,23 @@ public class BulkMigrationJobConfigurationResolver {
 								&& configuration.getVerification().getRepairPlanOnMismatchFile() != null)
 					throw new CommandException(
 							"fullScan requires INSERT, resume: false, requireEmptyTarget: true, no keyset/incremental strategy and no repair plan.");
-				table.setRowIteratorHandler(
-						new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(sourceConnection));
-				builder.sourceTable(table);
-			} else {
+				conversions.getTable().setRowIteratorHandler(conversions.rowIteratorHandler(
+						new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(sourceConnection)));
+				builder.sourceTable(conversions.getTable());
+			} else if (conversions.isEmpty()) {
 				builder.keysetSource(task.getKeysetColumns() == null || task.getKeysetColumns().isEmpty()
 						? new JdbcBulkMigrationKeysetSource(sourceConnection, table)
 						: new JdbcBulkMigrationKeysetSource(sourceConnection, table, task.getKeysetColumns()));
+			} else {
+				try {
+					builder.keysetSource(new ConvertingJdbcBulkMigrationKeysetSource(sourceConnection,
+							task.getKeysetColumns() == null || task.getKeysetColumns().isEmpty()
+									? new JdbcBulkMigrationKeysetSource(sourceConnection, table).getKeyColumnNames()
+									: task.getKeysetColumns(),
+							conversions));
+				} catch (IllegalArgumentException e) {
+					throw new CommandException(e.getMessage() + " Task: " + task.getId(), e);
+				}
 			}
 			if (task.getCheckpointMode() == com.sqlapp.jdbc.bulk.BulkMigrationCheckpointMode.FILE) {
 				if (task.getCheckpointDirectory() == null || task.getCheckpointDirectory().isBlank()) {
@@ -209,6 +226,56 @@ public class BulkMigrationJobConfigurationResolver {
 				report(configurationFile, configuration.getReport()),
 				verification(configurationFile, configuration.getVerification(), configuration.getTasks()),
 				provenance(configurationFingerprint, configuration.getProvenance()));
+	}
+
+	/**
+	 * Compiles optional value conversions and rejects conversions of columns that
+	 * identify rows.
+	 */
+	private static BulkMigrationColumnConversions conversions(final Table table,
+			final BulkMigrationJobConfiguration.Task task) {
+		try {
+			final var conversions = BulkMigrationColumnConversions.of(table, logicalTable(table, task),
+					task.getColumnConversions());
+			if (table.getPrimaryKeyConstraint() != null)
+				conversions.requireUnconverted(
+						table.getPrimaryKeyConstraint().getColumns().stream().map(column -> column.getName()).toList(),
+						"primary key");
+			conversions.requireUnconverted(task.getKeyColumns(), "UPSERT key");
+			conversions.requireUnconverted(task.getKeysetColumns(), "keyset");
+			return conversions;
+		} catch (IllegalArgumentException e) {
+			throw new CommandException(e.getMessage() + " Task: " + task.getId(), e);
+		}
+	}
+
+	/**
+	 * Source table clone with the configured copy types; the source itself when
+	 * none.
+	 */
+	private static Table logicalTable(final Table table, final BulkMigrationJobConfiguration.Task task) {
+		if (task.getColumnTypes() == null || task.getColumnTypes().isEmpty())
+			return table;
+		final Table logical = table.clone();
+		task.getColumnTypes().forEach((name, type) -> {
+			final var column = name == null ? null : logical.getColumns().get(name);
+			if (column == null)
+				throw new IllegalArgumentException(
+						"Unknown column type source column: " + table.getName() + "." + name);
+			BulkMigrationColumnType.parse(type).applyTo(column);
+		});
+		return logical;
+	}
+
+	/**
+	 * Conversions change source values, so checkpoints and plan fingerprints must
+	 * distinguish them as documented for custom source logic.
+	 */
+	static String sourceFingerprint(final String configured, final BulkMigrationColumnConversions conversions) {
+		if (conversions.isEmpty())
+			return configured;
+		final String value = "columnConversions=" + conversions.getFingerprint();
+		return configured == null || configured.isBlank() ? value : configured + ";" + value;
 	}
 
 	private static List<String> targetColumns(final Table source, final Map<String, String> mappings,

@@ -205,7 +205,7 @@ public final class TransferFileExportService {
 		if (job.configuration().dataMode() != TransferJobConfiguration.DataMode.FILE)
 			throw new IllegalArgumentException("This exporter requires FILE dataMode with CSV, TSV or JSONL format.");
 		if (job.configuration().mappingFile() != null)
-			new TransferNameMappingIO().read(job.mappingFile());
+			TransferNameMappingIO.requireNamesOnly(new TransferNameMappingIO().read(job.mappingFile()), "FILE export");
 		return job;
 	}
 
