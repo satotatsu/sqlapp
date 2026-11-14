@@ -182,6 +182,7 @@ recommended.
 | Database family | Artifact | Current bundled JDBC implementation dependency |
 |---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | None |
+| DuckDB | `sqlapp-core-duckdb` | DuckDB JDBC (`org.duckdb:duckdb_jdbc`); see [scope and limits](../sqlapp-core-duckdb/README.md) |
 | Firebird | `sqlapp-core-firebird` | Jaybird |
 | H2 | `sqlapp-core-h2` | None |
 | HSQLDB | `sqlapp-core-hsql` | HSQLDB JDBC driver |

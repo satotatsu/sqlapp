@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class JarNameUtils {
-	private static final Pattern PATTERN = Pattern.compile("sqlapp-(core|command)(-[0-9.]*)?\\.jar");
+	private static final Pattern PATTERN = Pattern.compile("sqlapp-(core|command)(-[0-9][0-9A-Za-z.+-]*)?\\.jar");
 
 	public static boolean isTarget(File f) {
 		Matcher matcher = PATTERN.matcher(f.getName());

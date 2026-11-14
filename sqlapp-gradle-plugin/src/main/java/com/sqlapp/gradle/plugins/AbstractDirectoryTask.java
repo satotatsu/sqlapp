@@ -23,7 +23,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Set;
 
-import org.gradle.api.file.ConfigurableFileTree;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
@@ -81,14 +80,15 @@ public abstract class AbstractDirectoryTask<T extends AbstractCommand> extends A
 	@InputFiles
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public FileTree getInputFiles() {
-		ConfigurableFileTree tree = getProject().fileTree(getDirectory());
-		if (!getIncludes().get().isEmpty()) {
-			tree.include(getIncludes().get());
-		}
-		if (!getExcludes().get().isEmpty()) {
-			tree.exclude(getExcludes().get());
-		}
-		return tree;
+		// No Project access: this getter is also evaluated at execution time.
+		return getDirectory().getAsFileTree().matching(patterns -> {
+			if (!getIncludes().get().isEmpty()) {
+				patterns.include(getIncludes().get());
+			}
+			if (!getExcludes().get().isEmpty()) {
+				patterns.exclude(getExcludes().get());
+			}
+		});
 	}
 
 	@Override

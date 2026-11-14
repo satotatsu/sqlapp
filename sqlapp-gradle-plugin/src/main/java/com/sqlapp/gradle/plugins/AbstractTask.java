@@ -61,7 +61,6 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 				.register(getProject().getGradle());
 		getClassLoaderCache().convention(classLoaderCache);
 		usesService(classLoaderCache);
-		this.command = createCommand();
 		// Configuration Phase で取得
 		final Configuration conf = getProject().getConfigurations().findByName("runtimeClasspath");
 		if (conf != null && conf.isCanBeResolved()) {
@@ -69,35 +68,33 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 		}
 	}
 
-	private T command;
+	/**
+	 * Created on first use rather than in the constructor. Not part of the task
+	 * state, so it is never serialized into the configuration cache.
+	 */
+	private transient T command;
 
 	@TaskAction
 	public void exec() {
-		run(command);
+		run(internalCommand());
 	}
 
 	protected abstract T createCommand();
 
 	protected void run(T command) {
-		if (this.getEnabled()) {
-			final ClassLoader createCls = getClassLoaderCache().get()
-					.getClassLoader(getRuntimeClasspath().getFiles());
-			final ClassLoader cls = Thread.currentThread().getContextClassLoader();
-			try {
-				Thread.currentThread().setContextClassLoader(createCls);
-				try (CreatedDataSources.Scope dataSources = CreatedDataSources.open()) {
-					initializeCommand(command);
-					beforeRun(command);
-					command.run();
-				} catch (Exception e) {
-					e.printStackTrace();
-					throw e;
-				}
-			} finally {
-				Thread.currentThread().setContextClassLoader(cls);
+		// A disabled task never reaches its action; Gradle reports it as SKIPPED.
+		final ClassLoader createCls = getClassLoaderCache().get().getClassLoader(getRuntimeClasspath().getFiles());
+		final ClassLoader cls = Thread.currentThread().getContextClassLoader();
+		try {
+			Thread.currentThread().setContextClassLoader(createCls);
+			// Failures propagate to Gradle, which reports them once.
+			try (CreatedDataSources.Scope dataSources = CreatedDataSources.open()) {
+				initializeCommand(command);
+				beforeRun(command);
+				command.run();
 			}
-		} else {
-			System.out.println("This task is disabled.");
+		} finally {
+			Thread.currentThread().setContextClassLoader(cls);
 		}
 	}
 
@@ -112,6 +109,9 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 	}
 
 	public T internalCommand() {
+		if (command == null) {
+			command = createCommand();
+		}
 		return command;
 	}
 

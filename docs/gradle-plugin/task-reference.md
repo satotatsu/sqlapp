@@ -18,6 +18,23 @@ task can issue DDL or DML and must be configured with the intended target.
 
 ## Tasks registered by `com.sqlapp.db`
 
+Each task belongs to one of these groups, so `gradlew tasks` lists them by
+purpose. Use `gradlew tasks --group "sqlapp migration"` to show one group.
+
+| Group | Tasks |
+|---|---|
+| `sqlapp schema` | `countAllTables`, `exportSchemaXml`, `exportAccessSchemaXml`, `exportSqliteSchemaXml`, `diffSchemaXml`, `generateDiffSql`, `generateSql`, `generateHtmlDocs` |
+| `sqlapp schema transformation` | `firstNormalForm`, `generateNormalizationPlan`, `columnRuleTransform` |
+| `sqlapp migration` | `migration`, `migrationInsert`, `migrationRepair`, `migrationValidate`, `migrationPlan`, `migrationEnvironmentSnapshot`, `compareMigrationEnvironments`, `verifyMigrationExecutionReport` |
+| `sqlapp migration assessment` | `assessMigration`, `assessDatabaseMigration`, `assessAccessOracleMigration`, `verifyDatabaseMigrationDdlPhases` |
+| `sqlapp bulk migration` | `generateAccessBulkMigrationJobConfiguration`, `validateBulkMigrationTarget`, `executeBulkMigrationJob`, `generateBulkMigrationOperationalReport`, `verifyBulkMigrationEvidence`, `verifyBulkMigrationEvidenceReport`, `generateBulkMigrationJobRepairPlanReport`, `executeBulkMigrationJobRepair`, `verifyBulkMigrationJobRepairEvidence`, `verifyBulkMigrationJobRepairFailureEvidence`, `verifyBulkMigrationJobRepairOutcome`, `verifyBulkMigrationJobRepairOutcomeReport` |
+| `sqlapp migration snapshot` | `generateMigrationSnapshotApprovalReport`, `executeMigrationSnapshot`, `verifyMigrationSnapshotReport`, `verifyMigrationSnapshotFailureReport` |
+| `sqlapp transfer` | `transferDatabase`, `exportTransferFile`, `importTransferFile`, `compareTransferStaging` |
+| `sqlapp legacy migration` | `pliSchemaImport`, `generateLegacyMigrationContract`, `generatePliCsvExtractor`, `generateLegacyRdbLoader`, `loadLegacyHierarchy` |
+
+Task types registered by a consuming build have no group unless the build sets
+one.
+
 | Task name | Task class | Primary configuration | Result | Database effect |
 |---|---|---|---|---|
 | `assessDatabaseMigration` | `AssessDatabaseMigrationTask` | Required `inputFile`, `targetDatabase`, `targetVersion`, `outputFile`; optional `htmlOutputFile`, fingerprint-bound `mappingFile`, generated `mappingTemplateFile`, review-only `ddlOutputFile` and `ddlPhaseOutputDirectory`; `failOnBlockers` defaults to `true`; `scanData` defaults to `false` | [Database migration assessment](database-migration-assessment.md): Access to Oracle 19c/21c/23ai/26ai or SQL Server 2016/2017/2019/2022; source inventory and target-specific findings as JSON with optional standalone HTML, generated mapping skeleton, resolved target mapping and combined or phase-separated target DDL preview | Offline read-only Access metadata; optional scalar and bounded duplicate/orphan key checks; no linked sources or database connections |
@@ -162,10 +179,39 @@ dataSource {
 }
 ```
 
-Keep the local connection file out of version control. The current loader skips
-a missing path, directory, or unrecognized extension, so validate the file path
-in CI instead of assuming that declaring it proves it was loaded. A task that
-needs a connection will still fail later if required JDBC settings are absent.
+A missing path, a directory, an unsupported extension or an unreadable file now
+stops the task with a message naming the file; earlier versions skipped missing
+files silently. Parser errors do not echo file contents. Setting names HikariCP
+does not know are still skipped, but are now reported as a build warning.
+
+The desktop application reads the same files with the same rules (shared
+`DataSourceConfigFiles` in sqlapp-command), so a connection loaded in a GUI
+connection form behaves the same in Gradle. The GUI saves new connection files
+as YAML:
+
+```yaml
+# src/main/config/sqlserver/dataSource.yaml
+driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+jdbcUrl: jdbc:sqlserver://localhost;databaseName=master;encrypt=true
+username: sa
+passwordEnv: SQLSERVER_PASSWORD
+```
+
+#### Supplying the password
+
+Use whichever fits; later options override earlier ones:
+
+| Method | Example | Notes |
+|---|---|---|
+| In the file | `password: secret` | Simplest; keep such files out of version control |
+| Second file | `properties file('config/sqlserver.yaml'), file("${System.getProperty('user.home')}/.sqlapp/sqlserver-secret.yaml")` | Later files override earlier keys, so the shared file can omit the password |
+| Environment variable named in the file | `passwordEnv: SQLSERVER_PASSWORD` | Read when the task runs; an unset variable stops the task |
+| Environment variable named in the build | `passwordEnv = 'SQLSERVER_PASSWORD'` | Same as above, set on the `dataSource` block |
+| Explicit value | `password = providers.environmentVariable('SQLSERVER_PASSWORD')` | Always wins |
+
+`dataSource.<name>` and `dataSourceProperties.<name>` keys (or a nested
+`dataSourceProperties:` map in YAML/JSON) become JDBC driver properties, for
+example `dataSource.cachePrepStmts=true`.
 
 ## Schema and table selection
 

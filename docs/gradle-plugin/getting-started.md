@@ -136,6 +136,7 @@ tasks instead share the `migration` extension described in the
 | `jdbcUrl` | `Property<String>` | JDBC URL; use this name, not `url` |
 | `driverClassName` | `Property<String>` | Explicit JDBC driver class when needed |
 | `username`, `password` | `Property<String>` | Connection credentials |
+| `passwordEnv` | `Property<String>` | Name of an environment variable holding the password; `password` wins when both are set |
 | `catalog`, `schema` | `Property<String>` | Default connection catalog/schema |
 | `maximumPoolSize` | `Property<Integer>` | Defaults to 5 when not set on the extension |
 | `minimumIdle` | `Property<Integer>` | Defaults to 0 when not set on the extension |
@@ -166,9 +167,11 @@ extension when you need to override the fallbacks. Avoid storing credentials
 in a committed build script or properties file.
 
 The configuration loader also recognizes Java-properties XML, JSON, YAML, and
-YML files. More than one file may be supplied through repeated `properties`
-calls. See the [task reference](task-reference.md#configure-a-data-source-from-a-file)
-for merge behavior, the companion-project pattern, and missing-file behavior.
+YML files, and stops with a clear message when a listed file is missing; unknown
+setting names are reported as a warning. More than one file may be supplied through repeated
+`properties` calls. A file can name the password's environment variable with
+`passwordEnv`. See the [task reference](task-reference.md#configure-a-data-source-from-a-file)
+for merge behavior, password options and the companion-project pattern.
 
 ## Troubleshooting
 

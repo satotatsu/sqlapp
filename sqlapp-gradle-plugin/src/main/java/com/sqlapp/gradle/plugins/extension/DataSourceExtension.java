@@ -39,10 +39,6 @@ import com.zaxxer.hikari.HikariDataSource;
 
 public abstract class DataSourceExtension {
 
-	public DataSourceExtension() {
-		this.getProperties().from();
-	}
-
 	public void call(Action<DataSourceExtension> cons) {
 		cons.execute(this);
 	}
@@ -102,10 +98,10 @@ public abstract class DataSourceExtension {
 	public abstract Property<String> getUsername();
 
 	/**
-	 * JDBC Password
+	 * JDBC Password. Internal so that it is not recorded in task history or
+	 * build scans; database tasks are never UP-TO-DATE anyway.
 	 */
-	@Input
-	@Optional
+	@Internal
 	public abstract Property<String> getPassword();
 
 	/**

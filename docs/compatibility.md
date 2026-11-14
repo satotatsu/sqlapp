@@ -44,6 +44,7 @@ release checklist must record which integration suites were actually run.
 | Database family | Artifact | Version-aware implementation in source | Current real-engine evidence | Current confidence boundary |
 |---|---|---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | 9.5, 9.7, 9.8, 10.1, 10.5, 11.1, 11.5, 12.1.0, 12.1.2, 12.1.5 | Db2 Community 11.5.8.0 and 12.1.5.0 test images | Older resolver branches are retained but are not all represented by current container runs. |
+| DuckDB | `sqlapp-core-duckdb` | 1.0 (resolution only), 1.1, 1.2, 1.4 (also 1.5 / 2.x) | `duckdbCompatibilityTest` (in-process, no container): metadata round trip with DuckDB JDBC 1.1.3, 1.2.2.0, 1.4.4.0, 1.5.6.0 and 2.0.0.1; 1.0.0 fails clearly as designed | Constraint metadata requires 1.1+; DuckDB does not keep constraint names, index order or named ENUM types. See [scope and limits](../sqlapp-core-duckdb/README.md). |
 | Firebird | `sqlapp-core-firebird` | 2.0, 2.5, 3.0, 5.0 | Firebird 3.0 and 5.0 test images | Firebird 2.x compatibility is code-level/module coverage in the current suite. |
 | H2 | `sqlapp-core-h2` | Pre-2.x and 2.x split | Module-level H2 tests | The 1.x reader is preserved; current real-engine version evidence is not recorded here. |
 | HSQLDB | `sqlapp-core-hsql` | 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.3.4, 2.4.0 | Module/in-process tests; JDBC dependency 2.7.4 | Version branches older than the current driver remain compatibility code. |
@@ -100,6 +101,7 @@ are not a declaration that applications must use exactly these versions.
 
 | Database | JDBC dependency used by current build/test configuration |
 |---|---|
+| DuckDB | `org.duckdb:duckdb_jdbc:2.0.0.1` |
 | Firebird | Jaybird `6.0.5` in dialect integration tests; dialect artifact currently uses `5.0.6.java11` |
 | HSQLDB | `org.hsqldb:hsqldb:2.7.4` |
 | Informix | `com.ibm.informix:jdbc:15.0.1.2` |

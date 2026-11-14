@@ -35,7 +35,7 @@ public abstract class TransferDatabaseTask extends AbstractDbTask<TransferDataba
 	@Override protected void initializeCommand(TransferDatabaseCommand command) {
 		inputs(command);
 		try { command.validateInputs(); }
-		catch (java.io.IOException failure) { throw new org.gradle.api.GradleException("Invalid direct transfer definition."); }
+		catch (java.io.IOException failure) { throw new org.gradle.api.GradleException("Invalid direct transfer definition.", failure); }
 		super.initializeCommand(command);
 	}
 	@Override protected void beforeRun(TransferDatabaseCommand command) {
@@ -45,7 +45,9 @@ public abstract class TransferDatabaseTask extends AbstractDbTask<TransferDataba
 			if (command.getDataSource() instanceof AutoCloseable closeable) {
 				try { closeable.close(); } catch (Exception ignored) { throw new IllegalStateException("Source connection setup and target cleanup failed."); }
 			}
-			throw new IllegalArgumentException("Unable to configure the source connection.");
+			// Only the failure type: the message may contain connection details.
+			throw new IllegalArgumentException("Unable to configure the source connection ("
+					+ failure.getClass().getName() + ").");
 		}
 	}
 	@Override protected TransferDatabaseCommand createCommand() { return new TransferDatabaseCommand(); }

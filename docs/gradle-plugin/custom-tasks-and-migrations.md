@@ -117,18 +117,23 @@ See [Versioned SQL migrations](versioned-migrations.md#compare-migration-state-a
 
 ## Additional task types
 
-These classes are not registered under fixed names by `DbPlugin`:
+These classes are not registered under fixed names by `DbPlugin`. Their database
+effects are listed in the [task reference](task-reference.md#public-task-types-without-fixed-names).
 
 | Task type | Purpose |
 |---|---|
+| `ExportDataTask` | Export selected table rows to data files |
 | `ImportDataTask` | Load data files into a database |
 | `GenerateDataConfigTask` | Generate test-data configuration |
 | `GenerateDataTask` | Generate test data |
+| `ConvertDataTask` | Convert data files between supported formats |
 | `ConvertGeneratorConfigTask` | Convert generator configuration files |
+| `SqlExecuteTask` | Execute SQL text or files |
 | `SqlQueryTask` | Execute SQL queries |
 | `TableSqlExecuteTask` | Execute table-oriented SQL |
 | `DropObjectsTask` | Drop selected database objects |
 | `SynchronizeSchemaTask` | Synchronize schema objects |
+| `MigrationDownTask` | Execute down migration |
 | `MigrationSeriesDownTask` | Execute series-oriented down migration |
 | `UpdateDictionariesTask` | Update documentation dictionaries |
 | `AvailableFontsTask` | List available fonts |

@@ -264,9 +264,10 @@ public enum TaskPropertiesEnum {
 				return;
 			}
 			final DebugTaskProperty extension = cast(taskProps);
-			if (extension.getDebug().getOrElse(false)) {
-				ContextTaskProperty contextProperty = cast(taskProps);
-				System.out.println("parameters=" + contextProperty.getParameters().get());
+			if (extension.getDebug().getOrElse(false) && taskProps instanceof ContextTaskProperty) {
+				final ContextTaskProperty contextProperty = cast(taskProps);
+				org.gradle.api.logging.Logging.getLogger(TaskPropertiesEnum.class)
+						.lifecycle("parameters=" + contextProperty.getParameters().getOrElse(java.util.Map.of()));
 			}
 		}
 	},
