@@ -81,6 +81,13 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 				if (!included && rs.getInt("key_ordinal") == 0 && !index.getIndexType().isColumnStore()
 						&& rs.getInt("partition_ordinal") > 0)
 					return;
+				if (index.getIndexType().isColumnStore() && index.getIndexType().isClusterd()) {
+					// クラスタ化列ストアは全列を含むため、ORDER句の列(2022以降)だけを保持する
+					if (rs.contains("column_store_order_ordinal") && rs.getInt("column_store_order_ordinal") > 0) {
+						index.getColumns().add(new Column(columnName), Order.Asc);
+					}
+					return;
+				}
 				if (included && !index.getIndexType().isColumnStore()) {
 					index.getIncludes().add(new Column(columnName));
 				} else {

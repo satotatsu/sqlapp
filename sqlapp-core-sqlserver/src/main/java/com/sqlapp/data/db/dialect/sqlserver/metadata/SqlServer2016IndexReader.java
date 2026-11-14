@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * SqlServer2016のインデックス読み込みクラス
@@ -31,5 +33,10 @@ public class SqlServer2016IndexReader extends SqlServer2014IndexReader {
 
 	public SqlServer2016IndexReader(final Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("indexes2016.sql");
 	}
 }

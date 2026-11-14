@@ -26,6 +26,11 @@ public class SqlServer2022TableReader extends SqlServer2019TableReader {
 	}
 
 	@Override
+	protected com.sqlapp.data.db.metadata.IndexReader newIndexReader() {
+		return new SqlServer2022IndexReader(this.getDialect());
+	}
+
+	@Override
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
 		setSpecifics(rs, "ledger_type", table);

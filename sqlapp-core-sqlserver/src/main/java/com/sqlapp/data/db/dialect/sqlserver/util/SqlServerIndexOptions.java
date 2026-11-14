@@ -289,17 +289,21 @@ public enum SqlServerIndexOptions {
 			return () -> SqlServerDialectResolver.getInstance().getDialect(15, 0);
 		}
 	},
+	/**
+	 * 列ストアインデックスのCOMPRESSION_DELAY(分)。SQL Server 2016以降。テーブルではなくインデックスの属性です。
+	 */
 	COMPRESSION_DELAY() {
 		@Override
-		public void setTable(final ExResultSet rs, Table table) throws SQLException {
-			if (!rs.contains(this.toString())) {
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			if (!rs.contains(this.toString()) || index.getIndexType() == null
+					|| !index.getIndexType().isColumnStore()) {
 				return;
 			}
 			int val = rs.getInt(this.toString());
 			if (val > 0) {
-				table.getSpecifics().put(this.toString(), val);
+				index.getSpecifics().put(this.toString(), val);
 			} else {
-				table.getSpecifics().remove(this.toString());
+				index.getSpecifics().remove(this.toString());
 			}
 		}
 	},
@@ -311,12 +315,30 @@ public enum SqlServerIndexOptions {
 				return;
 			}
 			String val = rs.getNString(this.toString());
-			if ("NONE".equalsIgnoreCase(val)) {
+			// 列ストアの圧縮はテーブルではなく列ストアインデックスの属性として扱う
+			if (val == null || "NONE".equalsIgnoreCase(val) || val.toUpperCase().startsWith("COLUMNSTORE")) {
 				table.setCompression(false);
 				table.setCompressionType(null);
 			} else {
 				table.setCompression(true);
 				table.setCompressionType(val.toUpperCase());
+			}
+		}
+
+		/**
+		 * 列ストアインデックスのDATA_COMPRESSION。既定値のCOLUMNSTOREは保持せず、COLUMNSTORE_ARCHIVEのみ保持します。
+		 */
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			if (!rs.contains(this.toString()) || index.getIndexType() == null
+					|| !index.getIndexType().isColumnStore()) {
+				return;
+			}
+			String val = rs.getNString(this.toString());
+			if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(val)) {
+				index.getSpecifics().put(this.toString(), "COLUMNSTORE_ARCHIVE");
+			} else {
+				index.getSpecifics().remove(this.toString());
 			}
 		}
 	},;

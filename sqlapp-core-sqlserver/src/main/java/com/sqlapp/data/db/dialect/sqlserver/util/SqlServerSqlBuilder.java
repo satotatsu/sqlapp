@@ -106,6 +106,11 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 		return instance();
 	}
 
+	public SqlServerSqlBuilder nonclustered() {
+		appendElement("NONCLUSTERED");
+		return instance();
+	}
+
 	public SqlServerSqlBuilder columnstore() {
 		appendElement("COLUMNSTORE");
 		return instance();

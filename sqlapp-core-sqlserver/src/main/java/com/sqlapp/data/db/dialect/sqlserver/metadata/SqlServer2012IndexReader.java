@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * SqlServer2012のインデックス読み込みクラス
@@ -31,5 +33,10 @@ public class SqlServer2012IndexReader extends SqlServer2008IndexReader {
 
 	public SqlServer2012IndexReader(final Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("indexes2012.sql");
 	}
 }

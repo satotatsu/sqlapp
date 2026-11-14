@@ -43,6 +43,12 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 	@Override
 	protected void addOption(final Table table, final SqlServerSqlBuilder builder) {
 		super.addOption(table, builder);
+		if (table.isCompression() && table.getCompressionType() != null
+				&& table.getCompressionType().toUpperCase().startsWith("COLUMNSTORE")) {
+			throw new IllegalArgumentException("DATA_COMPRESSION=" + table.getCompressionType()
+					+ " applies to columnstore indexes, not tables. Set DATA_COMPRESSION on the columnstore index of table "
+					+ table.getName() + ".");
+		}
 		if (table.isCompression()) {
 			builder.lineBreak();
 			builder.with().space().brackets(() -> {
@@ -51,10 +57,6 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 					builder.row();
 				} else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.page();
-				} else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
-					builder.columnstore();
-				} else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
-					builder.columnstoreArchive();
 				} else {
 					builder.row();
 				}
@@ -130,6 +132,10 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 					|| "text_in_row_limit".equalsIgnoreCase(k) || "is_track_columns_updated_on".equalsIgnoreCase(k)
 					|| "large_value_types_out_of_row".equalsIgnoreCase(k) || "has_var_decimal".equalsIgnoreCase(k)) {
 				return;
+			}
+			if (SqlServerIndexOptions.COMPRESSION_DELAY.toString().equalsIgnoreCase(k)) {
+				throw new IllegalArgumentException("COMPRESSION_DELAY applies to columnstore indexes, not tables. "
+						+ "Set COMPRESSION_DELAY on the columnstore index of table " + table.getName() + ".");
 			}
 			if (!first[0]) {
 				builder.space().comma();

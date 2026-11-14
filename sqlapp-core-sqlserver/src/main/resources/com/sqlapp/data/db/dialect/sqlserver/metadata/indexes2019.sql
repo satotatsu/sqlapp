@@ -26,6 +26,8 @@ SELECT
   , ic.is_included_column
   , st.no_recompute AS statistics_norecompute
   , i.filter_definition
+  , pt.data_compression_desc AS data_compression
+  , i.compression_delay
   , dsidx.Name as file_group_name
   , sit.tessellation_scheme
   , sit.bounding_box_xmax
@@ -56,6 +58,10 @@ LEFT OUTER JOIN sys.spatial_index_tessellations sit
   ON (i.object_id=sit.object_id
   AND i.index_id=sit.index_id)
 LEFT JOIN sys.partition_schemes ps ON ps.data_space_id = i.data_space_id
+LEFT OUTER JOIN sys.partitions pt
+  ON (pt.object_id = i.object_id
+  AND pt.index_id = i.index_id
+  AND pt.partition_number = 1)
 WHERE i.type IN (1, 2, 3, 4, 5, 6, 9)
   AND i.is_unique_constraint = 0 
   AND i.is_primary_key = 0 
