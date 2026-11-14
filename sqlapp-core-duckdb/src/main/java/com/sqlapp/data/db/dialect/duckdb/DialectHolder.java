@@ -16,8 +16,8 @@ public class DialectHolder {
 	public final static Dialect duckdb11 = new DuckDbVersions.DuckDb11(() -> duckdb12);
 	public final static Dialect duckdb10 = new DuckDb(() -> duckdb11);
 	/**
-	 * Unversioned callers retain the newest capabilities. Resolve a connection
-	 * for a concrete target.
+	 * Unversioned callers retain the newest capabilities. Resolve a connection for
+	 * a concrete target.
 	 */
 	public final static Dialect defaultDialect = duckdb14;
 }

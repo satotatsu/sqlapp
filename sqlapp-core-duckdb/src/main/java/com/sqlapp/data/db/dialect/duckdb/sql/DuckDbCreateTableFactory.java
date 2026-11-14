@@ -62,13 +62,12 @@ public class DuckDbCreateTableFactory extends AbstractCreateTableFactory<DuckDbS
 	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
 		if (!CommonUtils.isEmpty(table.getRemarks())) {
 			final DuckDbSqlBuilder builder = createSqlBuilder();
-			builder.comment().on().table().space().name(table, getOptions().isDecorateSchemaName()).space().is()
-					.space().sqlChar(table.getRemarks());
+			builder.comment().on().table().space().name(table, getOptions().isDecorateSchemaName()).space().is().space()
+					.sqlChar(table.getRemarks());
 			add(result, createOperation(builder.toString(), SqlType.SET_COMMENT, table));
 		}
 		for (final Column column : table.getColumns()) {
-			if (CommonUtils.isEmpty(column.getRemarks())
-					|| !getTableOptions().getWithColumnRemarks().test(column)) {
+			if (CommonUtils.isEmpty(column.getRemarks()) || !getTableOptions().getWithColumnRemarks().test(column)) {
 				continue;
 			}
 			final DuckDbSqlBuilder builder = createSqlBuilder();

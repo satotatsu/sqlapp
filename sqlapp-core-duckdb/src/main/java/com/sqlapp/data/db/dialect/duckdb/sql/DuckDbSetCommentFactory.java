@@ -13,15 +13,20 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.AbstractNamedObject;
 import com.sqlapp.data.schemas.AbstractSchemaObject;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.FunctionType;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.View;
 
 /**
- * {@code COMMENT ON} for DuckDB tables, views, columns, indexes and sequences.
- * A null remark removes the comment. DuckDB cannot comment on schemas.
+ * {@code COMMENT ON} for DuckDB tables, views, columns, indexes, sequences,
+ * macros and ENUM types. A null remark removes the comment. DuckDB cannot
+ * comment on schemas.
  */
 public class DuckDbSetCommentFactory extends AbstractSqlFactory<AbstractNamedObject<?>, DuckDbSqlBuilder> {
 
@@ -38,6 +43,10 @@ public class DuckDbSetCommentFactory extends AbstractSqlFactory<AbstractNamedObj
 			kind = "INDEX";
 		} else if (object instanceof Sequence) {
 			kind = "SEQUENCE";
+		} else if (object instanceof Function function) {
+			kind = function.getFunctionType() == FunctionType.Table ? "MACRO TABLE" : "MACRO";
+		} else if (object instanceof Domain domain && domain.getDataType() == DataType.ENUM) {
+			kind = "TYPE";
 		} else {
 			throw new IllegalArgumentException(
 					"DuckDB comments are not supported for " + object.getClass().getSimpleName());

@@ -55,13 +55,16 @@ class DuckDbDataTypeTest {
 
 		final Column enumColumn = new Column("e").setDataType(DataType.ENUM);
 		enumColumn.getValues().addAll(List.of("a", "b,c", "d'e"));
-		assertEquals("ENUM('a', 'b,c', 'd''e')", new DuckDbSqlBuilder(dialect).addTypeDefinition(enumColumn).toString());
+		assertEquals("ENUM('a', 'b,c', 'd''e')",
+				new DuckDbSqlBuilder(dialect).addTypeDefinition(enumColumn).toString());
 	}
 
 	@Test
 	void quotesOnlyWhenRequired() {
 		assertEquals("Name", dialect.quote("Name"));
 		assertEquals("\"select\"", dialect.quote("select"));
+		assertEquals("\"at\"", dialect.quote("at"));
+		assertEquals("\"Join\"", dialect.quote("Join"));
 		assertEquals("\"a b\"", dialect.quote("a b"));
 		assertEquals("\"x\"\"y\"", dialect.quote("x\"y"));
 		assertEquals("x\"y", dialect.unQuote("\"x\"\"y\""));

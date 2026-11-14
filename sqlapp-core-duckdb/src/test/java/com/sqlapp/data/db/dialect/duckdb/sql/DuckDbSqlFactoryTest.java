@@ -105,7 +105,8 @@ class DuckDbSqlFactoryTest {
 		sequence.setMaxValue(1000);
 		sequence.setCycle(true);
 		sequence.setCacheSize(20);
-		assertEquals("CREATE SEQUENCE IF NOT EXISTS s1.seq1 START WITH 10 INCREMENT BY 2 MAXVALUE 1000 MINVALUE 1 CYCLE",
+		assertEquals(
+				"CREATE SEQUENCE IF NOT EXISTS s1.seq1 START WITH 10 INCREMENT BY 2 MAXVALUE 1000 MINVALUE 1 CYCLE",
 				registry.createSql(sequence, SqlType.CREATE).get(0).getSqlText());
 		final String next = registry.createSql(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0).getSqlText();
 		assertTrue(next.contains("nextval('s1.seq1')"), next);

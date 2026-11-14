@@ -19,8 +19,8 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
  * Dialect resolver for DuckDB.
  * <p>
  * The DuckDB JDBC driver reports the library version as
- * {@code getDatabaseProductVersion()} (for example {@code v1.4.4}). The
- * version is parsed from that string so that the resolution does not depend on
+ * {@code getDatabaseProductVersion()} (for example {@code v1.4.4}). The version
+ * is parsed from that string so that the resolution does not depend on
  * {@code getDatabaseMajorVersion()} / {@code getDatabaseMinorVersion()}.
  * </p>
  */

@@ -29,7 +29,9 @@ import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.duckdb.metadata.DuckDbCatalogReader;
 import com.sqlapp.data.db.dialect.duckdb.sql.DuckDbSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.duckdb.util.DuckDbJdbcTypeHandlers;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbSqlBuilder;
+import com.sqlapp.data.db.dialect.duckdb.util.DuckDbSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
@@ -46,13 +48,19 @@ public class DuckDb extends Dialect {
 
 	private static final long serialVersionUID = 1L;
 
-	/** Reserved keywords reported by {@code duckdb_keywords()} for DuckDB 1.0 to 2.0. */
-	private static final Set<String> RESERVED_KEYWORDS = Set.of(("ALL ANALYSE ANALYZE AND ANY ARRAY AS ASC ASYMMETRIC "
-			+ "BOTH CASE CAST CHECK COLLATE COLUMN CONSTRAINT CREATE DEFAULT DEFERRABLE DESC DESCRIBE DISTINCT DO ELSE "
-			+ "END EXCEPT FALSE FETCH FOR FOREIGN FROM GRANT GROUP HAVING IN INITIALLY INTERSECT INTO LAMBDA LATERAL "
-			+ "LEADING LIMIT NOT NULL OFFSET ON ONLY OR ORDER PIVOT PIVOT_LONGER PIVOT_WIDER PLACING PRIMARY QUALIFY "
-			+ "REFERENCES RETURNING SELECT SHOW SOME SUMMARIZE SYMMETRIC TABLE THEN TO TRAILING TRUE UNION UNIQUE "
-			+ "UNPIVOT USING VARIADIC WHEN WHERE WINDOW WITH").split(" "));
+	/**
+	 * Keywords that DuckDB 1.0 to 2.0 reject as unquoted table, column, index or
+	 * alias names (verified against each release).
+	 */
+	private static final Set<String> RESERVED_KEYWORDS = Set
+			.of(("ALL ANALYSE ANALYZE AND ANTI ANY ARRAY AS ASC ASOF ASYMMETRIC AT AUTHORIZATION BINARY BOTH BY CASE "
+					+ "CAST CHECK COLLATE COLLATION COLUMN CONCURRENTLY CONSTRAINT CREATE CROSS DEFAULT DEFERRABLE DESC "
+					+ "DESCRIBE DISTINCT DO ELSE END EXCEPT FALSE FETCH FOR FOREIGN FREEZE FROM FULL GLOB GRANT GROUP "
+					+ "HAVING ILIKE IN INITIALLY INNER INTERSECT INTO IS ISNULL JOIN LAMBDA LATERAL LEADING LEFT LIKE LIMIT "
+					+ "NATURAL NOT NOTNULL NULL OFFSET ON ONLY OR ORDER OUTER OVERLAPS PIVOT PIVOT_LONGER PIVOT_WIDER "
+					+ "PLACING POSITIONAL PRIMARY QUALIFY REFERENCES RETURNING RIGHT SELECT SEMI SHOW SIMILAR SOME "
+					+ "SUMMARIZE SYMMETRIC TABLE TABLESAMPLE THEN TO TRAILING TRUE UNION UNIQUE UNPACK UNPIVOT USING "
+					+ "VARIADIC VERBOSE WHEN WHERE WINDOW WITH").split(" "));
 
 	/** Schemas that DuckDB creates for catalog compatibility. */
 	private static final String[] SYSTEM_SCHEMA = new String[] { "information_schema", "pg_catalog" };
@@ -77,6 +85,7 @@ public class DuckDb extends Dialect {
 			type.setCreateFormat("BLOB");
 			type.addColumnTypeMatcher("BYTEA").addColumnTypeMatcher("BINARY").addColumnTypeMatcher("VARBINARY");
 			type.setLiteral("from_hex('", "')");
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.BlobHandler());
 		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean("BOOLEAN", type -> {
@@ -97,6 +106,7 @@ public class DuckDb extends Dialect {
 		});
 		getDbDataTypes().addHugeIntType("HUGEINT", type -> {
 			type.addColumnTypeMatcher("INT128");
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.BigIntegerHandler());
 		});
 		// unsigned integers
 		getDbDataTypes().addUTinyInt("UTINYINT", type -> {
@@ -106,6 +116,7 @@ public class DuckDb extends Dialect {
 		getDbDataTypes().addUInt("UINTEGER", type -> {
 		});
 		getDbDataTypes().addUBigInt("UBIGINT", type -> {
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.BigIntegerHandler());
 		});
 		// floating point
 		getDbDataTypes().addReal("FLOAT", type -> {
@@ -124,10 +135,12 @@ public class DuckDb extends Dialect {
 		// date and time (DuckDB rejects precision modifiers on these types)
 		getDbDataTypes().addDate(type -> {
 			type.setDefaultValueLiteral(getCurrentDateFunction());
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.DateHandler());
 		});
 		getDbDataTypes().addTime(type -> {
 			type.setCreateFormat("TIME");
 			type.setDefaultValueLiteral(getCurrentTimeFunction());
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.TimeHandler());
 		});
 		getDbDataTypes().addTimeWithTimeZone("TIMETZ", type -> {
 			type.setCreateFormat("TIMETZ");
@@ -143,14 +156,17 @@ public class DuckDb extends Dialect {
 			type.setCreateFormat("TIMESTAMPTZ");
 			type.addColumnTypeMatcher("TIMESTAMP WITH TIME ZONE");
 			type.setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction());
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.TimestampWithTimeZoneHandler());
 		});
 		// INTERVAL
 		getDbDataTypes().addInterval(type -> {
 			type.setCreateFormat("INTERVAL");
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.IntervalHandler());
 		});
 		// UUID
 		getDbDataTypes().addUUID("UUID", type -> {
 			type.setLiteral("'", "'::UUID");
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.UuidHandler());
 		});
 		// JSON (json extension type; auto-loaded by DuckDB)
 		getDbDataTypes().addJsonType(type -> {
@@ -177,6 +193,11 @@ public class DuckDb extends Dialect {
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new DuckDbSqlFactoryRegistry(this);
+	}
+
+	@Override
+	public DuckDbSqlSplitter createSqlSplitter() {
+		return new DuckDbSqlSplitter(this);
 	}
 
 	@Override
@@ -294,8 +315,7 @@ public class DuckDb extends Dialect {
 		if (target == null || target.isEmpty() || isQuoted(target)) {
 			return false;
 		}
-		return !target.matches("[A-Za-z_][A-Za-z0-9_]*")
-				|| RESERVED_KEYWORDS.contains(target.toUpperCase(Locale.ROOT));
+		return !target.matches("[A-Za-z_][A-Za-z0-9_]*") || RESERVED_KEYWORDS.contains(target.toUpperCase(Locale.ROOT));
 	}
 
 	@Override

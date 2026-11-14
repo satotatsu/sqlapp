@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -78,7 +79,8 @@ class DuckDbMetadataRoundTripTest {
 				}
 			}
 			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-			assertInstanceOf(DuckDb.class, dialect);
+			assumeTrue(assertInstanceOf(DuckDb.class, dialect).supportsConstraintMetadata(),
+					"constraint metadata requires DuckDB 1.1 or later");
 			final Schema schema = readSchema(dialect, connection);
 
 			final Sequence sequence = schema.getSequences().get("seq1");
@@ -105,13 +107,14 @@ class DuckDbMetadataRoundTripTest {
 			assertEquals("nocase", parent.getColumns().get("ci").getCollation());
 			assertEquals("VARCHAR[]", parent.getColumns().get("tags").getDataTypeName());
 			assertNotNull(parent.getPrimaryKeyConstraint());
-			assertEquals(1, parent.getConstraints().getUniqueConstraints().stream()
-					.filter(c -> !c.isPrimaryKey()).count());
+			assertEquals(1,
+					parent.getConstraints().getUniqueConstraints().stream().filter(c -> !c.isPrimaryKey()).count());
 			assertEquals(1, parent.getConstraints().getCheckConstraints().size());
 
 			final Table child = schema.getTables().get("child");
 			assertEquals("nextval('s1.seq1')", child.getColumns().get("cid").getDefaultValue());
-			final ForeignKeyConstraint foreignKey = CommonUtils.first(child.getConstraints().getForeignKeyConstraints());
+			final ForeignKeyConstraint foreignKey = CommonUtils
+					.first(child.getConstraints().getForeignKeyConstraints());
 			assertEquals("parent", foreignKey.getRelatedTableName());
 			assertEquals("id", foreignKey.getRelatedColumns().get(0).getName());
 			final UniqueConstraint unique = child.getConstraints().getUniqueConstraints().stream()
@@ -153,9 +156,8 @@ class DuckDbMetadataRoundTripTest {
 			assertEquals(List.of("sad", "o,k", "it's"), List.copyOf(parent.getColumns().get("mood").getValues()));
 			assertEquals("nocase", parent.getColumns().get("ci").getCollation());
 			assertEquals(1, recreated.getTables().get("child").getConstraints().getForeignKeyConstraints().size());
-			assertEquals("((cid + 1))",
-					recreated.getTables().get("child").getIndexes().get("ix_expr").getSpecifics()
-							.get(DuckDbIndexReader.INDEX_KEYS));
+			assertEquals("((cid + 1))", recreated.getTables().get("child").getIndexes().get("ix_expr").getSpecifics()
+					.get(DuckDbIndexReader.INDEX_KEYS));
 			assertNotNull(recreated.getViews().get("v1"));
 		}
 	}

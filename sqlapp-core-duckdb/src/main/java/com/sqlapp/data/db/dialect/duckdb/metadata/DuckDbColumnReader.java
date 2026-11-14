@@ -9,12 +9,16 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.converter.DefaultConverter;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbDdlParser;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbDdlParser.ColumnDdl;
@@ -29,9 +33,9 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 /**
  * Reads DuckDB table and view columns from {@code duckdb_columns()}.
  * <p>
- * Generated columns and collations are taken from the table DDL returned by
- * the same query: {@code duckdb_columns()} reports generation expressions as
- * column defaults before DuckDB 2.0 and does not report collations.
+ * Generated columns and collations are taken from the table DDL returned by the
+ * same query: {@code duckdb_columns()} reports generation expressions as column
+ * defaults before DuckDB 2.0 and does not report collations.
  * </p>
  */
 public class DuckDbColumnReader extends ColumnReader {
@@ -94,14 +98,30 @@ public class DuckDbColumnReader extends ColumnReader {
 		return columns;
 	}
 
+	/**
+	 * Keeps values read by the DuckDB type handlers unchanged when they are put
+	 * into rows: the default TIME conversion to {@link java.sql.Time} drops
+	 * microseconds, and the default INTERVAL conversion does not keep every
+	 * interval.
+	 *
+	 * @param column column
+	 */
+	protected void keepValuePrecision(final Column column) {
+		if (column.getDataType() == DataType.TIME) {
+			column.setConverter(Converters.getDefault().getConverter(LocalTime.class));
+		} else if (column.getDataType() == DataType.INTERVAL) {
+			column.setConverter(new DefaultConverter());
+		}
+	}
+
 	protected void setDataType(final ExResultSet rs, final Column column) throws SQLException {
 		final String dataType = getString(rs, DATA_TYPE);
 		if (dataType != null && DECIMAL.matcher(dataType.trim()).matches()) {
-			getDialect().setDbType(dataType, getLong(rs, "numeric_precision"), getInteger(rs, "numeric_scale"),
-					column);
+			getDialect().setDbType(dataType, getLong(rs, "numeric_precision"), getInteger(rs, "numeric_scale"), column);
 			return;
 		}
 		getDialect().setDbType(dataType, null, null, column);
+		keepValuePrecision(column);
 		final List<String> values = DuckDbDdlParser.enumValues(dataType);
 		if (values != null) {
 			column.getValues().clear();

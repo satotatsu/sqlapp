@@ -23,8 +23,8 @@ public class DuckDbSqlBuilder extends AbstractSqlBuilder<DuckDbSqlBuilder> {
 	}
 
 	/**
-	 * Adds a column definition. DuckDB generated columns are always VIRTUAL and
-	 * may not have a default value. Column comments are emitted as separate
+	 * Adds a column definition. DuckDB generated columns are always VIRTUAL and may
+	 * not have a default value. Column comments are emitted as separate
 	 * {@code COMMENT ON COLUMN} statements by the table factories.
 	 */
 	@Override

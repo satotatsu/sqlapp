@@ -18,7 +18,9 @@ public final class DuckDbVersions {
 	private DuckDbVersions() {
 	}
 
-	/** DuckDB 1.1: named constraints and referenced tables in duckdb_constraints(). */
+	/**
+	 * DuckDB 1.1: named constraints and referenced tables in duckdb_constraints().
+	 */
 	public static class DuckDb11 extends DuckDb {
 		private static final long serialVersionUID = 1L;
 

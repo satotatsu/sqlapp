@@ -25,8 +25,8 @@ import com.sqlapp.util.FlexList;
 import com.sqlapp.util.TripleKeyMap;
 
 /**
- * Reads DuckDB foreign keys (DuckDB 1.1+). DuckDB only allows references
- * within the same catalog and schema and supports neither cascading actions nor
+ * Reads DuckDB foreign keys (DuckDB 1.1+). DuckDB only allows references within
+ * the same catalog and schema and supports neither cascading actions nor
  * deferred checking, so update and delete rules are left unspecified (NO
  * ACTION).
  */

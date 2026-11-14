@@ -104,7 +104,7 @@ public class DuckDbSchemaReader extends SchemaReader {
 
 	@Override
 	protected DomainReader newDomainReader() {
-		return null;
+		return new DuckDbEnumReader(getDialect());
 	}
 
 	@Override
@@ -134,7 +134,7 @@ public class DuckDbSchemaReader extends SchemaReader {
 
 	@Override
 	protected FunctionReader newFunctionReader() {
-		return null;
+		return new DuckDbFunctionReader(getDialect());
 	}
 
 	@Override

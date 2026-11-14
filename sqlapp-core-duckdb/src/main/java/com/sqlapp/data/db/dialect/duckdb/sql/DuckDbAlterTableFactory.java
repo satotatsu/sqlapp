@@ -102,8 +102,8 @@ public class DuckDbAlterTableFactory extends AbstractAlterTableFactory<DuckDbSql
 
 	private SqlOperation commentOnColumn(final Table table, final Column column) {
 		final DuckDbSqlBuilder builder = createSqlBuilder();
-		builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName())._add(".")
-				.name(column).space().is().space();
+		builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName())._add(".").name(column)
+				.space().is().space();
 		if (CommonUtils.isEmpty(column.getRemarks())) {
 			builder.null_();
 		} else {
@@ -140,9 +140,8 @@ public class DuckDbAlterTableFactory extends AbstractAlterTableFactory<DuckDbSql
 	protected void addDropConstraintDefinition(final Table originalTable, final Table table,
 			final Constraint originalConstraint, final Constraint constraint, final DbObjectDifference diff,
 			final List<SqlOperation> result) {
-		throw new IllegalArgumentException(
-				"DuckDB cannot drop constraints from an existing table; recreate the table: "
-						+ originalConstraint.getName());
+		throw new IllegalArgumentException("DuckDB cannot drop constraints from an existing table; recreate the table: "
+				+ originalConstraint.getName());
 	}
 
 	@Override
