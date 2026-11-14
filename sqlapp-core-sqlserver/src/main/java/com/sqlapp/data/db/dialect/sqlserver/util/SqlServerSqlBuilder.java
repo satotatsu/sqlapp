@@ -24,6 +24,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.AbstractNamedObject;
+import com.sqlapp.data.schemas.AbstractSchemaObject;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.TemporalPeriodType;
 import com.sqlapp.data.schemas.NamedArgument;
@@ -192,13 +193,73 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 		return clone;
 	}
 
+	/**
+	 * IF OBJECT_ID(N'name', N'type') IS NOT NULL DROP ... を追加します
+	 * 
+	 * @param obj 削除対象(Table/View/Procedure/Function)
+	 */
 	public SqlServerSqlBuilder dropIfExists(AbstractNamedObject<?> obj) {
-		_add("IF OBJECT_ID(").name(obj)._add(") IS NOT NULL");
+		return dropIfExists(obj, this.isWithSchemaName());
+	}
+
+	/**
+	 * IF OBJECT_ID(N'name', N'type') IS NOT NULL DROP ... を追加します
+	 * 
+	 * @param obj            削除対象(Table/View/Procedure/Function)
+	 * @param withSchemaName スキーマ名を付与するか
+	 */
+	public SqlServerSqlBuilder dropIfExists(AbstractNamedObject<?> obj, boolean withSchemaName) {
+		final SqlServerSqlBuilder nameBuilder = newInstance();
+		appendDropIfExistsName(nameBuilder, obj, withSchemaName);
+		final String quotedName = nameBuilder.toString().trim().replace("'", "''");
+		_add("IF OBJECT_ID(N'")._add(quotedName)._add("'");
+		final String objectType = getObjectIdType(obj);
+		if (objectType != null) {
+			_add(", N'")._add(objectType)._add("'");
+		}
+		_add(") IS NOT NULL");
 		lineBreak();
 		indent(() -> {
-			drop().procedure().name(obj);
+			drop();
+			appendDropIfExistsTarget(obj);
+			appendDropIfExistsName(this, obj, withSchemaName);
 		});
 		return instance();
+	}
+
+	private static void appendDropIfExistsName(final SqlServerSqlBuilder builder, final AbstractNamedObject<?> obj,
+			final boolean withSchemaName) {
+		if (obj instanceof AbstractSchemaObject<?> schemaObject) {
+			builder.name(schemaObject, withSchemaName);
+		} else {
+			builder.name(obj);
+		}
+	}
+
+	private void appendDropIfExistsTarget(final AbstractNamedObject<?> obj) {
+		if (obj instanceof com.sqlapp.data.schemas.Table) {
+			table();
+		} else if (obj instanceof com.sqlapp.data.schemas.View) {
+			view();
+		} else if (obj instanceof com.sqlapp.data.schemas.Procedure) {
+			procedure();
+		} else if (obj instanceof com.sqlapp.data.schemas.Function) {
+			function();
+		} else {
+			throw new IllegalArgumentException(
+					"dropIfExists does not support " + (obj == null ? "null" : obj.getClass().getName()));
+		}
+	}
+
+	private static String getObjectIdType(final AbstractNamedObject<?> obj) {
+		if (obj instanceof com.sqlapp.data.schemas.Table) {
+			return "U";
+		} else if (obj instanceof com.sqlapp.data.schemas.View) {
+			return "V";
+		} else if (obj instanceof com.sqlapp.data.schemas.Procedure) {
+			return "P";
+		}
+		return null;
 	}
 
 	/*
@@ -242,7 +303,7 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 		return (SqlServerSqlBuilder) super.clone();
 	}
 
-	private final Dialect sqlserver2008 = SqlServerDialectResolver.getInstance().getDialect(10, 0);
+	private final Dialect sqlserver2005 = SqlServerDialectResolver.getInstance().getDialect(9, 0);
 	private final Dialect sqlserver2016 = SqlServerDialectResolver.getInstance().getDialect(13, 0);
 
 	/**
@@ -258,14 +319,16 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 				&& getDialect().compareTo(sqlserver2016) < 0) {
 			throw new IllegalArgumentException("Temporal tables require SQL Server 2016 or later");
 		}
-		if (this.getDialect().compareTo(sqlserver2008) >= 0) {
-			if (!CommonUtils.isEmpty(column.getFormula())) {
-				as().space()._add(column.getFormula());
-				if (column.isFormulaPersisted()) {
-					persisted();
-				}
-				return instance();
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			if (column.isFormulaPersisted() && getDialect().compareTo(sqlserver2005) < 0) {
+				throw new IllegalArgumentException(
+						"PERSISTED computed columns require SQL Server 2005 or later. column=" + column.getName());
 			}
+			as().space()._add(column.getFormula());
+			if (column.isFormulaPersisted()) {
+				persisted();
+			}
+			return instance();
 		}
 		if (column.getDataType() == DataType.DOMAIN) {
 			this._add(column.getDataTypeName());

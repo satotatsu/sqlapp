@@ -307,9 +307,20 @@ public class SqlServer2000 extends Dialect {
 		return true;
 	}
 
+	/**
+	 * 計算列(col AS (expr))のサポート
+	 */
+	@Override
+	public boolean supportsColumnFormula() {
+		return true;
+	}
+
+	/**
+	 * SQL ServerのDROP TABLEにはCASCADE CONSTRAINTSが無い
+	 */
 	@Override
 	public boolean supportsDropCascade() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -322,14 +333,12 @@ public class SqlServer2000 extends Dialect {
 		return false;
 	}
 
+	/**
+	 * SQL Server 2000はNO ACTIONとCASCADEのみ(SET NULL/SET DEFAULTは2005以降)
+	 */
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
-		// || rule == Rule.SetDefault
-				|| rule == CascadeRule.Cascade) {
-			return true;
-		}
-		return false;
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade;
 	}
 
 	@Override
@@ -337,14 +346,12 @@ public class SqlServer2000 extends Dialect {
 		return true;
 	}
 
+	/**
+	 * SQL Server 2000はNO ACTIONとCASCADEのみ(SET NULL/SET DEFAULTは2005以降)
+	 */
 	@Override
 	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
-		// || rule == Rule.SetDefault
-				|| rule == CascadeRule.Cascade) {
-			return true;
-		}
-		return false;
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade;
 	}
 
 	/**
@@ -374,6 +381,9 @@ public class SqlServer2000 extends Dialect {
 	 */
 	@Override
 	public boolean isOptimisticLockColumn(final Column column) {
+		if (column.getDataType() == DataType.ROWVERSION) {
+			return true;
+		}
 		if (column.getDataType().isBinary() && column.getName().equalsIgnoreCase("TIMESTAMP")) {
 			return true;
 		}
@@ -465,10 +475,14 @@ public class SqlServer2000 extends Dialect {
 		if (!CommonUtils.isEmpty(prefix)) {
 			name = prefix + table.getName();
 		} else {
-			name = "#" + table.getName();
+			name = table.getName();
 		}
 		if (!CommonUtils.isEmpty(suffix)) {
 			name = name + suffix;
+		}
+		// SQL Serverの一時テーブルは#(ローカル)または##(グローバル)で始まる必要がある
+		if (!name.startsWith("#")) {
+			name = "#" + name;
 		}
 		return getObjectFullName(name);
 	}

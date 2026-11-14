@@ -90,4 +90,12 @@ public class SqlServer2012 extends SqlServer2008 {
 	public boolean supportsStandardOffsetFetchRows() {
 		return true;
 	}
+
+	/**
+	 * SEQUENCEのサポート(SQL Server 2012以降)
+	 */
+	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
 }

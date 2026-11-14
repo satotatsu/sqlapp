@@ -64,6 +64,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-db2"))
 	nmcpAggregation(project(":sqlapp-core-db2-zos"))
 	nmcpAggregation(project(":sqlapp-core-db2-i"))
+	nmcpAggregation(project(":sqlapp-core-drsum"))
 	nmcpAggregation(project(":sqlapp-core-firebird"))
 	nmcpAggregation(project(":sqlapp-core-h2"))
 	nmcpAggregation(project(":sqlapp-core-informix"))

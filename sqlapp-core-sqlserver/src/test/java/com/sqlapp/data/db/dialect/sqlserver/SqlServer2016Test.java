@@ -73,7 +73,7 @@ public class SqlServer2016Test {
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
-		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_1GB - 1), column.getLength());
 	}
 
 }

@@ -66,8 +66,8 @@ public class SqlServer2008MergeFactoryTest2 extends AbstractSqlServer11SqlFactor
 					VALUES (
 						  ${colA}
 						, ${colB}
-						, CURRENT_TIMESTAMP
-						, COALESCE(${updatedAt}, CURRENT_TIMESTAMP)
+						, SYSDATETIME()
+						, COALESCE(${updatedAt}, SYSDATETIME())
 						, 0
 					)
 				)

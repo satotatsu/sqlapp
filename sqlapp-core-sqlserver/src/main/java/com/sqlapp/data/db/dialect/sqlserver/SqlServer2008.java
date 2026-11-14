@@ -67,7 +67,8 @@ public class SqlServer2008 extends SqlServer2005 {
 		// DateTimeOffset
 		getDbDataTypes().addTimestampWithTimeZone("DATETIMEOFFSET", type -> {
 			type.addColumnTypeMatcher("DATETIMEOFFSET");
-			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")");
+			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")")
+					.setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction());
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp("DATETIME2", type -> {
@@ -145,12 +146,23 @@ public class SqlServer2008 extends SqlServer2005 {
 	}
 
 	@Override
-	public boolean supportsColumnFormula() {
-		return false;
-	}
-
-	@Override
 	public CorrelationStrategy getCorrelationStrategy() {
 		return CorrelationStrategy.BY_SOURCE_ROWID;
+	}
+
+	/**
+	 * 現在日時(Timestamp)の取得関数。DATETIME2(7)の精度で取得します。
+	 */
+	@Override
+	public String getCurrentTimestampFunction() {
+		return "SYSDATETIME()";
+	}
+
+	/**
+	 * 現在日時(Timestamp)タイムゾーン付きの取得関数
+	 */
+	@Override
+	public String getCurrentTimestampWithTimeZoneFunction() {
+		return "SYSDATETIMEOFFSET()";
 	}
 }

@@ -51,7 +51,7 @@ import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
  */
 public class SqlServer2005 extends SqlServer2000 {
 	private static final String GENERATED_KEYS_TABLE = "#SQLAPP_GENERATED_KEYS";
-	private static final Pattern VALUES_PATTERN = Pattern.compile("(?i)\\b(?:DEFAULT\\s+)?VALUES\\b");
+	private static final Pattern VALUES_PATTERN = Pattern.compile("(?i)(?:DEFAULT\\s+)?VALUES\\b");
 	/**
 	 * serialVersionUID
 	 */
@@ -75,12 +75,73 @@ public class SqlServer2005 extends SqlServer2000 {
 
 	@Override
 	public String handleBatchExecuteGeneratedKeysSql(Table table, Column identityColumn, String sql) {
-		Matcher matcher = VALUES_PATTERN.matcher(sql);
-		if (!matcher.find()) {
+		final int start = findValuesClause(sql);
+		if (start < 0) {
 			throw new IllegalArgumentException("Unable to add SQL Server generated-key capture to INSERT SQL: " + sql);
 		}
-		return sql.substring(0, matcher.start()) + " OUTPUT INSERTED." + getObjectFullName(identityColumn.getName())
-				+ " INTO " + GENERATED_KEYS_TABLE + "(GENERATED_KEY) " + sql.substring(matcher.start());
+		return sql.substring(0, start) + " OUTPUT INSERTED." + getObjectFullName(identityColumn.getName()) + " INTO "
+				+ GENERATED_KEYS_TABLE + "(GENERATED_KEY) " + sql.substring(start);
+	}
+
+	/**
+	 * 括弧の外にある最初のVALUES(またはDEFAULT VALUES)の位置を返します。 [識別子]、"識別子"、'文字列'とコメントの中は無視します。
+	 * 
+	 * @param sql INSERT SQL
+	 * @return VALUES句の開始位置。見つからない場合は-1
+	 */
+	static int findValuesClause(final String sql) {
+		final int length = sql.length();
+		int depth = 0;
+		int i = 0;
+		while (i < length) {
+			final char c = sql.charAt(i);
+			if (c == '[') {
+				i = skipQuoted(sql, i, ']');
+				continue;
+			} else if (c == '"' || c == '\'') {
+				i = skipQuoted(sql, i, c);
+				continue;
+			} else if (c == '-' && i + 1 < length && sql.charAt(i + 1) == '-') {
+				final int end = sql.indexOf('\n', i);
+				i = end < 0 ? length : end + 1;
+				continue;
+			} else if (c == '/' && i + 1 < length && sql.charAt(i + 1) == '*') {
+				final int end = sql.indexOf("*/", i + 2);
+				i = end < 0 ? length : end + 2;
+				continue;
+			} else if (c == '(') {
+				depth++;
+			} else if (c == ')') {
+				depth--;
+			} else if (depth == 0 && (c == 'V' || c == 'v' || c == 'D' || c == 'd')
+					&& (i == 0 || !isIdentifierPart(sql.charAt(i - 1)))) {
+				final Matcher matcher = VALUES_PATTERN.matcher(sql).region(i, length);
+				if (matcher.lookingAt()) {
+					return i;
+				}
+			}
+			i++;
+		}
+		return -1;
+	}
+
+	private static int skipQuoted(final String sql, final int start, final char close) {
+		int i = start + 1;
+		while (i < sql.length()) {
+			if (sql.charAt(i) == close) {
+				if (i + 1 < sql.length() && sql.charAt(i + 1) == close) {
+					i += 2;
+					continue;
+				}
+				return i + 1;
+			}
+			i++;
+		}
+		return sql.length();
+	}
+
+	private static boolean isIdentifierPart(final char c) {
+		return Character.isLetterOrDigit(c) || c == '_' || c == '@' || c == '#' || c == '$';
 	}
 
 	@Override
@@ -108,21 +169,21 @@ public class SqlServer2005 extends SqlServer2000 {
 	protected void registerDataType() {
 		super.registerDataType();
 		// VARCHAR
-		getDbDataTypes().addVarchar(LEN_2GB, type -> {
+		getDbDataTypes().addVarchar(LEN_2GB - 1, type -> {
 			type.setPetternColumnTypeMatcher("VARCHAR\\s*\\(\\s*MAX\\s*\\)");
-			type.setDefaultLength(LEN_2GB).setCreateFormat("VARCHAR(MAX)").setFixedLength(false);
+			type.setDefaultLength(LEN_2GB - 1).setCreateFormat("VARCHAR(MAX)").setFixedLength(false);
 		});
 		// NCHAR
 		// NVARCHAR
-		getDbDataTypes().addNVarchar(LEN_1GB, type -> {
+		getDbDataTypes().addNVarchar(LEN_1GB - 1, type -> {
 			type.setPetternColumnTypeMatcher("NVARCHAR\\s*\\(\\s*MAX\\s*\\)");
-			type.setDefaultLength(LEN_1GB).setCreateFormat("NVARCHAR(MAX)").setFixedLength(false);
+			type.setDefaultLength(LEN_1GB - 1).setCreateFormat("NVARCHAR(MAX)").setFixedLength(false);
 		});
 		// Binary
-		getDbDataTypes().addVarBinary(LEN_2GB, type -> {
+		getDbDataTypes().addVarBinary(LEN_2GB - 1, type -> {
 			type.setPetternColumnTypeMatcher("(VARBINARY\\s*\\(\\s*MAX\\s*\\)|IMAGE)");
-			type.setDefaultLength(LEN_2GB).setDefaultLength(LEN_2GB).setCreateFormat("VARBINARY(MAX)")
-					.setFixedLength(false).setLiteral("0x", "");
+			type.setDefaultLength(LEN_2GB - 1).setCreateFormat("VARBINARY(MAX)").setFixedLength(false).setLiteral("0x",
+					"");
 		});
 		// XML
 		getDbDataTypes().addSqlXml("XML", type -> {
@@ -217,17 +278,27 @@ public class SqlServer2005 extends SqlServer2000 {
 		return bool;
 	}
 
+	/**
+	 * 最大長を超える(または-1の)VARCHAR/NVARCHAR/VARBINARYの長さを(MAX)の上限値にします。 VARCHAR(MAX)と
+	 * VARBINARY(MAX)は2^31-1バイト、NVARCHAR(MAX)は2^30-1文字です。
+	 */
 	protected void setVarcharMax(final DataTypeLengthProperties<?> column) {
 		if (column.getDataType() == DataType.VARCHAR) {
 			if (column.getLength() != null
 					&& (column.getLength().longValue() > 8000 || column.getLength().longValue() < 0)) {
-				column.setLength(LEN_2GB);
+				column.setLength(LEN_2GB - 1);
 			}
 		}
 		if (column.getDataType() == DataType.NVARCHAR) {
 			if (column.getLength() != null
 					&& (column.getLength().longValue() > 4000 || column.getLength().longValue() < 0)) {
-				column.setLength(LEN_1GB);
+				column.setLength(LEN_1GB - 1);
+			}
+		}
+		if (column.getDataType() == DataType.VARBINARY) {
+			if (column.getLength() != null
+					&& (column.getLength().longValue() > 8000 || column.getLength().longValue() < 0)) {
+				column.setLength(LEN_2GB - 1);
 			}
 		}
 	}

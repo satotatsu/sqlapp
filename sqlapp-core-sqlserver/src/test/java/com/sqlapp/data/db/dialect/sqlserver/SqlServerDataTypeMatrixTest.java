@@ -32,8 +32,8 @@ class SqlServerDataTypeMatrixTest {
 	}
 
 	@ParameterizedTest(name = "{0} -> {1}: {2}")
-	@CsvSource({ "tinyint, UTINYINT, TINYINT", "real, REAL, REAL", "float(53), FLOAT, FLOAT(53)", "float, FLOAT, FLOAT(53)",
-			"smallint, SMALLINT, SMALLINT", "int, INT, INT", "bigint, BIGINT, BIGINT",
+	@CsvSource({ "tinyint, UTINYINT, TINYINT", "real, REAL, REAL", "float(53), FLOAT, FLOAT(53)",
+			"float, FLOAT, FLOAT(53)", "smallint, SMALLINT, SMALLINT", "int, INT, INT", "bigint, BIGINT, BIGINT",
 			"varchar(12), VARCHAR, VARCHAR(12)", "nvarchar(12), NVARCHAR, NVARCHAR(12)",
 			"varbinary(12), VARBINARY, VARBINARY(12)", "'decimal(12,3)', DECIMAL, 'DECIMAL(12,3)'", "date, DATE, DATE",
 			"xml, SQLXML, XML" })

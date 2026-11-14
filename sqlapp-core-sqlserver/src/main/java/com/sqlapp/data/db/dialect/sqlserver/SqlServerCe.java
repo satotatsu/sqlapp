@@ -45,10 +45,12 @@ public class SqlServerCe extends SqlServer2005 {
 	/**
 	 * DB製品名
 	 */
+	@Override
 	public String getProductName() {
 		return "SQLServerCE";
 	}
 
+	@Override
 	public boolean supportsWith() {
 		return true;
 	}
@@ -56,20 +58,40 @@ public class SqlServerCe extends SqlServer2005 {
 	/**
 	 * TOP句のサポート
 	 */
+	@Override
 	public boolean supportsTop() {
 		return true;
 	}
 
+	@Override
 	public boolean supportsRuleOnDelete(CascadeRule rule) {
 		return true;
 	}
 
+	@Override
 	public boolean supportsRuleOnUpdate(CascadeRule rule) {
 		return true;
 	}
 
+	@Override
 	public boolean supportsDefaultValueFunction() {
 		return true;
+	}
+
+	/**
+	 * SQL Server Compactにはスキーマが無い
+	 */
+	@Override
+	public boolean supportsSchema() {
+		return false;
+	}
+
+	/**
+	 * SQL Server Compactは一時テーブルとOUTPUT句をサポートしないため、生成キーのバッチ取得は使えない
+	 */
+	@Override
+	public boolean supportsBatchExecuteGeneratedKeysCapture() {
+		return false;
 	}
 
 	@Override

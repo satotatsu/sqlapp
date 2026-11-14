@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.resolver;
 
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
@@ -40,6 +43,61 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 
 	public static SqlServerDialectResolver getInstance() {
 		return instance;
+	}
+
+	/**
+	 * SQL Server 2016 SP1のビルド番号
+	 */
+	static final int SQL_SERVER_2016_SP1_BUILD = 4001;
+
+	/**
+	 * Azure SQL Database / Azure SQL Managed Instanceが返すメジャーバージョン
+	 */
+	private static final int AZURE_REPORTED_MAJOR_VERSION = 12;
+
+	/**
+	 * SERVERPROPERTY('EngineEdition'): Azure SQL Database
+	 */
+	static final int ENGINE_EDITION_AZURE_SQL_DATABASE = 5;
+
+	/**
+	 * SERVERPROPERTY('EngineEdition'): Azure SQL Managed Instance
+	 */
+	static final int ENGINE_EDITION_AZURE_SQL_MANAGED_INSTANCE = 8;
+
+	/**
+	 * Azure SQL Database / Managed Instanceは製品バージョンとして常に12.xを返すため、
+	 * EngineEditionで判定して最新のDialectを返します。 それ以外はnullを返し、バージョンによる判定に委ねます。
+	 */
+	@Override
+	public Dialect resolveDatabaseMetaData(final DatabaseMetaData metadata) {
+		try {
+			if (!match(metadata.getDatabaseProductName())) {
+				return null;
+			}
+			if (metadata.getDatabaseMajorVersion() != AZURE_REPORTED_MAJOR_VERSION) {
+				return null;
+			}
+			final var connection = metadata.getConnection();
+			if (connection == null) {
+				// オフライン解決ではEngineEditionを確認できないため、バージョンで判定する
+				return null;
+			}
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery("SELECT CAST(SERVERPROPERTY('EngineEdition') AS INT)")) {
+				if (!rows.next()) {
+					throw new IllegalStateException("SERVERPROPERTY('EngineEdition') returned no row");
+				}
+				final int engineEdition = rows.getInt(1);
+				if (engineEdition == ENGINE_EDITION_AZURE_SQL_DATABASE
+						|| engineEdition == ENGINE_EDITION_AZURE_SQL_MANAGED_INSTANCE) {
+					return DialectHolder.defaultDialect2022;
+				}
+				return null;
+			}
+		} catch (final SQLException e) {
+			throw new IllegalStateException("Failed to identify SQL Server engine edition from JDBC metadata", e);
+		}
 	}
 
 	static class SqlServerVersionResolver implements VersionResolver {
@@ -70,7 +128,8 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 			} else if (majorVersion >= 14) {
 				return DialectHolder.defaultDialect2017;
 			} else if (majorVersion >= 13) {
-				if (minorVersion > 1) {
+				// SQL Server 2016 SP1 is build 13.0.4001. The minor version is always 0.
+				if (revision != null && revision.intValue() >= SQL_SERVER_2016_SP1_BUILD) {
 					return DialectHolder.defaultDialect2016Sp1;
 				}
 				return DialectHolder.defaultDialect2016;

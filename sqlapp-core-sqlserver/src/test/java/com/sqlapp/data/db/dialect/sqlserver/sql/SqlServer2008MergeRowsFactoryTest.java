@@ -59,7 +59,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE INTO tableA AS _target_
-				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
+				USING ( /*VALUES*/VALUES ( 0, '', '', SYSDATETIME(), SYSDATETIME(), 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
 				)
@@ -101,7 +101,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE INTO tableA AS _target_
-				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
+				USING ( /*VALUES*/VALUES ( 0, '', '', SYSDATETIME(), SYSDATETIME(), 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.colc = _source_.colc
 				)
@@ -145,7 +145,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE INTO tableA AS _target_
-				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
+				USING ( /*VALUES*/VALUES ( 0, '', '', SYSDATETIME(), SYSDATETIME(), 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
 				)
@@ -202,7 +202,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE INTO tableA AS _target_
-				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
+				USING ( /*VALUES*/VALUES ( 0, '', '', SYSDATETIME(), SYSDATETIME(), 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
 				)
