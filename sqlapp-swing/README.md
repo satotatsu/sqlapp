@@ -50,9 +50,9 @@ the runtime retains its own legal notices. Before publishing, review the chosen
 JDK and dependency redistribution terms and provide any additional required
 source/notice material. Rebuild packages when the bundled Java needs updating.
 
-The **JDBC drivers** screen still accepts additional local driver JARs. They are
-session-only, as in the Gradle-launched application. Oracle's driver remains a
-separate addition. Choose writable user folders for jobs, profiles and results;
+The **JDBC drivers** screen downloads drivers such as Oracle's from Maven
+(saved under `~/.sqlapp/drivers` and loaded at every start) and still accepts
+session-only local driver JARs, as in the Gradle-launched application. Choose writable user folders for jobs, profiles and results;
 do not use the installation folder for working data. No database is contacted
 by the packaging tasks. Existing `run`, `installDist` and `distZip` remain
 available; the latter distributions require Java 25 on the recipient's machine.
@@ -926,8 +926,9 @@ execution.
 
 ### Named connections
 
-The **Saved** row of every source/target connection form lists named
-connections from one connection folder shared by all screens. Choose the folder
+The **Saved** row of every source/target connection form, and the **Saved
+connection** row of **Schema migration plan**, lists named connections from one
+connection folder shared by all screens. Choose the folder
 with **Folder…**, typically a Gradle project's `src/main/config`; it is
 remembered for the next start. Each subfolder holding a
 `dataSource.yaml`, `.yml`, `.properties`, `.json` or `.xml` file is one
@@ -941,6 +942,13 @@ references with `properties "src/main/config/<name>/dataSource.properties"`.
   digits, `.`, `_` and `-`.
 - Editing the URL, username or driver class detaches the form from the named
   connection; the row then shows `(none)`.
+- A new job YAML created from **Direct transfer** or **File transfer** uses the
+  selected saved connection names as its `source` / `target` runtime connection
+  names, so the Gradle task can bind `<name>/dataSource.*` to the same names.
+  A side without a saved connection keeps the default `source` / `target`;
+  choosing the same saved connection on both sides gives one shared name, and a
+  folder name the job rule rejects (it must start with a letter) falls back to
+  the default.
 - While a form still matches its settings file, connections opened by the GUI
   also apply the file's other settings, such as `schema`, `catalog` and
   `dataSource.*` driver properties. The form's URL, username, driver class and
@@ -988,6 +996,43 @@ startup connection or driver download. Driver classes still need to be on the
 application's runtime classpath or loaded from **JDBC drivers**. Execution retains its existing connection
 confirmation, password re-entry and live identity/fingerprint checks.
 
+## Download JDBC drivers from Maven
+
+Drivers that are not bundled, such as Oracle, DuckDB, MariaDB, H2, IBM Db2,
+Firebird and Snowflake, can be downloaded in **JDBC drivers › Download from
+Maven**, as in DBeaver:
+
+1. Choose the **Driver**, or **Other (Maven coordinate)** and enter
+   `groupId:artifactId` (optionally `:version[:classifier]`).
+2. **Find versions** reads `maven-metadata.xml` and selects the release; any
+   listed or typed version can be used.
+3. **Download and load** reads the POMs, resolves the runtime dependencies
+   (parent POMs, properties, dependency management and imported BOMs; compile
+   and runtime scope; optional dependencies and exclusions skipped; nearest
+   version wins), downloads every JAR, and loads the driver. **Cancel** stops it.
+
+- Every POM and JAR is checked against the repository's `.sha256`, `.sha512` or
+  `.sha1` file. A mismatch or a missing checksum discards the download. This
+  checks transfer integrity, not who published the driver: use trusted drivers.
+- Files are saved in `~/.sqlapp/drivers/repository/` in Maven layout and listed
+  in `~/.sqlapp/drivers/drivers.yaml`. Listed drivers are loaded again at every
+  start (local files only; no network). Downloading another version of the same
+  driver replaces its list entry; restart to switch from an already loaded
+  version.
+- **Remove** takes a driver off the start list and deletes JARs no other listed
+  driver uses. A JAR that is loaded and locked is kept and reported.
+- **Repositories…** sets the repository URLs, tried in order, in
+  `~/.sqlapp/drivers/settings.yaml`; the default is Maven Central. `https`,
+  `http` and `file:` URLs are accepted; user names or passwords in URLs are
+  rejected. Java's proxy settings (`https.proxyHost` and so on) are used.
+- Profiles in POMs and version ranges are not supported; such a dependency is
+  reported. Download that JAR separately and load it as a local file.
+- When a connection's JDBC URL has no driver and no driver class is set, the
+  error names the driver to download. For a catalog driver (for example a
+  `jdbc:oracle:` URL), the application offers once per session to open
+  **JDBC drivers** with that driver selected and its versions listed. Nothing is
+  downloaded until you choose **Download and load**.
+
 ## Add JDBC driver JARs
 
 Open **JDBC drivers**, optionally enter the JDBC driver class, then choose
@@ -1019,8 +1064,9 @@ Selecting the same path twice in one load, selecting only already loaded JARs
 without specifying an unregistered class, or registering an already loaded driver
 class is rejected. Duplicate classes are checked before initialization for
 explicit names and discovered service providers. Restart to change driver versions.
-JARs stay loaded for the application session; there is no unload, automatic
-download, file copy or persisted JAR list. Select them again after restarting.
+Local JARs stay loaded for the application session; there is no unload, file
+copy or persisted JAR list for them. Select them again after restarting, or use
+**Download from Maven** for a driver that should load at every start.
 Connection profiles keep their existing format and do not include JAR paths.
 Adding a JAR supplies a JDBC driver, not a new sqlapp database dialect.
 
@@ -1153,8 +1199,8 @@ no cancellation control for planning yet.
 
 The current distribution includes HSQLDB, PostgreSQL, MySQL, SQL Server and
 SQLite JDBC drivers. Oracle's dialect is included, but its JDBC driver must be
-provided separately. Use **JDBC drivers** to load additional local JARs without
-restarting. Specifying a driver class alone does not install its JAR.
+provided separately: download it in **JDBC drivers › Download from Maven**, or
+load local JARs there without restarting. Specifying a driver class alone does not install its JAR.
 Alternatively, after `:sqlapp-swing:installDist`, launch on Windows with a local
 Oracle driver on the runtime classpath:
 

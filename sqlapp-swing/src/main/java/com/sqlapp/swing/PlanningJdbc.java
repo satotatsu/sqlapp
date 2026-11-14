@@ -66,6 +66,8 @@ final class PlanningJdbc {
 			DataSourceConfigFiles.applyTo(configuration, settings, name -> null);
 		}
 		final var added = libraries.resolve(spec);
+		if (added == null && (spec.driverClass() == null || spec.driverClass().isBlank()))
+			MissingJdbcDriver.check(spec.jdbcUrl());
 		if (added != null)
 			configuration.setDataSource(new AddedDriverDataSource(added, spec, password));
 		else

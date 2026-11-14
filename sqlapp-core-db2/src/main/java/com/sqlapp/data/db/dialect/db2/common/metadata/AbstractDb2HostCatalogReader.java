@@ -142,6 +142,11 @@ public abstract class AbstractDb2HostCatalogReader extends JdbcCatalogReader {
 		}
 
 		@Override
+		protected com.sqlapp.data.db.metadata.ConstantReader newConstantReader() {
+			return new Db2HostVariableReader(getDialect(), resources);
+		}
+
+		@Override
 		protected MaskReader newMaskReader() {
 			return new Db2HostSecurityReaders.Masks(getDialect(), resources);
 		}

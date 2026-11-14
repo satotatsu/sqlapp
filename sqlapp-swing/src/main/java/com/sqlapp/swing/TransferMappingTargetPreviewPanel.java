@@ -8,7 +8,7 @@ import com.sqlapp.data.db.dialect.*;
 final class TransferMappingTargetPreviewPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 	final JComboBox<String> product = new JComboBox<>(new String[] { "No target preview", "HSQL Database Engine",
-			"PostgreSQL", "MySQL", "Oracle", "Microsoft SQL Server", "SQLite" });
+			"PostgreSQL", "MySQL", "Oracle", "Microsoft SQL Server", "SQLite", "DuckDB" });
 	final JTextField version = new JTextField(8);
 
 	TransferMappingTargetPreviewPanel(Runnable changed) {

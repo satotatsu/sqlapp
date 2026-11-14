@@ -76,15 +76,65 @@ class ConnectionCatalogTest {
 
 	@Test
 	void newJobsUseSavedConnectionNamesWithoutJoiningDifferentDatabases() {
-		assertEquals(new ConnectionCatalog.JobNames("local", "sqlserver"), ConnectionCatalog.jobNames("local", "sqlserver"));
+		assertEquals(new ConnectionCatalog.JobNames("local", "sqlserver"),
+				ConnectionCatalog.jobNames("local", "sqlserver"));
 		assertEquals(ConnectionCatalog.JobNames.DEFAULT, ConnectionCatalog.jobNames(null, null));
 		assertEquals(new ConnectionCatalog.JobNames("local", "target"), ConnectionCatalog.jobNames("local", null));
 		assertEquals(new ConnectionCatalog.JobNames("local", "local"), ConnectionCatalog.jobNames("local", "local"),
 				"the same saved connection on both sides is one connection");
 		assertEquals(ConnectionCatalog.JobNames.DEFAULT, ConnectionCatalog.jobNames(null, "source"),
 				"an unnamed source must not share a name with a different saved target");
-		assertEquals(new ConnectionCatalog.JobNames("source", "sqlserver"), ConnectionCatalog.jobNames("1db", "sqlserver"),
+		assertEquals(new ConnectionCatalog.JobNames("source", "sqlserver"),
+				ConnectionCatalog.jobNames("1db", "sqlserver"),
 				"a folder name the job rule rejects falls back to the default");
+	}
+
+	@Test
+	void schemaPlanUsesTheSavedConnectionsSettingsFile() throws Exception {
+		final Path config = config();
+		final Path file = config.resolve("sqlserver/dataSource.yaml");
+		final var panel = new AtomicReference<SchemaMigrationPlanPanel>();
+		final var spec = new AtomicReference<PlanningJdbc.Spec>();
+		final var loaded = new CountDownLatch(1);
+		final var planned = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var artifact = com.sqlapp.data.db.command.migration.schema.MigrationPlanArtifact
+					.of(new com.sqlapp.data.db.command.migration.schema.MigrationPlan(false, null, 30L, 0, 0,
+							java.util.List.of(), java.util.List.of(), null));
+			final var result = new SchemaMigrationPlanningService.Result(artifact,
+					new ReportReviewService().schemaPlan(artifact));
+			final var view = new SchemaMigrationPlanPanel(new SchemaMigrationPlanPanel.Planner() {
+				@Override
+				public SchemaMigrationPlanningService.Result plan(SchemaMigrationPlanningService.Request request,
+						String jdbcUrl, String username, char[] password, String driverClass) {
+					throw new AssertionError("the screen must pass the whole connection");
+				}
+
+				@Override
+				public SchemaMigrationPlanningService.Result plan(SchemaMigrationPlanningService.Request request,
+						PlanningJdbc.Spec connection, char[] password) {
+					spec.set(connection);
+					planned.countDown();
+					return result;
+				}
+			}, (artifactResult, path) -> {
+			});
+			panel.set(view);
+			assertNotNull(view.saved.getParent(), "the saved connection list is on the form");
+			view.profile.status.addPropertyChangeListener("text", event -> {
+				if (String.valueOf(event.getNewValue()).startsWith("Loaded"))
+					loaded.countDown();
+			});
+			view.profile.loadFrom(file);
+		});
+		assertTrue(loaded.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			panel.get().upDirectory.setText(directory.toString());
+			panel.get().build.doClick();
+		});
+		assertTrue(planned.await(5, TimeUnit.SECONDS));
+		assertEquals("jdbc:hsqldb:mem:sqlserver", spec.get().jdbcUrl());
+		assertEquals(file.toAbsolutePath().normalize(), spec.get().settingsFile());
 	}
 
 	@Test

@@ -11,6 +11,30 @@ import com.sqlapp.data.db.command.migration.bulk.BulkMigrationJobConfigurationEd
  * fingerprint and dependency order.
  */
 public final class TransferJobDraftBuilder {
+	private final String sourceConnection;
+	private final String targetConnection;
+
+	public TransferJobDraftBuilder() {
+		this("source", "target");
+	}
+
+	private TransferJobDraftBuilder(String sourceConnection, String targetConnection) {
+		this.sourceConnection = sourceConnection;
+		this.targetConnection = targetConnection;
+	}
+
+	/**
+	 * A builder that writes these runtime connection names into new jobs instead of
+	 * {@code source} / {@code target}, for example the names of saved connection
+	 * settings. Equal names bind both sides to one connection.
+	 */
+	public TransferJobDraftBuilder withConnectionNames(String source, String target) {
+		// Validate early with the job's own rules.
+		new TransferJobConfiguration(source, target, List.of("X"),
+				TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
+		return new TransferJobDraftBuilder(source, target);
+	}
+
 	/**
 	 * Resolve a captured selection without creating a job or opening connections.
 	 */
@@ -65,7 +89,7 @@ public final class TransferJobDraftBuilder {
 				.map(table -> TransferSchemaOnlyPreparation.identity(schema.getCatalogName(), schema.getName(),
 						table.getName()))
 				.toList();
-		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, mode,
+		final var configuration = new TransferJobConfiguration(1, sourceConnection, targetConnection, tables, mode,
 				sourceSchema(schema.getName()), targetSchema, null, null, false,
 				TransferJobConfiguration.DataMode.SCHEMA_ONLY, null, policy, allowDestructiveSchemaChanges,
 				generatedKeyColumn);
@@ -93,7 +117,7 @@ public final class TransferJobDraftBuilder {
 		final var draft = new BulkMigrationJobConfigurationEditorIO()
 				.validate(new BulkMigrationJobDraftBuilder().draftInsert(schema, selected, "", chunkSize, verify));
 		final var canonical = TransferFileJobDraftBuilder.schema(schema);
-		final var job = new TransferJobConfiguration(1, "source", "target",
+		final var job = new TransferJobConfiguration(1, sourceConnection, targetConnection,
 				draft.getTasks().stream().map(task -> task.getTable()).toList(), schemaMode,
 				sourceSchema(canonical.getName()), targetSchema, null, chunkSize, verify,
 				TransferJobConfiguration.DataMode.JDBC_DIRECT, null, policy, false, generatedKeyColumn);

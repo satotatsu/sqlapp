@@ -86,7 +86,8 @@ final class FileTransferDraftDialog {
 			final String keyColumn = createMissing.isSelected() && generatedKey.isSelected()
 					? generatedKeyColumn.getText()
 					: null;
-			return (schema, tables, chunk, verify) -> new TransferFileJobDraftBuilder().withConnectionNames(names.source(), names.target())
+			return (schema, tables, chunk, verify) -> new TransferFileJobDraftBuilder()
+					.withConnectionNames(names.source(), names.target())
 					.save(schema, tables, chunk, verify, mode, compatibilityPolicy, destinationSchema, files, keyColumn,
 							prepared.directory().resolve("transfer.yaml"))
 					.file().toString();

@@ -46,6 +46,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	final JTextField historyTable = new JTextField("changelog");
 	final JTextField driverClass = new JTextField();
 	final ConnectionProfilePanel profile = new ConnectionProfilePanel(jdbcUrl, username, driverClass, password);
+	/** Named connections shared with the other screens. */
+	final SavedConnectionChooser saved;
 	final JCheckBox checksumValidation = new JCheckBox("Record / validate checksums", true);
 	final JCheckBox rejectOutOfOrder = new JCheckBox("Reject out-of-order migrations", true);
 	final JCheckBox rejectNonTransactional = new JCheckBox("Reject non-transactional SQL", true);
@@ -86,6 +88,15 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	interface Planner {
 		SchemaMigrationPlanningService.Result plan(SchemaMigrationPlanningService.Request request, String jdbcUrl,
 				String username, char[] password, String driverClass);
+
+		/**
+		 * Plans with a connection that may carry a settings file for its other driver
+		 * settings; the default ignores that file.
+		 */
+		default SchemaMigrationPlanningService.Result plan(SchemaMigrationPlanningService.Request request,
+				PlanningJdbc.Spec connection, char[] password) {
+			return plan(request, connection.jdbcUrl(), connection.username(), password, connection.driverClass());
+		}
 	}
 
 	@FunctionalInterface
@@ -105,7 +116,23 @@ final class SchemaMigrationPlanPanel extends JPanel {
 	}
 
 	SchemaMigrationPlanPanel() {
-		this(new SchemaMigrationPlanningService()::plan, new SchemaMigrationPlanningService()::save);
+		this(defaultPlanner(new SchemaMigrationPlanningService()), new SchemaMigrationPlanningService()::save);
+	}
+
+	private static Planner defaultPlanner(final SchemaMigrationPlanningService service) {
+		return new Planner() {
+			@Override
+			public SchemaMigrationPlanningService.Result plan(final SchemaMigrationPlanningService.Request request,
+					final String jdbcUrl, final String username, final char[] password, final String driverClass) {
+				return service.plan(request, jdbcUrl, username, password, driverClass);
+			}
+
+			@Override
+			public SchemaMigrationPlanningService.Result plan(final SchemaMigrationPlanningService.Request request,
+					final PlanningJdbc.Spec connection, final char[] password) {
+				return service.plan(request, connection, password);
+			}
+		};
 	}
 
 	SchemaMigrationPlanPanel(final Planner planner, final Saver saver) {
@@ -135,15 +162,17 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		this.executionSaver = java.util.Objects.requireNonNull(executionSaver, "executionSaver");
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var common = new JPanel(new GridBagLayout());
-		row(common, 0, "JDBC URL", jdbcUrl);
-		row(common, 1, "Username", username);
-		row(common, 2, "Password", password);
-		row(common, 3, "Connection profile", profile);
+		saved = new SavedConnectionChooser(ConnectionCatalog.SESSION, profile, jdbcUrl, username, driverClass);
+		row(common, 0, "Saved connection", saved);
+		row(common, 1, "JDBC URL", jdbcUrl);
+		row(common, 2, "Username", username);
+		row(common, 3, "Password", password);
+		row(common, 4, "Connection profile", profile);
 		final var connectionActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
 		connectionActions.add(buildUrl);
 		connectionActions.add(test);
-		row(common, 4, "Connection", connectionActions);
-		row(common, 5, "Up SQL directory", directoryField(upDirectory));
+		row(common, 5, "Connection", connectionActions);
+		row(common, 6, "Up SQL directory", directoryField(upDirectory));
 		form.add(common, BorderLayout.NORTH);
 		final var advanced = new JPanel(new GridBagLayout());
 		row(advanced, 0, "Down SQL directory", directoryField(downDirectory));
@@ -328,7 +357,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		final PlanningJdbc.Spec connection;
 		try {
 			connection = new PlanningJdbc.Spec(jdbcUrl.getText().trim(), username.getText().trim(),
-					driverClass.getText().trim());
+					driverClass.getText().trim(), profile.settingsFile());
 		} catch (IllegalArgumentException failure) {
 			status.setText("Enter a JDBC URL starting with jdbc: before testing.");
 			jdbcUrl.requestFocusInWindow();
@@ -381,6 +410,7 @@ final class SchemaMigrationPlanPanel extends JPanel {
 		final String url = jdbcUrl.getText().trim();
 		final String user = username.getText().trim();
 		final String driver = driverClass.getText().trim();
+		final Path settings = profile.settingsFile();
 		final String up = upDirectory.getText().trim();
 		final String down = downDirectory.getText().trim();
 		final String setup = setupDirectory.getText().trim();
@@ -406,8 +436,8 @@ final class SchemaMigrationPlanPanel extends JPanel {
 					final var request = new SchemaMigrationPlanningService.Request(path(up), path(down), path(setup),
 							path(finish), version(target), history, checksums, ordered, transactional, rollback,
 							repeated, recurse);
-					return new Prepared(planner.plan(request, url, user, secret, driver), request,
-							new PlanningJdbc.Spec(url, user, driver));
+					final var connection = new PlanningJdbc.Spec(url, user, driver, settings);
+					return new Prepared(planner.plan(request, connection, secret), request, connection);
 				} finally {
 					Arrays.fill(secret, '\0');
 				}

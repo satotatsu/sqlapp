@@ -32,7 +32,10 @@ final class ConnectionCatalog {
 	}
 
 	static final String FILE_NAME = "dataSource";
-	/** Same rule as a transfer job's runtime connection names, so a connection name can be used in jobs. */
+	/**
+	 * Same rule as a transfer job's runtime connection names, so a connection name
+	 * can be used in jobs.
+	 */
 	private static final Pattern NAME = Pattern.compile("[A-Za-z][A-Za-z0-9_.-]{0,127}");
 
 	/** Runtime connection names written into a new transfer job. */
@@ -43,8 +46,8 @@ final class ConnectionCatalog {
 	/**
 	 * Names for a new job: the saved connection names of the source and target
 	 * forms when they are usable, otherwise {@code source} / {@code target}. Equal
-	 * names bind both sides to one connection, so they are only kept when both forms
-	 * chose the same saved connection.
+	 * names bind both sides to one connection, so they are only kept when both
+	 * forms chose the same saved connection.
 	 */
 	static JobNames jobNames(final String sourceConnection, final String targetConnection) {
 		final boolean sourceNamed = sourceConnection != null && NAME.matcher(sourceConnection).matches();
@@ -55,6 +58,7 @@ final class ConnectionCatalog {
 			return JobNames.DEFAULT;
 		return new JobNames(source, target);
 	}
+
 	static final ConnectionCatalog SESSION = new ConnectionCatalog(new PreferencesStore());
 
 	private final FolderStore store;

@@ -44,11 +44,31 @@ The resolver parses the version from `DatabaseMetaData.getDatabaseProductVersion
 | Inline `ENUM('a', 'b')` | `DataType.ENUM` with values |
 | LIST / ARRAY / STRUCT / MAP / UNION, `TIMESTAMP_NS` etc. | `DataType.OTHER` with the DuckDB type name |
 | View | Complete `CREATE VIEW` statement in `definition` |
+| Scalar / table macro (`CREATE MACRO`) | Function (`FunctionType.Scalar` / `Table`). All overloads are combined into one complete `CREATE MACRO` statement in `definition`; arguments and `statement` are set only for a single overload. |
+| `CREATE TYPE ... AS ENUM` | Domain with `DataType.ENUM` and the labels as values |
 
 Generated columns, collations and index keys are taken from the DDL that DuckDB
 stores in `duckdb_tables().sql` / `duckdb_indexes().sql`, because the catalog
 functions do not expose them in structured columns. Index keys that are
 expressions are kept in the `duckdb.index.keys` specific.
+
+## SQL generation
+
+Besides tables, indexes, sequences, views and comments, the SQL factory registry
+provides:
+
+| Object / `SqlType` | SQL |
+|---|---|
+| Function `CREATE` / `DROP` | `CREATE MACRO` (stored definition, or built from arguments and statement) / `DROP MACRO [TABLE]` |
+| Domain (ENUM) `CREATE` / `DROP` | `CREATE TYPE ... AS ENUM (...)` / `DROP TYPE` |
+| Table `CREATE_TEMPORARY` / `TRUNCATE_TEMPORARY` | `CREATE TEMPORARY TABLE` / `TRUNCATE TABLE` with the configured prefix/suffix and never schema qualified |
+| Table `ANALYZE` | `ANALYZE schema.table` |
+| Catalog `DEFRAG` | `CHECKPOINT database` |
+| `SET_COMMENT` | `COMMENT ON TABLE/VIEW/COLUMN/INDEX/SEQUENCE/MACRO [TABLE]/TYPE` |
+
+`Dialect.createSqlSplitter()` returns a splitter that keeps `$$...$$` /
+`$tag$...$tag$` strings, `E'...'` strings with backslash escapes and nested
+block comments intact.
 
 ## Data transfer
 
@@ -104,8 +124,14 @@ These follow from DuckDB itself; unsupported requests fail with
 - Sequences have no data type, cache or ordering option; those properties are
   not emitted.
 - A column whose type is a named `CREATE TYPE ... AS ENUM` is reported by DuckDB
-  as an inline ENUM; the type name is not kept. Macros, types and temporary
-  objects are not read.
+  as an inline ENUM; the type name is not kept. Temporary objects are not read.
+- `duckdb_functions()` does not expose macro parameter defaults
+  (`b := 5`); a macro read back declares the parameter without its default.
+  Macros with several overloads need DuckDB 1.1+ to be recreated.
+- DuckDB has no domains: only ENUM domains can be created. Temporary tables can
+  only keep self-referencing foreign keys (DuckDB rejects foreign keys across
+  catalogs). `FORCE CHECKPOINT` and `VACUUM` are not generated (`VACUUM` does
+  not reclaim space in DuckDB; `FORCE CHECKPOINT` aborts running transactions).
 - `COMMENT ON SCHEMA` is not supported by DuckDB.
 
 ## Tests
@@ -115,4 +141,32 @@ external server is used.
 
 ```
 ./gradlew :sqlapp-core-duckdb:test
+```
+
+DuckDB runs inside its JDBC driver, so no Docker container is needed. Each
+engine version is tested by swapping the driver jar:
+
+```
+./gradlew :sqlapp-core-duckdb:duckdbCompatibilityTest     # all versions below
+./gradlew :sqlapp-core-duckdb:duckdb14CompatibilityTest   # one version
+```
+
+| Task | DuckDB JDBC | Expected result |
+|---|---|---|
+| `duckdb10CompatibilityTest` | 1.0.0 | Constraint readers fail with `UnsupportedOperationException`; bulk tests and macros without overloads pass |
+| `duckdb11CompatibilityTest` | 1.1.3 | All module tests |
+| `duckdb12CompatibilityTest` | 1.2.2.0 | All module tests |
+| `duckdb14CompatibilityTest` | 1.4.4.0 | All module tests |
+| `duckdb15CompatibilityTest` | 1.5.6.0 | All module tests |
+| `duckdb20CompatibilityTest` | 2.0.0.1 | All module tests |
+
+Each task runs the whole module test suite with the given driver and checks that the connected engine reports the expected version
+(`sqlapp.test.duckdb.expectedVersion`).
+
+The command-layer integration (SQL script execution, `ExportSchemaXmlCommand`,
+XML round trip and regenerated DDL) is in `sqlapp-core-dialect-test`. It uses a
+DuckDB file in a temporary directory, so it needs no Docker either:
+
+```
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*duckdb*'
 ```

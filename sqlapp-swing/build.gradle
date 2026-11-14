@@ -15,6 +15,7 @@ dependencies {
     runtimeOnly project(':sqlapp-core-oracle')
     runtimeOnly project(':sqlapp-core-sqlserver')
     runtimeOnly project(':sqlapp-core-sqlite')
+    runtimeOnly project(':sqlapp-core-duckdb')
     // File-based Access migration needs both the MDB dialect and its existing UCanAccess driver.
     runtimeOnly project(':sqlapp-core-mdb')
 }

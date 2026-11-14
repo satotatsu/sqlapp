@@ -50,12 +50,14 @@ final class DirectTransferDraftDialog {
 					? generatedKeyColumn.getText()
 					: null;
 			if (schemaOnly.isSelected())
-				return (snapshot, tables, chunk,
-						verify) -> new TransferJobDraftBuilder().withConnectionNames(names.source(), names.target()).saveSchemaOnly(snapshot, tables, policy, schema,
-								schemaMode, destructive, prepared.directory().resolve("transfer.yaml"), keyColumn)
-								.file().toString();
-			return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder().withConnectionNames(names.source(), names.target()).saveDirect(snapshot, tables,
-					chunk, verify, policy, schema, mode, prepared.directory().resolve("transfer.yaml"), keyColumn)
+				return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder()
+						.withConnectionNames(names.source(), names.target())
+						.saveSchemaOnly(snapshot, tables, policy, schema, schemaMode, destructive,
+								prepared.directory().resolve("transfer.yaml"), keyColumn)
+						.file().toString();
+			return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder()
+					.withConnectionNames(names.source(), names.target()).saveDirect(snapshot, tables, chunk, verify,
+							policy, schema, mode, prepared.directory().resolve("transfer.yaml"), keyColumn)
 					.file().toString();
 		}, file -> {
 			saved.set(file);

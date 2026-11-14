@@ -93,17 +93,10 @@ public class BlobType extends AbstractLengthType<BlobType> {
 				stmt.setBlob(parameterIndex, (InputStream) x);
 				return;
 			}
-			Blob blob = null;
-			try {
-				blob = stmt.getConnection().createBlob();
-				byte[] bytes = cast(this.statementConverter.convertObject(x));
-				blob.setBytes(0, bytes);
-				stmt.setBlob(parameterIndex, blob);
-			} finally {
-				if (blob != null) {
-					blob.free();
-				}
-			}
+			// A Blob created here would have to stay valid until the statement (or
+			// batch) is executed; binding the bytes directly avoids that lifecycle.
+			final byte[] bytes = cast(this.statementConverter.convertObject(x));
+			stmt.setBytes(parameterIndex, bytes);
 		}
 	}
 

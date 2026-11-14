@@ -89,6 +89,7 @@ public final class Db2HostAlterFactories {
 			case "Trigger" -> "TRIGGER";
 			case "Domain" -> "TYPE";
 			case "Synonym" -> "ALIAS";
+			case "Constant" -> "VARIABLE";
 			default -> throw plan(after.getName(), changed);
 			};
 			return List.of(comment(kind + " " + name(after),

@@ -119,7 +119,7 @@ class SchemaComparisonServiceTest {
 	void rendersTwoStatementsForEveryBundledDialectWithoutNullOrDuplicateDelimiters() throws Exception {
 		int index = 0;
 		for (final String product : new String[] { "HSQL Database Engine", "PostgreSQL", "MySQL", "Oracle",
-				"Microsoft SQL Server", "SQLite" }) {
+				"Microsoft SQL Server", "SQLite", "DuckDB" }) {
 			final var before = schema();
 			final var after = schema();
 			before.setProductName(product);

@@ -30,6 +30,7 @@ include(
 , 'sqlapp-core-db2'
 , 'sqlapp-core-db2-zos'
 , 'sqlapp-core-db2-i'
+, 'sqlapp-core-drsum'
 , 'sqlapp-core-firebird'
 , 'sqlapp-core-h2'
 , 'sqlapp-core-informix'

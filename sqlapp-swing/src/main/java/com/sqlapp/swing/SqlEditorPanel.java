@@ -38,7 +38,7 @@ final class SqlEditorPanel extends JPanel {
 	final JButton saveAs = new JButton("Save as…");
 	final JButton use = new JButton("Use saved SQL directory");
 	final javax.swing.JComboBox<String> product = new javax.swing.JComboBox<>(new String[] { "Select product…",
-			"HSQL Database Engine", "PostgreSQL", "MySQL", "Oracle", "Microsoft SQL Server", "SQLite" });
+			"HSQL Database Engine", "PostgreSQL", "MySQL", "Oracle", "Microsoft SQL Server", "SQLite", "DuckDB" });
 	final javax.swing.JTextField version = new javax.swing.JTextField(7);
 	final JButton inspect = new JButton("Inspect boundaries");
 	final SqlSplitPreviewPanel splitPreview = new SqlSplitPreviewPanel();

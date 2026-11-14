@@ -100,8 +100,10 @@ final class DirectTransferPanel extends JPanel {
 		tableTabs.setStatementNavigator(task -> statementTabs.showTask(results, task));
 		progressTabs.setNavigators(task -> statementTabs.showTask(results, task),
 				task -> verificationTabs.showTask(results, task));
-		draftDialog = presenter == null ? prepared -> DirectTransferDraftDialog.show(this, prepared,
-				ConnectionCatalog.jobNames(source.connectionName(), target.connectionName())) : presenter;
+		draftDialog = presenter == null
+				? prepared -> DirectTransferDraftDialog.show(this, prepared,
+						ConnectionCatalog.jobNames(source.connectionName(), target.connectionName()))
+				: presenter;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		// Numbered steps in the order the Summary describes them.
 		final var connect = new StepSection("1. Connect source and target");

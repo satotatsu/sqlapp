@@ -23,8 +23,15 @@ module com.sqlapp.core.duckdb {
 	requires com.sqlapp.core;
 
 	exports com.sqlapp.data.db.dialect.duckdb;
+	exports com.sqlapp.data.db.dialect.duckdb.bulk;
 	exports com.sqlapp.data.db.dialect.duckdb.metadata;
 	exports com.sqlapp.data.db.dialect.duckdb.resolver;
 	exports com.sqlapp.data.db.dialect.duckdb.util;
 	exports com.sqlapp.data.db.dialect.duckdb.sql to com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.BulkInsertProvider with
+		com.sqlapp.data.db.dialect.duckdb.bulk.DuckDbBulkInsertProvider;
+	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
+		com.sqlapp.data.db.dialect.duckdb.bulk.DuckDbBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
+		com.sqlapp.data.db.dialect.duckdb.bulk.DuckDbSetBasedMigrationSnapshotProvider;
 }

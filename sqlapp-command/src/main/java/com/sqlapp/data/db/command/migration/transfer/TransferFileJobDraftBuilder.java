@@ -19,6 +19,30 @@ import com.sqlapp.util.MessageDigests;
  * eligibility and ordering.
  */
 public final class TransferFileJobDraftBuilder {
+	private final String sourceConnection;
+	private final String targetConnection;
+
+	public TransferFileJobDraftBuilder() {
+		this("source", "target");
+	}
+
+	private TransferFileJobDraftBuilder(String sourceConnection, String targetConnection) {
+		this.sourceConnection = sourceConnection;
+		this.targetConnection = targetConnection;
+	}
+
+	/**
+	 * A builder that writes these runtime connection names into new jobs instead of
+	 * {@code source} / {@code target}, for example the names of saved connection
+	 * settings. Equal names bind both sides to one connection.
+	 */
+	public TransferFileJobDraftBuilder withConnectionNames(String source, String target) {
+		// Validate early with the job's own rules.
+		new TransferJobConfiguration(source, target, List.of("X"),
+				TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING);
+		return new TransferFileJobDraftBuilder(source, target);
+	}
+
 	public SchemaSnapshot inspect(SchemaSnapshot reviewed) throws Exception {
 		final var schema = schema(reviewed);
 		final var choices = new ArrayList<BulkMigrationJobDraftBuilder.TableChoice>();
@@ -115,10 +139,10 @@ public final class TransferFileJobDraftBuilder {
 		final var tables = bulk.getTasks().stream().map(task -> task.getTable()).toList();
 		for (String table : tables)
 			supported(schema, table, files.unsupportedTemporalPolicy());
-		final var configuration = new TransferJobConfiguration(1, "source", "target", tables, schemaMode,
-				schema.getName() == null || schema.getName().isBlank() ? null : schema.getName(), targetSchema, null,
-				chunkSize, verify, TransferJobConfiguration.DataMode.FILE, files, compatibilityPolicy, false,
-				generatedKeyColumn);
+		final var configuration = new TransferJobConfiguration(1, sourceConnection, targetConnection, tables,
+				schemaMode, schema.getName() == null || schema.getName().isBlank() ? null : schema.getName(),
+				targetSchema, null, chunkSize, verify, TransferJobConfiguration.DataMode.FILE, files,
+				compatibilityPolicy, false, generatedKeyColumn);
 		final var io = new TransferJobConfigurationIO();
 		return io.write(file, io.format(configuration), null);
 	}

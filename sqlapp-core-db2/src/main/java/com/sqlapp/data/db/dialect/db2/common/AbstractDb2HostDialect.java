@@ -112,6 +112,11 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE,
 				Db2HostCreateIndexFactory.class);
 		registerAlterAndDrop(registry);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.CREATE,
+				Db2HostVariables.Create.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.DROP, Db2HostVariables.Drop.class);
+		registry.registerSqlFactory(com.sqlapp.data.schemas.Constant.class, SqlType.ALTER,
+				Db2HostAlterFactories.CommentOnly.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, SqlType.SEQUENCE_NEXT_VALUES,
 				Db2HostSequenceNextValuesFactory.class);
 		registry.registerSqlFactory(com.sqlapp.data.schemas.Mview.class, SqlType.CREATE,

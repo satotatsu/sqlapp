@@ -359,6 +359,37 @@ Not covered, or verified only by unit tests:
   not established (VERSIONING_STATUS `D`) fails.
 - Index-controlled partitioning (z/OS legacy) fails explicitly.
 
+## Materialized query tables, sequence values, schema diff and global variables
+
+- Materialized query tables (SYSTABLES.TYPE `M`) are read as `Mview` with
+  their columns and indexes. SYSVIEWS.STATEMENT must hold a complete
+  `CREATE TABLE ... AS (...)` statement, which is replayed after
+  `SET CURRENT SCHEMA`/`SET CURRENT PATH`; any other text fails. DROP uses
+  `DROP TABLE`.
+- `SqlType.SEQUENCE_NEXT_VALUES` produces a recursive common table expression
+  over SYSIBM.SYSDUMMY1 that returns `NEXT VALUE FOR` the sequence n times.
+- Diff (`ALTER`/`DROP`) support: added/removed objects use the registered
+  CREATE/DROP factories. Table changes cover `RENAME TABLE`, `ADD COLUMN`,
+  `DROP COLUMN ... RESTRICT` (the table space is left in advisory REORG-pending
+  status and needs REORG), widening `SET DATA TYPE`, `SET/DROP DEFAULT`,
+  `RENAME COLUMN`, comments, indexes and constraints. Nullability changes fail
+  because z/OS cannot change them in place. Sequences are altered in place
+  (INCREMENT, MIN/MAX, CYCLE, CACHE, ORDER); a changed START value fails. Index
+  structure changes drop and recreate the index. Masks are enabled/disabled in
+  place. Views, MQTs, triggers, types, aliases and global variables accept
+  only comment changes; anything else fails with an explicit-plan error.
+  Routine ALTER/DROP is not registered.
+- Global variables (SYSIBM.SYSVARIABLES) are read as `Constant` with
+  `DB2_OBJECT_TYPE=VARIABLE`, the type in `DB2_HOST_VARIABLE_*` specifics and
+  the default in `statement`. CREATE emits
+  `CREATE VARIABLE name type [DEFAULT ...]` plus `COMMENT ON VARIABLE`; DROP
+  emits `DROP VARIABLE name`. Numeric constants (DEFAULT codes 2, 3, 4, 9) are
+  taken from DEFAULTTEXT; special-register codes and `S`/`U` are mapped to the
+  register name. String-constant defaults (codes 1, 5, 6, 7, 8) fail because
+  the quoting of DEFAULTTEXT is not documented. CCSID 65535 becomes
+  FOR BIT DATA; other CCSIDs are not recreated, as for columns. A complete
+  `CREATE VARIABLE` in `definition` is replayed verbatim.
+
 ## Limits and verification
 
 **No real Db2 for z/OS server has been used to validate this implementation.**
@@ -400,6 +431,7 @@ No external database is accessed by the unit tests or the default Gradle test ta
 - [z/OS SYSTABLEPART (LIMITKEY)](https://www.ibm.com/support/knowledgecenter/SSEPEK_12.0.0/cattab/src/tpc/db2z_sysibmsystableparttable.html)
 - [z/OS SYSKEYTARGETS (index on expression)](https://www.ibm.com/support/knowledgecenter/en/SSEPEK_12.0.0/cattab/src/tpc/db2z_sysibmsyskeytargetstable.html)
 - [z/OS SYSCONTROLS (masks and permissions)](https://ibm.com/docs/SSEPEK_13.0.0/cattab/src/tpc/db2z_sysibmsyscontrolstable.html)
+- [z/OS SYSVARIABLES (global variables)](https://www.ibm.com/docs/SSEPEK_12.0.0/cattab/src/tpc/db2z_sysibmsysvariablestable.html)
 - [z/OS schema privilege catalog](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=tables-sysschemaauth)
 - [z/OS schema GRANT](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-grant-schema-privileges)
 - [z/OS schema REVOKE](https://www.ibm.com/docs/en/db2-for-zos/13.0.0?topic=statements-revoke-schema-privileges)

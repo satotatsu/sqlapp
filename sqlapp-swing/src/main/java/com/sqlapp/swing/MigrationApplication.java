@@ -99,6 +99,16 @@ public final class MigrationApplication {
 				|| jobEditor.isBusy() || sqlEditor.isBusy() || reports.isBusy() || drivers.isBusy()
 				|| fileTransfer.isBusy() || directTransfer.isBusy() || mdbTransfer.isBusy();
 		drivers.setBlockedSupplier(activity);
+		MissingJdbcDriver.install(entry -> {
+			final int answer = JOptionPane.showOptionDialog(frame,
+					"No JDBC driver is available for " + entry.urlPrefix() + " URLs.\n"
+							+ "Open JDBC drivers to download " + entry.name() + " (" + entry.groupId() + ":"
+							+ entry.artifactId() + ") from Maven?\nNothing is downloaded until you choose Download.",
+					"JDBC driver not found", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null,
+					new Object[] { "Open JDBC drivers", "Not now" }, "Open JDBC drivers");
+			if (answer == 0 && NestedTabs.select(tabs, drivers))
+				drivers.prepareDownload(entry);
+		});
 		drivers.setConnectionReceivers(select(tabs, schemaPlan, schemaPlan::selectDriverClass),
 				select(tabs, directTransfer, name -> directTransfer.selectDriverClass(name, true)),
 				select(tabs, directTransfer, name -> directTransfer.selectDriverClass(name, false)));
@@ -131,6 +141,8 @@ public final class MigrationApplication {
 		frame.setSize(1200, 840);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
+		// Drivers downloaded earlier are loaded again; this reads only local files.
+		drivers.loadInstalled();
 	}
 
 	/**

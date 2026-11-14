@@ -27,6 +27,7 @@ dependencies {
 	}
 	implementation project(':sqlapp-core-mdb')
 	implementation project(':sqlapp-core-sqlite')
+	implementation project(':sqlapp-core-duckdb')
 	
 	api('jakarta.activation:jakarta.activation-api:2.1.4')
 

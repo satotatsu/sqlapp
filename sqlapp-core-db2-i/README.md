@@ -364,6 +364,36 @@ Not covered, or verified only by unit tests:
   not established (VERSIONING_STATUS `D`) fails.
 - Index-controlled partitioning (z/OS legacy) fails explicitly.
 
+## Materialized query tables, sequence values, schema diff and global variables
+
+- Materialized query tables (SYSTABLES.TABLE_TYPE `M`) are read as `Mview`
+  with their columns and indexes. Only the query is stored in the catalog, so
+  the statement is rebuilt as
+  `CREATE TABLE name (columns) AS (query) DATA INITIALLY DEFERRED REFRESH DEFERRED
+  ENABLE|DISABLE QUERY OPTIMIZATION MAINTAINED BY USER`. Other refresh or
+  maintenance modes fail. The MQT isolation level is kept in specifics but is
+  not emitted.
+- `SqlType.SEQUENCE_NEXT_VALUES` produces a recursive common table expression
+  over SYSIBM.SYSDUMMY1 that returns `NEXT VALUE FOR` the sequence n times.
+- Diff (`ALTER`/`DROP`) support: added/removed objects use the registered
+  CREATE/DROP factories. Table changes cover `RENAME TABLE`, `ADD COLUMN`,
+  `DROP COLUMN ... RESTRICT`, widening `SET DATA TYPE`, `SET/DROP DEFAULT`,
+  `SET/DROP NOT NULL`, comments, indexes and constraints. Column renames fail
+  because IBM i has no `RENAME COLUMN`. Sequences are altered in place
+  (INCREMENT, MIN/MAX, CYCLE, CACHE, ORDER); a changed START value fails. Index
+  structure changes drop and recreate the index. Masks are enabled/disabled in
+  place. Views, MQTs, triggers, types, aliases and global variables accept
+  only comment changes; anything else fails with an explicit-plan error.
+  Routine ALTER/DROP is not registered.
+- Global variables (QSYS2.SYSVARIABLES) are read as `Constant` with
+  `DB2_OBJECT_TYPE=VARIABLE`, the type in `DB2_HOST_VARIABLE_*` specifics and
+  the default expression in `statement`. CREATE emits
+  `CREATE VARIABLE name type [CCSID n] [DEFAULT (expression) | DEFAULT NULL]`
+  plus `COMMENT ON VARIABLE`; DROP emits `DROP VARIABLE name`. Timestamp
+  precision comes from DATETIME_PRECISION. Variables whose READONLY value is
+  not `N` fail. A complete `CREATE VARIABLE` in `definition` is replayed
+  verbatim.
+
 ## Limits and verification
 
 **No real Db2 for i server has been used to validate this implementation.**
@@ -406,6 +436,7 @@ No external database is accessed by the unit tests or the default Gradle test ta
 - [IBM i SYSINDEXES (SEARCH_CONDITION, IS_SPANNING_INDEX)](https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/db2/rbafzcatsysindex.htm)
 - [IBM i SYSPARTITIONSTAT](https://ibm.com/support/knowledgecenter/ssw_ibm_i_73/db2/rbafzcatsyspstat.htm)
 - [IBM i SYSCONTROLS (masks and permissions)](https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_74/db2/rbafzcatsyscontrols.htm)
+- [IBM i SYSVARIABLES (global variables)](https://www.ibm.com/support/knowledgecenter/ssw_ibm_i_72/db2/rbafzcatsysvariables.htm)
 - [IBM i schema privilege catalog](https://www.ibm.com/docs/en/i/7.5?topic=views-sysschemaauth)
 - [IBM i schema GRANT](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-grant-schema-privileges)
 - [IBM i schema REVOKE](https://www.ibm.com/docs/en/i/7.5.0?topic=statements-revoke-schema-privileges)

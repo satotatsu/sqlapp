@@ -59,11 +59,27 @@ final class SchemaMigrationPlanningService {
 	 */
 	Result plan(final Request request, final String jdbcUrl, final String username, final char[] password,
 			final String driverClass) {
+		return plan(request, jdbcUrl, username, password, driverClass, null);
+	}
+
+	/**
+	 * Plans with a connection whose settings file, when present, supplies its other
+	 * driver settings. The supplied password array is cleared afterwards.
+	 */
+	Result plan(final Request request, final PlanningJdbc.Spec connection, final char[] password) {
+		Objects.requireNonNull(connection, "connection");
+		return plan(request, connection.jdbcUrl(), connection.username(), password, connection.driverClass(),
+				connection.settingsFile());
+	}
+
+	private Result plan(final Request request, final String jdbcUrl, final String username, final char[] password,
+			final String driverClass, final java.nio.file.Path settingsFile) {
 		Objects.requireNonNull(password, "password");
 		final String secret = new String(password);
 		try {
 			Objects.requireNonNull(request, "request");
-			try (var source = PlanningJdbc.open(new PlanningJdbc.Spec(jdbcUrl, username, driverClass), password)) {
+			try (var source = PlanningJdbc.open(new PlanningJdbc.Spec(jdbcUrl, username, driverClass, settingsFile),
+					password)) {
 				return plan(request, source);
 			}
 		} catch (final RuntimeException exception) {
