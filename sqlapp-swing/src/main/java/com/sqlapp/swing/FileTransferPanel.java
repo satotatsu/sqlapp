@@ -110,7 +110,8 @@ final class FileTransferPanel extends JPanel {
 				selection.task(), selection.description()));
 		progressTabs.setNavigators(task -> statementTabs.showTask(resultTabs, task),
 				task -> verificationTabs.showTask(resultTabs, task));
-		draftDialog = presenter == null ? prepared -> FileTransferDraftDialog.show(this, prepared) : presenter;
+		draftDialog = presenter == null ? prepared -> FileTransferDraftDialog.show(this, prepared,
+				ConnectionCatalog.jobNames(source.connectionName(), target.connectionName())) : presenter;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 		final var input = new JPanel(new BorderLayout(4, 4));
 		final var heading = new JPanel(new BorderLayout(4, 4));

@@ -113,6 +113,29 @@ class TransferJobDraftBuilderTest {
 	}
 
 	@Test
+	void savedConnectionNamesBecomeTheJobsRuntimeConnectionNames() throws Exception {
+		var snapshot = schema();
+		var named = new TransferJobDraftBuilder().withConnectionNames("local", "sqlserver");
+		var direct = named.saveDirect(snapshot, List.of("PUBLIC.ITEMS"), 100, true, null, null,
+				directory.resolve("named-direct.yaml"));
+		var schemaOnly = named.saveSchemaOnly(snapshot, List.of("PUBLIC.ITEMS"), null, null,
+				directory.resolve("named-schema.yaml"));
+		for (var saved : List.of(direct, schemaOnly)) {
+			var configuration = new TransferJobConfigurationIO().read(saved.file()).configuration();
+			assertEquals("local", configuration.source());
+			assertEquals("sqlserver", configuration.target());
+		}
+		var defaults = new TransferJobDraftBuilder().saveDirect(snapshot, List.of("PUBLIC.ITEMS"), 100, true, null,
+				null, directory.resolve("default-direct.yaml"));
+		assertEquals("source", defaults.configuration().source());
+		assertEquals("target", defaults.configuration().target());
+		assertThrows(IllegalArgumentException.class,
+				() -> new TransferJobDraftBuilder().withConnectionNames("jdbc:x", "target"));
+		assertThrows(IllegalArgumentException.class,
+				() -> new TransferFileJobDraftBuilder().withConnectionNames("1st", "target"));
+	}
+
+	@Test
 	void unnamedAccessSchemaIsOmittedForDirectAndSchemaOnlyJobs() throws Exception {
 		var snapshot = schema("");
 		var builder = new TransferJobDraftBuilder();

@@ -32,7 +32,29 @@ final class ConnectionCatalog {
 	}
 
 	static final String FILE_NAME = "dataSource";
-	private static final Pattern NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9_.-]*");
+	/** Same rule as a transfer job's runtime connection names, so a connection name can be used in jobs. */
+	private static final Pattern NAME = Pattern.compile("[A-Za-z][A-Za-z0-9_.-]{0,127}");
+
+	/** Runtime connection names written into a new transfer job. */
+	record JobNames(String source, String target) {
+		static final JobNames DEFAULT = new JobNames("source", "target");
+	}
+
+	/**
+	 * Names for a new job: the saved connection names of the source and target
+	 * forms when they are usable, otherwise {@code source} / {@code target}. Equal
+	 * names bind both sides to one connection, so they are only kept when both forms
+	 * chose the same saved connection.
+	 */
+	static JobNames jobNames(final String sourceConnection, final String targetConnection) {
+		final boolean sourceNamed = sourceConnection != null && NAME.matcher(sourceConnection).matches();
+		final boolean targetNamed = targetConnection != null && NAME.matcher(targetConnection).matches();
+		final String source = sourceNamed ? sourceConnection : JobNames.DEFAULT.source();
+		final String target = targetNamed ? targetConnection : JobNames.DEFAULT.target();
+		if (source.equals(target) && !(sourceNamed && targetNamed))
+			return JobNames.DEFAULT;
+		return new JobNames(source, target);
+	}
 	static final ConnectionCatalog SESSION = new ConnectionCatalog(new PreferencesStore());
 
 	private final FolderStore store;
@@ -105,7 +127,7 @@ final class ConnectionCatalog {
 		final String trimmed = name == null ? "" : name.trim();
 		if (!NAME.matcher(trimmed).matches())
 			throw new IllegalArgumentException(
-					"Use letters, digits, '.', '_' or '-' for the connection name, for example local or sqlserver.");
+					"Start the connection name with a letter, then use letters, digits, '.', '_' or '-', for example local or sqlserver.");
 		return folder.resolve(trimmed).resolve(FILE_NAME + ".yaml");
 	}
 

@@ -9,6 +9,11 @@ import com.sqlapp.data.db.command.migration.transfer.*;
 
 final class DirectTransferDraftDialog {
 	static Path show(Component owner, DataMigrationDraftService.Prepared prepared) {
+		return show(owner, prepared, ConnectionCatalog.JobNames.DEFAULT);
+	}
+
+	/** @param names runtime connection names written into the new job */
+	static Path show(Component owner, DataMigrationDraftService.Prepared prepared, ConnectionCatalog.JobNames names) {
 		final var saved = new AtomicReference<Path>();
 		final var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Create direct JDBC job",
 				Dialog.ModalityType.APPLICATION_MODAL);
@@ -46,10 +51,10 @@ final class DirectTransferDraftDialog {
 					: null;
 			if (schemaOnly.isSelected())
 				return (snapshot, tables, chunk,
-						verify) -> new TransferJobDraftBuilder().saveSchemaOnly(snapshot, tables, policy, schema,
+						verify) -> new TransferJobDraftBuilder().withConnectionNames(names.source(), names.target()).saveSchemaOnly(snapshot, tables, policy, schema,
 								schemaMode, destructive, prepared.directory().resolve("transfer.yaml"), keyColumn)
 								.file().toString();
-			return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder().saveDirect(snapshot, tables,
+			return (snapshot, tables, chunk, verify) -> new TransferJobDraftBuilder().withConnectionNames(names.source(), names.target()).saveDirect(snapshot, tables,
 					chunk, verify, policy, schema, mode, prepared.directory().resolve("transfer.yaml"), keyColumn)
 					.file().toString();
 		}, file -> {

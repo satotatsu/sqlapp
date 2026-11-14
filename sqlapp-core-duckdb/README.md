@@ -50,13 +50,41 @@ stores in `duckdb_tables().sql` / `duckdb_indexes().sql`, because the catalog
 functions do not expose them in structured columns. Index keys that are
 expressions are kept in the `duckdb.index.keys` specific.
 
+## Data transfer
+
+The module registers DuckDB providers for `BulkInsertResolver`,
+`BulkUpsertResolver` and `SetBasedMigrationSnapshotResolver`:
+
+| Provider | Implementation |
+|---|---|
+| Bulk insert | JDBC batch that binds every value with the DuckDB type handler of its column |
+| Bulk upsert | `INSERT ... ON CONFLICT (keys) DO UPDATE` (all supported versions; keys must match a primary key or unique constraint) |
+| SCD2 snapshot | Temporary staging table and `IS [NOT] DISTINCT FROM` comparison |
+
+Values of every type listed above are copied unchanged between DuckDB databases
+through the streaming read path (`JdbcDynamicRowIteratorHandler`) and the bulk
+insert path. The DuckDB JDBC drivers reject or corrupt some values when they are
+bound by Java class, so the type handlers bind them as text and let DuckDB
+convert them:
+
+| Type | Driver behavior avoided |
+|---|---|
+| HUGEINT / UBIGINT | `setBigDecimal` on HUGEINT stores NULL without an error |
+| UUID | `setObject(UUID)` changes the value on the 1.0 driver |
+| DATE / TIME | `LocalDate` / `LocalTime` are rejected before 1.2 / 1.4; `java.sql.Time` drops microseconds |
+| TIMESTAMPTZ | Instant shifted by the JVM time-zone offset |
+| INTERVAL | Read as DuckDB text and kept as `Interval`; an interval with mixed signs (e.g. `-1 month 2 days`) cannot be represented by `Interval` and is kept as text |
+
+TIME values are read as `java.time.LocalTime`, and the columns read by the
+metadata reader keep TIME/INTERVAL values without the default conversion.
+
 ## Version-specific behavior
 
 | Capability | DuckDB version |
 |---|---|
 | Constraint metadata (names, referenced tables in `duckdb_constraints()`) | 1.1+. On 1.0 the constraint readers fail with `UnsupportedOperationException`. |
 | `ALTER TABLE ... ADD PRIMARY KEY` | 1.2+ |
-| `MERGE INTO` (`SqlType.MERGE`) | 1.4+. Earlier versions fail with `IllegalArgumentException`. |
+| `MERGE INTO` (`SqlType.MERGE`) | 1.4+. Earlier versions fail with `IllegalArgumentException`; use the bulk upsert, which works on every version. |
 
 ## Limitations
 

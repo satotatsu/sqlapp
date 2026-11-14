@@ -70,8 +70,21 @@ class ConnectionCatalogTest {
 		assertThrows(IllegalArgumentException.class, () -> catalog.newConnectionFile("local"), "folder required");
 		catalog.setFolder(config());
 		assertEquals("dataSource.yaml", catalog.newConnectionFile("staging").getFileName().toString());
-		for (final String bad : new String[] { "", "../x", "a/b", "with space", ".hidden" })
+		for (final String bad : new String[] { "", "../x", "a/b", "with space", ".hidden", "1db" })
 			assertThrows(IllegalArgumentException.class, () -> catalog.newConnectionFile(bad), bad);
+	}
+
+	@Test
+	void newJobsUseSavedConnectionNamesWithoutJoiningDifferentDatabases() {
+		assertEquals(new ConnectionCatalog.JobNames("local", "sqlserver"), ConnectionCatalog.jobNames("local", "sqlserver"));
+		assertEquals(ConnectionCatalog.JobNames.DEFAULT, ConnectionCatalog.jobNames(null, null));
+		assertEquals(new ConnectionCatalog.JobNames("local", "target"), ConnectionCatalog.jobNames("local", null));
+		assertEquals(new ConnectionCatalog.JobNames("local", "local"), ConnectionCatalog.jobNames("local", "local"),
+				"the same saved connection on both sides is one connection");
+		assertEquals(ConnectionCatalog.JobNames.DEFAULT, ConnectionCatalog.jobNames(null, "source"),
+				"an unnamed source must not share a name with a different saved target");
+		assertEquals(new ConnectionCatalog.JobNames("source", "sqlserver"), ConnectionCatalog.jobNames("1db", "sqlserver"),
+				"a folder name the job rule rejects falls back to the default");
 	}
 
 	@Test

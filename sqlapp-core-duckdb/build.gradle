@@ -11,3 +11,44 @@ dependencies {
 javadoc {
 	include '**/duckdb/**'
 }
+
+// DuckDB is embedded in its JDBC driver, so each engine version is tested by
+// swapping the driver jar instead of starting a container. The regular `test`
+// task uses the driver declared above.
+//   gradlew :sqlapp-core-duckdb:duckdbCompatibilityTest
+//   gradlew :sqlapp-core-duckdb:duckdb14CompatibilityTest
+def duckdbCompatibilityDrivers = [
+	'10': [driver: '1.0.0', engine: '1.0.0'],
+	'11': [driver: '1.1.3', engine: '1.1.3'],
+	'12': [driver: '1.2.2.0', engine: '1.2.2'],
+	'14': [driver: '1.4.4.0', engine: '1.4.4'],
+	'15': [driver: '1.5.6.0', engine: '1.5.6'],
+	'20': [driver: '2.0.0.1', engine: '2.0.0'],
+]
+
+duckdbCompatibilityDrivers.each { suffix, versions ->
+	def driver = configurations.create("duckdb${suffix}Driver") {
+		canBeConsumed = false
+		canBeResolved = true
+		transitive = false
+	}
+	dependencies.add(driver.name, "org.duckdb:duckdb_jdbc:${versions.driver}")
+	tasks.register("duckdb${suffix}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Runs the DuckDB module tests with DuckDB JDBC ${versions.driver}."
+		testClassesDirs = sourceSets.test.output.classesDirs
+		classpath = sourceSets.test.runtimeClasspath.filter { !it.name.startsWith('duckdb_jdbc-') } + driver
+		useJUnitPlatform()
+		systemProperty 'sqlapp.test.duckdb.expectedVersion', versions.engine
+		testLogging {
+			events "skipped", "passed", "failed"
+			exceptionFormat = 'full'
+		}
+	}
+}
+
+tasks.register('duckdbCompatibilityTest') {
+	group = 'verification'
+	description = 'Runs the DuckDB module tests against every DuckDB JDBC version in the compatibility matrix.'
+	dependsOn duckdbCompatibilityDrivers.keySet().collect { "duckdb${it}CompatibilityTest" }
+}

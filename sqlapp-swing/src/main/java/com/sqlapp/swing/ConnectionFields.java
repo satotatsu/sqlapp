@@ -181,6 +181,11 @@ final class ConnectionFields extends JPanel {
 		}
 	}
 
+	/** Name of the saved connection the form currently matches, or null. */
+	String connectionName() {
+		return selectedName();
+	}
+
 	private String selectedName() {
 		return savedConnection.getSelectedIndex() > 0 ? (String) savedConnection.getSelectedItem() : null;
 	}

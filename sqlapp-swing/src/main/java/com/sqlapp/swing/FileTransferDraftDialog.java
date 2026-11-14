@@ -16,10 +16,16 @@ final class FileTransferDraftDialog {
 	}
 
 	static Path show(java.awt.Component owner, DataMigrationDraftService.Prepared prepared) {
+		return show(owner, prepared, ConnectionCatalog.JobNames.DEFAULT);
+	}
+
+	/** @param names runtime connection names written into the new job */
+	static Path show(java.awt.Component owner, DataMigrationDraftService.Prepared prepared,
+			ConnectionCatalog.JobNames names) {
 		final var selected = new AtomicReference<Path>();
 		final var dialog = new JDialog(SwingUtilities.getWindowAncestor(owner), "Create file transfer job",
 				java.awt.Dialog.ModalityType.APPLICATION_MODAL);
-		final var form = form(prepared, path -> {
+		final var form = form(prepared, names, path -> {
 			selected.set(path);
 			dialog.dispose();
 		}, dialog::dispose);
@@ -40,6 +46,11 @@ final class FileTransferDraftDialog {
 
 	static Form form(DataMigrationDraftService.Prepared prepared, java.util.function.Consumer<Path> saved,
 			Runnable cancelled) {
+		return form(prepared, ConnectionCatalog.JobNames.DEFAULT, saved, cancelled);
+	}
+
+	static Form form(DataMigrationDraftService.Prepared prepared, ConnectionCatalog.JobNames names,
+			java.util.function.Consumer<Path> saved, Runnable cancelled) {
 		final var format = new JComboBox<>(FileFormat.values());
 		final var fileOptions = new FileTransferOptionsPanel();
 		final var nullValue = fileOptions.nullValue;
@@ -75,7 +86,7 @@ final class FileTransferDraftDialog {
 			final String keyColumn = createMissing.isSelected() && generatedKey.isSelected()
 					? generatedKeyColumn.getText()
 					: null;
-			return (schema, tables, chunk, verify) -> new TransferFileJobDraftBuilder()
+			return (schema, tables, chunk, verify) -> new TransferFileJobDraftBuilder().withConnectionNames(names.source(), names.target())
 					.save(schema, tables, chunk, verify, mode, compatibilityPolicy, destinationSchema, files, keyColumn,
 							prepared.directory().resolve("transfer.yaml"))
 					.file().toString();
