@@ -96,24 +96,6 @@ public class SqlServer2008 extends SqlServer2005 {
 		return true;
 	}
 
-	@Override
-	public int hashCode() {
-		return super.hashCode() + 1;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 

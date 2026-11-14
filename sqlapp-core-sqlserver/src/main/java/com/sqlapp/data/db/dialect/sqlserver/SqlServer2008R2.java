@@ -33,7 +33,7 @@ public class SqlServer2008R2 extends SqlServer2008 {
 	/**
 	 * serialVersionUID
 	 */
-	private static final long serialVersionUID = -5751173741801001354L;
+	private static final long serialVersionUID = 7922998346082580627L;
 
 	protected SqlServer2008R2(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);

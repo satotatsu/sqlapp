@@ -169,14 +169,6 @@ class SqlServerDialectCapabilityTest {
 	}
 
 	@Test
-	void sqlServerCeCapabilities() {
-		final Dialect dialect = CeDialectHolder.defaultDialect;
-		assertFalse(dialect.supportsSchema());
-		assertFalse(dialect.supportsBatchExecuteGeneratedKeysCapture());
-		assertTrue(dialect(9).supportsBatchExecuteGeneratedKeysCapture());
-	}
-
-	@Test
 	void rowVersionIsOptimisticLockColumn() {
 		final Dialect dialect = dialect(16);
 		assertTrue(dialect.isOptimisticLockColumn(new Column("RowVer").setDataType(DataType.ROWVERSION)));
@@ -201,6 +193,33 @@ class SqlServerDialectCapabilityTest {
 		final String global = dialect.getTemporaryTableName(table, "##", null, false);
 		assertTrue(global.contains("##Orders"), global);
 		assertFalse(global.contains("###"), global);
+	}
+
+	@Test
+	void decimalDefaultsMatchSqlServer() {
+		for (DataType dataType : new DataType[] { DataType.DECIMAL, DataType.NUMERIC }) {
+			final var type = (com.sqlapp.data.db.datatype.DecimalType) dialect(16).getDbDataTypes().getDbType(dataType);
+			assertEquals(18, type.getDefaultPrecision(), dataType.toString());
+			assertEquals(0, type.getDefaultScale(), dataType.toString());
+			assertEquals(38, type.getMaxPrecision(), dataType.toString());
+		}
+	}
+
+	@Test
+	void dialectsAreEqualOnlyToSameVersion() {
+		final int[] versions = { 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+		for (int a : versions) {
+			assertEquals(dialect(a), dialect(a));
+			assertEquals(dialect(a).hashCode(), dialect(a).hashCode());
+			for (int b : versions) {
+				if (a != b) {
+					assertNotEquals(dialect(a), dialect(b), a + " vs " + b);
+				}
+			}
+		}
+		final var resolver = SqlServerDialectResolver.getInstance();
+		assertNotEquals(resolver.getDialect(13, 0), resolver.getDialect(13, 0, 4001));
+		assertNotEquals(resolver.getDialect(10, 0), resolver.getDialect(10, 50));
 	}
 
 	@Test

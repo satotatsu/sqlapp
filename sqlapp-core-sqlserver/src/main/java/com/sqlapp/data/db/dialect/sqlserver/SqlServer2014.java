@@ -38,7 +38,7 @@ public class SqlServer2014 extends SqlServer2012 {
 	/**
 	 * serialVersionUID
 	 */
-	private static final long serialVersionUID = -5751173741801001354L;
+	private static final long serialVersionUID = -8770353049139426170L;
 
 	protected SqlServer2014(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
@@ -48,19 +48,6 @@ public class SqlServer2014 extends SqlServer2012 {
 	protected void registerDataType() {
 		super.registerDataType();
 		setIndexTypeName("NONCLUSTERED HASH", IndexType.Hash);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

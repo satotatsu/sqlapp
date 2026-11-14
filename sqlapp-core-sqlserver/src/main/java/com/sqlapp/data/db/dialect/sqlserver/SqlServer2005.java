@@ -231,22 +231,6 @@ public class SqlServer2005 extends SqlServer2000 {
 		return true;
 	}
 
-	@Override
-	public int hashCode() {
-		return super.hashCode() + 1;
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 

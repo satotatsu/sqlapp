@@ -37,28 +37,10 @@ public class SqlServer2012 extends SqlServer2008 {
 	/**
 	 * serialVersionUID
 	 */
-	private static final long serialVersionUID = -5751173741801001354L;
+	private static final long serialVersionUID = 4878671366789823142L;
 
 	protected SqlServer2012(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-	}
-
-	@Override
-	public int hashCode() {
-		return super.hashCode() + 1;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*
