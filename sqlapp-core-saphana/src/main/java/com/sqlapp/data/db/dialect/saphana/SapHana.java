@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlBuilder;
 import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.IndexType;
@@ -127,18 +128,22 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addDecimalFloat("SMALLDECIMAL");
 		// Date
 		getDbDataTypes().addDate(type -> {
+			type.setDefaultValueLiteral(getCurrentDateFunction());
 		});
 		// DateTime
 		getDbDataTypes().addDateTime("SECONDDATE", type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// TIMESTAMP
 		getDbDataTypes().addTimestamp(type -> {
 			// HANA's catalog length is a display width, not a DDL precision.
 			type.setCreateFormat("TIMESTAMP");
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
 			type.setCreateFormat("TIME");
+			type.setDefaultValueLiteral(getCurrentTimeFunction());
 		});
 		// インデックスタイプ
 		this.setIndexTypeName(IndexType.BTree);
@@ -186,6 +191,102 @@ public class SapHana extends Dialect {
 
 	@Override
 	public boolean supportsMerge() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
+
+	@Override
+	public String getSequenceNextValString(final String sequenceName) {
+		return "SELECT " + sequenceName + ".NEXTVAL FROM DUMMY";
+	}
+
+	@Override
+	public boolean supportsLimit() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsLimitOffset() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsWith() {
+		return true;
+	}
+
+	/**
+	 * SAP HANA supports GENERATED ALWAYS AS (expression) columns. The column reader
+	 * stores that expression in {@link Column#getFormula()}, so DML must skip those
+	 * columns instead of writing the expression as a value.
+	 */
+	@Override
+	public boolean supportsColumnFormula() {
+		return true;
+	}
+
+	/**
+	 * Conservative statement parameter limit. SAP documents 32767 parameters per
+	 * statement (SQL error 589); HANA express 2.00.088 accepted up to 65535 and
+	 * rejected 65536 with SQL error 307. The documented value is kept so that older
+	 * revisions remain safe.
+	 */
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 32767;
+	}
+
+	@Override
+	public String getCurrentDateFunction() {
+		return "CURRENT_DATE";
+	}
+
+	@Override
+	public String getCurrentDateTimeFunction() {
+		return "CURRENT_TIMESTAMP";
+	}
+
+	@Override
+	public String getCurrentTimeWithTimeZoneFunction() {
+		return null;
+	}
+
+	@Override
+	public String getCurrentTimestampWithTimeZoneFunction() {
+		return null;
+	}
+
+	@Override
+	public boolean supportsCascadeDelete() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsCascadeUpdate() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsCascadeRistrict() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
+		return rule != null;
+	}
+
+	@Override
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
+		return rule != null;
+	}
+
+	@Override
+	public boolean supportsSchema() {
 		return true;
 	}
 

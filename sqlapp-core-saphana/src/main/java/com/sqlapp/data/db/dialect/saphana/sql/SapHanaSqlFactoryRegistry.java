@@ -30,6 +30,7 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.Synonym;
+import com.sqlapp.data.schemas.PublicSynonym;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -74,11 +75,15 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Procedure.class, SqlType.CREATE, SapHanaCreateProcedureFactory.class);
 		registerSqlFactory(Trigger.class, SqlType.CREATE, SapHanaCreateTriggerFactory.class);
 		registerSqlFactory(Synonym.class, SqlType.CREATE, SapHanaCreateSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.CREATE, SapHanaCreatePublicSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.DROP, SapHanaDropPublicSynonymFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, SapHanaCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SapHanaAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SapHahaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SapHanaTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, SapHanaSelectForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, SapHanaMergeFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, SapHanaCreateIndexFactory.class);
 		registerSqlFactory(Index.class, SqlType.DROP, SapHanaDropIndexFactory.class);
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF, SapHanaDdlAutoCommitOffFactory.class);

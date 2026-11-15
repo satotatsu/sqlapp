@@ -153,7 +153,7 @@ public class SapHanaCatalogReader extends CatalogReader {
 
 	@Override
 	protected PublicSynonymReader newPublicSynonymReader() {
-		return null;
+		return new SapHanaPublicSynonymReader(this.getDialect());
 	}
 
 }
