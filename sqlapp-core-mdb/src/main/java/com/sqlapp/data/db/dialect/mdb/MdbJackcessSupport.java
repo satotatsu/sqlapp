@@ -668,6 +668,12 @@ public final class MdbJackcessSupport implements AutoCloseable {
 				return nativeType;
 			}
 		}
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.BIT
+				|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARBIT) {
+			// Access has no bit string type: keep bit strings such as "0101" as text.
+			return column.getLength() != null && column.getLength() <= 255 ? io.github.spannm.jackcess.DataType.TEXT
+					: io.github.spannm.jackcess.DataType.MEMO;
+		}
 		return switch (column.getDataType().getJdbcType()) {
 		case BOOLEAN, BIT -> io.github.spannm.jackcess.DataType.BOOLEAN;
 		case TINYINT -> io.github.spannm.jackcess.DataType.BYTE;
