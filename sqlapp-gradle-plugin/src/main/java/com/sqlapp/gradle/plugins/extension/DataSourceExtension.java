@@ -20,10 +20,14 @@
 package com.sqlapp.gradle.plugins.extension;
 
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import javax.sql.DataSource;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
@@ -34,6 +38,7 @@ import org.gradle.api.tasks.PathSensitivity;
 
 import com.sqlapp.data.db.command.datasource.DataSourceConfigFiles;
 import com.sqlapp.gradle.plugins.util.CreatedDataSources;
+import com.sqlapp.jdbc.SqlappDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -44,10 +49,38 @@ public abstract class DataSourceExtension {
 	}
 
 	public DataSource createDataSource() {
-		// Closed by AbstractTask when the task action finishes.
-		final DataSource ds = CreatedDataSources.register(new HikariDataSource(toConfig()));
-		return ds;
+		final Map<String, String> dialectOptions = resolveDialectOptions();
+		if (dialectOptions.isEmpty()) {
+			// Closed by AbstractTask when the task action finishes.
+			return CreatedDataSources.register(new HikariDataSource(toConfig()));
+		}
+		// The wrapper closes the pool and passes the options to dialect resolution.
+		return CreatedDataSources
+				.register(new SqlappDataSource(new HikariDataSource(toConfig())).setDialectOptions(dialectOptions));
 	}
+
+	/**
+	 * Dialect options from the settings files ({@code dialect.*}) overridden by
+	 * {@link #getDialectOptions()}.
+	 */
+	public Map<String, String> resolveDialectOptions() {
+		final var options = new LinkedHashMap<String, String>();
+		if (!getProperties().isEmpty()) {
+			options.putAll(DataSourceConfigFiles.dialectOptions(DataSourceConfigFiles
+					.read(getProperties().getFiles().stream().map(java.io.File::toPath).toList())));
+		}
+		options.putAll(getDialectOptions().getOrElse(Map.of()));
+		return options;
+	}
+
+	/**
+	 * sqlapp dialect options for connections of this data source. For Oracle,
+	 * {@code oracle.maxStringSize} (STANDARD or EXTENDED) overrides the
+	 * MAX_STRING_SIZE detected from the database.
+	 */
+	@Input
+	@Optional
+	public abstract MapProperty<String, String> getDialectOptions();
 
 	/** Whether enough intent exists to create an optional task DataSource. */
 	@Internal

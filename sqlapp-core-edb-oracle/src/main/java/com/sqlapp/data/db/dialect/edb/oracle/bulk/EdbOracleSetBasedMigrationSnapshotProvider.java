@@ -7,5 +7,8 @@ import com.sqlapp.data.db.dialect.postgres.bulk.PostgresSetBasedMigrationSnapsho
 
 /** Reuses PostgreSQL execution for the Advanced Server baseline. */
 public class EdbOracleSetBasedMigrationSnapshotProvider extends PostgresSetBasedMigrationSnapshotProvider {
-	@Override public boolean supports(Dialect dialect) { return dialect instanceof EdbOracle; }
+	@Override
+	public boolean supports(Dialect dialect) {
+		return dialect instanceof EdbOracle;
+	}
 }

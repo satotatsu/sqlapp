@@ -169,6 +169,9 @@ public class LegacyMigrationMappingBuilder {
 				column.getConversion().put("level", columnLog.get("level"));
 				column.getConversion().put("declaration", columnLog.get("declaration"));
 				column.getConversion().put("remarks", columnLog.get("remarks"));
+				if (columnLog.get("storage") != null) {
+					column.getConversion().put("storage", columnLog.get("storage"));
+				}
 				tableMapping.getColumns().add(column);
 			}
 			Map<String, Object> occurrence = map(tableLog.get("occurrence"));
@@ -184,6 +187,9 @@ public class LegacyMigrationMappingBuilder {
 				column.getConversion().put("maximum", occurrence.get("maximum"));
 				tableMapping.getColumns().add(column);
 				tableMapping.getDetails().put("occurrence", occurrence);
+			}
+			if (tableLog.get("storage") != null) {
+				tableMapping.getDetails().put("storage", tableLog.get("storage"));
 			}
 			mapping.getTables().add(tableMapping);
 			byName.put(tableName.toLowerCase(Locale.ROOT), tableMapping);

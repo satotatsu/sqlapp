@@ -124,7 +124,7 @@ public final class ParquetTableIO {
 		PrimitiveTypeName physical;
 		LogicalTypeAnnotation logical = null;
 		switch (type) {
-		case BOOLEAN, BIT -> physical = PrimitiveTypeName.BOOLEAN;
+		case BOOLEAN -> physical = PrimitiveTypeName.BOOLEAN;
 		case TINYINT, SMALLINT, INT -> {
 			physical = PrimitiveTypeName.INT32;
 			logical = LogicalTypeAnnotation.intType(type == DataType.TINYINT ? 8 : type == DataType.SMALLINT ? 16 : 32, true);
@@ -132,7 +132,8 @@ public final class ParquetTableIO {
 		case BIGINT -> physical = PrimitiveTypeName.INT64;
 		case REAL -> physical = PrimitiveTypeName.FLOAT;
 		case FLOAT, DOUBLE -> physical = PrimitiveTypeName.DOUBLE;
-		case CHAR, VARCHAR, NCHAR, NVARCHAR, LONGVARCHAR, LONGNVARCHAR, CLOB, NCLOB -> {
+		// BIT/VARBIT are bit strings such as "0101".
+		case CHAR, VARCHAR, NCHAR, NVARCHAR, LONGVARCHAR, LONGNVARCHAR, CLOB, NCLOB, BIT, VARBIT -> {
 			physical = PrimitiveTypeName.BINARY;
 			logical = LogicalTypeAnnotation.stringType();
 		}

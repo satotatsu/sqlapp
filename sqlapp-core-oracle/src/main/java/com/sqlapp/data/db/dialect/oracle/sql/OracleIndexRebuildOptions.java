@@ -4,7 +4,6 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 import java.util.Objects;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.Oracle11g;
-import com.sqlapp.data.db.dialect.oracle.Oracle11gR2;
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.schemas.Deferrability;
 import com.sqlapp.data.schemas.Index;
@@ -44,7 +43,7 @@ final class OracleIndexRebuildOptions {
 			return;
 		if ("true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.join")))
 			throw new IllegalArgumentException("Online rebuild is not supported for join indexes");
-		if (subpartition && !(dialect instanceof Oracle11g) && !(dialect instanceof Oracle11gR2))
+		if (subpartition && !(dialect instanceof Oracle11g))
 			throw new IllegalArgumentException("Online subpartition rebuild requires Oracle 11g or later");
 		if (localHash)
 			throw new IllegalArgumentException("Local hash segment rebuild supports only TABLESPACE options");

@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.properties.DialectOptionsProperty;
 import com.sqlapp.data.db.command.viewpoint.SchemaViewpointCommandSupport;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -44,7 +45,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
+public class GenerateLegacyRdbLoaderCommand extends AbstractCommand implements DialectOptionsProperty {
 
 	private File contractFile;
 
@@ -60,6 +61,12 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private boolean deleteCommittedRoots = true;
 
+	/**
+	 * Verifies row counts with tableOperationMode INSERT. Disable only for JDBC
+	 * drivers that do not report batch insert counts.
+	 */
+	private boolean verifyCounts = true;
+
 	private String stagingTablePrefix;
 
 	private String rootCursorStrategy = "DIALECT";
@@ -69,6 +76,11 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 	private int databaseProductMajorVersion;
 
 	private int databaseProductMinorVersion;
+
+	/**
+	 * Dialectオプション(例: oracle.maxStringSize=STANDARD)
+	 */
+	private Map<String, String> dialectOptions = Map.of();
 
 	private boolean generateRunnerTemplate;
 
@@ -103,6 +115,7 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		var generator = new LegacyRdbLoaderGenerator();
 		var plan = generator.plan(contractFile, schemaFile, contract, mode, rootBatchSize, commitEveryRootBatches,
 				deleteCommittedRoots, stagingTablePrefix, cursorStrategy);
+		plan.setVerifyCounts(verifyCounts);
 		if (viewpointsFile != null || viewpointId != null) {
 			applyViewpoint(plan);
 		}
@@ -223,15 +236,16 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 	private Dialect resolveDialect() {
 		if (databaseProductName != null && !databaseProductName.isBlank()) {
 			return DialectResolver.getInstance().getDialect(databaseProductName, databaseProductMajorVersion,
-					databaseProductMinorVersion, null);
+					databaseProductMinorVersion, null, dialectOptions);
 		}
+		Dialect dialect;
 		try {
 			DbCommonObject<?> schema = SchemaUtils.readXml(schemaFile);
-			Dialect dialect = SchemaUtils.getDialect(schema);
-			return dialect == null ? DialectResolver.getInstance().getDefaultDialect() : dialect;
+			dialect = SchemaUtils.getDialect(schema);
 		} catch (Exception e) {
 			throw new CommandException("Failed to resolve Dialect from target schema XML: " + schemaFile, e);
 		}
+		return applyDialectOptions(dialect == null ? DialectResolver.getInstance().getDefaultDialect() : dialect);
 	}
 
 	private String baseName(String name) {

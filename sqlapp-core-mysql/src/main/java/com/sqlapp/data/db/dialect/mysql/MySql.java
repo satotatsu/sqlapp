@@ -57,6 +57,21 @@ import com.sqlapp.data.schemas.Column;
  * 
  */
 public class MySql extends Dialect {
+	/**
+	 * MySQL defines BOOLEAN as TINYINT(1) and reports BOOLEAN columns as
+	 * tinyint(1).
+	 */
+	private static final java.util.regex.Pattern BOOLEAN_TINYINT = java.util.regex.Pattern
+			.compile("\\s*tinyint\\s*\\(\\s*1\\s*\\)\\s*", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+	@Override
+	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
+		if (productDataType != null && BOOLEAN_TINYINT.matcher(productDataType).matches()) {
+			return super.setDbType(DataType.BOOLEAN, "BOOLEAN", null, null, column);
+		}
+		return super.setDbType(dataType, productDataType, lengthOrPrecision, scale, column);
+	}
 
 	@Override
 	public Optional<TypeInformation> matchDbType(DataType dataType, String productDataType, Long lengthOrPrecision,
@@ -118,8 +133,13 @@ public class MySql extends Dialect {
 		getDbDataTypes().addBlob("LONGBLOB", LEN_4GB - 1, type -> {
 			type.setCreateFormat("LONGBLOB");
 		});
+		// BIT(n): bit-field of 1 to 64 bits, held as a bit string such as "0101".
 		getDbDataTypes().addBit("BIT", 64, type -> {
 			type.setLiteral("b'", "'").setDefaultValueLiteral("b'0'");
+			type.setJdbcTypeHandler(new MySqlBitStringJdbcTypeHandler());
+		});
+		// BOOLEAN is a synonym for TINYINT(1); see setDbType for reading tinyint(1).
+		getDbDataTypes().addBoolean("BOOLEAN", type -> {
 		});
 
 		// Int8

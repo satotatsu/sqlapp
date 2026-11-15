@@ -27,7 +27,7 @@ class CockroachDataTypeMatrixTest {
 			"'numeric(12,3)', NUMERIC, 'NUMERIC(12,3)'", "character varying(12), VARCHAR, VARCHAR(12)",
 			"time(3) without time zone, TIME, TIME(3)",
 			"timestamp(3) with time zone, TIMESTAMP_WITH_TIMEZONE, TIMESTAMP(3) WITH TIME ZONE", "uuid, UUID, UUID",
-			"bytea, BLOB, BYTEA", "jsonb, JSONB, JSONB" })
+			"bytea, VARBINARY, BYTEA", "jsonb, JSONB, JSONB" })
 	void inheritedTypesResolveAndGenerateValidNames(String input, DataType type, String expected) {
 		for (var dialect : dialects()) {
 			assertEquals("cockroach", dialect.getSimpleName());

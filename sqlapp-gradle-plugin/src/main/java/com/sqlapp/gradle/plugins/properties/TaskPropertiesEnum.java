@@ -57,6 +57,7 @@ import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.RecursiveProperty;
 import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
+import com.sqlapp.data.db.command.properties.DialectOptionsProperty;
 import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.command.properties.SheetNameProperty;
@@ -903,6 +904,28 @@ public enum TaskPropertiesEnum {
 			final SqlProperty prop = cast(obj);
 			if (extension.getSql().isPresent()) {
 				prop.setSql(extension.getSql().get());
+			}
+		}
+	},
+	DIALECT_OPTIONS() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof DialectOptionsTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof DialectOptionsProperty)) {
+				return;
+			}
+			final DialectOptionsTaskProperty extension = cast(taskProps);
+			final DialectOptionsProperty prop = cast(obj);
+			final java.util.Map<String, String> options = extension.getDialectOptions().getOrElse(java.util.Map.of());
+			if (!options.isEmpty()) {
+				prop.setDialectOptions(options);
 			}
 		}
 	},

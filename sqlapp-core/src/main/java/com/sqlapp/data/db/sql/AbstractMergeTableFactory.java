@@ -60,7 +60,7 @@ public abstract class AbstractMergeTableFactory<S extends AbstractSqlBuilder<?>>
 		builder.merge().into();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
-		builder.as().space()._add(targetTableAlias);
+		addTableAlias(targetTableAlias, builder);
 		builder.lineBreak();
 		addUsing(obj, sqlSignature, sourceTableAlias, builder);
 		builder.lineBreak();
@@ -80,8 +80,18 @@ public abstract class AbstractMergeTableFactory<S extends AbstractSqlBuilder<?>>
 			source.setName(sourceTableName);
 		}
 		builder.using().name(source, this.getOptions().isDecorateSchemaName());
-		builder.as().space()._add(sourceTableAlias);
+		addTableAlias(sourceTableAlias, builder);
 		this.addTableComment(source, builder);
+	}
+
+	/**
+	 * テーブル別名を追加します。テーブル別名にASを使用できないDB(Oracle)ではASを付けません。
+	 */
+	protected void addTableAlias(final String alias, final S builder) {
+		if (this.getDialect().supportsTableNameAlias()) {
+			builder.as();
+		}
+		builder.space()._add(alias);
 	}
 
 	protected void addOn(final Table obj, final SqlSignature sqlSignature, String targetTableAlias,

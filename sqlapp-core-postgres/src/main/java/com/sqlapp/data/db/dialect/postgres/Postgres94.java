@@ -50,21 +50,8 @@ public class Postgres94 extends Postgres93 {
 			type.setLiteralPrefix("'");
 			type.setLiteralSuffix("'::jsonb");
 			type.setCastForUpdate(true);
-			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+			enableArray(type);
 		});
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.Postgres93#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

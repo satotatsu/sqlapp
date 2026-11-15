@@ -34,7 +34,10 @@ import tools.jackson.core.type.TypeReference;
  * The password can be given directly as {@code password}, or indirectly as
  * {@code passwordEnv}: the name of an environment variable that holds it.
  * {@code dataSource.*} and {@code dataSourceProperties.*} keys (or nested maps)
- * become JDBC driver properties.
+ * become JDBC driver properties. {@code dialect.*} keys (or a nested
+ * {@code dialect} map) are sqlapp dialect options such as
+ * {@code dialect.oracle.maxStringSize: STANDARD}; see
+ * {@link #dialectOptions(Map)}.
  */
 public final class DataSourceConfigFiles {
 	/** Setting naming the environment variable that holds the password. */
@@ -43,6 +46,11 @@ public final class DataSourceConfigFiles {
 	public static final String JDBC_URL = "jdbcUrl";
 	public static final String USERNAME = "username";
 	public static final String DRIVER_CLASS_NAME = "driverClassName";
+	/**
+	 * Prefix of sqlapp dialect options, for example
+	 * {@code dialect.oracle.maxStringSize}.
+	 */
+	public static final String DIALECT_PREFIX = "dialect.";
 	/** Supported file extensions, without the dot. */
 	public static final List<String> EXTENSIONS = List.of("yaml", "yml", "properties", "json", "xml");
 
@@ -113,6 +121,8 @@ public final class DataSourceConfigFiles {
 				continue;
 			if (value == null)
 				continue;
+			if (lower.startsWith(DIALECT_PREFIX))
+				continue;
 			if (lower.startsWith("datasource.") || lower.startsWith("datasourceproperties.")) {
 				config.addDataSourceProperty(key.substring(key.indexOf('.') + 1), value);
 			} else if (lower.startsWith("healthcheckproperties.")) {
@@ -125,6 +135,24 @@ public final class DataSourceConfigFiles {
 		if (password != null)
 			config.setPassword(password);
 		return List.copyOf(unknown);
+	}
+
+	/**
+	 * The sqlapp dialect options in the settings: {@code dialect.*} keys with the
+	 * prefix removed, for example {@code oracle.maxStringSize -> STANDARD}. They
+	 * are not HikariCP settings; pass them to
+	 * {@code SqlappDataSource#setDialectOptions(Map)}.
+	 *
+	 * @return dialect options in file order, empty when there are none
+	 */
+	public static Map<String, String> dialectOptions(final Map<String, Object> settings) {
+		final var options = new LinkedHashMap<String, String>();
+		for (final var entry : settings.entrySet()) {
+			final String key = entry.getKey();
+			if (entry.getValue() != null && key.toLowerCase(Locale.ROOT).startsWith(DIALECT_PREFIX))
+				options.put(key.substring(DIALECT_PREFIX.length()), entry.getValue().toString());
+		}
+		return options;
 	}
 
 	/**

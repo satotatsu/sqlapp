@@ -173,6 +173,24 @@ public class MySqlTest {
 	}
 
 	@Test
+	public void testBitIsBitStringAndBooleanIsTinyint1() {
+		Column bit = createColumn();
+		assertEquals(true, dialect.setDbType("bit(5)", null, null, bit));
+		assertEquals(DataType.BIT, bit.getDataType());
+		assertEquals("b'10101'", dialect.getSqlValueDefinition(new Column("b").setDataType(DataType.BIT), "10101"));
+		for (String declaration : new String[] { "tinyint(1)", "TINYINT(1)", "boolean", "bool" }) {
+			Column column = createColumn();
+			assertEquals(true, dialect.setDbType(declaration, null, null, column), declaration);
+			assertEquals(DataType.BOOLEAN, column.getDataType(), declaration);
+		}
+		Column tinyint = createColumn();
+		dialect.setDbType("tinyint(4)", null, null, tinyint);
+		assertEquals(DataType.TINYINT, tinyint.getDataType());
+		assertEquals("BOOLEAN",
+				dialect.createSqlBuilder().addTypeDefinition(new Column("f").setDataType(DataType.BOOLEAN)).toString());
+	}
+
+	@Test
 	public void testToBinary() {
 		Column column = createColumn();
 		column.setDataTypeName("binary(128)");

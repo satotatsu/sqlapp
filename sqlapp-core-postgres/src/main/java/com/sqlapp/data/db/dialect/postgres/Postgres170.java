@@ -15,6 +15,9 @@ public class Postgres170 extends Postgres160 {
 		super(nextVersionDialectSupplier);
 	}
 
+	/**
+	 * There is no PostgreSQL 17 specific catalog reader; the 16 reader is reused.
+	 */
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Postgres160CatalogReader(this);

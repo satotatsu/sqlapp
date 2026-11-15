@@ -170,6 +170,50 @@ administration-command module.
 Shared collation objects and cross-database constraint lifecycle state remain
 covered by their dedicated roadmap sections above.
 
+## Type-changing conversions in assessment mappings
+
+Assessment mapping `conversion` values are MVEL expressions applied by the
+generated Access initial-load job. The expression result is currently stored
+through the Schema XML source column type before the target JDBC driver converts
+it to `targetType`, so a conversion whose result has a different type (for
+example, an integer code converted to text) can fail or lose precision while
+copying. Transfer mappings already avoid this with a dialect-independent column
+`type` that becomes the bulk task's `columnTypes`.
+
+`targetType` is product-specific DDL text such as `VARCHAR2(200 CHAR)` or
+`NVARCHAR(50)` and cannot be mapped reliably to a sqlapp DataType in general.
+Before implementation, choose between an explicit optional copy type on the
+assessment column mapping (for example `copyType: VARCHAR(200)`) and deriving the
+DataType from `targetType` through the target dialect, with a clear error when
+the derivation is ambiguous. Either way, the generated job must emit
+`columnTypes`, keep key columns in their source type, include the copy type in the
+mapping fingerprint and coverage report, and test a type-changing conversion end
+to end through copy and verification.
+
+## Tree-level value verification for copy sessions
+
+`JdbcTreeDataCopySession` verifies only row counts (`verifyCounts`). Comparing the
+copied values tree by tree, by projecting each source tree through the column
+mapping and comparing it with the target tree, is deferred because:
+
+- the source tree must be read again with the session's free-form SQL, and source
+  changes after the copy produce false mismatches; with the default `none()`
+  restart the copied source roots no longer exist;
+- the target tree needs its own SELECTs that follow generated keys and foreign
+  keys, which the copy session does not build today;
+- child rows have no guaranteed natural key, so rows must be matched as a
+  multiset of values without generated keys and foreign keys;
+- cross-database type differences (timestamp precision, DECIMAL scale, CHAR
+  padding) need normalization by the target column type, or every difference
+  becomes a false mismatch.
+
+A cheaper follow-up is to record, in the target transaction with the checkpoint,
+the source root key to target root key mapping plus a hash of the values written
+per root (after type conversion, without generated keys and foreign keys), and to
+verify later by reading only the target. That detects lost, duplicated, truncated
+or later modified rows, also with `none()`, but not wrong conversion rules, which
+remain the job of mapping tests and sampled checks.
+
 ## Data use case domains
 
 ### Current scope

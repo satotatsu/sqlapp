@@ -15,8 +15,7 @@ class PostgresBitIntervalBoundaryTest {
 				Column column = new Column("value");
 				assertTrue(dialect.setDbType(declaration, null, null, column), declaration);
 				boolean bounded = declaration.contains("(");
-				assertEquals(declaration.startsWith("bit(") ? DataType.BINARY : DataType.VARBINARY,
-						column.getDataType());
+				assertEquals(declaration.startsWith("bit(") ? DataType.BIT : DataType.VARBIT, column.getDataType());
 				if (bounded)
 					assertEquals(7L, column.getLength());
 				else

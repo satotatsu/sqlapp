@@ -4,7 +4,6 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.Oracle10g;
 import com.sqlapp.data.db.dialect.oracle.Oracle11g;
-import com.sqlapp.data.db.dialect.oracle.Oracle11gR2;
 import com.sqlapp.data.db.dialect.oracle.Oracle18c;
 import com.sqlapp.data.schemas.PartitioningType;
 
@@ -24,7 +23,7 @@ final class OraclePartitionVersions {
 				throw new IllegalArgumentException(
 						"Composite HASH partitioning requires Oracle 18c or later in this dialect model");
 		} else if (root == PartitioningType.List || sub == PartitioningType.Range) {
-			if (!(dialect instanceof Oracle11g) && !(dialect instanceof Oracle11gR2))
+			if (!(dialect instanceof Oracle11g))
 				throw new IllegalArgumentException("LIST-* and RANGE-RANGE require Oracle 11g or later");
 		} else if (sub == PartitioningType.List && !(dialect instanceof Oracle10g)) {
 			throw new IllegalArgumentException("RANGE-LIST requires Oracle 10g or later in this dialect model");

@@ -60,7 +60,7 @@ public class OracleMergeFactoryTest extends AbstractOracleSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO "tableA" AS _target_
+				MERGE INTO "tableA" _target_
 				USING (
 					SELECT
 					  /*cola*/0 AS "cola"
@@ -106,7 +106,7 @@ public class OracleMergeFactoryTest extends AbstractOracleSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO "tableA" AS _target_
+				MERGE INTO "tableA" _target_
 				USING (
 					SELECT
 					  /*cola*/0 AS "cola"
@@ -153,7 +153,7 @@ public class OracleMergeFactoryTest extends AbstractOracleSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO "tableA" AS _target_
+				MERGE INTO "tableA" _target_
 				USING (
 					SELECT
 					  /*cola*/0 AS "cola"
@@ -201,7 +201,7 @@ public class OracleMergeFactoryTest extends AbstractOracleSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO "tableA" AS _target_
+				MERGE INTO "tableA" _target_
 				USING (
 					VALUES (
 						  /*cola*/0

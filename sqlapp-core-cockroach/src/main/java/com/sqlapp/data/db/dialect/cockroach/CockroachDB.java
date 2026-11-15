@@ -3,6 +3,9 @@ package com.sqlapp.data.db.dialect.cockroach;
 
 import java.math.BigInteger;
 import java.util.Objects;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
+import com.sqlapp.data.db.datatype.NumericType;
 import com.sqlapp.data.db.dialect.cockroach.util.CockroachPlacement;
 import com.sqlapp.data.db.dialect.postgres.Postgres110;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres110SqlFactoryRegistry;
@@ -10,6 +13,7 @@ import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.*;
 import com.sqlapp.data.schemas.*;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.data.db.dialect.cockroach.metadata.CockroachCatalogReader;
 import com.sqlapp.data.db.dialect.cockroach.sql.*;
 
@@ -37,6 +41,32 @@ public class CockroachDB extends Postgres110 {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new CockroachCatalogReader(this);
+	}
+
+	/**
+	 * PostgreSQL types that CockroachDB does not implement (verified with
+	 * {@code CREATE TABLE} on CockroachDB 24.3 and 25.4). Their PostgreSQL names
+	 * still resolve, but columns are created and bound as {@code TEXT}.
+	 */
+	private static final DataType[] TEXT_SURROGATE_TYPES = { DataType.SQLXML, DataType.CIDR, DataType.MACADDR,
+			DataType.POINT, DataType.CIRCLE, DataType.BOX, DataType.LINE, DataType.LSEG, DataType.PATH,
+			DataType.POLYGON, DataType.RANGE, DataType.MULTIRANGE };
+
+	@Override
+	protected void registerDataType() {
+		super.registerDataType();
+		// PostgreSQL 11 does not register MULTIRANGE; register it so that it can
+		// be redirected to TEXT below.
+		getDbDataTypes().addMultirange("MULTIRANGE", type -> type.setCreateFormat("MULTIRANGE"));
+		final DbDataType<?> text = getDbDataTypes().getDbType(DataType.VARCHAR, CommonUtils.LEN_1GB);
+		for (final DataType dataType : TEXT_SURROGATE_TYPES) {
+			getDbDataTypes().getDbTypeStrict(dataType).setDeprecated(text);
+		}
+		// MONEY is a fixed two-decimal 64-bit amount (up to 92233720368547758.07).
+		getDbDataTypes().getDbTypeStrict(DataType.MONEY)
+				.setDeprecated(new NumericType().setDefaultPrecision(19).setDefaultScale(2));
+		// CockroachDB has no abstime: keep second precision like PostgreSQL 12+.
+		getDbDataTypes().getDbType(DataType.SMALLDATETIME).setCreateFormat("TIMESTAMP(0) WITH TIME ZONE");
 	}
 
 	/**

@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 
+import org.geolatte.geom.Geometry;
+import org.geolatte.geom.codec.Wkt;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -39,14 +41,18 @@ import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.db.dialect.saphana.SapHanaGeometryJdbcTypeHandler;
+import com.sqlapp.data.db.dialect.saphana.SapHanaSpatial;
+import com.sqlapp.data.db.dialect.saphana.metadata.SapHanaSettingReader;
 import com.sqlapp.data.schemas.PublicSynonym;
+import com.sqlapp.data.schemas.Setting;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 
 /**
- * SAP HANA 2.0 checks for dialect gaps found in review: generic MERGE, generated
- * columns, SELECT_FOR_APP paging, public synonyms, parameter limit and spatial
- * JDBC representation.
+ * SAP HANA 2.0 checks for dialect gaps found in review: generic MERGE,
+ * generated columns, SELECT_FOR_APP paging, public synonyms, parameter limit,
+ * spatial columns and configuration parameters.
  */
 @org.junit.jupiter.api.parallel.Execution(org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD)
 class SapHanaDialectGapTest {
@@ -78,6 +84,9 @@ class SapHanaDialectGapTest {
 	static void stopContainer() throws Exception {
 		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
 			drop(statement, "DROP PUBLIC SYNONYM HANA_GAP_PUBLIC_ALIAS");
+			drop(statement, "DROP USER HANA_GAP_RESTRICTED CASCADE");
+			drop(statement,
+					"ALTER SYSTEM ALTER CONFIGURATION ('indexserver.ini', 'DATABASE') UNSET ('sqltrace', 'trace') WITH RECONFIGURE");
 			drop(statement, "DROP SCHEMA " + SCHEMA + " CASCADE");
 		} finally {
 			ReusableTestcontainers.stop(HANA);
@@ -90,7 +99,10 @@ class SapHanaDialectGapTest {
 		}
 	}
 
-	/** The shared MERGE factory output (subquery source with derived column list) runs on HANA. */
+	/**
+	 * The shared MERGE factory output (subquery source with derived column list)
+	 * runs on HANA.
+	 */
 	@Test
 	void executesGeneratedMergeIncludingGeneratedColumn() throws Exception {
 		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
@@ -189,8 +201,10 @@ class SapHanaDialectGapTest {
 			assertEquals(null, synonym.getDbLinkName());
 			List<PublicSynonym> userSynonyms = publicReader.getAll(connection);
 			assertTrue(userSynonyms.stream().anyMatch(s -> s.getName().equals("HANA_GAP_PUBLIC_ALIAS")));
-			assertFalse(userSynonyms.stream().anyMatch(s -> "SYS".equals(s.getObjectSchemaName())
-					|| s.getObjectSchemaName().startsWith("_SYS_")), "system public synonyms must be excluded");
+			assertFalse(
+					userSynonyms.stream().anyMatch(
+							s -> "SYS".equals(s.getObjectSchemaName()) || s.getObjectSchemaName().startsWith("_SYS_")),
+					"system public synonyms must be excluded");
 			var schemaReader = dialect.getCatalogReader().getSchemaReader().getSynonymReader();
 			schemaReader.setSchemaName("PUBLIC");
 			assertTrue(schemaReader.getAll(connection).isEmpty(), "PUBLIC synonyms must not be schema synonyms");
@@ -208,15 +222,15 @@ class SapHanaDialectGapTest {
 	}
 
 	/**
-	 * The dialect limit is accepted; HANA express 2.00.088 rejects 65536
-	 * parameters (SQL error 307).
+	 * The dialect limit is accepted; HANA express 2.00.088 rejects 65536 parameters
+	 * (SQL error 307).
 	 */
 	@Test
 	void acceptsDialectParameterLimit() throws Exception {
 		try (Connection connection = createConnection()) {
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-			assertEquals(32767, dialect.getMaxStatementParameterCount());
-			assertEquals("32767", countParameters(connection, dialect.getMaxStatementParameterCount()));
+			assertEquals(65535, dialect.getMaxStatementParameterCount());
+			assertEquals("65535", countParameters(connection, dialect.getMaxStatementParameterCount()));
 			SQLException e = assertThrows(SQLException.class, () -> countParameters(connection, 65536));
 			assertEquals(307, e.getErrorCode(), e.getMessage());
 		}
@@ -271,8 +285,9 @@ class SapHanaDialectGapTest {
 			insertSpatial(connection, 3, ps -> ps.setString(1, "POINT(3 4)"));
 			insertSpatial(connection, 4, ps -> ps.setString(1, "SRID=4326;POINT(3 4)"));
 			assertEquals("1:POINT (1 2):4326,2:POINT (3 4):4326,3:POINT (3 4):4326,4:POINT (3 4):4326",
-					single(connection, "SELECT STRING_AGG(ID || ':' || G.ST_AsText() || ':' || G.ST_SRID(), ',' ORDER BY ID) FROM "
-							+ SCHEMA + ".SPATIAL_ITEMS"));
+					single(connection,
+							"SELECT STRING_AGG(ID || ':' || G.ST_AsText() || ':' || G.ST_SRID(), ',' ORDER BY ID) FROM "
+									+ SCHEMA + ".SPATIAL_ITEMS"));
 		}
 	}
 
@@ -288,12 +303,149 @@ class SapHanaDialectGapTest {
 		}
 	}
 
+	/**
+	 * ST_GEOMETRY/ST_POINT with SRID round-trip through metadata, DDL and the JDBC
+	 * handler.
+	 */
+	@Test
+	void roundTripsSpatialColumns() throws Exception {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			statement.execute("CREATE COLUMN TABLE " + SCHEMA + ".SPATIAL_SOURCE (ID INTEGER PRIMARY KEY, "
+					+ "SHAPE ST_GEOMETRY(4326), LOCATION ST_POINT(4326), PLAIN ST_GEOMETRY)");
+			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			Table source = readTable(connection, dialect, "SPATIAL_SOURCE");
+			assertSpatial(source, "SHAPE", null, "4326");
+			assertSpatial(source, "LOCATION", "ST_POINT", "4326");
+			assertSpatial(source, "PLAIN", null, null);
+			Table copy = source.clone();
+			copy.setName("SPATIAL_COPY");
+			var registry = dialect.createSqlFactoryRegistry();
+			registry.getOptions().setDecorateSchemaName(true);
+			for (var op : registry.createSql(copy, SqlType.CREATE)) {
+				statement.execute(op.getSqlText());
+			}
+			Table recreated = readTable(connection, dialect, "SPATIAL_COPY");
+			for (String name : List.of("SHAPE", "LOCATION", "PLAIN")) {
+				assertEquals(source.getColumns().get(name).getSpecifics(),
+						recreated.getColumns().get(name).getSpecifics(), name);
+			}
+			var handler = (SapHanaGeometryJdbcTypeHandler) dialect.getDbDataTypes()
+					.getDbType(com.sqlapp.data.db.datatype.DataType.GEOMETRY).getJdbcTypeHandler();
+			List<String> values = List.of("SRID=4326;POLYGON((0 0,1 0,1 1,0 0))", "POINT(3 4)",
+					"SRID=4326;POINT Z(1 2 3)");
+			try (PreparedStatement ps = connection.prepareStatement(
+					"INSERT INTO " + SCHEMA + ".SPATIAL_COPY (ID, SHAPE, LOCATION, PLAIN) VALUES (?, ?, ?, ?)")) {
+				for (int i = 0; i < values.size(); i++) {
+					ps.setInt(1, i + 1);
+					handler.setObject(ps, 2, values.get(i));
+					// ST_POINT columns only accept 2-dimensional points.
+					handler.setObject(ps, 3, i == 0 ? null : Wkt.fromWkt("SRID=4326;POINT(7 8)"));
+					handler.setObject(ps, 4, i == 0 ? null : "POINT(5 6)");
+					ps.executeUpdate();
+				}
+			}
+			assertEquals("1:4326:null,2:4326:4326,3:4326:4326", single(connection,
+					"SELECT STRING_AGG(ID || ':' || SHAPE.ST_SRID() || ':' || IFNULL(TO_NVARCHAR(LOCATION.ST_SRID()), 'null'), ',' ORDER BY ID) FROM "
+							+ SCHEMA + ".SPATIAL_COPY"));
+			try (var rs = statement
+					.executeQuery("SELECT SHAPE, LOCATION, PLAIN FROM " + SCHEMA + ".SPATIAL_COPY ORDER BY ID")) {
+				for (String value : values) {
+					rs.next();
+					Geometry<?> expected = Wkt.fromWkt(value);
+					Geometry<?> actual = (Geometry<?>) handler.getObject(rs, 1);
+					// The driver returns WKB without SRID; the column carries SRID 4326.
+					assertEquals(withoutSrid(expected), withoutSrid(actual), value);
+				}
+			}
+			try (var rs = statement.executeQuery("SELECT LOCATION FROM " + SCHEMA + ".SPATIAL_COPY WHERE ID = 1")) {
+				rs.next();
+				assertEquals(null, handler.getObject(rs, "LOCATION"));
+			}
+		}
+	}
+
+	private static String withoutSrid(Geometry<?> geometry) {
+		return Wkt.toWkt(geometry).replaceFirst("^SRID=\\d+;", "");
+	}
+
+	private void assertSpatial(Table table, String name, String type, String srid) {
+		var column = table.getColumns().get(name);
+		assertEquals(com.sqlapp.data.db.datatype.DataType.GEOMETRY, column.getDataType(), name);
+		assertEquals(type, column.getSpecifics().get(SapHanaSpatial.TYPE), name);
+		assertEquals(srid, column.getSpecifics().get(SapHanaSpatial.SRID), name);
+	}
+
+	/**
+	 * Configuration parameters are read as settings with layer, default and
+	 * description.
+	 */
+	@Test
+	void readsConfigurationParametersAsSettings() throws Exception {
+		try (Connection connection = createConnection(); Statement statement = connection.createStatement()) {
+			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			var reader = dialect.getCatalogReader().getSettingReader();
+			List<Setting> settings = reader.getAll(connection);
+			assertTrue(settings.size() > 500, "settings=" + settings.size());
+			assertEquals(settings.size(), settings.stream().map(Setting::getName).distinct().count());
+			Setting logMode = settings.stream().filter(s -> s.getName().equals("global.ini/persistence/log_mode"))
+					.findFirst().orElseThrow();
+			assertEquals("normal", logMode.getValue());
+			assertTrue(logMode.isDefault());
+			assertEquals("normal", logMode.getDefaultValue());
+			assertTrue(logMode.getRemarks() != null && !logMode.getRemarks().isBlank());
+			assertEquals("DEFAULT", logMode.getSpecifics().get("LAYER_NAME"));
+
+			statement.execute("ALTER SYSTEM ALTER CONFIGURATION ('indexserver.ini', 'DATABASE') "
+					+ "SET ('sqltrace', 'trace') = 'on' WITH RECONFIGURE");
+			try {
+				reader.setObjectName("indexserver.ini/sqltrace/trace");
+				List<Setting> trace = reader.getAll(connection);
+				assertEquals(1, trace.size(), trace.toString());
+				assertEquals("TRUE", trace.getFirst().getValue());
+				assertEquals("on", trace.getFirst().getDisplayValue());
+				assertEquals("BOOLEAN", trace.getFirst().getSpecifics().get("DATA_TYPE_NAME"));
+				assertFalse(trace.getFirst().isDefault());
+				assertEquals("DATABASE", trace.getFirst().getSpecifics().get("LAYER_NAME"));
+				// Fallback for systems without the configuration parameter views.
+				List<Setting> fallback = new InifileSettingReader(dialect).getAll(connection);
+				Setting fallbackTrace = fallback.stream()
+						.filter(s -> s.getName().equals("indexserver.ini/sqltrace/trace")).findFirst().orElseThrow();
+				assertEquals("on", fallbackTrace.getValue());
+				assertFalse(fallbackTrace.isDefault());
+				assertEquals("DATABASE", fallbackTrace.getSpecifics().get("LAYER_NAME"));
+			} finally {
+				statement.execute("ALTER SYSTEM ALTER CONFIGURATION ('indexserver.ini', 'DATABASE') "
+						+ "UNSET ('sqltrace', 'trace') WITH RECONFIGURE");
+			}
+
+			drop(statement, "DROP USER HANA_GAP_RESTRICTED CASCADE");
+			statement.execute(
+					"CREATE USER HANA_GAP_RESTRICTED PASSWORD \"Restricted9xA\" NO FORCE_FIRST_PASSWORD_CHANGE");
+			try (Connection restricted = DriverManager.getConnection(
+					"jdbc:sap://localhost:" + HANA.getMappedPort(39041) + "/?databaseName=HXE", "HANA_GAP_RESTRICTED",
+					"Restricted9xA")) {
+				assertTrue(dialect.getCatalogReader().getSettingReader().getAll(restricted).isEmpty());
+			}
+		}
+	}
+
+	private static final class InifileSettingReader extends SapHanaSettingReader {
+		InifileSettingReader(Dialect dialect) {
+			super(dialect);
+			setParent(dialect.getCatalogReader());
+		}
+
+		@Override
+		protected boolean hasConfigurationParameterViews(Connection connection) {
+			return false;
+		}
+	}
+
 	private static Table readTable(Connection connection, Dialect dialect, String name) {
 		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 		reader.setSchemaName(SCHEMA);
 		reader.setObjectName(name);
-		return reader.getAllFull(connection).stream().filter(t -> name.equals(t.getName())).findFirst()
-				.orElseThrow();
+		return reader.getAllFull(connection).stream().filter(t -> name.equals(t.getName())).findFirst().orElseThrow();
 	}
 
 	private static String single(Connection connection, String sql) throws SQLException {
@@ -323,8 +475,10 @@ class SapHanaDialectGapTest {
 			Files.writeString(file, "{\"master_password\":\"" + PASSWORD + "\"}", StandardCharsets.UTF_8);
 			// The container user differs from the host user on Linux Docker hosts.
 			try {
-				Files.setPosixFilePermissions(directory, java.nio.file.attribute.PosixFilePermissions.fromString("rwxrwxrwx"));
-				Files.setPosixFilePermissions(file, java.nio.file.attribute.PosixFilePermissions.fromString("rw-rw-rw-"));
+				Files.setPosixFilePermissions(directory,
+						java.nio.file.attribute.PosixFilePermissions.fromString("rwxrwxrwx"));
+				Files.setPosixFilePermissions(file,
+						java.nio.file.attribute.PosixFilePermissions.fromString("rw-rw-rw-"));
 			} catch (UnsupportedOperationException e) {
 				// Non-POSIX file systems (Windows) do not need this.
 			}

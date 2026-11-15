@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.saphana.SapHanaSpatial;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.ColumnReader;
@@ -73,6 +74,17 @@ public class SapHanaColumnReader extends ColumnReader {
 		this.getDialect().setDbType(productDataType, max_length, scale, obj);
 		if (obj.getDataType() == DataType.TIMESTAMP)
 			obj.setLength((Long) null);
+		if (obj.getDataType() == DataType.GEOMETRY) {
+			obj.setLength((Long) null);
+			obj.setScale((Integer) null);
+			if (SapHanaSpatial.ST_POINT.equalsIgnoreCase(productDataType)) {
+				obj.getSpecifics().put(SapHanaSpatial.TYPE, SapHanaSpatial.ST_POINT);
+			}
+			final Integer srid = getInteger(rs, "SPATIAL_SRS_ID");
+			if (srid != null && srid.intValue() != 0) {
+				obj.getSpecifics().put(SapHanaSpatial.SRID, srid.toString());
+			}
+		}
 		obj.setTableName(getString(rs, TABLE_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDefaultValue(getString(rs, "DEFAULT_VALUE"));

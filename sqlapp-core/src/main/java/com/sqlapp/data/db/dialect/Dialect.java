@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect;
 
 import static com.sqlapp.data.db.datatype.DataType.BIGINT;
-import static com.sqlapp.data.db.datatype.DataType.BIT;
 import static com.sqlapp.data.db.datatype.DataType.DECIMAL;
 import static com.sqlapp.data.db.datatype.DataType.INT;
 import static com.sqlapp.data.db.datatype.DataType.SMALLINT;
@@ -986,9 +985,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (column.getScale() != 0) {
 			return;
 		}
-		if (column.getLength() == 1) {
-			column.setDataType(BIT);
-		} else if (column.getLength() < 3) {
+		// NUMBER(1) holds -9..9: it is a small integer, not a boolean or a bit string.
+		if (column.getLength() < 3) {
 			column.setDataType(TINYINT);
 		} else if (column.getLength() < 5) {
 			column.setDataType(SMALLINT);

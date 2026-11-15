@@ -19,7 +19,10 @@ capabilities or a commitment to implement every option.
   Job settings now saves the shared mapping without hand-written YAML. It starts
   from selected table identities and can load columns/informational types from
   captured metadata-only Schema XML without database access. Existing renames
-  survive enrichment; type/value conversion remains unimplemented.
+  survive enrichment. Column entries can also carry a sqlapp DataType `type` and an
+  MVEL `conversion` (YAML-authored, kept unchanged by the editor); direct JDBC
+  copies apply them consistently to DDL, copy, checkpoints and verification.
+  CSV/file paths reject them explicitly.
   Mapping grids provide literal search, sorting, renamed-only filtering and
   selected-name reset without changing hidden overrides or transfer selection.
   Input checks locate all syntax/duplicate-source issues using shared name rules;

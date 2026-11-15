@@ -50,19 +50,8 @@ public class Postgres93 extends Postgres92 {
 			type.setLiteralPrefix("'");
 			type.setLiteralSuffix("'::json");
 			type.setCastForUpdate(true);
-			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+			enableArray(type);
 		});
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

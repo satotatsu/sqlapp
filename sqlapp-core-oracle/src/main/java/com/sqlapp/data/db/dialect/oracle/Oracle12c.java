@@ -50,6 +50,24 @@ public class Oracle12c extends Oracle11gR2 {
 		super(nextVersionDialectSupplier);
 	}
 
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param nextVersionDialectSupplier 次のバージョンのDialect
+	 * @param maxStringSize              MAX_STRING_SIZE
+	 */
+	protected Oracle12c(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
+	}
+
+	/**
+	 * MAX_STRING_SIZE=EXTENDEDは12cから
+	 */
+	@Override
+	public boolean supportsExtendedMaxStringSize() {
+		return true;
+	}
+
 	@Override
 	public String getIdentityInsertDefaultValue(final Column column) {
 		if (column.getIdentityGenerationType() == IdentityGenerationType.ByDefault) {
@@ -61,39 +79,6 @@ public class Oracle12c extends Oracle11gR2 {
 	@Override
 	public String[] getGeneratedKeyColumnNames(final Table table, final Column identityColumn) {
 		return new String[] { identityColumn.getName() };
-	}
-
-	/**
-	 * データ型の登録
-	 */
-	@Override
-	protected void registerDataType() {
-		super.registerDataType();
-		// VARCHAR
-		getDbDataTypes().addVarchar("VARCHAR2", 32767, type -> {
-		});
-		// NVARCHAR
-		getDbDataTypes().addNVarchar("NVARCHAR2", 32767);
-		// VARBINARY
-		getDbDataTypes().addVarBinary("RAW", 32767, type -> {
-			type.setLiteral("HEXTORAW('", "')");
-		});
-	}
-
-	@Override
-	public int hashCode() {
-		return getProductName().hashCode() + 1;
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

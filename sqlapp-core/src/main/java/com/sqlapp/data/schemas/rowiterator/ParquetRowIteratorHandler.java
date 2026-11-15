@@ -180,7 +180,6 @@ public final class ParquetRowIteratorHandler extends AbstractRowIteratorHandler 
 		if (s.isCharacter() && t.isCharacter()) return true;
 		if (s.isBinary() && t.isBinary()) return true;
 		return (s == DataType.DECIMAL && t == DataType.NUMERIC)
-				|| (s == DataType.BOOLEAN && t == DataType.BIT)
 				|| (s == DataType.DOUBLE && t == DataType.FLOAT)
 				|| (s == DataType.TIMESTAMP && t == DataType.DATETIME);
 	}

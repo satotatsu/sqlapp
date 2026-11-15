@@ -96,8 +96,12 @@ artifact and review the migration mapping.
 
 ## `pliSchemaImport`
 
-Parses the ranges selected by a PL/I import configuration and emits Schema XML.
-PL/I comments are retained as schema remarks where supported by the importer.
+Parses the level declarations selected by a PL/I import configuration and
+emits Schema XML and an initial migration mapping. Each selected level-1
+structure becomes a root table; non-array groups are flattened into their
+table; each array becomes a child table that inherits the parent primary key
+and adds a one-based occurrence column. A scalar array such as
+`2 SCORES(5) FIXED DEC(5,2)` becomes a child table with one value column.
 
 | Property | Type | Required | Convention | Description |
 |---|---|---:|---|---|
@@ -109,6 +113,87 @@ PL/I comments are retained as schema remarks where supported by the importer.
 | `migrationMappingEnabled` | `Property<Boolean>` | yes | `true` | Generate the initial migration mapping |
 | `migrationMappingDirectory` | `DirectoryProperty` | no | command default | Mapping output directory |
 | `migrationMappingFileName` | `Property<String>` | no | command default | Mapping output filename |
+
+### Import configuration
+
+The minimum configuration names the schema and the primary key of each root
+table:
+
+```yaml
+schemaName: COMPANY
+structures:
+  - name: COMPANY_MASTER
+    primaryKey: [COMPANY_ID]
+```
+
+Declaration names, item paths and primary key columns are matched
+case-insensitively. An item path is dot separated from the level-1 name, for
+example `COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST`. Every name and path in
+the configuration must exist in the source; unknown entries are errors.
+
+| Key | Default | Description |
+|---|---|---|
+| `formatVersion` | `1` | Configuration format version |
+| `schemaName` | required | Target schema name |
+| `structures[].name` | required | Level-1 declaration name |
+| `structures[].tableName` | declaration name | Root table name |
+| `structures[].primaryKey` | required | Root table primary key columns |
+| `includeDeclarations` | all with `structures` | Declarations to import; each needs a `structures` entry |
+| `excludeDeclarations` | none | Declarations to skip |
+| `excludeItems` | none | Item paths not imported; their storage still counts for offsets |
+| `columnNames` | item name | Column name per scalar item path, for example to resolve flattened name conflicts |
+| `generatedTableNames` | array name | Table name per array item path |
+| `occurrenceColumnNames` | pattern | Occurrence column name per array item path |
+| `occurrenceColumnNamePattern` | `${groupName}_NO` | `${groupName}` is the array name, `${tableName}` the generated table name |
+| `prefixGroupRemarks` | `true` | Prefix column remarks with enclosing non-array group remarks |
+| `commentPlacement` | `AUTO` | `AUTO`, `TRAILING` or `LEADING`; see below |
+| `margins` | whole line | `[left, right]` source columns, for example `[2, 72]` for sources with sequence numbers |
+| `bit1AsBoolean` | `true` | Map `BIT(1)` to `BOOLEAN` instead of `BINARY(1)` |
+
+Comments become table and column remarks. With `AUTO`, a comment that starts
+on the line where an item ends belongs to that item, and other comments belong
+to the next item unless a blank line separates them, so file banners are not
+attached. `TRAILING` attaches comments to the preceding item and `LEADING` to
+the following item. Comments inside an item always belong to that item.
+
+Supported data attributes and their default column types:
+
+| PL/I | Column type |
+|---|---|
+| `CHAR(n)` / `CHAR(n) VARYING` / `VARYINGZ` | `CHAR(n)` / `VARCHAR(n)` |
+| `GRAPHIC(n)`, `WIDECHAR(n)` (optionally varying) | `NCHAR(n)` / `NVARCHAR(n)` |
+| `BIT(1)` / `BIT(n)` | `BOOLEAN` / `BINARY(ceil(n/8))` |
+| `FIXED BIN(p)` (`SIGNED`/`UNSIGNED`) | `SMALLINT`, `INT`, `BIGINT` or `DECIMAL(20)` by value range |
+| `FIXED DEC(p,q)` | `DECIMAL(p,q)`; `DECIMAL(p-q,0)` when `q < 0`, `DECIMAL(q,q)` when `q > p` |
+| `FLOAT BIN(p)` / `FLOAT DEC(p)` | `REAL` (short) or `DOUBLE` (long) |
+| `PIC` numeric picture | `DECIMAL(digits, digits after V)` |
+| `PIC` character picture (`X`, `A`, `9`) | `CHAR(n)` |
+
+Attributes may appear in any order (`BIN FIXED(31)`), and PL/I defaults apply
+(`FIXED` alone is `FIXED DEC(5)`, `FIXED BIN` is `FIXED BIN(15)`). Storage and
+initialization attributes such as `BASED`, `STATIC`, `INIT` and `DEFINED` are
+ignored. Unnamed `*` items are not imported but occupy storage. Arrays may use
+`(n)`, `(lower:upper)` or `DIM(...)`; the lower bound is recorded in the
+mapping. `%INCLUDE` is not expanded and is reported as a warning; other
+non-declaration statements are skipped.
+
+Items that cannot become columns, such as `POINTER`, `LIKE`, `UNION`,
+`REFER`, multi-dimensional arrays, scaled `FIXED BIN(p,q)`, extended `FLOAT`
+and `BIT VARYING`, are errors when imported. Exclude them with `excludeItems`
+if they are not needed. Level-1 arrays are rejected; declare a level-1
+structure that contains the array instead.
+
+The migration mapping records the source storage layout under each column's
+`conversion.storage` (`offset` and `length` in bytes, plus `bitOffset` and
+`bitLength` for bit data), the root table's `details.storage.recordLength`,
+and each array's `offset` and `elementLength` under `details.occurrence`.
+Offsets are relative to the record, or to one array element for items inside
+an array. They are calculated only when every item is byte or bit aligned,
+which holds for `UNALIGNED` structures and for structures of character,
+picture and `FIXED DEC` data. Items that need halfword or larger alignment,
+such as `FIXED BIN` and `FLOAT` without `UNALIGNED`, are placed by the
+compiler's structure mapping; the import then omits offsets and adds a
+warning. Take offsets from the compiler `AGGREGATE` listing in that case.
 
 ## `generateLegacyMigrationContract`
 
@@ -155,6 +240,7 @@ uses sqlapp's schema model, SQL generation, dialect handling, and
 | `rootBatchSize` | `Property<Integer>` | yes | `500` | Root rows handled in one JDBC tree batch |
 | `commitEveryRootBatches` | `Property<Long>` | yes | `500` | Root batches committed as one transaction |
 | `deleteCommittedRoots` | `Property<Boolean>` | yes | `true` | Delete committed staging roots; otherwise mark them loaded |
+| `verifyCounts` | `Property<Boolean>` | yes | `true` | With `INSERT`, verify staging and inserted row counts before every commit |
 | `stagingTablePrefix` | `Property<String>` | yes | `TMP_` | Staging-table prefix |
 | `rootCursorStrategy` | `Property<String>` | yes | `DIALECT` | Cursor strategy selection |
 
@@ -242,3 +328,21 @@ Executes a generated load plan against the configured database.
 
 This task changes database data. Test the generated plan against a disposable
 database before running it against a migration environment.
+
+Each load data set copies its extracted, non-generated fields from the staging
+column to the target column; other staging columns, including the load-status
+columns, are not copied. A staging column mapped to two target columns is
+rejected.
+
+The task logs the row counts of every data set: staging rows read, rows written
+to the target, and rows the JDBC driver reported as inserted.
+
+- With `tableOperationMode: INSERT` and `verifyCounts: true` (the default), the
+  three counts must be equal before every commit. A mismatch, or a JDBC driver
+  that does not report batch insert counts, stops the load and rolls back the
+  uncommitted transaction; earlier committed root batches remain, and their
+  staging roots are already completed, so a rerun continues after them. Set
+  `verifyCounts` to `false` only for drivers without batch insert counts.
+- With `INSERT_IGNORE`, rows whose target row already existed are reported as
+  ignored with a warning instead of failing the load.
+- `MERGE` and `REPLACE` report read and written rows only.

@@ -38,17 +38,6 @@ public class Postgres91 extends Postgres90 {
 		super(nextVersionDialectSupplier);
 	}
 
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 

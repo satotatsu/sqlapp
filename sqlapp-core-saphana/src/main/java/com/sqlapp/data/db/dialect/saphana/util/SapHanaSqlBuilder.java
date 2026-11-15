@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.dialect.saphana.util;
 
+import com.sqlapp.data.db.dialect.saphana.SapHanaSpatial;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -153,6 +154,9 @@ public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
 
 	@Override
 	protected SapHanaSqlBuilder typeDefinition(final Column column) {
+		if (SapHanaSpatial.isSpatial(column) && column.getDomain() == null) {
+			return _add(SapHanaSpatial.typeDefinition(column));
+		}
 		if (column.getDataType() == DataType.TIMESTAMP && column.getDomain() == null && column.getLength() != null
 				&& column.getLength() > 0 && column.getLength() != 7 && column.getLength() != 27) {
 			throw new IllegalArgumentException(

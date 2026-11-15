@@ -84,6 +84,8 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, SapHanaSelectForAppFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, SapHanaMergeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				SapHanaCreateUniqueConstraintFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, SapHanaCreateIndexFactory.class);
 		registerSqlFactory(Index.class, SqlType.DROP, SapHanaDropIndexFactory.class);
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF, SapHanaDdlAutoCommitOffFactory.class);

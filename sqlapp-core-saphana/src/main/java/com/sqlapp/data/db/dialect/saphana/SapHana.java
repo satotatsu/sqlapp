@@ -145,6 +145,11 @@ public class SapHana extends Dialect {
 			type.setCreateFormat("TIME");
 			type.setDefaultValueLiteral(getCurrentTimeFunction());
 		});
+		// ST_GEOMETRY, ST_POINT
+		getDbDataTypes().addGeometry(SapHanaSpatial.ST_GEOMETRY, type -> {
+			type.addColumnTypeMatcher(SapHanaSpatial.ST_POINT);
+			type.setJdbcTypeHandler(new SapHanaGeometryJdbcTypeHandler());
+		});
 		// インデックスタイプ
 		this.setIndexTypeName(IndexType.BTree);
 		this.setIndexTypeName(IndexType.CPBTree);
@@ -230,14 +235,13 @@ public class SapHana extends Dialect {
 	}
 
 	/**
-	 * Conservative statement parameter limit. SAP documents 32767 parameters per
-	 * statement (SQL error 589); HANA express 2.00.088 accepted up to 65535 and
-	 * rejected 65536 with SQL error 307. The documented value is kept so that older
-	 * revisions remain safe.
+	 * SAP HANA 2.0 accepts up to 65535 parameters per statement and rejects more
+	 * with SQL error 307 (verified on HANA express 2.00.088). SAP HANA 1.x is not
+	 * supported.
 	 */
 	@Override
 	public int getMaxStatementParameterCount() {
-		return 32767;
+		return 65535;
 	}
 
 	@Override

@@ -267,6 +267,11 @@ final class TransferCsvSource implements BulkMigrationKeysetSource {
 		case BIGINT -> new java.math.BigDecimal(value).longValueExact();
 		case NUMERIC, DECIMAL -> new java.math.BigDecimal(value);
 		case BOOLEAN, BIT -> {
+			if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.BIT
+					|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARBIT) {
+				// Bit strings such as "0101", not booleans.
+				yield com.sqlapp.data.db.datatype.BitStringJdbcTypeHandler.toBitString(value, 0);
+			}
 			if (!value.equals("true") && !value.equals("false"))
 				throw new IllegalArgumentException("Invalid boolean.");
 			yield Boolean.valueOf(value);

@@ -7,7 +7,8 @@ import com.sqlapp.data.schemas.Package;
 
 /** Emits a complete executable EPAS package specification. */
 public class EdbOracleCreatePackageFactory extends AbstractCreatePackageFactory<PostgresSqlBuilder> {
-	@Override protected void addCreateObject(Package object, PostgresSqlBuilder builder) {
+	@Override
+	protected void addCreateObject(Package object, PostgresSqlBuilder builder) {
 		if (object.getDefinition() == null || object.getDefinition().isEmpty()) {
 			throw new IllegalArgumentException("EPAS package requires a complete CREATE definition");
 		}

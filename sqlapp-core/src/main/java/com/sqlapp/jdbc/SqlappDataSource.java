@@ -20,6 +20,7 @@
 package com.sqlapp.jdbc;
 
 import java.sql.Connection;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -31,8 +32,37 @@ import javax.sql.DataSource;
  */
 public class SqlappDataSource extends AbstractDataSource {
 
+	/**
+	 * Dialectオプション(例: oracle.maxStringSize=STANDARD)
+	 */
+	private Map<String, String> dialectOptions = Map.of();
+
 	public SqlappDataSource(DataSource nativeObject) {
 		super(nativeObject);
+		if (nativeObject instanceof SqlappDataSource) {
+			this.dialectOptions = ((SqlappDataSource) nativeObject).getDialectOptions();
+		}
+	}
+
+	/**
+	 * このデータソースの接続でDialectを判定するときのオプションを返します。
+	 * 
+	 * @return Dialectオプション(変更不可)
+	 */
+	public Map<String, String> getDialectOptions() {
+		return dialectOptions;
+	}
+
+	/**
+	 * このデータソースの接続でDialectを判定するときのオプションを設定します。
+	 * 例えばOracleでは{@code oracle.maxStringSize}(STANDARD/EXTENDED)で接続先からの自動判定より優先する値を指定できます。
+	 * 
+	 * @param dialectOptions Dialectオプション
+	 * @return this
+	 */
+	public SqlappDataSource setDialectOptions(final Map<String, String> dialectOptions) {
+		this.dialectOptions = dialectOptions == null ? Map.of() : Map.copyOf(dialectOptions);
+		return this;
 	}
 
 	@Override
@@ -40,10 +70,14 @@ public class SqlappDataSource extends AbstractDataSource {
 		if (connection instanceof SqlappConnection) {
 			SqlappConnection conn= (SqlappConnection)connection;
 			this.initializeChild(conn);
+			if (!dialectOptions.isEmpty()) {
+				conn.setDialectOptions(dialectOptions);
+			}
 			return conn;
 		}
 		SqlappConnection conn=  new SqlappConnection(connection);
 		this.initializeChild(conn);
+		conn.setDialectOptions(dialectOptions);
 		return conn;
 	}
 	

@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.db2;
 
-import static com.sqlapp.data.db.datatype.DataType.BIT;
+import static com.sqlapp.data.db.datatype.DataType.BOOLEAN;
 import static com.sqlapp.data.db.datatype.DataType.CHAR;
 import static com.sqlapp.data.db.datatype.DataType.DECIMAL;
 import static com.sqlapp.data.db.datatype.DataType.LONGVARBINARY;
@@ -116,7 +116,7 @@ public class Db2 extends Dialect {
 		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
 			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
 			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
-					.setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
+					.setSizeSarrogation(1, BOOLEAN).setSizeSarrogation(16, UUID);
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {

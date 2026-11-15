@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import com.sqlapp.data.db.dialect.oracle.Oracle11g;
-import com.sqlapp.data.db.dialect.oracle.Oracle11gR2;
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.sql.SimpleSqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -145,7 +144,7 @@ public class OracleAlterIndexFactory extends SimpleSqlFactory<Index, OracleSqlBu
 						"Unsupported index status transition: " + oldStatus + " -> " + newStatus);
 		}
 		if (!Objects.equals(before.getSpecifics().get(VISIBILITY), after.getSpecifics().get(VISIBILITY))) {
-			if (!(getDialect() instanceof Oracle11g) && !(getDialect() instanceof Oracle11gR2))
+			if (!(getDialect() instanceof Oracle11g))
 				throw new IllegalArgumentException("Index visibility requires Oracle 11g or later");
 			String visibility = after.getSpecifics().get(VISIBILITY);
 			if (!"VISIBLE".equals(visibility) && !"INVISIBLE".equals(visibility))

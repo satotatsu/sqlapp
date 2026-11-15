@@ -25,15 +25,13 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeFactory;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * SAP HANA MERGE INTO factory.
  * <p>
  * SAP HANA rejects a derived column list on the USING subquery
  * ({@code AS _source_ (A, B)}, SQL error 257), so each source value is named
- * with a column alias instead. GENERATED ALWAYS AS columns are never inserted
- * or updated and get a NULL placeholder.
+ * with a column alias instead.
  */
 public class SapHanaMergeFactory extends AbstractMergeFactory<SapHanaSqlBuilder> {
 
@@ -43,16 +41,7 @@ public class SapHanaMergeFactory extends AbstractMergeFactory<SapHanaSqlBuilder>
 	}
 
 	@Override
-	protected void addUsingSourceColumns(final Table obj, final List<Column> columns,
-			final SapHanaSqlBuilder builder) {
+	protected void addUsingSourceColumns(final Table obj, final List<Column> columns, final SapHanaSqlBuilder builder) {
 		// Column aliases are already part of the USING subquery.
-	}
-
-	@Override
-	protected String getValueDefinitionForMerge(final Column column) {
-		if (!CommonUtils.isEmpty(column.getFormula())) {
-			return "NULL";
-		}
-		return super.getValueDefinitionForMerge(column);
 	}
 }

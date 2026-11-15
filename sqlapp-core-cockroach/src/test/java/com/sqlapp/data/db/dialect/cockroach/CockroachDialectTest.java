@@ -16,6 +16,45 @@ import com.sqlapp.jdbc.bulk.*;
 
 class CockroachDialectTest {
 	@Test
+	void createsUnsupportedPostgresTypesAsCockroachTypes() {
+		var dialect = new CockroachDB();
+		var expected = new java.util.LinkedHashMap<DataType, String>();
+		expected.put(DataType.MONEY, "NUMERIC(19,2)");
+		for (DataType type : new DataType[] { DataType.SQLXML, DataType.CIDR, DataType.MACADDR, DataType.POINT,
+				DataType.CIRCLE, DataType.BOX, DataType.LINE, DataType.LSEG, DataType.PATH, DataType.POLYGON,
+				DataType.RANGE, DataType.MULTIRANGE })
+			expected.put(type, "TEXT");
+		expected.put(DataType.SMALLDATETIME, "TIMESTAMP(0) WITH TIME ZONE");
+		expected.put(DataType.BIT, "BIT(1)");
+		expected.put(DataType.VARBIT, "VARBIT");
+		expected.put(DataType.BINARY, "BYTEA");
+		expected.put(DataType.VARBINARY, "BYTEA");
+		expected.put(DataType.BLOB, "BYTEA");
+		expected.forEach((type, definition) -> assertEquals(definition,
+				dialect.createSqlBuilder().addTypeDefinition(new Column("C").setDataType(type)).toString(),
+				type.toString()));
+		// PostgreSQL type names keep their logical type.
+		var column = new Column("C");
+		assertTrue(dialect.setDbType("money", null, null, column));
+		assertEquals(DataType.MONEY, column.getDataType());
+		assertEquals("1234.5", dialect.getSqlValueDefinition(new Column("m").setDataType(DataType.MONEY),
+				new java.math.BigDecimal("1234.5")));
+		assertEquals("'<a>it''s</a>'",
+				dialect.getSqlValueDefinition(new Column("x").setDataType(DataType.SQLXML), "<a>it's</a>"));
+	}
+
+	@Test
+	void writesBitStringsAndByteStringsAsTheirOwnLiterals() {
+		var dialect = new CockroachDB();
+		assertEquals("B'0001111110100000'",
+				dialect.getSqlValueDefinition(new Column("b").setDataType(DataType.BIT), "0001111110100000"));
+		assertEquals("B'0101'", dialect.getSqlValueDefinition(new Column("vb").setDataType(DataType.VARBIT), "0101"));
+		byte[] value = { (byte) 0x1f, (byte) 0xa0 };
+		assertEquals("decode('1fa0', 'hex')",
+				dialect.getSqlValueDefinition(new Column("bytes").setDataType(DataType.VARBINARY), value));
+	}
+
+	@Test
 	void restoresLegacyOwnerSpecificsAndPrefersCommonOwnerName() throws Exception {
 		var schema = new Schema("reports");
 		var view = new Mview("totals");

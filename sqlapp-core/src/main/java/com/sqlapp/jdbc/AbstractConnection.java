@@ -52,6 +52,11 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection> implem
 	private Dialect dialect = null;
 
 	/**
+	 * Dialectオプション(例: oracle.maxStringSize)
+	 */
+	private Map<String, String> dialectOptions = Map.of();
+
+	/**
 	 * コンストラクタ
 	 * 
 	 * @param nativeConnection ラッピングするコネクション
@@ -68,12 +73,31 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection> implem
 		if (dialect == null) {
 			try {
 				final DatabaseMetaData databaseMetaData = nativeObject.getMetaData();
-				dialect = DialectResolver.getInstance().getDialect(databaseMetaData);
+				dialect = DialectResolver.getInstance().getDialect(databaseMetaData, dialectOptions);
 			} catch (final SQLException e) {
 				error(this.getClass().getSimpleName() + "#getDialect()", e);
 			}
 		}
 		return dialect;
+	}
+
+	/**
+	 * Dialectオプションを返します。
+	 * 
+	 * @return Dialectオプション(変更不可)
+	 */
+	public Map<String, String> getDialectOptions() {
+		return dialectOptions;
+	}
+
+	/**
+	 * Dialectオプション(例: oracle.maxStringSize=STANDARD)を設定します。
+	 * 
+	 * @param dialectOptions Dialectオプション
+	 */
+	public void setDialectOptions(final Map<String, String> dialectOptions) {
+		this.dialectOptions = dialectOptions == null ? Map.of() : Map.copyOf(dialectOptions);
+		this.dialect = null;
 	}
 
 	/**
@@ -268,7 +292,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection> implem
 	public DatabaseMetaData getMetaData() throws SQLException {
 		final DatabaseMetaData databaseMetaData = nativeObject.getMetaData();
 		if (dialect == null) {
-			dialect = DialectResolver.getInstance().getDialect(databaseMetaData);
+			dialect = DialectResolver.getInstance().getDialect(databaseMetaData, dialectOptions);
 		}
 		if (databaseMetaData instanceof SqlappDatabaseMetaData) {
 			return databaseMetaData;

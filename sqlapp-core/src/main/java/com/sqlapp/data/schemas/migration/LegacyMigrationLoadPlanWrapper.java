@@ -100,6 +100,10 @@ public class LegacyMigrationLoadPlanWrapper {
 		return this.inner.isDeleteCommittedRoots();
 	}
 
+	public boolean isVerifyCounts() {
+		return this.inner.isVerifyCounts();
+	}
+
 	public String getStagingTablePrefix() {
 		return this.inner.getStagingTablePrefix();
 	}

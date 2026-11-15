@@ -155,7 +155,7 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 			connection.commit();
 			connection.setAutoCommit(false);
 
-			assertEquals(1, new JdbcTreeStagingLoader(connection, targetSchema, plan).load());
+			assertEquals(1, new JdbcTreeStagingLoader(connection, targetSchema, plan).load().roots());
 			assertEquals(1, count(connection, "COMPANY_MASTER"));
 			assertEquals(1, count(connection, "DEPARTMENT_GROUP"));
 			assertEquals(1, count(connection, "EMPLOYEE_LIST"));

@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.db.command;
 
+import java.util.Map;
+
+import com.sqlapp.data.db.command.properties.DialectOptionsProperty;
 import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
 import com.sqlapp.data.db.command.properties.TableOptionsProperty;
@@ -40,16 +43,21 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class AbstractSqlGenerateCommand extends AbstractCommand
-		implements SchemaOptionsProperty, SqlFactoryRegistryProperty {
+		implements SchemaOptionsProperty, SqlFactoryRegistryProperty, DialectOptionsProperty {
 
 	private SqlFactoryRegistry sqlFactoryRegistry;
 
 	private Options schemaOptions = new Options();
 
+	/**
+	 * Dialectオプション(例: oracle.maxStringSize=STANDARD)
+	 */
+	private Map<String, String> dialectOptions = Map.of();
+
 	protected SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target) {
 		SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
 		if (sqlFactoryRegistry == null) {
-			final Dialect dialect = SchemaUtils.getDialect(target);
+			final Dialect dialect = applyDialectOptions(SchemaUtils.getDialect(target));
 			sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		}
 		if (this.getSchemaOptions() != null) {

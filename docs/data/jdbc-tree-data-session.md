@@ -216,6 +216,118 @@ boundaries for its source and target, processing the final source batch before
 completing the target. Both connections must have auto-commit disabled. Separate
 source and target connections do not provide an atomic distributed transaction.
 
+## Periodic commits and restart
+
+A root SELECT is free-form SQL: it may join, group or compute its columns, so the
+session cannot rewrite it to skip roots that an earlier commit already processed.
+`setRestart(...)` declares how the SQL cooperates; set it before registering the
+root SELECT.
+
+| Restart | Root SELECT contract | Session guarantee |
+|---|---|---|
+| `JdbcTreeDataRestart.none()` (default) | none | Periodic commits need a root cursor held open across commits. When the driver reports no `HOLD_CURSORS_OVER_COMMIT` support, `next` fails before any change instead of failing after the first commit. |
+| `JdbcTreeDataRestart.selfExcluding()` | Excludes processed roots, for example with `NOT EXISTS` or a status column | When the cursor closes at commit, the session finishes the current batch and re-executes the root SELECT. The contract is not verified. |
+| `JdbcTreeDataRestart.checkpoint(jobId, keyColumns, store)` | Returns unique key columns in ascending order and starts after the `checkpoint` variable | Saves the last processed key before every commit in the same transaction, binds it on every (re)opened cursor and in the next execution, and rejects out-of-order keys. |
+
+A checkpoint root SELECT receives `checkpoint`: `null` on the first execution,
+otherwise a map of the last processed key values by root column name.
+
+```java
+var restart = JdbcTreeDataRestart.checkpoint("normalize-orders", List.of("CUSTOMER_ID"),
+        new JdbcBulkMigrationCheckpointStore(connection, "TREE_CHECKPOINTS"));
+session.setRestart(restart);
+session.setCommitEveryRootBatches(5);
+session.select(orders, """
+        SELECT c.ID AS CUSTOMER_ID
+        FROM FLAT_ORDERS fo
+        INNER JOIN CUSTOMERS c ON (fo.CUSTOMER_NAME=c.CUSTOMER_NAME)
+        WHERE 1=1
+          /*if checkpoint != null*/ AND c.ID > /*checkpoint.CUSTOMER_ID*/0 /*end*/
+        GROUP BY c.ID
+        ORDER BY c.ID
+        """);
+```
+
+Key columns must be root table columns returned by the SELECT, non-NULL, unique
+and comparable; rows that do not strictly increase stop the execution with an
+`ORDER BY` hint. The checkpoint store must use the session connection, so a
+checkpoint is committed atomically with its root batches. After a failure, run the
+same execution again: it continues after the last committed root. Only an
+execution that read every root marks the checkpoint complete; a completed
+checkpoint processes no further roots until it is deleted from the store. The root
+SQL text and key columns are fingerprinted: changing them rejects an existing
+checkpoint instead of skipping or repeating roots. Checkpoint restart requires a
+`Map` root SELECT context and SQL registered with `select(table, sql)`.
+
+### Copy sessions
+
+`JdbcTreeDataCopySession.setRestart(...)` uses the same policies for the source
+root SELECT:
+
+| Restart | Behavior |
+|---|---|
+| `none()` (default) | Copied source roots are deleted by the processed-root handler (or marked by a custom one). Source and target must share one connection, so removal and copy commit atomically; separate connections are rejected before copying. |
+| `selfExcluding()` | Also allows separate connections. The source commit follows the target commit, so an interruption between them copies roots again: target writes must be idempotent, for example `INSERT_IGNORE` by natural keys. |
+| `checkpoint(jobId, keyColumns, store)` | The source is only read. The store must use the **target** connection: the last copied source key is saved in the target transaction, so copied rows and the checkpoint commit together even with separate connections and generated target keys. |
+
+Copied roots are recorded when their target batch is written, before a reopened
+source cursor (`HoldCursorStrategy.REOPEN`) is executed again, and before the final
+target commit, including roots that produced no target rows.
+
+#### Column mapping
+
+By default `newCopy` copies columns with the same name. `setColumnMapping` replaces
+that rule for one source/target table pair:
+
+```java
+copy.setColumnMapping(source, target, JdbcTreeDataColumnMapping.builder()
+        .exclude("ID")                                  // let the target generate it
+        .rename("NAME", "CUSTOMER_NAME")
+        .convert("STATUS", "value == 'A' ? 'ACTIVE' : 'INACTIVE'")
+        .rename("NOTE", "NOTE_LENGTH")
+        .convert("NOTE", "value == null ? 0 : value.length()")
+        .build());
+```
+
+- `convert` takes an MVEL expression with `value` (the source value), `column`
+  (the source column) and `row` (the unconverted source row). The result is
+  converted to the **target** column type, so a conversion may change the type.
+- A value that is not null but becomes null after the type conversion stops the
+  copy with an error naming the source column; it is never written as null.
+- The mapping is validated when it is set: unknown source columns, a renamed or
+  converted column whose target is missing, two source columns written to the same
+  target column, an expression that does not compile, and a column that is both
+  excluded and renamed or converted are rejected.
+- Source columns without a rule and without a same-named target column are skipped,
+  as before. `setCopyColumnPredicate` still filters the target columns.
+
+#### Row counts
+
+`execute` returns `JdbcTreeDataCopyExecutionResult.counts()`: for every source/target
+table pair used by `newCopy`, the rows of the source table read by the work and the
+rows copied to the target table. Reading only counts rows returned by `next` or
+`readAll`; rows the work never iterates are not counted.
+
+`verifyCounts(sourceTable, targetTable)` turns the report into a check:
+
+```java
+copy.verifyCounts(orders, newOrders);
+copy.verifyCounts(orderLines, newOrderLines);
+```
+
+Before every target commit, including periodic commits, the rows read from the
+source table in finished roots must equal the rows copied to the target table, and
+the rows the JDBC driver reported as inserted. A mismatch, such as a row skipped
+by the work, throws before the commit, so the uncommitted transaction is rolled
+back; earlier periodic commits remain. A driver that does not report every insert
+count (`SUCCESS_NO_INFO`) fails the check instead of passing it.
+
+The target table must use `TableOperationMode.INSERT`, because other modes may
+legitimately write fewer or more rows, and its rows must be created with `newCopy`
+from that one source table; `newRow` on a verified target table is rejected. The
+counts cover one `execute` call: with restart, rows copied by an earlier execution
+are not included. Value-level verification is not provided.
+
 ## Execution results
 
 `execute` returns an immutable `JdbcTreeDataExecutionResult`. Ignoring the return

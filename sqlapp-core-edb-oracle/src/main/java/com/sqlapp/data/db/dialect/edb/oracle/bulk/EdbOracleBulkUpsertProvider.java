@@ -7,5 +7,8 @@ import com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertProvider;
 
 /** Reuses PostgreSQL execution for the Advanced Server baseline. */
 public class EdbOracleBulkUpsertProvider extends PostgresBulkUpsertProvider {
-	@Override public boolean supports(Dialect dialect) { return dialect instanceof EdbOracle; }
+	@Override
+	public boolean supports(Dialect dialect) {
+		return dialect instanceof EdbOracle;
+	}
 }

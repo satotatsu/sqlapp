@@ -24,6 +24,10 @@ public class Oracle26ai extends Oracle23ai {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected Oracle26ai(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
+	}
+
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Oracle26aiCatalogReader(this);

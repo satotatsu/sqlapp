@@ -1029,6 +1029,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public void addVarBit(long maxLength, Consumer<VarBitType> cons) {
 		VarBitType type = new VarBitType();
+		type.setMaxLength(maxLength);
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}
@@ -1041,6 +1042,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public void addBit(long maxLength, Consumer<BitType> cons) {
 		BitType type = new BitType();
+		type.setMaxLength(maxLength);
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}
@@ -1054,6 +1056,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public void addBit(String dataTypeName, long maxLength, Consumer<BitType> cons) {
 		BitType type = new BitType(dataTypeName);
+		type.setMaxLength(maxLength);
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}

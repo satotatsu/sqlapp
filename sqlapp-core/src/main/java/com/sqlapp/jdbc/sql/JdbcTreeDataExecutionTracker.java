@@ -66,6 +66,11 @@ final class JdbcTreeDataExecutionTracker {
 		dirty = true;
 	}
 
+	Counts executed(Table table, SqlType operation) {
+		long[] values = counts.get(new Key(identity(table), operation));
+		return values == null ? new Counts(0, 0, 0, 0) : snapshot(values, 0);
+	}
+
 	void committed() {
 		counts.values().forEach(values -> System.arraycopy(values, 0, values, 4, 4));
 		committedBatches = completedBatches;

@@ -143,7 +143,7 @@ public class SapHanaCatalogReader extends CatalogReader {
 
 	@Override
 	protected SettingReader newSettingReader() {
-		return null;
+		return new SapHanaSettingReader(this.getDialect());
 	}
 
 	@Override

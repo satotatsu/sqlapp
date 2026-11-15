@@ -241,7 +241,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				}
 				}
 			}
-			case BOOLEAN, BIT -> {
+			case BOOLEAN -> {
 				if (!(value instanceof Boolean))
 					throw new IllegalArgumentException("expected a boolean value");
 			}

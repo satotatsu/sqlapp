@@ -2575,6 +2575,36 @@ var operations = factory.createDiffSql(before.diff(after));
 ./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteTuple*' --tests '*OraclePartitionMaintenanceTest.finiteTuple*' --gradle-user-home .gradle-user-home
 ```
 
+## 2026-11-14: Dialect本体の設定値の修正
+
+Dialectクラス(`Oracle`～`Oracle26ai`、`DialectHolder`、`OracleDialectResolver`)のレビューで確認した、誤ったSQLを生成する設定値を修正した。
+
+- DATE型の既定値リテラルが基底クラスの`CURRENT_DATETIME`(Oracleに存在しない)になり、created_at/updated_at列のINSERT/UPDATEで使われていた。`getCurrentDateTimeFunction()`を`CURRENT_DATE`、`getCurrentDateFunction()`を`TRUNC(CURRENT_DATE)`とした。TIMESTAMPの`CURRENT_TIMESTAMP`と同じくセッションタイムゾーン基準。
+- UUID(RAW(16))の既定値リテラル`NEW_GUID()`を`SYS_GUID()`へ修正。
+- 11g以降は仮想列をformulaとして読み取りCREATEも生成していたが、`supportsColumnFormula()`がfalseのためINSERT/UPDATE/MERGEに式が値として出力されていた(ORA-54013)。11g以降でtrueとし、`Oracle11gR2`の継承元を`Oracle10g`から`Oracle11g`へ修正した。これに伴い`instanceof Oracle11g || instanceof Oracle11gR2`の重複判定を整理した。10g以前はfalseのまま。
+- 共通の`AbstractMergeFactory`で計算列をUSINGの列から除外した。従来は値定義がnullの列も出力していた。
+- Oracleはテーブル別名に`AS`を使用できないが、MERGEの`_target_`/`_source_`に`AS`を付けていた。`AbstractMergeTableFactory`で`supportsTableNameAlias()`に従うようにした。`supportsTableNameAlias()`がfalseのDialectはOracleのみ。
+- 23ai/26aiは`getSelectDummyTableName()`がnullのため、`INSERT_SELECT_NOT_EXISTS`が`FROM WHERE NOT EXISTS`となっていた。共通Factoryでダミーテーブルがない場合はFROM句を省略する(23aiはFROMなしSELECTでWHEREを使用可能)。MERGEのSELECT側も同様にnullを出力しない。
+- 12c以降で再登録するVARCHAR2(32767)にBYTE/CHARセマンティクスの指定がなく、VARCHARの代表型でセマンティクスが失われていた。
+- `matchDataTypeName`が常にtrueを返していた。VARCHAR2/NVARCHAR2のような末尾2の型名だけを追加で一致させる。
+- `getTemporaryTableName`が引数のスキーマ修飾指定を無視していた。既定の`decorateSchemaName=true`では出力は変わらない。
+- システムスキーマに12c以降のOracle管理ユーザー(AUDSYS、XDB、WMSYS、GSMADMIN_INTERNAL等)を追加し、配列はコピーを返す。
+- 冗長な`hashCode`/`equals`の再定義と、`OracleDialectResolver`の9/8系の重複分岐を削除した。等価性はクラス単位のままで動作は変わらない。
+
+## 2026-11-15: MAX_STRING_SIZEの切り替え
+
+12c以降のVARCHAR2/NVARCHAR2/RAWの最大長は`MAX_STRING_SIZE`で決まる(STANDARD: 4000/4000/2000バイト、EXTENDED: 32767バイト)。従来は12c以降で常にEXTENDEDを前提としていたが、次のように変更した。
+
+- `OracleMaxStringSize`(STANDARD/EXTENDED)を追加し、`Oracle#getMaxStringSize()`で参照できる。既定の`DialectHolder.oracle12cDialect`～`oracle26aiDialect`はSTANDARD、`oracle12cExtendedDialect`～`oracle26aiExtendedDialect`がEXTENDED。`Oracle#withMaxStringSize`または`DialectHolder.getDialect(dialect, size)`で切り替える。同じバージョンでもMAX_STRING_SIZEが異なるDialectは`equals`しない。11gR2以前でEXTENDEDを指定するとエラー。
+- 接続から判定する場合は`OracleDialectResolver`が`SELECT CAST(NULL AS VARCHAR2(32767)) FROM DUAL`を実行し、成功すればEXTENDED、ORA-00910ならSTANDARDとする。権限は不要。結果はJDBC URLごとにJVM内でキャッシュする。それ以外のエラーは、Dialectオプションで指定するよう促すメッセージ付きで失敗させる。
+- 接続がない場合(Schema XMLからのSQL生成や製品名とバージョンからの解決)はSTANDARD。
+- Dialectオプション`oracle.maxStringSize`で判定結果を上書きできる。共通の仕組みとして`SqlappDataSource#setDialectOptions`、`AbstractConnection#getDialectOptions`、`DialectResolver#getDialect(DatabaseMetaData, Map)`、`ProductNameDialectResolver#applyDialectOptions`を追加した。接続先で使用できないオプションや不正な値はエラー。
+- Gradleプラグインは`dataSource { dialectOptions.put('oracle.maxStringSize', 'STANDARD') }`、設定ファイルは`dialect.oracle.maxStringSize`(YAMLでは`dialect:`の入れ子)で指定する。`DataSourceConfigFiles#dialectOptions`で取り出し、HikariCPの設定としては扱わない。デスクトップアプリは読み込んだ設定ファイルの`dialect.*`を接続に渡す(`PlanningJdbc`。オプションがある場合だけ接続を`SqlappConnection`でラップする)。
+- 接続なしでSQLを生成するコマンド(`GenerateSimpleSqlCommand`、`GenerateDiffSqlCommand`、`GenerateLegacyRdbLoaderCommand`)は`DialectOptionsProperty`でオプションを受け取り、Schema XMLの製品情報や製品名から求めたDialectに`DialectResolver#applyDialectOptions`で適用する。Gradleでは`generateSql`、`generateDiffSql`、`generateLegacyRdbLoader`タスクの`dialectOptions`。
+- `AbstractStatement#getConnection()`は、ラップ済みのConnectionを返すようにした。これにより、Statementから取得したConnectionでもDialectオプションが失われない。
+
+単体テスト`OracleDialectCorrectnessTest`(12件)を追加し、修正前のコードでは10件が失敗することを確認した。`OracleMergeFactoryTest`の期待値は`AS`なしの別名へ更新した。sqlapp-coreと全`sqlapp-core-*`モジュールの単体テストを実行し、失敗は修正前から失敗している`PostgresAlterTableSqlFactoryTest.testRenameTable`と`SpannerLengthMigrationTest.rejectsArraysKeysAndMixedTypeChanges`の2件のみ。実DBでは未検証。
+
 ## 過去のOracle仕様参照
 
 - [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。

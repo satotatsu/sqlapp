@@ -38,6 +38,23 @@ class DataSourceConfigFilesTest {
 	}
 
 	@Test
+	void dialectOptionsAreReadButNotAppliedToHikari() throws Exception {
+		final var yaml = Files.writeString(directory.resolve("dataSource.yaml"),
+				"jdbcUrl: jdbc:hsqldb:mem:dialect\ndialect:\n  oracle:\n    maxStringSize: STANDARD\n");
+		final var settings = DataSourceConfigFiles.read(yaml);
+		assertEquals(Map.of("oracle.maxStringSize", "STANDARD"), DataSourceConfigFiles.dialectOptions(settings));
+		final var config = new HikariConfig();
+		assertEquals(java.util.List.of(), DataSourceConfigFiles.applyTo(config, settings, name -> null));
+		assertTrue(config.getDataSourceProperties().isEmpty());
+		final var properties = Files.writeString(directory.resolve("dataSource.properties"),
+				"jdbcUrl=jdbc:hsqldb:mem:dialect\ndialect.oracle.maxStringSize=EXTENDED\n");
+		assertEquals(Map.of("oracle.maxStringSize", "EXTENDED"),
+				DataSourceConfigFiles.dialectOptions(DataSourceConfigFiles.read(properties)));
+		assertEquals(Map.of("oracle.maxStringSize", "EXTENDED"),
+				DataSourceConfigFiles.dialectOptions(DataSourceConfigFiles.read(yaml, properties)));
+	}
+
+	@Test
 	void laterFilesOverrideEarlierValuesKeyByKey() throws Exception {
 		final var shared = Files.writeString(directory.resolve("dataSource.yaml"),
 				"jdbcUrl: jdbc:hsqldb:mem:shared\nusername: app\npassword: committed\n");

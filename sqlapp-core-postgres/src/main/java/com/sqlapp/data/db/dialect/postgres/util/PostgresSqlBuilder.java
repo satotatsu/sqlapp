@@ -179,7 +179,8 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 				}
 				return this;
 			}
-			if (column.getDataType() == DataType.VARBINARY && column.getLength() == null) {
+			if (column.getDataType() == DataType.VARBIT && column.getLength() == null) {
+				// BIT VARYING without a length is unlimited.
 				_add("VARBIT");
 				return this;
 			}

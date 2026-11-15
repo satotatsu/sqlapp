@@ -842,7 +842,9 @@ class CockroachMetadataReaderTest {
 					assertTrue(rows.next());
 					assertEquals(10, rows.getInt(1));
 				}
-				var source = read(c, name).getSequences().get("seq");
+				// Detach the sequence: under a Schema its schema name is the Schema's name and
+				// is not compared, so a move is only visible between detached objects.
+				var source = read(c, name).getSequences().get("seq").clone();
 				apply(c, source.diff(source.clone().setSchemaName(destination)));
 				assertTrue(read(c, name).getSequences().isEmpty());
 				assertEquals(java.math.BigInteger.TEN, read(c, destination).getSequences().get("seq").getStartValue());

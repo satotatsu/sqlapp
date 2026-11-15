@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.GenerateSqlTaskProperties;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DialectOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
@@ -46,7 +47,7 @@ import com.sqlapp.util.Java8DateUtils;
 @DisableCachingByDefault
 public abstract class AbstractGenerateSqlTask<T extends AbstractCommand> extends AbstractDbTask<T>
 		implements SchemaOptionTaskProperty, TableOptionsTaskProperty, OutputDirectoryTaskProperty,
-		TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty {
+		TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty, DialectOptionsTaskProperty {
 
 	protected String toString(SqlType sqlType) {
 		return sqlType.toString().toLowerCase();

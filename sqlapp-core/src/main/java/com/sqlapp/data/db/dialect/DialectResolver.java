@@ -40,6 +40,8 @@ import org.apache.logging.log4j.Logger;
 import com.sqlapp.data.db.dialect.resolver.DefaultDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.jdbc.AbstractConnection;
+import com.sqlapp.jdbc.AbstractDatabaseMetaData;
 import com.sqlapp.util.ClassFinder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
@@ -220,7 +222,7 @@ public class DialectResolver extends AbstractDialectResolver {
 	 * @param connection
 	 */
 	public Dialect getDialect(final Connection connection) {
-		return getDialect(getDatabaseMetaData(connection));
+		return getDialect(getDatabaseMetaData(connection), getDialectOptions(connection));
 	}
 
 	/**
@@ -242,15 +244,93 @@ public class DialectResolver extends AbstractDialectResolver {
 	 * @param databaseMetaData
 	 */
 	public Dialect getDialect(final DatabaseMetaData databaseMetaData) {
+		Map<String, String> dialectOptions = Map.of();
+		if (databaseMetaData instanceof AbstractDatabaseMetaData) {
+			// sqlappでラップした接続のメタデータはDialectオプションを持つ接続を返す
+			try {
+				dialectOptions = getDialectOptions(databaseMetaData.getConnection());
+			} catch (final SQLException e) {
+				throw new IllegalStateException("Cannot read the connection of the database metadata", e);
+			}
+		}
+		return getDialect(databaseMetaData, dialectOptions);
+	}
+
+	/**
+	 * Dialectの取得
+	 * 
+	 * @param databaseMetaData DatabaseMetaData
+	 * @param dialectOptions   データソースで指定したDialectオプション(例: oracle.maxStringSize)
+	 * @throws IllegalArgumentException 接続先のDBで使用できないオプションや不正な値の場合
+	 */
+	public Dialect getDialect(final DatabaseMetaData databaseMetaData, final Map<String, String> dialectOptions) {
+		final Map<String, String> options = dialectOptions == null ? Map.of() : dialectOptions;
 		for (ProductNameDialectResolver resolver : getResolverList()) {
-			final Dialect dialect = resolver.resolveDatabaseMetaData(databaseMetaData);
+			final Dialect dialect = resolver.resolveDatabaseMetaData(databaseMetaData, options);
 			if (dialect != null) {
-				return dialect;
+				return options.isEmpty() ? dialect : resolver.applyDialectOptions(dialect, options);
 			}
 		}
 		final ProductVersionInfo productVersionInfo = DbUtils.getProductVersionInfo(databaseMetaData);
 		return getDialect(productVersionInfo.getName(), productVersionInfo.getMajorVersion(),
-				productVersionInfo.getMinorVersion(), productVersionInfo.getRevision());
+				productVersionInfo.getMinorVersion(), productVersionInfo.getRevision(), options);
+	}
+
+	/**
+	 * Dialectの取得
+	 * 
+	 * @param dbProductName  DB製品名
+	 * @param majorVersion   メジャーバージョン
+	 * @param minorVersion   マイナーバージョン
+	 * @param revision       リビジョン
+	 * @param dialectOptions Dialectオプション(例: oracle.maxStringSize)
+	 * @throws IllegalArgumentException 対象のDBで使用できないオプションや不正な値の場合
+	 */
+	public Dialect getDialect(final String dbProductName, final int majorVersion, final int minorVersion,
+			final Integer revision, final Map<String, String> dialectOptions) {
+		final Dialect dialect = getDialect(dbProductName, majorVersion, minorVersion, revision);
+		if (dialectOptions == null || dialectOptions.isEmpty()) {
+			return dialect;
+		}
+		final String name = dbProductName == null ? null : dbProductName.trim();
+		final ProductNameDialectResolver resolver = name == null ? null : getResolverMap().get(name);
+		if (resolver == null) {
+			throw new IllegalArgumentException(
+					"Dialect options " + dialectOptions.keySet() + " cannot be applied to " + dbProductName);
+		}
+		return resolver.applyDialectOptions(dialect, dialectOptions);
+	}
+
+	/**
+	 * 解決済みのDialectにDialectオプションを適用します。Schema XMLの製品情報から求めたDialectなど、接続のない場合に使用します。
+	 * 
+	 * @param dialect        Dialect
+	 * @param dialectOptions Dialectオプション(例: oracle.maxStringSize)
+	 * @return オプションを適用したDialect
+	 * @throws IllegalArgumentException 対象のDBで使用できないオプションや不正な値の場合
+	 */
+	public Dialect applyDialectOptions(final Dialect dialect, final Map<String, String> dialectOptions) {
+		if (dialectOptions == null || dialectOptions.isEmpty() || dialect == null) {
+			if (dialect == null && dialectOptions != null && !dialectOptions.isEmpty()) {
+				throw new IllegalArgumentException(
+						"Dialect options " + dialectOptions.keySet() + " require a database product.");
+			}
+			return dialect;
+		}
+		for (final ProductNameDialectResolver resolver : getResolverList()) {
+			if (resolver.matchesProductName(dialect.getProductName())) {
+				return resolver.applyDialectOptions(dialect, dialectOptions);
+			}
+		}
+		throw new IllegalArgumentException(
+				"Dialect options " + dialectOptions.keySet() + " cannot be applied to " + dialect.getProductName());
+	}
+
+	private static Map<String, String> getDialectOptions(final Connection connection) {
+		if (connection instanceof AbstractConnection) {
+			return ((AbstractConnection) connection).getDialectOptions();
+		}
+		return Map.of();
 	}
 
 	public Dialect getDefaultDialect() {

@@ -8,6 +8,7 @@
 - [Execution reports](#execution-reports)
 - [Target-validation approval gates](#target-validation-approval-gates)
 - [Validate before the deployment window](#validate-before-the-deployment-window)
+- [Column types and value conversions](#column-types-and-value-conversions)
 - [Job identity and checkpoint configuration](#job-identity-and-checkpoint-configuration)
 - [Operational reports](#operational-reports)
 - [Post-migration verification](#post-migration-verification)
@@ -218,6 +219,46 @@ tasks:
 ```
 
 
+
+## Column types and value conversions
+
+A task can change the copy type of a column with `columnTypes` and convert source
+values with `columnConversions`, both keyed by source column name.
+
+```yaml
+tasks:
+  - id: customers
+    table: public.customers
+    columnTypes:
+      status: "VARCHAR(10)"
+    columnConversions:
+      customer_name: "value == null ? null : value.trim()"
+      status: "value == 'A' ? 'ACTIVE' : 'INACTIVE'"
+```
+
+A column type is a sqlapp `DataType` with optional length and scale, such as
+`VARCHAR(10)` or `DECIMAL(12,2)`. Rows are read with the Schema XML types and
+then projected into the copy types, which are also used for the target model,
+checkpoint chunk hashes, verification and repair. A non-NULL value that cannot be
+represented in its copy type stops the job instead of becoming NULL. The task does
+not create or alter target tables; prepare their definitions separately.
+
+Expressions receive `value` (this column's source value), `column` (the source
+column name) and `row` (a read-only map of all unconverted source values). The
+result is stored through the column's copy type. Conversions are applied where
+source rows are read, so the copy, checkpoint chunk hashes, verification and repair
+planning all use the converted values. Expressions must be deterministic;
+non-deterministic results appear as verification mismatches.
+
+Primary-key, `keysetColumns` and `keyColumns` columns can be neither retyped nor
+converted. Unknown columns, invalid types and blank or uncompilable expressions
+fail while resolving the job. The fingerprint of the types and expressions is
+appended to the effective `sourceFingerprint` (`columnConversions=sha256:...`,
+after any configured value), so it is part of the plan fingerprint and of saved
+checkpoints: changing a type or expression makes `resume` reject the earlier
+checkpoint instead of mixing old and new values. Reset the checkpoint deliberately
+when new settings should replace earlier work. Expressions run with the privileges
+of the migration process; treat job files that contain them as code.
 
 ## Job identity and checkpoint configuration
 

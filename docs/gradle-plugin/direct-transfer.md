@@ -281,7 +281,8 @@ columns together, retaining composite-key order and index options. It leaves the
 original Schema XML unchanged. Name mappings support both `CREATE_MISSING` and
 `APPLY_DIFFERENCES`; differences compare the desired mapped names with the target,
 and do **not** infer an ALTER RENAME. Existing destructive-change guards still
-apply. Types, values and SQL expressions are not transformed. When names change,
+apply. SQL expressions are not transformed; types and values change only through
+optional [column types and conversions](#column-types-and-value-conversions). When names change,
 `[SCHEMA_MAPPING_EXPRESSIONS]` warns that checks, defaults, generated expressions
 and predicates remain verbatim; inspect the generated SQL. `ERROR` policy rejects
 this warning, while `WARN` permits trying the DDL and refining the configuration.
@@ -316,6 +317,57 @@ and captured mappings must still match that pin, including comment-only edits.
 The bulk execution plan fingerprint retains its existing semantics. See the
 [direct copy example](../examples/direct-transfer/direct-mapped.yaml).
 CSV export/import still reject `mappingFile` explicitly.
+
+#### Column types and value conversions
+
+A column entry is either a target name or an object with any of `name`, `type`
+and `conversion`:
+
+```yaml
+formatVersion: 1
+tables:
+  PUBLIC.CUSTOMERS:
+    columns:
+      NAME: customer_name                      # rename only
+      ID: {type: BIGINT}                       # key: target definition only
+      STATUS: {type: "VARCHAR(10)", conversion: "value == 'A' ? 'ACTIVE' : 'INACTIVE'"}
+      NOTE: {name: memo, conversion: "row['NAME'] + ' / ' + value"}
+```
+
+`type` is a dialect-independent sqlapp `DataType` with optional length and scale,
+such as `VARCHAR(10)`, `DECIMAL(12,2)`, `BIGINT` or `TIMESTAMP`; the target
+dialect's SQL builder chooses the product type. It replaces the source column's
+type in the projected target definition for `CREATE_MISSING`, `APPLY_DIFFERENCES`
+and existing-table compatibility checks, including in `SCHEMA_ONLY` jobs. For
+non-key columns it is also the copy type: source values (or conversion results)
+are converted to it before they are written, hashed for checkpoints and compared
+during verification. A non-NULL value that cannot be represented in the type stops
+the copy instead of becoming NULL. Primary-key columns keep their source type while
+copying, so ordering and resume tokens are unchanged; their mapped type changes
+only the target definition.
+
+`conversion` is an MVEL expression. It receives `value` (this column's source
+value), `column` (the source column name) and `row` (a read-only map of every
+*unconverted* source value by source column name), is evaluated for every row,
+including NULL values, and its result is stored through the column's copy type.
+The source database is only read. Conversions are applied where source rows are
+read, so the copy, chunk checkpoints, post-copy verification and staged
+replacement all use the same converted values. Keep expressions deterministic (no
+clocks or random values), or verification will report mismatches. Primary-key,
+keyset and UPSERT key columns cannot be converted. Unknown columns, invalid types
+and blank or uncompilable expressions are rejected during review, before any target
+change. A failing expression stops the copy with the table and column name; source
+values are omitted from the message.
+
+The generated bulk job receives these settings as `columnTypes` and
+`columnConversions`, and their fingerprint becomes part of the effective
+`sourceFingerprint`, so changed types or expressions cannot resume earlier
+checkpoints. `SCHEMA_ONLY` jobs apply types and have no rows to convert. FILE
+export/import reject mappings with types or conversions instead of silently
+ignoring them. The GUI name editor keeps YAML-authored types and conversions when
+names are edited and saved; author them in the YAML file. Expressions run with the
+privileges of the migration process, so review mapping files as you would code.
+
 In **Job settings… → Edit names…**, edit target table names in the Tables tab
 and source-to-target column names in the Columns tab without writing YAML.
 For an optional offline column-definition preview, choose **Optional target

@@ -48,7 +48,7 @@ class SapHanaDialectFeatureTest {
 	void reportsHanaCapabilities() {
 		for (Dialect dialect : dialects) {
 			assertTrue(dialect.supportsColumnFormula());
-			assertEquals(32767, dialect.getMaxStatementParameterCount());
+			assertEquals(65535, dialect.getMaxStatementParameterCount());
 			assertTrue(dialect.supportsSequence());
 			assertEquals("SELECT SEQ1.NEXTVAL FROM DUMMY", dialect.getSequenceNextValString("SEQ1"));
 			assertTrue(dialect.supportsLimit());
@@ -93,7 +93,7 @@ class SapHanaDialectFeatureTest {
 			assertFalse(update.contains("TOTAL"), update);
 			String merge = registry.createSql(table, SqlType.MERGE).getFirst().getSqlText();
 			assertFalse(merge.contains("PRICE * 2"), merge);
-			assertTrue(merge.contains(", NULL AS TOTAL\n"), merge);
+			assertFalse(merge.contains("AS TOTAL"), merge);
 			assertTrue(merge.contains("/*ID*/0 AS ID"), merge);
 			assertFalse(merge.contains("_source_ ("), merge);
 			assertFalse(merge.contains("_target_.TOTAL"), merge);
@@ -164,6 +164,22 @@ class SapHanaDialectFeatureTest {
 			assertThrows(IllegalArgumentException.class, () -> registry.createSql(synonym, SqlType.CREATE));
 			synonym.setDbLinkName(null).setObjectName(null);
 			assertThrows(IllegalArgumentException.class, () -> registry.createSql(synonym, SqlType.CREATE));
+		}
+	}
+
+	@Test
+	void omitsSystemGeneratedConstraintNames() {
+		for (Dialect dialect : dialects) {
+			Table table = new Table("ITEMS").setDialect(dialect);
+			table.getColumns().add("ID", c -> c.setDataType(DataType.INT).setNotNull(true));
+			table.getColumns().add("CODE", c -> c.setDataType(DataType.INT));
+			table.getConstraints().addUniqueConstraint("_SYS_TREE_CS_#158276_#0_#P0", true,
+					table.getColumns().get("ID"));
+			table.getConstraints().addUniqueConstraint("ITEMS_CODE_UK", false, table.getColumns().get("CODE"));
+			String sql = dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE).getFirst().getSqlText();
+			assertFalse(sql.contains("_SYS_"), sql);
+			assertTrue(sql.contains(", PRIMARY KEY ( ID )"), sql);
+			assertTrue(sql.contains(", CONSTRAINT ITEMS_CODE_UK UNIQUE ( CODE )"), sql);
 		}
 	}
 

@@ -47,18 +47,16 @@ public class Oracle10g extends Oracle {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected Oracle10g(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
+	}
+
 	/**
 	 * データ型の登録
 	 */
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
-		// Single
-		getDbDataTypes().addReal("BINARY_FLOAT", type -> {
-		});
-		// Double
-		getDbDataTypes().addDouble("BINARY_DOUBLE", type -> {
-		});
 		// GEOMETRY
 		GeometryUtils.run(new Runnable() {
 			@Override
@@ -68,22 +66,6 @@ public class Oracle10g extends Oracle {
 				});
 			}
 		});
-	}
-
-	@Override
-	public int hashCode() {
-		return getProductName().hashCode() + 1;
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

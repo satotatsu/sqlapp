@@ -22,6 +22,10 @@ public class Oracle21c extends Oracle19c {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected Oracle21c(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
+	}
+
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
