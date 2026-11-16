@@ -84,8 +84,11 @@ public class H2CatalogReader extends AbstractISCatalogReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNodeCache().getString("catalogs.sql");
-		return node;
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("catalogs_200.sql");
+		}
+		return getSqlNodeCache().getString("catalogs.sql");
 	}
 
 	@Override

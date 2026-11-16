@@ -40,20 +40,28 @@ public class H2GeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	@Override
 	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
-		byte[] bytes = rs.getBytes(columnIndex);
-		WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
-		return decoder.decode(ByteBuffer.from(bytes));
+		return decode(rs.getBytes(columnIndex));
 	}
 
 	@Override
 	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
-		byte[] bytes = rs.getBytes(columnLabel);
+		return decode(rs.getBytes(columnLabel));
+	}
+
+	private static Object decode(byte[] bytes) {
+		if (bytes == null) {
+			return null;
+		}
 		WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
 		return decoder.decode(ByteBuffer.from(bytes));
 	}
 
 	@Override
 	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+		if (x == null) {
+			stmt.setBytes(parameterIndex, null);
+			return;
+		}
 		Geometry<?> geometry = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
 		WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.POSTGIS_EWKB_1);
 		ByteBuffer buffer = encoder.encode(geometry, ByteOrder.NDR);

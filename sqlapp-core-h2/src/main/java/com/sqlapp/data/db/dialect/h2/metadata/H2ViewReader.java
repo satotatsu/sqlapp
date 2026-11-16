@@ -49,8 +49,21 @@ public class H2ViewReader extends AbstractISViewReader {
 	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
-		setViewDefinition(table, getString(rs, "VIEW_DEFINITION"));
+		String definition = getString(rs, "VIEW_DEFINITION");
+		if (definition == null && isSystemSchema(table.getSchemaName())) {
+			// Built-in INFORMATION_SCHEMA views expose no definition and are never recreated.
+			table.setDefinition((String) null);
+			return table;
+		}
+		setViewDefinition(table, definition);
 		return table;
+	}
+
+	private boolean isSystemSchema(String schemaName) {
+		for (String system : getDialect().getSystemSchema())
+			if (system.equalsIgnoreCase(schemaName))
+				return true;
+		return false;
 	}
 
 	static void setViewDefinition(Table table, String viewDefinition) throws SQLException {

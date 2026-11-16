@@ -1,0 +1,10 @@
+SELECT
+  u.USER_NAME AS "NAME"
+, u.IS_ADMIN AS "ADMIN"
+, u.REMARKS
+FROM INFORMATION_SCHEMA.USERS u
+WHERE TRUE
+  /*if isNotEmpty(userName)*/
+  AND u.USER_NAME IN /*userName*/('%')
+  /*end*/
+ORDER BY u.USER_NAME

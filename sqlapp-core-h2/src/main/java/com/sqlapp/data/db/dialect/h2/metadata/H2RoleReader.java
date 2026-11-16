@@ -56,6 +56,10 @@ public class H2RoleReader extends RoleReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 2) {
+			return getSqlNodeCache().getString("roles_200.sql");
+		}
 		return getSqlNodeCache().getString("roles.sql");
 	}
 
