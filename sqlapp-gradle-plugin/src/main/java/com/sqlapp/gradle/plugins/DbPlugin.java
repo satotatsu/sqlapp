@@ -134,6 +134,8 @@ public class DbPlugin implements Plugin<Project> {
 		// sqlapp legacy migration
 		registerTask(project, "pliSchemaImport", PliSchemaImportTask.class, GROUP_LEGACY_MIGRATION,
 				"Imports PL/I record definitions as Schema XML.");
+		registerTask(project, "cobolSchemaImport", CobolSchemaImportTask.class, GROUP_LEGACY_MIGRATION,
+				"Imports COBOL copybook records as Schema XML.");
 		registerTask(project, "generateLegacyMigrationContract", GenerateLegacyMigrationContractTask.class, GROUP_LEGACY_MIGRATION,
 				"Generates an extraction and load contract from a mapping.");
 		registerTask(project, "generatePliCsvExtractor", GeneratePliCsvExtractorTask.class, GROUP_LEGACY_MIGRATION,

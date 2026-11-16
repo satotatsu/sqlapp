@@ -116,18 +116,45 @@ public class LegacyMigrationMappingBuilder {
 
 	public LegacyMigrationMapping buildPliImportMapping(File sourceFile, File targetFile, String encoding,
 			String schemaName, List<Map<String, Object>> tableLogs, List<String> warnings) {
+		return buildHostImportMapping(HostLanguage.PLI, sourceFile, targetFile, encoding, schemaName, tableLogs,
+				warnings);
+	}
+
+	/** Host language of an imported record definition. */
+	public enum HostLanguage {
+		PLI("PL/I", "PliSchemaImportCommand"), COBOL("COBOL", "CobolSchemaImportCommand");
+
+		private final String system;
+		private final String command;
+
+		HostLanguage(String system, String command) {
+			this.system = system;
+			this.command = command;
+		}
+	}
+
+	/**
+	 * Builds the migration mapping of a host record-definition import. Column logs
+	 * carry the source type ({@code sourceType}, or {@code pliType}),
+	 * {@code sourceLength}, {@code sourceScale}, {@code level},
+	 * {@code declaration}, {@code remarks}, and optionally {@code storage} and a
+	 * {@code conversion} map of language-specific entries. Table logs may carry
+	 * {@code storage} and {@code occurrence}.
+	 */
+	public LegacyMigrationMapping buildHostImportMapping(HostLanguage language, File sourceFile, File targetFile,
+			String encoding, String schemaName, List<Map<String, Object>> tableLogs, List<String> warnings) {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		String baseName = baseName(sourceFile.getName());
 		mapping.getMigration().setId(baseName + "-migration");
-		mapping.getMigration().setTitle(baseName + " PL/I legacy schema migration");
+		mapping.getMigration().setTitle(baseName + " " + language.system + " legacy schema migration");
 		mapping.getMigration().setGeneratedAt(OffsetDateTime.now().toString());
 		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
-		mapping.getSource().setSystem("PL/I");
+		mapping.getSource().setSystem(language.system);
 		mapping.getSource().setSchemaFile(sourceFile.getName());
 		mapping.getSource().setSchemaFingerprint(validator.fingerprint(sourceFile));
 		LegacyMigrationMapping.DefinitionFile definitionFile = new LegacyMigrationMapping.DefinitionFile();
 		definitionFile.setPath(sourceFile.getPath());
-		definitionFile.setType("PLI");
+		definitionFile.setType(language.name());
 		mapping.getSource().getDefinitionFiles().add(definitionFile);
 		mapping.getTarget().setSchemaFile(targetFile.getName());
 		mapping.getTarget().setSchemaFingerprint(validator.fingerprint(targetFile));
@@ -137,7 +164,7 @@ public class LegacyMigrationMappingBuilder {
 			String tableName = string(tableLog.get("table"));
 			Table table = findTable(targetRoot, null, schemaName, tableName);
 			if (table == null) {
-				throw new IllegalStateException("PL/I import mapping table was not found: " + tableName);
+				throw new IllegalStateException(language.system + " import mapping table was not found: " + tableName);
 			}
 			TableMapping tableMapping = new TableMapping();
 			tableMapping.setId(uniqueId(table));
@@ -156,7 +183,8 @@ public class LegacyMigrationMappingBuilder {
 				column.setTarget(string(columnLog.get("name")));
 				column.setAction(ColumnAction.COPY);
 				ColumnDefinition sourceDefinition = new ColumnDefinition();
-				sourceDefinition.setDataType(string(columnLog.get("pliType")));
+				sourceDefinition.setDataType(string(
+						columnLog.get("sourceType") != null ? columnLog.get("sourceType") : columnLog.get("pliType")));
 				if (columnLog.get("sourceLength") instanceof Number length) {
 					sourceDefinition.setLength(length.longValue());
 				}
@@ -165,13 +193,14 @@ public class LegacyMigrationMappingBuilder {
 				}
 				column.setSourceDefinition(sourceDefinition);
 				column.setTargetDefinition(definition(table.getColumns().get(column.getTarget())));
-				column.getConversion().put("language", "PLI");
+				column.getConversion().put("language", language.name());
 				column.getConversion().put("level", columnLog.get("level"));
 				column.getConversion().put("declaration", columnLog.get("declaration"));
 				column.getConversion().put("remarks", columnLog.get("remarks"));
 				if (columnLog.get("storage") != null) {
 					column.getConversion().put("storage", columnLog.get("storage"));
 				}
+				column.getConversion().putAll(map(columnLog.get("conversion")));
 				tableMapping.getColumns().add(column);
 			}
 			Map<String, Object> occurrence = map(tableLog.get("occurrence"));
@@ -226,7 +255,7 @@ public class LegacyMigrationMappingBuilder {
 		}
 		for (String warning : warnings) {
 			Diagnostic diagnostic = new Diagnostic();
-			diagnostic.setCode("PLI_IMPORT_WARNING");
+			diagnostic.setCode(language.name() + "_IMPORT_WARNING");
 			diagnostic.setSeverity(DiagnosticSeverity.WARNING);
 			diagnostic.setAction("REVIEW");
 			diagnostic.setMessage(warning);
@@ -234,7 +263,7 @@ public class LegacyMigrationMappingBuilder {
 		}
 		TransformationRecord record = new TransformationRecord();
 		record.setSequence(10);
-		record.setCommand("PliSchemaImportCommand");
+		record.setCommand(language.command);
 		record.setStatus(LegacyMigrationMapping.TransformationStatus.SUCCESS);
 		record.setInputFingerprint(mapping.getSource().getSchemaFingerprint());
 		record.setOutputFingerprint(mapping.getTarget().getSchemaFingerprint());

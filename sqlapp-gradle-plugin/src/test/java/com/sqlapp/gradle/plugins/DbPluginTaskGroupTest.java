@@ -31,7 +31,7 @@ class DbPluginTaskGroupTest {
 	@Test
 	void everyTaskHasGroupAndDescription() {
 		final List<Task> tasks = sqlappTasks();
-		assertEquals(48, tasks.size());
+		assertEquals(49, tasks.size());
 		for (final Task task : tasks) {
 			assertTrue(task.getGroup() != null && task.getGroup().startsWith("sqlapp "), task.getName());
 			assertTrue(task.getDescription() != null && !task.getDescription().isBlank(), task.getName());
