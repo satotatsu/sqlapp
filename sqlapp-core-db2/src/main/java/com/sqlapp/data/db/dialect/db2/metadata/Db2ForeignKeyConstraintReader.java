@@ -77,8 +77,8 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setSchemaName(fk_table_schema);
 					c.setTableName(fk_table_name);
-					c.setUpdateRule(CascadeRule.parse(getString(rs, UPDATE_RULE)));
-					c.setDeleteRule(CascadeRule.parse(getString(rs, DELETE_RULE)));
+					c.setUpdateRule(rule(getString(rs, UPDATE_RULE)));
+					c.setDeleteRule(rule(getString(rs, DELETE_RULE)));
 					c.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					c.setRemarks(getString(rs, REMARKS));
 					c.setEnable("Y".equals(getString(rs, "ENFORCED")));
@@ -105,6 +105,28 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 			setForeignKeyConstraintColumns(columns, List.of(constraint));
 		}
 		return list;
+	}
+
+	/**
+	 * SYSCAT.REFERENCES stores DELETERULE/UPDATERULE as one-letter codes (A = NO
+	 * ACTION, C = CASCADE, N = SET NULL, R = RESTRICT).
+	 */
+	static CascadeRule rule(final String code) {
+		if (code == null) {
+			return null;
+		}
+		switch (code.trim().toUpperCase(java.util.Locale.ROOT)) {
+		case "A":
+			return CascadeRule.None;
+		case "C":
+			return CascadeRule.Cascade;
+		case "N":
+			return CascadeRule.SetNull;
+		case "R":
+			return CascadeRule.Restrict;
+		default:
+			return CascadeRule.parse(code);
+		}
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

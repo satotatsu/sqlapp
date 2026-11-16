@@ -4,10 +4,10 @@ JOIN SYSCAT.ROUTINES r ON r.ROUTINESCHEMA=p.ROUTINESCHEMA AND r.SPECIFICNAME=p.S
 WHERE r.ROUTINEMODULEID IS NULL AND r.ROUTINETYPE='F' AND r.FUNCTIONTYPE IN ('T', 'R')
   AND p.ROWTYPE='R' AND p.ORDINAL>0
   /*if isNotEmpty(schemaName) */
-  AND rtrim(r.ROUTINESCHEMA) IN /*schemaName*/('%')
+  AND r.ROUTINESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(functionName) */
-  AND rtrim(r.ROUTINENAME) IN /*functionName*/('%')
+  AND r.ROUTINENAME IN /*functionName*/('%')
   /*end*/
 ORDER BY p.ROUTINESCHEMA, p.SPECIFICNAME, p.ORDINAL
 WITH UR

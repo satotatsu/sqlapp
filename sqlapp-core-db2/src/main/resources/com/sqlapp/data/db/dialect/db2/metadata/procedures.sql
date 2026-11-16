@@ -13,10 +13,10 @@ SELECT
 FROM SYSCAT.ROUTINES r
 WHERE ROUTINETYPE='P'
   /*if isNotEmpty(schemaName) */
-  AND rtrim(r.ROUTINESCHEMA) IN /*schemaName*/('%')
+  AND r.ROUTINESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(procedureName) */
-  AND rtrim(r.ROUTINENAME) IN /*procedureName*/('%')
+  AND r.ROUTINENAME IN /*procedureName*/('%')
   /*end*/
   AND rtrim(r.LANGUAGE) <>'' 
 ORDER BY r.ROUTINESCHEMA, r.ROUTINENAME, r.SPECIFICNAME

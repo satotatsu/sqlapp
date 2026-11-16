@@ -3,7 +3,7 @@ SELECT a.SCHEMANAME, a.GRANTOR, a.GRANTEE, a.GRANTEETYPE,
 FROM SYSCAT.SCHEMAAUTH a
 WHERE a.GRANTOR <> 'SYSIBM'
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(a.SCHEMANAME) IN /*schemaName*/('%')
+  AND a.SCHEMANAME IN /*schemaName*/('%')
 /*end*/
 ORDER BY a.SCHEMANAME, a.GRANTEE, a.GRANTOR
 WITH UR

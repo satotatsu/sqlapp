@@ -5,10 +5,10 @@ SELECT
 FROM SYSCAT.DATATYPES d
 WHERE 1=1
   /*if isNotEmpty(schemaName) */
-  AND rtrim(d.TYPESCHEMA) IN /*schemaName*/('%')
+  AND d.TYPESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(typeName) */
-  AND rtrim(d.TYPENAME) IN /*typeName*/('%')
+  AND d.TYPENAME IN /*typeName*/('%')
   /*end*/
   --A = ユーザー定義配列タイプ 
   --C = ユーザー定義カーソル・タイプ

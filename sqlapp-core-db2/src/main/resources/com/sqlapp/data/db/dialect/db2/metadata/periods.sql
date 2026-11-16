@@ -10,10 +10,10 @@ SELECT
 FROM SYSCAT.PERIODS p
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(p.TABSCHEMA) IN /*schemaName*/('%')
+  AND p.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(p.TABNAME) IN /*tableName*/('%')
+  AND p.TABNAME IN /*tableName*/('%')
   /*end*/
 ORDER BY p.TABSCHEMA, p.TABNAME, p.PERIODNAME
 WITH UR

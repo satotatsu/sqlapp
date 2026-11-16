@@ -6,10 +6,10 @@ FROM SYSCAT.TABLES t
 JOIN SYSCAT.VIEWS v ON v.VIEWSCHEMA=t.TABSCHEMA AND v.VIEWNAME=t.TABNAME
 WHERE t.TYPE='S'
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(t.TABSCHEMA) IN /*schemaName*/('%')
+  AND t.TABSCHEMA IN /*schemaName*/('%')
 /*end*/
 /*if isNotEmpty(tableName)*/
-  AND rtrim(t.TABNAME) IN /*tableName*/('%')
+  AND t.TABNAME IN /*tableName*/('%')
 /*end*/
 ORDER BY t.TABSCHEMA, t.TABNAME
 WITH UR

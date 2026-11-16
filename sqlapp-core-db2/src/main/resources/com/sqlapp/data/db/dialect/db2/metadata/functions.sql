@@ -19,10 +19,10 @@ LEFT JOIN SYSCAT.ROUTINEPARMS p
  AND p.ROWTYPE='R' AND p.ORDINAL=0
 WHERE ROUTINETYPE='F'
   /*if isNotEmpty(schemaName) */
-  AND rtrim(r.ROUTINESCHEMA) IN /*schemaName*/('%')
+  AND r.ROUTINESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(functionName) */
-  AND rtrim(r.ROUTINENAME) IN /*functionName*/('%')
+  AND r.ROUTINENAME IN /*functionName*/('%')
   /*end*/
   AND rtrim(r.LANGUAGE) <>''
 ORDER BY r.ROUTINESCHEMA, r.ROUTINENAME, r.SPECIFICNAME

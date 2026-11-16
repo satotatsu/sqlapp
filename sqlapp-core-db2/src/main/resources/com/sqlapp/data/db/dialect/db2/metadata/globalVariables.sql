@@ -4,10 +4,10 @@ SELECT v.VARSCHEMA, v.VARNAME, v.TYPESCHEMA, v.TYPENAME, v.TYPEMODULENAME, v.LEN
 FROM SYSCAT.VARIABLES v
 WHERE v.VARMODULEID IS NULL AND v.OWNER <> 'SYSIBM' AND v.READONLY <> 'S'
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(VARSCHEMA) IN /*schemaName*/('%')
+  AND VARSCHEMA IN /*schemaName*/('%')
 /*end*/
 /*if isNotEmpty(constantName)*/
-  AND rtrim(VARNAME) IN /*constantName*/('%')
+  AND VARNAME IN /*constantName*/('%')
 /*end*/
 ORDER BY VARSCHEMA, VARNAME
 WITH UR

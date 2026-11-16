@@ -24,10 +24,10 @@ FROM SYSCAT.TRIGGERS tr
 WHERE 1=1
   AND tr.VALID = 'Y'
   /*if isNotEmpty(schemaName) */
-  AND rtrim(tr.TRIGSCHEMA) IN /*schemaName*/('%')
+  AND tr.TRIGSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(triggerName) */
-  AND rtrim(tr.TRIGNAME) IN /*triggerName*/('%')
+  AND tr.TRIGNAME IN /*triggerName*/('%')
   /*end*/
 ORDER BY tr.TRIGSCHEMA, tr.TRIGNAME
 WITH UR

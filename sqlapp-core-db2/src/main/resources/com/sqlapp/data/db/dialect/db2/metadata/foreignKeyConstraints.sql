@@ -31,13 +31,13 @@ INNER JOIN SYSCAT.KEYCOLUSE pkc
 WHERE 1=1
   AND tc.TYPE='F'
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(r.TABSCHEMA) IN /*schemaName*/('%')
+  AND r.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(r.TABNAME) IN /*tableName*/('%')
+  AND r.TABNAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(constraintName)*/
-  AND rtrim(r.CONSTNAME) IN /*constraintName*/('%')
+  AND r.CONSTNAME IN /*constraintName*/('%')
   /*end*/
 ORDER BY r.TABSCHEMA, r.TABNAME, r.CONSTNAME,  fkc.COLSEQ
 WITH UR

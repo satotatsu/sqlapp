@@ -22,11 +22,11 @@ package com.sqlapp.data.db.dialect.db2;
 import static com.sqlapp.data.db.datatype.DataType.BOOLEAN;
 import static com.sqlapp.data.db.datatype.DataType.CHAR;
 import static com.sqlapp.data.db.datatype.DataType.DECIMAL;
-import static com.sqlapp.data.db.datatype.DataType.LONGVARBINARY;
 import static com.sqlapp.data.db.datatype.DataType.NCHAR;
 import static com.sqlapp.data.db.datatype.DataType.NUMERIC;
 import static com.sqlapp.data.db.datatype.DataType.NVARCHAR;
 import static com.sqlapp.data.db.datatype.DataType.UUID;
+import static com.sqlapp.data.db.datatype.DataType.VARBINARY;
 import static com.sqlapp.data.db.datatype.DataType.VARCHAR;
 import static com.sqlapp.util.CommonUtils.LEN_1GB;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
@@ -110,23 +110,23 @@ public class Db2 extends Dialect {
 		// BIT
 		getDbDataTypes().addBoolean("CHAR(1) FOR BIT DATA", type -> {
 			type.setPetternColumnTypeMatcher("CHAR(ACTER)?\\s*\\(\\s*1\\s*\\)\\s*FOR\\s+BIT\\s+DATA");
-			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
 		});
 		// BINARY
 		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
 			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
-			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
+			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'")
 					.setSizeSarrogation(1, BOOLEAN).setSizeSarrogation(16, UUID);
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {
 			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
-			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
 		});
 		// LONGVARBINARY(非推奨)
-		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
+		getDbDataTypes().addLongVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
 			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
-					.setDefaultValueLiteral("X'0'").setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+					.setDefaultValueLiteral("X'00'").setDeprecated(getDbDataTypes().getDbType(VARBINARY));
 		});
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
@@ -159,6 +159,10 @@ public class Db2 extends Dialect {
 		});
 		// DecimalFloat
 		getDbDataTypes().addDecimalFloat(34);
+		// Db2 spells the type DECFLOAT(16) / DECFLOAT(34).
+		((com.sqlapp.data.db.datatype.DecimalFloatType) getDbDataTypes()
+				.getDbType(com.sqlapp.data.db.datatype.DataType.DECIMALFLOAT)).setMaxPrecision(34)
+				.setDefaultPrecision(34).setCreateFormat("DECFLOAT(", ")").addColumnTypeMatcher("DECFLOAT");
 		// Date
 		getDbDataTypes().addDate(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
@@ -303,7 +307,8 @@ public class Db2 extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull || rule == CascadeRule.Cascade) {
+		if (rule == CascadeRule.None || rule == CascadeRule.Restrict || rule == CascadeRule.SetNull
+				|| rule == CascadeRule.Cascade) {
 			return true;
 		}
 		return false;
@@ -316,7 +321,7 @@ public class Db2 extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
-		if (rule == CascadeRule.None) {
+		if (rule == CascadeRule.None || rule == CascadeRule.Restrict) {
 			return true;
 		}
 		return false;

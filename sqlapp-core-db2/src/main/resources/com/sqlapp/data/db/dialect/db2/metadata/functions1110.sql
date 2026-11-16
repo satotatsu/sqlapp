@@ -30,10 +30,10 @@ LEFT JOIN SYSCAT.ROUTINEPARMS p
 WHERE r.ROUTINEMODULEID IS NULL
   AND ROUTINETYPE='F'
   /*if isNotEmpty(schemaName) */
-  AND rtrim(r.ROUTINESCHEMA) IN /*schemaName*/('%')
+  AND r.ROUTINESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(functionName) */
-  AND rtrim(r.ROUTINENAME) IN /*functionName*/('%')
+  AND r.ROUTINENAME IN /*functionName*/('%')
   /*end*/
   AND (rtrim(r.LANGUAGE) <>'' OR r.ORIGIN IN ('M', 'U'))
 ORDER BY r.ROUTINESCHEMA, r.ROUTINENAME, r.SPECIFICNAME

@@ -20,10 +20,10 @@ LEFT JOIN (
 WHERE d.TYPEMODULEID IS NULL
   AND d.OWNERTYPE <> 'S' AND d.OWNER <> 'SYSIBM'
   /*if isNotEmpty(schemaName) */
-  AND rtrim(d.TYPESCHEMA) IN /*schemaName*/('%')
+  AND d.TYPESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(typeName) */
-  AND rtrim(d.TYPENAME) IN /*typeName*/('%')
+  AND d.TYPENAME IN /*typeName*/('%')
   /*end*/
   --A = ユーザー定義配列タイプ 
   --C = ユーザー定義カーソル・タイプ

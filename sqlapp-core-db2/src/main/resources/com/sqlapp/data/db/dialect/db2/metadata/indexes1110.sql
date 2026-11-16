@@ -33,13 +33,13 @@ LEFT OUTER JOIN SYSCAT.TABLESPACES ts
   ON (i.TBSPACEID=ts.TBSPACEID)
 WHERE i.INDEXTYPE NOT IN ('XPTH','XRGN','XVIP')
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(i.TABSCHEMA) IN /*schemaName*/('%')
+  AND i.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(i.TABNAME) IN /*tableName*/('%')
+  AND i.TABNAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(indexName)*/
-  AND rtrim(i.INDNAME) IN /*indexName*/('%')
+  AND i.INDNAME IN /*indexName*/('%')
   /*end*/
 ORDER BY i.INDSCHEMA, i.TABNAME, i.INDNAME, ic.COLSEQ
 WITH UR

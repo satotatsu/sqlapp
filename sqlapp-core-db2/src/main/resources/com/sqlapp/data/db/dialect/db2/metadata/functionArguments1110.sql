@@ -12,10 +12,10 @@ WHERE r.ROUTINEMODULEID IS NULL
     AND x.ROUTINETYPE='F'
 )
   /*if isNotEmpty(schemaName) */
-  AND rtrim(r.ROUTINESCHEMA) IN /*schemaName*/('%')
+  AND r.ROUTINESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(routineName) */
-  AND rtrim(r.ROUTINENAME) IN /*routineName*/('%')
+  AND r.ROUTINENAME IN /*routineName*/('%')
   /*end*/
 ORDER BY r.ROUTINESCHEMA, r.ROUTINENAME, r.SPECIFICNAME, r.ORDINAL
 WITH UR

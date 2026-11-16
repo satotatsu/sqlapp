@@ -16,13 +16,13 @@ LEFT OUTER JOIN SYSCAT.TABLESPACES ts
   ON (i.TBSPACEID=ts.TBSPACEID)
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(i.TABSCHEMA) IN /*schemaName*/('%')
+  AND i.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(i.TABNAME) IN /*tableName*/('%')
+  AND i.TABNAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(indexName)*/
-  AND rtrim(ic.INDNAME) IN /*indexName*/('%')
+  AND ic.INDNAME IN /*indexName*/('%')
   /*end*/
 ORDER BY ic.INDSCHEMA, i.TABNAME, ic.INDNAME, ic.COLSEQ
 WITH UR

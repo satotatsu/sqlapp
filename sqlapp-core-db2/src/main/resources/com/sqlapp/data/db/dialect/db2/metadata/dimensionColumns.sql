@@ -8,9 +8,9 @@ SELECT
 FROM SYSCAT.COLUSE c
 WHERE c.TYPE = 'C'
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(c.TABSCHEMA) IN /*schemaName*/('%')
+  AND c.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(c.TABNAME) IN /*tableName*/('%')
+  AND c.TABNAME IN /*tableName*/('%')
   /*end*/
 ORDER BY c.TABSCHEMA, c.TABNAME, c.DIMENSION, c.COLSEQ

@@ -117,4 +117,47 @@ public class DialectResolverTest {
 		assertTrue(find);
 	}
 
+	private static com.sqlapp.data.schemas.ProductVersionInfo version(String productVersion, int major, int minor) {
+		var metadata = (java.sql.DatabaseMetaData) java.lang.reflect.Proxy.newProxyInstance(
+				DialectResolverTest.class.getClassLoader(), new Class<?>[] { java.sql.DatabaseMetaData.class },
+				(p, m, a) -> {
+					switch (m.getName()) {
+					case "getDatabaseProductName":
+						return "DB2/LINUXX8664";
+					case "getDatabaseProductVersion":
+						return productVersion;
+					case "getDatabaseMajorVersion":
+						return major;
+					case "getDatabaseMinorVersion":
+						return minor;
+					default:
+						throw new AssertionError(m.getName());
+					}
+				});
+		return com.sqlapp.util.DbUtils.getProductVersionInfo(metadata);
+	}
+
+	private static Dialect resolve(String productVersion, int major, int minor) {
+		var info = version(productVersion, major, minor);
+		return DialectResolver.getInstance().getDialect(info.getName(), info.getMajorVersion(), info.getMinorVersion(),
+				info.getRevision());
+	}
+
+	@Test
+	public void productVersionWithFixPackDigitResolvesByModificationLevel() {
+		// pppvvrrmf: the last digit is the fix pack, not part of the modification
+		// level.
+		org.junit.jupiter.api.Assertions.assertEquals(Integer.valueOf(4), version("SQL110540", 11, 5).getRevision());
+		assertTrue(resolve("SQL110540", 11, 5).getClass() == Db2_1150.class);
+		assertTrue(resolve("SQL110550", 11, 5).getClass() == com.sqlapp.data.db.dialect.db2.Db2_1155.class);
+		assertTrue(resolve("SQL110590", 11, 5).getClass() == com.sqlapp.data.db.dialect.db2.Db2_1155.class);
+		assertTrue(resolve("SQL110146", 11, 1).getClass() == Db2_1110.class);
+		assertTrue(resolve("SQL120100", 12, 1).getClass() == Db2_1210.class);
+		assertTrue(resolve("SQL120110", 12, 1).getClass() == Db2_1210.class);
+		assertTrue(resolve("SQL120120", 12, 1).getClass() == Db2_1212.class);
+		assertTrue(resolve("SQL120150", 12, 1).getClass() == Db2_1215.class);
+		// pppvvrrm of 11.1 GA or earlier servers
+		assertTrue(resolve("SQL10057", 10, 5).getClass() == com.sqlapp.data.db.dialect.db2.Db2_1050.class);
+		assertTrue(resolve("SQL09075", 9, 7).getClass() == Db2_970.class);
+	}
 }

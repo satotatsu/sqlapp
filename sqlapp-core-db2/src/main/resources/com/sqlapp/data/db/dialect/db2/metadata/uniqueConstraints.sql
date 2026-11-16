@@ -30,13 +30,13 @@ LEFT JOIN SYSCAT.INDEXCOLUSE ic
 WHERE 1=1
   AND tc.TYPE IN ('P', 'U')
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(tc.TABSCHEMA) IN /*schemaName*/('%')
+  AND tc.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(tc.TABNAME) IN /*tableName*/('%')
+  AND tc.TABNAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(constraintName)*/
-  AND rtrim(tc.CONSTNAME) IN /*constraintName*/('%')
+  AND tc.CONSTNAME IN /*constraintName*/('%')
   /*end*/
 ORDER BY tc.TABSCHEMA, tc.TABNAME, tc.CONSTNAME, tc.TYPE, kc.COLSEQ
 WITH UR

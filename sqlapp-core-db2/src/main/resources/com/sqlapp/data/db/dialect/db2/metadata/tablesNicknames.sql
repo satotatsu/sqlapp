@@ -16,10 +16,10 @@ LEFT JOIN SYSCAT.SERVERS s ON s.SERVERNAME=n.SERVERNAME
 LEFT JOIN SYSCAT.WRAPPERS w ON w.WRAPNAME=s.WRAPNAME
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(t.TABSCHEMA) IN /*schemaName*/('%')
+  AND t.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(t.TABNAME) IN /*tableName*/('%')
+  AND t.TABNAME IN /*tableName*/('%')
   /*end*/
   AND t.TYPE IN ('L', 'T', 'U', 'N')
 ORDER BY t.TABSCHEMA, t.TABNAME

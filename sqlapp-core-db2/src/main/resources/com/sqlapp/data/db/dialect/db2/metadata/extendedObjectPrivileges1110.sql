@@ -43,10 +43,10 @@ FROM (
 ) a
 WHERE a.GRANTOR <> 'SYSIBM' AND a.AUTH_STATE <> 'N'
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(a.schema_name) IN /*schemaName*/('%')
+  AND a.schema_name IN /*schemaName*/('%')
 /*end*/
 /*if isNotEmpty(objectName)*/
-  AND rtrim(a.object_name) IN /*objectName*/('%')
+  AND a.object_name IN /*objectName*/('%')
 /*end*/
 ORDER BY a.OBJECT_TYPE, a.schema_name, a.object_name, a.GRANTEE, a.GRANTOR, a.PRIVILEGE
 WITH UR

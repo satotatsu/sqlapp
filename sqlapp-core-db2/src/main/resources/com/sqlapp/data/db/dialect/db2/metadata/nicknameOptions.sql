@@ -7,10 +7,10 @@ SELECT o.* FROM (
 ) o
 WHERE 1=1
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(o.schema_name) IN /*schemaName*/('%')
+  AND o.schema_name IN /*schemaName*/('%')
 /*end*/
 /*if isNotEmpty(tableName)*/
-  AND rtrim(o.table_name) IN /*tableName*/('%')
+  AND o.table_name IN /*tableName*/('%')
 /*end*/
 ORDER BY o.schema_name, o.table_name, o.column_name, o.option_name
 WITH UR

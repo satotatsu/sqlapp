@@ -10,13 +10,13 @@ INNER JOIN SYSCAT.CHECKS c
   AND cc.TABNAME=c.TABNAME)
 WHERE 1=1
   /*if isNotEmpty(schemaName) */
-  AND rtrim(c.TABSCHEMA) IN /*schemaName*/('%')
+  AND c.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName) */
-  AND rtrim(c.TABNAME) IN /*tableName*/('%')
+  AND c.TABNAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(constraintName) */
-  AND rtrim(c.CONSTNAME) IN /*constraintName*/('%')
+  AND c.CONSTNAME IN /*constraintName*/('%')
   /*end*/
 ORDER BY c.TABSCHEMA, c.TABNAME, c.CONSTNAME
 WITH UR

@@ -10,10 +10,10 @@
 	WHERE 1=1
 	  AND t.TYPE IN ('A')
 	  /*if isNotEmpty(schemaName)*/
-	  AND rtrim(t.TABSCHEMA) IN /*schemaName*/('%')
+	  AND t.TABSCHEMA IN /*schemaName*/('%')
 	  /*end*/
 	  /*if isNotEmpty(synonymName)*/
-	  AND rtrim(t.TABNAME) IN /*synonymName*/('%')
+	  AND t.TABNAME IN /*synonymName*/('%')
 	  /*end*/
 ORDER BY schema_name, object_name
 WITH UR

@@ -4,7 +4,7 @@ SELECT a.GRANTOR, a.GRANTEE, a.GRANTEETYPE,
 FROM SYSCAT.DBAUTH a
 WHERE a.GRANTOR <> 'SYSIBM'
 /*if isNotEmpty(userName)*/
-  AND rtrim(a.GRANTEE) IN /*userName*/('%')
+  AND a.GRANTEE IN /*userName*/('%')
 /*end*/
 ORDER BY a.GRANTEE, a.GRANTEETYPE, a.GRANTOR
 WITH UR

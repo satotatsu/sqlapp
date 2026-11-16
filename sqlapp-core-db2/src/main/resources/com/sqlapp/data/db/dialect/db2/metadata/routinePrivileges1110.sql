@@ -5,10 +5,10 @@ LEFT JOIN SYSCAT.ROUTINES r ON r.ROUTINESCHEMA=a.SCHEMA AND r.SPECIFICNAME=a.SPE
 WHERE a.GRANTOR <> 'SYSIBM' AND a.EXECUTEAUTH <> 'N' AND a.ROUTINETYPE IN ('F', 'M', 'P')
  AND (a.SPECIFICNAME IS NULL OR r.SPECIFICNAME IS NOT NULL)
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(a.SCHEMA) IN /*schemaName*/('%')
+  AND a.SCHEMA IN /*schemaName*/('%')
 /*end*/
 /*if isNotEmpty(objectName)*/
-  AND COALESCE(rtrim(r.ROUTINENAME),rtrim(a.TYPENAME),'*') IN /*objectName*/('%')
+  AND COALESCE(r.ROUTINENAME,a.TYPENAME,'*') IN /*objectName*/('%')
 /*end*/
 ORDER BY a.SCHEMA, r.ROUTINENAME, a.GRANTEE, a.GRANTOR
 WITH UR

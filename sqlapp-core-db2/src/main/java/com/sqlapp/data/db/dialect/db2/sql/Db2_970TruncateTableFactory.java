@@ -43,6 +43,9 @@ public class Db2_970TruncateTableFactory extends AbstractTruncateTableFactory<Db
 	protected void addTruncateTable(Table obj, Db2SqlBuilder builder) {
 		builder.truncate().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		// Db2 LUW requires IMMEDIATE; the statement must be the first one in its unit
+		// of work.
+		builder.space()._add("IMMEDIATE");
 	}
 
 }

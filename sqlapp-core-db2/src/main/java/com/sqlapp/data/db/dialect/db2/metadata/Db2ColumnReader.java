@@ -118,7 +118,27 @@ public class Db2ColumnReader extends ColumnReader {
 		obj.setCollation(getString(rs, "COLLATIONNAME"));
 		obj.setRemarks(getString(rs, REMARKS));
 		String productDataType = getString(rs, "TYPENAME");
-		this.getDialect().setDbType(productDataType, length, scale, obj);
+		Long typeLength = length;
+		String typeName = productDataType;
+		final String builtinSchema = getString(rs, "TYPESCHEMA");
+		if (builtinSchema == null || "SYSIBM".equals(builtinSchema)) {
+			if ("TIMESTAMP".equals(productDataType)) {
+				// LENGTH is the storage length; the fractional seconds precision is in SCALE
+				// (Db2 9.7 or later, earlier releases have no TIMESTAMP(p)).
+				typeLength = getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_970 && scale != null
+						? Long.valueOf(scale.longValue())
+						: null;
+			} else if ("DECFLOAT".equals(productDataType) && length != null) {
+				// LENGTH is the number of bytes: 8 for DECFLOAT(16) and 16 for DECFLOAT(34).
+				typeName = com.sqlapp.data.db.datatype.DataType.DECIMALFLOAT.getTypeName();
+				if (length.longValue() == 8L) {
+					typeLength = 16L;
+				} else if (length.longValue() == 16L) {
+					typeLength = 34L;
+				}
+			}
+		}
+		this.getDialect().setDbType(typeName, typeLength, scale, obj);
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
 			if ("XML".equals(productDataType))
 				obj.setDataType(com.sqlapp.data.db.datatype.DataType.SQLXML);

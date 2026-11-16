@@ -2,7 +2,7 @@ SELECT c.*
 FROM SYSCAT.CONTROLS c
 WHERE c.CONTROLTYPE='R' AND c.IMPLICIT='N'
 /*if isNotEmpty(schemaName)*/
-  AND rtrim(c.CONTROLSCHEMA) IN /*schemaName*/('%')
+  AND c.CONTROLSCHEMA IN /*schemaName*/('%')
 /*end*/
 ORDER BY c.CONTROLSCHEMA, c.CONTROLNAME
 WITH UR

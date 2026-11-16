@@ -27,7 +27,9 @@ public class Db2CreateSequenceFactory extends AbstractCreateSequenceFactory<Db2S
 
 	@Override
 	protected void addCreateSequence(final Sequence obj, Db2SqlBuilder builder) {
-		builder.create().or().replace().sequence();
+		// OR REPLACE would silently reset an existing sequence and is not available
+		// before 9.7.
+		builder.create().sequence();
 	}
 
 	@Override

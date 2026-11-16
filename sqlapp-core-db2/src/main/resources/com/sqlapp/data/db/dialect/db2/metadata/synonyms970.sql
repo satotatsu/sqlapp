@@ -14,10 +14,10 @@ FROM
 	WHERE 1=1
 	  AND m.MODULETYPE='A'
 	  /*if isNotEmpty(schemaName)*/
-	  AND rtrim(m.MODULESCHEMA) IN /*schemaName*/('%')
+	  AND m.MODULESCHEMA IN /*schemaName*/('%')
 	  /*end*/
 	  /*if isNotEmpty(synonymName)*/
-	  AND rtrim(m.MODULENAME) IN /*synonymName*/('%')
+	  AND m.MODULENAME IN /*synonymName*/('%')
 	  /*end*/
     --sequence
 	UNION ALL
@@ -33,10 +33,10 @@ FROM
 	WHERE 1=1
 	  AND s.SEQTYPE='A'
 	  /*if isNotEmpty(schemaName) */
-	  AND rtrim(s.SEQSCHEMA) IN /*schemaName*/('%')
+	  AND s.SEQSCHEMA IN /*schemaName*/('%')
 	  /*end*/
 	  /*if isNotEmpty(synonymName) */
-	  AND rtrim(s.SEQNAME) IN /*synonymName*/('%')
+	  AND s.SEQNAME IN /*synonymName*/('%')
 	  /*end*/
 	--table
 	UNION ALL
@@ -52,10 +52,10 @@ FROM
 	WHERE 1=1
 	  AND t.TYPE IN ('A')
 	  /*if isNotEmpty(schemaName)*/
-	  AND rtrim(t.TABSCHEMA) IN /*schemaName*/('%')
+	  AND t.TABSCHEMA IN /*schemaName*/('%')
 	  /*end*/
 	  /*if isNotEmpty(synonymName)*/
-	  AND rtrim(t.TABNAME) IN /*synonymName*/('%')
+	  AND t.TABNAME IN /*synonymName*/('%')
 	  /*end*/
 )
 ORDER BY schema_name, object_name

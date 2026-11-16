@@ -6,10 +6,10 @@ FROM SYSCAT.DATATYPES d
 WHERE d.TYPEMODULEID IS NULL
   AND d.OWNERTYPE <> 'S' AND d.OWNER <> 'SYSIBM'
   /*if isNotEmpty(schemaName) */
-  AND rtrim(d.TYPESCHEMA) IN /*schemaName*/('%')
+  AND d.TYPESCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(domainName) */
-  AND rtrim(d.TYPENAME) IN /*domainName*/('%')
+  AND d.TYPENAME IN /*domainName*/('%')
   /*end*/
   --A = ユーザー定義配列タイプ 
   --C = ユーザー定義カーソル・タイプ

@@ -106,4 +106,28 @@ class Db2ColumnTypeRecreationTest {
 		assertEquals(DataType.VARCHAR, new Db2ColumnReader(DialectHolder.Db2_1010Dialect)
 				.createColumn(Db2MetadataParityTest.row(fields)).getDataType());
 	}
+
+	@Test
+	void timestampAndDecfloatUseDeclaredPrecisionInsteadOfCatalogStorageLength() throws Exception {
+		var fields = fields("TIMESTAMP");
+		fields.putAll(Map.of("LENGTH", "10", "SCALE", "6"));
+		Column timestamp = read(fields);
+		assertEquals(DataType.TIMESTAMP, timestamp.getDataType());
+		assertEquals(Long.valueOf(6), timestamp.getLength());
+		assertContains("TIMESTAMP(6)", create(timestamp));
+		fields.putAll(Map.of("LENGTH", "13", "SCALE", "12"));
+		assertContains("TIMESTAMP(12)", create(read(fields)));
+		fields = fields("DECFLOAT");
+		fields.put("LENGTH", "16");
+		Column decfloat = read(fields);
+		assertEquals(DataType.DECIMALFLOAT, decfloat.getDataType());
+		assertEquals(Long.valueOf(34), decfloat.getLength());
+		assertContains("DECFLOAT(34)", create(decfloat));
+		fields.put("LENGTH", "8");
+		assertContains("DECFLOAT(16)", create(read(fields)));
+	}
+
+	private static void assertContains(String expected, String ddl) {
+		assertTrue(ddl.contains(expected), ddl);
+	}
 }
