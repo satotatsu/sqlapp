@@ -7,8 +7,8 @@ canonical representation passed between the tasks.
 ## Recommended workflow
 
 ```text
-PL/I declaration
-  -> pliSchemaImport
+PL/I declaration or COBOL copybook
+  -> pliSchemaImport / cobolSchemaImport
   -> Schema XML and migration mapping
   -> generateNormalizationPlan
   -> reviewed normalization rules
@@ -194,6 +194,89 @@ picture and `FIXED DEC` data. Items that need halfword or larger alignment,
 such as `FIXED BIN` and `FLOAT` without `UNALIGNED`, are placed by the
 compiler's structure mapping; the import then omits offsets and adds a
 warning. Take offsets from the compiler `AGGREGATE` listing in that case.
+
+## `cobolSchemaImport`
+
+Parses a COBOL copybook and emits Schema XML and a migration mapping. The
+mapping records the storage layout in the same places as `pliSchemaImport`:
+each column's `conversion.storage` (`offset` and `length` in bytes, `usage`,
+and for numeric items `digits`, `scale`, `signed`, `signPosition` and
+`signSeparate`), the root table's `details.storage` (`recordLength`,
+`variableLength`), and each OCCURS table's `offset`, `length`,
+`elementLength`, `minimum` and `dependingOn` under `details.occurrence`.
+Offsets inside an OCCURS table are relative to one element. The COBOL name,
+category, PICTURE and level-88 conditions are recorded in `conversion`.
+
+| Property | Type | Required | Convention | Description |
+|---|---|---:|---|---|
+| `targetFile` | `RegularFileProperty` | yes | — | COBOL copybook |
+| `configurationFile` | `RegularFileProperty` | yes | — | Import configuration (below) |
+| `outputDirectory` | `DirectoryProperty` | yes | — | Schema XML output directory |
+| `encoding` | `Property<String>` | yes | `UTF-8` | Copybook text encoding |
+| `outputFileName` | `Property<String>` | no | command default | Schema XML filename |
+| `migrationMappingEnabled` | `Property<Boolean>` | yes | `true` | Generate the initial migration mapping |
+| `migrationMappingDirectory` | `DirectoryProperty` | no | command default | Mapping output directory |
+| `migrationMappingFileName` | `Property<String>` | no | command default | Mapping output filename |
+
+Configuration:
+
+```yaml
+formatVersion: 1
+schemaName: HOST
+sourceFormat: FIXED            # FIXED (columns 7-72) or FREE
+replacing:                     # like COPY ... REPLACING ==:PFX:== BY ==CUST==
+  ":PFX:": CUST
+recordName: CUSTOMER-REC       # for a copybook without a level-01 entry; default: file name
+includeRecords: []
+excludeRecords: []
+records:
+  - name: CUSTOMER-REC
+    tableName: CUSTOMER        # default: record name with '-' replaced by '_'
+    primaryKey: [CUST-ID]      # COBOL or column names
+redefines:                     # redefined item (path or name): selected alternative
+  BIRTH-DATE: BIRTH-DATE-N
+columnNames:                   # item path: column name
+  CUSTOMER-REC.ORDERS.ORDER-NO: ORDER_ID
+generatedTableNames:           # OCCURS item path: table name
+  CUSTOMER-REC.ORDERS: CUSTOMER_ORDER
+occurrenceColumnNamePattern: ${groupName}_NO
+prefixGroupRemarks: true
+```
+
+- Each record becomes a table. Group items are flattened; COBOL names become
+  column names with `-` replaced by `_`. Two items with the same name in one
+  table are rejected; give one of them a name in `columnNames`.
+- An item with OCCURS becomes a child table keyed by the parent key and an
+  occurrence number, as with PL/I arrays.
+- FILLER items are not imported; named items inside a FILLER group are.
+- For REDEFINES, the redefined item is imported and the redefining items are
+  reported as warnings, unless `redefines` selects another alternative.
+- Level-88 condition names are recorded in the mapping; comments become remarks.
+- The mapping's source column is the column name, because the contract uses it
+  as the staging column; the COBOL name stays in `sourcePath` and
+  `conversion.cobolName`.
+- Configuration entries that match nothing are rejected.
+
+| PICTURE / USAGE | Column type | Storage bytes |
+|---|---|---|
+| `X(n)`, `A(n)` | `CHAR(n)` | n |
+| `N(n)` (NATIONAL), `G(n)` (DISPLAY-1) | `NCHAR(n)` | 2n |
+| `9(p)V9(s)` DISPLAY | `DECIMAL(p+s,s)` | p+s, +1 with SIGN SEPARATE |
+| `9(p)V9(s)` COMP-3 / PACKED-DECIMAL | `DECIMAL(p+s,s)` | (p+s)/2+1 |
+| `9(n)` COMP / COMP-4 / BINARY | `SMALLINT` (n≤4), `INT` (n≤9), `BIGINT` (n≤18) | 2, 4, 8 |
+| `9(n)` COMP-5 | type that holds the full binary range of its storage | 2, 4, 8 |
+| `9(p)V9(s)` COMP, COMP-5 with decimals | `DECIMAL(p+s,s)` | 2, 4, 8 |
+| `9(p)P(n)` / `VP(n)9(p)` | `DECIMAL` with the scaled range | as above |
+| COMP-1 / COMP-2 | `REAL` / `DOUBLE` | 4 / 8 |
+| Edited pictures (`ZZ9.99-`, `99/99/99`) | `CHAR(display length)` with a warning | display length |
+
+Rejected because the layout would not be computed correctly: SYNCHRONIZED,
+USAGE POINTER, OCCURS DEPENDING ON followed by other items or inside another
+OCCURS, and a redefining item longer than the item it redefines. Level 66
+RENAMES is skipped with a warning.
+
+Reading host data sets (EBCDIC, packed decimal) directly with this layout is
+planned; until then, extract CSV on the host as for PL/I.
 
 ## `generateLegacyMigrationContract`
 

@@ -30,7 +30,7 @@ purpose. Use `gradlew tasks --group "sqlapp migration"` to show one group.
 | `sqlapp bulk migration` | `generateAccessBulkMigrationJobConfiguration`, `validateBulkMigrationTarget`, `executeBulkMigrationJob`, `generateBulkMigrationOperationalReport`, `verifyBulkMigrationEvidence`, `verifyBulkMigrationEvidenceReport`, `generateBulkMigrationJobRepairPlanReport`, `executeBulkMigrationJobRepair`, `verifyBulkMigrationJobRepairEvidence`, `verifyBulkMigrationJobRepairFailureEvidence`, `verifyBulkMigrationJobRepairOutcome`, `verifyBulkMigrationJobRepairOutcomeReport` |
 | `sqlapp migration snapshot` | `generateMigrationSnapshotApprovalReport`, `executeMigrationSnapshot`, `verifyMigrationSnapshotReport`, `verifyMigrationSnapshotFailureReport` |
 | `sqlapp transfer` | `transferDatabase`, `exportTransferFile`, `importTransferFile`, `compareTransferStaging` |
-| `sqlapp legacy migration` | `pliSchemaImport`, `generateLegacyMigrationContract`, `generatePliCsvExtractor`, `generateLegacyRdbLoader`, `loadLegacyHierarchy` |
+| `sqlapp legacy migration` | `pliSchemaImport`, `cobolSchemaImport`, `generateLegacyMigrationContract`, `generatePliCsvExtractor`, `generateLegacyRdbLoader`, `loadLegacyHierarchy` |
 
 Task types registered by a consuming build have no group unless the build sets
 one.
@@ -81,6 +81,7 @@ one.
 | `generateNormalizationPlan` | `GenerateNormalizationPlanTask` | `targetFile`, `outputDirectory`, optional mapping and analysis thresholds | YAML plan and optional preview Schema XML | No database access |
 | `columnRuleTransform` | `ColumnRuleTransformTask` | `targetFile`, `rulesFile`, `outputDirectory` | Transformed Schema XML and optional mapping | No database access |
 | `pliSchemaImport` | `PliSchemaImportTask` | `configurationFile`, `targetFile`, `outputDirectory` | Schema XML and optional migration mapping | No database access |
+| `cobolSchemaImport` | `CobolSchemaImportTask` | `configurationFile`, `targetFile`, `outputDirectory` | Schema XML and optional migration mapping with storage layout | No database access |
 | `generateLegacyMigrationContract` | `GenerateLegacyMigrationContractTask` | `mappingFile`, `outputDirectory` | Extraction/load contract | No database access |
 | `generatePliCsvExtractor` | `GeneratePliCsvExtractorTask` | `contractFile`, `outputDirectory` | PL/I CSV extraction artifacts | No database access |
 | `generateLegacyRdbLoader` | `GenerateLegacyRdbLoaderTask` | `contractFile`, `schemaFile`, `outputDirectory`, database identity/options | Load plan and optional runner template | No database access |
