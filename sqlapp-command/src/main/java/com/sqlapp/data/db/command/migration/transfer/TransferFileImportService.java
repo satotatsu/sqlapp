@@ -230,8 +230,10 @@ public final class TransferFileImportService {
 				var cells = new ArrayList<PreviewCell>();
 				for (var column : source.getTable().getColumns()) {
 					Object value = row.get(column);
-					boolean quoted = value instanceof String || TransferCsvTemporalCodec.temporal(column);
+					boolean quoted = value instanceof String || TransferCsvTemporalCodec.temporal(column)
+							|| TransferIntervalCodec.interval(column);
 					String text = value == null ? "null"
+							: TransferIntervalCodec.interval(column) ? TransferIntervalCodec.encode(column, value)
 							: TransferCsvTemporalCodec.temporal(column) ? TransferCsvTemporalCodec.encode(column, value)
 									: value.toString();
 					boolean truncated = text.codePointCount(0, text.length()) > 512;
@@ -751,6 +753,7 @@ public final class TransferFileImportService {
 
 	private static TransferSchemaPreparation.Plan schemaPlan(Loaded loaded, Connection target,
 			BulkMigrationJobPlan plan) throws Exception {
+		validateIntervalDestinations(loaded, target, plan);
 		var schema = TransferSchemaPreparation.plan(target, loaded.schema(), plan, loaded.configuration().schemaMode(),
 				loaded.configuration().compatibilityPolicy(), loaded.projection(),
 				loaded.configuration().effectiveGeneratedKeyColumn(), staged(loaded));
@@ -763,6 +766,77 @@ public final class TransferFileImportService {
 		return warnings.equals(schema.warnings()) ? schema
 				: TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(schema.fingerprint(),
 						schema.statements(), warnings, loaded.configuration().schemaMode()), schema.tables());
+	}
+
+	/** Validate interval changes before any target DDL or committed row write. */
+	private static void validateIntervalDestinations(Loaded loaded, Connection target,
+			BulkMigrationJobPlan plan) throws Exception {
+		if (plan.getTasks().stream().noneMatch(task -> task.getEffectiveSourceTable().getColumns().stream()
+				.anyMatch(TransferIntervalCodec::interval))) return;
+		var dialect = TransferJobPreparationService.dialect(target);
+		// Read the target column set once, never issue a catalog query per table/column.
+		var first = plan.getTasks().getFirst().getTargetTable();
+		var reader = dialect.getCatalogReader().getSchemaReader().getTableReader().getColumnReader();
+		reader.setCatalogName(first.getCatalogName());
+		reader.setSchemaName(first.getSchemaName());
+		var existing = reader.getAll(target);
+		for (var task : plan.getTasks()) {
+			var source = loaded.sources().get(task.getTaskId());
+			var columns = source.getTable().getColumns().stream().filter(TransferIntervalCodec::interval).toList();
+			if (columns.isEmpty()) continue;
+			var destinations = new LinkedHashMap<String, com.sqlapp.data.schemas.Column>();
+			for (var column : columns) {
+				var destination = task.getTargetTable().getColumns()
+						.get(task.getColumnMappings().getOrDefault(column.getName(), column.getName()));
+				if (loaded.configuration().schemaMode() != TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES) {
+					var planned = destination;
+					var matches = existing.stream().filter(candidate ->
+							planned.getTableName().equals(candidate.getTableName())
+							&& planned.getName().equals(candidate.getName())).toList();
+					if (matches.isEmpty())
+						matches = existing.stream().filter(candidate ->
+								planned.getTableName().equalsIgnoreCase(candidate.getTableName())
+								&& planned.getName().equalsIgnoreCase(candidate.getName())).toList();
+					if (matches.size() > 1)
+						throw new TransferSchemaPreparation.ValidationException("Ambiguous target interval column: " + column.getName());
+					if (!matches.isEmpty()) destination = matches.getFirst();
+				}
+				if (!TransferIntervalCodec.interval(destination))
+					throw new TransferSchemaPreparation.ValidationException("Target must retain interval column type: " + column.getName());
+				destinations.put(column.getName(), destination);
+			}
+			var rows = source.iterator(null);
+			Throwable primary = null;
+			try {
+				while (rows.hasNext()) {
+					var row = rows.next();
+					for (var column : columns) {
+						Object value = row.get(column);
+						var destination = destinations.get(column.getName());
+						var type = dialect.getDbDataTypes().getDbTypeStrict(destination.getDataType());
+						if (type == null)
+							throw new TransferSchemaPreparation.ValidationException("Target does not support file interval column: " + column.getName());
+						try {
+							if (value != null && type.getJdbcTypeHandler()
+								instanceof com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler standard
+								&& !standard.convert(value, destination).warnings().isEmpty())
+								throw new TransferSchemaPreparation.ValidationException("[CALENDAR_DAYS_AS_24_HOURS] Column " + column.getName()
+									+ " requires calendar-day conversion. Automatic file conversion reporting and "
+									+ "verification are not supported yet; use an explicitly time-only package.");
+							dialect.getSqlValueDefinition(destination, value);
+						} catch (TransferSchemaPreparation.ValidationException failure) {
+							throw failure;
+						} catch (RuntimeException failure) {
+							throw new TransferSchemaPreparation.ValidationException("[INTERVAL_VALUE_NOT_REPRESENTABLE] Column "
+									+ column.getName() + " exceeds the target interval qualifier, range or precision.");
+						}
+					}
+				}
+			} catch (Exception | Error failure) {
+				primary = failure;
+				throw failure;
+			} finally { com.sqlapp.util.iterator.IteratorCloseUtils.close(primary, rows); }
+		}
 	}
 
 	private static void writeAudit(Outcome outcome) throws java.io.IOException {

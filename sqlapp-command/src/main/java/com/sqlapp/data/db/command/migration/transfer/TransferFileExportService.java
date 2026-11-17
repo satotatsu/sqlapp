@@ -90,6 +90,9 @@ public final class TransferFileExportService {
 							configuration.compatibilityPolicy() == TransferJobConfiguration.CompatibilityPolicy.ERROR
 									? TransferJobConfiguration.TemporalPolicy.ERROR
 									: configuration.files().unsupportedTemporalPolicy());
+					for (var column : table.getColumns())
+						if (TransferIntervalCodec.interval(column))
+							TransferIntervalCodec.validate(column);
 					final boolean[] driverText = new boolean[table.getColumns().size()];
 					for (int index = 0; index < driverText.length; index++)
 						driverText[index] = TransferCsvTemporalCodec.temporal(table.getColumns().get(index))
@@ -214,7 +217,9 @@ public final class TransferFileExportService {
 		if (value == null)
 			return null;
 		final String text;
-		if (TransferCsvTemporalCodec.temporal(column) && !driverText)
+		if (TransferIntervalCodec.interval(column))
+			text = TransferIntervalCodec.encode(column, value);
+		else if (TransferCsvTemporalCodec.temporal(column) && !driverText)
 			text = TransferCsvTemporalCodec.encode(column, value);
 		else if (value instanceof String string)
 			text = string;

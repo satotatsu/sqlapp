@@ -375,3 +375,68 @@ References: [H2 interval types](https://www.h2database.com/html/datatypes.html#i
 [Oracle interval literals](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/Literals.html),
 [Oracle INTERVALYM API](https://docs.oracle.com/database/121/JAJDB/oracle/sql/INTERVALYM.html),
 [Oracle INTERVALDS API](https://docs.oracle.com/database/121/JAJDB/oracle/sql/INTERVALDS.html).
+
+## Stage 6: CSV, TSV and JSONL file transfer
+
+The command file-transfer path now accepts scalar interval columns. Export,
+typed import and offline previews share the existing IntervalValue parser and
+canonical formatter. No dialect parser is used to guess a file value.
+The canonical output is fixed before introducing the file path:
+
+| Value | File text |
+| --- | --- |
+| One calendar day | P1D |
+| Twenty-four hours of fixed time | PT86400S |
+| Mixed signs and nanoseconds | P14M-3DT0.123456789S |
+| Negative one nanosecond | PT-0.000000001S |
+| Zero, including input negative zero | PT0S |
+
+Input also accepts the existing sqlapp Y/H/M components and ASCII lowercase
+designators. Fractions are allowed on seconds only, at most nine digits.
+No day/time normalization is performed. P1D and PT24H retain different values.
+Long month/day limits and both Duration boundaries round-trip. Non-null empty
+strings, whitespace, malformed text, excess fractional digits and SQL/vendor
+interval text fail typed input; they do not become arbitrary strings or zeros.
+Legacy Interval objects can be exported through their explicit IntervalValue
+bridge, but legacy text is not accepted by this new command format.
+
+CSV and TSV retain their existing quoting, headers, encoding, null tokens and
+empty-field policy. A canonical interval equal to the configured null token is
+rejected at export, as for other scalar values. JSONL stores intervals as strings
+and nulls as JSON null, not objects or numbers. Preview cells use quoted canonical
+text. Interval arrays are rejected even for empty or null-only inputs.
+
+No production dependency, job property, manifest identifier or format version is
+changed. These interval column types were previously rejected by typed command
+import, so an older reader will still reject them rather than guess their
+meaning. Generic core CSV utilities and existing legacy output formats are
+unchanged by this stage.
+
+Before target DDL or writes, file import checks interval values using the target
+dialect's shared SQL/interval conversion path. Existing physical target column
+definitions are read in one batch per review/execution, not per table or row.
+Precision or range errors produce an actionable preflight failure. When schema
+differences will be applied, validation uses the planned destination definition.
+The source package bytes and normal execution-time revalidation remain pinned.
+
+Automatic calendar-day conversion in file import is intentionally not enabled
+yet: a conversion warning needs to reach the reviewed plan/audit, and verification
+must compare explicitly projected destination values. Until that next stage,
+nonzero calendar days targeting StandardIntervalJdbcTypeHandler fail preflight
+with CALENDAR_DAYS_AS_24_HOURS, including day/time cancellation to zero.
+File-only validation and preview still preserve such values. No warning is
+silently discarded and no partial import is started for this case.
+The standalone conversion API continues to support the warning-bearing
+conversion described in Stage 5.
+
+Tests cover actual CSV/TSV/JSONL files, nulls and malformed values, independently
+signed components, zero, Turkish locale and full common bounds. End-to-end
+embedded H2 tests exercise export -> pinned package -> quoted preview ->
+CREATE_MISSING -> import -> verification, including YEAR(9), DAY(9), nine-digit
+fractions and negative one nanosecond. Separate tests reject a lower existing
+target precision and calendar-day conversion before any target write.
+Only test dependencies on the existing H2 module and its existing driver version
+are added to sqlapp-command, so these command-level checks run normally.
+External databases are not required. This is not a claim that all unmigrated
+dialect adapters or all cross-database Schema type mappings support the full
+IntervalValue range.

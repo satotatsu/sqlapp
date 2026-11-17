@@ -118,6 +118,28 @@ reduction fails the default verification. `verify: false` still opts out of that
 target comparison. The shared Schema model stores temporal fractional precision
 in column `length`, rather than numeric `scale`.
 
+Scalar interval columns use the sqlapp interval format in CSV/TSV fields and JSONL
+strings. Examples are `P14M-3DT0.123456789S`, `P1D`, `PT86400S` and `PT0S`.
+Calendar days remain separate from fixed time: `P1D` and `PT24H` are distinct
+values, and the latter is written canonically as `PT86400S`. Signs, the complete
+IntervalValue range and up to nine fractional second digits are retained without
+database-specific conversion. Interval arrays and driver/legacy interval text
+are not supported by this file format. Null-token rules and JSON null behavior
+are unchanged. No new job option is required.
+
+File import reviews interval values against the target adapter before DDL or
+row writes. Existing target interval columns are read in one catalog batch so a
+lower physical precision is not mistaken for the captured source precision.
+Unsupported qualifiers, range overflow and fractional precision loss fail
+preflight. In APPLY_DIFFERENCES mode the planned destination definition is used.
+Until interval conversion warnings and projected verification are integrated,
+automatic import that would convert nonzero calendar days into fixed 24-hour
+units is rejected with `CALENDAR_DAYS_AS_24_HOURS`; the same file can still be
+validated and previewed without a target. Time-only values exported from the H2
+adapter import and verify unchanged. This restriction does not change the
+standalone standard-interval conversion API, which returns its warnings.
+See [interval value and conversion rules](../data/interval-values.md).
+
 Existing configurations without this field default to WARN, and previous Java
 constructors remain available. FileTransfer and manifest records have additive
 components; update record patterns and older strict readers when consuming new
