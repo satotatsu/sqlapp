@@ -8,10 +8,14 @@ import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.postgres.PostgresGeometryJdbcTypeHandler;
 import com.sqlapp.data.geometry.AbstractGeometry;
+import com.sqlapp.data.db.dialect.postgres.PostgresIntervalCodec;
+import com.sqlapp.data.interval.Interval;
+import com.sqlapp.data.interval.IntervalValue;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -28,7 +32,7 @@ public class PostgresBulkDataReader extends Reader {
 	private boolean closed;
 
 	public PostgresBulkDataReader(final Table table, final BulkOption options) {
-		java.util.Objects.requireNonNull(table, "table");
+		Objects.requireNonNull(table, "table");
 		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		for (final Column column : table.getColumns()) {
 			if (column.isHidden() || !CommonUtils.isEmpty(column.getFormula())
@@ -53,7 +57,7 @@ public class PostgresBulkDataReader extends Reader {
 
 	@Override
 	public int read(final char[] buffer, final int offset, final int length) throws IOException {
-		java.util.Objects.checkFromIndexSize(offset, length, buffer.length);
+		Objects.checkFromIndexSize(offset, length, buffer.length);
 		if (closed) {
 			throw new IOException("Reader is closed");
 		}
@@ -92,16 +96,22 @@ public class PostgresBulkDataReader extends Reader {
 					// A byte[] is a scalar bytea element only for binary array columns.
 					boolean binaryElements = column.getDataType() != null
 							&& column.getDataType().getDefaultClass() == byte[].class;
-					appendCsv(builder, toArrayText(value, binaryElements));
+					appendCsv(builder, toArrayText(value, binaryElements, column));
 				} else {
-					appendCsv(builder, toText(value));
+					appendCsv(builder, toText(value, column));
 				}
 			}
 		}
 		return builder.append('\n').toString();
 	}
 
-	private String toText(final Object value) {
+	private String toText(final Object value, final Column column) {
+		if (value instanceof IntervalValue interval) {
+			return PostgresIntervalCodec.encode(interval, column);
+		}
+		if (value instanceof Interval interval) {
+			return PostgresIntervalCodec.encode(interval.toIntervalValue(), column);
+		}
 		if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
 			// PostGIS geometry: the same EWKB that the regular INSERT binds, as hex text
 			return toHex(PostgresGeometryJdbcTypeHandler.toEwkb(geometry));
@@ -123,7 +133,7 @@ public class PostgresBulkDataReader extends Reader {
 			return builder.toString();
 		}
 		if (value.getClass().isArray()) {
-			return toArrayText(value, false);
+			return toArrayText(value, false, column);
 		}
 		if (value instanceof TemporalAccessor) {
 			return value.toString();
@@ -131,7 +141,7 @@ public class PostgresBulkDataReader extends Reader {
 		return value.toString();
 	}
 
-	private String toArrayText(final Object value, final boolean binaryElements) {
+	private String toArrayText(final Object value, final boolean binaryElements, final Column column) {
 		final StringBuilder builder = new StringBuilder("{");
 		for (int i = 0; i < Array.getLength(value); i++) {
 			if (i > 0)
@@ -140,9 +150,9 @@ public class PostgresBulkDataReader extends Reader {
 			if (element == null) {
 				builder.append("NULL");
 			} else if (element.getClass().isArray() && !(binaryElements && element instanceof byte[])) {
-				builder.append(toArrayText(element, binaryElements));
+				builder.append(toArrayText(element, binaryElements, column));
 			} else {
-				builder.append('"').append(toText(element).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+				builder.append('"').append(toText(element, column).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
 			}
 		}
 		return builder.append('}').toString();

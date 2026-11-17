@@ -1874,6 +1874,15 @@ public class DbDataTypeCollection implements Serializable {
 		register(type);
 	}
 
+	/** Registers a standard qualifier with separate leading/fractional precision. */
+	public void addStandardInterval(DataType type, int maximumPrecision, int maximumScale) {
+		register(new StandardIntervalType(type, maximumPrecision, maximumScale));
+	}
+
+	public void addStandardInterval(DataType type, int maximumPrecision, int maximumScale, int maximumArrayDimensions) {
+		register(new StandardIntervalType(type, maximumPrecision, maximumScale, maximumArrayDimensions));
+	}
+
 	/**
 	 * INTERVAL YEAR型を追加します
 	 * 

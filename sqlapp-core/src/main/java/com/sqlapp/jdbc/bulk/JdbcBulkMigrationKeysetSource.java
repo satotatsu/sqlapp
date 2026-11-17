@@ -36,7 +36,7 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 
 	/** Override value extraction for a projection while retaining shared SQL, ordering and cursor lifetime. Index is one-based. */
 	protected Object readColumn(ResultSet resultSet, int index, Column column, DbDataType<?> type) throws SQLException {
-		return type.getJdbcTypeHandler().getObject(resultSet, index);
+		return type.getJdbcTypeHandler().getObject(resultSet, index, column);
 	}
 
 	/** Uses the table's complete primary key in declared order. */

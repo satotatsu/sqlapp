@@ -81,6 +81,10 @@ public class JdbcHandlerUtils {
 	 */
 	public static void setParameters(final PreparedStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
+		if (bindParameter.getColumn() != null && bindParameter.getColumn().getDataType() == bindParameter.getDataType()) {
+			JdbcParameterBinder.bindColumn(statement, dialect, bindParameter.getColumn(), index, bindParameter.getValue());
+			return;
+		}
 		final DataType type = bindParameter.getDataType();
 		final Object value = bindParameter.getValue();
 		if (dialect != null && bindParameter.getDataType() != null) {

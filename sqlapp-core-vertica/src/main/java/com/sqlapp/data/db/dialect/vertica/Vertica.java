@@ -129,9 +129,15 @@ public class Vertica extends Dialect {
 		getDbDataTypes().addNumeric(type -> {
 			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(1024).setMaxScale(1024);
 		});
-		// INTERVAL
-		getDbDataTypes().addInterval(type -> {
-		});
+		getDbDataTypes().addInterval(type -> configureInterval(type));
+		for (var type : com.sqlapp.data.db.datatype.DataType.values()) {
+			if (type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL
+					&& type != com.sqlapp.data.db.datatype.DataType.INTERVAL
+					&& type != com.sqlapp.data.db.datatype.DataType.INTERVAL_YEAR_TO_DAY) {
+				getDbDataTypes().addStandardInterval(type, 6, 6, 0);
+				configureInterval(getDbDataTypes().getDbTypeStrict(type));
+			}
+		}
 	}
 
 	/**
@@ -258,6 +264,41 @@ public class Vertica extends Dialect {
 	@Override
 	public boolean isTemporaryTableSessionDrop() {
 		return false;
+	}
+
+	private void configureInterval(com.sqlapp.data.db.datatype.DbDataType<?> type) {
+		String name = type.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL ? "INTERVAL"
+				: type.getDataType().name().replace('_', ' ');
+		boolean seconds = type.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL || name.endsWith("SECOND");
+		if (type instanceof com.sqlapp.data.db.datatype.PrecisionProperties<?> precision) {
+			precision.setDefaultPrecision(seconds ? 6 : 0);
+			precision.setMaxPrecision(6);
+		}
+		type.setCreateFormat(name + (seconds ? "(" + com.sqlapp.data.db.datatype.DbDataType.PRECISION_REPLACE + ")" : ""));
+		type.setColumnTypeMatcher(new com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher(
+				name.replace(" ", "\\s+") + "(?:\\((?<fraction>[0-6])\\))?", (match, info) -> {
+			info.setLength(match.group("fraction") == null ? 6 : Integer.parseInt(match.group("fraction")));
+			info.setDataTypeName(name);
+		}));
+		var handler = new VerticaIntervalJdbcTypeHandler(type.getDataType());
+		type.setJdbcTypeHandler(handler);
+		var converter = new com.sqlapp.data.converter.AbstractConverter<com.sqlapp.data.interval.IntervalValue>() {
+			private static final long serialVersionUID = 1L;
+			@Override public com.sqlapp.data.interval.IntervalValue convertObject(Object value) { return value == null || "".equals(value) ? getDefaultValue() : handler.decode(value); }
+			@Override public com.sqlapp.data.interval.IntervalValue copy(Object value) { return convertObject(value); }
+			@Override public String format(com.sqlapp.data.interval.IntervalValue value) {
+				return value == null ? null : new com.sqlapp.data.db.datatype.StandardIntervalCodec(
+						type.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL ? com.sqlapp.data.db.datatype.DataType.INTERVAL_DAY_TO_SECOND : type.getDataType(), 18, 6).convert(value).text();
+			}
+		};
+		type.setConverter(converter).setFormatter(converter).setLiteral("INTERVAL '", "' " + name.substring("INTERVAL".length()).strip());
+	}
+
+	@Override
+	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
+		if (column.getDataType() != null && column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL)
+			return value == null ? "NULL" : new VerticaIntervalJdbcTypeHandler(column.getDataType()).literal(value, column);
+		return super.getSqlValueDefinition(column, value);
 	}
 
 }

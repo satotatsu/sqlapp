@@ -162,6 +162,17 @@ public class DuckDb extends Dialect {
 		getDbDataTypes().addInterval(type -> {
 			type.setCreateFormat("INTERVAL");
 			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.IntervalHandler());
+			var converter = new com.sqlapp.data.converter.AbstractConverter<com.sqlapp.data.interval.IntervalValue>() {
+				private static final long serialVersionUID = 1L;
+				@Override public com.sqlapp.data.interval.IntervalValue convertObject(Object value) {
+					return value == null || "".equals(value) ? getDefaultValue() : DuckDbIntervalCodec.decode(value);
+				}
+				@Override public com.sqlapp.data.interval.IntervalValue copy(Object value) { return convertObject(value); }
+				@Override public String format(com.sqlapp.data.interval.IntervalValue value) {
+					return value == null ? null : DuckDbIntervalCodec.encode(value);
+				}
+			};
+			type.setConverter(converter).setFormatter(converter).setLiteral("INTERVAL '", "'");
 		});
 		// UUID
 		getDbDataTypes().addUUID("UUID", type -> {
@@ -412,4 +423,11 @@ public class DuckDb extends Dialect {
 	public boolean isRepeatableReadSnapshotIsolation() {
 		return true;
 	}
+	@Override
+	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL)
+			return value == null ? "NULL" : new DuckDbIntervalJdbcTypeHandler().literal(value, column);
+		return super.getSqlValueDefinition(column, value);
+	}
+
 }

@@ -19,7 +19,7 @@ final class TransferJsonlCodec {
 	private static final tools.jackson.databind.ObjectMapper MAPPER = tools.jackson.databind.json.JsonMapper
 			.builder(tools.jackson.core.json.JsonFactory.builder()
 					.streamReadConstraints(tools.jackson.core.StreamReadConstraints.builder().maxStringLength(MAX_FIELD)
-							.maxNumberLength(MAX_FIELD).maxNestingDepth(2).build())
+							.maxNumberLength(MAX_FIELD).maxNestingDepth(34).build())
 					.build())
 			.disable(tools.jackson.databind.SerializationFeature.INDENT_OUTPUT)
 			.enable(tools.jackson.core.StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -37,6 +37,7 @@ final class TransferJsonlCodec {
 			if (size > MAX_LINE)
 				throw new IllegalArgumentException("JSONL row exceeds the 16 MiB character limit.");
 			object.put(column.getName(), value == null ? null
+					: intervalArray(column) ? MAPPER.readValue(value, Object[].class)
 					: numeric(column) ? new BigDecimal(value) : bool(column) ? Boolean.valueOf(value) : value);
 		}
 		var line = MAPPER.writeValueAsString(object);
@@ -65,19 +66,25 @@ final class TransferJsonlCodec {
 			var value = object.get(column.getName());
 			if (value == null)
 				continue;
-			if (numeric(column) ? !(value instanceof Number)
+			if (intervalArray(column) ? !(value instanceof java.util.List<?>)
+					: numeric(column) ? !(value instanceof Number)
 					: bool(column) ? !(value instanceof Boolean) : !(value instanceof String))
 				throw new IllegalArgumentException("JSONL scalar type differs from canonical Schema.");
 			if (value instanceof BigDecimal decimal
 					&& (Math.abs((long) decimal.scale()) + decimal.precision() > MAX_FIELD))
 				throw new IllegalArgumentException("JSONL number exceeds the 1 MiB character limit.");
-			values[index] = value instanceof BigDecimal decimal ? decimal.toPlainString() : value.toString();
+			values[index] = intervalArray(column) ? MAPPER.writeValueAsString(value)
+					: value instanceof BigDecimal decimal ? decimal.toPlainString() : value.toString();
 			if (values[index].length() > MAX_FIELD)
 				throw new IllegalArgumentException("JSONL field exceeds the 1 MiB character limit.");
 			if (!java.nio.charset.StandardCharsets.UTF_8.newEncoder().canEncode(values[index]))
 				throw new IllegalArgumentException("JSONL field contains invalid Unicode.");
 		}
 		return values;
+	}
+
+	private static boolean intervalArray(Column column) {
+		return TransferIntervalCodec.interval(column) && column.getArrayDimension() > 0;
 	}
 
 	private static boolean bool(Column column) {

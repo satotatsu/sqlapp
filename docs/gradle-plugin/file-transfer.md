@@ -118,6 +118,33 @@ reduction fails the default verification. `verify: false` still opts out of that
 target comparison. The shared Schema model stores temporal fractional precision
 in column `length`, rather than numeric `scale`.
 
+Scalar interval columns use the sqlapp interval format in CSV/TSV fields and JSONL
+strings. Examples are `P14M-3DT0.123456789S`, `P1D`, `PT86400S` and `PT0S`.
+Calendar days remain separate from fixed time: `P1D` and `PT24H` are distinct
+values, and the latter is written canonically as `PT86400S`. Signs, the complete
+IntervalValue range and up to nine fractional second digits are retained without
+database-specific conversion. Interval arrays use JSON arrays of canonical string
+leaves/nulls inside CSV/TSV cells and native nested arrays in JSONL. Driver/legacy
+interval text is rejected. Null-token rules and JSON null behavior
+are unchanged. No new job option is required.
+
+File import reviews interval values against the target adapter before DDL or
+row writes. Existing target interval columns are read in one catalog batch so a
+lower physical precision is not mistaken for the captured source precision.
+Unsupported qualifiers, range overflow and fractional precision loss fail
+preflight. In APPLY_DIFFERENCES mode the planned destination definition is used.
+Calendar days targeting standard day-time types are explicitly converted into
+24-hour units (`P1DT-1H` becomes `PT82800S`). Review and audit report
+`CALENDAR_DAYS_AS_24_HOURS` with affected columns/row counts; verification compares
+the same projected destination values. Precision/qualifier mapping is reported
+as `INTERVAL_PRECISION_MAPPING`, and every value must fit exactly. Strict
+compatibility policy rejects these warnings. The same projection is used by
+JDBC_DIRECT transfer. PostgreSQL/DuckDB keep calendar days separate from time;
+months are never converted into days. Array support and version/range limits
+remain destination-specific. File-only validation and preview retain the source
+components.
+See [interval value and conversion rules](../data/interval-values.md).
+
 Existing configurations without this field default to WARN, and previous Java
 constructors remain available. FileTransfer and manifest records have additive
 components; update record patterns and older strict readers when consuming new

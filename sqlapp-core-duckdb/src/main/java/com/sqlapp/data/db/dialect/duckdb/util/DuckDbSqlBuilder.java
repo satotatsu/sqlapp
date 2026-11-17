@@ -23,6 +23,14 @@ public class DuckDbSqlBuilder extends AbstractSqlBuilder<DuckDbSqlBuilder> {
 		super(dialect);
 	}
 
+	@Override
+	protected DuckDbSqlBuilder typeDefinition(Column column) {
+		super.typeDefinition(column);
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL && column.getArrayDimension() > 0)
+			_add("[]".repeat(column.getArrayDimension()));
+		return this;
+	}
+
 	/**
 	 * Adds a column definition. DuckDB generated columns are always VIRTUAL and may
 	 * not have a default value. Column comments are emitted as separate

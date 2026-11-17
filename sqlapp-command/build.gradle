@@ -33,6 +33,9 @@ dependencies {
 //	testImplementation 'org.mariadb.jdbc:mariadb-java-client:1.3.4'
 	testImplementation("org.hsqldb:hsqldb:2.7.4")
 	testImplementation project(':sqlapp-core-hsql')
+	// Exercise exact interval file export/import against the embedded H2 adapter.
+	testImplementation project(':sqlapp-core-h2')
+	testImplementation('com.h2database:h2:2.3.232')
 	testImplementation project(':sqlapp-core-mysql')
 	testImplementation project(':sqlapp-core-oracle')
 	testImplementation project(':sqlapp-core-postgres')

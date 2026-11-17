@@ -230,8 +230,10 @@ public final class TransferFileImportService {
 				var cells = new ArrayList<PreviewCell>();
 				for (var column : source.getTable().getColumns()) {
 					Object value = row.get(column);
-					boolean quoted = value instanceof String || TransferCsvTemporalCodec.temporal(column);
+					boolean quoted = value instanceof String || TransferCsvTemporalCodec.temporal(column)
+							|| TransferIntervalCodec.interval(column);
 					String text = value == null ? "null"
+							: TransferIntervalCodec.interval(column) ? TransferIntervalCodec.encode(column, value)
 							: TransferCsvTemporalCodec.temporal(column) ? TransferCsvTemporalCodec.encode(column, value)
 									: value.toString();
 					boolean truncated = text.codePointCount(0, text.length()) > 512;
@@ -452,7 +454,7 @@ public final class TransferFileImportService {
 					.columnMappings(task.getColumnMappings()).requireEmptyTarget(true).options(task.getOptions())
 					.build());
 		}
-		var stageCopy = BulkMigrationJobPlanner.plan(stageTasks);
+		var stageCopy = BulkMigrationJobPlanner.plan(stageTasks, original.getLifecycle());
 		var stageSchema = TransferSchemaPreparation.plan(target, schema, stageCopy,
 				TransferJobConfiguration.SchemaMode.CREATE_MISSING, loaded.configuration().compatibilityPolicy(),
 				projection, null, false, true);
@@ -746,7 +748,8 @@ public final class TransferFileImportService {
 			}
 			tasks.add(task.build());
 		}
-		return BulkMigrationJobPlanner.plan(tasks);
+		return TransferIntervalProjection.prepare(connection, BulkMigrationJobPlanner.plan(tasks),
+				loaded.schema().getDialect(), loaded.configuration().schemaMode(), staged(loaded));
 	}
 
 	private static TransferSchemaPreparation.Plan schemaPlan(Loaded loaded, Connection target,
@@ -755,6 +758,8 @@ public final class TransferFileImportService {
 				loaded.configuration().compatibilityPolicy(), loaded.projection(),
 				loaded.configuration().effectiveGeneratedKeyColumn(), staged(loaded));
 		var warnings = new ArrayList<>(schema.warnings());
+		for (String warning : TransferIntervalProjection.warnings(plan))
+			TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings, warning);
 		for (var task : plan.getTasks())
 			if (task.isFullScan())
 				TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings,

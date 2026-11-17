@@ -19,81 +19,24 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import static com.sqlapp.util.CommonUtils.abs;
-import static com.sqlapp.util.CommonUtils.notZero;
+import com.sqlapp.data.converter.AbstractConverter;
+import com.sqlapp.data.db.dialect.postgres.PostgresIntervalCodec;
+import com.sqlapp.data.interval.IntervalValue;
 
-import com.sqlapp.data.interval.Interval;
-import java.sql.SQLException;
-import org.postgresql.util.PGInterval;
-
-public class FromPGIntervalConverter extends AbstractFromObjectConverter<Interval, PGInterval> {
-
-	/**
-	 * serialVersionUID
-	 */
+/** Reads exact PostgreSQL values without collapsing days into time. */
+public class FromPGIntervalConverter extends AbstractConverter<IntervalValue> {
 	private static final long serialVersionUID = 6488632910509733050L;
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
-	 */
-	public Interval copy(Object obj) {
-		if (obj == null) {
-			return null;
-		}
-		return (Interval) convertObject(obj).clone();
-	}
-
 	@Override
-	protected boolean isTargetInstanceof(Object value) {
-		return value instanceof Interval;
+	public IntervalValue convertObject(final Object value) {
+		if (isSupplier(value)) return convertObject(getSupplierValue(value));
+		return value == null ? getDefaultValue() : PostgresIntervalCodec.decode(value);
 	}
-
 	@Override
-	protected boolean isInstanceof(Object value) {
-		return value instanceof PGInterval;
+	public IntervalValue copy(final Object value) {
+		return convertObject(value);
 	}
-
 	@Override
-	protected Interval toObjectFromString(String value) {
-		String val = (String) value;
-		if (Interval.isParsable(val)) {
-			return Interval.parse(val);
-		}
-		try {
-			PGInterval pgObject = new PGInterval(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	@Override
-	protected Interval toObject(PGInterval value) {
-		int years = value.getYears();
-		int months = value.getMonths();
-		int days = value.getDays();
-		int hours = value.getHours();
-		int minutes = value.getMinutes();
-		double seconds = value.getSeconds();
-		Interval interval = new Interval(abs(years), abs(months), abs(days), abs(hours), abs(minutes), abs(seconds));
-		int notZeroInt = notZero(years, months, days, hours, minutes);
-		if (notZeroInt < 0) {
-			interval.scale(-1);
-		} else if (seconds < 0) {
-			interval.scale(-1);
-		}
-		return interval;
-	}
-
-	@Override
-	protected Interval clone(Interval value) {
-		return value.clone();
-	}
-
-	@Override
-	protected Class<PGInterval> getObjectClass() {
-		return PGInterval.class;
+	public String format(final IntervalValue value) {
+		return value == null ? null : PostgresIntervalCodec.encode(value);
 	}
 }

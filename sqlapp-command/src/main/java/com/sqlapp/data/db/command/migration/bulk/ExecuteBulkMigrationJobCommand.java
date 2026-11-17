@@ -137,6 +137,12 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		});
 	}
 
+	/** Resolves optional destination value projections before validation and verification. */
+	protected BulkMigrationJobPlan prepareExecutionPlan(Connection source, Connection target,
+			BulkMigrationJobPlan executionPlan) throws SQLException {
+		return executionPlan;
+	}
+
 	private void executePlan(final BulkMigrationJobPlan executionPlan) {
 		executePlan(executionPlan, leaseConfiguration);
 	}
@@ -189,8 +195,9 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			// The chunk executor owns commit/rollback boundaries, including durable
 			// checkpoint writes. AbstractDataSourceCommand otherwise starts a transaction.
 			targetConnection.setAutoCommit(true);
-			final BulkMigrationJobPlan effectivePlan = reportConfiguration == null ? executionPlan
-					: withExplicitDatabaseCheckpointStores(executionPlan, targetConnection);
+			final BulkMigrationJobPlan projectedPlan = prepareExecutionPlan(sourceConnection, targetConnection, executionPlan);
+			final BulkMigrationJobPlan effectivePlan = reportConfiguration == null ? projectedPlan
+					: withExplicitDatabaseCheckpointStores(projectedPlan, targetConnection);
 			final BulkMigrationJobListener executionListener;
 			final BulkMigrationOperationalReportJobListener reportListener;
 			if (reportConfiguration == null) {
@@ -390,7 +397,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 						verification));
 				continue;
 			}
-			if (!(task.getKeysetSource() instanceof JdbcBulkMigrationKeysetSource source)) {
+			final var source = task.getKeysetSource();
+			if (source.getKeyColumnNames().isEmpty()) {
 				throw new CommandException(
 						"Declarative verification requires a JDBC keyset source: " + task.getTaskId());
 			}

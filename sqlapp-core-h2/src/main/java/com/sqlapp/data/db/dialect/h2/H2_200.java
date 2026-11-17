@@ -7,9 +7,14 @@ package com.sqlapp.data.db.dialect.h2;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.converter.StandardIntervalConverter;
 import com.sqlapp.data.db.datatype.AbstractLengthType;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
+import com.sqlapp.data.db.datatype.StandardIntervalCodec;
+import com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
 
 /**
  * H2 2.0.
@@ -37,6 +42,11 @@ public class H2_200 extends H2 {
 				length.setMaxLength(MAX_LENGTH);
 		}
 		getDbDataTypes().addDecimalFloat("DECFLOAT");
+		for (DataType type : DataType.values()) {
+			if (type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL
+					&& type != DataType.INTERVAL && type != DataType.INTERVAL_YEAR_TO_DAY)
+				getDbDataTypes().addStandardInterval(type, 18, 9);
+		}
 		getDbDataTypes().addTimeWithTimeZone(type -> {
 			type.setDefaultValueLiteral(getCurrentTimeFunction());
 		});
@@ -45,6 +55,17 @@ public class H2_200 extends H2 {
 	@Override
 	public String getSequenceNextValString(String sequenceName) {
 		return "SELECT NEXT VALUE FOR " + sequenceName;
+	}
+
+	@Override
+	public String getSqlValueDefinition(Column column, Object value) {
+		var type = column.getDataType();
+		if (type != null && type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			var handler = (StandardIntervalJdbcTypeHandler)
+					getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
+			return handler.literal(value, column);
+		}
+		return super.getSqlValueDefinition(column, value);
 	}
 
 	@Override

@@ -99,7 +99,24 @@ public class H2ColumnReader extends ColumnReader {
 		column.setLength(getLong(rs, "TYPE_PRECISION"));
 		getDialect().setDbType(getString(rs, "TYPE_NAME"), column.getLength(), column.getScale(), column);
 		String typeSql = getString(rs, "TYPE_SQL");
-		if (typeSql != null && (typeSql.contains(" ARRAY") || typeSql.startsWith("INTERVAL ")
+		if (typeSql != null && typeSql.startsWith("INTERVAL ")) {
+			String base = typeSql.replaceAll(" ARRAY(?:\\[[0-9]+\\])?", "");
+			String qualifier = base.substring("INTERVAL ".length()).replaceAll("\\([0-9]+(?:,[0-9]+)?\\)", "")
+					.replaceAll("\\s+", "_");
+			var type = com.sqlapp.data.db.datatype.DataType.valueOf("INTERVAL_" + qualifier);
+			var info = new com.sqlapp.data.db.datatype.StandardIntervalCodec(type, 2, 6)
+					.columnTypeMatcher().match(base).orElseThrow();
+			column.setDataType(type).setDataTypeName((String) null);
+			column.setLength(info.getLength().orElse(null));
+			column.setScale(info.getScale().orElse(null));
+			column.setArrayDimension((typeSql.length() - typeSql.replace(" ARRAY", "").length()) / 6);
+			if (column.getArrayDimension() > 0) {
+				var matcher = java.util.regex.Pattern.compile(" ARRAY(?:\\[([0-9]+)\\])?").matcher(typeSql);
+				var bounds = new java.util.ArrayList<String>();
+				while (matcher.find()) bounds.add(matcher.group(1) == null ? "*" : matcher.group(1));
+				column.getSpecifics().put(com.sqlapp.data.db.datatype.IntervalArrays.DECLARED_BOUNDS, String.join(",", bounds));
+			}
+		} else if (typeSql != null && (typeSql.contains(" ARRAY") || typeSql.startsWith("INTERVAL ")
 				|| typeSql.startsWith("ROW(") || typeSql.startsWith("GEOMETRY("))) {
 			column.setDataTypeName(typeSql);
 			column.setDataType(com.sqlapp.data.db.datatype.DataType.OTHER);

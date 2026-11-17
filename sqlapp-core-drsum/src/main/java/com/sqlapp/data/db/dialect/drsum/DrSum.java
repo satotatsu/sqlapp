@@ -118,6 +118,11 @@ public class DrSum extends Dialect {
 		});
 		// INTERVAL is a day-to-second interval ('DD HH:MI:SS.FF').
 		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setDefaultPrecision(0).setMaxPrecision(MAX_FRACTIONAL_SECONDS);
+			type.setDefaultScale(0).setMaxScale(MAX_FRACTIONAL_SECONDS);
+			type.setJdbcTypeHandler(new DrSumIntervalJdbcTypeHandler());
+			var converter = new com.sqlapp.data.converter.StandardIntervalConverter(type.getDataType());
+			type.setConverter(converter).setFormatter(converter);
 			type.setColumnTypeMatcher("INTERVAL");
 			type.setCreateFormat("INTERVAL");
 			type.setLiteral("INTERVAL '", "'");
@@ -208,4 +213,11 @@ public class DrSum extends Dialect {
 	public int hashCode() {
 		return super.hashCode();
 	}
+	@Override
+	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL_DAY_TO_SECOND)
+			return new DrSumIntervalJdbcTypeHandler().literal(value, column);
+		return super.getSqlValueDefinition(column, value);
+	}
+
 }
