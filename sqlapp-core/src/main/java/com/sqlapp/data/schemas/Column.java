@@ -32,10 +32,13 @@ import java.util.stream.Collectors;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.converter.ConvertObject;
+import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.DefaultConverter;
 import com.sqlapp.data.converter.Formatter;
+import com.sqlapp.data.converter.IntervalColumnConverter;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.MetaType;
 import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.HiddenProperty;
 import com.sqlapp.data.schemas.properties.MaskingFunctionProperty;
@@ -222,6 +225,9 @@ public final class Column extends AbstractColumn<Column>
 				converter = new DefaultConverter();
 			} else if (this.getDataType() != null) {
 				converter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
+				if (this.getDataType().getMetaTtype() == MetaType.INTERVAL) {
+					converter = new IntervalColumnConverter((Converter<?>) converter);
+				}
 			}
 			if (converter == null) {
 				converter = new DefaultConverter();
@@ -235,6 +241,9 @@ public final class Column extends AbstractColumn<Column>
 		if (formatter == null) {
 			if (this.getDataType() != null) {
 				formatter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
+				if (this.getDataType().getMetaTtype() == MetaType.INTERVAL) {
+					formatter = new IntervalColumnConverter((Converter<?>) formatter);
+				}
 			}
 			if (formatter == null) {
 				formatter = new DefaultConverter();

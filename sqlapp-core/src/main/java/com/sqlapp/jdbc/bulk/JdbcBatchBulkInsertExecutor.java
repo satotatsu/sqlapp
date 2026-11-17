@@ -148,7 +148,7 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 		if (dbDataType == null) {
 			JdbcParameterBinder.bind(statement, dialect, null, index, value);
 		} else {
-			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
+			dbDataType.getJdbcTypeHandler().setObject(statement, index, value, column);
 		}
 	}
 

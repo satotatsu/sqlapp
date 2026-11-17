@@ -677,6 +677,10 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	private void setParameters(final PreparedStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
+		if (bindParameter.getColumn() != null && bindParameter.getColumn().getDataType() == bindParameter.getDataType()) {
+			JdbcParameterBinder.bindColumn(statement, dialect, bindParameter.getColumn(), index, bindParameter.getValue());
+			return;
+		}
 		JdbcParameterBinder.bind(statement, dialect, bindParameter.getDataType(), index, bindParameter.getValue());
 	}
 

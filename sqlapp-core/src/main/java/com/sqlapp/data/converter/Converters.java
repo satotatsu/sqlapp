@@ -70,6 +70,7 @@ import com.sqlapp.data.interval.IntervalMinute;
 import com.sqlapp.data.interval.IntervalMinuteToSecond;
 import com.sqlapp.data.interval.IntervalMonth;
 import com.sqlapp.data.interval.IntervalSecond;
+import com.sqlapp.data.interval.IntervalValue;
 import com.sqlapp.data.interval.IntervalYear;
 import com.sqlapp.data.interval.IntervalYearToDay;
 import com.sqlapp.data.interval.IntervalYearToMonth;
@@ -226,6 +227,7 @@ public class Converters implements Serializable {
 
 	protected void setIntervalConverters() {
 		// Interval
+		puts(new IntervalValueConverter(), IntervalValue.class);
 		puts(new IntervalConverter(), Interval.class);
 		puts(new IntervalArrayConverter(this.getConverter(Interval.class)), Interval[].class);
 		//

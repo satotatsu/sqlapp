@@ -3,9 +3,9 @@
 `sqlapp-core` provides the independent immutable value
 `com.sqlapp.data.interval.IntervalValue`. The legacy `Interval*` APIs now delegate
 value arithmetic to this model while preserving their four stored fields.
-`DataType`, JDBC handlers, Schema XML and file format selection are unchanged.
-No new dependency is required. This does not enable new database or migration-file
-support.
+DataType identifiers, Schema XML metadata and file format selection are unchanged.
+No new dependency is required. PostgreSQL JDBC/COPY support for the new value is
+described in stage 4; dedicated migration-file adapters remain a later stage.
 
 ```java
 var value = IntervalValue.parse("P1Y2M-3DT4H5M6.123456789S");
@@ -35,8 +35,8 @@ last 24 hours. Nonrepresentable component kinds throw DateTimeException; numeric
 overflow throws ArithmeticException.
 
 `requireFractionalPrecision(0..9)` returns the same value if exact and throws
-ArithmeticException when nonzero digits would be lost. A future PostgreSQL
-adapter must call `requireFractionalPrecision(6)` before writing microseconds;
+ArithmeticException when nonzero digits would be lost. The PostgreSQL
+adapter calls `requireFractionalPrecision(6)` before writing microseconds;
 this method alone does not check the database's range or column precision.
 For example, `PT1.123456789S` is valid here but fails that six-digit check.
 
@@ -190,10 +190,81 @@ the future file interchange format is deferred until the file-I/O stage.
 
 The 15 original core regressions and 15 newly reproduced defects/specification
 cases now run untagged in normal tests. The PostgreSQL driver mixed-sign regression
-remains tagged: repairing it requires a JDBC/model transition, not more fields in
-the legacy serialization. No external database is required by these regressions.
+was left tagged at the end of stage 3; stage 4 below repairs it. No external database
+is required by these regressions.
 
-## Future conversion policy
+## Stage 4: PostgreSQL values through JDBC, Schema rows and COPY
+
+PostgreSQL adapters now return IntervalValue. ToPGIntervalConverter returns a
+PGobject with type interval, with independently signed integer month, day and
+microsecond fields. For example, one calendar day minus one hour is transmitted
+as `+0 mons +1 days -3600000000 microseconds`. Neither day/hour nor month/day
+normalization is performed, so no conversion warning is necessary.
+
+PostgresIntervalCodec validates signed int32 months/days, signed int64
+microseconds, and exact fractional precision. A ninth-digit fraction cannot be
+silently rounded to six digits. Infinite intervals and their reserved field
+combinations are unsupported and fail explicitly. Time is written as an integer
+microsecond quantity, avoiding decimal/double conversion even at the int64 bounds.
+Reads recognize postgres, postgres_verbose, sql_standard and designator ISO server
+output. SQL-standard's lone leading negative sign is applied to the whole unlabeled
+day/time value; explicit component signs are preserved. This is not a general
+PostgreSQL expression parser: SQL literals, arbitrary unit aliases, fractional
+months and non-finite values are not accepted as JDBC value strings.
+
+JDBC reads use ResultSet.getString rather than constructing PGInterval, whose
+hour and whole-second fields are narrower than PostgreSQL's storage. Direct driver
+objects are still accepted via exact integer second/microsecond accessors. If an
+application has already rounded a value while constructing a PGInterval, the
+original digits cannot be recovered. Canonical input is validated before binding.
+
+The handler is registered for generic interval and every supported qualifier,
+including older dialect resolutions (8, 11, 15 and 18 covered by tests). Only
+existing interval text syntax is used; no new catalog queries, dependency versions,
+or version-specific metadata columns are introduced. Server execution is not part
+of these unit tests; an external database has not been used.
+
+PostgreSQL qualifiers reject nonzero fields to the right of the last allowed
+unit instead of relying on server truncation. PostgreSQL permits fields above the
+first named unit, so these checks intentionally differ from SQL-standard target
+conversion. Explicit fractional column precision 0..6 is checked when Column
+metadata is available. A new default JdbcTypeHandler overload accepts the Column;
+normal SQL binding and portable batch INSERT forward this metadata. Existing
+handlers retain their original behavior through the default implementation.
+Type-only binding has no knowledge of a physical column's lower precision and
+uses PostgreSQL's default six digits. Call bindColumn or use
+PostgresIntervalJdbcTypeHandler(Column) when binding outside those metadata paths.
+
+Schema interval columns preserve immutable values from modern adapters instead
+of converting them back to legacy subclasses. The column converter also recognizes
+canonical sqlapp strings, and its formatter emits canonical text for IntervalValue.
+The new value's Java class is registered for INTERVAL parameter-type inference.
+Legacy values and their typed parsers remain available. DataType identifiers,
+qualifiers and XML metadata are unchanged. This common bridge does not make
+unmigrated database adapters understand mixed-sign or wide-range values.
+
+PostgreSQL COPY uses the same codec as JDBC, including column precision and field
+checks. COPY interval arrays preserve dimensions, null elements and component
+signs. JDBC interval array binding is not added in this stage and is rejected on
+the column-aware path rather than treated as a scalar.
+
+The existing SQL factory path also uses the PostgreSQL converter/formatter and
+typed INTERVAL literals. Column precision is validated before rendering literals,
+so scripted INSERT values use the same validation as bound INSERT values.
+The general Converter registry retains its established null/empty-string defaults;
+IntervalValue.parse itself remains strict.
+
+The PostgreSQL mixed-sign regression now runs in ordinary tests. Core tests cover
+every interval column's immutable-value and canonical-text round trips; PostgreSQL
+tests cover driver objects, JDBC read -> Row -> bind, wide field bounds, all output
+styles, qualifiers, precision, and COPY. These are driver/proxy/text tests, not
+proof of an external PostgreSQL round trip.
+
+References: [PostgreSQL interval semantics](https://www.postgresql.org/docs/18/datatype-datetime.html#DATATYPE-INTERVAL-INPUT),
+[storage and infinity representations](https://github.com/postgres/postgres/blob/REL_18_STABLE/src/include/datatype/timestamp.h),
+[pgJDBC PGInterval implementation](https://github.com/pgjdbc/pgjdbc/blob/REL42.7.11/pgjdbc/src/main/java/org/postgresql/util/PGInterval.java).
+
+## Conversion policy
 
 No conversion warnings are stored on IntervalValue. They belong to conversion
 results and migration reports, alongside the source/target type and any explicit
@@ -201,9 +272,9 @@ policy. The current stages introduce no conversion-result API.
 
 | Future target | Policy |
 | --- | --- |
-| PostgreSQL-like month/day/time model | Preserve independent components; validate range and fractional precision. |
-| YEAR TO MONTH | Require zero days and time; validate leading precision and range. |
-| DAY TO SECOND | Require zero months. Combine days at an explicit 24-hour conversion policy; record a warning whenever nonzero calendar days are converted to 24-hour units. Validate range and precision. |
+| PostgreSQL month/day/time model (implemented) | Preserve independent components; validate range and fractional precision. |
+| SQL-standard YEAR TO MONTH targets (future) | Require zero days and time; validate leading precision and range. |
+| SQL-standard DAY TO SECOND targets (future) | Require zero months. Combine days at an explicit 24-hour conversion policy; record a warning whenever nonzero calendar days are converted to 24-hour units. Validate range and precision. |
 | Other interval qualifiers | Validate omitted components and precision explicitly; never silently truncate. |
 
 The DAY TO SECOND policy preserves a fixed-duration interpretation, not necessarily

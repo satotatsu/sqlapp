@@ -23,6 +23,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.sqlapp.data.schemas.Column;
+
 public interface JdbcTypeHandler {
 
 	/**
@@ -53,4 +55,10 @@ public interface JdbcTypeHandler {
 	 */
 	void setObject(PreparedStatement stmt, int parameterIndex, Object x)
 			throws SQLException;
+
+	/** Column-aware binding for precision/qualifier checks; existing handlers retain their behavior. */
+	default void setObject(PreparedStatement stmt, int parameterIndex, Object value,
+			Column column) throws SQLException {
+		setObject(stmt, parameterIndex, value);
+	}
 }
