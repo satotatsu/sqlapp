@@ -40,6 +40,7 @@ passes.
 | `modifiedOnly` | `Property<Boolean>` | yes | `false` | Build only models changed since `stateFile` and their downstream models |
 | `unitTestsEnabled` | `Property<Boolean>` | yes | `true` | Run unit tests before building |
 | `testOnly` | `Property<Boolean>` | yes | `false` | Run unit tests and build nothing |
+| `targetMappingFile` | `RegularFileProperty` | no | — | Transfer name mapping with the [declared column types](#declared-columns), written after a complete build |
 
 ## Configuration
 
@@ -122,6 +123,51 @@ back, every downstream model is skipped, unrelated models are still built, and
 the task fails after reporting each model's status. Relations of models that
 succeeded remain. `stateFile` is not written after a failed run.
 
+## Declared columns
+
+A `table` model can declare its output columns and primary key. Declare them
+for every model that is loaded into another database:
+
+```yaml
+models:
+  - name: CUSTOMER_SALES
+    materialized: table
+    sql: models/customer_sales.sql
+    columns:
+      - name: CUSTOMER_ID
+        type: INT
+      - name: NAME
+        type: VARCHAR(50)
+        notNull: true
+      - name: TOTAL
+        type: DECIMAL(12,2)
+    primaryKey: [CUSTOMER_ID]
+```
+
+`type` is a sqlapp `DataType` with optional length and scale, the same notation
+as the transfer mapping file. CHAR, VARCHAR, NCHAR and NVARCHAR need a length.
+In YAML flow style, quote types that contain a comma:
+`{name: TOTAL, type: "DECIMAL(12,2)"}`.
+
+DuckDB then creates the table with these columns, NOT NULL constraints, the
+primary key and a length check for character columns, and fills it with
+`INSERT ... SELECT`. A row that does not fit fails the model before anything
+reaches the target:
+
+- a string longer than the declared length;
+- NULL in a `notNull` or primary key column, or a duplicate key;
+- a number outside the declared precision, or a value that cannot be cast to
+  the declared type;
+- a query that returns a column that is not declared, or misses one.
+
+Values are cast to the declared types; a DECIMAL with more fraction digits is
+rounded to the declared scale. Primary key columns are always NOT NULL.
+
+DuckDB keeps the types, NOT NULL and the primary key, but not string lengths
+(`VARCHAR(n)` has no effect in DuckDB). With `targetMappingFile`, the task
+writes the declared types as a transfer name mapping, so that the transfer to
+the target creates the columns with them; see the next section.
+
 ## Unit tests
 
 A unit test runs one model query against inline rows instead of its real
@@ -177,17 +223,81 @@ are built; unselected upstream relations must already exist in the engine.
 A changed fingerprint means the *definition* changed. It does not detect new
 source data, so keep `modifiedOnly` off for regular data refreshes.
 
+## End-to-end with the transfer task
+
+The model step sits between two `transferDatabase` jobs. DuckDB is the target
+of the first job and the source of the second:
+
+```groovy
+tasks.register('loadWork', TransferDatabaseTask) {      // source -> DuckDB
+    configurationFile = file('migration/load.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:oracle:thin:@source/app' }
+    dataSource { jdbcUrl = 'jdbc:duckdb:build/migration/work.duckdb' }
+}
+executeMigrationModels {                                  // models in DuckDB
+    configurationFile = file('migration/models.yaml')
+    dataSource { jdbcUrl = 'jdbc:duckdb:build/migration/work.duckdb' }
+}
+tasks.register('unloadWork', TransferDatabaseTask) {    // DuckDB -> target
+    configurationFile = file('migration/unload.yaml')
+    sourceDataSource { jdbcUrl = 'jdbc:duckdb:build/migration/work.duckdb' }
+    dataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
+}
+```
+
+```yaml
+# load.yaml
+formatVersion: 1
+source: src
+target: work
+tables: [CUSTOMER, ORDERS]
+schemaMode: CREATE_MISSING
+```
+
+```groovy
+executeMigrationModels {
+    configurationFile = file('migration/models.yaml')
+    targetMappingFile = layout.buildDirectory.file('migration/model-types.yaml')
+    dataSource { jdbcUrl = 'jdbc:duckdb:build/migration/work.duckdb' }
+}
+```
+
+```yaml
+# unload.yaml
+formatVersion: 1
+source: work
+target: dst
+tables: [CUSTOMER_SALES]
+schemaMode: CREATE_MISSING
+mappingFile: ../build/migration/model-types.yaml   # relative to this file
+```
+
+Rows are written into DuckDB with the DuckDB Appender (see
+[Bulk INSERT](../data/bulk-insert.md#duckdb)). Each transfer still requires its
+reviewed `expectedConfigurationFingerprint` and `allowExecution`, as
+described in [Direct transfer](direct-transfer.md).
+
+Both transfers verify the copied rows. DuckDB offers no SERIALIZABLE isolation
+through JDBC; its REPEATABLE READ is snapshot isolation, which the DuckDB dialect
+declares and verification uses.
+
+The target table gets the declared types, NOT NULL and the primary key. A model
+table loaded without declared columns has no string lengths, and creating its
+target table fails; declare the columns, or create the target table yourself
+and use `schemaMode: REQUIRE_EXISTING`.
+
 ## Current limitations
 
 - Models run on DuckDB only. Building models inside another target database is
   planned.
 - `incremental` materialization is not available yet; `table` rebuilds fully.
 - Loading the source database into the engine and loading model tables into the
-  target are separate steps, using the existing export, transfer and
-  bulk-migration tasks.
-- Result column types are the types DuckDB derives from the query. When a model
-  table is loaded into another database, define the target table types in the
-  Schema model rather than relying on the derived types.
+  target are separate `transferDatabase` jobs; see
+  [End-to-end with the transfer task](#end-to-end-with-the-transfer-task).
+- Only `table` models can declare columns. View models have the types DuckDB
+  derives from the query.
+- Declared lengths are checked as characters (`length()` in DuckDB). Targets
+  that measure lengths in bytes can still reject multi-byte strings.
 
 See the [design notes](../development/migration-models-design.md) for the
 planned follow-up work.

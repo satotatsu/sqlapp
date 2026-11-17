@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -142,7 +141,7 @@ public class Path extends  AbstractMultiPoint<Point> implements ToUpperDimension
 		for(int i=0;i<points.length;i++){
 			points[i]=this.points[i].toUpperDimension();
 		}
-		return new Path3D(points);
+		return new Path3D(this.open, points);
 	}
 	
 	/* (non-Javadoc)
@@ -150,30 +149,32 @@ public class Path extends  AbstractMultiPoint<Point> implements ToUpperDimension
 	 */
 	@Override
 	public Path setValue(String text) {
-		boolean open=false;
-		if (text.contains("[")){
-			text=text.replace("[", "").replace("]", "");
-			open=true;
-		} else{
-			text=text.replace("(", "").replace(")", "");
-		}
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.open=open;
-		this.setPoint(vals);
+		final GeometryTextParser.PointList list = this.setPointText(text, true);
+		this.open = list.enclosure == GeometryTextParser.Enclosure.BRACKET;
 		return this;
 	}
 	
 	/**
-	 * 面積を求めます
+	 * 面積を求めます。
+	 * <p>
+	 * 閉じたPathを多角形とみなし、靴紐公式で面積を求めます。点が3点未満の場合は0を返します。 開いたPathは面積を持たないため
+	 * {@link Double#NaN} を返します。
+	 * </p>
 	 */
 	public double getArea(){
-		double total=0d;
-		for(int i=0;i<points.length-1;i++){
-			total=total+(points[i+1].getX()-points[i].getX())*(points[i+1].getY()-points[i].getY()/2);
+		if (this.open) {
+			return Double.NaN;
 		}
-		total=total+(points[0].getX()-points[points.length-1].getX())*(points[0].getY()-points[points.length-1].getY()/2);
-		return Math.abs(total);
+		if (points == null || points.length < 3) {
+			return 0d;
+		}
+		double total = 0d;
+		for (int i = 0; i < points.length; i++) {
+			final Point p = points[i];
+			final Point q = points[(i + 1) % points.length];
+			total += p.getX() * q.getY() - q.getX() * p.getY();
+		}
+		return Math.abs(total) / 2d;
 	}
 	
 	/**

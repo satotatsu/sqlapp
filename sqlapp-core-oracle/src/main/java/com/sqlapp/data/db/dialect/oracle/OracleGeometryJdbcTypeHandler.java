@@ -46,17 +46,29 @@ public class OracleGeometryJdbcTypeHandler implements JdbcTypeHandler {
 
 	@Override
 	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
-		return Decoders.decode((java.sql.Struct) rs.getObject(columnIndex));
+		final Object value = rs.getObject(columnIndex);
+		return value == null ? null : Decoders.decode((java.sql.Struct) value);
 	}
 
 	@Override
 	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
-		return Decoders.decode((java.sql.Struct) rs.getObject(columnLabel));
+		final Object value = rs.getObject(columnLabel);
+		return value == null ? null : Decoders.decode((java.sql.Struct) value);
 	}
 
 	@Override
 	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
 		Geometry<?> geo = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
+		if (geo == null) {
+			stmt.setNull(parameterIndex, java.sql.Types.STRUCT, "MDSYS.SDO_GEOMETRY");
+			return;
+		}
+		if (geo.isEmpty()) {
+			// SDO_GEOMETRY には空の図形の表現がない(NULL とは意味が異なるため変換しない)
+			throw new IllegalArgumentException(
+					"Oracle SDO_GEOMETRY cannot represent an empty geometry. value="
+							+ org.geolatte.geom.codec.Wkt.toWkt(geo));
+		}
 		java.sql.Struct struct = Encoders.encode(geo, stmt.getConnection(), sqlTypeFactory);
 		stmt.setObject(parameterIndex, struct);
 	}

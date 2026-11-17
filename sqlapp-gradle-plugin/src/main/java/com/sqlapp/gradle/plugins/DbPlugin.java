@@ -34,6 +34,7 @@ public class DbPlugin implements Plugin<Project> {
 	public static final String GROUP_MIGRATION_ASSESSMENT = "sqlapp migration assessment";
 	public static final String GROUP_BULK_MIGRATION = "sqlapp bulk migration";
 	public static final String GROUP_MIGRATION_SNAPSHOT = "sqlapp migration snapshot";
+	public static final String GROUP_MIGRATION_MODEL = "sqlapp migration model";
 	public static final String GROUP_TRANSFER = "sqlapp transfer";
 	public static final String GROUP_LEGACY_MIGRATION = "sqlapp legacy migration";
 
@@ -122,6 +123,9 @@ public class DbPlugin implements Plugin<Project> {
 				"Verifies a migration snapshot report.");
 		registerTask(project, "verifyMigrationSnapshotFailureReport", VerifyMigrationSnapshotFailureReportTask.class, GROUP_MIGRATION_SNAPSHOT,
 				"Verifies a migration snapshot failure report.");
+		// sqlapp migration model
+		registerTask(project, "executeMigrationModels", ExecuteMigrationModelsTask.class, GROUP_MIGRATION_MODEL,
+				"Tests and builds SELECT-defined migration models.");
 		// sqlapp transfer
 		registerTask(project, "transferDatabase", TransferDatabaseTask.class, GROUP_TRANSFER,
 				"Reviews or runs a direct database-to-database transfer.");
@@ -136,6 +140,8 @@ public class DbPlugin implements Plugin<Project> {
 				"Imports PL/I record definitions as Schema XML.");
 		registerTask(project, "cobolSchemaImport", CobolSchemaImportTask.class, GROUP_LEGACY_MIGRATION,
 				"Imports COBOL copybook records as Schema XML.");
+		registerTask(project, "extractCobolCsv", ExtractCobolCsvTask.class, GROUP_LEGACY_MIGRATION,
+				"Extracts contract CSV files from a host data set with a COBOL record layout.");
 		registerTask(project, "generateLegacyMigrationContract", GenerateLegacyMigrationContractTask.class, GROUP_LEGACY_MIGRATION,
 				"Generates an extraction and load contract from a mapping.");
 		registerTask(project, "generatePliCsvExtractor", GeneratePliCsvExtractorTask.class, GROUP_LEGACY_MIGRATION,

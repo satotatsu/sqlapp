@@ -31,7 +31,7 @@ class DbPluginTaskGroupTest {
 	@Test
 	void everyTaskHasGroupAndDescription() {
 		final List<Task> tasks = sqlappTasks();
-		assertEquals(49, tasks.size());
+		assertEquals(51, tasks.size());
 		for (final Task task : tasks) {
 			assertTrue(task.getGroup() != null && task.getGroup().startsWith("sqlapp "), task.getName());
 			assertTrue(task.getDescription() != null && !task.getDescription().isBlank(), task.getName());
@@ -42,7 +42,8 @@ class DbPluginTaskGroupTest {
 	void tasksAreGroupedByPurpose() {
 		final Map<String, List<String>> byGroup = new TreeMap<>(sqlappTasks().stream()
 				.collect(Collectors.groupingBy(Task::getGroup, Collectors.mapping(Task::getName, Collectors.toList()))));
-		assertEquals(8, byGroup.size(), byGroup.toString());
+		assertEquals(9, byGroup.size(), byGroup.toString());
+		assertTrue(byGroup.get(DbPlugin.GROUP_MIGRATION_MODEL).contains("executeMigrationModels"));
 		assertTrue(byGroup.get(DbPlugin.GROUP_MIGRATION).contains("migration"));
 		assertTrue(byGroup.get(DbPlugin.GROUP_SCHEMA).contains("exportSchemaXml"));
 		assertTrue(byGroup.get(DbPlugin.GROUP_BULK_MIGRATION).contains("executeBulkMigrationJob"));

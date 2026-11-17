@@ -11,6 +11,7 @@
 | Check copied HTML and SVG navigation | [Generated example checks](build-and-test.md#check-the-saved-gradle-html-example) |
 | Review planned work | [Roadmap](roadmap.md) |
 | Review migration UX and mapping priorities | [Data migration plan](data-migration-plan.md) |
+| Review SELECT-defined model design and follow-up work | [Migration models design](migration-models-design.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
 | Verify data type resolution, ranges and real-engine recreation | [Dialect data types](dialect-data-types.md) |
 | Read and recreate PostgreSQL-only schema objects | [PostgreSQL schema objects](postgresql-schema-objects.md) |

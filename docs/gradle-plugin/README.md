@@ -36,6 +36,7 @@ use a plugin release that contains the tasks you need.
 
 - [Bulk migration tasks](bulk-migration.md): jobs, approval gates, leases, verification, and repair.
 - [Snapshot task](snapshot.md): SCD2 configuration and execution reports.
+- [Migration models](migration-models.md): SELECT-defined models, unit tests and selective builds on DuckDB.
 - [Migration reports](migration-reports.md): operational and repair-plan reports.
 - [Migration concepts and Java APIs](../migration/README.md): shared workflow reference.
 

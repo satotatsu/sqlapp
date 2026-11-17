@@ -49,7 +49,7 @@ class TransferNameMappingInputChecksTest {
 			panel.columnGrid.getCellEditor().stopCellEditing();
 			assertEquals(0, panel.issues.size());
 			assertTrue(panel.checkStatus.getText().contains("Names changed"));
-			assertEquals("CORRECTED", panel.configuration().tables().get("A").columns().get("B"));
+			assertEquals("CORRECTED", panel.configuration().tables().get("A").names().get("B"));
 		});
 	}
 

@@ -51,6 +51,8 @@ public class BoxConverter extends AbstractConverter<Box> implements Supplier<Box
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Box.class);
 		} else if (value instanceof Box) {
 			return (Box) value;
 		} else if (value instanceof Box3D) {

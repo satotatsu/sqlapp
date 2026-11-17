@@ -45,6 +45,8 @@ public class PointConverter extends AbstractConverter<Point> implements Supplier
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Point.class);
 		} else if (value instanceof Point) {
 			return (Point) value;
 		} else if (value instanceof Point3D) {

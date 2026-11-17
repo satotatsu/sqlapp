@@ -47,6 +47,8 @@ public class PathConverter extends AbstractConverter<Path> implements Supplier<P
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Path.class);
 		} else if (value instanceof Path) {
 			return (Path) value;
 		} else if (value instanceof Path3D) {

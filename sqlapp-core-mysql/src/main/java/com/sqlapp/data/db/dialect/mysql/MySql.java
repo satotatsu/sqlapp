@@ -276,6 +276,11 @@ public class MySql extends Dialect {
 	}
 
 	@Override
+	public String getSelectDummyTableName() {
+		return "DUAL";
+	}
+
+	@Override
 	public String getIdentitySelectString() {
 		return "SELECT LAST_INSERT_ID()";
 	}

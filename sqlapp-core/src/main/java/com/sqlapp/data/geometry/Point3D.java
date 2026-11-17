@@ -19,8 +19,8 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.HashCodeBuilder;
 
 /**
  * POINT 3D型
@@ -31,6 +31,12 @@ public class Point3D extends AbstractPoint2D implements ToLowerDimensionType<Poi
 	private static final long serialVersionUID = 3280634501061893212L;
     /** Z座標  */
     public double z=0d;
+
+    /**
+     * コンストラクタ
+     */
+    public Point3D(){
+    }
 
     /**
      * @param x X座標
@@ -74,6 +80,15 @@ public class Point3D extends AbstractPoint2D implements ToLowerDimensionType<Poi
 	/**
 	 * @return the z
 	 */
+	/* (non-Javadoc)
+	 * @see com.sqlapp.data.geometry.AbstractPoint2D#hashCode(com.sqlapp.util.HashCodeBuilder)
+	 */
+	@Override
+	protected void hashCode(HashCodeBuilder builder){
+		super.hashCode(builder);
+		builder.append(z);
+	}
+
 	public double getZ() {
 		return z;
 	}
@@ -115,9 +130,7 @@ public class Point3D extends AbstractPoint2D implements ToLowerDimensionType<Poi
 	 */
 	@Override
 	public Point3D setValue(String text) {
-		text=CommonUtils.unwrap(text, "(", ")");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
+		final double[] vals = GeometryTextParser.parsePoint(text, 3, "Point3D");
 		this.setX(vals[0]);
 		this.setY(vals[1]);
 		this.setZ(vals[2]);

@@ -47,6 +47,8 @@ public class PolygonConverter extends AbstractConverter<Polygon> implements Supp
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Polygon.class);
 		} else if (value instanceof Polygon) {
 			return (Polygon) value;
 		} else if (value instanceof Polygon3D) {

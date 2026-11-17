@@ -5,6 +5,7 @@ plugins {
 dependencies {
 	implementation project(':sqlapp-core')
 	testImplementation project(':sqlapp-core-test')
+	testRuntimeOnly('com.oracle.database.jdbc:ojdbc11:23.26.0.0.0')
 }
 
 javadoc {

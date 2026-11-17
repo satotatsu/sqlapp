@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 有限の直線型
@@ -115,12 +113,26 @@ public final class Lseg extends AbstractMultiPoint<Point> implements ToUpperDime
 	 */
 	@Override
 	public Lseg setValue(String text) {
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.setPoint(vals);
+		this.setPointText(text, true);
 		return this;
 	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMinPointSize() {
+		return 2;
+	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMaxPointSize() {
+		return 2;
+	}
+
 	
 	/**
 	 * Line型に変換します

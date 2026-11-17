@@ -53,7 +53,11 @@ public class ToPGLineConverter extends AbstractToObjectConverter<PGline, Line> {
 
 	@Override
 	protected void setValue(PGline obj, String value) throws SQLException {
-		obj.setValue(value);
+		// pgjdbc の PGline#setValue は2点形式の係数計算が誤っているため、core 側で解析してから係数を求める
+		final PGline line = toDbType(new Line().setValue(value));
+		obj.a = line.a;
+		obj.b = line.b;
+		obj.c = line.c;
 	}
 
 	/*

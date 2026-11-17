@@ -59,11 +59,13 @@ final class PlanningJdbc {
 	static HikariDataSource open(final Spec spec, final char[] password, final boolean readOnly, final int size,
 			final JdbcDriverLibraries libraries) {
 		final var configuration = new HikariConfig();
+		java.util.Map<String, String> dialectOptions = java.util.Map.of();
 		if (spec.settingsFile() != null) {
 			// The form owns endpoint and credentials; the file supplies everything else.
 			final var settings = new java.util.LinkedHashMap<>(DataSourceConfigFiles.read(spec.settingsFile()));
 			settings.keySet().removeIf(key -> FORM_KEYS.contains(key.toLowerCase(java.util.Locale.ROOT)));
 			DataSourceConfigFiles.applyTo(configuration, settings, name -> null);
+			dialectOptions = DataSourceConfigFiles.dialectOptions(settings);
 		}
 		final var added = libraries.resolve(spec);
 		if (added == null && (spec.driverClass() == null || spec.driverClass().isBlank()))
@@ -84,7 +86,44 @@ final class PlanningJdbc {
 		configuration.setMinimumIdle(0);
 		configuration.setConnectionTimeout(10_000);
 		configuration.setInitializationFailTimeout(-1);
+		if (!dialectOptions.isEmpty()) {
+			return new DialectOptionsDataSource(configuration, dialectOptions);
+		}
 		return new HikariDataSource(configuration);
+	}
+
+	/**
+	 * Pool whose connections carry the {@code dialect.*} options of the settings
+	 * file (for example {@code oracle.maxStringSize}) to dialect resolution. Only
+	 * used when such options exist, so ordinary connections stay unwrapped.
+	 */
+	static final class DialectOptionsDataSource extends HikariDataSource {
+		private final java.util.Map<String, String> dialectOptions;
+
+		DialectOptionsDataSource(final HikariConfig configuration, final java.util.Map<String, String> dialectOptions) {
+			super(configuration);
+			this.dialectOptions = java.util.Map.copyOf(dialectOptions);
+		}
+
+		java.util.Map<String, String> getDialectOptions() {
+			return dialectOptions;
+		}
+
+		@Override
+		public Connection getConnection() throws java.sql.SQLException {
+			return wrap(super.getConnection());
+		}
+
+		@Override
+		public Connection getConnection(final String username, final String password) throws java.sql.SQLException {
+			return wrap(super.getConnection(username, password));
+		}
+
+		private Connection wrap(final Connection connection) {
+			final var wrapped = new com.sqlapp.jdbc.SqlappConnection(connection);
+			wrapped.setDialectOptions(dialectOptions);
+			return wrapped;
+		}
 	}
 
 	static Dialect requireDialect(final Connection connection) {

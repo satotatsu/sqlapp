@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -142,7 +141,7 @@ public class Path3D extends  AbstractMultiPoint<Point3D> implements ToLowerDimen
 		for(int i=0;i<points.length;i++){
 			points[i]=this.points[i].toLowerDimension();
 		}
-		return new Path(points);
+		return new Path(this.open, points);
 	}
 
 	/* (non-Javadoc)
@@ -150,17 +149,8 @@ public class Path3D extends  AbstractMultiPoint<Point3D> implements ToLowerDimen
 	 */
 	@Override
 	public Path3D setValue(String text) {
-		boolean open=false;
-		if (text.contains("[")){
-			text=text.replace("[", "").replace("]", "");
-			open=true;
-		} else{
-			text=text.replace("(", "").replace(")", "");
-		}
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.open=open;
-    	setPoint(vals);
+		final GeometryTextParser.PointList list = this.setPointText(text, true);
+		this.open = list.enclosure == GeometryTextParser.Enclosure.BRACKET;
 		return this;
 	}
 	

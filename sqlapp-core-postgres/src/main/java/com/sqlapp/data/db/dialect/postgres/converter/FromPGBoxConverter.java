@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import java.sql.SQLException;
 import com.sqlapp.data.geometry.Box;
 import org.postgresql.geometric.PGbox;
 
@@ -54,20 +53,16 @@ public class FromPGBoxConverter extends AbstractFromObjectConverter<Box, PGbox> 
 
 	@Override
 	protected Box toObjectFromString(String value) {
-		String val = (String) value;
-		try {
-			PGbox pgObject = new PGbox(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		// PostgreSQL の出力形式は core 側で解析する(pgjdbc の PGline(String) は2点形式の係数計算が誤っているため)
+		return new Box().setValue(value);
 	}
 
 	@Override
 	protected Box toObject(PGbox value) {
-		Box obj = new Box();
-		obj.setValue(value.getValue());
-		return obj;
+		if (value.point == null || value.point[0] == null || value.point[1] == null) {
+			return null;
+		}
+		return new Box(value.point[0].x, value.point[0].y, value.point[1].x, value.point[1].y);
 	}
 
 	@Override

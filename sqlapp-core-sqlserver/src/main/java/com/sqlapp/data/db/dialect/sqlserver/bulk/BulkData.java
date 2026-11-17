@@ -11,6 +11,9 @@ import java.util.Set;
 import com.microsoft.sqlserver.jdbc.ISQLServerBulkData;
 import com.microsoft.sqlserver.jdbc.SQLServerBulkCopyOptions;
 import com.microsoft.sqlserver.jdbc.SQLServerException;
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.sqlserver.SqlServerGeometryJdbcTypeHandler;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -80,6 +83,10 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 	@Override
 	public int getColumnType(final int ordinal) {
 		final Column column = getColumn(ordinal);
+		if (isGeometry(column)) {
+			// geometry / geography are sent as the same serialized bytes that the regular INSERT binds
+			return java.sql.Types.VARBINARY;
+		}
 		if (column.getDataType() == null || column.getDataType().getJdbcType() == null) {
 			return java.sql.Types.OTHER;
 		}
@@ -105,7 +112,14 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 		}
 		final Object[] values = new Object[columns.size()];
 		for (int i = 0; i < columns.size(); i++) {
-			values[i] = currentRow.get(columns.get(i).getOrdinal());
+			final Column column = columns.get(i);
+			final Object value = currentRow.get(column.getOrdinal());
+			if (value != null && isGeometry(column)) {
+				values[i] = SqlServerGeometryJdbcTypeHandler.toSqlServerBytes(Converters.getDefault()
+						.convertObject(value, org.geolatte.geom.Geometry.class));
+			} else {
+				values[i] = value;
+			}
 		}
 		return values;
 	}
@@ -124,6 +138,10 @@ public class BulkData implements ISQLServerBulkData, AutoCloseable {
 		} catch (RuntimeException e) {
 			throw new SQLException("Failed to read bulk row for " + table.getName(), e);
 		}
+	}
+
+	private static boolean isGeometry(final Column column) {
+		return column.getDataType() == DataType.GEOMETRY || column.getDataType() == DataType.GEOGRAPHY;
 	}
 
 	public long getRowCount() {

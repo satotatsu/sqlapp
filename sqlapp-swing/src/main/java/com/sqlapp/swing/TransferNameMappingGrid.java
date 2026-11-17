@@ -218,7 +218,7 @@ final class TransferNameMappingGrid extends JPanel {
 			}
 			String proposed = rules.apply(current);
 			if (!blankUnchanged)
-				new TransferNameMappingIO.TableMapping(null, Map.of(value(row, sourceColumn), proposed));
+				TransferNameMappingIO.TableMapping.names(null, Map.of(value(row, sourceColumn), proposed));
 			validateName(proposed);
 			changes.add(new NameChange(row, rowValues(row), current, proposed));
 		}
@@ -235,7 +235,7 @@ final class TransferNameMappingGrid extends JPanel {
 	}
 
 	private void validateName(String name) {
-		new TransferNameMappingIO.TableMapping(blankUnchanged ? name : null,
+		TransferNameMappingIO.TableMapping.names(blankUnchanged ? name : null,
 				blankUnchanged ? Map.of() : Map.of("source", name));
 	}
 

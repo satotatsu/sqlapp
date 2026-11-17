@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.postgres.PostgresGeometryJdbcTypeHandler;
+import com.sqlapp.data.geometry.AbstractGeometry;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -100,6 +102,17 @@ public class PostgresBulkDataReader extends Reader {
 	}
 
 	private String toText(final Object value) {
+		if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			// PostGIS geometry: the same EWKB that the regular INSERT binds, as hex text
+			return toHex(PostgresGeometryJdbcTypeHandler.toEwkb(geometry));
+		}
+		if (value instanceof org.locationtech.jts.geom.Geometry geometry) {
+			return toHex(PostgresGeometryJdbcTypeHandler.toEwkb(org.geolatte.geom.jts.JTS.from(geometry)));
+		}
+		if (value instanceof AbstractGeometry geometry) {
+			// PostgreSQL built-in geometric types: sqlapp's text form is valid PostgreSQL input
+			return geometry.toString();
+		}
 		if (value instanceof byte[] bytes) {
 			final StringBuilder builder = new StringBuilder(2 + bytes.length * 2);
 			builder.append("\\x");
@@ -133,6 +146,15 @@ public class PostgresBulkDataReader extends Reader {
 			}
 		}
 		return builder.append('}').toString();
+	}
+
+	private static String toHex(final byte[] bytes) {
+		final StringBuilder builder = new StringBuilder(bytes.length * 2);
+		for (final byte currentByte : bytes) {
+			builder.append(Character.forDigit((currentByte >>> 4) & 0x0f, 16));
+			builder.append(Character.forDigit(currentByte & 0x0f, 16));
+		}
+		return builder.toString();
 	}
 
 	private void appendCsv(final StringBuilder builder, final String value) {

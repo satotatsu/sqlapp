@@ -48,6 +48,9 @@ public class PostgresGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	}
 
 	private Object convertInternal(Object obj) {
+		if (obj == null) {
+			return null;
+		}
 		if (obj instanceof PGobject) {
 			String pgValue = ((PGobject) obj).getValue();
 			if (pgValue.charAt(0) == 'S') {
@@ -72,8 +75,53 @@ public class PostgresGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	@Override
 	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
 		Geometry<?> geometry = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
-		WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.POSTGIS_EWKB_1);
-		byte[] bytes = encoder.encode(geometry, ByteOrder.NDR).toByteArray();
-		stmt.setBytes(parameterIndex, bytes);
+		if (geometry == null) {
+			stmt.setNull(parameterIndex, java.sql.Types.OTHER);
+			return;
+		}
+		stmt.setBytes(parameterIndex, toEwkb(geometry));
+	}
+
+	/**
+	 * PostGIS へ送る EWKB(リトルエンディアン)に変換します。通常の INSERT と COPY で同じ表現を使うために共有します。
+	 * 
+	 * @param geometry
+	 *            図形
+	 * @return EWKB
+	 */
+	public static byte[] toEwkb(final Geometry<?> geometry) {
+		if (geometry instanceof org.geolatte.geom.Point && geometry.isEmpty()) {
+			// Geolatte は空の Point を GEOMETRYCOLLECTION EMPTY として符号化するため、
+			// PostGIS と同じく座標を NaN とした Point として符号化する
+			return emptyPointEwkb(geometry);
+		}
+		final WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.POSTGIS_EWKB_1);
+		return encoder.encode(geometry, ByteOrder.NDR).toByteArray();
+	}
+
+	private static byte[] emptyPointEwkb(final Geometry<?> geometry) {
+		final boolean hasSrid = geometry.getSRID() > 0;
+		final int dimension = 2 + (geometry.hasZ() ? 1 : 0) + (geometry.hasM() ? 1 : 0);
+		final java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(1 + 4 + (hasSrid ? 4 : 0) + 8 * dimension)
+				.order(java.nio.ByteOrder.LITTLE_ENDIAN);
+		buffer.put((byte) 1);
+		int type = 1;
+		if (geometry.hasZ()) {
+			type |= 0x80000000;
+		}
+		if (geometry.hasM()) {
+			type |= 0x40000000;
+		}
+		if (hasSrid) {
+			type |= 0x20000000;
+		}
+		buffer.putInt(type);
+		if (hasSrid) {
+			buffer.putInt(geometry.getSRID());
+		}
+		for (int i = 0; i < dimension; i++) {
+			buffer.putDouble(Double.NaN);
+		}
+		return buffer.array();
 	}
 }

@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import java.sql.SQLException;
 import com.sqlapp.data.geometry.Point;
 import org.postgresql.geometric.PGpoint;
 
@@ -54,20 +53,16 @@ public class FromPGPointConverter extends AbstractFromObjectConverter<Point, PGp
 
 	@Override
 	protected Point toObjectFromString(String value) {
-		String val = (String) value;
-		try {
-			PGpoint pgObject = new PGpoint(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		// PostgreSQL の出力形式は core 側で解析する(pgjdbc の PGline(String) は2点形式の係数計算が誤っているため)
+		return new Point().setValue(value);
 	}
 
 	@Override
 	protected Point toObject(PGpoint value) {
-		Point obj = new Point();
-		obj.setValue(value.getValue());
-		return obj;
+		if (value.isNull) {
+			return null;
+		}
+		return new Point(value.x, value.y);
 	}
 
 	@Override

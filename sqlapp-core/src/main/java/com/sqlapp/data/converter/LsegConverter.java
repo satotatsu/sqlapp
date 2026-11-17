@@ -49,6 +49,8 @@ public class LsegConverter extends AbstractConverter<Lseg> implements Supplier<L
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Lseg.class);
 		} else if (value instanceof Lseg) {
 			return (Lseg) value;
 		} else if (value instanceof Lseg3D) {

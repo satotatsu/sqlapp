@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.HashCodeBuilder;
 
@@ -34,6 +33,12 @@ public class Circle3D extends AbstractPoint2D implements ToLowerDimensionType<Ci
     public double z=0d;
 	/** 半径  */
     private double r=0d;
+
+    /**
+     * コンストラクタ
+     */
+    public Circle3D(){
+    }
 
     /**
      * @param x X座標
@@ -59,6 +64,7 @@ public class Circle3D extends AbstractPoint2D implements ToLowerDimensionType<Ci
 	
 	@Override
 	protected void hashCode(HashCodeBuilder builder){
+		super.hashCode(builder);
 		builder.append(r);
 		builder.append(z);
 	}
@@ -140,10 +146,7 @@ public class Circle3D extends AbstractPoint2D implements ToLowerDimensionType<Ci
 	 */
 	@Override
 	public Circle3D setValue(String text) {
-		text=CommonUtils.unwrap(text, "<", ">");
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		Double[] vals=Converters.getDefault().convertObject(values, Double[].class);
+		final double[] vals = GeometryTextParser.parseCircle(text, 3, "Circle3D");
 		this.setX(vals[0]);
 		this.setY(vals[1]);
 		this.setZ(vals[2]);

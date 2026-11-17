@@ -24,6 +24,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.geolatte.geom.Geometry;
+import org.geolatte.geom.crs.CoordinateReferenceSystem;
+import org.geolatte.geom.crs.CoordinateReferenceSystems;
+import org.geolatte.geom.crs.LinearUnit;
 import org.geolatte.geom.codec.db.sqlserver.Decoders;
 import org.geolatte.geom.codec.db.sqlserver.Encoders;
 
@@ -38,19 +41,49 @@ public class SqlServerGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	@Override
 	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
 		byte[] bytes = rs.getBytes(columnIndex);
-		return Decoders.decode(bytes);
+		return bytes == null ? null : Decoders.decode(bytes);
 	}
 
 	@Override
 	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
 		byte[] bytes = rs.getBytes(columnLabel);
-		return Decoders.decode(bytes);
+		return bytes == null ? null : Decoders.decode(bytes);
 	}
 
 	@Override
 	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
 		Geometry<?> geometry = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
-		byte[] bytes = Encoders.encode(geometry);
-		stmt.setObject(parameterIndex, bytes);
+		if (geometry == null) {
+			stmt.setNull(parameterIndex, java.sql.Types.VARBINARY);
+			return;
+		}
+		stmt.setObject(parameterIndex, toSqlServerBytes(geometry));
+	}
+
+	/**
+	 * SQL Server の geometry / geography のシリアル化形式に変換します。通常の INSERT と一括コピーで同じ表現を使うために共有します。
+	 * <p>
+	 * Geolatte のエンコーダーは SRID が 0 以下の図形で Z/M の指定を書き込めない(IllegalStateException になる)ため、
+	 * その場合は一時的な SRID で符号化してから、先頭4バイトの SRID を 0 に戻します。
+	 * </p>
+	 * 
+	 * @param geometry
+	 *            図形
+	 * @return SQL Server のシリアル化形式
+	 */
+	public static byte[] toSqlServerBytes(final Geometry<?> geometry) {
+		if (geometry.getSRID() > 0 || !(geometry.hasZ() || geometry.hasM())) {
+			return Encoders.encode(geometry);
+		}
+		final CoordinateReferenceSystem<?> crs = CoordinateReferenceSystems.mkCoordinateReferenceSystem(
+				CoordinateReferenceSystems.WEB_MERCATOR, geometry.hasZ() ? LinearUnit.METER : null,
+				geometry.hasM() ? LinearUnit.METER : null);
+		final byte[] bytes = Encoders.encode(Geometry.forceToCrs(geometry, crs));
+		// SRID(リトルエンディアンの int)を 0 にする
+		bytes[0] = 0;
+		bytes[1] = 0;
+		bytes[2] = 0;
+		bytes[3] = 0;
+		return bytes;
 	}
 }

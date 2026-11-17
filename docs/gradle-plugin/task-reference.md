@@ -29,8 +29,9 @@ purpose. Use `gradlew tasks --group "sqlapp migration"` to show one group.
 | `sqlapp migration assessment` | `assessMigration`, `assessDatabaseMigration`, `assessAccessOracleMigration`, `verifyDatabaseMigrationDdlPhases` |
 | `sqlapp bulk migration` | `generateAccessBulkMigrationJobConfiguration`, `validateBulkMigrationTarget`, `executeBulkMigrationJob`, `generateBulkMigrationOperationalReport`, `verifyBulkMigrationEvidence`, `verifyBulkMigrationEvidenceReport`, `generateBulkMigrationJobRepairPlanReport`, `executeBulkMigrationJobRepair`, `verifyBulkMigrationJobRepairEvidence`, `verifyBulkMigrationJobRepairFailureEvidence`, `verifyBulkMigrationJobRepairOutcome`, `verifyBulkMigrationJobRepairOutcomeReport` |
 | `sqlapp migration snapshot` | `generateMigrationSnapshotApprovalReport`, `executeMigrationSnapshot`, `verifyMigrationSnapshotReport`, `verifyMigrationSnapshotFailureReport` |
+| `sqlapp migration model` | `executeMigrationModels` |
 | `sqlapp transfer` | `transferDatabase`, `exportTransferFile`, `importTransferFile`, `compareTransferStaging` |
-| `sqlapp legacy migration` | `pliSchemaImport`, `cobolSchemaImport`, `generateLegacyMigrationContract`, `generatePliCsvExtractor`, `generateLegacyRdbLoader`, `loadLegacyHierarchy` |
+| `sqlapp legacy migration` | `pliSchemaImport`, `cobolSchemaImport`, `extractCobolCsv`, `generateLegacyMigrationContract`, `generatePliCsvExtractor`, `generateLegacyRdbLoader`, `loadLegacyHierarchy` |
 
 Task types registered by a consuming build have no group unless the build sets
 one.
@@ -70,6 +71,7 @@ one.
 | `executeMigrationSnapshot` | `ExecuteMigrationSnapshotTask` | `configurationFile`, source and target data sources | Atomic SCD2 snapshot and optional reports | Mutates target |
 | `verifyMigrationSnapshotReport` | `VerifyMigrationSnapshotReportTask` | `reportFile`, `approvalFile`, optional `configurationFile` | Offline validation | No database access |
 | `verifyMigrationSnapshotFailureReport` | `VerifyMigrationSnapshotFailureReportTask` | `reportFile`, `approvalFile`, optional `configurationFile` | Offline failure-artifact validation | No database access |
+| `executeMigrationModels` | `ExecuteMigrationModelsTask` | `configurationFile` and a DuckDB `dataSource`; optional `stateFile`, `modifiedOnly`, `unitTestsEnabled`, `testOnly` | Unit-tested, dependency-ordered tables and views; optional state artifact | Mutates the connected engine; see [Migration models](migration-models.md) |
 | `exportSchemaXml` | `ExportSchemaXmlTask` | `dataSource`, `outputDirectory`, optional target and filters | Schema XML | Read-only unless vendor metadata access has side effects |
 | `exportAccessSchemaXml` | `ExportAccessSchemaXmlTask` | `inputFile`, `outputFile` | Schema XML | Reads Access file |
 | `exportSqliteSchemaXml` | `ExportSqliteSchemaXmlTask` | `inputFile`, `outputFile` | Schema XML | Reads SQLite file |
@@ -82,6 +84,7 @@ one.
 | `columnRuleTransform` | `ColumnRuleTransformTask` | `targetFile`, `rulesFile`, `outputDirectory` | Transformed Schema XML and optional mapping | No database access |
 | `pliSchemaImport` | `PliSchemaImportTask` | `configurationFile`, `targetFile`, `outputDirectory` | Schema XML and optional migration mapping | No database access |
 | `cobolSchemaImport` | `CobolSchemaImportTask` | `configurationFile`, `targetFile`, `outputDirectory` | Schema XML and optional migration mapping with storage layout | No database access |
+| `extractCobolCsv` | `ExtractCobolCsvTask` | `contractFile`, `configurationFile`, `dataFile`, `outputDirectory` | Contract CSV files read from a host data set | No database access; overwrites the CSV files |
 | `generateLegacyMigrationContract` | `GenerateLegacyMigrationContractTask` | `mappingFile`, `outputDirectory` | Extraction/load contract | No database access |
 | `generatePliCsvExtractor` | `GeneratePliCsvExtractorTask` | `contractFile`, `outputDirectory` | PL/I CSV extraction artifacts | No database access |
 | `generateLegacyRdbLoader` | `GenerateLegacyRdbLoaderTask` | `contractFile`, `schemaFile`, `outputDirectory`, database identity/options | Load plan and optional runner template | No database access |

@@ -621,3 +621,22 @@ syntax that does not affect object identity may remain in dialect-specific
 `specifics`, but parent/child references, rename-sensitive column references,
 ordered keys, nested fields and dependency relationships need typed Schema
 objects with XML round-trip tests.
+
+## COBOL host data set extraction: follow-ups
+
+`cobolSchemaImport` and `extractCobolCsv` cover fixed and variable (RDW, BDW)
+records, IBM code sets through JDK charsets, table-driven code sets such as
+Fujitsu JEF, and header/detail records. Not yet done:
+
+- spanned records (RECFM=VS/VBS) and OCCURS DEPENDING ON that is not the last
+  item of a record (IBM complex ODO);
+- trailer checks that sum items inside OCCURS or read trailer items inside
+  OCCURS;
+- detail records that carry their header's key themselves, linked by those
+  fields instead of by file order;
+- `NUMBERED_COLUMNS` contracts (1NF-normalized OCCURS) in `extractCobolCsv`;
+- shipped Fujitsu JEF tables, which must come from the user's environment
+  (IBM CCSID 1390/1399 are not in the JDK but work through ICU4J's
+  `icu4j-charset`, as `x-IBM1390`/`x-IBM1399`);
+- a common reader for PL/I, whose `storage` layout lacks the encoding details
+  (USAGE, sign) that COBOL records.

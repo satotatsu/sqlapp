@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 多角形抽象クラス
@@ -107,10 +105,7 @@ public class Polygon3D extends AbstractMultiPoint<Point3D> implements ToLowerDim
 	 */
 	@Override
 	public Polygon3D setValue(String text) {
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.setPoint(vals);
+		this.setPointText(text, false);
 		return this;
 	}
 	

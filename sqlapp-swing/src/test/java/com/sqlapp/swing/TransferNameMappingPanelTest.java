@@ -31,9 +31,9 @@ class TransferNameMappingPanelTest {
 			assertFalse(panel.columns.isCellEditable(0, 3));
 			var mapping = panel.configuration().tables().get("PUBLIC.注文");
 			assertEquals("履歴", mapping.targetTable());
-			assertEquals(java.util.Map.of("名前", "顧客名", "古い列", "保持"), mapping.columns());
+			assertEquals(java.util.Map.of("名前", "顧客名", "古い列", "保持"), mapping.names());
 			panel.columns.setValueAt("個数", 2, 2);
-			assertEquals("個数", panel.configuration().tables().get("PUBLIC.注文").columns().get("数量"));
+			assertEquals("個数", panel.configuration().tables().get("PUBLIC.注文").names().get("数量"));
 		});
 	}
 
@@ -69,9 +69,38 @@ class TransferNameMappingPanelTest {
 			var changed = panel.configuration();
 			assertEquals("商品", changed.tables().get("PUBLIC.ITEMS").targetTable());
 			assertNull(changed.tables().get("PUBLIC.追加").targetTable());
-			assertEquals("先", changed.tables().get("PUBLIC.追加").columns().get("元"));
+			assertEquals("先", changed.tables().get("PUBLIC.追加").names().get("元"));
 			panel.load(io.validate(io.format(changed)));
 			assertEquals(changed, panel.configuration());
+		});
+	}
+
+	@Test
+	void keepsYamlAuthoredTypesAndConversionsWhenNamesAreEditedAndSaved() throws Exception {
+		var io = new TransferNameMappingIO();
+		var original = io.validate("""
+				formatVersion: 1
+				tables:
+				  PUBLIC.注文:
+				    columns:
+				      名前: {name: 顧客名, conversion: "value.trim()"}
+				      区分: {type: "VARCHAR(10)"}
+				  PUBLIC.ITEMS: {}
+				""");
+		SwingUtilities.invokeAndWait(() -> {
+			var panel = new TransferNameMappingPanel();
+			panel.load(original);
+			assertEquals(original, panel.configuration());
+			panel.tables.setValueAt("注文履歴", 0, 1);
+			var changed = panel.configuration().tables().get("PUBLIC.注文");
+			assertEquals("注文履歴", changed.targetTable());
+			assertEquals(new TransferNameMappingIO.ColumnMapping("顧客名", null, "value.trim()"),
+					changed.columns().get("名前"));
+			assertEquals(new TransferNameMappingIO.ColumnMapping(null, "VARCHAR(10)", null),
+					changed.columns().get("区分"));
+			assertFalse(panel.configuration().tables().get("PUBLIC.ITEMS").hasTypesOrConversions());
+			panel.load(io.validate("formatVersion: 1\ntables: {PUBLIC.注文: {}}\n"));
+			assertFalse(panel.configuration().hasTypesOrConversions());
 		});
 	}
 

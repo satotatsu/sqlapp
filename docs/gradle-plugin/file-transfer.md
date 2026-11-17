@@ -217,7 +217,9 @@ Verification is enabled by default. It compares typed rows from the captured CSV
 with target rows using the shared ordered count/hash verifier in SERIALIZABLE
 read isolation. A mismatch fails the invocation while retaining completed copy
 results. `verify: false` is an explicit opt-out retained in the result. The target
-must support transactions; verification additionally requires SERIALIZABLE.
+must support transactions; verification additionally requires SERIALIZABLE, or
+REPEATABLE READ where the target dialect declares it to be snapshot isolation
+(DuckDB).
 This does not fence concurrent writers or establish a maintenance window.
 
 Each execution workspace retains `import-result.json` with the package/plan

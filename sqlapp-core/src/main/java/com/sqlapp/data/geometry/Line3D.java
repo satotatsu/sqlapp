@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 無限の3次元直線型
@@ -48,9 +46,7 @@ public final class Line3D extends AbstractMultiPoint<Point3D> implements ToLower
      * @param y2 終了Y座標
      */
     public Line3D(double x1, double y1, double z1, double x2, double y2, double z2){
-    	super();
-        this.points[0]=newPoint(x1, y1, z1);
-        this.points[1]=newPoint(x2, y2, z2);
+    	super(x1, y1, z1, x2, y2, z2);
     }
 
     /**
@@ -116,12 +112,38 @@ public final class Line3D extends AbstractMultiPoint<Point3D> implements ToLower
 	 */
 	@Override
 	public Line3D setValue(String text) {
-		text=text.replace("(", "").replace(")", "");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
-		this.setPoint(vals);
+		this.setPointText(text, true);
 		return this;
 	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMinPointSize() {
+		return 2;
+	}
+
+	/**
+	 * 2点のみ設定できます。
+	 */
+	@Override
+	protected int getMaxPointSize() {
+		return 2;
+	}
+
+	/**
+	 * 2点の座標が同じ場合は直線を定められないため拒否します。
+	 */
+	@Override
+	protected void validatePoints(final Point3D[] points) {
+		super.validatePoints(points);
+		if (points[0].equals(points[1])) {
+			throw new IllegalArgumentException("Line3D requires two distinct points. points=" + points[0] + ","
+					+ points[1]);
+		}
+	}
+
 	
 
 	/**

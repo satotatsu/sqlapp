@@ -19,8 +19,8 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import java.sql.SQLException;
 import com.sqlapp.data.geometry.Polygon;
+import com.sqlapp.data.geometry.Point;
 import org.postgresql.geometric.PGpolygon;
 
 public class FromPGPolygonConverter extends AbstractFromObjectConverter<Polygon, PGpolygon> {
@@ -54,20 +54,20 @@ public class FromPGPolygonConverter extends AbstractFromObjectConverter<Polygon,
 
 	@Override
 	protected Polygon toObjectFromString(String value) {
-		String val = (String) value;
-		try {
-			PGpolygon pgObject = new PGpolygon(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		// PostgreSQL の出力形式は core 側で解析する(pgjdbc の PGline(String) は2点形式の係数計算が誤っているため)
+		return new Polygon().setValue(value);
 	}
 
 	@Override
 	protected Polygon toObject(PGpolygon value) {
-		Polygon obj = new Polygon();
-		obj.setValue(value.getValue());
-		return obj;
+		if (value.points == null) {
+			return null;
+		}
+		final Point[] points = new Point[value.points.length];
+		for (int i = 0; i < points.length; i++) {
+			points[i] = new Point(value.points[i].x, value.points[i].y);
+		}
+		return new Polygon(points);
 	}
 
 	@Override

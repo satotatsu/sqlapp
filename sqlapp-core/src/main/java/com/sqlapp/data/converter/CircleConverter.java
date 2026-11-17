@@ -45,6 +45,8 @@ public class CircleConverter extends AbstractConverter<Circle> implements Suppli
 			return convertObject(getSupplierValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
+		} else if (value instanceof org.geolatte.geom.Geometry<?> geometry) {
+			return SpatialGeometryConversions.fromSpatial(geometry, Circle.class);
 		} else if (value instanceof Circle) {
 			return (Circle) value;
 		} else if (value instanceof Circle3D) {

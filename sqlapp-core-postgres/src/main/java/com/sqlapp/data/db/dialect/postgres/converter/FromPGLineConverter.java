@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import java.sql.SQLException;
 import com.sqlapp.data.geometry.Line;
 import org.postgresql.geometric.PGline;
 
@@ -54,20 +53,13 @@ public class FromPGLineConverter extends AbstractFromObjectConverter<Line, PGlin
 
 	@Override
 	protected Line toObjectFromString(String value) {
-		String val = (String) value;
-		try {
-			PGline pgObject = new PGline(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		// PostgreSQL の出力形式は core 側で解析する(pgjdbc の PGline(String) は2点形式の係数計算が誤っているため)
+		return new Line().setValue(value);
 	}
 
 	@Override
 	protected Line toObject(PGline value) {
-		Line obj = new Line();
-		obj.setValue(value.getValue());
-		return obj;
+		return Line.fromCoefficients(value.a, value.b, value.c);
 	}
 
 	@Override

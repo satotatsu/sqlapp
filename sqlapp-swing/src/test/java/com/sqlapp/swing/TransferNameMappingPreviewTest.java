@@ -32,7 +32,7 @@ class TransferNameMappingPreviewTest {
 			assertEquals(panel.formattedMapping(), panel.preview.text.getText());
 			yaml.set(panel.preview.text.getText());
 			var mapped = new TransferNameMappingIO().validate(yaml.get()).tables().get("PUBLIC.注文");
-			assertEquals(java.util.Map.of("名前", "顧客名"), mapped.columns());
+			assertEquals(java.util.Map.of("名前", "顧客名"), mapped.names());
 			panel.preview.navigation.query.setText("顧客名");
 			panel.preview.navigation.next.doClick(0);
 			assertEquals("顧客名", panel.preview.text.getSelectedText());

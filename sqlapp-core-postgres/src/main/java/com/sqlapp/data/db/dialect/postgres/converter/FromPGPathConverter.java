@@ -19,8 +19,8 @@
 
 package com.sqlapp.data.db.dialect.postgres.converter;
 
-import java.sql.SQLException;
 import com.sqlapp.data.geometry.Path;
+import com.sqlapp.data.geometry.Point;
 import org.postgresql.geometric.PGpath;
 
 public class FromPGPathConverter extends AbstractFromObjectConverter<Path, PGpath> {
@@ -54,20 +54,20 @@ public class FromPGPathConverter extends AbstractFromObjectConverter<Path, PGpat
 
 	@Override
 	protected Path toObjectFromString(String value) {
-		String val = (String) value;
-		try {
-			PGpath pgObject = new PGpath(val);
-			return toObject(pgObject);
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		// PostgreSQL の出力形式は core 側で解析する(pgjdbc の PGline(String) は2点形式の係数計算が誤っているため)
+		return new Path().setValue(value);
 	}
 
 	@Override
 	protected Path toObject(PGpath value) {
-		Path obj = new Path();
-		obj.setValue(value.getValue());
-		return obj;
+		if (value.points == null) {
+			return null;
+		}
+		final Point[] points = new Point[value.points.length];
+		for (int i = 0; i < points.length; i++) {
+			points[i] = new Point(value.points[i].x, value.points[i].y);
+		}
+		return new Path(value.isOpen(), points);
 	}
 
 	@Override

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.geometry;
 
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * POINT型
@@ -97,9 +95,7 @@ public class Point extends AbstractPoint2D implements ToUpperDimensionType<Point
 	 */
 	@Override
 	public Point setValue(String text) {
-		text=CommonUtils.unwrap(text, "(", ")");
-		String[] values=CommonUtils.split(text, "\\s*,\\s*");
-		double[] vals=Converters.getDefault().convertObject(values, double[].class);
+		final double[] vals = GeometryTextParser.parsePoint(text, 2, "Point");
 		this.setX(vals[0]);
 		this.setY(vals[1]);
 		return this;
