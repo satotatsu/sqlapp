@@ -274,7 +274,11 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		Column column = this.getColumn(context, parameter.getName());
 		Object val;
 		if (column != null) {
-			parameter.setDataType(column.getDataType());
+			// Retain precision/scale for column-aware JDBC handlers without changing
+			// the expression used to evaluate this parameter on subsequent rows.
+			String parameterName = parameter.getName();
+			parameter.setColumn(column);
+			parameter.setName(parameterName);
 			if (context instanceof Row) {
 				final Row row = (Row) context;
 				val = row.get(column);

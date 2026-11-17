@@ -99,7 +99,15 @@ public class H2ColumnReader extends ColumnReader {
 		column.setLength(getLong(rs, "TYPE_PRECISION"));
 		getDialect().setDbType(getString(rs, "TYPE_NAME"), column.getLength(), column.getScale(), column);
 		String typeSql = getString(rs, "TYPE_SQL");
-		if (typeSql != null && (typeSql.contains(" ARRAY") || typeSql.startsWith("INTERVAL ")
+		if (typeSql != null && (typeSql.matches("INTERVAL YEAR(?:\\([0-9]+\\))? TO MONTH")
+				|| typeSql.matches("INTERVAL DAY(?:\\([0-9]+\\))? TO SECOND(?:\\([0-9]+\\))?"))) {
+			column.setDataType(typeSql.startsWith("INTERVAL YEAR")
+					? com.sqlapp.data.db.datatype.DataType.INTERVAL_YEAR_TO_MONTH
+					: com.sqlapp.data.db.datatype.DataType.INTERVAL_DAY_TO_SECOND);
+			column.setDataTypeName((String) null);
+			column.setLength(getLong(rs, "TYPE_INTERVAL_PRECISION"));
+			column.setScale(typeSql.startsWith("INTERVAL DAY") ? rs.getInt("TYPE_FRACTIONAL_PRECISION") : null);
+		} else if (typeSql != null && (typeSql.contains(" ARRAY") || typeSql.startsWith("INTERVAL ")
 				|| typeSql.startsWith("ROW(") || typeSql.startsWith("GEOMETRY("))) {
 			column.setDataTypeName(typeSql);
 			column.setDataType(com.sqlapp.data.db.datatype.DataType.OTHER);

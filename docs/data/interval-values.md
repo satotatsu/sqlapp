@@ -268,15 +268,110 @@ References: [PostgreSQL interval semantics](https://www.postgresql.org/docs/18/d
 
 No conversion warnings are stored on IntervalValue. They belong to conversion
 results and migration reports, alongside the source/target type and any explicit
-policy. The current stages introduce no conversion-result API.
+policy. StandardIntervalCodec.Result now retains the normalized destination
+value, exact SQL payload and immutable warnings. JDBC handlers expose
+convert(value, column) so a migration planner can retain these results before
+execution. Automatic migration-report/file integration is a separate stage;
+ordinary JDBC binding validates and executes but does not create a report.
 
-| Future target | Policy |
+| Target | Policy |
 | --- | --- |
 | PostgreSQL month/day/time model (implemented) | Preserve independent components; validate range and fractional precision. |
-| SQL-standard YEAR TO MONTH targets (future) | Require zero days and time; validate leading precision and range. |
-| SQL-standard DAY TO SECOND targets (future) | Require zero months. Combine days at an explicit 24-hour conversion policy; record a warning whenever nonzero calendar days are converted to 24-hour units. Validate range and precision. |
+| Oracle and H2 YEAR TO MONTH (implemented) | Require zero days and time; validate leading precision and range. |
+| Oracle and H2 DAY TO SECOND (implemented) | Require zero months. Combine days at an explicit 24-hour conversion policy; return CALENDAR_DAYS_AS_24_HOURS whenever nonzero calendar days are converted to 24-hour units, including cancellation to zero. Validate range and precision. |
 | Other interval qualifiers | Validate omitted components and precision explicitly; never silently truncate. |
 
 The DAY TO SECOND policy preserves a fixed-duration interpretation, not necessarily
 the result of applying the source interval to a zoned timestamp across daylight
 saving transitions. Month/day conversion using a guessed 30-day month is forbidden.
+
+## Stage 5: SQL-standard targets
+
+This stage connects YEAR TO MONTH and DAY TO SECOND in Oracle's existing interval
+registrations and in H2 2.0 and later. H2 1.x registration and resolver behavior
+remain unchanged. H2's other eleven standard qualifiers are not registered in this
+stage. The shared codec understands their exact field rules, but their dialect
+and Schema precision mappings still need separate integration and tests.
+
+The public entry point for a destination is its StandardIntervalJdbcTypeHandler.
+Normal SQL/row and batch binding passes Column metadata automatically. For
+standalone binding and report preparation:
+
+```java
+var column = new Column("elapsed")
+        .setDataType(DataType.INTERVAL_DAY_TO_SECOND).setLength(9).setScale(9);
+var handler = (StandardIntervalJdbcTypeHandler) dialect.getDbDataTypes()
+        .getDbTypeStrict(column.getDataType()).getJdbcTypeHandler();
+var prepared = handler.convert(IntervalValue.parse("P1DT-1H"), column);
+// prepared.value() == IntervalValue.parse("PT82800S")
+// prepared.text() == "+0 23:00:00"
+// prepared.warnings() == [CALENDAR_DAYS_AS_24_HOURS]
+handler.setObject(statement, 1, prepared.value(), column);
+```
+
+Retain prepared.warnings() with the source and target identity in a migration
+report. Re-converting the already normalized value cannot recover its source
+calendar-day provenance. Warnings are never placed on IntervalValue itself.
+The conversion is checked before the PreparedStatement is touched. Missing
+Column metadata uses the SQL default leading precision 2 and fractional precision
+6; this cannot detect a physical column declared with lower precision. Use the
+column-aware overload when those limits are known.
+
+Generated SQL bind-variable evaluation previously copied only DataType from a
+resolved Column. It now retains the Column, including length and scale, while
+preserving the parameter's expression name for re-evaluation. This closes a
+metadata gap on generated single-row INSERT as well as multi-row INSERT paths;
+the H2 integration test exercises both with nine fractional digits.
+
+Oracle leading precision is checked in 0..9 and H2 in 1..18. Fractional precision
+is checked in 0..9. Column.length is leading precision and Column.scale is
+fractional second precision for these targets (different from PostgreSQL's
+precision mapping). Invalid precision, out-of-range leading fields, nonzero
+omitted fields and excess fractional digits cause errors rather than truncation
+or rounding. Both signs and nine fractional digits are preserved. The codec uses
+integer arithmetic for the final day/time sum, including cancellation near range
+boundaries, and throws ArithmeticException when the resulting Duration or month
+count cannot be represented.
+
+SQL-standard day-time values are read as timePart with zero calendar days. Thus
+P1D and PT24H remain distinct source values but both become PT86400S after a
+DAY TO SECOND round trip; the former conversion produces a warning. This is an
+explicit destination semantic conversion. YEAR TO MONTH preserves signed total
+months. H2 DAY(18) can contain values beyond Duration's long-second range; reading
+such values fails explicitly rather than clipping them.
+
+Both adapters read JDBC text to avoid old Interval integer limits. H2 binds exact
+payloads with setString, verified against the existing embedded H2 2.3.232 test
+dependency. Oracle constructs oracle.sql.INTERVALYM/INTERVALDS with the driver's
+String constructor and binds the resulting object with setObject. Driver classes
+are loaded at runtime from the connection class loader, with the context class
+loader as a fallback for connection wrappers. Missing driver support produces an
+actionable SQLException. No new mandatory driver dependency is introduced.
+Oracle nulls use the vendor's interval type codes. Interval arrays are explicitly
+unsupported on the column-aware binding/literal paths.
+
+SQL literals include explicit destination precision and use the same codec as
+JDBC. H2 metadata now models these two interval qualifiers directly and reads
+leading and fractional precision independently. Oracle's catalog type-name
+matcher also handles declarations such as INTERVAL DAY(9) TO SECOND(9), which
+previously fell back to OTHER because its two precision positions were not
+recognized. This matcher is installed only for the newly connected dialect
+types; other dialect registrations retain their existing behavior. The existing H2 batched catalog
+query gains two fields already present in H2 2.x; no per-object query is added.
+Recreation through Schema and the SQL factory is covered by an embedded test.
+Other H2 interval types remain represented by their existing complete type names.
+No DataType identifiers, XML formats or existing Interval fields are changed.
+
+Tests cover the shared thirteen-qualifier codec, exact bounds, invalid text,
+Turkish locale, warnings, real embedded H2 JDBC/literals/generated INSERT paths,
+and H2 metadata -> Schema -> DDL -> metadata. Oracle tests cover resolved versions
+9, 10, 11, 12, 19 and 23, proxy JDBC reads/nulls and pre-bind validation.
+OracleIntervalDriverTest additionally validates real driver objects offline when
+an Oracle driver is present on the test runtime classpath; it skips otherwise.
+It opens no database connection. An external Oracle server has not been tested,
+so server execution and old Oracle driver versions remain unverified.
+
+References: [H2 interval types](https://www.h2database.com/html/datatypes.html#interval_type),
+[Oracle interval literals](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/Literals.html),
+[Oracle INTERVALYM API](https://docs.oracle.com/database/121/JAJDB/oracle/sql/INTERVALYM.html),
+[Oracle INTERVALDS API](https://docs.oracle.com/database/121/JAJDB/oracle/sql/INTERVALDS.html).
