@@ -6,6 +6,8 @@ apply plugin: 'java-library'
 apply plugin: "io.freefair.lombok"
 apply plugin: 'groovy'
 
+apply from: rootProject.file('gradle/interval-test-tasks.gradle')
+
 dependencies {
 	// Typed local Parquet I/O shared by commands and Schema row iterators.
 	implementation 'org.apache.parquet:parquet-hadoop:1.17.0'

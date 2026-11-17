@@ -2,6 +2,8 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
+apply from: rootProject.file('gradle/interval-test-tasks.gradle')
+
 dependencies {
 	implementation project(':sqlapp-core')
 	testImplementation project(':sqlapp-core-test')
