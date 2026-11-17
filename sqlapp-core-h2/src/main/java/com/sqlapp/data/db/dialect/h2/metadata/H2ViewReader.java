@@ -51,7 +51,8 @@ public class H2ViewReader extends AbstractISViewReader {
 		Table table = super.createTable(rs);
 		String definition = getString(rs, "VIEW_DEFINITION");
 		if (definition == null && isSystemSchema(table.getSchemaName())) {
-			// Built-in INFORMATION_SCHEMA views expose no definition and are never recreated.
+			// Built-in INFORMATION_SCHEMA views expose no definition and are never
+			// recreated.
 			table.setDefinition((String) null);
 			return table;
 		}

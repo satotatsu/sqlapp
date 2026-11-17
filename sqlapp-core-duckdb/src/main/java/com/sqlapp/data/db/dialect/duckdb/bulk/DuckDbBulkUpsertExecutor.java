@@ -55,6 +55,12 @@ public class DuckDbBulkUpsertExecutor implements BulkUpsertExecutor {
 			sql = updateSql(table, updates, keys);
 		}
 		final DuckDbBulkInsertExecutor batch = new DuckDbBulkInsertExecutor(dialect) {
+			// The statement is INSERT ... ON CONFLICT or UPDATE, not a plain INSERT.
+			@Override
+			protected boolean isAppenderEnabled() {
+				return false;
+			}
+
 			@Override
 			protected List<Column> writableColumns(final Table ignored, final BulkOption bulkOption) {
 				return bindings;

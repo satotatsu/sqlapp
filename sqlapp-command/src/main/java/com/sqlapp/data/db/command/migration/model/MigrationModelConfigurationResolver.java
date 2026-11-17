@@ -15,7 +15,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.sqlapp.data.db.command.migration.bulk.BulkMigrationColumnType;
 import com.sqlapp.data.schemas.migration.MigrationModel;
+import com.sqlapp.data.schemas.migration.MigrationModelColumn;
 import com.sqlapp.data.schemas.migration.MigrationModelPlan;
 import com.sqlapp.data.schemas.migration.MigrationModelSource;
 import com.sqlapp.data.schemas.migration.MigrationModelUnitTest;
@@ -98,7 +100,7 @@ public final class MigrationModelConfigurationResolver {
 			sql = value.getQuery();
 		}
 		return new MigrationModel(value.getName(), value.getSchema(), stripStatementEnd(sql), materialization(value),
-				value.getParameters());
+				value.getParameters(), columns(value), value.getPrimaryKey());
 	}
 
 	/**
@@ -110,6 +112,27 @@ public final class MigrationModelConfigurationResolver {
 			value = value.substring(0, value.length() - 1).stripTrailing();
 		}
 		return value;
+	}
+
+	private static List<MigrationModelColumn> columns(final MigrationModelConfiguration.Model value) {
+		final List<MigrationModelColumn> columns = new ArrayList<>();
+		for (final var column : value.getColumns() == null ? List.<MigrationModelConfiguration.Column>of()
+				: value.getColumns()) {
+			if (column == null || column.getType() == null || column.getType().isBlank()) {
+				throw new IllegalArgumentException("Each declared column of model " + value.getName()
+						+ " needs a name and a type, such as {name: NAME, type: VARCHAR(50)}.");
+			}
+			final BulkMigrationColumnType type;
+			try {
+				type = BulkMigrationColumnType.parse(column.getType());
+			} catch (IllegalArgumentException e) {
+				throw new IllegalArgumentException(
+						"Column " + column.getName() + " of model " + value.getName() + ": " + e.getMessage(), e);
+			}
+			columns.add(new MigrationModelColumn(column.getName(), type.dataType(), type.length(), type.scale(),
+					column.isNotNull()));
+		}
+		return columns;
 	}
 
 	private static MigrationModel.Materialization materialization(final MigrationModelConfiguration.Model value) {

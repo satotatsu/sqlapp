@@ -283,7 +283,7 @@ public final class TransferFileImportService {
 			java.util.function.Consumer<String> draft) throws Exception {
 		final Loaded loaded = load(manifest, expectedFingerprint);
 		try (var target = binding(loaded, connections).getConnection()) {
-			target.setReadOnly(true);
+			TransferConnections.requestReadOnly(target);
 			final var plan = plan(loaded, target);
 			final var schemaPlan = schemaPlan(loaded, target, plan);
 			var staged = staged(loaded) ? stagePlan(loaded, target, plan).review() : null;
@@ -348,8 +348,8 @@ public final class TransferFileImportService {
 				if (!schemaPlan.fingerprint().equals(review.planFingerprint())
 						|| !schemaPlan.equals(review.schemaPreparation()))
 					throw new IllegalArgumentException("File import plan changed. Review again.");
-				if (!target.getMetaData().supportsTransactions() || verificationRequested
-						&& !target.getMetaData().supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE))
+				if (!target.getMetaData().supportsTransactions()
+						|| verificationRequested && TransferConnections.stableReadIsolation(target) == null)
 					throw new IllegalArgumentException(
 							"Target transaction/verification isolation support is insufficient.");
 				target.setReadOnly(false);
@@ -377,11 +377,9 @@ public final class TransferFileImportService {
 				result = copyFileRows(target, plan, active, progress);
 				if (verificationRequested) {
 					phase = TransferJobExecutionService.Phase.VERIFICATION;
-					target.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+					TransferConnections.useStableReadIsolation(target);
 					target.setAutoCommit(false);
 					try {
-						if (target.getTransactionIsolation() != Connection.TRANSACTION_SERIALIZABLE)
-							throw new IllegalArgumentException("Target did not retain requested isolation.");
 						verifyCopiedTables(target, plan, loaded.configuration().chunkSize(), verified);
 					} finally {
 						target.rollback();
@@ -481,7 +479,7 @@ public final class TransferFileImportService {
 			if (!staged(loaded) || review.staging() == null)
 				throw new IllegalArgumentException("Staged file import requires a fresh staging review.");
 			try (var stable = targetSource.getConnection()) {
-				stable.setReadOnly(true);
+				TransferConnections.requestReadOnly(stable);
 				var original = plan(loaded, stable);
 				originalPlan = original;
 				var finalSchema = schemaPlan(loaded, stable, original);
@@ -501,7 +499,7 @@ public final class TransferFileImportService {
 				execution.phase = TransferJobExecutionService.Phase.COPY;
 				stageResult = copyFileRows(stable, stage.copy(), active, progress);
 				execution.phase = TransferJobExecutionService.Phase.VERIFICATION;
-				stable.setReadOnly(true);
+				TransferConnections.requestReadOnly(stable);
 				stable.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 				stable.setAutoCommit(false);
 				Throwable primary = null;

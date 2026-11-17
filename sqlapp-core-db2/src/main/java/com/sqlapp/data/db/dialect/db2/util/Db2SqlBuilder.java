@@ -105,6 +105,30 @@ public class Db2SqlBuilder extends AbstractSqlBuilder<Db2SqlBuilder> {
 			appendStorageOptions(column);
 			return instance();
 		}
+		if ("Y".equals(
+				column.getSpecifics().get(com.sqlapp.data.db.dialect.db2.metadata.Db2ColumnReader.FOR_BIT_DATA))) {
+			final String base;
+			if (column.getDataType() == DataType.BINARY) {
+				base = "CHAR";
+			} else if (column.getDataType() == DataType.VARBINARY) {
+				base = "VARCHAR";
+			} else if (column.getDataType() == DataType.LONGVARBINARY) {
+				base = null;
+			} else {
+				throw new IllegalArgumentException(
+						"Db2 FOR BIT DATA requires a binary string type: " + column.getName());
+			}
+			if (base == null) {
+				_add("LONG VARCHAR FOR BIT DATA");
+			} else {
+				if (column.getLength() == null || column.getLength() <= 0)
+					throw new IllegalArgumentException(
+							"Db2 column requires its declared positive length: " + column.getName());
+				_add(base + "(" + column.getLength() + ") FOR BIT DATA");
+			}
+			appendStorageOptions(column);
+			return instance();
+		}
 		if (column.getDataType() != DataType.VECTOR) {
 			String units = column.getStringUnits();
 			boolean character = column.getDataType() == DataType.CHAR || column.getDataType() == DataType.VARCHAR

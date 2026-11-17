@@ -35,11 +35,13 @@ public class FirebirdAlterSequenceFactory extends AbstractAlterSequenceFactory<F
 
 	@Override
 	protected void addCreateObject(Sequence obj, FirebirdSqlBuilder builder) {
-		BigInteger val = CommonUtils.coalesce(obj.getLastValue(), obj.getStartValue());
-		if (val == null)
-			throw new IllegalArgumentException("Sequence ALTER requires an explicit current value (lastValue)");
-		validateValue(val);
-		builder.set().generator().space().name(obj).space().to().space()._add(val);
+		BigInteger next = CommonUtils.coalesce(obj.getLastValue(), obj.getStartValue());
+		if (next == null)
+			throw new IllegalArgumentException("Sequence ALTER requires an explicit next value (lastValue)");
+		validateValue(next);
+		// SET GENERATOR takes the current value, one increment before the next value.
+		builder.set().generator().space().name(obj).space().to().space()
+				._add(FirebirdCreateSequenceFactory.currentBefore(next, obj.getIncrementBy()));
 	}
 
 	@Override
@@ -60,9 +62,9 @@ public class FirebirdAlterSequenceFactory extends AbstractAlterSequenceFactory<F
 		}
 		if (changed.containsKey("lastValue")) {
 			if (target.getLastValue() == null)
-				throw new IllegalArgumentException("Sequence current value cannot be cleared");
-			// SET GENERATOR means the current value on every supported version.
-			// RESTART WITH means the next value on 4.0+, unlike earlier releases.
+				throw new IllegalArgumentException("Sequence next value cannot be cleared");
+			// SET GENERATOR means the current value on every supported version, so the
+			// next value is converted; RESTART WITH means the next value only on 4.0+.
 			result.addAll(createSql(target));
 		}
 		if (changed.containsKey("remarks"))

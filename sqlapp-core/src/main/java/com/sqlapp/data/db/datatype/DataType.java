@@ -632,6 +632,14 @@ public enum DataType {
 	},
 	/** 10進数可変浮動小数点型 */
 	DECIMALFLOAT(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
+		/**
+		 * DECFLOAT(16)とDECFLOAT(34)は別の型のため、精度を保持します。
+		 */
+		@Override
+		public boolean isFixedSize() {
+			return true;
+		}
+
 		@Override
 		public DataType getSurrogate() {
 			return DECIMAL;

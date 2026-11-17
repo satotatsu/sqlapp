@@ -51,10 +51,11 @@ public class H2FunctionReader extends FunctionReader {
 	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		final boolean modern = H2Versions.isModern(productVersionInfo);
 		final List<Function> result = list();
 		final var aliases = new java.util.LinkedHashMap<java.util.List<String>, Function>();
+		final var registry = getDialect().createSqlFactoryRegistry();
+		registry.getOptions().setCreateIfNotExists(false);
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -88,8 +89,6 @@ public class H2FunctionReader extends FunctionReader {
 					var previous = aliases.putIfAbsent(key, obj);
 					if (previous != null) {
 						if (previous.getDefinition().isEmpty()) {
-							var registry = getDialect().createSqlFactoryRegistry();
-							registry.getOptions().setCreateIfNotExists(false);
 							previous.setDefinition(registry.createSql(previous, com.sqlapp.data.db.sql.SqlType.CREATE)
 									.get(0).getSqlText());
 						}
@@ -106,8 +105,7 @@ public class H2FunctionReader extends FunctionReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("functionAliases_200.sql");
 		}
 		return getSqlNodeCache().getString("functionAliases.sql");

@@ -41,6 +41,13 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 	private boolean unitTestsEnabled = true;
 	/** Run unit tests only and build nothing. */
 	private boolean testOnly;
+	/**
+	 * Optional transfer name mapping written after every model was built. It
+	 * carries the declared column types of table models, so that a transfer from
+	 * the engine creates target tables with those types; the engine does not keep
+	 * string lengths. The file is replaced on every complete build.
+	 */
+	private File targetMappingFile;
 
 	private List<MigrationTransformationTestResult> unitTestResults = List.of();
 	private MigrationModelRunner.Result result;
@@ -106,6 +113,10 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 				throw new CommandException(message.toString());
 			}
 		});
+		if (!testOnly && targetMappingFile != null && result != null && result.isSuccess()) {
+			MigrationModelTargetMapping.write(targetMappingFile.toPath(), plan);
+			info("Migration model target mapping: ", targetMappingFile.getAbsolutePath());
+		}
 		if (!testOnly && stateFile != null && result != null && result.isSuccess()) {
 			new MigrationNodeManifestIO().write(stateFile.toPath(), plan.nodeManifest());
 			info("Migration model state: ", stateFile.getAbsolutePath());

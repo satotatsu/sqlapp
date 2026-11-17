@@ -50,8 +50,7 @@ public class H2TriggerReader extends TriggerReader {
 	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		boolean modern = H2Versions.isModern(productVersionInfo);
 		final Dialect dialect = this.getDialect();
 		final List<Trigger> result = list();
 		final var triggers = new java.util.LinkedHashMap<java.util.List<String>, Trigger>();
@@ -81,7 +80,8 @@ public class H2TriggerReader extends TriggerReader {
 				if (modern) {
 					trigger.setActionOrientation(getString(rs, "ACTION_ORIENTATION"));
 					trigger.getSpecifics().put("h2.queueSize", getString(rs, "QUEUE_SIZE"));
-					trigger.getSpecifics().put("h2.noWait", String.valueOf(rs.getBoolean("NO_WAIT")));
+					if (rs.getBoolean("NO_WAIT"))
+						trigger.getSpecifics().put("h2.noWait", "true");
 					if (rs.getBoolean("IS_ROLLBACK"))
 						trigger.getEventManipulation().add("ROLLBACK");
 				}
@@ -93,8 +93,7 @@ public class H2TriggerReader extends TriggerReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("triggers_200.sql");
 		}
 		return getSqlNodeCache().getString("triggers.sql");

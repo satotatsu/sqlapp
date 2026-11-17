@@ -59,7 +59,7 @@ public class MySqlTruncateTemporaryTableFactoryTest extends AbstractMySqlSqlFact
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				DELETE FROM TABLE `tableA`""";
+				DELETE FROM `tableA`""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

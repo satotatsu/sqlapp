@@ -140,7 +140,13 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 		if (obj.isIdentity()) {
 			obj.setIdentityStartValue(rs.getLong("ident_seed"));
 			obj.setIdentityStep(rs.getLong("ident_increment"));
-			obj.setIdentityLastValue(rs.getLong("ident_current"));
+			// The model holds the next value to issue. sys.identity_columns.last_value
+			// (2005+) is NULL until the first insert; IDENT_CURRENT returns the seed in
+			// that case, so without it the seed is treated as used and may skip one value.
+			java.math.BigDecimal issued = rs.contains("ident_last_value") ? rs.getBigDecimal("ident_last_value")
+					: rs.getBigDecimal("ident_current");
+			obj.setIdentityLastValue(com.sqlapp.data.db.metadata.SequenceNextValues
+					.after(issued == null ? null : issued.longValue(), obj.getIdentityStep()));
 		}
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setRemarks(getString(rs, REMARKS));

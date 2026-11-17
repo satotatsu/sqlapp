@@ -80,14 +80,14 @@ class Db2SequenceRecreationTest {
 	}
 
 	@Test
-	void nativeDistinctTypeLargeStartAndCacheBoundaryAreNotLiveLastValue() throws Exception {
+	void nativeDistinctTypeLargeStartAndCacheBoundaryIsTheNextValue() throws Exception {
 		var fields = fields("Id\".Type", 31);
 		fields.put("SEQUENCE_TYPE_SCHEMA", "Type.Schema");
 		fields.put("START", "9223372036854775808");
 		Sequence sequence = read(fields);
 		assertEquals(DataType.OTHER, sequence.getDataType());
-		assertNull(sequence.getLastValue());
-		assertEquals("101", sequence.getSpecifics().get("NEXTCACHEFIRSTVALUE"));
+		assertEquals(BigInteger.valueOf(101), sequence.getLastValue());
+		assertNull(sequence.getSpecifics().get("NEXTCACHEFIRSTVALUE"));
 		assertEquals(new BigInteger("9223372036854775808"), sequence.getStartValue());
 		String ddl = sql(sequence, SqlType.CREATE).getFirst();
 		assertTrue(ddl.contains("AS \"Type.Schema\".\"Id\"\".Type\""), ddl);

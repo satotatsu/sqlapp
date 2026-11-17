@@ -47,7 +47,7 @@ class Db2FunctionReturnReaderTest {
 						for (int i = 0; i < 20; i++)
 							handler.handleResultSetNext(Db2MetadataParityTest.row(Map.of("routine_name", "F",
 									"schema_name", i % 2 == 0 ? "APP" : "OTHER", "specific_name", "F." + i / 2,
-									"FUNCTIONTYPE", "T", "ROUTINE_DEFINITION", "unparseable return signature")));
+									"FUNCTIONTYPE", "T", "TEXT", "unparseable return signature")));
 					} else {
 						assertTrue(sql.toString().contains("p.ORDINAL>0"));
 						assertTrue(sql.toString().contains("r.ROUTINEMODULEID IS NULL"));

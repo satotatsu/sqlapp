@@ -12,6 +12,8 @@ import com.sqlapp.data.db.datatype.JdbcTypeHandler;
  * H2 accepts UTF-8 JSON bytes without converting documents into JSON strings.
  */
 public final class H2JsonJdbcTypeHandler implements JdbcTypeHandler {
+	private final JsonStringConverter converter = new JsonStringConverter();
+
 	@Override
 	public Object getObject(ResultSet rows, int index) throws SQLException {
 		return rows.getString(index);
@@ -25,8 +27,7 @@ public final class H2JsonJdbcTypeHandler implements JdbcTypeHandler {
 	@Override
 	public void setObject(PreparedStatement statement, int index, Object value) throws SQLException {
 		byte[] bytes = value instanceof byte[] binary ? binary
-				: value == null ? null
-						: new JsonStringConverter().convertObject(value).getBytes(StandardCharsets.UTF_8);
+				: value == null ? null : converter.convertObject(value).getBytes(StandardCharsets.UTF_8);
 		statement.setBytes(index, bytes);
 	}
 }

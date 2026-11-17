@@ -53,7 +53,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).shortValue();
+			return toShort((Number) value, value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -71,14 +71,13 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			try {
-				return Long.valueOf(value).shortValue();
-			} catch (NumberFormatException e) {
-				Double dval = Double.valueOf(value);
-				return dval.shortValue();
-			}
+			return (short) IntegralNumbers.parse(value, "Short", Short.MIN_VALUE, Short.MAX_VALUE);
 		}
-		return parse(value).shortValue();
+		return toShort(parse(value), value);
+	}
+
+	private static Short toShort(final Number value, final Object original) {
+		return (short) IntegralNumbers.toLong(value, original, "Short", Short.MIN_VALUE, Short.MAX_VALUE);
 	}
 
 	@Override

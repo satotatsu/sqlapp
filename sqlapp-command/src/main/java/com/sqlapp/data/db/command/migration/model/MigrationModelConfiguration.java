@@ -34,6 +34,21 @@ public class MigrationModelConfiguration {
 		/** {@code view} (default) or {@code table}. */
 		private String materialized;
 		private Map<String, Object> parameters = new LinkedHashMap<>();
+		/**
+		 * Optional output columns, in order. Requires {@code materialized: table}.
+		 */
+		private List<Column> columns = new ArrayList<>();
+		/** Optional primary key; requires {@link #columns}. */
+		private List<String> primaryKey = new ArrayList<>();
+	}
+
+	@Getter
+	@Setter
+	public static class Column {
+		private String name;
+		/** sqlapp DataType with optional length and scale, such as VARCHAR(50). */
+		private String type;
+		private boolean notNull;
 	}
 
 	@Getter

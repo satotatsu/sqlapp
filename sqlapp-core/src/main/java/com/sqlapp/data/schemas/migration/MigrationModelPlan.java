@@ -243,6 +243,13 @@ public final class MigrationModelPlan {
 		value.append("schema=").append(model.schemaName()).append('\n');
 		value.append("materialization=").append(model.materialization()).append('\n');
 		value.append("parameters=").append(model.parameters()).append('\n');
+		for (final MigrationModelColumn column : model.columns()) {
+			value.append("column=").append(column.name()).append(' ').append(column.typeText())
+					.append(column.notNull() ? " NOT NULL" : "").append('\n');
+		}
+		if (!model.primaryKey().isEmpty()) {
+			value.append("primaryKey=").append(model.primaryKey()).append('\n');
+		}
 		for (final String name : sourceNames) {
 			value.append("source=").append(sources.get(name)).append('\n');
 		}

@@ -62,6 +62,10 @@ public class SqlServer2012SequenceReader extends SequenceReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
+				&& productVersionInfo.getMajorVersion() >= 14) {
+			return getSqlNodeCache().getString("sequences2017.sql");
+		}
 		return getSqlNodeCache().getString("sequences2012.sql");
 	}
 
@@ -70,12 +74,18 @@ public class SqlServer2012SequenceReader extends SequenceReader {
 		obj.setDialect(this.getDialect());
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDataTypeName(getString(rs, TYPE_NAME));
-		obj.setLastValue(rs.getBigDecimal("current_value"));
 		obj.setStartValue(rs.getBigDecimal("start_value"));
 		obj.setIncrementBy(rs.getBigDecimal("increment"));
 		obj.setMinValue(rs.getBigDecimal("minimum_value"));
 		obj.setMaxValue(rs.getBigDecimal("maximum_value"));
 		obj.setCycle(rs.getBoolean("is_cycling"));
+		// The model holds the next value to issue. last_used_value (2017+) is NULL for
+		// an unused sequence; before 2017 current_value cannot tell "unused" from
+		// "used once", so it is treated as used and may skip one value.
+		java.math.BigDecimal issued = rs.contains("last_used_value") ? rs.getBigDecimal("last_used_value")
+				: rs.getBigDecimal("current_value");
+		obj.setLastValue(com.sqlapp.data.db.metadata.SequenceNextValues.after(issued, rs.getBigDecimal("increment"),
+				rs.getBigDecimal("minimum_value"), rs.getBigDecimal("maximum_value"), obj.isCycle()));
 		obj.setCache(rs.getBoolean("is_cached"));
 		obj.setPrecision(getInteger(rs, "precision"));
 		obj.setScale(getInteger(rs, "scale"));

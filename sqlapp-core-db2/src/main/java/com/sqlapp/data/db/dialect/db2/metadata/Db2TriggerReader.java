@@ -82,7 +82,7 @@ public class Db2TriggerReader extends TriggerReader {
 			trigger.getEventManipulation().add(getString(rs, EVENT_MANIPULATION));
 		trigger.setTableSchemaName(getString(rs, EVENT_OBJECT_SCHEMA));
 		trigger.setTableName(getString(rs, EVENT_OBJECT_TABLE));
-		trigger.setDefinition(getString(rs, ACTION_STATEMENT));
+		trigger.setDefinition(getString(rs, "TEXT"));
 		trigger.setActionTiming(getString(rs, ACTION_TIMING));
 		trigger.setActionOrientation(getString(rs, ACTION_ORIENTATION));
 		trigger.setCreatedAt(rs.getTimestamp("CREATE_TIME"));

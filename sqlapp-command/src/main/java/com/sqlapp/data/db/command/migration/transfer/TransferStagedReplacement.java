@@ -138,7 +138,7 @@ public final class TransferStagedReplacement {
 	private static Comparison compare(SavedStagingComparison.Evidence evidence, DataSource target) {
 		var recorded = evidence.verification();
 		try (var connection = new BoundDataSource(target, evidence.targetIdentity()).getConnection()) {
-			connection.setReadOnly(true);
+			TransferConnections.requestReadOnly(connection);
 			connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 			connection.setAutoCommit(false);
 			// Resolve only the captured table model. The original source is never read.
@@ -207,8 +207,8 @@ public final class TransferStagedReplacement {
 			final TargetPlan plan;
 			try (var source = connections.get(cfg.source()).getConnection();
 					var target = connections.get(cfg.target()).getConnection()) {
-				source.setReadOnly(true);
-				target.setReadOnly(true);
+				TransferConnections.requestReadOnly(source);
+				TransferConnections.requestReadOnly(target);
 				var original = resolve(review, source);
 				plan = prepareTargets(target, original, review.prepared().job().fingerprint(), cfg);
 				// The staged copy re-derives its data job; carry reviewed copy types and
@@ -366,10 +366,10 @@ public final class TransferStagedReplacement {
 			execution.state = State.STAGE_VERIFIED;
 			execution.phase = Phase.VERIFICATION;
 			try (var source = bindings.source().getConnection(); var stable = bindings.target().getConnection()) {
-				source.setReadOnly(true);
+				TransferConnections.requestReadOnly(source);
 				source.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 				source.setAutoCommit(false);
-				stable.setReadOnly(true);
+				TransferConnections.requestReadOnly(stable);
 				stable.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
 				stable.setAutoCommit(false);
 				// Verify the same stable stage snapshot that will be streamed to final tables.

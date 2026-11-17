@@ -92,8 +92,7 @@ public class H2TableLinkReader extends TableLinkReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("tableLinks_200.sql");
 		}
 		return getSqlNodeCache().getString("tableLinks.sql");

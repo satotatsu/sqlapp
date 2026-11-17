@@ -56,7 +56,7 @@ public class Db2Utils {
 		obj.setSpecificNameLiteral(getString(rs, SPECIFIC_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setLanguage(getString(rs, "LANGUAGE"));
-		String definition = getString(rs, "ROUTINE_DEFINITION");
+		String definition = getString(rs, "TEXT");
 		String replayDefinition = dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
 				&& "SQL".equals(obj.getLanguage())
 						? com.sqlapp.data.db.dialect.db2.util.Db2RoutineDefinition.preserveSpecificName(definition,

@@ -194,9 +194,8 @@ public final class TransferJobExecutionService {
 			if (!current.schemaPreparation().statements().isEmpty()) {
 				try (var target = bindings.target().getConnection()) {
 					if (current.job().configuration().dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY
-							&& (!target.getMetaData().supportsTransactions()
-									|| current.job().configuration().verify() && !target.getMetaData()
-											.supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE)))
+							&& (!target.getMetaData().supportsTransactions() || current.job().configuration().verify()
+									&& TransferConnections.stableReadIsolation(target) == null))
 						throw new IllegalArgumentException("Target transaction/verification support is insufficient.");
 					target.setReadOnly(false);
 					target.setAutoCommit(true);

@@ -117,8 +117,9 @@ public class SqliteColumnReader extends ColumnReader {
 			column.setIdentity(true);
 			column.setNullable(false);
 			if (splitColumnDefinitions(definition).stream()
-					.filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
-					.anyMatch(item -> SqliteDdl.hasKeywords(item, "AUTOINCREMENT")))
+					.anyMatch(item -> Objects.equals(column.getName(), readIdentifier(item))
+							? SqliteDdl.hasKeywords(item, "AUTOINCREMENT")
+							: SqliteDdl.isTableLevelAutoIncrement(item, column.getName())))
 				column.getSpecifics().put("sqlite.autoincrement", "true");
 		}
 	}

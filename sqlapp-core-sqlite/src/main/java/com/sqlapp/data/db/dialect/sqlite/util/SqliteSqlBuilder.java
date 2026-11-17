@@ -40,6 +40,12 @@ public class SqliteSqlBuilder extends AbstractSqlBuilder<SqliteSqlBuilder> {
 		if ("true".equals(column.getSpecifics().get("sqlite.declaredType.empty")) && column.getDomain() == null)
 			return this;
 		String declared = column.getSpecifics().get("sqlite.declaredType");
+		if (declared == null && column.getDomain() == null && column.getDataType() != null
+				&& column.getDataType().isDateTime() && column.getTable() != null
+				&& "true".equals(column.getTable().getSpecifics().get("strict")))
+			// STRICT tables reject DATE/TIME/TIMESTAMP declarations; values are ISO-8601
+			// text.
+			return _add("TEXT");
 		if (declared == null || column.getDomain() != null)
 			return super.typeDefinition(column);
 		// INT and INTEGER PRIMARY KEY have different rowid semantics. Do not

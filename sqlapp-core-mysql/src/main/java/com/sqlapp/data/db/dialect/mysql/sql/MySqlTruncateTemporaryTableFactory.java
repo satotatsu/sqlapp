@@ -36,7 +36,7 @@ public class MySqlTruncateTemporaryTableFactory extends AbstractTruncateTemporar
 		// TRUNCATEするとCOMMITされるのでDELETEに差し替える
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
-		builder.delete().from().table();
+		builder.delete().from();
 		builder.space()._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
 	}

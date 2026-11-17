@@ -32,7 +32,7 @@ class FirebirdSequenceVersionSqlTest {
 	void recreatesCurrentValueBeforeCommentsAndPreservesZero() {
 		for (var dialect : new com.sqlapp.data.db.dialect.Dialect[] { DialectHolder.defaultDialect25,
 				DialectHolder.defaultDialect30, DialectHolder.defaultDialect50 }) {
-			var sequence = new Sequence("quoted sequence").setStartValue(50).setLastValue(0).setRemarks("remark");
+			var sequence = new Sequence("quoted sequence").setStartValue(50).setLastValue(1).setRemarks("remark");
 			var sql = dialect.createSqlFactoryRegistry().createSql(sequence, SqlType.CREATE);
 			assertEquals(3, sql.size());
 			assertEquals("SET GENERATOR \"quoted sequence\" TO 0", sql.get(1).getSqlText());
@@ -45,7 +45,8 @@ class FirebirdSequenceVersionSqlTest {
 		var sequence = new Sequence("s").setStartValue(-10);
 		var legacy = DialectHolder.defaultDialect25.createSqlFactoryRegistry().createSql(sequence, SqlType.CREATE);
 		assertEquals(2, legacy.size());
-		assertTrue(legacy.get(1).getSqlText().endsWith(" TO -10"));
+		// The first NEXT VALUE must return the start value -10.
+		assertTrue(legacy.get(1).getSqlText().endsWith(" TO -11"));
 		var modern = DialectHolder.defaultDialect50.createSqlFactoryRegistry().createSql(sequence, SqlType.CREATE);
 		assertEquals(1, modern.size());
 		assertTrue(modern.get(0).getSqlText().contains("START WITH -10"));
@@ -65,7 +66,7 @@ class FirebirdSequenceVersionSqlTest {
 	@Test
 	void acceptsIntrinsicBigintWithoutAnAsClause() {
 		var sequence = new Sequence("s").setDataType(com.sqlapp.data.db.datatype.DataType.BIGINT)
-				.setLastValue(Long.MIN_VALUE);
+				.setLastValue(Long.MIN_VALUE + 1);
 		var sql = DialectHolder.defaultDialect50.createSqlFactoryRegistry().createSql(sequence, SqlType.CREATE);
 		assertFalse(sql.get(0).getSqlText().contains("BIGINT"));
 		assertTrue(sql.get(1).getSqlText().endsWith(" TO " + Long.MIN_VALUE));

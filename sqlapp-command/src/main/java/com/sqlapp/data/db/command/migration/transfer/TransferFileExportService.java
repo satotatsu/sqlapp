@@ -43,7 +43,7 @@ public final class TransferFileExportService {
 		final var warnings = new ArrayList<TransferFilePackageIO.Warning>();
 		String schemaFingerprint;
 		try (var connection = source.getConnection()) {
-			connection.setReadOnly(true);
+			TransferConnections.requestReadOnly(connection);
 			if (!connection.getMetaData().supportsTransactionIsolationLevel(Connection.TRANSACTION_SERIALIZABLE))
 				throw new IllegalArgumentException("File export requires SERIALIZABLE read isolation.");
 			connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);

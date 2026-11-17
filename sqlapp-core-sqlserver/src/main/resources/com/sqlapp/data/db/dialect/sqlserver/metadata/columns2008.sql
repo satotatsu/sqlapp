@@ -20,6 +20,8 @@ SELECT
 	, IDENT_SEED(st.name + '.' + t.name) AS ident_seed
 	, IDENT_INCR(st.name + '.' + t.name) AS ident_increment
 	, IDENT_CURRENT(st.name + '.' + t.name) AS ident_current
+	, (SELECT CAST(ic.last_value AS DECIMAL(38)) FROM sys.identity_columns ic
+		WHERE ic.object_id=c.object_id AND ic.column_id=c.column_id) AS ident_last_value
 	, cc.definition AS formula
 	, COALESCE(cc.is_persisted,0) AS formula_persisted
 	, CASE WHEN COALESCE(sd.column_id,0) = 0 THEN 0 ELSE 1 END AS has_computed_formula

@@ -72,6 +72,9 @@ public class LegacyMigrationContractBuilder {
 			if (maximum instanceof Number number) {
 				dataSet.setMaximumOccurrences(number.intValue());
 			}
+			if (Boolean.TRUE.equals(values.get("recordSequence"))) {
+				dataSet.setOccurrenceSourceMode(LegacyMigrationContract.OccurrenceSourceMode.RECORD_SEQUENCE);
+			}
 		}
 		RelationshipMapping directParent = parentRelationships.get(table.getId());
 		if (directParent != null) {

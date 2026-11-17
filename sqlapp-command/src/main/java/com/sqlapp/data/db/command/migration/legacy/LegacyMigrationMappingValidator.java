@@ -269,10 +269,17 @@ public class LegacyMigrationMappingValidator {
 		}
 		String column = occurrence.get("column") == null ? null : String.valueOf(occurrence.get("column"));
 		Object maximumValue = occurrence.get("maximum");
-		if (blank(column) || !(maximumValue instanceof Number maximumNumber) || maximumNumber.intValue() <= 0) {
+		// A child record numbered in file order (header and detail records) has no
+		// upper bound.
+		boolean recordSequence = Boolean.TRUE.equals(occurrence.get("recordSequence"));
+		if (blank(column) || recordSequence && (maximumValue != null || hasIndexedSources || blank(
+				occurrence.get("parentRecord") == null ? null : String.valueOf(occurrence.get("parentRecord"))))) {
 			throw new CommandException("Occurrence mapping is invalid: " + table.getId());
 		}
-		int maximum = maximumNumber.intValue();
+		if (!recordSequence && (!(maximumValue instanceof Number maximumNumber) || maximumNumber.intValue() <= 0)) {
+			throw new CommandException("Occurrence mapping is invalid: " + table.getId());
+		}
+		int maximum = recordSequence ? Integer.MAX_VALUE : ((Number) maximumValue).intValue();
 		ColumnMapping occurrenceColumn = occurrenceColumns.getFirst();
 		if (occurrenceColumn.getAction() != ColumnAction.GENERATE
 				|| !equalsName(column, occurrenceColumn.getTarget())) {

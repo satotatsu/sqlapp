@@ -48,7 +48,6 @@ public class H2 extends Dialect {
 	 */
 	private static final long serialVersionUID = -6420560614725995097L;
 
-	private static final int CHAR_SIZE_MAX = 200;
 	private static final long SIZE_MAX = LEN_2GB - 1;
 	/**
 	 * システム予約スキーマ
@@ -78,7 +77,7 @@ public class H2 extends Dialect {
 		// ENUM
 		getDbDataTypes().addEnum();
 		// CHAR
-		getDbDataTypes().addChar(CHAR_SIZE_MAX);
+		getDbDataTypes().addChar(SIZE_MAX);
 		// VARCHAR
 		getDbDataTypes().addVarchar(SIZE_MAX, type -> {
 			type.addColumnTypeMatcher(
@@ -92,11 +91,11 @@ public class H2 extends Dialect {
 		// CLOB
 		getDbDataTypes().addClob("CLOB", SIZE_MAX);
 		// NCHAR(CHARと同じ)
-		getDbDataTypes().addNChar(CHAR_SIZE_MAX, type -> {
+		getDbDataTypes().addNChar(SIZE_MAX, type -> {
 			type.setLiteral("'", "'");
 		});
 		// NVARCHAR(VARCHARと同じ)
-		getDbDataTypes().addNVarchar(CHAR_SIZE_MAX, type -> {
+		getDbDataTypes().addNVarchar(SIZE_MAX, type -> {
 			type.addColumnTypeMatcher(
 					new LengthColumnTypeMatcher("(NVARCHAR2|NVARCHAR_CASESENSITIVE)", "FOR\\s+BIT\\s+DATA"));
 			type.setLiteral("'", "'");

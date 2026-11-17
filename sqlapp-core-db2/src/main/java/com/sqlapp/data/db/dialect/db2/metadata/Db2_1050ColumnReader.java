@@ -41,6 +41,8 @@ public class Db2_1050ColumnReader extends Db2_1010ColumnReader {
 		Column obj = super.createColumn(rs);
 		if (obj.getSpecifics().get("TYPESCHEMA") != null && !"SYSIBM".equals(obj.getSpecifics().get("TYPESCHEMA")))
 			return obj;
+		if ("Y".equals(obj.getSpecifics().get(FOR_BIT_DATA)))
+			return obj;
 		String stringUnits = getString(rs, "TYPESTRINGUNITS");
 		if (stringUnits != null && !stringUnits.isBlank()) {
 			obj.setStringUnits(stringUnits);

@@ -103,7 +103,7 @@ public class Db2FunctionReader extends FunctionReader {
 		obj.setDeterministic("Y".equalsIgnoreCase(this.getString(rs, "DETERMINISTIC")));
 		obj.setParallel("Y".equalsIgnoreCase(this.getString(rs, "PARALLEL")));
 		String type = this.getString(rs, "FUNCTIONTYPE");
-		String definition = getString(rs, "ROUTINE_DEFINITION");
+		String definition = getString(rs, "TEXT");
 		if ("R".equalsIgnoreCase(type)) {
 			obj.setFunctionType(FunctionType.Row);
 			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110))

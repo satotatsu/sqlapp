@@ -402,4 +402,14 @@ public class DuckDb extends Dialect {
 	public boolean equals(final Object obj) {
 		return super.equals(obj);
 	}
+
+	/**
+	 * DuckDB uses multi-version concurrency control: every transaction reads the
+	 * snapshot taken when it started. The JDBC driver reports REPEATABLE READ and
+	 * rejects SERIALIZABLE.
+	 */
+	@Override
+	public boolean isRepeatableReadSnapshotIsolation() {
+		return true;
+	}
 }

@@ -50,8 +50,7 @@ public class H2ConstantReader extends ConstantReader {
 	protected List<Constant> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		boolean modern = H2Versions.isModern(productVersionInfo);
 		final List<Constant> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -75,8 +74,7 @@ public class H2ConstantReader extends ConstantReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("constants_200.sql");
 		}
 		return getSqlNodeCache().getString("constants.sql");

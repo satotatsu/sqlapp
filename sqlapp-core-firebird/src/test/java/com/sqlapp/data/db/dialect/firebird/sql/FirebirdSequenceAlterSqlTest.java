@@ -10,12 +10,15 @@ import com.sqlapp.data.schemas.Sequence;
 
 class FirebirdSequenceAlterSqlTest {
 	@Test
-	void zeroAndNegativeCurrentValuesAreEmitted() {
+	void nextValueIsConvertedToTheCurrentGeneratorValue() {
 		var registry = DialectHolder.defaultDialect25.createSqlFactoryRegistry();
 		assertEquals("SET GENERATOR \"quoted sequence\" TO 0",
-				registry.createSql(new Sequence("quoted sequence").setLastValue(0), SqlType.ALTER).get(0).getSqlText());
-		assertTrue(registry.createSql(new Sequence("s").setLastValue(-7), SqlType.ALTER).get(0).getSqlText()
+				registry.createSql(new Sequence("quoted sequence").setLastValue(1), SqlType.ALTER).get(0).getSqlText());
+		assertTrue(registry.createSql(new Sequence("s").setLastValue(-6), SqlType.ALTER).get(0).getSqlText()
 				.endsWith(" TO -7"));
+		assertTrue(DialectHolder.defaultDialect30.createSqlFactoryRegistry()
+				.createSql(new Sequence("s").setLastValue(15).setIncrementBy(5), SqlType.ALTER).get(0).getSqlText()
+				.endsWith(" TO 10"));
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Sequence("s"), SqlType.ALTER));
 	}
 
@@ -31,7 +34,7 @@ class FirebirdSequenceAlterSqlTest {
 	@Test
 	void incrementAndCurrentValueUseSeparateStatements() {
 		Sequence original = new Sequence("s").setLastValue(100).setIncrementBy(1);
-		Sequence target = original.clone().setLastValue(0).setIncrementBy(-3);
+		Sequence target = original.clone().setLastValue(-3).setIncrementBy(-3);
 		var sql = DialectHolder.defaultDialect30.createSqlFactoryRegistry().createSql(original.diff(target),
 				SqlType.ALTER);
 		assertEquals(2, sql.size());

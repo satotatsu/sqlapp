@@ -139,6 +139,16 @@ public class Db2ColumnReader extends ColumnReader {
 			}
 		}
 		this.getDialect().setDbType(typeName, typeLength, scale, obj);
+		if ((builtinSchema == null || "SYSIBM".equals(builtinSchema)) && "0".equals(trim(getString(rs, "CODEPAGE")))) {
+			// CHAR/VARCHAR/LONG VARCHAR FOR BIT DATA hold bytes, not characters.
+			final com.sqlapp.data.db.datatype.DataType binary = forBitDataType(productDataType);
+			if (binary != null) {
+				obj.setDataType(binary);
+				obj.setDataTypeName(null);
+				obj.setLength(binary == com.sqlapp.data.db.datatype.DataType.LONGVARBINARY ? null : length);
+				obj.getSpecifics().put(FOR_BIT_DATA, "Y");
+			}
+		}
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
 			if ("XML".equals(productDataType))
 				obj.setDataType(com.sqlapp.data.db.datatype.DataType.SQLXML);
@@ -180,6 +190,26 @@ public class Db2ColumnReader extends ColumnReader {
 			setSpecifics(rs, "LOGGED", obj);
 		}
 		return obj;
+	}
+
+	/** Column specific marking CHAR/VARCHAR/LONG VARCHAR FOR BIT DATA columns. */
+	public static final String FOR_BIT_DATA = "DB2_FOR_BIT_DATA";
+
+	static com.sqlapp.data.db.datatype.DataType forBitDataType(final String typeName) {
+		if (typeName == null) {
+			return null;
+		}
+		switch (typeName) {
+		case "CHARACTER":
+		case "CHAR":
+			return com.sqlapp.data.db.datatype.DataType.BINARY;
+		case "VARCHAR":
+			return com.sqlapp.data.db.datatype.DataType.VARBINARY;
+		case "LONG VARCHAR":
+			return com.sqlapp.data.db.datatype.DataType.LONGVARBINARY;
+		default:
+			return null;
+		}
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

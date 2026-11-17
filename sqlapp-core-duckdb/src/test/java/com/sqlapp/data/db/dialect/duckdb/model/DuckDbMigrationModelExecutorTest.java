@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.duckdb.model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -113,6 +114,57 @@ class DuckDbMigrationModelExecutorTest {
 			final String sql = executor.fixtureRelation(Fixture.sql("SELECT DATE '2026-01-02' AS d"));
 			assertEquals(List.of(List.of(java.time.LocalDate.of(2026, 1, 2))),
 					query(connection, "SELECT d FROM " + sql + " AS f"));
+		}
+	}
+
+	@Test
+	void createsDeclaredTablesAndRejectsRowsThatDoNotFit() throws Exception {
+		final var columns = List.of(
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+						com.sqlapp.data.db.datatype.DataType.INT, null, null, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("NAME",
+						com.sqlapp.data.db.datatype.DataType.VARCHAR, 5L, null, true),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("AMOUNT",
+						com.sqlapp.data.db.datatype.DataType.DECIMAL, 6L, 2, false));
+		final MigrationModel model = new MigrationModel("customer", null, "unused", Materialization.TABLE,
+				Map.of("minimum", 1), columns, List.of("ID"));
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			connection.setAutoCommit(false);
+			// Result columns may come in any order and case.
+			executor.materialize(connection, model, "SELECT amount, name, id FROM (VALUES"
+					+ " (1, 'alice', 1.5), (2, 'bob', NULL), (0, 'x', 9)) AS v(id, name, amount) WHERE id >= /*minimum*/0");
+			connection.commit();
+			assertEquals(
+					List.of(Arrays.asList(1, "alice", new java.math.BigDecimal("1.50")), Arrays.asList(2, "bob", null)),
+					query(connection, "SELECT * FROM customer ORDER BY ID"));
+			assertEquals(
+					List.of(List.of("ID", "INTEGER", "NO"), List.of("NAME", "VARCHAR", "NO"),
+							List.of("AMOUNT", "DECIMAL(6,2)", "YES")),
+					query(connection, "SELECT column_name, data_type, is_nullable FROM information_schema.columns"
+							+ " WHERE table_name = 'customer' ORDER BY ordinal_position"));
+			assertEquals(List.of(List.of("PRIMARY KEY")),
+					query(connection, "SELECT constraint_type FROM duckdb_constraints() WHERE table_name = 'customer'"
+							+ " AND constraint_type = 'PRIMARY KEY'"));
+
+			final String[] invalid = { "SELECT 1 AS ID, 'toolong' AS NAME, 1 AS AMOUNT", // length
+					"SELECT 1 AS ID, NULL AS NAME, 1 AS AMOUNT", // NOT NULL
+					"SELECT * FROM (VALUES (1, 'a', 1), (1, 'b', 2)) AS v(ID, NAME, AMOUNT)", // primary key
+					"SELECT 1 AS ID, 'a' AS NAME, 10000 AS AMOUNT", // precision
+					"SELECT 'x' AS ID, 'a' AS NAME, 1 AS AMOUNT", // cast
+					"SELECT 1 AS ID, 'a' AS NAME", // missing column
+					"SELECT 1 AS ID, 'a' AS NAME, 1 AS AMOUNT, 2 AS EXTRA" }; // undeclared column
+			for (final String sql : invalid) {
+				assertThrows(Exception.class, () -> executor.materialize(connection, model, sql), sql);
+				connection.rollback();
+			}
+			final var columnMismatch = assertThrows(IllegalArgumentException.class,
+					() -> executor.materialize(connection, model, "SELECT 1 AS ID, 'a' AS NAME, 2 AS EXTRA"));
+			assertTrue(columnMismatch.getMessage().contains("Missing: [AMOUNT]"), columnMismatch.getMessage());
+			assertTrue(columnMismatch.getMessage().contains("Not declared: [EXTRA]"), columnMismatch.getMessage());
+			connection.rollback();
+			// The committed table is unchanged.
+			assertEquals(List.of(List.of(2L)), query(connection, "SELECT count(*) FROM customer"));
 		}
 	}
 }

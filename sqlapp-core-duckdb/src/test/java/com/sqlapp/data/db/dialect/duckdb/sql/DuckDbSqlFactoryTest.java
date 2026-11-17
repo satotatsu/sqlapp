@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.dialect.duckdb.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -76,6 +77,30 @@ class DuckDbSqlFactoryTest {
 				.addForeignKeyConstraint("fk_child", child.getColumns().get("pid"), parent.getColumns().get("id"))
 				.setDeleteRule(CascadeRule.Cascade);
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(child, SqlType.CREATE));
+	}
+
+	@Test
+	void omitsNoActionRulesThatDuckDbCannotParse() throws Exception {
+		final Table parent = parent();
+		final Table child = new Table("child");
+		parent.getParent().add(child);
+		child.getColumns().add(new Column("pid").setDataType(DataType.INT));
+		// Metadata readers such as HSQLDB's report NO ACTION as CascadeRule.None.
+		child.getConstraints()
+				.addForeignKeyConstraint("fk_child", child.getColumns().get("pid"), parent.getColumns().get("id"))
+				.setDeleteRule(CascadeRule.None).setUpdateRule(CascadeRule.Restrict);
+		final String sql = join(registry.createSql(child, SqlType.CREATE));
+		assertTrue(sql.contains("FOREIGN KEY ( pid ) REFERENCES s1.parent ( id )\n"), sql);
+		assertFalse(sql.contains(" ON "), sql);
+
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:duckdb:");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE SCHEMA s1");
+			statement.execute("CREATE TABLE s1.parent (id INTEGER PRIMARY KEY)");
+			for (final SqlOperation operation : registry.createSql(child, SqlType.CREATE)) {
+				statement.execute(operation.getSqlText());
+			}
+		}
 	}
 
 	@Test

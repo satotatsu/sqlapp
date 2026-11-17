@@ -48,7 +48,7 @@ class FirebirdSequenceBulkMetadataTest {
 		assertEquals(2, queries.size());
 		assertTrue(queries.get(0).contains("GEN_ID(\"sequence \"\"0\",0)"), queries.get(0));
 		assertTrue(sequences.stream()
-				.allMatch(sequence -> java.math.BigInteger.valueOf(123).equals(sequence.getLastValue())));
+				.allMatch(sequence -> java.math.BigInteger.valueOf(124).equals(sequence.getLastValue())));
 	}
 
 	@Test

@@ -28,6 +28,12 @@ import com.sqlapp.data.converter.Converters;
  * @author satoh
  * 
  */
+/**
+ * Next value to be issued (the value a recreated sequence starts or restarts
+ * with). It can be ahead of the last value actually handed out when the
+ * database reports a cache allocation boundary; null means unused or unknown,
+ * so the start value applies.
+ */
 public interface LastValueProperty<T> {
 
 	BigInteger getLastValue();

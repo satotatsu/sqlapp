@@ -59,7 +59,7 @@ class Db2FunctionMappingReaderTest {
 				.contains("r.ORIGIN IN ('M', 'U')"));
 		String ddl = "CREATE FUNCTION APP.F(INT) RETURNS INT AS TEMPLATE";
 		var function = reader.createFunction(Db2MetadataParityTest.row(Map.of("schema_name", "APP", "routine_name", "F",
-				"specific_name", "F1", "LANGUAGE", " ", "FUNCTIONTYPE", "S", "ROUTINE_DEFINITION", ddl)));
+				"specific_name", "F1", "LANGUAGE", " ", "FUNCTIONTYPE", "S", "TEXT", ddl)));
 		assertEquals(List.of(ddl), function.getDefinition());
 	}
 

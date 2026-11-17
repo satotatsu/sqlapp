@@ -127,6 +127,61 @@ class Db2ColumnTypeRecreationTest {
 		assertContains("DECFLOAT(16)", create(read(fields)));
 	}
 
+	@Test
+	void forBitDataColumnsAreBinaryInTheModelAndKeepTheirNativeSpelling() throws Exception {
+		var fields = fields("CHARACTER");
+		fields.putAll(Map.of("CODEPAGE", "0", "LENGTH", "16"));
+		Column fixed = read(fields);
+		assertEquals(DataType.BINARY, fixed.getDataType());
+		assertEquals(Long.valueOf(16), fixed.getLength());
+		assertContains("CHAR(16) FOR BIT DATA", create(fixed));
+		fields = fields("VARCHAR");
+		fields.putAll(Map.of("CODEPAGE", "0", "LENGTH", "40", "TYPESTRINGUNITS", "OCTETS", "STRINGUNITSLENGTH", "40"));
+		Column varying = read(fields);
+		assertEquals(DataType.VARBINARY, varying.getDataType());
+		assertNull(varying.getStringUnits());
+		assertContains("VARCHAR(40) FOR BIT DATA", create(varying));
+		fields = fields("LONG VARCHAR");
+		fields.putAll(Map.of("CODEPAGE", "0", "LENGTH", "32700"));
+		Column longVarying = read(fields);
+		assertEquals(DataType.LONGVARBINARY, longVarying.getDataType());
+		assertContains("LONG VARCHAR FOR BIT DATA", create(longVarying));
+		// Character columns are unchanged.
+		fields = fields("VARCHAR");
+		fields.put("CODEPAGE", "1208");
+		assertEquals(DataType.VARCHAR, read(fields).getDataType());
+		// Releases before native binary types read the same representation.
+		fields = fields("CHARACTER");
+		fields.putAll(Map.of("CODEPAGE", "0", "LENGTH", "8"));
+		assertEquals(DataType.BINARY, new Db2ColumnReader(DialectHolder.Db2_1010Dialect)
+				.createColumn(Db2MetadataParityTest.row(fields)).getDataType());
+	}
+
+	@Test
+	void nativeBinaryStringTypesAreReadAndGenerated() throws Exception {
+		var fields = fields("BINARY");
+		fields.putAll(Map.of("CODEPAGE", "0", "LENGTH", "8"));
+		Column fixed = read(fields);
+		assertEquals(DataType.BINARY, fixed.getDataType());
+		String ddl = create(fixed);
+		assertContains("BINARY(8)", ddl);
+		assertTrue(!ddl.contains("FOR BIT DATA"), ddl);
+		fields = fields("VARBINARY");
+		fields.putAll(Map.of("CODEPAGE", "0", "LENGTH", "100"));
+		Column varying = read(fields);
+		assertEquals(DataType.VARBINARY, varying.getDataType());
+		assertContains("VARBINARY(100)", create(varying));
+		// Portable models generate native types on 11.1 or later.
+		assertContains("VARBINARY(30)", create(new Column("B").setDataType(DataType.VARBINARY).setLength(30)));
+	}
+
+	@Test
+	void offsetFetchIsAvailableFromRelease1110() {
+		assertTrue(DialectHolder.Db2_1110Dialect.supportsStandardOffsetFetchRows());
+		assertTrue(DialectHolder.Db2_1215Dialect.supportsStandardOffsetFetchRows());
+		assertTrue(!DialectHolder.Db2_1050Dialect.supportsStandardOffsetFetchRows());
+	}
+
 	private static void assertContains(String expected, String ddl) {
 		assertTrue(ddl.contains(expected), ddl);
 	}

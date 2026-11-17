@@ -65,10 +65,12 @@ public class H2CreateTriggerFactory extends AbstractCreateTriggerFactory<H2SqlBu
 
 	@Override
 	protected void addCreateTriggerBody(final Trigger obj, H2SqlBuilder builder) {
-		String orientation = obj.getActionOrientation() == null ? "ROW" : obj.getActionOrientation();
-		if (!java.util.List.of("ROW", "STATEMENT").contains(orientation))
-			throw new IllegalArgumentException("Invalid H2 trigger orientation: " + orientation);
-		builder.forEach().space()._add(orientation);
+		String orientation = obj.getActionOrientation();
+		if (orientation != null) {
+			if (!java.util.List.of("ROW", "STATEMENT").contains(orientation))
+				throw new IllegalArgumentException("Invalid H2 trigger orientation: " + orientation);
+			builder.forEach().space()._add(orientation);
+		}
 		String queue = obj.getSpecifics().get("h2.queueSize");
 		if (queue != null) {
 			try {

@@ -21,7 +21,7 @@ class Db2TriggerRecreationTest {
 				"EVENT_OBJECT_TABLE", "T", "ACTION_TIMING", "AFTER", "ACTION_ORIENTATION", "ROW", "EVENT_MANIPULATION",
 				"", "TRIGEVENT", "M", "VALID", "X"));
 		values.putAll(Map.of("EVENTINSERT", "Y", "EVENTUPDATE", "Y", "EVENTDELETE", "N", "QUALIFIER", "Base.Q",
-				"FUNC_PATH", "\"SYSIBM\",\"Fns.Q\"", "remarks", "trigger's comment", "ACTION_STATEMENT",
+				"FUNC_PATH", "\"SYSIBM\",\"Fns.Q\"", "remarks", "trigger's comment", "TEXT",
 				"CREATE TRIGGER \"S.Q\".\"TR\"\".Q\" AFTER INSERT OR UPDATE ON APP.T\nFOR EACH ROW\nBEGIN ATOMIC\n\n VALUES 'a;b';\nEND"));
 		return values;
 	}
@@ -45,8 +45,9 @@ class Db2TriggerRecreationTest {
 		Trigger restored = SchemaUtils.readXml(new StringReader(trigger.asXml()));
 		assertEquals(trigger, restored);
 		assertEquals(trigger, trigger.clone());
-		assertEquals(List.of("SET CURRENT SCHEMA = 'Base.Q'", "SET CURRENT PATH = \"SYSIBM\", \"Fns.Q\"",
-				values.get("ACTION_STATEMENT"), "COMMENT ON TRIGGER \"S.Q\".\"TR\"\".Q\" IS 'trigger''s comment'"),
+		assertEquals(
+				List.of("SET CURRENT SCHEMA = 'Base.Q'", "SET CURRENT PATH = \"SYSIBM\", \"Fns.Q\"", values.get("TEXT"),
+						"COMMENT ON TRIGGER \"S.Q\".\"TR\"\".Q\" IS 'trigger''s comment'"),
 				sql(restored, SqlType.CREATE));
 		assertEquals(List.of("DROP TRIGGER \"S.Q\".\"TR\"\".Q\""), sql(restored, SqlType.DROP));
 	}

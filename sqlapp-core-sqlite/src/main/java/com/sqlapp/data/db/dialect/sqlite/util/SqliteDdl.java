@@ -223,6 +223,9 @@ public final class SqliteDdl {
 					}
 					if (j < close && (items.get(j).is("ASC") || items.get(j).is("DESC")))
 						descending = items.get(j++).is("DESC");
+					// SQLite also accepts PRIMARY KEY(id AUTOINCREMENT) as a table constraint.
+					if (primary && j < close && items.get(j).is("AUTOINCREMENT"))
+						j++;
 					columns.add(new KeyColumn(column, collation, descending));
 					if (j < close && !items.get(j++).is(","))
 						throw new IllegalArgumentException("Unsupported SQLite key syntax: " + fragment);
@@ -240,6 +243,21 @@ public final class SqliteDdl {
 			result.add(new KeyDeclaration(constraintName(items, i), primary, List.copyOf(columns), conflict));
 		}
 		return result;
+	}
+
+	/**
+	 * Whether a table-constraint fragment declares
+	 * {@code PRIMARY KEY(column AUTOINCREMENT)} for the given column.
+	 */
+	public static boolean isTableLevelAutoIncrement(String fragment, String column) {
+		List<Token> items = tokens(fragment);
+		int start = !items.isEmpty() && items.get(0).is("CONSTRAINT") ? 2 : 0;
+		if (start + 2 >= items.size() || !items.get(start).is("PRIMARY") || !items.get(start + 1).is("KEY")
+				|| !items.get(start + 2).is("("))
+			return false;
+		int close = closingToken(items, start + 2);
+		return close - 1 > start + 3 && items.get(close - 1).is("AUTOINCREMENT")
+				&& identifier(items.get(start + 3).text()).equals(column);
 	}
 
 	/** Reads each CHECK with its own name; comments and literals remain opaque. */

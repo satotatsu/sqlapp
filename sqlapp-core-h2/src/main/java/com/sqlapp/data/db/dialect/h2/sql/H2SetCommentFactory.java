@@ -52,12 +52,14 @@ public class H2SetCommentFactory extends AbstractSqlFactory<AbstractNamedObject<
 		builder.comment().on().space()._add(kind).space();
 		if (object instanceof Column column) {
 			requireName(column.getTableName());
-			requireName(column.getSchemaName());
-			if (getOptions().isDecorateSchemaName())
+			if (getOptions().isDecorateSchemaName()) {
+				requireName(column.getSchemaName());
 				builder.name(column.getSchemaName())._add(".");
+			}
 			builder.name(column.getTableName())._add(".").name(column.getName());
 		} else if (object instanceof AbstractSchemaObject<?> named) {
-			requireName(named.getSchemaName());
+			if (getOptions().isDecorateSchemaName())
+				requireName(named.getSchemaName());
 			builder.name(named, getOptions().isDecorateSchemaName());
 		} else
 			builder.name(object.getName());

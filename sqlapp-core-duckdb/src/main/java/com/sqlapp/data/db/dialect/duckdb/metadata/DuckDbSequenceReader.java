@@ -47,7 +47,9 @@ public class DuckDbSequenceReader extends SequenceReader {
 				sequence.setMaxValue(rs.getBigDecimal("max_value"));
 				sequence.setIncrementBy(rs.getBigDecimal("increment_by"));
 				sequence.setCycle(rs.getBoolean("cycle"));
-				sequence.setLastValue(rs.getBigDecimal("last_value"));
+				sequence.setLastValue(com.sqlapp.data.db.metadata.SequenceNextValues.after(
+						rs.getBigDecimal("last_value"), rs.getBigDecimal("increment_by"), rs.getBigDecimal("min_value"),
+						rs.getBigDecimal("max_value"), sequence.isCycle()));
 				sequence.setRemarks(getString(rs, REMARKS));
 				result.add(sequence);
 			}

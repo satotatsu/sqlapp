@@ -9,7 +9,7 @@ SELECT
 , r.IS_DETERMINISTIC
 , r.REMARKS
 FROM INFORMATION_SCHEMA.ROUTINES r
-WHERE TRUE
+WHERE r.ROUTINE_TYPE <> 'AGGREGATE'
   /*if isNotEmpty(catalogName)*/
   AND r.ROUTINE_CATALOG IN /*catalogName*/('%')
   /*end*/

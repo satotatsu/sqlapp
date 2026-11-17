@@ -30,12 +30,15 @@ import java.math.BigInteger;
 public class FirebirdCreateSequenceFactory extends AbstractCreateSequenceFactory<FirebirdSqlBuilder> {
 	@Override
 	protected void addOtherDefinitions(Sequence obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
-		BigInteger current = obj.getLastValue();
-		if (current == null && getDialect().compareTo(DialectHolder.defaultDialect30) < 0)
-			current = obj.getStartValue();
-		if (current != null)
-			addSql(result, createSqlBuilder()._add("SET GENERATOR ").name(obj.getName())._add(" TO ")._add(current),
-					SqlType.ALTER, obj);
+		// lastValue/startValue are the next value to issue; SET GENERATOR takes the
+		// current value, one increment before it. 3.0+ applies startValue via START
+		// WITH.
+		BigInteger next = obj.getLastValue();
+		if (next == null && getDialect().compareTo(DialectHolder.defaultDialect30) < 0)
+			next = obj.getStartValue();
+		if (next != null)
+			addSql(result, createSqlBuilder()._add("SET GENERATOR ").name(obj.getName())._add(" TO ")
+					._add(currentBefore(next, obj.getIncrementBy())), SqlType.ALTER, obj);
 		if (obj.getRemarks() != null)
 			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
 	}
@@ -100,5 +103,14 @@ public class FirebirdCreateSequenceFactory extends AbstractCreateSequenceFactory
 
 	@Override
 	protected void addOrder(final Sequence obj, FirebirdSqlBuilder builder) {
+	}
+
+	/** The generator value whose next increment yields {@code next}. */
+	static BigInteger currentBefore(BigInteger next, BigInteger increment) {
+		BigInteger current = next.subtract(increment == null ? BigInteger.ONE : increment);
+		if (current.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0
+				|| current.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0)
+			throw new IllegalArgumentException("Firebird sequence values must fit a signed 64-bit integer");
+		return current;
 	}
 }

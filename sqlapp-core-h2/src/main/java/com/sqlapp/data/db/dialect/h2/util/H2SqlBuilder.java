@@ -68,6 +68,8 @@ public class H2SqlBuilder extends AbstractSqlBuilder<H2SqlBuilder> {
 					._add(column.getFormula())._add(")");
 		} else if (!column.isIdentity())
 			defaultDefinition(column);
+		else if (!CommonUtils.isEmpty(column.getOnUpdate()))
+			throw new IllegalArgumentException("H2 identity columns cannot specify ON UPDATE: " + column.getName());
 		if (!CommonUtils.isEmpty(column.getOnUpdate()))
 			onUpdateDefinition(column);
 		notNullDefinition(column);
@@ -118,10 +120,12 @@ public class H2SqlBuilder extends AbstractSqlBuilder<H2SqlBuilder> {
 	@Override
 	protected H2SqlBuilder autoIncrement(AbstractColumn<?> column) {
 		space().generated();
-		if (column.getIdentityGenerationType() == IdentityGenerationType.ByDefault)
-			by().default_();
-		else
+		// Only an explicit ALWAYS forbids input; an unspecified type keeps BY DEFAULT,
+		// matching the INSERT/MERGE planning in this dialect.
+		if (column.getIdentityGenerationType() == IdentityGenerationType.Always)
 			always();
+		else
+			by().default_();
 		as().identity();
 		var parts = new java.util.ArrayList<String>();
 		if (column.getIdentityStartValue() != null)

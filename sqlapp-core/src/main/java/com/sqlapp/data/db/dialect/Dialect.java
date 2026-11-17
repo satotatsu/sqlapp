@@ -1500,6 +1500,22 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
+	/**
+	 * Whether a REPEATABLE READ transaction reads one consistent snapshot of the
+	 * whole database, without phantom rows (snapshot isolation).
+	 * <p>
+	 * Consistency checks that read a database while nothing else may change it,
+	 * such as migration verification, otherwise require SERIALIZABLE. A database
+	 * that provides snapshot isolation but does not offer SERIALIZABLE through
+	 * JDBC can return {@code true} so that these checks use REPEATABLE READ.
+	 * </p>
+	 *
+	 * @return {@code true} when REPEATABLE READ is snapshot isolation
+	 */
+	public boolean isRepeatableReadSnapshotIsolation() {
+		return false;
+	}
+
 	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName) {
 		if (dataType == null) {
 			return false;

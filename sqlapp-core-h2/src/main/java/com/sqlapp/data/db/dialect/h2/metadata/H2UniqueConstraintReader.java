@@ -72,7 +72,7 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					c.setRemarks(getString(rs, REMARKS));
-					if (!primary && supportsNullTreatment(productVersionInfo)) {
+					if (!primary && H2Versions.supportsNullTreatment(productVersionInfo)) {
 						c.getSpecifics().put("h2.nullsDistinct", getString(rs, "NULLS_DISTINCT"));
 					}
 					// String index_name = getString(rs, "unique_index_name");
@@ -90,20 +90,13 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (supportsNullTreatment(productVersionInfo)) {
+		if (H2Versions.supportsNullTreatment(productVersionInfo)) {
 			return getSqlNodeCache().getString("uniqueConstraints_220.sql");
 		}
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("uniqueConstraints_200.sql");
 		}
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
-	}
-
-	private boolean supportsNullTreatment(ProductVersionInfo version) {
-		return version != null && version.getMajorVersion() != null
-				&& (version.getMajorVersion() > 2 || version.getMajorVersion() == 2 && version.getMinorVersion() != null
-						&& version.getMinorVersion() >= 2);
 	}
 
 }

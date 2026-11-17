@@ -123,7 +123,7 @@ public class MySql extends Dialect {
 		});
 		// BLOB
 		getDbDataTypes().addBlob("TINYBLOB", 255, type -> {
-			type.setCreateFormat("BLOB");
+			type.setCreateFormat("TINYBLOB");
 		});
 		getDbDataTypes().addBlob("BLOB", LEN_64KB - 1, type -> {
 		});
@@ -200,7 +200,7 @@ public class MySql extends Dialect {
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID", type -> {
-			type.setAsBinaryType();
+			type.setAsBinaryType().setCreateFormat("BINARY(16)");
 		});
 		// Single
 		getDbDataTypes().addReal("FLOAT", type -> {

@@ -118,6 +118,11 @@ public class CobolSchemaImportCommand extends AbstractCommand implements TargetF
 		var mapping = new LegacyMigrationMappingBuilder().buildHostImportMapping(
 				LegacyMigrationMappingBuilder.HostLanguage.COBOL, targetFile, outputFile, encoding,
 				configuration.getSchemaName(), result.tableLogs, result.warnings);
+		if (!result.controlRecords.isEmpty()) {
+			// Control records (trailers) are not loaded; extractCobolCsv reads their layout
+			// from here.
+			mapping.getOptions().put("cobolControlRecords", result.controlRecords);
+		}
 		new LegacyMigrationMappingIO().write(file, mapping);
 		info("Output legacy migration mapping: " + file.getAbsolutePath());
 	}
@@ -142,7 +147,8 @@ public class CobolSchemaImportCommand extends AbstractCommand implements TargetF
 		return cobolName.replace('-', '_');
 	}
 
-	private record BuildResult(Schema schema, List<Map<String, Object>> tableLogs, List<String> warnings) {
+	private record BuildResult(Schema schema, List<Map<String, Object>> tableLogs, List<String> warnings,
+			Map<String, Object> controlRecords) {
 	}
 
 	/** Builds tables from parsed records; package-private for tests. */
@@ -171,40 +177,182 @@ public class CobolSchemaImportCommand extends AbstractCommand implements TargetF
 			for (CobolItem record : copybook.records()) {
 				selectRedefines(record);
 			}
+			List<CobolItem> pending = new ArrayList<>();
+			Map<String, Object> controlRecords = new LinkedHashMap<>();
 			for (CobolItem record : copybook.records()) {
 				String recordName = record.getName().toUpperCase(Locale.ROOT);
 				if (!includes.isEmpty() && !includes.contains(recordName) || excludes.contains(recordName)) {
 					continue;
 				}
-				RecordMapping mapping = configuration.mapping(record.getName());
-				if (mapping == null) {
+				RecordMapping recordMapping = configuration.mapping(record.getName());
+				if (recordMapping == null) {
 					warnings.add("No record mapping was provided: " + record.getName());
 					continue;
 				}
-				Table table = new Table(valueOr(mapping.getTableName(), sqlName(record.getName())));
-				table.setRemarks(record.getRemarks());
-				schema.getTables().add(table);
-				List<CobolItem> items = new ArrayList<>();
-				if (record.isGroup()) {
-					addColumns(table, record, record, new ArrayList<>(), items);
-				} else {
-					addColumn(table, record, record, List.of(), items);
+				if (recordMapping.isControl()) {
+					if (recordMapping.getTableName() != null || !recordMapping.getPrimaryKey().isEmpty()
+							|| recordMapping.getParent() != null || recordMapping.getSequenceColumn() != null) {
+						throw new CommandException("A control record has no table; remove tableName, primaryKey,"
+								+ " parent and sequenceColumn: record=" + record.getName());
+					}
+					controlRecords.put(record.getName(), controlLayout(record));
+					continue;
 				}
-				List<Column> primaryKey = columns(table, mapping.getPrimaryKey(), "primary key");
-				if (primaryKey.isEmpty()) {
-					throw new CommandException("primaryKey is required: record=" + record.getName());
-				}
-				table.setPrimaryKey("PK_" + table.getName(), primaryKey.toArray(Column[]::new));
-				Map<String, Object> storage = mapOf("recordLength", record.getTotalLength(), "variableLength",
-						hasDependingOn(record));
-				tableLogs.add(tableLog(table, record, record, items, null, storage));
-				childTables(schema, table, record, record, tableLogs);
+				pending.add(record);
+			}
+			// Parent records first, so that a detail record can inherit its header's key.
+			Map<String, Table> recordTables = new LinkedHashMap<>();
+			while (!pending.isEmpty()) {
+				CobolItem next = pending.stream().filter(record -> {
+					String parent = configuration.mapping(record.getName()).getParent();
+					if (parent != null && controlRecords.keySet().stream().anyMatch(parent::equalsIgnoreCase)) {
+						throw new CommandException(
+								"A control record cannot be a parent: " + record.getName() + " -> " + parent);
+					}
+					return parent == null || recordTables.containsKey(parent.toUpperCase(Locale.ROOT));
+				}).findFirst()
+						.orElseThrow(
+								() -> new CommandException(
+										"Parent record is not imported or the parents form a cycle: " + pending.stream()
+												.map(record -> record.getName() + " -> "
+														+ configuration.mapping(record.getName()).getParent())
+												.toList()));
+				pending.remove(next);
+				recordTables.put(next.getName().toUpperCase(Locale.ROOT),
+						recordTable(schema, next, configuration.mapping(next.getName()), recordTables, tableLogs));
 			}
 			validateConfiguration();
 			if (schema.getTables().isEmpty()) {
 				throw new CommandException("No configured COBOL records were found.");
 			}
-			return new BuildResult(schema, tableLogs, warnings);
+			return new BuildResult(schema, tableLogs, warnings, controlRecords);
+		}
+
+		/** Storage layout of a control record's elementary items, by item path. */
+		private Map<String, Object> controlLayout(CobolItem record) {
+			Map<String, Object> fields = new LinkedHashMap<>();
+			controlFields(record, record, fields);
+			return mapOf("recordLength", record.getTotalLength(), "fields", fields);
+		}
+
+		private void controlFields(CobolItem record, CobolItem item, Map<String, Object> fields) {
+			if (!selected(item)) {
+				return;
+			}
+			if (item.getOccursMaximum() != null) {
+				if (!item.isFiller()) {
+					warnings.add("OCCURS items of a control record are not available for checks: " + item.getPath());
+				}
+				return;
+			}
+			if (item.isGroup()) {
+				for (CobolItem child : item.getChildren()) {
+					controlFields(record, child, fields);
+				}
+			} else if (!item.isFiller()) {
+				fields.put(item.getPath(), mapOf("storage", storage(item, record), "conversion", conversion(item)));
+			}
+		}
+
+		/**
+		 * What a reader needs to decode the bytes of an item, relative to {@code base}.
+		 */
+		private static Map<String, Object> storage(CobolItem item, CobolItem base) {
+			Map<String, Object> storage = mapOf("offset", item.getOffset() - base.getOffset(), "length",
+					item.getLength(), "usage", CobolItem.usageText(item.getUsage()));
+			if (item.getCategory() == Category.NUMERIC) {
+				storage.put("digits", item.getDigits());
+				storage.put("scale", item.getScale());
+				storage.put("signed", item.isSigned());
+				if (item.isSigned() && item.getUsage() == Usage.DISPLAY) {
+					storage.put("signPosition", item.isSignLeading() ? "LEADING" : "TRAILING");
+					storage.put("signSeparate", item.isSignSeparate());
+				}
+			}
+			return storage;
+		}
+
+		/** COBOL details for review. */
+		private static Map<String, Object> conversion(CobolItem item) {
+			Map<String, Object> conversion = mapOf("cobolName", item.getName(), "category", item.getCategory().name(),
+					"picture", item.getPicture());
+			if (item.getRedefines() != null || !item.getRedefinedBy().isEmpty()) {
+				conversion.put("redefinition", true);
+			}
+			if (!item.getConditions().isEmpty()) {
+				conversion.put("conditions", item.getConditions().stream()
+						.map(condition -> mapOf("name", condition.name(), "values", condition.values())).toList());
+			}
+			return conversion;
+		}
+
+		private Table recordTable(Schema schema, CobolItem record, RecordMapping mapping,
+				Map<String, Table> recordTables, List<Map<String, Object>> tableLogs) {
+			String tableName = valueOr(mapping.getTableName(), sqlName(record.getName()));
+			if (schema.getTables().contains(tableName)) {
+				throw new CommandException(
+						"Table name conflicts: " + tableName + "; set tableName for " + record.getName());
+			}
+			Table table = new Table(tableName);
+			table.setRemarks(record.getRemarks());
+			schema.getTables().add(table);
+			Table parent = mapping.getParent() == null ? null
+					: recordTables.get(mapping.getParent().toUpperCase(Locale.ROOT));
+			List<Column> inheritedKeys = new ArrayList<>();
+			List<Column> parentKeys = List.of();
+			Column sequence = null;
+			if (parent != null) {
+				if (!mapping.getPrimaryKey().isEmpty()) {
+					throw new CommandException("primaryKey of a record with a parent is the parent key and a sequence"
+							+ " number; remove primaryKey: record=" + record.getName());
+				}
+				parentKeys = parent.getPrimaryKeyConstraint().getColumns().toColumns();
+				for (Column parentKey : parentKeys) {
+					Column inherited = parentKey.clone().setIdentity(false).setDefaultValue(null);
+					table.getColumns().add(inherited);
+					inheritedKeys.add(inherited);
+				}
+				String sequenceName = valueOr(mapping.getSequenceColumn(),
+						configuration.occurrenceColumnName(sqlName(record.getName())));
+				if (table.getColumns().contains(sequenceName)) {
+					throw new CommandException("Sequence column conflicts with an inherited key: table=" + tableName
+							+ ", column=" + sequenceName + "; set sequenceColumn for " + record.getName());
+				}
+				sequence = new Column(sequenceName).setDataType(DataType.INT).setNotNull(true);
+				sequence.setRemarks("Sequence of " + record.getName() + " records after their " + mapping.getParent()
+						+ " record (1..)");
+				table.getColumns().add(sequence);
+			}
+			List<CobolItem> items = new ArrayList<>();
+			if (record.isGroup()) {
+				addColumns(table, record, record, new ArrayList<>(), items);
+			} else {
+				addColumn(table, record, record, List.of(), items);
+			}
+			List<Column> primaryKey;
+			if (parent != null) {
+				primaryKey = new ArrayList<>(inheritedKeys);
+				primaryKey.add(sequence);
+			} else {
+				primaryKey = columns(table, mapping.getPrimaryKey(), "primary key");
+				if (primaryKey.isEmpty()) {
+					throw new CommandException("primaryKey is required: record=" + record.getName());
+				}
+			}
+			table.setPrimaryKey("PK_" + table.getName(), primaryKey.toArray(Column[]::new));
+			if (parent != null) {
+				table.getConstraints().addForeignKeyConstraint("FK_" + table.getName() + "_" + parent.getName(),
+						inheritedKeys.toArray(Column[]::new), parentKeys.toArray(Column[]::new));
+			}
+			Map<String, Object> storage = mapOf("recordLength", record.getTotalLength(), "variableLength",
+					hasDependingOn(record));
+			// A record with a parent is a child data set numbered in file order, like an
+			// OCCURS element.
+			Map<String, Object> occurrence = parent == null ? null
+					: mapOf("column", sequence.getName(), "parentRecord", mapping.getParent(), "recordSequence", true);
+			tableLogs.add(tableLog(table, record, record, items, occurrence, storage));
+			childTables(schema, table, record, record, tableLogs);
+			return table;
 		}
 
 		private static Set<String> upper(List<String> values) {
@@ -484,28 +632,8 @@ public class CobolSchemaImportCommand extends AbstractCommand implements TargetF
 			List<Map<String, Object>> columns = new ArrayList<>();
 			for (CobolItem item : items) {
 				Column column = columnByItem.get(item);
-				// storage: what a reader needs to decode the bytes; conversion: COBOL details
-				// for review.
-				Map<String, Object> storage = mapOf("offset", item.getOffset() - base.getOffset(), "length",
-						item.getLength(), "usage", CobolItem.usageText(item.getUsage()));
-				if (item.getCategory() == Category.NUMERIC) {
-					storage.put("digits", item.getDigits());
-					storage.put("scale", item.getScale());
-					storage.put("signed", item.isSigned());
-					if (item.isSigned() && item.getUsage() == Usage.DISPLAY) {
-						storage.put("signPosition", item.isSignLeading() ? "LEADING" : "TRAILING");
-						storage.put("signSeparate", item.isSignSeparate());
-					}
-				}
-				Map<String, Object> conversion = mapOf("cobolName", item.getName(), "category",
-						item.getCategory().name(), "picture", item.getPicture());
-				if (item.getRedefines() != null || !item.getRedefinedBy().isEmpty()) {
-					conversion.put("redefinition", true);
-				}
-				if (!item.getConditions().isEmpty()) {
-					conversion.put("conditions", item.getConditions().stream()
-							.map(condition -> mapOf("name", condition.name(), "values", condition.values())).toList());
-				}
+				Map<String, Object> storage = storage(item, base);
+				Map<String, Object> conversion = conversion(item);
 				// The staging column is named after the source name, so it must be an SQL
 				// identifier.
 				columns.add(mapOf("name", column.getName(), "sourceName", column.getName(), "sourcePath",
@@ -588,5 +716,22 @@ public class CobolSchemaImportCommand extends AbstractCommand implements TargetF
 		private String name;
 		private String tableName;
 		private List<String> primaryKey = new ArrayList<>();
+		/**
+		 * Record whose most recent occurrence in the data set is the parent of this
+		 * record, as with header and detail records. The table inherits the parent's
+		 * key and is numbered by {@code sequenceColumn}.
+		 */
+		private String parent;
+		/**
+		 * Sequence column of a record with a parent; defaults to
+		 * occurrenceColumnNamePattern.
+		 */
+		private String sequenceColumn;
+		/**
+		 * Control record, such as a trailer with record counts and totals: no table is
+		 * created; its layout is kept in the mapping for extractCobolCsv's
+		 * trailerChecks.
+		 */
+		private boolean control;
 	}
 }

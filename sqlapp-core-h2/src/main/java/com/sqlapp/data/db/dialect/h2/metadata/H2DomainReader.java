@@ -50,8 +50,7 @@ public class H2DomainReader extends DomainReader {
 	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		boolean modern = H2Versions.isModern(productVersionInfo);
 		final List<Domain> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -124,8 +123,7 @@ public class H2DomainReader extends DomainReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("domains_200.sql");
 		}
 		return getSqlNodeCache().getString("domains.sql");

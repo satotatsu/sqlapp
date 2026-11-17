@@ -63,11 +63,11 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 			return op.isPresent() ? op.getAsLong() : null;
 		} else if (value instanceof OptionalDouble) {
 			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? (long) op.getAsDouble() : null;
+			return op.isPresent() ? toLong(op.getAsDouble(), value) : null;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).longValue();
+			return toLong((Number) value, value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -87,16 +87,15 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 		if (getNumberFormat() == null) {
 			return convertLong(value);
 		}
-		return parse(value).longValue();
+		return toLong(parse(value), value);
 	}
 
 	private Long convertLong(final String value) {
-		try {
-			return Long.valueOf(value).longValue();
-		} catch (NumberFormatException e) {
-			Double dval = Double.valueOf(value);
-			return dval.longValue();
-		}
+		return IntegralNumbers.parse(value, "Long", Long.MIN_VALUE, Long.MAX_VALUE);
+	}
+
+	private static Long toLong(final Number value, final Object original) {
+		return IntegralNumbers.toLong(value, original, "Long", Long.MIN_VALUE, Long.MAX_VALUE);
 	}
 
 	@Override

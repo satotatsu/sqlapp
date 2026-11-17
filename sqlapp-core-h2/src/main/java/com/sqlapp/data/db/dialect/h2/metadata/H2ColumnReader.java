@@ -53,8 +53,7 @@ public class H2ColumnReader extends ColumnReader {
 	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		final boolean modern = H2Versions.isModern(productVersionInfo);
 		final List<Column> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -80,7 +79,7 @@ public class H2ColumnReader extends ColumnReader {
 				}
 				String ccString = getString(rs, "CHECK_CONSTRAINT");
 				if (!isEmpty(ccString)) {
-					CheckConstraint cc = new CheckConstraint(table_name + "_" + table_name + " CHECK", ccString);
+					CheckConstraint cc = new CheckConstraint(table_name + "_" + column_name + " CHECK", ccString);
 					column.setCheckConstraint(cc);
 				}
 				column.setRemarks(getString(rs, REMARKS));
@@ -92,6 +91,9 @@ public class H2ColumnReader extends ColumnReader {
 		});
 		return result;
 	}
+
+	/** H2 identity cache when CACHE is omitted. */
+	private static final String DEFAULT_IDENTITY_CACHE = "32";
 
 	private void setModernProperties(final ExResultSet rs, final Column column) throws SQLException {
 		column.setLength(getLong(rs, "TYPE_PRECISION"));
@@ -131,7 +133,9 @@ public class H2ColumnReader extends ColumnReader {
 			column.setIdentityMinValue(getLong(rs, "IDENTITY_MINIMUM"));
 			column.setIdentityCycle("YES".equalsIgnoreCase(getString(rs, "IDENTITY_CYCLE")));
 			column.setIdentityLastValue(getLong(rs, "IDENTITY_BASE"));
-			column.getSpecifics().put("h2.identityCache", getString(rs, "IDENTITY_CACHE"));
+			String cache = getString(rs, "IDENTITY_CACHE");
+			if (cache != null && !DEFAULT_IDENTITY_CACHE.equals(cache))
+				column.getSpecifics().put("h2.identityCache", cache);
 		}
 		if ("ALWAYS".equalsIgnoreCase(getString(rs, "IS_GENERATED"))) {
 			column.setFormula(getString(rs, "GENERATION_EXPRESSION"));
@@ -140,8 +144,7 @@ public class H2ColumnReader extends ColumnReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("columns_200.sql");
 		}
 		return getSqlNodeCache().getString("columns.sql");

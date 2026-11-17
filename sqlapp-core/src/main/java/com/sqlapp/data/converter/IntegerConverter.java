@@ -61,10 +61,10 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 			return op.isPresent() ? op.getAsInt() : null;
 		} else if (value instanceof OptionalLong) {
 			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? (int) op.getAsLong() : null;
+			return op.isPresent() ? toInt(op.getAsLong(), value) : null;
 		} else if (value instanceof OptionalDouble) {
 			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? (int) op.getAsDouble() : null;
+			return op.isPresent() ? toInt(op.getAsDouble(), value) : null;
 		} else if (value instanceof Optional<?>) {
 			final Optional<?> op = (Optional<?>) value;
 			if (!op.isPresent()) {
@@ -80,7 +80,7 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 		if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).intValue();
+			return toInt((Number) value, value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -98,14 +98,13 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			try {
-				return Long.valueOf(value).intValue();
-			} catch (NumberFormatException e) {
-				Double dval = Double.valueOf(value);
-				return dval.intValue();
-			}
+			return (int) IntegralNumbers.parse(value, "Integer", Integer.MIN_VALUE, Integer.MAX_VALUE);
 		}
-		return parse(value).intValue();
+		return toInt(parse(value), value);
+	}
+
+	private static Integer toInt(final Number value, final Object original) {
+		return (int) IntegralNumbers.toLong(value, original, "Integer", Integer.MIN_VALUE, Integer.MAX_VALUE);
 	}
 
 	@Override

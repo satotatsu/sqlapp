@@ -8,6 +8,7 @@ package com.sqlapp.data.db.dialect.duckdb.util;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -84,6 +85,17 @@ public class DuckDbSqlBuilder extends AbstractSqlBuilder<DuckDbSqlBuilder> {
 
 	@Override
 	protected DuckDbSqlBuilder comment(final AbstractColumn<?> column) {
+		return instance();
+	}
+
+	/**
+	 * DuckDB supports only the default referential action (NO ACTION), and
+	 * {@code DuckDbCreateTableFactory} rejects other rules. The rule is therefore
+	 * not written; the shared builder would write the {@code NONE} rule literally,
+	 * which DuckDB cannot parse.
+	 */
+	@Override
+	public DuckDbSqlBuilder cascadeRule(final ForeignKeyConstraint constraint) {
 		return instance();
 	}
 }

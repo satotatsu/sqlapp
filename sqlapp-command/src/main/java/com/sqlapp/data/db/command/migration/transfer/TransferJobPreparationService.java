@@ -96,8 +96,8 @@ public final class TransferJobPreparationService {
 		try (var from = openConnection(source, "opening source connection");
 				var to = openConnection(target, "opening target connection")) {
 			phase = "configuring read-only source and target connections";
-			from.setReadOnly(true);
-			to.setReadOnly(true);
+			TransferConnections.requestReadOnly(from);
+			TransferConnections.requestReadOnly(to);
 			phase = "checking supported database products";
 			final Dialect sourceDialect = dialect(from);
 			final Dialect targetDialect = dialect(to);

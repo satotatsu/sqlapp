@@ -10,7 +10,9 @@ import com.sqlapp.data.db.dialect.duckdb.DuckDb;
 import com.sqlapp.jdbc.bulk.BulkInsertExecutor;
 import com.sqlapp.jdbc.bulk.BulkInsertProvider;
 
-/** Type-aware JDBC batch INSERT provider for DuckDB. */
+/**
+ * DuckDB bulk INSERT provider: Appender with a type-aware JDBC batch fallback.
+ */
 public class DuckDbBulkInsertProvider implements BulkInsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {

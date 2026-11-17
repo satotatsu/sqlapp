@@ -54,8 +54,8 @@ public class H2IndexReader extends IndexReader {
 	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		boolean modern = H2Versions.isModern(productVersionInfo);
+		final boolean nullTreatment = H2Versions.supportsNullTreatment(productVersionInfo);
 		final List<Index> result = list();
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -74,6 +74,15 @@ public class H2IndexReader extends IndexReader {
 					index.setUnique(uniqueness);
 					// int indexType = rs.getInt(INDEX_TYPE);
 					index.setWhere(getString(rs, "filter_condition"));
+					if (modern) {
+						String kind = getString(rs, "INDEX_TYPE_NAME");
+						if (kind != null && kind.contains("HASH"))
+							index.setIndexType(com.sqlapp.data.schemas.IndexType.Hash);
+						else if (kind != null && kind.contains("SPATIAL"))
+							index.setIndexType(com.sqlapp.data.schemas.IndexType.Spatial);
+						if (uniqueness && nullTreatment)
+							index.getSpecifics().put("h2.nullsDistinct", getString(rs, "NULLS_DISTINCT"));
+					}
 					//
 					map.put(catalog_name, schema_name, name, index);
 					result.add(index);
@@ -89,8 +98,10 @@ public class H2IndexReader extends IndexReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.supportsNullTreatment(productVersionInfo)) {
+			return getSqlNodeCache().getString("indexes_220.sql");
+		}
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("indexes_200.sql");
 		}
 		return getSqlNodeCache().getString("indexes.sql");

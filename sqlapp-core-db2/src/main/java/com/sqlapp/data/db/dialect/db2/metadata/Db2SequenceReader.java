@@ -82,6 +82,7 @@ public class Db2SequenceReader extends SequenceReader {
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 		sequence.setCacheSize(cacheSize);
 		sequence.setCache(cacheSize != null && cacheSize.compareTo(BigDecimal.ONE) > 0);
+		// The next cache allocation boundary: never below the next value to issue.
 		sequence.setLastValue(rs.getBigDecimal("NEXTCACHEFIRSTVALUE"));
 		sequence.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		sequence.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
@@ -131,11 +132,6 @@ public class Db2SequenceReader extends SequenceReader {
 				if (sequence.getDataType() == DataType.DECIMAL)
 					sequence.setPrecision(precision).setScale(0);
 			}
-			// NEXTCACHEFIRSTVALUE is an allocation boundary, not a last assigned value.
-			BigDecimal boundary = rs.getBigDecimal("NEXTCACHEFIRSTVALUE");
-			sequence.setLastValue((java.math.BigInteger) null);
-			if (boundary != null)
-				sequence.getSpecifics().put("NEXTCACHEFIRSTVALUE", boundary.toPlainString());
 		}
 		return sequence;
 	}

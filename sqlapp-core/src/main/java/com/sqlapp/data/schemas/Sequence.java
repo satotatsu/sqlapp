@@ -76,7 +76,10 @@ public final class Sequence extends AbstractSchemaObject<Sequence>
 	private Integer cacheSize = null;
 	/** 開始番号 */
 	private BigInteger startValue = null;
-	/** 最終採番済み番号 */
+	/**
+	 * 次に払い出す番号(START WITH/RESTART WITHに使う値)。DBがキャッシュの上端を返す場合は、
+	 * 実際に払い出した値より先に進んでいることがある。nullは未使用または不明で、開始番号を使う。
+	 */
 	private BigInteger lastValue = null;
 	/**
 	 * コンバータ
@@ -190,12 +193,10 @@ public final class Sequence extends AbstractSchemaObject<Sequence>
 	 * 
 	 */
 	public BigInteger nextValueFor() {
-		if (this.lastValue == null) {
-			this.lastValue = this.startValue;
-		} else {
-			this.lastValue = this.startValue.add(this.incrementBy);
-		}
-		return this.lastValue;
+		final BigInteger next = this.lastValue != null ? this.lastValue
+				: this.startValue != null ? this.startValue : BigInteger.ONE;
+		this.lastValue = next.add(this.incrementBy != null ? this.incrementBy : BigInteger.ONE);
+		return next;
 	}
 
 	@Override

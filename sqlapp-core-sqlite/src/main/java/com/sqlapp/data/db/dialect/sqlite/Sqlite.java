@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlite.metadata.SqliteCatalogReader;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.dialect.sqlite.sql.SqliteSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteJdbcTypeHandlers;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -94,6 +95,30 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addNumeric(type -> {
 		});
 		getDbDataTypes().addDecimal(type -> {
+		});
+		// SQLite has no date storage class: ISO-8601 text, as CURRENT_TIMESTAMP writes.
+		getDbDataTypes().addDate(type -> {
+			type.setCreateFormat("DATE").setLiteral("'", "'");
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.DateHandler());
+		});
+		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME").setLiteral("'", "'");
+			type.setDefaultValueLiteral(getCurrentTimeFunction());
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.TimeHandler());
+		});
+		getDbDataTypes().addTimestamp(type -> {
+			type.setCreateFormat("TIMESTAMP").setLiteral("'", "'");
+			type.addColumnTypeMatcher("DATETIME");
+			type.addColumnTypeMatcher("DATETIME2");
+			type.addColumnTypeMatcher("SMALLDATETIME");
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.TimestampHandler());
+		});
+		getDbDataTypes().addTimestampWithTimeZone(type -> {
+			type.setCreateFormat("TIMESTAMP WITH TIME ZONE").setLiteral("'", "'");
+			type.addColumnTypeMatcher("DATETIMEOFFSET");
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.TimestampWithTimeZoneHandler());
 		});
 		// Values in STRICT ANY columns must reach JDBC without coercion.
 		getDbDataTypes().addAnyData("ANY");
@@ -267,6 +292,36 @@ public class Sqlite extends Dialect {
 	@Override
 	public char getOpenQuote() {
 		return '[';
+	}
+
+	/** Keywords listed by SQLite; quoting a non-reserved one is harmless. */
+	private static final java.util.Set<String> KEYWORDS = java.util.Set.of("ABORT", "ACTION", "ADD", "AFTER", "ALL",
+			"ALTER", "ALWAYS", "ANALYZE", "AND", "AS", "ASC", "ATTACH", "AUTOINCREMENT", "BEFORE", "BEGIN", "BETWEEN",
+			"BY", "CASCADE", "CASE", "CAST", "CHECK", "COLLATE", "COLUMN", "COMMIT", "CONFLICT", "CONSTRAINT", "CREATE",
+			"CROSS", "CURRENT", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "DATABASE", "DEFAULT",
+			"DEFERRABLE", "DEFERRED", "DELETE", "DESC", "DETACH", "DISTINCT", "DO", "DROP", "EACH", "ELSE", "END",
+			"ESCAPE", "EXCEPT", "EXCLUDE", "EXCLUSIVE", "EXISTS", "EXPLAIN", "FAIL", "FILTER", "FIRST", "FOLLOWING",
+			"FOR", "FOREIGN", "FROM", "FULL", "GENERATED", "GLOB", "GROUP", "GROUPS", "HAVING", "IF", "IGNORE",
+			"IMMEDIATE", "IN", "INDEX", "INDEXED", "INITIALLY", "INNER", "INSERT", "INSTEAD", "INTERSECT", "INTO", "IS",
+			"ISNULL", "JOIN", "KEY", "LAST", "LEFT", "LIKE", "LIMIT", "MATCH", "MATERIALIZED", "NATURAL", "NO", "NOT",
+			"NOTHING", "NOTNULL", "NULL", "NULLS", "OF", "OFFSET", "ON", "OR", "ORDER", "OTHERS", "OUTER", "OVER",
+			"PARTITION", "PLAN", "PRAGMA", "PRECEDING", "PRIMARY", "QUERY", "RAISE", "RANGE", "RECURSIVE", "REFERENCES",
+			"REGEXP", "REINDEX", "RELEASE", "RENAME", "REPLACE", "RESTRICT", "RETURNING", "RIGHT", "ROLLBACK", "ROW",
+			"ROWS", "SAVEPOINT", "SELECT", "SET", "TABLE", "TEMP", "TEMPORARY", "THEN", "TIES", "TO", "TRANSACTION",
+			"TRIGGER", "UNBOUNDED", "UNION", "UNIQUE", "UPDATE", "USING", "VACUUM", "VALUES", "VIEW", "VIRTUAL", "WHEN",
+			"WHERE", "WINDOW", "WITH", "WITHOUT");
+
+	/**
+	 * SQLite does not fold identifier case, so an all-uppercase name still needs
+	 * quoting when it is a keyword or cannot start an unquoted identifier.
+	 */
+	@Override
+	public boolean needQuote(final String target) {
+		if (target == null || target.isEmpty() || isQuoted(target))
+			return false;
+		final char first = target.charAt(0);
+		return !(Character.isLetter(first) || first == '_')
+				|| KEYWORDS.contains(target.toUpperCase(java.util.Locale.ROOT)) || super.needQuote(target);
 	}
 
 	@Override

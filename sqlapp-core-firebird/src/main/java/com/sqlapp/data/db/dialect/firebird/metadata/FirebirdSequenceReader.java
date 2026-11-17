@@ -62,6 +62,8 @@ public class FirebirdSequenceReader extends SequenceReader {
 		String name = trim(getString(rs, "RDB$GENERATOR_NAME"));
 		Sequence sequence = new Sequence(name);
 		sequence.setCycle(false);
+		if (rs.contains("RDB$GENERATOR_INCREMENT"))
+			sequence.setIncrementBy(rs.getBigDecimal("RDB$GENERATOR_INCREMENT"));
 		return sequence;
 	}
 
@@ -101,7 +103,7 @@ public class FirebirdSequenceReader extends SequenceReader {
 						public void handleResultSetNext(ExResultSet rs) throws SQLException {
 							found[0] = true;
 							for (int i = 0; i < batch.size(); i++)
-								batch.get(i).setLastValue(rs.getBigDecimal("VALUE_" + i));
+								batch.get(i).setLastValue(next(batch.get(i), rs.getBigDecimal("VALUE_" + i)));
 						}
 					});
 			if (!found[0])
@@ -119,5 +121,14 @@ public class FirebirdSequenceReader extends SequenceReader {
 		SqlExecuter sql = new SqlExecuter("SELECT GEN_ID(");
 		sql.addSqlLine("\"" + sequenceName.replace("\"", "\"\"") + "\", 0) FROM RDB$DATABASE");
 		return sql.executeScalar(connection, BigDecimal.class, 1);
+	}
+
+	/**
+	 * GEN_ID(g, 0) is the current value; the model holds the next value to issue.
+	 */
+	private static java.math.BigDecimal next(Sequence sequence, java.math.BigDecimal current) {
+		var increment = sequence.getIncrementBy();
+		return com.sqlapp.data.db.metadata.SequenceNextValues.after(current,
+				increment == null ? null : new java.math.BigDecimal(increment), null, null, false);
 	}
 }

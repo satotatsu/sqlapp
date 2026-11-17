@@ -21,9 +21,8 @@ class Db2RoutineReplayTest {
 		var fields = new HashMap<String, String>(Map.of("routine_name", name, "schema_name", "APP", "specific_name",
 				name + "_SPEC", "LANGUAGE", "SQL", "TEXT_BODY_OFFSET", "-1", "QUALIFIER", "BASE.SCHEMA", "FUNC_PATH",
 				"\"SYSIBM\",\"Fns.Q\"", "REMARKS", "routine's comment", "DIALECT", "SQL PL", "VALID", "Y"));
-		fields.put("ROUTINE_DEFINITION",
-				"CREATE " + kind + " APP." + name + "() " + (function ? "RETURNS INTEGER " : "") + "SPECIFIC " + name
-						+ "_SPEC LANGUAGE SQL " + (function ? "RETURN 1" : "BEGIN END"));
+		fields.put("TEXT", "CREATE " + kind + " APP." + name + "() " + (function ? "RETURNS INTEGER " : "")
+				+ "SPECIFIC " + name + "_SPEC LANGUAGE SQL " + (function ? "RETURN 1" : "BEGIN END"));
 		fields.put("FUNCTIONTYPE", "S");
 		fields.put("RETURN_TYPE_NAME", "INTEGER");
 		return fields;
@@ -63,7 +62,7 @@ class Db2RoutineReplayTest {
 			var sql = sql(routine, SqlType.CREATE);
 			assertEquals("SET CURRENT SCHEMA = 'BASE.SCHEMA'", sql.get(0));
 			assertEquals("SET CURRENT PATH = \"SYSIBM\", \"Fns.Q\"", sql.get(1));
-			assertEquals(fields.get("ROUTINE_DEFINITION"), sql.get(2));
+			assertEquals(fields.get("TEXT"), sql.get(2));
 			assertEquals("COMMENT ON SPECIFIC " + (function ? "FUNCTION APP.F_SPEC" : "PROCEDURE APP.P_SPEC")
 					+ " IS 'routine''s comment'", sql.get(3));
 		}
@@ -79,7 +78,7 @@ class Db2RoutineReplayTest {
 			String source = "/* native /* comment */ header */ CREATE " + kind + " APP." + (function ? "F" : "P")
 					+ "(P VARCHAR(30) DEFAULT 'SPECIFIC OTHER LANGUAGE SQL') " + (function ? "RETURNS INTEGER " : "")
 					+ "LANGUAGE SQL " + (function ? "RETURN 1" : "BEGIN VALUES 'LANGUAGE SQL; SPECIFIC'; END");
-			values.put("ROUTINE_DEFINITION", source);
+			values.put("TEXT", source);
 			var routine = read(function, values, options);
 			assertTrue(String.join("\n", routine.getDefinition())
 					.contains("SPECIFIC \"" + (function ? "F" : "P") + "_SPEC\" LANGUAGE SQL"));
@@ -136,7 +135,7 @@ class Db2RoutineReplayTest {
 	void defaultBodyReadRetainsNativeHeaderThroughXmlWithoutExtraQueries() throws Exception {
 		for (boolean function : List.of(true, false)) {
 			var values = fields(function);
-			String ddl = values.get("ROUTINE_DEFINITION");
+			String ddl = values.get("TEXT");
 			values.put("TEXT_BODY_OFFSET", Integer.toString(ddl.indexOf(function ? "RETURN" : "BEGIN")));
 			Routine<?> routine = read(function, values, new ReaderOptions());
 			assertTrue(routine.getDefinition().isEmpty());
@@ -160,7 +159,7 @@ class Db2RoutineReplayTest {
 		var values = fields(false);
 		String body = "BEGIN DECLARE C CURSOR WITH RETURN FOR SELECT 1 FROM SYSIBM.SYSDUMMY1; OPEN C; END";
 		String ddl = "CREATE PROCEDURE APP.P() LANGUAGE SQL " + body;
-		values.put("ROUTINE_DEFINITION", ddl);
+		values.put("TEXT", ddl);
 		values.put("TEXT_BODY_OFFSET", Integer.toString(ddl.indexOf("BEGIN")));
 		values.putAll(Map.of("RESULT_SETS", "2", "SQL_DATA_ACCESS", "R", "COMMIT_ON_RETURN", "N", "DETERMINISTIC", "N",
 				"AUTONOMOUS", "N"));
