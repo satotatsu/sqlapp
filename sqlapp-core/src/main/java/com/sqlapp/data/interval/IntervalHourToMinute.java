@@ -41,6 +41,13 @@ public final class IntervalHourToMinute extends IntervalHourToSecond {
 		super(0, 0, 0, 0);
 	}
 
+	@Override
+	protected IntervalValue constrainValue(final IntervalValue value) {
+		final IntervalValue dateTime = super.constrainValue(value);
+		return new IntervalValue(0, dateTime.days(), java.time.Duration.ofMinutes(
+				dateTime.timePart().dividedBy(java.time.Duration.ofMinutes(1))));
+	}
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -60,8 +67,9 @@ public final class IntervalHourToMinute extends IntervalHourToSecond {
 		if (interval == null) {
 			return null;
 		}
-		IntervalHourToMinute result = new IntervalHourToMinute(interval.getHoursFull(), interval.getMinutes());
-		if (!interval.isPositive()) {
+		final Interval value = interval.toInterval();
+		IntervalHourToMinute result = new IntervalHourToMinute(value.getHoursFull(), value.getMinutes());
+		if (!value.isPositive()) {
 			result.scale(-1);
 		}
 		return result;

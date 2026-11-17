@@ -57,8 +57,9 @@ public class IntervalMonth extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalMonth result=new IntervalMonth(interval.getMonthsFull());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		IntervalMonth result=new IntervalMonth(value.getMonthsFull());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;

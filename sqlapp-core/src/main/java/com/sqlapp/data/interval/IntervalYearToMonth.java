@@ -40,6 +40,11 @@ public class IntervalYearToMonth extends Interval{
      */
 	public IntervalYearToMonth(){
     }
+
+	@Override
+	protected IntervalValue constrainValue(final IntervalValue value) {
+		return new IntervalValue(value.months(), 0, java.time.Duration.ZERO);
+	}
 	
 	/**
 	 * コンストラクタ
@@ -116,8 +121,9 @@ public class IntervalYearToMonth extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	final IntervalYearToMonth result=new IntervalYearToMonth(interval.getYears(), interval.getMonths());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		final IntervalYearToMonth result=new IntervalYearToMonth(value.getYears(), value.getMonths());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;
@@ -217,8 +223,16 @@ public class IntervalYearToMonth extends Interval{
     }
     
     public YearMonth toYearMonth(){
+		if (!isPositive() || getMonths() == 0) {
+			throw new java.time.DateTimeException("Interval is not an absolute year/month; use toYearMonth(base)");
+		}
     	return YearMonth.of(this.getYears(), getMonths());
     }
+
+	/** Applies this signed period to an explicit base year/month. */
+	public YearMonth toYearMonth(final YearMonth base) {
+		return java.util.Objects.requireNonNull(base, "base").plusMonths(toIntervalValue().months());
+	}
 
     /* (non-Javadoc)
      * @see java.lang.Object#toString()

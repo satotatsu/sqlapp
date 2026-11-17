@@ -78,10 +78,11 @@ public class IntervalSecond extends Interval{
     	if (interval==null){
     		return null;
     	}
+		final Interval value = interval.toInterval();
     	IntervalSecond result=new IntervalSecond(
-    					interval.getSecondsFull()
-    	    			, interval.getNanos());
-    	if (!interval.isPositive()){
+						value.getSecondsFull()
+						, value.getNanos());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;
@@ -127,14 +128,7 @@ public class IntervalSecond extends Interval{
     	if (!this.isPositive()){
         	builder.append("-");
     	}
-    	if (this.getNanos()>0){
-    		synchronized(secondsFormat){
-    			double val=(double)this.getNanos()/NANO_LIMIT+this.getSecondsFull();
-    			builder.append(secondsFormat.format(val));
-    		}
-    	} else{
-        	builder.append(this.getSecondsFull());
-    	}
+		builder.append(formatSeconds(this.getSecondsFull()));
     	builder.append("");
     	return builder.toString();
     }

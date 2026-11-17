@@ -39,6 +39,13 @@ public class IntervalDayToMinute extends IntervalDayToSecond{
 	public IntervalDayToMinute(){
     }
 
+	@Override
+	protected IntervalValue constrainValue(final IntervalValue value) {
+		final IntervalValue dateTime = super.constrainValue(value);
+		return new IntervalValue(0, dateTime.days(), java.time.Duration.ofMinutes(
+				dateTime.timePart().dividedBy(java.time.Duration.ofMinutes(1))));
+	}
+
 	/**
 	 * コンストラクタ 
 	 * @param days
@@ -89,9 +96,10 @@ public class IntervalDayToMinute extends IntervalDayToSecond{
     	if (interval==null){
     		return null;
     	}
-    	IntervalDayToMinute result=new IntervalDayToMinute(interval.getDays()
-    			, interval.getHours(), interval.getMinutes());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		IntervalDayToMinute result=new IntervalDayToMinute(value.getDays()
+				, value.getHours(), value.getMinutes());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;

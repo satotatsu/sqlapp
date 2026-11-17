@@ -10,14 +10,12 @@ import java.time.LocalDateTime;
 import java.time.MonthDay;
 import java.util.Locale;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
-/** Desired behavior, deliberately run only by knownBugTest until fixed. */
-@Tag("known-bug")
-class IntervalKnownBugTest {
+/** Repaired regressions; these must run in the ordinary test task. */
+class IntervalRegressionTest {
 	@Test
 	void timestampAdditionReturnsComputedDateWithoutChangingInput() {
 		final Timestamp input = Timestamp.valueOf("2026-01-01 00:00:00.123456789");

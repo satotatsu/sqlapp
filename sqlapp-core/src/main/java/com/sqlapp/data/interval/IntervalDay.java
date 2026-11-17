@@ -57,8 +57,9 @@ public final class IntervalDay extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalDay result=new IntervalDay(interval.getDays());
-    	if (!interval.isPositive()){
+		final Interval value = interval.toInterval();
+		IntervalDay result=new IntervalDay(value.getDays());
+		if (!value.isPositive()){
     		result.scale(-1);
     	}
     	return result;

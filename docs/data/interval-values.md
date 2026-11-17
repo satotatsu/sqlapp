@@ -1,9 +1,11 @@
 # Interval values: staged replacement
 
 `sqlapp-core` provides the independent immutable value
-`com.sqlapp.data.interval.IntervalValue`. Existing `Interval*`, `DataType`, JDBC
-handlers, Schema XML and file export defaults are unchanged. No new dependency
-is required. This stage does not enable new database or migration-file support.
+`com.sqlapp.data.interval.IntervalValue`. The legacy `Interval*` APIs now delegate
+value arithmetic to this model while preserving their four stored fields.
+`DataType`, JDBC handlers, Schema XML and file format selection are unchanged.
+No new dependency is required. This does not enable new database or migration-file
+support.
 
 ```java
 var value = IntervalValue.parse("P1Y2M-3DT4H5M6.123456789S");
@@ -103,6 +105,93 @@ Stage 2 adds only IntervalValue, its format, focused tests and this documentatio
 It does not delegate existing Interval methods or change their serialization
 fields. Further stages must address old setter semantics, legacy Comparable,
 driver-specific ranges and qualifiers, and complete DB/file round trips.
+
+## Stage 3: legacy API delegation
+
+There are no deployed consumers of the legacy implementation. Backward
+compatibility is therefore not an acceptance requirement: correctness takes
+priority over old erroneous results. The four-field storage was retained in this
+implementation because the tested facade does not require a new storage format,
+not as a promise that future stages must retain it. Frozen stream and CSV tests
+remain useful regression coverage, rather than a constraint on future redesign.
+
+The stored instance fields remain exactly `int months`, `int nanos`,
+`boolean positive`, `int seconds`, with every existing serialVersionUID unchanged.
+There is no cached value or new serialization field. `toIntervalValue()` derives
+a fresh immutable value from stored totals, without calling polymorphic component
+getters. Legacy storage still combines calendar days into total seconds and is
+limited to nonnegative int magnitudes. It cannot retain independent mixed signs
+or the distinction between a calendar day and 24 hours. Use IntervalValue for
+those cases. Bounds violations now throw ArithmeticException instead of wrapping.
+
+Constructor policy:
+
+- All nonzero arguments must share a sign. All-negative arguments construct a
+  negative interval, including negative fractional seconds or nanos.
+- Mixed-sign arguments throw IllegalArgumentException with guidance to use
+  IntervalValue. They are not converted to absolute values or silently netted.
+- A zero constructor value is positive, including negative floating-point zero.
+  Explicit `setNegative()` still supports legacy negative zero and its frozen
+  serialization. Existing equals/order distinguish explicit negative zero.
+- Component setters remain magnitude setters and preserve the selected sign.
+  Existing replacement rules are retained: for example, `setMonths(26)` replaces
+  total months, even when years are already present. Interval-to-interval addition
+  uses totals rather than these setters, so month carries cannot overwrite years.
+  Integer setters preserve lower components; fractional setters replace lower
+  units when a fractional component is supplied. `setSeconds(double)` replaces
+  the fractional seconds even for a whole-valued double.
+
+Addition policy:
+
+- `add(Interval target)` continues to mutate its argument, not its receiver.
+  Signed values are added through IntervalValue; unrepresentable mixed month/time
+  signs fail before changing the target. Legacy subtype projection remains in
+  effect (for example YEAR TO MONTH ignores day/time fields).
+- Calendar and timestamp overloads add **total months in one operation first**,
+  then calendar days, then time. They do not mutate input dates. Calendar preserves
+  its timezone and end-of-month rules. This intentionally changes the old
+  time/day/month/year order and makes it agree with java.time month addition.
+- Calendar/Date/Time operate at millisecond precision; sub-millisecond signed
+  time is truncated toward zero. Timestamp and capable java.time objects retain
+  all nine fractional digits, including carry and borrow across second boundaries.
+- Legacy total seconds are reconstructed as days plus a sub-day time remainder.
+  Therefore a legacy 24-hour amount behaves like a calendar day across DST, while
+  IntervalValue itself continues to distinguish these values.
+- LocalDate retains the previous date-only projection: sub-day remainders are
+  ignored. Month/YearMonth overloads project to months. MonthDay uses the explicit
+  reference leap year 2000 for arithmetic and end-of-month handling.
+
+Equality is exact to the nanosecond and matches hashing. Legacy Comparable remains
+a signed lexicographic order over (months, seconds, nanos), reversing magnitude
+comparison for negative intervals. This is not PostgreSQL or generic SQL ordering.
+
+`IntervalYearToMonth.toYearMonth()` retains valid positive absolute year/month
+component mappings. A negative period or month component zero has no unambiguous
+absolute-date mapping and raises DateTimeException directing callers to the new
+`toYearMonth(YearMonth base)` overload. The overload adds signed total months to
+the explicit base; it does not guess an epoch.
+
+Legacy SQL parsing now accepts leading precision annotations and a trailing decimal
+point on seconds, retains fractional day/hour/minute values, and validates leading
+and fractional precision. Null/blank is not parsable. `isParsable` attempts actual
+parsing and checks storage range rather than only matching a permissive regex.
+Unknown units, punctuation, trailing garbage, and lossy fractions are rejected.
+Previously supported typed lower-field projections and space-separated date parts
+remain supported. The complete six-component base `toString()` representation is
+also unambiguous and can be read back without a unit suffix. A nonblank bare scalar
+requires a typed parser such as IntervalSecond.parse; the base parser does not
+guess its unit or silently return null. Null/blank base input still returns null.
+
+Legacy output retains its existing unit layout, with bug fixes for duplicated hours
+and lost fractional seconds. Fractional output is now exact to nine digits instead
+of rounded to six. This may change affected CSV field text but not file format
+selection. IntervalValue's `PT86400S` output is unchanged in this stage; selecting
+the future file interchange format is deferred until the file-I/O stage.
+
+The 15 original core regressions and 15 newly reproduced defects/specification
+cases now run untagged in normal tests. The PostgreSQL driver mixed-sign regression
+remains tagged: repairing it requires a JDBC/model transition, not more fields in
+the legacy serialization. No external database is required by these regressions.
 
 ## Future conversion policy
 

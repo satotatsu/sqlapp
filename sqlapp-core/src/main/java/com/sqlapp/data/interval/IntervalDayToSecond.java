@@ -40,6 +40,11 @@ public class IntervalDayToSecond extends Interval {
 	public IntervalDayToSecond() {
 	}
 
+	@Override
+	protected IntervalValue constrainValue(final IntervalValue value) {
+		return new IntervalValue(0, value.days(), value.timePart());
+	}
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -132,9 +137,10 @@ public class IntervalDayToSecond extends Interval {
 		if (interval == null) {
 			return null;
 		}
-		IntervalDayToSecond result = new IntervalDayToSecond(interval.getDays(), interval.getHours(),
-				interval.getMinutes(), interval.getSeconds(), interval.getNanos());
-		if (!interval.isPositive()) {
+		final Interval value = interval.toInterval();
+		IntervalDayToSecond result = new IntervalDayToSecond(value.getDays(), value.getHours(),
+				value.getMinutes(), value.getSeconds(), value.getNanos());
+		if (!value.isPositive()) {
 			result.scale(-1);
 		}
 		return result;
@@ -204,11 +210,7 @@ public class IntervalDayToSecond extends Interval {
 		builder.append(":");
 		builder.append(this.getMinutes());
 		builder.append(":");
-		builder.append(this.getSeconds());
-		if (this.getNanos() > 0) {
-			builder.append(".");
-			builder.append(this.getNanos() / NANO_LIMIT);
-		}
+		builder.append(formatSeconds(this.getSeconds()));
 		return builder.toString();
 	}
 }
