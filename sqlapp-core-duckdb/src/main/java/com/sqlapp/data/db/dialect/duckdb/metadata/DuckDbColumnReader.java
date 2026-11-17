@@ -116,6 +116,12 @@ public class DuckDbColumnReader extends ColumnReader {
 
 	protected void setDataType(final ExResultSet rs, final Column column) throws SQLException {
 		final String dataType = getString(rs, DATA_TYPE);
+		if (dataType != null && dataType.matches("INTERVAL(?:\\[\\])+")) {
+			column.setDataType(DataType.INTERVAL).setDataTypeName(null);
+			column.setArrayDimension((dataType.length() - "INTERVAL".length()) / 2);
+			keepValuePrecision(column);
+			return;
+		}
 		if (dataType != null && DECIMAL.matcher(dataType.trim()).matches()) {
 			getDialect().setDbType(dataType, getLong(rs, "numeric_precision"), getInteger(rs, "numeric_scale"), column);
 			return;

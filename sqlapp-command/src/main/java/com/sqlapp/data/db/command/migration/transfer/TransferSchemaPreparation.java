@@ -280,6 +280,13 @@ public final class TransferSchemaPreparation {
 		for (var task : tasks)
 			remapped.put(task.getEffectiveSourceTable().getName(), task.getEffectiveSourceTable().clone()
 					.setCatalogName(first.getCatalogName()).setSchemaName(first.getSchemaName()));
+		for (var task : tasks)
+			for (var column : remapped.get(task.getEffectiveSourceTable().getName()).getColumns()) {
+				var targetColumn = task.getEffectiveTargetTable().getColumns().get(column.getName());
+				if (targetColumn != null && column.getDataType() != null
+						&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL)
+					TransferIntervalProjection.copyType(targetColumn, column);
+			}
 		final var statements = new ArrayList<Statement>();
 		final var preparedTasks = mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES ? tasks : missing;
 		for (var task : preparedTasks) {

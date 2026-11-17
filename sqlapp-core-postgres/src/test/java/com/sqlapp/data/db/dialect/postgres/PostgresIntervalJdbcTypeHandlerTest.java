@@ -24,6 +24,7 @@ class PostgresIntervalJdbcTypeHandlerTest {
 		final var handler = new PostgresIntervalJdbcTypeHandler();
 		final ResultSet result = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
+					if (method.getName().equals("getMetaData")) return null;
 					if (method.getName().equals("getString")) return "1 day -01:00:00.000001";
 					throw new AssertionError("Unexpected JDBC read: " + method.getName());
 				});

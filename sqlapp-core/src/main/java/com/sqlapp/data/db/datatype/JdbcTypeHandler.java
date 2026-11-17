@@ -45,6 +45,11 @@ public interface JdbcTypeHandler {
 	 */
 	Object getObject(ResultSet rs, String columnLabel) throws SQLException;
 
+	/** Read with canonical Schema qualifiers when a driver exposes only a broad JDBC type. */
+	default Object getObject(ResultSet rs, int index, Column column) throws SQLException {
+		return getObject(rs, index);
+	}
+
 	/**
 	 * PreparedStatementへ値を設定します
 	 * 

@@ -105,6 +105,12 @@ public final class TransferJobPreparationService {
 				validateInsertMethod(targetDialect, configuration);
 			phase = "resolving source Schema metadata";
 			final Schema schema = readSchema(from, sourceDialect, configuration.sourceSchema());
+			// Preflight reads update scan counters on PostgreSQL. These are observations,
+			// not schema/data definitions, and must not invalidate the pinned transfer.
+			schema.applyAll(object -> {
+				if (object instanceof com.sqlapp.data.schemas.properties.StatisticsProperty<?> statistics)
+					statistics.getStatistics().clear();
+			});
 			if (stagingBuffer)
 				prepareStagingSchema(schema, snapshot.fingerprint());
 			final String targetSchema = configuration.targetSchema() == null
@@ -205,14 +211,24 @@ public final class TransferJobPreparationService {
 					bulk.fingerprint());
 			phase = "resolving target table identities in the generated bulk configuration";
 			final var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+			if (configuration.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE
+					&& resolved.plan().getTasks().stream().flatMap(task -> task.getEffectiveSourceTable().getColumns().stream())
+							.anyMatch(TransferIntervalCodec::interval))
+				throw new TransferSchemaPreparation.ValidationException("Direct staged replacement of interval columns is not supported. "
+						+ "Use REQUIRE_EMPTY and a reviewed destination definition for interval transfer.");
+			final var intervalPlan = TransferIntervalProjection.prepare(to, resolved.plan(), sourceDialect,
+					configuration.schemaMode(), configuration.effectiveTargetPreparation()
+							== TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
-			final var compatibility = TransferSchemaPreparation.plan(to, schema, resolved.plan(),
+			final var compatibility = TransferSchemaPreparation.plan(to, schema, intervalPlan,
 					configuration.schemaMode(), configuration.compatibilityPolicy(), projection,
 					configuration.effectiveGeneratedKeyColumn(),
 					configuration
 							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE,
 					stagingBuffer);
 			final var copyWarnings = new ArrayList<>(compatibility.warnings());
+			for (String warning : TransferIntervalProjection.warnings(intervalPlan))
+				TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings, warning);
 			for (var task : resolved.plan().getTasks())
 				if (task.isFullScan())
 					TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings,
@@ -229,7 +245,7 @@ public final class TransferJobPreparationService {
 				throw new PreparationException("Transfer definition changed during preparation. Prepare it again.");
 			TransferNameMappingIO.capture(mapping, directory);
 			final var savedJob = io.write(directory.resolve("transfer.yaml"), snapshot.text(), null);
-			return withDraft(new Prepared(directory, savedJob, xml, bulk, resolved.plan().getFingerprint(),
+			return withDraft(new Prepared(directory, savedJob, xml, bulk, intervalPlan.getFingerprint(),
 					resolved.plan().getTaskIds(), copyPlan.warnings(), copyPlan), targetDialect, draft);
 		} catch (TransferSchemaPreparation.ValidationException failure) {
 			throw failure;

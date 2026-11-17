@@ -92,7 +92,10 @@ public class VerticaColumnReader extends ColumnReader {
 				datetime_precision == null ? null : datetime_precision.longValue()), numeric_scale, obj);
 		// NUMERIC_SCALE is reported as zero even for temporal columns. It is not
 		// their fractional-second precision; null DATETIME_PRECISION means default.
-		if (obj.getDataType() != null && obj.getDataType().isDateTime()) {
+		if (obj.getDataType() != null && obj.getDataType().isInterval()) {
+			obj.setLength(datetime_precision == null ? null : datetime_precision.longValue());
+			obj.setScale((Integer) null);
+		} else if (obj.getDataType() != null && obj.getDataType().isDateTime()) {
 			obj.setLength(datetime_precision == null ? null : datetime_precision.longValue());
 			obj.setScale(datetime_precision);
 		}

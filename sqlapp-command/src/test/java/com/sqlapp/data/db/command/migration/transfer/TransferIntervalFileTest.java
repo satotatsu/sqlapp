@@ -19,6 +19,40 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 class TransferIntervalFileTest {
+	@ParameterizedTest
+	@EnumSource(FileFormat.class)
+	void intervalArraysUseJsonAndPreserveDimensionsNullsAndIndependentComponents(FileFormat format) throws Exception {
+		var table = table();
+		var column = table.getColumns().get("C").setArrayDimension(2);
+		Object[] value = { new Object[] { IntervalValue.parse("P1D"), null, IntervalValue.parse("PT24H") },
+				new Object[] { IntervalValue.parse("P1M-1DT0.123456789S"), IntervalValue.ZERO, IntervalValue.parse("PT-0.000000001S") } };
+		String text = TransferIntervalCodec.encode(column, value);
+		var path = directory.resolve("arrays.txt");
+		if (format == FileFormat.JSONL) {
+			String json = TransferJsonlCodec.write(table, new String[] { "1", text });
+			assertTrue(json.contains("\"C\":[["));
+			Files.writeString(path, json + "\n");
+		} else {
+			try (var writer = new com.sqlapp.util.file.CsvWriter(Files.newBufferedWriter(path), options -> {
+				options.setQuoteAllFields(true);
+				options.getFormat().setDelimiter(format == FileFormat.TSV ? '\t' : ',');
+				options.getFormat().setLineSeparator("\n");
+			})) {
+				writer.writeHeader(new String[] { "ID", "C" });
+				writer.writeRow(new String[] { "1", text });
+			}
+		}
+		var source = new TransferCsvSource(table, path, new FileTransfer("files", format, "UTF-8",
+				format == FileFormat.JSONL ? null : "__NULL__"), "test", 1);
+		source.validate();
+		var rows = source.iterator(null);
+		try {
+			assertTrue(rows.hasNext()); assertArrayEquals(value, (Object[]) rows.next().get("C"));
+			assertFalse(rows.hasNext());
+		} finally { com.sqlapp.util.iterator.IteratorCloseUtils.close(null, rows); }
+		for (String invalid : new String[] { "[[\"P1D\"],\"PT1S\"]", "[[1]]", "[[{}]]" })
+			assertThrows(IllegalArgumentException.class, () -> TransferIntervalCodec.decode(column, invalid));
+	}
 	@TempDir Path directory;
 
 	private Table table() {
@@ -77,9 +111,9 @@ class TransferIntervalFileTest {
 	}
 
 	@Test
-	void emptyOrNullOnlyTablesStillRejectIntervalArrays() {
+	void emptyOrNullOnlyTablesStillRejectUnsupportedArrayDimensions() {
 		var table = table();
-		table.getColumns().get("C").setArrayDimension(1);
+		table.getColumns().get("C").setArrayDimension(33);
 		assertThrows(IllegalArgumentException.class, () -> TransferCsvSource.validateColumnTypes(table));
 	}
 }

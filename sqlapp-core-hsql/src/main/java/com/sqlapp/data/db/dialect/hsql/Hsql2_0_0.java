@@ -71,60 +71,23 @@ public class Hsql2_0_0 extends Hsql {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction())
 					.setMaxPrecision(9).setDefaultPrecision(6);
 		});
-		// INTERVAL YEAR
-		getDbDataTypes().addIntervalYear(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(9)
-					.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearConverter()));
-		});
-		// INTERVAL MONTH
-		getDbDataTypes().addIntervalMonth(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(9)
-					.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalMonthConverter()));
-		});
-		// INTERVAL DAY
-		getDbDataTypes().addIntervalDay(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(9)
-					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
-		});
-		// INTERVAL HOUR
-		getDbDataTypes().addIntervalHour(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(9)
-					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourConverter()));
-		});
-		// INTERVAL MINUTE
-		getDbDataTypes().addIntervalMinute(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(9)
-					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalMinuteConverter()));
-		});
-		// INTERVAL SECOND
-		getDbDataTypes().addIntervalSecond(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(9)
-					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
-		});
-		// INTERVAL YEAR TO MONTH
-		getDbDataTypes().addIntervalYearToMonth(type -> {
-			type.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearToMonthConverter()));
-		});
-		// INTERVAL DAY TO HOUR
-		getDbDataTypes().addIntervalDayToHour(type -> {
-			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToHourConverter()));
-		});
-		// INTERVAL DAY TO MINUTE
-		getDbDataTypes().addIntervalDayToMinute(type -> {
-			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToMinuteConverter()));
-		});
-		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond(type -> {
-			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToSecondConverter()));
-		});
-		// INTERVAL HOUR TO MINUTE
-		getDbDataTypes().addIntervalHourToMinute(type -> {
-			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToMinuteConverter()));
-		});
-		// INTERVAL HOUR TO SECOND
-		getDbDataTypes().addIntervalHourToSecond(type -> {
-			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToSecondConverter()));
-		});
+		for (var type : com.sqlapp.data.db.datatype.DataType.values()) {
+			if (type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL
+					&& type != com.sqlapp.data.db.datatype.DataType.INTERVAL
+					&& type != com.sqlapp.data.db.datatype.DataType.INTERVAL_YEAR_TO_DAY)
+				getDbDataTypes().addStandardInterval(type, 9, 9, 0);
+		}
+	}
+
+	@Override
+	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
+		if (column.getDataType() != null
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			var handler = (com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler)
+					getDbDataTypes().getDbTypeStrict(column.getDataType()).getJdbcTypeHandler();
+			return handler.literal(value, column);
+		}
+		return super.getSqlValueDefinition(column, value);
 	}
 
 	private void registerLobTypes(long maximum) {

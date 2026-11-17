@@ -154,10 +154,13 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 
 	private DbDataType<?> typedDbDataType(final Column column) {
 		final DataType type = column.getDataType();
-		if (type == null || type.isOther() || type.isDomain() || column.getArrayDimension() > 0) {
+		if (type == null || type.isOther() || type.isDomain()) {
 			return null;
 		}
 		final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
+		if (column.getArrayDimension() > 0 && dbDataType != null
+				&& !(dbDataType.getJdbcTypeHandler() instanceof com.sqlapp.data.db.datatype.IntervalTypeHandler))
+			return null;
 		return dbDataType == null || dbDataType.getJdbcTypeHandler() == null ? null : dbDataType;
 	}
 

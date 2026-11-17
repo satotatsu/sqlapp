@@ -19,6 +19,13 @@ import com.sqlapp.data.db.dialect.postgres.converter.ToPGIntervalConverter;
 import com.sqlapp.data.interval.IntervalValue;
 
 class PostgresIntervalCodecTest {
+	@Test void oldServerClockAndIntMinimumDayOutputRemainExact() {
+		var value = IntervalValue.parse("PT25H0.123456S");
+		assertEquals(value, PostgresIntervalCodec.parse(PostgresIntervalCodec.encode(value)));
+		assertTrue(PostgresIntervalCodec.encode(value).endsWith("+25:00:00.123456"));
+		assertEquals(new IntervalValue(Integer.MAX_VALUE, Integer.MIN_VALUE, Duration.ZERO),
+				PostgresIntervalCodec.parse("+178956970-7 --2147483648 +0:00:00"));
+	}
 	@ParameterizedTest
 	@CsvSource(delimiter = '|', value = {
 		"1 year 2 mons 3 days 04:05:06.123456|P14M3DT14706.123456S",

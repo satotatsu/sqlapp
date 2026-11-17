@@ -19,6 +19,48 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.interval.IntervalValue;
 
 class TransferIntervalPackageTest {
+	@ParameterizedTest
+	@EnumSource(FileFormat.class)
+	void intervalArrayPackagesPreserveBoundsNanosAndNullsThroughCreateImportAndVerify(FileFormat format) throws Exception {
+		var source = database();
+		var target = database();
+		try (var from = source.getConnection(); var to = target.getConnection();
+				var statement = from.createStatement()) {
+			statement.execute("CREATE TABLE ITEMS(ID INT PRIMARY KEY,D INTERVAL DAY(9) TO SECOND(9) ARRAY[3] ARRAY[2])");
+			statement.execute("INSERT INTO ITEMS VALUES(1,ARRAY[ARRAY[INTERVAL '1' DAY,NULL,INTERVAL '-0.000000001' SECOND(9,9)],"
+					+ "ARRAY[INTERVAL '24' HOUR,INTERVAL '0' SECOND,NULL]])");
+			statement.execute("INSERT INTO ITEMS VALUES(2,NULL)");
+			var job = Files.writeString(directory.resolve("job.yaml"),
+					"formatVersion: 1\nsource: from\ntarget: to\nsourceSchema: PUBLIC\ntargetSchema: PUBLIC\n"
+					+ "tables: [ITEMS]\nschemaMode: CREATE_MISSING\ndataMode: FILE\n"
+					+ "files: {directory: packages, format: " + format
+					+ (format == FileFormat.JSONL ? "" : ", nullValue: __NULL__") + "}\n");
+			var saved = new TransferFileExportService().export(job, Map.of("from", source));
+			var service = new TransferFileImportService();
+			var review = service.review(saved.file(), saved.fingerprint(), Map.of("to", target));
+			assertTrue(review.schemaPreparation().statements().stream().anyMatch(sql -> sql.sql().contains("ARRAY[3] ARRAY[2]")),
+					() -> review.schemaPreparation().statements().toString());
+			var outcome = service.execute(review, Map.of("to", target), directory);
+			assertEquals(TransferJobExecutionService.Phase.COMPLETE, outcome.phase());
+			assertTrue(outcome.verification().values().stream().allMatch(result -> result.isMatch()));
+			var reader = DialectResolver.getInstance().getDialect(to).getCatalogReader()
+					.getSchemaReader().getTableReader();
+			reader.setSchemaName("PUBLIC"); reader.setObjectName("ITEMS");
+			var column = reader.getAllFull(to).getFirst().getColumns().get("D");
+			assertEquals(2, column.getArrayDimension());
+			assertEquals("3,2", column.getSpecifics().get(com.sqlapp.data.db.datatype.IntervalArrays.DECLARED_BOUNDS));
+			var handler = DialectResolver.getInstance().getDialect(to).getDbDataTypes()
+					.getDbTypeStrict(column.getDataType()).getJdbcTypeHandler();
+			try (var query = to.createStatement(); var rows = query.executeQuery("SELECT D FROM ITEMS ORDER BY ID")) {
+				assertTrue(rows.next());
+				assertArrayEquals(new Object[] {
+						new Object[] { IntervalValue.parse("PT86400S"), null, IntervalValue.parse("PT-0.000000001S") },
+						new Object[] { IntervalValue.parse("PT86400S"), IntervalValue.ZERO, null }
+				}, (Object[]) handler.getObject(rows, 1));
+				assertTrue(rows.next()); assertNull(handler.getObject(rows, 1));
+			}
+		}
+	}
 	@TempDir Path directory;
 
 	private JdbcDataSource database() {
@@ -53,7 +95,7 @@ class TransferIntervalPackageTest {
 	}
 
 	@Test
-	void calendarDayConversionIsRejectedDuringReviewBeforeCreatingTargetTables() throws Exception {
+	void calendarDayConversionIsReviewedAuditedAndVerifiedAsDestinationValue() throws Exception {
 		var source = database();
 		var target = database();
 		try (var from = source.getConnection(); var to = target.getConnection();
@@ -69,7 +111,7 @@ class TransferIntervalPackageTest {
 			var file = saved.file().getParent().resolve(member.file());
 			String text = Files.readString(file);
 			assertTrue(text.contains("PT86400S"));
-			Files.writeString(file, text.replace("PT86400S", "P1D"));
+			Files.writeString(file, text.replace("PT86400S", "P1DT-1H"));
 			var changed = new TransferFilePackageIO.TableFile(member.taskId(), member.catalog(), member.schema(),
 					member.table(), member.columns(), member.file(), member.rows(), Files.size(file),
 					com.sqlapp.data.db.command.migration.internal.BoundedMigrationFile.sha256(file, null, "maxDataBytes", "data"));
@@ -79,11 +121,18 @@ class TransferIntervalPackageTest {
 			var updated = new TransferFilePackageIO().read(saved.file(), null);
 			var service = new TransferFileImportService();
 			service.validatePackage(updated.file(), updated.fingerprint()); // Lossless file value is valid.
-			var failure = assertThrows(IllegalArgumentException.class,
-					() -> service.review(updated.file(), updated.fingerprint(), Map.of("to", target)));
-			assertTrue(failure.getMessage().contains("CALENDAR_DAYS_AS_24_HOURS"));
-			try (var tables = to.getMetaData().getTables(null, "PUBLIC", "ITEMS", null)) {
-				assertFalse(tables.next());
+			var review = service.review(updated.file(), updated.fingerprint(), Map.of("to", target));
+			assertTrue(review.schemaPreparation().warnings().stream().anyMatch(warning ->
+					warning.contains("CALENDAR_DAYS_AS_24_HOURS") && warning.contains("1 row(s)")));
+			var outcome = service.execute(review, Map.of("to", target), directory);
+			assertEquals(TransferJobExecutionService.Phase.COMPLETE, outcome.phase());
+			assertTrue(outcome.verification().values().stream().allMatch(result -> result.isMatch()));
+			assertTrue(Files.readString(outcome.auditFile()).contains("CALENDAR_DAYS_AS_24_HOURS"));
+			try (var result = to.createStatement(); var rows = result.executeQuery("SELECT D FROM ITEMS")) {
+				assertTrue(rows.next());
+				var handler = DialectResolver.getInstance().getDialect(to).getDbDataTypes()
+						.getDbTypeStrict(com.sqlapp.data.db.datatype.DataType.INTERVAL_DAY_TO_SECOND).getJdbcTypeHandler();
+				assertEquals(IntervalValue.parse("PT82800S"), handler.getObject(rows, 1));
 			}
 		}
 	}

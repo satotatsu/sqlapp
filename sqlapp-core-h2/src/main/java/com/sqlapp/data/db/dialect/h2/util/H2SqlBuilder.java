@@ -53,6 +53,23 @@ public class H2SqlBuilder extends AbstractSqlBuilder<H2SqlBuilder> {
 		return instance();
 	}
 
+	private H2SqlBuilder intervalArrayDimensions(Column column) {
+		if (column.getArrayDimension() > 0 && column.getDataType() != null
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			String bounds = column.getSpecifics().get(com.sqlapp.data.db.datatype.IntervalArrays.DECLARED_BOUNDS);
+			if (bounds == null) _add(" ARRAY".repeat(column.getArrayDimension()));
+			else {
+				String[] values = bounds.split(",", -1);
+				if (values.length != column.getArrayDimension()) throw new IllegalArgumentException("Invalid interval array bounds");
+				for (String value : values) {
+					if (!value.matches("[0-9]+|\\*")) throw new IllegalArgumentException("Invalid interval array bound");
+					_add(" ARRAY" + (value.equals("*") ? "" : "[" + value + "]"));
+				}
+			}
+		}
+		return this;
+	}
+
 	@Override
 	public H2SqlBuilder definition(Column column, boolean withRemarks) {
 		typeDefinition(column);
@@ -109,7 +126,7 @@ public class H2SqlBuilder extends AbstractSqlBuilder<H2SqlBuilder> {
 			name(column.getDataTypeName());
 		} else
 			super.typeDefinition(column);
-		return this;
+		return intervalArrayDimensions(column);
 	}
 
 	@Override

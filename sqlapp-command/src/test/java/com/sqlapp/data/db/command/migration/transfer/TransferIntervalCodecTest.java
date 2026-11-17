@@ -59,7 +59,8 @@ class TransferIntervalCodecTest {
 			assertTrue(failure.getMessage().contains("elapsed"));
 		}
 		assertThrows(IllegalArgumentException.class, () -> TransferIntervalCodec.encode(column, ""));
-		assertThrows(IllegalArgumentException.class, () -> TransferIntervalCodec.decode(column.clone().setArrayDimension(1), null));
+		assertNull(TransferIntervalCodec.decode(column.clone().setArrayDimension(1), null));
+		assertThrows(IllegalArgumentException.class, () -> TransferIntervalCodec.decode(column.clone().setArrayDimension(33), null));
 		var previous = Locale.getDefault();
 		try {
 			Locale.setDefault(Locale.forLanguageTag("tr-TR"));

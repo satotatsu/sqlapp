@@ -59,7 +59,8 @@ class OracleIntervalTest {
 					? IntervalValue.parse("P-999999999Y-11M")
 					: IntervalValue.parse("PT-86399999999999.123456789S");
 			var rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
-					new Class<?>[] { ResultSet.class }, (proxy, method, args) -> text);
+					new Class<?>[] { ResultSet.class }, (proxy, method, args) ->
+							method.getName().equals("getMetaData") ? null : text);
 			assertEquals(expected, handler.getObject(rows, 1));
 			assertEquals(expected, handler.getObject(rows, "C"));
 			var statement = (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(),

@@ -486,6 +486,14 @@ public class Postgres extends Dialect {
 
 	@Override
 	public String getSqlValueDefinition(final Column column, final Object value) {
+		if (column.getDataType() != null && column.getArrayDimension() > 0
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			var scalar = column.clone().setArrayDimension(0);
+			return value == null ? "NULL" : com.sqlapp.data.db.datatype.IntervalArrays.literal(value,
+					com.sqlapp.data.db.datatype.IntervalArrays.dimensions(value), leaf -> "INTERVAL '"
+							+ PostgresIntervalCodec.encode(PostgresIntervalCodec.decode(leaf), scalar) + "'")
+					+ "::interval" + "[]".repeat(column.getArrayDimension());
+		}
 		if (value != null && column.getDataType() != null && column.getArrayDimension() == 0
 				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
 			final var interval = PostgresIntervalCodec.decode(value);

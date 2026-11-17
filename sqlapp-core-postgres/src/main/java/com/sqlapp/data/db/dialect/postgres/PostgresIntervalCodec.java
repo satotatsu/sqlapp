@@ -105,8 +105,21 @@ public final class PostgresIntervalCodec {
 	/** Explicit signs keep input independent of the connection's IntervalStyle. */
 	public static String encode(final IntervalValue value) {
 		validate(value);
+		var absolute = micros(value.timePart()).abs();
+		var hour = absolute.divideAndRemainder(BigInteger.valueOf(3_600_000_000L));
+		// Before PostgreSQL 15, labeled numbers and clock hours use int32.
+		// A clock avoids a large microsecond token for ordinary values. Full
+		// int64 microsecond boundaries require the newer labeled-number parser.
+		if (hour[0].compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0)
+			return signed(Long.toString(value.months())) + " mons " + signed(Long.toString(value.days()))
+					+ " days " + signed(micros(value.timePart()).toString()) + " microseconds";
+		var minute = hour[1].divideAndRemainder(BigInteger.valueOf(60_000_000));
+		var second = minute[1].divideAndRemainder(BigInteger.valueOf(1_000_000));
+		String clock = (value.timePart().isNegative() ? "-" : "+") + hour[0]
+				+ String.format(Locale.ROOT, ":%02d:%02d.%06d", minute[0].intValueExact(),
+						second[0].intValueExact(), second[1].intValueExact());
 		return signed(Long.toString(value.months())) + " mons " + signed(Long.toString(value.days()))
-				+ " days " + signed(micros(value.timePart()).toString()) + " microseconds";
+				+ " days " + clock;
 	}
 
 	private static String signed(final String number) {
@@ -116,6 +129,9 @@ public final class PostgresIntervalCodec {
 	/** Reads the four server output styles and the codec's explicit labeled text. */
 	public static IntervalValue parse(final String input) {
 		String text = input.trim();
+		// PostgreSQL 14 sql_standard output negates int32 days before printing
+		// its magnitude, producing this double minus at the one INT_MIN boundary.
+		text = text.replaceAll("(?<=\\s)--2147483648(?=\\s)", "-2147483648");
 		if (text.startsWith("P") || text.startsWith("p")) {
 			return validate(IntervalValue.parse(text));
 		}

@@ -28,6 +28,11 @@ public final class OracleIntervalJdbcTypeHandler extends StandardIntervalJdbcTyp
 	}
 
 	@Override
+	protected void validateArrayDimensions(int dimensions) {
+		throw new IllegalArgumentException("Oracle interval arrays require a named SQL collection type; built-in interval ARRAY is unsupported");
+	}
+
+	@Override
 	protected void bindText(PreparedStatement statement, int index, String text) throws SQLException {
 		String className = "oracle.sql." + (yearMonth ? "INTERVALYM" : "INTERVALDS");
 		Object nativeValue = createNativeValue(statement.getConnection().getClass().getClassLoader(), className, text);

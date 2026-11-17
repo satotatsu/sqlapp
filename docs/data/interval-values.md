@@ -347,8 +347,7 @@ String constructor and binds the resulting object with setObject. Driver classes
 are loaded at runtime from the connection class loader, with the context class
 loader as a fallback for connection wrappers. Missing driver support produces an
 actionable SQLException. No new mandatory driver dependency is introduced.
-Oracle nulls use the vendor's interval type codes. Interval arrays are explicitly
-unsupported on the column-aware binding/literal paths.
+Oracle nulls use the vendor's interval type codes. Oracle anonymous interval arrays are explicitly unsupported; SQL named collections require a separate model. H2 interval arrays are supported in Stage 7.
 
 SQL literals include explicit destination precision and use the same codec as
 JDBC. H2 metadata now models these two interval qualifiers directly and reads
@@ -359,7 +358,7 @@ recognized. This matcher is installed only for the newly connected dialect
 types; other dialect registrations retain their existing behavior. The existing H2 batched catalog
 query gains two fields already present in H2 2.x; no per-object query is added.
 Recreation through Schema and the SQL factory is covered by an embedded test.
-Other H2 interval types remain represented by their existing complete type names.
+Stage 7 extends H2 metadata and DDL handling to all thirteen standard qualifiers.
 No DataType identifiers, XML formats or existing Interval fields are changed.
 
 Tests cover the shared thirteen-qualifier codec, exact bounds, invalid text,
@@ -368,8 +367,7 @@ and H2 metadata -> Schema -> DDL -> metadata. Oracle tests cover resolved versio
 9, 10, 11, 12, 19 and 23, proxy JDBC reads/nulls and pre-bind validation.
 OracleIntervalDriverTest additionally validates real driver objects offline when
 an Oracle driver is present on the test runtime classpath; it skips otherwise.
-It opens no database connection. An external Oracle server has not been tested,
-so server execution and old Oracle driver versions remain unverified.
+It opens no database connection. Stage 7 adds opt-in Oracle Free server tests; old Oracle server/driver versions remain unverified.
 
 References: [H2 interval types](https://www.h2database.com/html/datatypes.html#interval_type),
 [Oracle interval literals](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/Literals.html),
@@ -404,7 +402,7 @@ CSV and TSV retain their existing quoting, headers, encoding, null tokens and
 empty-field policy. A canonical interval equal to the configured null token is
 rejected at export, as for other scalar values. JSONL stores intervals as strings
 and nulls as JSON null, not objects or numbers. Preview cells use quoted canonical
-text. Interval arrays are rejected even for empty or null-only inputs.
+text. Stage 7 adds interval arrays as described below.
 
 No production dependency, job property, manifest identifier or format version is
 changed. These interval column types were previously rejected by typed command
@@ -419,24 +417,101 @@ Precision or range errors produce an actionable preflight failure. When schema
 differences will be applied, validation uses the planned destination definition.
 The source package bytes and normal execution-time revalidation remain pinned.
 
-Automatic calendar-day conversion in file import is intentionally not enabled
-yet: a conversion warning needs to reach the reviewed plan/audit, and verification
-must compare explicitly projected destination values. Until that next stage,
-nonzero calendar days targeting StandardIntervalJdbcTypeHandler fail preflight
-with CALENDAR_DAYS_AS_24_HOURS, including day/time cancellation to zero.
-File-only validation and preview still preserve such values. No warning is
-silently discarded and no partial import is started for this case.
-The standalone conversion API continues to support the warning-bearing
-conversion described in Stage 5.
+Stage 7 enables explicit calendar-day conversion with reviewed warnings and
+verification of the destination projection; the earlier conservative rejection
+is superseded. File-only validation and preview retain the original components.
 
 Tests cover actual CSV/TSV/JSONL files, nulls and malformed values, independently
 signed components, zero, Turkish locale and full common bounds. End-to-end
 embedded H2 tests exercise export -> pinned package -> quoted preview ->
 CREATE_MISSING -> import -> verification, including YEAR(9), DAY(9), nine-digit
 fractions and negative one nanosecond. Separate tests reject a lower existing
-target precision and calendar-day conversion before any target write.
+target precision before any target write; Stage 7 verifies calendar-day conversion with an audit.
 Only test dependencies on the existing H2 module and its existing driver version
 are added to sqlapp-command, so these command-level checks run normally.
 External databases are not required. This is not a claim that all unmigrated
 dialect adapters or all cross-database Schema type mappings support the full
 IntervalValue range.
+
+
+## Stage 7: destination projections, remaining adapters and arrays
+
+File import and JDBC_DIRECT preparation now resolve one destination interval
+projection. The same projection checks every source value before target DDL,
+feeds INSERT/COPY, and supplies expected values for verification. Calendar-day
+conversion is reported as `CALENDAR_DAYS_AS_24_HOURS`, with column and affected
+row count. Precision/qualifier mappings produce `INTERVAL_PRECISION_MAPPING`.
+Both warnings appear in review and retained execution/audit results. A strict
+compatibility policy rejects them. Values never carry migration warnings.
+
+For standard day-time targets, days are fixed multiples of 24 hours:
+`P1DT-1H` becomes `PT82800S`. PostgreSQL/DuckDB destinations retain separate
+calendar days and time. Months are never converted to days. A generic source
+interval targeting a standard database must resolve to one group from its
+nonzero values, or use an explicitly prepared target column; mixed groups and
+all-zero/empty ambiguous columns fail with an actionable error.
+
+Leading precision and fractional-second precision are mapped semantically,
+rather than copying Column.length between incompatible dialect conventions.
+A declaration may narrow from nine fractional digits to six when every actual
+value fits exactly; any nonzero discarded digit fails preflight. Range,
+qualifier and unsupported array declarations also fail before writes, including
+empty/null-only sources where declaration validation applies. PostgreSQL scan
+statistics are omitted from captured direct-transfer schema definitions, because
+preflight SELECTs change counters without changing types or constraints.
+
+| Adapter | Value/precision boundary | Arrays | Verification performed |
+| --- | --- | --- | --- |
+| PostgreSQL | Independent int32 months/days and int64 microseconds; fraction 0..6 | Rectangular, at most six actual dimensions; null leaves | Real PostgreSQL 14.23 and 18.4; four output styles, DST, bounds, JDBC, literals, cross-DB file/direct transfer |
+| Oracle | YEAR TO MONTH / DAY TO SECOND; leading 0..9, fraction 0..9 | Named collections require a separate model | Real Oracle Free 23.26.3 native driver/server; YEAR(9), DAY(9), nanoseconds and nulls; file transfer to prepared table |
+| H2 2.x | All thirteen standard qualifiers; leading 1..18, fraction 0..9, within common Duration bounds | Nested ARRAY, null leaves/subarrays, declared upper cardinalities retained | Embedded H2 2.3.232; all qualifiers, metadata/DDL, JDBC, literals and CSV/TSV/JSONL package verification |
+| HSQLDB 2.x | All thirteen standard qualifiers; leading 1..9, fraction 0..9 | Rejected: HSQLDB 2.7.4 interval parser rejects ARRAY declarations | Embedded engine, all scalar qualifiers and explicit array rejection |
+| DuckDB | Independent int32 months/days and int64 microseconds | Nested variable-length lists | Embedded DuckDB JDBC 2.0.0.1, mixed signs, 25-hour time part, bounds and arrays |
+| Informix | Native leading/trailing fields retained, including HOUR and FRACTION-only; leading 1..9, fraction 0..5 | Named collections require a separate model | Adapter/native qualifier tests; no Informix server execution |
+| Vertica | Native driver objects; int64 microseconds; fraction 0..6; YEAR TO MONTH constrained by driver's int year constructor | Rejected pending native qualification | Real Vertica 25.3 driver objects offline; no Vertica server execution |
+| Dr.Sum | Experimental DAY TO SECOND text adapter, length treated as fractional precision 0..6 | Rejected | Codec/unit tests only; existing dialect remains experimental, server metadata and binding assumptions unverified |
+| TimesTen | Existing six legacy scalar registrations use exact common codecs; corrected YEAR spelling and SECOND registration | Rejected | Registration/codec tests only; server syntax, ranges and drivers unverified |
+
+PostgreSQL before 15 has an int32 limit in its text interval input parser.
+Ordinary values use an explicitly signed clock to avoid overflowing a large
+microsecond token. A time part requiring more than Integer.MAX_VALUE clock
+hours is rejected by transfer preflight on those versions; a binary interval
+transport would be required to write that extreme range. PostgreSQL 18 tests
+exercise both int64 microsecond endpoints. PostgreSQL 14's sql_standard output
+for int32-minimum days prints a double minus; the reader handles exactly that
+boundary. Non-default PostgreSQL array lower bounds are rejected explicitly
+because ordinary Java arrays cannot retain them. PostgreSQL declarations do
+not constrain actual array depth; each value's actual shape is used.
+
+CSV/TSV interval-array cells contain quoted JSON arrays of canonical strings and
+nulls. JSONL stores native nested JSON arrays with canonical string leaves.
+Scalar interval cells keep the Stage 6 representation. Empty arrays, nulls and
+nanosecond values round-trip; malformed shapes and non-string leaves fail typed
+input. File readers enforce nesting and string limits. H2 declaration bounds
+are stored in `interval.arrayBounds` in innermost-first order and recreated by
+its SQL builder. Fixed-size DuckDB ARRAY declarations and SQL named collections
+are outside this implementation. JDBC_DIRECT with STAGED_REPLACE and interval
+columns is explicitly rejected during preparation: saved staging comparison
+currently re-resolves unprojected source metadata. Use REQUIRE_EMPTY for direct
+interval transfer.
+
+The new `IntervalTypeHandler`, `IntervalPrecision`, `IntervalConversion` and
+`IntervalArrays` APIs are shared extension points; vendor rules remain in their
+own dialect modules. Existing JdbcTypeHandler column-aware reads and keyset key
+metadata use default methods. No production dependency or job/manifest format
+version was added. Existing Interval classes and their fields are unchanged in
+this stage. Cross-product DDL still requires review: PostgreSQL-specific table
+settings can produce invalid Oracle CREATE SQL. This unrelated existing DDL
+issue is not hidden; the Oracle end-to-end interval test uses REQUIRE_EXISTING.
+
+Real-server tests opt in through `sqlapp.interval.pg.url` and
+`sqlapp.interval.oracle.url`, accepting only the dedicated loopback fixture
+ports/database names in the tests. Default tests skip them. Tests create and
+remove only private random schemas/tables or session-temporary tables. The
+implementation run used fresh disposable containers, never an existing server.
+
+Sources: [PostgreSQL 14 interval parser](https://github.com/postgres/postgres/blob/REL_14_STABLE/src/backend/utils/adt/datetime.c),
+[PostgreSQL 15 interval parser](https://github.com/postgres/postgres/blob/REL_15_STABLE/src/backend/utils/adt/datetime.c),
+[DuckDB intervals](https://www.duckdb.org/docs/2.0/sql/data_types/interval),
+[Informix interval types](https://www.ibm.com/docs/en/informix-servers/12.10.0?topic=types-interval-data-type),
+[Vertica interval JDBC objects](https://docs.vertica.com/26.2.x/en/connecting-to/client-libraries/accessing/java/jdbc-data-types/using-intervals-with-jdbc/).

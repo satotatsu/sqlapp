@@ -42,14 +42,11 @@ public class H2_200 extends H2 {
 				length.setMaxLength(MAX_LENGTH);
 		}
 		getDbDataTypes().addDecimalFloat("DECFLOAT");
-		getDbDataTypes().addIntervalYearToMonth(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(18);
-			configureInterval(type);
-		});
-		getDbDataTypes().addIntervalDayToSecond(type -> {
-			type.setDefaultPrecision(2).setMaxPrecision(18).setDefaultScale(6).setMaxScale(9);
-			configureInterval(type);
-		});
+		for (DataType type : DataType.values()) {
+			if (type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL
+					&& type != DataType.INTERVAL && type != DataType.INTERVAL_YEAR_TO_DAY)
+				getDbDataTypes().addStandardInterval(type, 18, 9);
+		}
 		getDbDataTypes().addTimeWithTimeZone(type -> {
 			type.setDefaultValueLiteral(getCurrentTimeFunction());
 		});
@@ -60,24 +57,13 @@ public class H2_200 extends H2 {
 		return "SELECT NEXT VALUE FOR " + sequenceName;
 	}
 
-	private void configureInterval(DbDataType<?> type) {
-		type.setColumnTypeMatcher(new StandardIntervalCodec(type.getDataType(), 2, 6).columnTypeMatcher());
-		var converter = new StandardIntervalConverter(type.getDataType());
-		type.setConverter(converter).setFormatter(converter);
-		type.setJdbcTypeHandler(new StandardIntervalJdbcTypeHandler(
-				type.getDataType(), 1, 18));
-		String qualifier = type.getDataType().name().substring("INTERVAL_".length()).replace('_', ' ');
-		type.setLiteral("INTERVAL '", "' " + qualifier);
-	}
-
 	@Override
 	public String getSqlValueDefinition(Column column, Object value) {
 		var type = column.getDataType();
-		if (type == DataType.INTERVAL_YEAR_TO_MONTH || type == DataType.INTERVAL_DAY_TO_SECOND) {
+		if (type != null && type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
 			var handler = (StandardIntervalJdbcTypeHandler)
 					getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
-			var codec = handler.codec(column);
-			return value == null ? "NULL" : codec.literal(value);
+			return handler.literal(value, column);
 		}
 		return super.getSqlValueDefinition(column, value);
 	}

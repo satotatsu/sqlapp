@@ -316,7 +316,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			for (int i = 0; i < size; i++) {
 				final ColumnPosition columnPosition = columnList.get(i);
 				final Column column = columnPosition.column;
-				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index);
+				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index, column);
 				row.put(column.getOrdinal(), obj);
 			}
 		}
