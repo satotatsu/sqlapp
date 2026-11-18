@@ -64,6 +64,16 @@ public class OracleColumnReader extends ColumnReader {
 		if (list.isEmpty()) {
 			return list;
 		}
+		if (list.stream().anyMatch(column -> column.getSpecifics().containsKey("oracle.udt.owner"))) {
+			java.util.List<OracleIntervalCollections.Description> collections;
+			try { collections = OracleIntervalCollections.refresh(connection); }
+			catch (SQLException failure) { throw new IllegalStateException("Cannot read Oracle interval collection metadata", failure); }
+			for (var column : list) {
+				String owner = column.getSpecifics().get("oracle.udt.owner");
+				for (var collection : collections)
+					if (collection.owner().equals(owner) && collection.name().equals(column.getDataTypeName())) collection.apply(column);
+			}
+		}
 		ParametersContextBuilder builder = ParametersContextBuilder.create()
 				.schemaName(result.keySet().toArray(new String[0]));
 		builder.tableName(result.secondKeySet().toArray(new String[0]));
@@ -111,6 +121,12 @@ public class OracleColumnReader extends ColumnReader {
 				scale, column);
 		if ("NUMBER".equalsIgnoreCase(productDataType))
 			column.setLength(precision).setScale(scale);
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.OTHER) {
+			String owner = getString(rs, "DATA_TYPE_OWNER");
+			if (owner != null) column.getSpecifics().put("oracle.udt.owner", owner);
+		}
+		String collectionKind = getString(rs, "SQLAPP_INTERVAL_COLLECTION_KIND");
+		if (collectionKind != null) column.getSpecifics().put(OracleIntervalCollections.KIND, collectionKind);
 		column.setDefaultValue(dataDefault);
 		column.setOctetLength(rs.getLong("DATA_LENGTH"));
 		column.setSchemaName(getString(rs, "OWNER"));

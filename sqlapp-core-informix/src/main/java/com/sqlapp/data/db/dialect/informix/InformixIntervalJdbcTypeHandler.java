@@ -29,7 +29,7 @@ public final class InformixIntervalJdbcTypeHandler implements IntervalTypeHandle
 			return codec.parse(text);
 		}
 		StandardIntervalCodec.Result convert(Object value) {
-			if (value instanceof String text && !text.startsWith("P") && !text.startsWith("p")) value = read(text);
+			if (value instanceof String text && !text.startsWith("P") && !text.startsWith("p")) value = read(text.strip());
 			else value = new IntervalValueConverter().convertObject(value);
 			return codec.convert(value);
 		}
@@ -45,7 +45,7 @@ public final class InformixIntervalJdbcTypeHandler implements IntervalTypeHandle
 	}
 
 	private Layout layout(Column column) {
-		if (column.getArrayDimension() > 0) throw new IllegalArgumentException("Informix interval collections require a named collection model");
+		if (column.getArrayDimension() > 0) return layout(elementColumn(column));
 		String declaration = column.getDataTypeName();
 		if (declaration == null || !declaration.strip().toUpperCase(java.util.Locale.ROOT).startsWith("INTERVAL ")) {
 			int leading = column.getLength() == null ? group == DataType.INTERVAL_YEAR_TO_MONTH ? 4 : 2
@@ -67,8 +67,36 @@ public final class InformixIntervalJdbcTypeHandler implements IntervalTypeHandle
 		var qualifier = DataType.valueOf("INTERVAL_" + start + (start.equals(end) ? "" : "_TO_" + end));
 		return new Layout(declaration, new StandardIntervalCodec(qualifier, leading, fraction), leading, fraction, fractionOnly);
 	}
+	private Column elementColumn(Column column) {
+		if (column.getArrayDimension() != 1) throw new IllegalArgumentException("Informix interval LIST supports one dimension");
+		String declaration = column.getDataTypeName();
+		if (declaration == null) throw new IllegalArgumentException("Informix interval LIST requires its native element qualifier");
+		var match = Pattern.compile("LIST\\s*\\(\\s*(INTERVAL .*)\\s*NOT NULL\\s*\\)", Pattern.CASE_INSENSITIVE).matcher(declaration.strip());
+		if (!match.matches()) throw new IllegalArgumentException("Only ordered Informix LIST(INTERVAL ... NOT NULL) maps to interval arrays: " + declaration);
+		return column.clone().setArrayDimension(0).setDataTypeName(match.group(1).strip());
+	}
+	private Object arrayValue(Object value, Column column, java.util.List<String> warnings) {
+		var element = elementColumn(column);
+		Object[] result = (Object[]) IntervalArrays.map(value, 1, leaf -> {
+			var converted = prepareInterval(leaf, element);
+			for (String warning : converted.warnings()) if (!warnings.contains(warning)) warnings.add(warning);
+			return converted.value();
+		});
+		if (result != null && java.util.Arrays.asList(result).contains(null))
+			throw new IllegalArgumentException("Informix interval LIST elements must be non-null");
+		return result;
+	}
+
 	@Override public void validateIntervalColumn(Column column) { layout(column); }
+	@Override public String readExpression(String quotedColumn, Column column) {
+		return column.getArrayDimension() == 0 ? "CAST(" + quotedColumn + " AS VARCHAR(128))"
+				: "CAST(" + quotedColumn + " AS LIST(LVARCHAR(128) NOT NULL))";
+	}
 	@Override public IntervalConversion prepareInterval(Object value, Column column) {
+		if (column.getArrayDimension() > 0) {
+			var warnings = new java.util.ArrayList<String>();
+			return new IntervalConversion(arrayValue(value, column, warnings), warnings);
+		}
 		var result = layout(column).convert(value);
 		return new IntervalConversion(result.value(), result.warnings().stream().map(Enum::name).toList());
 	}
@@ -82,6 +110,7 @@ public final class InformixIntervalJdbcTypeHandler implements IntervalTypeHandle
 		column.setLength(precision).setScale(fraction);
 		String declaration = group == DataType.INTERVAL_YEAR_TO_MONTH ? "INTERVAL YEAR(" + precision + ") TO MONTH"
 				: "INTERVAL DAY(" + precision + ") TO " + (fraction == 0 ? "SECOND" : "FRACTION(" + fraction + ")");
+		if (column.getArrayDimension() > 0) declaration = "LIST(" + declaration + " NOT NULL)";
 		column.setDataTypeName(declaration);
 		column.getSpecifics().put(com.sqlapp.data.db.dialect.informix.metadata.InformixColumnReader.INFORMIX_NATIVE_TYPE, declaration);
 		return column;
@@ -93,6 +122,15 @@ public final class InformixIntervalJdbcTypeHandler implements IntervalTypeHandle
 		return getObject(rows, index, column);
 	}
 	@Override public Object getObject(ResultSet rows, int index, Column column) throws SQLException {
+		if (column.getArrayDimension() > 0) {
+			var array = rows.getArray(index);
+			if (array == null) return null;
+			try { return prepareInterval(array.getArray(), column).value(); } finally { array.free(); }
+		}
+		int jdbcType = rows.getMetaData().getColumnType(index);
+		if (group == DataType.INTERVAL_YEAR_TO_MONTH && layout(column).leading() > 8
+				&& jdbcType != Types.VARCHAR && jdbcType != Types.CHAR && jdbcType != Types.LONGVARCHAR)
+			throw new SQLException("Informix YEAR(9) interval reads require the exact VARCHAR projection; native JDBC interval conversion can overflow");
 		String text = rows.getString(index);
 		return text == null ? null : layout(column).read(text.strip());
 	}
@@ -102,11 +140,21 @@ public final class InformixIntervalJdbcTypeHandler implements IntervalTypeHandle
 	}
 	@Override public void setObject(PreparedStatement statement, int index, Object value, Column column) throws SQLException {
 		var layout = layout(column);
+		if (column.getArrayDimension() > 0) {
+			if (value == null) statement.setNull(index, Types.OTHER);
+			else statement.setObject(index, IntervalArrays.map(prepareInterval(value, column).value(), 1, layout::text));
+			return;
+		}
 		if (value == null) statement.setNull(index, Types.OTHER);
 		else statement.setString(index, layout.text(value));
 	}
 	public String literal(Object value, Column column) {
 		var layout = layout(column);
+		if (column.getArrayDimension() > 0) {
+			if (value == null) return "NULL";
+			Object[] values = (Object[]) prepareInterval(value, column).value();
+			return "LIST{" + java.util.Arrays.stream(values).map(leaf -> literal(leaf, elementColumn(column))).collect(java.util.stream.Collectors.joining(",")) + "}";
+		}
 		return value == null ? "NULL" : "INTERVAL(" + layout.text(value) + ")" + layout.declaration().substring("INTERVAL".length());
 	}
 }

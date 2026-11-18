@@ -40,7 +40,8 @@ import com.sqlapp.util.CommonUtils;
 public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> extends SimpleSqlFactory<Table, S> {
 
 	protected void addSelectAllColumns(final Table obj, final S builder) {
-		if (this.getTableOptions().getSelectAllColumnAsAsterisk().test(obj)) {
+		if (this.getTableOptions().getSelectAllColumnAsAsterisk().test(obj)
+				&& !(getOptions().isJdbcRead() && obj.getColumns().stream().anyMatch(this::hasJdbcReadExpression))) {
 			builder.lineBreak();
 			builder._add("*");
 			builder.lineBreak();
@@ -49,7 +50,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 			for (final Column column : obj.getColumns()) {
 				builder.lineBreak();
 				builder.comma(!first);
-				builder.name(column);
+				addJdbcReadColumn(column, null, builder);
 				this.addSelectColumnComment(column, builder);
 				first = false;
 			}

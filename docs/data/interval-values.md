@@ -557,3 +557,85 @@ and rejects altered evidence. Dedicated PostgreSQL 18 and Oracle Free tests
 exercise calendar-day staging conversion and PostgreSQL -> Oracle CREATE_MISSING
 -> import -> audit -> verification. Older Oracle server versions are covered by
 unit tests, not actual server execution.
+
+
+## Stage 9: native transport and collection qualification
+
+PostgreSQL integer-datetime servers before 15 can store clock components outside
+an int32 hour count, but cannot reliably input or output those values as interval
+text. The adapter now uses the exact 16-byte binary representation for large
+JDBC parameters and binary scalar/array results on SQLapp-owned read statements.
+Temporary driver OID settings are restored, including execution failures. Simple
+query mode cannot provide this path and fails explicitly. SQL literals split a
+large clock component into two int32-hour-safe intervals and add them on the
+server without converting hours into calendar days.
+
+Transfer review selects JDBC_BATCH automatically when exact transport needs it,
+records INTERVAL_JDBC_BINDING warnings and retains the selection in the captured
+projection. Explicit NATIVE is rejected before target DDL. Vertica interval arrays
+also require this selection because its delimited COPY parser rejects arrays.
+Declarations are checked even for empty or entirely NULL inputs.
+
+Informix typed reads project each interval to VARCHAR(128), or LIST elements to
+LVARCHAR(128), before the JDBC driver sees them. This avoids confirmed int32-month
+overflow in native YEAR(9) reads without bounding the total collection length.
+Ordered, one-dimensional LIST(INTERVAL ... NOT NULL) maps to interval arrays;
+order and duplicates are retained. Empty lists and a NULL whole column are
+supported. NULL elements, SET and MULTISET are rejected for this array mapping.
+The native declaration remains in the Schema model for recreation.
+
+Oracle named VARRAY and nested TABLE collections of INTERVAL YEAR TO MONTH or
+INTERVAL DAY TO SECOND are recognized in batched column metadata. The named SQL
+type must already exist at the destination, with the recorded element precision
+and VARRAY bound. For manual columns, use
+OracleIntervalCollections.column(connection, typeName), then set the column name.
+Refresh this resolution after type DDL. Identifiers are separately quoted.
+Native bindings retain nanoseconds and NULL elements; empty and NULL collections
+remain different. VARRAY retains order. Nested TABLE is an unordered bag: values
+are sorted canonically for verification, duplicates are retained, and conversion
+reports INTERVAL_COLLECTION_UNORDERED. Generated CREATE TABLE includes nested
+storage clauses. Collection type CREATE itself remains a separate prerequisite.
+
+Vertica supports one-dimensional interval ARRAY JDBC writes using exact JSON
+strings and explicit CAST parameters. Its INSERT factory emits the CAST to avoid
+the driver's scalar COPY batching path. Metadata retains cardinality and native
+outer byte capacity, and DDL uses ARRAY[element, bound] syntax. Typed reads cast
+individual elements to VARCHAR(128), preserving server text independently of
+narrow driver interval objects. Nested array parameter casts were rejected by
+Vertica 25.1 and are rejected before writes by this adapter. The signed int64
+minimum microsecond pattern is reserved/non-finite on the tested server, so the
+finite day/time range is -Long.MAX_VALUE through Long.MAX_VALUE microseconds.
+The scalar native year/month driver constructor still limits the year field to
+int32; larger writes fail explicitly.
+
+JdbcTypeHandler now provides default readExpression and prepareRead hooks;
+JdbcReadScope composes temporary statement settings. Options.jdbcRead is false
+by default, so ordinary generated SELECT SQL keeps its existing form. SQLapp's
+row iterator and migration keyset source enable typed projections automatically.
+No Schema fields, production dependencies or dependency versions were added.
+Standard destination adapters clear foreign native type names when mapping types.
+
+Real-server qualification in disposable local containers:
+
+| Product | Tested server versions | Checks |
+| --- | --- | --- |
+| PostgreSQL | 9.3.25, 14.23, 18.4 | Native bounds, mixed signs, scalar/array transport, literals |
+| Oracle Free | 23.26.3 image | Scalars, named VARRAY/TABLE, nanos, metadata and table recreation |
+| Informix | 14.10.FC9W1DE, 15.0.1.0.3 | Six native qualifiers, leading bounds, fractions, ordered LIST, metadata and recreation |
+| Vertica | 25.1.0-0 | All 13 qualifiers, finite microsecond endpoints, ARRAY, metadata, generated INSERT and recreation |
+
+Informix 12.10.FC12W1DE started locally but fixture JDBC authentication failed;
+it is not qualified by this run. Dr.Sum and TimesTen have no available dedicated
+environment and were skipped as requested. Tests never connect to an external
+or production database. Real-server tests remain opt-in. The additional command
+fixture tests require the Informix/Vertica dialects and JDBC drivers on the test
+runtime and sqlapp.interval.additional=true; they use only the dedicated loopback
+ports 19088 and 15433.
+
+The native file-transfer fixtures verified CSV, TSV and JSONL imports into
+Informix 15 and Vertica 25 with post-import data comparison. Vertica also verifies
+an entirely NULL array column under AUTO and rejects forced NATIVE before DDL.
+Oracle named collections were qualified through native JDBC and SQL literals,
+metadata and table recreation; their file-transfer path was not server-qualified
+in this stage. PostgreSQL 14 file transfer verifies AUTO/JDBC_BATCH success and
+NATIVE rejection for a clock component beyond the old text parser's range.

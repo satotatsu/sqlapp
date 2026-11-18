@@ -126,22 +126,32 @@ class TransferIntervalServerTest {
 			} finally { sql.execute("DROP SCHEMA " + schema + " CASCADE"); }
 		}
 	}
-	@Test
-	@EnabledIfSystemProperty(named = "sqlapp.interval.pg.url", matches = "jdbc:postgresql://127[.]0[.]0[.]1:15433/interval_test")
-	void oldPostgresRejectsUnrepresentableTextHoursBeforeTargetDdl() throws Exception {
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.ValueSource(strings={"AUTO","JDBC_BATCH","NATIVE"})
+	void oldPostgresSelectsBinaryJdbcAndRejectsForcedNativeBeforeDdl(String insertMethod) throws Exception {
 		var from = h2(); var to = pg(); String schema = name(), table = name();
 		try (var source = from.getConnection(); var target = to.getConnection(); var sql = target.createStatement()) {
+			org.junit.jupiter.api.Assumptions.assumeTrue(target.getMetaData().getDatabaseMajorVersion()<15);
 			sql.execute("CREATE SCHEMA " + schema);
 			try {
 				source.createStatement().execute("CREATE TABLE \"" + table + "\"(ID INT PRIMARY KEY,D INTERVAL DAY(9) TO SECOND(9))");
 				source.createStatement().execute("INSERT INTO \"" + table + "\" VALUES(1,INTERVAL '106751991 04:00:54.775807' DAY(9) TO SECOND(9))");
-				var saved = new TransferFileExportService().export(job(table, "PUBLIC", schema), Map.of("from", from));
-				var failure = assertThrows(IllegalArgumentException.class, () -> new TransferFileImportService()
-						.review(saved.file(), saved.fingerprint(), Map.of("to", to)));
-				assertTrue(failure.getMessage().contains("INTERVAL_VALUE_NOT_REPRESENTABLE"), failure::getMessage);
-				try (var rows = sql.executeQuery("SELECT to_regclass('" + schema + "." + table + "')")) {
-					assertTrue(rows.next()); assertNull(rows.getObject(1));
+				Path definition=job(table,"PUBLIC",schema);
+				Files.writeString(definition,Files.readString(definition)+"insertMethod: "+insertMethod+"\n");
+				var saved=new TransferFileExportService().export(definition,Map.of("from",from));
+				var service=new TransferFileImportService();
+				if(insertMethod.equals("NATIVE")) {
+					var failure=assertThrows(IllegalArgumentException.class,()->service.review(saved.file(),saved.fingerprint(),Map.of("to",to)));
+					assertTrue(failure.getMessage().contains("JDBC_BATCH"),failure::getMessage);
+					try(var rows=sql.executeQuery("SELECT to_regclass('"+schema+"."+table+"')")){assertTrue(rows.next());assertNull(rows.getObject(1));}
+				} else {
+					var review=service.review(saved.file(),saved.fingerprint(),Map.of("to",to));
+					assertTrue(review.schemaPreparation().warnings().stream().anyMatch(warning->warning.contains("INTERVAL_JDBC_BINDING")));
+					var outcome=service.execute(review,Map.of("to",to),directory);
+					assertEquals(TransferJobExecutionService.Phase.COMPLETE,outcome.phase());
+					assertTrue(outcome.verification().values().stream().allMatch(value->value.isMatch()));
 				}
+
 			} finally { sql.execute("DROP SCHEMA " + schema + " CASCADE"); }
 		}
 	}

@@ -14,8 +14,10 @@ class InformixIntervalTest {
 		var hour = new Column("C").setDataType(DataType.INTERVAL_DAY_TO_SECOND)
 				.setDataTypeName("INTERVAL HOUR(6) TO FRACTION(5)");
 		var value = IntervalValue.parse("PT90000.12345S");
+		var metadata = (java.sql.ResultSetMetaData) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { java.sql.ResultSetMetaData.class }, (proxy, method, args) -> java.sql.Types.VARCHAR);
 		var rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> "25:00:00.12345");
+				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> method.getName().equals("getMetaData") ? metadata : "25:00:00.12345");
 		assertEquals(value, handler.getObject(rows, 1, hour));
 		assertEquals("INTERVAL(+25:00:00.12345) HOUR(6) TO FRACTION(5)", handler.literal(value, hour));
 		assertThrows(ArithmeticException.class, () -> handler.prepareInterval(IntervalValue.parse("PT0.000001S"), hour));

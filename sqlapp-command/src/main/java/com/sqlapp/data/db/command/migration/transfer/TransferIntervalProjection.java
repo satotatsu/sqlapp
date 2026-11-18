@@ -25,7 +25,8 @@ final class TransferIntervalProjection {
 	static final String SNAPSHOT = "sqlapp.transfer.intervalProjection.v1";
 	private record Field(String source, String target, DataType type, String typeName, Long length,
 			Integer scale, int dimensions, Map<String, String> specifics) {}
-	private record Snapshot(String product, int major, int minor, List<Field> fields, List<String> warnings) {}
+	private record Snapshot(String product, int major, int minor, List<Field> fields, List<String> warnings,
+			BulkInsertMethod insertMethod) {}
 	private record Binding(Column source, Column destination, IntervalTypeHandler handler) {}
 
 	static boolean captured(BulkMigrationJobPlan plan) {
@@ -73,7 +74,7 @@ final class TransferIntervalProjection {
 				schema.getTables().get(task.getEffectiveSourceTable().getName()).getSpecifics()
 					.put(SNAPSHOT, new com.sqlapp.util.JsonConverter().toJsonString(new Snapshot(
 							metadata.getDatabaseProductName(), metadata.getDatabaseMajorVersion(), metadata.getDatabaseMinorVersion(),
-							List.copyOf(fields), first ? warnings(plan) : List.of())));
+							List.copyOf(fields), first ? warnings(plan) : List.of(), task.getOptions().getBulkOption().getInsertMethod())));
 				first = false; // Store the job warning list once, not once per table.
 			}
 		}
@@ -106,7 +107,7 @@ final class TransferIntervalProjection {
 				adapter.validateIntervalColumn(destination);
 				bindings.add(new Binding(source, destination, adapter));
 			}
-			tasks.add(projectTask(task, output, bindings));
+			tasks.add(projectTask(task, output, bindings, saved.insertMethod()));
 		}
 		return warnings == null ? original : BulkMigrationJobPlanner.plan(original.getJobId(), tasks,
 				new Report(original.getLifecycle(), warnings));
@@ -173,8 +174,11 @@ final class TransferIntervalProjection {
 				bindings.add(new Binding(column, destination, targetHandler));
 			}
 			if (bindings.isEmpty()) { tasks.add(task); continue; }
-			warnings.addAll(preflight(task, bindings, target));
-			tasks.add(projectTask(task, output, bindings));
+			var taskWarnings = preflight(task, bindings, target);
+			warnings.addAll(taskWarnings);
+			tasks.add(projectTask(task, output, bindings,
+					taskWarnings.stream().anyMatch(text -> text.startsWith("[INTERVAL_JDBC_BINDING]"))
+							? BulkInsertMethod.JDBC_BATCH : null));
 		}
 		return BulkMigrationJobPlanner.plan(original.getJobId(), tasks,
 				new Report(original.getLifecycle(), List.copyOf(warnings)));
@@ -182,16 +186,31 @@ final class TransferIntervalProjection {
 
 	private static List<String> preflight(BulkMigrationJobTask task, List<Binding> bindings, Connection target) throws Exception {
 		var counts = new java.util.TreeMap<String, Long>();
+		for (var binding : bindings) {
+			if (binding.handler().requiresJdbcBinding(null, binding.destination(), target.getMetaData())) {
+				if (task.getOptions().getBulkOption().getInsertMethod() == BulkInsertMethod.NATIVE)
+					throw invalid("[INTERVAL_JDBC_BINDING] Column " + binding.source().getName() + " requires JDBC_BATCH for interval arrays");
+				counts.put("INTERVAL_JDBC_BINDING] column " + binding.source().getName() + " -> " + binding.destination().getName(), 0L);
+			}
+		}
 		try (var rows = new Rows(open(task, null), task.getEffectiveSourceTable(), bindings)) {
 			while (rows.hasNext()) {
 				var raw = rows.rawNext();
 				for (var binding : bindings) {
 				var value = raw.get(binding.source());
-				if (value == null) continue;
 				try {
-					for (String code : binding.handler().prepareInterval(value, binding.destination(), target.getMetaData()).warnings())
+					for (String code : value == null ? java.util.List.<String>of() : binding.handler().prepareInterval(value, binding.destination(), target.getMetaData()).warnings())
 						counts.merge(code + "] column " + binding.source().getName()
 							+ " -> " + binding.destination().getName(), 1L, Math::addExact);
+					if (binding.handler().requiresJdbcBinding(value, binding.destination(), target.getMetaData())) {
+						if (task.getOptions().getBulkOption().getInsertMethod() == BulkInsertMethod.NATIVE)
+							throw invalid("[INTERVAL_JDBC_BINDING] Column " + binding.source().getName()
+									+ " requires JDBC_BATCH for exact interval binding; NATIVE text bulk transport cannot represent it.");
+						counts.merge("INTERVAL_JDBC_BINDING] column " + binding.source().getName()
+								+ " -> " + binding.destination().getName(), 1L, Math::addExact);
+					}
+				} catch (TransferSchemaPreparation.ValidationException failure) {
+					throw failure;
 				} catch (RuntimeException failure) {
 					throw invalid("[INTERVAL_VALUE_NOT_REPRESENTABLE] Column " + binding.source().getName()
 						+ " exceeds the target interval qualifier, range, precision or array support.");
@@ -204,13 +223,14 @@ final class TransferIntervalProjection {
 		return warnings;
 	}
 
-	private static BulkMigrationJobTask projectTask(BulkMigrationJobTask task, Table output, List<Binding> bindings) {
+	private static BulkMigrationJobTask projectTask(BulkMigrationJobTask task, Table output, List<Binding> bindings,
+			BulkInsertMethod insertMethod) {
 		var input = task.getEffectiveSourceTable();
 		var projected = input.clone();
 		for (var binding : bindings) copyType(binding.destination(), projected.getColumns().get(binding.source().getName()));
 		var builder = BulkMigrationJobTask.builder().taskId(task.getTaskId()).targetTable(output)
 				.columnMappings(task.getColumnMappings()).requireEmptyTarget(task.isRequireEmptyTarget())
-				.options(task.getOptions()).checkpointStore(task.getCheckpointStore()).chunkListener(task.getChunkListener());
+				.options(withInsertMethod(task.getOptions(), insertMethod)).checkpointStore(task.getCheckpointStore()).chunkListener(task.getChunkListener());
 		if (task.isFullScan()) {
 			projected.setRowIteratorHandler(collection -> new Rows(openUnchecked(task), projected, bindings));
 			builder.sourceTable(projected).fullScan(true);
@@ -230,6 +250,20 @@ final class TransferIntervalProjection {
 			});
 		}
 		return builder.build();
+	}
+
+	private static ChunkedBulkMigrationOption withInsertMethod(ChunkedBulkMigrationOption original, BulkInsertMethod method) {
+		var bulk = original.getBulkOption();
+		if (method == null || method == bulk.getInsertMethod()) return original;
+		var selected = BulkOption.builder().batchSize(bulk.getBatchSize()).bulkCopyTimeout(bulk.getBulkCopyTimeout())
+				.checkConstraints(bulk.isCheckConstraints()).fireTriggers(bulk.isFireTriggers()).keepIdentity(bulk.isKeepIdentity())
+				.keepNulls(bulk.isKeepNulls()).tableLock(bulk.isTableLock()).useTransaction(bulk.isUseTransaction())
+				.allowEncryptedValueModifications(bulk.isAllowEncryptedValueModifications()).insertMethod(method).build();
+		return ChunkedBulkMigrationOption.builder().migrationId(original.getMigrationId()).chunkSize(original.getChunkSize())
+				.mode(original.getMode()).incrementalStrategy(original.getIncrementalStrategy()).resume(original.isResume())
+				.checkpointMode(original.getCheckpointMode()).checkpointTableName(original.getCheckpointTableName())
+				.sourceFingerprint(original.getSourceFingerprint()).targetFingerprint(original.getTargetFingerprint())
+				.bulkOption(selected).bulkUpsertOption(original.getBulkUpsertOption()).retryOption(original.getRetryOption()).build();
 	}
 
 	private static DataType inferGroup(BulkMigrationJobTask task, Column column) throws Exception {

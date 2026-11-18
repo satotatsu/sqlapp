@@ -35,6 +35,30 @@ public class VerticaSqlBuilder extends AbstractSqlBuilder<VerticaSqlBuilder> {
 		super(dialect);
 	}
 
+	@Override protected VerticaSqlBuilder typeDefinition(com.sqlapp.data.schemas.Column column) {
+		if (column.getArrayDimension() == 0 || column.getDataType().getMetaTtype() != com.sqlapp.data.db.datatype.MetaType.INTERVAL)
+			return super.typeDefinition(column);
+		int dimensions = column.getArrayDimension();
+		String declaration = column.getSpecifics().get(com.sqlapp.data.db.datatype.IntervalArrays.DECLARED_BOUNDS);
+		String[] bounds = declaration == null ? new String[dimensions] : declaration.split(",",-1);
+		if(bounds.length != dimensions) throw new IllegalArgumentException("Interval array bounds do not match dimensions");
+		_add("ARRAY[".repeat(dimensions));
+		super.typeDefinition(column.clone().setArrayDimension(0).setDataTypeName(null));
+		for(String bound:bounds) {
+			if(bound != null && !bound.equals("*")) {
+				if(!bound.matches("[1-9][0-9]*")) throw new IllegalArgumentException("Invalid Vertica interval array bound");
+				_add(",")._add(bound);
+			}
+			_add("]");
+		}
+		String capacity=column.getSpecifics().get("vertica.interval.arrayMaxBytes");
+		if(capacity!=null) {
+			if(!capacity.matches("[1-9][0-9]*")) throw new IllegalArgumentException("Invalid Vertica ARRAY capacity");
+			_add("(")._add(capacity)._add(")");
+		}
+		return this;
+	}
+
 	@Override
 	public VerticaSqlBuilder definition(com.sqlapp.data.schemas.Column column, boolean withRemarks) {
 		if (!column.isIdentity())

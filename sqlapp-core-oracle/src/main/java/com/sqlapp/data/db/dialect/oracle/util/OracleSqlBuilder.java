@@ -167,6 +167,9 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 
 	@Override
 	protected OracleSqlBuilder typeDefinition(final Column column) {
+		if (column.getArrayDimension() > 0 && column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+			return this._add(com.sqlapp.data.db.dialect.oracle.metadata.OracleIntervalCollections.qualifiedName(column));
+		}
 		if (column.getDomain() != null && column.getDomainName() == null) {
 			throw new IllegalArgumentException("Column domain reference requires a name: " + column.getName());
 		}
