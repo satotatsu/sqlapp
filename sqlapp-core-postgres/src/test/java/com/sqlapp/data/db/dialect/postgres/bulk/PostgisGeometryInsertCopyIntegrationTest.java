@@ -246,17 +246,15 @@ class PostgisGeometryInsertCopyIntegrationTest {
 	}
 
 	/**
-	 * sqlapp の幾何型(3D を含む)を GEOMETRY 列に INSERT / COPY すると同じ空間型として保存され、元の型に読み戻せること。
+	 * sqlapp の幾何型を GEOMETRY 列に INSERT / COPY すると同じ空間型として保存され、元の型に読み戻せること。
 	 */
 	@Test
 	void sqlappGeometricValuesInGeometryColumn() throws Exception {
-		final com.sqlapp.data.geometry.AbstractGeometry[] values = { new com.sqlapp.data.geometry.Point3D(1, 2, 3),
-				new Path(false, 0, 0, 1, 1, 2, 0), new Path(true, 0, 0, 1, 1),
-				new com.sqlapp.data.geometry.Path3D(true, 0, 0, 1, 1, 1, 2), new Polygon(0, 0, 1, 1, 1, 0),
+		final com.sqlapp.data.geometry.AbstractGeometry[] values = { new Point(1, 2),
+				new Path(false, 0, 0, 1, 1, 2, 0), new Path(true, 0, 0, 1, 1), new Polygon(0, 0, 1, 1, 1, 0),
 				new Box(2, 3, 0, 1), new Lseg(0, 0, 1, 1), new Circle(1, 2, 3) };
-		final String[] expected = { "POINT(1 2 3)", "LINESTRING(0 0,1 1,2 0,0 0)", "LINESTRING(0 0,1 1)",
-				"LINESTRING(0 0 1,1 1 2)", "POLYGON((0 0,1 1,1 0,0 0))", "POLYGON((2 3,0 3,0 1,2 1,2 3))",
-				"LINESTRING(0 0,1 1)" };
+		final String[] expected = { "POINT(1 2)", "LINESTRING(0 0,1 1,2 0,0 0)", "LINESTRING(0 0,1 1)",
+				"POLYGON((0 0,1 1,1 0,0 0))", "POLYGON((2 3,0 3,0 1,2 1,2 3))", "LINESTRING(0 0,1 1)" };
 		final List<String> names = new ArrayList<>();
 		for (final String prefix : new String[] { "sqlapp_geo_sq_ins", "sqlapp_geo_sq_copy" }) {
 			final String name = prefix + "_" + suffix;
@@ -299,12 +297,12 @@ class PostgisGeometryInsertCopyIntegrationTest {
 			assertEquals(expected[i], stored.get(0).get(i).split("\\|")[0], "id=" + (i + 1));
 		}
 		// Circle は 64 角形の POLYGON(閉じるための点を含めて 65 点)
-		assertTrue(stored.get(0).get(7).startsWith("POLYGON(("), stored.get(0).get(7));
-		assertEquals("65", stored.get(0).get(7).split("\\|")[1]);
+		assertTrue(stored.get(0).get(6).startsWith("POLYGON(("), stored.get(0).get(6));
+		assertEquals("65", stored.get(0).get(6).split("\\|")[1]);
 		// sqlapp の型へ読み戻す
 		final JdbcTypeHandler handler = dialect.getDbDataTypes().getDbType(DataType.GEOMETRY).getJdbcTypeHandler();
 		try (Statement statement = connection.createStatement();
-				ResultSet rs = statement.executeQuery("SELECT id, g FROM " + names.get(1) + " WHERE id <= 7 ORDER BY id")) {
+				ResultSet rs = statement.executeQuery("SELECT id, g FROM " + names.get(1) + " WHERE id <= 6 ORDER BY id")) {
 			while (rs.next()) {
 				final int index = rs.getInt(1) - 1;
 				final Object geometry = handler.getObject(rs, "g");

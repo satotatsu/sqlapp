@@ -24,7 +24,7 @@ package com.sqlapp.data.geometry;
  * 無限の直線型
  *
  */
-public final class Line extends AbstractMultiPoint<Point> implements ToUpperDimensionType<Line3D>{
+public final class Line extends AbstractMultiPoint<Point>{
 
     /**
 	 * serialVersionUID
@@ -123,17 +123,6 @@ public final class Line extends AbstractMultiPoint<Point> implements ToUpperDime
 		return 2;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Line3D toUpperDimension() {
-		Point3D[] points=new Point3D[this.points.length];
-		for(int i=0;i<points.length;i++){
-			points[i]=this.points[i].toUpperDimension();
-		}
-		return new Line3D(points[0], points[1]);
-	}
 	
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.geometric.AbstractGeometry#parse(java.lang.String)

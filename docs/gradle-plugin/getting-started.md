@@ -185,6 +185,7 @@ invalid value, stops the task.
 | Option | Values | Meaning |
 |---|---|---|
 | `oracle.maxStringSize` | `STANDARD`, `EXTENDED` | Oracle `MAX_STRING_SIZE`. Maximum length of VARCHAR2/NVARCHAR2 (4000 or 32767 bytes) and RAW (2000 or 32767 bytes). Oracle 12c or later accepts `EXTENDED` |
+| `mysql.tinyInt1Mapping` | `BOOLEAN` (default), `NUMERIC` | MySQL/MariaDB/Aurora MySQL signed TINYINT(1) interpretation. Use `NUMERIC` to preserve numeric source values; see [TINYINT(1) values](../data/mysql-tinyint.md) |
 
 Without the option sqlapp detects `MAX_STRING_SIZE` on Oracle 12c or later by
 running `SELECT CAST(NULL AS VARCHAR2(32767)) FROM DUAL`, which needs no extra

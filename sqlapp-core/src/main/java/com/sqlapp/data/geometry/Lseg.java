@@ -24,7 +24,7 @@ package com.sqlapp.data.geometry;
  * 有限の直線型
  *
  */
-public final class Lseg extends AbstractMultiPoint<Point> implements ToUpperDimensionType<Lseg3D>{
+public final class Lseg extends AbstractMultiPoint<Point>{
 
     /**
 	 * serialVersionUID
@@ -95,17 +95,6 @@ public final class Lseg extends AbstractMultiPoint<Point> implements ToUpperDime
 		return 2;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Lseg3D toUpperDimension() {
-		Point3D[] points=new Point3D[this.points.length];
-		for(int i=0;i<points.length;i++){
-			points[i]=this.points[i].toUpperDimension();
-		}
-		return new Lseg3D(points[0], points[1]);
-	}
 	
 	
 	/* (non-Javadoc)

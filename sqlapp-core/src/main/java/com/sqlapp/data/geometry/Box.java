@@ -24,7 +24,7 @@ package com.sqlapp.data.geometry;
  * 矩形
  *
  */
-public final class Box extends AbstractMultiPoint<Point> implements ToUpperDimensionType<Box3D>{
+public final class Box extends AbstractMultiPoint<Point>{
 
     /**
 	 * serialVersionUID
@@ -95,17 +95,6 @@ public final class Box extends AbstractMultiPoint<Point> implements ToUpperDimen
 		return 2;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Box3D toUpperDimension() {
-		Point3D[] points=new Point3D[this.points.length];
-		for(int i=0;i<points.length;i++){
-			points[i]=this.points[i].toUpperDimension();
-		}
-		return new Box3D(points[0], points[1]);
-	}
 	
 	
 	/* (non-Javadoc)

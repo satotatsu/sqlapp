@@ -467,11 +467,12 @@ public class DbDataTypeCollection implements Serializable {
 	}
 
 	/**
-	 * データ型を登録します
+	 * データ型を登録します。独自のDialect型は型の解決を始める前の初期化時に登録します。
 	 * 
 	 * @param dbDataType データ型
+	 * @return 登録した型
 	 */
-	protected DbDataType<?> register(DbDataType<?> dbDataType) {
+	public DbDataType<?> register(DbDataType<?> dbDataType) {
 		if (dataTypeMap.containsKey(dbDataType.getDataType())) {
 			dataTypeMap.remove(dbDataType.getDataType());
 		}

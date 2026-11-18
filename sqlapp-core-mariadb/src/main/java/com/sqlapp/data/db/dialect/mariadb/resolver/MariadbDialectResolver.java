@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.db.dialect.mariadb.resolver;
 
+import com.sqlapp.data.db.dialect.mysql.MySqlTinyInt1Mapping;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mariadb.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
@@ -34,6 +36,12 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 
 	public MariadbDialectResolver() {
 		super("MariaDB", new MariadbVersionResolver());
+	}
+
+	@Override
+	public Dialect applyDialectOptions(final Dialect dialect, final java.util.Map<String, String> options) {
+		final var mapping = MySqlTinyInt1Mapping.fromOptions(options);
+		return mapping == null ? dialect : DialectHolder.getDialect(dialect, mapping);
 	}
 
 	/**

@@ -24,7 +24,7 @@ package com.sqlapp.data.geometry;
  * 多角形抽象クラス
  *
  */
-public class Polygon extends AbstractMultiPoint<Point> implements ToUpperDimensionType<Polygon3D>{
+public class Polygon extends AbstractMultiPoint<Point>{
     /** serialVersionUID */
 	private static final long serialVersionUID = 3280634501061893212L;
     
@@ -88,17 +88,6 @@ public class Polygon extends AbstractMultiPoint<Point> implements ToUpperDimensi
 		return 2;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.geometric.ToUpperDimensionType#toUpperDimension()
-	 */
-	@Override
-	public Polygon3D toUpperDimension() {
-		Point3D[] points=new Point3D[this.points.length];
-		for(int i=0;i<points.length;i++){
-			points[i]=this.points[i].toUpperDimension();
-		}
-		return new Polygon3D(points);
-	}
 
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.geometric.AbstractGeometry#parse(java.lang.String)

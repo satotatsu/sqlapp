@@ -24,7 +24,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Circle;
-import com.sqlapp.data.geometry.Circle3D;
 
 /**
  * CircleType Converter
@@ -49,8 +48,6 @@ public class CircleConverter extends AbstractConverter<Circle> implements Suppli
 			return SpatialGeometryConversions.fromSpatial(geometry, Circle.class);
 		} else if (value instanceof Circle) {
 			return (Circle) value;
-		} else if (value instanceof Circle3D) {
-			return ((Circle3D) value).toLowerDimension();
 		} else if (value instanceof String) {
 			Circle obj = new Circle();
 			obj.setValue((String) value);

@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.db.dialect.mysql.resolver;
 
+import com.sqlapp.data.db.dialect.mysql.MySqlTinyInt1Mapping;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
@@ -34,6 +36,12 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 
 	public MySqlDialectResolver() {
 		super("MySql", new MySqlVersionResolver());
+	}
+
+	@Override
+	public Dialect applyDialectOptions(final Dialect dialect, final java.util.Map<String, String> options) {
+		final var mapping = MySqlTinyInt1Mapping.fromOptions(options);
+		return mapping == null ? dialect : DialectHolder.getDialect(dialect, mapping);
 	}
 
 	/**

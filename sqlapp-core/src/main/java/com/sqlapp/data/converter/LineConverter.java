@@ -24,11 +24,8 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Box;
-import com.sqlapp.data.geometry.Box3D;
 import com.sqlapp.data.geometry.Line;
-import com.sqlapp.data.geometry.Line3D;
 import com.sqlapp.data.geometry.Lseg;
-import com.sqlapp.data.geometry.Lseg3D;
 
 /**
  * LineType Converter
@@ -53,16 +50,10 @@ public class LineConverter extends AbstractConverter<Line> implements Supplier<L
 			return SpatialGeometryConversions.fromSpatial(geometry, Line.class);
 		} else if (value instanceof Line) {
 			return (Line) value;
-		} else if (value instanceof Line3D) {
-			return ((Line3D) value).toLowerDimension();
 		} else if (value instanceof Lseg) {
 			return ((Lseg) value).toLine();
-		} else if (value instanceof Lseg3D) {
-			return ((Lseg3D) value).toLine().toLowerDimension();
 		} else if (value instanceof Box) {
 			return ((Box) value).toLine();
-		} else if (value instanceof Box3D) {
-			return ((Box3D) value).toLine().toLowerDimension();
 		}
 		Line obj = new Line();
 		obj.setValue(value.toString());

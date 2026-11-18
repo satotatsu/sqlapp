@@ -20,6 +20,9 @@ is configured. Iterators are closed after completion or failure.
 
 ## Bulk upsert
 
+For transaction ownership, failed rollback and uncertain commit outcomes, see
+[Bulk transaction recovery](bulk-transaction-recovery.md).
+
 `BulkUpsertResolver` performs a set-oriented upsert by creating a staging
 table, loading it through the existing bulk-insert provider, and applying the
 staged rows to the target. The target primary key is the default match key;

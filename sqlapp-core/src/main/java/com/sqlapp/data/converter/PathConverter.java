@@ -24,9 +24,7 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Path;
-import com.sqlapp.data.geometry.Path3D;
 import com.sqlapp.data.geometry.Polygon;
-import com.sqlapp.data.geometry.Polygon3D;
 
 /**
  * PathType Converter
@@ -51,12 +49,8 @@ public class PathConverter extends AbstractConverter<Path> implements Supplier<P
 			return SpatialGeometryConversions.fromSpatial(geometry, Path.class);
 		} else if (value instanceof Path) {
 			return (Path) value;
-		} else if (value instanceof Path3D) {
-			return ((Path3D) value).toLowerDimension();
 		} else if (value instanceof Polygon) {
 			return ((Polygon) value).toPath();
-		} else if (value instanceof Polygon3D) {
-			return ((Polygon3D) value).toPath().toLowerDimension();
 		}
 		Path obj = new Path();
 		obj.setValue(value.toString());

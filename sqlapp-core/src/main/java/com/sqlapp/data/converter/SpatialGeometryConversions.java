@@ -28,35 +28,28 @@ import org.geolatte.geom.codec.Wkt;
 import com.sqlapp.data.geometry.AbstractGeometry;
 import com.sqlapp.data.geometry.AbstractPoint2D;
 import com.sqlapp.data.geometry.Box;
-import com.sqlapp.data.geometry.Box3D;
 import com.sqlapp.data.geometry.Circle;
-import com.sqlapp.data.geometry.Circle3D;
 import com.sqlapp.data.geometry.Line;
-import com.sqlapp.data.geometry.Line3D;
 import com.sqlapp.data.geometry.Lseg;
-import com.sqlapp.data.geometry.Lseg3D;
 import com.sqlapp.data.geometry.Path;
-import com.sqlapp.data.geometry.Path3D;
 import com.sqlapp.data.geometry.Point;
-import com.sqlapp.data.geometry.Point3D;
 import com.sqlapp.data.geometry.Polygon;
-import com.sqlapp.data.geometry.Polygon3D;
 
 /**
- * sqlapp の幾何型(PostgreSQL の組み込み幾何型と、その3D版)と、空間型(Geolatte の Geometry)の相互変換。
+ * sqlapp の幾何型(PostgreSQL の組み込み幾何型)と、空間型(Geolatte の Geometry)の相互変換。
  *
  * <h2>sqlapp の幾何型 → 空間型</h2>
  * <table border="1">
  * <caption>変換規則</caption>
  * <tr><th>sqlapp</th><th>空間型</th></tr>
- * <tr><td>Point / Point3D</td><td>POINT / POINT Z</td></tr>
- * <tr><td>Lseg / Lseg3D</td><td>2点の LINESTRING</td></tr>
- * <tr><td>開いた Path / Path3D</td><td>LINESTRING(2点以上。始点と終点が同じものは閉じた Path と区別できないためエラー)</td></tr>
- * <tr><td>閉じた Path / Path3D</td><td>終点に始点を加えた LINESTRING(環)</td></tr>
- * <tr><td>Polygon / Polygon3D</td><td>外周1つの POLYGON(終点に始点を加える。3点以上)</td></tr>
+ * <tr><td>Point</td><td>POINT</td></tr>
+ * <tr><td>Lseg</td><td>2点の LINESTRING</td></tr>
+ * <tr><td>開いた Path</td><td>LINESTRING(2点以上。始点と終点が同じものは閉じた Path と区別できないためエラー)</td></tr>
+ * <tr><td>閉じた Path</td><td>終点に始点を加えた LINESTRING(環)</td></tr>
+ * <tr><td>Polygon</td><td>外周1つの POLYGON(終点に始点を加える。3点以上)</td></tr>
  * <tr><td>Box</td><td>軸に平行な長方形の POLYGON</td></tr>
- * <tr><td>Circle / Circle3D</td><td>{@value #CIRCLE_SEGMENTS} 角形で近似した POLYGON(Circle3D は z 一定の水平な円)。近似のため円には戻せない</td></tr>
- * <tr><td>Line / Line3D / Box3D</td><td>対応する空間型がないためエラー(無限直線 / 直方体)</td></tr>
+ * <tr><td>Circle</td><td>{@value #CIRCLE_SEGMENTS} 角形で近似した POLYGON。近似のため円には戻せない</td></tr>
+ * <tr><td>Line</td><td>無限直線に対応する空間型がないためエラー</td></tr>
  * </table>
  * SRID は持たない。座標に NaN / Infinity を含む値は WKT で表せないためエラーにする。
  *
@@ -65,9 +58,8 @@ import com.sqlapp.data.geometry.Polygon3D;
  * は軸に平行な長方形の POLYGON からだけ作り、PostgreSQL と同じく(右上, 左下)の順にする。
  * <ul>
  * <li>SRID は捨てる(sqlapp の幾何型は SRID を持たない)。</li>
- * <li>2D の型への変換で Z を持つ値、M を持つ値、空の図形、穴のある POLYGON、Multi 系 / GeometryCollection はエラーにする。</li>
- * <li>3D の型への変換で Z を持たない値は z = 0 とする({@link Point#toUpperDimension()} と同じ)。</li>
- * <li>Circle / Circle3D / Line / Line3D / Box3D へは変換できない。</li>
+ * <li>Z / M を持つ値、空の図形、穴のある POLYGON、Multi 系 / GeometryCollection はエラーにする(sqlapp の幾何型は2次元)。</li>
+ * <li>Circle / Line へは変換できない。</li>
  * </ul>
  */
 public final class SpatialGeometryConversions {
@@ -97,14 +89,8 @@ public final class SpatialGeometryConversions {
 	}
 
 	static String toWkt(final AbstractGeometry value) {
-		if (value instanceof Point3D point) {
-			return "POINT Z(" + coordinates(point) + ")";
-		}
-		if (value instanceof Circle3D circle) {
-			return "POLYGON Z((" + circle(circle.getX(), circle.getY(), circle.getZ(), true, circle.getR()) + "))";
-		}
 		if (value instanceof Circle circle) {
-			return "POLYGON((" + circle(circle.getX(), circle.getY(), 0, false, circle.getR()) + "))";
+			return "POLYGON((" + circle(circle.getX(), circle.getY(), circle.getR()) + "))";
 		}
 		if (value instanceof Point point) {
 			return "POINT(" + coordinates(point) + ")";
@@ -112,20 +98,11 @@ public final class SpatialGeometryConversions {
 		if (value instanceof Lseg lseg) {
 			return "LINESTRING(" + coordinates(lseg.getPoints()) + ")";
 		}
-		if (value instanceof Lseg3D lseg) {
-			return "LINESTRING Z(" + coordinates(lseg.getPoints()) + ")";
-		}
 		if (value instanceof Path path) {
 			return "LINESTRING(" + pathCoordinates(path.getPoints(), path.open, "Path") + ")";
 		}
-		if (value instanceof Path3D path) {
-			return "LINESTRING Z(" + pathCoordinates(path.getPoints(), path.open, "Path3D") + ")";
-		}
 		if (value instanceof Polygon polygon) {
 			return "POLYGON((" + ring(polygon.getPoints(), "Polygon") + "))";
-		}
-		if (value instanceof Polygon3D polygon) {
-			return "POLYGON Z((" + ring(polygon.getPoints(), "Polygon3D") + "))";
 		}
 		if (value instanceof Box box) {
 			final Point p1 = box.getPoints()[0];
@@ -133,12 +110,9 @@ public final class SpatialGeometryConversions {
 			final Point[] corners = { p1, new Point(p2.getX(), p1.getY()), p2, new Point(p1.getX(), p2.getY()) };
 			return "POLYGON((" + ring(corners, "Box") + "))";
 		}
-		if (value instanceof Line || value instanceof Line3D) {
-			throw new IllegalArgumentException(value.getClass().getSimpleName()
-					+ " is an infinite line and has no spatial geometry equivalent. value=" + value);
-		}
-		if (value instanceof Box3D) {
-			throw new IllegalArgumentException("Box3D is a cuboid and has no spatial geometry equivalent. value=" + value);
+		if (value instanceof Line) {
+			throw new IllegalArgumentException(
+					"Line is an infinite line and has no spatial geometry equivalent. value=" + value);
 		}
 		throw new IllegalArgumentException("Unsupported geometry type: " + value.getClass().getName());
 	}
@@ -173,7 +147,7 @@ public final class SpatialGeometryConversions {
 		return ret;
 	}
 
-	private static String circle(final double x, final double y, final double z, final boolean hasZ, final double r) {
+	private static String circle(final double x, final double y, final double r) {
 		if (!(r > 0) || Double.isInfinite(r)) {
 			throw new IllegalArgumentException("Circle radius must be positive and finite to approximate. r=" + r);
 		}
@@ -185,9 +159,6 @@ public final class SpatialGeometryConversions {
 				builder.append(',');
 			}
 			builder.append(number(x + r * Math.cos(angle))).append(' ').append(number(y + r * Math.sin(angle)));
-			if (hasZ) {
-				builder.append(' ').append(number(z));
-			}
 		}
 		return builder.toString();
 	}
@@ -200,9 +171,6 @@ public final class SpatialGeometryConversions {
 			}
 			final AbstractPoint2D point = points[i];
 			builder.append(number(point.getX())).append(' ').append(number(point.getY()));
-			if (point instanceof Point3D point3d) {
-				builder.append(' ').append(number(point3d.getZ()));
-			}
 		}
 		return builder.toString();
 	}
@@ -231,38 +199,30 @@ public final class SpatialGeometryConversions {
 		if (value == null) {
 			return null;
 		}
-		final boolean is3d = type == Point3D.class || type == Lseg3D.class || type == Path3D.class
-				|| type == Polygon3D.class;
-		if (value.hasM()) {
-			throw new IllegalArgumentException(type.getSimpleName() + " can't hold M coordinates. value=" + wkt(value));
-		}
-		if (value.hasZ() && !is3d) {
-			throw new IllegalArgumentException(type.getSimpleName() + " can't hold Z coordinates. value=" + wkt(value));
+		if (value.hasZ() || value.hasM()) {
+			throw new IllegalArgumentException(
+					type.getSimpleName() + " is two-dimensional and can't hold Z or M coordinates. value=" + wkt(value));
 		}
 		if (value.isEmpty()) {
 			throw new IllegalArgumentException(type.getSimpleName() + " can't be empty. value=" + wkt(value));
 		}
 		final GeometryType geometryType = value.getGeometryType();
 		final Object ret;
-		if (type == Point.class || type == Point3D.class) {
+		if (type == Point.class) {
 			require(geometryType == GeometryType.POINT, value, type);
-			ret = is3d ? point3d(value, 0) : point(value, 0);
-		} else if (type == Lseg.class || type == Lseg3D.class) {
+			ret = point(value, 0);
+		} else if (type == Lseg.class) {
 			require(geometryType == GeometryType.LINESTRING && value.getNumPositions() == 2, value, type);
-			ret = is3d ? new Lseg3D(point3d(value, 0), point3d(value, 1)) : new Lseg(point(value, 0), point(value, 1));
-		} else if (type == Path.class || type == Path3D.class) {
+			ret = new Lseg(point(value, 0), point(value, 1));
+		} else if (type == Path.class) {
 			require(geometryType == GeometryType.LINESTRING && value.getNumPositions() >= 2, value, type);
 			final int n = value.getNumPositions();
 			final boolean closed = java.util.Arrays.equals(position(value, 0), position(value, n - 1));
 			final int size = closed ? n - 1 : n;
-			if (is3d) {
-				ret = new Path3D(!closed, points3d(value, size));
-			} else {
-				ret = new Path(!closed, points(value, size));
-			}
-		} else if (type == Polygon.class || type == Polygon3D.class) {
+			ret = new Path(!closed, points(value, size));
+		} else if (type == Polygon.class) {
 			final int n = singleRing(value, type);
-			ret = is3d ? new Polygon3D(points3d(value, n - 1)) : new Polygon(points(value, n - 1));
+			ret = new Polygon(points(value, n - 1));
 		} else if (type == Box.class) {
 			final int n = singleRing(value, type);
 			ret = box(value, n);
@@ -326,9 +286,6 @@ public final class SpatialGeometryConversions {
 
 	private static double[] position(final Geometry<?> value, final int index) {
 		final double[] coordinates = value.getPositionN(index).toArray(null);
-		if (value.hasZ()) {
-			return new double[] { coordinates[0], coordinates[1], coordinates[2] };
-		}
 		return new double[] { coordinates[0], coordinates[1] };
 	}
 
@@ -337,23 +294,10 @@ public final class SpatialGeometryConversions {
 		return new Point(p[0], p[1]);
 	}
 
-	private static Point3D point3d(final Geometry<?> value, final int index) {
-		final double[] p = position(value, index);
-		return new Point3D(p[0], p[1], p.length > 2 ? p[2] : 0d);
-	}
-
 	private static Point[] points(final Geometry<?> value, final int size) {
 		final Point[] ret = new Point[size];
 		for (int i = 0; i < size; i++) {
 			ret[i] = point(value, i);
-		}
-		return ret;
-	}
-
-	private static Point3D[] points3d(final Geometry<?> value, final int size) {
-		final Point3D[] ret = new Point3D[size];
-		for (int i = 0; i < size; i++) {
-			ret[i] = point3d(value, i);
 		}
 		return ret;
 	}

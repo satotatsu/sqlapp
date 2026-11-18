@@ -64,10 +64,30 @@ public class MySql extends Dialect {
 	private static final java.util.regex.Pattern BOOLEAN_TINYINT = java.util.regex.Pattern
 			.compile("\\s*tinyint\\s*\\(\\s*1\\s*\\)\\s*", java.util.regex.Pattern.CASE_INSENSITIVE);
 
+	private boolean numericTinyInt1;
+
+	/** Returns the configured interpretation; existing dialects default to BOOLEAN. */
+	public final MySqlTinyInt1Mapping getTinyInt1Mapping() {
+		return numericTinyInt1 ? MySqlTinyInt1Mapping.NUMERIC : MySqlTinyInt1Mapping.BOOLEAN;
+	}
+
+	/** Used by version factories only on newly constructed numeric dialects. */
+	protected final void useNumericTinyInt1Mapping() {
+		numericTinyInt1 = true;
+	}
+
+	/** Builds a numeric variant without changing an existing shared dialect. */
+	protected static <T extends MySql> T createNumericTinyInt1Dialect(final Supplier<T> factory) {
+		final T dialect = factory.get();
+		dialect.useNumericTinyInt1Mapping();
+		return dialect;
+	}
+
 	@Override
 	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
 			final Integer scale, final com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
 		if (productDataType != null && BOOLEAN_TINYINT.matcher(productDataType).matches()) {
+			if (numericTinyInt1) return super.setDbType(DataType.TINYINT, productDataType, lengthOrPrecision, scale, column);
 			return super.setDbType(DataType.BOOLEAN, "BOOLEAN", null, null, column);
 		}
 		return super.setDbType(dataType, productDataType, lengthOrPrecision, scale, column);
@@ -144,6 +164,7 @@ public class MySql extends Dialect {
 
 		// Int8
 		getDbDataTypes().addTinyInt(type -> {
+			type.setJdbcTypeHandler(new MySqlTinyIntJdbcTypeHandler(false));
 			type.clearColumnTypeMatchers();
 			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("TINYINT"));
 		});
@@ -169,6 +190,7 @@ public class MySql extends Dialect {
 		});
 		// UTINYINT
 		getDbDataTypes().addUTinyInt(type -> {
+			type.setJdbcTypeHandler(new MySqlTinyIntJdbcTypeHandler(true));
 			type.clearColumnTypeMatchers();
 			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("UTINYINT"));
 			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("TINYINT"));
@@ -437,7 +459,7 @@ public class MySql extends Dialect {
 
 	@Override
 	public int hashCode() {
-		return getProductName().hashCode();
+		return getProductName().hashCode() + (numericTinyInt1 ? 31 : 0);
 	}
 
 	/**
@@ -448,7 +470,7 @@ public class MySql extends Dialect {
 		if (!super.equals(obj)) {
 			return false;
 		}
-		return true;
+		return numericTinyInt1 == ((MySql) obj).numericTinyInt1;
 	}
 
 	/**

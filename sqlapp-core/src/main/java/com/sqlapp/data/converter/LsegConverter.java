@@ -24,11 +24,8 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Box;
-import com.sqlapp.data.geometry.Box3D;
 import com.sqlapp.data.geometry.Line;
-import com.sqlapp.data.geometry.Line3D;
 import com.sqlapp.data.geometry.Lseg;
-import com.sqlapp.data.geometry.Lseg3D;
 
 /**
  * LsegType Converter
@@ -53,16 +50,10 @@ public class LsegConverter extends AbstractConverter<Lseg> implements Supplier<L
 			return SpatialGeometryConversions.fromSpatial(geometry, Lseg.class);
 		} else if (value instanceof Lseg) {
 			return (Lseg) value;
-		} else if (value instanceof Lseg3D) {
-			return ((Lseg3D) value).toLowerDimension();
 		} else if (value instanceof Line) {
 			return ((Line) value).toLseg();
-		} else if (value instanceof Line3D) {
-			return ((Line3D) value).toLseg().toLowerDimension();
 		} else if (value instanceof Box) {
 			return ((Box) value).toLseg();
-		} else if (value instanceof Box3D) {
-			return ((Box3D) value).toLseg().toLowerDimension();
 		}
 		Lseg obj = new Lseg();
 		obj.setValue(value.toString());

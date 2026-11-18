@@ -24,7 +24,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Point;
-import com.sqlapp.data.geometry.Point3D;
 
 /**
  * PointType Converter
@@ -49,8 +48,6 @@ public class PointConverter extends AbstractConverter<Point> implements Supplier
 			return SpatialGeometryConversions.fromSpatial(geometry, Point.class);
 		} else if (value instanceof Point) {
 			return (Point) value;
-		} else if (value instanceof Point3D) {
-			return ((Point3D) value).toLowerDimension();
 		} else if (value instanceof java.awt.Point) {
 			java.awt.Point ap = (java.awt.Point) value;
 			return new Point(ap.getX(), ap.getY());

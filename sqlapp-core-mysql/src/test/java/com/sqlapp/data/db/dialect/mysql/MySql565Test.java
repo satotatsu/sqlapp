@@ -69,7 +69,7 @@ public class MySql565Test {
 		Column column = createColumn();
 		column.setLength(0);
 		column.setDataTypeName("timestamp");
-		assertEquals(null, column.getLength());
+		assertEquals(Long.valueOf(0), column.getLength());
 		assertEquals("TIMESTAMP", column.getDataTypeName());
 		assertEquals(DataType.TIMESTAMPVERSION, column.getDataType());
 	}
@@ -78,7 +78,7 @@ public class MySql565Test {
 	public void testTimestamp2() {
 		Column column = createColumn();
 		column.setDataTypeName("timestamp");
-		assertEquals(null, column.getLength());
+		assertEquals(Long.valueOf(0), column.getLength());
 		assertEquals("TIMESTAMP", column.getDataTypeName());
 		assertEquals(DataType.TIMESTAMPVERSION, column.getDataType());
 	}

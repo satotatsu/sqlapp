@@ -36,7 +36,6 @@ import org.junit.jupiter.params.provider.MethodSource;
  * 幾何型の文字列表現(setValue / toString)の回帰テスト。
  *
  * 受理形式は PostgreSQL 16 の入力関数で実際に確認した形式と、 既存実装が受理していた形式を合わせたもの。
- * 3D型は同じ構文で1点あたりの座標数を3としたもの。
  */
 public class GeometryTextFormatTest {
 
@@ -51,10 +50,6 @@ public class GeometryTextFormatTest {
 						new Point(100, Double.NEGATIVE_INFINITY)),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "NaN,2", new Point(Double.NaN, 2)),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "(1.0E10,2.0)", new Point(1e10, 2)),
-				// point3d
-				Arguments.of((Supplier<AbstractGeometry>) Point3D::new, "(1,2,3)", new Point3D(1, 2, 3)),
-				Arguments.of((Supplier<AbstractGeometry>) Point3D::new, "1,2,3", new Point3D(1, 2, 3)),
-				Arguments.of((Supplier<AbstractGeometry>) Point3D::new, " ( 1 , 2 , 3 ) ", new Point3D(1, 2, 3)),
 				// lseg
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "[(0,0),(1,1)]", new Lseg(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "((0,0),(1,1))", new Lseg(0, 0, 1, 1)),
@@ -62,26 +57,18 @@ public class GeometryTextFormatTest {
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "0,0,1,1", new Lseg(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "(0,0,1,1)", new Lseg(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "[0,0,1,1]", new Lseg(0, 0, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Lseg3D::new, "[(0,0,0),(1,1,1)]",
-						new Lseg3D(0, 0, 0, 1, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Lseg3D::new, "0,0,0,1,1,1", new Lseg3D(0, 0, 0, 1, 1, 1)),
 				// box
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "((0,0),(1,1))", new Box(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "(0,0),(1,1)", new Box(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "0,0,1,1", new Box(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "(0,0,1,1)", new Box(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "(1,1),(0,0)", new Box(1, 1, 0, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Box3D::new, "((0,0,0),(1,1,1))",
-						new Box3D(0, 0, 0, 1, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Box3D::new, "0,0,0,1,1,1", new Box3D(0, 0, 0, 1, 1, 1)),
 				// line (2点形式)
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "[(0,0),(1,1)]", new Line(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "((0,0),(1,1))", new Line(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "(0,0),(1,1)", new Line(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "0,0,1,1", new Line(0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "(0,0,1,1)", new Line(0, 0, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Line3D::new, "((0,0,0),(1,1,1))",
-						new Line3D(0, 0, 0, 1, 1, 1)),
 				// path
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "[(0,0),(1,1)]", new Path(true, 0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "[0,0,1,1]", new Path(true, 0, 0, 1, 1)),
@@ -92,10 +79,6 @@ public class GeometryTextFormatTest {
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "(0,0),(1,1)", new Path(false, 0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "(0,0,1,1)", new Path(false, 0, 0, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "0,0,1,1", new Path(false, 0, 0, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Path3D::new, "[(0,0,0),(1,1,1)]",
-						new Path3D(true, 0, 0, 0, 1, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Path3D::new, "((0,0,0),(1,1,1))",
-						new Path3D(false, 0, 0, 0, 1, 1, 1)),
 				// polygon
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "((0,0),(1,1),(1,0))",
 						new Polygon(0, 0, 1, 1, 1, 0)),
@@ -105,8 +88,6 @@ public class GeometryTextFormatTest {
 						new Polygon(0, 0, 1, 1, 1, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "0,0,1,1,1,0", new Polygon(0, 0, 1, 1, 1, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "((0,0))", new Polygon(0, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Polygon3D::new, "((0,0,0),(1,1,1),(1,0,0))",
-						new Polygon3D(0, 0, 0, 1, 1, 1, 1, 0, 0)),
 				// circle
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "<(0,0),1>", new Circle(0, 0, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "((0,0),1)", new Circle(0, 0, 1)),
@@ -115,9 +96,7 @@ public class GeometryTextFormatTest {
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, " < ( 1 , 2 ) , 3 > ", new Circle(1, 2, 3)),
 				// 既存実装が受理していた形式(PostgreSQLは受理しない)
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "<0,0,1>", new Circle(0, 0, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "(0,0,1)", new Circle(0, 0, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Circle3D::new, "<(1,2,3),4>", new Circle3D(1, 2, 3, 4)),
-				Arguments.of((Supplier<AbstractGeometry>) Circle3D::new, "1,2,3,4", new Circle3D(1, 2, 3, 4)));
+				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "(0,0,1)", new Circle(0, 0, 1)));
 	}
 
 	@ParameterizedTest(name = "[{index}] {1}")
@@ -136,21 +115,17 @@ public class GeometryTextFormatTest {
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "1"),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "a,b"),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "1,,2"),
-				Arguments.of((Supplier<AbstractGeometry>) Point3D::new, "(1,2)"),
-				Arguments.of((Supplier<AbstractGeometry>) Point3D::new, "(1,2,3,4)"),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "[(0,0),(1,1),(2,2)]"),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "[(0,0)]"),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, "((0,0),(1,1)"),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "[(0,0),(1,1)]"),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "(0,0),(1,1),(2,2)"),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, "0,0,1"),
-				Arguments.of((Supplier<AbstractGeometry>) Box3D::new, "((0,0),(1,1))"),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "{0,0,3}"),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "((0,0),(0,0))"),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "{1,2}"),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "{1,2,3,4}"),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, "{1,2,3"),
-				Arguments.of((Supplier<AbstractGeometry>) Line3D::new, "{1,2,3}"),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "((0,0),(1,1)"),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "[(0,0),(1,1))"),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, "0,0,1"),
@@ -160,8 +135,7 @@ public class GeometryTextFormatTest {
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "0,0,1"),
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "<(0,0),1)"),
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "<(0,0)>"),
-				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "<(0,0),1,2>"),
-				Arguments.of((Supplier<AbstractGeometry>) Circle3D::new, "<(0,0),1>"));
+				Arguments.of((Supplier<AbstractGeometry>) Circle::new, "<(0,0),1,2>"));
 	}
 
 	@ParameterizedTest(name = "[{index}] {1}")
@@ -206,23 +180,14 @@ public class GeometryTextFormatTest {
 	static Stream<Arguments> roundTrip() {
 		return Stream.of(
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, new Point(1.5, -2)),
-				Arguments.of((Supplier<AbstractGeometry>) Point3D::new, new Point3D(1.5, -2, 3)),
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, new Circle(1, 2, 3.5)),
-				Arguments.of((Supplier<AbstractGeometry>) Circle3D::new, new Circle3D(1, 2, 3, 4.5)),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, new Box(1, 1, 0, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Box3D::new, new Box3D(0, 0, 0, 1, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, new Lseg(0, 0, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Lseg3D::new, new Lseg3D(0, 0, 0, 1, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Line::new, new Line(0, 0, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Line3D::new, new Line3D(0, 0, 0, 1, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, new Path(true, 0, 0, 1, 1, 2, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, new Path(false, 0, 0, 1, 1, 2, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, new Path(true, 0, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Path3D::new, new Path3D(true, 0, 0, 0, 1, 1, 1)),
-				Arguments.of((Supplier<AbstractGeometry>) Path3D::new, new Path3D(false, 0, 0, 0, 1, 1, 1)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, new Polygon(0, 0, 1, 1, 1, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Polygon3D::new,
-						new Polygon3D(0, 0, 0, 1, 1, 1, 1, 0, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new,
 						new Point(Double.NaN, Double.POSITIVE_INFINITY)));
 	}

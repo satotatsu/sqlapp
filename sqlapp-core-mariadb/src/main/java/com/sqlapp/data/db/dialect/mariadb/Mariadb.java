@@ -40,6 +40,10 @@ public class Mariadb extends MySql {
 		super(nextVersionDialectSupplier);
 	}
 
+	static MySql configureNumeric(final Supplier<? extends MySql> factory) {
+		return createNumericTinyInt1Dialect(factory);
+	}
+
 	@Override
 	public String getProductName() {
 		return "MariaDB";

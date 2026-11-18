@@ -184,6 +184,46 @@ The general resolver fallback for unknown products is unchanged. Receiving a
 generic dialect does not establish support for a removed database. Do not use
 that fallback to generate or execute database-specific migration SQL.
 
+## Geometric types and spatial values
+
+### Removed 3D geometric types
+
+`Point3D`, `Box3D`, `Lseg3D`, `Line3D`, `Path3D`, `Polygon3D`, `Circle3D` and the
+`ToUpperDimensionType` / `ToLowerDimensionType` interfaces have been removed from
+`com.sqlapp.data.geometry`, together with `toUpperDimension()` on the 2D types.
+This is a breaking change for code using those classes. No database has a
+matching column type; the PostgreSQL built-in geometric types are all
+two-dimensional. Store 3D coordinates in a `GEOMETRY` column (`POINT Z`,
+`LINESTRING Z`, ...). The 2D converters no longer accept the removed 3D values.
+
+### Behavior changes
+
+- `GEOMETRY` / `GEOGRAPHY` columns now convert text to Geolatte geometries in every
+  file format (CSV, JSON, YAML, Excel). Text is written as PostGIS EWKT and read as
+  WKT, EWKT or hex EWKB. Malformed input, including trailing data, raises
+  `IllegalArgumentException`; previously the value stayed a `String` and inserting
+  it failed with `ClassCastException`.
+- The PostgreSQL built-in geometric types are parsed strictly in the PostgreSQL
+  input formats, including `line` as `{A,B,C}`, `lseg` as `[...]` and open `path`
+  values. Wrong coordinate or point counts are rejected instead of truncated.
+- `SpatialGeometryConversions` converts between the built-in types and spatial
+  geometries. A closed `path` becomes a ring `LINESTRING` and `circle` becomes a
+  64-sided `POLYGON`; `line` has no equivalent and is rejected. Converting a
+  spatial geometry to a built-in type drops its SRID.
+- Values a database can't store are rejected instead of being silently changed.
+  MySQL and MariaDB reject Z/M coordinates and empty geometries other than
+  `GEOMETRYCOLLECTION EMPTY`. Oracle rejects empty geometries. PostGIS stores
+  `POINT EMPTY` as a point rather than `GEOMETRYCOLLECTION EMPTY`.
+- MySQL/MariaDB `LOAD DATA` keeps the connection usable when a value can't be
+  encoded. The statement fails without storing rows (on transactional tables),
+  and the value's exception is the cause. This needs MySQL 5.7 or later; older
+  servers keep the previous behavior.
+- Real-engine integration tests run only when `SQLAPP_TEST_POSTGIS_*`,
+  `SQLAPP_TEST_MYSQL_*`, `SQLAPP_TEST_MARIADB_*`, `SQLAPP_TEST_SQLSERVER_*` or
+  `SQLAPP_TEST_ORACLE_*` (`_URL`, `_USER`, `_PASSWORD`) is set. They were run
+  against PostgreSQL 16 + PostGIS 3.4, MySQL 8.4, MariaDB 11.4, SQL Server 2022
+  and Oracle 23 Free in disposable containers.
+
 ## Index schema qualification
 
 When `decorateSchemaName` is enabled, generated CREATE INDEX statements now
