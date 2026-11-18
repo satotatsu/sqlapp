@@ -175,10 +175,14 @@ final class TransferIntervalProjection {
 			}
 			if (bindings.isEmpty()) { tasks.add(task); continue; }
 			var taskWarnings = preflight(task, bindings, target);
+			if(taskWarnings.stream().anyMatch(text->text.startsWith("[INTERVAL_NATIVE_BINDING]"))
+					&& taskWarnings.stream().anyMatch(text->text.startsWith("[INTERVAL_JDBC_BINDING]")))
+				throw invalid("Interval columns require incompatible transports; split this task by supported destination types");
 			warnings.addAll(taskWarnings);
 			tasks.add(projectTask(task, output, bindings,
 					taskWarnings.stream().anyMatch(text -> text.startsWith("[INTERVAL_JDBC_BINDING]"))
-							? BulkInsertMethod.JDBC_BATCH : null));
+							? BulkInsertMethod.JDBC_BATCH : taskWarnings.stream().anyMatch(text -> text.startsWith("[INTERVAL_NATIVE_BINDING]"))
+								? BulkInsertMethod.NATIVE : null));
 		}
 		return BulkMigrationJobPlanner.plan(original.getJobId(), tasks,
 				new Report(original.getLifecycle(), List.copyOf(warnings)));
@@ -187,6 +191,11 @@ final class TransferIntervalProjection {
 	private static List<String> preflight(BulkMigrationJobTask task, List<Binding> bindings, Connection target) throws Exception {
 		var counts = new java.util.TreeMap<String, Long>();
 		for (var binding : bindings) {
+			if (!binding.handler().supportsJdbcBinding(binding.destination())) {
+				if(task.getOptions().getBulkOption().getInsertMethod()==BulkInsertMethod.JDBC_BATCH)
+					throw invalid("[INTERVAL_NATIVE_BINDING] Column "+binding.source().getName()+" requires NATIVE transport; choose AUTO or NATIVE");
+				counts.put("INTERVAL_NATIVE_BINDING] column "+binding.source().getName()+" -> "+binding.destination().getName(),0L);
+			}
 			if (binding.handler().requiresJdbcBinding(null, binding.destination(), target.getMetaData())) {
 				if (task.getOptions().getBulkOption().getInsertMethod() == BulkInsertMethod.NATIVE)
 					throw invalid("[INTERVAL_JDBC_BINDING] Column " + binding.source().getName() + " requires JDBC_BATCH for interval arrays");
@@ -202,6 +211,8 @@ final class TransferIntervalProjection {
 					for (String code : value == null ? java.util.List.<String>of() : binding.handler().prepareInterval(value, binding.destination(), target.getMetaData()).warnings())
 						counts.merge(code + "] column " + binding.source().getName()
 							+ " -> " + binding.destination().getName(), 1L, Math::addExact);
+					if(!binding.handler().supportsJdbcBinding(binding.destination()))
+						counts.merge("INTERVAL_NATIVE_BINDING] column "+binding.source().getName()+" -> "+binding.destination().getName(),1L,Math::addExact);
 					if (binding.handler().requiresJdbcBinding(value, binding.destination(), target.getMetaData())) {
 						if (task.getOptions().getBulkOption().getInsertMethod() == BulkInsertMethod.NATIVE)
 							throw invalid("[INTERVAL_JDBC_BINDING] Column " + binding.source().getName()

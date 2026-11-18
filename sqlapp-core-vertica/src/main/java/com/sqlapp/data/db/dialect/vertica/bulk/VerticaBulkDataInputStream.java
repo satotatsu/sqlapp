@@ -25,13 +25,13 @@ public class VerticaBulkDataInputStream extends InputStream {
 	private int position;
 	private long rowCount;
 	private boolean closed;
+	private String inputPrefix="__sqlapp_copy_";
 
 	public VerticaBulkDataInputStream(final Table table, final BulkOption options) {
 		java.util.Objects.requireNonNull(table, "table");
 		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		for (final Column column : table.getColumns()) {
-			if (column.isHidden() || !CommonUtils.isEmpty(column.getFormula())
-					|| (column.isIdentity() && !effective.isKeepIdentity())) {
+			if (!writable(column,effective)) {
 				continue;
 			}
 			columns.add(column);
@@ -39,7 +39,31 @@ public class VerticaBulkDataInputStream extends InputStream {
 		if (columns.isEmpty()) {
 			throw new IllegalArgumentException("No writable Vertica COPY columns: " + table.getName());
 		}
+		while(hasInputPrefix(inputPrefix))inputPrefix+="_";
 		rows = table.getRows().iterator();
+	}
+
+	private boolean hasInputPrefix(String prefix) {
+		return columns.stream().anyMatch(column->column.getName().toLowerCase(java.util.Locale.ROOT).startsWith(prefix));
+	}
+	static boolean writable(Column column,BulkOption options) {
+		return !column.isHidden() && CommonUtils.isEmpty(column.getFormula())
+				&& (!column.isIdentity() || options != null && options.isKeepIdentity());
+	}
+	static boolean binary(Column column) { return column.getDataType()!=null && column.getDataType().isBinary(); }
+	static boolean transformedInterval(Column column) {
+		return column.getDataType()!=null && column.getDataType().isInterval()
+				&& (column.getArrayDimension()==0 );
+	}
+	static String binaryText(byte[] bytes) {
+		var text=new StringBuilder(Math.multiplyExact(bytes.length,4));
+		for(byte value:bytes){int b=value&255;text.append('\\').append((char)('0'+(b>>>6))).append((char)('0'+((b>>>3)&7))).append((char)('0'+(b&7)));}
+		return text.toString();
+	}
+
+	String binaryInputName(Column column,int part){return inputPrefix+column.getOrdinal()+"_"+part;}
+	String inputName(Column column) {
+		return transformedInterval(column) ? inputPrefix+column.getOrdinal() : column.getName();
 	}
 
 	public List<Column> getColumns() {
@@ -71,7 +95,7 @@ public class VerticaBulkDataInputStream extends InputStream {
 				if (!rows.hasNext()) {
 					return written == 0 ? -1 : written;
 				}
-				current = toCsv(rows.next()).getBytes(StandardCharsets.UTF_8);
+				current = encodeRow(rows.next()).getBytes(StandardCharsets.UTF_8);
 				position = 0;
 				rowCount++;
 			}
@@ -83,7 +107,7 @@ public class VerticaBulkDataInputStream extends InputStream {
 		return written;
 	}
 
-	private String toCsv(final Row row) {
+	protected String encodeRow(final Row row) {
 		final StringBuilder builder = new StringBuilder();
 		for (int i = 0; i < columns.size(); i++) {
 			if (i > 0) {
@@ -93,7 +117,10 @@ public class VerticaBulkDataInputStream extends InputStream {
 			if (value == null) {
 				builder.append(NULL_MARKER);
 			} else {
-				final String text = value instanceof byte[] bytes ? java.util.HexFormat.of().formatHex(bytes)
+				final var column = columns.get(i);
+				final String text = column.getDataType() != null && column.getDataType().isInterval()
+						? new com.sqlapp.data.db.dialect.vertica.VerticaIntervalJdbcTypeHandler(column.getDataType()).text(value,column)
+						: value instanceof byte[] bytes ? binaryText(bytes)
 						: value.toString();
 				appendEscaped(builder, text);
 			}

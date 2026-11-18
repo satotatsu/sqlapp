@@ -37,6 +37,12 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 		validateOptions(options);
 		final BulkOption effective = options == null ? BulkOption.defaults() : options;
 		final List<Column> columns = writableColumns(table, effective);
+		for (var column : columns) {
+			var type = typedDbDataType(column);
+			if (type != null && type.getJdbcTypeHandler() instanceof com.sqlapp.data.db.datatype.IntervalTypeHandler interval
+					&& !interval.supportsJdbcBinding(column))
+				throw new IllegalArgumentException("Column " + column.getName() + " requires NATIVE transport; JDBC_BATCH cannot bind this interval declaration");
+		}
 		final int batchSize = effective.getBatchSize() == null
 				? DEFAULT_BATCH_SIZE : effective.getBatchSize();
 		if (batchSize <= 0) {

@@ -688,3 +688,50 @@ VARCHAR(65000), with SQLState42846. A real-server regression test verifies both
 failures and that no row was inserted. One-dimensional JDBC array support is
 unchanged; multi-dimensional JDBC writes remain rejected before execution.
 No new public API, dependency or user configuration setting is introduced.
+
+## Stage 11: Vertica nested DAY/TIME arrays through native JSON COPY
+
+Vertica 25.1.0-0 now supports DAY/TIME interval arrays through native JSON COPY.
+The real-server fixtures qualify dimensions 1, 2 and 3, all ten DAY/TIME
+qualifiers, finite microsecond endpoints, negative fractions, duplicate leaves,
+NULL leaves/subarrays/whole arrays and empty arrays at every level. Dimensions
+up to the existing 32-level model limit are accepted but not all server-qualified.
+The JDBC driver exposes NULL subarrays as empty JDBC Array wrappers; the Vertica
+reader instead decodes the outer array text, which retains their distinction.
+Other dialect readers are unchanged.
+
+Transfer review selects NATIVE for nested DAY/TIME declarations under AUTO,
+retains the decision in the captured plan, and emits INTERVAL_NATIVE_BINDING
+in review/audit results. Explicit JDBC_BATCH is rejected before target DDL,
+including NULL values. The shared IntervalTypeHandler.supportsJdbcBinding(Column)
+default remains true; only dialects requiring another transport override it.
+The low-level JDBC batch executor also checks it before consuming source rows.
+CSV/TSV/JSONL packages and JDBC_DIRECT transfers are qualified from H2 into
+Vertica with post-transfer data verification. Keyless duplicate rows are also
+qualified through full-scan verification. File encodings themselves are unchanged;
+JSON COPY is an internal destination transport.
+
+Native COPY uses strict materialized-type checking, ABORT ON ERROR and NO COMMIT,
+and checks accepted/rejected row counts. Autocommit connections use an owned
+transaction that commits only after the input is closed successfully; caller
+transactions retain commit/rollback ownership. Server rejections, input read
+failures and input-close failures are covered by real-server rollback/reuse tests.
+All 13 scalar interval qualifiers and binary NULL/empty/nonempty cells are
+qualified through delimited COPY. Interval text uses its declared qualifier;
+an incompatible text CAST can silently produce NULL on this server.
+
+JSON COPY accepts DAY/TIME interval arrays only. YEAR/MONTH multidimensional
+arrays remain explicitly unsupported: JDBC parameter casts reject them and
+FJSONPARSER cannot materialize their values. One-dimensional YEAR/MONTH arrays
+retain JDBC_BATCH selection; forced NATIVE is rejected at transfer review.
+A task combining nested DAY/TIME arrays and YEAR/MONTH arrays has no common
+supported transport and is rejected. Non-interval array columns in a JSON COPY
+row are also rejected. Hidden, computed and skipped identity columns are excluded
+from transport selection and validation.
+
+For JSON COPY rows, binary cells use two VARCHAR hex fillers and HEX_TO_BINARY,
+with an explicit limit of 65,000 bytes per binary cell. Larger cells fail rather
+than silently truncate. Scalar JSON values must have an explicitly supported
+Java representation, and floating-point values must be finite. This stage does
+not qualify every possible non-interval vendor type or older Vertica versions.
+No dependency versions, credentials or public configuration formats change.

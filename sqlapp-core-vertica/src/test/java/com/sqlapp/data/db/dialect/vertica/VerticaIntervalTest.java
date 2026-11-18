@@ -30,4 +30,17 @@ class VerticaIntervalTest {
 		assertThrows(ArithmeticException.class, () -> handler.prepareInterval(IntervalValue.parse("P2147483648Y"), column));
 		assertThrows(IllegalArgumentException.class, () -> handler.prepareInterval(IntervalValue.parse("P1M1D"), column));
 	}
+	@Test void transportCapabilitiesAreCheckedEvenForNullArrays() {
+		var day=new VerticaIntervalJdbcTypeHandler(DataType.INTERVAL_DAY_TO_SECOND);
+		var column=new Column("C").setDataType(DataType.INTERVAL_DAY_TO_SECOND).setLength(6).setArrayDimension(2);
+		assertFalse(day.supportsJdbcBinding(column));day.validateIntervalColumn(column);
+		assertFalse(day.requiresJdbcBinding(null,column,null));
+		var month=new VerticaIntervalJdbcTypeHandler(DataType.INTERVAL_YEAR_TO_MONTH);
+		column.setDataType(DataType.INTERVAL_YEAR_TO_MONTH);
+		assertThrows(IllegalArgumentException.class,()->month.validateIntervalColumn(column));
+		assertThrows(IllegalArgumentException.class,()->month.prepareInterval(null,column));
+		column.setArrayDimension(1);month.validateIntervalColumn(column);
+		assertTrue(month.supportsJdbcBinding(column));assertTrue(month.requiresJdbcBinding(null,column,null));
+	}
+
 }
