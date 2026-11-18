@@ -4,6 +4,7 @@ package com.sqlapp.data.db.dialect.test.duckdb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.StringReader;
@@ -119,8 +120,17 @@ class DuckDbScriptAndSchemaXmlTest {
 			final Dialect dialect;
 			try (var connection = target.getConnection()) {
 				dialect = DialectResolver.getInstance().getDialect(connection);
+				// Retarget the canonical model explicitly; generated SQL must never
+				// silently discard a source catalog and write to another database.
+				schema.setCatalogName(connection.getCatalog());
 			}
 			final SqlFactoryRegistry registry = dialect.createSqlFactoryRegistry();
+			assertThrows(IllegalArgumentException.class,
+					() -> registry.createSql(schema.getFunctions().get("label"), SqlType.CREATE));
+			// DuckDB catalogs omit defaults: provide the complete original macro DDL.
+			schema.getFunctions().get("label").setDefinition("CREATE MACRO s1.label(v) AS v || $$;$$");
+			schema.getFunctions().get("parents")
+					.setDefinition("CREATE MACRO s1.parents(n) AS TABLE SELECT * FROM s1.parent WHERE id <= n");
 			final List<SqlOperation> operations = new ArrayList<>();
 			operations.add(new SqlOperation("CREATE SCHEMA s1", SqlType.CREATE));
 			schema.getDomains().forEach(d -> operations.addAll(registry.createSql(d, SqlType.CREATE)));
