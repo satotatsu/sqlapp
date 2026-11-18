@@ -20,85 +20,91 @@
 package com.sqlapp.data.interval;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
+
 /**
  * INTERVAL DAY型
+ * 
  * @author satoh
  *
  */
-public final class IntervalDay extends Interval{
+public final class IntervalDay extends Interval {
 
-    /**
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 2517932092799906545L;
 
 	/**
-     * コンストラクタ
-     */
-	public IntervalDay(){
-    }
+	 * コンストラクタ
+	 */
+	public IntervalDay() {
+	}
 
 	/**
-	 * コンストラクタ 
+	 * コンストラクタ
+	 * 
 	 * @param days
 	 */
-    public IntervalDay(int days){
-        super(0, 0
-        		, days, 0
-        		, 0, 0
-        		, 0);
-    }
+	public IntervalDay(int days) {
+		super(0, 0, days, 0, 0, 0, 0);
+	}
 
-    /**
-     * IntervalからIntervalDayへの変換
-     * @param interval
-     */
-    public static IntervalDay toDayType(final Interval interval){
-    	if (interval==null){
-    		return null;
-    	}
+	/**
+	 * IntervalからIntervalDayへの変換
+	 * 
+	 * @param interval
+	 */
+	public static IntervalDay toDayType(final Interval interval) {
+		if (interval == null) {
+			return null;
+		}
 		final Interval value = interval.toInterval();
-		IntervalDay result=new IntervalDay(value.getDays());
-		if (!value.isPositive()){
-    		result.scale(-1);
-    	}
-    	return result;
-    }
+		IntervalDay result = new IntervalDay(value.getDays());
+		if (!value.isPositive()) {
+			result.scale(-1);
+		}
+		return result;
+	}
 
-    /**
-     * 文字列からIntervalDayの構築
-     * @param val
-     */
-    public static IntervalDay parse(final String val){
-    	if (isEmpty(val)){
-    		return null;
-    	}
-    	Interval interval=Interval.parseDetail(val);
-    	if (interval==null){
-    		interval=Interval.parse(val, YEAR, DAY);
-    	}
-    	return toDayType(interval);
-    }
-    
-    /* (non-Javadoc)
-     * @see java.lang.Object#clone()
-     */
-    @Override
-    public IntervalDay clone(){
-		return (IntervalDay)super.clone();
-    }
+	/**
+	 * 文字列からIntervalDayの構築
+	 * 
+	 * @param val
+	 */
+	public static IntervalDay parse(final String val) {
+		if (isEmpty(val)) {
+			return null;
+		}
+		Interval interval = Interval.parseDetail(val);
+		if (interval == null) {
+			interval = Interval.parse(val, YEAR, DAY);
+		}
+		return toDayType(interval);
+	}
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString(){
-    	StringBuilder builder=new StringBuilder("");
-    	if (!this.isPositive()){
-        	builder.append("-");
-    	}
-    	builder.append((this.getDays()));
-    	builder.append("");
-    	return builder.toString();
-    }
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#clone()
+	 */
+	@Override
+	public IntervalDay clone() {
+		return (IntervalDay) super.clone();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder("");
+		if (!this.isPositive()) {
+			builder.append("-");
+		}
+		builder.append((this.getDays()));
+		builder.append("");
+		return builder.toString();
+	}
 }
