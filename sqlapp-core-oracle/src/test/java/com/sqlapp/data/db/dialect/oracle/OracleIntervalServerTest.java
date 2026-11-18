@@ -14,6 +14,49 @@ import com.sqlapp.data.schemas.Column;
 @EnabledIfSystemProperty(named = "sqlapp.interval.oracle.url",
 		matches = "jdbc:oracle:thin:@//127[.]0[.]0[.]1:11521/FREEPDB1")
 class OracleIntervalServerTest {
+	@Test void namedCollectionsPreserveNanosNullsBoundsAndBagSemantics() throws Exception {
+		try (var connection = DriverManager.getConnection(System.getProperty("sqlapp.interval.oracle.url"),
+				"interval_test", "interval_test_2026"); var sql = connection.createStatement()) {
+			for (boolean nested : new boolean[]{false, true}) {
+				String name = "I_COL_" + UUID.randomUUID().toString().replace("-", "").substring(0,12).toUpperCase(java.util.Locale.ROOT);
+				String table = name + "_T";
+				sql.execute("CREATE TYPE " + name + " AS " + (nested ? "TABLE" : "VARRAY(8)") + " OF INTERVAL DAY(9) TO SECOND(9)");
+				try {
+					var column = com.sqlapp.data.db.dialect.oracle.metadata.OracleIntervalCollections.column(connection, name).setName("C");
+					var handler = new OracleIntervalJdbcTypeHandler(DataType.INTERVAL_DAY_TO_SECOND);
+					Object[] input = {IntervalValue.parse("P999999999DT0.123456789S"), null, IntervalValue.parse("PT-0.000000001S"), IntervalValue.parse("PT-0.000000001S")};
+					Object[] expected = (Object[]) handler.prepareInterval(input, column).value();
+					assertEquals(nested, handler.prepareInterval(input, column).warnings().contains("INTERVAL_COLLECTION_UNORDERED"));
+					sql.execute("CREATE TABLE " + table + "(id INT,C " + name + ")" + (nested ? " NESTED TABLE C STORE AS " + name + "_S" : ""));
+					try {
+						var dialect=com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(connection);
+						var reader=dialect.getCatalogReader().getSchemaReader().getTableReader().getColumnReader();
+						reader.setSchemaName("INTERVAL_TEST"); reader.setObjectName(table);
+						var captured=reader.getAll(connection).stream().filter(item->item.getName().equals("C")).findFirst().orElseThrow();
+						assertEquals(1,captured.getArrayDimension());assertEquals(9L,captured.getLength());assertEquals(9,captured.getScale());
+						var recreated=new com.sqlapp.data.schemas.Table(table+"_COPY");recreated.getColumns().add(captured.clone());
+						for(var operation:dialect.createSqlFactoryRegistry().createSql(recreated,com.sqlapp.data.db.sql.SqlType.CREATE)) sql.execute(operation.getSqlText());
+						sql.execute("DROP TABLE "+table+"_COPY PURGE");
+						try (var insert = connection.prepareStatement("INSERT INTO " + table + " VALUES(?,?)")) {
+							for(int i=1;i<=3;i++) {
+								insert.setInt(1,i); handler.setObject(insert,2,i==1?input:i==2?new Object[0]:null,column); insert.addBatch();
+							}
+							insert.executeBatch();
+						}
+						sql.execute("INSERT INTO " + table + " VALUES(4," + handler.literal(input,column) + ")");
+						try (var rows = sql.executeQuery("SELECT C FROM " + table + " ORDER BY id")) {
+							assertTrue(rows.next()); assertArrayEquals(expected,(Object[])handler.getObject(rows,1,column));
+							assertTrue(rows.next()); assertArrayEquals(new Object[0],(Object[])handler.getObject(rows,1,column));
+							assertTrue(rows.next()); assertNull(handler.getObject(rows,1,column));
+							assertTrue(rows.next()); assertArrayEquals(expected,(Object[])handler.getObject(rows,1,column));
+						}
+						if(!nested) assertThrows(IllegalArgumentException.class,()->handler.prepareInterval(new Object[9],column));
+					} finally {sql.execute("DROP TABLE " + table + " PURGE");}
+				} finally {sql.execute("DROP TYPE " + name);}
+			}
+		}
+	}
+
 	@Test
 	void realDriverAndServerPreserveYearDayBoundsNanosAndNull() throws Exception {
 		String table = "I_RT_" + UUID.randomUUID().toString().replace("-", "").substring(0, 15).toUpperCase(java.util.Locale.ROOT);

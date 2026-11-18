@@ -26,6 +26,10 @@ import java.sql.SQLException;
 import com.sqlapp.data.schemas.Column;
 
 public interface JdbcTypeHandler {
+	/** Configure a newly created, SQLapp-owned read statement; close restores temporary connection settings. */
+	default JdbcReadScope prepareRead(PreparedStatement statement) throws SQLException { return JdbcReadScope.NONE; }
+	/** Exact server-side projection for typed JDBC readers. The argument is already identifier-quoted. */
+	default String readExpression(String quotedColumn, Column column) { return quotedColumn; }
 
 	/**
 	 * ResultSetから値を取得します

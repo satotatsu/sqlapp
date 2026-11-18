@@ -30,6 +30,8 @@ public class VerticaBulkInsertExecutor implements BulkInsertExecutor {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(table, "table");
 		validateOptions(options);
+		if(table.getColumns().stream().anyMatch(column->column.getArrayDimension()>0))
+			throw new IllegalArgumentException("Vertica delimited COPY cannot load arrays; choose JDBC_BATCH");
 		try (VerticaBulkDataInputStream input = new VerticaBulkDataInputStream(table, options)) {
 			final StringBuilder sql = new StringBuilder("COPY ")
 					.append(dialect.getObjectFullName(table.getSchemaName(), table.getName())).append(" (");

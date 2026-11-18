@@ -20,6 +20,11 @@ public final class PostgresIntervalJdbcTypeHandler extends DefaultJdbcTypeHandle
 	private static final long serialVersionUID = 1L;
 
 	@Override public boolean fixedArrayDimensions() { return false; }
+	@Override public com.sqlapp.data.db.datatype.JdbcReadScope prepareRead(PreparedStatement statement) throws SQLException {
+		if (statement.getConnection().getMetaData().getDatabaseMajorVersion() >= 15)
+			return com.sqlapp.data.db.datatype.JdbcReadScope.NONE;
+		return PostgresIntervalBinary.prepareRead(statement);
+	}
 
 	@Override
 	public com.sqlapp.data.db.datatype.IntervalConversion prepareInterval(Object value, Column destination) {
@@ -39,22 +44,9 @@ public final class PostgresIntervalJdbcTypeHandler extends DefaultJdbcTypeHandle
 		return com.sqlapp.data.db.datatype.IntervalConversion.unchanged(interval);
 	}
 
-	@Override
-	public com.sqlapp.data.db.datatype.IntervalConversion prepareInterval(Object value, Column destination,
-			java.sql.DatabaseMetaData server) throws SQLException {
-		var prepared = prepareInterval(value, destination);
-		if (server.getDatabaseMajorVersion() < 15) {
-			com.sqlapp.data.db.datatype.IntervalArrays.map(prepared.value(),
-					destination.getArrayDimension() == 0 ? 0 : com.sqlapp.data.db.datatype.IntervalArrays.dimensions(prepared.value()), leaf -> {
-					var time = ((IntervalValue) leaf).timePart();
-					var hours = java.math.BigInteger.valueOf(time.getSeconds()).multiply(java.math.BigInteger.valueOf(1_000_000_000L))
-							.add(java.math.BigInteger.valueOf(time.getNano())).abs().divide(java.math.BigInteger.valueOf(3_600_000_000_000L));
-					if (hours.compareTo(java.math.BigInteger.valueOf(Integer.MAX_VALUE)) > 0)
-						throw new IllegalArgumentException("PostgreSQL before 15 cannot parse interval clock hours beyond int32; use a binary interval transport");
-					return leaf;
-				});
-		}
-		return prepared;
+	@Override public boolean requiresJdbcBinding(Object value, Column destination, java.sql.DatabaseMetaData server)
+			throws SQLException {
+		return server.getDatabaseMajorVersion() < 15 && PostgresIntervalBinary.required(value);
 	}
 
 	@Override
@@ -92,6 +84,9 @@ public final class PostgresIntervalJdbcTypeHandler extends DefaultJdbcTypeHandle
 		if (column.getArrayDimension() > 0) {
 			if (value == null) { statement.setNull(index, java.sql.Types.ARRAY); return; }
 			prepareInterval(value, column);
+			if (PostgresIntervalBinary.required(value)) {
+				PostgresIntervalBinary.bind(statement, index, value, true); return;
+			}
 			var scalar = column.clone().setArrayDimension(0);
 			var text = (Object[]) com.sqlapp.data.db.datatype.IntervalArrays.map(value,
 					com.sqlapp.data.db.datatype.IntervalArrays.dimensions(value),
@@ -104,11 +99,24 @@ public final class PostgresIntervalJdbcTypeHandler extends DefaultJdbcTypeHandle
 		if (interval != null) {
 			PostgresIntervalCodec.encode(interval, column);
 		}
-		super.setObject(statement, index, interval);
+		setObject(statement, index, interval);
+	}
+
+	@Override public void setObject(PreparedStatement statement, int index, Object value) throws SQLException {
+		if (!(statementConverter instanceof ToPGIntervalConverter)) { super.setObject(statement, index, value); return; }
+		var converted = (org.postgresql.util.PGobject) statementConverter.convertObject(value);
+		var interval = PostgresIntervalCodec.decode(converted);
+		if (interval != null && PostgresIntervalBinary.required(interval)) PostgresIntervalBinary.bind(statement, index, interval, false);
+		else statement.setObject(index, converted, java.sql.Types.OTHER);
 	}
 
 	@Override
 	public Object getObject(final ResultSet result, final int column) throws SQLException {
+		if (PostgresIntervalBinary.binary(result, column)) {
+			byte[] bytes = result.getBytes(column);
+			return bytes == null ? null : com.sqlapp.data.db.datatype.IntervalArrays.array(result, column)
+					? PostgresIntervalBinary.readArray(bytes) : PostgresIntervalBinary.readScalar(bytes);
+		}
 		if (com.sqlapp.data.db.datatype.IntervalArrays.array(result, column))
 			return readArray(result.getArray(column), result.getString(column));
 		return resultSetconverter.convertObject(result.getString(column));
@@ -116,6 +124,8 @@ public final class PostgresIntervalJdbcTypeHandler extends DefaultJdbcTypeHandle
 
 	@Override
 	public Object getObject(final ResultSet result, final String column) throws SQLException {
+		if (result.getMetaData() instanceof org.postgresql.jdbc.PgResultSetMetaData)
+			return getObject(result, result.findColumn(column));
 		if (result.getMetaData() != null && com.sqlapp.data.db.datatype.IntervalArrays.array(result, result.findColumn(column)))
 			return readArray(result.getArray(column), result.getString(column));
 		return resultSetconverter.convertObject(result.getString(column));

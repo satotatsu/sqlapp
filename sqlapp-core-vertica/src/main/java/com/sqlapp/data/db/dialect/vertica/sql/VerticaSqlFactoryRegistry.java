@@ -45,6 +45,7 @@ public class VerticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 				VerticaCreateCheckConstraintFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE, VerticaCreateIndexFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.DROP, VerticaDropIndexFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT, VerticaInsertFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, VerticaCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, VerticaDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, VerticaCreateTemporaryTableFactory.class);

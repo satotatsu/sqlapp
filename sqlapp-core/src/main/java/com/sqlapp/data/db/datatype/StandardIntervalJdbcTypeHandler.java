@@ -101,7 +101,7 @@ public class StandardIntervalJdbcTypeHandler implements IntervalTypeHandler, jav
 
 	@Override
 	public Column adaptIntervalColumn(Column destination, IntervalPrecision source) {
-		return destination.setLength(source.leading() < 0 ? maximumPrecision
+		return destination.setDataTypeName(null).setLength(source.leading() < 0 ? maximumPrecision
 				: Math.max(minimumPrecision, Math.min(source.leading(), maximumPrecision)))
 				.setScale(type.name().endsWith("SECOND") ? Math.min(source.fractional(), maximumScale) : null);
 	}

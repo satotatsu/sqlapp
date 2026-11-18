@@ -78,6 +78,15 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 	@Override
 	protected void addOption(final Table table, OracleSqlBuilder builder) {
 		addTableOptions(table, builder);
+		for (var column : table.getColumns()) {
+			if (column.getArrayDimension() == 1 && "TABLE".equals(column.getSpecifics().get(
+					com.sqlapp.data.db.dialect.oracle.metadata.OracleIntervalCollections.KIND))) {
+				String identity = table.getSchemaName() + "\u0000" + table.getName() + "\u0000" + column.getName();
+				String storage = "I_NT_" + java.util.UUID.nameUUIDFromBytes(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+						.toString().replace("-", "").substring(0,24);
+				builder.lineBreak()._add("NESTED TABLE ").name(column.getName())._add(" STORE AS ").name(storage);
+			}
+		}
 		if (table.getLobTableSpaceName() != null) {
 			if (table.getTableType() == Table.TableType.Temporary)
 				throw new IllegalArgumentException(

@@ -88,6 +88,26 @@ public class VerticaColumnReader extends ColumnReader {
 				obj.getSpecifics().put("CURRENT_VALUE", allocated);
 			obj.setIdentityCycle(toBoolean(getString(rs, "ALLOW_CYCLE")));
 		}
+		var arrayBounds = new java.util.ArrayList<String>();
+		while (data_type.toLowerCase(java.util.Locale.ROOT).startsWith("array[")
+				&& data_type.toLowerCase(java.util.Locale.ROOT).contains("interval")) {
+			int closing=data_type.lastIndexOf(']');
+			if(closing<6) throw new IllegalArgumentException("Invalid Vertica ARRAY declaration");
+			if(arrayBounds.isEmpty() && closing<data_type.length()-1) {
+				String capacity=data_type.substring(closing+1);
+				if(!capacity.matches("\\([1-9][0-9]*\\)")) throw new IllegalArgumentException("Invalid Vertica ARRAY capacity");
+				obj.getSpecifics().put("vertica.interval.arrayMaxBytes",capacity.substring(1,capacity.length()-1));
+			}
+			String body = data_type.substring(6, closing).strip();
+			int depth = 0, comma = -1;
+			for(int i=0;i<body.length();i++) { char ch=body.charAt(i); if(ch=='[')depth++; else if(ch==']')depth--; else if(ch==','&&depth==0)comma=i; }
+			arrayBounds.add(comma < 0 ? "*" : body.substring(comma+1).strip());
+			data_type = (comma < 0 ? body : body.substring(0,comma)).strip();
+		}
+		if(!arrayBounds.isEmpty()) {
+			data_type=data_type.toUpperCase(java.util.Locale.ROOT);
+			if(data_type.matches("INTERVAL(?:\\([0-6]\\))?")) data_type=data_type.replace("INTERVAL","INTERVAL DAY TO SECOND");
+		}
 		this.getDialect().setDbType(data_type, maxNullable(char_maxlength, numeric_precision,
 				datetime_precision == null ? null : datetime_precision.longValue()), numeric_scale, obj);
 		// NUMERIC_SCALE is reported as zero even for temporal columns. It is not
@@ -95,6 +115,15 @@ public class VerticaColumnReader extends ColumnReader {
 		if (obj.getDataType() != null && obj.getDataType().isInterval()) {
 			obj.setLength(datetime_precision == null ? null : datetime_precision.longValue());
 			obj.setScale((Integer) null);
+			if (!arrayBounds.isEmpty()) {
+				obj.setArrayDimension(arrayBounds.size());
+				var precision = java.util.regex.Pattern.compile("\\(([0-6])\\)").matcher(data_type);
+				if (precision.find()) obj.setLength(Long.parseLong(precision.group(1)));
+				else obj.setLength(data_type.endsWith("SECOND") ? 6L : 0L);
+				java.util.Collections.reverse(arrayBounds);
+				obj.getSpecifics().put(com.sqlapp.data.db.datatype.IntervalArrays.DECLARED_BOUNDS, String.join(",",arrayBounds));
+			}
+
 		} else if (obj.getDataType() != null && obj.getDataType().isDateTime()) {
 			obj.setLength(datetime_precision == null ? null : datetime_precision.longValue());
 			obj.setScale(datetime_precision);

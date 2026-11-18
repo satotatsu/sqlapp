@@ -10,6 +10,9 @@ public interface IntervalTypeHandler extends JdbcTypeHandler {
 		return column.getDataTypeName() == null ? column.getDataType().name() : column.getDataTypeName();
 	}
 	IntervalConversion prepareInterval(Object value, Column destination);
+	/** True when an exact value requires this adapter's JDBC binding rather than a text bulk loader. */
+	default boolean requiresJdbcBinding(Object value, Column destination, java.sql.DatabaseMetaData server)
+			throws java.sql.SQLException { return false; }
 	/** Validates declarations even when the source has no non-null interval values. */
 	default void validateIntervalColumn(Column destination) { intervalPrecision(destination); }
 	/** Adds known server-version limits before target DDL or writes. */

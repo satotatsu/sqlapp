@@ -169,7 +169,9 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		try {
 			statement.setFetchSize(fetchSize);
 			parameters.setBind(statement);
-			return new KeysetIterator(statement, statement.executeQuery(), dialect);
+			try (var scope = com.sqlapp.data.db.datatype.JdbcReadScope.prepare(statement, table, dialect)) {
+				return new KeysetIterator(statement, statement.executeQuery(), dialect);
+			}
 		} catch (SQLException | RuntimeException e) {
 			DbUtils.close(statement);
 			throw e;
@@ -215,6 +217,7 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 
 	private SqlNode selectNode(final Dialect dialect, final TableRelation relation) {
 		final var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setJdbcRead(true);
 		return registry.getTableOptions().useSelectByRowComparisonOperatorStrategy(
 				table -> RowComparisonOperator.GREATER_THAN,
 				() -> registry.createSqlNodes(relation, SqlType.SELECT_BY_ROW).get(0));

@@ -330,8 +330,7 @@ public class Oracle extends Dialect {
 		var type = column.getDataType();
 		if (type == DataType.INTERVAL_YEAR_TO_MONTH || type == DataType.INTERVAL_DAY_TO_SECOND) {
 			var handler = (OracleIntervalJdbcTypeHandler) getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
-			var codec = handler.codec(column);
-			return value == null ? "NULL" : codec.literal(value);
+			return handler.literal(value, column);
 		}
 		return super.getSqlValueDefinition(column, value);
 	}
