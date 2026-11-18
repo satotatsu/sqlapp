@@ -21,15 +21,23 @@ package com.sqlapp.data.db.dialect.duckdb;
 
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
+import java.sql.SQLException;
+import java.time.LocalTime;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.converter.DefaultConverter;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.duckdb.metadata.DuckDbCatalogReader;
 import com.sqlapp.data.db.dialect.duckdb.sql.DuckDbSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbJdbcTypeHandlers;
+import com.sqlapp.data.db.dialect.duckdb.util.DuckDbNativeType;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbSqlBuilder;
 import com.sqlapp.data.db.dialect.duckdb.util.DuckDbSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -136,6 +144,8 @@ public class DuckDb extends Dialect {
 		getDbDataTypes().addDate(type -> {
 			type.setDefaultValueLiteral(getCurrentDateFunction());
 			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.DateHandler());
+			type.setConverter(new DefaultConverter());
+			type.setFormatter(new DefaultConverter());
 		});
 		getDbDataTypes().addTime(type -> {
 			type.setCreateFormat("TIME");
@@ -146,6 +156,9 @@ public class DuckDb extends Dialect {
 			type.setCreateFormat("TIMETZ");
 			type.addColumnTypeMatcher("TIME WITH TIME ZONE");
 			type.setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction());
+			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.TimeWithTimeZoneHandler());
+			type.setConverter(new DefaultConverter());
+			type.setFormatter(new DefaultConverter());
 		});
 		getDbDataTypes().addTimestamp(type -> {
 			type.setCreateFormat("TIMESTAMP");
@@ -164,11 +177,19 @@ public class DuckDb extends Dialect {
 			type.setJdbcTypeHandler(new DuckDbJdbcTypeHandlers.IntervalHandler());
 			var converter = new com.sqlapp.data.converter.AbstractConverter<com.sqlapp.data.interval.IntervalValue>() {
 				private static final long serialVersionUID = 1L;
-				@Override public com.sqlapp.data.interval.IntervalValue convertObject(Object value) {
+
+				@Override
+				public com.sqlapp.data.interval.IntervalValue convertObject(Object value) {
 					return value == null || "".equals(value) ? getDefaultValue() : DuckDbIntervalCodec.decode(value);
 				}
-				@Override public com.sqlapp.data.interval.IntervalValue copy(Object value) { return convertObject(value); }
-				@Override public String format(com.sqlapp.data.interval.IntervalValue value) {
+
+				@Override
+				public com.sqlapp.data.interval.IntervalValue copy(Object value) {
+					return convertObject(value);
+				}
+
+				@Override
+				public String format(com.sqlapp.data.interval.IntervalValue value) {
 					return value == null ? null : DuckDbIntervalCodec.encode(value);
 				}
 			};
@@ -184,6 +205,9 @@ public class DuckDb extends Dialect {
 		});
 		// ENUM
 		getDbDataTypes().addEnum();
+		// Native/nested types retain their type expression in the Schema model.
+		// DuckDB's canonical text preserves values without driver-specific objects.
+		getDbDataTypes().register(new DuckDbNativeType());
 	}
 
 	@Override
@@ -194,6 +218,41 @@ public class DuckDb extends Dialect {
 	@Override
 	public String getSimpleName() {
 		return "duckdb";
+	}
+
+	/**
+	 * Reads the current catalog's schema with complete macro DDL on DuckDB 2.0+.
+	 * Requires auto-commit and uses a temporary data-free catalog export, removed
+	 * before returning. Low-level readers remain read-only unless explicitly
+	 * enabled.
+	 */
+	public com.sqlapp.data.schemas.Schema readSchema(final java.sql.Connection connection, final String schemaName)
+			throws SQLException {
+		if (!(this instanceof DuckDbVersions.DuckDb20))
+			throw new UnsupportedOperationException("Complete macro extraction requires DuckDB 2.0+");
+		if (!connection.getAutoCommit())
+			throw new SQLException("Complete DuckDB schema extraction requires an auto-commit connection");
+		final var reader = getCatalogReader().getSchemaReader();
+		reader.setCatalogName(connection.getCatalog());
+		reader.setSchemaName(schemaName == null ? connection.getSchema() : schemaName);
+		((com.sqlapp.data.db.dialect.duckdb.metadata.DuckDbSchemaReader) reader).setReadCompleteMacroDefinitions(true);
+		final var schemas = reader.getAllFull(connection);
+		if (schemas.size() != 1)
+			throw new SQLException("Expected one DuckDB schema, found " + schemas.size());
+		return schemas.getFirst();
+	}
+
+	@Override
+	public Converter<?> getColumnValueConverter(final Column column) {
+		if (column.getArrayDimension() == 0) {
+			if (column.getDataType() == DataType.DATE || column.getDataType() == DataType.TIME_WITH_TIMEZONE) {
+				return new DefaultConverter();
+			}
+			if (column.getDataType() == DataType.TIME) {
+				return Converters.getDefault().getConverter(LocalTime.class);
+			}
+		}
+		return null;
 	}
 
 	@Override
@@ -228,12 +287,16 @@ public class DuckDb extends Dialect {
 
 	/**
 	 * Whether {@code ALTER TABLE ... ADD PRIMARY KEY} is available (DuckDB 1.2+).
-	 * DuckDB cannot add UNIQUE, CHECK or FOREIGN KEY constraints to an existing
-	 * table in any version.
+	 * UNIQUE is supported from 2.0; CHECK and FOREIGN KEY require table recreation.
 	 *
 	 * @return whether a primary key can be added to an existing table
 	 */
 	public boolean supportsAlterTableAddPrimaryKey() {
+		return false;
+	}
+
+	/** Whether ALTER TABLE ADD UNIQUE is supported (DuckDB 2.0+). */
+	public boolean supportsAlterTableAddUnique() {
 		return false;
 	}
 
@@ -423,10 +486,44 @@ public class DuckDb extends Dialect {
 	public boolean isRepeatableReadSnapshotIsolation() {
 		return true;
 	}
+
 	@Override
-	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
-		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL)
+	public String getSqlValueDefinition(final Column column, final Object value) {
+		if (value != null && (column.getDataType() == DataType.DATE || column.getDataType() == DataType.TIME
+				|| column.getDataType() == DataType.TIME_WITH_TIMEZONE)) {
+			try {
+				final String text;
+				final String type;
+				if (column.getDataType() == DataType.DATE) {
+					text = DuckDbJdbcTypeHandlers.DateHandler.format(value);
+					type = "DATE";
+				} else if (column.getDataType() == DataType.TIME) {
+					text = DuckDbJdbcTypeHandlers.TimeHandler.format(value);
+					type = "TIME";
+				} else {
+					text = DuckDbJdbcTypeHandlers.TimeWithTimeZoneHandler.format(value);
+					type = "TIMETZ";
+				}
+				return createSqlBuilder().sqlChar(text)._add("::")._add(type).toString();
+			} catch (SQLException e) {
+				throw new IllegalArgumentException("Invalid DuckDB temporal value for " + column.getName(), e);
+			}
+		}
+		if (column.getDataType() == DataType.INTERVAL)
 			return value == null ? "NULL" : new DuckDbIntervalJdbcTypeHandler().literal(value, column);
+		if (column.getDataType() == DataType.OTHER) {
+			if (value == null) {
+				return "NULL";
+			}
+			if (!(value instanceof CharSequence) || column.getDataTypeName() == null) {
+				throw new IllegalArgumentException(
+						"DuckDB native values require a type expression and canonical text: " + column.getName());
+			}
+			final String literal = createSqlBuilder().sqlChar(value.toString()).toString();
+			final String expression = com.sqlapp.data.db.dialect.duckdb.util.DuckDbNativeCodec.writeExpression(literal,
+					column);
+			return expression.equals(literal) ? literal + "::" + column.getDataTypeName() : expression;
+		}
 		return super.getSqlValueDefinition(column, value);
 	}
 

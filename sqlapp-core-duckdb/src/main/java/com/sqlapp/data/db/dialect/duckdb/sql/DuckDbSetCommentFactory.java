@@ -56,6 +56,9 @@ public class DuckDbSetCommentFactory extends AbstractSqlFactory<AbstractNamedObj
 		builder.comment().on().space()._add(kind).space();
 		if (object instanceof Column column) {
 			requireName(column.getTableName());
+			if (getOptions().isDecorateSchemaName() && column.getCatalogName() != null) {
+				builder.name(column.getCatalogName())._add(".");
+			}
 			if (getOptions().isDecorateSchemaName() && column.getSchemaName() != null) {
 				builder.name(column.getSchemaName())._add(".");
 			}

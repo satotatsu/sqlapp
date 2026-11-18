@@ -15,6 +15,11 @@ javadoc {
 	include '**/duckdb/**'
 }
 
+tasks.withType(Test).configureEach {
+	inputs.property('duckdbExtensionDirectory',
+			providers.environmentVariable('SQLAPP_DUCKDB_EXTENSION_DIRECTORY').orElse(''))
+}
+
 // DuckDB is embedded in its JDBC driver, so each engine version is tested by
 // swapping the driver jar instead of starting a container. The regular `test`
 // task uses the driver declared above.

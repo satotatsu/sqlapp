@@ -32,6 +32,7 @@ public class DuckDbSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.CREATE, DuckDbCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, DuckDbAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, DuckDbMergeFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, DuckDbSelectForAppFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, DuckDbCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, DuckDbTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ANALYZE, DuckDbAnalyzeTableFactory.class);

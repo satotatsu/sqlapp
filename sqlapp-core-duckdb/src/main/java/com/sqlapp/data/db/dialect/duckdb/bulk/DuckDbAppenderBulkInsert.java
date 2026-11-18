@@ -462,6 +462,12 @@ final class DuckDbAppenderBulkInsert {
 
 	/** Same inputs as {@code DuckDbJdbcTypeHandlers.DateHandler}. */
 	private static LocalDate date(final Object value) {
+		if ("infinity".equals(value)) {
+			return LocalDate.ofEpochDay(Integer.MAX_VALUE);
+		}
+		if ("-infinity".equals(value)) {
+			return LocalDate.ofEpochDay(-Integer.MAX_VALUE);
+		}
 		if (value instanceof LocalDate date) {
 			return date;
 		}

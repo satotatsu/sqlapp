@@ -50,6 +50,12 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * excluded.
  */
 public class DuckDbSchemaReader extends SchemaReader {
+	private boolean readCompleteMacroDefinitions;
+
+	/** Enables temporary schema-only export to recover macro parameter defaults. */
+	public void setReadCompleteMacroDefinitions(final boolean value) {
+		readCompleteMacroDefinitions = value;
+	}
 
 	protected DuckDbSchemaReader(final Dialect dialect) {
 		super(dialect);
@@ -134,7 +140,9 @@ public class DuckDbSchemaReader extends SchemaReader {
 
 	@Override
 	protected FunctionReader newFunctionReader() {
-		return new DuckDbFunctionReader(getDialect());
+		final var reader = new DuckDbFunctionReader(getDialect());
+		reader.setReadCompleteDefinitions(readCompleteMacroDefinitions);
+		return reader;
 	}
 
 	@Override

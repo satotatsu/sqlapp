@@ -66,7 +66,7 @@ public class DuckDbDialectResolver extends ProductNameDialectResolver {
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
 			if (majorVersion > 1) {
-				return DialectHolder.duckdb14;
+				return DialectHolder.duckdb20;
 			}
 			if (majorVersion < 1) {
 				return DialectHolder.duckdb10;

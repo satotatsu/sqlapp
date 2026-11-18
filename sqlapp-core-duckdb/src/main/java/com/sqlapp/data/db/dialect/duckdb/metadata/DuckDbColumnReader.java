@@ -109,8 +109,9 @@ public class DuckDbColumnReader extends ColumnReader {
 	protected void keepValuePrecision(final Column column) {
 		if (column.getDataType() == DataType.TIME) {
 			column.setConverter(Converters.getDefault().getConverter(LocalTime.class));
-		} else if (column.getDataType() == DataType.INTERVAL) {
-			column.setConverter(new DefaultConverter());
+		} else if (column.getDataType() == DataType.INTERVAL || column.getDataType() == DataType.DATE
+				|| column.getDataType() == DataType.TIME_WITH_TIMEZONE || column.getDataType() == DataType.OTHER) {
+			column.setConverter(new DefaultConverter()).setFormatter(new DefaultConverter());
 		}
 	}
 
