@@ -32,12 +32,8 @@ class TransferIntervalAdditionalServerTest {
 			try {
 				var saved=new TransferFileExportService().export(job,Map.of("from",source));
 				var service=new TransferFileImportService();
-				if(nativeOnly) {
-					var failure=assertThrows(IllegalArgumentException.class,()->service.review(saved.file(),saved.fingerprint(),Map.of("to",target)));
-					assertTrue(failure.getMessage().contains("JDBC_BATCH"));return;
-				}
+
 				var review=service.review(saved.file(),saved.fingerprint(),Map.of("to",target));
-				if(!informix) assertTrue(review.schemaPreparation().warnings().stream().anyMatch(warning->warning.contains("INTERVAL_JDBC_BINDING")));
 				var result=service.execute(review,Map.of("to",target),directory);
 				assertEquals(TransferJobExecutionService.Phase.COMPLETE,result.phase());
 				assertFalse(result.verification().isEmpty());

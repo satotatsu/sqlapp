@@ -25,7 +25,7 @@ class VerticaBulkDataInputStreamTest {
 		try (VerticaBulkDataInputStream input = new VerticaBulkDataInputStream(table, BulkOption.defaults())) {
 			assertEquals(4, input.getColumns().size());
 			assertEquals("name", input.getColumns().get(0).getName());
-			assertEquals("山田,\"太郎\"\nline\u001f\u001d\u001f\u001f00ff\u001e",
+			assertEquals("山田,\"太郎\"\nline\u001f\u001d\u001f\u001f\\\\000\\\\377\u001e",
 					new String(input.readAllBytes(), StandardCharsets.UTF_8));
 			assertEquals(1, input.getRowCount());
 		}

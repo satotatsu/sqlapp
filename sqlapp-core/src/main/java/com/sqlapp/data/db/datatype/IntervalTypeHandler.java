@@ -5,6 +5,8 @@ import com.sqlapp.data.schemas.Column;
 
 /** Common interval projection/precision boundary; vendor behavior stays in its adapter. */
 public interface IntervalTypeHandler extends JdbcTypeHandler {
+	/** Whether this declaration can be represented by one JDBC parameter. */
+	default boolean supportsJdbcBinding(Column column) { return true; }
 	default boolean fixedArrayDimensions() { return true; }
 	default String intervalQualifier(Column column) {
 		return column.getDataTypeName() == null ? column.getDataType().name() : column.getDataTypeName();

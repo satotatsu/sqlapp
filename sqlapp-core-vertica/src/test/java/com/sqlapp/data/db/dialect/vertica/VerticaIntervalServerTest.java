@@ -37,7 +37,7 @@ class VerticaIntervalServerTest {
 				var column=new Column("c").setDataType(DataType.INTERVAL_DAY_TO_SECOND).setLength(6).setArrayDimension(dimensions);
 				Object[] leaf={IntervalValue.parse("PT86400.000001S"),null,IntervalValue.parse("PT-3600S"),IntervalValue.ZERO};
 				Object[] input=dimensions==1?leaf:new Object[]{leaf,new Object[0],null};
-				assertThrows(IllegalArgumentException.class,()->handler.prepareInterval(new Object[]{leaf},column.clone().setArrayDimension(2)));
+				assertFalse(handler.supportsJdbcBinding(column.clone().setArrayDimension(2)));
 				String table="i_array_"+dimensions;
 				sql.execute("CREATE LOCAL TEMP TABLE "+table+"(id INT,c "+"ARRAY[".repeat(dimensions)+"INTERVAL DAY TO SECOND(6)"+"]".repeat(dimensions)+") ON COMMIT PRESERVE ROWS");
 				var dialect=com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(connection);

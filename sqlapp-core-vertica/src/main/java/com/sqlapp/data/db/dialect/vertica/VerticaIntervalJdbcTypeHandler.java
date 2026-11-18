@@ -14,6 +14,7 @@ import com.vertica.jdbc.VerticaYearMonthInterval;
 /** Exact native JDBC interval objects; no 30-day month conversion or double fractions. */
 public final class VerticaIntervalJdbcTypeHandler implements IntervalTypeHandler, java.io.Serializable {
 	private static final long serialVersionUID = 1L;
+	private static final com.sqlapp.util.JsonConverter ARRAY_JSON = new com.sqlapp.util.JsonConverter();
 	private final DataType type;
 	public VerticaIntervalJdbcTypeHandler(DataType type) { this.type = type; }
 	private boolean yearMonth() { return type.name().contains("YEAR") || type == DataType.INTERVAL_MONTH; }
@@ -42,7 +43,8 @@ public final class VerticaIntervalJdbcTypeHandler implements IntervalTypeHandler
 		return new IntervalValueConverter().convertObject(value);
 	}
 	@Override public void validateIntervalColumn(Column column) {
-		if (column.getArrayDimension() < 0 || column.getArrayDimension() > 1) throw new IllegalArgumentException("Vertica interval array JDBC writes support one dimension; the server cannot cast a nested array parameter");
+		if (column.getArrayDimension() < 0 || column.getArrayDimension() > 32) throw new IllegalArgumentException("Vertica interval arrays require 0..32 dimensions");
+		if(yearMonth() && column.getArrayDimension()>1)throw new IllegalArgumentException("Nested Vertica YEAR/MONTH intervals are not supported by the server JSON parser or JDBC parameter casts");
 		codec(column);
 	}
 	private IntervalValue parseText(String text, Column column) {
@@ -91,7 +93,8 @@ public final class VerticaIntervalJdbcTypeHandler implements IntervalTypeHandler
 		default -> com.vertica.jdbc.VerticaTypes.INTERVAL_DAY_TO_SECOND;
 		};
 	}
-	@Override public boolean requiresJdbcBinding(Object value, Column column, java.sql.DatabaseMetaData server) { return column.getArrayDimension()>0; }
+	@Override public boolean requiresJdbcBinding(Object value, Column column, java.sql.DatabaseMetaData server){return yearMonth() && column.getArrayDimension()>0;}
+	@Override public boolean supportsJdbcBinding(Column column) { return column.getArrayDimension() <= 1; }
 	@Override public IntervalConversion prepareInterval(Object input, Column column) {
 		if (column.getArrayDimension() > 0) {
 			validateIntervalColumn(column);
@@ -143,7 +146,11 @@ public final class VerticaIntervalJdbcTypeHandler implements IntervalTypeHandler
 	@Override public Object getObject(ResultSet rows, int index, Column column) throws SQLException {
 		if (column.getArrayDimension() > 0) {
 			var scalar = column.clone().setArrayDimension(0);
-			return IntervalArrays.read(rows.getArray(index), text -> parseText(text, scalar));
+			// The driver exposes null subarrays as empty java.sql.Array objects.
+			// Its outer JSON text retains null versus empty at every depth.
+			String text = rows.getString(index);
+			return text == null ? null : IntervalArrays.map(ARRAY_JSON.fromJsonString(text, Object.class),
+					column.getArrayDimension(), leaf -> parseText((String) leaf, scalar));
 		}
 		if (rows.getMetaData().getColumnType(index) == Types.VARCHAR) {
 			String text = rows.getString(index); return text == null ? null : parseText(text, column);
@@ -157,7 +164,8 @@ public final class VerticaIntervalJdbcTypeHandler implements IntervalTypeHandler
 		setObject(statement, index, value, new Column().setDataType(type));
 	}
 	@Override public void setObject(PreparedStatement statement, int index, Object value, Column column) throws SQLException {
-		codec(column);
+		validateIntervalColumn(column);
+		if (!supportsJdbcBinding(column)) throw new IllegalArgumentException("Nested Vertica intervals require NATIVE JSON COPY; one JDBC parameter cannot represent this declaration");
 		if (value == null) statement.setNull(index, column.getArrayDimension()>0 ? Types.VARCHAR : Types.NULL);
 		else if (column.getArrayDimension() > 0) statement.setString(index, json(prepareInterval(value,column).value(), column.getArrayDimension(), column.clone().setArrayDimension(0)));
 		else statement.setObject(index, nativeValue(value, column));
@@ -168,6 +176,13 @@ public final class VerticaIntervalJdbcTypeHandler implements IntervalTypeHandler
 		String qualifier=type==DataType.INTERVAL?"DAY TO SECOND":type.name().substring(9).replace('_',' ');
 		return "ARRAY[".repeat(column.getArrayDimension())+"INTERVAL "+qualifier
 				+(qualifier.endsWith("SECOND")?"("+intervalPrecision(column).fractional()+")":"")+"]".repeat(column.getArrayDimension());
+	}
+
+	/** Exact server input for one scalar, also used by native bulk transport. */
+	public String text(Object value, Column column) {
+		if (column.getArrayDimension() != 0) throw new IllegalArgumentException("Expected a scalar interval column");
+		var interval=(IntervalValue)prepareInterval(value,column).value();
+		return codec(column).convert(interval).text();
 	}
 
 	public String literal(Object value, Column column) {
