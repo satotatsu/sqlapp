@@ -26,13 +26,11 @@ ON (
      tc.COLUMN_NAME=tic.COLUMN_NAME
     )
 WHERE 1=1
-  /*if isNotEmpty(containsHiddenColumns)*/
-  /*if !containsHiddenColumns*/
+  /*if containsHiddenColumns == null || !containsHiddenColumns*/
   AND (tc.HIDDEN_COLUMN='NO' OR tc.USER_GENERATED='YES')
   /*end*/
-  /*if containsHiddenColumns*/
+  /*if containsHiddenColumns != null && containsHiddenColumns*/
   AND tc.HIDDEN_COLUMN='YES' AND tc.USER_GENERATED='NO'
-  /*end*/
   /*end*/
   /*if isNotEmpty(schemaName)*/
   AND tc.OWNER IN /*schemaName*/('%')

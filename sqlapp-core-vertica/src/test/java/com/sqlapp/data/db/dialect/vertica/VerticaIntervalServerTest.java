@@ -13,6 +13,22 @@ import com.sqlapp.data.schemas.Column;
 
 @EnabledIfSystemProperty(named="sqlapp.interval.vertica.url", matches="jdbc:vertica://127[.]0[.]0[.]1:15433/VMart")
 class VerticaIntervalServerTest {
+	@Test void serverRejectsNestedArrayParametersBeforeAnyInsert() throws Exception {
+		try (var connection=DriverManager.getConnection(System.getProperty("sqlapp.interval.vertica.url"),"dbadmin","");
+				var sql=connection.createStatement()) {
+			sql.execute("CREATE LOCAL TEMP TABLE i_nested_parameter(id INT,c ARRAY[ARRAY[INTERVAL DAY TO SECOND(6)]]) ON COMMIT PRESERVE ROWS");
+			for (String parameter : new String[]{"?", "CAST(? AS VARCHAR(65000))"}) {
+				var failure=assertThrows(SQLException.class,()-> {
+					try (var insert=connection.prepareStatement("INSERT INTO i_nested_parameter VALUES(1,CAST("+parameter+" AS ARRAY[ARRAY[INTERVAL DAY TO SECOND(6)]]))")) {
+						insert.setString(1,"[[\"0 01:00:00.000001\",null],[],null]");insert.executeUpdate();
+					}
+				});
+				assertEquals("42846",failure.getSQLState());
+			}
+			try (var rows=sql.executeQuery("SELECT COUNT(*) FROM i_nested_parameter")) {assertTrue(rows.next());assertEquals(0,rows.getInt(1));}
+		}
+	}
+
 	@Test void arraysPreserveNestedShapeNullsMicrosecondsAndLiteralValues() throws Exception {
 		try (var connection=DriverManager.getConnection(System.getProperty("sqlapp.interval.vertica.url"),"dbadmin","");var sql=connection.createStatement()) {
 			var handler=new VerticaIntervalJdbcTypeHandler(DataType.INTERVAL_DAY_TO_SECOND);

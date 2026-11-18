@@ -624,8 +624,8 @@ Real-server qualification in disposable local containers:
 | Informix | 14.10.FC9W1DE, 15.0.1.0.3 | Six native qualifiers, leading bounds, fractions, ordered LIST, metadata and recreation |
 | Vertica | 25.1.0-0 | All 13 qualifiers, finite microsecond endpoints, ARRAY, metadata, generated INSERT and recreation |
 
-Informix 12.10.FC12W1DE started locally but fixture JDBC authentication failed;
-it is not qualified by this run. Dr.Sum and TimesTen have no available dedicated
+Informix 12.10.FC12W1DE was initially blocked by fixture JDBC authentication;
+Stage 10 below completes this qualification. Dr.Sum and TimesTen have no available dedicated
 environment and were skipped as requested. Tests never connect to an external
 or production database. Real-server tests remain opt-in. The additional command
 fixture tests require the Informix/Vertica dialects and JDBC drivers on the test
@@ -637,5 +637,54 @@ Informix 15 and Vertica 25 with post-import data comparison. Vertica also verifi
 an entirely NULL array column under AUTO and rejects forced NATIVE before DDL.
 Oracle named collections were qualified through native JDBC and SQL literals,
 metadata and table recreation; their file-transfer path was not server-qualified
-in this stage. PostgreSQL 14 file transfer verifies AUTO/JDBC_BATCH success and
+in Stage 9; Stage 10 below adds bidirectional qualification. PostgreSQL 14 file transfer verifies AUTO/JDBC_BATCH success and
 NATIVE rejection for a clock component beyond the old text parser's range.
+
+
+## Stage 10: Oracle collection file transfer and Informix 12
+
+The Oracle Free 23.26.3 image is exercised in both directions between H2 and
+Oracle for named VARRAY and nested TABLE collections, YEAR(9) TO MONTH and
+DAY(9) TO SECOND(9), and CSV/TSV/JSONL. The 12 combinations each perform export,
+import and data verification in both directions. Cases include nanosecond
+fractions, maximum leading fields, negative values, duplicates, NULL elements,
+empty collections and NULL whole collections. Nested TABLE conversion retains
+its INTERVAL_COLLECTION_UNORDERED warning and canonical bag comparison.
+Destination SQL collection types are still an explicit prerequisite.
+
+These tests exposed Oracle storage metadata entering the logical Schema:
+
+* Column catalog queries now default to visible/user-authored columns when the
+  batch query context omits containsHiddenColumns, as well as when it is false.
+  Explicit true retains the existing internal-hidden-column selection. Oracle
+  12c and later still include user-authored INVISIBLE columns. The SQL conditions
+  handle a missing flag without a null-negation exception. Oracle11g and later
+  use these corrected column queries; earlier versions keep ALL_TAB_COLUMNS.
+* Oracle automatically generates a unique constraint and index for a nested
+  collection's internal identity. The constraint references a SYS_NC... storage
+  column while the index catalog reports the visible collection column. These
+  storage-only keys are excluded using catalog relationships to
+  ALL_NESTED_TABLES and ALL_IND_COLUMNS, without matching generated name prefixes.
+  Ordinary primary keys and unnamed user unique constraints, including an
+  INVISIBLE RAW column's key, remain modeled. The change uses the existing
+  batched catalog queries, with no additional per-table requests.
+
+The catalog fields used for the key relationship are present in the
+[Oracle9i Release 2 ALL_CONSTRAINTS reference](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch229.htm)
+and [ALL_NESTED_TABLES reference](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch287.htm).
+Older Oracle versions are covered by SQL evaluation/unit tests rather than
+real-server execution in this stage.
+
+Informix12.10.FC12W1DE passed the same native qualifier bounds, fractional
+precision, ordered LIST, NULL/empty handling and metadata recreation tests used
+for versions14 and15. This old image did not apply INFORMIX_PASSWORD to its
+initial account; qualification used the image's built-in fixture credential.
+The temporary trust-file experiment was removed before the successful run;
+normal password authentication was used. This is only a disposable loopback
+fixture procedure, with no production authentication changes.
+
+Vertica25.1 rejects both a direct nested-array parameter CAST and a CAST through
+VARCHAR(65000), with SQLState42846. A real-server regression test verifies both
+failures and that no row was inserted. One-dimensional JDBC array support is
+unchanged; multi-dimensional JDBC writes remain rejected before execution.
+No new public API, dependency or user configuration setting is introduced.
