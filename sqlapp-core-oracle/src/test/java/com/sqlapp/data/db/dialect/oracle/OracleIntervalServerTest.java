@@ -14,6 +14,31 @@ import com.sqlapp.data.schemas.Column;
 @EnabledIfSystemProperty(named = "sqlapp.interval.oracle.url",
 		matches = "jdbc:oracle:thin:@//127[.]0[.]0[.]1:11521/FREEPDB1")
 class OracleIntervalServerTest {
+	@Test void internalCollectionKeysAreOmittedButUserInvisibleUniqueColumnsRemain() throws Exception {
+		String type="I_KEY_"+UUID.randomUUID().toString().replace("-", "").substring(0,12).toUpperCase(java.util.Locale.ROOT);
+		String table=type+"_T";
+		try(var connection=DriverManager.getConnection(System.getProperty("sqlapp.interval.oracle.url"),"interval_test","interval_test_2026");var sql=connection.createStatement()) {
+			sql.execute("CREATE TYPE "+type+" AS TABLE OF INTERVAL DAY(9) TO SECOND(9)");
+			try {
+				sql.execute("CREATE TABLE "+table+"(ID NUMBER PRIMARY KEY,U RAW(4) INVISIBLE UNIQUE,C "+type+") NESTED TABLE C STORE AS "+type+"_S");
+				try {
+					var dialect=com.sqlapp.data.db.dialect.DialectResolver.getInstance().getDialect(connection);
+					var tables=dialect.getCatalogReader().getSchemaReader().getTableReader();
+					tables.setSchemaName("INTERVAL_TEST");tables.setObjectName(table);
+					var captured=tables.getAllFull(connection).getFirst();
+					assertEquals(java.util.Set.of("ID","U","C"),captured.getColumns().stream().map(Column::getName).collect(java.util.stream.Collectors.toSet()));
+					assertEquals("true",captured.getColumns().get("U").getSpecifics().get("oracle.column.invisible"));
+					assertEquals(2,captured.getConstraints().getUniqueConstraints().size());
+					assertEquals(java.util.Set.of("ID","U"),captured.getConstraints().getUniqueConstraints().stream().flatMap(key->key.getColumns().stream())
+							.map(column->column.getName()).collect(java.util.stream.Collectors.toSet()));
+					assertEquals(2,captured.getIndexes().size());
+					assertEquals(java.util.Set.of("ID","U"),captured.getIndexes().stream().flatMap(index->index.getColumns().stream())
+							.map(column->column.getName()).collect(java.util.stream.Collectors.toSet()));
+				} finally {sql.execute("DROP TABLE "+table+" PURGE");}
+			} finally {sql.execute("DROP TYPE "+type);}
+		}
+	}
+
 	@Test void namedCollectionsPreserveNanosNullsBoundsAndBagSemantics() throws Exception {
 		try (var connection = DriverManager.getConnection(System.getProperty("sqlapp.interval.oracle.url"),
 				"interval_test", "interval_test_2026"); var sql = connection.createStatement()) {
