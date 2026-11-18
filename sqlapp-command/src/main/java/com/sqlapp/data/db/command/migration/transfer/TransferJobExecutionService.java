@@ -178,6 +178,7 @@ public final class TransferJobExecutionService {
 					Connection source, Connection target, com.sqlapp.jdbc.bulk.BulkMigrationJobPlan plan)
 					throws SQLException {
 				try {
+					if (TransferIntervalProjection.captured(plan)) return TransferIntervalProjection.restoreChecked(plan, target);
 					return TransferIntervalProjection.prepare(target, plan, TransferJobPreparationService.dialect(source),
 							review.prepared().job().configuration().schemaMode(), false);
 				} catch (SQLException failure) { throw failure; }

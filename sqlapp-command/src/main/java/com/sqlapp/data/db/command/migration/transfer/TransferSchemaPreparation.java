@@ -293,6 +293,7 @@ public final class TransferSchemaPreparation {
 			final var source = task.getEffectiveSourceTable();
 			ordinary(source, policy, warnings);
 			final var target = remapped.get(source.getName());
+			target.getSpecifics().remove(TransferIntervalProjection.SNAPSHOT);
 			if (mode == TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
 					&& (target.getPrimaryKeyConstraint() == null
 							|| target.getPrimaryKeyConstraint().getColumns().isEmpty())) {

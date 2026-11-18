@@ -143,6 +143,12 @@ JDBC_DIRECT transfer. PostgreSQL/DuckDB keep calendar days separate from time;
 months are never converted into days. Array support and version/range limits
 remain destination-specific. File-only validation and preview retain the source
 components.
+For JDBC_DIRECT with STAGED_REPLACE, destination interval semantics are captured
+in the fingerprinted source Schema. Staging and final verification use that
+captured projection. Retained-stage comparison can replay it without a source
+connection. Keep source-schema.xml and data-job.yaml with the saved review/result;
+editing those artifacts invalidates the evidence. No additional option is needed.
+
 See [interval value and conversion rules](../data/interval-values.md).
 
 Existing configurations without this field default to WARN, and previous Java

@@ -566,8 +566,8 @@ public final class TransferStagedReplacement {
 	}
 
 	static BulkMigrationJobPlan resolve(BulkMigrationJobConfigurationEditorIO.Snapshot dataJob, Connection source) {
-		return new BulkMigrationJobConfigurationResolver()
-				.resolveJob(dataJob.file().toFile(), source, dataJob.fingerprint(), 1_048_576L, 16_777_216L).plan();
+		return TransferIntervalProjection.restore(new BulkMigrationJobConfigurationResolver()
+				.resolveJob(dataJob.file().toFile(), source, dataJob.fingerprint(), 1_048_576L, 16_777_216L).plan());
 	}
 
 	private static BulkMigrationJobTask task(BulkMigrationJobPlan plan, String id) {

@@ -22,7 +22,95 @@ import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /** One resolved interval projection shared by preflight, copy and verification. */
 final class TransferIntervalProjection {
+	static final String SNAPSHOT = "sqlapp.transfer.intervalProjection.v1";
+	private record Field(String source, String target, DataType type, String typeName, Long length,
+			Integer scale, int dimensions, Map<String, String> specifics) {}
+	private record Snapshot(String product, int major, int minor, List<Field> fields, List<String> warnings) {}
 	private record Binding(Column source, Column destination, IntervalTypeHandler handler) {}
+
+	static boolean captured(BulkMigrationJobPlan plan) {
+		return plan.getTasks().stream().anyMatch(task -> task.getEffectiveSourceTable().getSpecifics().containsKey(SNAPSHOT));
+	}
+
+	static BulkMigrationJobPlan restoreChecked(BulkMigrationJobPlan raw, Connection target) throws Exception {
+		var restored = restore(raw);
+		var actual = new java.util.TreeSet<String>();
+		var dialect = TransferJobPreparationService.dialect(target);
+		for (int i = 0; i < raw.getTasks().size(); i++) {
+			var original = raw.getTasks().get(i);
+			var projected = restored.getTasks().get(i);
+			if (!original.getEffectiveSourceTable().getSpecifics().containsKey(SNAPSHOT)) continue;
+			var bindings = new ArrayList<Binding>();
+			for (var column : original.getEffectiveSourceTable().getColumns()) {
+				if (!interval(column)) continue;
+				var destination = projected.getEffectiveTargetTable().getColumns().get(original.getTargetColumnName(column.getName()));
+				bindings.add(new Binding(column, destination, handler(dialect, destination)));
+			}
+			actual.addAll(preflight(original, bindings, target));
+		}
+		var expected = warnings(restored).stream().filter(text -> !text.startsWith("[INTERVAL_PRECISION_MAPPING]"))
+				.collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+		if (!actual.equals(expected)) throw invalid("Interval conversion warnings changed. Review the transfer again.");
+		return restored;
+	}
+
+	/** Pins replayable destination semantics inside the already fingerprinted Schema artifact. */
+	static boolean capture(com.sqlapp.data.schemas.Schema schema, BulkMigrationJobPlan plan, Connection target)
+			throws SQLException {
+		if (!(plan.getLifecycle() instanceof Report)) return false;
+		var metadata = target.getMetaData();
+		boolean first = true;
+		for (var task : plan.getTasks()) {
+			var fields = new ArrayList<Field>();
+			for (var source : task.getEffectiveSourceTable().getColumns()) {
+				if (!interval(source)) continue;
+				var destination = task.getEffectiveTargetTable().getColumns().get(task.getTargetColumnName(source.getName()));
+				fields.add(new Field(source.getName(), destination.getName(), destination.getDataType(),
+						destination.getDataTypeName(), destination.getLength(), destination.getScale(),
+						destination.getArrayDimension(), new LinkedHashMap<>(destination.getSpecifics())));
+			}
+			if (!fields.isEmpty()) {
+				schema.getTables().get(task.getEffectiveSourceTable().getName()).getSpecifics()
+					.put(SNAPSHOT, new com.sqlapp.util.JsonConverter().toJsonString(new Snapshot(
+							metadata.getDatabaseProductName(), metadata.getDatabaseMajorVersion(), metadata.getDatabaseMinorVersion(),
+							List.copyOf(fields), first ? warnings(plan) : List.of())));
+				first = false; // Store the job warning list once, not once per table.
+			}
+		}
+		return true;
+	}
+
+	/** Rebuilds a pinned plan without reading source rows or consulting current target column definitions. */
+	static BulkMigrationJobPlan restore(BulkMigrationJobPlan original) {
+		var tasks = new ArrayList<BulkMigrationJobTask>();
+		List<String> warnings = null;
+		for (var task : original.getTasks()) {
+			String text = task.getEffectiveSourceTable().getSpecifics().get(SNAPSHOT);
+			if (text == null) { tasks.add(task); continue; }
+			var saved = new com.sqlapp.util.JsonConverter().fromJsonString(text, Snapshot.class);
+			if (warnings != null && !saved.warnings().isEmpty()) throw invalid("Duplicate captured interval warnings");
+			if (warnings == null) warnings = List.copyOf(saved.warnings());
+			var dialect = com.sqlapp.data.db.dialect.DialectResolver.getInstance()
+					.getDialect(saved.product(), saved.major(), saved.minor(), null);
+			var output = task.getEffectiveTargetTable().clone();
+			var bindings = new ArrayList<Binding>();
+			for (var field : saved.fields()) {
+				var source = task.getEffectiveSourceTable().getColumns().get(field.source());
+				var destination = output.getColumns().get(field.target());
+				if (source == null || destination == null || !field.target().equals(task.getTargetColumnName(field.source())))
+					throw invalid("Invalid captured interval column mapping");
+				destination.setDataType(field.type()).setDataTypeName(field.typeName()).setLength(field.length())
+						.setScale(field.scale()).setArrayDimension(field.dimensions());
+				destination.getSpecifics().clear(); destination.getSpecifics().putAll(field.specifics());
+				var adapter = handler(dialect, destination);
+				adapter.validateIntervalColumn(destination);
+				bindings.add(new Binding(source, destination, adapter));
+			}
+			tasks.add(projectTask(task, output, bindings));
+		}
+		return warnings == null ? original : BulkMigrationJobPlanner.plan(original.getJobId(), tasks,
+				new Report(original.getLifecycle(), warnings));
+	}
 
 	static BulkMigrationJobPlan prepare(Connection target, BulkMigrationJobPlan original, Dialect sourceDialect,
 			TransferJobConfiguration.SchemaMode mode, boolean staged) throws Exception {
@@ -43,7 +131,7 @@ final class TransferIntervalProjection {
 			for (var column : input.getColumns()) {
 				if (!interval(column)) continue;
 				var planned = output.getColumns().get(task.getColumnMappings().getOrDefault(column.getName(), column.getName()));
-				var actual = mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES || staged ? null
+				var actual = mode == TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES ? null
 						: existing(existing, planned);
 				Column destination;
 				if (actual != null) {
@@ -85,52 +173,63 @@ final class TransferIntervalProjection {
 				bindings.add(new Binding(column, destination, targetHandler));
 			}
 			if (bindings.isEmpty()) { tasks.add(task); continue; }
-			var counts = new LinkedHashMap<String, Long>();
-			try (var rows = new Rows(open(task, null), input, bindings)) {
-				while (rows.hasNext()) {
-					var raw = rows.rawNext();
-					for (var binding : bindings) {
-						var value = raw.get(binding.source());
-						if (value == null) continue;
-						try {
-							for (String code : binding.handler().prepareInterval(value, binding.destination(), target.getMetaData()).warnings())
-								counts.merge(code + "] column " + binding.source().getName()
-										+ " -> " + binding.destination().getName(), 1L, Math::addExact);
-						} catch (RuntimeException failure) {
-							throw invalid("[INTERVAL_VALUE_NOT_REPRESENTABLE] Column " + binding.source().getName()
-									+ " exceeds the target interval qualifier, range, precision or array support.");
-						}
-					}
-				}
-			}
-			counts.forEach((code, count) -> warnings.add("[" + code + ": " + count + " row(s), task " + task.getTaskId()));
-			var projected = input.clone();
-			for (var binding : bindings) copyType(binding.destination(), projected.getColumns().get(binding.source().getName()));
-			var builder = BulkMigrationJobTask.builder().taskId(task.getTaskId()).targetTable(output)
-					.columnMappings(task.getColumnMappings()).requireEmptyTarget(task.isRequireEmptyTarget())
-					.options(task.getOptions()).checkpointStore(task.getCheckpointStore()).chunkListener(task.getChunkListener());
-			if (task.isFullScan()) {
-				projected.setRowIteratorHandler(collection -> new Rows(openUnchecked(task), projected, bindings));
-				builder.sourceTable(projected).fullScan(true);
-			} else {
-				builder.keysetSource(new BulkMigrationKeysetSource() {
-					@Override public Table getTable() { return projected; }
-					@Override public List<String> getKeyColumnNames() { return task.getKeysetSource().getKeyColumnNames(); }
-					@Override public String getConfigurationFingerprint() {
-						return task.getKeysetSource().getConfigurationFingerprint() + ":interval-projection-v1";
-					}
-					@Override public Iterator<Row> iterator(String token) throws SQLException {
-						return new Rows(open(task, token), projected, bindings);
-					}
-					@Override public String resumeToken(Row row) throws SQLException {
-						return task.getKeysetSource().resumeToken(row);
-					}
-				});
-			}
-			tasks.add(builder.build());
+			warnings.addAll(preflight(task, bindings, target));
+			tasks.add(projectTask(task, output, bindings));
 		}
 		return BulkMigrationJobPlanner.plan(original.getJobId(), tasks,
 				new Report(original.getLifecycle(), List.copyOf(warnings)));
+	}
+
+	private static List<String> preflight(BulkMigrationJobTask task, List<Binding> bindings, Connection target) throws Exception {
+		var counts = new java.util.TreeMap<String, Long>();
+		try (var rows = new Rows(open(task, null), task.getEffectiveSourceTable(), bindings)) {
+			while (rows.hasNext()) {
+				var raw = rows.rawNext();
+				for (var binding : bindings) {
+				var value = raw.get(binding.source());
+				if (value == null) continue;
+				try {
+					for (String code : binding.handler().prepareInterval(value, binding.destination(), target.getMetaData()).warnings())
+						counts.merge(code + "] column " + binding.source().getName()
+							+ " -> " + binding.destination().getName(), 1L, Math::addExact);
+				} catch (RuntimeException failure) {
+					throw invalid("[INTERVAL_VALUE_NOT_REPRESENTABLE] Column " + binding.source().getName()
+						+ " exceeds the target interval qualifier, range, precision or array support.");
+				}
+				}
+			}
+		}
+		var warnings = new ArrayList<String>();
+		counts.forEach((code, count) -> warnings.add("[" + code + ": " + count + " row(s), task " + task.getTaskId()));
+		return warnings;
+	}
+
+	private static BulkMigrationJobTask projectTask(BulkMigrationJobTask task, Table output, List<Binding> bindings) {
+		var input = task.getEffectiveSourceTable();
+		var projected = input.clone();
+		for (var binding : bindings) copyType(binding.destination(), projected.getColumns().get(binding.source().getName()));
+		var builder = BulkMigrationJobTask.builder().taskId(task.getTaskId()).targetTable(output)
+				.columnMappings(task.getColumnMappings()).requireEmptyTarget(task.isRequireEmptyTarget())
+				.options(task.getOptions()).checkpointStore(task.getCheckpointStore()).chunkListener(task.getChunkListener());
+		if (task.isFullScan()) {
+			projected.setRowIteratorHandler(collection -> new Rows(openUnchecked(task), projected, bindings));
+			builder.sourceTable(projected).fullScan(true);
+		} else {
+			builder.keysetSource(new BulkMigrationKeysetSource() {
+				@Override public Table getTable() { return projected; }
+				@Override public List<String> getKeyColumnNames() { return task.getKeysetSource().getKeyColumnNames(); }
+				@Override public String getConfigurationFingerprint() {
+				return task.getKeysetSource().getConfigurationFingerprint() + ":interval-projection-v1";
+				}
+				@Override public Iterator<Row> iterator(String token) throws SQLException {
+				return new Rows(open(task, token), projected, bindings);
+				}
+				@Override public String resumeToken(Row row) throws SQLException {
+				return task.getKeysetSource().resumeToken(row);
+				}
+			});
+		}
+		return builder.build();
 	}
 
 	private static DataType inferGroup(BulkMigrationJobTask task, Column column) throws Exception {

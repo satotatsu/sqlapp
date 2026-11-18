@@ -490,19 +490,17 @@ nanosecond values round-trip; malformed shapes and non-string leaves fail typed
 input. File readers enforce nesting and string limits. H2 declaration bounds
 are stored in `interval.arrayBounds` in innermost-first order and recreated by
 its SQL builder. Fixed-size DuckDB ARRAY declarations and SQL named collections
-are outside this implementation. JDBC_DIRECT with STAGED_REPLACE and interval
-columns is explicitly rejected during preparation: saved staging comparison
-currently re-resolves unprojected source metadata. Use REQUIRE_EMPTY for direct
-interval transfer.
+are outside this implementation. Stage 8 enables JDBC_DIRECT with STAGED_REPLACE using captured destination
+projections, including retained-stage comparison.
 
 The new `IntervalTypeHandler`, `IntervalPrecision`, `IntervalConversion` and
 `IntervalArrays` APIs are shared extension points; vendor rules remain in their
 own dialect modules. Existing JdbcTypeHandler column-aware reads and keyset key
 metadata use default methods. No production dependency or job/manifest format
 version was added. Existing Interval classes and their fields are unchanged in
-this stage. Cross-product DDL still requires review: PostgreSQL-specific table
-settings can produce invalid Oracle CREATE SQL. This unrelated existing DDL
-issue is not hidden; the Oracle end-to-end interval test uses REQUIRE_EXISTING.
+this stage. Cross-product DDL still requires review. Stage 8 fixes the PostgreSQL table
+settings and duplicate backing-index problems in Oracle CREATE SQL, and extends
+the Oracle end-to-end test to CREATE_MISSING.
 
 Real-server tests opt in through `sqlapp.interval.pg.url` and
 `sqlapp.interval.oracle.url`, accepting only the dedicated loopback fixture
@@ -515,3 +513,47 @@ Sources: [PostgreSQL 14 interval parser](https://github.com/postgres/postgres/bl
 [DuckDB intervals](https://www.duckdb.org/docs/2.0/sql/data_types/interval),
 [Informix interval types](https://www.ibm.com/docs/en/informix-servers/12.10.0?topic=types-interval-data-type),
 [Vertica interval JDBC objects](https://docs.vertica.com/26.2.x/en/connecting-to/client-libraries/accessing/java/jdbc-data-types/using-intervals-with-jdbc/).
+
+
+## Stage 8: replayable staging projections and Oracle CREATE
+
+Staged replacement remains limited to the existing PostgreSQL and HSQLDB
+providers. JDBC_DIRECT + STAGED_REPLACE now uses the same reviewed interval semantics for
+staging copy, stable-stage verification, final transactional replacement and
+retained-stage comparison. Existing final interval columns determine their
+actual qualifier and precision; missing final columns use the mapped definition.
+Calendar days still convert only at a destination with fixed 24-hour days.
+Review and audit retain the conversion warnings and affected row counts.
+
+The generated, fingerprinted source-schema.xml captures destination interval
+types, native qualifiers, array dimensions, precision and conversion warnings in
+a private table Specifics entry, sqlapp.transfer.intervalProjection.v1. The job
+warning list is stored once, not duplicated for every table. No user-authored
+configuration or public record constructor changes. The generated data-job.yaml
+pins the updated Schema hash. Both artifacts must remain with the saved result.
+
+Execution rebuilds the captured projection and checks all current source values
+against it before copying. A changed warning count requires another review.
+Retained-stage comparison reconstructs the same types without opening the source
+connection or reading source rows; it remains usable after the source table is
+removed. Existing artifact fingerprints, target identity checks, stage hashes,
+serializable replacement transaction and rollback/commit-uncertain handling are
+preserved. Altered Schema evidence is rejected. Older non-interval artifacts
+continue through the unchanged path.
+
+Oracle's shared CREATE TABLE factory (all supported Oracle dialect versions)
+now emits only its recognized Oracle physical properties from Specifics. Foreign
+metadata such as PostgreSQL autovacuum_enabled, unlogged and relallfrozen is
+retained in the Schema but is not concatenated into Oracle SQL. Modeled Oracle
+storage options remain supported. An enabled inline PK/UNIQUE constraint already
+creates its backing index; the separate matching index definition is therefore
+omitted, while independent indexes remain modeled and generated. No metadata
+catalog query or production dependency is added.
+
+Tests cover interval keysets, keyless duplicate rows, renamed columns, multiple
+tables, missing final tables, precision mapping, final INSERT rollback and both
+commit-uncertain outcomes. Saved comparison runs after dropping the source table
+and rejects altered evidence. Dedicated PostgreSQL 18 and Oracle Free tests
+exercise calendar-day staging conversion and PostgreSQL -> Oracle CREATE_MISSING
+-> import -> audit -> verification. Older Oracle server versions are covered by
+unit tests, not actual server execution.

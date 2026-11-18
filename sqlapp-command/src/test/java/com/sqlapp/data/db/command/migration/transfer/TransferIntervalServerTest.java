@@ -64,16 +64,52 @@ class TransferIntervalServerTest {
 				var bindings = Map.of("from", from, "to", to);
 				var review = service.review(definition, bindings, directory);
 				assertTrue(review.prepared().warnings().stream().anyMatch(text -> text.contains("CALENDAR_DAYS_AS_24_HOURS")));
-				String direct = Files.readString(definition);
-				Files.writeString(definition, direct + "targetPreparation: STAGED_REPLACE\n");
-				var unsupported = assertThrows(IllegalArgumentException.class,
-						() -> service.review(definition, bindings, directory));
-				assertTrue(unsupported.getMessage().contains("Direct staged replacement"), unsupported::getMessage);
-				Files.writeString(definition, direct);
 				var outcome = service.execute(review, bindings);
 				assertEquals(TransferJobExecutionService.Phase.COMPLETE, outcome.phase());
 				assertTrue(outcome.verificationResult().isMatch());
 			} finally { sql.execute("DROP SCHEMA " + schema + " CASCADE"); }
+		}
+	}
+	@org.junit.jupiter.params.ParameterizedTest
+	@org.junit.jupiter.params.provider.CsvSource({"false,false", "true,false", "false,true", "true,true"})
+	void postgresCalendarIntervalUsesReviewedStagingProjection(boolean fullScan, boolean postgresTarget) throws Exception {
+		var from = pg(); var embedded = new org.hsqldb.jdbc.JDBCDataSource();
+		embedded.setUrl("jdbc:hsqldb:mem:" + UUID.randomUUID()); embedded.setUser("SA");
+		DataSource to = postgresTarget ? pg() : embedded;
+		String schema = name(), table = name(), targetSchema = postgresTarget ? name() : "PUBLIC";
+		try (var source = from.getConnection(); var target = to.getConnection(); var sql = source.createStatement();
+				var destination = target.createStatement()) {
+			sql.execute("CREATE SCHEMA " + schema);
+			if (postgresTarget) {
+				sql.execute("CREATE SCHEMA " + targetSchema);
+				destination.execute("SET search_path TO " + targetSchema);
+			}
+			try {
+				sql.execute("CREATE TABLE " + schema + "." + table + "(id INT" + (fullScan ? "" : " PRIMARY KEY") + ",c INTERVAL(6))");
+				sql.execute("INSERT INTO " + schema + "." + table + " VALUES(1,INTERVAL '1 day -1 hour')");
+				if (fullScan) sql.execute("INSERT INTO " + schema + "." + table + " SELECT * FROM " + schema + "." + table);
+				destination.execute("CREATE TABLE \"" + table + "\"(\"id\" INT" + (fullScan ? "" : " PRIMARY KEY")
+						+ ",\"c\" " + (postgresTarget ? "INTERVAL(6)" : "INTERVAL DAY(9) TO SECOND(6)") + ")");
+				destination.execute("INSERT INTO \"" + table + "\" VALUES(99,INTERVAL '1' HOUR)");
+				Path definition = job(table, schema, targetSchema);
+				Files.writeString(definition, Files.readString(definition).replace("dataMode: FILE", "dataMode: JDBC_DIRECT")
+						.replaceAll("(?m)^files:.*\\n", "") + "targetPreparation: STAGED_REPLACE\ninsertMethod: JDBC_BATCH\n");
+				var service = new TransferJobExecutionService(); var bindings = Map.of("from", from, "to", to);
+				var review = service.review(definition, bindings, directory);
+				assertEquals(!postgresTarget, review.prepared().warnings().stream().anyMatch(text -> text.contains("CALENDAR_DAYS_AS_24_HOURS")));
+				new TransferJobReportIO().writeReview(review);
+				var outcome = service.execute(review, bindings);
+				assertEquals(TransferStagedReplacement.State.COMMITTED, outcome.staging().state());
+				assertTrue(outcome.verificationResult().isMatch());
+				var report = new TransferJobReportIO().writeOutcomeSnapshot(review, outcome);
+				assertEquals(!postgresTarget, Files.readString(report.file()).contains("CALENDAR_DAYS_AS_24_HOURS"));
+				try (var rows = destination.executeQuery("SELECT COUNT(*) FROM \"" + table + "\" WHERE \"id\"=1")) {
+					assertTrue(rows.next()); assertEquals(fullScan ? 2 : 1, rows.getInt(1));
+				}
+			} finally {
+				sql.execute("DROP SCHEMA " + schema + " CASCADE");
+				if (postgresTarget) sql.execute("DROP SCHEMA " + targetSchema + " CASCADE");
+			}
 		}
 	}
 	@Test void h2NineDigitDeclarationMapsToPostgresSixDigitsWhenValuesFitExactly() throws Exception {
@@ -137,10 +173,7 @@ class TransferIntervalServerTest {
 			try {
 				sql.execute("CREATE TABLE " + schema + ".\"" + table + "\"(id INT PRIMARY KEY,c INTERVAL(6))");
 				sql.execute("INSERT INTO " + schema + ".\"" + table + "\" VALUES(1,INTERVAL '1 day -1 hour')");
-				target.createStatement().execute("CREATE TABLE \"" + table + "\"(\"id\" NUMBER(10) PRIMARY KEY,\"c\" INTERVAL DAY(9) TO SECOND(6))");
-				Path definition = job(table, schema, "INTERVAL_TEST");
-				Files.writeString(definition, Files.readString(definition).replace("CREATE_MISSING", "REQUIRE_EXISTING"));
-				transfer(definition, from, to, "CALENDAR_DAYS_AS_24_HOURS");
+				transfer(job(table, schema, "INTERVAL_TEST"), from, to, "CALENDAR_DAYS_AS_24_HOURS");
 				try (var result = target.createStatement(); var rows = result.executeQuery("SELECT \"c\" FROM \"" + table + "\"")) {
 					assertTrue(rows.next());
 					var dialect = TransferJobPreparationService.dialect(target);

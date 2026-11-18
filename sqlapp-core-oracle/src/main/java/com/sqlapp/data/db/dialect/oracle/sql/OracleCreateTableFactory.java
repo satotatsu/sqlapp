@@ -37,6 +37,19 @@ import com.sqlapp.util.CommonUtils;
  */
 public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleSqlBuilder> {
 	@Override
+	protected void addCreateIndexDefinition(Table table, com.sqlapp.data.schemas.Index index, List<SqlOperation> result) {
+		// Enabled inline PK/UNIQUE constraints create their backing index already.
+		// PostgreSQL metadata models both objects; emitting both fails on Oracle.
+		boolean backing = table.getConstraints().getUniqueConstraints().stream().anyMatch(constraint ->
+				constraint.isEnable()
+				&& (java.util.Objects.equals(index.getName(), constraint.getIndexName())
+						|| java.util.Objects.equals(index.getName(), constraint.getName()))
+				&& constraint.getColumns().stream().map(column -> column.getName()).toList()
+						.equals(index.getColumns().stream().map(column -> column.getName()).toList()));
+		if (!backing) super.addCreateIndexDefinition(table, index, result);
+	}
+
+	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		String definition = com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(table);
 		if (definition == null && OracleExternalTableOptions.isExternal(table))
@@ -195,7 +208,12 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 	}
 
 	private boolean isModeledProperty(String key) {
-		return OracleAnnotationUtils.isAnnotationKey(key) || "oracle.table.duration".equals(key)
+		// Specifics can originate in a different database. Only Oracle's modeled
+		// physical properties are executable Oracle clauses; all other entries
+		// remain metadata, rather than being concatenated into CREATE TABLE.
+		return java.util.Arrays.stream(com.sqlapp.data.db.dialect.oracle.util.OracleUtils.getTableStatisticsKeys())
+				.noneMatch(value -> value.equalsIgnoreCase(key))
+				|| OracleAnnotationUtils.isAnnotationKey(key) || "oracle.table.duration".equals(key)
 				|| "COMPRESS_FOR".equals(key) || OracleIotOptions.modeled(key)
 				|| "oracle.table.organization".equals(key) || "oracle.table.iotComplex".equals(key);
 	}

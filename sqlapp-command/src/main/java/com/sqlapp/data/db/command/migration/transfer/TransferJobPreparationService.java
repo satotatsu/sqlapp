@@ -210,15 +210,23 @@ public final class TransferJobPreparationService {
 					TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping),
 					bulk.fingerprint());
 			phase = "resolving target table identities in the generated bulk configuration";
-			final var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
-			if (configuration.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE
-					&& resolved.plan().getTasks().stream().flatMap(task -> task.getEffectiveSourceTable().getColumns().stream())
-							.anyMatch(TransferIntervalCodec::interval))
-				throw new TransferSchemaPreparation.ValidationException("Direct staged replacement of interval columns is not supported. "
-						+ "Use REQUIRE_EMPTY and a reviewed destination definition for interval transfer.");
-			final var intervalPlan = TransferIntervalProjection.prepare(to, resolved.plan(), sourceDialect,
+			var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+			var intervalPlan = TransferIntervalProjection.prepare(to, resolved.plan(), sourceDialect,
 					configuration.schemaMode(), configuration.effectiveTargetPreparation()
 							== TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
+			if (TransferIntervalProjection.capture(schema, intervalPlan, to)) {
+				AtomicMigrationFile.write(xml, temporary -> {
+					try (var writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
+						schema.writeXml(writer);
+					} catch (javax.xml.stream.XMLStreamException failure) {
+						throw new IOException("Unable to capture interval projection", failure);
+					}
+				});
+				definition.put("schemaFingerprint", BoundedMigrationFile.sha256(xml, 16_777_216L, "maxSchemaBytes", "Schema"));
+				bulk = bulkIO.write(bulk.file(), TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping), bulk.fingerprint());
+				resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
+				intervalPlan = TransferIntervalProjection.restore(resolved.plan());
+			}
 			phase = "validating target tables, columns, primary keys and empty-target conditions";
 			final var compatibility = TransferSchemaPreparation.plan(to, schema, intervalPlan,
 					configuration.schemaMode(), configuration.compatibilityPolicy(), projection,
