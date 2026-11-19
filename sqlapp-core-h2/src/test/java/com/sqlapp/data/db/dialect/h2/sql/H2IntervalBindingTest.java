@@ -19,8 +19,8 @@ import com.sqlapp.data.schemas.Column;
 
 class H2IntervalBindingTest {
 	static Stream<IntervalValue> values() {
-		return Stream.of(IntervalValue.ZERO, IntervalValue.parse("P1DT-1H"),
-				IntervalValue.parse("PT-0.123456789S"), IntervalValue.parse("P999999999DT23H59M59.999999999S"),
+		return Stream.of(IntervalValue.ZERO, IntervalValue.parse("P1DT-1H"), IntervalValue.parse("PT-0.123456789S"),
+				IntervalValue.parse("P999999999DT23H59M59.999999999S"),
 				IntervalValue.parse("P-999999999DT-23H-59M-59.999999999S"),
 				new IntervalValue(0, 0, Duration.ofSeconds(Long.MIN_VALUE)),
 				new IntervalValue(0, 0, Duration.ofSeconds(Long.MAX_VALUE, 999999999)));
@@ -98,11 +98,11 @@ class H2IntervalBindingTest {
 			row.put(column, value);
 			table.getRows().add(row);
 			var dialect = DialectResolver.getInstance().getDialect(connection);
-			assertEquals(1, H2NativeDmlTest.write(connection, dialect.createSqlFactoryRegistry(),
-					table, com.sqlapp.data.db.sql.SqlType.INSERT, row));
+			assertEquals(1, H2NativeDmlTest.write(connection, dialect.createSqlFactoryRegistry(), table,
+					com.sqlapp.data.db.sql.SqlType.INSERT, row));
 			row.put("ID", 2);
-			assertEquals(1, H2NativeDmlTest.write(connection, dialect.createSqlFactoryRegistry(),
-					table, com.sqlapp.data.db.sql.SqlType.INSERT_ROWS, table));
+			assertEquals(1, H2NativeDmlTest.write(connection, dialect.createSqlFactoryRegistry(), table,
+					com.sqlapp.data.db.sql.SqlType.INSERT_ROWS, table));
 			var handler = (StandardIntervalJdbcTypeHandler) dialect.getDbDataTypes()
 					.getDbTypeStrict(column.getDataType()).getJdbcTypeHandler();
 			try (var rows = statement.executeQuery("SELECT C FROM T")) {
@@ -118,16 +118,17 @@ class H2IntervalBindingTest {
 	void rejectsLossBeforeDatabaseExecutionAndKeepsOldResolverBehavior() throws Exception {
 		var current = DialectResolver.getInstance().getDialect("H2", 2, 3, null);
 		var type = DataType.INTERVAL_DAY_TO_SECOND;
-		var handler = (StandardIntervalJdbcTypeHandler) current.getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
+		var handler = (StandardIntervalJdbcTypeHandler) current.getDbDataTypes().getDbTypeStrict(type)
+				.getJdbcTypeHandler();
 		var column = new Column("C").setDataType(type).setLength(2).setScale(6);
 		try (var connection = DriverManager.getConnection("jdbc:h2:mem:");
 				var statement = connection.prepareStatement("SELECT ?")) {
-			assertThrows(ArithmeticException.class, () -> handler.setObject(statement, 1,
-					IntervalValue.parse("PT0.000000001S"), column));
-			assertThrows(ArithmeticException.class, () -> handler.setObject(statement, 1,
-					IntervalValue.parse("P100D"), column));
-			assertThrows(IllegalArgumentException.class, () -> handler.setObject(statement, 1,
-					IntervalValue.parse("P1M1D"), column));
+			assertThrows(ArithmeticException.class,
+					() -> handler.setObject(statement, 1, IntervalValue.parse("PT0.000000001S"), column));
+			assertThrows(ArithmeticException.class,
+					() -> handler.setObject(statement, 1, IntervalValue.parse("P100D"), column));
+			assertThrows(IllegalArgumentException.class,
+					() -> handler.setObject(statement, 1, IntervalValue.parse("P1M1D"), column));
 			assertThrows(IllegalArgumentException.class, () -> handler.codec(column.clone().setLength(0)));
 			assertThrows(IllegalArgumentException.class, () -> handler.codec(column.clone().setLength(19)));
 			assertThrows(IllegalArgumentException.class, () -> handler.codec(column.clone().setScale(10)));

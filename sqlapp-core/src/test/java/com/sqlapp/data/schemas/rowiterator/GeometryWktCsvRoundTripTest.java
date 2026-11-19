@@ -161,6 +161,37 @@ public class GeometryWktCsvRoundTripTest {
 		return Wkt.fromWkt("POINT(0 0)").getSRID();
 	}
 
+	@Test
+	public void testEmptyCoordinateDimensionsThroughCsv() throws Exception {
+		final Table table = newTable();
+		final String[] sources = { "SRID=4326;POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY",
+				"LINESTRING ZM EMPTY", "POLYGON Z EMPTY", "MULTIPOINT Z EMPTY",
+				"GEOMETRYCOLLECTION Z(POINT Z EMPTY,POINT Z(1 2 3))" };
+		final List<Geometry<?>> expected = new ArrayList<>();
+		final File file = new File(directory, "empty-dimensions.csv");
+		try (TextFileWriter writer = DataFormat.CSV.createCsvListWriter(file, "UTF-8")) {
+			writer.writeHeader("ID", "G");
+			for (int i = 0; i < sources.length; i++) {
+				final Row row = table.newRow();
+				row.put(table.getColumns().get("G"), sources[i]);
+				final Geometry<?> geometry = row.get("G");
+				expected.add(geometry);
+				writer.writeRow(Integer.toString(i), table.getColumns().get("G").getFormatter().format(geometry));
+			}
+		}
+		final List<Row> rows = read(file);
+		assertEquals(sources.length, rows.size());
+		for (int i = 0; i < sources.length; i++) {
+			final Geometry<?> before = expected.get(i);
+			final Geometry<?> after = rows.get(i).get("G");
+			assertEquals(before.hasZ(), after.hasZ(), sources[i]);
+			assertEquals(before.hasM(), after.hasM(), sources[i]);
+			assertEquals(before.getSRID(), after.getSRID(), sources[i]);
+			assertEquals(before.isEmpty(), after.isEmpty(), sources[i]);
+			assertEquals(before, after, sources[i]);
+		}
+	}
+
 	private static void assertGeometry(final Object value, final GeometryType type, final int srid, final boolean z,
 			final boolean m, final boolean empty, final double[]... coordinates) {
 		final Geometry<?> geometry = assertInstanceOf(Geometry.class, value);

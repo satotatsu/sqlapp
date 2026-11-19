@@ -1267,6 +1267,11 @@ public class SchemaUtils {
 	 * @return 正規化した後の値
 	 */
 	public static String normalizeDataType(String value) {
+		// Structured type expressions contain field identifiers and, potentially,
+		// quoted names/literals. Scalar type-name normalization is not safe there.
+		if (value != null && value.stripLeading().matches("(?is)(STRUCT|MAP|UNION)\\s*\\(.*")) {
+			return trim(value);
+		}
 		if (isQuotedQualifiedTypeName(value)) {
 			return trim(value);
 		}

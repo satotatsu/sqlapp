@@ -94,6 +94,26 @@ import com.sqlapp.util.SqlBuilder;
  */
 public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
+	 * Maps native MySQL-family TIMESTAMP to this dialect's registered instant type.
+	 * A null default expression leaves current-time defaults for manual review.
+	 */
+	protected final ColumnMigration.Result migrateNativeTimestamp(final Column source,
+			final int maxPrecision, final boolean fixedPrecision, final String currentTimeDefault) {
+		if (source.getDataType() != DataType.TIMESTAMPVERSION
+				|| !"TIMESTAMP".equalsIgnoreCase(source.getDataTypeName())) {
+			return new ColumnMigration.Result(null, java.util.List.of(
+					"No native timestamp migration rule for " + source.getDataType() + " on " + getProductName()));
+		}
+		return ColumnMigration.mapNativeTimestamp(source, this, maxPrecision, fixedPrecision, currentTimeDefault);
+	}
+
+	/** Target-specific rules used only by explicit column migration. */
+	protected ColumnMigration.Result convertColumnForMigration(final Column source) {
+		return new ColumnMigration.Result(null, java.util.List.of(
+				"No column migration rule for " + source.getDataType() + " on " + getProductName()));
+	}
+
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -6651943701544804926L;
@@ -211,6 +231,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 		}
 		return getDbDataTypes().getDbType(column.getDataType(), column.getLength());
+	}
+
+	/**
+	 * Optional default row converter/formatter for a dialect's value representation.
+	 * Explicit Column converters take precedence. Null preserves the shared default.
+	 */
+	public com.sqlapp.data.converter.Converter<?> getColumnValueConverter(final Column column) {
+		return null;
 	}
 
 	public boolean setDbType(final int sqlType, final String productDataType, final Long lengthOrPrecision,
@@ -337,6 +365,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	private String normalize(String dataTypeName) {
 		String text = trim(dataTypeName);
+		if (text != null && text.matches("(?is)(STRUCT|MAP|UNION)\\s*\\(.*")) return text;
 		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)) return text;
 		text = CommonUtils.unwrap(text, '"');
 		return text.replaceAll("\s+", " ");

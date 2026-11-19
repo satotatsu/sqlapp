@@ -169,6 +169,20 @@ class MySqlBulkUpsertTargetNameTest {
 				.endsWith("WHERE source.sqlapp_bulk_matched_1 = 0"));
 	}
 
+	@Test
+	void preservesTimestampInstantsInBothTargetAssignments() throws Exception {
+		var sql = new ArrayList<String>();
+		var table = table(null, null);
+		table.getColumns().add("ts", c -> c.setDataType(DataType.TIMESTAMPVERSION));
+		new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 0, 19))
+				.execute(connection(sql), table, BulkUpsertOption.builder().stagingTableName("stage").build());
+		for (String prefix : new String[] {"UPDATE target_table", "INSERT INTO target_table"}) {
+			String statement = sql.stream().filter(q -> q.startsWith(prefix)).findFirst().orElseThrow();
+			assertTrue(statement.contains("UNIX_TIMESTAMP(source.ts)"), statement);
+			assertTrue(statement.contains("'+00:00'"), statement);
+		}
+	}
+
 	private Table table(String catalog, String schema) {
 		var table = new Table("target_table").setCatalogName(catalog).setSchemaName(schema);
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));

@@ -30,6 +30,8 @@ public interface JdbcTypeHandler {
 	default JdbcReadScope prepareRead(PreparedStatement statement) throws SQLException { return JdbcReadScope.NONE; }
 	/** Exact server-side projection for typed JDBC readers. The argument is already identifier-quoted. */
 	default String readExpression(String quotedColumn, Column column) { return quotedColumn; }
+	/** Reconstruct an exact server-side value from one JDBC parameter expression. */
+	default String writeExpression(String expression, Column column) { return expression; }
 
 	/**
 	 * ResultSetから値を取得します

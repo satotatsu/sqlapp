@@ -71,7 +71,10 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 				if (minorVersion >= 4) {
 					return DialectHolder.mysql840Dialect;
 				}
-				if (minorVersion == 0 && revision != null && revision >= 1) {
+				if (minorVersion > 0 || (revision != null && revision >= 19)) {
+					return DialectHolder.mysql8019Dialect;
+				}
+				if (revision != null && revision >= 1) {
 					return DialectHolder.mysql801Dialect;
 				}
 				return DialectHolder.mysql800Dialect;

@@ -18,6 +18,34 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 
 class MySqlBulkDataInputStreamTest {
 	@Test
+	void encodesBothInstantsOfADaylightSavingOverlap() throws Exception {
+		final Table table = new Table("overlap");
+		table.getColumns().add(new Column("ts").setDataType(DataType.TIMESTAMPVERSION));
+		for (String instant : new String[] {"2026-11-01T05:30:00.123456Z", "2026-11-01T06:30:00.123456Z"}) {
+			table.getRows().add(row -> row.put("ts", java.sql.Timestamp.from(java.time.Instant.parse(instant))));
+		}
+		try (var input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
+			input.useExplicitTimestampOffset();
+			assertEquals("2026-11-01 05:30:00.123456+00:00\u001e2026-11-01 06:30:00.123456+00:00\u001e",
+					new String(input.readAllBytes(), StandardCharsets.UTF_8));
+		}
+	}
+
+	@Test
+	void encodesNativeTimestampInDestinationOffset() throws Exception {
+		final Table table = new Table("temporal_values");
+		table.getColumns().add(new Column("ts").setDataType(DataType.TIMESTAMPVERSION));
+		table.getRows().add(row -> row.put("ts",
+				java.sql.Timestamp.from(java.time.Instant.parse("2026-11-18T12:34:56.123456Z"))));
+		table.getRows().add(row -> row.put("ts", null));
+		try (var input = new MySqlBulkDataInputStream(table, BulkOption.defaults())) {
+			input.setTimestampOffset(java.time.ZoneOffset.of("-03:30"));
+			assertEquals("2026-11-18 09:04:56.123456\u001e\\N\u001e",
+					new String(input.readAllBytes(), StandardCharsets.UTF_8));
+		}
+	}
+
+	@Test
 	void encodesBooleanAndBitValuesWithoutLosingTheirMeaning() throws Exception {
 		final Table table = new Table("typed_values");
 		table.getColumns().add(new Column("flag").setDataType(DataType.BOOLEAN));

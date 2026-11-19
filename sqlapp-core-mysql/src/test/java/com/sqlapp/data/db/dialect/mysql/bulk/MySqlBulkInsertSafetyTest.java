@@ -30,6 +30,22 @@ class MySqlBulkInsertSafetyTest {
 	private boolean detachFails;
 	private String engine = "InnoDB";
 	private String loadSql;
+	private String timeZone;
+	private String loadedText;
+
+
+	@Test
+	void usesNamedUtcForLegacyTimestampLoads() throws Exception {
+		timeZone = "Etc/UTC";
+		Table table = new Table("target");
+		table.getColumns().add("ts", c -> c.setDataType(DataType.TIMESTAMPVERSION));
+		table.getRows().add(row -> row.put("ts",
+				Timestamp.from(java.time.Instant.parse("2026-11-01T05:30:00.123456Z"))));
+		new MySqlBulkInsertExecutor(DialectHolder.mysql570Dialect)
+				.execute(connection(), table, BulkOption.defaults());
+		assertTrue(loadedText.startsWith("2026-11-01 05:30:00.123456"), loadedText);
+		assertFalse(loadedText.contains("+00:00"), loadedText);
+	}
 
 	private Connection connection() {
 		var statement = (JdbcStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -43,12 +59,12 @@ class MySqlBulkInsertSafetyTest {
 				}
 				case "executeLargeUpdate", "executeUpdate" -> {
 					loadSql = (String) a[0]; calls.add("load");
-					if (consume) input.readAllBytes();
+					if (consume) loadedText = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
 					if (m.getName().equals("executeLargeUpdate")) yield affected;
 					yield (int) affected;
 				}
 				case "executeQuery" -> Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { java.sql.ResultSet.class },
-						(r, rm, ra) -> switch (rm.getName()) { case "next" -> true; case "getLong" -> warningCount; case "close" -> null; default -> throw new AssertionError(rm.getName()); });
+						(r, rm, ra) -> switch (rm.getName()) { case "next" -> true; case "getLong" -> warningCount; case "getString" -> timeZone; case "close" -> null; default -> throw new AssertionError(rm.getName()); });
 				case "getWarnings" -> { calls.add("warnings"); yield warning; }
 				case "close" -> { calls.add("close statement"); yield null; }
 				default -> throw new AssertionError(m.getName());

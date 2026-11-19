@@ -27,7 +27,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 public class DialectHolder {
 	public final static Dialect mysql900Dialect = new MySql900(() -> null);
 	public final static Dialect mysql840Dialect = new MySql840(() -> mysql900Dialect);
-	public final static Dialect mysql801Dialect = new MySql801(() -> mysql840Dialect);
+	public final static Dialect mysql8019Dialect = new MySql8019(() -> mysql840Dialect);
+	public final static Dialect mysql801Dialect = new MySql801(() -> mysql8019Dialect);
 	public final static Dialect mysql800Dialect = new MySql800(() -> mysql801Dialect);
 	public final static Dialect mysql570Dialect = new MySql570(() -> mysql800Dialect);
 	public final static Dialect mysql565Dialect = new MySql565(() -> mysql570Dialect);
@@ -37,7 +38,8 @@ public class DialectHolder {
 	// Numeric variants retain their own next-version chain.
 	private static final MySql mysql900DialectNumeric = numeric(new MySql900(() -> null));
 	private static final MySql mysql840DialectNumeric = numeric(new MySql840(() -> mysql900DialectNumeric));
-	private static final MySql mysql801DialectNumeric = numeric(new MySql801(() -> mysql840DialectNumeric));
+	private static final MySql mysql8019DialectNumeric = numeric(new MySql8019(() -> mysql840DialectNumeric));
+	private static final MySql mysql801DialectNumeric = numeric(new MySql801(() -> mysql8019DialectNumeric));
 	private static final MySql mysql800DialectNumeric = numeric(new MySql800(() -> mysql801DialectNumeric));
 	private static final MySql mysql570DialectNumeric = numeric(new MySql570(() -> mysql800DialectNumeric));
 	private static final MySql mysql565DialectNumeric = numeric(new MySql565(() -> mysql570DialectNumeric));
@@ -57,6 +59,7 @@ public class DialectHolder {
 		final List<Dialect> original = List.of(
 				mysql900Dialect,
 				mysql840Dialect,
+				mysql8019Dialect,
 				mysql801Dialect,
 				mysql800Dialect,
 				mysql570Dialect,
@@ -66,6 +69,7 @@ public class DialectHolder {
 		final List<MySql> numeric = List.of(
 				mysql900DialectNumeric,
 				mysql840DialectNumeric,
+				mysql8019DialectNumeric,
 				mysql801DialectNumeric,
 				mysql800DialectNumeric,
 				mysql570DialectNumeric,

@@ -175,6 +175,25 @@ public class GeometryTextFormatTest {
 		assertEquals(0d, a * p2.getX() + b * p2.getY() + c, 1e-12);
 	}
 
+	@Test
+	public void testExtremeLineCoefficients() {
+		final Line large = Line.fromCoefficients(1, -1, 1e20);
+		assertOnLine(large, 1, -1, 1e20);
+		assertNotEquals(large.getPoints()[0].getY(), large.getPoints()[1].getY());
+		final Line tiny = Line.fromCoefficients(1, 1e-320, 1);
+		for (final Point point : tiny.getPoints()) {
+			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(point.getX()));
+			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(point.getY()));
+		}
+		assertOnLine(tiny, 1, 1e-320, 1);
+		assertNotEquals(tiny.getPoints()[0].getX(), tiny.getPoints()[1].getX());
+		assertOnLine(Line.fromCoefficients(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE), 1, 1, 1);
+		assertThrows(IllegalArgumentException.class, () -> Line.fromCoefficients(Double.NaN, 1, 0));
+		assertThrows(IllegalArgumentException.class, () -> Line.fromCoefficients(1, Double.POSITIVE_INFINITY, 0));
+		assertThrows(IllegalArgumentException.class, () -> Line.fromCoefficients(1, 1, Double.NaN));
+		assertThrows(IllegalArgumentException.class, () -> Line.fromCoefficients(Double.MIN_VALUE, 0, 1));
+	}
+
 	// ---- 自身の出力の読み戻し ----
 
 	static Stream<Arguments> roundTrip() {

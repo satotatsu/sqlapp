@@ -168,6 +168,7 @@ public class SqlServer2000 extends Dialect {
 		});
 		// 行バージョン型
 		getDbDataTypes().addRowVersion("TIMESTAMP", type -> {
+			type.setColumnTypeMatcher("TIMESTAMP", "ROWVERSION");
 			type.setLiteral("0x", "");
 		});
 		// SYSNAME型

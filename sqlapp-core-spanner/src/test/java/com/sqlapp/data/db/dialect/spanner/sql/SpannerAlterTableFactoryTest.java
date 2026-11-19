@@ -16,6 +16,32 @@ import com.sqlapp.data.schemas.Table;
 
 class SpannerAlterTableFactoryTest {
 	@Test
+	void replacesOnlyAnUnindexedVirtualGeneratedExpression() {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		final var original = table();
+		final var column = original.getColumns().get("value");
+		column.setDataType(DataType.BIGINT).setNotNull(false).setFormula("id + 1").setFormulaPersisted(false);
+		final var target = original.clone();
+		target.getColumns().get("value").setFormula("id + 2");
+		final var sql = registry.createSql(original.diff(target), SqlType.ALTER).getFirst().getSqlText();
+		assertTrue(sql.endsWith("INT64 AS (id + 2)"), sql);
+
+		final var index = new com.sqlapp.data.schemas.Index("ByValue");
+		index.getColumns().add("value");
+		original.getIndexes().add(index);
+		target.getIndexes().add(index.clone());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+
+		original.getIndexes().clear();
+		target.getIndexes().clear();
+		column.setFormulaPersisted(true);
+		target.getColumns().get("value").setFormulaPersisted(true);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+	}
+
+	@Test
 	void restartsExistingIdentityCountersOnlyWhenExplicitlyRequested() {
 		final var original = table();
 		original.getColumns().get("id").setIdentity(true);

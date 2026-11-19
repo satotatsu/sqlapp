@@ -111,7 +111,7 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		}
 		if (option.isInsertWhenNotMatched()) {
 			final StringBuilder s = new StringBuilder("INSERT INTO ").append(target).append(" (").append(list(staged, null))
-					.append(") SELECT ").append(list(staged, "source")).append(" FROM ").append(stage)
+					.append(") SELECT ").append(projection(staged)).append(" FROM ").append(stage)
 					.append(" AS source");
 			// Freeze match classification before target DML, so concurrent conflicts cannot
 			// silently change an insert into an update or skip a requested action.
@@ -135,8 +135,24 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 			if (i > 0)
 				s.append(", ");
 			final String n = quote(cols.get(i).getName());
-			s.append("target.").append(n).append(" = ").append(alias).append('.').append(n);
+			s.append("target.").append(n).append(" = ").append(sourceValue(cols.get(i), alias));
 		}
+	}
+
+	private String projection(final List<Column> columns) {
+		return columns.stream().map(column -> sourceValue(column, "source"))
+				.collect(java.util.stream.Collectors.joining(", "));
+	}
+
+	private String sourceValue(final Column column, final String alias) {
+		final String reference = alias + "." + quote(column.getName());
+		if (dialect instanceof com.sqlapp.data.db.dialect.mysql.MySql8019
+				&& column.getDataType() == com.sqlapp.data.db.datatype.DataType.TIMESTAMPVERSION) {
+			// A plain assignment can reconstruct TIMESTAMP from ambiguous local fields at a DST overlap.
+			return "CONCAT(TIMESTAMPADD(MICROSECOND, UNIX_TIMESTAMP(" + reference
+					+ ") * 1000000, CAST('1970-01-01 00:00:00' AS DATETIME(6))), '+00:00')";
+		}
+		return reference;
 	}
 
 	private BulkOption bulkOption(final BulkOption source) {

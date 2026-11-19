@@ -67,7 +67,7 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 				// caller owns the transaction, retain the connection-local object until
 				// that connection ends instead of violating the caller's boundary.
 				if (cleanupSql != null && scope.isTransactionManaged()) scope.addCleanupSql(cleanupSql);
-				stage(connection, stage, data, definition.keyColumns(), sourceRows, batchSize);
+				stage(connection, table, stage, data, definition.keyColumns(), sourceRows, batchSize);
 				requireValidKeys(connection, stage, definition.keyColumns(), null, false, "source snapshot");
 				final long unchanged = unchanged(connection, target, stage, definition);
 				final long expired = close(connection, target, stage, definition, effectiveAt);
@@ -80,10 +80,14 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 		}
 	}
 
-	private void stage(final Connection c, final String stage, final List<String> columns, final List<String> keys,
+	private void stage(final Connection c, final Table table, final String stage, final List<String> columns, final List<String> keys,
 			final Iterable<? extends Map<String, Object>> rows, final int batchSize) throws SQLException {
 		final String sql = "INSERT INTO " + stage + " (" + list(columns, null) + ") VALUES ("
-				+ String.join(", ", java.util.Collections.nCopies(columns.size(), "?")) + ")";
+				+ columns.stream().map(name -> {
+					final var column = table.getColumns().get(name);
+					final var type = dialect.getDbDataType(column);
+					return type == null ? "?" : type.getJdbcTypeHandler().writeExpression("?", column);
+				}).collect(Collectors.joining(", ")) + ")";
 		try (var st = c.prepareStatement(sql)) {
 			final var keyNames = new HashSet<>(keys);
 			int pending = 0;
@@ -97,7 +101,10 @@ public abstract class AbstractStagingMigrationSnapshotExecutor implements SetBas
 					if (value == null && keyNames.contains(column)) {
 						throw new IllegalArgumentException("source snapshot key must not contain null: " + column);
 					}
-					st.setObject(i + 1, value);
+					final var model = table.getColumns().get(column);
+					final var type = dialect.getDbDataType(model);
+					if (type == null || "?".equals(type.getJdbcTypeHandler().writeExpression("?", model))) st.setObject(i + 1, value);
+					else type.getJdbcTypeHandler().setObject(st, i + 1, value, model);
 				}
 				st.addBatch(); if (++pending == batchSize) { st.executeBatch(); pending = 0; }
 			}

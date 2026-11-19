@@ -211,6 +211,44 @@ public class GeometryConverterWktTest {
 		assertNull(converter().convertObject(""));
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = { "POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY",
+			"SRID=4326;POINT Z EMPTY", "SRID=4326;LINESTRING ZM EMPTY", "POLYGON Z EMPTY",
+			"MULTIPOINT Z EMPTY", "MULTILINESTRING Z EMPTY", "MULTIPOLYGON ZM EMPTY",
+			"GEOMETRYCOLLECTION Z EMPTY",
+			"GEOMETRYCOLLECTION Z(POINT Z EMPTY,POINT Z(1 2 3))" })
+	public void testEmptyDimensionsSurviveFormatting(final String text) {
+		final Geometry<?> before = converter().convertObject(text);
+		final Geometry<?> after = converter().convertObject(converter().format(before));
+		assertEquals(before.getGeometryType(), after.getGeometryType());
+		assertEquals(before.getSRID(), after.getSRID());
+		assertEquals(before.hasZ(), after.hasZ());
+		assertEquals(before.hasM(), after.hasM());
+		assertEquals(before.isEmpty(), after.isEmpty());
+		assertEquals(before, after);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "GEOMETRYCOLLECTION Z(POINT(1 2))",
+			"GEOMETRYCOLLECTION ZM(LINESTRING(1 2 3,4 5 6))",
+			"GEOMETRYCOLLECTION Z(GEOMETRYCOLLECTION(POINT(1 2)))",
+			"GEOMETRYCOLLECTION Z(POINT M(1 2 3))",
+			"GEOMETRYCOLLECTION M(POINT Z EMPTY)",
+			"GEOMETRYCOLLECTION ZM(GEOMETRYCOLLECTION M EMPTY)" })
+	public void testRejectConflictingCollectionDimensions(final String text) {
+		assertThrows(IllegalArgumentException.class, () -> converter().convertObject(text));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "GEOMETRYCOLLECTION Z(POINT(1 2 3))",
+			"GEOMETRYCOLLECTION M(POINT(1 2 3))",
+			"GEOMETRYCOLLECTION ZM(GEOMETRYCOLLECTION(POINT(1 2 3 4)))" })
+	public void testInheritedCollectionDimensions(final String text) {
+		final Geometry<?> geometry = converter().convertObject(text);
+		assertEquals(text.contains(" Z") || text.contains(" ZM"), geometry.hasZ());
+		assertEquals(text.contains(" M") || text.contains(" ZM"), geometry.hasM());
+	}
+
 	/**
 	 * GEOMETRY 列の変換に GeometryConverter が使われること。
 	 */

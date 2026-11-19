@@ -90,7 +90,21 @@ class SpannerLengthMigrationTest {
 	}
 
 	@Test
-	void rejectsArraysKeysAndMixedTypeChanges() {
+	void resizesOneDimensionalStringAndBytesArrays() {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		for (final var type : java.util.List.of(DataType.VARCHAR, DataType.VARBINARY)) {
+			final var original = table(type);
+			original.getColumns().getFirst().setArrayDimension(1).setNotNull(false);
+			final var target = original.clone();
+			target.getColumns().getFirst().setLength(40);
+			final String nativeType = type == DataType.VARCHAR ? "STRING" : "BYTES";
+			final var sql = registry.createSql(original.diff(target), SqlType.ALTER).getFirst().getSqlText();
+			assertTrue(sql.endsWith("ARRAY<" + nativeType + "(40)>"), sql);
+		}
+	}
+
+	@Test
+	void rejectsRequiredArraysKeysAndMixedTypeChanges() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		final var array = table(DataType.VARCHAR);
 		array.getColumns().get(0).setArrayDimension(1);
@@ -106,7 +120,7 @@ class SpannerLengthMigrationTest {
 				() -> registry.createSql(key.diff(resizedKey), SqlType.ALTER));
 		final var original = table(DataType.VARCHAR);
 		final var converted = original.clone();
-		converted.getColumns().get(0).setDataType(DataType.VARBINARY).setLength(40);
+		converted.getColumns().get(0).setDataType(DataType.BIGINT);
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(original.diff(converted), SqlType.ALTER));
 	}

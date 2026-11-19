@@ -129,10 +129,10 @@ public class MySql extends Dialect {
 		getDbDataTypes().addLongVarchar("TEXT", LEN_64KB - 1, type -> {
 			type.setCreateFormat("TEXT");
 		});
-		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB, type -> {
+		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB - 1, type -> {
 			type.setCreateFormat("MEDIUMTEXT");
 		});
-		getDbDataTypes().addLongVarchar("LONGTEXT", LEN_4GB, type -> {
+		getDbDataTypes().addLongVarchar("LONGTEXT", LEN_4GB - 1, type -> {
 			type.setCreateFormat("LONGTEXT");
 		});
 		// BINARY
@@ -240,6 +240,7 @@ public class MySql extends Dialect {
 		});
 		// DateTime
 		getDbDataTypes().addTimestamp("DATETIME", type -> {
+			type.setJdbcTypeHandler(new MySqlDatetimeJdbcTypeHandler());
 			type.setLiteral("'", "'").setCreateFormat("DATETIME").setDefaultValueLiteral(getCurrentDateTimeFunction())
 					.setFixedPrecision(false).setConverter(Converters.getDefault().getConverter(java.util.Date.class));
 		});

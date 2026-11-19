@@ -293,3 +293,31 @@ Full table metadata reads retain CHECK constraints in the table constraint
 collection, using its complete enabled/trust/replication state; duplicate column
 projections are removed. Foreign key `None` and `Restrict` actions generate SQL
 Server's `NO ACTION` syntax.
+
+### Native type and DDL round-trip corrections
+
+SQL Server 2000 and later resolve both `timestamp` and `rowversion` as binary
+row-version columns. SQL Server 2008 and later keep these names distinct from
+`datetime2` and `datetimeoffset`. Re-extract metadata previously read as a date/time
+type before generating replacement DDL; existing Schema XML is not automatically
+reinterpreted.
+
+CREATE preserves explicit IDENTITY seed/increment and, from SQL Server 2008,
+nullable SPARSE columns. Unsupported SPARSE combinations fail explicitly.
+SQL Server 2012 and later emit FileTable CREATE operations with optional directory
+and filename collation settings. These still require the server/database FILESTREAM
+configuration. Change-tracking ALTER operations support enable, disable and
+`TRACK_COLUMNS_UPDATED` changes from SQL Server 2008.
+
+From SQL Server 2005, column renames use `sys.sp_rename`. DEFAULT changes drop and
+add constraints separately from ALTER COLUMN. Readers retain the assigned DEFAULT
+name in column `specifics.default_name`; older Schema models can omit it, in which
+case the generated SQL resolves it from the current database catalog and reports
+an error when the expected constraint is missing. Execute multi-operation changes
+in a transaction when atomicity is required.
+
+SQL Server MERGE generation separates composite OUTPUT keys and omits UPDATE when
+no mutable columns remain. Identity-only inserts use DEFAULT VALUES. Routine
+argument metadata uses character lengths for Unicode types and fractional-second
+precision for time types. Public Java signatures and XML configuration formats
+are unchanged.

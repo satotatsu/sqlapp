@@ -36,6 +36,17 @@ public class MySqlBulkDataInputStream extends InputStream {
 	private RuntimeException failure;
 	/** Set after the abort record has been produced; the stream then ends. */
 	private boolean aborted;
+	private java.time.ZoneOffset timestampOffset;
+	private boolean explicitTimestampOffset;
+
+	void useExplicitTimestampOffset() {
+		timestampOffset = java.time.ZoneOffset.UTC;
+		explicitTimestampOffset = true;
+	}
+
+	void setTimestampOffset(final java.time.ZoneOffset offset) {
+		timestampOffset = offset;
+	}
 
 	public boolean isComplete() { return complete; }
 
@@ -182,6 +193,12 @@ public class MySqlBulkDataInputStream extends InputStream {
 					.convertObject(value, org.geolatte.geom.Geometry.class);
 			return java.util.HexFormat.of().formatHex(
 					com.sqlapp.data.db.dialect.mysql.MySqlGeometryJdbcTypeHandler.toMySqlBytes(geometry));
+		}
+		if (timestampOffset != null && column.getDataType() == DataType.TIMESTAMPVERSION
+				&& value instanceof java.sql.Timestamp timestamp) {
+			return java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+					.format(timestamp.toInstant().atOffset(timestampOffset)).replace('T', ' ')
+					+ (explicitTimestampOffset ? "+00:00" : "");
 		}
 		if (value instanceof Boolean flag) return flag ? "1" : "0";
 		if (value instanceof byte[] bytes) return java.util.HexFormat.of().formatHex(bytes);

@@ -221,6 +221,11 @@ public final class Column extends AbstractColumn<Column>
 	@SuppressWarnings("rawtypes")
 	public ConvertObject getConverter() {
 		if (converter == null) {
+			if (getDialect() != null) {
+				converter = getDialect().getColumnValueConverter(this);
+			}
+		}
+		if (converter == null) {
 			if (this.getArrayDimension() > 0) {
 				converter = new DefaultConverter();
 			} else if (this.getDataType() != null) {
@@ -238,6 +243,11 @@ public final class Column extends AbstractColumn<Column>
 
 	@SuppressWarnings("rawtypes")
 	public Formatter getFormatter() {
+		if (formatter == null) {
+			if (getDialect() != null) {
+				formatter = getDialect().getColumnValueConverter(this);
+			}
+		}
 		if (formatter == null) {
 			if (this.getDataType() != null) {
 				formatter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());

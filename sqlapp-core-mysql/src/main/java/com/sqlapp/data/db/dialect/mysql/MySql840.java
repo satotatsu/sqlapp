@@ -29,7 +29,7 @@ import com.sqlapp.data.db.dialect.Dialect;
  * @author SATOH
  * 
  */
-public class MySql840 extends MySql801 {
+public class MySql840 extends MySql8019 {
 
 	/**
 	 * serialVersionUID

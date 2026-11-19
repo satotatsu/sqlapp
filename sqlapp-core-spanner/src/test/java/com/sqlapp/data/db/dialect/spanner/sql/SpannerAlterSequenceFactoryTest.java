@@ -17,6 +17,13 @@ import com.sqlapp.data.schemas.Sequence;
 
 class SpannerAlterSequenceFactoryTest {
 	@Test
+	void ignoresObservedCounterChangesForDdl() {
+		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		final var original = new Sequence("OrderSeq");
+		final var target = original.clone().setLastValue(java.math.BigInteger.TEN);
+		assertTrue(registry.createSql(original.diff(target), SqlType.ALTER).isEmpty());
+	}
+	@Test
 	void restartsOnlyFromExplicitCounterRequestsInTheOriginalStyle() throws Exception {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		for (String style : List.of("CLAUSES", "OPTIONS")) {

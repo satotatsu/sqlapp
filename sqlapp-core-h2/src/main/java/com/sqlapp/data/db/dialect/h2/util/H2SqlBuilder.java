@@ -57,12 +57,15 @@ public class H2SqlBuilder extends AbstractSqlBuilder<H2SqlBuilder> {
 		if (column.getArrayDimension() > 0 && column.getDataType() != null
 				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
 			String bounds = column.getSpecifics().get(com.sqlapp.data.db.datatype.IntervalArrays.DECLARED_BOUNDS);
-			if (bounds == null) _add(" ARRAY".repeat(column.getArrayDimension()));
+			if (bounds == null)
+				_add(" ARRAY".repeat(column.getArrayDimension()));
 			else {
 				String[] values = bounds.split(",", -1);
-				if (values.length != column.getArrayDimension()) throw new IllegalArgumentException("Invalid interval array bounds");
+				if (values.length != column.getArrayDimension())
+					throw new IllegalArgumentException("Invalid interval array bounds");
 				for (String value : values) {
-					if (!value.matches("[0-9]+|\\*")) throw new IllegalArgumentException("Invalid interval array bound");
+					if (!value.matches("[0-9]+|\\*"))
+						throw new IllegalArgumentException("Invalid interval array bound");
 					_add(" ARRAY" + (value.equals("*") ? "" : "[" + value + "]"));
 				}
 			}

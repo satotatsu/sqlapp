@@ -43,8 +43,8 @@ public class H2_200 extends H2 {
 		}
 		getDbDataTypes().addDecimalFloat("DECFLOAT");
 		for (DataType type : DataType.values()) {
-			if (type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL
-					&& type != DataType.INTERVAL && type != DataType.INTERVAL_YEAR_TO_DAY)
+			if (type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL && type != DataType.INTERVAL
+					&& type != DataType.INTERVAL_YEAR_TO_DAY)
 				getDbDataTypes().addStandardInterval(type, 18, 9);
 		}
 		getDbDataTypes().addTimeWithTimeZone(type -> {
@@ -61,8 +61,7 @@ public class H2_200 extends H2 {
 	public String getSqlValueDefinition(Column column, Object value) {
 		var type = column.getDataType();
 		if (type != null && type.getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
-			var handler = (StandardIntervalJdbcTypeHandler)
-					getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
+			var handler = (StandardIntervalJdbcTypeHandler) getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler();
 			return handler.literal(value, column);
 		}
 		return super.getSqlValueDefinition(column, value);

@@ -121,12 +121,15 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
 	@Override
 	public SpannerSqlBuilder definitionForAlterColumn(final Column column) {
-		if (column.isIdentity() || !CommonUtils.isEmpty(column.getFormula())) {
+		if (column.isIdentity() || (!CommonUtils.isEmpty(column.getFormula()) && column.isFormulaPersisted())) {
 			throw new UnsupportedOperationException(
 					"Cloud Spanner identity/generated columns require a separate ALTER migration: " + column.getName());
 		}
 		typeDefinition(column);
 		notNullDefinition(column);
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			return space().as().space()._add("(")._add(column.getFormula())._add(")");
+		}
 		// These clauses are removed by a typed ALTER if omitted, so restate the target
 		// values.
 		if (!CommonUtils.isEmpty(column.getDefaultValue())) {

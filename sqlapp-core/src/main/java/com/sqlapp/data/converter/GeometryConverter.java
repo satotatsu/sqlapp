@@ -35,7 +35,8 @@ import org.geolatte.geom.jts.JTS;
  * </p>
  * <ul>
  * <li>出力: PostGIS EWKT ({@link Wkt.Dialect#POSTGIS_EWKT_1})。SRID は "SRID=n;" として含め、Z/M は PostGIS の表記
- * ("POINT(x y z)"、"POINTM(x y m)"、"POINT(x y z m)")で出力する。SRID 0 は SRID なしとして扱う。</li>
+ * ("POINT(x y z)"、"POINTM(x y m)"、"POINT(x y z m)")で出力する。EMPTY に Z がある場合は、
+ * 次元を保持するため ISO の Z/ZM 指定を明示する。SRID 0 は SRID なしとして扱う。</li>
  * <li>入力: WKT / EWKT(ISO の "POINT Z (...)" 表記を含む)と、16進文字列の EWKB(PostgreSQL の COPY が出力する形式)。
  * 構文が不正な入力や末尾に余分なデータがある入力は拒否する。</li>
  * </ul>
@@ -73,7 +74,14 @@ public class GeometryConverter extends AbstractConverter<org.geolatte.geom.Geome
 		if (value == null) {
 			return null;
 		}
-		return Wkt.toWkt(value, Wkt.Dialect.POSTGIS_EWKT_1);
+		final String text = Wkt.toWkt(value, Wkt.Dialect.POSTGIS_EWKT_1);
+		// EWKT omits Z/ZM markers. EMPTY has no coordinates from which to recover
+		// those dimensions, including empty members of a collection.
+		if (value.hasZ() && text.contains("EMPTY")) {
+			final String wkt = Wkt.toWkt(value, Wkt.Dialect.SFA_1_2_1);
+			return value.getSRID() > 0 ? "SRID=" + value.getSRID() + ";" + wkt : wkt;
+		}
+		return text;
 	}
 
 	private static final Pattern HEX = Pattern.compile("[0-9A-Fa-f]+");

@@ -16,7 +16,8 @@ public class SpannerSequenceNextValuesFactory extends AbstractSequenceNextValues
 
 	@Override
 	protected void addSequenceNextValues(final Sequence sequence, final SpannerSqlBuilder builder) {
-		builder.select().space()._add("GET_NEXT_SEQUENCE_VALUE")._add("(")._add("SEQUENCE").space().name(sequence)
+		builder.select().space()._add("GET_NEXT_SEQUENCE_VALUE")._add("(")._add("SEQUENCE").space()
+				.name(sequence, getOptions().isDecorateSchemaName())
 				._add(")");
 		builder.lineBreak().from().space()._add("UNNEST")._add("(")._add("GENERATE_ARRAY")._add("(")._add(1).comma()
 				._add(getColumnParameterExpression(getCountParameterName(sequence), "1"))._add(")")._add(")");

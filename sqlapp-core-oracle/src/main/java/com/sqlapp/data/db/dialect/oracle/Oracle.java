@@ -53,6 +53,12 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class Oracle extends Dialect {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, false, "SYSTIMESTAMP");
+	}
+
 	/**
 	 * serialVersionUID
 	 */

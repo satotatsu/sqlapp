@@ -9,6 +9,7 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.data.schemas.SchemaProperties;
 
 /** Changes the skip range of an existing GoogleSQL sequence. */
 public class SpannerAlterSequenceFactory extends SimpleAlterSqlFactory<Sequence, SpannerSqlBuilder> {
@@ -26,7 +27,8 @@ public class SpannerAlterSequenceFactory extends SimpleAlterSqlFactory<Sequence,
 		final var target = difference.getTarget(Sequence.class);
 		final var changes = difference.toDifference().getChangedProperties(getDialect());
 		for (final String property : changes.keySet()) {
-			if (!SpannerCreateSequenceFactory.SKIP_RANGE_MIN.equalsIgnoreCase(property)
+			if (!SchemaProperties.LAST_VALUE.getLabel().equalsIgnoreCase(property)
+					&& !SpannerCreateSequenceFactory.SKIP_RANGE_MIN.equalsIgnoreCase(property)
 					&& !SpannerCreateSequenceFactory.SKIP_RANGE_MAX.equalsIgnoreCase(property)
 					&& !SEQUENCE_DDL_STYLE.equalsIgnoreCase(property)
 					&& !RESTART_COUNTER_WITH.equalsIgnoreCase(property)) {

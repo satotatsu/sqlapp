@@ -143,6 +143,29 @@ public class PGGeometryConveterTest {
 	}
 
 	@Test
+	public void testExtremeCoefficientRoundTrip() {
+		for (final double[] coefficients : new double[][] { { 1, -1, 1e20 }, { 1, 1e-320, 1 },
+				{ 1e-320, 1, 1 }, { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE } }) {
+			final Line line = new FromPGLineConverter().convertObject(
+					new PGline(coefficients[0], coefficients[1], coefficients[2]));
+			final PGline back = new ToPGLineConverter().convertObject(line);
+			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(back.a));
+			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(back.b));
+			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(back.c));
+			final double scale = Math.max(Math.abs(coefficients[0]), Math.abs(coefficients[1]));
+			final double resultScale = Math.max(Math.abs(back.a), Math.abs(back.b));
+			final double sign = Math.copySign(1d, coefficients[0] != 0d ? coefficients[0] : coefficients[1])
+					* Math.copySign(1d, back.a != 0d ? back.a : back.b);
+			assertEquals(coefficients[0] / scale, sign * back.a / resultScale,
+					Math.max(Double.MIN_VALUE, Math.ulp(coefficients[0] / scale) * 8));
+			assertEquals(coefficients[1] / scale, sign * back.b / resultScale,
+					Math.max(Double.MIN_VALUE, Math.ulp(coefficients[1] / scale) * 8));
+			assertEquals(coefficients[2] / scale, sign * back.c / resultScale,
+					Math.max(Double.MIN_VALUE, Math.ulp(coefficients[2] / scale) * 8));
+		}
+	}
+
+	@Test
 	public void testToPGTypes() {
 		assertInstanceOf(PGpath.class, new ToPGPathConverter().convertObject(new Path(true, 0, 0, 1, 1)));
 		final PGpath open = new ToPGPathConverter().convertObject(new Path(true, 0, 0, 1, 1));

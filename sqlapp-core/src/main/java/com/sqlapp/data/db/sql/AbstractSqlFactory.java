@@ -663,6 +663,12 @@ public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> imp
 	}
 
 	protected String getColumnParameterExpression(final Column column, final String _default) {
+		final String expression = getUnconvertedColumnParameterExpression(column, _default);
+		final var type = getDialect().getDbDataType(column);
+		return type == null ? expression : type.getJdbcTypeHandler().writeExpression(expression, column);
+	}
+
+	private String getUnconvertedColumnParameterExpression(final Column column, final String _default) {
 		if (this.getOptions() != null) {
 			if (this.getTableOptions() != null) {
 				if (this.getTableOptions().getParameterExpression() != null) {

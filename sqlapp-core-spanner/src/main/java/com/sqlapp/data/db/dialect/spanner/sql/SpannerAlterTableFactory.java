@@ -379,6 +379,26 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		final var changed = difference.toDifference().getChangedProperties(getDialect());
 		final Column column = difference.getTarget(Column.class);
 		final Column oldColumn = difference.getOriginal(Column.class);
+		if (changed.size() == 1 && changed.containsKey(SchemaProperties.FORMULA.getLabel())) {
+			requireNonKey(original, oldColumn);
+			requireNonKey(table, column);
+			if (oldColumn.getFormula() == null || oldColumn.getFormula().isBlank()
+					|| column.getFormula() == null || column.getFormula().isBlank()
+					|| oldColumn.isFormulaPersisted() || column.isFormulaPersisted()
+					|| oldColumn.isIdentity() || column.isIdentity() || column.isNotNull()
+					|| !CommonUtils.isEmpty(column.getDefaultValue()) || !CommonUtils.isEmpty(column.getOnUpdate())
+					|| original.getIndexes().stream().anyMatch(index ->
+							index.getColumns().get(column.getName()) != null
+									|| index.getIncludes().get(column.getName()) != null)) {
+				throw new UnsupportedOperationException(
+						"Spanner can replace only an existing unindexed virtual column expression: " + column.getName());
+			}
+			final var builder = createSqlBuilder();
+			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(column)
+					.space().definitionForAlterColumn(column);
+			add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
+			return;
+		}
 		if (changed.size() == 1 && changed.containsKey(IDENTITY_RESTART_COUNTER_WITH)) {
 			if (!oldColumn.isIdentity() || !column.isIdentity()
 					|| column.getDataType() != DataType.BIGINT || column.getArrayDimension() != 0)
@@ -434,9 +454,10 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		requireNonKey(original, oldColumn);
 		if (length) {
 			if ((column.getDataType() != DataType.VARCHAR && column.getDataType() != DataType.VARBINARY)
-					|| column.getDataType() != oldColumn.getDataType() || column.getArrayDimension() != 0) {
+					|| column.getDataType() != oldColumn.getDataType() || column.getArrayDimension() > 1) {
 				throw new UnsupportedOperationException(
-						"Cloud Spanner length ALTER supports only scalar STRING/BYTES columns: " + column.getName());
+						"Cloud Spanner length ALTER supports STRING/BYTES scalars and one-dimensional arrays: "
+								+ column.getName());
 			}
 			final Long targetLength = column.getLength();
 			if (targetLength == null || targetLength <= 0) {

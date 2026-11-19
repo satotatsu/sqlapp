@@ -87,19 +87,29 @@ public class SqlServerUtils extends ReaderUtils {
 		obj.setSchemaName(getString(rs, MetadataReader.SCHEMA_NAME));
 		SchemaUtils.setRoutine(obj, routine);
 		String productDataType = getString(rs, "NAME");
-		Long maxLength = getLong(rs, "max_length");
+		Long maxLength = getMaxLength(productDataType, getLong(rs, "max_length"));
 		if (maxLength != null && maxLength.longValue() == -1L) {
 			if ("xml".equalsIgnoreCase(productDataType)) {
 				maxLength = null;
 			} else {
-				maxLength = CommonUtils.LEN_2GB - 1;
+				maxLength = "nvarchar".equalsIgnoreCase(productDataType) ? CommonUtils.LEN_1GB - 1
+						: CommonUtils.LEN_2GB - 1;
 			}
 		}
 		Long precision = getLong(rs, "precision");
 		Integer scale = getInteger(rs, "scale");
+		if ("decimal".equalsIgnoreCase(productDataType) || "numeric".equalsIgnoreCase(productDataType))
+			maxLength = precision;
+		boolean temporal = "time".equalsIgnoreCase(productDataType) || "datetime2".equalsIgnoreCase(productDataType)
+				|| "datetimeoffset".equalsIgnoreCase(productDataType);
+		if (temporal) {
+			maxLength = scale == null ? null : scale.longValue();
+			precision = null;
+			scale = null;
+		}
 		obj.setDefaultValue(getString(rs, "default_value"));
 		obj.setReadonly(getBoolean(rs, "is_readonly"));
-		obj.getDialect().setDbType(productDataType, notZero(maxLength, precision), scale, obj);
+		obj.getDialect().setDbType(productDataType, temporal ? maxLength : notZero(maxLength, precision), scale, obj);
 	}
 
 	/**
@@ -339,9 +349,11 @@ public class SqlServerUtils extends ReaderUtils {
 	}
 
 	public static Long getMaxLength(String productDataType, Long byteLength) {
-		productDataType = productDataType.toUpperCase();
+		if (productDataType == null || byteLength == null)
+			return byteLength;
+		productDataType = productDataType.toUpperCase(java.util.Locale.ROOT);
 		if (productDataType.startsWith("NTEXT") || productDataType.startsWith("NCHAR")
-				|| productDataType.startsWith("NVARCHAR") && byteLength != null) {
+				|| productDataType.startsWith("NVARCHAR")) {
 			if (byteLength.longValue() > 0) {
 				return byteLength.longValue() / 2;
 			}

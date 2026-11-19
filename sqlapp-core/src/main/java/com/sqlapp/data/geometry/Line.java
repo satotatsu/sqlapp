@@ -58,7 +58,8 @@ public final class Line extends AbstractMultiPoint<Point>{
 	/**
 	 * 直線の方程式 Ax + By + C = 0 の係数から、直線上の異なる2点を持つ Line を作成します。
 	 * <p>
-	 * B が 0 でない場合は x=0 と x=1 の点、B が 0 の場合(垂直線)は y=0 と y=1 の点を使用します。 2点で表すため、元の係数の大きさ・符号は保存されず、直線としての意味のみ保持されます。
+	 * 係数の大きさに応じて軸と点の間隔を選択し、除算のオーバーフローや丸めによる傾きの消失を避けます。
+	 * 2点で表すため、元の係数の大きさ・符号は保存されず、直線としての意味のみ保持されます。
 	 * </p>
 	 * 
 	 * @param a
@@ -68,19 +69,38 @@ public final class Line extends AbstractMultiPoint<Point>{
 	 * @param c
 	 *            Cの係数
 	 * @throws IllegalArgumentException
-	 *             A と B がともに 0 の場合
+	 *             係数が有限でない場合、A と B がともに 0 の場合、または有限の2点で表せない場合
 	 */
 	public static Line fromCoefficients(final double a, final double b, final double c) {
-		if (a == 0d && b == 0d) {
-			throw new IllegalArgumentException("Invalid line coefficients: A and B cannot both be zero. {" + a + ","
+		if (!Double.isFinite(a) || !Double.isFinite(b) || !Double.isFinite(c) || (a == 0d && b == 0d)) {
+			throw new IllegalArgumentException("Invalid line coefficients: coefficients must be finite and A and B cannot both be zero. {" + a + ","
 					+ b + "," + c + "}");
 		}
-		// "+ 0d" は -0.0 を 0.0 にそろえるため
-		if (b != 0d) {
-			return new Line(0d, -c / b + 0d, 1d, -(a + c) / b + 0d);
+		// Solve for the coordinate with the larger coefficient, so |slope| <= 1.
+		final boolean solveY = Math.abs(b) >= Math.abs(a);
+		final double divisor = solveY ? b : a;
+		final double slope = -(solveY ? a : b) / divisor;
+		final double intercept = -c / divisor + 0d;
+		if (!Double.isFinite(intercept) || (slope == 0d && (solveY ? a : b) != 0d)) {
+			throw new IllegalArgumentException("Line coefficients cannot be represented by finite points.");
 		}
-		final double x = -c / a + 0d;
-		return new Line(x, 0d, x, 1d);
+		// Use a larger independent coordinate when a unit step would lose the slope.
+		double step = slope == 0d ? 1d : Math.max(1d, Math.abs(intercept));
+		final double sign = (slope > 0d) == (intercept > 0d) && intercept != 0d ? -1d : 1d;
+		double signedStep = Math.copySign(step, sign);
+		double end = Math.fma(slope, signedStep, intercept) + 0d;
+		if (slope != 0d && end == intercept) {
+			// Even a very small slope can be represented if the independent
+			// coordinate is increased enough to move several ULPs at the intercept.
+			step = (Math.ulp(intercept) / Math.abs(slope)) * 4d;
+			signedStep = Math.copySign(step, sign);
+			end = Math.fma(slope, signedStep, intercept) + 0d;
+		}
+		if (!Double.isFinite(signedStep) || !Double.isFinite(end) || (slope != 0d && end == intercept)) {
+			throw new IllegalArgumentException("Line coefficients cannot be represented by distinct finite points.");
+		}
+		return solveY ? new Line(0d, intercept, signedStep, end)
+				: new Line(intercept, 0d, end, signedStep);
 	}
     
 	/* (non-Javadoc)

@@ -7,6 +7,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.dialect.spanner.DialectHolder;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
+import com.sqlapp.data.db.dialect.spanner.sql.SpannerSequenceState;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.*;
@@ -18,6 +19,14 @@ class SpannerSequenceReaderTest {
 	private class Reader extends SpannerSequenceReader {
 		final List<Map<String, String>> rows = new ArrayList<>();
 		int queries;
+		int stateReads;
+
+		@Override
+		List<SpannerSequenceState> captureStates(Connection connection, List<Sequence> sequences) {
+			stateReads++;
+			return sequences.stream().map(sequence -> new SpannerSequenceState(sequence.getSchemaName(),
+					sequence.getName(), "plain".equals(sequence.getName()) ? null : 3500L)).toList();
+		}
 
 		Reader() {
 			super(DialectHolder.defaultDialect);
@@ -65,14 +74,17 @@ class SpannerSequenceReaderTest {
 		final var reader = new Reader();
 		for (String schema : List.of("a", "b"))
 			for (int i = 0; i < 20; i++)
-				reader.rows.add(row(schema, "sequence " + i));
+				reader.rows.add(row(schema, "sequence_" + i));
 		final var sequences = reader.doGetAll(null, new ParametersContext(), null);
+		reader.setMetadataDetail(null, new ParametersContext(), sequences);
 		assertEquals(40, sequences.size());
 		assertEquals(1, reader.queries);
+		assertEquals(1, reader.stateReads);
 		for (var sequence : sequences) {
 			final Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
 			assertEquals(sequence.getSchemaName(), restored.getSchemaName());
 			assertEquals(sequence.getStartValue(), restored.getStartValue());
+			assertEquals(new java.math.BigInteger("3501"), restored.getLastValue());
 			assertEquals("bit_reversed_positive", restored.getSpecifics().get("SEQUENCE_KIND"));
 			assertEquals("100", restored.getSpecifics().get(SpannerCreateSequenceFactory.SKIP_RANGE_MIN));
 			assertEquals("200", restored.getSpecifics().get(SpannerCreateSequenceFactory.SKIP_RANGE_MAX));
@@ -106,7 +118,7 @@ class SpannerSequenceReaderTest {
 	}
 
 	@Test
-	void allowsMissingOptionalOptionsAndSingleValueSkipRanges() {
+	void allowsMissingOptionalOptionsAndSingleValueSkipRanges() throws Exception {
 		final var reader = new Reader();
 		final var plain = row("app", "plain");
 		plain.remove("START_WITH_COUNTER");
@@ -118,7 +130,9 @@ class SpannerSequenceReaderTest {
 		single.put("SKIP_RANGE_MAX", "100");
 		reader.rows.add(single);
 		final var sequences = reader.doGetAll(null, new ParametersContext(), null);
+		reader.setMetadataDetail(null, new ParametersContext(), sequences);
 		assertEquals(2, sequences.size());
+		assertNull(sequences.get(0).getLastValue());
 		assertNull(sequences.get(0).getSpecifics().get(SpannerCreateSequenceFactory.SKIP_RANGE_MIN));
 		assertEquals("100", sequences.get(1).getSpecifics().get(SpannerCreateSequenceFactory.SKIP_RANGE_MAX));
 		assertNull(sequences.get(0).getSpecifics().get("SEQUENCE_KIND"));

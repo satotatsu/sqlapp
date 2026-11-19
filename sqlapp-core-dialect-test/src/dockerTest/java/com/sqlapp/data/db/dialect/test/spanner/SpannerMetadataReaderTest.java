@@ -18,9 +18,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,6 +42,7 @@ import com.sqlapp.data.db.dialect.spanner.sql.SpannerAlterCatalogFactory;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateIndexFactory;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateTableFactory;
+import com.sqlapp.data.db.dialect.spanner.sql.SpannerSequenceState;
 import com.sqlapp.data.db.dialect.test.BulkMigrationJobAssertions;
 import com.sqlapp.data.db.dialect.test.BulkMigrationTransactionAssertions;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
@@ -58,6 +62,7 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -78,6 +83,62 @@ class SpannerMetadataReaderTest {
 	@AfterAll
 	static void stopContainer() {
 		ReusableTestcontainers.stop(SPANNER);
+	}
+
+	@Test
+	void createsAltersAndDropsChangeStreams() throws Exception {
+		try (var connection = createConnection("stream-" + UUID.randomUUID().toString().substring(0, 8));
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE Orders (id INT64 NOT NULL, label STRING(30)) PRIMARY KEY (id)");
+			final var stream = new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit",
+					com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.Scope.ALL, List.of(), null);
+			statement.execute(stream.createSql(true));
+			final var stopped = new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit",
+					com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.Scope.NONE, List.of(), null);
+			statement.execute(stopped.setScopeSql());
+			final var watchingOrders = new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit",
+					com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.Scope.TABLES,
+					List.of(new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.Target(null, "Orders",
+							List.of("label"))), null);
+			statement.execute(watchingOrders.setScopeSql());
+			final var reader = new com.sqlapp.data.db.dialect.spanner.metadata.SpannerChangeStreamReader();
+			final var restored = reader.read(connection).getFirst();
+			assertEquals(watchingOrders.scope(), restored.scope());
+			assertEquals(watchingOrders.targets().stream().map(target -> target.table()).toList(),
+					restored.targets().stream().map(target -> target.table()).toList());
+			assertEquals(List.of("label"), restored.targets().getFirst().columns());
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var catalog = dialect.getCatalogReader().getAllFull(connection).getFirst();
+			final var snapshot = com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStreams.get(catalog).orElseThrow();
+			assertEquals(List.of(restored), snapshot);
+			final var alteredCatalog = catalog.clone().setDialect(dialect);
+			final var registry = dialect.createSqlFactoryRegistry();
+			// Keep catalog-provided options in the target when changing only the scope.
+			com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStreams.set(alteredCatalog,
+					List.of(new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit",
+							stopped.scope(), stopped.targets(), restored.options())));
+			for (final var operation : registry.createSql(catalog.diff(alteredCatalog)))
+				statement.execute(operation.getSqlText());
+			assertEquals(stopped.scope(), reader.read(connection).getFirst().scope());
+			for (final var operation : registry.createSql(alteredCatalog.diff(catalog)))
+				statement.execute(operation.getSqlText());
+			final var restoredCopy = new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("AuditCopy",
+					restored.scope(), restored.targets(), restored.options());
+			statement.execute(restoredCopy.createSql(false));
+			assertEquals(2, reader.read(connection).size());
+			statement.execute(restoredCopy.dropSql(false));
+			try (var rows = statement.executeQuery("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.CHANGE_STREAM_TABLES "
+					+ "WHERE CHANGE_STREAM_NAME = 'Audit'")) {
+				assertTrue(rows.next());
+				assertEquals("Orders", rows.getString(1));
+			}
+			// The emulator does not yet accept DROP CHANGE STREAM IF EXISTS.
+			statement.execute(stream.dropSql(false));
+			try (var rows = statement.executeQuery("SELECT CHANGE_STREAM_NAME FROM INFORMATION_SCHEMA.CHANGE_STREAMS "
+					+ "WHERE CHANGE_STREAM_NAME = 'Audit'")) {
+				assertTrue(!rows.next());
+			}
+		}
 	}
 
 	@Test
@@ -106,13 +167,289 @@ class SpannerMetadataReaderTest {
 			assertEquals(3, roleSql.size());
 			for (final var operation : roleSql)
 				sql.execute(operation.getSqlText());
-			assertThrows(SQLException.class, () -> sql.execute("CREATE ROLE Reader"));
+			// The emulator accepts role DDL, but does not expose roles in its DDL dump.
+			assertEquals("GRANT ROLE `Reader` TO ROLE `App`", roleSql.getLast().getSqlText());
+			sql.execute("CREATE TABLE Orders (id INT64 NOT NULL) PRIMARY KEY (id)");
+			final var granted = withRoles.clone().setDialect(dialect);
+			final var privilege = new com.sqlapp.data.schemas.ObjectPrivilege().setObjectName("Orders")
+					.setGranteeName("Reader").setPrivilege("SELECT").setHierachy(false);
+			privilege.getSpecifics().put("OBJECT_TYPE", "TABLE");
+			granted.getObjectPrivileges().add(privilege);
+			for (final var operation : registry.createSql(withRoles.diff(granted)))
+				sql.execute(operation.getSqlText());
+			for (final var operation : registry.createSql(granted.diff(withRoles)))
+				sql.execute(operation.getSqlText());
 			for (final var operation : registry.createSql(withRoles.diff(configured)))
 				sql.execute(operation.getSqlText());
 			sql.execute(registry.createSql(new Role("Reader"), SqlType.CREATE).getFirst().getSqlText());
 			sql.execute(registry.createSql(new Role("Reader"), SqlType.DROP).getFirst().getSqlText());
-			for (final var operation : registry.createSql(configured.diff(original)))
+			assertThrows(UnsupportedOperationException.class, () -> registry.createSql(configured.diff(original)));
+			final var retained = original.clone();
+			retained.getSpecifics().put(SpannerAlterCatalogFactory.DEFAULT_SEQUENCE_KIND, "bit_reversed_positive");
+			for (final var operation : registry.createSql(configured.diff(retained)))
 				sql.execute(operation.getSqlText());
+		}
+	}
+
+	@Test
+	void preservesInboundAndSelfReferencesDuringPrimaryKeyReplacement() throws Exception {
+		try (var connection = createConnection("pk-references-" + UUID.randomUUID().toString().substring(0, 8));
+				var sql = connection.createStatement()) {
+			sql.execute("CREATE SCHEMA Sales");
+			sql.execute("CREATE SCHEMA Billing");
+			sql.execute("CREATE TABLE Sales.Orders (id INT64 NOT NULL, code INT64, prior_id INT64, "
+					+ "CONSTRAINT PriorOrder FOREIGN KEY (prior_id) REFERENCES Sales.Orders (id)) PRIMARY KEY (id)");
+			sql.execute("CREATE UNIQUE INDEX Sales.ByLegacyId ON Sales.Orders (id)");
+			sql.execute("CREATE TABLE Billing.Payments (id INT64 NOT NULL, order_id INT64, "
+					+ "CONSTRAINT PaymentOrder FOREIGN KEY (order_id) REFERENCES Sales.Orders (id)) PRIMARY KEY (id)");
+			sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (1, 10)");
+			sql.executeUpdate("INSERT INTO Sales.Orders (id, code, prior_id) VALUES (2, 20, 1)");
+			sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (1, 2)");
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var schemas = dialect.getCatalogReader().getSchemaReader().getAllFull(connection);
+			final var orders = schemas.stream().filter(schema -> "Sales".equals(schema.getName()))
+					.findFirst().orElseThrow().getTables().get("Orders");
+			final var payments = schemas.stream().filter(schema -> "Billing".equals(schema.getName()))
+					.findFirst().orElseThrow().getTables().get("Payments");
+			final var withoutUnique = orders.clone();
+			withoutUnique.getIndexes().remove(withoutUnique.getIndexes().get("ByLegacyId"));
+			assertThrows(IllegalArgumentException.class, () ->
+					com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(
+							withoutUnique, List.of("code"), "OrdersStaging", "OrdersBackup", List.of(payments)));
+			final var migration = com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(
+					orders, List.of("code"), "OrdersStaging", "OrdersBackup", List.of(payments));
+			assertEquals(2, migration.foreignKeys().size());
+			final var plan = migration.table();
+			sql.execute(plan.createSql());
+			assertEquals(2, sql.executeUpdate(plan.copySql()));
+			try (var rows = sql.executeQuery(plan.countSql())) {
+				assertTrue(rows.next());
+				assertEquals(rows.getLong(1), rows.getLong(2));
+			}
+			for (final String statement : migration.cutoverStatements())
+				sql.execute(statement);
+
+			sql.executeUpdate("INSERT INTO Sales.Orders (id, code, prior_id) VALUES (3, 30, 1)");
+			sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (2, 3)");
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, prior_id) VALUES (4, 40, 999)"));
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (3, 999)"));
+		}
+	}
+
+	@Test
+	void replacesAPrimaryKeyWithAnAtomicNameSwap() throws Exception {
+		try (var connection = createConnection("pk-swap-" + UUID.randomUUID().toString().substring(0, 8));
+				var sql = connection.createStatement()) {
+			sql.execute("CREATE SCHEMA Sales");
+			sql.execute("CREATE TABLE Sales.Customers (id INT64 NOT NULL) PRIMARY KEY (id)");
+			sql.executeUpdate("INSERT INTO Sales.Customers (id) VALUES (1)");
+			sql.execute("CREATE TABLE Sales.Orders (id INT64 NOT NULL, code INT64, label STRING(20), customer INT64, "
+					+ "CONSTRAINT PositiveCode CHECK (code > 0), "
+					+ "CONSTRAINT OrderCustomer FOREIGN KEY (customer) REFERENCES Sales.Customers (id)) PRIMARY KEY (id)");
+			sql.execute("CREATE UNIQUE INDEX Sales.ByLabel ON Sales.Orders (label)");
+			sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label, customer) VALUES (1, 10, 'a', 1), (2, 20, 'b', 1)");
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var reader = dialect.getCatalogReader().getSchemaReader();
+			final var source = reader.getAllFull(connection).stream().filter(schema -> "Sales".equals(schema.getName()))
+					.findFirst().orElseThrow().getTables().get("Orders");
+			final var migration = com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(source,
+					List.of("code"), "OrdersStaging", "OrdersBackup");
+			final var plan = migration.table();
+			sql.execute(plan.createSql());
+			assertThrows(SQLException.class, () -> sql.execute(plan.createSql()));
+			assertEquals(2, sql.executeUpdate(plan.copySql()));
+			try (var rows = sql.executeQuery(plan.countSql())) {
+				assertTrue(rows.next());
+				assertEquals(2, rows.getLong(1));
+				assertEquals(2, rows.getLong(2));
+			}
+			assertEquals(2, migration.moves().size());
+			for (final var move : migration.moves()) {
+				sql.execute(move.dropSourceSql());
+				sql.execute(move.createStagingSql());
+				sql.execute(move.dropStagingSql());
+				sql.execute(move.recreateSourceSql());
+				sql.execute(move.dropSourceSql());
+				sql.execute(move.createStagingSql());
+			}
+			assertEquals(1, migration.foreignKeys().size());
+			for (final var move : migration.foreignKeys())
+				sql.execute(move.dropSql());
+			sql.execute(plan.cutoverSql());
+			for (final var move : migration.foreignKeys())
+				sql.execute(move.addSql());
+			try (var rows = sql.executeQuery("SELECT code FROM Sales.Orders@{FORCE_INDEX=ByLabel} WHERE label='b'")) {
+				assertTrue(rows.next());
+				assertEquals(20, rows.getLong(1));
+			}
+			sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (1, 30)");
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (3, 10)"));
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (3, NULL)"));
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label) VALUES (3, 40, 'a')"));
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label) VALUES (3, -1, 'c')"));
+			assertThrows(SQLException.class, () ->
+					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label, customer) VALUES (3, 50, 'c', 2)"));
+			try (var rows = sql.executeQuery("SELECT COUNT(*) FROM Sales.OrdersBackup")) {
+				assertTrue(rows.next());
+				assertEquals(2, rows.getLong(1));
+			}
+		}
+	}
+
+	@Test
+	void resizesAnArrayElementLimitWithoutReplacingTheColumn() throws Exception {
+		try (var connection = createConnection("array-resize-" + UUID.randomUUID().toString().substring(0, 8));
+				var sql = connection.createStatement()) {
+			sql.execute("CREATE TABLE ArrayValues (id INT64 NOT NULL, tags ARRAY<STRING(5)>) PRIMARY KEY (id)");
+			sql.executeUpdate("INSERT INTO ArrayValues (id, tags) VALUES (1, ['hello'])");
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+			final var original = reader.getAllFull(connection).getFirst();
+			final var target = original.clone();
+			target.getColumns().get("tags").setLength(10);
+			final var registry = dialect.createSqlFactoryRegistry();
+			sql.execute(registry.createSql(original.diff(target)).getFirst().getSqlText());
+			sql.executeUpdate("INSERT INTO ArrayValues (id, tags) VALUES (2, ['longer'])");
+			assertThrows(SQLException.class, () ->
+					sql.execute(registry.createSql(target.diff(original)).getFirst().getSqlText()));
+			try (var rows = sql.executeQuery("SELECT tags[OFFSET(0)] FROM ArrayValues ORDER BY id")) {
+				assertTrue(rows.next());
+				assertEquals("hello", rows.getString(1));
+				assertTrue(rows.next());
+				assertEquals("longer", rows.getString(1));
+			}
+		}
+	}
+
+	@Test
+	void replacesAVirtualGeneratedColumnExpression() throws Exception {
+		try (var connection = createConnection("virtual-" + UUID.randomUUID().toString().substring(0, 8));
+				var sql = connection.createStatement()) {
+			sql.execute("CREATE TABLE VirtualValues (id INT64 NOT NULL, calculated INT64 AS (id + 1)) PRIMARY KEY (id)");
+			sql.executeUpdate("INSERT INTO VirtualValues (id) VALUES (10)");
+			final var dialect = DialectResolver.getInstance().getDialect(connection);
+			final var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
+			final var original = reader.getAllFull(connection).getFirst();
+			final var target = original.clone();
+			target.getColumns().get("calculated").setFormula("id + 2");
+			final var registry = dialect.createSqlFactoryRegistry();
+			final var operation = registry.createSql(original.diff(target)).getFirst();
+			try {
+				sql.execute(operation.getSqlText());
+			} catch (SQLException exception) {
+				org.junit.jupiter.api.Assumptions.assumeFalse(exception.getMessage() != null
+						&& exception.getMessage().contains("Cannot change the expression of a generated column"),
+						"Local emulator rejects replacing an unindexed virtual generated expression");
+				throw exception;
+			}
+			try (var rows = sql.executeQuery("SELECT id, calculated FROM VirtualValues")) {
+				assertTrue(rows.next());
+				assertEquals(10L, rows.getLong(1));
+				assertEquals(12L, rows.getLong(2));
+			}
+		}
+	}
+
+	@Test
+	void capturesSequenceCountersAcrossTheBatchBoundary() throws Exception {
+		try (var connection = createConnection("seq-batch-" + UUID.randomUUID().toString().substring(0, 8));
+				var sql = connection.createStatement()) {
+			final var sequences = IntStream.range(0, 65).mapToObj(index -> new Sequence("Seq" + index)).toList();
+			sql.execute("START BATCH DDL");
+			for (int index = 0; index < sequences.size(); index++)
+				sql.execute("CREATE SEQUENCE " + sequences.get(index).getName()
+						+ " BIT_REVERSED_POSITIVE START COUNTER WITH " + (100 + index));
+			sql.execute("RUN BATCH");
+			connection.setAutoCommit(false);
+			try (var rows = sql.executeQuery("SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE Seq63), "
+					+ "GET_NEXT_SEQUENCE_VALUE(SEQUENCE Seq64)")) {
+				assertTrue(rows.next());
+			}
+			connection.commit();
+			connection.setAutoCommit(true);
+
+			final var states = SpannerSequenceState.capture(connection, sequences);
+			assertEquals(sequences.stream().map(Sequence::getName).toList(),
+					states.stream().map(SpannerSequenceState::name).toList());
+			for (int index = 0; index < 63; index++)
+				assertNull(states.get(index).counter(), states.get(index).name());
+			assertNotNull(states.get(63).counter());
+			assertNotNull(states.get(64).counter());
+			try (var rows = sql.executeQuery("SELECT GET_INTERNAL_SEQUENCE_STATE(SEQUENCE Seq64), "
+					+ "GET_INTERNAL_SEQUENCE_STATE(SEQUENCE Seq63)")) {
+				assertTrue(rows.next());
+				assertEquals(rows.getLong(1), states.get(64).counter().longValue());
+				assertEquals(rows.getLong(2), states.get(63).counter().longValue());
+			}
+		}
+	}
+
+	@Test
+	void restoresCapturedSequenceCountersInAFreshDatabase() throws Exception {
+		final String suffix = UUID.randomUUID().toString().substring(0, 8);
+		try (var source = createConnection("seq-source-" + suffix);
+				var target = createConnection("seq-target-" + suffix);
+				var sourceSql = source.createStatement(); var targetSql = target.createStatement()) {
+			sourceSql.execute("CREATE SCHEMA Sales");
+			sourceSql.execute("CREATE SEQUENCE Sales.OrderSeq BIT_REVERSED_POSITIVE START COUNTER WITH 100");
+			sourceSql.execute("CREATE SEQUENCE OrderSeq BIT_REVERSED_POSITIVE START COUNTER WITH 200");
+			sourceSql.execute("CREATE TABLE Allocations (id INT64 NOT NULL) PRIMARY KEY (id)");
+			sourceSql.executeUpdate("INSERT INTO Allocations (id) VALUES (GET_NEXT_SEQUENCE_VALUE(SEQUENCE Sales.OrderSeq))");
+			final var sourceDialect = DialectResolver.getInstance().getDialect(source);
+			final var sequences = sourceDialect.getCatalogReader().getSchemaReader().getSequenceReader().getAllFull(source);
+			assertEquals(2, sequences.size());
+			final var usedMetadata = sequences.stream().filter(sequence -> "Sales".equalsIgnoreCase(sequence.getSchemaName()))
+					.findFirst().orElseThrow();
+			final var unusedMetadata = sequences.stream().filter(sequence -> !"Sales".equalsIgnoreCase(sequence.getSchemaName()))
+					.findFirst().orElseThrow();
+			final var states = com.sqlapp.data.db.dialect.spanner.sql.SpannerSequenceState.capture(source,
+					List.of(usedMetadata, unusedMetadata));
+			assertNotNull(states.getFirst().counter());
+			assertNull(states.getLast().counter());
+			assertEquals(java.math.BigInteger.valueOf(100), usedMetadata.getStartValue());
+			assertEquals(java.math.BigInteger.valueOf(200), unusedMetadata.getStartValue());
+			assertEquals(java.math.BigInteger.valueOf(states.getFirst().counter()).add(java.math.BigInteger.ONE),
+					usedMetadata.getLastValue());
+			assertNull(unusedMetadata.getLastValue());
+			final var registry = DialectResolver.getInstance().getDialect(target).createSqlFactoryRegistry();
+			targetSql.execute("CREATE SCHEMA Sales");
+			targetSql.execute(registry.createSql(states.getFirst().forCreate(usedMetadata, 1000),
+					SqlType.CREATE).getFirst().getSqlText());
+			targetSql.execute(registry.createSql(states.getLast().forCreate(unusedMetadata, 1000),
+					SqlType.CREATE).getFirst().getSqlText());
+			target.setAutoCommit(false);
+			try (var rows = targetSql.executeQuery("SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE Sales.OrderSeq), "
+					+ "GET_NEXT_SEQUENCE_VALUE(SEQUENCE OrderSeq)")) {
+				assertTrue(rows.next());
+				assertEquals(Long.reverse(states.getFirst().counter() + 1000) >>> 1, rows.getLong(1));
+				assertEquals(Long.reverse(200L) >>> 1, rows.getLong(2));
+			}
+			target.commit();
+		}
+	}
+
+	@Test
+	void allocatesBatchesFromTheRequestedNamedSchema() throws Exception {
+		try (var connection = createConnection("next-values-" + UUID.randomUUID().toString().substring(0, 8));
+				var sql = connection.createStatement()) {
+			sql.execute("CREATE SCHEMA Sales");
+			sql.execute("CREATE SEQUENCE Sales.OrderSeq BIT_REVERSED_POSITIVE START COUNTER WITH 100");
+			sql.execute("CREATE SEQUENCE OrderSeq BIT_REVERSED_POSITIVE START COUNTER WITH 200");
+			final var sequence = new com.sqlapp.data.schemas.Sequence("OrderSeq").setSchemaName("Sales");
+			connection.setAutoCommit(false);
+			try (var generator = new com.sqlapp.jdbc.sql.SequenceValueGenerator(connection, sequence)) {
+				final var values = generator.generateValues(3);
+				assertEquals(3, values.size());
+				assertEquals(Set.of(Long.reverse(100L) >>> 1, Long.reverse(101L) >>> 1, Long.reverse(102L) >>> 1),
+						new HashSet<>(values));
+			}
+			connection.commit();
 		}
 	}
 

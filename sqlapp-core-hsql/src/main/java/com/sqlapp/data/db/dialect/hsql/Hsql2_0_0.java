@@ -43,6 +43,12 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
 public class Hsql2_0_0 extends Hsql {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, false, null);
+	}
+
 	static final long MAX_LOB_LENGTH = 1024L * 1024 * 1024 * 1024;
 	/**
 	 * serialVersionUID
@@ -83,8 +89,8 @@ public class Hsql2_0_0 extends Hsql {
 	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
 		if (column.getDataType() != null
 				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
-			var handler = (com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler)
-					getDbDataTypes().getDbTypeStrict(column.getDataType()).getJdbcTypeHandler();
+			var handler = (com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler) getDbDataTypes()
+					.getDbTypeStrict(column.getDataType()).getJdbcTypeHandler();
 			return handler.literal(value, column);
 		}
 		return super.getSqlValueDefinition(column, value);

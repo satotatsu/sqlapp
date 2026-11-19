@@ -30,7 +30,8 @@ class H2IntervalMetadataTest {
 			assertEquals(3, day.getScale());
 			var ddl = dialect.createSqlFactoryRegistry().createSql(table, SqlType.CREATE);
 			statement.execute("DROP TABLE T");
-			for (var sql : ddl) statement.execute(sql.getSqlText());
+			for (var sql : ddl)
+				statement.execute(sql.getSqlText());
 			var recreated = reader.getAllFull(connection).get(0);
 			for (String name : new String[] { "Y", "D" }) {
 				var before = table.getColumns().get(name);

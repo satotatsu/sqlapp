@@ -42,6 +42,11 @@ import com.sqlapp.data.schemas.CascadeRule;
  * 
  */
 public class H2 extends Dialect {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, false, null);
+	}
 
 	/**
 	 * serialVersionUID

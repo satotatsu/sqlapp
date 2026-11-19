@@ -53,6 +53,11 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  * </p>
  */
 public class DuckDb extends Dialect {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, true, null);
+	}
 
 	private static final long serialVersionUID = 1L;
 

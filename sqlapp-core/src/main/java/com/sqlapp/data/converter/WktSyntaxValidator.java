@@ -66,7 +66,7 @@ final class WktSyntaxValidator {
 			validator.expect(';');
 		}
 		validator.skipWhitespace();
-		validator.geometry();
+		validator.geometry(null);
 		validator.skipWhitespace();
 		if (validator.pos != validator.text.length()) {
 			throw validator.error("unexpected character");
@@ -78,7 +78,7 @@ final class WktSyntaxValidator {
 		int size;
 	}
 
-	private void geometry() {
+	private void geometry(final String inheritedDimension) {
 		final int start = pos;
 		final String word = readWord();
 		if (word.isEmpty()) {
@@ -86,11 +86,13 @@ final class WktSyntaxValidator {
 		}
 		String keyword = word.toUpperCase(Locale.ROOT);
 		final TupleSize tupleSize = new TupleSize();
+		String dimension = null;
 		if (!KEYWORDS.contains(keyword) && keyword.endsWith("M")
 				&& KEYWORDS.contains(keyword.substring(0, keyword.length() - 1))) {
 			// PostGIS の "POINTM(...)" 形式
 			keyword = keyword.substring(0, keyword.length() - 1);
 			tupleSize.size = 3;
+			dimension = "M";
 		}
 		if (!KEYWORDS.contains(keyword)) {
 			pos = start;
@@ -102,10 +104,12 @@ final class WktSyntaxValidator {
 			switch (next) {
 			case "Z":
 			case "M":
+				dimension = next;
 				tupleSize.size = 3;
 				readWord();
 				break;
 			case "ZM":
+				dimension = next;
 				tupleSize.size = 4;
 				readWord();
 				break;
@@ -115,6 +119,15 @@ final class WktSyntaxValidator {
 			skipWhitespace();
 			next = peekWord();
 		}
+		if (dimension != null && inheritedDimension != null && !dimension.equals(inheritedDimension)) {
+			throw error("dimension " + dimension + " conflicts with collection dimension " + inheritedDimension);
+		}
+		if (dimension == null) {
+			dimension = inheritedDimension;
+		}
+		if (dimension != null) {
+			tupleSize.size = "ZM".equals(dimension) ? 4 : 3;
+		}
 		if ("EMPTY".equals(next)) {
 			readWord();
 			return;
@@ -123,7 +136,7 @@ final class WktSyntaxValidator {
 			expect('(');
 			do {
 				skipWhitespace();
-				geometry();
+				geometry(dimension);
 				skipWhitespace();
 			} while (tryConsume(','));
 			expect(')');
@@ -146,7 +159,7 @@ final class WktSyntaxValidator {
 				if ("EMPTY".equals(peekWord())) {
 					readWord();
 				} else {
-					geometry();
+					geometry(null);
 				}
 			} else {
 				tuple(tupleSize);

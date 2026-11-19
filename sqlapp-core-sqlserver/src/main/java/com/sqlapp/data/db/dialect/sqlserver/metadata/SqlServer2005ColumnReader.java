@@ -89,6 +89,8 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 			setSpecifics(rs, "is_not_for_replication", column);
 		}
 		setSpecifics(rs, "xmlschema", column);
+		if (rs.contains("default_name"))
+			setSpecifics(rs, "default_name", column);
 		return column;
 	}
 }

@@ -198,6 +198,12 @@ two-dimensional. Store 3D coordinates in a `GEOMETRY` column (`POINT Z`,
 
 ### Behavior changes
 
+- Geometry text output explicitly includes Z/ZM markers when EMPTY values would
+  otherwise lose their coordinate dimensions, including empty collection members.
+  GeometryCollection dimension declarations are checked recursively; conflicting
+  child declarations and coordinate counts are rejected. Line coefficient input
+  selects a stable axis and point spacing and rejects non-finite coefficients or
+  values that cannot safely be represented as two finite points.
 - `GEOMETRY` / `GEOGRAPHY` columns now convert text to Geolatte geometries in every
   file format (CSV, JSON, YAML, Excel). Text is written as PostGIS EWKT and read as
   WKT, EWKT or hex EWKB. Malformed input, including trailing data, raises

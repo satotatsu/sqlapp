@@ -16,7 +16,7 @@ class MySqlTinyIntMappingTest {
 	private Column column(Dialect d,String name){var c=new Column("v");assertTrue(d.setDbType(name,null,null,c));return c;}
 	@Test
 	void numericModePreservesVersionAndDefaultIsolation(){
-		for(int[] v:new int[][]{{5,1,0},{5,6,4},{5,6,5},{5,7,0},{8,0,0},{8,0,1},{8,4,0},{9,0,0}}){
+		for(int[] v:new int[][]{{5,1,0},{5,6,4},{5,6,5},{5,7,0},{8,0,0},{8,0,1},{8,0,19},{8,4,0},{9,0,0}}){
 			var normal=resolver.getDialect("mysql",v[0],v[1],v[2]);
 			var numeric=resolver.getDialect("mysql",v[0],v[1],v[2],Map.of(OPTION,"NUMERIC"));
 			assertEquals(normal.getClass(),numeric.getClass());assertNotSame(normal,numeric);

@@ -26,6 +26,23 @@ import com.sqlapp.data.schemas.Table;
 
 public class SqlServer2008MergeFactory extends AbstractMergeFactory<SqlServerSqlBuilder> {
 	@Override
+	protected void addMergeTableWhenMatched(final Table table, final SqlSignature signature,
+			final String targetAlias, final String sourceAlias, final SqlServerSqlBuilder builder) {
+		if (SqlServerMergeSupport.hasUpdates(table, signature, this::isUpdateable))
+			super.addMergeTableWhenMatched(table, signature, targetAlias, sourceAlias, builder);
+	}
+
+	@Override
+	protected void addMergeTableWhenNotMatched(final Table table, final SqlSignature signature,
+			final String targetAlias, final String sourceAlias, final SqlServerSqlBuilder builder) {
+		if (table.getColumns().stream().noneMatch(c -> isInsertable(c) && !c.isIdentity())) {
+			builder.when().not().matched().by().target().then().insert()._add(" DEFAULT VALUES");
+			return;
+		}
+		super.addMergeTableWhenNotMatched(table, signature, targetAlias, sourceAlias, builder);
+	}
+
+	@Override
 	protected void addMergeTableAfter(final Table obj, final SqlSignature sqlSignature, String targetTableAlias,
 			final String sourceTableAlias, final SqlServerSqlBuilder builder) {
 		builder.semicolon();

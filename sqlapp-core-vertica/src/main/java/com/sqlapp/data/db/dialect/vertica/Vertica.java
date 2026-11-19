@@ -41,6 +41,12 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class Vertica extends Dialect {
+	@Override
+	protected com.sqlapp.data.db.dialect.ColumnMigration.Result convertColumnForMigration(
+			final com.sqlapp.data.schemas.Column source) {
+		return migrateNativeTimestamp(source, 6, false, null);
+	}
+
 	/**
 	 * serialVersionUID
 	 */

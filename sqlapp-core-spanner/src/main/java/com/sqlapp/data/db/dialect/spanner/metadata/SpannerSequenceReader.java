@@ -7,15 +7,17 @@ package com.sqlapp.data.db.dialect.spanner.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
 
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
+import com.sqlapp.data.db.dialect.spanner.sql.SpannerSequenceState;
 import com.sqlapp.data.db.metadata.SequenceReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
@@ -50,6 +52,23 @@ public class SpannerSequenceReader extends SequenceReader {
 			}
 		});
 		return result;
+	}
+
+	@Override
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Sequence> sequences) throws SQLException {
+		final var states = captureStates(connection, sequences);
+		for (int index = 0; index < sequences.size(); index++) {
+			final Long counter = states.get(index).counter();
+			// The model describes the next counter after the observed state, before bit reversal.
+			if (counter != null)
+				sequences.get(index).setLastValue(BigInteger.valueOf(counter).add(BigInteger.ONE));
+		}
+	}
+
+	List<SpannerSequenceState> captureStates(final Connection connection, final List<Sequence> sequences)
+			throws SQLException {
+		return SpannerSequenceState.capture(connection, sequences);
 	}
 
 	protected SqlNode getSqlNode(final ProductVersionInfo productVersionInfo) {

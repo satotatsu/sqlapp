@@ -66,6 +66,22 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 				}
 			}
 			try (input; var statement = connection.createStatement()) {
+				if (dialect instanceof com.sqlapp.data.db.dialect.mysql.MySql8019) {
+					input.useExplicitTimestampOffset();
+				} else if (input.getColumns().stream().anyMatch(column -> column.getDataType() == DataType.TIMESTAMPVERSION)) {
+					try (var result = statement.executeQuery("SELECT @@session.time_zone")) {
+						if (!result.next()) {
+							throw new SQLException("Cannot read LOAD DATA session time zone");
+						}
+						final String zone = result.getString(1);
+						if ("UTC".equalsIgnoreCase(zone) || "Etc/UTC".equalsIgnoreCase(zone)) {
+							input.setTimestampOffset(java.time.ZoneOffset.UTC);
+						} else if (zone != null && zone.matches("[+-][0-9]{1,2}:[0-9]{2}")) {
+							final String normalized = zone.length() == 5 ? zone.charAt(0) + "0" + zone.substring(1) : zone;
+							input.setTimestampOffset(java.time.ZoneOffset.of(normalized));
+						}
+					}
+				}
 				final StringBuilder sql = new StringBuilder("LOAD DATA LOCAL INFILE " + "'sqlapp-stream' INTO TABLE ")
 						.append(dialect.getObjectFullName(table.getSchemaName(), table.getName()))
 						.append(" CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'1F' "
