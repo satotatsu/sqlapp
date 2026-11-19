@@ -25,12 +25,11 @@ public class DefaultBulkMigrationKeysetCodec implements BulkMigrationKeysetCodec
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public List<Object> decode(final List<Column> keyColumns, final String token) {
 		final List<?> encoded = JsonUtils.fromJsonString(token, List.class);
 		if (encoded.size() != keyColumns.size()) {
-			throw new IllegalArgumentException("Keyset token contains " + encoded.size()
-					+ " values but " + keyColumns.size() + " key columns are configured");
+			throw new IllegalArgumentException("Keyset token contains " + encoded.size() + " values but "
+					+ keyColumns.size() + " key columns are configured");
 		}
 		final List<Object> values = new ArrayList<>(keyColumns.size());
 		for (int i = 0; i < keyColumns.size(); i++) {
