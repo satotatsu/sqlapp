@@ -53,19 +53,20 @@ public class JdbcViewReader extends ViewReader {
 	}
 
 	/**
-	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY",
-	 * "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL
+	 * TEMPORARY", "ALIAS", "SYNONYM".
 	 */
 	private String[] tableTypes = new String[] { "VIEW" };
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		try {
-			return JdbcMetadataUtils.getMetadata(connection,CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())), tableTypes);
+			return JdbcMetadataUtils.getMetadata(connection,
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())),
+					tableTypes);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
@@ -85,8 +86,7 @@ public class JdbcViewReader extends ViewReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

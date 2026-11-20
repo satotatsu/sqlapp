@@ -49,15 +49,15 @@ public class JdbcObjectPrivilegeReader extends ObjectPrivilegeReader {
 	}
 
 	@Override
-	protected List<ObjectPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ObjectPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = databaseMetaData.getTablePrivileges(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())));
+			rs = databaseMetaData.getTablePrivileges(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())));
 			List<ObjectPrivilege> result = list();
 			while (rs.next()) {
 				ObjectPrivilege columnPrivilege = createPrivilege(rs);

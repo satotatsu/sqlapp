@@ -54,13 +54,21 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 	@Override
 	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		return JdbcMetadataUtils.readTables(connection, context,
+				CommonUtils.coalesce(getCatalogName(context), getCatalogName()),
+				CommonUtils.coalesce(getSchemaName(context), getSchemaName()), getTableName(context),
+				tableContext -> readTable(connection, tableContext, productVersionInfo));
+	}
+
+	private List<UniqueConstraint> readTable(Connection connection, ParametersContext context,
+			ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		List<UniqueConstraint> list = list();
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
 			rs = databaseMetaData.getPrimaryKeys(
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
-					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(this.getCatalogName(context), this.getCatalogName()),
+					CommonUtils.coalesce(this.getSchemaName(context), this.getSchemaName()),
 					CommonUtils.coalesce(emptyToNull(this.getTableName(context)), emptyToNull(this.getObjectName())));
 			TripleKeyMap<String, String, String, UniqueConstraint> tUkMap = tripleKeyMap();
 			TripleKeyMap<String, String, String, FlexList<String>> tColMap = tripleKeyMap();

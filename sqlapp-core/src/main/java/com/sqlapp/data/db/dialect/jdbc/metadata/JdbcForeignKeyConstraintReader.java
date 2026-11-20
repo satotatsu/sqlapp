@@ -29,6 +29,11 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.Comparator;
+import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnPair;
@@ -55,57 +60,56 @@ public class JdbcForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		return JdbcMetadataUtils.readTables(connection, context,
+				CommonUtils.coalesce(getCatalogName(context), getCatalogName()),
+				CommonUtils.coalesce(getSchemaName(context), getSchemaName()), getTableName(context),
+				tableContext -> readTable(connection, tableContext, productVersionInfo));
+	}
+
+	private List<ForeignKeyConstraint> readTable(Connection connection, ParametersContext context,
+			ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		List<ForeignKeyConstraint> list = list();
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
 			rs = databaseMetaData.getImportedKeys(
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					, emptyToNull(this.getTableName(context)));
-			TripleKeyMap<String, String, String, ForeignKeyConstraint> tCMap = tripleKeyMap();
-			TripleKeyMap<String, String, String, FlexList<ColumnPair>> tColMap = tripleKeyMap();
+					CommonUtils.coalesce(this.getCatalogName(context), this.getCatalogName()),
+					CommonUtils.coalesce(this.getSchemaName(context), this.getSchemaName()),
+					emptyToNull(this.getTableName(context)));
+			Map<Key, List<KeyColumn>> groups = new LinkedHashMap<>();
 			while (rs.next()) {
-				String pk_table_catalog = getString(rs, "PKTABLE_CAT");
-				String pk_table_schema = getString(rs, "PKTABLE_SCHEM");
-				String pk_table_name = getString(rs, "PKTABLE_NAME");
-				String pk_columnName = getString(rs, "PKCOLUMN_NAME");
-				String fk_table_catalog = getString(rs, "FKTABLE_CAT");
-				String fk_table_schema = getString(rs, "FKTABLE_SCHEM");
-				String fk_table_name = getString(rs, "FKTABLE_NAME");
-				String fk_columnName = getString(rs, "FKCOLUMN_NAME");
-				String fk_name = getString(rs, "FK_NAME");
-				ForeignKeyConstraint c = tCMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
-				if (c == null) {
-					c = new ForeignKeyConstraint(fk_name);
-					c.setCatalogName(fk_table_catalog);
-					c.setSchemaName(fk_table_schema);
-					c.setTableName(fk_table_name);
-					c.setUpdateRule(CascadeRule.parse(rs.getInt("UPDATE_RULE")));
-					c.setDeleteRule(CascadeRule.parse(rs.getInt("DELETE_RULE")));
-					c.setDeferrability(Deferrability.parse(rs
-							.getInt("DEFERRABILITY")));
-					colList = new FlexList<ColumnPair>();
-					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
-					tColMap.put(fk_table_catalog, fk_table_schema, fk_name,
-							colList);
-					list.add(c);
-				}
-				ColumnPair cPair = new ColumnPair();
-				cPair.refCatalogName = pk_table_catalog;
-				cPair.refSchemaName = pk_table_schema;
-				cPair.refTableName = pk_table_name;
-				cPair.refColumnName = pk_columnName;
-				cPair.columnName = fk_columnName;
-				colList.add(cPair);
+				Key key = new Key(getString(rs, "FKTABLE_CAT"), getString(rs, "FKTABLE_SCHEM"),
+						getString(rs, "FKTABLE_NAME"), getString(rs, "FK_NAME"), getString(rs, "PKTABLE_CAT"),
+						getString(rs, "PKTABLE_SCHEM"), getString(rs, "PKTABLE_NAME"), getString(rs, "PK_NAME"),
+						rs.getInt("UPDATE_RULE"), rs.getInt("DELETE_RULE"), rs.getInt("DEFERRABILITY"));
+				ColumnPair pair = new ColumnPair();
+				pair.refCatalogName = key.parentCatalog();
+				pair.refSchemaName = key.parentSchema();
+				pair.refTableName = key.parentTable();
+				pair.refColumnName = getString(rs, "PKCOLUMN_NAME");
+				pair.columnName = getString(rs, "FKCOLUMN_NAME");
+				groups.computeIfAbsent(key, ignored -> list()).add(new KeyColumn(rs.getInt("KEY_SEQ"), pair));
 			}
-			setForeignKeyConstraintColumns(tColMap, list);
+			for (var entry : groups.entrySet()) {
+				Key key = entry.getKey();
+				List<KeyColumn> columns = entry.getValue();
+				if (key.name() == null && columns.stream().allMatch(column -> column.sequence() == 1)) {
+					for (KeyColumn column : columns) {
+						list.add(createConstraint(key, List.of(column)));
+					}
+				} else {
+					columns.sort(Comparator.comparingInt(KeyColumn::sequence));
+					for (int i = 0; i < columns.size(); i++) {
+						if (columns.get(i).sequence() != i + 1) {
+							throw new SQLException("Ambiguous or invalid JDBC foreign key metadata for " + key
+									+ "; name the constraints or use a vendor metadata reader");
+						}
+					}
+					list.add(createConstraint(key, columns));
+				}
+			}
 			return list;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -113,4 +117,53 @@ public class JdbcForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 			close(rs);
 		}
 	}
+
+	private record Key(String catalog, String schema, String table, String name, String parentCatalog,
+			String parentSchema, String parentTable, String parentKey, int updateRule, int deleteRule,
+			int deferrability) {
+	}
+
+	private record KeyColumn(int sequence, ColumnPair pair) {
+	}
+
+	private ForeignKeyConstraint createConstraint(Key key, List<KeyColumn> columns) {
+		ForeignKeyConstraint constraint = new ForeignKeyConstraint(key.name());
+		constraint.setCatalogName(key.catalog());
+		constraint.setSchemaName(key.schema());
+		constraint.setTableName(key.table());
+		constraint.setUpdateRule(CascadeRule.parse(key.updateRule()));
+		constraint.setDeleteRule(CascadeRule.parse(key.deleteRule()));
+		constraint.setDeferrability(Deferrability.parse(key.deferrability()));
+		FlexList<ColumnPair> pairs = new FlexList<>();
+		for (KeyColumn column : columns) {
+			pairs.add(column.pair());
+		}
+		TripleKeyMap<String, String, String, FlexList<ColumnPair>> map = tripleKeyMap();
+		map.put(key.catalog(), key.schema(), key.name(), pairs);
+		setForeignKeyConstraintColumns(map, List.of(constraint));
+		if (key.name() == null) {
+			// Keep anonymous constraints distinct in Schema collections and XML without
+			// inventing SQL names.
+			StringBuilder identity = new StringBuilder();
+			for (String value : new String[] { key.catalog(), key.schema(), key.table(), key.parentCatalog(),
+					key.parentSchema(), key.parentTable(), key.parentKey(), Integer.toString(key.updateRule()),
+					Integer.toString(key.deleteRule()), Integer.toString(key.deferrability()) }) {
+				appendIdentity(identity, value);
+			}
+			for (KeyColumn column : columns) {
+				appendIdentity(identity, column.pair().columnName);
+				appendIdentity(identity, column.pair().refColumnName);
+			}
+			constraint.setId("jdbc-fk-" + UUID.nameUUIDFromBytes(identity.toString().getBytes(StandardCharsets.UTF_8)));
+		}
+		return constraint;
+	}
+
+	private void appendIdentity(StringBuilder identity, String value) {
+		identity.append(value == null ? -1 : value.length()).append(':');
+		if (value != null) {
+			identity.append(value);
+		}
+	}
+
 }

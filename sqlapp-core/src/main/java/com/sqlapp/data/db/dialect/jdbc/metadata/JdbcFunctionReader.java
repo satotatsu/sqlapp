@@ -50,15 +50,15 @@ public class JdbcFunctionReader extends FunctionReader {
 	}
 
 	@Override
-	protected List<Function> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ExResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = new ExResultSet(databaseMetaData.getFunctions(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))));
+			rs = new ExResultSet(databaseMetaData.getFunctions(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))));
 			List<Function> result = list();
 			while (rs.next()) {
 				Function obj = createFunction(rs);
@@ -69,6 +69,27 @@ public class JdbcFunctionReader extends FunctionReader {
 			throw new RuntimeException(e);
 		} finally {
 			close(rs);
+		}
+	}
+
+	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Function> functions)
+			throws SQLException {
+		if (functions.isEmpty()) {
+			return;
+		}
+		RoutineArgumentReader<?> reader = setReaderParameter(getRoutineArgumentReader(), functions);
+		var arguments = getObjectKeyMap(connection, reader);
+		for (Function function : functions) {
+			function.setDialect(getDialect());
+			String name = function.getSpecificName() == null ? function.getName() : function.getSpecificName();
+			var values = arguments.get(function.getCatalogName(), function.getSchemaName(), name);
+			if (values != null) {
+				function.getArguments().addAll(values);
+			}
+			if (reader instanceof JdbcFunctionArgumentReader jdbcReader) {
+				jdbcReader.applyReturning(function);
+			}
 		}
 	}
 

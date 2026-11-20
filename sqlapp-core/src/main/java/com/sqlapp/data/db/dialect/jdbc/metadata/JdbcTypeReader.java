@@ -50,18 +50,18 @@ public class JdbcTypeReader extends TypeReader {
 	}
 
 	@Override
-	protected List<Type> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Type> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		int[] types = new int[] { java.sql.Types.STRUCT };
 		List<Type> result = list();
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = databaseMetaData.getUDTs(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))
-					, types);
+			rs = databaseMetaData.getUDTs(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())),
+					types);
 			if (rs == null) {
 				return result;
 			}

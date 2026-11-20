@@ -50,17 +50,17 @@ public class JdbcColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ExResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = new ExResultSet(databaseMetaData.getColumns(
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					, emptyToNull(getSchemaName(context))
-					, emptyToNull(getTableName(context))
-					, emptyToNull(getColumnName(context))));
+			rs = new ExResultSet(
+					databaseMetaData.getColumns(
+							CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)),
+									emptyToNull(this.getCatalogName())),
+							emptyToNull(getSchemaName(context)), emptyToNull(getTableName(context)),
+							emptyToNull(getColumnName(context))));
 			List<Column> result = list();
 			while (rs.next()) {
 				Column column = createColumn(rs);
@@ -90,13 +90,10 @@ public class JdbcColumnReader extends ColumnReader {
 		String isAutoIncrement = getString(rs, "IS_AUTOINCREMENT");
 		boolean autoIncrement = false;
 		if ("YES".equalsIgnoreCase(isAutoIncrement)) {
-			if (nullable == ResultSetMetaData.columnNullable) {
-				autoIncrement = true;
-			}
+			autoIncrement = true;
 		}
 		Column column = new Column(colName);
-		this.getDialect().setDbType(sqlType, productDataType, precision,
-				scale, column);
+		this.getDialect().setDbType(sqlType, productDataType, precision, scale, column);
 		column.setNullable(allowDBNull);
 		column.setIdentity(autoIncrement);
 		column.setCatalogName(getString(rs, "TABLE_CAT"));

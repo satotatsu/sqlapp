@@ -36,27 +36,33 @@ import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.CommonUtils;
 
-public class JdbcProcedureArgumentReader extends
-		RoutineArgumentReader<Procedure> {
+public class JdbcProcedureArgumentReader extends RoutineArgumentReader<Procedure> {
 
 	public JdbcProcedureArgumentReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<NamedArgument> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ExResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = new ExResultSet(databaseMetaData.getProcedureColumns(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())), null));
+			rs = new ExResultSet(databaseMetaData.getProcedureColumns(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())),
+					null));
 			List<NamedArgument> result = list();
 			while (rs.next()) {
+				// Return-status and result-set rows are not procedure parameters.
+				int type = rs.getInt("COLUMN_TYPE");
+				if (type == DatabaseMetaData.procedureColumnReturn || type == DatabaseMetaData.procedureColumnResult) {
+					continue;
+				}
 				NamedArgument obj = createNamedArgument(rs);
 				result.add(obj);
 			}
@@ -68,18 +74,14 @@ public class JdbcProcedureArgumentReader extends
 		}
 	}
 
-	protected NamedArgument createNamedArgument(ExResultSet rs)
-			throws SQLException {
+	protected NamedArgument createNamedArgument(ExResultSet rs) throws SQLException {
 		String catalog_name = getString(rs, "PROCEDURE_CAT");
 		String schema_name = getString(rs, "PROCEDURE_SCHEM");
 		Procedure routine = new Procedure(getString(rs, "PROCEDURE_NAME"));
 		routine.setDialect(this.getDialect());
 		routine.setSpecificName(getString(rs, "SPECIFIC_NAME"));
 		//
-		Long length = rs.getLongValue("LENGTH");
-		if (length==null) {
-			length = rs.getLongValue("PRECISION");
-		}
+		Long length = rs.getLongValue("PRECISION");
 		Integer scale = rs.getInteger("SCALE");
 		int nullable = rs.getInt("NULLABLE");
 		int sqlType = rs.getInt("DATA_TYPE");
@@ -89,14 +91,22 @@ public class JdbcProcedureArgumentReader extends
 		obj.setSchemaName(schema_name);
 		String productDataType = getString(rs, "TYPE_NAME");
 		boolean allowDBNull = false;
-		if (nullable != DatabaseMetaData.functionNullableUnknown) {
-			if (nullable == DatabaseMetaData.functionNullable) {
+		if (nullable != DatabaseMetaData.procedureNullableUnknown) {
+			if (nullable == DatabaseMetaData.procedureNullable) {
 				allowDBNull = true;
 			}
 		}
-		this.getDialect().setDbType(sqlType, productDataType, length,
-				scale, obj);
+		this.getDialect().setDbType(sqlType, productDataType, length, scale, obj);
 		obj.setNullable(allowDBNull);
+		obj.setOctetLength(rs.getLongValue("CHAR_OCTET_LENGTH"));
+		obj.setDirection(switch (rs.getInt("COLUMN_TYPE")) {
+		case DatabaseMetaData.procedureColumnIn -> ParameterDirection.Input;
+		case DatabaseMetaData.procedureColumnOut -> ParameterDirection.Output;
+		case DatabaseMetaData.procedureColumnInOut -> ParameterDirection.Inout;
+		case DatabaseMetaData.procedureColumnReturn, DatabaseMetaData.procedureColumnResult ->
+			ParameterDirection.Output;
+		default -> throw new SQLException("Unknown JDBC procedure column kind for " + routine.getName());
+		});
 		obj.setRemarks(getString(rs, "REMARKS"));
 		return obj;
 	}

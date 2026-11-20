@@ -50,17 +50,18 @@ public class JdbcDomainReader extends DomainReader {
 	}
 
 	@Override
-	protected List<Domain> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Domain> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		int[] types = new int[] { java.sql.Types.DISTINCT };
 		List<Domain> result = list();
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = databaseMetaData.getUDTs(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())), types);
+			rs = databaseMetaData.getUDTs(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())),
+					types);
 			if (rs == null) {
 				return result;
 			}

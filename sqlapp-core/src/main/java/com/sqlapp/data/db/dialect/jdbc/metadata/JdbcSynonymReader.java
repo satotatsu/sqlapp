@@ -47,19 +47,20 @@ public class JdbcSynonymReader extends SynonymReader {
 	}
 
 	/**
-	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY",
-	 * "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL
+	 * TEMPORARY", "ALIAS", "SYNONYM".
 	 */
 	private String[] tableTypes = new String[] { "SYNONYM" };
 
 	@Override
-	protected List<Synonym> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Synonym> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		try {
-			List<Table> tables = JdbcMetadataUtils.getMetadata(connection,CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())), getTableTypes());
+			List<Table> tables = JdbcMetadataUtils.getMetadata(connection,
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())),
+					getTableTypes());
 			List<Synonym> result = list();
 			for (Table table : tables) {
 				Synonym s = new Synonym(table.getName());
