@@ -40,6 +40,12 @@ public class HsqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	}
 
 	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(Sequence.class, com.sqlapp.data.schemas.State.Modified, SqlType.ALTER);
+	}
+
+	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		registerSqlFactory(Schema.class, SqlType.CREATE, HsqlCreateSchemaFactory.class);
@@ -65,5 +71,6 @@ public class HsqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Function.class, SqlType.CREATE, HsqlCreateFunctionFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, HsqlCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, HsqlAlterSequenceFactory.class);
 	}
 }

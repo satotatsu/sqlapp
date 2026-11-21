@@ -52,6 +52,7 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
+		registerSqlFactory(Sequence.class, com.sqlapp.data.schemas.State.Modified, SqlType.ALTER);
 	}
 
 	/*
@@ -96,6 +97,7 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Schema.class, SqlType.SET_SEARCH_PATH_TO_SCHEMA, PostgresSetSearchPathToSchemaFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, PostgresCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, PostgresAlterSequenceFactory.class);
 		//
 		registerSqlFactory(Function.class, SqlType.CREATE, PostgresCreateFunctionFactory.class);
 		registerSqlFactory(Function.class, SqlType.DROP, PostgresDropFunctionFactory.class);

@@ -53,6 +53,14 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 	protected void addColumnDefinition(Column column, SqliteSqlBuilder builder) {
 		Column definition = column.clone();
 		definition.setIdentity(false);
+		// The clone has no parent table, so decide STRICT handling from the original.
+		// STRICT tables reject DATE/TIME/TIMESTAMP declarations; values are ISO-8601
+		// text.
+		if (column.getTable() != null && "true".equals(column.getTable().getSpecifics().get("strict"))
+				&& column.getDomain() == null && column.getDataType() != null && column.getDataType().isDateTime()
+				&& column.getSpecifics().get("sqlite.declaredType") == null
+				&& !"true".equals(column.getSpecifics().get("sqlite.declaredType.empty")))
+			definition.getSpecifics().put("sqlite.declaredType", "TEXT");
 		String notNullConflict = column.getSpecifics().get("sqlite.notNull.onConflict");
 		if (notNullConflict != null) {
 			notNullConflict = notNullConflict.toUpperCase(java.util.Locale.ROOT);

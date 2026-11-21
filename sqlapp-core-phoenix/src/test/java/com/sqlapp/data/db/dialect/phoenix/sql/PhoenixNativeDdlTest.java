@@ -11,6 +11,19 @@ import com.sqlapp.data.schemas.*;
 
 class PhoenixNativeDdlTest {
 	@Test
+	void requiresAnExplicitVerifiedStartInsteadOfIgnoringRecordedSequenceProgress() throws Exception {
+		final var sequence = new Sequence("descending").setStartValue(BigInteger.TEN)
+				.setIncrementBy(BigInteger.valueOf(-2)).setMinValue(BigInteger.ZERO).setMaxValue(BigInteger.TEN)
+				.setLastValue(BigInteger.valueOf(6));
+		final Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(restored, SqlType.CREATE));
+		restored.setLastValue(null).setStartValue(BigInteger.valueOf(6));
+		final String sql = registry.createSql(restored, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("START WITH 6 INCREMENT BY -2 MINVALUE 0 MAXVALUE 10"), sql);
+	}
+
+	@Test
 	void sequenceChangesFailDuringSchemaMigrationAndInvalidDeclarationsFailEarly() {
 		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
 		final var source = new Schema("APP");

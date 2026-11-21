@@ -3,7 +3,10 @@
 Sequence migrations reject changes to an existing sequence explicitly. CREATE
 accepts the native BIGINT type or an omitted type. CREATE, DROP and value
 allocation require a nonblank sequence name. Sequence counter restoration
-requires a separate migration.
+requires a separate migration. CREATE rejects a populated `lastValue` because
+silently ignoring it could reuse previously allocated values. For a new
+destination sequence, clear `lastValue` and specify the independently verified
+next value as `startValue`.
 
 Phoenix INSERT and INSERT_ROWS factories preserve explicit column families in
 UPSERT targets, as does INSERT_SELECT_NOT_EXISTS. That SQL uses a SELECT

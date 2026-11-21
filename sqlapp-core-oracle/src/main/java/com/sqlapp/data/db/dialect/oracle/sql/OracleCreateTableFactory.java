@@ -37,16 +37,18 @@ import com.sqlapp.util.CommonUtils;
  */
 public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleSqlBuilder> {
 	@Override
-	protected void addCreateIndexDefinition(Table table, com.sqlapp.data.schemas.Index index, List<SqlOperation> result) {
+	protected void addCreateIndexDefinition(Table table, com.sqlapp.data.schemas.Index index,
+			List<SqlOperation> result) {
 		// Enabled inline PK/UNIQUE constraints create their backing index already.
 		// PostgreSQL metadata models both objects; emitting both fails on Oracle.
-		boolean backing = table.getConstraints().getUniqueConstraints().stream().anyMatch(constraint ->
-				constraint.isEnable()
-				&& (java.util.Objects.equals(index.getName(), constraint.getIndexName())
-						|| java.util.Objects.equals(index.getName(), constraint.getName()))
-				&& constraint.getColumns().stream().map(column -> column.getName()).toList()
-						.equals(index.getColumns().stream().map(column -> column.getName()).toList()));
-		if (!backing) super.addCreateIndexDefinition(table, index, result);
+		boolean backing = table.getConstraints().getUniqueConstraints().stream()
+				.anyMatch(constraint -> constraint.isEnable()
+						&& (java.util.Objects.equals(index.getName(), constraint.getIndexName())
+								|| java.util.Objects.equals(index.getName(), constraint.getName()))
+						&& constraint.getColumns().stream().map(column -> column.getName()).toList()
+								.equals(index.getColumns().stream().map(column -> column.getName()).toList()));
+		if (!backing)
+			super.addCreateIndexDefinition(table, index, result);
 	}
 
 	@Override
@@ -79,11 +81,12 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 	protected void addOption(final Table table, OracleSqlBuilder builder) {
 		addTableOptions(table, builder);
 		for (var column : table.getColumns()) {
-			if (column.getArrayDimension() == 1 && "TABLE".equals(column.getSpecifics().get(
-					com.sqlapp.data.db.dialect.oracle.metadata.OracleIntervalCollections.KIND))) {
+			if (column.getArrayDimension() == 1 && "TABLE".equals(column.getSpecifics()
+					.get(com.sqlapp.data.db.dialect.oracle.metadata.OracleIntervalCollections.KIND))) {
 				String identity = table.getSchemaName() + "\u0000" + table.getName() + "\u0000" + column.getName();
-				String storage = "I_NT_" + java.util.UUID.nameUUIDFromBytes(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-						.toString().replace("-", "").substring(0,24);
+				String storage = "I_NT_"
+						+ java.util.UUID.nameUUIDFromBytes(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+								.toString().replace("-", "").substring(0, 24);
 				builder.lineBreak()._add("NESTED TABLE ").name(column.getName())._add(" STORE AS ").name(storage);
 			}
 		}
@@ -221,9 +224,8 @@ public class OracleCreateTableFactory extends AbstractCreateTableFactory<OracleS
 		// physical properties are executable Oracle clauses; all other entries
 		// remain metadata, rather than being concatenated into CREATE TABLE.
 		return java.util.Arrays.stream(com.sqlapp.data.db.dialect.oracle.util.OracleUtils.getTableStatisticsKeys())
-				.noneMatch(value -> value.equalsIgnoreCase(key))
-				|| OracleAnnotationUtils.isAnnotationKey(key) || "oracle.table.duration".equals(key)
-				|| "COMPRESS_FOR".equals(key) || OracleIotOptions.modeled(key)
+				.noneMatch(value -> value.equalsIgnoreCase(key)) || OracleAnnotationUtils.isAnnotationKey(key)
+				|| "oracle.table.duration".equals(key) || "COMPRESS_FOR".equals(key) || OracleIotOptions.modeled(key)
 				|| "oracle.table.organization".equals(key) || "oracle.table.iotComplex".equals(key);
 	}
 

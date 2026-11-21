@@ -267,21 +267,27 @@ public class TimesTen extends Dialect {
 	public CatalogReader getCatalogReader() {
 		return new OracleCatalogReader(this);
 	}
+
 	private void configureInterval(com.sqlapp.data.db.datatype.DbDataType<?> type) {
 		String qualifier = type.getDataType().name().substring("INTERVAL_".length());
 		type.setCreateFormat("INTERVAL " + qualifier);
-		type.setJdbcTypeHandler(new com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler(type.getDataType(), 1, 9, 9, 0));
-		type.setColumnTypeMatcher(new com.sqlapp.data.db.datatype.StandardIntervalCodec(type.getDataType(), 2, 6).columnTypeMatcher());
+		type.setJdbcTypeHandler(
+				new com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler(type.getDataType(), 1, 9, 9, 0));
+		type.setColumnTypeMatcher(
+				new com.sqlapp.data.db.datatype.StandardIntervalCodec(type.getDataType(), 2, 6).columnTypeMatcher());
 		var converter = new com.sqlapp.data.converter.StandardIntervalConverter(type.getDataType());
 		type.setConverter(converter).setFormatter(converter).setLiteral("INTERVAL '", "' " + qualifier);
 	}
 
 	@Override
 	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
-		if (column.getDataType() != null && column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
+		if (column.getDataType() != null
+				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
 			var type = getDbDataTypes().getDbTypeStrict(column.getDataType());
-			if (type == null) throw new IllegalArgumentException("Unsupported TimesTen interval qualifier");
-			return ((com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler) type.getJdbcTypeHandler()).literal(value, column);
+			if (type == null)
+				throw new IllegalArgumentException("Unsupported TimesTen interval qualifier");
+			return ((com.sqlapp.data.db.datatype.StandardIntervalJdbcTypeHandler) type.getJdbcTypeHandler())
+					.literal(value, column);
 		}
 		return super.getSqlValueDefinition(column, value);
 	}

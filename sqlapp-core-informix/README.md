@@ -270,6 +270,8 @@ types through one batched SYSPROCCOLUMNS query. SMALLINT, INTEGER, FLOAT, SMALLF
 DATE, INT8 and BIGINT are supported. A complete resolved signature is preserved
 in `INFORMIX_ROUTINE_SIGNATURE_TYPES`. Other argument types, non-input modes,
 and incomplete signatures require a real SPECIFIC name for grant generation.
+The Docker suite includes a round-trip test for INTEGER and DATE overloads
+that checks that a generated REVOKE removes only the intended overload grant.
 Hand-authored grants normally require
 `INFORMIX_ROUTINE_KIND`, the SPECIFIC_NAME identity marker, a specific name, owner,
 grantee, `privilege=EXECUTE` and `hierachy=false`. XML preserves these fields.

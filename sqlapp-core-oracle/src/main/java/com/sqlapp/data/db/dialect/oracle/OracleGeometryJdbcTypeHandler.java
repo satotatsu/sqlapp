@@ -65,9 +65,8 @@ public class OracleGeometryJdbcTypeHandler implements JdbcTypeHandler {
 		}
 		if (geo.isEmpty()) {
 			// SDO_GEOMETRY には空の図形の表現がない(NULL とは意味が異なるため変換しない)
-			throw new IllegalArgumentException(
-					"Oracle SDO_GEOMETRY cannot represent an empty geometry. value="
-							+ org.geolatte.geom.codec.Wkt.toWkt(geo));
+			throw new IllegalArgumentException("Oracle SDO_GEOMETRY cannot represent an empty geometry. value="
+					+ org.geolatte.geom.codec.Wkt.toWkt(geo));
 		}
 		java.sql.Struct struct = Encoders.encode(geo, stmt.getConnection(), sqlTypeFactory);
 		stmt.setObject(parameterIndex, struct);

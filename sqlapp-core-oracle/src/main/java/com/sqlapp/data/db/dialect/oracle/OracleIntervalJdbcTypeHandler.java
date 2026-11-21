@@ -32,10 +32,12 @@ public final class OracleIntervalJdbcTypeHandler extends StandardIntervalJdbcTyp
 
 	@Override
 	protected void validateArrayDimensions(int dimensions) {
-		if (dimensions != 1) throw new IllegalArgumentException("Oracle interval arrays require a one-dimensional named SQL collection");
+		if (dimensions != 1)
+			throw new IllegalArgumentException("Oracle interval arrays require a one-dimensional named SQL collection");
 	}
 
-	@Override public void validateIntervalColumn(Column column) {
+	@Override
+	public void validateIntervalColumn(Column column) {
 		super.validateIntervalColumn(column);
 		if (column.getArrayDimension() > 0) {
 			OracleIntervalCollections.qualifiedName(column);
@@ -44,50 +46,87 @@ public final class OracleIntervalJdbcTypeHandler extends StandardIntervalJdbcTyp
 				throw new IllegalArgumentException("Resolve the Oracle TABLE or VARRAY collection metadata before use");
 		}
 	}
-	@Override public Column adaptIntervalColumn(Column column, IntervalPrecision source) {
-		if (column.getArrayDimension() > 0) { validateIntervalColumn(column); return column; }
+
+	@Override
+	public Column adaptIntervalColumn(Column column, IntervalPrecision source) {
+		if (column.getArrayDimension() > 0) {
+			validateIntervalColumn(column);
+			return column;
+		}
 		return super.adaptIntervalColumn(column, source);
 	}
-	@Override public IntervalConversion prepareInterval(Object value, Column column) {
+
+	@Override
+	public IntervalConversion prepareInterval(Object value, Column column) {
 		validateIntervalColumn(column);
 		var converted = super.prepareInterval(value, column);
-		if (column.getArrayDimension() == 0 || !"TABLE".equals(column.getSpecifics().get(OracleIntervalCollections.KIND))) return converted;
+		if (column.getArrayDimension() == 0
+				|| !"TABLE".equals(column.getSpecifics().get(OracleIntervalCollections.KIND)))
+			return converted;
 		Object[] values = (Object[]) converted.value();
-		if (values != null) java.util.Arrays.sort(values, java.util.Comparator.nullsFirst(java.util.Comparator.comparing(Object::toString)));
+		if (values != null)
+			java.util.Arrays.sort(values,
+					java.util.Comparator.nullsFirst(java.util.Comparator.comparing(Object::toString)));
 		var warnings = new java.util.ArrayList<>(converted.warnings());
 		warnings.add("INTERVAL_COLLECTION_UNORDERED");
 		return new IntervalConversion(values, warnings);
 	}
-	@Override public IntervalConversion prepareInterval(Object value, Column column, java.sql.DatabaseMetaData server) throws SQLException {
-		if (column.getArrayDimension() > 0) OracleIntervalCollections.require(server.getConnection(), column);
+
+	@Override
+	public IntervalConversion prepareInterval(Object value, Column column, java.sql.DatabaseMetaData server)
+			throws SQLException {
+		if (column.getArrayDimension() > 0)
+			OracleIntervalCollections.require(server.getConnection(), column);
 		return prepareInterval(value, column);
 	}
-	@Override public void setObject(PreparedStatement statement, int index, Object value, Column column) throws SQLException {
-		if (column == null || column.getArrayDimension() == 0) { super.setObject(statement, index, value, column); return; }
+
+	@Override
+	public void setObject(PreparedStatement statement, int index, Object value, Column column) throws SQLException {
+		if (column == null || column.getArrayDimension() == 0) {
+			super.setObject(statement, index, value, column);
+			return;
+		}
 		OracleIntervalCollections.require(statement.getConnection(), column);
 		String name = OracleIntervalCollections.qualifiedName(column);
-		if (value == null) { statement.setNull(index, java.sql.Types.ARRAY, name); return; }
+		if (value == null) {
+			statement.setNull(index, java.sql.Types.ARRAY, name);
+			return;
+		}
 		var scalar = column.clone().setArrayDimension(0);
 		Object[] values = (Object[]) prepareInterval(value, column).value();
 		Object[] nativeValues = new Object[values.length];
-		for (int i=0; i<values.length; i++) if (values[i] != null)
-			nativeValues[i] = createNativeValue(statement.getConnection().getClass().getClassLoader(),
-					"oracle.sql." + (yearMonth ? "INTERVALYM" : "INTERVALDS"), codec(scalar).convert(values[i]).text());
+		for (int i = 0; i < values.length; i++)
+			if (values[i] != null)
+				nativeValues[i] = createNativeValue(statement.getConnection().getClass().getClassLoader(),
+						"oracle.sql." + (yearMonth ? "INTERVALYM" : "INTERVALDS"),
+						codec(scalar).convert(values[i]).text());
 		try {
 			Class<?> driver = Class.forName("oracle.jdbc.OracleConnection");
 			Object connection = statement.getConnection().unwrap(driver);
-			var array = (java.sql.Array) driver.getMethod("createOracleArray", String.class, Object.class).invoke(connection, name, nativeValues);
-			try { statement.setArray(index, array); } finally { array.free(); }
+			var array = (java.sql.Array) driver.getMethod("createOracleArray", String.class, Object.class)
+					.invoke(connection, name, nativeValues);
+			try {
+				statement.setArray(index, array);
+			} finally {
+				array.free();
+			}
 		} catch (InvocationTargetException failure) {
-			if (failure.getCause() instanceof SQLException sql) throw sql;
+			if (failure.getCause() instanceof SQLException sql)
+				throw sql;
 			throw new SQLException("Cannot bind Oracle interval collection", failure.getCause());
-		} catch (ReflectiveOperationException failure) { throw new SQLException("Oracle JDBC createOracleArray is required", failure); }
+		} catch (ReflectiveOperationException failure) {
+			throw new SQLException("Oracle JDBC createOracleArray is required", failure);
+		}
 	}
-	@Override public Object getObject(java.sql.ResultSet rows, int index, Column column) throws SQLException {
-		if (column.getArrayDimension() == 0) return super.getObject(rows, index);
+
+	@Override
+	public Object getObject(java.sql.ResultSet rows, int index, Column column) throws SQLException {
+		if (column.getArrayDimension() == 0)
+			return super.getObject(rows, index);
 		validateIntervalColumn(column);
 		var array = rows.getArray(index);
-		if (array == null) return null;
+		if (array == null)
+			return null;
 		var values = new java.util.ArrayList<Object>();
 		var codec = codec(column.clone().setArrayDimension(0));
 		try (var elements = array.getResultSet()) {
@@ -95,18 +134,26 @@ public final class OracleIntervalJdbcTypeHandler extends StandardIntervalJdbcTyp
 				String text = elements.getString(2);
 				values.add(text == null ? null : codec.parse(text));
 			}
-		} finally { array.free(); }
+		} finally {
+			array.free();
+		}
 		return prepareInterval(values.toArray(), column).value();
 	}
-	@Override public String literal(Object value, Column column) {
-		if (column.getArrayDimension() == 0) return super.literal(value, column);
+
+	@Override
+	public String literal(Object value, Column column) {
+		if (column.getArrayDimension() == 0)
+			return super.literal(value, column);
 		validateIntervalColumn(column);
 		String name = OracleIntervalCollections.qualifiedName(column);
-		if (value == null) return "CAST(NULL AS " + name + ")";
+		if (value == null)
+			return "CAST(NULL AS " + name + ")";
 		Object[] values = (Object[]) prepareInterval(value, column).value();
 		var scalar = column.clone().setArrayDimension(0);
-		return name + "(" + java.util.Arrays.stream(values).map(leaf -> leaf == null ? "NULL" : codec(scalar).literal(leaf))
-				.collect(java.util.stream.Collectors.joining(",")) + ")";
+		return name + "("
+				+ java.util.Arrays.stream(values).map(leaf -> leaf == null ? "NULL" : codec(scalar).literal(leaf))
+						.collect(java.util.stream.Collectors.joining(","))
+				+ ")";
 	}
 
 	@Override
@@ -116,7 +163,10 @@ public final class OracleIntervalJdbcTypeHandler extends StandardIntervalJdbcTyp
 		statement.setObject(index, nativeValue);
 	}
 
-	/** Package-visible for offline driver tests; no connection or database is needed. */
+	/**
+	 * Package-visible for offline driver tests; no connection or database is
+	 * needed.
+	 */
 	static Object createNativeValue(ClassLoader loader, String className, String text) throws SQLException {
 		try {
 			Class<?> driverType;
@@ -128,7 +178,8 @@ public final class OracleIntervalJdbcTypeHandler extends StandardIntervalJdbcTyp
 			return driverType.getConstructor(String.class).newInstance(text);
 		} catch (InvocationTargetException exception) {
 			Throwable cause = exception.getCause();
-			if (cause instanceof SQLException sql) throw sql;
+			if (cause instanceof SQLException sql)
+				throw sql;
 			throw new SQLException("Oracle interval driver rejected validated text", cause);
 		} catch (ReflectiveOperationException | LinkageError exception) {
 			throw new SQLException("Oracle JDBC driver must expose " + className + "(String)", exception);

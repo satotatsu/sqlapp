@@ -66,6 +66,55 @@ class InformixMetadataDockerTest {
 	}
 
 	@Test
+	void grantsAndRevokesOnlyTheNamedSignatureOfAnOverloadedRoutine() throws Exception {
+		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
+		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";
+		final String options = ":INFORMIXSERVER=informix;DELIMIDENT=Y";
+		try (var setup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+				var statement = setup.createStatement()) {
+			statement.execute("CREATE DATABASE " + database + " WITH LOG");
+		}
+		try {
+			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
+					var statement = connection.createStatement()) {
+				statement.execute("CREATE ROLE routine_reader");
+				statement.execute(
+						"CREATE FUNCTION informix.overloaded_grant(p INTEGER) RETURNING INTEGER; RETURN 1; END FUNCTION;");
+				statement.execute(
+						"CREATE FUNCTION informix.overloaded_grant(p DATE) RETURNING INTEGER; RETURN 2; END FUNCTION;");
+				statement.execute("GRANT EXECUTE ON FUNCTION informix.overloaded_grant(INTEGER) TO routine_reader");
+				statement.execute("GRANT EXECUTE ON FUNCTION informix.overloaded_grant(DATE) TO routine_reader");
+				var dialect = DialectHolder.defaultDialect;
+				var reader = new InformixRoutinePrivilegeReader(dialect);
+				var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
+				var parameters = new ParametersContext();
+				parameters.put("objectName", "overloaded_grant");
+				String signature = com.sqlapp.data.db.dialect.informix.InformixRoutineSignature.TYPES;
+				var grants = reader.doGetAll(connection, parameters, version).stream()
+						.filter(grant -> "routine_reader".equals(grant.getGranteeName())).toList();
+				assertEquals(2, grants.size());
+				var integerGrant = grants.stream()
+						.filter(grant -> "INTEGER".equals(grant.getSpecifics().get(signature))).findFirst()
+						.orElseThrow();
+				var registry = dialect.createSqlFactoryRegistry();
+				statement.execute(registry.createSql(integerGrant, SqlType.REVOKE).getFirst().getSqlText());
+				var remaining = reader.doGetAll(connection, parameters, version).stream()
+						.filter(grant -> "routine_reader".equals(grant.getGranteeName())).toList();
+				assertEquals(1, remaining.size());
+				assertEquals("DATE", remaining.getFirst().getSpecifics().get(signature));
+				statement.execute(registry.createSql(integerGrant, SqlType.GRANT).getFirst().getSqlText());
+				assertEquals(2, reader.doGetAll(connection, parameters, version).stream()
+						.filter(grant -> "routine_reader".equals(grant.getGranteeName())).count());
+			}
+		} finally {
+			try (var cleanup = DriverManager.getConnection(endpoint + "sysmaster" + options, "informix", "in4mix");
+					var statement = cleanup.createStatement()) {
+				statement.execute("DROP DATABASE " + database);
+			}
+		}
+	}
+
+	@Test
 	void serverMetadataSequenceBatchesAndPutReplacementKeepTransactionBoundaries() throws Exception {
 		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
 		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";

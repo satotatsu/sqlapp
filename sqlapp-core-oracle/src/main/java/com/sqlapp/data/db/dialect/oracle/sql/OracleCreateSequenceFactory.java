@@ -25,6 +25,26 @@ import com.sqlapp.data.schemas.Sequence;
 
 public class OracleCreateSequenceFactory extends AbstractCreateSequenceFactory<OracleSqlBuilder> {
 
+	/**
+	 * Oracle does not keep the declared start value in its catalog, so the sequence
+	 * is created at its next value ({@code lastValue}) directly.
+	 */
+	@Override
+	protected void addCreateObject(final Sequence obj, final OracleSqlBuilder builder) {
+		if (obj.getLastValue() == null) {
+			super.addCreateObject(obj, builder);
+			return;
+		}
+		final Sequence next = obj.clone();
+		next.setStartValue(obj.getLastValue());
+		super.addCreateObject(next, builder);
+	}
+
+	@Override
+	protected boolean appliesNextValueInCreate() {
+		return true;
+	}
+
 	@Override
 	protected void addDataType(final Sequence obj, OracleSqlBuilder builder) {
 	}

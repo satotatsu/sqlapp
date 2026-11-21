@@ -106,6 +106,26 @@ The task reports the comparison through command logging. It does not write a
 migration SQL file. Advanced callers can set `equalsHandler` to customize
 schema equality; use the same comparison rules when generating corresponding SQL.
 
+Sequence and identity next values (`lastValue`, `identityLastValue`) advance
+with every insert, so they are not compared by default. To verify a migration
+or to generate `RESTART` statements, compare them explicitly; use the same
+setting for `diffSchemaXml`, `generateDiffSql` and `synchronizeSchema`:
+
+```groovy
+tasks.named('generateDiffSql') {
+    equalsHandler { compareSequenceValues = true }
+}
+```
+
+A changed next value then becomes `ALTER SEQUENCE ... RESTART WITH` on
+PostgreSQL, H2 and HSQLDB, and `RESTART START WITH` on Oracle 18c and later.
+Databases that cannot restart in place (Oracle before 18c, DuckDB) and Db2,
+which never restarts automatically, fail with the sequence name instead of
+skipping it. CREATE starts a sequence at its next value when one is known:
+Oracle and DuckDB use it as `START WITH`; PostgreSQL, H2 and HSQLDB keep the
+original `START WITH` and add the restart; Firebird sets the generator. Db2
+CREATE never applies it.
+
 ## Generate CREATE SQL
 
 ```groovy

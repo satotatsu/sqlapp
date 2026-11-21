@@ -45,8 +45,8 @@ class OracleIntervalTest {
 			assertEquals("INTERVAL '+0 23:00:00' DAY(9) TO SECOND(9)",
 					dialect.getSqlValueDefinition(ds, IntervalValue.parse("P1DT-1H")));
 			assertEquals("NULL", dialect.getSqlValueDefinition(ds, null));
-			assertThrows(ArithmeticException.class, () -> dialect.getSqlValueDefinition(ds,
-					IntervalValue.parse("P1000000000D")));
+			assertThrows(ArithmeticException.class,
+					() -> dialect.getSqlValueDefinition(ds, IntervalValue.parse("P1000000000D")));
 		}
 	}
 
@@ -55,12 +55,11 @@ class OracleIntervalTest {
 		for (var type : new DataType[] { DataType.INTERVAL_YEAR_TO_MONTH, DataType.INTERVAL_DAY_TO_SECOND }) {
 			var handler = new OracleIntervalJdbcTypeHandler(type);
 			String text = type == DataType.INTERVAL_YEAR_TO_MONTH ? "-999999999-11" : "-999999999 23:59:59.123456789";
-			var expected = type == DataType.INTERVAL_YEAR_TO_MONTH
-					? IntervalValue.parse("P-999999999Y-11M")
+			var expected = type == DataType.INTERVAL_YEAR_TO_MONTH ? IntervalValue.parse("P-999999999Y-11M")
 					: IntervalValue.parse("PT-86399999999999.123456789S");
 			var rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
-					new Class<?>[] { ResultSet.class }, (proxy, method, args) ->
-							method.getName().equals("getMetaData") ? null : text);
+					new Class<?>[] { ResultSet.class },
+					(proxy, method, args) -> method.getName().equals("getMetaData") ? null : text);
 			assertEquals(expected, handler.getObject(rows, 1));
 			assertEquals(expected, handler.getObject(rows, "C"));
 			var statement = (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -81,14 +80,15 @@ class OracleIntervalTest {
 				new Class<?>[] { PreparedStatement.class }, (proxy, method, args) -> {
 					throw new AssertionError("Invalid value reached JDBC");
 				});
-		assertThrows(ArithmeticException.class, () -> handler.setObject(statement, 1, IntervalValue.parse("P100D"), column));
-		assertThrows(ArithmeticException.class, () -> handler.setObject(statement, 1,
-				IntervalValue.parse("PT0.000000001S"), column));
-		assertThrows(IllegalArgumentException.class, () -> handler.setObject(statement, 1,
-				IntervalValue.parse("P1M1D"), column));
+		assertThrows(ArithmeticException.class,
+				() -> handler.setObject(statement, 1, IntervalValue.parse("P100D"), column));
+		assertThrows(ArithmeticException.class,
+				() -> handler.setObject(statement, 1, IntervalValue.parse("PT0.000000001S"), column));
+		assertThrows(IllegalArgumentException.class,
+				() -> handler.setObject(statement, 1, IntervalValue.parse("P1M1D"), column));
 		assertThrows(IllegalArgumentException.class, () -> handler.codec(column.clone().setLength(10)));
 		assertThrows(IllegalArgumentException.class, () -> new OracleIntervalJdbcTypeHandler(DataType.INTERVAL_YEAR));
-		assertThrows(SQLException.class, () -> OracleIntervalJdbcTypeHandler.createNativeValue(
-				getClass().getClassLoader(), "missing.IntervalDriver", "+1-2"));
+		assertThrows(SQLException.class, () -> OracleIntervalJdbcTypeHandler
+				.createNativeValue(getClass().getClassLoader(), "missing.IntervalDriver", "+1-2"));
 	}
 }

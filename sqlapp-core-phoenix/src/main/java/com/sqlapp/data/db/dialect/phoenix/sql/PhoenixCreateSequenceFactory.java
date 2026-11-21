@@ -20,6 +20,10 @@ public class PhoenixCreateSequenceFactory extends AbstractCreateSequenceFactory<
 	@Override
 	protected void addCreateObject(Sequence sequence, PhoenixSqlBuilder builder) {
 		requireName(sequence);
+		if (sequence.getLastValue() != null)
+			throw new UnsupportedOperationException("Phoenix cannot restore a sequence counter from lastValue; "
+					+ "set startValue to the verified next value for the new sequence and clear lastValue: "
+					+ sequence.getName());
 		if (sequence.getDataType() != null && sequence.getDataType() != com.sqlapp.data.db.datatype.DataType.BIGINT)
 			throw new UnsupportedOperationException("Phoenix sequences use BIGINT: " + sequence.getName());
 		for (var value : new java.math.BigInteger[] { sequence.getStartValue(), sequence.getIncrementBy(),
