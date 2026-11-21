@@ -9,14 +9,11 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.datatype.DataType;
@@ -28,9 +25,6 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 
 /** Reads SQLite columns from table-valued PRAGMA metadata. */
 public class SqliteColumnReader extends ColumnReader {
-	private static final Pattern SIZE_PATTERN = Pattern
-			.compile("^\\s*([^()]+?)(?:\\s*\\(\\s*(\\d+)(?:\\s*,\\s*(\\d+))?\\s*\\))?\\s*$");
-
 	public SqliteColumnReader(final Dialect dialect) {
 		super(dialect);
 	}
@@ -341,41 +335,7 @@ public class SqliteColumnReader extends ColumnReader {
 			column.getSpecifics().put("sqlite.declaredType.empty", "true");
 		else
 			column.getSpecifics().put("sqlite.declaredType", typeName);
-		final Matcher matcher = SIZE_PATTERN.matcher(typeName);
-		final String baseType = matcher.matches() ? matcher.group(1).trim() : typeName;
-		final Long precision = matcher.matches() && matcher.group(2) != null ? Long.valueOf(matcher.group(2)) : null;
-		final Integer scale = matcher.matches() && matcher.group(3) != null ? Integer.valueOf(matcher.group(3)) : null;
-		int sqlType = toSqlType(baseType);
-		// Ordinary ANY retains NUMERIC affinity; only STRICT ANY is dynamic.
-		getDialect().setDbType(sqlType, "ANY".equalsIgnoreCase(baseType) ? "NUMERIC" : baseType, precision, scale,
-				column);
-		// SQLite accepts arbitrary declarations; map unregistered names by affinity
-		// for JDBC binding while sqlite.declaredType preserves executable source DDL.
-		if (column.getDataType() == null || column.getDataType().isOther()) {
-			column.setDataTypeName(null);
-			column.setDataType(DataType.valueOf(sqlType));
-			if (precision != null)
-				column.setLength(precision);
-			if (scale != null)
-				column.setScale(scale);
-		}
-	}
-
-	private int toSqlType(final String declaredType) {
-		final String type = declaredType.toUpperCase(Locale.ROOT);
-		if (type.contains("INT")) {
-			return Types.BIGINT;
-		}
-		if (type.contains("CHAR") || type.contains("CLOB") || type.contains("TEXT")) {
-			return Types.VARCHAR;
-		}
-		if (type.contains("BLOB") || type.isEmpty()) {
-			return Types.BLOB;
-		}
-		if (type.contains("REAL") || type.contains("FLOA") || type.contains("DOUB")) {
-			return Types.DOUBLE;
-		}
-		return Types.NUMERIC;
+		SqliteDdl.applyDeclaredType(getDialect(), column, typeName);
 	}
 
 	private String quoteIdentifier(final String value) {

@@ -68,7 +68,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 				WHEN MATCHED
 					THEN UPDATE
 						SET _target_."colD" = _source_."colD"
-						, _target_."lock_version" = _source_."lock_version"
+						, _target_."lock_version" = COALESCE( _target_."lock_version", 0 ) + 1
 				WHEN NOT MATCHED
 					THEN INSERT
 					(
@@ -122,7 +122,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 				WHEN MATCHED
 					THEN UPDATE
 						SET _target_."colD" = _source_."colD"
-						, _target_."lock_version" = _source_."lock_version"
+						, _target_."lock_version" = COALESCE( _target_."lock_version", 0 ) + 1
 				WHEN NOT MATCHED
 					THEN INSERT
 					(

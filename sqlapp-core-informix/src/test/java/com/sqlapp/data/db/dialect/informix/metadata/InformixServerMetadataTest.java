@@ -50,7 +50,7 @@ class InformixServerMetadataTest {
 		for (int i = 0; i < 30; i++)
 			data.rows.add(new HashMap<>(Map.of("space_number", Integer.toString(i + 1), "space_name",
 					"space" + i + "   ", "space_owner", "informix   ", "space_flags",
-					i % 3 == 0 ? "1" : i % 3 == 1 ? "16" : "-32768", "page_size", "2048")));
+					i % 3 == 0 ? "196609" : i % 3 == 1 ? "16" : "-32768", "page_size", "2048")));
 		final var reader = new InformixTableSpaceReader(DialectHolder.defaultDialect) {
 			@Override
 			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
@@ -63,6 +63,8 @@ class InformixServerMetadataTest {
 		assertEquals("DBSPACE", spaces.get(0).getSpecifics().get("INFORMIX_SPACE_KIND"));
 		assertEquals("BLOBSPACE", spaces.get(1).getSpecifics().get("INFORMIX_SPACE_KIND"));
 		assertEquals("SBSPACE", spaces.get(2).getSpecifics().get("INFORMIX_SPACE_KIND"));
+		assertEquals("196609", spaces.get(0).getSpecifics().get("INFORMIX_SPACE_FLAGS"));
+		assertEquals("32768", spaces.get(2).getSpecifics().get("INFORMIX_SPACE_FLAGS"));
 		assertEquals("2048", spaces.get(0).getSpecifics().get("INFORMIX_PAGE_SIZE"));
 		assertEquals("space0", spaces.get(0).getName());
 		assertNull(spaces.get(0).getLocation());

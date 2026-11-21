@@ -62,12 +62,12 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 				statement.addBatch();
 				pending++;
 				if (pending == batchSize) {
-					affected = addCount(affected, count(statement.executeBatch()));
+					affected = addCount(affected, countBatchRows(statement.executeBatch()));
 					pending = 0;
 				}
 			}
 			if (pending > 0) {
-				affected = addCount(affected, count(statement.executeBatch()));
+				affected = addCount(affected, countBatchRows(statement.executeBatch()));
 			}
 			return affected;
 		} catch (SQLException | RuntimeException | Error e) {
@@ -170,7 +170,8 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 		return dbDataType == null || dbDataType.getJdbcTypeHandler() == null ? null : dbDataType;
 	}
 
-	private long count(final int[] counts) throws SQLException {
+	/** Returns the affected row count from a successful JDBC batch result. */
+	protected long countBatchRows(final int[] counts) throws SQLException {
 		long affected = 0;
 		for (final int value : counts) {
 			if (value == Statement.EXECUTE_FAILED) {

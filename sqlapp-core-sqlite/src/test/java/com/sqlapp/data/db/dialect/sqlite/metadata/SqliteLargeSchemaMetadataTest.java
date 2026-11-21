@@ -57,7 +57,8 @@ class SqliteLargeSchemaMetadataTest {
 			for (Table table : tables) {
 				assertEquals(3, table.getColumns().size(), table.getName());
 				assertEquals(1, table.getIndexes().size(), table.getName());
-				assertEquals("true", table.getSpecifics().get("strict"), table.getName());
+				assertEquals("true", table.getSpecifics().get(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.STRICT),
+						table.getName());
 				assertTrue(table.getColumns().get("id").isIdentity(), table.getName());
 				assertEquals(2, table.getConstraints().getUniqueConstraints().size(), table.getName());
 				assertEquals(1, table.getConstraints().getCheckConstraints().size(), table.getName());

@@ -55,7 +55,8 @@ public final class SqliteConstraintFactories {
 				|| constraint.getTableName().isBlank())
 			throw new IllegalArgumentException(
 					"SQLite CHECK change requires explicit schema, table and constraint names");
-		if (dropping && "true".equals(constraint.getSpecifics().get("sqlite.check.unnamed")))
+		if (dropping && "true"
+				.equals(constraint.getSpecifics().get(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.CHECK_UNNAMED)))
 			throw new IllegalArgumentException("SQLite cannot drop an anonymous CHECK by its generated metadata name");
 		Table table = constraint.getTable();
 		if (table != null && ("true".equals(table.getSpecifics().get("sqlite.virtual"))

@@ -31,6 +31,15 @@ public class SqliteAlterTableFactory extends AbstractAlterTableFactory<SqliteSql
 		Table target = difference.getTarget(Table.class);
 		if (original == null || target == null)
 			throw unsupported("ALTER requires both the original and target table");
+		if (com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.hasLegacyKeys(original)
+				|| com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.hasLegacyKeys(target)) {
+			// Compare earlier saved models by option meaning, not by key spelling.
+			Table normalizedOriginal = original.clone();
+			Table normalizedTarget = target.clone();
+			com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.migrateLegacyKeys(normalizedOriginal);
+			com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.migrateLegacyKeys(normalizedTarget);
+			return createDiffSql(normalizedOriginal.diff(normalizedTarget));
+		}
 		var changes = difference.toDifference().getChangedProperties(getDialect());
 		if (!changes.isEmpty() && ("true".equals(original.getSpecifics().get("sqlite.virtual"))
 				|| com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.isVirtualTable(toString(original.getDefinition()))))

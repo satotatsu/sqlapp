@@ -201,8 +201,8 @@ class SqliteTableRoundTripTest {
 					"CREATE TABLE t(id INTEGER PRIMARY KEY, value TEXT DEFAULT 'STRICT WITHOUT ROWID') /* STRICT WITHOUT ROWID */");
 			var table = read(connection, "main", "t");
 			assertTrue(table.getColumns().get("id").isIdentity());
-			assertNull(table.getSpecifics().get("strict"));
-			assertNull(table.getSpecifics().get("without_rowid"));
+			assertFalse(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.isStrict(table));
+			assertFalse(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.isWithoutRowid(table));
 		}
 	}
 }

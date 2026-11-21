@@ -28,7 +28,7 @@ class InformixBulkExecutionTest {
 		boolean clientInfoUnsupported;
 		boolean transactions = true, serializable = true;
 		int logging = 1, pending, batches, prepared, closed, queries;
-		boolean failBatch;
+		boolean failBatch, aggregatePutCounts;
 		boolean exposePut, driverPut;
 		final List<String> sql = new ArrayList<>();
 		final List<Object[]> eligible = new ArrayList<>();
@@ -73,7 +73,9 @@ class InformixBulkExecutionTest {
 				if (failBatch)
 					throw new BatchUpdateException("failed", new int[] { Statement.EXECUTE_FAILED });
 				final int[] counts = new int[pending];
-				java.util.Arrays.fill(counts, 1);
+				java.util.Arrays.fill(counts, aggregatePutCounts ? Statement.SUCCESS_NO_INFO : 1);
+				if (aggregatePutCounts)
+					counts[0] = pending;
 				pending = 0;
 				yield counts;
 			}
@@ -131,6 +133,16 @@ class InformixBulkExecutionTest {
 		driver.failBatch = true;
 		assertThrows(BatchUpdateException.class, () -> executor.execute(driver.connection(), table(), option));
 		assertEquals(2, driver.closed);
+	}
+
+	@Test
+	void countsThePutBatchTotalWithoutCountingSuccessMarkersAgain() throws Exception {
+		final var driver = new Driver();
+		driver.aggregatePutCounts = true;
+		final var executor = new InformixBulkInsertExecutor(DialectHolder.defaultDialect);
+		final var option = BulkOption.builder().insertMethod(BulkInsertMethod.NATIVE).build();
+		assertEquals(2, executor.execute(driver.connection(), table(), option));
+		assertEquals(1, driver.batches);
 	}
 
 	@Test

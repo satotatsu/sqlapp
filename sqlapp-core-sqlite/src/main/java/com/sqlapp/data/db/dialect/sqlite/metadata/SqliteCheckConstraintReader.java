@@ -40,7 +40,8 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 						constraint.setSchemaName(getSchemaName(context));
 						constraint.setTableName(table);
 						if (check.name() == null)
-							constraint.getSpecifics().put("sqlite.check.unnamed", "true");
+							constraint.getSpecifics()
+									.put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.CHECK_UNNAMED, "true");
 						result.add(constraint);
 					}
 				}

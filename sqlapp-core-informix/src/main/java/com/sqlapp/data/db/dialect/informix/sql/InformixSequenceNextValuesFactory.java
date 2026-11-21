@@ -23,14 +23,9 @@ public class InformixSequenceNextValuesFactory extends AbstractSequenceNextValue
 		identifier(builder, sequence.getName());
 		builder._add(".NEXTVAL");
 		builder.lineBreak().from().space();
-		// Ten ten-row collections cover every nonnegative Java int count. FIRST stops
-		// the unsorted cross product at the requested size; no physical catalog is
-		// scanned.
-		for (int i = 0; i < 10; i++) {
-			if (i > 0)
-				builder._add(", ");
-			builder._add("TABLE(SET{0,1,2,3,4,5,6,7,8,9}) AS _d" + i + "(n)");
-		}
+		// The JDBC batch size matches this 100-row source.
+		builder._add("TABLE(SET{0,1,2,3,4,5,6,7,8,9}) AS _d0(n), ");
+		builder._add("TABLE(SET{0,1,2,3,4,5,6,7,8,9}) AS _d1(n)");
 	}
 
 	private void identifier(final InformixSqlBuilder builder, final String name) {

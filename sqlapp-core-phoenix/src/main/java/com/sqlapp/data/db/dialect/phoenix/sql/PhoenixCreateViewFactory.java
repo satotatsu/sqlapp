@@ -2,10 +2,20 @@
 package com.sqlapp.data.db.dialect.phoenix.sql;
 
 import com.sqlapp.data.db.sql.AbstractCreateViewFactory;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import java.util.List;
 import com.sqlapp.data.db.dialect.phoenix.util.PhoenixSqlBuilder;
 import com.sqlapp.data.schemas.View;
 
 public class PhoenixCreateViewFactory extends AbstractCreateViewFactory<PhoenixSqlBuilder> {
+	@Override
+	protected void addOtherDefinitions(View view, List<SqlOperation> operations) {
+		super.addOtherDefinitions(view, operations);
+		for (var index : view.getIndexes())
+			operations.addAll(getSqlFactoryRegistry().createSql(index, SqlType.CREATE));
+	}
+
 	@Override
 	protected void addCreateObject(View view, PhoenixSqlBuilder builder) {
 		if (view.getName() == null || view.getName().isBlank())

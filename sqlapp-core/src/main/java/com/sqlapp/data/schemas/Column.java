@@ -149,6 +149,10 @@ public final class Column extends AbstractColumn<Column>
 	public String getDomainSchemaName() { return getDomain() == null ? null : getDomain().getSchemaName(); }
 
 	public Column setDomainName(String name) {
+		// Naming the domain already set keeps its definition (data type, length...).
+		if (domain != null && name != null && name.equals(domain.getName())) {
+			return this;
+		}
 		String schema = getDomainSchemaName();
 		domain = name == null ? null : new Domain(name).setSchemaName(schema);
 		domainColumn = null;
@@ -157,6 +161,9 @@ public final class Column extends AbstractColumn<Column>
 	}
 
 	public Column setDomainSchemaName(String schema) {
+		if (domain != null && java.util.Objects.equals(schema, domain.getSchemaName())) {
+			return this;
+		}
 		String name = getDomainName();
 		domain = new Domain(name).setSchemaName(schema);
 		domainColumn = null;

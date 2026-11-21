@@ -21,10 +21,15 @@ class PhoenixAlterViewTest {
 				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 		final String ddl = "CREATE VIEW \"Sales\".extended AS SELECT * FROM \"Sales\".base";
 		view.setDefinition(ddl);
+		final var index = new Index("view_idx");
+		final String indexDdl = "CREATE INDEX view_idx ON \"Sales\".extended (UPPER(existing))";
+		index.getSpecifics().put(PhoenixCreateIndexFactory.NATIVE_DEFINITION, indexDdl);
+		view.getIndexes().add(index);
 		final Schema restored = SchemaUtils.readXml(new java.io.StringReader(target.asXml()));
 		final var additions = registry.createSql(original.diff(restored), SqlType.ALTER);
-		assertEquals(1, additions.size());
+		assertEquals(2, additions.size());
 		assertEquals(ddl, additions.get(0).getSqlText());
+		assertEquals(indexDdl, additions.get(1).getSqlText());
 		final var replacement = restored.clone();
 		replacement.getViews().get(0).setDefinition(ddl + " WHERE id = 1");
 		assertThrows(UnsupportedOperationException.class,

@@ -41,10 +41,11 @@ public class InformixTableSpaceReader extends TableSpaceReader {
 				final var space = new TableSpace(name).setOwnerName(required(rs, "space_owner"));
 				space.setId(required(rs, "space_number"));
 				final int nativeFlags = Integer.parseInt(required(rs, "space_flags"));
-				if (nativeFlags < Short.MIN_VALUE || nativeFlags > 0xffff)
-					throw new IllegalStateException("Invalid Informix storage flags: " + name);
-				final int flags = nativeFlags & 0xffff;
-				space.getSpecifics().put("INFORMIX_SPACE_FLAGS", Integer.toString(flags));
+				// Older catalog results can expose a signed SMALLINT, while modern
+				// servers can return dbspace status bits above the low 16 bits.
+				final long flags = nativeFlags < 0 && nativeFlags >= Short.MIN_VALUE ? nativeFlags & 0xffffL
+						: Integer.toUnsignedLong(nativeFlags);
+				space.getSpecifics().put("INFORMIX_SPACE_FLAGS", Long.toString(flags));
 				space.getSpecifics().put("INFORMIX_SPACE_KIND",
 						(flags & 0x8000) != 0 ? "SBSPACE" : (flags & 0x10) != 0 ? "BLOBSPACE" : "DBSPACE");
 				if (pageSize) {

@@ -138,6 +138,9 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 			constraint.setDeferrability(declaration.deferrability());
 			if (declaration.name() != null)
 				constraint.setName(declaration.name());
+			else
+				constraint.getSpecifics().put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.FOREIGN_KEY_UNNAMED,
+						"true");
 		}
 	}
 

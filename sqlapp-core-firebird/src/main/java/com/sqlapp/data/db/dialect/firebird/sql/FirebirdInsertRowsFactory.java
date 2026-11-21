@@ -44,9 +44,15 @@ public class FirebirdInsertRowsFactory extends InsertRowsFactory {
 		final FirebirdSqlBuilder builder = new FirebirdSqlBuilder(getDialect());
 		final Domain domain = column.getDomain();
 		final String characterSet;
-		if (domain != null) {
+		if (domain != null && domain.getDataType() != null) {
 			builder.typeDefinition(domain);
 			characterSet = domain.getCharacterSet();
+		} else if (domain != null) {
+			// only the domain name is known: use the type declared on the column
+			builder.columnType(new Column(column.getName()).setDataType(column.getDataType())
+					.setDataTypeName(column.getDataTypeName()).setLength(column.getLength())
+					.setScale(column.getScale()));
+			characterSet = column.getCharacterSet();
 		} else {
 			builder.columnType(column);
 			characterSet = column.getCharacterSet();

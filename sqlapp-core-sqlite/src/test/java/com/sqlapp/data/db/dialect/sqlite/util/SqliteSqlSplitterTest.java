@@ -186,4 +186,20 @@ public class SqliteSqlSplitterTest extends AbstractTest {
 		assertEquals("/*create table comment*/", splits.get(i++).getText());
 	}
 
+	@Test
+	void repeatedHasNextDoesNotSkipStatements() {
+		var tokenizer = new SqliteSqlSplitter(com.sqlapp.data.db.dialect.sqlite.DialectHolder.defaultDialect)
+				.createSqlTokenizer("SELECT 1; -- note\nSELECT 2;");
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.hasNext());
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.hasNext());
+		org.junit.jupiter.api.Assertions.assertEquals("SELECT 1;", tokenizer.next());
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.hasNext());
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.hasNext());
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.isComment());
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.next().startsWith("-- note"));
+		org.junit.jupiter.api.Assertions.assertTrue(tokenizer.hasNext());
+		org.junit.jupiter.api.Assertions.assertEquals("SELECT 2;", tokenizer.next());
+		org.junit.jupiter.api.Assertions.assertFalse(tokenizer.hasNext());
+		org.junit.jupiter.api.Assertions.assertFalse(tokenizer.hasNext());
+	}
 }

@@ -260,6 +260,108 @@ public final class SqliteDdl {
 				&& identifier(items.get(start + 3).text()).equals(column);
 	}
 
+	private static final java.util.regex.Pattern SIZE_PATTERN = java.util.regex.Pattern
+			.compile("^\\s*([^()]+?)(?:\\s*\\(\\s*(\\d+)(?:\\s*,\\s*(\\d+))?\\s*\\))?\\s*$");
+
+	/**
+	 * Sets the Schema type of a column from its declared SQLite type. Registered
+	 * names map directly; other declarations follow SQLite's type affinity rules.
+	 */
+	public static void applyDeclaredType(com.sqlapp.data.db.dialect.Dialect dialect,
+			com.sqlapp.data.schemas.Column column, String declaredType) {
+		final String typeName = declaredType == null ? "" : declaredType;
+		final java.util.regex.Matcher matcher = SIZE_PATTERN.matcher(typeName);
+		final boolean sized = matcher.matches();
+		final String baseType = sized ? matcher.group(1).trim() : typeName;
+		final Long precision = sized && matcher.group(2) != null ? Long.valueOf(matcher.group(2)) : null;
+		final Integer scale = sized && matcher.group(3) != null ? Integer.valueOf(matcher.group(3)) : null;
+		final int sqlType = affinityType(baseType);
+		// Ordinary ANY retains NUMERIC affinity; only STRICT ANY is dynamic.
+		dialect.setDbType(sqlType, "ANY".equalsIgnoreCase(baseType) ? "NUMERIC" : baseType, precision, scale, column);
+		// SQLite accepts arbitrary declarations; map unregistered names by affinity
+		// for JDBC binding while the declaration itself keeps the executable DDL.
+		if (column.getDataType() == null || column.getDataType().isOther()) {
+			column.setDataTypeName(null);
+			column.setDataType(com.sqlapp.data.db.datatype.DataType.valueOf(sqlType));
+			if (precision != null)
+				column.setLength(precision);
+			if (scale != null)
+				column.setScale(scale);
+		}
+	}
+
+	/**
+	 * Whether a declaration read from the catalog still describes the column's
+	 * Schema type, length and scale. A changed Schema model wins over it.
+	 */
+	public static boolean matchesDeclaredType(com.sqlapp.data.db.dialect.Dialect dialect,
+			com.sqlapp.data.schemas.Column column, String declaredType) {
+		var probe = new com.sqlapp.data.schemas.Column(column.getName());
+		probe.setDialect(dialect);
+		applyDeclaredType(dialect, probe, declaredType);
+		return probe.getDataType() == column.getDataType()
+				&& java.util.Objects.equals(probe.getLength(), column.getLength())
+				&& java.util.Objects.equals(probe.getScale(), column.getScale());
+	}
+
+	/** SQLite's column affinity rules, as a JDBC type. */
+	private static int affinityType(final String declaredType) {
+		final String type = declaredType.toUpperCase(java.util.Locale.ROOT);
+		if (type.contains("INT"))
+			return java.sql.Types.BIGINT;
+		if (type.contains("CHAR") || type.contains("CLOB") || type.contains("TEXT"))
+			return java.sql.Types.VARCHAR;
+		if (type.contains("BLOB") || type.isEmpty())
+			return java.sql.Types.BLOB;
+		if (type.contains("REAL") || type.contains("FLOA") || type.contains("DOUB"))
+			return java.sql.Types.DOUBLE;
+		return java.sql.Types.NUMERIC;
+	}
+
+	/** Specifics key holding an index's key list as read from CREATE INDEX. */
+	public static final String INDEX_KEYS = "sqlite.index.keys";
+
+	/**
+	 * The retained CREATE INDEX key list when it still matches the index's modeled
+	 * columns and orders; otherwise null, so a changed model wins.
+	 */
+	public static String retainedIndexKeys(com.sqlapp.data.schemas.Index index) {
+		String keys = index.getSpecifics().get(INDEX_KEYS);
+		if (keys == null || keys.isBlank())
+			return null;
+		List<String> items = topLevelItems(keys);
+		var columns = index.getColumns();
+		if (items.size() != columns.size())
+			return null;
+		for (int i = 0; i < items.size(); i++) {
+			String item = items.get(i);
+			String name = hasIndexExpressions(item) ? stripIndexKeyOrder(item) : firstIdentifier(item);
+			var column = columns.get(i);
+			boolean descending = column.getOrder() == com.sqlapp.data.schemas.Order.Desc;
+			if (!name.equals(column.getName()) || descending != isDescendingIndexKey(item))
+				return null;
+		}
+		return keys;
+	}
+
+	/** Splits a list at top-level commas, keeping comments and literals opaque. */
+	private static List<String> topLevelItems(String text) {
+		List<String> result = new ArrayList<>();
+		int start = 0, depth = 0;
+		for (Token token : tokens(text)) {
+			if (token.is("("))
+				depth++;
+			else if (token.is(")"))
+				depth--;
+			else if (token.is(",") && depth == 0) {
+				result.add(text.substring(start, token.start()).trim());
+				start = token.end();
+			}
+		}
+		result.add(text.substring(start).trim());
+		return result;
+	}
+
 	/** Reads each CHECK with its own name; comments and literals remain opaque. */
 	public static List<CheckDeclaration> checks(String fragment) {
 		List<Token> items = tokens(fragment);

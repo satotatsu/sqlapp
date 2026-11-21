@@ -20,6 +20,7 @@ import org.testcontainers.utility.DockerImageName;
 import com.sqlapp.data.db.dialect.test.ReusableTestcontainers;
 
 import com.sqlapp.data.db.dialect.informix.DialectHolder;
+import com.sqlapp.data.db.metadata.ReaderOptions;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
@@ -80,14 +81,16 @@ class InformixMetadataDockerTest {
 					statement.execute("GRANT UPDATE (keep_col, drop_col) ON informix." + table + " TO " + role);
 					var dialect = DialectHolder.defaultDialect;
 					var reader = new InformixColumnPrivilegeReader(dialect);
+					reader.setReaderOptions(new ReaderOptions());
 					var parameters = new ParametersContext();
 					parameters.put("tableName", table);
 					parameters.put("objectName", table);
 					var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
 					var before = new com.sqlapp.data.schemas.Catalog("sysmaster");
 					before.getColumnPrivileges().addAll(reader.doGetAll(connection, parameters, version));
-					before.getObjectPrivileges().addAll(
-							new InformixObjectPrivilegeReader(dialect).doGetAll(connection, parameters, version));
+					var objectPrivileges = new InformixObjectPrivilegeReader(dialect);
+					objectPrivileges.setReaderOptions(new ReaderOptions());
+					before.getObjectPrivileges().addAll(objectPrivileges.doGetAll(connection, parameters, version));
 					var after = before.clone();
 					assertTrue(after.getColumnPrivileges().removeIf(grant -> role.equals(grant.getGranteeName())
 							&& "drop_col".equals(grant.getColumnName()) && "UPDATE".equals(grant.getPrivilege())));
@@ -129,6 +132,7 @@ class InformixMetadataDockerTest {
 				statement.execute("GRANT EXECUTE ON FUNCTION informix.overloaded_grant(DATE) TO routine_reader");
 				var dialect = DialectHolder.defaultDialect;
 				var reader = new InformixRoutinePrivilegeReader(dialect);
+				reader.setReaderOptions(new ReaderOptions());
 				var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
 				var parameters = new ParametersContext();
 				parameters.put("objectName", "overloaded_grant");
@@ -173,14 +177,17 @@ class InformixMetadataDockerTest {
 				final var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
 				final var spaceFilter = new ParametersContext();
 				spaceFilter.put("tableSpaceName", "rootdbs");
-				final var spaces = new InformixTableSpaceReader(dialect).doGetAll(connection, spaceFilter, version);
+				final var spaceReader = new InformixTableSpaceReader(dialect);
+				spaceReader.setReaderOptions(new ReaderOptions());
+				final var spaces = spaceReader.doGetAll(connection, spaceFilter, version);
 				assertEquals(1, spaces.size());
 				assertEquals("rootdbs", spaces.get(0).getName());
 				assertTrue(Integer.parseInt(spaces.get(0).getSpecifics().get("INFORMIX_PAGE_SIZE")) > 0);
 				final var settingsFilter = new ParametersContext();
 				settingsFilter.put("settingName", "DBSERVERNAME");
-				assertEquals(1,
-						new InformixSettingReader(dialect).doGetAll(connection, settingsFilter, version).size());
+				final var settingReader = new InformixSettingReader(dialect);
+				settingReader.setReaderOptions(new ReaderOptions());
+				assertEquals(1, settingReader.doGetAll(connection, settingsFilter, version).size());
 				statement.execute("CREATE SEQUENCE informix.batch_ids START WITH 10 INCREMENT BY 3 NOCACHE");
 				final var sequence = new com.sqlapp.data.schemas.Sequence("batch_ids").setSchemaName("informix")
 						.setCatalogName(database);
@@ -192,9 +199,9 @@ class InformixMetadataDockerTest {
 					assertEquals(List.of(421L, 424L), generator.get(2).stream()
 							.map(v -> new java.math.BigDecimal(v.toString()).longValueExact()).toList());
 				}
-				try (var getter = new com.sqlapp.jdbc.sql.SequenceGetter(connection, dialect, sequence, 17)) {
-					assertEquals(427L, getter.get(Long.class));
-					assertEquals(430L, getter.get(Long.class));
+				try (var getter = new com.sqlapp.jdbc.sql.SequenceGetter(connection, dialect, sequence, 101)) {
+					for (int i = 0; i < 101; i++)
+						assertEquals(427 + 3L * i, getter.get(Long.class));
 				}
 				statement.execute("CREATE TABLE informix.put_target(id INTEGER PRIMARY KEY)");
 				statement.execute("CREATE RAW TABLE informix.raw_target(id INTEGER)");
@@ -259,7 +266,8 @@ class InformixMetadataDockerTest {
 		try {
 			try (var connection = DriverManager.getConnection(endpoint + database + options, "informix", "in4mix");
 					var statement = connection.createStatement()) {
-				statement.execute("CREATE TABLE informix.items(id INTEGER NOT NULL,parent_id INTEGER,payload INTEGER)");
+				statement.execute(
+						"CREATE TABLE informix.items(id INTEGER NOT NULL,parent_id INTEGER,payload INTEGER) NEXT SIZE 64 LOCK MODE PAGE");
 				statement.execute("CREATE UNIQUE INDEX informix.items_ux ON informix.items(id) IN rootdbs");
 				statement.execute(
 						"ALTER TABLE informix.items ADD CONSTRAINT PRIMARY KEY(id) CONSTRAINT informix.items_pk");
@@ -279,6 +287,8 @@ class InformixMetadataDockerTest {
 				reader.setObjectName("items");
 				schema.getTables().addAll(reader.getAllFull(connection));
 				var table = schema.getTables().get("items");
+				assertEquals("PAGE", table.getSpecifics().get("INFORMIX_LOCK_MODE"));
+				assertEquals("64", table.getSpecifics().get("INFORMIX_NEXT_SIZE_KB"));
 				assertEquals("items_ux", table.getConstraints().getPrimaryKeyConstraint().getIndexName());
 				var after = before.clone();
 				after.getSchemas().get("informix").getTables().get("items").getColumns().get("id").setDefaultValue("3");
@@ -296,6 +306,16 @@ class InformixMetadataDockerTest {
 					}
 				}
 				statement.execute("INSERT INTO informix.items(parent_id,payload) VALUES(1,30)");
+				var current = reader.getAllFull(connection).getFirst();
+				var storage = current.clone();
+				storage.getSpecifics().put("INFORMIX_LOCK_MODE", "ROW");
+				storage.getSpecifics().put("INFORMIX_NEXT_SIZE_KB", "128");
+				for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry()
+						.createSql(current.diff(storage), SqlType.ALTER))
+					statement.execute(operation.getSqlText());
+				var stored = reader.getAllFull(connection).getFirst().getSpecifics();
+				assertEquals("ROW", stored.get("INFORMIX_LOCK_MODE"));
+				assertEquals("128", stored.get("INFORMIX_NEXT_SIZE_KB"));
 				assertThrows(java.sql.SQLException.class,
 						() -> statement.execute("INSERT INTO informix.items VALUES(2,NULL,40)"));
 				assertThrows(java.sql.SQLException.class,

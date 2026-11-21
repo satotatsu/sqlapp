@@ -2599,7 +2599,10 @@ module regression scope; this does not imply new server/cluster coverage.
 - Informix has a dialect-owned sequence CREATE factory. It omits unsupported AS
   type syntax, emits NOCACHE for a disabled/zero cache, and rejects negative or
   enabled size-one caches (Informix requires at least two cached values). The
-  sequence reader reflects whether catalog caching is enabled.
+  sequence reader reflects whether catalog caching is enabled. JDBC sequence
+  preallocation splits Informix requests into queries of at most 100 values.
+  Callers executing the generated `SEQUENCE_NEXT_VALUES` SQL directly must
+  respect `Dialect.getSequenceQueryBatchSize()`.
 - Vertica sequence CREATE/ALTER honors disabled caching and sizes 0/1 as NO CACHE;
   negative sizes fail clearly. Its reader reflects cache enablement. The sequence
   catalog has no original START value: CURRENT_VALUE is distribution state and

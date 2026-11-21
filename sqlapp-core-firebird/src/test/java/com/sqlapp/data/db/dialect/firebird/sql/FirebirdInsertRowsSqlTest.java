@@ -53,6 +53,15 @@ class FirebirdInsertRowsSqlTest {
 	}
 
 	@Test
+	void legacyCastsNameOnlyDomainToColumnType() {
+		final Table table = new Table("T");
+		table.getColumns().add("AMOUNT",
+				c -> c.setDomainName("D_AMOUNT").setDataType(DataType.NUMERIC).setLength(18).setScale(2));
+		final String sql = sql(DialectHolder.defaultDialect20, table);
+		assertTrue(sql.contains("AS NUMERIC(18, 2))") || sql.contains("AS NUMERIC(18,2))"), sql);
+	}
+
+	@Test
 	void legacyRejectsArrayColumns() {
 		final Table table = new Table("T");
 		table.getColumns().add("A", c -> c.setDataType(DataType.INT).setArrayDimension(1).setArrayDimensionLowerBound(1)

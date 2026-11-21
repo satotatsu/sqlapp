@@ -285,6 +285,11 @@ public class Informix extends Dialect {
 	}
 
 	@Override
+	public int getSequenceQueryBatchSize() {
+		return 100;
+	}
+
+	@Override
 	public String getSequenceNextValString(final String sequenceName) {
 		if (sequenceName == null || sequenceName.isBlank())
 			throw new IllegalArgumentException("Informix sequence name is required");

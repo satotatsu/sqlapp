@@ -102,8 +102,11 @@ public class SqliteIndexReader extends JdbcIndexReader {
 							index.getColumns().add(new Column(column), order);
 						} else if (rs.getInt("cid") == -2) {
 							// Parse each expression index once, not once per expression key.
-							final List<String> keys = expressionKeys.computeIfAbsent(name,
-									key -> SqliteColumnReader.splitColumnDefinitions(rs.getString("definition")));
+							List<String> keys = expressionKeys.get(name);
+							if (keys == null) {
+								keys = SqliteColumnReader.splitColumnDefinitions(rs.getString("definition"));
+								expressionKeys.put(name, keys);
+							}
 							index.getColumns().add(stripOrder(keys.get(rs.getInt("seqno"))), order);
 						}
 					}
@@ -167,7 +170,7 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	private void retainKeys(Index index, String definition) {
 		List<String> keys = SqliteColumnReader.splitColumnDefinitions(definition);
 		if (!keys.isEmpty())
-			index.getSpecifics().put("sqlite.index.keys", String.join(", ", keys));
+			index.getSpecifics().put(SqliteDdl.INDEX_KEYS, String.join(", ", keys));
 	}
 
 	static String stripOrder(final String definition) {

@@ -7,6 +7,8 @@ import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics;
+import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Constraint;
 import com.sqlapp.data.schemas.Index;
@@ -29,15 +31,15 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 			return List.of(createOperation(sql, SqlType.CREATE, table));
 		}
 		if (getDialect() instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite) {
-			if ("true".equals(table.getSpecifics().get("strict")) && !sqlite.supportsStrictTables())
+			if (SqliteSpecifics.isStrict(table) && !sqlite.supportsStrictTables())
 				throw new IllegalArgumentException("SQLite STRICT tables require SQLite 3.37 or later");
-			if ("true".equals(table.getSpecifics().get("without_rowid")) && !sqlite.supportsWithoutRowid())
+			if (SqliteSpecifics.isWithoutRowid(table) && !sqlite.supportsWithoutRowid())
 				throw new IllegalArgumentException("SQLite WITHOUT ROWID requires SQLite 3.8.2 or later");
 		}
 		var identities = table.getColumns().stream().filter(Column::isIdentity).toList();
 		var primary = table.getConstraints().getPrimaryKeyConstraint();
-		if (identities.size() > 1 || !identities.isEmpty() && ("true".equals(table.getSpecifics().get("without_rowid"))
-				|| primary != null && (primary.getColumns().size() != 1
+		if (identities.size() > 1 || !identities.isEmpty()
+				&& (SqliteSpecifics.isWithoutRowid(table) || primary != null && (primary.getColumns().size() != 1
 						|| !identities.get(0).getName().equals(primary.getColumns().get(0).getName()))))
 			throw new IllegalArgumentException(
 					"SQLite identity requires a single INTEGER primary key in a rowid table: " + table.getName());
@@ -55,12 +57,16 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 		definition.setIdentity(false);
 		// The clone has no parent table, so decide STRICT handling from the original.
 		// STRICT tables reject DATE/TIME/TIMESTAMP declarations; values are ISO-8601
-		// text.
-		if (column.getTable() != null && "true".equals(column.getTable().getSpecifics().get("strict"))
-				&& column.getDomain() == null && column.getDataType() != null && column.getDataType().isDateTime()
-				&& column.getSpecifics().get("sqlite.declaredType") == null
-				&& !"true".equals(column.getSpecifics().get("sqlite.declaredType.empty")))
-			definition.getSpecifics().put("sqlite.declaredType", "TEXT");
+		// text, so declare the column as text.
+		if (SqliteSpecifics.isStrict(column.getTable()) && column.getDomain() == null && column.getDataType() != null
+				&& column.getDataType().isDateTime()) {
+			definition.setDataType(com.sqlapp.data.db.datatype.DataType.VARCHAR);
+			definition.setDataTypeName(null);
+			definition.setLength(null);
+			definition.setScale(null);
+			definition.getSpecifics().remove("sqlite.declaredType");
+			definition.getSpecifics().remove("sqlite.declaredType.empty");
+		}
 		String notNullConflict = column.getSpecifics().get("sqlite.notNull.onConflict");
 		if (notNullConflict != null) {
 			notNullConflict = notNullConflict.toUpperCase(java.util.Locale.ROOT);
@@ -69,7 +75,6 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 						"Invalid SQLite NOT NULL conflict policy for " + column.getName() + ": " + notNullConflict);
 			definition.setNotNull(false);
 		}
-		String declaredType = column.getSpecifics().get("sqlite.declaredType");
 		builder.name(column).space().definition(definition, false);
 		if (notNullConflict != null && column.isNotNull())
 			builder.space()._add("NOT NULL ON CONFLICT ")._add(notNullConflict);
@@ -81,7 +86,7 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 				builder.space().constraint().name(primary, false);
 		}
 		if (column.isIdentity()) {
-			String type = declaredType == null ? createSqlBuilder().addTypeDefinition(column).toString() : declaredType;
+			String type = createSqlBuilder().addTypeDefinition(column).toString();
 			if (!"INTEGER".equalsIgnoreCase(type.trim()))
 				throw new IllegalArgumentException("SQLite identity requires INTEGER: " + column.getName());
 			builder.space()._add("PRIMARY KEY");
@@ -113,7 +118,8 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 					&& isInlinePrimaryKey(table.getColumns().get(unique.getColumns().get(0).getName())))
 				return;
 			builder.lineBreak().comma();
-			if (!CommonUtils.isEmpty(unique.getName()))
+			// A name generated when reading an unnamed key is not part of the DDL.
+			if (!CommonUtils.isEmpty(unique.getName()) && !SqliteSpecifics.isUnnamed(unique))
 				builder.constraint().name(unique, false);
 			builder.space()._add(unique.isPrimaryKey() ? "PRIMARY KEY" : "UNIQUE").space()._add("(");
 			for (int i = 0; i < unique.getColumns().size(); i++) {
@@ -127,6 +133,10 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 			}
 			builder._add(")");
 			addConflict(unique.getSpecifics().get("sqlite.onConflict"), builder);
+			return;
+		}
+		if (constraint instanceof CheckConstraint check && SqliteSpecifics.isUnnamed(check)) {
+			builder.lineBreak().comma()._add("CHECK (")._add(check.getExpression())._add(")");
 			return;
 		}
 		super.addConstraintDefinition(constraint, builder);
@@ -161,8 +171,8 @@ public class SqliteCreateTableFactory extends AbstractCreateTableFactory<SqliteS
 
 	@Override
 	protected void addOption(Table table, SqliteSqlBuilder builder) {
-		boolean withoutRowid = "true".equals(table.getSpecifics().get("without_rowid"));
-		boolean strict = "true".equals(table.getSpecifics().get("strict"));
+		boolean withoutRowid = SqliteSpecifics.isWithoutRowid(table);
+		boolean strict = SqliteSpecifics.isStrict(table);
 		if (withoutRowid)
 			builder.space()._add("WITHOUT ROWID");
 		if (strict)

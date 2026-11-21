@@ -109,6 +109,9 @@ class SqliteVersionCapabilitiesTest {
 				() -> version(7, 0).createSqlFactoryRegistry().createSql(index, SqlType.CREATE));
 		assertFalse(version(8, 0).createSqlFactoryRegistry().createSql(index, SqlType.CREATE).isEmpty());
 		index.setWhere(null);
+		// Retained keys apply only while they match the modeled index columns.
+		index.getColumns().clear();
+		index.getColumns().add("abs(value)");
 		index.getSpecifics().put("sqlite.index.keys", "abs(value)");
 		assertThrows(IllegalArgumentException.class,
 				() -> version(8, 3).createSqlFactoryRegistry().createSql(index, SqlType.CREATE));

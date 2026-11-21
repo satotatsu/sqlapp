@@ -78,7 +78,7 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 							SET _target_."colb" = _source_."colb"
 							, _target_."colc" = _source_."colc"
 							, _target_."updated_at" = _source_."updated_at"
-							, _target_."lock_version" = _source_."lock_version"
+							, _target_."lock_version" = COALESCE( _target_."lock_version", 0 ) + 1
 					WHEN NOT MATCHED
 						THEN INSERT
 						(
@@ -128,7 +128,7 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 						THEN UPDATE
 							SET _target_."colb" = _source_."colb"
 							, _target_."updated_at" = _source_."updated_at"
-							, _target_."lock_version" = _source_."lock_version"
+							, _target_."lock_version" = _target_."lock_version" + 1
 					WHEN NOT MATCHED
 						THEN INSERT
 						(
@@ -182,7 +182,7 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 							SET _target_."colb" = _source_."colb"
 							, _target_."colc" = _source_."colc"
 							, _target_."updated_at" = _source_."updated_at"
-							, _target_."lock_version" = _source_."lock_version"
+							, _target_."lock_version" = _target_."lock_version" + 1
 					WHEN NOT MATCHED
 						THEN INSERT
 						(
@@ -246,7 +246,7 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 							SET _target_."colb" = _source_."colb"
 							, _target_."colc" = _source_."colc"
 							, _target_."updated_at" =/*update_updated_at*/
-							, _target_."lock_version" = _source_."lock_version"
+							, _target_."lock_version" = _target_."lock_version" + 1
 					WHEN NOT MATCHED
 						THEN INSERT
 						(

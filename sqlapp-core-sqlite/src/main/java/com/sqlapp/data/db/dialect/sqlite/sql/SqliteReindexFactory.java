@@ -29,7 +29,7 @@ public class SqliteReindexFactory extends AbstractSqlFactory<DbCommonObject<?>, 
 		List<SqlOperation> result = new ArrayList<>();
 		for (Table table : schema.getTables()) {
 			for (Index index : table.getIndexes()) {
-				String keys = index.getSpecifics().get("sqlite.index.keys");
+				String keys = com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl.retainedIndexKeys(index);
 				if (keys == null || keys.isBlank() || !SqliteDdl.hasIndexExpressions(keys))
 					continue;
 				if (!schema.getName().equalsIgnoreCase(index.getSchemaName()))

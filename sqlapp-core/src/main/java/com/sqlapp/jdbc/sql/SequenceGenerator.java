@@ -78,12 +78,16 @@ public class SequenceGenerator implements Closeable {
 		}
 		initialize();
 		final List<Object> list = CommonUtils.list(size);
-		statement.setInt(1, size);
-		try (ResultSet resultSet = statement.executeQuery()) {
-			while (resultSet.next()) {
-				final Object val = resultSet.getObject(1);
-				list.add(val);
+		final int batchSize = dialect.getSequenceQueryBatchSize();
+		for (int remaining = size; remaining > 0;) {
+			final int count = Math.min(batchSize, remaining);
+			statement.setInt(1, count);
+			try (ResultSet resultSet = statement.executeQuery()) {
+				while (resultSet.next()) {
+					list.add(resultSet.getObject(1));
+				}
 			}
+			remaining -= count;
 		}
 		return dialect.expandSequenceValues(sequence, list, size);
 	}

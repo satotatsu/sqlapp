@@ -397,6 +397,20 @@ public class Sqlite extends Dialect {
 		return "CURRENT_TIME";
 	}
 
+	/** SQLite DDL is transactional and is undone by ROLLBACK. */
+	@Override
+	public boolean isDdlRollbackable() {
+		return true;
+	}
+
+	/**
+	 * Whether integrity_check accepts a table name (SQLite 3.33+). Reported from
+	 * the 3.35 dialect, the nearest registered version.
+	 */
+	public boolean supportsIntegrityCheckTable() {
+		return false;
+	}
+
 	@Override
 	public boolean supportsDropCascade() {
 		return false;

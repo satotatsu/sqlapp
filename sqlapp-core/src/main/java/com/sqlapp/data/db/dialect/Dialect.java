@@ -595,6 +595,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
+	/** Maximum number of sequence values requested by a single JDBC query. */
+	public int getSequenceQueryBatchSize() {
+		return Integer.MAX_VALUE;
+	}
+
 	/** Expands values returned by a dialect-specific sequence reservation. */
 	public List<Object> expandSequenceValues(final Sequence sequence, final List<Object> values, final int count) {
 		return values;

@@ -77,8 +77,8 @@ public class Firebird20CreateTemporaryTableFactoryTest extends Firebird20SqlFact
 
 	@Test
 	public void firebird20RejectsGlobalTemporaryTables() {
-		var factory = com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect20.createSqlFactoryRegistry()
-				.getSqlFactory(new Table(), SqlType.CREATE_TEMPORARY);
+		final SqlFactory<Table> factory = com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect20
+				.createSqlFactoryRegistry().getSqlFactory(new Table(), SqlType.CREATE_TEMPORARY);
 		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
 				() -> factory.createSql(getTable1("tableA")));
 	}

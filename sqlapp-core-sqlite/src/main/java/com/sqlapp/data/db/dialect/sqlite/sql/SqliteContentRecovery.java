@@ -87,8 +87,9 @@ final class SqliteContentRecovery {
 		var captured = new Table("sqlapp_content_" + suffix).setSchemaName("temp").setDialect(dialect);
 		for (String name : java.util.stream.Stream.concat(java.util.stream.Stream.of(capturedId), columns.stream())
 				.toList()) {
-			var column = new Column(name).setDataType(com.sqlapp.data.db.datatype.DataType.ANY_DATA);
-			column.getSpecifics().put("sqlite.declaredType", "");
+			// No declared type means no affinity, so values keep their storage class.
+			var column = new Column(name).setDataType(com.sqlapp.data.db.datatype.DataType.BLOB);
+			column.getSpecifics().put("sqlite.declaredType.empty", "true");
 			captured.getColumns().add(column);
 		}
 		for (var operation : registry.createSql(captured, SqlType.CREATE))
@@ -169,7 +170,7 @@ final class SqliteContentRecovery {
 	}
 
 	private static boolean hasRowid(Table table) {
-		return !(table instanceof View) && !"true".equals(table.getSpecifics().get("without_rowid"));
+		return !(table instanceof View) && !com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.isWithoutRowid(table);
 	}
 
 	private static String identity(Table table) {

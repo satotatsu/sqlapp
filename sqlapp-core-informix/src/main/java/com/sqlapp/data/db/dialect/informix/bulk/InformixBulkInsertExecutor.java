@@ -4,6 +4,7 @@ package com.sqlapp.data.db.dialect.informix.bulk;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Statement;
 import java.util.regex.Pattern;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Table;
@@ -30,6 +31,20 @@ public class InformixBulkInsertExecutor extends JdbcBatchBulkInsertExecutor {
 					"Informix NATIVE inserts require a connection configured with IFX_USEPUT=1; "
 							+ "use AUTO or JDBC_BATCH for ordinary batches. No connection setting was changed.");
 		return super.execute(connection, table, options);
+	}
+
+	@Override
+	protected long countBatchRows(final int[] counts) throws SQLException {
+		// PUT returns the batch total first, followed by SUCCESS_NO_INFO for
+		// the remaining entries. Each individual INSERT can insert only one row.
+		if (counts.length > 1 && counts[0] > 1) {
+			for (int i = 1; i < counts.length; i++) {
+				if (counts[i] != Statement.SUCCESS_NO_INFO)
+					return super.countBatchRows(counts);
+			}
+			return counts[0];
+		}
+		return super.countBatchRows(counts);
 	}
 
 	private boolean usesPut(final Connection connection) throws SQLException {

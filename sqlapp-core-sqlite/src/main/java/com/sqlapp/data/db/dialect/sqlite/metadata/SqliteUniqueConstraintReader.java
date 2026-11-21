@@ -42,6 +42,9 @@ public class SqliteUniqueConstraintReader extends UniqueConstraintReader {
 						constraint.setCatalogName(getCatalogName(context));
 						constraint.setSchemaName(getSchemaName(context));
 						constraint.setTableName(table);
+						if (key.name() == null && !key.primary())
+							constraint.getSpecifics()
+									.put(com.sqlapp.data.db.dialect.sqlite.SqliteSpecifics.UNIQUE_UNNAMED, "true");
 						if (key.conflict() != null)
 							constraint.getSpecifics().put("sqlite.onConflict", key.conflict());
 						for (int i = 0; i < key.columns().size(); i++) {
