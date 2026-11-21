@@ -151,7 +151,7 @@ class InformixSecurityReaderTest {
 	@Test
 	void resolvesUnnamedSignaturesInOneBatchAndKeepsUnsupportedTypesUnresolved() {
 		var privileges = new Rows();
-		for (int id : java.util.List.of(101, 102, 103, 104)) {
+		for (int id : java.util.List.of(101, 102, 103, 104, 105, 106)) {
 			var row = new HashMap<String, Object>(Map.of("catalog_name", "db", "schema_name", "owner", "routine_name",
 					"routine", "routine_id", id, "argument_count", 2, "routine_parameter_types", "2 7", "routine_kind",
 					"PROCEDURE", "routine_auth", "e", "grantor", "owner", "grantee", "reader"));
@@ -161,6 +161,8 @@ class InformixSecurityReaderTest {
 				row.put("routine_id", 101);
 			if (id == 103)
 				row.put("routine_parameter_types", "2 10");
+			if (id >= 105)
+				row.put("routine_parameter_types", id == 105 ? "13 45" : "13 7");
 			privileges.rows.add(row);
 		}
 		var parameters = new Rows();
@@ -174,6 +176,14 @@ class InformixSecurityReaderTest {
 				parameters.rows.set(parameters.rows.size() - 2, Map.of("routine_id", id, "parameter_id", 2,
 						"parameter_type", 7, "extended_type_id", 0, "parameter_mode", 1));
 		}
+		parameters.rows.add(Map.of("routine_id", 105, "parameter_id", 1, "parameter_type", 13, "extended_type_id", 0,
+				"parameter_mode", 1, "parameter_length", 42));
+		parameters.rows.add(Map.of("routine_id", 105, "parameter_id", 2, "parameter_type", 45, "extended_type_id", 0,
+				"parameter_mode", 1));
+		parameters.rows.add(Map.of("routine_id", 106, "parameter_id", 1, "parameter_type", 13, "extended_type_id", 0,
+				"parameter_mode", 1, "parameter_length", 298));
+		parameters.rows.add(Map.of("routine_id", 106, "parameter_id", 2, "parameter_type", 7, "extended_type_id", 0,
+				"parameter_mode", 1));
 		var reader = new InformixRoutinePrivilegeReader(DialectHolder.defaultDialect) {
 			@Override
 			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
@@ -201,6 +211,8 @@ class InformixSecurityReaderTest {
 		grants.get(3).getSpecifics().put(com.sqlapp.data.db.dialect.informix.InformixRoutineSignature.TYPES,
 				"types_owner.code_t()");
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(grants.get(3), grant));
+		assertTrue(registry.createSql(grants.get(4), grant).getFirst().getSqlText().contains("(VARCHAR(42), BOOLEAN)"));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(grants.get(5), grant));
 		parameters.rows.add(parameters.rows.getFirst());
 		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, context, null));
 		parameters.rows.removeLast();

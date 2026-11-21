@@ -270,7 +270,10 @@ SPECIFIC FUNCTION/PROCEDURE`, preserving owner, grantee, grant option and option
 signature is emitted as `FUNCTION owner.name()` or `PROCEDURE owner.name()`.
 For unnamed routines with arguments, the reader resolves fixed built-in input
 types through one batched SYSPROCCOLUMNS query. SMALLINT, INTEGER, FLOAT, SMALLFLOAT,
-DATE, INT8 and BIGINT are supported. Named DISTINCT, opaque and ROW types
+DATE, INT8, BIGINT and BOOLEAN are supported. CHAR and NCHAR use their
+positive catalog length. VARCHAR and NVARCHAR use catalog lengths from 1
+through 255 when no extra length flags are encoded. Decimal precision and
+temporal qualifiers still require a SPECIFIC name. Named DISTINCT, opaque and ROW types
 are resolved through a join to SYSXTDTYPES in the same batch and emitted
 as quoted owner-qualified names. The signature retains identifiers containing
 spaces, dots, commas and quotes across XML serialization.

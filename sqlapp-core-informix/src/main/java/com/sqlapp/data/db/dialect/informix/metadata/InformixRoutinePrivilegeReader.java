@@ -88,8 +88,12 @@ public class InformixRoutinePrivilegeReader extends RoutinePrivilegeReader {
 						if (mode == 3 || mode == 5)
 							return;
 						int extendedType = rs.getInt("extended_type_id");
+						int typeCode = rs.getInt("parameter_type");
+						boolean missingType = rs.wasNull();
 						String type = extendedType == 0
-								? InformixRoutineSignature.builtinType(rs.getInt("parameter_type"), extendedType, mode)
+								? (missingType ? null
+										: InformixRoutineSignature.builtinTypeWithLength(typeCode,
+												rs.getInt("parameter_length"), mode))
 								: InformixRoutineSignature.namedType(rs.getString("type_owner"),
 										rs.getString("type_name"), rs.getString("type_kind"), mode);
 						var signature = signatures.computeIfAbsent(rs.getInt("routine_id"), ignored -> new TreeMap<>());
