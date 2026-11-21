@@ -267,7 +267,10 @@ SPECIFIC FUNCTION/PROCEDURE`, preserving owner, grantee, grant option and option
 signature is emitted as `FUNCTION owner.name()` or `PROCEDURE owner.name()`.
 For unnamed routines with arguments, the reader resolves fixed built-in input
 types through one batched SYSPROCCOLUMNS query. SMALLINT, INTEGER, FLOAT, SMALLFLOAT,
-DATE, INT8 and BIGINT are supported. A complete resolved signature is preserved
+DATE, INT8 and BIGINT are supported. Named DISTINCT, opaque and ROW types
+with simple owner and type identifiers are resolved through a join to
+SYSXTDTYPES in the same batch and emitted as quoted owner-qualified names.
+A complete resolved signature is preserved
 in `INFORMIX_ROUTINE_SIGNATURE_TYPES`. Other argument types, non-input modes,
 and incomplete signatures require a real SPECIFIC name for grant generation.
 The Docker suite includes a round-trip test for INTEGER and DATE overloads
