@@ -57,6 +57,14 @@ class SqlServerTemporalTableTest {
 	}
 
 	@Test
+	void periodColumnDefaultFollowsGeneratedClause() {
+		Table table = table();
+		table.getColumns().get("Valid From").setDefaultValue("SYSUTCDATETIME()");
+		String sql = registry(16).createSql(table, SqlType.CREATE).getFirst().getSqlText();
+		assertTrue(sql.contains("GENERATED ALWAYS AS ROW START HIDDEN DEFAULT SYSUTCDATETIME() NOT NULL"), sql);
+	}
+
+	@Test
 	void disabledVersioningRetainsPeriodAndAnonymousHistoryNeedsNoConfiguration() {
 		Table table = table();
 		table.toSystemVersioning().setEnable(false);

@@ -66,8 +66,10 @@ class PostgresModernSchemaSqlTest extends AbstractPostgresSqlFactoryTest {
 
 		assertTrue(postgres13.setDbType("daterange", null, null, range));
 		assertEquals(DataType.RANGE, range.getDataType());
+		assertEquals("daterange", range.getDataTypeName().toLowerCase(java.util.Locale.ROOT));
 		assertTrue(postgres14.setDbType("datemultirange", null, null, multirange));
 		assertEquals(DataType.MULTIRANGE, multirange.getDataType());
+		assertEquals("datemultirange", multirange.getDataTypeName().toLowerCase(java.util.Locale.ROOT));
 
 		Table table = new Table("SCHEDULES");
 		table.setDialect(postgres14);

@@ -318,10 +318,12 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		} else {
 			org = this.get(e.getSpecificName());
 		}
-		if (org != null && org.getClass().equals(e.getClass())) {
+		if (org != null && org.getClass().equals(e.getClass()) && eq(org.getId(), e.getId())) {
 			e.cloneProperties(org);
 		} else {
 			this.inner.add(index, e);
+			this.getNameMap().put(e.getName(), e);
+			this.getSpecificNameMap().put(e.getSpecificName(), e);
 		}
 		setElementParent(e);
 	}
@@ -458,7 +460,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 */
 	public boolean containsAll(final String... names) {
 		for (int i = 0; i < names.length; i++) {
-			if (!getNameMap().containsKey(names[i])) {
+			if (!contains(names[i])) {
 				return false;
 			}
 		}
@@ -488,6 +490,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	}
 
 	public boolean contains(final T o) {
+		if (o == null) {
+			return false;
+		}
 		if (this.getSpecificNameMap().containsKey(o.getSpecificName())) {
 			return true;
 		}
@@ -505,7 +510,10 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		if (o instanceof String) {
 			return this.contains((String) o);
 		}
-		return contains((T) o);
+		if (o instanceof AbstractNamedObject) {
+			return contains((T) o);
+		}
+		return false;
 	}
 
 	public boolean remove(final String o) {
@@ -573,7 +581,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 
 	@Override
 	public AbstractNamedObjectCollection<T> clone() {
-		return cast(super.clone());
+		final AbstractNamedObjectCollection<T> clone = cast(super.clone());
+		clone.setCaseSensitive(this.caseSensitive);
+		return clone;
 	}
 
 	/*
@@ -666,7 +676,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	@SuppressWarnings("unchecked")
 	protected void cloneProperties(final AbstractNamedObjectCollection<T> obj) {
 		final int size = this.size();
-		obj.caseSensitive = this.caseSensitive;
+		obj.setCaseSensitive(this.caseSensitive);
 		for (int i = 0; i < size; i++) {
 			obj.add((T) this.get(i).clone());
 		}

@@ -137,7 +137,10 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 		});
 	}
 
-	/** Resolves optional destination value projections before validation and verification. */
+	/**
+	 * Resolves optional destination value projections before validation and
+	 * verification.
+	 */
 	protected BulkMigrationJobPlan prepareExecutionPlan(Connection source, Connection target,
 			BulkMigrationJobPlan executionPlan) throws SQLException {
 		return executionPlan;
@@ -195,7 +198,8 @@ public class ExecuteBulkMigrationJobCommand extends AbstractDataSourceCommand {
 			// The chunk executor owns commit/rollback boundaries, including durable
 			// checkpoint writes. AbstractDataSourceCommand otherwise starts a transaction.
 			targetConnection.setAutoCommit(true);
-			final BulkMigrationJobPlan projectedPlan = prepareExecutionPlan(sourceConnection, targetConnection, executionPlan);
+			final BulkMigrationJobPlan projectedPlan = prepareExecutionPlan(sourceConnection, targetConnection,
+					executionPlan);
 			final BulkMigrationJobPlan effectivePlan = reportConfiguration == null ? projectedPlan
 					: withExplicitDatabaseCheckpointStores(projectedPlan, targetConnection);
 			final BulkMigrationJobListener executionListener;

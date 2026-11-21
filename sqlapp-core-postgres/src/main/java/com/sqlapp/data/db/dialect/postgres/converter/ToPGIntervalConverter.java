@@ -34,26 +34,35 @@ public class ToPGIntervalConverter extends AbstractConverter<PGobject> {
 	private static final long serialVersionUID = 6488632910509733050L;
 	private final DataType type;
 	private final int precision;
+
 	public ToPGIntervalConverter() {
 		this(DataType.INTERVAL, 6);
 	}
+
 	public ToPGIntervalConverter(final DataType type, final int precision) {
 		this.type = Objects.requireNonNull(type, "type");
 		PostgresIntervalCodec.validate(IntervalValue.ZERO, type, precision);
 		this.precision = precision;
 	}
+
 	@Override
 	public PGobject convertObject(final Object value) {
-		if (isSupplier(value)) return convertObject(getSupplierValue(value));
+		if (isSupplier(value))
+			return convertObject(getSupplierValue(value));
 		final IntervalValue interval = PostgresIntervalCodec.decode(value);
-		if (interval == null) return getDefaultValue();
+		if (interval == null)
+			return getDefaultValue();
 		PostgresIntervalCodec.validate(interval, type, precision);
 		final PGobject result = new PGobject();
 		result.setType("interval");
-		try { result.setValue(PostgresIntervalCodec.encode(interval)); }
-		catch (SQLException exception) { throw new IllegalArgumentException("Cannot encode interval", exception); }
+		try {
+			result.setValue(PostgresIntervalCodec.encode(interval));
+		} catch (SQLException exception) {
+			throw new IllegalArgumentException("Cannot encode interval", exception);
+		}
 		return result;
 	}
+
 	@Override
 	public PGobject copy(final Object value) {
 		return convertObject(value);

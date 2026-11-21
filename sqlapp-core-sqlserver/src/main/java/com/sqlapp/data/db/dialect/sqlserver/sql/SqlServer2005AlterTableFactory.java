@@ -163,16 +163,15 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 			throw new IllegalArgumentException(
 					"Remove the column CHECK before altering its column definition: " + target.getName());
 		boolean defaultChanged = !java.util.Objects.equals(original.getDefaultValue(), target.getDefaultValue())
-				|| !com.sqlapp.util.CommonUtils.isEmpty(original.getDefaultValue())
-						&& !java.util.Objects.equals(original.getSpecifics().get("default_name"),
-								target.getSpecifics().get("default_name"));
+				|| !com.sqlapp.util.CommonUtils.isEmpty(original.getDefaultValue()) && !java.util.Objects
+						.equals(original.getSpecifics().get("default_name"), target.getSpecifics().get("default_name"));
 		if (defaultChanged && !com.sqlapp.util.CommonUtils.isEmpty(original.getDefaultValue()))
 			dropDefault(original, originalTable, result);
 		if (!java.util.Objects.equals(original.getName(), target.getName()))
 			addRenameColumn(originalTable, table, original, target, diff, result);
 		var changes = diff.toDifference().getChangedProperties(getDialect());
-		if (changes.keySet().stream().anyMatch(key -> !key.equals("name") && !key.equals("defaultValue")
-				&& !key.equals("default_name")))
+		if (changes.keySet().stream()
+				.anyMatch(key -> !key.equals("name") && !key.equals("defaultValue") && !key.equals("default_name")))
 			addAlterColumn(originalTable, table, original, target, diff, result);
 		if (defaultChanged && !com.sqlapp.util.CommonUtils.isEmpty(target.getDefaultValue())) {
 			var builder = createSqlBuilder();
@@ -191,8 +190,8 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 		var name = createSqlBuilder().name(originalTable, getOptions().isDecorateSchemaName());
 		String qualified = name.toString().trim() + "." + getDialect().quote(original.getName());
 		var builder = createSqlBuilder();
-		builder._add("EXEC sys.sp_rename ")._add(SqlServerDdlSupport.nchar(qualified))._add(", ")._add(SqlServerDdlSupport.nchar(target.getName()))
-				._add(", N'COLUMN'");
+		builder._add("EXEC sys.sp_rename ")._add(SqlServerDdlSupport.nchar(qualified))._add(", ")
+				._add(SqlServerDdlSupport.nchar(target.getName()))._add(", N'COLUMN'");
 		add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
 	}
 
@@ -200,7 +199,8 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 		var builder = createSqlBuilder();
 		String constraint = column.getSpecifics().get("default_name");
 		if (constraint != null && !constraint.isBlank()) {
-			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).drop().constraint().name(constraint);
+			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).drop().constraint()
+					.name(constraint);
 		} else {
 			// Old Schema XML need not duplicate a database-assigned constraint name.
 			String tableName = createSqlBuilder().name(table, getOptions().isDecorateSchemaName()).toString().trim();
@@ -208,8 +208,9 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 			builder._add("DECLARE @sqlapp_default_name sysname;\nSELECT @sqlapp_default_name = dc.name ")
 					._add("FROM sys.default_constraints dc JOIN sys.columns c ")
 					._add("ON c.object_id = dc.parent_object_id AND c.column_id = dc.parent_column_id ")
-					._add("WHERE dc.parent_object_id = OBJECT_ID(")._add(SqlServerDdlSupport.nchar(tableName))._add(") AND c.name = ")
-					._add(SqlServerDdlSupport.nchar(column.getName()))._add(";\nIF @sqlapp_default_name IS NULL\n")
+					._add("WHERE dc.parent_object_id = OBJECT_ID(")._add(SqlServerDdlSupport.nchar(tableName))
+					._add(") AND c.name = ")._add(SqlServerDdlSupport.nchar(column.getName()))
+					._add(";\nIF @sqlapp_default_name IS NULL\n")
 					._add("RAISERROR ('Expected DEFAULT constraint was not found', 16, 1);\nELSE\nEXEC (")
 					._add(SqlServerDdlSupport.nchar(drop))._add(" + QUOTENAME(@sqlapp_default_name));");
 			builder = createSqlBuilder()._add("EXEC (")._add(SqlServerDdlSupport.nchar(builder.toString()))._add(")");

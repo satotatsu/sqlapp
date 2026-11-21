@@ -2,7 +2,7 @@
 
 [Development index](README.md) · [User guide](../gradle-plugin/migration-models.md)
 
-Updated: 2026-11-16. This document separates what is implemented from what is
+Updated: 2026-11-20. This document separates what is implemented from what is
 planned. Planned items are not commitments.
 
 ## Goal
@@ -62,7 +62,27 @@ file in `sqlapp-command`. No external database is involved.
      DuckDB keeps no string lengths. Converting unbounded strings to a
      per-target maximum was rejected: row-size limits (MySQL, Firebird) and LOB
      restrictions (Oracle CLOB, SQL Server MAX) make it unsafe.
-   - A single job that runs the three steps is not implemented.
+   - Lossless declared types (decided 2026-11-20): `columns` is an optional
+     contract for all columns. A declared type never changes a value: the
+     query result is staged once in a temporary table, every value must
+     survive a cast to the declared type and back, and the same staged rows
+     are inserted. Rounding, truncation, overflow and failed conversions are
+     errors that report counts but no values; conversions belong in the model
+     SQL. There is no lenient mode, because the feature was not released with
+     rounding.
+   - Publishing conditions (decided 2026-11-20, not implemented): an existing
+     target table must accept the declared data without changing it (type,
+     length in the target's unit, precision and scale, NOT NULL, the whole
+     primary key), otherwise the load stops before it starts; a new table is
+     created as declared. Byte-length overflow is left to the load, which must
+     fail and leave published data unchanged; truncated values are never
+     published. Rollback of the data and whether a newly created table remains
+     are verified separately.
+   - A single job that runs the three steps is not implemented. It will pass
+     the declared columns of the successful model run in memory instead of
+     reading a mapping file, start publishing only when that run succeeded,
+     and record each step's outcome. A step is offered for restart only when
+     its inputs and intermediate results can be shown to be unchanged.
 2. **Types.** Declared columns cover the target types of table models. Still
    open: byte-length targets (lengths are checked in characters), CHAR padding,
    time zones, and declared columns for views.

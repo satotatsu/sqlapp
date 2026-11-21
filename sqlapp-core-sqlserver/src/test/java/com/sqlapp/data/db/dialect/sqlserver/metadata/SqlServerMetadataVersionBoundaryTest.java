@@ -78,4 +78,32 @@ class SqlServerMetadataVersionBoundaryTest {
 		assertInstanceOf(SqlServer2017TableReader.class,
 				resolver.getDialect(15, 0).getCatalogReader().getSchemaReader().getTableReader());
 	}
+
+	@Test
+	void readsOnlyDescriptionFromTheMatchingExtendedPropertyClass() throws Exception {
+		for (String resource : new String[] { "tables2005", "tables2008", "tables2012", "tables2014", "tables2016",
+				"tables2017", "tables2019", "tables2022", "columns2005", "columns2008", "columns2016",
+				"typeColumns2008" }) {
+			String sql = resource(resource + ".sql");
+			int join = sql.indexOf("LEFT OUTER JOIN sys.extended_properties ex");
+			assertTrue(join >= 0, resource);
+			String predicate = sql.substring(join, sql.indexOf(")", join));
+			boolean typeColumn = resource.equals("typeColumns2008");
+			assertTrue(predicate.contains("ex.class = " + (typeColumn ? 8 : 1)), resource);
+			assertTrue(predicate.contains("ex.name = N'MS_Description'"), resource);
+			if (typeColumn)
+				assertTrue(predicate.contains("t.user_type_id = ex.major_id"));
+		}
+	}
+
+	@Test
+	void readsGraphFlagsFrom2017AndTextDurabilityFrom2014() throws Exception {
+		assertFalse(resource("tables2016.sql").contains("t.is_node"));
+		for (String version : new String[] { "2017", "2019", "2022" }) {
+			String sql = resource("tables" + version + ".sql");
+			assertTrue(sql.contains("t.is_node"));
+			assertTrue(sql.contains("t.is_edge"));
+			assertTrue(sql.contains("t.durability_desc AS durability"));
+		}
+	}
 }

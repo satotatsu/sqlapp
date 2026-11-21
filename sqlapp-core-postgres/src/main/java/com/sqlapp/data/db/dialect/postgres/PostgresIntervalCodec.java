@@ -18,8 +18,9 @@ import com.sqlapp.data.interval.IntervalValue;
 import com.sqlapp.data.schemas.Column;
 
 /**
- * PostgreSQL month/day/microsecond representation. Never exchanges calendar days
- * for hours and never uses double for fractions or a 30-day month approximation.
+ * PostgreSQL month/day/microsecond representation. Never exchanges calendar
+ * days for hours and never uses double for fractions or a 30-day month
+ * approximation.
  */
 public final class PostgresIntervalCodec {
 	private static final BigInteger BILLION = BigInteger.valueOf(1_000_000_000);
@@ -40,30 +41,39 @@ public final class PostgresIntervalCodec {
 		Math.toIntExact(value.days());
 		final long time = micros(value.timePart()).longValueExact();
 		if ((value.months() == Integer.MAX_VALUE && value.days() == Integer.MAX_VALUE && time == Long.MAX_VALUE)
-				|| (value.months() == Integer.MIN_VALUE && value.days() == Integer.MIN_VALUE && time == Long.MIN_VALUE)) {
-			throw new IllegalArgumentException("PostgreSQL reserves this interval for infinity; finite IntervalValue required");
+				|| (value.months() == Integer.MIN_VALUE && value.days() == Integer.MIN_VALUE
+						&& time == Long.MIN_VALUE)) {
+			throw new IllegalArgumentException(
+					"PostgreSQL reserves this interval for infinity; finite IntervalValue required");
 		}
 		return value;
 	}
 
-	/** PostgreSQL field restrictions discard only fields to the right of the last unit. */
+	/**
+	 * PostgreSQL field restrictions discard only fields to the right of the last
+	 * unit.
+	 */
 	public static IntervalValue validate(final IntervalValue value, final DataType type, final int precision) {
 		validate(value);
-		if (precision < 0 || precision > 6) throw new IllegalArgumentException("PostgreSQL interval precision must be 0..6");
+		if (precision < 0 || precision > 6)
+			throw new IllegalArgumentException("PostgreSQL interval precision must be 0..6");
 		value.requireFractionalPrecision(precision);
 		final String last = type.getTypeName();
-		if (type == DataType.INTERVAL) return value;
+		if (type == DataType.INTERVAL)
+			return value;
 		if (type.getMetaTtype() != MetaType.INTERVAL) {
 			throw new IllegalArgumentException("Expected an interval Schema type");
 		}
 		if (last.endsWith("YEAR") || last.endsWith("MONTH")) {
-			if (value.days() != 0 || !value.timePart().isZero()
-					|| (last.endsWith("YEAR") && value.months() % 12 != 0)) throw fieldLoss(type);
+			if (value.days() != 0 || !value.timePart().isZero() || (last.endsWith("YEAR") && value.months() % 12 != 0))
+				throw fieldLoss(type);
 		} else if (last.endsWith("DAY")) {
-			if (!value.timePart().isZero()) throw fieldLoss(type);
+			if (!value.timePart().isZero())
+				throw fieldLoss(type);
 		} else if (last.endsWith("HOUR") || last.endsWith("MINUTE")) {
 			final Duration unit = Duration.ofSeconds(last.endsWith("HOUR") ? 3600 : 60);
-			if (!unit.multipliedBy(value.timePart().dividedBy(unit)).equals(value.timePart())) throw fieldLoss(type);
+			if (!unit.multipliedBy(value.timePart().dividedBy(unit)).equals(value.timePart()))
+				throw fieldLoss(type);
 		}
 		return value;
 	}
@@ -85,12 +95,15 @@ public final class PostgresIntervalCodec {
 	}
 
 	public static IntervalValue decode(final Object input) {
-		if (input == null) return null;
+		if (input == null)
+			return null;
 		if (input instanceof PGInterval value) {
-			if (value.getValue() == null) return null;
-			return validate(new IntervalValue(Math.addExact(Math.multiplyExact((long) value.getYears(), 12), value.getMonths()),
-					value.getDays(), Duration.ofHours(value.getHours()).plusMinutes(value.getMinutes())
-						.plusSeconds(value.getWholeSeconds()).plusNanos((long) value.getMicroSeconds() * 1000)));
+			if (value.getValue() == null)
+				return null;
+			return validate(new IntervalValue(
+					Math.addExact(Math.multiplyExact((long) value.getYears(), 12), value.getMonths()), value.getDays(),
+					Duration.ofHours(value.getHours()).plusMinutes(value.getMinutes())
+							.plusSeconds(value.getWholeSeconds()).plusNanos((long) value.getMicroSeconds() * 1000)));
 		}
 		if (input instanceof PGobject value) {
 			if (!"interval".equalsIgnoreCase(value.getType())) {
@@ -98,7 +111,8 @@ public final class PostgresIntervalCodec {
 			}
 			return value.getValue() == null ? null : parse(value.getValue());
 		}
-		if (input instanceof String text) return parse(text);
+		if (input instanceof String text)
+			return parse(text);
 		return validate(new IntervalValueConverter().convertObject(input));
 	}
 
@@ -111,22 +125,23 @@ public final class PostgresIntervalCodec {
 		// A clock avoids a large microsecond token for ordinary values. Full
 		// int64 microsecond boundaries require the newer labeled-number parser.
 		if (hour[0].compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) > 0)
-			return signed(Long.toString(value.months())) + " mons " + signed(Long.toString(value.days()))
-					+ " days " + signed(micros(value.timePart()).toString()) + " microseconds";
+			return signed(Long.toString(value.months())) + " mons " + signed(Long.toString(value.days())) + " days "
+					+ signed(micros(value.timePart()).toString()) + " microseconds";
 		var minute = hour[1].divideAndRemainder(BigInteger.valueOf(60_000_000));
 		var second = minute[1].divideAndRemainder(BigInteger.valueOf(1_000_000));
-		String clock = (value.timePart().isNegative() ? "-" : "+") + hour[0]
-				+ String.format(Locale.ROOT, ":%02d:%02d.%06d", minute[0].intValueExact(),
-						second[0].intValueExact(), second[1].intValueExact());
-		return signed(Long.toString(value.months())) + " mons " + signed(Long.toString(value.days()))
-				+ " days " + clock;
+		String clock = (value.timePart().isNegative() ? "-" : "+") + hour[0] + String.format(Locale.ROOT,
+				":%02d:%02d.%06d", minute[0].intValueExact(), second[0].intValueExact(), second[1].intValueExact());
+		return signed(Long.toString(value.months())) + " mons " + signed(Long.toString(value.days())) + " days "
+				+ clock;
 	}
 
 	private static String signed(final String number) {
 		return number.startsWith("-") ? number : "+" + number;
 	}
 
-	/** Reads the four server output styles and the codec's explicit labeled text. */
+	/**
+	 * Reads the four server output styles and the codec's explicit labeled text.
+	 */
 	public static IntervalValue parse(final String input) {
 		String text = input.trim();
 		// PostgreSQL 14 sql_standard output negates int32 days before printing
@@ -154,15 +169,19 @@ public final class PostgresIntervalCodec {
 			if (text.startsWith("-") && !hasSign(sql.group("time"))) {
 				if (sql.group("ym") == null || !hasSign(sql.group("day"))) {
 					time = time.negated();
-					if (sql.group("ym") != null) days = -days;
+					if (sql.group("ym") != null)
+						days = -days;
 				}
 			}
 			return validate(new IntervalValue(months, days, time));
 		}
 		boolean ago = text.toLowerCase(Locale.ROOT).endsWith(" ago");
-		if (ago) text = text.substring(0, text.length() - 4).trim();
-		if (text.startsWith("@")) text = text.substring(1).trim();
-		if (text.equals("0")) return IntervalValue.ZERO;
+		if (ago)
+			text = text.substring(0, text.length() - 4).trim();
+		if (text.startsWith("@"))
+			text = text.substring(1).trim();
+		if (text.equals("0"))
+			return IntervalValue.ZERO;
 		long months = 0;
 		long days = 0;
 		Duration time = Duration.ZERO;
@@ -173,25 +192,36 @@ public final class PostgresIntervalCodec {
 			if (field.lookingAt()) {
 				final BigDecimal number = new BigDecimal(field.group(1));
 				final String unit = field.group(2).toLowerCase(Locale.ROOT);
-				if (unit.startsWith("year")) months = Math.addExact(months, Math.multiplyExact(number.longValueExact(), 12));
-				else if (unit.startsWith("mon")) months = Math.addExact(months, number.longValueExact());
-				else if (unit.startsWith("day")) days = Math.addExact(days, number.longValueExact());
-				else if (unit.startsWith("hour")) time = time.plus(duration(number.multiply(BigDecimal.valueOf(3600))));
-				else if (unit.startsWith("min")) time = time.plus(duration(number.multiply(BigDecimal.valueOf(60))));
-				else if (unit.startsWith("micro")) time = time.plus(duration(number.movePointLeft(6)));
-				else time = time.plus(duration(number));
+				if (unit.startsWith("year"))
+					months = Math.addExact(months, Math.multiplyExact(number.longValueExact(), 12));
+				else if (unit.startsWith("mon"))
+					months = Math.addExact(months, number.longValueExact());
+				else if (unit.startsWith("day"))
+					days = Math.addExact(days, number.longValueExact());
+				else if (unit.startsWith("hour"))
+					time = time.plus(duration(number.multiply(BigDecimal.valueOf(3600))));
+				else if (unit.startsWith("min"))
+					time = time.plus(duration(number.multiply(BigDecimal.valueOf(60))));
+				else if (unit.startsWith("micro"))
+					time = time.plus(duration(number.movePointLeft(6)));
+				else
+					time = time.plus(duration(number));
 				position = field.end();
 			} else {
 				final Matcher clock = TIME.matcher(text).region(position, text.length());
-				if (!clock.lookingAt()) throw invalid(input);
+				if (!clock.lookingAt())
+					throw invalid(input);
 				time = time.plus(time(clock.group()));
 				position = clock.end();
 			}
 			found = true;
-			if (position < text.length() && !Character.isWhitespace(text.charAt(position))) throw invalid(input);
-			while (position < text.length() && Character.isWhitespace(text.charAt(position))) position++;
+			if (position < text.length() && !Character.isWhitespace(text.charAt(position)))
+				throw invalid(input);
+			while (position < text.length() && Character.isWhitespace(text.charAt(position)))
+				position++;
 		}
-		if (!found) throw invalid(input);
+		if (!found)
+			throw invalid(input);
 		final IntervalValue result = new IntervalValue(months, days, time);
 		return validate(ago ? result.negated() : result);
 	}
@@ -201,13 +231,15 @@ public final class PostgresIntervalCodec {
 	}
 
 	private static long months(final Matcher match) {
-		final long value = Math.addExact(Math.multiplyExact(Long.parseLong(match.group(2)), 12), Long.parseLong(match.group(3)));
+		final long value = Math.addExact(Math.multiplyExact(Long.parseLong(match.group(2)), 12),
+				Long.parseLong(match.group(3)));
 		return match.group(1).equals("-") ? Math.negateExact(value) : value;
 	}
 
 	private static Duration time(final String text) {
 		final Matcher match = TIME.matcher(text);
-		if (!match.matches()) throw invalid(text);
+		if (!match.matches())
+			throw invalid(text);
 		final Duration value = Duration.ofHours(Long.parseLong(match.group(2)))
 				.plusMinutes(Long.parseLong(match.group(3))).plus(duration(new BigDecimal(match.group(4))));
 		return match.group(1).equals("-") ? value.negated() : value;
@@ -219,6 +251,7 @@ public final class PostgresIntervalCodec {
 	}
 
 	private static IllegalArgumentException invalid(final String text) {
-		return new IllegalArgumentException("Unsupported PostgreSQL interval text (finite server output or sqlapp format required): " + text);
+		return new IllegalArgumentException(
+				"Unsupported PostgreSQL interval text (finite server output or sqlapp format required): " + text);
 	}
 }

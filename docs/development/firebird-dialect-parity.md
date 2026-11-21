@@ -26,16 +26,15 @@ verified scope; they are not hidden behind the successful test count.
 | Publication policy | 4.0 / 5.0 database active flag, automatic membership for future tables and published table identities; XML retention and explicit restore SQL | Default restore leaves publication inactive; server transport configuration, replica modes and actual data delivery are outside this SQL metadata path |
 | Schema DDL ordering | 2.5 / 3.0 / 4.0 / 5.0 dependency-aware CREATE and object-level ALTER additions, removals and reference changes; circular foreign keys; 3+ package declarations and bodies | Routine/body cycles and ambiguous interface changes require explicit staging; CREATE prerequisites outside a filtered Schema remain caller-supplied |
 | Roles and grants | Versioned membership, object/column/routine/DDL privileges and 4.0+ system privileges | Server CREATE DATABASE grants are opt-in; user/password export and ownership reassignment are outside scope |
-| DML and maintenance | Bulk/upsert/migration/JDBC-tree tests; rollback-aware DELETE-based truncation; composite-key predicate fallback; safe table DROP | Firebird has no supported tuple-comparison or cascading table-DROP path; dependencies are not removed implicitly |
+| DML and maintenance | Bulk/upsert/migration/JDBC-tree tests; bulk upsert uses `MERGE ... USING RDB$DATABASE` and updates only `updateColumns`; rollback-aware DELETE-based truncation; composite-key predicate fallback; safe table DROP | Upsert with inserts requires Firebird 2.1 (a Firebird20 dialect checks the server version); update-only upsert works on every version. Firebird has no supported tuple-comparison or cascading table-DROP path; dependencies are not removed implicitly |
 | Database-file information | 2.0 context fallback and 2.1+ monitoring query; one metadata read; path/alias retention | Not a PostgreSQL tablespace implementation; pre-2.0 has no reader; 2.0 native execution remains unverified |
 
 The final audit corrected inaccurate capability flags: tuple comparisons and
 tuple IN are disabled, so shared `SqlSignature` and row predicates use AND/OR
 expressions with the same bound values. Table DROP no longer appends unsupported
 `CASCADE CONSTRAINTS`; a dependent view prevents deletion. WITH is advertised
-from the 2.5 dialect onward. The combined 2.0/2.1 dialect conservatively returns
-false because CTEs were introduced in 2.1, although callers may issue valid 2.1
-CTEs explicitly. Resolver boundaries and public method signatures are unchanged.
+from the 2.1 dialect onward, where CTEs were introduced; the 2.0 dialect returns
+false.
 
 The audit also corrected the shared core fallback itself: composite equality
 now binds every component with AND; inclusive comparisons use strict prefix
@@ -378,7 +377,8 @@ References for the audit fixes:
 | Server | Dialect | Behavior |
 |---|---|---|
 | Before 2.0 | `Firebird` | Existing legacy behavior; computed index generation rejected |
-| 2.0–2.1 | `Firebird20` | Computed indexes and existing sequence/temporary-table support |
+| 2.0 | `Firebird20` | Computed indexes and existing sequence support; global temporary table DDL is rejected |
+| 2.1–2.4 | `Firebird21` | WITH, global temporary tables, MERGE-based bulk upsert; metadata readers are shared with 2.0 |
 | 2.5 | `Firebird25` | Existing 2.5 metadata and settings support |
 | 3.x | `Firebird30` | Native BOOLEAN, PSQL functions, package-aware queries and database-local DDL privileges |
 | 4.x | `Firebird40` | INT128, DECFLOAT, time-zone types, precision up to 38 and role system privileges |
@@ -416,7 +416,7 @@ exact dialect classes should allow the new `Firebird40` class.
   which are represented by the existing package header/body readers. This
   avoids collisions between same-name standalone and package routines.
 * Procedure parameter queries distinguish pre-2.1 catalogs from 2.1+ catalogs
-  using the actual server version (the 2.1 dialect still resolves to Firebird20).
+  using the actual server version (the 2.1 dialect shares the 2.0 readers).
   The legacy query reads defaults/nullability/collation from RDB$FIELDS;
   the newer query retains parameter overrides. A separate 2.5 query reads type
   reference identities without accessing those columns on 2.0/2.1. UTF8
@@ -446,8 +446,8 @@ exact dialect classes should allow the new `Firebird40` class.
   Unknown values and ON COMMIT settings on ordinary tables are errors.
   The actual server version selects the relation-type catalog projection:
   2.0 and earlier queries never reference the column introduced in 2.1.
-  Firebird20 still represents both 2.0 and 2.1, so generating GTT DDL through
-  that dialect requires the caller to target a 2.1+ server.
+  GTT DDL is generated from the Firebird21 dialect onward and rejected by
+  Firebird20.
   To support the tested 4.0/5.0 servers, GTT security uses a subsequent ALTER
   TABLE ... ALTER SQL SECURITY operation. Execute the complete operation list.
 * Composite primary/unique and foreign keys retain key order and explicit
@@ -502,7 +502,7 @@ definitions, unknown specifics and external callers remain in effect.
 
 Preservation/generation is enabled from the 2.5 dialect for procedures and 3.0
 for PSQL/UDR functions. Pre-2.5 metadata queries and legacy UDF mechanisms retain
-their prior behavior; the combined Firebird20 resolver does not certify 2.1
+their prior behavior; the Firebird21 dialect does not certify 2.1
 reference generation. Unknown declaration mechanisms, malformed manifests and
 incomplete identifiers fail clearly. Older Schema XML remains readable; an old
 export without the reference cannot recover its original declaration. Newly
@@ -617,7 +617,7 @@ and [generators](https://www.firebirdsql.org/file/documentation/chunk/en/refdocs
 Compilation-state metadata is retained without extra SELECTs. The 2.5+ procedure
 and trigger readers and 3.0+ function readers expose `firebird.validBlr` as
 `true`/`false`; a NULL catalog flag remains unset (unknown). Pre-2.5 dialect
-readers do not access the column, keeping the shared 2.0/2.1 resolver safe.
+readers do not access the column, keeping the shared 2.0/2.1 readers safe.
 Although the catalog column was introduced in 2.1, this metadata is currently
 exposed only by the 2.5+ dialect readers.
 Package/header and package-body readers expose `firebird.validBody` and

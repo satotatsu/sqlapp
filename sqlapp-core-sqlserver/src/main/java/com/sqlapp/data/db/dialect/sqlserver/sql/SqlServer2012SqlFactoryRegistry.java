@@ -38,7 +38,7 @@ public class SqlServer2012SqlFactoryRegistry extends SqlServer2008SqlFactoryRegi
 		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2012CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2012AlterTableFactory.class);
 		// Index
-		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2014CreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2012CreateIndexFactory.class);
 		// Sequence
 		registerSqlFactory(Sequence.class, SqlType.CREATE, SqlServer2012CreateSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, SqlServer2012SequenceNextValuesFactory.class);

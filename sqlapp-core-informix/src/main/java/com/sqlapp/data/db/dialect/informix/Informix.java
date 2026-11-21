@@ -270,6 +270,28 @@ public class Informix extends Dialect {
 	}
 
 	@Override
+	public com.sqlapp.data.db.dialect.util.SqlSplitter createSqlSplitter() {
+		return new com.sqlapp.data.db.dialect.informix.util.InformixSqlSplitter(this);
+	}
+
+	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequencePreallocation() {
+		return true;
+	}
+
+	@Override
+	public String getSequenceNextValString(final String sequenceName) {
+		if (sequenceName == null || sequenceName.isBlank())
+			throw new IllegalArgumentException("Informix sequence name is required");
+		return "SELECT " + sequenceName + ".NEXTVAL FROM TABLE(SET{1})";
+	}
+
+	@Override
 	public int hashCode() {
 		return getProductName().hashCode();
 	}
@@ -292,6 +314,7 @@ public class Informix extends Dialect {
 	public boolean isDdlRollbackable() {
 		return true;
 	}
+
 	@Override
 	public String getSqlValueDefinition(com.sqlapp.data.schemas.Column column, Object value) {
 		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.INTERVAL_YEAR_TO_MONTH

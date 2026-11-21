@@ -27,11 +27,11 @@ class FirebirdCapabilitySqlTest {
 	}
 
 	@Test
-	void withIsConservativeForTheShared20And21Dialect() {
+	void withStartsAtFirebird21() {
 		assertFalse(DialectHolder.defaultDialect.supportsWith());
 		assertFalse(DialectHolder.defaultDialect20.supportsWith());
-		for (var dialect : List.of(DialectHolder.defaultDialect25, DialectHolder.defaultDialect30,
-				DialectHolder.defaultDialect40, DialectHolder.defaultDialect50))
+		for (var dialect : List.of(DialectHolder.defaultDialect21, DialectHolder.defaultDialect25,
+				DialectHolder.defaultDialect30, DialectHolder.defaultDialect40, DialectHolder.defaultDialect50))
 			assertTrue(dialect.supportsWith());
 	}
 

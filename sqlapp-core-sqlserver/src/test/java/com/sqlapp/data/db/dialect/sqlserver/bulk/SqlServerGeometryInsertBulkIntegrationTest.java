@@ -40,35 +40,32 @@ import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 import com.sqlapp.util.file.TextFileWriter;
 
 /**
- * SQL Server の GEOMETRY 列で、通常の INSERT(JDBC バッチ)と BulkInsert(SQLServerBulkCopy)が同じ値を保存すること、
- * DB → CSV → DB で値が保たれること、SQL Server で表現できない値は変換せずにエラーになることを確認する。
+ * SQL Server の GEOMETRY 列で、通常の INSERT(JDBC バッチ)と
+ * BulkInsert(SQLServerBulkCopy)が同じ値を保存すること、 DB → CSV → DB で値が保たれること、SQL Server
+ * で表現できない値は変換せずにエラーになることを確認する。
  * <p>
- * 実DBに接続するため、環境変数 SQLAPP_TEST_SQLSERVER_URL(と SQLAPP_TEST_SQLSERVER_USER / SQLAPP_TEST_SQLSERVER_PASSWORD)が設定されている場合だけ実行する。
- * テーブルは一意な名前で作成し、終了時に削除する。
+ * 実DBに接続するため、環境変数 SQLAPP_TEST_SQLSERVER_URL(と SQLAPP_TEST_SQLSERVER_USER /
+ * SQLAPP_TEST_SQLSERVER_PASSWORD)が設定されている場合だけ実行する。 テーブルは一意な名前で作成し、終了時に削除する。
  * </p>
  */
 @EnabledIfEnvironmentVariable(named = "SQLAPP_TEST_SQLSERVER_URL", matches = ".+")
 class SqlServerGeometryInsertBulkIntegrationTest {
 
 	/** 保存できる値と、読み戻したときの EWKT */
-	private static final String[][] SUPPORTED = {
-			{ "SRID=4326;POINT(139.7 35.6)", "SRID=4326;POINT(139.7 35.6)" },
-			{ "POINT(1 2)", "POINT(1 2)" },
-			{ null, null },
+	private static final String[][] SUPPORTED = { { "SRID=4326;POINT(139.7 35.6)", "SRID=4326;POINT(139.7 35.6)" },
+			{ "POINT(1 2)", "POINT(1 2)" }, { null, null },
 			{ "SRID=3857;MULTIPOLYGON(((0 0,1 0,1 1,0 0)),((5 5,6 5,6 6,5 5)))",
 					"SRID=3857;MULTIPOLYGON(((0 0,1 0,1 1,0 0)),((5 5,6 5,6 6,5 5)))" },
 			{ "LINESTRING(0 0,1 1)", "LINESTRING(0 0,1 1)" },
-			{ "GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))", "GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))" },
-			{ "POINT Z(1 2 3)", "POINT(1 2 3)" },
-			{ "POINT M(1 2 3)", "POINTM(1 2 3)" },
+			{ "GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))",
+					"GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))" },
+			{ "POINT Z(1 2 3)", "POINT(1 2 3)" }, { "POINT M(1 2 3)", "POINTM(1 2 3)" },
 			{ "POINT ZM(1 2 3 4)", "POINT(1 2 3 4)" },
-			{ "SRID=4326;POINT Z(139.7 35.6 10)", "SRID=4326;POINT(139.7 35.6 10)" },
-			{ "POINT EMPTY", "POINT EMPTY" },
-			{ "GEOMETRYCOLLECTION EMPTY", "GEOMETRYCOLLECTION EMPTY" },
-	};
+			{ "SRID=4326;POINT Z(139.7 35.6 10)", "SRID=4326;POINT(139.7 35.6 10)" }, { "POINT EMPTY", "POINT EMPTY" },
+			{ "GEOMETRYCOLLECTION EMPTY", "GEOMETRYCOLLECTION EMPTY" }, };
 
 	/** SQL Server で表現できないため、エラーになる値 */
-	private static final String[] UNSUPPORTED = {  };
+	private static final String[] UNSUPPORTED = {};
 
 	@TempDir
 	File directory;
@@ -138,7 +135,8 @@ class SqlServerGeometryInsertBulkIntegrationTest {
 			throws SQLException {
 		final Map<Integer, List<String>> result = new LinkedHashMap<>();
 		try (Statement statement = connection.createStatement();
-				ResultSet rs = statement.executeQuery("SELECT ID, G.AsTextZM(), G.STSrid FROM " + table + " ORDER BY ID")) {
+				ResultSet rs = statement
+						.executeQuery("SELECT ID, G.AsTextZM(), G.STSrid FROM " + table + " ORDER BY ID")) {
 			while (rs.next()) {
 				final List<String> values = new ArrayList<>();
 				for (int i = 2; i <= rs.getMetaData().getColumnCount(); i++) {
@@ -240,7 +238,8 @@ class SqlServerGeometryInsertBulkIntegrationTest {
 						value);
 				assertTrue(hasIllegalArgument(exception), value + ": " + exception);
 				// 別の接続で確認する(SQL Server の BulkInsert は失敗時に接続が使えなくなる場合がある)
-				try (Connection check = connect(); Statement statement = check.createStatement();
+				try (Connection check = connect();
+						Statement statement = check.createStatement();
 						ResultSet rs = statement.executeQuery("SELECT COUNT(*) FROM " + name)) {
 					assertTrue(rs.next());
 					assertEquals(0, rs.getInt(1), value);

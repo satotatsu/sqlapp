@@ -58,7 +58,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO tableA AS _target_
+				MERGE INTO tableA WITH ( HOLDLOCK ) AS _target_
 				USING (
 					VALUES (
 						  /*cola*/0
@@ -76,7 +76,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					THEN UPDATE
 						SET _target_.colb = _source_.colb
 						, _target_.updated_at = _source_.updated_at
-						, _target_.lock_version = _source_.lock_version
+						, _target_.lock_version = COALESCE( _target_.lock_version, 0 ) + 1
 				WHEN NOT MATCHED
 					THEN INSERT
 					(
@@ -105,7 +105,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE INTO tableA AS _target_
+				MERGE INTO tableA WITH ( HOLDLOCK ) AS _target_
 				USING (
 					VALUES (
 						  /*cola*/0
@@ -123,7 +123,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					THEN UPDATE
 						SET _target_.colb = _source_.colb
 						, _target_.updated_at = _source_.updated_at
-						, _target_.lock_version = _source_.lock_version
+						, _target_.lock_version = _target_.lock_version + 1
 				WHEN NOT MATCHED
 					THEN INSERT
 					(
@@ -153,7 +153,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-								MERGE INTO tableA AS _target_
+								MERGE INTO tableA WITH ( HOLDLOCK ) AS _target_
 				USING (
 					VALUES (
 						  /*cola*/0
@@ -171,7 +171,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					THEN UPDATE
 						SET _target_.colb = _source_.colb
 						, _target_.updated_at = _source_.updated_at
-						, _target_.lock_version = _source_.lock_version
+						, _target_.lock_version = _target_.lock_version + 1
 				WHEN NOT MATCHED
 					THEN INSERT
 					(

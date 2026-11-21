@@ -24,8 +24,10 @@ class PostgresIntervalJdbcTypeHandlerTest {
 		final var handler = new PostgresIntervalJdbcTypeHandler();
 		final ResultSet result = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
-					if (method.getName().equals("getMetaData")) return null;
-					if (method.getName().equals("getString")) return "1 day -01:00:00.000001";
+					if (method.getName().equals("getMetaData"))
+						return null;
+					if (method.getName().equals("getString"))
+						return "1 day -01:00:00.000001";
 					throw new AssertionError("Unexpected JDBC read: " + method.getName());
 				});
 		final Table table = new Table("durations");
@@ -51,8 +53,8 @@ class PostgresIntervalJdbcTypeHandlerTest {
 		for (int major : new int[] { 8, 11, 15, 18 }) {
 			final var dialect = DialectResolver.getInstance().getDialect("postgres", major, 0, null);
 			for (DataType type : DataType.values()) {
-				if (type.getMetaTtype() != MetaType.INTERVAL
-						|| type == DataType.INTERVAL_YEAR_TO_DAY) continue;
+				if (type.getMetaTtype() != MetaType.INTERVAL || type == DataType.INTERVAL_YEAR_TO_DAY)
+					continue;
 				assertInstanceOf(PostgresIntervalJdbcTypeHandler.class,
 						dialect.getDbDataTypes().getDbTypeStrict(type).getJdbcTypeHandler(), type.name());
 			}
@@ -64,15 +66,18 @@ class PostgresIntervalJdbcTypeHandlerTest {
 		final Object[] bound = { "untouched", null };
 		final var precision = new PostgresIntervalJdbcTypeHandler(
 				new Column("amount").setDataType(DataType.INTERVAL).setLength(3));
-		assertThrows(ArithmeticException.class, () -> precision.setObject(statement(bound), 1, IntervalValue.parse("PT0.000001S")));
+		assertThrows(ArithmeticException.class,
+				() -> precision.setObject(statement(bound), 1, IntervalValue.parse("PT0.000001S")));
 		assertEquals("untouched", bound[0]);
 		final var minutes = new PostgresIntervalJdbcTypeHandler(DataType.INTERVAL_DAY_TO_MINUTE);
-		assertThrows(IllegalArgumentException.class, () -> minutes.setObject(statement(bound), 1, IntervalValue.parse("P1DT1S")));
+		assertThrows(IllegalArgumentException.class,
+				() -> minutes.setObject(statement(bound), 1, IntervalValue.parse("P1DT1S")));
 		assertEquals("untouched", bound[0]);
-		assertThrows(IllegalArgumentException.class, () ->
-				new PostgresIntervalJdbcTypeHandler(DataType.INTERVAL_YEAR).setObject(statement(bound), 1, IntervalValue.parse("P13M")));
-		assertThrows(IllegalArgumentException.class, () ->
-				new PostgresIntervalJdbcTypeHandler(DataType.INTERVAL_YEAR_TO_MONTH).setObject(statement(bound), 1, IntervalValue.parse("P1M1D")));
+		assertThrows(IllegalArgumentException.class, () -> new PostgresIntervalJdbcTypeHandler(DataType.INTERVAL_YEAR)
+				.setObject(statement(bound), 1, IntervalValue.parse("P13M")));
+		assertThrows(IllegalArgumentException.class,
+				() -> new PostgresIntervalJdbcTypeHandler(DataType.INTERVAL_YEAR_TO_MONTH).setObject(statement(bound),
+						1, IntervalValue.parse("P1M1D")));
 		assertThrows(IllegalArgumentException.class, () -> new PostgresIntervalJdbcTypeHandler(
 				new Column("amount").setDataType(DataType.INTERVAL).setLength(7)));
 	}
@@ -83,16 +88,21 @@ class PostgresIntervalJdbcTypeHandlerTest {
 		final Column column = new Column("amount").setDataType(DataType.INTERVAL).setLength(3);
 		final IntervalValue value = IntervalValue.parse("PT0.123456S");
 		final Object[] bound = { "untouched", null };
-		assertThrows(ArithmeticException.class, () ->
-				com.sqlapp.jdbc.sql.JdbcParameterBinder.bindColumn(statement(bound), dialect, column, 1, value));
+		assertThrows(ArithmeticException.class,
+				() -> com.sqlapp.jdbc.sql.JdbcParameterBinder.bindColumn(statement(bound), dialect, column, 1, value));
 		final var parameter = new com.sqlapp.jdbc.sql.BindParameter();
 		parameter.setColumn(column);
 		parameter.setValue(value);
-		assertThrows(ArithmeticException.class, () ->
-				com.sqlapp.jdbc.sql.JdbcHandlerUtils.setParameters(statement(bound), dialect, parameter, 1));
+		assertThrows(ArithmeticException.class,
+				() -> com.sqlapp.jdbc.sql.JdbcHandlerUtils.setParameters(statement(bound), dialect, parameter, 1));
 		class BatchProbe extends com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor {
-			BatchProbe() { super(dialect); }
-			void bindValueForTest() throws Exception { bindValue(statement(bound), 1, column, value); }
+			BatchProbe() {
+				super(dialect);
+			}
+
+			void bindValueForTest() throws Exception {
+				bindValue(statement(bound), 1, column, value);
+			}
 		}
 		assertThrows(ArithmeticException.class, () -> new BatchProbe().bindValueForTest());
 		assertEquals("untouched", bound[0]);
@@ -114,11 +124,20 @@ class PostgresIntervalJdbcTypeHandlerTest {
 	}
 
 	private PreparedStatement statement(final Object[] bound) {
-		return (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { PreparedStatement.class },
-				(proxy, method, args) -> {
-					if (method.getName().equals("getConnection")) return null;
-					if (method.getName().equals("setObject")) { bound[0] = args[1]; bound[1] = args[2]; return null; }
-					if (method.getName().equals("setNull")) { bound[0] = null; bound[1] = args[1]; return null; }
+		return (PreparedStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
+				new Class<?>[] { PreparedStatement.class }, (proxy, method, args) -> {
+					if (method.getName().equals("getConnection"))
+						return null;
+					if (method.getName().equals("setObject")) {
+						bound[0] = args[1];
+						bound[1] = args[2];
+						return null;
+					}
+					if (method.getName().equals("setNull")) {
+						bound[0] = null;
+						bound[1] = args[1];
+						return null;
+					}
 					throw new AssertionError("Unexpected JDBC bind: " + method.getName());
 				});
 	}

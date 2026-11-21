@@ -174,15 +174,20 @@ public final class TransferJobExecutionService {
 				.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE)
 			throw failed(new Outcome(review.prepared(), Phase.REVALIDATION, null, null, List.of(), Map.of(), null));
 		final var command = new ExecuteBulkMigrationJobCommand() {
-			@Override protected com.sqlapp.jdbc.bulk.BulkMigrationJobPlan prepareExecutionPlan(
-					Connection source, Connection target, com.sqlapp.jdbc.bulk.BulkMigrationJobPlan plan)
-					throws SQLException {
+			@Override
+			protected com.sqlapp.jdbc.bulk.BulkMigrationJobPlan prepareExecutionPlan(Connection source,
+					Connection target, com.sqlapp.jdbc.bulk.BulkMigrationJobPlan plan) throws SQLException {
 				try {
-					if (TransferIntervalProjection.captured(plan)) return TransferIntervalProjection.restoreChecked(plan, target);
-					return TransferIntervalProjection.prepare(target, plan, TransferJobPreparationService.dialect(source),
+					if (TransferIntervalProjection.captured(plan))
+						return TransferIntervalProjection.restoreChecked(plan, target);
+					return TransferIntervalProjection.prepare(target, plan,
+							TransferJobPreparationService.dialect(source),
 							review.prepared().job().configuration().schemaMode(), false);
-				} catch (SQLException failure) { throw failure; }
-				catch (Exception failure) { throw new SQLException("Cannot prepare destination interval values", failure); }
+				} catch (SQLException failure) {
+					throw failure;
+				} catch (Exception failure) {
+					throw new SQLException("Cannot prepare destination interval values", failure);
+				}
 			}
 		};
 		final var completed = new ArrayList<String>();

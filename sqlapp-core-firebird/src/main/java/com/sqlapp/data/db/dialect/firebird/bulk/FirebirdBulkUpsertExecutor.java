@@ -87,11 +87,11 @@ public class FirebirdBulkUpsertExecutor implements BulkUpsertExecutor {
 	}
 
 	/**
-	 * Firebird 2.0 and 2.1 share one dialect, so the server version decides; 1.x
-	 * never has MERGE.
+	 * MERGE exists from 2.1. A Firebird20 dialect may still be used against a 2.1
+	 * server, so the server version decides there; 1.x never has MERGE.
 	 */
 	private void requireMerge(final Connection connection) throws SQLException {
-		if (dialect.compareTo(DialectHolder.defaultDialect25) >= 0) {
+		if (dialect.compareTo(DialectHolder.defaultDialect21) >= 0) {
 			return;
 		}
 		if (dialect.compareTo(DialectHolder.defaultDialect20) >= 0) {

@@ -290,9 +290,10 @@ public class Firebird extends Dialect {
 			return;
 		}
 		final String del = getDelimiter(sql, DELIMITERS);
+		// isql: SET TERM <new terminator> <current terminator>
 		sqlTerminator.setTerminator(del);
-		sqlTerminator.setStartStatementTerminator("SET TERM ; " + del);
-		sqlTerminator.setEndStatementTerminator("SET TERM " + del + " ;");
+		sqlTerminator.setStartStatementTerminator("SET TERM " + del + " ;");
+		sqlTerminator.setEndStatementTerminator("SET TERM ; " + del);
 	}
 
 	@Override

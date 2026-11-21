@@ -67,8 +67,7 @@ import com.sqlapp.data.geometry.Polygon;
 public class PGGeometryConveterTest {
 
 	static Stream<Arguments> converters() {
-		return Stream.of(
-				Arguments.of(new Point(1.5, -2), new ToPGPointConverter(), new FromPGPointConverter()),
+		return Stream.of(Arguments.of(new Point(1.5, -2), new ToPGPointConverter(), new FromPGPointConverter()),
 				Arguments.of(new Box(1, 1, 0, 0), new ToPGBoxConverter(), new FromPGBoxConverter()),
 				Arguments.of(new Lseg(0, 0, 1, 1), new ToPGLsegConverter(), new FromPGLsegConverter()),
 				Arguments.of(new Path(true, 0, 0, 1, 1, 2, 0), new ToPGPathConverter(), new FromPGPathConverter()),
@@ -99,8 +98,7 @@ public class PGGeometryConveterTest {
 	}
 
 	static Stream<Arguments> postgresOutput() {
-		return Stream.of(
-				Arguments.of(new FromPGPointConverter(), "(1,2)", new Point(1, 2)),
+		return Stream.of(Arguments.of(new FromPGPointConverter(), "(1,2)", new Point(1, 2)),
 				Arguments.of(new FromPGBoxConverter(), "(1,1),(0,0)", new Box(1, 1, 0, 0)),
 				Arguments.of(new FromPGLsegConverter(), "[(0,0),(1,1)]", new Lseg(0, 0, 1, 1)),
 				Arguments.of(new FromPGLineConverter(), "{1,-1,0}", new Line(0, 0, 1, 1)),
@@ -124,8 +122,7 @@ public class PGGeometryConveterTest {
 		assertEquals(new Lseg(0, 0, 1, 1), new FromPGLsegConverter().convertObject(new PGlseg("[(0,0),(1,1)]")));
 		assertEquals(new Line(0, 0, 1, 1), new FromPGLineConverter().convertObject(new PGline("{1,-1,0}")));
 		assertEquals(new Path(true, 0, 0, 1, 1), new FromPGPathConverter().convertObject(new PGpath("[(0,0),(1,1)]")));
-		assertEquals(new Path(false, 0, 0, 1, 1),
-				new FromPGPathConverter().convertObject(new PGpath("((0,0),(1,1))")));
+		assertEquals(new Path(false, 0, 0, 1, 1), new FromPGPathConverter().convertObject(new PGpath("((0,0),(1,1))")));
 		assertEquals(new Polygon(0, 0, 1, 1, 1, 0),
 				new FromPGPolygonConverter().convertObject(new PGpolygon("((0,0),(1,1),(1,0))")));
 		assertEquals(new Circle(0, 0, 1), new FromPGCircleConverter().convertObject(new PGcircle("<(0,0),1>")));
@@ -144,10 +141,10 @@ public class PGGeometryConveterTest {
 
 	@Test
 	public void testExtremeCoefficientRoundTrip() {
-		for (final double[] coefficients : new double[][] { { 1, -1, 1e20 }, { 1, 1e-320, 1 },
-				{ 1e-320, 1, 1 }, { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE } }) {
-			final Line line = new FromPGLineConverter().convertObject(
-					new PGline(coefficients[0], coefficients[1], coefficients[2]));
+		for (final double[] coefficients : new double[][] { { 1, -1, 1e20 }, { 1, 1e-320, 1 }, { 1e-320, 1, 1 },
+				{ Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE } }) {
+			final Line line = new FromPGLineConverter()
+					.convertObject(new PGline(coefficients[0], coefficients[1], coefficients[2]));
 			final PGline back = new ToPGLineConverter().convertObject(line);
 			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(back.a));
 			org.junit.jupiter.api.Assertions.assertTrue(Double.isFinite(back.b));

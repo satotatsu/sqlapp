@@ -10,7 +10,7 @@ final class FirebirdTemporaryTableSql {
 	}
 
 	static void requireSupportedDialect(FirebirdSqlBuilder builder) {
-		if (builder.getDialect().compareTo(DialectHolder.defaultDialect20) < 0)
+		if (builder.getDialect().compareTo(DialectHolder.defaultDialect21) < 0)
 			throw new IllegalArgumentException("Global temporary tables require Firebird 2.1 or later");
 	}
 

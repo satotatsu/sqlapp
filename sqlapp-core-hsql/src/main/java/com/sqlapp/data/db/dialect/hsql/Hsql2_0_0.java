@@ -67,6 +67,11 @@ public class Hsql2_0_0 extends Hsql {
 		super.registerDataType();
 		registerLobTypes(Integer.MAX_VALUE);
 		registerLobTypes(MAX_LOB_LENGTH);
+		// BINARY(n): fixed length and zero padded, distinct from VARBINARY.
+		getDbDataTypes().addBinary("BINARY", Integer.MAX_VALUE, type -> {
+			type.setDefaultLength(1);
+			type.setLiteral("X'", "'");
+		});
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction()).setMaxPrecision(9)
@@ -172,6 +177,11 @@ public class Hsql2_0_0 extends Hsql {
 	@Override
 	public CorrelationStrategy getCorrelationStrategy() {
 		return CorrelationStrategy.BY_KEY;
+	}
+
+	@Override
+	public boolean supportsStandardOffsetFetchRows() {
+		return true;
 	}
 
 	@Override

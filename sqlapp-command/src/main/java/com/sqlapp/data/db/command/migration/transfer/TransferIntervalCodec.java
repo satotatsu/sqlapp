@@ -7,15 +7,21 @@ import com.sqlapp.data.db.datatype.MetaType;
 import com.sqlapp.data.interval.IntervalValue;
 import com.sqlapp.data.schemas.Column;
 
-/** Lossless sqlapp interval text for CSV, TSV and JSONL; no destination normalization. */
+/**
+ * Lossless sqlapp interval text for CSV, TSV and JSONL; no destination
+ * normalization.
+ */
 final class TransferIntervalCodec {
-	private static final tools.jackson.databind.ObjectMapper JSON = tools.jackson.databind.json.JsonMapper.builder(
-			tools.jackson.core.json.JsonFactory.builder().streamReadConstraints(
-					tools.jackson.core.StreamReadConstraints.builder().maxNestingDepth(34)
-							.maxStringLength(1_048_576).maxNumberLength(64).build()).build())
+	private static final tools.jackson.databind.ObjectMapper JSON = tools.jackson.databind.json.JsonMapper
+			.builder(tools.jackson.core.json.JsonFactory.builder()
+					.streamReadConstraints(tools.jackson.core.StreamReadConstraints.builder().maxNestingDepth(34)
+							.maxStringLength(1_048_576).maxNumberLength(64).build())
+					.build())
 			.disable(tools.jackson.databind.SerializationFeature.INDENT_OUTPUT)
 			.enable(tools.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
-	private TransferIntervalCodec() {}
+
+	private TransferIntervalCodec() {
+	}
 
 	static boolean interval(Column column) {
 		return column.getDataType().getMetaTtype() == MetaType.INTERVAL;
@@ -28,7 +34,8 @@ final class TransferIntervalCodec {
 
 	static String encode(Column column, Object value) {
 		validate(column);
-		if (value == null) return null;
+		if (value == null)
+			return null;
 		if (column.getArrayDimension() > 0) {
 			Object array = value instanceof String text ? decode(column, text) : value;
 			return JSON.writeValueAsString(IntervalArrays.map(array, dimensions(column, array),
@@ -36,18 +43,21 @@ final class TransferIntervalCodec {
 		}
 		IntervalValue interval = value instanceof String text ? (IntervalValue) decode(column, text)
 				: new IntervalValueConverter().convertObject(value);
-		if (interval == null) throw invalid(column, null);
+		if (interval == null)
+			throw invalid(column, null);
 		return interval.toString();
 	}
 
 	static Object decode(Column column, String text) {
 		validate(column);
-		if (text == null) return null;
+		if (text == null)
+			return null;
 		try {
 			if (column.getArrayDimension() > 0) {
 				var array = JSON.readValue(text, Object[].class);
 				return IntervalArrays.map(array, dimensions(column, array), leaf -> {
-					if (!(leaf instanceof String field)) throw invalid(column, null);
+					if (!(leaf instanceof String field))
+						throw invalid(column, null);
 					return IntervalValue.parse(field);
 				});
 			}
@@ -61,8 +71,10 @@ final class TransferIntervalCodec {
 		var dialect = column.getDialect();
 		if (dialect != null) {
 			var type = dialect.getDbDataTypes().getDbTypeStrict(column.getDataType());
-			if (type != null && type.getJdbcTypeHandler() instanceof com.sqlapp.data.db.datatype.IntervalTypeHandler handler
-					&& !handler.fixedArrayDimensions()) return IntervalArrays.dimensions(value);
+			if (type != null
+					&& type.getJdbcTypeHandler() instanceof com.sqlapp.data.db.datatype.IntervalTypeHandler handler
+					&& !handler.fixedArrayDimensions())
+				return IntervalArrays.dimensions(value);
 		}
 		return column.getArrayDimension();
 	}

@@ -58,7 +58,7 @@ public class SqlServerVersionTest {
 		assertTrue(dialect2017 instanceof SqlServer2017);
 		assertTrue(dialect2019 instanceof SqlServer2019);
 		assertTrue(dialect2022 instanceof SqlServer2022);
-		assertTrue(dialect2025 instanceof SqlServer2022);
+		assertTrue(dialect2025 instanceof SqlServer2025);
 	}
 
 	@Test

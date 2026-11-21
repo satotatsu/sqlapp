@@ -29,6 +29,7 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.OnOffType;
 
 public class SqlServer2005CreateIndexFactory extends SqlServerCreateIndexFactory {
 
@@ -65,6 +66,11 @@ public class SqlServer2005CreateIndexFactory extends SqlServerCreateIndexFactory
 		val = obj.getSpecifics().get(key);
 		if (val != null) {
 			map.put(key, val);
+		}
+		String online = obj.getSpecifics().get("ONLINE");
+		if (online != null) {
+			OnOffType option = OnOffType.parse(online);
+			map.put("ONLINE", option.toString());
 		}
 		return map;
 	}

@@ -135,6 +135,8 @@ public class DbPlugin implements Plugin<Project> {
 				"Imports a transfer file package into the target database.");
 		registerTask(project, "compareTransferStaging", CompareTransferStagingTask.class, GROUP_TRANSFER,
 				"Compares retained staging data with the target database.");
+		registerTask(project, "generateLogicMigrationRequest", GenerateLogicMigrationRequestTask.class, GROUP_TRANSFER,
+				"Writes a trigger conversion request for an AI or a reviewer (Oracle to PostgreSQL).");
 		// sqlapp legacy migration
 		registerTask(project, "pliSchemaImport", PliSchemaImportTask.class, GROUP_LEGACY_MIGRATION,
 				"Imports PL/I record definitions as Schema XML.");

@@ -40,13 +40,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -799,7 +799,7 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 		return SIMPLE_NAME;
 	}
 
-	private static final Map<Class<?>, String> CACHE = new HashMap<Class<?>, String>();
+	private static final Map<Class<?>, String> CACHE = new ConcurrentHashMap<Class<?>, String>();
 
 	/**
 	 * XMLでのタグ名を取得します
@@ -811,7 +811,9 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 			return name;
 		}
 		name = getSimpleNameNoCache(clazz);
-		CACHE.put(clazz, name);
+		if (name != null) {
+			CACHE.put(clazz, name);
+		}
 		return name;
 	}
 
@@ -1104,7 +1106,7 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 		renew();
 	}
 
-	private static final Map<Class<?>, Class<?>> COLLECTION_TYPE_CACHE = new HashMap<Class<?>, Class<?>>();
+	private static final Map<Class<?>, Class<?>> COLLECTION_TYPE_CACHE = new ConcurrentHashMap<Class<?>, Class<?>>();
 
 	/**
 	 * コレクションのクラスを取得します

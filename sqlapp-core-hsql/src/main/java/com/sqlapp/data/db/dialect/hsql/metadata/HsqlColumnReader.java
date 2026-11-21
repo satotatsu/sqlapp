@@ -63,7 +63,28 @@ public class HsqlColumnReader extends ColumnReader {
 				result.add(obj);
 			}
 		});
+		setIdentityNextValues(connection, result);
 		return result;
+	}
+
+	/**
+	 * Sets the next value of plain identity columns, so that recreated tables do
+	 * not reissue values that were already generated.
+	 */
+	protected void setIdentityNextValues(Connection connection, List<Column> columns) {
+		if (!HsqlIdentityRestarts.needed(columns))
+			return;
+		var restarts = HsqlIdentityRestarts.read(connection);
+		for (Column column : columns) {
+			if (!column.isIdentity() || column.getSequenceName() != null)
+				continue;
+			Long next = restarts
+					.get(HsqlIdentityRestarts.key(column.getSchemaName(), column.getTableName(), column.getName()));
+			// An unused identity restarts at its start value; leave it unset so that
+			// schema comparisons do not report identities that were never used.
+			if (next != null && !next.equals(column.getIdentityStartValue()))
+				column.setIdentityLastValue(next);
+		}
 	}
 
 	protected Column createColumn(ExResultSet rs) throws SQLException {
@@ -104,9 +125,13 @@ public class HsqlColumnReader extends ColumnReader {
 			obj.setDataTypeName(qualifiedType(getString(rs, "UDT_SCHEMA"), udtName));
 		} else if (!isEmpty(interval_type)) {
 			Long interval_precision = getLong(rs, "INTERVAL_PRECISION");
+			// DATETIME_PRECISION holds the fractional seconds precision of
+			// intervals ending in SECOND.
+			Integer fractional_precision = interval_type.toUpperCase(java.util.Locale.ROOT).endsWith("SECOND")
+					&& datetime_scale != null ? Integer.valueOf(datetime_scale.intValue()) : null;
 			obj.setNullable(nullable);
 			obj.setIdentity(identity);
-			this.getDialect().setDbType(data_type + " " + interval_type, interval_precision, null, obj);
+			this.getDialect().setDbType(data_type + " " + interval_type, interval_precision, fractional_precision, obj);
 		} else {
 			obj.setNullable(nullable);
 			obj.setIdentity(identity);

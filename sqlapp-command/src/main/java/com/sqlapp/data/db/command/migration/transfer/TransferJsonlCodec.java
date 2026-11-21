@@ -38,7 +38,7 @@ final class TransferJsonlCodec {
 				throw new IllegalArgumentException("JSONL row exceeds the 16 MiB character limit.");
 			object.put(column.getName(), value == null ? null
 					: intervalArray(column) ? MAPPER.readValue(value, Object[].class)
-					: numeric(column) ? new BigDecimal(value) : bool(column) ? Boolean.valueOf(value) : value);
+							: numeric(column) ? new BigDecimal(value) : bool(column) ? Boolean.valueOf(value) : value);
 		}
 		var line = MAPPER.writeValueAsString(object);
 		if (line.length() > MAX_LINE)
@@ -68,7 +68,7 @@ final class TransferJsonlCodec {
 				continue;
 			if (intervalArray(column) ? !(value instanceof java.util.List<?>)
 					: numeric(column) ? !(value instanceof Number)
-					: bool(column) ? !(value instanceof Boolean) : !(value instanceof String))
+							: bool(column) ? !(value instanceof Boolean) : !(value instanceof String))
 				throw new IllegalArgumentException("JSONL scalar type differs from canonical Schema.");
 			if (value instanceof BigDecimal decimal
 					&& (Math.abs((long) decimal.scale()) + decimal.precision() > MAX_FIELD))

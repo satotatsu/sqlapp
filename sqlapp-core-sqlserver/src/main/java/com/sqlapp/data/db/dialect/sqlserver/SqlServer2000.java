@@ -174,7 +174,7 @@ public class SqlServer2000 extends Dialect {
 		// SYSNAME型
 		getDbDataTypes().addSqlIdentifierType("SYSNAME");
 		// ANYDATA
-		getDbDataTypes().addAnyData("VARIANT");
+		getDbDataTypes().addAnyData("SQL_VARIANT");
 		// 推奨される型の登録
 		getDbDataTypes().registerRecommend(CHAR, NVARCHAR);
 		getDbDataTypes().registerRecommend(NCHAR, NVARCHAR);

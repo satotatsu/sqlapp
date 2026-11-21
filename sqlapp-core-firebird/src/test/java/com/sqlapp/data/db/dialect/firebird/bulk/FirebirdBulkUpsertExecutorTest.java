@@ -154,6 +154,12 @@ class FirebirdBulkUpsertExecutorTest {
 		modern.minor = 1;
 		new FirebirdBulkUpsertExecutor(DialectHolder.defaultDialect20).execute(modern.connection(), table(), option);
 		assertEquals(1, modern.sql.size());
+		// The 2.1 dialect needs no server check.
+		final Driver resolved = new Driver();
+		resolved.major = 2;
+		resolved.minor = 0;
+		new FirebirdBulkUpsertExecutor(DialectHolder.defaultDialect21).execute(resolved.connection(), table(), option);
+		assertEquals(1, resolved.sql.size());
 		assertThrows(SQLFeatureNotSupportedException.class,
 				() -> new FirebirdBulkUpsertExecutor(DialectHolder.defaultDialect).execute(new Driver().connection(),
 						table(), option));

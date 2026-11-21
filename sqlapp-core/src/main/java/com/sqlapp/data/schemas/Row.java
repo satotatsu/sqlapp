@@ -269,7 +269,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 				}
 			}
 			if (this.options != null) {
-				if (column.getOrdinal() < this.remarks.length) {
+				if (column.getOrdinal() < this.options.length) {
 					newOptions[i] = this.options[column.getOrdinal()];
 				} else {
 					newOptions[i] = null;

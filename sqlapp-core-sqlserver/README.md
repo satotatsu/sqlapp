@@ -321,3 +321,69 @@ no mutable columns remain. Identity-only inserts use DEFAULT VALUES. Routine
 argument metadata uses character lengths for Unicode types and fractional-second
 precision for time types. Public Java signatures and XML configuration formats
 are unchanged.
+
+### Metadata comments, table options and MERGE locking
+
+SQL Server 2005 and later read comments from MS_Description only. Table type
+columns use the table type's extended property identity. SQL Server 2017 and
+later retain graph table flags for validation.
+
+CREATE TABLE does not copy arbitrary specifics into WITH. Configure index
+options on indexes. Memory-optimized, graph and ledger tables require dedicated
+recreation support and are rejected instead of being emitted as ordinary tables.
+
+SQL Server 2008 and later add HOLDLOCK to the target of MERGE, MERGE_ROWS and
+MERGE_TABLE, consistent with native bulk upsert. This can increase blocking
+when concurrent transactions contend for the same target key ranges.
+
+Native IMAGE and SQL_VARIANT keep their SQL Server type names. DATE expressions
+return DATE from SQL Server 2008. Column masking requires SQL Server 2016 or
+later. SQL scripts accept a line comment following GO or its repeat count.
+Explicit table locks return a single count, and exclusive locks use TABLOCKX.
+The shared MERGE update increments numeric optimistic lock columns using the
+target value and honors the configured update coalescing option.
+
+SQL Server 2000 uses the legacy unparenthesized CREATE INDEX options for
+PAD_INDEX and FILLFACTOR. Row and page lock options require SQL Server 2005 or
+later. CREATE TABLE places temporal period defaults after the generated period marker
+and before nullability, as verified on SQL Server 2025.
+
+### Native JSON and VECTOR in SQL Server 2025
+
+The SQL Server 2025 dialect is selected for engine major version 17 and later.
+It recognizes native JSON and VECTOR table columns. VECTOR dimensions come
+from sys.columns.vector_dimensions and are stored as the Schema model's vector
+dimension. Set that field when defining a VECTOR column by hand. FLOAT32 is
+the default. FLOAT16 uses the vector_base_type specific and requires the
+server's preview feature setting where applicable.
+
+JDBC reads represent JSON and vectors as text in the row model. Prepared
+statements accept JSON text and JSON-array vector text, including SQL NULL.
+The native vector binding also accepts microsoft.sql.Vector. Native Bulk Copy
+supports JSON text and FLOAT32 vectors represented as JSON arrays. It checks
+the declared dimensions and rejects malformed or non-finite vector input.
+Use JDBC inserts for FLOAT16. The server and driver used for verification
+reject the native FLOAT16 bulk protocol.
+
+The SQL Server 2025 dialect also reads and recreates JSON and DiskANN VECTOR
+indexes. JSON index paths are stored as a JSON array in the json_index_paths
+specific, and optimize_for_array_search preserves the array-search setting.
+VECTOR indexes use the Schema model vectorDistanceType property. SQL Server
+requires QUOTED_IDENTIFIER ON for JSON index DDL. Enable PREVIEW_FEATURES
+where the server requires it for VECTOR index creation. SQL Server build
+17.0.4065.4 accepts an explicit filegroup for VECTOR indexes but rejects
+the JSON index ON filegroup clause. On that build, let JSON indexes inherit
+the table's filegroup.
+
+The optional SqlServer2025NativeTypesTest round-trip requires a disposable local
+SQL Server 2025 instance. Set SQLAPP_TEST_SQLSERVER_2025_URL and
+SQLAPP_TEST_SQLSERVER_2025_PASSWORD to run it.
+
+To include FLOAT16, enable PREVIEW_FEATURES in the disposable database and
+set SQLAPP_TEST_SQLSERVER_2025_FLOAT16=true. The test checks both JDBC
+vectorTypeSupport=v1, which returns FLOAT16 as text, and v2, which enables
+native FLOAT16 transfer.
+
+Set SQLAPP_TEST_SQLSERVER_2025_INDEX_FILEGROUP to an existing non-default
+filegroup in the disposable database to verify that a VECTOR index stays
+on that filegroup after recreation.

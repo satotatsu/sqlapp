@@ -31,4 +31,6 @@ module com.sqlapp.core.informix {
 		with com.sqlapp.data.db.dialect.informix.bulk.InformixBulkUpsertProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider
 		with com.sqlapp.data.db.dialect.informix.bulk.InformixSetBasedMigrationSnapshotProvider;
+	provides com.sqlapp.jdbc.bulk.AtomicTableReplacementProvider
+		with com.sqlapp.data.db.dialect.informix.bulk.InformixAtomicTableReplacementProvider;
 }

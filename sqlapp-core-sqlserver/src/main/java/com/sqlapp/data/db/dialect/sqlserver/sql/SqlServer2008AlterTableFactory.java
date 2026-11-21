@@ -50,8 +50,8 @@ public class SqlServer2008AlterTableFactory extends SqlServer2005AlterTableFacto
 		SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.alter().table().name(table, getOptions().isDecorateSchemaName());
 		if (after)
-			builder.enable().changeTracking()._add(" WITH (TRACK_COLUMNS_UPDATED = ")
-					._add(columns ? "ON" : "OFF")._add(")");
+			builder.enable().changeTracking()._add(" WITH (TRACK_COLUMNS_UPDATED = ")._add(columns ? "ON" : "OFF")
+					._add(")");
 		else
 			builder.disable().changeTracking();
 		add(result, createOperation(builder.toString(), com.sqlapp.data.db.sql.SqlType.ALTER, originalTable, table));

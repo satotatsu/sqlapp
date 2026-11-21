@@ -79,8 +79,8 @@ public class SqlServer2008CreateTableFactoryTest2 extends AbstractSqlServerSqlFa
 		table.setDialect(dialect);
 		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
-		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'")
-				.setNotNull(true).setMaskingFunction("DEFAULT()"));
+		table.getColumns().add(
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
 		table.getColumns().add(new Column("colD").setDataType(DataType.TIMESTAMP).setLength(7).setNotNull(true));
 		table.getColumns()
 				.add(new Column("colE").setDataType(DataType.TIMESTAMP_WITH_TIMEZONE).setLength(7).setNotNull(true));

@@ -167,4 +167,81 @@ class DuckDbMigrationModelExecutorTest {
 			assertEquals(List.of(List.of(2L)), query(connection, "SELECT count(*) FROM customer"));
 		}
 	}
+
+	@Test
+	void rejectsValuesThatTheDeclaredTypeWouldChange() throws Exception {
+		final var columns = List.of(
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+						com.sqlapp.data.db.datatype.DataType.INT, null, null, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("AMOUNT",
+						com.sqlapp.data.db.datatype.DataType.DECIMAL, 12L, 2, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("DAY",
+						com.sqlapp.data.db.datatype.DataType.DATE, null, null, false));
+		final MigrationModel model = new MigrationModel("payment", null, "unused", Materialization.TABLE, Map.of(),
+				columns, List.of("ID"));
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			connection.setAutoCommit(false);
+			// Lossless conversions are accepted: wider integers, fewer fraction digits,
+			// dates as text.
+			executor.materialize(connection, model, "SELECT 1::BIGINT AS ID, 1.5::DOUBLE AS AMOUNT,"
+					+ " '2026-11-20' AS DAY UNION ALL SELECT 2, 3.10, NULL");
+			connection.commit();
+			assertEquals(
+					List.of(Arrays.asList(1, new java.math.BigDecimal("1.50"), "2026-11-20"),
+							Arrays.asList(2, new java.math.BigDecimal("3.10"), null)),
+					query(connection, "SELECT ID, AMOUNT, CAST(DAY AS VARCHAR) FROM payment ORDER BY ID"));
+
+			final Map<String, String> changing = Map.of( //
+					"SELECT 1 AS ID, 12.345 AS AMOUNT, NULL::DATE AS DAY",
+					"AMOUNT (1 rows, DECIMAL(5,3) to DECIMAL(12,2))",
+					"SELECT 1 AS ID, 0.1::DOUBLE + 0.2::DOUBLE AS AMOUNT, NULL::DATE AS DAY", "AMOUNT (1 rows",
+					"SELECT 1 AS ID, 1e11::DOUBLE AS AMOUNT, NULL::DATE AS DAY", "AMOUNT (1 rows", // overflow
+					"SELECT 1 AS ID, 1 AS AMOUNT, TIMESTAMP '2026-11-20 10:00:00' AS DAY", "DAY (1 rows",
+					"SELECT 1 AS ID, 1 AS AMOUNT, '20261120' AS DAY", "DAY (1 rows", // not a date
+					"SELECT 1.5 AS ID, 1 AS AMOUNT, NULL::DATE AS DAY", "ID (1 rows",
+					"SELECT 3000000000 AS ID, 1 AS AMOUNT, NULL::DATE AS DAY", "ID (1 rows");
+			for (final Map.Entry<String, String> entry : changing.entrySet()) {
+				final var e = assertThrows(IllegalArgumentException.class,
+						() -> executor.materialize(connection, model, entry.getKey()), entry.getKey());
+				assertTrue(e.getMessage().contains(entry.getValue()), e.getMessage());
+				connection.rollback();
+			}
+			// Values are not written to the message.
+			final var rounded = assertThrows(IllegalArgumentException.class, () -> executor.materialize(connection,
+					model, "SELECT 1 AS ID, 12.345 AS AMOUNT, NULL::DATE AS DAY"));
+			assertTrue(!rounded.getMessage().contains("12.345") && rounded.getMessage().contains("ROUND"),
+					rounded.getMessage());
+			connection.rollback();
+			// The committed table is unchanged.
+			assertEquals(List.of(List.of(2L)), query(connection, "SELECT count(*) FROM payment"));
+
+			// An explicit conversion in the model SQL is accepted.
+			executor.materialize(connection, model,
+					"SELECT 1 AS ID, ROUND(12.345, 2) AS AMOUNT, CAST(TIMESTAMP '2026-11-20 10:00:00' AS DATE) AS DAY");
+			connection.commit();
+			assertEquals(List.of(Arrays.asList(1, new java.math.BigDecimal("12.35"), "2026-11-20")),
+					query(connection, "SELECT ID, AMOUNT, CAST(DAY AS VARCHAR) FROM payment"));
+		}
+	}
+
+	@Test
+	void runsTheModelQueryOnceForCheckAndInsert() throws Exception {
+		final var columns = List.of(new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+				com.sqlapp.data.db.datatype.DataType.INT, null, null, false));
+		final MigrationModel model = new MigrationModel("numbered", null, "unused", Materialization.TABLE, Map.of(),
+				columns, List.of());
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			try (var statement = connection.createStatement()) {
+				statement.execute("CREATE SEQUENCE numbers");
+			}
+			connection.setAutoCommit(false);
+			executor.materialize(connection, model, "SELECT nextval('numbers') AS ID FROM range(3)");
+			connection.commit();
+			assertEquals(List.of(List.of(1), List.of(2), List.of(3)),
+					query(connection, "SELECT ID FROM numbered ORDER BY ID"));
+			assertEquals(List.of(List.of(3L)), query(connection, "SELECT currval('numbers')"));
+		}
+	}
 }

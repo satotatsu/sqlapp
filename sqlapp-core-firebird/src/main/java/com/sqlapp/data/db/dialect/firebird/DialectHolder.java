@@ -25,7 +25,8 @@ public class DialectHolder {
 	public final static Firebird40 defaultDialect40 = new Firebird40(() -> defaultDialect50);
 	public final static Firebird30 defaultDialect30 = new Firebird30(() -> defaultDialect40);
 	public final static Firebird25 defaultDialect25 = new Firebird25(() -> defaultDialect30);
-	public final static Firebird20 defaultDialect20 = new Firebird20(() -> defaultDialect25);
+	public final static Firebird21 defaultDialect21 = new Firebird21(() -> defaultDialect25);
+	public final static Firebird20 defaultDialect20 = new Firebird20(() -> defaultDialect21);
 	public final static Firebird defaultDialect = new Firebird(() -> defaultDialect20);
 
 }

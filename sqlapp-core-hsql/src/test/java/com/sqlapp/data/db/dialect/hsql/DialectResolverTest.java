@@ -32,8 +32,24 @@ public class DialectResolverTest {
 		var resolver = DialectResolver.getInstance();
 		assertEquals(resolver.getDialect("hsql", 2, 4), resolver.getDialect("hsql", 3, 0));
 		assertEquals(resolver.getDialect("hsql", 2, 4), resolver.getDialect("hsql", 2, 7));
-		org.junit.jupiter.api.Assertions.assertFalse(resolver.getDialect("hsql", 1, 8).supportsColumnFormula());
 		org.junit.jupiter.api.Assertions.assertTrue(resolver.getDialect("hsql", 2, 0).supportsColumnFormula());
+		assertEquals(DialectHolder.defaultDialect2_0_0, resolver.getDialect("hsql", 2, 0));
+	}
+
+	@Test
+	public void testHsqldb1xIsRejected() {
+		var resolver = DialectResolver.getInstance();
+		for (int[] version : new int[][] { { 1, 8 }, { 1, 7 }, { 1, 0 } }) {
+			var failure = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+					() -> resolver.getDialect("HSQL Database Engine", version[0], version[1], null));
+			org.junit.jupiter.api.Assertions.assertTrue(failure.getMessage().contains("HSQLDB 2.0 or later"),
+					failure.getMessage());
+		}
+	}
+
+	@Test
+	public void testUnknownVersionUsesOldestSupportedDialect() {
+		assertEquals(DialectHolder.defaultDialect2_0_0, DialectResolver.getInstance().getDialect("HSQL", 0, 0, null));
 	}
 
 	@Test

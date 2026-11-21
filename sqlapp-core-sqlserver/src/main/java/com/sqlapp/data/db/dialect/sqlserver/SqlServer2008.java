@@ -63,7 +63,7 @@ public class SqlServer2008 extends SqlServer2005 {
 		super.registerDataType();
 		// Date
 		getDbDataTypes().addDate(type -> {
-			type.setDefaultValueLiteral("CONVERT (date, " + getCurrentTimestampFunction() + ")");
+			type.setDefaultValueLiteral(getCurrentDateFunction());
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
@@ -96,6 +96,11 @@ public class SqlServer2008 extends SqlServer2005 {
 			}
 		});
 		getDbDataTypes().registerRecommend(DATETIME, TIMESTAMP);
+	}
+
+	@Override
+	public String getCurrentDateFunction() {
+		return "CONVERT (date, " + getCurrentTimestampFunction() + ")";
 	}
 
 	@Override

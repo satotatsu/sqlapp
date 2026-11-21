@@ -61,14 +61,14 @@ public class SqlServerGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	}
 
 	/**
-	 * SQL Server の geometry / geography のシリアル化形式に変換します。通常の INSERT と一括コピーで同じ表現を使うために共有します。
+	 * SQL Server の geometry / geography のシリアル化形式に変換します。通常の INSERT
+	 * と一括コピーで同じ表現を使うために共有します。
 	 * <p>
-	 * Geolatte のエンコーダーは SRID が 0 以下の図形で Z/M の指定を書き込めない(IllegalStateException になる)ため、
-	 * その場合は一時的な SRID で符号化してから、先頭4バイトの SRID を 0 に戻します。
+	 * Geolatte のエンコーダーは SRID が 0 以下の図形で Z/M の指定を書き込めない(IllegalStateException
+	 * になる)ため、 その場合は一時的な SRID で符号化してから、先頭4バイトの SRID を 0 に戻します。
 	 * </p>
 	 * 
-	 * @param geometry
-	 *            図形
+	 * @param geometry 図形
 	 * @return SQL Server のシリアル化形式
 	 */
 	public static byte[] toSqlServerBytes(final Geometry<?> geometry) {

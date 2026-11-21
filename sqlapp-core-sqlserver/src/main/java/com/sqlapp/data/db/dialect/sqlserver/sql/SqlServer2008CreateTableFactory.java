@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 
@@ -30,7 +29,6 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.OnOffType;
 
 /**
  * SQLServer2008用のテーブル作成
@@ -60,17 +58,7 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 				} else {
 					builder.row();
 				}
-				addWithOption(table, builder);
 			});
-		} else {
-			SqlServerSqlBuilder child = builder.newInstance();
-			addWithOption(table, child);
-			if (!child.toString().isEmpty()) {
-				builder.with().space().brackets(() -> {
-					builder.space();
-					builder._add(child.toString());
-				});
-			}
 		}
 	}
 
@@ -80,6 +68,7 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 				&& getDialect().compareTo(com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver
 						.getInstance().getDialect(13, 0)) < 0)
 			throw new IllegalArgumentException("Temporal tables require SQL Server 2016 or later");
+		validateTableOptions(table);
 		List<SqlOperation> result = super.createSql(table);
 		String escalation = table.getSpecifics().get("LOCK_ESCALATION");
 		if (escalation != null) {
@@ -120,53 +109,22 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 		add(result, createOperation(sql, SqlType.ALTER, table));
 	}
 
-	protected void addWithOption(final Table table, final SqlServerSqlBuilder builder) {
-		final Map<String, String> map = table.getSpecifics();
-		boolean[] first = new boolean[] { true };
-		map.forEach((k, v) -> {
-			String key = k.toLowerCase(Locale.ROOT);
-			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v))) || key.equals("temporal_type")
-					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v))))
-				return;
-			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k) || "LOCK_ESCALATION".equalsIgnoreCase(k)
-					|| "text_in_row_limit".equalsIgnoreCase(k) || "is_track_columns_updated_on".equalsIgnoreCase(k)
-					|| "large_value_types_out_of_row".equalsIgnoreCase(k) || "has_var_decimal".equalsIgnoreCase(k)) {
-				return;
-			}
-			if (SqlServerIndexOptions.COMPRESSION_DELAY.toString().equalsIgnoreCase(k)) {
-				throw new IllegalArgumentException("COMPRESSION_DELAY applies to columnstore indexes, not tables. "
-						+ "Set COMPRESSION_DELAY on the columnstore index of table " + table.getName() + ".");
-			}
-			if (!first[0]) {
-				builder.space().comma();
-			}
-			SqlServerIndexOptions enm = SqlServerIndexOptions.parse(k);
-			if (enm != null) {
-				builder._add(enm);
-				first[0] = false;
-				if (CommonUtils.isEmpty(v)) {
-					return;
-				}
-				builder.space().eq().space();
-				if (enm.isOnOff()) {
-					OnOffType onOffType = OnOffType.parse(v, null);
-					if (onOffType == null) {
-						builder._add(enm.getDefaultValue());
-					} else {
-						builder._add(onOffType);
-					}
-				} else {
-					builder._add(v);
-				}
-			} else {
-				builder._add(k.toUpperCase());
-				first[0] = false;
-				if (CommonUtils.isEmpty(v)) {
-					return;
-				}
-				builder.space().eq().space();
-				builder._add(v);
-			}
-		});
+	private void validateTableOptions(final Table table) {
+		var specifics = table.getSpecifics();
+		String ledger = specifics.get("ledger_type");
+		if (SqlServerDdlSupport.isMemoryOptimized(table))
+			throw new IllegalArgumentException(
+					"Cannot recreate SQL Server memory-optimized table with equivalent indexes and constraints: "
+							+ table.getName());
+		if (Boolean.TRUE.equals(specifics.get("is_node", Boolean.class))
+				|| Boolean.TRUE.equals(specifics.get("is_edge", Boolean.class)))
+			throw new IllegalArgumentException(
+					"SQL Server graph table recreation requires graph column and constraint support: "
+							+ table.getName());
+		if (ledger != null && !"0".equals(ledger) && !"NON_LEDGER_TABLE".equalsIgnoreCase(ledger))
+			throw new IllegalArgumentException("SQL Server ledger table recreation is unsupported: " + table.getName());
+		if (specifics.containsKey(SqlServerIndexOptions.COMPRESSION_DELAY.toString()))
+			throw new IllegalArgumentException(
+					"COMPRESSION_DELAY applies to columnstore indexes, not tables: " + table.getName());
 	}
 }

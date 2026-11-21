@@ -14,6 +14,7 @@
 | Review SELECT-defined model design and follow-up work | [Migration models design](migration-models-design.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
 | Verify data type resolution, ranges and real-engine recreation | [Dialect data types](dialect-data-types.md) |
+| Review time zone value handling and the ZonedDateTime memo | [Time zone values](time-zone-values.md) |
 | Read and recreate PostgreSQL-only schema objects | [PostgreSQL schema objects](postgresql-schema-objects.md) |
 | Review Firebird metadata, version boundaries and DDL recreation | [Firebird dialect coverage](firebird-dialect-parity.md) |
 | Compare MySQL metadata, DDL/DML coverage, and remaining gaps | [MySQL dialect comparison](mysql-dialect-parity.md) |

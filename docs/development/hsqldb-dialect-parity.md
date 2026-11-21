@@ -37,7 +37,7 @@ by specific name to retain overload identity.
 | Routine security | Use HSQLDB's default definer semantics; explicitly reject unsupported invoker security rather than emit invalid SQL. |
 | Table checks | Resolve owning tables from TABLE_CONSTRAINTS and avoid SQL-text LIKE filtering and literal rewriting. |
 | ALTER | Generate DROP DEFAULT when removing a default; reject generated-expression changes with an explicit migration error. |
-| Resolution | Preserve 1.x and 2.x boundaries; future major versions use the newest known dialect instead of falling back to 2.0 based on their minor number. |
+| Resolution | Reject HSQLDB 1.x with an explicit error (2.0 or later is required); an unknown version (0.0) resolves to 2.0; preserve 2.x boundaries; future major versions use the newest known dialect instead of falling back to 2.0 based on their minor number. |
 | Distinct types | Read the source representation into `Type.statement`, generate CREATE TYPE, and retain qualified distinct types in table columns. |
 | Synonyms | Read schema/name/target identity and recreate quoted local targets. The reader probes SYSTEM_SYNONYMS once per requested set, so older engines without this catalog keep their previous behavior. |
 | Domain ALTER | Apply named-check additions, expression replacements and removals, SET/DROP DEFAULT and native rename without replacing dependent columns. The same factory is used through Schema ALTER. |
@@ -214,8 +214,9 @@ shared Column model and through Schema XML. CREATE and conversion CASTs preserve
 those components. LOB metadata accepts both the native large-object names and
 BLOB/CLOB spellings, and CREATE retains the declared length. Modern 2.x type
 registration supports the engine's 1 TiB declaration limit; tests retain a 3 GiB
-declaration with small data, without allocating a multi-gigabyte value. Legacy
-1.8 type registration remains unchanged.
+declaration with small data, without allocating a multi-gigabyte value. The base
+`Hsql` registration is only the root of the version chain; HSQLDB 1.x is rejected
+by the resolver.
 Omitting a LOB length retains the native engine's 1 GiB default rather than
 shrinking the previous unqualified BLOB/CLOB declaration.
 Array-backed DOMAIN/DISTINCT columns keep their named identity during metadata,
@@ -555,8 +556,8 @@ of a complete database configuration. Settings are metadata only: Catalog CREATE
 does not automatically apply SET commands or local file properties.
 
 These additions apply to HSQLDB 2.x and are execution-tested on the disposable
-2.7.4 engine. Legacy 1.x keeps its original role query, returns no new memberships
-or properties, and never queries these 2.x catalogs. Older JARs remain unexecuted.
+2.7.4 engine. The readers' 1.x branches remain in the source but are unreachable,
+because the resolver rejects HSQLDB 1.x. Older 2.x JARs remain unexecuted.
 
 ## Privileges and executable scripts
 

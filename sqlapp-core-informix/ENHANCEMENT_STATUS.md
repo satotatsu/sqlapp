@@ -2,6 +2,58 @@
 
 Assessment date: 2026-10-30.
 
+Follow-up implementation: 2026-11-20. Native basic ALTER, explicit rejection of
+unsafe storage/constraint-dependent changes, SPL script splitting, shared MERGE
+empty-update handling, temporary-table APIs, single sequence-value SQL and
+set-based authorization metadata readers have been added. See the README for
+the supported operations, tests and compatibility boundary. This follow-up used
+unit/model tests only and does not extend the live-server compatibility claim.
+
+The continuation adds dbspace/server-setting readers, collection-based bulk
+sequence allocation, verified JDBC PUT-mode selection and the staged atomic
+replacement provider. These paths have unit/model coverage and an added,
+compiled-only Docker integration test. They do not yet have new live-server
+evidence. Role create/drop, role membership grant/revoke (including default role
+and grant option), and named routine EXECUTE grant/revoke factories are now
+implemented with unit/model coverage. Routine grants distinguish executable
+SPECIFIC names from synthetic catalog-type-ID identities. An empty synthetic
+signature is supported. Catalog CREATE emits the grants after routine creation.
+User connected-database authorization grant/revoke and ALTER now preserve the
+C/R/D/U privilege distinction, revoke elevated levels before CONNECT, and reject
+unsupported account attributes. Membership ALTER supports default-role changes
+and grant-option upgrades, while explicitly rejecting grant-chain revocation.
+Table grants/revokes and column grants now preserve grantor and grant-option
+semantics. Object/column privilege readers use one set-based query each and
+strictly decode the vendor privilege patterns. Column-specific revoke is rejected
+because Informix only revokes these privileges across all columns; a complete
+grant-set and downstream dependency plan remains necessary.
+Complete dependency-aware ALTER/security DDL and external-file/HPL
+loading remain outside the implemented scope. Bulk upsert and snapshot providers
+continue to use their existing execution paths.
+
+Catalog-level ALTER now provides an initial constraint-dependency plan for column
+definition changes with stable table/column identities. Given complete connected-
+database snapshots, it drops foreign keys before keys/checks, modifies all affected
+tables, restores keys/checks, then foreign keys. Cross-owner and self-references,
+composite keys and named NOT NULL have unit/model coverage. Standalone table
+safety checks remain. Standalone indexes are now retained through MODIFY, and
+modeled enabled named backing indexes are ensured once after column changes and
+before key restoration using CREATE INDEX IF NOT EXISTS (known 11.70+ only).
+Owner/storage/options reuse the native index factory. Unsupported backing-index
+states, mixed structural changes and full dependency migration remain rejected;
+see README prerequisites. Index survival/reuse in this plan lacks live evidence.
+Independent-index additions/removals/renames and definition changes can now be
+combined with column MODIFY, or planned alone. Changed indexes are dropped after
+constraint removal and recreated after all column changes, before restoring keys.
+Native DDL retains owner, storage and supported index modes. On Informix 11.70
+and later, changes to enabled named backing indexes use conditional DROP after
+constraint removal and unconditional CREATE before key restoration. The same
+path supports renaming an index and updating the key's reference when there
+is no competing index on the same columns. INCLUDE payload columns remain unsupported.
+Catalog ALTER also supports PRIMARY KEY and UNIQUE additions, removals and
+replacement, plus foreign-key mode changes. Retained foreign keys require
+an enabled matching key when their referenced keys change.
+
 ## Completion scope
 
 The normal-use enhancement can be considered complete for the paths covered by

@@ -26,7 +26,9 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 					|| index.getSpecifics().get(InformixIndexReader.INFORMIX_ACCESS_METHOD) == null)
 				throw new UnsupportedOperationException("Unsupported Informix index type: " + index.getIndexType());
 		}
-		builder.index().space();
+		builder.index();
+		addExistenceCondition(index, builder);
+		builder.space();
 		if (getOptions().isDecorateSchemaName()) {
 			String owner = index.getSpecifics().get(com.sqlapp.data.db.dialect.informix.Informix.OBJECT_OWNER);
 			if (owner == null)
@@ -34,6 +36,12 @@ public class InformixCreateIndexFactory extends AbstractCreateIndexFactory<Abstr
 			if (owner != null)
 				builder.name(owner)._add('.');
 		}
+	}
+
+	/**
+	 * Conditional creation is used only by the version-checked dependency planner.
+	 */
+	protected void addExistenceCondition(final Index index, final AbstractSqlBuilder<?> builder) {
 	}
 
 	@Override

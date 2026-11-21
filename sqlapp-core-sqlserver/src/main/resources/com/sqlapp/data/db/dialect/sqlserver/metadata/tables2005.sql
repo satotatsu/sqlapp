@@ -24,7 +24,9 @@ LEFT OUTER JOIN sys.data_spaces AS lobs
   ON (t.lob_data_space_id = lobs.data_space_id)
 LEFT OUTER JOIN sys.extended_properties ex
   ON (t.object_id = ex.major_id
-  AND ex.minor_id = 0)
+  AND ex.minor_id = 0
+  AND ex.class = 1
+  AND ex.name = N'MS_Description')
 LEFT OUTER JOIN sys.partition_schemes ps 
   ON (idx.data_space_id = ps.data_space_id)
 WHERE 1=1

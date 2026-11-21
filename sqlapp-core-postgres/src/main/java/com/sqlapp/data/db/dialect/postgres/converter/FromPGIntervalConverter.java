@@ -26,15 +26,19 @@ import com.sqlapp.data.interval.IntervalValue;
 /** Reads exact PostgreSQL values without collapsing days into time. */
 public class FromPGIntervalConverter extends AbstractConverter<IntervalValue> {
 	private static final long serialVersionUID = 6488632910509733050L;
+
 	@Override
 	public IntervalValue convertObject(final Object value) {
-		if (isSupplier(value)) return convertObject(getSupplierValue(value));
+		if (isSupplier(value))
+			return convertObject(getSupplierValue(value));
 		return value == null ? getDefaultValue() : PostgresIntervalCodec.decode(value);
 	}
+
 	@Override
 	public IntervalValue copy(final Object value) {
 		return convertObject(value);
 	}
+
 	@Override
 	public String format(final IntervalValue value) {
 		return value == null ? null : PostgresIntervalCodec.encode(value);

@@ -34,10 +34,10 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -418,7 +418,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		return SIMPLE_NAME;
 	}
 
-	private static final Map<Class<?>, String> SIMPLE_NAME_MAP = new HashMap<Class<?>, String>();
+	private static final Map<Class<?>, String> SIMPLE_NAME_MAP = new ConcurrentHashMap<Class<?>, String>();
 
 	/**
 	 * XMLでのタグ名を取得します

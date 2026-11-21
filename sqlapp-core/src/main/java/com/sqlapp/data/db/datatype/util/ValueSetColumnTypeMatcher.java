@@ -45,14 +45,40 @@ public class ValueSetColumnTypeMatcher implements ColumnTypeMatcher {
 					}
 					value = m.group("values");
 					if (value != null) {
-						String[] vals = value.split(",");
-						List<String> set = CommonUtils.list();
-						for (String val : vals) {
-							set.add(trim(val));
-						}
-						c.setValues(set);
+						c.setValues(splitValues(value));
 					}
 				});
+	}
+
+	/** Splits outside quoted literals, retaining their original quoting and escapes. */
+	private static List<String> splitValues(String value) {
+		List<String> values = CommonUtils.list();
+		int start = 0;
+		char quote = 0;
+		for (int i = 0; i < value.length(); i++) {
+			char ch = value.charAt(i);
+			if (quote != 0) {
+				if (ch == '\\') {
+					i++;
+				} else if (ch == quote) {
+					if (i + 1 < value.length() && value.charAt(i + 1) == quote) {
+						i++;
+					} else {
+						quote = 0;
+					}
+				}
+			} else if (ch == '\'' || ch == '"') {
+				quote = ch;
+			} else if (ch == ',') {
+				values.add(trim(value.substring(start, i)));
+				start = i + 1;
+			}
+		}
+		if (quote != 0) {
+			throw new IllegalArgumentException("Unterminated quoted value: " + value);
+		}
+		values.add(trim(value.substring(start)));
+		return values;
 	}
 
 	public String getDataTypeName() {

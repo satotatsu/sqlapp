@@ -107,7 +107,6 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 			final Optional<TypeInformation> op = columnTypeMatcher.match(dataTypeName);
 			if (op.isPresent()) {
 				op.get().setDbDataType(this);
-				op.get().setDataTypeName(this.getTypeName());
 				return op;
 			}
 		}
@@ -1070,7 +1069,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 */
 	public T setPetternColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
 		this.getColumnTypeMatchers().clear();
-		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern));
+		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern, matcherColumns));
 		return instance();
 	}
 
@@ -1082,7 +1081,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 * @return this
 	 */
 	public T addPetternColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
-		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern));
+		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern, matcherColumns));
 		return instance();
 	}
 

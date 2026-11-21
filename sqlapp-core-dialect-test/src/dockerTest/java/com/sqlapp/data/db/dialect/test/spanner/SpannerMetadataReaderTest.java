@@ -99,7 +99,8 @@ class SpannerMetadataReaderTest {
 			final var watchingOrders = new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit",
 					com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.Scope.TABLES,
 					List.of(new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.Target(null, "Orders",
-							List.of("label"))), null);
+							List.of("label"))),
+					null);
 			statement.execute(watchingOrders.setScopeSql());
 			final var reader = new com.sqlapp.data.db.dialect.spanner.metadata.SpannerChangeStreamReader();
 			final var restored = reader.read(connection).getFirst();
@@ -115,8 +116,8 @@ class SpannerMetadataReaderTest {
 			final var registry = dialect.createSqlFactoryRegistry();
 			// Keep catalog-provided options in the target when changing only the scope.
 			com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStreams.set(alteredCatalog,
-					List.of(new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit",
-							stopped.scope(), stopped.targets(), restored.options())));
+					List.of(new com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream("Audit", stopped.scope(),
+							stopped.targets(), restored.options())));
 			for (final var operation : registry.createSql(catalog.diff(alteredCatalog)))
 				statement.execute(operation.getSqlText());
 			assertEquals(stopped.scope(), reader.read(connection).getFirst().scope());
@@ -207,17 +208,17 @@ class SpannerMetadataReaderTest {
 			sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (1, 2)");
 			final var dialect = DialectResolver.getInstance().getDialect(connection);
 			final var schemas = dialect.getCatalogReader().getSchemaReader().getAllFull(connection);
-			final var orders = schemas.stream().filter(schema -> "Sales".equals(schema.getName()))
-					.findFirst().orElseThrow().getTables().get("Orders");
-			final var payments = schemas.stream().filter(schema -> "Billing".equals(schema.getName()))
-					.findFirst().orElseThrow().getTables().get("Payments");
+			final var orders = schemas.stream().filter(schema -> "Sales".equals(schema.getName())).findFirst()
+					.orElseThrow().getTables().get("Orders");
+			final var payments = schemas.stream().filter(schema -> "Billing".equals(schema.getName())).findFirst()
+					.orElseThrow().getTables().get("Payments");
 			final var withoutUnique = orders.clone();
 			withoutUnique.getIndexes().remove(withoutUnique.getIndexes().get("ByLegacyId"));
-			assertThrows(IllegalArgumentException.class, () ->
-					com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(
+			assertThrows(IllegalArgumentException.class,
+					() -> com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(
 							withoutUnique, List.of("code"), "OrdersStaging", "OrdersBackup", List.of(payments)));
-			final var migration = com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(
-					orders, List.of("code"), "OrdersStaging", "OrdersBackup", List.of(payments));
+			final var migration = com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration
+					.planWithDependencies(orders, List.of("code"), "OrdersStaging", "OrdersBackup", List.of(payments));
 			assertEquals(2, migration.foreignKeys().size());
 			final var plan = migration.table();
 			sql.execute(plan.createSql());
@@ -231,10 +232,10 @@ class SpannerMetadataReaderTest {
 
 			sql.executeUpdate("INSERT INTO Sales.Orders (id, code, prior_id) VALUES (3, 30, 1)");
 			sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (2, 3)");
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, prior_id) VALUES (4, 40, 999)"));
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (3, 999)"));
+			assertThrows(SQLException.class,
+					() -> sql.executeUpdate("INSERT INTO Sales.Orders (id, code, prior_id) VALUES (4, 40, 999)"));
+			assertThrows(SQLException.class,
+					() -> sql.executeUpdate("INSERT INTO Billing.Payments (id, order_id) VALUES (3, 999)"));
 		}
 	}
 
@@ -249,13 +250,14 @@ class SpannerMetadataReaderTest {
 					+ "CONSTRAINT PositiveCode CHECK (code > 0), "
 					+ "CONSTRAINT OrderCustomer FOREIGN KEY (customer) REFERENCES Sales.Customers (id)) PRIMARY KEY (id)");
 			sql.execute("CREATE UNIQUE INDEX Sales.ByLabel ON Sales.Orders (label)");
-			sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label, customer) VALUES (1, 10, 'a', 1), (2, 20, 'b', 1)");
+			sql.executeUpdate(
+					"INSERT INTO Sales.Orders (id, code, label, customer) VALUES (1, 10, 'a', 1), (2, 20, 'b', 1)");
 			final var dialect = DialectResolver.getInstance().getDialect(connection);
 			final var reader = dialect.getCatalogReader().getSchemaReader();
 			final var source = reader.getAllFull(connection).stream().filter(schema -> "Sales".equals(schema.getName()))
 					.findFirst().orElseThrow().getTables().get("Orders");
-			final var migration = com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration.planWithDependencies(source,
-					List.of("code"), "OrdersStaging", "OrdersBackup");
+			final var migration = com.sqlapp.data.db.dialect.spanner.sql.SpannerPrimaryKeyMigration
+					.planWithDependencies(source, List.of("code"), "OrdersStaging", "OrdersBackup");
 			final var plan = migration.table();
 			sql.execute(plan.createSql());
 			assertThrows(SQLException.class, () -> sql.execute(plan.createSql()));
@@ -285,16 +287,16 @@ class SpannerMetadataReaderTest {
 				assertEquals(20, rows.getLong(1));
 			}
 			sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (1, 30)");
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (3, 10)"));
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (3, NULL)"));
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label) VALUES (3, 40, 'a')"));
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label) VALUES (3, -1, 'c')"));
-			assertThrows(SQLException.class, () ->
-					sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label, customer) VALUES (3, 50, 'c', 2)"));
+			assertThrows(SQLException.class,
+					() -> sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (3, 10)"));
+			assertThrows(SQLException.class,
+					() -> sql.executeUpdate("INSERT INTO Sales.Orders (id, code) VALUES (3, NULL)"));
+			assertThrows(SQLException.class,
+					() -> sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label) VALUES (3, 40, 'a')"));
+			assertThrows(SQLException.class,
+					() -> sql.executeUpdate("INSERT INTO Sales.Orders (id, code, label) VALUES (3, -1, 'c')"));
+			assertThrows(SQLException.class, () -> sql
+					.executeUpdate("INSERT INTO Sales.Orders (id, code, label, customer) VALUES (3, 50, 'c', 2)"));
 			try (var rows = sql.executeQuery("SELECT COUNT(*) FROM Sales.OrdersBackup")) {
 				assertTrue(rows.next());
 				assertEquals(2, rows.getLong(1));
@@ -316,8 +318,8 @@ class SpannerMetadataReaderTest {
 			final var registry = dialect.createSqlFactoryRegistry();
 			sql.execute(registry.createSql(original.diff(target)).getFirst().getSqlText());
 			sql.executeUpdate("INSERT INTO ArrayValues (id, tags) VALUES (2, ['longer'])");
-			assertThrows(SQLException.class, () ->
-					sql.execute(registry.createSql(target.diff(original)).getFirst().getSqlText()));
+			assertThrows(SQLException.class,
+					() -> sql.execute(registry.createSql(target.diff(original)).getFirst().getSqlText()));
 			try (var rows = sql.executeQuery("SELECT tags[OFFSET(0)] FROM ArrayValues ORDER BY id")) {
 				assertTrue(rows.next());
 				assertEquals("hello", rows.getString(1));
@@ -331,7 +333,8 @@ class SpannerMetadataReaderTest {
 	void replacesAVirtualGeneratedColumnExpression() throws Exception {
 		try (var connection = createConnection("virtual-" + UUID.randomUUID().toString().substring(0, 8));
 				var sql = connection.createStatement()) {
-			sql.execute("CREATE TABLE VirtualValues (id INT64 NOT NULL, calculated INT64 AS (id + 1)) PRIMARY KEY (id)");
+			sql.execute(
+					"CREATE TABLE VirtualValues (id INT64 NOT NULL, calculated INT64 AS (id + 1)) PRIMARY KEY (id)");
 			sql.executeUpdate("INSERT INTO VirtualValues (id) VALUES (10)");
 			final var dialect = DialectResolver.getInstance().getDialect(connection);
 			final var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
@@ -343,8 +346,9 @@ class SpannerMetadataReaderTest {
 			try {
 				sql.execute(operation.getSqlText());
 			} catch (SQLException exception) {
-				org.junit.jupiter.api.Assumptions.assumeFalse(exception.getMessage() != null
-						&& exception.getMessage().contains("Cannot change the expression of a generated column"),
+				org.junit.jupiter.api.Assumptions.assumeFalse(
+						exception.getMessage() != null && exception.getMessage()
+								.contains("Cannot change the expression of a generated column"),
 						"Local emulator rejects replacing an unindexed virtual generated expression");
 				throw exception;
 			}
@@ -367,8 +371,8 @@ class SpannerMetadataReaderTest {
 						+ " BIT_REVERSED_POSITIVE START COUNTER WITH " + (100 + index));
 			sql.execute("RUN BATCH");
 			connection.setAutoCommit(false);
-			try (var rows = sql.executeQuery("SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE Seq63), "
-					+ "GET_NEXT_SEQUENCE_VALUE(SEQUENCE Seq64)")) {
+			try (var rows = sql.executeQuery(
+					"SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE Seq63), " + "GET_NEXT_SEQUENCE_VALUE(SEQUENCE Seq64)")) {
 				assertTrue(rows.next());
 			}
 			connection.commit();
@@ -395,19 +399,22 @@ class SpannerMetadataReaderTest {
 		final String suffix = UUID.randomUUID().toString().substring(0, 8);
 		try (var source = createConnection("seq-source-" + suffix);
 				var target = createConnection("seq-target-" + suffix);
-				var sourceSql = source.createStatement(); var targetSql = target.createStatement()) {
+				var sourceSql = source.createStatement();
+				var targetSql = target.createStatement()) {
 			sourceSql.execute("CREATE SCHEMA Sales");
 			sourceSql.execute("CREATE SEQUENCE Sales.OrderSeq BIT_REVERSED_POSITIVE START COUNTER WITH 100");
 			sourceSql.execute("CREATE SEQUENCE OrderSeq BIT_REVERSED_POSITIVE START COUNTER WITH 200");
 			sourceSql.execute("CREATE TABLE Allocations (id INT64 NOT NULL) PRIMARY KEY (id)");
-			sourceSql.executeUpdate("INSERT INTO Allocations (id) VALUES (GET_NEXT_SEQUENCE_VALUE(SEQUENCE Sales.OrderSeq))");
+			sourceSql.executeUpdate(
+					"INSERT INTO Allocations (id) VALUES (GET_NEXT_SEQUENCE_VALUE(SEQUENCE Sales.OrderSeq))");
 			final var sourceDialect = DialectResolver.getInstance().getDialect(source);
-			final var sequences = sourceDialect.getCatalogReader().getSchemaReader().getSequenceReader().getAllFull(source);
+			final var sequences = sourceDialect.getCatalogReader().getSchemaReader().getSequenceReader()
+					.getAllFull(source);
 			assertEquals(2, sequences.size());
-			final var usedMetadata = sequences.stream().filter(sequence -> "Sales".equalsIgnoreCase(sequence.getSchemaName()))
-					.findFirst().orElseThrow();
-			final var unusedMetadata = sequences.stream().filter(sequence -> !"Sales".equalsIgnoreCase(sequence.getSchemaName()))
-					.findFirst().orElseThrow();
+			final var usedMetadata = sequences.stream()
+					.filter(sequence -> "Sales".equalsIgnoreCase(sequence.getSchemaName())).findFirst().orElseThrow();
+			final var unusedMetadata = sequences.stream()
+					.filter(sequence -> !"Sales".equalsIgnoreCase(sequence.getSchemaName())).findFirst().orElseThrow();
 			final var states = com.sqlapp.data.db.dialect.spanner.sql.SpannerSequenceState.capture(source,
 					List.of(usedMetadata, unusedMetadata));
 			assertNotNull(states.getFirst().counter());
@@ -419,10 +426,10 @@ class SpannerMetadataReaderTest {
 			assertNull(unusedMetadata.getLastValue());
 			final var registry = DialectResolver.getInstance().getDialect(target).createSqlFactoryRegistry();
 			targetSql.execute("CREATE SCHEMA Sales");
-			targetSql.execute(registry.createSql(states.getFirst().forCreate(usedMetadata, 1000),
-					SqlType.CREATE).getFirst().getSqlText());
-			targetSql.execute(registry.createSql(states.getLast().forCreate(unusedMetadata, 1000),
-					SqlType.CREATE).getFirst().getSqlText());
+			targetSql.execute(registry.createSql(states.getFirst().forCreate(usedMetadata, 1000), SqlType.CREATE)
+					.getFirst().getSqlText());
+			targetSql.execute(registry.createSql(states.getLast().forCreate(unusedMetadata, 1000), SqlType.CREATE)
+					.getFirst().getSqlText());
 			target.setAutoCommit(false);
 			try (var rows = targetSql.executeQuery("SELECT GET_NEXT_SEQUENCE_VALUE(SEQUENCE Sales.OrderSeq), "
 					+ "GET_NEXT_SEQUENCE_VALUE(SEQUENCE OrderSeq)")) {

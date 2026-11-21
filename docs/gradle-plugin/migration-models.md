@@ -125,8 +125,10 @@ succeeded remain. `stateFile` is not written after a failed run.
 
 ## Declared columns
 
-A `table` model can declare its output columns and primary key. Declare them
-for every model that is loaded into another database:
+A `table` model can declare its output columns and primary key. The
+declaration is optional, but when present it is a contract for all columns:
+the query must return exactly the declared columns. Leave internal models
+undeclared, and declare every model that is loaded into another database:
 
 ```yaml
 models:
@@ -149,19 +151,34 @@ as the transfer mapping file. CHAR, VARCHAR, NCHAR and NVARCHAR need a length.
 In YAML flow style, quote types that contain a comma:
 `{name: TOTAL, type: "DECIMAL(12,2)"}`.
 
-DuckDB then creates the table with these columns, NOT NULL constraints, the
-primary key and a length check for character columns, and fills it with
-`INSERT ... SELECT`. A row that does not fit fails the model before anything
-reaches the target:
+The model query runs once into a temporary table. Its rows are checked
+there, and the same rows are inserted into a table created with the declared
+columns, NOT NULL constraints, the primary key and a length check for
+character columns. A row that does not fit fails the model before anything
+reaches the target, and the previous table is kept:
 
+- a value that the declared type would change or cannot hold: a DECIMAL with
+  more fraction digits than the declared scale, a fractional or too large
+  number for an integer type, a DOUBLE such as `0.1 + 0.2` whose exact value
+  has more digits than the scale, a
+  TIMESTAMP with a time for a DATE, text that is not in the canonical form of
+  the declared type;
 - a string longer than the declared length;
 - NULL in a `notNull` or primary key column, or a duplicate key;
-- a number outside the declared precision, or a value that cannot be cast to
-  the declared type;
 - a query that returns a column that is not declared, or misses one.
 
-Values are cast to the declared types; a DECIMAL with more fraction digits is
-rounded to the declared scale. Primary key columns are always NOT NULL.
+A value is accepted when casting it to the declared type and back gives the
+same value, so widening an integer, dropping trailing zeros or parsing
+`'2026-11-20'` as a DATE is fine. Conversions that change values belong in the
+model SQL, where they are visible and reviewed:
+
+```sql
+SELECT customer_id, ROUND(total, 2) AS total, CAST(ordered_at AS DATE) AS order_date
+FROM /*$ref('stg_order')*/stg_order
+```
+
+The error names the model, the columns, the number of rows and the types; it
+contains no data values. Primary key columns are always NOT NULL.
 
 DuckDB keeps the types, NOT NULL and the primary key, but not string lengths
 (`VARCHAR(n)` has no effect in DuckDB). With `targetMappingFile`, the task

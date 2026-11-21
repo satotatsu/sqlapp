@@ -291,6 +291,35 @@ class InformixMetadataReaderTest {
 	}
 
 	@Test
+	void enrichesExistingPrimaryKeysWithNamedBackingIndexesInConstantQueries() throws Exception {
+		final Tables reader = new Tables();
+		final Table table = new Table("items").setCatalogName("testdb").setSchemaName("owner");
+		table.getColumns().add(new Column("id"));
+		final var primary = table.getConstraints().addPrimaryKeyConstraint("pk", "id");
+		final var values = indexRow("owner", "items", "id", 1);
+		values.put("constraint_name", "pk");
+		values.put("constraint_type", "P");
+		values.put("raw_index_keys", "1 [1]");
+		values.put("backing_named", "1");
+		reader.rows.add(values);
+		final DoubleKeyMap<String, String, Table> tables = new DoubleKeyMap<>();
+		tables.put("owner", "items", table);
+		reader.setUniqueConstraints(null, tables);
+		assertEquals(2, reader.queries);
+		assertSame(primary, table.getConstraints().get("pk"));
+		assertTrue(primary.isPrimaryKey());
+		assertEquals(1, table.getConstraints().size());
+		assertEquals(1, table.getIndexes().size());
+		assertEquals("ix", primary.getIndexName());
+		assertTrue(primary.getIndex().isUnique());
+		assertTrue(table.getColumns().get("id").isNotNull());
+		reader.setUniqueConstraints(null, tables);
+		assertEquals(4, reader.queries);
+		assertEquals(1, table.getIndexes().size());
+		assertSame(primary, table.getConstraints().get("pk"));
+	}
+
+	@Test
 	void readsRollingPolicyAndDisabledIntervalWithoutInventingAnAction() throws Exception {
 		final Tables reader = new Tables();
 		final Table table = new Table("rolling");

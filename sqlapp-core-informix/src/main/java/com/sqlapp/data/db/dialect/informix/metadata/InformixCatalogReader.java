@@ -16,7 +16,47 @@ public class InformixCatalogReader extends JdbcCatalogReader {
 	}
 
 	@Override
+	protected com.sqlapp.data.db.metadata.ObjectPrivilegeReader newObjectPrivilegeReader() {
+		return new InformixObjectPrivilegeReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.ColumnPrivilegeReader newColumnPrivilegeReader() {
+		return new InformixColumnPrivilegeReader(getDialect());
+	}
+
+	@Override
 	protected SchemaReader newSchemaReader() {
 		return new InformixSchemaReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.TableSpaceReader newTableSpaceReader() {
+		return new InformixTableSpaceReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.SettingReader newSettingReader() {
+		return new InformixSettingReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.UserReader newUserReader() {
+		return new InformixUserReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.RoleReader newRoleReader() {
+		return new InformixRoleReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.RoleMemberReader newRoleMemberReader() {
+		return new InformixRoleMemberReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.RoutinePrivilegeReader newRoutinePrivilegeReader() {
+		return new InformixRoutinePrivilegeReader(getDialect());
 	}
 }

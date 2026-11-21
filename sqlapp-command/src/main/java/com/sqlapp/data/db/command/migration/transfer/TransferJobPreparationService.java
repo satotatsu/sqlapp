@@ -212,8 +212,8 @@ public final class TransferJobPreparationService {
 			phase = "resolving target table identities in the generated bulk configuration";
 			var resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
 			var intervalPlan = TransferIntervalProjection.prepare(to, resolved.plan(), sourceDialect,
-					configuration.schemaMode(), configuration.effectiveTargetPreparation()
-							== TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
+					configuration.schemaMode(), configuration
+							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE);
 			if (TransferIntervalProjection.capture(schema, intervalPlan, to)) {
 				AtomicMigrationFile.write(xml, temporary -> {
 					try (var writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
@@ -222,8 +222,11 @@ public final class TransferJobPreparationService {
 						throw new IOException("Unable to capture interval projection", failure);
 					}
 				});
-				definition.put("schemaFingerprint", BoundedMigrationFile.sha256(xml, 16_777_216L, "maxSchemaBytes", "Schema"));
-				bulk = bulkIO.write(bulk.file(), TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping), bulk.fingerprint());
+				definition.put("schemaFingerprint",
+						BoundedMigrationFile.sha256(xml, 16_777_216L, "maxSchemaBytes", "Schema"));
+				bulk = bulkIO.write(bulk.file(),
+						TransferNameMappingIO.pinDataJob(new YamlConverter().toJsonString(definition), mapping),
+						bulk.fingerprint());
 				resolved = resolver.resolveJob(bulk.file().toFile(), from, bulk.fingerprint());
 				intervalPlan = TransferIntervalProjection.restore(resolved.plan());
 			}

@@ -55,11 +55,7 @@ public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, Defau
 		// "INTERVAL DAY(", ") TO MINUTE(", ")"
 		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(prefix + "\\s*(\\((?<length>\\s*[0-9]+\\s*)\\s*"
 				+ middle + "\\s*(\\s*,\\s*(?<scale>\\s*[0-9]+\\s*))?\\))?\\s*" + suffix, (m, c) -> {
-					String value = m.group("dataTypeName");
-					if (value != null) {
-						c.setDataTypeName(value);
-					}
-					value = m.group("length");
+					String value = m.group("length");
 					if (value != null) {
 						c.setLength(value);
 					} else {

@@ -133,8 +133,9 @@ public class InformixColumnReader extends JdbcColumnReader {
 	}
 
 	private void setNativeType(Column column, String declaration) {
-		var intervalList = java.util.regex.Pattern.compile("LIST\\s*\\(\\s*(INTERVAL .*)\\s*NOT NULL\\s*\\)",
-				java.util.regex.Pattern.CASE_INSENSITIVE).matcher(declaration.strip());
+		var intervalList = java.util.regex.Pattern
+				.compile("LIST\\s*\\(\\s*(INTERVAL .*)\\s*NOT NULL\\s*\\)", java.util.regex.Pattern.CASE_INSENSITIVE)
+				.matcher(declaration.strip());
 		if (intervalList.matches()) {
 			String element = intervalList.group(1).toUpperCase(java.util.Locale.ROOT);
 			column.setDataType(element.contains("YEAR") || element.contains("MONTH")

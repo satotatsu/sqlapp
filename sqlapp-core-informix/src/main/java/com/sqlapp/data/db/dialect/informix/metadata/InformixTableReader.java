@@ -170,29 +170,40 @@ public class InformixTableReader extends JdbcTableReader {
 			if (table == null
 					|| table.getCatalogName() != null && !table.getCatalogName().equals(index.getCatalogName()))
 				continue;
-			if (table.getConstraints().get(metadata.constraintName()) != null)
-				continue;
-			final UniqueConstraint constraint = new UniqueConstraint(metadata.constraintName(), false);
+			final var existing = table.getConstraints().get(metadata.constraintName());
+			if (existing != null && (!(existing instanceof UniqueConstraint)
+					|| ((UniqueConstraint) existing).isPrimaryKey() != metadata.primaryKey()))
+				throw new IllegalStateException(
+						"Conflicting Informix key constraint metadata: " + metadata.constraintName());
+			final UniqueConstraint constraint = existing instanceof UniqueConstraint unique ? unique
+					: new UniqueConstraint(metadata.constraintName(), metadata.primaryKey());
 			if (index.getIndexType() == com.sqlapp.data.schemas.IndexType.Function) {
 				throw new UnsupportedOperationException(
 						"Functional Informix UNIQUE constraint is not representable: " + metadata.constraintName());
 			}
-			index.getColumns().forEach(column -> {
-				if (table.getColumns().get(column.getName()) == null) {
-					throw new IllegalStateException(
-							"Missing Informix UNIQUE constraint column: " + table.getName() + "." + column.getName());
-				}
-				constraint.getColumns().add(table.getColumns().get(column.getName()), column.getOrder());
-			});
-			table.getConstraints().add(constraint);
+			if (existing != null && !constraint.getColumns().stream().map(c -> c.getName()).toList()
+					.equals(index.getColumns().stream().map(c -> c.getName()).toList()))
+				throw new IllegalStateException("Conflicting Informix key columns: " + metadata.constraintName());
+			if (existing == null)
+				index.getColumns().forEach(column -> {
+					if (table.getColumns().get(column.getName()) == null) {
+						throw new IllegalStateException("Missing Informix UNIQUE constraint column: " + table.getName()
+								+ "." + column.getName());
+					}
+					constraint.getColumns().add(table.getColumns().get(column.getName()), column.getOrder());
+				});
+			if (existing == null)
+				table.getConstraints().add(constraint);
 			if (backing) {
 				if (index.getName().startsWith(" "))
 					index.setName("sqlapp_" + Integer.toUnsignedString(
 							(table.getSchemaName() + "." + table.getName() + "." + constraint.getName()).hashCode(),
 							36));
-				if (table.getIndexes().contains(index.getName()))
-					throw new IllegalStateException("Ambiguous Informix backing index: " + index.getName());
-				table.getIndexes().add(index);
+				final var existingIndex = table.getIndexes().get(index.getName());
+				if (existingIndex == null)
+					table.getIndexes().add(index);
+				else if (!existingIndex.equals(index))
+					throw new IllegalStateException("Conflicting Informix backing index: " + index.getName());
 				constraint.setIndexName(index.getName());
 				constraint.getSpecifics().put(INFORMIX_BACKING_INDEX_REQUIRED, "true");
 			}

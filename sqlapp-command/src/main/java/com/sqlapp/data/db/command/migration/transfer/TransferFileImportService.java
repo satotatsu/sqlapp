@@ -234,8 +234,9 @@ public final class TransferFileImportService {
 							|| TransferIntervalCodec.interval(column);
 					String text = value == null ? "null"
 							: TransferIntervalCodec.interval(column) ? TransferIntervalCodec.encode(column, value)
-							: TransferCsvTemporalCodec.temporal(column) ? TransferCsvTemporalCodec.encode(column, value)
-									: value.toString();
+									: TransferCsvTemporalCodec.temporal(column)
+											? TransferCsvTemporalCodec.encode(column, value)
+											: value.toString();
 					boolean truncated = text.codePointCount(0, text.length()) > 512;
 					if (truncated)
 						text = text.substring(0, text.offsetByCodePoints(0, 512));

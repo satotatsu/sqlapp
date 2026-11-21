@@ -91,9 +91,11 @@ public class Postgres extends Dialect {
 			if (defaultValue.strip().matches("(?i)CURRENT_TIMESTAMP(?:\\s*\\(\\s*[0-6]?\\s*\\))?")) {
 				final String expression = defaultValue.strip();
 				final int opening = expression.indexOf('(');
-				final String digits = opening < 0 ? "" : expression.substring(opening + 1, expression.length() - 1).strip();
-				candidate.setDefaultValue(digits.isEmpty() || Long.parseLong(digits) == precision
-						? "statement_timestamp()" : "CAST(statement_timestamp() AS TIMESTAMPTZ(" + digits + "))");
+				final String digits = opening < 0 ? ""
+						: expression.substring(opening + 1, expression.length() - 1).strip();
+				candidate.setDefaultValue(
+						digits.isEmpty() || Long.parseLong(digits) == precision ? "statement_timestamp()"
+								: "CAST(statement_timestamp() AS TIMESTAMPTZ(" + digits + "))");
 			} else if ("NULL".equalsIgnoreCase(defaultValue.strip())) {
 				candidate.setDefaultValue("NULL");
 			} else {
@@ -509,7 +511,6 @@ public class Postgres extends Dialect {
 		//
 	}
 
-
 	private static void configureInterval(final DbDataType<?> type) {
 		final var converter = new com.sqlapp.data.db.dialect.postgres.converter.FromPGIntervalConverter();
 		type.setJdbcTypeHandler(new PostgresIntervalJdbcTypeHandler(type.getDataType()));
@@ -523,20 +524,25 @@ public class Postgres extends Dialect {
 		if (column.getDataType() != null && column.getArrayDimension() > 0
 				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
 			var scalar = column.clone().setArrayDimension(0);
-			return value == null ? "NULL" : com.sqlapp.data.db.datatype.IntervalArrays.literal(value,
-					com.sqlapp.data.db.datatype.IntervalArrays.dimensions(value), leaf -> getSqlValueDefinition(scalar, leaf))
-					+ "::interval" + "[]".repeat(column.getArrayDimension());
+			return value == null ? "NULL"
+					: com.sqlapp.data.db.datatype.IntervalArrays.literal(value,
+							com.sqlapp.data.db.datatype.IntervalArrays.dimensions(value),
+							leaf -> getSqlValueDefinition(scalar, leaf)) + "::interval"
+							+ "[]".repeat(column.getArrayDimension());
 		}
 		if (value != null && column.getDataType() != null && column.getArrayDimension() == 0
 				&& column.getDataType().getMetaTtype() == com.sqlapp.data.db.datatype.MetaType.INTERVAL) {
 			final var interval = PostgresIntervalCodec.decode(value);
-			if (interval != null) PostgresIntervalCodec.encode(interval, column);
+			if (interval != null)
+				PostgresIntervalCodec.encode(interval, column);
 			if (interval != null && PostgresIntervalBinary.required(interval)) {
 				var chunk = java.time.Duration.ofHours(Integer.MAX_VALUE);
-				if (interval.timePart().isNegative()) chunk = chunk.negated();
+				if (interval.timePart().isNegative())
+					chunk = chunk.negated();
 				var first = new com.sqlapp.data.interval.IntervalValue(interval.months(), interval.days(), chunk);
 				var second = new com.sqlapp.data.interval.IntervalValue(0, 0, interval.timePart().minus(chunk));
-				return "(" + super.getSqlValueDefinition(column, first) + " + " + super.getSqlValueDefinition(column, second) + ")";
+				return "(" + super.getSqlValueDefinition(column, first) + " + "
+						+ super.getSqlValueDefinition(column, second) + ")";
 			}
 			return super.getSqlValueDefinition(column, interval);
 		}

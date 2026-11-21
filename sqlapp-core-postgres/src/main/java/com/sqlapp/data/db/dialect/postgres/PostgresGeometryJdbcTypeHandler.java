@@ -85,8 +85,7 @@ public class PostgresGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	/**
 	 * PostGIS へ送る EWKB(リトルエンディアン)に変換します。通常の INSERT と COPY で同じ表現を使うために共有します。
 	 * 
-	 * @param geometry
-	 *            図形
+	 * @param geometry 図形
 	 * @return EWKB
 	 */
 	public static byte[] toEwkb(final Geometry<?> geometry) {

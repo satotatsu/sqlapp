@@ -120,7 +120,8 @@ public class PostgresBulkDataReader extends Reader {
 			return toHex(PostgresGeometryJdbcTypeHandler.toEwkb(org.geolatte.geom.jts.JTS.from(geometry)));
 		}
 		if (value instanceof AbstractGeometry geometry) {
-			// PostgreSQL built-in geometric types: sqlapp's text form is valid PostgreSQL input
+			// PostgreSQL built-in geometric types: sqlapp's text form is valid PostgreSQL
+			// input
 			return geometry.toString();
 		}
 		if (value instanceof byte[] bytes) {
@@ -152,7 +153,8 @@ public class PostgresBulkDataReader extends Reader {
 			} else if (element.getClass().isArray() && !(binaryElements && element instanceof byte[])) {
 				builder.append(toArrayText(element, binaryElements, column));
 			} else {
-				builder.append('"').append(toText(element, column).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+				builder.append('"').append(toText(element, column).replace("\\", "\\\\").replace("\"", "\\\""))
+						.append('"');
 			}
 		}
 		return builder.append('}').toString();

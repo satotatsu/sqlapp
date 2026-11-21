@@ -19,24 +19,22 @@ import com.sqlapp.data.db.dialect.postgres.converter.ToPGIntervalConverter;
 import com.sqlapp.data.interval.IntervalValue;
 
 class PostgresIntervalCodecTest {
-	@Test void oldServerClockAndIntMinimumDayOutputRemainExact() {
+	@Test
+	void oldServerClockAndIntMinimumDayOutputRemainExact() {
 		var value = IntervalValue.parse("PT25H0.123456S");
 		assertEquals(value, PostgresIntervalCodec.parse(PostgresIntervalCodec.encode(value)));
 		assertTrue(PostgresIntervalCodec.encode(value).endsWith("+25:00:00.123456"));
 		assertEquals(new IntervalValue(Integer.MAX_VALUE, Integer.MIN_VALUE, Duration.ZERO),
 				PostgresIntervalCodec.parse("+178956970-7 --2147483648 +0:00:00"));
 	}
+
 	@ParameterizedTest
-	@CsvSource(delimiter = '|', value = {
-		"1 year 2 mons 3 days 04:05:06.123456|P14M3DT14706.123456S",
-		"-1 year -2 mons +3 days -04:05:06|P-14M3DT-14706S",
-		"@ 1 year 2 mons -3 days 4 hours 5 mins 6 secs ago|P-14M3DT-14706S",
-		"-1-2 +3 -4:05:06|P-14M3DT-14706S",
-		"1-2|P14M", "-1-2|P-14M", "3 4:05:06|P3DT14706S",
-		"-3 04:05:06|P-3DT-14706S", "-3 +04:05:06|P-3DT14706S",
-		"1 day -01:00:00|P1DT-3600S", "25:00:00|PT90000S",
-		"-00:00:00.000001|PT-0.000001S", "P-1Y-2M3DT-4H-5M-6S|P-14M3DT-14706S",
-		"@ 0|PT0S", "00:00:00|PT0S" })
+	@CsvSource(delimiter = '|', value = { "1 year 2 mons 3 days 04:05:06.123456|P14M3DT14706.123456S",
+			"-1 year -2 mons +3 days -04:05:06|P-14M3DT-14706S",
+			"@ 1 year 2 mons -3 days 4 hours 5 mins 6 secs ago|P-14M3DT-14706S", "-1-2 +3 -4:05:06|P-14M3DT-14706S",
+			"1-2|P14M", "-1-2|P-14M", "3 4:05:06|P3DT14706S", "-3 04:05:06|P-3DT-14706S", "-3 +04:05:06|P-3DT14706S",
+			"1 day -01:00:00|P1DT-3600S", "25:00:00|PT90000S", "-00:00:00.000001|PT-0.000001S",
+			"P-1Y-2M3DT-4H-5M-6S|P-14M3DT-14706S", "@ 0|PT0S", "00:00:00|PT0S" })
 	void parsesAllServerOutputStylesExactly(final String input, final String expected) {
 		final IntervalValue value = IntervalValue.parse(expected);
 		assertEquals(value, PostgresIntervalCodec.parse(input));
@@ -72,13 +70,16 @@ class PostgresIntervalCodecTest {
 		final var to = new ToPGIntervalConverter();
 		assertThrows(ArithmeticException.class, () -> to.convertObject(IntervalValue.parse("PT0.000000001S")));
 		assertThrows(ArithmeticException.class, () -> to.convertObject("PT-0.000000001S"));
-		assertThrows(ArithmeticException.class, () -> to.convertObject(new IntervalValue((long) Integer.MAX_VALUE + 1, 0, Duration.ZERO)));
-		assertThrows(ArithmeticException.class, () -> to.convertObject(new IntervalValue(0, (long) Integer.MIN_VALUE - 1, Duration.ZERO)));
-		assertThrows(ArithmeticException.class, () -> to.convertObject(new IntervalValue(0, 0, Duration.ofSeconds(Long.MAX_VALUE))));
-		assertThrows(IllegalArgumentException.class, () -> PostgresIntervalCodec.parse(
-				"+2147483647 mons +2147483647 days +9223372036854775807 microseconds"));
-		assertThrows(IllegalArgumentException.class, () -> PostgresIntervalCodec.parse(
-				"-2147483648 mons -2147483648 days -9223372036854775808 microseconds"));
+		assertThrows(ArithmeticException.class,
+				() -> to.convertObject(new IntervalValue((long) Integer.MAX_VALUE + 1, 0, Duration.ZERO)));
+		assertThrows(ArithmeticException.class,
+				() -> to.convertObject(new IntervalValue(0, (long) Integer.MIN_VALUE - 1, Duration.ZERO)));
+		assertThrows(ArithmeticException.class,
+				() -> to.convertObject(new IntervalValue(0, 0, Duration.ofSeconds(Long.MAX_VALUE))));
+		assertThrows(IllegalArgumentException.class, () -> PostgresIntervalCodec
+				.parse("+2147483647 mons +2147483647 days +9223372036854775807 microseconds"));
+		assertThrows(IllegalArgumentException.class, () -> PostgresIntervalCodec
+				.parse("-2147483648 mons -2147483648 days -9223372036854775808 microseconds"));
 	}
 
 	@ParameterizedTest
@@ -98,7 +99,8 @@ class PostgresIntervalCodecTest {
 		nullDriver.setValue(null);
 		assertNull(from.convertObject(nullDriver));
 		final PGobject wrong = new PGobject();
-		wrong.setType("point"); wrong.setValue("(1,2)");
+		wrong.setType("point");
+		wrong.setValue("(1,2)");
 		assertThrows(IllegalArgumentException.class, () -> from.convertObject(wrong));
 		final IntervalValue value = IntervalValue.parse("P1DT-1H");
 		assertSame(value, from.copy(value));

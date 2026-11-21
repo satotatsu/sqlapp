@@ -6,9 +6,9 @@
 package com.sqlapp.data.db.dialect.duckdb.model;
 
 import java.sql.Connection;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -16,15 +16,10 @@ import java.util.stream.Collectors;
 
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.migration.MigrationModel;
 import com.sqlapp.data.schemas.migration.MigrationModelColumn;
 import com.sqlapp.data.schemas.migration.MigrationModelSource;
-import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.bulk.AbstractMigrationModelExecutor;
-import com.sqlapp.jdbc.sql.JdbcQueryHandler;
-import com.sqlapp.jdbc.sql.ResultSetNextHandler;
-import com.sqlapp.jdbc.sql.SqlParser;
 
 /**
  * Builds models inside DuckDB. Tables are replaced with
@@ -36,14 +31,20 @@ import com.sqlapp.jdbc.sql.SqlParser;
  * constraints, the primary key and a length check for character columns, and is
  * then filled with {@code INSERT ... SELECT}. DuckDB ignores declared string
  * lengths, so the length check is what rejects values that would not fit the
- * target. Values are cast to the declared types; a value that cannot be cast or
- * violates a constraint fails the model.
+ * target. The query result is staged once in a temporary table, so the rows
+ * that are checked are the rows that are inserted. A value that would change
+ * when cast to its declared type (rounding, truncation, overflow) or cannot be
+ * cast fails the model; conversions that change values belong in the model SQL.
+ * A value that violates a constraint fails the model too.
  * </p>
  */
 public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelExecutor {
 	private static final String EXISTING_TYPE_SQL = "SELECT table_type FROM information_schema.tables"
 			+ " WHERE table_catalog = current_database() AND lower(table_schema) = lower(coalesce(?, current_schema()))"
 			+ " AND lower(table_name) = lower(?)";
+
+	/** Holds the model result while it is checked, so the query runs once. */
+	private static final String STAGE = "sqlapp_model_stage";
 
 	public DuckDbMigrationModelExecutor(final Dialect dialect) {
 		super(dialect);
@@ -77,17 +78,99 @@ public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelEx
 
 	private void materializeDeclared(final Connection connection, final MigrationModel model, final String relation,
 			final String selectSql) throws SQLException {
-		checkResultColumns(model, resultColumns(connection, model, selectSql));
-		final String existing = existingType(connection, model);
-		if (existing != null) {
-			execute(connection, ("VIEW".equalsIgnoreCase(existing) ? "DROP VIEW " : "DROP TABLE ") + relation,
+		// The query runs once; the checked rows are the inserted rows.
+		execute(connection,
+				"CREATE OR REPLACE TEMP TABLE " + STAGE + " AS\nSELECT * FROM (\n" + selectSql + "\n) AS model_result",
+				model.parameters());
+		try {
+			final Map<String, String> resultTypes = resultTypes(connection);
+			checkResultColumns(model, new ArrayList<>(resultTypes.keySet()));
+			checkLosslessConversion(connection, model, resultTypes);
+			final String existing = existingType(connection, model);
+			if (existing != null) {
+				execute(connection, ("VIEW".equalsIgnoreCase(existing) ? "DROP VIEW " : "DROP TABLE ") + relation,
+						Map.of());
+			}
+			execute(connection, createTable(model, relation), Map.of());
+			final String columns = model.columns().stream().map(column -> identifier(column.name()))
+					.collect(Collectors.joining(", "));
+			execute(connection, "INSERT INTO " + relation + " (" + columns + ")\nSELECT " + columns + " FROM " + STAGE,
 					Map.of());
+		} catch (final SQLException | RuntimeException e) {
+			// A failed statement can abort the transaction; keep the original error.
+			try {
+				dropStage(connection);
+			} catch (final SQLException dropFailure) {
+				e.addSuppressed(dropFailure);
+			}
+			throw e;
 		}
-		execute(connection, createTable(model, relation), Map.of());
-		final String columns = model.columns().stream().map(column -> identifier(column.name()))
-				.collect(Collectors.joining(", "));
-		execute(connection, "INSERT INTO " + relation + " (" + columns + ")\nSELECT " + columns + " FROM (\n"
-				+ selectSql + "\n) AS model_result", model.parameters());
+		dropStage(connection);
+	}
+
+	private void dropStage(final Connection connection) throws SQLException {
+		execute(connection, "DROP TABLE IF EXISTS " + STAGE, Map.of());
+	}
+
+	/** Column names and DuckDB types of the staged query result, in order. */
+	private static Map<String, String> resultTypes(final Connection connection) throws SQLException {
+		final Map<String, String> types = new LinkedHashMap<>();
+		try (var statement = connection.createStatement();
+				var resultSet = statement.executeQuery("DESCRIBE " + STAGE)) {
+			while (resultSet.next()) {
+				types.put(resultSet.getString("column_name"), resultSet.getString("column_type"));
+			}
+		}
+		return types;
+	}
+
+	/**
+	 * Fails when casting a value to its declared type would change it: rounding,
+	 * truncation, overflow or a failed conversion. A value is kept when casting it
+	 * to the declared type and back gives the same value. Only counts are reported,
+	 * never the values.
+	 */
+	private void checkLosslessConversion(final Connection connection, final MigrationModel model,
+			final Map<String, String> resultTypes) throws SQLException {
+		final List<MigrationModelColumn> checked = new ArrayList<>();
+		final List<String> sourceTypes = new ArrayList<>();
+		final StringBuilder sql = new StringBuilder("SELECT ");
+		for (final MigrationModelColumn column : model.columns()) {
+			final String sourceType = resultTypes.entrySet().stream()
+					.filter(entry -> entry.getKey().equalsIgnoreCase(column.name())).map(Map.Entry::getValue)
+					.findFirst().orElseThrow();
+			final String declaredType = type(model, column);
+			if (sourceType.equalsIgnoreCase(declaredType)) {
+				continue;
+			}
+			final String name = identifier(column.name());
+			final String cast = "TRY_CAST(" + name + " AS " + declaredType + ")";
+			sql.append(checked.isEmpty() ? "" : ", ").append("count(*) FILTER (WHERE ").append(name)
+					.append(" IS NOT NULL AND (").append(cast).append(" IS NULL OR TRY_CAST(").append(cast)
+					.append(" AS ").append(sourceType).append(") IS DISTINCT FROM ").append(name).append("))");
+			checked.add(column);
+			sourceTypes.add(sourceType);
+		}
+		if (checked.isEmpty()) {
+			return;
+		}
+		sql.append(" FROM ").append(STAGE);
+		final List<String> failures = new ArrayList<>();
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql.toString())) {
+			resultSet.next();
+			for (int i = 0; i < checked.size(); i++) {
+				final long count = resultSet.getLong(i + 1);
+				if (count > 0) {
+					failures.add(checked.get(i).name() + " (" + count + " rows, " + sourceTypes.get(i) + " to "
+							+ checked.get(i).typeText() + ")");
+				}
+			}
+		}
+		if (!failures.isEmpty()) {
+			throw new IllegalArgumentException("Model " + model.name()
+					+ " has values that change or fail when cast to the declared type: " + String.join(", ", failures)
+					+ ". Convert them explicitly in the model SQL, for example with ROUND or CAST.");
+		}
 	}
 
 	private String createTable(final MigrationModel model, final String relation) {
@@ -125,31 +208,6 @@ public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelEx
 					+ column.name() + " in model " + model.name());
 		}
 		return definition;
-	}
-
-	/** Column labels of the model query, read without fetching rows. */
-	private List<String> resultColumns(final Connection connection, final MigrationModel model, final String selectSql)
-			throws SQLException {
-		final List<String> labels = new ArrayList<>();
-		final ParametersContext context = new ParametersContext();
-		context.putAll(model.parameters());
-		new JdbcQueryHandler(
-				SqlParser.getInstance().parse(dialect, "SELECT * FROM (\n" + selectSql + "\n) AS model_result LIMIT 0"),
-				new ResultSetNextHandler() {
-					@Override
-					public void handleResultSetNext(final ExResultSet resultSet) {
-						// No rows are fetched.
-					}
-				}) {
-			@Override
-			protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
-				final ResultSetMetaData metadata = resultSet.getNativeObject().getMetaData();
-				for (int i = 1; i <= metadata.getColumnCount(); i++) {
-					labels.add(metadata.getColumnLabel(i));
-				}
-			}
-		}.execute(connection, context);
-		return labels;
 	}
 
 	private static void checkResultColumns(final MigrationModel model, final List<String> actual) {

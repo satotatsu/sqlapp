@@ -47,10 +47,12 @@ import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 import com.sqlapp.util.file.TextFileWriter;
 
 /**
- * PostgreSQL + PostGIS で、通常の INSERT(JDBC バッチ)と COPY が同じ値を保存すること、 および DB → CSV → DB で意味が保たれることを確認する。
+ * PostgreSQL + PostGIS で、通常の INSERT(JDBC バッチ)と COPY が同じ値を保存すること、 および DB → CSV →
+ * DB で意味が保たれることを確認する。
  * <p>
- * 実DBに接続するため、環境変数 SQLAPP_TEST_POSTGIS_URL(と SQLAPP_TEST_POSTGIS_USER / SQLAPP_TEST_POSTGIS_PASSWORD)
- * が設定されている場合だけ実行する。接続先には PostGIS 拡張が必要。テーブルは一意な名前で作成し、終了時に削除する。
+ * 実DBに接続するため、環境変数 SQLAPP_TEST_POSTGIS_URL(と SQLAPP_TEST_POSTGIS_USER /
+ * SQLAPP_TEST_POSTGIS_PASSWORD) が設定されている場合だけ実行する。接続先には PostGIS
+ * 拡張が必要。テーブルは一意な名前で作成し、終了時に削除する。
  * </p>
  */
 @EnabledIfEnvironmentVariable(named = "SQLAPP_TEST_POSTGIS_URL", matches = ".+")
@@ -60,8 +62,8 @@ class PostgisGeometryInsertCopyIntegrationTest {
 			{ "line", "line" }, { "path_open", "path" }, { "path_closed", "path" }, { "polygon", "polygon" },
 			{ "circle", "circle" }, { "g", "geometry" } };
 
-	private static final DataType[] TYPES = { DataType.POINT, DataType.BOX, DataType.LSEG, DataType.LINE,
-			DataType.PATH, DataType.PATH, DataType.POLYGON, DataType.CIRCLE, DataType.GEOMETRY };
+	private static final DataType[] TYPES = { DataType.POINT, DataType.BOX, DataType.LSEG, DataType.LINE, DataType.PATH,
+			DataType.PATH, DataType.POLYGON, DataType.CIRCLE, DataType.GEOMETRY };
 
 	@TempDir
 	File directory;
@@ -184,7 +186,8 @@ class PostgisGeometryInsertCopyIntegrationTest {
 		}
 		sql.append(" FROM ").append(table).append(" ORDER BY id");
 		final Map<Integer, Map<String, String>> result = new LinkedHashMap<>();
-		try (Statement statement = connection.createStatement(); ResultSet rs = statement.executeQuery(sql.toString())) {
+		try (Statement statement = connection.createStatement();
+				ResultSet rs = statement.executeQuery(sql.toString())) {
 			final int count = rs.getMetaData().getColumnCount();
 			while (rs.next()) {
 				final Map<String, String> values = new LinkedHashMap<>();
@@ -250,9 +253,9 @@ class PostgisGeometryInsertCopyIntegrationTest {
 	 */
 	@Test
 	void sqlappGeometricValuesInGeometryColumn() throws Exception {
-		final com.sqlapp.data.geometry.AbstractGeometry[] values = { new Point(1, 2),
-				new Path(false, 0, 0, 1, 1, 2, 0), new Path(true, 0, 0, 1, 1), new Polygon(0, 0, 1, 1, 1, 0),
-				new Box(2, 3, 0, 1), new Lseg(0, 0, 1, 1), new Circle(1, 2, 3) };
+		final com.sqlapp.data.geometry.AbstractGeometry[] values = { new Point(1, 2), new Path(false, 0, 0, 1, 1, 2, 0),
+				new Path(true, 0, 0, 1, 1), new Polygon(0, 0, 1, 1, 1, 0), new Box(2, 3, 0, 1), new Lseg(0, 0, 1, 1),
+				new Circle(1, 2, 3) };
 		final String[] expected = { "POINT(1 2)", "LINESTRING(0 0,1 1,2 0,0 0)", "LINESTRING(0 0,1 1)",
 				"POLYGON((0 0,1 1,1 0,0 0))", "POLYGON((2 3,0 3,0 1,2 1,2 3))", "LINESTRING(0 0,1 1)" };
 		final List<String> names = new ArrayList<>();
@@ -285,7 +288,8 @@ class PostgisGeometryInsertCopyIntegrationTest {
 		for (final String name : names) {
 			final List<String> rows = new ArrayList<>();
 			try (Statement statement = connection.createStatement();
-					ResultSet rs = statement.executeQuery("SELECT ST_AsEWKT(g), ST_NPoints(g) FROM " + name + " ORDER BY id")) {
+					ResultSet rs = statement
+							.executeQuery("SELECT ST_AsEWKT(g), ST_NPoints(g) FROM " + name + " ORDER BY id")) {
 				while (rs.next()) {
 					rows.add(rs.getString(1) + "|" + rs.getInt(2));
 				}
@@ -302,13 +306,15 @@ class PostgisGeometryInsertCopyIntegrationTest {
 		// sqlapp の型へ読み戻す
 		final JdbcTypeHandler handler = dialect.getDbDataTypes().getDbType(DataType.GEOMETRY).getJdbcTypeHandler();
 		try (Statement statement = connection.createStatement();
-				ResultSet rs = statement.executeQuery("SELECT id, g FROM " + names.get(1) + " WHERE id <= 6 ORDER BY id")) {
+				ResultSet rs = statement
+						.executeQuery("SELECT id, g FROM " + names.get(1) + " WHERE id <= 6 ORDER BY id")) {
 			while (rs.next()) {
 				final int index = rs.getInt(1) - 1;
 				final Object geometry = handler.getObject(rs, "g");
 				final Class<? extends com.sqlapp.data.geometry.AbstractGeometry> type = values[index].getClass();
-				assertEquals(values[index], com.sqlapp.data.converter.SpatialGeometryConversions
-						.fromSpatial((Geometry<?>) geometry, type), "id=" + (index + 1));
+				assertEquals(values[index],
+						com.sqlapp.data.converter.SpatialGeometryConversions.fromSpatial((Geometry<?>) geometry, type),
+						"id=" + (index + 1));
 			}
 		}
 	}
@@ -316,8 +322,8 @@ class PostgisGeometryInsertCopyIntegrationTest {
 	/**
 	 * line 値が2点を通ることを PostgreSQL の演算子で確認する。
 	 */
-	private void assertLineContains(final String table, final int id, final double x1, final double y1,
-			final double x2, final double y2) throws SQLException {
+	private void assertLineContains(final String table, final int id, final double x1, final double y1, final double x2,
+			final double y2) throws SQLException {
 		try (Statement statement = connection.createStatement();
 				ResultSet rs = statement.executeQuery("SELECT point '(" + x1 + "," + y1 + ")' <@ line AND point '(" + x2
 						+ "," + y2 + ")' <@ line FROM " + table + " WHERE id = " + id)) {

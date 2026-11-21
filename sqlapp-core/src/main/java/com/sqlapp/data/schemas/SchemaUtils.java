@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
@@ -562,7 +563,7 @@ public class SchemaUtils {
 		object.validate();
 	}
 
-	private static final Map<Class<?>, Set<Class<?>>> CLASSES_CACHE = CommonUtils.map();
+	private static final Map<Class<?>, Set<Class<?>>> CLASSES_CACHE = new ConcurrentHashMap<>();
 
 	/**
 	 * DROP可能なクラスを取得します
@@ -1076,7 +1077,7 @@ public class SchemaUtils {
 		return builder.toString();
 	}
 
-	private static Map<Class<?>, Set<ISchemaProperty>> ALL_SCHEMA_PROPERTIES_SET = CommonUtils.map();
+	private static final Map<Class<?>, Set<ISchemaProperty>> ALL_SCHEMA_PROPERTIES_SET = new ConcurrentHashMap<>();
 
 	public static Set<ISchemaProperty> getAllSchemaProperties(final Class<?> clazz) {
 		Set<ISchemaProperty> set = ALL_SCHEMA_PROPERTIES_SET.get(clazz);
@@ -1086,6 +1087,7 @@ public class SchemaUtils {
 			set = CommonUtils.linkedSet(schemaProperties.size() + schemaObjectProperties.size());
 			set.addAll(schemaProperties);
 			set.addAll(schemaObjectProperties);
+			set = Collections.unmodifiableSet(set);
 			if (!set.isEmpty()) {
 				ALL_SCHEMA_PROPERTIES_SET.put(clazz, set);
 			}
@@ -1093,7 +1095,7 @@ public class SchemaUtils {
 		return set;
 	}
 
-	private static Map<Class<?>, Set<ISchemaProperty>> SCHEMA_PROPERTIES_SET = CommonUtils.map();
+	private static final Map<Class<?>, Set<ISchemaProperty>> SCHEMA_PROPERTIES_SET = new ConcurrentHashMap<>();
 
 	public static Set<ISchemaProperty> getSchemaProperties(final Class<?> clazz) {
 		Set<ISchemaProperty> set = SCHEMA_PROPERTIES_SET.get(clazz);
@@ -1104,6 +1106,7 @@ public class SchemaUtils {
 					set.add(prop);
 				}
 			}
+			set = Collections.unmodifiableSet(set);
 			if (!set.isEmpty()) {
 				SCHEMA_PROPERTIES_SET.put(clazz, set);
 			}
@@ -1120,7 +1123,7 @@ public class SchemaUtils {
 		return set;
 	}
 
-	private static Map<Class<?>, Set<ISchemaProperty>> SCHEMA_OBJECT_PROPERTIES_SET = CommonUtils.map();
+	private static final Map<Class<?>, Set<ISchemaProperty>> SCHEMA_OBJECT_PROPERTIES_SET = new ConcurrentHashMap<>();
 
 	public static Set<ISchemaProperty> getSchemaObjectProperties(final Class<?> clazz) {
 		Set<ISchemaProperty> set = SCHEMA_OBJECT_PROPERTIES_SET.get(clazz);
@@ -1131,6 +1134,7 @@ public class SchemaUtils {
 					set.add(prop);
 				}
 			}
+			set = Collections.unmodifiableSet(set);
 			if (!set.isEmpty()) {
 				SCHEMA_OBJECT_PROPERTIES_SET.put(clazz, set);
 			}
