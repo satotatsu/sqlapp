@@ -2,7 +2,10 @@
 package com.sqlapp.data.db.dialect.phoenix.sql;
 
 import com.sqlapp.data.db.sql.CreateTableFactory;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
@@ -11,6 +14,34 @@ import com.sqlapp.util.AbstractSqlBuilder;
  */
 public class PhoenixCreateTableFactory extends CreateTableFactory {
 	public static final String COLUMN_FAMILY = "phoenix.columnFamily";
+	/** Complete CREATE TABLE supplied for an explicitly transactional table. */
+	public static final String TRANSACTIONAL_DEFINITION = "phoenix.transactionalDefinition";
+
+	@Override
+	public java.util.List<SqlOperation> createSql(Table table) {
+		final String definition = table.getSpecifics().get(TRANSACTIONAL_DEFINITION);
+		if (definition == null)
+			return super.createSql(table);
+		if (definition.isBlank() || table.getName() == null || table.getName().isBlank() || !Boolean.TRUE
+				.equals(PhoenixDdlOptions.booleanValue(table.getSpecifics(), PhoenixDdlOptions.TRANSACTIONAL)))
+			throw new IllegalArgumentException(
+					"Phoenix transactional definition requires a named table, nonblank DDL and TRANSACTIONAL=true");
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.phoenix.Phoenix phoenix)
+				|| !phoenix.supportsTransactionalTables())
+			throw new UnsupportedOperationException("Phoenix transactional definitions require version 4.7 or later");
+		final var result = new java.util.ArrayList<SqlOperation>();
+		final var builder = createSqlBuilder();
+		builder._add(definition);
+		addSql(result, builder, SqlType.CREATE, table);
+		addIndexDefinitions(table, result);
+		addOtherDefinitions(table, result);
+		return result;
+	}
+
+	@Override
+	protected void addCreateIndexDefinition(Table table, Index index, java.util.List<SqlOperation> result) {
+		result.addAll(getSqlFactoryRegistry().createSql(index, SqlType.CREATE));
+	}
 
 	@Override
 	protected void addOption(Table table, AbstractSqlBuilder<?> builder) {
@@ -23,6 +54,9 @@ public class PhoenixCreateTableFactory extends CreateTableFactory {
 		if (pk != null) {
 			for (int i = 0; i < pk.getColumns().size(); i++) {
 				final var column = table.getColumns().get(pk.getColumns().get(i).getName());
+				if (column == null)
+					throw new IllegalArgumentException("Phoenix primary-key column is missing from the table: "
+							+ pk.getColumns().get(i).getName());
 				if (column != null && column.getArrayDimension() > 0 && i != pk.getColumns().size() - 1)
 					throw new IllegalArgumentException(
 							"Phoenix ARRAY must be the final primary-key column: " + column.getName());

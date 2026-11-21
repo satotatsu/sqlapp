@@ -8,6 +8,7 @@ import com.sqlapp.data.schemas.Sequence;
 public class PhoenixDropSequenceFactory extends AbstractDropSequenceFactory<PhoenixSqlBuilder> {
 	@Override
 	protected void addDropObject(Sequence sequence, PhoenixSqlBuilder builder) {
+		PhoenixCreateSequenceFactory.requireName(sequence);
 		builder.drop().sequence().ifExists(getOptions().isDropIfExists()).name(sequence,
 				getOptions().isDecorateSchemaName());
 	}

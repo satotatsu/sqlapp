@@ -11,6 +11,21 @@ import com.sqlapp.data.schemas.*;
 
 class PhoenixNativeDdlTest {
 	@Test
+	void sequenceChangesFailDuringSchemaMigrationAndInvalidDeclarationsFailEarly() {
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		final var source = new Schema("APP");
+		source.getSequences().add(new Sequence("seq").setStartValue(BigInteger.ONE));
+		final var target = source.clone();
+		target.getSequences().get(0).setIncrementBy(BigInteger.TWO);
+		assertThrows(UnsupportedOperationException.class, () -> registry.createSql(source.diff(target), SqlType.ALTER));
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(new Sequence("seq").setDataType(DataType.VARCHAR), SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> registry.createSql(new Sequence(" "), SqlType.SEQUENCE_NEXT_VALUES));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Sequence(" "), SqlType.DROP));
+	}
+
+	@Test
 	void rejectsUnrepresentableIndexStateAndLocalSalting() {
 		final var table = new Table("t");
 		final var index = new Index("idx");

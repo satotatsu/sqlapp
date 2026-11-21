@@ -10,6 +10,45 @@ import com.sqlapp.data.schemas.*;
 
 class PhoenixDdlOptionsTest {
 	@Test
+	void comparesSaltAndTenantValuesSemanticallyWithoutHidingRealChanges() throws Exception {
+		for (var dialect : java.util.List.of(DialectHolder.defaultDialect, DialectHolder.defaultDialect5_3_1)) {
+			final var original = table();
+			original.getSpecifics().put(PhoenixDdlOptions.SALT_BUCKETS, " 008 ");
+			original.getSpecifics().put(PhoenixDdlOptions.MULTI_TENANT, "FALSE");
+			final Table target = SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+			target.getSpecifics().put(PhoenixDdlOptions.SALT_BUCKETS, "8");
+			target.getSpecifics().put(PhoenixDdlOptions.MULTI_TENANT, "false");
+			final var registry = dialect.createSqlFactoryRegistry();
+			assertTrue(registry.createSql(original.diff(target), SqlType.ALTER).isEmpty());
+			target.getColumns().add(new Column("extra").setDataType(DataType.INT));
+			assertEquals(1, registry.createSql(original.diff(target), SqlType.ALTER).size());
+			for (String key : java.util.List.of(PhoenixDdlOptions.SALT_BUCKETS, PhoenixDdlOptions.MULTI_TENANT)) {
+				final var changed = target.clone();
+				changed.getSpecifics().put(key, key.equals(PhoenixDdlOptions.SALT_BUCKETS) ? "9" : "true");
+				assertThrows(UnsupportedOperationException.class,
+						() -> registry.createSql(original.diff(changed), SqlType.ALTER));
+				changed.getSpecifics().remove(key);
+				assertThrows(UnsupportedOperationException.class,
+						() -> registry.createSql(original.diff(changed), SqlType.ALTER));
+			}
+		}
+	}
+
+	@Test
+	void validatesUnchangedSaltAndTenantOptionsDuringColumnMigration() {
+		for (String key : java.util.List.of(PhoenixDdlOptions.SALT_BUCKETS, PhoenixDdlOptions.MULTI_TENANT)) {
+			for (String invalid : java.util.List.of("", "invalid", "-1", "0", "257", "2147483648")) {
+				final var original = table();
+				original.getSpecifics().put(key, invalid);
+				final var target = original.clone();
+				target.getColumns().add(new Column("extra").setDataType(DataType.INT));
+				assertThrows(IllegalArgumentException.class, () -> DialectHolder.defaultDialect
+						.createSqlFactoryRegistry().createSql(original.diff(target), SqlType.ALTER));
+			}
+		}
+	}
+
+	@Test
 	void checksSaltBoundariesForTablesAndIndexes() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		for (int buckets : new int[] { 1, 256 }) {

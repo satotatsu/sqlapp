@@ -1,5 +1,354 @@
 # Apache Phoenix dialect enhancement
 
+Sequence migrations reject changes to an existing sequence explicitly. CREATE
+accepts the native BIGINT type or an omitted type. CREATE, DROP and value
+allocation require a nonblank sequence name. Sequence counter restoration
+requires a separate migration.
+
+Phoenix INSERT and INSERT_ROWS factories preserve explicit column families in
+UPSERT targets, as does INSERT_SELECT_NOT_EXISTS. That SQL uses a SELECT
+predicate and does not guarantee atomic conflict handling. The same INSERT
+factory supplies positional JDBC batch SQL;
+added row diffs use dialect SQL literals with the row as their target, so
+quoted column names with whitespace do not depend on named bind markers.
+Deleted row diffs generate DELETE predicates from all modeled primary-key
+columns. Added and deleted row diffs require a modeled primary key and non-null
+values for every key column. Added rows must also be able to write all key columns.
+batch sizing and binding continue through the shared JDBC executor.
+
+## Semantic comparison of fixed table options
+
+Index diffs also compare explicit SALT_BUCKETS values as integers. Equivalent
+spellings avoid DROP/CREATE in table and view migrations. An absent setting
+remains distinct from an explicit value, including zero.
+Explicit GLOBAL and LOCAL index types compare case-insensitively. A spelling
+change can accompany a state transition without triggering index recreation.
+Explicit GLOBAL also matches an omitted type, as in CREATE INDEX.
+An explicit BTree model type and a blank predicate compare like omitted values,
+matching CREATE INDEX. Nonblank predicates still require native DDL.
+Sort direction on INCLUDE columns does not trigger index recreation because
+Phoenix only renders sort direction on index keys.
+Table and view migrations treat an index key or INCLUDE column's explicit
+family as redundant when it exactly matches the owning column's family.
+Standalone index ALTER diffs use the same rule.
+Explicit index key prefix lengths and NULL ordering are rejected during CREATE
+and index additions or replacements in migrations.
+
+Table ALTER diffs compare SALT_BUCKETS as a validated integer and MULTI_TENANT
+as a validated boolean, using the same rules as CREATE. For example, `008` and
+`8`, or `FALSE` and `false`, do not prevent an otherwise supported column
+addition. Actual setting changes and removal still require a separate migration;
+absence is not equated with an assumed server default. Invalid unchanged values
+also fail when generating a column migration. DEFAULT_COLUMN_FAMILY keeps exact,
+case-sensitive comparison. No public API, version boundary or XML format changed.
+
+## Identifier validation and escaping
+
+Phoenix identifier quoting now doubles embedded double quotes, retaining the
+existing handling of already quoted names. This applies to all Phoenix resolver
+versions without changing public signatures or the Schema XML format.
+CREATE TABLE rejects primary-key references absent from the table's case-sensitive
+column collection. CREATE INDEX rejects blank ordinary key/INCLUDE names and
+explicit blank column families. Valid family identifiers retain normal quoting
+through XML. No catalog queries or dependencies were added. Native syntax follows
+the [quoted-name grammar](https://phoenix.apache.org/docs/grammar/).
+
+## Strict optional boolean headers
+
+IMMUTABLE_ROWS, MULTI_TENANT and TRANSACTIONAL use the same strict header
+validation for tables and views. Case-insensitive true/false is retained through
+Schema XML; absent fields and SQL NULL remain unknown. Other strings fail with
+the field name instead of relying on JDBC boolean coercion. The existing single
+getTables call and result closure on failure are preserved on all resolver paths.
+No catalog columns, dependencies, public signatures or XML structure changed.
+Live-driver behavior remains unverified.
+
+## Transaction metadata and null storage safety
+
+For an explicitly transactional table, set `phoenix.transactionalDefinition`
+to a trusted, complete CREATE TABLE statement for the destination. On Phoenix
+4.7+ it is emitted as supplied, with modeled indexes still emitted separately.
+The caller specifies the provider and verifies that it is available on the
+destination. Existing tables carrying this definition allow index-only modeled
+changes. Other changes require an explicit native migration so the stored
+CREATE statement cannot silently become stale.
+
+Phoenix's optional getTables TRANSACTIONAL and TRANSACTION_PROVIDER fields now
+survive header retrieval and Schema XML, including unknown/retired provider names.
+No query or transaction-manager connection is added for these fields; older
+driver projections with neither field remain supported. Malformed booleans or
+blank provider names fail, and the JDBC result is closed on failure.
+
+Known transactional tables now refuse modeled CREATE instead of silently
+omitting transaction semantics. This deliberately includes known provider names:
+provider availability, version-specific configuration and transaction guarantees
+need a provider-aware migration, which is outside this local batch. No implicit
+Tephra/Omid selection, downgrade or transaction conversion is generated.
+Explicit TRANSACTIONAL=false can be rendered on 4.7+; a provider without a
+transactional table is rejected. ALTER refuses transaction-flag/provider changes
+or removal, while ordinary column additions to an unchanged transactional table
+remain available and subject to Phoenix's execution checks.
+
+STORE_NULLS (4.3+) is recovered in the existing supplemental table-property query
+only on supported catalog versions and emits a validated boolean CREATE option.
+SQL NULL is retained as unknown rather than an inferred flag. Setting it uses
+PhoenixDdlOptions.STORE_NULLS; transaction metadata uses TRANSACTIONAL and
+TRANSACTION_PROVIDER constants. All values use the existing specifics/XML model.
+Changing/removing STORE_NULLS through ALTER remains explicitly unsupported.
+
+These additions stay in sqlapp-core-phoenix, with additive constants/capabilities
+and no existing signatures, dependencies or XML structure changed. Local tests
+cover optional-field fallback, resource closure, XML, CREATE guards, read version
+boundaries and safe failure paths. No live cluster or transaction behavior was
+tested. The explicit DDL path generates a recreation plan; transaction execution
+and provider availability remain destination-specific.
+
+References: [native transaction semantics](https://phoenix.apache.org/docs/features/transactions/),
+[STORE_NULLS and transaction versions](https://phoenix.apache.org/docs/grammar/),
+[provider evolution](https://issues.apache.org/jira/browse/PHOENIX-4605).
+
+## Metadata cache and guidepost tuning
+
+UPDATE_CACHE_FREQUENCY (Phoenix 4.7+) and GUIDE_POSTS_WIDTH (4.9+) now use the
+existing specifics map for CREATE, Table diffs and supplemental catalog recovery.
+Use PhoenixDdlOptions.UPDATE_CACHE_FREQUENCY with ALWAYS, NEVER or a nonnegative
+BIGINT millisecond count, and PhoenixDdlOptions.GUIDE_POSTS_WIDTH with a nonnegative
+BIGINT byte count or explicit `NULL` to remove a table override. Absent keys emit
+no CREATE setting. Removing a previously explicit key from a diff is ambiguous
+and fails; specify the intended value instead. Case variants and numeric leading
+zeros normalize without unnecessary SQL.
+
+```java
+target.getSpecifics().put(PhoenixDdlOptions.UPDATE_CACHE_FREQUENCY, "ALWAYS");
+target.getSpecifics().put(PhoenixDdlOptions.GUIDE_POSTS_WIDTH, "NULL");
+var operations = dialect.createSqlFactoryRegistry()
+        .createSql(original.diff(target), SqlType.ALTER);
+```
+
+The existing set-based catalog SELECT projects each column only on supported
+versions, with no additional query. Observed GUIDE_POSTS_WIDTH SQL NULL is retained
+as explicit `NULL` (no table override); unselected older/unknown metadata stays
+unset. Phoenix4_7 and its holder constant are additive, with nearest-version
+inheritance. OFFSET/append-only 4.8, DEFAULT 4.9 and multi-row VALUES 5.3.1 keep
+their existing boundaries. Invalid values, overflow and unsupported versions fail.
+
+This batch covers tables; View/index-specific tuning, runtime caching/statistics
+behavior and live old-version execution remain unverified. No shared-core, XML
+structure or dependency changes were added. Local tests cover SQL/XML, metadata
+version boundaries, explicit resets, invalid inputs and no-op normalization.
+
+References: [table options](https://phoenix.apache.org/docs/grammar/),
+[statistics/reset semantics](https://phoenix.apache.org/docs/features/statistics-collection/).
+
+## WAL and append-only schema properties
+
+The existing table specifics map now supports `PhoenixDdlOptions.DISABLE_WAL`
+(`phoenix.disableWal`) and `PhoenixDdlOptions.APPEND_ONLY_SCHEMA`
+(`phoenix.appendOnlySchema`). Both accept explicit true/false values, retain
+their values through Schema XML, and generate native CREATE TABLE options.
+Absent keys emit no setting. No durability or schema-mode default is inferred.
+
+```java
+table.getSpecifics().put(PhoenixDdlOptions.DISABLE_WAL, false);
+table.getSpecifics().put(PhoenixDdlOptions.APPEND_ONLY_SCHEMA, true);
+```
+
+DISABLE_WAL changes use the ordinary Table diff and emit ALTER TABLE ... SET
+DISABLE_WAL=TRUE or FALSE. Equivalent boolean spellings produce no SQL. Removing
+an explicitly recorded value fails as ambiguous; set the intended value instead.
+These operations can accompany existing column/IMMUTABLE_ROWS changes.
+DISABLE_WAL=TRUE intentionally trades away WAL durability: Phoenix documents
+possible data loss on region-server failure. sqlapp only generates SQL and never
+enables it implicitly or promises transaction/rollback guarantees.
+
+APPEND_ONLY_SCHEMA requires a known 4.8+ dialect. Existing Phoenix4_8 and later
+classes expose its capability without changing resolver boundaries. Altering or
+removing this setting is not generated in this batch. When it is true, a Table
+diff that drops columns is refused; column additions remain available. View
+property ALTER/reconstruction limitations remain unchanged.
+
+For known 4.1+ catalogs the existing supplemental table-header SELECT also reads
+DISABLE_WAL; it selects APPEND_ONLY_SCHEMA only from known 4.8+/5+ catalogs.
+No additional SELECT is introduced. SQL NULL remains unset, malformed boolean
+metadata fails, and all results are validated before publishing recovered
+properties. Old/unknown version and view paths retain their existing behavior.
+The common native DISABLE_WAL syntax targets the module's existing 4.1+ scope;
+live catalog, crash recovery and older-version execution are not certified.
+
+No dependencies, existing signatures, XML structure or shared-core behavior
+changed. Local tests cover CREATE/XML, WAL changes in both directions, mixed
+diffs, invalid values, append-only restrictions and catalog version boundaries.
+
+References: [native options and ALTER syntax](https://phoenix.apache.org/docs/grammar/),
+[catalog fields](https://github.com/apache/phoenix/blob/5.2/phoenix-core-client/src/main/java/org/apache/phoenix/jdbc/PhoenixDatabaseMetaData.java).
+
+## User-authored functional indexes
+
+Phoenix 4.3+ now accepts the shared IndexType.Function representation, matching
+the PostgreSQL convention: an unresolved key ReferenceColumn name is SQL expression
+text, while a key resolving to a modeled Column retains ordinary identifier and
+family quoting. Expressions can mix with ordinary keys, descending order and
+INCLUDE columns, and survive Schema XML without new fields or specifics keys.
+
+```java
+Index index = new Index("upper_name").setIndexType(IndexType.Function);
+index.getColumns().add("UPPER(name)", Order.Desc);
+table.getIndexes().add(index);
+var operations = dialect.createSqlFactoryRegistry().createSql(index, SqlType.CREATE);
+```
+
+Select a known 4.3+ dialect through the ordinary resolver. The additive Phoenix4_3
+class/holder constant preserves the later OFFSET, DEFAULT and VALUES boundaries;
+older/unknown legacy dialects refuse functional indexes. Native LOCAL/GLOBAL,
+INCLUDE, existence options and active-state restrictions continue to apply.
+Family qualification for an expression belongs inside the expression itself;
+a separate family specifics value on that expression is rejected. Blank keys
+are rejected. Expressions are user-authored SQL; function availability, syntax,
+types and dependencies are validated by Phoenix at execution, not by a new parser.
+
+The existing Table/View diff path adds/drops/replaces these indexes through the
+native factories. Since expression dependencies are not parsed, any column drop
+with a retained expression index fails clearly: explicitly remove the index first.
+This prevents a plan from silently retaining an index Phoenix may remove as a
+side effect. Structural replacements remain non-atomic DROP/CREATE operations.
+
+This batch does not reconstruct expressions from SYSTEM.CATALOG's internal key
+names. The metadata reader's existing unsupported-functional/internal-key guard
+is retained; live catalog expression recovery is still separate work. No metadata
+queries, shared model/core, XML formats, dependencies or existing signatures were
+changed. Local SQL/XML/version/diff tests do not certify live Phoenix execution.
+
+References: [functional index introduction in 4.3](https://phoenix.apache.org/recent-improvements/),
+[functional index semantics](https://phoenix.apache.org/docs/features/secondary-indexes/).
+
+## State-only index ALTER
+
+Index `SqlType.ALTER` now supports explicit `phoenix.indexState=DISABLE` or
+`UNUSABLE` through the existing specifics map. The ordinary Table/View diff
+entry point also recognizes state-only changes and emits ALTER INDEX instead
+of DROP/CREATE. Changes to key columns, INCLUDE or other declarations retain
+the structural replacement path; standalone index ALTER refuses those changes.
+
+```java
+Table target = original.clone();
+target.getIndexes().get("idx_events").getSpecifics()
+        .put(PhoenixAlterIndexFactory.STATE, "UNUSABLE");
+var operations = dialect.createSqlFactoryRegistry()
+        .createSql(original.diff(target), SqlType.ALTER);
+```
+
+The supported diff states are ACTIVE (also `a` or USABLE), UNUSABLE and DISABLE.
+Equivalent ACTIVE spellings produce no operation. A known UNUSABLE source may
+return to ACTIVE/USABLE using native USABLE. A DISABLE source cannot be enabled
+or made maintained through this path: choose SqlType.REBUILD explicitly.
+Missing states, removal of a state, raw catalog states other than `a`, internal
+INACTIVE/pending/build states and unsupported transitions fail rather than
+guessing whether the physical index is maintained or complete. Direct USABLE
+without a source diff is refused for the same reason. This conservative subset
+does not claim automatic round-trip transitions for every catalog state.
+
+Table/View identity, quoting and schema decoration are preserved. State changes
+can accompany supported table/view column changes; the source and target models
+are not mutated. No IF EXISTS, automatic rebuild, transaction or execution is
+introduced. Native syntax follows the module's existing common 4.1+ target;
+server-state validation, concurrent rebuild activity and live legacy-version
+compatibility remain unverified.
+
+Reference: [Phoenix ALTER INDEX semantics](https://phoenix.apache.org/docs/grammar/).
+
+## Default-family metadata and explicit index rebuild
+
+For known Phoenix 4.1+ server versions, table header retrieval now supplements
+the existing JDBC getTables result with one set-based SYSTEM.CATALOG query for
+DEFAULT_COLUMN_FAMILY. It binds the returned table names, tenant IDs and schema
+names, including global/default-schema objects, then matches the full identity.
+Forty tables still require only one JDBC header call and one catalog SELECT.
+The JDBC header result is closed before the supplemental query. No extra query
+is issued for empty sets, views, pre-4.1 servers or unknown versions. Those
+older/unknown paths retain their prior metadata limitations.
+
+A catalog NULL remains unknown/unset rather than guessing a default family.
+Missing requested headers, duplicates, blank family values and query/permission
+failures are surfaced. Existing specifics/XML/CREATE TABLE handling preserves
+the recovered family and escapes its literal. Catalog visibility must include
+the requested headers; concurrent table removal or visibility differences fail
+instead of silently exporting incomplete metadata. No additional dependency or
+per-table SELECT is introduced.
+
+An existing Index attached to a Table or View can now be rebuilt explicitly:
+
+```java
+var operations = dialect.createSqlFactoryRegistry()
+        .createSql(table.getIndexes().get("idx_events"), SqlType.REBUILD);
+```
+
+This generates `ALTER INDEX idx_events ON <parent> REBUILD`, preserving schema
+decoration and identifier quoting. It does not recreate the table/index, update
+the in-memory state, infer a rebuild from a state difference, or execute SQL.
+There is no implicit IF EXISTS: a missing server index must fail visibly. Index
+name and parent identity are required. This is synchronous native syntax; build
+permissions, runtime availability, concurrent writes and costs are checked by
+Phoenix when the caller executes it. General state transitions remain separate.
+
+Local tests cover JDBC mocks, SQL, XML, version gates, failure/resource handling
+and Table/View rebuild entry points. No Phoenix/HBase catalog query or rebuild
+has been executed against a live server; pre-4.1 native rebuild compatibility
+is not newly certified.
+
+References: [Phoenix catalog column](https://github.com/apache/phoenix/blob/5.2/phoenix-core-client/src/main/java/org/apache/phoenix/jdbc/PhoenixDatabaseMetaData.java),
+[ALTER INDEX](https://phoenix.apache.org/docs/grammar/).
+
+## Value preservation and DML safety
+
+Phoenix DATE/TIME and their unsigned names retain epoch milliseconds in scalar
+JDBC reads/binds, Schema Row conversion, XML and SQL literals. They use a
+Phoenix-specific converter and a full UTC `yyyy-MM-dd HH:mm:ss.SSS` representation,
+including for TIME because Phoenix TIME also stores an epoch value. Local Java
+date/time inputs and strings without an offset are interpreted as UTC; inputs
+with an offset retain the same instant. Sub-millisecond values and invalid inputs
+fail explicitly. Set the Schema/Catalog product identity when serializing rows
+so XML readers can resolve Phoenix; detached table XML without product identity
+cannot infer vendor-specific DATE/TIME semantics. Arrays are outside this change.
+Existing explicit Column converters/formatters retain precedence.
+
+The shared Row XML writer now honors the existing optional dialect column-value
+converter/formatter hook. Without an opt-in its serialization behavior is unchanged.
+This also applies to DuckDB's existing opt-in; no database-specific condition is
+added to core. XML structure, public method signatures and dependencies are unchanged.
+
+Generic UPDATE and MERGE requests (including table/row and diff entry points)
+now fail with an actionable UnsupportedOperationException. Phoenix does not have
+these SQL statements. The implementation does not infer an UPSERT that could
+insert an absent row, discard an optimistic-lock condition or change conflict
+semantics. Ordinary INSERT continues to emit UPSERT, and DELETE remains available.
+
+`SELECT_FOR_APP` supports `_row` as LIMIT and `_offset` as OFFSET. Both are bound
+parameters, omitted for count queries; missing values leave the query unpaged.
+Nonnegative integral values are required, including zero for an empty LIMIT.
+OFFSET requires Phoenix 4.8+, selected by the ordinary resolver. Older/unknown
+versions allow LIMIT and a zero offset, and reject nonzero OFFSET at template
+evaluation. Limit and sequence capability flags now reflect the native factories.
+The default legacy dialect still does not assume OFFSET or DEFAULT support.
+
+Phoenix 5.3+ resolves VARBINARY_ENCODED to the shared VARBINARY/byte[] model while
+preserving the native name through XML and DDL. Ordinary VARBINARY keeps its
+existing default mapping. Encoded binary SQL literals accept byte[] and emit
+`X'...'`; JDBC uses VARBINARY and leaves physical encoding to Phoenix. Earlier
+versions and encoded arrays fail explicitly. The 5.3.1 multi-row VALUES boundary
+and 4.9 DEFAULT boundary remain intact. Phoenix4_8/Phoenix5_3 and holder constants
+are additive API; the existing version classes inherit from the nearer version.
+
+These changes are verified locally, not against a Phoenix/HBase cluster. General
+view reconstruction, additional catalog/HBase properties, functional index and
+index-state migrations, native bulk transport, transaction guarantees and atomic
+replacement remain separate work requiring catalog/driver or migration design
+verification. No external database or schema/data migration is performed here.
+
+References: [DATE/TIME](https://phoenix.apache.org/docs/datatypes/),
+[4.8 OFFSET](https://blogsarchive.apache.org/phoenix/entry/announcing_phoenix_4_8_released),
+[VARBINARY_ENCODED 5.3](https://phoenix.apache.org/docs/features/varbinary-encoded/),
+[SQL grammar](https://phoenix.apache.org/docs/grammar/).
+
 ## Index diffs for tables and views
 
 The ordinary Table/View diff entry point now delegates index additions,
@@ -367,6 +716,38 @@ columns, preserving the JDBC fallback on older supported versions.
 Source: [Apache Phoenix JDBC metadata projections](https://apache.googlesource.com/phoenix/+/740ce13210cf6d876abfde52a58e10fa407b5018/phoenix-core/src/main/java/org/apache/phoenix/jdbc/PhoenixDatabaseMetaData.java).
 
 ## Index and view completion batch
+
+Modeled CREATE VIEW rejects explicit Phoenix view or table options that its
+SELECT-based renderer cannot preserve. Complete native view definitions use
+the shared definition field and survive XML. The supplied statement controls
+qualification, view properties and existence clauses.
+The schema migration uses that definition when adding a view. Changing the
+definition of an existing view requires an explicit migration, since dependent
+views and indexes may need to be handled before the view can be replaced.
+
+Catalog names containing parentheses are retained verbatim as opaque index
+metadata. The XML round trip preserves the marker that blocks modeled CREATE.
+Phoenix's physical key names can differ from the original expressions and
+its index keys can include appended parent primary-key columns. Recreating
+these indexes requires separately supplied native DDL.
+Set `PhoenixCreateIndexFactory.NATIVE_DEFINITION` in the index specifics to a
+trusted, complete CREATE INDEX statement for that index and its owner. The
+statement takes precedence over catalog key names and is emitted verbatim,
+including its own qualification and existence clauses. Retained indexes with
+opaque or native definitions block modeled column deletion because their
+dependencies cannot be inferred.
+
+An observed zero bucket count on a LOCAL index is treated as no separate
+salting clause, allowing metadata-to-DDL recreation. Positive LOCAL bucket
+counts remain visible and cannot be recreated by the modeled CREATE factory.
+GLOBAL zero still explicitly overrides inherited salting.
+
+Index ALTER diffs accept the catalog's disabled state code `d` as DISABLE.
+An explicit rebuild is still required to re-enable a disabled index.
+
+Index metadata rejects blank index or owner names, out-of-range salt counts,
+and duplicate column ordinals across keys and INCLUDE columns. These checks
+apply to both existing catalog query paths without increasing query count.
 
 PhoenixIndexReader reads SYSTEM.CATALOG index headers and columns in at most
 two set-based queries. It does not call getIndexInfo once per table. Index name

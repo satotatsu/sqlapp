@@ -9,6 +9,28 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class PhoenixAlterViewTest {
+	@Test
+	void schemaMigrationUsesNativeViewDefinitionAndRejectsReplacement() throws Exception {
+		final var original = new Schema("Sales");
+		final var target = original.clone();
+		final var view = view();
+		view.getSpecifics().put("phoenix.viewMetadataOnly", true);
+		target.getViews().add(view);
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+		final String ddl = "CREATE VIEW \"Sales\".extended AS SELECT * FROM \"Sales\".base";
+		view.setDefinition(ddl);
+		final Schema restored = SchemaUtils.readXml(new java.io.StringReader(target.asXml()));
+		final var additions = registry.createSql(original.diff(restored), SqlType.ALTER);
+		assertEquals(1, additions.size());
+		assertEquals(ddl, additions.get(0).getSqlText());
+		final var replacement = restored.clone();
+		replacement.getViews().get(0).setDefinition(ddl + " WHERE id = 1");
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(restored.diff(replacement), SqlType.ALTER));
+	}
+
 	private View view() {
 		final var view = new View("extended");
 		view.setSchemaName("Sales");

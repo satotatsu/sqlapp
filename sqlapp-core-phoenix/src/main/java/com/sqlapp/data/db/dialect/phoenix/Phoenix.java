@@ -49,6 +49,11 @@ public class Phoenix extends Dialect {
 	private static final long serialVersionUID = -8635862003765087520L;
 	private static final long SIZE_MAX = LEN_2GB - 1;
 
+	@Override
+	protected String doQuote(final String target) {
+		return getOpenQuote() + target.replace("\"", "\"\"") + getCloseQuote();
+	}
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -116,10 +121,16 @@ public class Phoenix extends Dialect {
 		// Date
 		getDbDataTypes().addDate(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+			final var converter = new com.sqlapp.data.db.dialect.phoenix.converter.PhoenixTemporalConverter(false);
+			type.setConverter(converter).setFormatter(converter).setJdbcTypeHandler(
+					new com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler(java.sql.JDBCType.DATE, converter));
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+			final var converter = new com.sqlapp.data.db.dialect.phoenix.converter.PhoenixTemporalConverter(true);
+			type.setConverter(converter).setFormatter(converter).setJdbcTypeHandler(
+					new com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler(java.sql.JDBCType.TIME, converter));
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp(type -> {
@@ -150,7 +161,10 @@ public class Phoenix extends Dialect {
 		final boolean isArray = array.matches();
 		if (isArray)
 			name = array.group(1).strip();
+		if (name.equals("VARBINARY_ENCODED") && !supportsEncodedBinary())
+			throw new UnsupportedOperationException("Phoenix VARBINARY_ENCODED requires version 5.3 or later");
 		final String base = switch (name) {
+		case "VARBINARY_ENCODED" -> "VARBINARY";
 		case "UNSIGNED_FLOAT" -> "FLOAT";
 		case "UNSIGNED_DOUBLE" -> "DOUBLE";
 		case "UNSIGNED_DATE" -> "DATE";
@@ -215,6 +229,38 @@ public class Phoenix extends Dialect {
 	@Override
 	public String getSimpleName() {
 		return "Phoenix";
+	}
+
+	@Override
+	public com.sqlapp.data.converter.Converter<?> getColumnValueConverter(final com.sqlapp.data.schemas.Column column) {
+		if (column.getArrayDimension() == 0
+				&& (column.getDataType() == DataType.DATE || column.getDataType() == DataType.TIME))
+			return (com.sqlapp.data.converter.Converter<?>) getDbDataType(column).getConverter();
+		return super.getColumnValueConverter(column);
+	}
+
+	@Override
+	public boolean supportsLimit() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
+
+	@Override
+	public String getSqlValueDefinition(final com.sqlapp.data.schemas.Column column, final Object value) {
+		if ("VARBINARY_ENCODED".equalsIgnoreCase(column.getDataTypeName())) {
+			if (!supportsEncodedBinary())
+				throw new UnsupportedOperationException("Phoenix VARBINARY_ENCODED requires version 5.3 or later");
+			if (value != null) {
+				if (!(value instanceof byte[] bytes))
+					throw new IllegalArgumentException("Phoenix VARBINARY_ENCODED SQL literals require byte[] values");
+				return "X'" + java.util.HexFormat.of().formatHex(bytes) + "'";
+			}
+		}
+		return super.getSqlValueDefinition(column, value);
 	}
 
 	@Override
@@ -310,6 +356,38 @@ public class Phoenix extends Dialect {
 
 	/** Whether column DEFAULT declarations are available on this version. */
 	public boolean supportsColumnDefault() {
+		return false;
+	}
+
+	/** Whether the server supports the escaped variable-length binary encoding. */
+	public boolean supportsEncodedBinary() {
+		return false;
+	}
+
+	/** Whether native CREATE INDEX keys may contain expressions. */
+	public boolean supportsFunctionalIndexes() {
+		return false;
+	}
+
+	public boolean supportsUpdateCacheFrequency() {
+		return false;
+	}
+
+	public boolean supportsGuidePostsWidth() {
+		return false;
+	}
+
+	/** Server capability; provider-aware transactional CREATE remains guarded. */
+	public boolean supportsTransactionalTables() {
+		return false;
+	}
+
+	public boolean supportsStoreNulls() {
+		return false;
+	}
+
+	/** Whether CREATE TABLE accepts APPEND_ONLY_SCHEMA. */
+	public boolean supportsAppendOnlySchema() {
 		return false;
 	}
 }
