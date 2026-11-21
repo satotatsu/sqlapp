@@ -19,8 +19,10 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.converter.TimeConverter;
-import com.sqlapp.data.converter.ZonedDateTimeConverter;
+import java.time.OffsetTime;
+import java.time.format.DateTimeFormatter;
+
+import com.sqlapp.data.converter.OffsetTimeConverter;
 
 /**
  * TIME_WITH_TIMEZONEを表す型
@@ -35,7 +37,7 @@ public class TimeWithTimeZoneType extends TimeType {
 	/**
 	 * コンバータ
 	 */
-	private TimeConverter converter = null;
+	private OffsetTimeConverter converter = null;
 
 	/**
 	 * コンストラクタ
@@ -55,11 +57,14 @@ public class TimeWithTimeZoneType extends TimeType {
 			this.setColumnTypeMatcher("TIME", "\\s*WITH\\s+TIME\\s+ZONE");
 			this.addColumnTypeMatcher("TIMETZ", "");
 		}
-		converter = new TimeConverter();
-		converter.setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance()
-				.setParseFormats("H:m:s.SSS Z", "H:m:s.SSS z", "H:m:s.SSS", "H:m:s Z", "H:m:s", "H:m Z", "H:m")
-				.setFormat("HH:mm:ss.SSS Z"));
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
+		// Values are OffsetTime, the JDBC 4.2 type of TIME WITH TIME ZONE.
+		converter = OffsetTimeConverter.newInstance()
+				.setParseFormats(DateTimeFormatter.ISO_OFFSET_TIME, ZonedTemporalFormats.timeParser())
+				.setFormat(ZonedTemporalFormats.timeText());
+		this.setConverter(converter);
+		this.setFormatter(converter);
+		this.setJdbcTypeHandler(
+				new JavaTimeJdbcTypeHandler<>(this.getDataType().getJdbcType(), OffsetTime.class, converter));
 	}
 
 	/*

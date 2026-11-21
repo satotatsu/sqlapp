@@ -35,6 +35,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.ParameterizedType;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,8 +45,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
@@ -192,6 +195,16 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 		for (int i = 0; i < size; i++) {
 			final T obj = inner.get(i);
 			obj.setOrdinal(i);
+		}
+	}
+
+	/**
+	 * Called after an element was removed or replaced. Refreshes ordinals and
+	 * derived lookups when validation at change is enabled.
+	 */
+	protected void structureChanged() {
+		if (this.isValidateAtChange()) {
+			renew();
 		}
 	}
 
@@ -357,19 +370,14 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 		return true;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean remove(final Object o) {
-		this.beforeRemove((T) o);
-		final boolean bool = inner.remove(o);
-		if (this.isValidateAtChange()) {
-			renew();
+		final int index = inner.indexOf(o);
+		if (index < 0) {
+			return false;
 		}
-		if (bool) {
-			((T) o).setParent(null);
-		}
-		this.afterRemove((T) o);
-		return bool;
+		removeAt(index);
+		return true;
 	}
 
 	/*
@@ -379,15 +387,27 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 	 */
 	@Override
 	public T remove(final int index) {
-		final T obj = this.get(index);
+		return removeAt(index);
+	}
+
+	/**
+	 * Removes the element at the specified position. Every removal path, including
+	 * iterators, sub lists and bulk operations, uses this method so that remove
+	 * hooks, parents, ordinals and name lookups stay consistent. Elements are
+	 * removed one at a time because hooks such as row compaction for columns rely
+	 * on the current ordinals.
+	 *
+	 * @param index position of the element to remove
+	 * @return the removed element
+	 */
+	protected T removeAt(final int index) {
+		final T obj = inner.get(index);
 		this.beforeRemove(obj);
-		final T rm = inner.remove(index);
-		if (this.isValidateAtChange()) {
-			renew();
+		inner.remove(index);
+		if (obj != null) {
+			obj.setParent(null);
 		}
-		if (rm != null) {
-			rm.setParent(null);
-		}
+		structureChanged();
 		this.afterRemove(obj);
 		return obj;
 	}
@@ -397,20 +417,26 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 	 * 
 	 * @see java.util.AbstractCollection#removeAll(java.util.Collection)
 	 */
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean removeAll(final Collection<?> c) {
-		boolean result = true;
-		for (final Object o : c) {
-			final boolean bool = inner.remove(o);
-			if (!bool) {
-				result = false;
+		Objects.requireNonNull(c);
+		return removeIf(c::contains);
+	}
+
+	@Override
+	public boolean removeIf(final Predicate<? super T> filter) {
+		Objects.requireNonNull(filter);
+		boolean removed = false;
+		int i = 0;
+		while (i < inner.size()) {
+			if (filter.test(inner.get(i))) {
+				removeAt(i);
+				removed = true;
 			} else {
-				((T) o).setParent(null);
+				i++;
 			}
 		}
-		renew();
-		return result;
+		return removed;
 	}
 
 	/*
@@ -418,14 +444,20 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 	 * 
 	 * @see java.util.ArrayList#set(int, java.lang.Object)
 	 */
+	/**
+	 * Replaces the element in place. Add and remove hooks are not called, so data
+	 * bound to the position (for example row values of a column) is kept.
+	 */
 	@Override
 	public T set(final int index, final T element) {
-		final T obj = inner.set(index, element);
-		element.setOrdinal(index);
-		if (this.isValidateAtChange()) {
-			renew();
+		final T old = inner.set(index, element);
+		setElementParent(element);
+		if (old != null && old != element) {
+			old.setParent(null);
 		}
-		return obj;
+		element.setOrdinal(index);
+		structureChanged();
+		return old;
 	}
 
 	/*
@@ -845,7 +877,7 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 
 	@Override
 	public Iterator<T> iterator() {
-		return this.inner.iterator();
+		return new CollectionIterator(0);
 	}
 
 	@Override
@@ -861,7 +893,8 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 
 	@Override
 	public boolean retainAll(final Collection<?> c) {
-		return this.inner.retainAll(c);
+		Objects.requireNonNull(c);
+		return removeIf(e -> !c.contains(e));
 	}
 
 	@Override
@@ -890,17 +923,148 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 
 	@Override
 	public ListIterator<T> listIterator() {
-		return this.inner.listIterator();
+		return new CollectionIterator(0);
 	}
 
 	@Override
 	public ListIterator<T> listIterator(final int index) {
-		return this.inner.listIterator(index);
+		return new CollectionIterator(index);
 	}
 
+	/**
+	 * Returns a view whose changes go through this collection's add, set and remove
+	 * paths.
+	 */
 	@Override
 	public List<T> subList(final int fromIndex, final int toIndex) {
-		return this.inner.subList(fromIndex, toIndex);
+		return new CollectionListView().subList(fromIndex, toIndex);
+	}
+
+	/**
+	 * List iterator that applies the collection's hooks, parent handling and lookup
+	 * maintenance to remove, set and add.
+	 */
+	private final class CollectionIterator implements ListIterator<T> {
+		private final ListIterator<T> it;
+		private T last;
+		private boolean canModify;
+
+		CollectionIterator(final int index) {
+			this.it = inner.listIterator(index);
+		}
+
+		@Override
+		public boolean hasNext() {
+			return it.hasNext();
+		}
+
+		@Override
+		public T next() {
+			last = it.next();
+			canModify = true;
+			return last;
+		}
+
+		@Override
+		public boolean hasPrevious() {
+			return it.hasPrevious();
+		}
+
+		@Override
+		public T previous() {
+			last = it.previous();
+			canModify = true;
+			return last;
+		}
+
+		@Override
+		public int nextIndex() {
+			return it.nextIndex();
+		}
+
+		@Override
+		public int previousIndex() {
+			return it.previousIndex();
+		}
+
+		@Override
+		public void remove() {
+			if (!canModify) {
+				throw new IllegalStateException();
+			}
+			canModify = false;
+			final T obj = last;
+			beforeRemove(obj);
+			it.remove();
+			if (obj != null) {
+				obj.setParent(null);
+			}
+			structureChanged();
+			afterRemove(obj);
+		}
+
+		@Override
+		public void set(final T element) {
+			if (!canModify) {
+				throw new IllegalStateException();
+			}
+			final T old = last;
+			it.set(element);
+			setElementParent(element);
+			if (old != null && old != element) {
+				old.setParent(null);
+			}
+			structureChanged();
+			last = element;
+		}
+
+		@Override
+		public void add(final T element) {
+			canModify = false;
+			if (!getAddDbObjectPredicate().test(AbstractBaseDbObjectCollection.this, element)) {
+				return;
+			}
+			if (!beforeAdd(element)) {
+				return;
+			}
+			setElementParent(element);
+			it.add(element);
+			structureChanged();
+			afterAdd(element);
+			element.validate();
+		}
+	}
+
+	/**
+	 * List view backing {@link #subList(int, int)}.
+	 */
+	private final class CollectionListView extends AbstractList<T> {
+		@Override
+		public T get(final int index) {
+			return inner.get(index);
+		}
+
+		@Override
+		public int size() {
+			return inner.size();
+		}
+
+		@Override
+		public T set(final int index, final T element) {
+			return AbstractBaseDbObjectCollection.this.set(index, element);
+		}
+
+		@Override
+		public void add(final int index, final T element) {
+			AbstractBaseDbObjectCollection.this.add(index, element);
+			modCount++;
+		}
+
+		@Override
+		public T remove(final int index) {
+			modCount++;
+			return removeAt(index);
+		}
 	}
 
 	protected void validate() {

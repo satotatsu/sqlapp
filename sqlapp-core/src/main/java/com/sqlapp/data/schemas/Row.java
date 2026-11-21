@@ -215,6 +215,9 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		clone.setDataSourceInfo(this.getDataSourceInfo());
 		clone.setDataSourceDetailInfo(this.getDataSourceDetailInfo());
 		clone.rowOperation = this.rowOperation;
+		// rowId and hasErrors take part in equals(Object), so a clone keeps them.
+		clone.rowId = this.rowId;
+		clone.hasErrors = this.hasErrors;
 		if (this.values != null) {
 			clone.values = new Object[this.values.length];
 			System.arraycopy(this.values, 0, clone.values, 0, this.values.length);
@@ -885,6 +888,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
+	@SuppressWarnings("unchecked")
 	protected void writeXml(final StaxWriter stax, final ColumnCollection columns) throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
@@ -912,7 +916,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 				stax.writeAttribute(StaxWriter.KEY_ELEMENT, column.getName());
 				stax.writeAttribute(COMMENT, comment);
 				stax.writeAttribute(OPTION, option);
-				stax.writeCharacters(val);
+				// A dialect may retain more information than the Java class's shared
+				// formatter (for example, epoch milliseconds in a DATE value).
+				if (val != null && column.getDialect() != null
+						&& column.getDialect().getColumnValueConverter(column) != null) {
+					stax.writeCharacters(column.getFormatter().format(val));
+				} else {
+					stax.writeCharacters(val);
+				}
 				stax.writeEndElement();
 			}
 		}
@@ -1209,8 +1220,9 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 */
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.getClass(), this.getRowId(),
-				this.getTable() != null ? this.getTable().getName() : null);
+		// Use only properties compared by equals(Object): two equal rows in
+		// differently named tables must have the same hash code.
+		return Objects.hash(this.getRowId(), this.getDataSourceRowNumber());
 	}
 
 	/**

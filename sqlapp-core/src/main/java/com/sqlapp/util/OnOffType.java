@@ -20,6 +20,7 @@
 package com.sqlapp.util;
 
 import com.sqlapp.data.converter.BooleanConverter;
+import com.sqlapp.data.converter.ConverterException;
 import com.sqlapp.data.converter.EnumConvertable;
 
 public enum OnOffType implements EnumConvertable<String>{
@@ -56,7 +57,13 @@ public enum OnOffType implements EnumConvertable<String>{
 	}
 
 	public static OnOffType parse(final Object obj, final OnOffType defaultValue) {
-		final Boolean bool=converter.convertObject(obj);
+		final Boolean bool;
+		try {
+			bool = converter.convertObject(obj);
+		} catch (final ConverterException e) {
+			// unknown text keeps the previous lenient behavior
+			return defaultValue;
+		}
 		if (bool!=null&&bool.booleanValue()) {
 			return ON;
 		}

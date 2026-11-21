@@ -706,9 +706,10 @@ public class Converters implements Serializable {
 
 	public static Converters getNewBooleanTrueInstance() {
 		final Converters converters = new Converters();
-		final BooleanConverter converter = (BooleanConverter) converters.getConverter(Boolean.class);
-		converter.setTrueString("true").setFalseString("false");
-		converters.puts(converter, Boolean.class, boolean.class);
+		// Keep the separate boolean converter so that boolean.class keeps its false
+		// default; the array converters share these instances.
+		((BooleanConverter) converters.getConverter(Boolean.class)).setTrueString("true").setFalseString("false");
+		((BooleanConverter) converters.getConverter(boolean.class)).setTrueString("true").setFalseString("false");
 		return converters;
 	}
 

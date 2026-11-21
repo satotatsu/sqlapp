@@ -23,6 +23,7 @@ import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.converter.BooleanConverter;
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.converter.ConverterException;
 
 public abstract class StringToBooleanSetValue<T> extends AbstractSetValue<T, String>{
 
@@ -30,7 +31,12 @@ public abstract class StringToBooleanSetValue<T> extends AbstractSetValue<T, Str
 	
 	@Override
 	public void setValue(T target, String name, String setValue) throws XMLStreamException {
-		Boolean val=converter.convertObject(setValue);
+		Boolean val;
+		try {
+			val = converter.convertObject(setValue);
+		} catch (final ConverterException e) {
+			val = null;
+		}
 		if (val==null){
 			raiseError(target, name, setValue);
 		}

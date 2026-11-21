@@ -33,26 +33,34 @@ public abstract class AbstractSqlExecutor implements SqlExecutor {
 	@Override
 	public void execute(SqlOperation... operations) throws Exception {
 		for(SqlOperation operation:operations){
-			if (operation.getSqlType()==null){
-				writeStartStatementTerminator(operation);
-				write(operation.getSqlText());
-				write(";");
+			if (operation.getSqlType()!=null && operation.getSqlType().isEmptyLine()){
 				write("\n");
-				writeEndStatementTerminator(operation);
-			} else if (operation.getSqlType().isEmptyLine()){
-				write("\n");
-			} else if (operation.getSqlType().isComment()){
+			} else if (operation.getSqlType()!=null && operation.getSqlType().isComment()){
 				write(operation.getSqlText());
 				write("\n");
 			} else{
 				writeStartStatementTerminator(operation);
 				write(operation.getSqlText());
-				write(";");
+				final String terminator = terminator(operation);
+				if (!";".equals(terminator)) {
+					// On its own line so a trailing line comment cannot hide it.
+					write("\n");
+				}
+				write(terminator);
 				write("\n");
 				writeEndStatementTerminator(operation);
 			}
 			write("\n");
 		}
+	}
+
+	/**
+	 * The statement terminator chosen by the dialect (for example {@code @} after
+	 * {@code SET TERM @ ;}), or {@code ;}.
+	 */
+	private static String terminator(SqlOperation operation){
+		final String terminator = operation.getTerminator();
+		return terminator == null || terminator.isBlank() ? ";" : terminator;
 	}
 
 	private void writeStartStatementTerminator(SqlOperation operation) throws Exception{
