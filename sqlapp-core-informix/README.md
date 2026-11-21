@@ -90,7 +90,11 @@ column before renaming it; duplicate unmatched difference entries do not cause
 that column to be dropped and recreated. Default values and nullability are
 emitted as complete target declarations, including named NOT NULL constraints.
 
-Storage/fragmentation, table inheritance/specifics and owner/database moves
+Table metadata reads ROW/PAGE locking and positive next-extent sizes in the
+existing batched table query. CREATE TABLE emits the modeled values. Table
+ALTER supports changing `INFORMIX_LOCK_MODE` and `INFORMIX_NEXT_SIZE_KB`
+to explicit target values. NEXT SIZE affects future extent allocations.
+Dbspace relocation, fragmentation, table inheritance, and owner/database moves
 require an explicit migration plan and fail with an actionable exception instead
 of producing an empty or incomplete ALTER plan. Informix MODIFY can drop keys,
 checks and referencing foreign keys. MODIFY on a table containing constraints

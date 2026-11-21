@@ -75,6 +75,14 @@ public class InformixTableReader extends JdbcTableReader {
 						&& !table.getCatalogName().equals(getString(rs, CATALOG_NAME)))
 					return;
 				final String type = getString(rs, "row_type_name");
+				var lockLevel = getString(rs, "table_lock_level");
+				if ("R".equals(lockLevel) || "P".equals(lockLevel))
+					table.getSpecifics().put(com.sqlapp.data.db.dialect.informix.util.InformixTableOptions.LOCK_MODE,
+							"R".equals(lockLevel) ? "ROW" : "PAGE");
+				int nextSize = rs.getInt("table_next_size");
+				if (nextSize > 0)
+					table.getSpecifics().put(com.sqlapp.data.db.dialect.informix.util.InformixTableOptions.NEXT_SIZE_KB,
+							Integer.toString(nextSize));
 				if (rs.getInt("row_type_id") > 0 && type == null)
 					throw new IllegalStateException("Missing Informix table ROW type identity: " + table.getName());
 				if (type != null) {

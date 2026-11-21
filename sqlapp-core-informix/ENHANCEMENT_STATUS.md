@@ -76,6 +76,13 @@ an empty child field list is not the equivalent syntax.
 
 ## Remaining work and prerequisites
 
+The follow-up verification runs the Informix module tests and compiles the
+Docker suite. The suite includes overload-specific routine grants, partial
+column revocation, constraint and index preservation, and lock mode and
+next-extent readback after ALTER. These Docker cases still need execution
+against an explicitly selected disposable server. The earlier live coverage
+does not extend to the follow-up changes.
+
 | Priority | Item | Classification | Next action |
 | --- | --- | --- | --- |
 | P1 | Informix 11.70 live compatibility | Unverified supported version | Obtain a disposable 11.70 environment and run the same metadata/recreation suite before claiming live compatibility. |

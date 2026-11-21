@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.sqlapp.data.db.dialect.informix.util.InformixSqlBuilder;
+import com.sqlapp.data.db.dialect.informix.util.InformixTableOptions;
 import com.sqlapp.data.db.sql.AbstractAlterTableFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
@@ -31,14 +32,31 @@ public class InformixAlterTableFactory extends AbstractAlterTableFactory<Informi
 		if (changes.containsKey(SchemaObjectProperties.PARTITIONING.getLabel())
 				|| !java.util.Objects.equals(original.getTableSpaceName(), target.getTableSpaceName())
 				|| !original.getInherits().equals(target.getInherits())
-				|| !original.getSpecifics().equals(target.getSpecifics()))
+				|| !InformixTableOptions.otherSpecifics(original).equals(InformixTableOptions.otherSpecifics(target)))
 			throw new UnsupportedOperationException("Informix table storage, inheritance or specifics changes require "
 					+ "an explicit migration plan: " + original.getName());
 		if (!java.util.Objects.equals(original.getSchemaName(), target.getSchemaName())
 				|| !java.util.Objects.equals(original.getCatalogName(), target.getCatalogName()))
 			throw new UnsupportedOperationException(
 					"Informix ALTER cannot move a table between owners or databases: " + original.getName());
-		return super.createDiffSql(difference);
+		var result = new java.util.ArrayList<>(super.createDiffSql(difference));
+		String mode = InformixTableOptions.lockMode(target);
+		if (!java.util.Objects.equals(InformixTableOptions.lockMode(original), mode))
+			appendTableOption(original, target, "LOCK MODE", mode == null ? null : "(" + mode + ")", result);
+		Integer size = InformixTableOptions.nextSize(target);
+		if (!java.util.Objects.equals(InformixTableOptions.nextSize(original), size))
+			appendTableOption(original, target, "MODIFY NEXT SIZE", size == null ? null : size.toString(), result);
+		return result;
+	}
+
+	private void appendTableOption(Table original, Table target, String clause, String value,
+			List<SqlOperation> result) {
+		if (value == null)
+			throw new UnsupportedOperationException("Informix ALTER requires an explicit target value for " + clause);
+		var builder = createSqlBuilder();
+		builder.alter().table().name(target, getOptions().isDecorateSchemaName()).space()._add(clause).space()
+				._add(value);
+		add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
 	}
 
 	@Override

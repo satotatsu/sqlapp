@@ -53,6 +53,20 @@ class InformixMetadataReaderTest {
 		};
 	}
 
+	@Test
+	void readsLockModeAndNextExtentInTheExistingTableMetadataQuery() {
+		var reader = new Tables();
+		var table = new Table("items").setCatalogName("testdb").setSchemaName("owner");
+		var tables = new DoubleKeyMap<String, String, Table>();
+		tables.put("owner", "items", table);
+		reader.rows.add(Map.of("schema_name", "owner", "table_name", "items", "catalog_name", "testdb",
+				"table_lock_level", "R", "table_next_size", 64));
+		reader.setTableTypes(null, tables);
+		assertEquals(1, reader.queries);
+		assertEquals("ROW", table.getSpecifics().get("INFORMIX_LOCK_MODE"));
+		assertEquals("64", table.getSpecifics().get("INFORMIX_NEXT_SIZE_KB"));
+	}
+
 	static Map<String, Object> indexRow(final String owner, final String table, final String column, final int number) {
 		final Map<String, Object> values = new HashMap<>();
 		values.put("catalog_name", "testdb");

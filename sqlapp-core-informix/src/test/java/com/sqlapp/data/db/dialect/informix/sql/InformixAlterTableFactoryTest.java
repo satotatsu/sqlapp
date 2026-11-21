@@ -11,6 +11,27 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.*;
 
 class InformixAlterTableFactoryTest {
+	@Test
+	void createsAndAltersExplicitLockAndNextExtentSettings() {
+		var original = table();
+		original.getSpecifics().put("INFORMIX_LOCK_MODE", "PAGE");
+		original.getSpecifics().put("INFORMIX_NEXT_SIZE_KB", "32");
+		var target = original.clone();
+		target.getSpecifics().put("INFORMIX_LOCK_MODE", "ROW");
+		target.getSpecifics().put("INFORMIX_NEXT_SIZE_KB", "64");
+		assertEquals(java.util.List.of("ALTER TABLE \"owner\".\"items\" LOCK MODE (ROW)",
+				"ALTER TABLE \"owner\".\"items\" MODIFY NEXT SIZE 64"), sql(original, target));
+		var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
+		assertTrue(registry.createSql(target, SqlType.CREATE).getFirst().getSqlText()
+				.contains("NEXT SIZE 64 LOCK MODE ROW"));
+		assertTrue(sql(target, original).getFirst().endsWith("LOCK MODE (PAGE)"));
+		target.getSpecifics().remove("INFORMIX_LOCK_MODE");
+		assertThrows(UnsupportedOperationException.class, () -> sql(original, target));
+		target.getSpecifics().put("INFORMIX_LOCK_MODE", "ROW");
+		target.getSpecifics().put("INFORMIX_NEXT_SIZE_KB", "0");
+		assertThrows(IllegalArgumentException.class, () -> sql(original, target));
+	}
+
 	private Table table() {
 		final var table = new Table("items").setSchemaName("owner");
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));

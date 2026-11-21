@@ -92,6 +92,16 @@ public class InformixCreateTableFactory extends AbstractCreateTableFactory<Infor
 
 	@Override
 	protected void addOption(final Table table, final InformixSqlBuilder builder) {
+		addStorageLocation(table, builder);
+		var size = com.sqlapp.data.db.dialect.informix.util.InformixTableOptions.nextSize(table);
+		if (size != null)
+			builder.space()._add("NEXT SIZE ")._add(size);
+		var mode = com.sqlapp.data.db.dialect.informix.util.InformixTableOptions.lockMode(table);
+		if (mode != null)
+			builder.space()._add("LOCK MODE ")._add(mode);
+	}
+
+	private void addStorageLocation(final Table table, final InformixSqlBuilder builder) {
 		final Partitioning partitioning = table.getPartitioning();
 		if (partitioning == null) {
 			if (table.getTableSpaceName() != null) {
