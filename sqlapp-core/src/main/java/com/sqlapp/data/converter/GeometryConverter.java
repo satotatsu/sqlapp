@@ -227,7 +227,7 @@ public class GeometryConverter extends AbstractConverter<org.geolatte.geom.Geome
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof GeometryConverter)) {

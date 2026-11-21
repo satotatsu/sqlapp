@@ -104,4 +104,30 @@ public abstract class AbstractCreateSequenceFactory<S extends AbstractSqlBuilder
 	protected void addOptions(final Sequence obj, S builder){
 	}
 
+	/**
+	 * Restarts the created sequence at its next value ({@code lastValue}) when it
+	 * differs from the start value and the registered ALTER factory can restart
+	 * in place. {@code START WITH} keeps the original start value.
+	 */
+	@Override
+	protected void addOtherDefinitions(final Sequence obj, final java.util.List<SqlOperation> result) {
+		super.addOtherDefinitions(obj, result);
+		final java.math.BigInteger next = obj.getLastValue();
+		if (next == null || next.equals(obj.getStartValue()) || appliesNextValueInCreate()) {
+			return;
+		}
+		final SqlFactory<Sequence> alter = getSqlFactoryRegistry().getSqlFactory(obj, SqlType.ALTER);
+		if (alter instanceof StandardAlterSequenceFactory<?> standard && standard.supportsRestart()) {
+			result.addAll(standard.createSql(obj));
+		}
+	}
+
+	/**
+	 * @return true when the CREATE statement itself starts at {@code lastValue}, so
+	 *         no restart is added
+	 */
+	protected boolean appliesNextValueInCreate() {
+		return false;
+	}
+
 }

@@ -88,7 +88,7 @@ public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYear
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof IntervalYearToMonthConverter)) {

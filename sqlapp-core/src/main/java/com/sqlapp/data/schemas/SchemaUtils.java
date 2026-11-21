@@ -1114,11 +1114,28 @@ public class SchemaUtils {
 		return set;
 	}
 
+	private static final Map<Class<?>, Set<ISchemaProperty>> SETTABLE_SCHEMA_PROPERTIES_SET = new ConcurrentHashMap<>();
+
+	/**
+	 * Copies the schema properties that the target can accept from the source.
+	 * Properties the target cannot set were no-ops before, so they are skipped.
+	 *
+	 * @return the properties applied to the target
+	 */
 	public static Set<ISchemaProperty> copySchemaProperties(final Object from, final Object to) {
-		final Set<ISchemaProperty> set = getSchemaProperties(from.getClass());
-		for (final ISchemaProperty prop : SchemaProperties.values()) {
-			final Object value = prop.getCloneValue(from);
-			prop.setValue(to, value);
+		Set<ISchemaProperty> set = SETTABLE_SCHEMA_PROPERTIES_SET.get(to.getClass());
+		if (set == null) {
+			final Set<ISchemaProperty> settable = CommonUtils.linkedSet();
+			for (final ISchemaProperty prop : SchemaProperties.values()) {
+				if (prop.isSetterInstanceof(to)) {
+					settable.add(prop);
+				}
+			}
+			set = Collections.unmodifiableSet(settable);
+			SETTABLE_SCHEMA_PROPERTIES_SET.put(to.getClass(), set);
+		}
+		for (final ISchemaProperty prop : set) {
+			prop.setValue(to, prop.getCloneValue(from));
 		}
 		return set;
 	}

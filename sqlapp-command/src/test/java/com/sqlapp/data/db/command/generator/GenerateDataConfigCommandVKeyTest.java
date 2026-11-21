@@ -68,6 +68,7 @@ public class GenerateDataConfigCommandVKeyTest extends AbstractGeneratorCommandT
 					  /*PK_TEXT*/''
 					, /*TEXT*/''
 				)
+				;
 								""";
 		assertEquals(insertSql.trim(), config.getInsertSql().trim());
 		//
@@ -106,6 +107,7 @@ public class GenerateDataConfigCommandVKeyTest extends AbstractGeneratorCommandT
 					  /*PK_TEXT*/''
 					, /*TEXT*/''
 				)
+				;
 								""";
 		assertEquals(insertSql.trim(), config.getInsertSql().trim());
 		//

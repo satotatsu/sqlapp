@@ -101,26 +101,41 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 
 	protected Map<String, T> getNameMap() {
 		if (nameMap == null) {
-			if (caseSensitive) {
-				nameMap = map(this.size());
-			} else {
-				nameMap = caseInsensitiveMap(this.size() * 4 / 3 + 1);
-			}
-			renew();
+			rebuildNameMaps();
 		}
 		return nameMap;
 	}
 
 	protected Map<String, T> getSpecificNameMap() {
 		if (specificNameMap == null) {
-			if (caseSensitive) {
-				specificNameMap = map(this.size() * 4 / 3 + 1);
-			} else {
-				specificNameMap = new CaseInsensitiveMap<T>(this.size() * 4 / 3 + 1);
-			}
-			renew();
+			rebuildNameMaps();
 		}
 		return specificNameMap;
+	}
+
+	/**
+	 * Creates both lookup maps and fills them with a single renew().
+	 */
+	private void rebuildNameMaps() {
+		final int capacity = this.size() * 4 / 3 + 1;
+		if (caseSensitive) {
+			nameMap = map(capacity);
+			specificNameMap = map(capacity);
+		} else {
+			nameMap = caseInsensitiveMap(capacity);
+			specificNameMap = new CaseInsensitiveMap<T>(capacity);
+		}
+		renew();
+	}
+
+	/**
+	 * Drops the lookups and rebuilds them on the next lookup, so renaming many
+	 * elements costs a single rebuild instead of a full renew per rename.
+	 */
+	@Override
+	protected void elementNameChanged() {
+		this.nameMap = null;
+		this.specificNameMap = null;
 	}
 
 	/**
@@ -598,9 +613,6 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		}
 		if (equalsHandler.referenceEquals(this, obj)) {
 			return true;
-		}
-		if (!(obj instanceof AbstractNamedObjectCollection<?>)) {
-			return false;
 		}
 		@SuppressWarnings("unchecked")
 		final AbstractNamedObjectCollection<T> val = (AbstractNamedObjectCollection<T>) obj;

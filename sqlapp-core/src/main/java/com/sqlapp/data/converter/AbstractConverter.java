@@ -137,7 +137,8 @@ public abstract class AbstractConverter<T> implements Converter<T> {
 		if (obj == null) {
 			return false;
 		}
-		if (!(obj instanceof AbstractConverter<?>)) {
+		// same class only, consistent with hashCode
+		if (obj.getClass() != this.getClass()) {
 			return false;
 		}
 		AbstractConverter<?> cst = AbstractConverter.class.cast(obj);

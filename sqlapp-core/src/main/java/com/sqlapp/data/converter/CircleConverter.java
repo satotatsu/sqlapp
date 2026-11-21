@@ -71,7 +71,7 @@ public class CircleConverter extends AbstractConverter<Circle> implements Suppli
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof CircleConverter)) {

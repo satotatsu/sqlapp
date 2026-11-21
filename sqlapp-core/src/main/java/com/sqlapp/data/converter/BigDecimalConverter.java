@@ -101,7 +101,7 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof BigDecimalConverter)) {

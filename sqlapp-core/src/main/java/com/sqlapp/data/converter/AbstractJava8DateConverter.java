@@ -90,6 +90,26 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	protected T parseDate(final String value) {
 		final int size = parseFormats.length;
 		DateTimeParseException ext = null;
+		// Prefer a format that reads the whole text, so that a shorter format
+		// listed first (for example ".SSS" before ".nnnnnnnnn") cannot silently
+		// drop the rest of the value.
+		for (int i = 0; i < size; i++) {
+			final DateTimeFormatter dateTimeFormatter = parseFormats[i];
+			if (!readsWholeText(value, dateTimeFormatter)) {
+				continue;
+			}
+			try {
+				final T dateTime = parse(value, dateTimeFormatter);
+				if (dateTime != null) {
+					return dateTime;
+				}
+			} catch (final DateTimeParseException e) {
+				if (ext == null) {
+					ext = e;
+				}
+			}
+		}
+		// Otherwise keep the lenient behavior: the first format that reads a prefix.
 		for (int i = 0; i < size; i++) {
 			try {
 				final DateTimeFormatter dateTimeFormatter = parseFormats[i];
@@ -107,6 +127,16 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		throw new UnsupportedOperationException(message, ext);
 	}
 
+	private static boolean readsWholeText(final String value, final DateTimeFormatter dateTimeFormatter) {
+		final ParsePosition position = new ParsePosition(0);
+		try {
+			dateTimeFormatter.parseUnresolved(value, position);
+		} catch (final RuntimeException e) {
+			return false;
+		}
+		return position.getErrorIndex() < 0 && position.getIndex() == value.length();
+	}
+
 	protected abstract T parse(String value, DateTimeFormatter dateTimeFormatter);
 
 	public DateTimeFormatter[] getParseFormats() {
@@ -114,7 +144,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	}
 
 	public S setParseFormats(final String... parseFormats) {
-		return setParseFormats(Java8DateUtils.getDateTimeFormatters(parseFormats));
+		return setParseFormats(Java8DateUtils.getParseDateTimeFormatters(parseFormats));
 	}
 
 	protected abstract String format(T temporal, DateTimeFormatter formatter);
@@ -158,7 +188,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 			if (parseFormat instanceof DateTimeFormatter) {
 				formatters.add((DateTimeFormatter) parseFormat);
 			} else if (parseFormat instanceof String) {
-				formatters.add(Java8DateUtils.getDateTimeFormatter((String) parseFormat));
+				formatters.add(Java8DateUtils.getParseDateTimeFormatter((String) parseFormat));
 			} else {
 				throw new IllegalArgumentException(
 						"parseFormats must String or DateTimeFormatter.[" + Arrays.toString(parseFormats) + "]");
@@ -184,7 +214,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		if (parseFormat instanceof DateTimeFormatter) {
 			formatters.add(index, (DateTimeFormatter) parseFormat);
 		} else if (parseFormat instanceof String) {
-			formatters.add(index, Java8DateUtils.getDateTimeFormatter((String) parseFormat));
+			formatters.add(index, Java8DateUtils.getParseDateTimeFormatter((String) parseFormat));
 		} else {
 			throw new IllegalArgumentException(
 					"parseFormats must String or DateTimeFormatter.[" + Arrays.toString(parseFormats) + "]");
@@ -195,9 +225,6 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	public S setParseFormats(final DateTimeFormatter... parseFormats) {
 		if (!isEmpty(parseFormats)) {
 			this.parseFormats = linkedSet(parseFormats).toArray(new DateTimeFormatter[0]);
-			if (this.getFormat() != null) {
-				this.setFormat(CommonUtils.first(parseFormats));
-			}
 		} else {
 			this.parseFormats = parseFormats;
 		}
@@ -496,7 +523,8 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	}
 
 	protected OffsetDateTime toOffsetDateTime(final LocalDateTime date) {
-		return OffsetDateTime.of(date, getDefaultZoneOffset());
+		// the offset in effect at that date, not the current one (daylight saving time)
+		return ZonedDateTime.of(date, getDefaultZoneId()).toOffsetDateTime();
 	}
 
 	protected ZonedDateTime toZonedDateTime(final Temporal temporal) {

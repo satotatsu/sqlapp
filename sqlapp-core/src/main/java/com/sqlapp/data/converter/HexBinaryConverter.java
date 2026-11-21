@@ -55,7 +55,7 @@ public class HexBinaryConverter extends AbstractBinaryConverter {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof HexBinaryConverter)) {

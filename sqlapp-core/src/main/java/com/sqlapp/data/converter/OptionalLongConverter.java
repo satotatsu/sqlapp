@@ -101,7 +101,7 @@ public class OptionalLongConverter extends AbstractNumberConverter<OptionalLong>
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof OptionalLongConverter)) {

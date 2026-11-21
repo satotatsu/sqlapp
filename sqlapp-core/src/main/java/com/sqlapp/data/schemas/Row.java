@@ -1149,8 +1149,11 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 			return true;
 		}
 		final Row val = (Row) obj;
-		if (!equals(VALUES, val, this.getValues(), val.getValues(), equalsHandler,
-				EqualsUtils.getEqualsSupplier(this.getValues(), val.getValues()))) {
+		// getValues() copies the array; copy each side once.
+		final Object[] values = this.getValues();
+		final Object[] targetValues = val.getValues();
+		if (!equals(VALUES, val, values, targetValues, equalsHandler,
+				EqualsUtils.getEqualsSupplier(values, targetValues))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.REMARKS, val, this.remarks, val.remarks, equalsHandler,

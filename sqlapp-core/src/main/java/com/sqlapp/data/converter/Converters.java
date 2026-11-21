@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.map;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -47,6 +45,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.geolatte.geom.Geometry;
 
@@ -74,7 +73,6 @@ import com.sqlapp.data.interval.IntervalValue;
 import com.sqlapp.data.interval.IntervalYear;
 import com.sqlapp.data.interval.IntervalYearToDay;
 import com.sqlapp.data.interval.IntervalYearToMonth;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * 
@@ -88,7 +86,7 @@ public class Converters implements Serializable {
 	 */
 	private static final long serialVersionUID = -7044716555455402735L;
 
-	private Map<Class<?>, Converter<?>> converterMap = map();
+	private Map<Class<?>, Converter<?>> converterMap = new ConcurrentHashMap<>();
 
 	private static final Converters DEFAULT_CONVERTER = new Converters();
 	/**
@@ -629,7 +627,7 @@ public class Converters implements Serializable {
 		return (S) converter;
 	}
 
-	private final Set<Class<?>> unsupportedClasses = CommonUtils.set();
+	private final Set<Class<?>> unsupportedClasses = ConcurrentHashMap.newKeySet();
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private EnumConverter<?> createEnumConverter(final Class<?> clazz) {
@@ -647,10 +645,14 @@ public class Converters implements Serializable {
 		if (unsupportedClasses.contains(clazz)) {
 			return null;
 		}
+		// Use the most specific registered type, independent of the map order: a
+		// subclass of Timestamp must get the Timestamp converter, not the Date one.
+		Class<?> converterClass = null;
 		for (final Map.Entry<Class<?>, Converter<?>> entry : converterMap.entrySet()) {
-			if (entry.getKey().isAssignableFrom(clazz)) {
+			final Class<?> key = entry.getKey();
+			if (key.isAssignableFrom(clazz) && isMoreSpecific(key, converterClass)) {
+				converterClass = key;
 				converter = (Converter<T>) entry.getValue();
-				break;
 			}
 		}
 		if (converter != null) {
@@ -659,6 +661,23 @@ public class Converters implements Serializable {
 			unsupportedClasses.add(clazz);
 		}
 		return converter;
+	}
+
+	private static boolean isMoreSpecific(final Class<?> candidate, final Class<?> current) {
+		if (current == null) {
+			return true;
+		}
+		if (current.isAssignableFrom(candidate)) {
+			return true;
+		}
+		if (candidate.isAssignableFrom(current)) {
+			return false;
+		}
+		// unrelated types (for example two interfaces): prefer a class, then the name
+		if (candidate.isInterface() != current.isInterface()) {
+			return !candidate.isInterface();
+		}
+		return candidate.getName().compareTo(current.getName()) < 0;
 	}
 
 	public Map<Class<?>, Converter<?>> getConverterMap() {

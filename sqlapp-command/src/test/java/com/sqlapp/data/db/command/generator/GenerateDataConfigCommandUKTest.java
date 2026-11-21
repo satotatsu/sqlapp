@@ -73,6 +73,7 @@ public class GenerateDataConfigCommandUKTest extends AbstractGeneratorCommandTes
 					AND ORDER_ID = /*ORDER_ID*/0
 					AND LINE_NO = /*LINE_NO*/0
 			)
+			;
 			""";
 
 	private void testFile(ConfigFileType fileType) {
@@ -119,6 +120,7 @@ public class GenerateDataConfigCommandUKTest extends AbstractGeneratorCommandTes
 					WHERE 1=1
 						AND CUSTOMER_CODE = /*CUSTOMER_CODE*/''
 				)
+				;
 					""";
 		assertEquals(insertSql, config.getInsertSql());
 		assertEquals(1, config.getQueries().size());
@@ -266,6 +268,7 @@ public class GenerateDataConfigCommandUKTest extends AbstractGeneratorCommandTes
 					WHERE 1=1
 						AND ORDER_NO = /*ORDER_NO*/''
 				)
+				;
 				""";
 		assertEquals(insertSql, config.getInsertSql());
 		assertEquals(2, config.getQueries().size());

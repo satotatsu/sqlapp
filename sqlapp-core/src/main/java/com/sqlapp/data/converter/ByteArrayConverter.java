@@ -85,7 +85,7 @@ public class ByteArrayConverter extends AbstractBinaryConverter {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof ByteArrayConverter)) {

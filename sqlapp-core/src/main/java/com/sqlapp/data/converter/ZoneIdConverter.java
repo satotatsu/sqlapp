@@ -72,7 +72,7 @@ public class ZoneIdConverter extends AbstractConverter<ZoneId> {
 		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof ZoneIdConverter)) {

@@ -24,6 +24,7 @@ import static com.sqlapp.util.CommonUtils.eq;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.text.ParsePosition;
 
 /**
  * @author SATOH
@@ -41,11 +42,14 @@ public abstract class AbstractNumberConverter<T> extends AbstractConverter<T> {
 	private NumberFormat numberFormat = null;
 
 	protected synchronized Number parse(String value) {
-		try {
-			return numberFormat.parse(value);
-		} catch (ParseException e) {
-			throw new RuntimeException(e);
+		final ParsePosition position = new ParsePosition(0);
+		final Number number = numberFormat.parse(value, position);
+		// NumberFormat stops at the first unknown character ("12abc" would be 12)
+		if (number == null || position.getIndex() != value.length()) {
+			throw new ConverterException("Cannot parse number: " + value,
+					new ParseException(value, Math.max(position.getErrorIndex(), position.getIndex())));
 		}
+		return number;
 	}
 
 	public synchronized String format(Number value) {
@@ -57,7 +61,8 @@ public abstract class AbstractNumberConverter<T> extends AbstractConverter<T> {
 	}
 
 	public void setNumberFormat(NumberFormat numberFormat) {
-		this.numberFormat = numberFormat;
+		// copy: setParseIntegerOnly must not change the caller's instance
+		this.numberFormat = numberFormat == null ? null : (NumberFormat) numberFormat.clone();
 		if (numberFormat != null) {
 			this.numberFormat.setParseIntegerOnly(this.getParseIntegerOnly());
 		}

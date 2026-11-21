@@ -78,7 +78,7 @@ public class CalendarConverter extends AbstractDateConverter<Calendar, CalendarC
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof CalendarConverter)) {

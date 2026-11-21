@@ -162,6 +162,8 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>> exte
 	@SuppressWarnings("unchecked")
 	@Override
 	public T setName(String name) {
+		// Interned: the same object, column and argument names repeat across schemas,
+		// so sharing one instance keeps large models small.
 		this.name = name == null ? null : trim(name).intern();
 		nameChanged();
 		return instance();
@@ -173,8 +175,8 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>> exte
 	 */
 	protected void nameChanged() {
 		final DbCommonObject<?> parent = getParent();
-		if (parent instanceof AbstractDbObjectCollection) {
-			((AbstractDbObjectCollection<?>) parent).structureChanged();
+		if (parent instanceof AbstractBaseDbObjectCollection) {
+			((AbstractBaseDbObjectCollection<?>) parent).elementNameChanged();
 		}
 	}
 

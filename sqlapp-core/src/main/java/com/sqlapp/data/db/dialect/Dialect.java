@@ -1465,7 +1465,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @return 文字列
 	 */
 	public String toText(final Collection<SplitResult> results) {
-		return toText(results, result -> result.getTextType().isComment(), result -> result.getText());
+		return toText(results, result -> result.getTextType() != null && result.getTextType().isComment(),
+				result -> result.getText());
 	}
 
 	/**
@@ -1475,37 +1476,49 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @return 文字列
 	 */
 	public String toTextFromSqlOperation(final Collection<SqlOperation> results) {
-		return toText(results, result -> result.getSqlType().isComment(), result -> result.getSqlText());
+		return toText(results, result -> result.getSqlType() != null && result.getSqlType().isComment(),
+				result -> result.getSqlText());
 	}
 
+	/**
+	 * Renders statements as a script that this dialect's splitter can split
+	 * again: an optional delimiter switch, the statement, its terminator (';'
+	 * unless the dialect switches delimiters) and an optional delimiter reset.
+	 * Comments and blank text are written as they are.
+	 */
 	private <X> String toText(final Collection<X> sqls, Predicate<X> commentPredicate,
 			Function<X, String> sqlTextFunc) {
-		if (sqls.size() == 0) {
-			X obj = CommonUtils.first(sqls);
-			String sqlText = sqlTextFunc.apply(obj);
-			return sqlText;
-		}
 		final StringBuilder builder = new StringBuilder();
+		if (sqls == null) {
+			return "";
+		}
 		for (final X result : sqls) {
-			String sqlText = sqlTextFunc.apply(result);
-			if (!commentPredicate.test(result) && !CommonUtils.isBean(sqlText)) {
-				SqlTerminator sqlTerminator = createSqlDelimiter(sqlText);
-				if (!CommonUtils.isEmpty(sqlTerminator.getStartStatementTerminator())) {
-					builder.append(sqlTerminator.getStartStatementTerminator());
-					builder.append("\n");
-				}
-				builder.append(sqlText);
-				builder.append("\n");
-				if (!CommonUtils.isEmpty(sqlTerminator.getEndStatementTerminator())) {
-					builder.append(sqlTerminator.getEndStatementTerminator());
-					builder.append("\n");
-				} else {
-					builder.append(sqlTerminator.getEndStatementTerminator());
-					builder.append("\n");
-				}
-			} else {
-				builder.append(sqlText);
-				builder.append("\n");
+			if (result == null) {
+				continue;
+			}
+			final String sqlText = sqlTextFunc.apply(result);
+			if (sqlText == null) {
+				continue;
+			}
+			if (commentPredicate.test(result) || CommonUtils.isBlank(sqlText)) {
+				builder.append(sqlText).append('\n');
+				continue;
+			}
+			final SqlTerminator sqlTerminator = createSqlDelimiter(sqlText);
+			final String start = sqlTerminator.getStartStatementTerminator();
+			final String terminator = CommonUtils.isBlank(sqlTerminator.getTerminator()) ? ";"
+					: sqlTerminator.getTerminator().strip();
+			final String end = sqlTerminator.getEndStatementTerminator();
+			final String statement = sqlText.stripTrailing();
+			if (!CommonUtils.isBlank(start)) {
+				builder.append(start).append('\n');
+			}
+			builder.append(statement).append('\n');
+			if (!(";".equals(terminator) && statement.endsWith(";"))) {
+				builder.append(terminator).append('\n');
+			}
+			if (!CommonUtils.isBlank(end) && !end.strip().equals(terminator)) {
+				builder.append(end).append('\n');
 			}
 		}
 		return builder.toString();

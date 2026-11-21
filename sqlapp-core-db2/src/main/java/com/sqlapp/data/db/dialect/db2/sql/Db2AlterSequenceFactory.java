@@ -31,11 +31,18 @@ public class Db2AlterSequenceFactory extends Db2_1110CreateSequenceFactory {
 			return drop.createSql(before);
 		}
 		if (difference.getState() == State.Modified) {
+			if (difference.getChangedProperties().containsKey(SchemaProperties.LAST_VALUE.getLabel()))
+				throw new IllegalArgumentException(
+						"Db2 never restarts a sequence automatically; apply ALTER SEQUENCE ... RESTART WITH explicitly: "
+								+ difference.getTarget(Sequence.class).getName());
 			Sequence originalModel = difference.getOriginal(Sequence.class).clone();
 			Sequence targetModel = difference.getTarget(Sequence.class).clone();
 			// Cache allocation boundaries drift during normal use and are not DDL settings.
 			originalModel.getSpecifics().remove("NEXTCACHEFIRSTVALUE");
 			targetModel.getSpecifics().remove("NEXTCACHEFIRSTVALUE");
+			// lastValue holds the same boundary as the next value to issue.
+			originalModel.setLastValue(null);
+			targetModel.setLastValue(null);
 			DbObjectDifference settings = originalModel.diff(targetModel);
 			Set<String> changed = settings.getChangedProperties().keySet();
 			Set<String> supported = new HashSet<>();

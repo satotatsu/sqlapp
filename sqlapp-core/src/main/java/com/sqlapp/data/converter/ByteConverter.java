@@ -107,7 +107,7 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof ByteConverter)) {

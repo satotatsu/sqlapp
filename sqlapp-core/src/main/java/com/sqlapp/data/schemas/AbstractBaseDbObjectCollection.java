@@ -208,6 +208,13 @@ public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObj
 		}
 	}
 
+	/**
+	 * Called after the name or specific name of an element changed. Ordinals do not
+	 * change, so collections without name lookups have nothing to do.
+	 */
+	protected void elementNameChanged() {
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

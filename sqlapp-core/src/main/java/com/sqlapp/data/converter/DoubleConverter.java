@@ -113,7 +113,7 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		if (!super.equals(this)) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		if (!(obj instanceof DoubleConverter)) {
