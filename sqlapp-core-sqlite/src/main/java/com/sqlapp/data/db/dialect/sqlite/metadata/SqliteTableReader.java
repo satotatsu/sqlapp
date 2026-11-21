@@ -61,6 +61,9 @@ public class SqliteTableReader extends JdbcTableReader {
 						table.getSpecifics().put("sqlite.virtual", "true");
 						if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement())
 							table.setDefinition(definition);
+					} else {
+						// Already read here; avoids reading every CREATE statement again.
+						setTableOptions(table, definition);
 					}
 					tables.add(table);
 				}
@@ -122,13 +125,6 @@ public class SqliteTableReader extends JdbcTableReader {
 			uniques.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
 			checks.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
 			foreignKeys.forEach(o -> tableMap.get(o.getTableName()).getConstraints().add(o));
-			try (var statement = SqliteMetadataQueries.prepare(connection, bulkContext, "m.name", "", "");
-					var rs = statement.executeQuery()) {
-				while (rs.next()) {
-					Table table = tableMap.get(rs.getString("table_name"));
-					setTableOptions(table, rs.getString("table_sql"));
-				}
-			}
 			return;
 		}
 
@@ -148,7 +144,6 @@ public class SqliteTableReader extends JdbcTableReader {
 			load(connection, table, getUniqueConstraintReader());
 			load(connection, table, getCheckConstraintReader());
 			load(connection, table, getForeignKeyConstraintReader());
-			loadTableOptions(connection, table);
 		}
 	}
 
@@ -159,21 +154,6 @@ public class SqliteTableReader extends JdbcTableReader {
 			table.getSpecifics().put("without_rowid", "true");
 		if (SqliteDdl.hasTableOption(definition, "STRICT"))
 			table.getSpecifics().put("strict", "true");
-	}
-
-	private void loadTableOptions(final Connection connection, final Table table) throws SQLException {
-		final String schemaName = table.getSchemaName() == null ? "main" : table.getSchemaName();
-		final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-				+ ".sqlite_master WHERE type='table' AND name=?";
-		try (var statement = connection.prepareStatement(sql)) {
-			statement.setString(1, table.getName());
-			try (var resultSet = statement.executeQuery()) {
-				if (!resultSet.next()) {
-					return;
-				}
-				setTableOptions(table, resultSet.getString(1));
-			}
-		}
 	}
 
 	private String quoteIdentifier(final String value) {

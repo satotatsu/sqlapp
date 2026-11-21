@@ -54,8 +54,35 @@ public class PostgresCreateTableFactory extends AbstractCreateTableFactory<Postg
 		this.addTableComment(obj, builder);
 	}
 
+	/**
+	 * Restarts identity and serial columns at their next value
+	 * ({@code identityLastValue}) when it differs from the start value. The
+	 * declared start value is kept.
+	 */
+	protected void addIdentityRestarts(final Table table, final List<SqlOperation> result) {
+		for (final com.sqlapp.data.schemas.Column column : table.getColumns()) {
+			final Long next = column.isIdentity() ? column.getIdentityLastValue() : null;
+			if (next == null || next.equals(column.getIdentityStartValue())) {
+				continue;
+			}
+			final PostgresSqlBuilder builder = this.createSqlBuilder();
+			if (column.getIdentityGenerationType() != null) {
+				builder.alter().table().space().name(table, this.getOptions().isDecorateSchemaName()).space()
+						._add("ALTER COLUMN ").name(column).space()._add("RESTART WITH ")._add(next);
+			} else {
+				// serial: the owned sequence name is generated, so resolve it at run time.
+				final PostgresSqlBuilder tableName = this.createSqlBuilder();
+				tableName.name(table, this.getOptions().isDecorateSchemaName());
+				builder._add("SELECT setval(pg_get_serial_sequence(").sqlChar(tableName.toString())._add(", ")
+						.sqlChar(column.getName())._add("), ")._add(next)._add(", false)");
+			}
+			addSql(result, builder, SqlType.ALTER, table);
+		}
+	}
+
 	@Override
 	protected void addOtherDefinitions(Table table, List<SqlOperation> result) {
+		addIdentityRestarts(table, result);
 		for (var constraint : table.getConstraints()) {
 			if (separateNotValid(constraint)) {
 				getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE).stream()

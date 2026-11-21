@@ -221,6 +221,46 @@ class InformixAlterCatalogFactoryTest {
 	}
 
 	@Test
+	void renamesReferencedColumnAndRecreatesTheUpdatedKeyCheckAndForeignKey() {
+		var before = catalog();
+		parent(before).getColumns().get("id").setId("parent-id");
+		var after = before.clone();
+		var table = parent(after);
+		var renamed = table.getColumns().get("id").setName("new_id");
+		table.getConstraints().remove("pk_parent");
+		table.getConstraints().addPrimaryKeyConstraint("pk_parent", "new_id");
+		((ForeignKeyConstraint) child(after).getConstraints().get("fk_parent")).setRelatedColumns(renamed);
+		assertThrows(UnsupportedOperationException.class, () -> sql(before, after));
+		((CheckConstraint) table.getConstraints().get("ck_parent")).setExpression("new_id > 0");
+		var operations = sql(before, after);
+		int dropForeign = index(operations, "DROP CONSTRAINT \"child_owner\".\"fk_parent\"");
+		int rename = index(operations, "RENAME COLUMN");
+		int key = index(operations, "ADD CONSTRAINT PRIMARY KEY");
+		int check = index(operations, "ADD CONSTRAINT CHECK (new_id > 0)");
+		assertTrue(dropForeign >= 0 && dropForeign < rename && rename < key && rename < check, operations.toString());
+		assertTrue(operations.get(key).contains("\"new_id\""));
+		assertTrue(operations.getLast().contains("FOREIGN KEY") && operations.getLast().contains("\"new_id\""));
+		assertTrue(sql(after, before).stream().anyMatch(s -> s.contains("RENAME COLUMN") && s.endsWith("TO \"id\"")));
+	}
+
+	@Test
+	void removesAColumnAfterDroppingItsCheckAndRestoresTheReplacementExpression() {
+		var before = catalog();
+		var table = child(before);
+		table.getColumns().add("payload", c -> c.setDataType(DataType.INT));
+		table.getConstraints().addCheckConstraint("ck_child", "payload > 0 AND parent_id > 0");
+		var after = before.clone();
+		child(after).getColumns().remove("payload");
+		assertThrows(UnsupportedOperationException.class, () -> sql(before, after));
+		((CheckConstraint) child(after).getConstraints().get("ck_child")).setExpression("parent_id > 0");
+		var operations = sql(before, after);
+		int drop = index(operations, "DROP CONSTRAINT \"child_owner\".\"ck_child\"");
+		int column = index(operations, "DROP ( \"payload\")");
+		int check = index(operations, "ADD CONSTRAINT CHECK (parent_id > 0)");
+		assertTrue(drop >= 0 && drop < column && column < check, operations.toString());
+	}
+
+	@Test
 	void renamesAnIndependentColumnWithStableIdentityAndModifiesItsNewName() {
 		var before = catalog();
 		standalone(before, child(before), "payload_idx");

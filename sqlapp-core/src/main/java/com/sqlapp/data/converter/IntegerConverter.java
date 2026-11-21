@@ -23,12 +23,6 @@ import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -52,26 +46,13 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 	public Integer convertObject(final Object value) {
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Integer) {
 			return (Integer) value;
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? op.getAsInt() : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? toInt(op.getAsLong(), value) : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? toInt(op.getAsDouble(), value) : null;
-		} else if (value instanceof Optional<?>) {
-			final Optional<?> op = (Optional<?>) value;
-			if (!op.isPresent()) {
-				return getDefaultValue();
-			}
-			Object internal = op.get();
-			return convertOther(internal);
 		}
 		return convertOther(value);
 	}
@@ -119,9 +100,7 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 	}
 
 	public static int toInt(final byte[] bytes) {
-		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
-		keyBuffer.order(ByteOrder.BIG_ENDIAN);
-		return keyBuffer.getInt();
+		return (int) IntegralNumbers.fromBytes(bytes, "Integer", Integer.MIN_VALUE, Integer.MAX_VALUE);
 	}
 
 	/*

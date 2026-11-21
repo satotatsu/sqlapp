@@ -54,7 +54,7 @@ public class URIConverter extends AbstractConverter<URI> {
 			try {
 				return ((URL) value).toURI();
 			} catch (URISyntaxException e) {
-				throw new RuntimeException(e);
+				throw new ConverterException(e.getMessage(), e);
 			}
 		} else if (value instanceof File) {
 			return ((File) value).toURI();

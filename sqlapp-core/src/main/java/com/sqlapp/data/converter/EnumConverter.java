@@ -137,7 +137,7 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 				}
 			}
 		} catch (SecurityException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException("Cannot access " + clazz.getName() + "." + methodName, e);
 		} catch (NoSuchMethodException e) {
 			method = null;
 		}
@@ -155,12 +155,12 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 	private <T> T invoke(Method method, Object value) {
 		try {
 			return (T) method.invoke(null, value);
-		} catch (IllegalArgumentException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
+		} catch (IllegalArgumentException | IllegalAccessException e) {
+			throw new ConverterException("Cannot convert to " + clazz.getName() + ": " + value, e);
 		} catch (InvocationTargetException e) {
-			throw new RuntimeException(e);
+			// for example valueOf("UNKNOWN"): report the enum and the value, not the reflection
+			final Throwable cause = e.getCause() != null ? e.getCause() : e;
+			throw new ConverterException("Cannot convert to " + clazz.getName() + ": " + value, cause);
 		}
 	}
 

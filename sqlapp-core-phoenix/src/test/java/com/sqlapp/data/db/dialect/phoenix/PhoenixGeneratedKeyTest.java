@@ -23,6 +23,28 @@ import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 
 class PhoenixGeneratedKeyTest {
+	@Test
+	void tenantCatalogDoesNotBecomeAnSqlIdentifier() {
+		for (var dialect : List.of(DialectHolder.defaultDialect, DialectHolder.defaultDialect5_3_1)) {
+			assertEquals("\"Sales\".\"Batch Seq\"", dialect.getObjectFullName("customer-a", "Sales", "Batch Seq"));
+			assertEquals("\"Batch Seq\"", dialect.getObjectFullName("customer-b", null, "Batch Seq"));
+		}
+	}
+
+	@Test
+	void respectsReservationSchemaAndRejectsOutOfBoundsExpansion() {
+		final var dialect = DialectHolder.defaultDialect5_3_1;
+		final var sequence = new Sequence("Batch Seq").setSchemaName("Sales").setIncrementBy(BigInteger.valueOf(-2))
+				.setMinValue(BigInteger.ONE);
+		final var registry = dialect.createSqlFactoryRegistry();
+		registry.getOptions().setDecorateSchemaName(true);
+		final var reservation = registry.createSqlNodes(sequence, SqlType.SEQUENCE_NEXT_VALUES).get(0).eval(3);
+		assertTrue(reservation.getSql().contains("VALUES FOR \"Sales\".\"Batch Seq\""), reservation.getSql());
+		assertEquals(3, reservation.getBindParameters().get(0).getBindParameter().getValue());
+		assertEquals(List.of(5L, 3L, 1L), dialect.expandSequenceValues(sequence, List.of(5L), 3));
+		org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+				() -> dialect.expandSequenceValues(sequence, List.of(5L), 4));
+	}
 
 	@Test
 	void usesExplicitSequenceReservationAndUpsert() {

@@ -69,13 +69,18 @@ public abstract class AbstractBinaryConverter extends AbstractConverter<byte[]> 
 		} else if (value instanceof Blob) {
 			final Blob lob = (Blob) value;
 			try {
-				return lob.getBytes(1, (int) lob.length());
+				final long length = lob.length();
+				if (length > Integer.MAX_VALUE) {
+					throw new ConverterException("Blob is too large for byte[]: " + length + " bytes");
+				}
+				return lob.getBytes(1, (int) length);
 			} catch (final SQLException e) {
-				throw new RuntimeException(e);
+				throw new ConverterException(e.getMessage(), e);
 			}
 		} else if (value instanceof String) {
 			return stringToBinary((String) value);
 		} else if (value instanceof InputStream) {
+			// the stream is read to the end and closed: the converter consumes it
 			final InputStream is = InputStream.class.cast(value);
 			try {
 				return BinaryUtils.toBinary(is);

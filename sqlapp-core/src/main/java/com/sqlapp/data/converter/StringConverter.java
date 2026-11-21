@@ -82,7 +82,7 @@ public class StringConverter extends AbstractConverter<String> {
 			try {
 				return lob.getSubString(1, (int) lob.length());
 			} catch (final SQLException e) {
-				throw new RuntimeException(e);
+				throw new ConverterException(e.getMessage(), e);
 			}
 		} else if (value instanceof SQLXML) {
 			final SQLXML sqlxml = (SQLXML) value;
@@ -90,7 +90,7 @@ public class StringConverter extends AbstractConverter<String> {
 				try {
 					return sqlxml.getString();
 				} catch (final SQLException e) {
-					throw new RuntimeException(e);
+					throw new ConverterException(e.getMessage(), e);
 				}
 			} finally {
 				try {

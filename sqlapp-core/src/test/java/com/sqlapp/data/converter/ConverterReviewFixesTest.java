@@ -183,4 +183,101 @@ class ConverterReviewFixesTest {
 		assertEquals(new BooleanConverter(), new BooleanConverter());
 		assertNotEquals(new BooleanConverter(), new BooleanConverter().setTrueString("true"));
 	}
+	@Test
+	void compactDigitsAreLocalDateTimes() {
+		final Converters converters = new Converters();
+		assertEquals(LocalDateTime.of(2026, 11, 21, 0, 0), converters.convertObject("20261121", LocalDateTime.class));
+		assertEquals(java.time.LocalDate.of(2026, 11, 21), converters.convertObject("20261121", java.time.LocalDate.class));
+		assertEquals(LocalDateTime.of(2026, 11, 21, 10, 30, 15),
+				converters.convertObject("20261121103015", LocalDateTime.class));
+		assertEquals(LocalDateTime.of(2026, 11, 21, 10, 30, 15, 123000000),
+				converters.convertObject("20261121103015123", LocalDateTime.class));
+		assertEquals(LocalDateTime.of(2026, 11, 21, 0, 0),
+				converters.convertObject("20261121", java.time.ZonedDateTime.class).toLocalDateTime());
+		// not a valid date: epoch milliseconds as before
+		assertEquals(java.time.Instant.ofEpochMilli(20261399L),
+				converters.convertObject("20261399", java.time.ZonedDateTime.class).toInstant());
+		assertEquals(java.time.Instant.ofEpochMilli(1700000000000L),
+				converters.convertObject("1700000000000", java.time.OffsetDateTime.class).toInstant());
+	}
+
+	@Test
+	void singleQuoteIsNotAnIndexError() {
+		final Converters converters = new Converters();
+		assertThrows(UnsupportedOperationException.class, () -> converters.convertObject("'", LocalDateTime.class));
+		assertThrows(RuntimeException.class, () -> converters.convertObject("'", java.time.Duration.class));
+		assertEquals(LocalDateTime.of(2026, 1, 2, 3, 4, 5),
+				converters.convertObject("'2026-01-02 03:04:05'", LocalDateTime.class));
+	}
+
+	@Test
+	void currentKeywordsOnly() {
+		final Converters converters = new Converters();
+		for (final String text : new String[] { "now", "NOW()", "CURRENT_TIMESTAMP", "current_timestamp(3)",
+				"current date", "SYSDATE", "systimestamp", "getdate()", "localtimestamp", "current" }) {
+			final LocalDateTime value = converters.convertObject(text, LocalDateTime.class);
+			assertTrue(java.time.Duration.between(value, LocalDateTime.now()).abs().getSeconds() < 60, text);
+		}
+		assertThrows(UnsupportedOperationException.class,
+				() -> converters.convertObject("system error", LocalDateTime.class));
+		assertThrows(UnsupportedOperationException.class,
+				() -> converters.convertObject("currently unknown", LocalDateTime.class));
+	}
+
+	@Test
+	void anyOptionalUsesDefaultWhenEmpty() {
+		final Converters converters = new Converters();
+		assertEquals(0, (int) converters.getConverter(int.class).convertObject(java.util.OptionalInt.empty()));
+		assertEquals(0, (int) converters.getConverter(int.class).convertObject(java.util.Optional.empty()));
+		assertEquals(null, new IntegerConverter().convertObject(java.util.OptionalLong.empty()));
+		assertEquals(12, new IntegerConverter().convertObject(java.util.Optional.of("12")));
+		assertEquals(1, new IntegerConverter().convertObject(java.util.OptionalDouble.of(1.9)));
+		assertEquals(3L, new LongConverter().convertObject(java.util.Optional.of(3)));
+		assertEquals((short) 4, new ShortConverter().convertObject(java.util.OptionalInt.of(4)));
+		assertEquals(0L, (long) converters.getConverter(long.class).convertObject(java.util.OptionalLong.empty()));
+		assertThrows(ConverterException.class, () -> new ByteConverter().convertObject(java.util.OptionalInt.of(300)));
+	}
+
+	@Test
+	void bigIntegerTruncatesLikeOtherIntegralTypes() {
+		final BigIntegerConverter converter = new BigIntegerConverter();
+		assertEquals(java.math.BigInteger.ONE, converter.convertObject("1.5"));
+		assertEquals(java.math.BigInteger.ONE, converter.convertObject(java.util.Optional.of(1.9d)));
+		assertEquals(new java.math.BigDecimal(1e30d).toBigInteger(), converter.convertObject(1e30d));
+		assertThrows(ConverterException.class, () -> converter.convertObject(Double.NaN));
+		assertThrows(ConverterException.class, () -> converter.convertObject("abc"));
+	}
+
+	@Test
+	void integralBytesAreSignExtendedAndRangeChecked() {
+		assertEquals(1, IntegerConverter.toInt(new byte[] { 1 }));
+		assertEquals(-1, IntegerConverter.toInt(new byte[] { (byte) 0xFF }));
+		assertEquals(258, IntegerConverter.toInt(new byte[] { 0, 0, 0, 1, 2 }));
+		assertEquals(0x01020304, IntegerConverter.toInt(new byte[] { 1, 2, 3, 4 }));
+		assertThrows(ConverterException.class, () -> IntegerConverter.toInt(new byte[] { 1, 0, 0, 0, 0 }));
+		assertEquals(0x0102030405060708L, LongConverter.toLong(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }));
+		assertEquals(Short.MAX_VALUE, ShortConverter.toShort(new byte[] { 0x7F, (byte) 0xFF }));
+		assertThrows(ConverterException.class, () -> ShortConverter.toShort(new byte[] { 1, 0, 0 }));
+		assertEquals(1.5d, DoubleConverter.toDouble(java.nio.ByteBuffer.allocate(4).putFloat(1.5f).array()));
+		assertEquals(1.5f, FloatConverter.toFloat(java.nio.ByteBuffer.allocate(8).putDouble(1.5d).array()));
+		assertThrows(ConverterException.class, () -> DoubleConverter.toDouble(new byte[] { 1, 2 }));
+	}
+
+	@Test
+	void conversionFailuresAreConverterExceptions() {
+		assertThrows(ConverterException.class, () -> new IntegerConverter().convertObject("abc"));
+		final ConverterException enumFailure = assertThrows(ConverterException.class,
+				() -> new EnumConverter<>(Color.class).convertObject("BLUE"));
+		assertTrue(enumFailure.getMessage().contains("BLUE"), enumFailure.getMessage());
+		assertThrows(ConverterException.class, () -> new URLConverter().convertObject("not a url"));
+	}
+
+	@Test
+	void durationAndPeriodAcceptAnyDate() {
+		final java.util.Date date = new java.util.Date(0);
+		assertEquals(new Converters().convertObject(new java.sql.Date(0), java.time.Duration.class),
+				new Converters().convertObject(date, java.time.Duration.class));
+		assertEquals(new Converters().convertObject(new java.sql.Date(0), java.time.Period.class),
+				new Converters().convertObject(date, java.time.Period.class));
+	}
 }

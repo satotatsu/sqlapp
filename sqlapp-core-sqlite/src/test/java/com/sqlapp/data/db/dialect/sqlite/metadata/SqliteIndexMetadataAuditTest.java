@@ -58,7 +58,7 @@ class SqliteIndexMetadataAuditTest {
 	}
 
 	@Test
-	void legacyIndexesUseOneCatalogQueryAndVersionAppropriatePragmas() throws Exception {
+	void legacyIndexesUseOneCatalogQueryWithoutPragmas() throws Exception {
 		try (var raw = DriverManager.getConnection("jdbc:sqlite::memory:"); var statement = raw.createStatement()) {
 			statement.execute("CREATE TABLE t(other TEXT)");
 			statement.execute("CREATE INDEX ix ON t(other)");
@@ -103,11 +103,10 @@ class SqliteIndexMetadataAuditTest {
 				prepared.set(0);
 				pragmas.clear();
 				var indexes = reader.doGetAll(connection, context, version);
-				assertEquals(3, indexes.size());
+				// other.t's PRIMARY KEY index is internal and read as a constraint instead.
+				assertEquals(2, indexes.size());
 				assertEquals(1, prepared.get());
-				assertEquals(1, pragmas.size());
-				String expected = SqliteIndexReader.supportsExtendedIndexes(version) ? ".index_xinfo(" : ".index_info(";
-				assertTrue(pragmas.stream().allMatch(sql -> sql.contains(expected)));
+				assertTrue(pragmas.isEmpty());
 				var index = indexes.stream().filter(i -> i.getName().equals("ix")).findFirst().orElseThrow();
 				assertEquals("other", index.getSchemaName());
 				assertTrue(index.isUnique());
@@ -160,7 +159,8 @@ class SqliteIndexMetadataAuditTest {
 			assertEquals("id > 2", expression.getWhere());
 			context.put("tableName", "a");
 			queries.set(0);
-			assertEquals(2, reader.doGetAll(connection, context, version).size());
+			// a's UNIQUE column index is internal and read as a constraint instead.
+			assertEquals(1, reader.doGetAll(connection, context, version).size());
 			assertEquals(1, queries.get());
 			context.put("schemaName", "other");
 			var attached = reader.doGetAll(connection, context, version);
@@ -168,7 +168,7 @@ class SqliteIndexMetadataAuditTest {
 			assertEquals("value", attached.get(0).getColumns().get(0).getName());
 			assertNull(attached.get(0).getWhere());
 			var schemas = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getAllFull(raw);
-			assertEquals(2, schemas.stream().filter(s -> s.getName().equals("main")).findFirst().orElseThrow()
+			assertEquals(1, schemas.stream().filter(s -> s.getName().equals("main")).findFirst().orElseThrow()
 					.getTables().get("a").getIndexes().size());
 		}
 	}
@@ -254,5 +254,43 @@ class SqliteIndexMetadataAuditTest {
 		assertTrue(
 				SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo().setMajorVersion(3).setMinorVersion(16)));
 		assertFalse(SqliteIndexReader.supportsBulkIndexes(new ProductVersionInfo()));
+	}
+
+	@Test
+	void constraintIndexesAreReadOnlyAsConstraints() throws Exception {
+		try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+				var statement = connection.createStatement()) {
+			statement.execute(
+					"CREATE TABLE t(code TEXT PRIMARY KEY, value TEXT UNIQUE, other TEXT, UNIQUE(other, value))");
+			statement.execute("CREATE INDEX ix ON t(other)");
+			var context = new ParametersContext();
+			context.put("schemaName", "main");
+			context.put("tableName", "t");
+			var reader = new SqliteIndexReader(DialectHolder.defaultDialect);
+			for (int minor : List.of(15, 53)) {
+				var indexes = reader.doGetAll(connection, context,
+						new ProductVersionInfo().setMajorVersion(3).setMinorVersion(minor));
+				assertEquals(List.of("ix"), indexes.stream().map(index -> index.getName()).toList());
+			}
+			var tableReader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
+			tableReader.setSchemaName("main");
+			tableReader.setObjectName("t");
+			var table = tableReader.getAllFull(connection).get(0);
+			assertEquals(1, table.getIndexes().size());
+			assertEquals(3, table.getConstraints().getUniqueConstraints().size());
+			assertNotNull(table.getConstraints().getPrimaryKeyConstraint());
+			// Recreation yields the same constraints and no duplicate index.
+			statement.execute("DROP TABLE t");
+			for (var operation : DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(table,
+					com.sqlapp.data.db.sql.SqlType.CREATE))
+				statement.execute(operation.getSqlText());
+			try (var rs = statement.executeQuery(
+					"SELECT sum(origin='c'), sum(origin='u'), sum(origin='pk') FROM pragma_index_list('t')")) {
+				assertTrue(rs.next());
+				assertEquals(1, rs.getInt(1));
+				assertEquals(2, rs.getInt(2));
+				assertEquals(1, rs.getInt(3));
+			}
+		}
 	}
 }

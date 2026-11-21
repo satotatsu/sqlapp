@@ -144,11 +144,14 @@ that modifies existing columns or creates indexes on the new columns.
 Insertions use Informix's native `ADD (... BEFORE existing_column)` syntax.
 Column removal can be combined with independent-index removal and changes
 to retained columns. The planner rejects removal when a retained key, index
-or modeled privilege still refers to the column. CHECK expressions, partitioning,
-inheritance, expression or fragmented indexes, and catalogs containing views,
+or modeled privilege still refers to the column. Retained CHECK expressions
+must be explicitly rewritten in the target. Partitioning, inheritance,
+expression or fragmented indexes, and catalogs containing views,
 triggers or routines require a separate removal plan. A column can be renamed
 in place when the original and target columns share a nonempty ID that is unique
-within each table snapshot and the column stays at the same position. The same
+within each table snapshot and the column stays at the same position. The target
+can supply updated key, foreign-key and CHECK definitions for the renamed column.
+The same
 dependency restrictions as column removal apply. Any type or default change
 uses the new name after RENAME COLUMN. Mixed additions and removals that
 cannot be matched using those rules are rejected. Reversing a column removal
@@ -268,11 +271,15 @@ signature is emitted as `FUNCTION owner.name()` or `PROCEDURE owner.name()`.
 For unnamed routines with arguments, the reader resolves fixed built-in input
 types through one batched SYSPROCCOLUMNS query. SMALLINT, INTEGER, FLOAT, SMALLFLOAT,
 DATE, INT8 and BIGINT are supported. Named DISTINCT, opaque and ROW types
-with simple owner and type identifiers are resolved through a join to
-SYSXTDTYPES in the same batch and emitted as quoted owner-qualified names.
+are resolved through a join to SYSXTDTYPES in the same batch and emitted
+as quoted owner-qualified names. The signature retains identifiers containing
+spaces, dots, commas and quotes across XML serialization.
 A complete resolved signature is preserved
 in `INFORMIX_ROUTINE_SIGNATURE_TYPES`. Other argument types, non-input modes,
 and incomplete signatures require a real SPECIFIC name for grant generation.
+Routine privilege reads support catalog, owner (`schemaName`) and routine-name
+filters. Invalid argument counts, missing routine IDs and duplicate parameter
+positions fail during metadata reading.
 The Docker suite includes a round-trip test for INTEGER and DATE overloads
 that checks that a generated REVOKE removes only the intended overload grant.
 Hand-authored grants normally require
@@ -343,8 +350,10 @@ The individual factories also work when prerequisite principals and routines alr
 
 Catalog ALTER accepts combined table, column, and routine privilege differences.
 It emits GRANT for additions and GRANT WITH GRANT OPTION for upgrades. It emits
-REVOKE for removal of grants without grant option on tables and routines, unless
-a table revoke could also remove a retained column grant. Removing a grantable
+REVOKE for removal of grants without grant option on tables and routines.
+For table SELECT and UPDATE, it restores retained column grants when the
+affected grantors are known and those column grants have no grant option.
+Removing a grantable
 privilege or its grant option on a column is supported for SELECT and UPDATE
 when the original scope has no downstream grants or unknown grantors. In that
 case the planner revokes the scope and restores the target column grants without

@@ -66,6 +66,49 @@ class InformixMetadataDockerTest {
 	}
 
 	@Test
+	void restoresRetainedColumnGrantsAfterAnAllColumnRevoke() throws Exception {
+		final String suffix = Long.toUnsignedString(System.nanoTime(), 36);
+		final String table = "ifx_t" + suffix;
+		final String role = "ifx_r" + suffix;
+		try (var connection = DriverManager.getConnection("jdbc:informix-sqli://localhost:"
+				+ INFORMIX.getMappedPort(9088) + "/sysmaster:INFORMIXSERVER=informix;DELIMIDENT=Y", "informix",
+				"in4mix"); var statement = connection.createStatement()) {
+			statement.execute("CREATE ROLE " + role);
+			try {
+				statement.execute("CREATE TABLE informix." + table + "(keep_col INTEGER, drop_col INTEGER)");
+				try {
+					statement.execute("GRANT UPDATE (keep_col, drop_col) ON informix." + table + " TO " + role);
+					var dialect = DialectHolder.defaultDialect;
+					var reader = new InformixColumnPrivilegeReader(dialect);
+					var parameters = new ParametersContext();
+					parameters.put("tableName", table);
+					parameters.put("objectName", table);
+					var version = com.sqlapp.util.DbUtils.getProductVersionInfo(connection);
+					var before = new com.sqlapp.data.schemas.Catalog("sysmaster");
+					before.getColumnPrivileges().addAll(reader.doGetAll(connection, parameters, version));
+					before.getObjectPrivileges().addAll(
+							new InformixObjectPrivilegeReader(dialect).doGetAll(connection, parameters, version));
+					var after = before.clone();
+					assertTrue(after.getColumnPrivileges().removeIf(grant -> role.equals(grant.getGranteeName())
+							&& "drop_col".equals(grant.getColumnName()) && "UPDATE".equals(grant.getPrivilege())));
+					var operations = dialect.createSqlFactoryRegistry().createSql(before.diff(after), SqlType.ALTER);
+					assertEquals(2, operations.size());
+					for (var operation : operations)
+						statement.execute(operation.getSqlText());
+					var columns = reader.doGetAll(connection, parameters, version).stream().filter(
+							grant -> role.equals(grant.getGranteeName()) && "UPDATE".equals(grant.getPrivilege()))
+							.map(grant -> grant.getColumnName()).toList();
+					assertEquals(List.of("keep_col"), columns);
+				} finally {
+					statement.execute("DROP TABLE informix." + table);
+				}
+			} finally {
+				statement.execute("DROP ROLE " + role);
+			}
+		}
+	}
+
+	@Test
 	void grantsAndRevokesOnlyTheNamedSignatureOfAnOverloadedRoutine() throws Exception {
 		final String database = "ifx_" + Long.toUnsignedString(System.nanoTime(), 36);
 		final String endpoint = "jdbc:informix-sqli://localhost:" + INFORMIX.getMappedPort(9088) + "/";

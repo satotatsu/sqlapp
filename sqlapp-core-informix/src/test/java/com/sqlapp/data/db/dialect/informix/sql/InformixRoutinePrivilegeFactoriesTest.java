@@ -162,6 +162,11 @@ class InformixRoutinePrivilegeFactoriesTest {
 		withColumn.getObjectPrivileges().get(0).setGrantable(false);
 		var removed = withColumn.clone();
 		removed.getObjectPrivileges().clear();
+		var narrowed = registry.createSql(withColumn.diff(removed), SqlType.ALTER);
+		assertEquals(2, narrowed.size());
+		assertTrue(narrowed.getFirst().getSqlText().startsWith("REVOKE UPDATE"));
+		assertTrue(narrowed.getLast().getSqlText().startsWith("GRANT UPDATE (\"label\")"));
+		withColumn.getColumnPrivileges().getFirst().setGrantable(true);
 		assertThrows(UnsupportedOperationException.class,
 				() -> registry.createSql(withColumn.diff(removed), SqlType.ALTER));
 	}
@@ -242,6 +247,22 @@ class InformixRoutinePrivilegeFactoriesTest {
 				.readXml(new java.io.StringReader(original.asXml()));
 		assertEquals(sql(original, SqlType.GRANT), sql(restored, SqlType.GRANT));
 		assertFalse(restored.isHierachy());
+	}
+
+	@Test
+	void retainsQuotedTypeNamesAndArgumentBoundariesAcrossXml() throws Exception {
+		var signature = com.sqlapp.data.db.dialect.informix.InformixRoutineSignature.TYPES;
+		var value = privilege().setSpecificName("routine(250 7)");
+		value.getSpecifics().put("INFORMIX_ROUTINE_IDENTITY", "PARAMETER_TYPE_IDS");
+		String type = com.sqlapp.data.db.dialect.informix.InformixRoutineSignature.namedType("type.owner", "odd,\"name",
+				"D", 1);
+		value.getSpecifics().put(signature, type + ",DATE");
+		RoutinePrivilege restored = com.sqlapp.data.schemas.SchemaUtils
+				.readXml(new java.io.StringReader(value.asXml()));
+		assertEquals(sql(value, SqlType.GRANT), sql(restored, SqlType.GRANT));
+		assertTrue(sql(restored, SqlType.REVOKE).contains("\"routine\"(\"type.owner\".\"odd,\"\"name\", DATE)"));
+		restored.getSpecifics().put(signature, type + "(),DATE");
+		assertThrows(IllegalArgumentException.class, () -> sql(restored, SqlType.GRANT));
 	}
 
 	@Test

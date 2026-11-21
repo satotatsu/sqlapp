@@ -23,9 +23,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -52,17 +49,11 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 		}
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (value instanceof Double) {
 			return (Double) value;
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? (double) op.getAsInt() : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? (double) op.getAsLong() : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? (double) op.getAsDouble() : null;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
@@ -103,7 +94,12 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 	public static double toDouble(final byte[] bytes) {
 		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
 		keyBuffer.order(ByteOrder.BIG_ENDIAN);
-		return keyBuffer.getDouble();
+		if (bytes.length == Double.BYTES) {
+			return keyBuffer.getDouble();
+		} else if (bytes.length == Float.BYTES) {
+			return keyBuffer.getFloat();
+		}
+		throw new ConverterException("Cannot convert " + bytes.length + " bytes to Double (4 or 8 bytes expected)");
 	}
 
 	/*

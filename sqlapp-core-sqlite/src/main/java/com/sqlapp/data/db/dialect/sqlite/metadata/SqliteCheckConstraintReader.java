@@ -25,9 +25,8 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			ProductVersionInfo version) {
 		List<CheckConstraint> result = new ArrayList<>();
-		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.name", "", "");
-				var rs = statement.executeQuery()) {
-			while (rs.next()) {
+		try {
+			SqliteMetadataQueries.forEach(connection, context, "m.name", "", "", rs -> {
 				String table = rs.getString("table_name");
 				int sequence = 0;
 				for (String fragment : SqliteColumnReader.splitColumnDefinitions(rs.getString("table_sql"))) {
@@ -45,7 +44,7 @@ public class SqliteCheckConstraintReader extends CheckConstraintReader {
 						result.add(constraint);
 					}
 				}
-			}
+			});
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}

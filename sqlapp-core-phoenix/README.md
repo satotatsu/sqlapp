@@ -1,5 +1,9 @@
 # Apache Phoenix dialect enhancement
 
+Phoenix retains tenant identity in JDBC catalog metadata and Schema XML.
+SQL object names contain the schema and object only. Execute the generated SQL
+with a JDBC connection whose TenantId matches the intended tenant.
+
 Sequence migrations reject changes to an existing sequence explicitly. CREATE
 accepts the native BIGINT type or an omitted type. CREATE, DROP and value
 allocation require a nonblank sequence name. Sequence counter restoration
@@ -7,6 +11,9 @@ requires a separate migration. CREATE rejects a populated `lastValue` because
 silently ignoring it could reuse previously allocated values. For a new
 destination sequence, clear `lastValue` and specify the independently verified
 next value as `startValue`.
+Sequence allocation honors schema qualification. When a returned first value
+is expanded client-side, expansion fails rather than returning calculated
+values outside known bounds or guessing a cycle boundary.
 
 Phoenix INSERT and INSERT_ROWS factories preserve explicit column families in
 UPSERT targets, as does INSERT_SELECT_NOT_EXISTS. That SQL uses a SELECT

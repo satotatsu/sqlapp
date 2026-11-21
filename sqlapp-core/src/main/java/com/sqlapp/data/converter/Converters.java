@@ -92,7 +92,7 @@ public class Converters implements Serializable {
 	/**
 	 * default converter
 	 */
-	private final Converter<?> defaultConveter = new DefaultConverter();
+	private final Converter<?> defaultConverter = new DefaultConverter();
 	/**
 	 */
 	private boolean enumEmptyToNull = false;
@@ -378,6 +378,11 @@ public class Converters implements Serializable {
 	}
 
 	/**
+	 * Switches the date-time output formats of this instance to ISO 8601. The
+	 * converters are changed in place, so calling this on {@link #getDefault()}
+	 * affects every user of the shared instance; use {@code new Converters()
+	 * .toIsoDateFormat()} for a local setting.
+	 * 
 	 * @return this
 	 */
 	public Converters toIsoDateFormat() {
@@ -560,7 +565,7 @@ public class Converters implements Serializable {
 		@SuppressWarnings("rawtypes")
 		Converter converter = getConverter(clazz);
 		if (converter == null) {
-			converter = this.defaultConveter;
+			converter = this.defaultConverter;
 		}
 		if (src != null && !(src instanceof String)) {
 			if (converter instanceof StringConverter) {
@@ -593,11 +598,11 @@ public class Converters implements Serializable {
 	@SuppressWarnings({ "unchecked" })
 	public <S extends Converter<T>, T> S getConverter(final Class<T> clazz) {
 		if (clazz == null) {
-			return (S) defaultConveter;
+			return (S) defaultConverter;
 		}
 		final Converter<?> converter = getConverterInternal(clazz);
 		if (converter == null) {
-			return (S) defaultConveter;
+			return (S) defaultConverter;
 		}
 		return (S) converter;
 	}
@@ -714,7 +719,7 @@ public class Converters implements Serializable {
 		try {
 			put(Class.forName(name), converter);
 		} catch (final ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new ConverterException(e.getMessage(), e);
 		}
 		return this;
 	}

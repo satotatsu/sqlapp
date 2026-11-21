@@ -79,7 +79,7 @@ public class OffsetTimeConverter extends AbstractJava8OffsetConverter<OffsetTime
 			String lowerVal = ((String) value).toLowerCase();
 			if (isCurrentText(lowerVal)) {
 				return OffsetTime.now();
-			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			} else if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				String val = cast(value);
 				return parseDate(val.substring(1, val.length() - 1));
 			} else if (isNumberPattern(lowerVal)) {

@@ -73,6 +73,9 @@ public class SqliteViewReader extends JdbcViewReader {
 		return SqliteDdl.viewStatement(definition);
 	}
 
+	/** Marks a view SQLite cannot compile, such as one whose table was dropped. */
+	public static final String INVALID_VIEW = "sqlite.view.invalid";
+
 	@Override
 	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Table> views)
 			throws SQLException {
@@ -80,6 +83,30 @@ public class SqliteViewReader extends JdbcViewReader {
 			return;
 		var version = new ProductVersionInfo().setMajorVersion(connection.getMetaData().getDatabaseMajorVersion())
 				.setMinorVersion(connection.getMetaData().getDatabaseMinorVersion());
+		try {
+			loadDetails(connection, context, views, version);
+			return;
+		} catch (RuntimeException e) {
+			if (sqlCause(e) == null)
+				throw e;
+		}
+		// SQLite compiles a view to report its columns, so one view whose tables or
+		// columns no longer exist fails the whole batch. No batched form tolerates
+		// that, so only after a batch failure isolate each view to keep the columns
+		// of every valid one. The view keeps its definition and stays recreatable.
+		for (Table view : views) {
+			try {
+				loadDetails(connection, context, List.of(view), version);
+			} catch (RuntimeException e) {
+				if (sqlCause(e) == null)
+					throw e;
+				view.getSpecifics().put(INVALID_VIEW, "true");
+			}
+		}
+	}
+
+	private void loadDetails(Connection connection, ParametersContext context, List<Table> views,
+			ProductVersionInfo version) throws SQLException {
 		if (!SqliteIndexReader.supportsBulkIndexes(version)) {
 			super.setMetadataDetail(connection, context, views);
 			return;
@@ -87,8 +114,16 @@ public class SqliteViewReader extends JdbcViewReader {
 		var bulkContext = context.clone();
 		bulkContext.put("tableName", views.stream().map(Table::getName).toList());
 		var byName = views.stream().collect(java.util.stream.Collectors.toMap(Table::getName, view -> view));
+		// Read every column before assigning any, so a failure leaves no partial view.
 		getColumnReader().getAllFull(connection, bulkContext)
 				.forEach(column -> byName.get(column.getTableName()).getColumns().add(column));
+	}
+
+	private static SQLException sqlCause(Throwable error) {
+		for (Throwable current = error; current != null; current = current.getCause())
+			if (current instanceof SQLException sql)
+				return sql;
+		return null;
 	}
 
 	private String quoteIdentifier(final String value) {

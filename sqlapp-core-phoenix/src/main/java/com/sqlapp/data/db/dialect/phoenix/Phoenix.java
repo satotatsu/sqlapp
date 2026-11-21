@@ -50,6 +50,13 @@ public class Phoenix extends Dialect {
 	private static final long SIZE_MAX = LEN_2GB - 1;
 
 	@Override
+	public String getObjectFullName(String catalogName, String schemaName, String objectName) {
+		// Phoenix exposes tenant identity as JDBC catalog metadata, but selects it on
+		// the connection.
+		return super.getObjectFullName(null, schemaName, objectName);
+	}
+
+	@Override
 	protected String doQuote(final String target) {
 		return getOpenQuote() + target.replace("\"", "\"\"") + getCloseQuote();
 	}
@@ -308,7 +315,12 @@ public class Phoenix extends Dialect {
 		final BigInteger increment = sequence.getIncrementBy() != null ? sequence.getIncrementBy() : BigInteger.ONE;
 		final List<Object> result = CommonUtils.list(count);
 		for (int i = 0; i < count; i++) {
-			result.add(first.add(increment.multiply(BigInteger.valueOf(i))).longValueExact());
+			final BigInteger value = first.add(increment.multiply(BigInteger.valueOf(i)));
+			if ((sequence.getMinValue() != null && value.compareTo(sequence.getMinValue()) < 0)
+					|| (sequence.getMaxValue() != null && value.compareTo(sequence.getMaxValue()) > 0))
+				throw new IllegalStateException(
+						"Phoenix sequence reservation exceeds modeled bounds: " + sequence.getName());
+			result.add(value.longValueExact());
 		}
 		return result;
 	}

@@ -23,9 +23,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 /**
  * @author SATOH
@@ -45,6 +42,9 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 		}
 		if (isSupplier(value)) {
 			return convertObject(getSupplierValue(value));
+		} else if (isOptional(value)) {
+			// any kind of Optional: empty is the default value
+			return convertObject(getOptionalValue(value));
 		} else if (value instanceof BigDecimal) {
 			return (BigDecimal) value;
 		} else if (value instanceof String) {
@@ -55,15 +55,6 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 			return BigDecimal.valueOf(((Double) value));
 		} else if (value instanceof Number) {
 			return BigDecimal.valueOf(((Number) value).longValue());
-		} else if (value instanceof OptionalInt) {
-			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? BigDecimal.valueOf(op.getAsInt()) : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? BigDecimal.valueOf(op.getAsLong()) : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? BigDecimal.valueOf(op.getAsDouble()) : null;
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return BigDecimal.ONE;

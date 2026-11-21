@@ -26,6 +26,7 @@ import com.sqlapp.util.DoubleKeyMap;
 
 class InformixMetadataReaderTest {
 	static ExResultSet row(final Map<String, Object> values) {
+		boolean[] nullInteger = { false };
 		return new ExResultSet((ResultSet) Proxy.newProxyInstance(ResultSet.class.getClassLoader(),
 				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> switch (method.getName()) {
 				case "getString" -> values.get(args[0] instanceof Integer n ? switch (n) {
@@ -35,7 +36,12 @@ class InformixMetadataReaderTest {
 				case 7 -> "dbspace";
 				default -> throw new UnsupportedOperationException("column " + n);
 				} : args[0]);
-				case "getInt" -> values.getOrDefault(args[0], 0);
+				case "getInt" -> {
+					Object value = values.get(args[0]);
+					nullInteger[0] = value == null;
+					yield value == null ? 0 : ((Number) value).intValue();
+				}
+				case "wasNull" -> nullInteger[0];
 				case "getLong" -> ((Number) values.getOrDefault(args[0], 0L)).longValue();
 				case "getDouble" -> ((Number) values.getOrDefault(args[0], 0)).doubleValue();
 				default -> throw new UnsupportedOperationException(method.getName());

@@ -9,6 +9,9 @@ WHERE 1 = 1
   /*if isNotEmpty(catalogName)*/
   AND TRIM(DBINFO('dbname')) IN /*catalogName*/('%')
   /*end*/
+  /*if isNotEmpty(schemaName)*/
+  AND p.owner IN /*schemaName*/('%')
+  /*end*/
   /*if isNotEmpty(objectName)*/
   AND p.procname IN /*objectName*/('%')
   /*end*/

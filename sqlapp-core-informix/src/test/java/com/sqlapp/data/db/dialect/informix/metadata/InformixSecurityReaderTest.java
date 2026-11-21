@@ -151,7 +151,7 @@ class InformixSecurityReaderTest {
 	@Test
 	void resolvesUnnamedSignaturesInOneBatchAndKeepsUnsupportedTypesUnresolved() {
 		var privileges = new Rows();
-		for (int id : java.util.List.of(101, 102, 103)) {
+		for (int id : java.util.List.of(101, 102, 103, 104)) {
 			var row = new HashMap<String, Object>(Map.of("catalog_name", "db", "schema_name", "owner", "routine_name",
 					"routine", "routine_id", id, "argument_count", 2, "routine_parameter_types", "2 7", "routine_kind",
 					"PROCEDURE", "routine_auth", "e", "grantor", "owner", "grantee", "reader"));
@@ -164,19 +164,29 @@ class InformixSecurityReaderTest {
 			privileges.rows.add(row);
 		}
 		var parameters = new Rows();
-		for (int id : java.util.List.of(101, 103)) {
+		for (int id : java.util.List.of(101, 103, 104)) {
 			parameters.rows.add(Map.of("routine_id", id, "parameter_id", 2, "parameter_type", id == 101 ? 7 : 10,
 					"extended_type_id", 0, "parameter_mode", 1));
-			parameters.rows.add(Map.of("routine_id", id, "parameter_id", 1, "parameter_type", 2, "extended_type_id", 0,
-					"parameter_mode", 1));
+			parameters.rows.add(Map.of("routine_id", id, "parameter_id", 1, "parameter_type", 2, "extended_type_id",
+					id == 104 ? 250 : 0, "parameter_mode", 1, "type_owner", "types_owner", "type_name", "code_t",
+					"type_kind", "D"));
+			if (id == 104)
+				parameters.rows.set(parameters.rows.size() - 2, Map.of("routine_id", id, "parameter_id", 2,
+						"parameter_type", 7, "extended_type_id", 0, "parameter_mode", 1));
 		}
 		var reader = new InformixRoutinePrivilegeReader(DialectHolder.defaultDialect) {
 			@Override
 			protected JdbcQueryHandler execute(Connection c, SqlNode n, ParametersContext p, ResultSetNextHandler h) {
-				return (n.eval(p).getSql().contains("sysproccolumns") ? parameters : privileges).feed(n, p, h);
+				String query = n.eval(p).getSql();
+				if (query.contains("sysproccolumns"))
+					return parameters.feed(n, p, h);
+				assertTrue(query.contains("p.owner IN"), query);
+				return privileges.feed(n, p, h);
 			}
 		};
-		var grants = reader.doGetAll(null, new ParametersContext(), null);
+		var context = new ParametersContext();
+		context.put("schemaName", "owner");
+		var grants = reader.doGetAll(null, context, null);
 		assertEquals(1, privileges.queries);
 		assertEquals(1, parameters.queries);
 		var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
@@ -186,5 +196,15 @@ class InformixSecurityReaderTest {
 		assertTrue(registry.createSql(grants.get(1), grant).getFirst().getSqlText()
 				.contains("\"routine\"(INTEGER, DATE)"));
 		assertThrows(IllegalArgumentException.class, () -> registry.createSql(grants.get(2), grant));
+		assertTrue(registry.createSql(grants.get(3), grant).getFirst().getSqlText()
+				.contains("\"routine\"(\"types_owner\".\"code_t\", DATE)"));
+		grants.get(3).getSpecifics().put(com.sqlapp.data.db.dialect.informix.InformixRoutineSignature.TYPES,
+				"types_owner.code_t()");
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(grants.get(3), grant));
+		parameters.rows.add(parameters.rows.getFirst());
+		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, context, null));
+		parameters.rows.removeLast();
+		privileges.rows.getFirst().remove("argument_count");
+		assertThrows(IllegalStateException.class, () -> reader.doGetAll(null, context, null));
 	}
 }

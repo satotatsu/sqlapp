@@ -885,8 +885,11 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 		var sequence = column.getSequence();
 		if (sequence != null) {
 			space()._add("(");
-			if (sequence.getStartValue() != null)
-				_add("START WITH ")._add(sequence.getStartValue()).space();
+			// Start at the next value (lastValue) when it is known, like sequences:
+			// Oracle does not keep the declared start of an identity.
+			var start = sequence.getLastValue() != null ? sequence.getLastValue() : sequence.getStartValue();
+			if (start != null)
+				_add("START WITH ")._add(start).space();
 			if (sequence.getIncrementBy() != null)
 				_add("INCREMENT BY ")._add(sequence.getIncrementBy()).space();
 			if (sequence.getMinValue() != null)

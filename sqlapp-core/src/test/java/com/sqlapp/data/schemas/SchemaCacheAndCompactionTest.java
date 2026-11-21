@@ -85,8 +85,8 @@ public class SchemaCacheAndCompactionTest {
 	 */
 	@Test
 	public void concurrentLookupsReturnConsistentResults() throws Exception {
-		final List<Class<?>> classes = List.of(Table.class, Column.class, Index.class, View.class, Schema.class,
-				Catalog.class, Sequence.class, Function.class, Procedure.class, Trigger.class);
+		final List<Class<?>> classes = List.<Class<?>>of(Table.class, Column.class, Index.class, View.class,
+				Schema.class, Catalog.class, Sequence.class, Function.class, Procedure.class, Trigger.class);
 		final List<Object> expected = lookup(classes);
 		final ExecutorService executor = Executors.newFixedThreadPool(8);
 		try {

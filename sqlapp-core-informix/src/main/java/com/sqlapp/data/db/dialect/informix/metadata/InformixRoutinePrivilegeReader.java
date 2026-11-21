@@ -18,7 +18,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /**
- * Reads all routine grants with their overload identities in a single query.
+ * Reads routine grants in one query and resolves missing signatures in a batch.
  */
 public class InformixRoutinePrivilegeReader extends RoutinePrivilegeReader {
 	private record Pending(RoutinePrivilege privilege, int routineId, int parameterCount) {
@@ -45,8 +45,9 @@ public class InformixRoutinePrivilegeReader extends RoutinePrivilegeReader {
 				privilege.setObjectName(InformixSecurityMetadata.required(rs, ROUTINE_NAME));
 				privilege.setSpecificName(InformixRoutineUtils.specificName(rs, privilege.getObjectName()));
 				final String specific = getString(rs, "specific_name");
+				boolean unnamed = specific == null || specific.isBlank();
 				privilege.getSpecifics().put("INFORMIX_ROUTINE_IDENTITY",
-						specific != null && !specific.isBlank() ? "SPECIFIC_NAME" : "PARAMETER_TYPE_IDS");
+						unnamed ? "PARAMETER_TYPE_IDS" : "SPECIFIC_NAME");
 				privilege.setPrivilege("EXECUTE");
 				privilege.setHierachy(false);
 				privilege.setGrantorName(InformixSecurityMetadata.required(rs, GRANTOR));
@@ -56,9 +57,17 @@ public class InformixRoutinePrivilegeReader extends RoutinePrivilegeReader {
 				if (!java.util.Set.of("FUNCTION", "PROCEDURE").contains(kind))
 					throw new IllegalStateException("Unknown Informix routine kind: " + kind);
 				privilege.getSpecifics().put("INFORMIX_ROUTINE_KIND", kind);
-				int count = rs.getInt("argument_count");
-				if ((specific == null || specific.isBlank()) && count > 0)
-					pending.add(new Pending(privilege, rs.getInt("routine_id"), count));
+				if (unnamed) {
+					int count = rs.getInt("argument_count");
+					if (rs.wasNull() || count < 0)
+						throw new IllegalStateException("Missing or invalid Informix routine argument count");
+					if (count > 0) {
+						int id = rs.getInt("routine_id");
+						if (rs.wasNull() || id <= 0)
+							throw new IllegalStateException("Missing or invalid Informix routine ID");
+						pending.add(new Pending(privilege, id, count));
+					}
+				}
 				result.add(privilege);
 			}
 		});
@@ -78,10 +87,17 @@ public class InformixRoutinePrivilegeReader extends RoutinePrivilegeReader {
 						int mode = rs.getInt("parameter_mode");
 						if (mode == 3 || mode == 5)
 							return;
-						String type = InformixRoutineSignature.builtinType(rs.getInt("parameter_type"),
-								rs.getInt("extended_type_id"), mode);
-						signatures.computeIfAbsent(rs.getInt("routine_id"), ignored -> new TreeMap<>())
-								.put(rs.getInt("parameter_id"), type);
+						int extendedType = rs.getInt("extended_type_id");
+						String type = extendedType == 0
+								? InformixRoutineSignature.builtinType(rs.getInt("parameter_type"), extendedType, mode)
+								: InformixRoutineSignature.namedType(rs.getString("type_owner"),
+										rs.getString("type_name"), rs.getString("type_kind"), mode);
+						var signature = signatures.computeIfAbsent(rs.getInt("routine_id"), ignored -> new TreeMap<>());
+						int position = rs.getInt("parameter_id");
+						if (rs.wasNull() || position < 0 || signature.containsKey(position))
+							throw new IllegalStateException(
+									"Missing, invalid or duplicate Informix routine parameter position");
+						signature.put(position, type);
 					}
 				});
 		for (Pending grant : pending) {

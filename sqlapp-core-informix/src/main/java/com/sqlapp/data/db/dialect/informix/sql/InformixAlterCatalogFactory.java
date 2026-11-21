@@ -326,8 +326,14 @@ public class InformixAlterCatalogFactory extends SimpleSqlFactory<Catalog, Infor
 			else
 				throw unsupported("removing a grantable privilege requires a grant-chain plan");
 		}
-		if (original instanceof ObjectPrivilege table)
-			validateNoRetainedColumns(table, target);
+		if (original instanceof ObjectPrivilege table
+				&& target.getColumnPrivileges().stream().anyMatch(p -> matchesColumnScope(table, p))) {
+			if (table.getGrantorName() == null || !isReplayableColumnPrivilege(table.getPrivilege())
+					|| before.getColumnPrivileges().stream().anyMatch(
+							p -> matchesColumnScope(table, p) && (p.getGrantorName() == null || p.isGrantable())))
+				throw unsupported("table revocation cannot safely restore the affected column privileges");
+			restoreColumnGrants(table, target, grants);
+		}
 		return getSqlFactoryRegistry().createSql(deletion);
 	}
 
@@ -348,10 +354,19 @@ public class InformixAlterCatalogFactory extends SimpleSqlFactory<Catalog, Infor
 				.anyMatch(p -> matchesColumnScope(table, p) && p.getGrantorName() == null))
 			throw unsupported("column revocation requires known grantors in the original scope");
 		if (before.getColumnPrivileges().stream().anyMatch(p -> matchesColumnScope(table, p) && p.isGrantable())) {
-			if (!"SELECT".equalsIgnoreCase(column.getPrivilege()) && !"UPDATE".equalsIgnoreCase(column.getPrivilege()))
+			if (!isReplayableColumnPrivilege(column.getPrivilege()))
 				throw unsupported("column grant-option removal supports SELECT and UPDATE");
 			validateNoDelegatedTableGrants(table, before, target);
 		}
+		restoreColumnGrants(table, target, grants);
+		return getSqlFactoryRegistry().createSql(table, SqlType.REVOKE);
+	}
+
+	private static boolean isReplayableColumnPrivilege(String privilege) {
+		return "SELECT".equalsIgnoreCase(privilege) || "UPDATE".equalsIgnoreCase(privilege);
+	}
+
+	private void restoreColumnGrants(ObjectPrivilege table, Catalog target, Map<String, SqlOperation> grants) {
 		for (ColumnPrivilege retained : target.getColumnPrivileges()) {
 			if (!matchesColumnScope(table, retained))
 				continue;
@@ -360,7 +375,6 @@ public class InformixAlterCatalogFactory extends SimpleSqlFactory<Catalog, Infor
 			for (var operation : getSqlFactoryRegistry().createSql(retained, SqlType.GRANT))
 				grants.putIfAbsent(operation.getSqlText(), operation);
 		}
-		return getSqlFactoryRegistry().createSql(table, SqlType.REVOKE);
 	}
 
 	private static void validateRoutineGrantRemoval(RoutinePrivilege original, Catalog before, Catalog after) {
@@ -499,10 +513,14 @@ public class InformixAlterCatalogFactory extends SimpleSqlFactory<Catalog, Infor
 	}
 
 	private static void validateColumnRemoval(Catalog catalog, Table original, Table target) {
-		if (target.getColumns().isEmpty() || original.getPartitioning() != null || !original.getInherits().isEmpty()
-				|| target.getConstraints().stream().anyMatch(c -> c instanceof CheckConstraint))
-			throw unsupported(
-					"column removal requires a nonempty table without partitioning, inheritance or CHECK expressions");
+		if (target.getColumns().isEmpty() || original.getPartitioning() != null || !original.getInherits().isEmpty())
+			throw unsupported("column removal or rename requires a nonempty table without partitioning or inheritance");
+		for (CheckConstraint check : target.getConstraints().getCheckConstraints()) {
+			if (original.getConstraints().getCheckConstraints().stream()
+					.anyMatch(oldCheck -> Objects.equals(oldCheck.getExpression(), check.getExpression())))
+				throw unsupported(
+						"column removal or rename requires an explicit rewrite of retained CHECK expressions");
+		}
 		for (Schema schema : catalog.getSchemas()) {
 			if (!schema.getViews().isEmpty() || !schema.getTriggers().isEmpty() || !schema.getMviews().isEmpty()
 					|| !schema.getFunctions().isEmpty() || !schema.getProcedures().isEmpty())

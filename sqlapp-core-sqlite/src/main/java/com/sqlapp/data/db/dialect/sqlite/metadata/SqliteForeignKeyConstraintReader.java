@@ -72,38 +72,40 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 	private List<ForeignKeyConstraint> readBulk(Connection connection, ParametersContext context) {
 		Map<String, ForeignKeyConstraint> constraints = new LinkedHashMap<>();
 		Map<String, Integer> parentKeyCounts = new LinkedHashMap<>();
+		java.util.Set<String> unresolved = new java.util.HashSet<>();
 		Map<String, String> definitions = new LinkedHashMap<>();
 		String schema = getSchemaName(context) == null ? "main" : getSchemaName(context);
-		try (var statement = SqliteMetadataQueries.prepare(connection, context,
-				"p.*, COALESCE(p.\"to\", r.name) AS referenced_column, "
-						+ "(SELECT count(*) FROM pragma_table_info(p.\"table\", ?) WHERE pk>0) AS parent_key_count",
-				"JOIN pragma_foreign_key_list(m.name, ?) p LEFT JOIN pragma_table_info(p.\"table\", ?) r "
-						+ "ON p.\"to\" IS NULL AND r.pk=p.seq+1",
-				", p.id, p.seq"); var rs = statement.executeQuery()) {
-			while (rs.next()) {
-				String table = rs.getString("table_name");
-				definitions.putIfAbsent(table, rs.getString("table_sql"));
-				String key = table + "\u0000" + rs.getInt("id");
-				var constraint = constraints.get(key);
-				if (constraint == null) {
-					constraint = createConstraint(context, schema, table, rs.getInt("id"), rs.getString("table"),
-							rs.getString("on_update"), rs.getString("on_delete"));
-					constraints.put(key, constraint);
-				}
-				constraint.getColumns().add(new Column(rs.getString("from")));
-				String referenced = rs.getString("referenced_column");
-				if (referenced == null)
-					throw unresolvedParent(constraint);
-				constraint.getRelatedColumns().add(referenced);
-				if (rs.getString("to") == null)
-					parentKeyCounts.put(key, rs.getInt("parent_key_count"));
-			}
+		try {
+			SqliteMetadataQueries.forEach(connection, context,
+					"p.*, COALESCE(p.\"to\", r.name) AS referenced_column, "
+							+ "(SELECT count(*) FROM pragma_table_info(p.\"table\", ?) WHERE pk>0) AS parent_key_count",
+					"JOIN pragma_foreign_key_list(m.name, ?) p LEFT JOIN pragma_table_info(p.\"table\", ?) r "
+							+ "ON p.\"to\" IS NULL AND r.pk=p.seq+1",
+					", p.id, p.seq", rs -> {
+						String table = rs.getString("table_name");
+						definitions.putIfAbsent(table, rs.getString("table_sql"));
+						String key = table + "\u0000" + rs.getInt("id");
+						var constraint = constraints.get(key);
+						if (constraint == null) {
+							constraint = createConstraint(context, schema, table, rs.getInt("id"),
+									rs.getString("table"), rs.getString("on_update"), rs.getString("on_delete"));
+							constraints.put(key, constraint);
+						}
+						constraint.getColumns().add(new Column(rs.getString("from")));
+						if (rs.getString("to") == null)
+							parentKeyCounts.put(key, rs.getInt("parent_key_count"));
+						String referenced = rs.getString("referenced_column");
+						if (referenced == null)
+							unresolved.add(key);
+						else
+							constraint.getRelatedColumns().add(referenced);
+					});
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 		parentKeyCounts.forEach((key, count) -> {
-			if (count != constraints.get(key).getColumns().size())
-				throw unresolvedParent(constraints.get(key));
+			if (unresolved.contains(key) || count != constraints.get(key).getColumns().size())
+				markUnresolvedParent(constraints.get(key));
 		});
 		applyDeclarations(constraints.values(), definitions);
 		return List.copyOf(constraints.values());
@@ -148,10 +150,24 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 		return true;
 	}
 
-	private IllegalArgumentException unresolvedParent(ForeignKeyConstraint constraint) {
-		return new IllegalArgumentException("Cannot resolve SQLite foreign key " + constraint.getTableName() + " -> "
-				+ constraint.getRelatedTableName()
-				+ ": referenced primary key must exist and match the child column count");
+	/**
+	 * Marks a key whose omitted parent columns cannot be resolved because the
+	 * parent table is missing, has no primary key, or its key differs in column
+	 * count. SQLite accepts such DDL and reports "foreign key mismatch" only on
+	 * DML.
+	 */
+	public static final String PARENT_UNRESOLVED = "sqlite.foreignKey.parentUnresolved";
+
+	/**
+	 * Keeps the key without parent columns, so SQLite recreates the original
+	 * {@code REFERENCES parent} declaration, and marks it for other consumers.
+	 */
+	private void markUnresolvedParent(ForeignKeyConstraint constraint) {
+		constraint.getRelatedColumns().clear();
+		constraint.getSpecifics().put(PARENT_UNRESOLVED, "true");
+		logger.warn("SQLite foreign key " + constraint.getTableName() + " -> " + constraint.getRelatedTableName()
+				+ " has no resolvable parent key: the parent table must exist with a primary key"
+				+ " matching the child column count");
 	}
 
 	/**
@@ -178,8 +194,9 @@ public class SqliteForeignKeyConstraintReader extends ForeignKeyConstraintReader
 				parents.put(parent, columns);
 			}
 			if (columns.isEmpty() || columns.size() != constraint.getColumns().size())
-				throw unresolvedParent(constraint);
-			columns.forEach(constraint.getRelatedColumns()::add);
+				markUnresolvedParent(constraint);
+			else
+				columns.forEach(constraint.getRelatedColumns()::add);
 		}
 	}
 

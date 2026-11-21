@@ -64,12 +64,13 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 			final Calendar cst = Calendar.class.cast(value);
 			return Duration.ofSeconds(toSecond(cst), toNano(cst));
 		} else if (value instanceof java.util.Date) {
-			final java.sql.Date dt = java.sql.Date.class.cast(value);
+			// any java.util.Date (Timestamp, java.sql.Date, ...), not only java.sql.Date
+			final java.util.Date dt = java.util.Date.class.cast(value);
 			final Calendar cst = DateUtils.toCalendar(dt);
 			return Duration.ofSeconds(toSecond(cst), toNano(cst));
 		} else if (value instanceof String) {
 			final String lowerVal = ((String) value).toLowerCase();
-			if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+			if (lowerVal.length() >= 2 && lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
 				final String val = cast(value);
 				return parse(val.substring(1, val.length() - 1));
 			}

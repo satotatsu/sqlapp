@@ -53,40 +53,42 @@ public class SqliteColumnReader extends ColumnReader {
 		String pragma = version.getMajorVersion() > 3 || version.getMinorVersion() >= 26 ? "table_xinfo" : "table_info";
 		Map<String, List<Column>> primaryKeys = new java.util.LinkedHashMap<>();
 		Map<String, String> definitions = new java.util.LinkedHashMap<>();
-		try (var statement = SqliteMetadataQueries.prepare(connection, context, "m.type AS object_type, p.*",
-				"JOIN pragma_" + pragma + "(m.name, ?) p", ", p.cid", true); var rs = statement.executeQuery()) {
-			while (rs.next()) {
-				String table = rs.getString("table_name");
-				String definition = rs.getString("table_sql");
-				definitions.put(table, definition);
-				Column column = new Column(rs.getString("name"));
-				column.setDialect(getDialect());
-				column.setCatalogName(getCatalogName(context));
-				column.setSchemaName(getSchemaName(context));
-				column.setTableName(table);
-				splitColumnDefinitions(definition).stream()
-						.filter(item -> Objects.equals(column.getName(), readIdentifier(item))).findFirst()
-						.ifPresent(item -> setColumnDeclaration(column, item));
-				setDataType(column, rs.getString("type"));
-				setViewColumnType(column, "view".equals(rs.getString("object_type")));
-				setStrictAnyType(column, definition);
-				setVirtualColumnType(column, definition);
-				int pk = rs.getInt("pk");
-				column.setNullable(rs.getInt("notnull") == 0);
-				column.setDefaultValue(rs.getString("dflt_value"));
-				if (pk > 0)
-					primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
-				int hidden = pragma.equals("table_xinfo") ? rs.getInt("hidden") : 0;
-				column.setHidden(hidden == 1);
-				column.setFormulaPersisted(hidden == 3);
-				if (hidden == 2 || hidden == 3) {
-					splitColumnDefinitions(definition).stream()
-							.filter(item -> Objects.equals(column.getName(), readIdentifier(item)))
-							.map(SqliteColumnReader::extractFormula).filter(Objects::nonNull).findFirst()
-							.ifPresent(column::setFormula);
-				}
-				result.add(column);
-			}
+		// Parse each CREATE statement once, not once per column.
+		Map<String, Map<String, String>> fragments = new java.util.HashMap<>();
+		try {
+			SqliteMetadataQueries.forEach(connection, context, "m.type AS object_type, p.*",
+					"JOIN pragma_" + pragma + "(m.name, ?) p", ", p.cid", true, rs -> {
+						String table = rs.getString("table_name");
+						String definition = rs.getString("table_sql");
+						definitions.put(table, definition);
+						Column column = new Column(rs.getString("name"));
+						column.setDialect(getDialect());
+						column.setCatalogName(getCatalogName(context));
+						column.setSchemaName(getSchemaName(context));
+						column.setTableName(table);
+						String fragment = fragments.computeIfAbsent(table, key -> columnFragments(definition))
+								.get(column.getName());
+						if (fragment != null)
+							setColumnDeclaration(column, fragment);
+						setDataType(column, rs.getString("type"));
+						setViewColumnType(column, "view".equals(rs.getString("object_type")));
+						setStrictAnyType(column, definition);
+						setVirtualColumnType(column, definition);
+						int pk = rs.getInt("pk");
+						column.setNullable(rs.getInt("notnull") == 0);
+						column.setDefaultValue(rs.getString("dflt_value"));
+						if (pk > 0)
+							primaryKeys.computeIfAbsent(table, key -> new java.util.ArrayList<>()).add(column);
+						int hidden = pragma.equals("table_xinfo") ? rs.getInt("hidden") : 0;
+						column.setHidden(hidden == 1);
+						column.setFormulaPersisted(hidden == 3);
+						if ((hidden == 2 || hidden == 3) && fragment != null) {
+							String formula = extractFormula(fragment);
+							if (formula != null)
+								column.setFormula(formula);
+						}
+						result.add(column);
+					});
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
@@ -95,6 +97,17 @@ public class SqliteColumnReader extends ColumnReader {
 					.equalsIgnoreCase(keys.get(0).getSpecifics().getOrDefault("sqlite.declaredType", "").trim()))
 				setPrimaryKeyDetails(keys.get(0), definitions.get(table));
 		});
+		return result;
+	}
+
+	/**
+	 * Column fragments by name. Column definitions precede table constraints, so
+	 * the first fragment for a name is its column definition.
+	 */
+	private static Map<String, String> columnFragments(String definition) {
+		Map<String, String> result = new java.util.HashMap<>();
+		for (String item : splitColumnDefinitions(definition))
+			result.putIfAbsent(readIdentifier(item), item);
 		return result;
 	}
 
