@@ -27,9 +27,15 @@ import com.sqlapp.util.YamlConverter;
 /** Reads model YAML and its SQL files into a validated plan. */
 public final class MigrationModelConfigurationResolver {
 
-	public record Resolution(MigrationModelPlan plan, List<MigrationModelUnitTest> unitTests) {
+	public record Resolution(MigrationModelPlan plan, List<MigrationModelUnitTest> unitTests,
+			List<MigrationModelDataTest> dataTests) {
+		public Resolution(final MigrationModelPlan plan, final List<MigrationModelUnitTest> unitTests) {
+			this(plan, unitTests, List.of());
+		}
+
 		public Resolution {
 			unitTests = List.copyOf(unitTests);
+			dataTests = List.copyOf(dataTests);
 		}
 	}
 
@@ -70,7 +76,19 @@ public final class MigrationModelConfigurationResolver {
 				}
 				unitTests.add(unitTest);
 			}
-			return new Resolution(plan, unitTests);
+			final List<MigrationModelDataTest> dataTests = new ArrayList<>();
+			final Map<String, Boolean> dataTestIds = new LinkedHashMap<>();
+			for (final var model : value.getModels()) {
+				for (final var test : nullToEmpty(model.getDataTests())) {
+					final MigrationModelDataTest dataTest = dataTest(plan, plan.model(model.getName()), test);
+					if (dataTestIds.put(dataTest.id().toLowerCase(Locale.ROOT), Boolean.TRUE) != null) {
+						throw new IllegalArgumentException(
+								"Duplicate data test name: " + dataTest.id() + ". Give the tests distinct names.");
+					}
+					dataTests.add(dataTest);
+				}
+			}
+			return new Resolution(plan, unitTests, dataTests);
 		} catch (IllegalArgumentException e) {
 			throw new CommandException("Invalid migration model configuration: " + e.getMessage(), e);
 		}
@@ -206,6 +224,106 @@ public final class MigrationModelConfigurationResolver {
 			expected.add(canonical);
 		}
 		return new MigrationModelUnitTest(value.getName(), value.getModel(), given, expected, value.isOrdered());
+	}
+
+	private static MigrationModelDataTest dataTest(final MigrationModelPlan plan, final MigrationModel model,
+			final MigrationModelConfiguration.DataTest value) {
+		if (value == null) {
+			throw new IllegalArgumentException("Empty data test in model " + model.name() + ".");
+		}
+		final List<MigrationModelDataTest.Kind> kinds = new ArrayList<>();
+		if (value.getNotNull() != null) {
+			kinds.add(MigrationModelDataTest.Kind.NOT_NULL);
+		}
+		if (value.getUnique() != null) {
+			kinds.add(MigrationModelDataTest.Kind.UNIQUE);
+		}
+		if (value.getAcceptedValues() != null) {
+			kinds.add(MigrationModelDataTest.Kind.ACCEPTED_VALUES);
+		}
+		if (value.getRelationships() != null) {
+			kinds.add(MigrationModelDataTest.Kind.RELATIONSHIPS);
+		}
+		if (value.getExpression() != null) {
+			kinds.add(MigrationModelDataTest.Kind.EXPRESSION);
+		}
+		if (value.getRowCount() != null) {
+			kinds.add(MigrationModelDataTest.Kind.ROW_COUNT);
+		}
+		if (value.getSql() != null) {
+			kinds.add(MigrationModelDataTest.Kind.SQL);
+		}
+		if (kinds.size() != 1) {
+			throw new IllegalArgumentException("Each data test of model " + model.name() + " needs exactly one of"
+					+ " notNull, unique, acceptedValues, relationships, expression, rowCount and sql"
+					+ (value.getName() == null ? "." : ": " + value.getName()));
+		}
+		final MigrationModelDataTest.Kind kind = kinds.getFirst();
+		List<String> columns = List.of();
+		List<Object> values = List.of();
+		String to = null;
+		List<String> fields = List.of();
+		Long min = null;
+		Long max = null;
+		switch (kind) {
+		case NOT_NULL -> columns = value.getNotNull();
+		case UNIQUE -> columns = value.getUnique();
+		case ACCEPTED_VALUES -> {
+			columns = value.getAcceptedValues().getColumn() == null ? List.of()
+					: List.of(value.getAcceptedValues().getColumn());
+			values = value.getAcceptedValues().getValues();
+		}
+		case RELATIONSHIPS -> {
+			final var relationships = value.getRelationships();
+			columns = oneOrMany(model, "column", relationships.getColumn(), relationships.getColumns());
+			fields = oneOrMany(model, "field", relationships.getField(), relationships.getFields());
+			to = relationships.getTo();
+			if (to != null
+					&& plan.models().stream()
+							.noneMatch(candidate -> candidate.name().equalsIgnoreCase(relationships.getTo()))
+					&& plan.sources().values().stream()
+							.noneMatch(candidate -> candidate.name().equalsIgnoreCase(relationships.getTo()))) {
+				throw new IllegalArgumentException(
+						"Data test of model " + model.name() + " references an unknown model or source: " + to);
+			}
+		}
+		case ROW_COUNT -> {
+			min = value.getRowCount().getMin();
+			max = value.getRowCount().getMax();
+		}
+		case EXPRESSION, SQL -> {
+		}
+		}
+		final String name = value.getName() != null && !value.getName().isBlank() ? value.getName()
+				: model.name() + "." + kind.name().toLowerCase(Locale.ROOT)
+						+ (columns.isEmpty() ? "" : "(" + String.join(",", columns) + ")");
+		final MigrationModelDataTest.Severity severity;
+		try {
+			severity = value.getSeverity() == null ? MigrationModelDataTest.Severity.ERROR
+					: MigrationModelDataTest.Severity.valueOf(value.getSeverity().trim().toUpperCase(Locale.ROOT));
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException(
+					"Unsupported severity of data test " + name + ": " + value.getSeverity() + ". Use error or warn.");
+		}
+		if (model.hasDeclaredColumns()) {
+			for (final String column : columns) {
+				if (model.columns().stream().noneMatch(declared -> declared.name().equalsIgnoreCase(column))) {
+					throw new IllegalArgumentException("Data test " + name + " uses a column that model " + model.name()
+							+ " does not declare: " + column);
+				}
+			}
+		}
+		return new MigrationModelDataTest(name, model.name(), kind, columns, values, to, fields, value.getExpression(),
+				min, max, value.getSql(), severity);
+	}
+
+	private static List<String> oneOrMany(final MigrationModel model, final String property, final String one,
+			final List<String> many) {
+		if (one != null && many != null) {
+			throw new IllegalArgumentException("Set either " + property + " or " + property
+					+ "s in a relationships test of model " + model.name() + ".");
+		}
+		return one != null ? List.of(one) : many == null ? List.of() : many;
 	}
 
 	private static File resolve(final File configurationFile, final String path) {

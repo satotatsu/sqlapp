@@ -48,6 +48,9 @@ class RunMigrationPipelineCommandTest {
 			      FROM /*$source('customer')*/customer c
 			      JOIN /*$source('orders')*/orders o ON o.CUSTOMER_ID = c.ID
 			      GROUP BY c.ID, c.NAME
+			    dataTests:
+			      - expression: TOTAL > 0
+			      - rowCount: {min: MIN_ROWS}
 			unitTests:
 			  - name: sums-orders
 			    model: CUSTOMER_SALES
@@ -128,6 +131,7 @@ class RunMigrationPipelineCommandTest {
 			assertEquals(Status.SUCCEEDED, report.step(step).status(), step.name());
 		}
 		assertEquals("unit tests passed: 1, models built: 1", report.step(Step.MODELS).detail());
+		assertEquals("passed: 2, warned: 0, failed: 0", report.step(Step.DATA_TESTS).detail());
 		assertEquals("phase: COMPLETE, verified: true", report.step(Step.PUBLISH).detail());
 		assertTrue(Files.isRegularFile(Path.of(report.step(Step.PUBLISH).resultFile())));
 		assertEquals(List.of("1 | alice | 200.00", "2 | bob | 120.00"),
@@ -154,6 +158,22 @@ class RunMigrationPipelineCommandTest {
 		assertEquals(Status.SUCCEEDED, report.step(Step.LOAD).status());
 		assertEquals(Status.FAILED, report.step(Step.MODELS).status());
 		assertTrue(report.step(Step.MODELS).message().contains("TOTAL"), report.step(Step.MODELS).message());
+		assertEquals(Status.NOT_RUN, report.step(Step.PUBLISH).status());
+		assertEquals(List.of("0"), rows(target,
+				"SELECT count(*) FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_NAME = 'CUSTOMER_SALES'"));
+	}
+
+	@Test
+	void failedDataTestStopsBeforePublishing() throws Exception {
+		write("models.yaml", Files.readString(directory.resolve("models.yaml")).replace("{min: 1}", "{min: 3}"));
+		final RunMigrationPipelineCommand command = command(fingerprint());
+		final RuntimeException e = assertThrows(RuntimeException.class, command::run);
+		assertTrue(e.getMessage().contains("stopped at DATA_TESTS"), e.getMessage());
+		final MigrationPipelineReport report = report(command);
+		assertEquals(Status.SUCCEEDED, report.step(Step.MODELS).status());
+		assertEquals(Status.FAILED, report.step(Step.DATA_TESTS).status());
+		assertTrue(report.step(Step.DATA_TESTS).message().contains("CUSTOMER_SALES.row_count: row count 2"),
+				report.step(Step.DATA_TESTS).message());
 		assertEquals(Status.NOT_RUN, report.step(Step.PUBLISH).status());
 		assertEquals(List.of("0"), rows(target,
 				"SELECT count(*) FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_NAME = 'CUSTOMER_SALES'"));
@@ -229,7 +249,8 @@ class RunMigrationPipelineCommandTest {
 	}
 
 	private void models(final String totalExpression, final String expected) throws Exception {
-		write("models.yaml", MODELS.replace("AMOUNT_EXPRESSION", totalExpression).replace("EXPECTED", expected));
+		write("models.yaml", MODELS.replace("AMOUNT_EXPRESSION", totalExpression).replace("EXPECTED", expected)
+				.replace("MIN_ROWS", "1"));
 	}
 
 	private void write(final String name, final String text) throws Exception {

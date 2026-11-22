@@ -238,6 +238,11 @@ public final class TransferJobPreparationService {
 							.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE,
 					stagingBuffer);
 			final var copyWarnings = new ArrayList<>(compatibility.warnings());
+			// Counter state is independent of table creation and row-copy verification.
+			if (intervalPlan != null)
+				for (String check : TransferGeneratedKeyChecks.required(intervalPlan, targetDialect, configuration,
+						TransferGeneratedKeySynchronization.synchronizes(configuration)))
+					TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings, check);
 			for (String warning : TransferIntervalProjection.warnings(intervalPlan))
 				TransferSchemaPreparation.compatibility(configuration.compatibilityPolicy(), copyWarnings, warning);
 			for (var task : resolved.plan().getTasks())

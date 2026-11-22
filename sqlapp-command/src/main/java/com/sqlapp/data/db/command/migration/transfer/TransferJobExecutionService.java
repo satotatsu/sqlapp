@@ -58,7 +58,17 @@ public final class TransferJobExecutionService {
 			BulkMigrationJobResult copyResult, BulkMigrationJobVerificationResult verificationResult,
 			List<String> completedTasks, Map<String, ChunkedBulkMigrationProgress> committedProgress,
 			String stoppedTaskId, TransferSchemaPreparation.Progress schemaPreparation,
-			TransferFailureDiagnostic failureDiagnostic, TransferStagedReplacement.Status staging) {
+			TransferFailureDiagnostic failureDiagnostic, TransferStagedReplacement.Status staging,
+			List<com.sqlapp.jdbc.bulk.GeneratedKeyCounters.Result> generatedKeyCounters) {
+		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
+				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
+				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId,
+				TransferSchemaPreparation.Progress schemaPreparation, TransferFailureDiagnostic failureDiagnostic,
+				TransferStagedReplacement.Status staging) {
+			this(prepared, phase, copyResult, verificationResult, completedTasks, committedProgress, stoppedTaskId,
+					schemaPreparation, failureDiagnostic, staging, List.of());
+		}
+
 		public Outcome(TransferJobPreparationService.Prepared prepared, Phase phase, BulkMigrationJobResult copyResult,
 				BulkMigrationJobVerificationResult verificationResult, List<String> completedTasks,
 				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId,
@@ -85,6 +95,7 @@ public final class TransferJobExecutionService {
 		public Outcome {
 			completedTasks = List.copyOf(completedTasks);
 			committedProgress = Map.copyOf(committedProgress);
+			generatedKeyCounters = generatedKeyCounters == null ? List.of() : List.copyOf(generatedKeyCounters);
 		}
 	}
 
@@ -173,14 +184,15 @@ public final class TransferJobExecutionService {
 		if (review.prepared().job().configuration()
 				.effectiveTargetPreparation() == TransferJobConfiguration.TargetPreparation.STAGED_REPLACE)
 			throw failed(new Outcome(review.prepared(), Phase.REVALIDATION, null, null, List.of(), Map.of(), null));
+		final com.sqlapp.jdbc.bulk.BulkMigrationJobPlan[] executedPlan = { null };
 		final var command = new ExecuteBulkMigrationJobCommand() {
 			@Override
 			protected com.sqlapp.jdbc.bulk.BulkMigrationJobPlan prepareExecutionPlan(Connection source,
 					Connection target, com.sqlapp.jdbc.bulk.BulkMigrationJobPlan plan) throws SQLException {
 				try {
 					if (TransferIntervalProjection.captured(plan))
-						return TransferIntervalProjection.restoreChecked(plan, target);
-					return TransferIntervalProjection.prepare(target, plan,
+						return executedPlan[0] = TransferIntervalProjection.restoreChecked(plan, target);
+					return executedPlan[0] = TransferIntervalProjection.prepare(target, plan,
 							TransferJobPreparationService.dialect(source),
 							review.prepared().job().configuration().schemaMode(), false);
 				} catch (SQLException failure) {
@@ -275,8 +287,12 @@ public final class TransferJobExecutionService {
 			if (current.job().configuration().verify()
 					&& (command.getVerificationResult() == null || !command.getVerificationResult().isMatch()))
 				throw new IllegalStateException("Transfer verification did not succeed.");
+			// Raise generators only after a verified copy; a failure here reports
+			// FINALIZATION.
+			final var counters = TransferGeneratedKeySynchronization.synchronize(current.job().configuration(),
+					executedPlan[0], bindings.target());
 			return new Outcome(current, Phase.COMPLETE, command.getResult(), command.getVerificationResult(), completed,
-					progress, null, schemaProgress[0]);
+					progress, null, schemaProgress[0], null, null, counters);
 		} catch (Exception failure) {
 			// Driver exceptions and their causes may include credentials or secret-bearing
 			// URLs.

@@ -81,4 +81,5 @@ module com.sqlapp.core {
 	uses com.sqlapp.data.schemas.migration.assessment.MigrationAssessmentProvider;
 	uses com.sqlapp.jdbc.bulk.BulkUpsertProvider;
 	uses com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider;
+	uses com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider;
 }

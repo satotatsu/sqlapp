@@ -19,7 +19,7 @@ import com.sqlapp.util.JsonConverter;
  * @param runId               identifier of the run and name of its directory
  * @param pipelineFingerprint approved fingerprint of the pipeline inputs
  * @param status              overall status
- * @param steps               load, models and publish, in order
+ * @param steps               load, models, data tests and publish, in order
  */
 @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
 public record MigrationPipelineReport(int formatVersion, String runId, String pipelineFingerprint, Status status,
@@ -29,7 +29,7 @@ public record MigrationPipelineReport(int formatVersion, String runId, String pi
 	}
 
 	public enum Step {
-		LOAD, MODELS, PUBLISH
+		LOAD, MODELS, DATA_TESTS, PUBLISH
 	}
 
 	/**

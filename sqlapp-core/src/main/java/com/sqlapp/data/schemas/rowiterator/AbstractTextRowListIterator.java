@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
+import java.util.NoSuchElementException;
+
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
@@ -43,7 +45,8 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractIterator {
 	private final long limit = Long.MAX_VALUE;
 	private boolean init = false;
 
-	private boolean hasNext = false;
+	/** Unconsumed result of hasNextInternal(); null when not yet checked. */
+	private Boolean pending;
 
 	private boolean dispose = false;
 
@@ -76,36 +79,42 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractIterator {
 		if (dispose) {
 			return false;
 		}
-		try {
-			initialize();
-			if (count >= limit) {
-				hasNext = false;
-				closeSilent();
-				return hasNext;
+		if (pending == null) {
+			try {
+				initialize();
+				// hasNextInternal may advance the source (e.g. ResultSet.next()), so it is
+				// called at most once per row; repeated hasNext() calls reuse the result.
+				pending = count < limit && hasNextInternal();
+			} catch (final Exception e) {
+				closeOnFailure(e);
+				throw new RuntimeException(e);
 			}
-			hasNext = hasNextInternal();
-		} catch (final Exception e) {
-			closeOnFailure(e);
-			throw new RuntimeException(e);
+			if (!pending) {
+				closeSilent();
+			}
 		}
-		if (!hasNext) {
-			closeSilent();
-		} else {
-			count++;
-		}
-		return hasNext;
+		return pending;
 	}
 
 	protected abstract boolean hasNextInternal() throws Exception;
 
 	protected abstract void set(T val, Row row) throws Exception;
 
+	/**
+	 * Returns the next row. {@code count} is the number of rows already returned,
+	 * so {@code count + 1} is the 1-based number of the row being set.
+	 */
 	@Override
 	public Row next() {
+		if (!hasNext()) {
+			throw new NoSuchElementException();
+		}
+		pending = null;
 		final Row row = this.table.newRow();
 		try {
 			final T t = this.read();
 			set(t, row);
+			count++;
 			return row;
 		} catch (final RuntimeException e) {
 			closeOnFailure(e);
@@ -113,10 +122,6 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractIterator {
 		} catch (final Exception e) {
 			closeOnFailure(e);
 			throw new RuntimeException(e);
-		} finally {
-			if (!hasNext) {
-				closeSilent();
-			}
 		}
 	}
 

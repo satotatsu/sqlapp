@@ -14,9 +14,43 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
 		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges,
 		String generatedKeyColumn, com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod,
-		TargetPreparation targetPreparation) {
+		TargetPreparation targetPreparation, GeneratedKeyCounterMode generatedKeyCounters) {
 	public enum TargetPreparation {
 		REQUIRE_EMPTY, STAGED_REPLACE
+	}
+
+	/**
+	 * What happens to identity/serial generators after keys are copied with their
+	 * values. SYNCHRONIZE raises each generator past the imported keys (never
+	 * back); WARN only reports the columns. Omitted means SYNCHRONIZE on databases
+	 * that allow it implicitly; Db2 is synchronized only when SYNCHRONIZE is set
+	 * explicitly.
+	 */
+	public enum GeneratedKeyCounterMode {
+		SYNCHRONIZE, WARN
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges, String generatedKeyColumn,
+			com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod, TargetPreparation targetPreparation) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, generatedKeyColumn,
+				insertMethod, targetPreparation, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public GeneratedKeyCounterMode effectiveGeneratedKeyCounters() {
+		return generatedKeyCounters == null ? GeneratedKeyCounterMode.SYNCHRONIZE : generatedKeyCounters;
+	}
+
+	/**
+	 * Whether SYNCHRONIZE was set explicitly, which databases such as Db2 require.
+	 */
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public boolean explicitGeneratedKeyCounters() {
+		return generatedKeyCounters == GeneratedKeyCounterMode.SYNCHRONIZE;
 	}
 
 	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,

@@ -230,7 +230,7 @@ public final class TransferStagedReplacement {
 					TransferJobConfiguration.SchemaMode.CREATE_MISSING, cfg.sourceSchema(),
 					plan.targets().getFirst().schema(), "names.yaml", cfg.chunkSize(), true,
 					TransferJobConfiguration.DataMode.JDBC_DIRECT, null, cfg.compatibilityPolicy(), false, null,
-					cfg.insertMethod(), null);
+					cfg.insertMethod(), null, cfg.generatedKeyCounters());
 			var io = new TransferJobConfigurationIO();
 			Path job = directory.resolve("transfer.yaml");
 			io.write(job, io.format(staged), null);

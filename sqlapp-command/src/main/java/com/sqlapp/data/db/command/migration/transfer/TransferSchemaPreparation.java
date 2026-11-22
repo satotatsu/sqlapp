@@ -239,10 +239,8 @@ public final class TransferSchemaPreparation {
 		if (!Objects.equals(sourceSchema.getProductName(), connection.getMetaData().getDatabaseProductName()))
 			compatibility(policy, warnings,
 					"Source and target products differ. DDL/types are generated from the shared Schema with the target dialect; vendor semantics require review and testing.");
-		// Counter state is independent of table creation and row-copy verification.
-		if (data != null)
-			for (String check : TransferGeneratedKeyChecks.required(data))
-				compatibility(policy, warnings, check);
+		// Generated-key counter checks depend on the transfer path and are added by
+		// the callers (TransferGeneratedKeyChecks).
 		if (mode == TransferJobConfiguration.SchemaMode.REQUIRE_EXISTING) {
 			if (structuralOnly)
 				BulkMigrationTargetValidator.validateStructure(connection, data);

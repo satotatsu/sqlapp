@@ -759,6 +759,9 @@ public final class TransferFileImportService {
 				loaded.configuration().compatibilityPolicy(), loaded.projection(),
 				loaded.configuration().effectiveGeneratedKeyColumn(), staged(loaded));
 		var warnings = new ArrayList<>(schema.warnings());
+		// Counter state is independent of table creation and row-copy verification.
+		for (String check : TransferGeneratedKeyChecks.required(plan))
+			TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings, check);
 		for (String warning : TransferIntervalProjection.warnings(plan))
 			TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings, warning);
 		for (var task : plan.getTasks())

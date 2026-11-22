@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.db.command.migration.model.ExecuteMigrationModelsCommand;
 import com.sqlapp.data.db.command.migration.model.MigrationModelConfigurationResolver;
+import com.sqlapp.data.db.command.migration.model.MigrationModelDataTests;
 import com.sqlapp.data.db.command.migration.model.MigrationModelTargetMapping;
 import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.Status;
 import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.Step;
@@ -35,10 +36,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Runs load, models and publish as one job: a verified transfer from the source
- * database into the engine (optional), the model unit tests and builds inside
- * the engine, and a verified transfer of the model tables to the target
- * database.
+ * Runs load, models, data tests and publish as one job: a verified transfer
+ * from the source database into the engine (optional), the model unit tests and
+ * builds inside the engine, the data tests of the built models, and a verified
+ * transfer of the model tables to the target database.
  * <p>
  * Without {@link #allowExecution} the command reads the definitions offline and
  * reports the fingerprint to approve. It covers the pipeline file, both
@@ -47,11 +48,12 @@ import lombok.Setter;
  * approved one.
  * </p>
  * <p>
- * Publishing starts only after every model of this run was built. The declared
- * columns of this run are written into the run directory as the contract
- * mapping of the publish transfer; the publish job must not name a mapping file
- * itself. Every run gets its own directory with a report that is rewritten
- * after each step. A failed run is not resumed: run the pipeline again.
+ * Publishing starts only after every model of this run was built and every
+ * ERROR data test passed. The declared columns of this run are written into the
+ * run directory as the contract mapping of the publish transfer; the publish
+ * job must not name a mapping file itself. Every run gets its own directory
+ * with a report that is rewritten after each step. A failed run is not resumed:
+ * run the pipeline again.
  * </p>
  * The engine is {@link #getDataSource()}.
  */
@@ -183,7 +185,10 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 			reportFile = runDirectory.resolve("pipeline-report.json");
 			report = new MigrationPipelineReport(1, runId, configurationFingerprint, Status.RUNNING,
 					List.of(StepReport.of(Step.LOAD, inputs.load() == null ? Status.SKIPPED : Status.NOT_RUN),
-							StepReport.of(Step.MODELS, Status.NOT_RUN), StepReport.of(Step.PUBLISH, Status.NOT_RUN)));
+							StepReport.of(Step.MODELS, Status.NOT_RUN),
+							StepReport.of(Step.DATA_TESTS,
+									inputs.models().dataTests().isEmpty() ? Status.SKIPPED : Status.NOT_RUN),
+							StepReport.of(Step.PUBLISH, Status.NOT_RUN)));
 			report.write(reportFile);
 		} catch (IOException e) {
 			throw new CommandException("Migration pipeline run directory cannot be written: " + e.getMessage(), e);
@@ -194,6 +199,9 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 					inputs.load().fingerprint(), sourceDataSource, getDataSource(), runDirectory.resolve("load")));
 		}
 		step(Step.MODELS, inputs.modelsFingerprint(), () -> models(inputs));
+		if (!inputs.models().dataTests().isEmpty()) {
+			step(Step.DATA_TESTS, inputs.modelsFingerprint(), () -> dataTests(inputs));
+		}
 		step(Step.PUBLISH, inputs.publish().fingerprint(), () -> publish(inputs));
 		finish(Status.SUCCEEDED);
 		info("Migration pipeline completed: ", reportFile);
@@ -267,11 +275,32 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 		command.setDataSource(getDataSource());
 		command.setCloseDataSource(false);
 		command.setUnitTestsEnabled(true);
+		command.setDataTestsEnabled(false);
 		command.run();
 		// The publish step uses the declarations of the built models only.
 		requireUnchanged(inputs);
 		return new Outcome(null, null, "unit tests passed: " + command.getUnitTestResults().size() + ", models built: "
 				+ command.getResult().models().size());
+	}
+
+	private Outcome dataTests(final Inputs inputs) throws Exception {
+		requireUnchanged(inputs);
+		final var plan = inputs.models().plan();
+		final MigrationModelDataTests.Results results;
+		try (var connection = getDataSource().getConnection()) {
+			results = MigrationModelDataTests.run(connection, plan, plan.models(), inputs.models().dataTests());
+		}
+		for (final var test : results.tests()) {
+			info("Migration model data test ", test.id(), " ", test.status(),
+					test.message() == null ? "" : " " + test.message());
+		}
+		if (!results.isSuccess()) {
+			throw new IllegalStateException("Data tests failed (" + results.summary() + "): " + results.tests().stream()
+					.filter(test -> test.status() == MigrationModelDataTests.Status.FAIL
+							|| test.status() == MigrationModelDataTests.Status.ERROR)
+					.map(test -> test.id() + ": " + test.message()).collect(java.util.stream.Collectors.joining("; ")));
+		}
+		return new Outcome(null, null, results.summary());
 	}
 
 	private void requireUnchanged(final Inputs inputs) throws IOException {
@@ -299,7 +328,7 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 		final var derived = new TransferJobConfiguration(job.formatVersion(), job.source(), job.target(), job.tables(),
 				job.schemaMode(), job.sourceSchema(), job.targetSchema(), mappingFile, job.chunkSize(), job.verify(),
 				job.dataMode(), job.files(), job.compatibilityPolicy(), job.allowDestructiveSchemaChanges(),
-				job.generatedKeyColumn(), job.insertMethod(), job.targetPreparation());
+				job.generatedKeyColumn(), job.insertMethod(), job.targetPreparation(), job.generatedKeyCounters());
 		final var written = io.write(directory.resolve("publish.yaml"), io.format(derived), null);
 		return transfer(written.file(), written.fingerprint(), getDataSource(), targetDataSource,
 				runDirectory.resolve("publish"));

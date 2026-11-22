@@ -19,8 +19,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Runs the unit tests of YAML-defined models and then builds the models in
- * dependency order inside the connected engine.
+ * Runs the unit tests of YAML-defined models, builds the models in dependency
+ * order inside the connected engine and then runs the data tests of the built
+ * models.
  */
 @Getter
 @Setter
@@ -42,6 +43,11 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 	/** Run unit tests only and build nothing. */
 	private boolean testOnly;
 	/**
+	 * Run the data tests of the built models after a complete build. A failed ERROR
+	 * test fails the command; the built models are kept.
+	 */
+	private boolean dataTestsEnabled = true;
+	/**
 	 * Optional transfer name mapping written after every model was built. It
 	 * carries the declared column types of table models, so that a transfer from
 	 * the engine creates target tables with those types; the engine does not keep
@@ -51,11 +57,13 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 
 	private List<MigrationTransformationTestResult> unitTestResults = List.of();
 	private MigrationModelRunner.Result result;
+	private MigrationModelDataTests.Results dataTestResults;
 
 	@Override
 	protected void doRun() {
 		unitTestResults = List.of();
 		result = null;
+		dataTestResults = null;
 		if (getDataSource() == null) {
 			throw new CommandException("Migration model data source is required.");
 		}
@@ -112,12 +120,33 @@ public class ExecuteMigrationModelsCommand extends AbstractDataSourceCommand {
 				}
 				throw new CommandException(message.toString());
 			}
+			if (dataTestsEnabled) {
+				dataTestResults = MigrationModelDataTests.run(connection, plan, selected, resolved.dataTests());
+				for (final var test : dataTestResults.tests()) {
+					info("Migration model data test ", test.id(), " ", test.status(),
+							test.message() == null ? "" : " " + test.message());
+				}
+				info("Migration model data tests ", dataTestResults.summary());
+				if (!dataTestResults.isSuccess()) {
+					final StringBuilder message = new StringBuilder("Migration model data tests failed:");
+					for (final var test : dataTestResults.tests()) {
+						if (test.status() == MigrationModelDataTests.Status.FAIL
+								|| test.status() == MigrationModelDataTests.Status.ERROR) {
+							message.append(System.lineSeparator()).append("  ").append(test.id()).append(": ")
+									.append(test.message());
+						}
+					}
+					throw new CommandException(message.toString());
+				}
+			}
 		});
-		if (!testOnly && targetMappingFile != null && result != null && result.isSuccess()) {
+		if (!testOnly && targetMappingFile != null && result != null && result.isSuccess()
+				&& (dataTestResults == null || dataTestResults.isSuccess())) {
 			MigrationModelTargetMapping.write(targetMappingFile.toPath(), plan);
 			info("Migration model target mapping: ", targetMappingFile.getAbsolutePath());
 		}
-		if (!testOnly && stateFile != null && result != null && result.isSuccess()) {
+		if (!testOnly && stateFile != null && result != null && result.isSuccess()
+				&& (dataTestResults == null || dataTestResults.isSuccess())) {
 			new MigrationNodeManifestIO().write(stateFile.toPath(), plan.nodeManifest());
 			info("Migration model state: ", stateFile.getAbsolutePath());
 		}
