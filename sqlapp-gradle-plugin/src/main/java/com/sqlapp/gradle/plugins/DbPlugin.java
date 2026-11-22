@@ -126,6 +126,8 @@ public class DbPlugin implements Plugin<Project> {
 		// sqlapp migration model
 		registerTask(project, "executeMigrationModels", ExecuteMigrationModelsTask.class, GROUP_MIGRATION_MODEL,
 				"Tests and builds SELECT-defined migration models.");
+		registerTask(project, "runMigrationPipeline", RunMigrationPipelineTask.class, GROUP_MIGRATION_MODEL,
+				"Loads the engine, builds the migration models and publishes them as one job.");
 		// sqlapp transfer
 		registerTask(project, "transferDatabase", TransferDatabaseTask.class, GROUP_TRANSFER,
 				"Reviews or runs a direct database-to-database transfer.");

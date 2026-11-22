@@ -35,6 +35,10 @@ The existing implementation provides starting points:
 - Assessment's `MigrationTargetDdlGenerator` currently emits only target
   defaults explicitly supplied by mappings. Automatic migration must integrate
   deliberately with this path rather than changing its behavior incidentally.
+- PostgreSQL's `PostgresUtils` can populate `identity` and `sequence` as well
+  as retaining a serial column's `nextval(...)` default. Consume those fields
+  together; do not classify an already modeled generator as an unrelated unknown
+  default solely because its SQL contains `nextval`.
 
 Shared conversion concepts and orchestration belong in `sqlapp-core`;
 product-specific recognition, rendering and capability checks belong in the
@@ -115,6 +119,13 @@ Prefer an exact match whenever available. The ordering is a default heuristic,
 not a proof of equivalence; dialects define stable tie-breaking and recommended
 alternatives. Unknown semantics must not be classified as exact.
 
+Reuse `Dialect.getCurrentDateFunction()`, `getCurrentTimestampFunction()` and
+related existing definitions as candidate sources where their semantics fit.
+Keep their `DbDataType.defaultValueLiteral` consumers consistent with the same
+dialect definitions. Do not create an independently maintained duplicate function
+table or assume those convenience methods alone describe every temporal semantic.
+Preserve existing method behavior while introducing the richer candidate metadata.
+
 Ordinary use requires no per-column approvals. Optional controls include:
 
 - Strict mode rejecting approximate or unresolved conversions at application.
@@ -137,8 +148,12 @@ an action so it cannot be confused with an unsupported omission or absent defaul
 
 Include resolved source/target column identities, original/target expressions,
 products and versions, semantic differences, selection reason, applied rule IDs,
-dependency checks and transfer impact. Retain configuration and plan fingerprints
-so decisions can be reproduced and invalidated when their inputs change.
+dependency checks and transfer impact. First delivery emits these facts in a
+structured report without requiring a persistent decision store. In the later
+cutover phase, retain configuration and plan fingerprints so saved decisions can
+be reproduced and invalidated when their inputs change. Existing artifact
+fingerprint requirements continue to apply; this feature adds no first-phase
+decision-persistence subsystem.
 
 Keep the following dimensions separate:
 
@@ -146,7 +161,7 @@ Keep the following dimensions separate:
 |---|---|
 | Diagnostic severity | INFO, WARNING, UNRESOLVED; evaluation-point and time-basis differences default to WARNING; precision loss is reported |
 | Execution decision | Proceed or blocked for the relevant phase, derived from policy and transfer requirements |
-| Resolution | Open, corrected, or explicitly accepted with actor, timestamp and reason |
+| Resolution (later cutover phase) | Open, corrected, or explicitly accepted with actor, timestamp and reason |
 | Verification | Unchecked, statically checked, or checked against a specific database, with individual evidence |
 
 Warnings do not block ordinary execution. An unresolved default need not block
@@ -158,7 +173,37 @@ Static verification records which references resolve in the target Schema and
 which remain external or unknown. Database verification records DDL application,
 read-back comparison and value/temporal checks separately. Successful DDL alone
 does not prove equivalent values; a successful INSERT is evidence only for the
-conditions actually tested. Reopen resolutions when relevant fingerprints change.
+conditions actually tested. In the later cutover phase, reopen saved resolutions
+when relevant fingerprints change.
+
+## Serial columns and existing generators
+
+Include a narrow PostgreSQL serial-to-target-identity path in first delivery.
+Prefer existing Schema identity/sequence metadata over reconstructing it from
+SQL text. Recognize the associated `nextval` as part of that generator and avoid
+emitting both an identity and a separate unresolved DEFAULT.
+
+Automatic conversion requires an unambiguous column-owned sequence, no known
+shared or external consumers, and target support for the required generator
+behavior. Sequence names or a `nextval` pattern alone do not establish ownership.
+Use existing metadata where sufficient; if additional ownership information is
+needed, obtain it in the PostgreSQL reader in bulk, without per-column queries.
+Record any differences in generator options or explicit-value insertion behavior.
+
+Reuse the existing next-value convention: `Sequence.lastValue` and corresponding
+identity state represent the next value to issue, not the last value returned.
+Carry start, increment and relevant bounds through the existing generator model.
+Do not advance the source generator to discover its state. Explicit-value loading
+may not advance a target generator: plan restoration/reseeding after transfer
+using existing facilities, and report missing state, collisions or unsupported
+restoration rather than inventing a next value. Capture/restore timing must account
+for source writes; a stale metadata snapshot is not a cutover guarantee.
+
+Where this narrow conversion cannot be established, keep the issue unresolved
+but group it by a stable generator reason and supported remedy, with affected
+columns listed together. Batch overrides must remain available. General shared
+sequence translation is deferred, rather than silently converted to per-column
+identities. The same-product preservation path remains preferred.
 
 ## Unsupported defaults, transfer and cutover
 
@@ -183,6 +228,9 @@ for every row.
 Accepting a cutover issue does not make an otherwise invalid transfer executable.
 Analysis and unaffected work can continue. Cutover checks open issues and requires
 correction or explicit acceptance, keeping the details accessible to callers.
+Automated cutover decision persistence is a later phase. First delivery lists
+these remaining obligations in the report and does not claim cutover readiness
+or require a new acceptance store to perform unaffected transfer.
 
 ## DIFF and verification
 
@@ -200,11 +248,22 @@ Do not assume an accepted approximation makes two different expressions equal.
 
 First delivery covers basic literals and current-date/time functions for Oracle,
 SQL Server, PostgreSQL, MySQL/MariaDB and SQLite, with an explicit supported
-product/version matrix established by implementation tests. Other expressions
-remain visible as preserved or unresolved. Later work can add other dialects,
-UUID/user/sequence functions, sequence-to-identity conversion, and reuse for CHECK
-constraints or computed columns. General semantic DIFF normalization and UI support
-are follow-ups; their absence must remain visible in verification results.
+product/version matrix established by implementation tests, plus the narrow
+owned-serial generator path above. Deliver conversion, a structured report and
+transfer-impact decisions first. Persistent correction/acceptance records,
+decision fingerprints and invalidation, and automated cutover checks form the
+next phase; they are not prerequisites for first delivery.
+
+Other expressions remain visible as preserved or unresolved. Later work can add
+other dialects, UUID/user/general sequence functions, broader sequence-to-identity
+conversion, and reuse for CHECK constraints or computed columns. General semantic
+DIFF normalization and UI support are follow-ups; their absence must remain
+visible in verification results.
+
+MySQL `ON UPDATE CURRENT_TIMESTAMP` is separate from DEFAULT conversion. First
+delivery preserves it where the target supports its semantics; otherwise report
+it as requiring action, with a trigger or application change as possible remedies.
+Do not generate a trigger automatically or silently discard existing issues.
 
 Schema XML and existing `Column` APIs remain unchanged. New public conversion
 entry points and configuration names are not finalized here. Redesigning
@@ -216,13 +275,21 @@ APIs and configuration formats retain compatibility.
 
 - Core: source immutability, literal distinctions, semantic differences,
   deterministic ranking, overrides, unknown semantics, warning/strict behavior,
-  valid candidates, report fingerprints and resolution invalidation.
+  valid candidates and structured reports. Decision fingerprints and resolution
+  invalidation are tested with the later cutover phase.
 - Dialects: actual reader representations, supported expressions, quoting,
   meaningful casts, legal defaults per column type, version boundaries and
   preserved-expression dependencies. Test local rules in their owning module.
 - Commands: explicit values versus omission/DEFAULT/NULL, generated and identity
   columns, row-dependent supply, unsupported omissions, transfer decisions and
-  cutover correction/acceptance records. Exercise existing assessment integration.
+  remaining cutover obligations. Exercise existing assessment integration;
+  correction/acceptance persistence tests belong to the later phase.
+- Generators: modeled serial identity plus `nextval` is handled once; test owned
+  versus shared/ambiguous sequences, quoted names, non-unit increments, unknown
+  next state, explicit-value transfer and post-load restoration without consuming
+  source values. Test unsupported target options and grouped unresolved reports.
+- ON UPDATE: preserve supported behavior and report unsupported behavior separately
+  from the DEFAULT result.
 - Cross-dialect tests: conversion matrices in `sqlapp-core-dialect-test`, checking
   selected SQL, differences and target Schema rather than only SQL syntax.
 - Authorized database tests: generate DDL, apply, read back and compare; INSERT
@@ -230,6 +297,10 @@ APIs and configuration formats retain compatibility.
   Distinguish transaction and statement time with separate statements in one
   transaction; distinguish statement and call time within one statement with
   controlled evaluation delays. Avoid relying on coincidentally equal timestamps.
+- SQLite: compare values produced by omitted-column defaults with values written
+  by sqlapp's date/time converters under the repository's ISO-8601 storage policy.
+  Check UTC/offset handling, separators, fractional precision and read-back, rather
+  than assuming a built-in current-timestamp expression uses the required format.
 
 Run changed tests first, then affected modules and direct dependents. Keep real
 database tests separate and require explicit authorization for their targets,
