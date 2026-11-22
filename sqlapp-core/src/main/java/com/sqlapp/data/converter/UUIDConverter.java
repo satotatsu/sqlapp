@@ -53,7 +53,12 @@ public class UUIDConverter extends AbstractConverter<UUID> implements Supplier<U
 			if ("random".equalsIgnoreCase((String) value)) {
 				return UUID.randomUUID();
 			}
-			return UUID.fromString((String) value);
+			String text = ((String) value).trim();
+			// Microsoft GUID text such as Access / SQL Server uses {xxxxxxxx-...}.
+			if (text.length() > 2 && text.charAt(0) == '{' && text.charAt(text.length() - 1) == '}') {
+				text = text.substring(1, text.length() - 1);
+			}
+			return UUID.fromString(text);
 		} else if (value instanceof byte[]) {
 			return BinaryUtils.toUUID((byte[]) value);
 		} else if (value instanceof long[]) {
