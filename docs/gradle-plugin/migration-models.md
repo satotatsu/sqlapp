@@ -303,6 +303,56 @@ table loaded without declared columns has no string lengths, and creating its
 target table fails; declare the columns, or create the target table yourself
 and use `schemaMode: REQUIRE_EXISTING`.
 
+## Publishing into existing tables
+
+The mapping written by `targetMappingFile` marks every table as a contract
+(`contract: true`). When the target table already exists, the transfer checks
+it against the contract during review, before anything is written, and stops
+with every problem it finds:
+
+| Contract | The existing target table must have |
+|---|---|
+| `VARCHAR(n)`, `CHAR(n)` | a character column of at least `n`, or an unbounded one |
+| `DECIMAL(p,s)` | a scale of at least `s` and at least `p - s` integer digits; an integer column only for `s = 0` and a `p` it can always hold |
+| `INT`, `BIGINT`, … | an integer column at least as wide, or a decimal with enough integer digits |
+| `DOUBLE`, `REAL` | a floating-point column at least as wide |
+| `DATE`, `TIMESTAMP`, `TIME` | `DATE`, `TIMESTAMP` or `DATETIME`; at least the declared fractional seconds |
+| a nullable column | a nullable column |
+| the primary key | no unique key that does not contain the primary key columns |
+| — | no other NOT NULL column without a default |
+
+A wider column is fine. A table that the transfer creates is created from the
+contract and is not checked.
+
+Lengths are compared as numbers in the target's own unit. A target that counts
+bytes, such as Oracle with byte semantics, accepts the check for `VARCHAR2(20)`
+and can still reject a row with twenty multi-byte characters. That row fails
+the load. To publish into tables that already hold data, use
+`targetPreparation: STAGED_REPLACE`:
+
+```yaml
+# unload.yaml
+formatVersion: 1
+source: work
+target: dst
+tables: [CUSTOMER_SALES, CUSTOMER_NAMES]
+schemaMode: CREATE_MISSING
+targetPreparation: STAGED_REPLACE
+mappingFile: ../build/migration/model-types.yaml
+```
+
+The rows are copied into staging tables and verified, then replace the
+existing rows in one transaction. When the target rejects a row, the
+transaction rolls back and the published rows stay as they were. A table that
+the job created for a new model remains, empty. Without `STAGED_REPLACE` the
+target must be empty, and rows of chunks committed before a rejected row
+remain. A value that a target shortens instead of rejecting it does not match
+the source during verification (`verify: true`, the default), so the transfer
+fails instead of reporting success.
+
+Select every table of the mapping in the transfer job: a mapping entry outside
+the selected tables is rejected.
+
 ## Current limitations
 
 - Models run on DuckDB only. Building models inside another target database is
@@ -314,7 +364,8 @@ and use `schemaMode: REQUIRE_EXISTING`.
 - Only `table` models can declare columns. View models have the types DuckDB
   derives from the query.
 - Declared lengths are checked as characters (`length()` in DuckDB). Targets
-  that measure lengths in bytes can still reject multi-byte strings.
+  that measure lengths in bytes can still reject multi-byte strings during the
+  load; see [Publishing into existing tables](#publishing-into-existing-tables).
 
 See the [design notes](../development/migration-models-design.md) for the
 planned follow-up work.

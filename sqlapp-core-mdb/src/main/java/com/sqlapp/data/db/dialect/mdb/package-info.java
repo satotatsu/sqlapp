@@ -18,6 +18,12 @@
  */
 
 /**
- * データベース毎の方言のサポート
+ * Microsoft Access(MDB/ACCDB)の方言のサポート。
+ * <p>
+ * Access 97(Jet 3)のファイルはテキストをコードページで保存しているため、日本語を含む場合は ファイルを開く前にシステムプロパティ
+ * {@code jackcess.charset.VERSION_3} (例:
+ * {@code -Djackcess.charset.VERSION_3=MS932})を設定してください。 Jackcess と UCanAccess
+ * の両方に適用されます。Jet 4 以降は Unicode のため不要です。
+ * </p>
  */
 package com.sqlapp.data.db.dialect.mdb;

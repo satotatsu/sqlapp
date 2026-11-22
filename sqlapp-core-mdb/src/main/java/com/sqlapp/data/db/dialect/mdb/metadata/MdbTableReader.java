@@ -57,8 +57,9 @@ public class MdbTableReader extends JdbcTableReader {
 			return;
 		}
 		try {
-			if (MdbMetadataSupport.database(connection) != null) {
-				loadAccessDetails(connection, tables);
+			final var database = MdbMetadataSupport.database(connection);
+			if (database != null) {
+				MdbMetadataSupport.withDatabase(connection, database, () -> loadAccessDetails(connection, tables));
 				return;
 			}
 		} catch (final IOException e) {

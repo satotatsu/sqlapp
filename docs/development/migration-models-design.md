@@ -2,7 +2,7 @@
 
 [Development index](README.md) · [User guide](../gradle-plugin/migration-models.md)
 
-Updated: 2026-11-20. This document separates what is implemented from what is
+Updated: 2026-11-22. This document separates what is implemented from what is
 planned. Planned items are not commitments.
 
 ## Goal
@@ -70,7 +70,7 @@ file in `sqlapp-command`. No external database is involved.
      errors that report counts but no values; conversions belong in the model
      SQL. There is no lenient mode, because the feature was not released with
      rounding.
-   - Publishing conditions (decided 2026-11-20, not implemented): an existing
+   - Publishing conditions (decided 2026-11-20, implemented 2026-11-22): an existing
      target table must accept the declared data without changing it (type,
      length in the target's unit, precision and scale, NOT NULL, the whole
      primary key), otherwise the load stops before it starts; a new table is
@@ -78,6 +78,14 @@ file in `sqlapp-command`. No external database is involved.
      fail and leave published data unchanged; truncated values are never
      published. Rollback of the data and whether a newly created table remains
      are verified separately.
+     Implementation: the model mapping marks tables `contract: true`;
+     `TransferTargetContract` compares the projected contract table with the
+     target metadata during review. A unique key passes when it contains the
+     declared key, because rows unique on the key are then unique on it too.
+     `MigrationModelPublishTest` covers the check and a byte-length rejection
+     under `STAGED_REPLACE` (published rows kept, the new table left empty);
+     that path also needed the snapshot isolation of decision 1A for a DuckDB
+     source during the final verification.
    - A single job that runs the three steps is not implemented. It will pass
      the declared columns of the successful model run in memory instead of
      reading a mapping file, start publishing only when that run succeeded,

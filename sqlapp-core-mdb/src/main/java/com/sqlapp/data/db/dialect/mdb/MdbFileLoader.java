@@ -53,6 +53,13 @@ public final class MdbFileLoader {
 	 * PARAMETERS.
 	 */
 	public static final String SAVED_QUERY_PARAMETERS = "access.parameters";
+	/**
+	 * System property read by Jackcess (and therefore UCanAccess) for the text
+	 * charset of Access 97 (Jet 3) files, e.g. {@code MS932}. Jet 4 and later store
+	 * Unicode text and ignore it. The default is Cp1252, which garbles Japanese
+	 * text.
+	 */
+	public static final String JET3_CHARSET_PROPERTY = "jackcess.charset.VERSION_3";
 
 	private MdbFileLoader() {
 	}

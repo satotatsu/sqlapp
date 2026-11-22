@@ -61,6 +61,16 @@ public final class MdbMigrationAssessmentSourceProvider implements MigrationAsse
 				new ObjectId(null, "", "databaseFile", fileFormat), "Access file format=" + fileFormat + ".",
 				"Confirm the selected Access driver, deployment architecture and retained frontend support this file format.",
 				null));
+		if ("V1997".equals(fileFormat)) {
+			final String charset = System.getProperty(MdbFileLoader.JET3_CHARSET_PROPERTY);
+			findings.add(new Finding("access.jet3-charset", charset == null ? Severity.WARNING : Severity.REVIEW,
+					Evidence.SCHEMA, new ObjectId(null, "", "databaseFile", fileFormat),
+					"Access 97 text is decoded with "
+							+ (charset == null ? "the Jackcess default charset (Cp1252)" : "charset " + charset) + ".",
+					"Set -D" + MdbFileLoader.JET3_CHARSET_PROPERTY
+							+ "=<code page> (e.g. MS932 for Japanese) before opening the file, then verify sample text.",
+					null));
+		}
 		for (final String linkedTable : snapshot.linkedTables()) {
 			findings.add(new Finding("access.linked-table", Severity.WARNING, Evidence.SCHEMA,
 					new ObjectId(null, "", "linkedTable", linkedTable),

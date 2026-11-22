@@ -92,6 +92,10 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 			if (value == null || value instanceof byte[]) {
 				return value;
 			}
+			if (value instanceof Byte b) {
+				// Jackcess returns Access Byte (unsigned 0-255) as a signed Java Byte.
+				return (short) Byte.toUnsignedInt(b);
+			}
 			if (value instanceof io.github.spannm.jackcess.complex.ComplexValueForeignKey) {
 				throw new UnsupportedOperationException(
 						"Access complex/attachment column is not supported: " + tableName + "." + column.getName());

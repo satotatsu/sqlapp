@@ -346,6 +346,17 @@ the copy instead of becoming NULL. Primary-key columns keep their source type wh
 copying, so ordering and resume tokens are unchanged; their mapped type changes
 only the target definition.
 
+A table entry can set `contract: true`, as the mapping written by
+[`executeMigrationModels`](migration-models.md#publishing-into-existing-tables)
+does. Every column then needs a `type`, and the mapping is a contract: before
+anything is written, an existing target table must accept every row the
+contract allows without changing a value. Its columns must have a type of the
+same family that is at least as wide (length, precision and scale, integer
+width, fractional seconds), it must not be NOT NULL where the contract allows
+NULL, an extra NOT NULL column needs a default, and every unique key must
+contain the source primary key. Otherwise review fails and names each column.
+Tables that the job creates are created from the contract and need no check.
+
 `conversion` is an MVEL expression. It receives `value` (this column's source
 value), `column` (the source column name) and `row` (a read-only map of every
 *unconverted* source value by source column name), is evaluated for every row,

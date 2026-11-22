@@ -202,12 +202,14 @@ public final class MdbJackcessSupport implements AutoCloseable {
 
 	/** Adds a column directly to an existing Access table. */
 	public void addColumn(final String tableName, final Column column) throws IOException {
+		ensureOpen();
 		toColumnBuilder(column).addToTable(requireTable(tableName));
 		dirty = true;
 	}
 
 	/** Adds an index directly to an existing Access table. */
 	public void addIndex(final String tableName, final Index index) throws IOException {
+		ensureOpen();
 		toIndexBuilder(index).addToTable(requireTable(tableName));
 		dirty = true;
 	}
@@ -641,6 +643,9 @@ public final class MdbJackcessSupport implements AutoCloseable {
 			return io.github.spannm.jackcess.DataType.GUID;
 		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.MONEY)
 			return io.github.spannm.jackcess.DataType.MONEY;
+		// Access Byte is unsigned; UTINYINT's JDBC type is SMALLINT.
+		if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.UTINYINT)
+			return io.github.spannm.jackcess.DataType.BYTE;
 		final String sourceType = column.getSpecifics().get(MdbFileLoader.SOURCE_TYPE);
 		if (sourceType != null) {
 			final var nativeType = io.github.spannm.jackcess.DataType.valueOf(sourceType);
@@ -676,8 +681,8 @@ public final class MdbJackcessSupport implements AutoCloseable {
 		}
 		return switch (column.getDataType().getJdbcType()) {
 		case BOOLEAN, BIT -> io.github.spannm.jackcess.DataType.BOOLEAN;
-		case TINYINT -> io.github.spannm.jackcess.DataType.BYTE;
-		case SMALLINT -> io.github.spannm.jackcess.DataType.INT;
+		// Signed TINYINT (-128..127) does not fit unsigned Access Byte.
+		case TINYINT, SMALLINT -> io.github.spannm.jackcess.DataType.INT;
 		case INTEGER -> io.github.spannm.jackcess.DataType.LONG;
 		case BIGINT -> io.github.spannm.jackcess.DataType.BIG_INT;
 		case REAL -> io.github.spannm.jackcess.DataType.FLOAT;

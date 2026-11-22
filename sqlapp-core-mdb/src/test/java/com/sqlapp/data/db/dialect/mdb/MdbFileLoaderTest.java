@@ -265,17 +265,17 @@ class MdbFileLoaderTest {
 
 		final var table = MdbFileLoader.loadTable(file, "型一覧");
 		assertEquals(DataType.BOOLEAN, table.getColumns().get("真偽値").getDataType());
-		assertEquals(DataType.TINYINT, table.getColumns().get("バイト整数").getDataType());
+		assertEquals(DataType.UTINYINT, table.getColumns().get("バイト整数").getDataType());
 		assertEquals(DataType.SMALLINT, table.getColumns().get("短整数").getDataType());
 		assertEquals(DataType.INT, table.getColumns().get("長整数").getDataType());
 		assertEquals(DataType.BIGINT, table.getColumns().get("巨大整数").getDataType());
 		assertEquals(DataType.REAL, table.getColumns().get("単精度").getDataType());
 		assertEquals(DataType.DOUBLE, table.getColumns().get("倍精度").getDataType());
-		assertEquals(DataType.DECIMAL, table.getColumns().get("通貨").getDataType());
+		assertEquals(DataType.MONEY, table.getColumns().get("通貨").getDataType());
 		assertEquals(DataType.DECIMAL, table.getColumns().get("小数").getDataType());
 		assertEquals(12L, table.getColumns().get("小数").getLength());
 		assertEquals(3, table.getColumns().get("小数").getScale());
-		assertEquals(DataType.NVARCHAR, table.getColumns().get("GUID").getDataType());
+		assertEquals(DataType.UUID, table.getColumns().get("GUID").getDataType());
 		assertEquals(DataType.DATETIME, table.getColumns().get("日時").getDataType());
 		assertEquals(DataType.VARBINARY, table.getColumns().get("バイナリ").getDataType());
 

@@ -25,9 +25,9 @@ public class MdbCreateTableFactory extends AbstractCreateTableFactory<MdbSqlBuil
 	@Override
 	protected void addUniqueConstraintDefinitions(final Table table, final MdbSqlBuilder builder) {
 		for (final UniqueConstraint constraint : table.getConstraints().getUniqueConstraints()) {
-			if (constraint.isPrimaryKey() && constraint.getColumns().size() == 1
-					&& constraint.getColumns().get(0).getColumn() != null
-					&& constraint.getColumns().get(0).getColumn().isIdentity()) {
+			// Emitted inline by addColumnDefinition; both sides use the same predicate
+			// so the primary key is never dropped or duplicated.
+			if (constraint.isPrimaryKey() && inlineAutoNumberColumn(table) != null) {
 				continue;
 			}
 			addConstraintDefinition(constraint, builder);
@@ -35,11 +35,16 @@ public class MdbCreateTableFactory extends AbstractCreateTableFactory<MdbSqlBuil
 	}
 
 	private boolean isInlineAutoNumberPrimaryKey(final Column column) {
-		if (!column.isIdentity() || column.getTable() == null) {
-			return false;
+		return column.getTable() != null && inlineAutoNumberColumn(column.getTable()) == column;
+	}
+
+	/** The table column of a single-column AutoNumber primary key, if any. */
+	private Column inlineAutoNumberColumn(final Table table) {
+		final UniqueConstraint primaryKey = table.getConstraints().getPrimaryKeyConstraint();
+		if (primaryKey == null || primaryKey.getColumns().size() != 1) {
+			return null;
 		}
-		final UniqueConstraint primaryKey = column.getTable().getConstraints().getPrimaryKeyConstraint();
-		return primaryKey != null && primaryKey.getColumns().size() == 1
-				&& primaryKey.getColumns().get(0).getColumn() == column;
+		final Column column = table.getColumns().get(primaryKey.getColumns().get(0).getName());
+		return column != null && column.isIdentity() ? column : null;
 	}
 }

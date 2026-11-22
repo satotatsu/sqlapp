@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcColumnReader;
 import com.sqlapp.data.db.dialect.mdb.util.MdbColumnSupport;
@@ -38,8 +39,16 @@ public class MdbColumnReader extends JdbcColumnReader {
 			}
 			for (final Column column : columns) {
 				final io.github.spannm.jackcess.Table table = database.getTable(column.getTableName());
-				if (table != null && table.getColumn(column.getName()) != null) {
-					MdbColumnSupport.enrich(column, table.getColumn(column.getName()));
+				final var source = table == null ? null : table.getColumn(column.getName());
+				if (source != null) {
+					// UCanAccess reports its HSQLDB mirror type (e.g. NUMERIC for Decimal,
+					// DECIMAL for Currency, VARCHAR for GUID); use the physical type.
+					// Text keeps the JDBC VARCHAR/LONGVARCHAR mapping, which is lossless.
+					final DataType dataType = MdbColumnSupport.dataType(source.getType());
+					if (dataType != DataType.OTHER && !source.getType().isTextual()) {
+						column.setDataType(dataType);
+					}
+					MdbColumnSupport.enrich(column, source);
 				}
 			}
 			return columns;
