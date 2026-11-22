@@ -2,7 +2,7 @@
 
 [Development index](README.md) · [User guide](../gradle-plugin/migration-models.md)
 
-Updated: 2026-11-22. This document separates what is implemented from what is
+Updated: 2026-11-22 (single job). This document separates what is implemented from what is
 planned. Planned items are not commitments.
 
 ## Goal
@@ -35,7 +35,8 @@ part was the model itself.
 | `sqlapp-core`, `com.sqlapp.jdbc.bulk` | `MigrationModelExecutor`, `AbstractMigrationModelExecutor`, `MigrationModelExecutorProvider`, `MigrationModelExecutorResolver` |
 | `sqlapp-core-duckdb` | `DuckDbMigrationModelExecutor` and its provider |
 | `sqlapp-command`, `...command.migration.model` | `MigrationModelConfiguration`, `MigrationModelConfigurationResolver`, `MigrationModelRunner`, `ExecuteMigrationModelsCommand` |
-| `sqlapp-gradle-plugin` | `ExecuteMigrationModelsTask`, registered as `executeMigrationModels` |
+| `sqlapp-command`, `...command.migration.pipeline` | `MigrationPipelineConfiguration`, `MigrationPipelineReport`, `RunMigrationPipelineCommand` |
+| `sqlapp-gradle-plugin` | `ExecuteMigrationModelsTask` and `RunMigrationPipelineTask`, registered as `executeMigrationModels` and `runMigrationPipeline` |
 
 `sqlapp-command` gains `sqlapp-core-duckdb` and the DuckDB JDBC driver as
 **test** dependencies only. At run time the executor is discovered through
@@ -86,11 +87,16 @@ file in `sqlapp-command`. No external database is involved.
      under `STAGED_REPLACE` (published rows kept, the new table left empty);
      that path also needed the snapshot isolation of decision 1A for a DuckDB
      source during the final verification.
-   - A single job that runs the three steps is not implemented. It will pass
-     the declared columns of the successful model run in memory instead of
-     reading a mapping file, start publishing only when that run succeeded,
-     and record each step's outcome. A step is offered for restart only when
-     its inputs and intermediate results can be shown to be unchanged.
+   - Single job (implemented 2026-11-22): `RunMigrationPipelineCommand` and
+     the `runMigrationPipeline` task. One approved fingerprint covers the
+     pipeline file, both transfer jobs, the model YAML and the model plan
+     fingerprint; each step re-checks its own definition. The declared columns
+     of the successful model run are written into the run directory as the
+     contract mapping, and a derived publish job points at it, so a previous
+     mapping can never be published. Each run has its own directory and a
+     report rewritten after each step. There is no resume: restarting a step
+     would need proof that the engine still holds exactly this run's loaded
+     data and models, which the engine does not record yet.
 2. **Types.** Declared columns cover the target types of table models. Still
    open: byte-length targets (lengths are checked in characters), CHAR padding,
    time zones, and declared columns for views.

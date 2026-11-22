@@ -353,14 +353,77 @@ fails instead of reporting success.
 Select every table of the mapping in the transfer job: a mapping entry outside
 the selected tables is rejected.
 
+## One job: `runMigrationPipeline`
+
+`runMigrationPipeline` runs the three steps as one job: the load transfer,
+the unit tests and model builds, and the publish transfer. A pipeline file
+names the three definitions; paths are relative to it:
+
+```yaml
+# migration/pipeline.yaml
+formatVersion: 1
+load: load.yaml        # optional: source -> DuckDB
+models: models.yaml
+publish: publish.yaml  # DuckDB -> target, without mappingFile
+```
+
+```groovy
+runMigrationPipeline {
+    configurationFile = file('migration/pipeline.yaml')
+    dataSource { jdbcUrl = 'jdbc:duckdb:build/migration/work.duckdb' }  // engine
+    sourceDataSource { jdbcUrl = 'jdbc:oracle:thin:@source/app' }
+    targetDataSource { jdbcUrl = 'jdbc:postgresql://target/app' }
+    // expectedConfigurationFingerprint = 'sha256:...'
+    // allowExecution = true
+}
+```
+
+| Property | Type | Required | Convention | Description |
+|---|---|---:|---|---|
+| `configurationFile` | `RegularFileProperty` | yes | — | Pipeline file |
+| `dataSource` | data source block | yes | — | Engine; a DuckDB database |
+| `sourceDataSource` | data source block | with `load` | — | Database read by the load job |
+| `targetDataSource` | data source block | to execute | — | Database written by the publish job |
+| `expectedConfigurationFingerprint` | `Property<String>` | to execute | — | Approved fingerprint |
+| `allowExecution` | `Property<Boolean>` | yes | `false` | Run the pipeline instead of reviewing it |
+| `workspaceDirectory` | `DirectoryProperty` | yes | `build/sqlapp-migration/pipeline` | One directory per run |
+
+Without `allowExecution` the task reads the definitions without connecting and
+logs the fingerprint to approve. The fingerprint covers the pipeline file, both
+transfer jobs, the model YAML and every model definition, including the SQL
+files. Any change needs a new approval, and each step checks again that its
+definition is still the approved one.
+
+The steps run in order and the first failure stops the run:
+
+1. **LOAD** runs the load job with verification.
+2. **MODELS** runs the unit tests and builds every model. It checks after the
+   build that the model definitions did not change during it.
+3. **PUBLISH** starts only after every model of this run was built. The
+   declared columns of this run are written into the run directory as the
+   [contract mapping](#publishing-into-existing-tables) of the published
+   tables, and the publish job is run with it and with verification.
+
+The load and publish jobs must copy rows directly and must not turn off
+verification; the publish job must not name a `mappingFile`, because the
+pipeline supplies the one of the run. Use `targetPreparation: STAGED_REPLACE`
+in the publish job to replace rows of existing tables.
+
+Every run gets its own directory, named after its start time, with
+`pipeline-report.json`. The report is rewritten after each step and records,
+for each step, its status (`SUCCEEDED`, `FAILED`, `NOT_RUN`, `SKIPPED`), start
+time, duration, the fingerprint of the definition it ran, the transfer review
+and result reports, counts and the failure message. Steps after a failure stay
+`NOT_RUN`. A failed run is not resumed: fix the cause and run the pipeline
+again. Messages come from the failed step; a database error message can
+contain values from the failing row.
+
 ## Current limitations
 
 - Models run on DuckDB only. Building models inside another target database is
   planned.
 - `incremental` materialization is not available yet; `table` rebuilds fully.
-- Loading the source database into the engine and loading model tables into the
-  target are separate `transferDatabase` jobs; see
-  [End-to-end with the transfer task](#end-to-end-with-the-transfer-task).
+- A failed pipeline run starts again from the load step; no step is resumed.
 - Only `table` models can declare columns. View models have the types DuckDB
   derives from the query.
 - Declared lengths are checked as characters (`length()` in DuckDB). Targets
