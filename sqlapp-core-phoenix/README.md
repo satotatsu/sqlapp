@@ -1,5 +1,28 @@
 # Apache Phoenix dialect enhancement
 
+Column metadata rejects duplicate column names within one tenant/schema/object
+identity, including same-name columns in different families. This prevents
+loss during attachment to the shared Schema model, which keys columns by
+simple name. Same-name columns in separate tenants remain separate.
+
+Phoenix 5.3+ table diffs support appending one nullable VARCHAR or sized CHAR column to an
+existing primary key ending in scalar VARCHAR. The table must have no indexes
+and the extension must be the only change. Other key changes continue to
+require a separate migration.
+
+Phoenix bulk UPSERT uses direct JDBC batches for complete, non-null primary
+keys and both insert and update actions. Set `useTransaction=false` explicitly.
+The provider writes all writable columns and rejects a custom update subset
+or staging table name. Source duplicate handling uses the shared bulk plan.
+Earlier batches may already have been applied when a later row fails. Use a
+connection for the intended tenant. Atomic table replacement is unsupported.
+For a table with tenant metadata, bulk UPSERT verifies the connection's
+JDBC catalog against that tenant before preparing any SQL.
+Use `Phoenix.executeTenantBulkUpsert` to select a DataSource by the table's
+tenant ID. The empty map key represents the global connection. A missing
+mapping, a mismatched connection catalog, or a connection without auto-commit
+fails before SQL preparation. The method closes the connection it acquires.
+
 Phoenix retains tenant identity in JDBC catalog metadata and Schema XML.
 SQL object names contain the schema and object only. Execute the generated SQL
 with a JDBC connection whose TenantId matches the intended tenant.
@@ -727,13 +750,23 @@ Source: [Apache Phoenix JDBC metadata projections](https://apache.googlesource.c
 
 ## Index and view completion batch
 
+On Phoenix 5.3.2, `PhoenixNativeDefinitions.read(connection, viewOrIndex)`
+explicitly obtains a definition using SHOW CREATE TABLE and stores it in
+the same model field used for recreation. It requires a global connection
+and a global object. It queries only the selected object, since this
+Phoenix command accepts one object name. The standard bulk readers do not
+invoke it. Mapped views and other complex definitions are unverified.
+JDBC exposes only client major/minor. Verify that the client and server are
+5.3.2 before using the method.
+
 Modeled CREATE VIEW rejects explicit Phoenix view or table options that its
 SELECT-based renderer cannot preserve. Complete native view definitions use
 the shared definition field and survive XML. The supplied statement controls
 qualification, view properties and existence clauses.
 The schema migration uses that definition when adding a view. Changing the
-definition of an existing view requires an explicit migration, since dependent
-views and indexes may need to be handled before the view can be replaced.
+definition still requires an explicit migration. Views use the same set-based
+index reader as tables. View creation emits attached indexes after the view,
+using the same modeled or explicit native CREATE INDEX path as tables.
 
 Catalog names containing parentheses are retained verbatim as opaque index
 metadata. The XML round trip preserves the marker that blocks modeled CREATE.
