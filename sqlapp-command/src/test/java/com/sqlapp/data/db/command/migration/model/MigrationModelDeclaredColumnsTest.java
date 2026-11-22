@@ -80,7 +80,8 @@ class MigrationModelDeclaredColumnsTest {
 						new TransferNameMappingIO.TableMapping(null,
 								Map.of("ID", new TransferNameMappingIO.ColumnMapping(null, "INT", null), "NAME",
 										new TransferNameMappingIO.ColumnMapping(null, "VARCHAR(10)", null), "AMOUNT",
-										new TransferNameMappingIO.ColumnMapping(null, "DECIMAL(8,2)", null)))),
+										new TransferNameMappingIO.ColumnMapping(null, "DECIMAL(8,2)", null)),
+								true)),
 				mapping.configuration().tables());
 		// A second complete build replaces the file without complaint.
 		command(CONFIGURATION.replace("VARCHAR(10)", "VARCHAR(20)")).run();

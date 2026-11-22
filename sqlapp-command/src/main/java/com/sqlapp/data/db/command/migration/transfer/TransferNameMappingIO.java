@@ -99,8 +99,21 @@ public final class TransferNameMappingIO {
 		}
 	}
 
-	/** Table rename and column definitions keyed by source column name. */
-	public record TableMapping(String targetTable, Map<String, ColumnMapping> columns) {
+	/**
+	 * Table rename and column definitions keyed by source column name.
+	 *
+	 * @param contract true when the columns are a declared contract, such as the
+	 *                 declared columns of a migration model: every source column
+	 *                 has a type, and an existing target table must accept every
+	 *                 row the contract allows without changing a value. Null or
+	 *                 false for an ordinary mapping.
+	 */
+	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+	public record TableMapping(String targetTable, Map<String, ColumnMapping> columns, Boolean contract) {
+		public TableMapping(String targetTable, Map<String, ColumnMapping> columns) {
+			this(targetTable, columns, null);
+		}
+
 		public TableMapping {
 			if (targetTable != null) {
 				name(targetTable);
@@ -112,6 +125,13 @@ public final class TransferNameMappingIO {
 				name(source);
 				Objects.requireNonNull(column, "column mapping");
 			});
+			if (Boolean.TRUE.equals(contract))
+				columns.forEach((source, column) -> {
+					if (column.type() == null)
+						throw new IllegalArgumentException("A contract mapping needs a type for every column.");
+				});
+			else
+				contract = null;
 		}
 
 		/** Rename-only mapping from source to target column names. */
@@ -120,6 +140,11 @@ public final class TransferNameMappingIO {
 			if (names != null)
 				names.forEach((source, target) -> columns.put(source, ColumnMapping.rename(target)));
 			return new TableMapping(targetTable, columns);
+		}
+
+		/** True when the columns are a declared contract. */
+		public boolean declaresContract() {
+			return Boolean.TRUE.equals(contract);
 		}
 
 		/** Renamed columns only: source column name to target column name. */
@@ -138,7 +163,7 @@ public final class TransferNameMappingIO {
 
 		/** Same mapping with a different target table name. */
 		public TableMapping withTargetTable(String value) {
-			return new TableMapping(value, columns);
+			return new TableMapping(value, columns, contract);
 		}
 
 		/**
@@ -153,7 +178,7 @@ public final class TransferNameMappingIO {
 					result.put(source, updated);
 			});
 			names.forEach((source, target) -> result.putIfAbsent(source, ColumnMapping.rename(target)));
-			return new TableMapping(targetTable, result);
+			return new TableMapping(targetTable, result, contract);
 		}
 	}
 
@@ -202,6 +227,9 @@ public final class TransferNameMappingIO {
 				var target = table.get("targetTable");
 				if (target != null && !target.isNull() && !target.isString())
 					throw new IllegalArgumentException();
+				var contract = table.get("contract");
+				if (contract != null && !contract.isBoolean())
+					throw new IllegalArgumentException();
 				table.path("columns").forEach(value -> {
 					if (value.isObject())
 						value.forEach(field -> {
@@ -218,7 +246,7 @@ public final class TransferNameMappingIO {
 			return value;
 		} catch (RuntimeException failure) {
 			throw new IllegalArgumentException(
-					"Invalid name mapping. Require formatVersion: 1 and tables keyed by source table identity; targetTable and columns are optional. A column is a target name or {name, type, conversion}; type is a sqlapp DataType such as VARCHAR(10). Check unknown/duplicate fields, names, types, blank expressions and value types.");
+					"Invalid name mapping. Require formatVersion: 1 and tables keyed by source table identity; targetTable, columns and contract (true or false) are optional. A column is a target name or {name, type, conversion}; type is a sqlapp DataType such as VARCHAR(10). Check unknown/duplicate fields, names, types, blank expressions and value types.");
 		}
 	}
 

@@ -19,15 +19,16 @@ import com.sqlapp.exceptions.CommandException;
 
 /**
  * Transfer name mapping that gives the declared column types of model tables to
- * a transfer reading them from the engine.
+ * a transfer reading them from the engine. Each table is marked as a contract,
+ * so that an existing target table is checked against it before loading.
  */
-final class MigrationModelTargetMapping {
+public final class MigrationModelTargetMapping {
 
 	private MigrationModelTargetMapping() {
 	}
 
 	/** Mapping for every table model with declared columns, keyed by its table. */
-	static TransferNameMappingIO.Configuration of(final MigrationModelPlan plan) {
+	public static TransferNameMappingIO.Configuration of(final MigrationModelPlan plan) {
 		final Map<String, TransferNameMappingIO.TableMapping> tables = new LinkedHashMap<>();
 		for (final MigrationModel model : plan.models()) {
 			if (!model.hasDeclaredColumns()) {
@@ -38,7 +39,7 @@ final class MigrationModelTargetMapping {
 				columns.put(column.name(), new TransferNameMappingIO.ColumnMapping(null, column.typeText(), null));
 			}
 			tables.put(model.schemaName() == null ? model.name() : model.schemaName() + "." + model.name(),
-					new TransferNameMappingIO.TableMapping(null, columns));
+					new TransferNameMappingIO.TableMapping(null, columns, true));
 		}
 		return new TransferNameMappingIO.Configuration(1, tables);
 	}

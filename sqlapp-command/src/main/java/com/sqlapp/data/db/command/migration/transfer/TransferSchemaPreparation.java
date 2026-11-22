@@ -139,6 +139,7 @@ public final class TransferSchemaPreparation {
 					.toList();
 			final var base = plan(connection, projection.schema(), selections, data.getFingerprint(), mode, policy,
 					data, generatedKeyColumn, structuralOnly);
+			checkContracts(connection, projection, data, base.tables());
 			warnings.addAll(base.warnings());
 			return withTables(result(base.fingerprint(), base.statements(), warnings, mode), base.tables());
 		}
@@ -148,6 +149,50 @@ public final class TransferSchemaPreparation {
 								task.getEffectiveTargetTable()))
 						.toList(),
 				data.getFingerprint(), mode, policy, data, generatedKeyColumn, structuralOnly);
+	}
+
+	/**
+	 * Stops before any write when an existing target table cannot accept every row
+	 * of a declared contract unchanged. New tables are created from the contract
+	 * and need no check; APPLY_DIFFERENCES changes the table to the contract.
+	 */
+	private static void checkContracts(Connection connection, TransferNameMappingProjection.Projection projection,
+			BulkMigrationJobPlan data, List<TablePreparation> tables) throws Exception {
+		final var existing = new HashSet<String>();
+		tables.stream().filter(table -> table.action() == TableAction.USE_EXISTING)
+				.forEach(table -> existing.add(table.taskId()));
+		final var checked = data.getTasks().stream().filter(task -> existing.contains(task.getTaskId())
+				&& projection.contract(task.getEffectiveSourceTable().getName())).toList();
+		if (checked.isEmpty())
+			return;
+		final var dialect = TransferJobPreparationService.dialect(connection);
+		final var schemas = new HashMap<String, Schema>();
+		final var problems = new ArrayList<String>();
+		for (var task : checked) {
+			final var target = task.getEffectiveTargetTable();
+			final var schema = schemas.computeIfAbsent(Objects.toString(target.getSchemaName(), ""), name -> {
+				try {
+					return TransferJobPreparationService.readSchema(connection, dialect, target.getSchemaName());
+				} catch (Exception e) {
+					throw new IllegalStateException(e);
+				}
+			});
+			final var actual = schema.getTables().stream().filter(table -> table.getName().equals(target.getName()))
+					.findFirst()
+					.or(() -> schema.getTables().stream()
+							.filter(table -> table.getName().equalsIgnoreCase(target.getName())).findFirst())
+					.orElse(null);
+			if (actual == null)
+				continue;
+			final var declared = projection.bySourceName().get(task.getEffectiveSourceTable().getName());
+			for (var problem : TransferTargetContract.violations(declared, actual))
+				problems.add(diagnosticName(target.getName()) + "." + problem);
+		}
+		if (!problems.isEmpty())
+			throw new ValidationException(
+					"Existing target tables do not accept every row of their declared contract unchanged: "
+							+ String.join("; ", problems)
+							+ ". Nothing was written. Change the target tables or the declared columns, or load into a new table.");
 	}
 
 	/**

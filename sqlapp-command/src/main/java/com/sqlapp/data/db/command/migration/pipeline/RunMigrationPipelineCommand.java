@@ -1,0 +1,372 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.pipeline;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+import javax.sql.DataSource;
+
+import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.migration.model.ExecuteMigrationModelsCommand;
+import com.sqlapp.data.db.command.migration.model.MigrationModelConfigurationResolver;
+import com.sqlapp.data.db.command.migration.model.MigrationModelTargetMapping;
+import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.Status;
+import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.Step;
+import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.StepReport;
+import com.sqlapp.data.db.command.migration.transfer.TransferDatabaseCommand;
+import com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration;
+import com.sqlapp.data.db.command.migration.transfer.TransferJobConfigurationIO;
+import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingIO;
+import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.util.MessageDigests;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Runs load, models and publish as one job: a verified transfer from the source
+ * database into the engine (optional), the model unit tests and builds inside
+ * the engine, and a verified transfer of the model tables to the target
+ * database.
+ * <p>
+ * Without {@link #allowExecution} the command reads the definitions offline and
+ * reports the fingerprint to approve. It covers the pipeline file, both
+ * transfer jobs, the model YAML and every model definition. Execution requires
+ * that fingerprint, and each step checks that its definition is still the
+ * approved one.
+ * </p>
+ * <p>
+ * Publishing starts only after every model of this run was built. The declared
+ * columns of this run are written into the run directory as the contract
+ * mapping of the publish transfer; the publish job must not name a mapping file
+ * itself. Every run gets its own directory with a report that is rewritten
+ * after each step. A failed run is not resumed: run the pipeline again.
+ * </p>
+ * The engine is {@link #getDataSource()}.
+ */
+@Getter
+@Setter
+public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
+	private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT)
+			.withZone(ZoneOffset.UTC);
+
+	private File configurationFile;
+	private File workspaceDirectory;
+	private String expectedConfigurationFingerprint;
+	private boolean allowExecution;
+	private DataSource sourceDataSource;
+	private DataSource targetDataSource;
+	@Setter(AccessLevel.NONE)
+	private String configurationFingerprint;
+	@Setter(AccessLevel.NONE)
+	private Path runDirectory;
+	@Setter(AccessLevel.NONE)
+	private Path reportFile;
+	@Setter(AccessLevel.NONE)
+	private MigrationPipelineReport report;
+
+	/** Definitions read for one validation, with their fingerprints. */
+	public record Inputs(MigrationPipelineConfiguration.Snapshot pipeline, TransferJobConfigurationIO.Snapshot load,
+			String modelsFingerprint, MigrationModelConfigurationResolver.Resolution models,
+			TransferJobConfigurationIO.Snapshot publish, String fingerprint) {
+	}
+
+	/**
+	 * Reads and checks every definition without connecting, and computes the
+	 * fingerprint to approve.
+	 */
+	public Inputs validateInputs() throws IOException {
+		if (configurationFile == null) {
+			throw new IllegalArgumentException("configurationFile is required.");
+		}
+		if (allowExecution && (expectedConfigurationFingerprint == null
+				|| !expectedConfigurationFingerprint.matches("sha256:[0-9a-f]{64}"))) {
+			throw new IllegalArgumentException(
+					"Executing requires an expectedConfigurationFingerprint (sha256:<64 lowercase hex digits>).");
+		}
+		final var pipeline = MigrationPipelineConfiguration.read(configurationFile.toPath());
+		final var io = new TransferJobConfigurationIO();
+		final var load = pipeline.load() == null ? null : io.read(pipeline.load());
+		if (load != null) {
+			checkTransfer("load", load);
+		}
+		final var publish = io.read(pipeline.publish());
+		checkTransfer("publish", publish);
+		if (publish.configuration().mappingFile() != null) {
+			throw new IllegalArgumentException("The publish job must not set mappingFile: the pipeline passes the"
+					+ " declared columns of the run as the mapping.");
+		}
+		final var models = new MigrationModelConfigurationResolver().resolve(pipeline.models().toFile());
+		final String modelsFingerprint = modelsFingerprint(pipeline.models(), models);
+		final String text = String.join("\n", "pipeline " + pipeline.fingerprint(),
+				"load " + (load == null ? "-" : load.fingerprint()), "models " + modelsFingerprint,
+				"publish " + publish.fingerprint());
+		return new Inputs(pipeline, load, modelsFingerprint, models, publish, "sha256:"
+				+ MessageDigests.SHA256.checksumAsString(text.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+	}
+
+	private static void checkTransfer(final String step, final TransferJobConfigurationIO.Snapshot job) {
+		final var configuration = job.configuration();
+		if (configuration.dataMode() != null
+				&& configuration.dataMode() != TransferJobConfiguration.DataMode.JDBC_DIRECT) {
+			throw new IllegalArgumentException("The " + step + " job must copy rows directly (dataMode: JDBC_DIRECT).");
+		}
+		if (Boolean.FALSE.equals(configuration.verify())) {
+			throw new IllegalArgumentException(
+					"The " + step + " job must verify the copied rows; remove verify: false.");
+		}
+	}
+
+	private static String modelsFingerprint(final Path file,
+			final MigrationModelConfigurationResolver.Resolution models) throws IOException {
+		return "sha256:" + MessageDigests.SHA256.checksumAsString(
+				(MessageDigests.SHA256.checksumAsString(Files.readAllBytes(file)) + "\n" + models.plan().fingerprint())
+						.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+	}
+
+	@Override
+	protected void doRun() {
+		configurationFingerprint = null;
+		runDirectory = null;
+		reportFile = null;
+		report = null;
+		try {
+			runPipeline();
+		} finally {
+			if (isCloseDataSource()) {
+				close(sourceDataSource);
+				if (targetDataSource != sourceDataSource) {
+					close(targetDataSource);
+				}
+				if (getDataSource() != sourceDataSource && getDataSource() != targetDataSource) {
+					close(getDataSource());
+				}
+			}
+		}
+	}
+
+	private void runPipeline() {
+		final Inputs inputs;
+		try {
+			inputs = validateInputs();
+		} catch (IOException e) {
+			throw new CommandException("Migration pipeline definitions cannot be read: " + e.getMessage(), e);
+		}
+		configurationFingerprint = inputs.fingerprint();
+		info("Migration pipeline fingerprint: ", configurationFingerprint);
+		if (!allowExecution) {
+			info("Migration pipeline review only; set allowExecution and expectedConfigurationFingerprint to run it.");
+			return;
+		}
+		if (!configurationFingerprint.equals(expectedConfigurationFingerprint)) {
+			throw new IllegalArgumentException("Migration pipeline definitions changed. Review them again.");
+		}
+		if (workspaceDirectory == null || getDataSource() == null || targetDataSource == null
+				|| inputs.load() != null && sourceDataSource == null) {
+			throw new IllegalArgumentException("workspaceDirectory, the engine dataSource, targetDataSource and,"
+					+ " with a load job, sourceDataSource are required.");
+		}
+		final String runId = RUN_ID.format(Instant.now()) + "-" + UUID.randomUUID().toString().substring(0, 8);
+		try {
+			runDirectory = Files.createDirectories(workspaceDirectory.toPath().resolve(runId));
+			reportFile = runDirectory.resolve("pipeline-report.json");
+			report = new MigrationPipelineReport(1, runId, configurationFingerprint, Status.RUNNING,
+					List.of(StepReport.of(Step.LOAD, inputs.load() == null ? Status.SKIPPED : Status.NOT_RUN),
+							StepReport.of(Step.MODELS, Status.NOT_RUN), StepReport.of(Step.PUBLISH, Status.NOT_RUN)));
+			report.write(reportFile);
+		} catch (IOException e) {
+			throw new CommandException("Migration pipeline run directory cannot be written: " + e.getMessage(), e);
+		}
+		info("Migration pipeline run: ", runDirectory);
+		if (inputs.load() != null) {
+			step(Step.LOAD, inputs.load().fingerprint(), () -> transfer(inputs.load().file(),
+					inputs.load().fingerprint(), sourceDataSource, getDataSource(), runDirectory.resolve("load")));
+		}
+		step(Step.MODELS, inputs.modelsFingerprint(), () -> models(inputs));
+		step(Step.PUBLISH, inputs.publish().fingerprint(), () -> publish(inputs));
+		finish(Status.SUCCEEDED);
+		info("Migration pipeline completed: ", reportFile);
+	}
+
+	/** Result of a step for the report. */
+	private record Outcome(String reviewFile, String resultFile, String detail) {
+	}
+
+	@FunctionalInterface
+	private interface StepAction {
+		Outcome run() throws Exception;
+	}
+
+	private void step(final Step step, final String fingerprint, final StepAction action) {
+		final Instant started = Instant.now();
+		final long start = System.nanoTime();
+		update(new StepReport(step, Status.RUNNING, started.toString(), null, fingerprint, null, null, null, null),
+				Status.RUNNING);
+		info("Migration pipeline step ", step, " started");
+		try {
+			final Outcome outcome = action.run();
+			update(new StepReport(step, Status.SUCCEEDED, started.toString(), elapsed(start), fingerprint,
+					outcome.reviewFile(), outcome.resultFile(), outcome.detail(), null), Status.RUNNING);
+			info("Migration pipeline step ", step, " succeeded",
+					outcome.detail() == null ? "" : ": " + outcome.detail());
+		} catch (final Exception e) {
+			final String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+			final StepReport failed = new StepReport(step, Status.FAILED, started.toString(), elapsed(start),
+					fingerprint, failedFile(e, true), failedFile(e, false), null, message);
+			update(failed, Status.FAILED);
+			throw new CommandException(
+					"Migration pipeline stopped at " + step + ": " + message + " Report: " + reportFile, e);
+		}
+	}
+
+	/**
+	 * Transfer reports of a failed transfer step, kept by the command that failed.
+	 */
+	private String failedFile(final Exception e, final boolean review) {
+		return e instanceof TransferStepException failure ? (review ? failure.reviewFile : failure.resultFile) : null;
+	}
+
+	private static Long elapsed(final long start) {
+		return (System.nanoTime() - start) / 1_000_000L;
+	}
+
+	private void update(final StepReport step, final Status overall) {
+		report = report.with(step, overall);
+		try {
+			report.write(reportFile);
+		} catch (IOException e) {
+			throw new CommandException("Migration pipeline report cannot be written: " + reportFile, e);
+		}
+	}
+
+	private void finish(final Status status) {
+		report = new MigrationPipelineReport(report.formatVersion(), report.runId(), report.pipelineFingerprint(),
+				status, report.steps());
+		try {
+			report.write(reportFile);
+		} catch (IOException e) {
+			throw new CommandException("Migration pipeline report cannot be written: " + reportFile, e);
+		}
+	}
+
+	private Outcome models(final Inputs inputs) throws IOException {
+		requireUnchanged(inputs);
+		final ExecuteMigrationModelsCommand command = new ExecuteMigrationModelsCommand();
+		command.setConfigurationFile(inputs.pipeline().models().toFile());
+		command.setDataSource(getDataSource());
+		command.setCloseDataSource(false);
+		command.setUnitTestsEnabled(true);
+		command.run();
+		// The publish step uses the declarations of the built models only.
+		requireUnchanged(inputs);
+		return new Outcome(null, null, "unit tests passed: " + command.getUnitTestResults().size() + ", models built: "
+				+ command.getResult().models().size());
+	}
+
+	private void requireUnchanged(final Inputs inputs) throws IOException {
+		final var models = new MigrationModelConfigurationResolver().resolve(inputs.pipeline().models().toFile());
+		if (!modelsFingerprint(inputs.pipeline().models(), models).equals(inputs.modelsFingerprint())) {
+			throw new IllegalStateException("Model definitions changed during the run. Review the pipeline again.");
+		}
+	}
+
+	private Outcome publish(final Inputs inputs) throws Exception {
+		final var io = new TransferJobConfigurationIO();
+		final var current = io.read(inputs.publish().file());
+		if (!current.fingerprint().equals(inputs.publish().fingerprint())) {
+			throw new IllegalStateException("The publish job changed during the run. Review the pipeline again.");
+		}
+		final var job = current.configuration();
+		final var mapping = contract(inputs, job.tables());
+		final Path directory = Files.createDirectories(runDirectory.resolve("publish-job"));
+		String mappingFile = null;
+		if (!mapping.tables().isEmpty()) {
+			final var mappingIO = new TransferNameMappingIO();
+			mappingIO.write(directory.resolve("model-types.yaml"), mappingIO.format(mapping), null);
+			mappingFile = "model-types.yaml";
+		}
+		final var derived = new TransferJobConfiguration(job.formatVersion(), job.source(), job.target(), job.tables(),
+				job.schemaMode(), job.sourceSchema(), job.targetSchema(), mappingFile, job.chunkSize(), job.verify(),
+				job.dataMode(), job.files(), job.compatibilityPolicy(), job.allowDestructiveSchemaChanges(),
+				job.generatedKeyColumn(), job.insertMethod(), job.targetPreparation());
+		final var written = io.write(directory.resolve("publish.yaml"), io.format(derived), null);
+		return transfer(written.file(), written.fingerprint(), getDataSource(), targetDataSource,
+				runDirectory.resolve("publish"));
+	}
+
+	/** Contract mapping of the published model tables with declared columns. */
+	private static TransferNameMappingIO.Configuration contract(final Inputs inputs, final List<String> tables) {
+		final var all = MigrationModelTargetMapping.of(inputs.models().plan());
+		final var selected = new LinkedHashMap<String, TransferNameMappingIO.TableMapping>();
+		all.tables().forEach((name, table) -> {
+			final String key = name.toUpperCase(Locale.ROOT);
+			if (tables.stream().map(value -> value.toUpperCase(Locale.ROOT))
+					.anyMatch(value -> value.equals(key) || !key.contains(".") && value.endsWith("." + key))) {
+				selected.put(name, table);
+			}
+		});
+		return new TransferNameMappingIO.Configuration(1, selected);
+	}
+
+	private Outcome transfer(final Path job, final String fingerprint, final DataSource from, final DataSource to,
+			final Path workspace) throws Exception {
+		final TransferDatabaseCommand command = new TransferDatabaseCommand();
+		command.setConfigurationFile(job.toFile());
+		command.setWorkspaceDirectory(workspace.toFile());
+		command.setExpectedConfigurationFingerprint(fingerprint);
+		command.setAllowExecution(true);
+		command.setSourceDataSource(from);
+		command.setDataSource(to);
+		command.setCloseDataSource(false);
+		try {
+			command.run();
+		} catch (RuntimeException e) {
+			throw new TransferStepException(e, path(command.getReviewFile()), path(command.getResultFile()));
+		}
+		final var result = command.getResult();
+		final List<String> detail = new ArrayList<>();
+		detail.add("phase: " + result.phase());
+		if (result.verificationResult() != null) {
+			detail.add("verified: " + result.verificationResult().isMatch());
+		}
+		return new Outcome(path(command.getReviewFile()), path(command.getResultFile()), String.join(", ", detail));
+	}
+
+	private static String path(final Path path) {
+		return path == null ? null : path.toAbsolutePath().toString();
+	}
+
+	/** A failed transfer with the reports it left. */
+	private static final class TransferStepException extends Exception {
+		private static final long serialVersionUID = 1L;
+		private final String reviewFile;
+		private final String resultFile;
+
+		TransferStepException(final RuntimeException cause, final String reviewFile, final String resultFile) {
+			super(cause.getMessage(), cause);
+			this.reviewFile = reviewFile;
+			this.resultFile = resultFile;
+		}
+	}
+
+	private static void close(final DataSource dataSource) {
+		if (dataSource instanceof AutoCloseable closeable) {
+			try {
+				closeable.close();
+			} catch (Exception ignored) {
+				// Closing a pool must not hide the outcome of the run.
+			}
+		}
+	}
+}

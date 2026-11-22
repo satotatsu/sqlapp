@@ -367,7 +367,8 @@ public final class TransferStagedReplacement {
 			execution.phase = Phase.VERIFICATION;
 			try (var source = bindings.source().getConnection(); var stable = bindings.target().getConnection()) {
 				TransferConnections.requestReadOnly(source);
-				source.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+				// A snapshot of the source; DuckDB offers it as REPEATABLE READ.
+				TransferConnections.useStableReadIsolation(source);
 				source.setAutoCommit(false);
 				TransferConnections.requestReadOnly(stable);
 				stable.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
