@@ -175,6 +175,30 @@ class PhoenixColumnReaderTest {
 	}
 
 	@Test
+	void rejectsDuplicateOrMalformedColumnsAndKeepsTenantIdentitiesSeparate() {
+		final var reader = new PhoenixColumnReader(DialectHolder.defaultDialect5_3_1);
+		final var first = row("items", "value", "a");
+		final var duplicate = new Jdbc(List.of(first, new HashMap<>(first)));
+		assertThrows(IllegalStateException.class,
+				() -> reader.doGetAll(duplicate.connection, new ParametersContext(), null));
+		assertTrue(duplicate.closed);
+		for (String field : List.of("TABLE_NAME", "COLUMN_NAME", "COLUMN_FAMILY")) {
+			final var invalid = new HashMap<>(first);
+			invalid.put(field, " ");
+			final var jdbc = new Jdbc(List.of(invalid));
+			assertThrows(IllegalStateException.class,
+					() -> reader.doGetAll(jdbc.connection, new ParametersContext(), null));
+			assertTrue(jdbc.closed);
+		}
+		final var otherTenant = row("items", "value", "b");
+		otherTenant.put("TABLE_CAT", "another");
+		final var jdbc = new Jdbc(List.of(first, otherTenant));
+		assertEquals(2, reader.doGetAll(jdbc.connection, new ParametersContext(), null).size());
+		assertEquals(1, jdbc.queries);
+		assertTrue(jdbc.closed);
+	}
+
+	@Test
 	void exposesPhoenixColumnReadersForTablesAndViews() {
 		for (var dialect : List.of(DialectHolder.defaultDialect, DialectHolder.defaultDialect5_3_1)) {
 			final var schema = dialect.getCatalogReader().getSchemaReader();

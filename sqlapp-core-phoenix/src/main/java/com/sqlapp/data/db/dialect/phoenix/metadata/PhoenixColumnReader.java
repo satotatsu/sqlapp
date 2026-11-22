@@ -37,16 +37,25 @@ public class PhoenixColumnReader extends JdbcColumnReader {
 				throw new UnsupportedOperationException(
 						"Phoenix columns with the same name in different families cannot be represented "
 								+ "by the current Schema column identity: " + identity);
+			if (previous != null)
+				throw new IllegalStateException("Duplicate Phoenix column metadata: " + identity);
 		}
 		return columns;
 	}
 
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
+		final String name = rs.getString("COLUMN_NAME");
+		final String tableName = rs.getString("TABLE_NAME");
+		if (name == null || name.isBlank() || tableName == null || tableName.isBlank())
+			throw new IllegalStateException("Phoenix column metadata requires a column name and owning table/view");
 		final var column = super.createColumn(rs);
 		final String family = rs.getString("COLUMN_FAMILY");
-		if (family != null && !family.isEmpty())
+		if (family != null && !family.isEmpty()) {
+			if (family.isBlank())
+				throw new IllegalStateException("Blank Phoenix column family: " + name);
 			column.getSpecifics().put(PhoenixCreateTableFactory.COLUMN_FAMILY, family);
+		}
 		final Long capacity = rs.getLongValue("ARRAY_SIZE");
 		if (capacity != null) {
 			if (capacity < 0)

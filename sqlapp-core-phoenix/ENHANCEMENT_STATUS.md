@@ -281,6 +281,15 @@ Gradle outputs; no generated source changes are intentional.
 
 ## Live-server verification still required
 
+The target for native view and functional-index reconstruction validation is
+Phoenix 5.3.2 with HBase 2.5. The Linux amd64 openEuler image
+`openeuler/phoenix:5.3.2-oe2403sp4` was pulled successfully on 2026-11-22.
+The image was extended locally with Java 11 and HBase 2.5.14. In an isolated
+container, SHOW CREATE TABLE produced executable DDL for an inherited view
+with a declared column and filter, and for a descending function index.
+Both were dropped and recreated from the output and yielded identical DDL.
+This does not establish coverage for mapped views or tenant objects.
+
 No Docker/container or external database was used. Mocked JDBC results and
 query-template tests do not execute catalog SQL. A real server is required to
 verify exact index column encodings, header/catalog permissions, native array
@@ -294,8 +303,11 @@ older syntax/catalog paths are isolated but are not live-certified.
   views from VIEW_STATEMENT alone; provide complete CREATE DDL.
 - Functional/internal index keys, inactive-index state transitions and local
   index storage/salting combinations that cannot be recreated reliably here.
-- Multiple source columns with identical simple names in different families:
-  current Schema column identity cannot represent these without ambiguity.
+- Accepted limitation: Phoenix permits the same column name in different
+  families, but the shared Schema model identifies columns by simple name.
+  Phoenix metadata reads reject this case explicitly before attaching the
+  columns to the model. Family-qualified column identity is outside the
+  Phoenix dialect's supported scope.
 - Automatic tenant connection selection and sequence counter restoration.
 - New Phoenix types/features requiring further version splits or shared models.
 - ALTER of native table properties other than explicit IMMUTABLE_ROWS changes,

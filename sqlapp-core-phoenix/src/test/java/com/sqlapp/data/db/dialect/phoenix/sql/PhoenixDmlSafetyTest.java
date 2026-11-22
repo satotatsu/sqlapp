@@ -14,6 +14,7 @@ class PhoenixDmlSafetyTest {
 	void jdbcBatchBindsQualifiedColumnsInOrderAndLeavesConnectionOpen() throws Exception {
 		final var table = new Table("Events");
 		table.getColumns().add(new Column("ID").setDataType(DataType.INT));
+		table.getConstraints().addPrimaryKeyConstraint("pk", table.getColumns().get("ID"));
 		final var payload = new Column("Value Text").setDataType(DataType.VARCHAR);
 		payload.getSpecifics().put(PhoenixCreateTableFactory.COLUMN_FAMILY, "Case Family");
 		table.getColumns().add(payload);
@@ -28,6 +29,7 @@ class PhoenixDmlSafetyTest {
 		final var batchSizes = new java.util.ArrayList<Integer>();
 		final var closed = new java.util.concurrent.atomic.AtomicBoolean();
 		final var pending = new java.util.concurrent.atomic.AtomicInteger();
+		final var connectionClosed = new java.util.concurrent.atomic.AtomicBoolean();
 		final var owner = new java.util.concurrent.atomic.AtomicReference<java.sql.Connection>();
 		final var statement = (java.sql.PreparedStatement) java.lang.reflect.Proxy.newProxyInstance(
 				getClass().getClassLoader(), new Class<?>[] { java.sql.PreparedStatement.class },
@@ -58,6 +60,14 @@ class PhoenixDmlSafetyTest {
 				});
 		final var connection = (java.sql.Connection) java.lang.reflect.Proxy.newProxyInstance(
 				getClass().getClassLoader(), new Class<?>[] { java.sql.Connection.class }, (proxy, method, args) -> {
+					if (method.getName().equals("getCatalog"))
+						return "tenant-a";
+					if (method.getName().equals("getAutoCommit"))
+						return true;
+					if (method.getName().equals("close")) {
+						connectionClosed.set(true);
+						return null;
+					}
 					assertEquals("prepareStatement", method.getName());
 					final String sql = (String) args[0];
 					assertTrue(sql.startsWith("UPSERT INTO"), sql);
@@ -72,6 +82,37 @@ class PhoenixDmlSafetyTest {
 		assertEquals(List.of(List.of(1, "value1"), java.util.Arrays.asList(2, null), List.of(3, "value3")), batches);
 		assertEquals(List.of(2, 1), batchSizes);
 		assertTrue(closed.get());
+		batches.clear();
+		batchSizes.clear();
+		final var upsert = com.sqlapp.jdbc.bulk.BulkUpsertResolver.resolve(DialectHolder.defaultDialect5_3_1);
+		assertFalse(upsert.supportsCallerTransactionAtomicity());
+		assertThrows(IllegalArgumentException.class, () -> upsert.execute(connection, table, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> upsert.execute(connection, table, com.sqlapp.jdbc.bulk.BulkUpsertOption.builder()
+						.useTransaction(false).keyColumn(payload.getName()).build()));
+		assertTrue(batches.isEmpty());
+		table.setCatalogName("tenant-b");
+		assertThrows(IllegalArgumentException.class, () -> upsert.execute(connection, table,
+				com.sqlapp.jdbc.bulk.BulkUpsertOption.builder().useTransaction(false).build()));
+		assertTrue(batches.isEmpty());
+		table.setCatalogName("tenant-a");
+		assertEquals(3, upsert.execute(connection, table,
+				com.sqlapp.jdbc.bulk.BulkUpsertOption.builder().useTransaction(false).bulkOption(options).build()));
+		assertEquals(List.of(2, 1), batchSizes);
+		assertFalse(connectionClosed.get());
+		final var dataSource = (javax.sql.DataSource) java.lang.reflect.Proxy.newProxyInstance(
+				getClass().getClassLoader(), new Class<?>[] { javax.sql.DataSource.class }, (proxy, method, args) -> {
+					assertEquals("getConnection", method.getName());
+					return connection;
+				});
+		final var routedOptions = com.sqlapp.jdbc.bulk.BulkUpsertOption.builder().useTransaction(false)
+				.bulkOption(options).build();
+		final var phoenix = (com.sqlapp.data.db.dialect.phoenix.Phoenix) DialectHolder.defaultDialect5_3_1;
+		assertThrows(IllegalArgumentException.class,
+				() -> phoenix.executeTenantBulkUpsert(java.util.Map.of(), table, routedOptions));
+		assertEquals(3,
+				phoenix.executeTenantBulkUpsert(java.util.Map.of("tenant-a", dataSource), table, routedOptions));
+		assertTrue(connectionClosed.get());
 	}
 
 	@Test

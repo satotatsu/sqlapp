@@ -85,6 +85,11 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 				throw new UnsupportedOperationException(
 						"Phoenix table property changes require a separate migration: " + key);
 		}
+		if (properties.containsKey(SchemaObjectProperties.CONSTRAINTS.getLabel())) {
+			final var extension = appendPrimaryKeyColumn(original, target);
+			if (extension != null)
+				return List.of(extension);
+		}
 		if (properties.containsKey(SchemaProperties.NAME.getLabel())
 				|| properties.containsKey(SchemaObjectProperties.CONSTRAINTS.getLabel()))
 			throw new UnsupportedOperationException(
@@ -139,6 +144,45 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 			add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
 		}
 		return result;
+	}
+
+	private SqlOperation appendPrimaryKeyColumn(Table original, Table target) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.phoenix.Phoenix5_3) || original instanceof View
+				|| !original.getIndexes().isEmpty() || !target.getIndexes().isEmpty())
+			return null;
+		final var before = original.getPrimaryKeyConstraint();
+		final var after = target.getPrimaryKeyConstraint();
+		if (before == null || after == null || before.getColumns().isEmpty()
+				|| after.getColumns().size() != before.getColumns().size() + 1)
+			return null;
+		final var previousTail = original.getColumns().get(before.getColumns().getLast().getName());
+		final var reference = after.getColumns().getLast();
+		final var column = target.getColumns().get(reference.getName());
+		if (previousTail == null || previousTail.getDataType() != com.sqlapp.data.db.datatype.DataType.VARCHAR
+				|| previousTail.getArrayDimension() > 0 || column == null
+				|| original.getColumns().get(column.getName()) != null || !isSupportedAppendedKey(column)
+				|| column.getArrayDimension() > 0 || column.isNotNull() || column.getDefaultValue() != null
+				|| column.getFormula() != null || column.isIdentity()
+				|| column.getSpecifics().get(PhoenixCreateTableFactory.COLUMN_FAMILY) != null
+				|| (reference.getOrder() != null && reference.getOrder() != Order.Asc))
+			return null;
+		final var reduced = target.clone();
+		reduced.getPrimaryKeyConstraint().getColumns().removeLast();
+		reduced.getColumns().remove(column.getName());
+		if (!original.diff(reduced).toDifference().getChangedProperties(getDialect()).isEmpty())
+			return null;
+		final var builder = createSqlBuilder();
+		addAlterObject(target, builder);
+		builder.add();
+		addColumnDefinition(column, builder);
+		builder.space()._add("NULL PRIMARY KEY");
+		return createOperation(builder.toString(), SqlType.ALTER, null, column);
+	}
+
+	private static boolean isSupportedAppendedKey(Column column) {
+		return column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARCHAR
+				|| (column.getDataType() == com.sqlapp.data.db.datatype.DataType.CHAR && column.getLength() != null
+						&& column.getLength() > 0);
 	}
 
 	private static Object comparableProperty(Table table, String key) {

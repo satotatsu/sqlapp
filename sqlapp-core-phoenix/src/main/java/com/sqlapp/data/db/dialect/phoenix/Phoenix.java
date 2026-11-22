@@ -49,6 +49,27 @@ public class Phoenix extends Dialect {
 	private static final long serialVersionUID = -8635862003765087520L;
 	private static final long SIZE_MAX = LEN_2GB - 1;
 
+	/**
+	 * Executes bulk UPSERT using the data source mapped to the table's tenant. Use
+	 * the empty key for a global connection. The selected connection is closed
+	 * here.
+	 */
+	public long executeTenantBulkUpsert(java.util.Map<String, ? extends javax.sql.DataSource> sources,
+			com.sqlapp.data.schemas.Table table, com.sqlapp.jdbc.bulk.BulkUpsertOption options)
+			throws java.sql.SQLException {
+		final String tenant = java.util.Objects.requireNonNullElse(table.getCatalogName(), "");
+		final var source = sources.get(tenant);
+		if (source == null)
+			throw new IllegalArgumentException("No Phoenix data source configured for the table tenant");
+		try (var connection = source.getConnection()) {
+			if (!tenant.equals(java.util.Objects.requireNonNullElse(connection.getCatalog(), "")))
+				throw new IllegalArgumentException("Configured Phoenix connection does not match the table tenant");
+			if (!connection.getAutoCommit())
+				throw new IllegalArgumentException("Routed Phoenix bulk UPSERT requires auto-commit");
+			return com.sqlapp.jdbc.bulk.BulkUpsertResolver.resolve(this).execute(connection, table, options);
+		}
+	}
+
 	@Override
 	public String getObjectFullName(String catalogName, String schemaName, String objectName) {
 		// Phoenix exposes tenant identity as JDBC catalog metadata, but selects it on

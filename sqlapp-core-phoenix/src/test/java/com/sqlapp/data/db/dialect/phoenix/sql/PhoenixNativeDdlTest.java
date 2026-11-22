@@ -11,6 +11,29 @@ import com.sqlapp.data.schemas.*;
 
 class PhoenixNativeDdlTest {
 	@Test
+	void appendsOnlyAnIsolatedNullableTrailingPrimaryKey() {
+		final var original = new Table("EVENTS");
+		final var id = new Column("ID").setDataType(DataType.VARCHAR).setNotNull(true);
+		original.getColumns().add(id);
+		original.getConstraints().addPrimaryKeyConstraint("PK", id);
+		final var target = original.clone();
+		target.getColumns().add(new Column("SUFFIX").setDataType(DataType.VARCHAR));
+		target.getPrimaryKeyConstraint().getColumns().add("SUFFIX");
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		final var sql = registry.createSql(original.diff(target), SqlType.ALTER);
+		assertEquals(1, sql.size());
+		assertEquals("ALTER TABLE EVENTS ADD SUFFIX VARCHAR NULL PRIMARY KEY", sql.get(0).getSqlText());
+		target.getColumns().get("SUFFIX").setDataType(DataType.CHAR).setLength(8);
+		assertEquals("ALTER TABLE EVENTS ADD SUFFIX CHAR(8) NULL PRIMARY KEY",
+				registry.createSql(original.diff(target), SqlType.ALTER).get(0).getSqlText());
+		assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
+				.createSql(original.diff(target), SqlType.ALTER));
+		target.getColumns().get("SUFFIX").setNotNull(true);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+	}
+
+	@Test
 	void requiresAnExplicitVerifiedStartInsteadOfIgnoringRecordedSequenceProgress() throws Exception {
 		final var sequence = new Sequence("descending").setStartValue(BigInteger.TEN)
 				.setIncrementBy(BigInteger.valueOf(-2)).setMinValue(BigInteger.ZERO).setMaxValue(BigInteger.TEN)
