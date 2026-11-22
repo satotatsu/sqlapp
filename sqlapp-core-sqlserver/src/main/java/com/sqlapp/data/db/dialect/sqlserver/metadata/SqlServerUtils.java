@@ -57,6 +57,85 @@ public class SqlServerUtils extends ReaderUtils {
 		return definition;
 	}
 
+	/**
+	 * Removes redundant outer parentheses that SQL Server adds to stored
+	 * definitions (defaults, CHECK constraints, filtered index predicates).
+	 * <p>
+	 * Only a pair of parentheses that encloses the whole definition is removed,
+	 * repeatedly, so {@code ((1)+(2))} becomes {@code (1)+(2)}, not {@code 1)+(2}.
+	 * Parentheses inside string literals and quoted identifiers are ignored.
+	 * Unbalanced input is returned unchanged.
+	 * </p>
+	 *
+	 * @param definition stored definition
+	 * @return definition without enclosing parentheses
+	 */
+	public static String unwrapParentheses(final String definition) {
+		String value = definition;
+		while (!CommonUtils.isEmpty(value) && value.charAt(0) == '('
+				&& findClosingParenthesis(value) == value.length() - 1) {
+			value = value.substring(1, value.length() - 1);
+		}
+		return value;
+	}
+
+	/**
+	 * Returns the index of the parenthesis closing the one at index 0, or -1.
+	 */
+	private static int findClosingParenthesis(final String value) {
+		int depth = 0;
+		final int length = value.length();
+		for (int i = 0; i < length; i++) {
+			final char c = value.charAt(i);
+			switch (c) {
+			case '(':
+				depth++;
+				break;
+			case ')':
+				depth--;
+				if (depth == 0) {
+					return i;
+				}
+				if (depth < 0) {
+					return -1;
+				}
+				break;
+			case '\'':
+				i = skipQuoted(value, i, '\'');
+				break;
+			case '"':
+				i = skipQuoted(value, i, '"');
+				break;
+			case '[':
+				i = skipQuoted(value, i, ']');
+				break;
+			default:
+				break;
+			}
+			if (i < 0) {
+				return -1;
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * Returns the index of the closing quote (doubled quotes are escapes), or -1.
+	 */
+	private static int skipQuoted(final String value, final int start, final char close) {
+		final int length = value.length();
+		for (int i = start + 1; i < length; i++) {
+			if (value.charAt(i) == close) {
+				if (i + 1 < length && value.charAt(i + 1) == close) {
+					i++;
+					continue;
+				}
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	public static IndexType getIndexType(int indexType) {
 		if (indexType == 0) {
 			// ヒープ

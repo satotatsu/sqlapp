@@ -22,7 +22,6 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.notZero;
 import static com.sqlapp.util.CommonUtils.trim;
-import static com.sqlapp.util.CommonUtils.unwrap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -78,7 +77,7 @@ public class SqlServer2008TypeColumnReader extends TypeColumnReader {
 		obj.setNullable(rs.getBoolean("is_nullable"));
 		obj.setIdentity(rs.getBoolean("is_identity"));
 		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
-		obj.setDefaultValue(unwrap(getString(rs, "default_definition"), '(', ')'));
+		obj.setDefaultValue(SqlServerUtils.unwrapParentheses(getString(rs, "default_definition")));
 		// column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -89,7 +88,7 @@ public class SqlServer2008TypeColumnReader extends TypeColumnReader {
 			// Table types keep no identity counter of their own.
 		}
 		obj.setRemarks(getString(rs, "remarks"));
-		String check_definition = trim(unwrap(getString(rs, "check_definition"), '(', ')'));
+		String check_definition = trim(SqlServerUtils.unwrapParentheses(getString(rs, "check_definition")));
 		obj.setCheck(check_definition);
 		setSpecifics(rs, "is_rowguidcol", obj);
 		// setDbSpecificInfo(rs, "is_id_not_for_repl", column);

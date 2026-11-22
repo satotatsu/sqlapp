@@ -65,7 +65,18 @@ public final class TransferFileImportService {
 			Map<String, BulkMigrationVerificationResult> verification,
 			Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId, Path auditFile,
 			TransferSchemaPreparation.Progress schemaPreparation, TransferFailureDiagnostic failureDiagnostic,
-			StagingOutcome staging) {
+			StagingOutcome staging, List<com.sqlapp.jdbc.bulk.GeneratedKeyCounters.Result> generatedKeyCounters) {
+		public Outcome(String manifestFingerprint, String planFingerprint, TransferJobExecutionService.Phase phase,
+				BulkMigrationJobResult copyResult, boolean verificationRequested,
+				Map<String, BulkMigrationVerificationResult> verification,
+				Map<String, ChunkedBulkMigrationProgress> committedProgress, String stoppedTaskId, Path auditFile,
+				TransferSchemaPreparation.Progress schemaPreparation, TransferFailureDiagnostic failureDiagnostic,
+				StagingOutcome staging) {
+			this(manifestFingerprint, planFingerprint, phase, copyResult, verificationRequested, verification,
+					committedProgress, stoppedTaskId, auditFile, schemaPreparation, failureDiagnostic, staging,
+					List.of());
+		}
+
 		public Outcome(String manifestFingerprint, String planFingerprint, TransferJobExecutionService.Phase phase,
 				BulkMigrationJobResult copyResult, boolean verificationRequested,
 				Map<String, BulkMigrationVerificationResult> verification,
@@ -96,6 +107,7 @@ public final class TransferFileImportService {
 		public Outcome {
 			verification = Map.copyOf(verification);
 			committedProgress = Map.copyOf(committedProgress);
+			generatedKeyCounters = generatedKeyCounters == null ? List.of() : List.copyOf(generatedKeyCounters);
 		}
 	}
 
@@ -326,6 +338,7 @@ public final class TransferFileImportService {
 		int completedDdl = 0;
 		Integer attemptedDdl = null;
 		List<String> schemaWarnings = List.of();
+		com.sqlapp.jdbc.bulk.BulkMigrationJobPlan copied = null;
 		try {
 			if (workspace == null || !Files.isDirectory(workspace) || !Files.isWritable(workspace))
 				throw new IllegalArgumentException("Choose an existing writable import workspace.");
@@ -347,6 +360,7 @@ public final class TransferFileImportService {
 				if (!MigrationPlanCommand.databaseIdentity(target).equals(review.targetIdentity()))
 					throw new IllegalArgumentException("Target database identity changed.");
 				final var plan = plan(loaded, target);
+				copied = plan;
 				final var schemaPlan = schemaPlan(loaded, target, plan);
 				if (!schemaPlan.fingerprint().equals(review.planFingerprint())
 						|| !schemaPlan.equals(review.schemaPreparation()))
@@ -390,10 +404,14 @@ public final class TransferFileImportService {
 				}
 				phase = TransferJobExecutionService.Phase.FINALIZATION;
 			}
+			// Raise generators only after a verified copy; a failure here reports FINALIZATION.
+			final var counters = TransferGeneratedKeySynchronization.synchronize(loaded.configuration(), copied,
+					binding(loaded, connections));
 			final var outcome = new Outcome(review.manifestFingerprint(), review.planFingerprint(),
 					TransferJobExecutionService.Phase.COMPLETE, result, verificationRequested, verified, progress, null,
 					directory.resolve("import-result.json"),
-					new TransferSchemaPreparation.Progress(ddl, completedDdl, attemptedDdl, schemaWarnings));
+					new TransferSchemaPreparation.Progress(ddl, completedDdl, attemptedDdl, schemaWarnings), null,
+					null, counters);
 			writeAudit(outcome);
 			return outcome;
 		} catch (ImportException failure) {
@@ -477,7 +495,9 @@ public final class TransferFileImportService {
 		BulkMigrationJobResult stageResult = null;
 		TransferFailureDiagnostic diagnostic = null;
 		boolean failed = false;
+		boolean counterFailure = false;
 		com.sqlapp.jdbc.bulk.BulkMigrationJobPlan originalPlan = null;
+		List<com.sqlapp.jdbc.bulk.GeneratedKeyCounters.Result> counters = List.of();
 		try {
 			if (!staged(loaded) || review.staging() == null)
 				throw new IllegalArgumentException("Staged file import requires a fresh staging review.");
@@ -540,6 +560,19 @@ public final class TransferFileImportService {
 							verification.values().stream().anyMatch(value -> !value.isMatch())
 									|| execution.verified != null && !execution.verified.isMatch());
 		}
+		if (!failed) {
+			// The replacement is committed; a counter failure must not be reported as a
+			// staging-cleanup problem.
+			try {
+				counters = TransferGeneratedKeySynchronization.synchronize(loaded.configuration(), originalPlan,
+						targetSource);
+			} catch (Exception failure) {
+				failed = true;
+				counterFailure = true;
+				execution.phase = TransferJobExecutionService.Phase.FINALIZATION;
+				diagnostic = TransferFailureDiagnostic.capture(failure, false);
+			}
+		}
 		var finalVerification = new LinkedHashMap<String, BulkMigrationVerificationResult>();
 		if (execution.verified != null)
 			execution.verified.getTasks()
@@ -551,7 +584,8 @@ public final class TransferFileImportService {
 		var stopped = failed ? execution.activeTask == null ? active[0] : execution.activeTask : null;
 		var audit = directory.resolve("import-result.json");
 		var outcome = new Outcome(review.manifestFingerprint(), review.planFingerprint(), execution.phase, null, true,
-				finalVerification, Map.of(), stopped, audit, execution.schema, diagnostic, status);
+				finalVerification, Map.of(), counterFailure ? null : stopped, audit, execution.schema, diagnostic,
+				status, counters);
 		try {
 			if (execution.state == TransferStagedReplacement.State.COMMIT_UNCERTAIN && originalPlan != null)
 				TransferJobReportIO.write(audit,
@@ -760,7 +794,8 @@ public final class TransferFileImportService {
 				loaded.configuration().effectiveGeneratedKeyColumn(), staged(loaded));
 		var warnings = new ArrayList<>(schema.warnings());
 		// Counter state is independent of table creation and row-copy verification.
-		for (String check : TransferGeneratedKeyChecks.required(plan))
+		for (String check : TransferGeneratedKeyChecks.required(plan, TransferJobPreparationService.dialect(target),
+				loaded.configuration(), TransferGeneratedKeySynchronization.synchronizes(loaded.configuration())))
 			TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings, check);
 		for (String warning : TransferIntervalProjection.warnings(plan))
 			TransferSchemaPreparation.compatibility(loaded.configuration().compatibilityPolicy(), warnings, warning);

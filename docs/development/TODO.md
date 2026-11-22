@@ -99,3 +99,9 @@ Regression coverage:
 Initial verification: all 54 selected parser, resolver, command and preview tests passed.
 See the [review record](sql-splitter-review.md#initial-verification-2026-10-25) for commands
 and unexecuted scopes. No external database was used.
+
+## Access complex columns
+
+- [ ] Expand Access complex columns (attachment, multi-value, version history)
+  into child tables. Blocked on Microsoft Access sample files to verify rename
+  behavior. See [Access complex columns](access-complex-columns.md).

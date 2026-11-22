@@ -2,7 +2,7 @@
 
 [Development index](README.md) · [User guide](../gradle-plugin/migration-models.md)
 
-Updated: 2026-11-22 (single job). This document separates what is implemented from what is
+Updated: 2026-11-22 (data tests). This document separates what is implemented from what is
 planned. Planned items are not commitments.
 
 ## Goal
@@ -97,6 +97,15 @@ file in `sqlapp-command`. No external database is involved.
      report rewritten after each step. There is no resume: restarting a step
      would need proof that the engine still holds exactly this run's loaded
      data and models, which the engine does not record yet.
+   - Data tests (implemented 2026-11-22): `dataTests` on a model, with the
+     rules notNull, unique, acceptedValues, relationships, expression,
+     rowCount and sql. Each rule is compiled into a failing-rows query and
+     only the count is reported, following the no-values rule of the declared
+     type check. NULL handling follows dbt and SQL constraints: unique ignores
+     keys with a NULL, acceptedValues and relationships ignore NULL,
+     expression treats NULL as failing. `severity: warn` reports without
+     failing; a query that cannot run always fails. The pipeline runs them as
+     the DATA_TESTS step between MODELS and PUBLISH.
 2. **Types.** Declared columns cover the target types of table models. Still
    open: byte-length targets (lengths are checked in characters), CHAR padding,
    time zones, and declared columns for views.

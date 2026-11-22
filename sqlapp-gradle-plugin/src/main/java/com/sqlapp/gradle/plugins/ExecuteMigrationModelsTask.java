@@ -22,6 +22,7 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 		getModifiedOnly().convention(false);
 		getUnitTestsEnabled().convention(true);
 		getTestOnly().convention(false);
+		getDataTestsEnabled().convention(true);
 	}
 
 	public void call(final Action<ExecuteMigrationModelsTask> action) {
@@ -54,6 +55,10 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 	@Input
 	public abstract Property<Boolean> getTestOnly();
 
+	/** Run the data tests of the built models after a complete build. */
+	@Input
+	public abstract Property<Boolean> getDataTestsEnabled();
+
 	@Override
 	protected void beforeRun(final ExecuteMigrationModelsCommand command) {
 		command.setConfigurationFile(getConfigurationFile().get().getAsFile());
@@ -63,6 +68,7 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 		command.setModifiedOnly(getModifiedOnly().get());
 		command.setUnitTestsEnabled(getUnitTestsEnabled().get());
 		command.setTestOnly(getTestOnly().get());
+		command.setDataTestsEnabled(getDataTestsEnabled().get());
 	}
 
 	@Override

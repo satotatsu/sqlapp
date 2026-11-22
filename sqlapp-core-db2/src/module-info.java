@@ -34,6 +34,8 @@ module com.sqlapp.core.db2mod {
 			com.sqlapp.data.db.dialect.db2.bulk.Db2BulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 		com.sqlapp.data.db.dialect.db2.bulk.Db2BulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.db2.bulk.Db2GeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.db2.bulk.Db2SetBasedMigrationSnapshotProvider;
 }

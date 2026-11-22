@@ -28,6 +28,8 @@ module com.sqlapp.core.sqlite {
 			com.sqlapp.data.db.dialect.sqlite.bulk.SqliteBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 		com.sqlapp.data.db.dialect.sqlite.bulk.SqliteBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.sqlite.bulk.SqliteGeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.sqlite.bulk.SqliteSetBasedMigrationSnapshotProvider;
 }

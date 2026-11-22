@@ -20,13 +20,11 @@ final class TransferGeneratedKeySynchronization {
 	}
 
 	/**
-	 * Whether the transfer path of this configuration synchronizes counters. Direct
-	 * copies do; file imports and staged replacement keep the counter warning.
+	 * Whether this configuration copies rows, after which counters are
+	 * synchronized: direct copies, file imports and staged replacement alike.
 	 */
 	static boolean synchronizes(final TransferJobConfiguration configuration) {
-		return configuration.dataMode() != TransferJobConfiguration.DataMode.FILE
-				&& configuration.dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY && configuration
-						.effectiveTargetPreparation() != TransferJobConfiguration.TargetPreparation.STAGED_REPLACE;
+		return configuration.dataMode() != TransferJobConfiguration.DataMode.SCHEMA_ONLY;
 	}
 
 	static List<GeneratedKeyCounters.Result> synchronize(final TransferJobConfiguration configuration,

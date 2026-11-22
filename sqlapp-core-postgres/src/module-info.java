@@ -28,6 +28,8 @@ module com.sqlapp.core.postgres {
 			com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkInsertProvider;
 	provides com.sqlapp.jdbc.bulk.BulkUpsertProvider with
 		com.sqlapp.data.db.dialect.postgres.bulk.PostgresBulkUpsertProvider;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.postgres.bulk.PostgresGeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.postgres.bulk.PostgresSetBasedMigrationSnapshotProvider;
 }

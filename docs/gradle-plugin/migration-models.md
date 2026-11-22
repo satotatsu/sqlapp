@@ -29,8 +29,8 @@ executeMigrationModels {
 In a build without the Java plugin, supply these through an explicit
 configuration as described in [Getting started](getting-started.md).
 
-The task runs the unit tests first and builds the models only when every test
-passes.
+The task runs the unit tests first, builds the models only when every test
+passes, and then runs the [data tests](#data-tests) of the built models.
 
 | Property | Type | Required | Convention | Description |
 |---|---|---:|---|---|
@@ -40,6 +40,7 @@ passes.
 | `modifiedOnly` | `Property<Boolean>` | yes | `false` | Build only models changed since `stateFile` and their downstream models |
 | `unitTestsEnabled` | `Property<Boolean>` | yes | `true` | Run unit tests before building |
 | `testOnly` | `Property<Boolean>` | yes | `false` | Run unit tests and build nothing |
+| `dataTestsEnabled` | `Property<Boolean>` | yes | `true` | Run data tests after a complete build |
 | `targetMappingFile` | `RegularFileProperty` | no | — | Transfer name mapping with the [declared column types](#declared-columns), written after a complete build |
 
 ## Configuration
@@ -220,6 +221,52 @@ unitTests:
 - Fixtures are supplied as common table expressions named after the
   references, so table aliases and column qualifiers in the model keep working.
 
+## Data tests
+
+Unit tests check the SQL against fixtures. Data tests check the built model
+against the real data: each rule is a query for the rows that break it, and
+the test passes when there are none.
+
+```yaml
+models:
+  - name: ORDER_FACT
+    materialized: table
+    query: ...
+    dataTests:
+      - notNull: [CUSTOMER_ID, AMOUNT]
+      - unique: [ORDER_ID]
+      - acceptedValues: {column: STATUS, values: [NEW, SHIPPED]}
+      - relationships: {column: CUSTOMER_ID, to: customer, field: ID}
+      - expression: AMOUNT >= 0
+      - rowCount: {min: 1}
+      - name: no-cancelled
+        severity: warn
+        sql: SELECT * FROM /*$ref('ORDER_FACT')*/ORDER_FACT WHERE STATUS = 'CANCELLED'
+```
+
+| Rule | Failing rows |
+|---|---|
+| `notNull: [columns]` | rows with NULL in any of the columns |
+| `unique: [columns]` | keys that occur more than once; keys with a NULL are not compared |
+| `acceptedValues: {column, values}` | non-NULL values outside the list; add `notNull` to reject NULL |
+| `relationships: {column, to, field}` | non-NULL values without a matching row in the model or source `to`; `columns` and `fields` for a composite key |
+| `expression: condition` | rows where the condition is not true, including NULL |
+| `rowCount: {min, max}` | the number of rows is outside the range; either bound is optional |
+| `sql: query` | the rows the query returns; `$ref` and `$source` work as in models |
+
+Each test has exactly one rule. `name` defaults to the model, the rule and
+its columns, such as `ORDER_FACT.unique(ORDER_ID)`, and must be unique.
+`severity: error` (the default) fails the task; `severity: warn` only reports.
+A test query that cannot run fails the task whatever its severity. Columns
+named by a rule must be declared when the model [declares
+columns](#declared-columns).
+
+The tests run after every model was built. A failure does not roll the models
+back, but the task fails, and neither `stateFile` nor `targetMappingFile` is
+written. The log and the error report the number of failing rows for each
+test, never the values. With `modifiedOnly` only the tests of the rebuilt
+models run.
+
 ## Building only what changed
 
 ```groovy
@@ -399,7 +446,10 @@ The steps run in order and the first failure stops the run:
 1. **LOAD** runs the load job with verification.
 2. **MODELS** runs the unit tests and builds every model. It checks after the
    build that the model definitions did not change during it.
-3. **PUBLISH** starts only after every model of this run was built. The
+3. **DATA_TESTS** runs the [data tests](#data-tests) of every model; it is
+   `SKIPPED` when the models have none.
+4. **PUBLISH** starts only after every model of this run was built and every
+   `error` data test passed. The
    declared columns of this run are written into the run directory as the
    [contract mapping](#publishing-into-existing-tables) of the published
    tables, and the publish job is run with it and with verification.

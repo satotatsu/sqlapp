@@ -57,10 +57,13 @@ class MdbByteAndGuidRoundTripTest {
 		final Column value = loaded.getColumns().get("V");
 		assertEquals(DataType.UTINYINT, value.getDataType());
 		final List<Integer> fileValues = new ArrayList<>();
+		final List<Long> rowNumbers = new ArrayList<>();
 		for (final Row row : loaded.getRows()) {
 			fileValues.add(((Number) row.get("V")).intValue());
+			rowNumbers.add(row.getDataSourceRowNumber());
 		}
 		assertEquals(BYTES, fileValues);
+		assertEquals(List.of(1L, 2L, 3L, 4L), rowNumbers);
 		final var converter = Converters.getDefault().getConverter(value.getDataType().getDefaultClass());
 		for (final Integer expected : BYTES) {
 			assertEquals(expected.intValue(), ((Number) converter.convertObject(expected)).intValue());

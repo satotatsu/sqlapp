@@ -209,14 +209,14 @@ with INSERT and resume disabled. No target is cleared or reset. A second import
 into a now nonempty target fails even if the first import succeeded.
 CSV import explicitly requests preservation of source identity values and NULLs
 from the bulk insert provider, just like direct transfer. Existing packages keep
-their format and require a fresh review, not manual edits. Database-generated
-sequence/identity counters for later inserts are not synchronized automatically.
-Review and outcomes name modeled identity/auto-increment columns with the same
-`[GENERATED_KEY_COUNTER]` follow-up as direct transfer, for both existing and
-newly prepared tables. WARN permits execution; ERROR stops before copying.
-Copied-row verification does not certify future generated values. Inspect the
-target counter separately; no restart or nextval probe is performed. This is
-limited to columns represented as generated keys in the canonical Schema.
+their format and require a fresh review, not manual edits. After a verified
+import, identity/serial generators are synchronized past the imported keys as in
+direct transfer (`generatedKeyCounters`, default `SYNCHRONIZE`), including the
+final tables of a staged replacement; the outcome lists each column. Where a
+database is not supported, or with `generatedKeyCounters: WARN`, review and
+outcomes name the columns with the same `[GENERATED_KEY_COUNTER]` follow-up;
+WARN permits execution and ERROR stops before copying. This is limited to
+columns represented as generated keys in the canonical Schema.
 Upgrading does not repair rows already copied with regenerated keys; inspect the
 previous audit and use a known empty target before rerunning.
 

@@ -28,7 +28,6 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.CommonUtils;
 
 /**
  * SqlServer2008のインデックス読み込みクラス
@@ -110,7 +109,7 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	protected Index createIndex(final ExResultSet rs) throws SQLException {
 		final Index index = super.createIndex(rs);
 		String where = getString(rs, FILTER_DEFINITION);
-		where = CommonUtils.unwrap(SqlServerUtils.replaceNames(where), "(", ")");
+		where = SqlServerUtils.unwrapParentheses(SqlServerUtils.replaceNames(where));
 		index.setWhere(where);
 		if (index.getIndexType() == IndexType.Spatial) {
 			setSpecifics(rs, TESSELLATION_SCHEMA, index);

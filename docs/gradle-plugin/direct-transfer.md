@@ -717,25 +717,36 @@ Common initial-copy jobs explicitly preserve source identity values and NULLs.
 Generated per-table bulk options use `keepIdentity: true` and `keepNulls: true`,
 so parent keys are not silently regenerated while children retain their original
 foreign keys. Low-level Bulk API defaults are unchanged. Existing shared jobs
-need no new option; review them again after upgrading. Sequence/identity counter
-synchronization for subsequent generated inserts remains a separate concern.
-Selected columns modeled as identity or auto-increment now produce a per-column
-`[GENERATED_KEY_COUNTER]` warning in review and outcomes, including for
-`REQUIRE_EXISTING`. It names the resolved target table/column and states that
-counter alignment has not been checked or changed. `WARN` permits transfer;
-`ERROR` rejects this unverified condition before copying. This follows the same
-shared policy in GUI and Gradle. A target without a generator can treat that
-follow-up as not applicable after inspection. The stable code and
-`TransferGeneratedKeyChecks.messages` expose this warning category without
-changing job/report record layouts. The GUI calls out the pending follow-up even
-when copied-row verification matches.
+need no new option; review them again after upgrading.
 
-Before application writes, check the target's next generated values against
-imported keys, accounting for increment direction, bounds, cycling, caches and
-concurrent writers. No automatic MAX+1 restart or probe INSERT/nextval is executed.
-Detection uses canonical identity/auto-increment metadata; independent sequences
-and vendor default expressions not represented that way are not comprehensively
-detected. Existing generic DDL/default/identity compatibility warnings remain.
+After a verified copy (direct, file import or `STAGED_REPLACE`, where the final
+tables are synchronized after the committed replacement), the generators of
+selected identity/serial columns are raised past the imported keys so later automatic inserts cannot
+collide with them. The required next value is the larger of the source's next
+value and the imported maximum plus the increment (the smaller for a negative
+increment), and a generator is never moved back. The outcome lists each column
+in `generatedKeyCounters` with its action (`RESTARTED`, `ALREADY_SAFE`,
+`FOLLOWS_INSERTED_KEYS`, `NO_GENERATOR`) and the executed statement. A failure
+at this step is reported as `FINALIZATION`; the copied rows stay committed.
+
+```yaml
+generatedKeyCounters: WARN   # optional; default SYNCHRONIZE
+```
+
+PostgreSQL 10+, H2 2.x and Oracle 12c+ are restarted and SQL Server 2005+ is
+reseeded with `DBCC CHECKIDENT` (which needs ALTER permission on the table);
+MySQL, MariaDB, HSQLDB and
+SQLite raise the counter past inserted keys by themselves. Db2 for LUW never
+restarts a generator unless the job sets `generatedKeyCounters: SYNCHRONIZE`
+explicitly; its catalog reports a restart only after the next generated value,
+so a repeated run with a smaller source value can move an unused restart point
+back, never below the imported keys. On other databases and with `WARN`, each such column still produces a `[GENERATED_KEY_COUNTER]`
+warning in review and outcomes stating that counter alignment has not been
+checked or changed; `WARN` permits transfer and `ERROR` rejects it before
+copying. `TransferGeneratedKeyChecks.messages` exposes this warning category,
+and the GUI calls out the pending follow-up. Detection uses canonical
+identity/auto-increment metadata; independent sequences and vendor default
+expressions not represented that way are not synchronized. Existing generic DDL/default/identity compatibility warnings remain.
 
 The bulk job target uses the command's nontransactional connection wrapper:
 the chunk executor alone commits/rolls back data and checkpoint transactions.

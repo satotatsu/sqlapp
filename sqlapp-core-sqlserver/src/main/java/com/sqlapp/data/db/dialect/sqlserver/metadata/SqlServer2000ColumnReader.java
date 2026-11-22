@@ -23,7 +23,6 @@ import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.eqIgnoreCase;
 import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.notZero;
-import static com.sqlapp.util.CommonUtils.unwrap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -132,7 +131,7 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 		obj.setNullable(rs.getBoolean("is_nullable"));
 		obj.setIdentity(rs.getBoolean("is_identity"));
 		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
-		obj.setDefaultValue(unwrap(getString(rs, "default_definition"), '(', ')'));
+		obj.setDefaultValue(SqlServerUtils.unwrapParentheses(getString(rs, "default_definition")));
 		// column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));

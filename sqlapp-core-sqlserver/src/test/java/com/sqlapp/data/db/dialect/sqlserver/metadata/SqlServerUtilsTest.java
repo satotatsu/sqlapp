@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -133,4 +134,41 @@ public class SqlServerUtilsTest extends AbstractTest {
 				SqlServerUtils.replaceNames("([EndDate]>=[StartDate] OR [EndDate] IS NULL)"));
 	}
 
+	@Test
+	public void testUnwrapParenthesesSimple() {
+		assertEquals("0", SqlServerUtils.unwrapParentheses("((0))"));
+		assertEquals("getdate()", SqlServerUtils.unwrapParentheses("(getdate())"));
+		assertEquals("N'abc'", SqlServerUtils.unwrapParentheses("(N'abc')"));
+		assertEquals("", SqlServerUtils.unwrapParentheses("()"));
+		assertEquals("getdate()", SqlServerUtils.unwrapParentheses("getdate()"));
+		assertNull(SqlServerUtils.unwrapParentheses(null));
+		assertEquals("", SqlServerUtils.unwrapParentheses(""));
+	}
+
+	@Test
+	public void testUnwrapParenthesesKeepsUnenclosedExpressions() {
+		assertEquals("(1)+(2)", SqlServerUtils.unwrapParentheses("((1)+(2))"));
+		assertEquals("(1)+(2)", SqlServerUtils.unwrapParentheses("(1)+(2)"));
+		assertEquals("([a])>(0)", SqlServerUtils.unwrapParentheses("(([a])>(0))"));
+		assertEquals("[a]>(0) AND [b]<(10)", SqlServerUtils.unwrapParentheses("([a]>(0) AND [b]<(10))"));
+		assertEquals("dateadd(day,(1),getdate())", SqlServerUtils.unwrapParentheses("(dateadd(day,(1),getdate()))"));
+	}
+
+	@Test
+	public void testUnwrapParenthesesIgnoresQuotedText() {
+		assertEquals("'a)'", SqlServerUtils.unwrapParentheses("('a)')"));
+		assertEquals("'(a'", SqlServerUtils.unwrapParentheses("('(a')"));
+		assertEquals("'it''s )'", SqlServerUtils.unwrapParentheses("('it''s )')"));
+		assertEquals("('a')+(')')", SqlServerUtils.unwrapParentheses("(('a')+(')'))"));
+		assertEquals("[c)]>(0)", SqlServerUtils.unwrapParentheses("([c)]>(0))"));
+		assertEquals("[c]](]>(0)", SqlServerUtils.unwrapParentheses("([c]](]>(0))"));
+		assertEquals("\"c)\">(0)", SqlServerUtils.unwrapParentheses("(\"c)\">(0))"));
+	}
+
+	@Test
+	public void testUnwrapParenthesesKeepsUnbalancedInput() {
+		assertEquals("((0)", SqlServerUtils.unwrapParentheses("((0)"));
+		assertEquals("('a)", SqlServerUtils.unwrapParentheses("('a)"));
+		assertEquals("([a)", SqlServerUtils.unwrapParentheses("([a)"));
+	}
 }

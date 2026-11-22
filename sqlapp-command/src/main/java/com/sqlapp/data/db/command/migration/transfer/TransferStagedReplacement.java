@@ -390,8 +390,20 @@ public final class TransferStagedReplacement {
 				stable.rollback();
 			}
 			cleanupStages(bindings.target(), plan, execution);
-			return outcome(current, Phase.COMPLETE, execution.verified, execution.schema, null, plan, execution.state,
-					copied, execution.rows, execution.cleaned, null);
+			final var done = outcome(current, Phase.COMPLETE, execution.verified, execution.schema, null, plan,
+					execution.state, copied, execution.rows, execution.cleaned, null);
+			// The replacement is committed; a counter failure must not be reported as a
+			// staging-cleanup problem.
+			try {
+				return withCounters(done, TransferGeneratedKeySynchronization
+						.synchronize(current.job().configuration(), original, bindings.target()));
+			} catch (Exception failure) {
+				throw new CounterFailure(outcome(current, Phase.FINALIZATION, execution.verified, execution.schema,
+						TransferFailureDiagnostic.capture(failure, false), plan, execution.state, copied,
+						execution.rows, execution.cleaned, null));
+			}
+		} catch (CounterFailure failure) {
+			throw failed(failure.outcome);
 		} catch (Exception | LinkageError failure) {
 			if (execution.state == State.COMMITTED)
 				execution.state = State.COMMITTED_STAGE_CLEANUP_FAILED;
@@ -552,6 +564,24 @@ public final class TransferStagedReplacement {
 
 	private static String commentSql(String sql) {
 		return sql.lines().map(line -> "-- " + line).collect(java.util.stream.Collectors.joining("\n"));
+	}
+
+	/** Carries the committed outcome past the generic failure handling. */
+	private static final class CounterFailure extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		private final transient Outcome outcome;
+
+		CounterFailure(Outcome outcome) {
+			super("Generated-key counter synchronization failed after commit.", null, false, false);
+			this.outcome = outcome;
+		}
+	}
+
+	private static Outcome withCounters(Outcome outcome,
+			List<com.sqlapp.jdbc.bulk.GeneratedKeyCounters.Result> counters) {
+		return new Outcome(outcome.prepared(), outcome.phase(), outcome.copyResult(), outcome.verificationResult(),
+				outcome.completedTasks(), outcome.committedProgress(), outcome.stoppedTaskId(),
+				outcome.schemaPreparation(), outcome.failureDiagnostic(), outcome.staging(), counters);
 	}
 
 	private static Outcome outcome(TransferJobPreparationService.Prepared current, Phase phase,

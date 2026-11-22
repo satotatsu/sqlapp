@@ -82,7 +82,7 @@ public class MdbRowIteratorHandler extends AbstractRowIteratorHandler {
 		protected void set(final io.github.spannm.jackcess.Row source, final Row row) {
 			row.setDataSourceInfo(file.toString());
 			row.setDataSourceDetailInfo(tableName);
-			row.setDataSourceRowNumber(count);
+			row.setDataSourceRowNumber(count + 1);
 			for (final Column column : table.getColumns()) {
 				put(row, column, normalizeValue(column, source.get(column.getName())));
 			}

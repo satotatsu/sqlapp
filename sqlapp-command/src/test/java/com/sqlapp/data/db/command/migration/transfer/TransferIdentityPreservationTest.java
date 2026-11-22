@@ -37,13 +37,16 @@ class TransferIdentityPreservationTest {
 			final var service = new TransferFileImportService();
 			final var bindings = Map.of("to", target);
 			final var review = service.review(exported.file(), exported.fingerprint(), bindings);
-			assertCounterCheck(review.schemaPreparation().warnings());
+			// File imports synchronize counters by default, so no counter warning remains.
+			assertTrue(TransferGeneratedKeyChecks.messages(review.schemaPreparation().warnings()).isEmpty());
 			final var result = service.execute(review, bindings, directory);
 			assertEquals(TransferJobExecutionService.Phase.COMPLETE, result.phase());
 			assertTrue(result.verification().values().stream().allMatch(value -> value.isMatch()));
 			assertEquals(4, result.copyResult().getProcessedRows());
 			assertEquals(review.schemaPreparation().warnings(), result.schemaPreparation().warnings());
-			assertTrue(Files.readString(result.auditFile()).contains(TransferGeneratedKeyChecks.CODE));
+			assertEquals(com.sqlapp.jdbc.bulk.GeneratedKeyCounters.Action.FOLLOWS_INSERTED_KEYS,
+					result.generatedKeyCounters().getFirst().action());
+			assertTrue(Files.readString(result.auditFile()).contains("FOLLOWS_INSERTED_KEYS"));
 		} else {
 			final var service = new TransferJobExecutionService();
 			final var bindings = Map.of("from", source, "to", target);

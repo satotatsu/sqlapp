@@ -16,7 +16,8 @@ import com.sqlapp.data.schemas.Table;
  * Raises identity/serial generators after keys were imported with explicit
  * values. The required next value is the later (for a negative increment, the
  * smaller) of the source model's next value and the imported key extreme plus
- * the increment. A generator is never moved back.
+ * the increment. A generator is never moved back from a value the database
+ * reports; providers document catalogs that report a restart late (Db2).
  */
 public final class GeneratedKeyCounters {
 	private GeneratedKeyCounters() {

@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
-import static com.sqlapp.util.CommonUtils.unwrap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -84,7 +83,7 @@ public class SqlServer2000CheckConstraintReader extends CheckConstraintReader {
 		String tableName = getString(rs, TABLE_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String value = getString(rs, "definition");
-		String definition = SqlServerUtils.replaceNames(unwrap(value, '(', ')'), columnName);
+		String definition = SqlServerUtils.replaceNames(SqlServerUtils.unwrapParentheses(value), columnName);
 		CheckConstraint c = new CheckConstraint(constraint_name, definition);
 		c.setCatalogName(getString(rs, CATALOG_NAME));
 		c.setSchemaName(getString(rs, SCHEMA_NAME));

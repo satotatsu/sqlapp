@@ -27,6 +27,8 @@ module com.sqlapp.core.h2mod {
 	exports com.sqlapp.data.db.dialect.h2.metadata;
 	exports com.sqlapp.data.db.dialect.h2.resolver;
 	exports com.sqlapp.data.db.dialect.h2.sql to com.sqlapp.core;
+	provides com.sqlapp.jdbc.bulk.GeneratedKeyCounterProvider with
+		com.sqlapp.data.db.dialect.h2.bulk.H2GeneratedKeyCounterProvider;
 	provides com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotProvider with
 		com.sqlapp.data.db.dialect.h2.bulk.H2SetBasedMigrationSnapshotProvider;
 }
