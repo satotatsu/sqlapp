@@ -44,4 +44,16 @@ class FirebirdSqlScriptTest {
 				.filter(text -> !text.isEmpty()).toList();
 		assertEquals(List.of(PROCEDURE, SELECT), statements);
 	}
+
+	@Test
+	void dialectTextSplitsBackIntoTheSameStatements() {
+		final Dialect dialect = DialectHolder.defaultDialect30;
+		final String text = dialect.toTextFromSqlOperation(
+				List.of(new SqlOperation(PROCEDURE, SqlType.CREATE), new SqlOperation(SELECT, SqlType.SELECT)));
+		assertEquals("SET TERM @ ;\n" + PROCEDURE + "\n@\nSET TERM ; @\n" + SELECT + "\n;\n", text);
+		final List<String> statements = dialect.createSqlSplitter().parse(text).stream()
+				.filter(part -> !part.getTextType().isComment()).map(SplitResult::getText).map(String::strip)
+				.filter(value -> !value.isEmpty()).toList();
+		assertEquals(List.of(PROCEDURE, SELECT), statements);
+	}
 }
