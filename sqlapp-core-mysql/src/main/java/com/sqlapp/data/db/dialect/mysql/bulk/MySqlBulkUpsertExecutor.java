@@ -40,15 +40,15 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		final String stage = stageName(option), stageSql = quote(stage);
 		final String target = targetName(table);
 		String marker = "sqlapp_bulk_matched";
-		for (int suffix = 1; containsName(staged, marker); suffix++) marker = "sqlapp_bulk_matched_" + suffix;
+		for (int suffix = 1; containsName(staged, marker); suffix++)
+			marker = "sqlapp_bulk_matched_" + suffix;
 		final String matched = quote(marker);
 		try (var scope = BulkUpsertExecutionScope.begin(connection, option.isUseTransaction())) {
 			try {
 				try (var statement = connection.createStatement()) {
 					statement.execute("CREATE TEMPORARY TABLE " + stageSql
 							+ (option.isInsertWhenNotMatched() ? " (" + matched + " TINYINT NOT NULL DEFAULT 0)" : "")
-							+ " AS SELECT " + list(staged, null)
-							+ " FROM " + target + " WHERE 1 = 0");
+							+ " AS SELECT " + list(staged, null) + " FROM " + target + " WHERE 1 = 0");
 				}
 				scope.addCleanupSql("DROP TEMPORARY TABLE " + stageSql);
 				BulkInsertResolver.resolve(dialect).execute(connection, plan.createStagingTable(stage),
@@ -59,7 +59,8 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 					for (int i = 0; i < statements.size(); i++) {
 						final int count = statement.executeUpdate(statements.get(i));
 						// The first statement only classifies rows in the staging table.
-						if (!option.isInsertWhenNotMatched() || i != 0) affected += count;
+						if (!option.isInsertWhenNotMatched() || i != 0)
+							affected += count;
 					}
 				}
 				scope.commit();
@@ -89,8 +90,9 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		return dialect.getObjectFullName(catalog, table.getName());
 	}
 
-	private List<String> sql(final String target, final String stage, final List<Column> keys, final List<Column> staged,
-			final List<Column> updates, final BulkUpsertOption option, final String matched) {
+	private List<String> sql(final String target, final String stage, final List<Column> keys,
+			final List<Column> staged, final List<Column> updates, final BulkUpsertOption option,
+			final String matched) {
 		final List<String> statements = new java.util.ArrayList<>();
 		if (option.isInsertWhenNotMatched()) {
 			final StringBuilder classify = new StringBuilder("UPDATE ").append(stage).append(" AS source LEFT JOIN ")
@@ -106,13 +108,14 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 			match(s, keys);
 			s.append(" SET ");
 			assignments(s, updates, "source");
-			if (option.isInsertWhenNotMatched()) s.append(" WHERE source.").append(matched).append(" = 1");
+			if (option.isInsertWhenNotMatched())
+				s.append(" WHERE source.").append(matched).append(" = 1");
 			statements.add(s.toString());
 		}
 		if (option.isInsertWhenNotMatched()) {
-			final StringBuilder s = new StringBuilder("INSERT INTO ").append(target).append(" (").append(list(staged, null))
-					.append(") SELECT ").append(projection(staged)).append(" FROM ").append(stage)
-					.append(" AS source");
+			final StringBuilder s = new StringBuilder("INSERT INTO ").append(target).append(" (")
+					.append(list(staged, null)).append(") SELECT ").append(projection(staged)).append(" FROM ")
+					.append(stage).append(" AS source");
 			// Freeze match classification before target DML, so concurrent conflicts cannot
 			// silently change an insert into an update or skip a requested action.
 			s.append(" WHERE source.").append(matched).append(" = 0");
@@ -148,7 +151,8 @@ public class MySqlBulkUpsertExecutor implements BulkUpsertExecutor {
 		final String reference = alias + "." + quote(column.getName());
 		if (dialect instanceof com.sqlapp.data.db.dialect.mysql.MySql8019
 				&& column.getDataType() == com.sqlapp.data.db.datatype.DataType.TIMESTAMPVERSION) {
-			// A plain assignment can reconstruct TIMESTAMP from ambiguous local fields at a DST overlap.
+			// A plain assignment can reconstruct TIMESTAMP from ambiguous local fields at a
+			// DST overlap.
 			return "CONCAT(TIMESTAMPADD(MICROSECOND, UNIX_TIMESTAMP(" + reference
 					+ ") * 1000000, CAST('1970-01-01 00:00:00' AS DATETIME(6))), '+00:00')";
 		}

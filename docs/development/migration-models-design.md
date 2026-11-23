@@ -2,7 +2,7 @@
 
 [Development index](README.md) · [User guide](../gradle-plugin/migration-models.md)
 
-Updated: 2026-11-22 (data tests). This document separates what is implemented from what is
+Updated: 2026-11-23 (incremental models). This document separates what is implemented from what is
 planned. Planned items are not commitments.
 
 ## Goal
@@ -104,8 +104,36 @@ file in `sqlapp-command`. No external database is involved.
      type check. NULL handling follows dbt and SQL constraints: unique ignores
      keys with a NULL, acceptedValues and relationships ignore NULL,
      expression treats NULL as failing. `severity: warn` reports without
-     failing; a query that cannot run always fails. The pipeline runs them as
-     the DATA_TESTS step between MODELS and PUBLISH.
+     failing; a query that cannot run always fails and is reported by error
+     category only, since driver messages can quote values. Every test runs
+     with `modifiedOnly` too, so a changed test is never skipped. The
+     pipeline runs them as the DATA_TESTS step between MODELS and PUBLISH.
+   - Commit rule (decided 2026-11-23): a run builds the selected models in
+     dependency order and runs every data test on the same connection in the
+     same transaction; it commits only when every model was built and no
+     ERROR test failed. Tests may read models built after the tested one
+     (relationships, sql), which a per-model commit would get wrong on the
+     first run and misjudge against the previous table later. The pipeline
+     MODELS step uses the same transaction and reports DATA_TESTS from it.
+     A failed test query can abort a DuckDB transaction, so later tests are
+     NOT_RUN.
+   - Incremental models (decided 2026-11-23, following dbt with two
+     additions): `materialized: incremental` merges the staged rows by the
+     declared primary key (`INSERT ... ON CONFLICT DO UPDATE`); the SQL selects
+     the rows inside `/*if isIncremental*/` and reads its own table through a
+     self reference. Additions to dbt: (A) a lineage fingerprint of the model,
+     every upstream model and every referenced source definition, recorded as a
+     versioned table comment in the build transaction; a missing, unreadable
+     or different fingerprint stops the run until `fullRefresh`, so old rows
+     computed by old definitions never mix silently, and a full rebuild never
+     happens by itself (it could drop rows a source no longer has). SQL is not
+     normalized, because comments carry template directives. (C) NULL and
+     duplicated keys of the new rows fail before the merge, on the same staged
+     rows. Not adopted: declarative lookback (documented as SQL), comparison
+     with a full rebuild (expensive and noisy), deletes, microbatch,
+     incremental loading. Publishing stays a full STAGED_REPLACE of the model
+     tables, so rows merged before a failed publish are published by the next
+     run; retained staging tables must be removed by the operator first.
 2. **Types.** Declared columns cover the target types of table models. Still
    open: byte-length targets (lengths are checked in characters), CHAR padding,
    time zones, and declared columns for views.

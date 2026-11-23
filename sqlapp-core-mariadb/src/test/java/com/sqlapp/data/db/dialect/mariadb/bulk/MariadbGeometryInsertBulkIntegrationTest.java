@@ -40,30 +40,31 @@ import com.sqlapp.jdbc.bulk.JdbcBatchBulkInsertExecutor;
 import com.sqlapp.util.file.TextFileWriter;
 
 /**
- * MariaDB の GEOMETRY 列で、通常の INSERT(JDBC バッチ)と BulkInsert(LOAD DATA LOCAL INFILE)が同じ値を保存すること、
- * DB → CSV → DB で値が保たれること、MariaDB で表現できない値は変換せずにエラーになることを確認する。
+ * MariaDB の GEOMETRY 列で、通常の INSERT(JDBC バッチ)と BulkInsert(LOAD DATA LOCAL
+ * INFILE)が同じ値を保存すること、 DB → CSV → DB で値が保たれること、MariaDB
+ * で表現できない値は変換せずにエラーになることを確認する。
  * <p>
- * 実DBに接続するため、環境変数 SQLAPP_TEST_MARIADB_URL(と SQLAPP_TEST_MARIADB_USER / SQLAPP_TEST_MARIADB_PASSWORD)が設定されている場合だけ実行する。 URL には allowLocalInfile=true が必要。
- * テーブルは一意な名前で作成し、終了時に削除する。
+ * 実DBに接続するため、環境変数 SQLAPP_TEST_MARIADB_URL(と SQLAPP_TEST_MARIADB_USER /
+ * SQLAPP_TEST_MARIADB_PASSWORD)が設定されている場合だけ実行する。 URL には allowLocalInfile=true
+ * が必要。 テーブルは一意な名前で作成し、終了時に削除する。
  * </p>
  */
 @EnabledIfEnvironmentVariable(named = "SQLAPP_TEST_MARIADB_URL", matches = ".+")
 class MariadbGeometryInsertBulkIntegrationTest {
 
 	/** 保存できる値と、読み戻したときの EWKT */
-	private static final String[][] SUPPORTED = {
-			{ "SRID=4326;POINT(139.7 35.6)", "SRID=4326;POINT(139.7 35.6)" },
-			{ "POINT(1 2)", "POINT(1 2)" },
-			{ null, null },
+	private static final String[][] SUPPORTED = { { "SRID=4326;POINT(139.7 35.6)", "SRID=4326;POINT(139.7 35.6)" },
+			{ "POINT(1 2)", "POINT(1 2)" }, { null, null },
 			{ "SRID=3857;MULTIPOLYGON(((0 0,1 0,1 1,0 0)),((5 5,6 5,6 6,5 5)))",
 					"SRID=3857;MULTIPOLYGON(((0 0,1 0,1 1,0 0)),((5 5,6 5,6 6,5 5)))" },
 			{ "LINESTRING(0 0,1 1)", "LINESTRING(0 0,1 1)" },
-			{ "GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))", "GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))" },
-			{ "GEOMETRYCOLLECTION EMPTY", "GEOMETRYCOLLECTION EMPTY" },
-	};
+			{ "GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))",
+					"GEOMETRYCOLLECTION(POINT(1 2),LINESTRING(0 0,1 1))" },
+			{ "GEOMETRYCOLLECTION EMPTY", "GEOMETRYCOLLECTION EMPTY" }, };
 
 	/** MariaDB で表現できないため、エラーになる値 */
-	private static final String[] UNSUPPORTED = { "POINT Z(1 2 3)", "POINT M(1 2 3)", "POINT EMPTY", "LINESTRING EMPTY" };
+	private static final String[] UNSUPPORTED = { "POINT Z(1 2 3)", "POINT M(1 2 3)", "POINT EMPTY",
+			"LINESTRING EMPTY" };
 
 	@TempDir
 	File directory;
@@ -133,7 +134,8 @@ class MariadbGeometryInsertBulkIntegrationTest {
 			throws SQLException {
 		final Map<Integer, List<String>> result = new LinkedHashMap<>();
 		try (Statement statement = connection.createStatement();
-				ResultSet rs = statement.executeQuery("SELECT ID, ST_AsText(G), ST_SRID(G) FROM " + table + " ORDER BY ID")) {
+				ResultSet rs = statement
+						.executeQuery("SELECT ID, ST_AsText(G), ST_SRID(G) FROM " + table + " ORDER BY ID")) {
 			while (rs.next()) {
 				final List<String> values = new ArrayList<>();
 				for (int i = 2; i <= rs.getMetaData().getColumnCount(); i++) {
@@ -240,7 +242,8 @@ class MariadbGeometryInsertBulkIntegrationTest {
 					assertTrue(rs.next(), value);
 				}
 				// 別の接続でも確認する
-				try (Connection check = connect(); Statement statement = check.createStatement();
+				try (Connection check = connect();
+						Statement statement = check.createStatement();
 						ResultSet rs = statement.executeQuery("SELECT COUNT(*) FROM " + name)) {
 					assertTrue(rs.next());
 					assertEquals(0, rs.getInt(1), value);

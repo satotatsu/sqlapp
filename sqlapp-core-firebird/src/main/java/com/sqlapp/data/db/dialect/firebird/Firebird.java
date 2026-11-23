@@ -73,6 +73,16 @@ public class Firebird extends Dialect {
 		getDbDataTypes().addVarchar(32765, type -> {
 			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?\\s+VARYING", ""));
 		});
+		// BINARY/VARBINARY are written as CHAR/VARCHAR CHARACTER SET OCTETS. The
+		// BINARY keywords exist only from 4.0, so they are not matched by name here.
+		getDbDataTypes().addBinary("BINARY", 32767, type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("CHAR(", ") CHARACTER SET OCTETS");
+		});
+		getDbDataTypes().addVarBinary("VARBINARY", 32765, type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("VARCHAR(", ") CHARACTER SET OCTETS");
+		});
 		// CLOB
 		getDbDataTypes().addClob("BLOB SUB_TYPE TEXT", SIZE_MAX, type -> {
 			type.addColumnTypeMatcher("BLOB SUBTYPE 1");

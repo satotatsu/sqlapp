@@ -46,18 +46,22 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 		final List<SqlOperation> sqlList = list();
 		final MySqlSqlBuilder builder = createSqlBuilder();
 		final boolean rowAlias = getDialect() instanceof MySql8019;
-		final String insertedRow = "sqlapp_new_row".equalsIgnoreCase(table.getName())
-				? "sqlapp_new_row_" : "sqlapp_new_row";
-		// Separate column aliases keep existing unqualified update expressions unambiguous.
+		final String insertedRow = "sqlapp_new_row".equalsIgnoreCase(table.getName()) ? "sqlapp_new_row_"
+				: "sqlapp_new_row";
+		// Separate column aliases keep existing unqualified update expressions
+		// unambiguous.
 		final Map<Column, String> insertedColumns = new LinkedHashMap<>();
 		if (rowAlias) {
 			final Set<String> names = new HashSet<>();
 			table.getColumns().forEach(column -> names.add(column.getName().toLowerCase(Locale.ROOT)));
 			int index = 0;
 			for (final Column column : table.getColumns()) {
-				if (isFormulaColumn(column) || CommonUtils.isEmpty(getValueDefinitionForInsert(column))) continue;
+				if (isFormulaColumn(column) || CommonUtils.isEmpty(getValueDefinitionForInsert(column)))
+					continue;
 				String name;
-				do { name = "sqlapp_value_" + index++; } while (!names.add(name));
+				do {
+					name = "sqlapp_value_" + index++;
+				} while (!names.add(name));
 				insertedColumns.put(column, name);
 			}
 		}
@@ -103,7 +107,8 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 		if (rowAlias) {
 			builder._add("AS ").name(insertedRow).space().brackets(() -> {
 				int index = 0;
-				for (final String name : insertedColumns.values()) builder.comma(index++ > 0).name(name);
+				for (final String name : insertedColumns.values())
+					builder.comma(index++ > 0).name(name);
 			}).lineBreak();
 		}
 		builder.on().duplicate().key();

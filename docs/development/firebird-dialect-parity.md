@@ -15,7 +15,7 @@ verified scope; they are not hidden behind the successful test count.
 
 | Area | Verified Firebird scope | Boundary |
 |---|---|---|
-| Resolution and native types | 2.5 / 3.0 / 4.0 / 5.0; version-specific types, precision, quoting | Earlier versions have catalog/SQL unit checks, not native certification; future majors are not certified |
+| Resolution and native types | 2.5 / 3.0 / 4.0 / 5.0; version-specific types, precision, quoting; `CHARACTER SET OCTETS` text is read as BINARY/VARBINARY (recreated as OCTETS before 4.0); BLOB segment size is kept in specifics, not as a length | Earlier versions have catalog/SQL unit checks, not native certification; future majors are not certified |
 | Tables, columns, domains | Read/create/reread; defaults, nullability, comments, domain references, arrays, GTT and external tables; supported in-place ALTER | Destructive/ambiguous conversions fail; external file access is limited to disposable fixtures |
 | Views and constraints | Query plus column aliases, CHECK OPTION, PK/UNIQUE/FK/CHECK recreation, standalone named DROP and enforcement | Dependencies must exist; unsupported constraint options fail; referenced keys are not cascaded implicitly |
 | Indexes | Normal/expression/5.0 partial indexes; direction, state, comments, ALTER/REBUILD/ANALYZE | Statistics mean Firebird selectivity, not PostgreSQL histograms; ANALYZE needs modeled index information |

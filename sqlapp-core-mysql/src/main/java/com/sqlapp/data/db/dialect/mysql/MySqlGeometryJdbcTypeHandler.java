@@ -84,11 +84,9 @@ public class MySqlGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	 * が黙って落ちたり、別の種類の図形に変わったりするため、変換せずにエラーにします。
 	 * </p>
 	 * 
-	 * @param geometry
-	 *            図形
+	 * @param geometry 図形
 	 * @return MySQL の内部形式
-	 * @throws IllegalArgumentException
-	 *             MySQL で表現できない図形の場合
+	 * @throws IllegalArgumentException MySQL で表現できない図形の場合
 	 */
 	public static byte[] toMySqlBytes(final Geometry<?> geometry) {
 		if (geometry.hasZ() || geometry.hasM()) {

@@ -17,10 +17,10 @@ class MySqlDatetimeBindingTest {
 	@Test
 	void readsDatetimeAsLocalFieldsByIndexAndLabel() throws Exception {
 		var value = LocalDateTime.parse("2026-11-18T12:34:56.654321");
-		var handler = DialectResolver.getInstance().getDialect("mysql", 8, 4, 0)
-				.getDbDataTypes().getDbType(DataType.TIMESTAMP).getJdbcTypeHandler();
-		var rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[] { ResultSet.class }, (proxy, method, args) -> {
+		var handler = DialectResolver.getInstance().getDialect("mysql", 8, 4, 0).getDbDataTypes()
+				.getDbType(DataType.TIMESTAMP).getJdbcTypeHandler();
+		var rows = (ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { ResultSet.class },
+				(proxy, method, args) -> {
 					assertEquals("getObject", method.getName());
 					assertEquals(LocalDateTime.class, args[1]);
 					return args[0].equals("missing") ? null : value;

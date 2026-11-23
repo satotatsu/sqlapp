@@ -72,7 +72,7 @@ final class SqliteMetadataQueries {
 		return names;
 	}
 
-	private static String schemaName(ParametersContext context) {
+	static String schemaName(ParametersContext context) {
 		Object schemaValue = context.get("schemaName");
 		if (schemaValue instanceof Collection<?> values)
 			schemaValue = values.isEmpty() ? null : values.iterator().next();

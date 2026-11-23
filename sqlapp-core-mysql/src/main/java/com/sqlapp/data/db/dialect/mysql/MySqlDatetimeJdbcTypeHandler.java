@@ -39,8 +39,7 @@ final class MySqlDatetimeJdbcTypeHandler extends DefaultJdbcTypeHandler {
 	}
 
 	@Override
-	public void setObject(final PreparedStatement statement, final int index, final Object value)
-			throws SQLException {
+	public void setObject(final PreparedStatement statement, final int index, final Object value) throws SQLException {
 		if (value instanceof Timestamp timestamp) {
 			// DATETIME stores wall-clock fields. A JDBC TIMESTAMP bind can shift them.
 			statement.setString(index, timestamp.toString());

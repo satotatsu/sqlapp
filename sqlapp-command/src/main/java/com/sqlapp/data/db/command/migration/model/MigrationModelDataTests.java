@@ -23,7 +23,8 @@ import com.sqlapp.jdbc.bulk.MigrationModelExecutorResolver;
 
 /**
  * Runs data tests against built models. Only the number of failing rows is
- * reported, never their values.
+ * reported, never their values; a test query that fails reports the error
+ * category without the database message.
  */
 public final class MigrationModelDataTests {
 	private MigrationModelDataTests() {
@@ -36,7 +37,9 @@ public final class MigrationModelDataTests {
 		/** Failing rows in an ERROR test. */
 		FAIL,
 		/** The test query could not run. */
-		ERROR
+		ERROR,
+		/** Not run because an earlier test query failed. */
+		NOT_RUN
 	}
 
 	/**
@@ -55,7 +58,8 @@ public final class MigrationModelDataTests {
 
 		/** True when no test failed or errored; warnings are allowed. */
 		public boolean isSuccess() {
-			return tests.stream().noneMatch(test -> test.status() == Status.FAIL || test.status() == Status.ERROR);
+			return tests.stream().noneMatch(test -> test.status() == Status.FAIL || test.status() == Status.ERROR
+					|| test.status() == Status.NOT_RUN);
 		}
 
 		public long count(final Status status) {
@@ -64,7 +68,8 @@ public final class MigrationModelDataTests {
 
 		public String summary() {
 			return "passed: " + count(Status.PASS) + ", warned: " + count(Status.WARN) + ", failed: "
-					+ (count(Status.FAIL) + count(Status.ERROR));
+					+ (count(Status.FAIL) + count(Status.ERROR))
+					+ (count(Status.NOT_RUN) == 0 ? "" : ", not run: " + count(Status.NOT_RUN));
 		}
 	}
 
@@ -75,13 +80,22 @@ public final class MigrationModelDataTests {
 		final Set<String> selected = models.stream().map(model -> model.name().toLowerCase(Locale.ROOT))
 				.collect(Collectors.toSet());
 		final List<Result> results = new ArrayList<>();
+		boolean aborted = false;
 		for (final MigrationModel model : models) {
 			for (final MigrationModelDataTest test : tests) {
 				if (!test.model().equalsIgnoreCase(model.name())
 						|| !selected.contains(model.name().toLowerCase(Locale.ROOT))) {
 					continue;
 				}
-				results.add(run(connection, plan, executor, model, test));
+				if (aborted) {
+					// A failed statement can abort the transaction of the run.
+					results.add(new Result(test.id(), model.name(), test.kind(), test.severity(), Status.NOT_RUN, 0, 0,
+							"not run after a failed test query"));
+					continue;
+				}
+				final Result result = run(connection, plan, executor, model, test);
+				aborted = result.status() == Status.ERROR;
+				results.add(result);
 			}
 		}
 		return new Results(results);
@@ -109,17 +123,27 @@ public final class MigrationModelDataTests {
 					count == 0 ? Status.PASS : failed(test), count, elapsed,
 					count == 0 ? null : count + (test.kind() == Kind.UNIQUE ? " duplicated keys" : " failing rows"));
 		} catch (SQLException | RuntimeException e) {
-			try {
-				if (!connection.getAutoCommit()) {
-					connection.rollback();
-				}
-			} catch (SQLException rollback) {
-				e.addSuppressed(rollback);
-			}
+			// The caller owns the transaction and rolls it back.
 			return new Result(test.id(), model.name(), test.kind(), test.severity(), Status.ERROR, 0,
-					(System.nanoTime() - started) / 1_000_000L,
-					e.getMessage() == null ? e.getClass().getName() : e.getMessage());
+					(System.nanoTime() - started) / 1_000_000L, errorMessage(e));
 		}
+	}
+
+	/**
+	 * Category of a failed test query. The driver message is left out: it can quote
+	 * the value that failed, such as a string that cannot be cast.
+	 */
+	static String errorMessage(final Exception e) {
+		final StringBuilder message = new StringBuilder("test query failed (").append(e.getClass().getSimpleName());
+		if (e instanceof SQLException sql) {
+			if (sql.getSQLState() != null) {
+				message.append(", SQLSTATE ").append(sql.getSQLState());
+			}
+			if (sql.getErrorCode() != 0) {
+				message.append(", error code ").append(sql.getErrorCode());
+			}
+		}
+		return message.append("); run the test query in the engine to see the database message").toString();
 	}
 
 	private static Status failed(final MigrationModelDataTest test) {
@@ -169,7 +193,7 @@ public final class MigrationModelDataTests {
 		case EXPRESSION -> "SELECT * FROM " + relation + " WHERE (" + test.expression() + ") IS NOT TRUE";
 		case ROW_COUNT -> null;
 		case SQL -> MigrationModelRunner.resolveSql(plan, executor, new MigrationModel(model.name(), model.schemaName(),
-				stripEnd(test.sql()), model.materialization(), model.parameters()));
+				stripEnd(test.sql()), MigrationModel.Materialization.VIEW, model.parameters()));
 		};
 		return failing == null ? "SELECT count(*) FROM " + relation
 				: "SELECT count(*) FROM (\n" + failing + "\n) AS failing_rows";

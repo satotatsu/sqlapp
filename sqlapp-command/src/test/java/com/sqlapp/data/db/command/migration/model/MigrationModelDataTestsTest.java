@@ -87,7 +87,7 @@ class MigrationModelDataTestsTest {
 	}
 
 	@Test
-	void reportsFailingRowsWithoutValuesAndKeepsTheBuiltModels() throws Exception {
+	void reportsFailingRowsWithoutValuesAndRollsBackTheModels() throws Exception {
 		execute("INSERT INTO ORDERS VALUES (10, 1, 'NEW', 150.25), (10, 2, 'NEW', 1), (11, 3, 'BAD', -5),"
 				+ " (12, NULL, 'NEW', 10), (13, 1, 'CANCELLED', NULL)");
 		final ExecuteMigrationModelsCommand command = command(MODELS);
@@ -110,8 +110,9 @@ class MigrationModelDataTestsTest {
 		for (final String value : new String[] { "BAD", "CANCELLED", "-5", "150.25" }) {
 			assertFalse(e.getMessage().contains(value), value + " in " + e.getMessage());
 		}
-		// The models are built and committed; the state file waits for passing tests.
-		assertEquals(5L, count("SELECT count(*) FROM ORDER_FACT"));
+		// The models of the run are rolled back and the state file is not written.
+		assertTrue(e.getMessage().contains("rolled back"), e.getMessage());
+		assertEquals(0L, count("SELECT count(*) FROM information_schema.tables WHERE table_name = 'ORDER_FACT'"));
 		assertFalse(Files.exists(directory.resolve("state.json")));
 	}
 
@@ -127,6 +128,39 @@ class MigrationModelDataTestsTest {
 		assertEquals(Status.ERROR, test.status());
 		assertTrue(e.getMessage().contains("no-cancelled"), e.getMessage());
 		assertEquals("passed: 6, warned: 0, failed: 1", command.getDataTestResults().summary());
+	}
+
+	@Test
+	void aFailedTestQueryReportsNoDatabaseMessage() throws Exception {
+		// DuckDB quotes the value that cannot be cast in its error message.
+		execute("INSERT INTO ORDERS VALUES (10, 1, 'NEW', 1), (11, 2, 'SHIPPED', 2)",
+				"UPDATE CUSTOMER SET NAME = 'SECRET-VALUE-42' WHERE ID = 1");
+		final ExecuteMigrationModelsCommand command = command(
+				MODELS.replace("SELECT * FROM /*$ref('ORDER_FACT')*/ORDER_FACT WHERE STATUS = 'CANCELLED'",
+						"SELECT * FROM /*$source('customer')*/customer WHERE CAST(NAME AS INTEGER) > 0"));
+		final CommandException e = assertThrows(CommandException.class, command::run);
+		final var test = command.getDataTestResults().tests().stream()
+				.filter(value -> value.id().equals("no-cancelled")).findFirst().orElseThrow();
+		assertEquals(Status.ERROR, test.status());
+		assertTrue(test.message().startsWith("test query failed (SQLException"), test.message());
+		assertFalse(test.message().contains("SECRET-VALUE-42"), test.message());
+		assertFalse(e.getMessage().contains("SECRET-VALUE-42"), e.getMessage());
+	}
+
+	@Test
+	void modifiedOnlyRunsEveryTestAlsoForModelsThatWereNotRebuilt() throws Exception {
+		execute("INSERT INTO ORDERS VALUES (10, 1, 'NEW', 1), (11, 2, 'SHIPPED', 2)");
+		final ExecuteMigrationModelsCommand first = command(MODELS);
+		first.setStateFile(directory.resolve("state.json").toFile());
+		first.run();
+		// Only a test changes: no model is rebuilt, the changed test still runs.
+		final ExecuteMigrationModelsCommand second = command(MODELS.replace("{min: 1, max: 3}", "{min: 3}"));
+		second.setStateFile(directory.resolve("state.json").toFile());
+		second.setModifiedOnly(true);
+		final CommandException e = assertThrows(CommandException.class, second::run);
+		assertEquals(0, second.getResult().models().size());
+		assertTrue(e.getMessage().contains("ORDER_FACT.row_count: row count 2 is outside [3, ]"), e.getMessage());
+		assertEquals(7, second.getDataTestResults().tests().size());
 	}
 
 	@Test

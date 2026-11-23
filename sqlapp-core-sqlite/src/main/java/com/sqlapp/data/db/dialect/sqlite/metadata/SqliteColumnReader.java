@@ -32,14 +32,47 @@ public class SqliteColumnReader extends ColumnReader {
 	@Override
 	protected List<Column> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		List<Column> result;
 		if (SqliteIndexReader.supportsBulkIndexes(productVersionInfo)) {
-			return readBulkColumns(connection, context, productVersionInfo);
+			result = readBulkColumns(connection, context, productVersionInfo);
+		} else {
+			result = readColumns(connection, context, "table_xinfo");
+			if (result.isEmpty()) {
+				result = readColumns(connection, context, "table_info");
+			}
 		}
-		List<Column> result = readColumns(connection, context, "table_xinfo");
-		if (result.isEmpty()) {
-			result = readColumns(connection, context, "table_info");
-		}
+		readAutoIncrementNextValues(connection, context, result);
 		return result;
+	}
+
+	/**
+	 * AUTOINCREMENT keys never reuse a value: sqlite_sequence holds the largest key
+	 * ever issued, so the next value is seq + 1. A table without a row has never
+	 * issued a key and stays unknown. Plain rowid aliases follow MAX(rowid) and
+	 * have no counter to read.
+	 */
+	private void readAutoIncrementNextValues(Connection connection, ParametersContext context, List<Column> columns) {
+		Map<String, Column> autoIncrements = new java.util.HashMap<>();
+		for (Column column : columns) {
+			if (column.isIdentity() && "true".equals(column.getSpecifics().get("sqlite.autoincrement")))
+				autoIncrements.put(column.getTableName(), column);
+		}
+		if (autoIncrements.isEmpty())
+			return;
+		String schema = SqliteMetadataQueries.schemaName(context);
+		try (var statement = connection.createStatement();
+				var rs = statement.executeQuery(
+						"SELECT name, seq FROM \"" + schema.replace("\"", "\"\"") + "\".sqlite_sequence")) {
+			while (rs.next()) {
+				Column column = autoIncrements.get(rs.getString(1));
+				long seq = rs.getLong(2);
+				if (column != null && !rs.wasNull() && seq < Long.MAX_VALUE)
+					column.setIdentityLastValue(seq + 1);
+			}
+		} catch (SQLException e) {
+			// sqlite_sequence is created with the first AUTOINCREMENT table; without
+			// it every counter is unused.
+		}
 	}
 
 	private List<Column> readBulkColumns(Connection connection, ParametersContext context, ProductVersionInfo version) {

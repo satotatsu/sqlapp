@@ -24,6 +24,7 @@ class MariadbSequenceReaderTest {
 		boolean missingCache;
 		String nativeType = "bigint";
 		Integer cacheRowId;
+		BigDecimal notCached;
 
 		Reader() {
 			super(DialectResolver.getInstance().getDialect("MariaDB", 11, 5, 0));
@@ -40,7 +41,7 @@ class MariadbSequenceReaderTest {
 				assertTrue(sql.contains("t.TABLE_NAME = s.SEQUENCE_NAME"), sql);
 			} else {
 				assertNull(n.getRowParameter());
-				assertTrue(sql.contains("cache_size FROM `app`.`seq``"), sql);
+				assertTrue(sql.contains("cache_size, next_not_cached_value FROM `app`.`seq``"), sql);
 			}
 			try {
 				int rows = header ? count : sql.split(" UNION ALL ").length;
@@ -83,6 +84,7 @@ class MariadbSequenceReaderTest {
 							case "MAXIMUM_VALUE" -> storageMax;
 							case "maximum_value" -> storageMax;
 							case "cache_size" -> cache;
+							case "next_not_cached_value" -> notCached;
 							default -> null;
 							};
 						}
@@ -148,6 +150,16 @@ class MariadbSequenceReaderTest {
 		var negative = new Reader();
 		negative.cache = BigDecimal.valueOf(-1);
 		assertThrows(IllegalStateException.class, () -> negative.doGetAll(null, new ParametersContext(), null));
+	}
+
+	@Test
+	void nextNotCachedValueBecomesTheNextValue() {
+		var reader = new Reader();
+		reader.notCached = BigDecimal.valueOf(42);
+		assertEquals(java.math.BigInteger.valueOf(42),
+				reader.doGetAll(null, new ParametersContext(), null).get(0).getLastValue());
+		var unread = new Reader();
+		assertNull(unread.doGetAll(null, new ParametersContext(), null).get(0).getLastValue());
 	}
 
 	@Test

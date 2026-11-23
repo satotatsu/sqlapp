@@ -404,14 +404,15 @@ public final class TransferFileImportService {
 				}
 				phase = TransferJobExecutionService.Phase.FINALIZATION;
 			}
-			// Raise generators only after a verified copy; a failure here reports FINALIZATION.
+			// Raise generators only after a verified copy; a failure here reports
+			// FINALIZATION.
 			final var counters = TransferGeneratedKeySynchronization.synchronize(loaded.configuration(), copied,
 					binding(loaded, connections));
 			final var outcome = new Outcome(review.manifestFingerprint(), review.planFingerprint(),
 					TransferJobExecutionService.Phase.COMPLETE, result, verificationRequested, verified, progress, null,
 					directory.resolve("import-result.json"),
-					new TransferSchemaPreparation.Progress(ddl, completedDdl, attemptedDdl, schemaWarnings), null,
-					null, counters);
+					new TransferSchemaPreparation.Progress(ddl, completedDdl, attemptedDdl, schemaWarnings), null, null,
+					counters);
 			writeAudit(outcome);
 			return outcome;
 		} catch (ImportException failure) {

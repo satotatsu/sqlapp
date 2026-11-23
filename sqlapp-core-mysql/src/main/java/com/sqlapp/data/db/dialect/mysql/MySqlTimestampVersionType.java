@@ -14,8 +14,8 @@ final class MySqlTimestampVersionType extends TimestampType {
 		setDataType(DataType.TIMESTAMPVERSION);
 		setTypeName("TIMESTAMP");
 		clearColumnTypeMatchers();
-		addColumnTypeMatcher(new RegexColumnTypeMatcher(
-				"TIMESTAMP\\s*(?:\\(\\s*(?<precision>[0-6])\\s*\\))?", (matcher, info) -> {
+		addColumnTypeMatcher(
+				new RegexColumnTypeMatcher("TIMESTAMP\\s*(?:\\(\\s*(?<precision>[0-6])\\s*\\))?", (matcher, info) -> {
 					final String precision = matcher.group("precision");
 					info.setLength(precision == null ? "0" : precision);
 				}));

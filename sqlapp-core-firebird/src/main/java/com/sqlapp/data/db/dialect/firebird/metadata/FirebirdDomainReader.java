@@ -120,6 +120,7 @@ public class FirebirdDomainReader extends DomainReader {
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
 		if (type == 14 || type == 37)
 			obj.setLength(rs.getInt("RDB$CHARACTER_LENGTH"));
+		FirebirdUtils.setBinaryIfOctets(obj);
 		return obj;
 	}
 

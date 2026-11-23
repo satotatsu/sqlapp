@@ -37,11 +37,25 @@ import com.sqlapp.jdbc.bulk.AbstractMigrationModelExecutor;
  * cast fails the model; conversions that change values belong in the model SQL.
  * A value that violates a constraint fails the model too.
  * </p>
+ * <p>
+ * An incremental model is built the same way the first time. Later runs merge
+ * the staged rows into the table with {@code INSERT ... ON CONFLICT DO UPDATE}
+ * on the primary key. The lineage fingerprint is kept as the table comment.
+ * </p>
  */
 public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelExecutor {
 	private static final String EXISTING_TYPE_SQL = "SELECT table_type FROM information_schema.tables"
 			+ " WHERE table_catalog = current_database() AND lower(table_schema) = lower(coalesce(?, current_schema()))"
 			+ " AND lower(table_name) = lower(?)";
+
+	private static final String COMMENT_SQL = "SELECT comment FROM duckdb_tables()"
+			+ " WHERE database_name = current_database() AND lower(schema_name) = lower(coalesce(?, current_schema()))"
+			+ " AND lower(table_name) = lower(?)";
+
+	/**
+	 * Table comment prefix and format version of the recorded lineage fingerprint.
+	 */
+	private static final String FINGERPRINT_PREFIX = "sqlapp-model:1:";
 
 	/** Holds the model result while it is checked, so the query runs once. */
 	private static final String STAGE = "sqlapp_model_stage";
@@ -59,7 +73,7 @@ public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelEx
 		}
 		// CREATE OR REPLACE cannot change an existing relation between table and view.
 		if (model.hasDeclaredColumns()) {
-			materializeDeclared(connection, model, relation, selectSql);
+			materializeDeclared(connection, model, relation, selectSql, model.parameters());
 			return;
 		}
 		final String existing = existingType(connection, model);
@@ -76,16 +90,127 @@ public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelEx
 				model.parameters());
 	}
 
-	private void materializeDeclared(final Connection connection, final MigrationModel model, final String relation,
-			final String selectSql) throws SQLException {
-		// The query runs once; the checked rows are the inserted rows.
+	@Override
+	public IncrementalState incrementalState(final Connection connection, final MigrationModel model)
+			throws SQLException {
+		final String existing = existingType(connection, model);
+		if (existing == null) {
+			return new IncrementalState(false, null);
+		}
+		if (!"BASE TABLE".equalsIgnoreCase(existing)) {
+			return new IncrementalState(true, null);
+		}
+		try (var statement = connection.prepareStatement(COMMENT_SQL)) {
+			statement.setString(1, model.schemaName());
+			statement.setString(2, model.name());
+			try (var resultSet = statement.executeQuery()) {
+				final String comment = resultSet.next() ? resultSet.getString(1) : null;
+				return new IncrementalState(true,
+						comment != null && comment.startsWith(FINGERPRINT_PREFIX)
+								&& comment.length() > FINGERPRINT_PREFIX.length()
+										? comment.substring(FINGERPRINT_PREFIX.length())
+										: null);
+			}
+		}
+	}
+
+	/**
+	 * Builds the table from all rows, or merges the new rows into it by primary
+	 * key: NULL and duplicated keys and values that the declared types would change
+	 * are rejected on the same staged rows that are merged. The lineage fingerprint
+	 * is written as the table comment in the same transaction.
+	 */
+	@Override
+	public void materializeIncremental(final Connection connection, final MigrationModel model, final String selectSql,
+			final boolean incremental, final String fingerprint) throws SQLException {
+		final String relation = relation(model);
+		if (model.schemaName() != null) {
+			execute(connection, "CREATE SCHEMA IF NOT EXISTS " + identifier(model.schemaName()), Map.of());
+		}
+		final Map<String, Object> parameters = new java.util.HashMap<>(model.parameters());
+		parameters.put(MigrationModel.INCREMENTAL_PARAMETER, incremental);
+		if (incremental) {
+			stage(connection, model, selectSql, parameters);
+			try {
+				checkKeys(connection, model);
+				execute(connection, upsert(model, relation), Map.of());
+			} catch (final SQLException | RuntimeException e) {
+				dropStageAfter(connection, e);
+				throw e;
+			}
+			dropStage(connection);
+		} else {
+			materializeDeclared(connection, model, relation, selectSql, parameters);
+		}
+		execute(connection,
+				"COMMENT ON TABLE " + relation + " IS '" + (FINGERPRINT_PREFIX + fingerprint).replace("'", "''") + "'",
+				Map.of());
+	}
+
+	/** Stages the query result once and checks its columns and conversions. */
+	private void stage(final Connection connection, final MigrationModel model, final String selectSql,
+			final Map<String, Object> parameters) throws SQLException {
 		execute(connection,
 				"CREATE OR REPLACE TEMP TABLE " + STAGE + " AS\nSELECT * FROM (\n" + selectSql + "\n) AS model_result",
-				model.parameters());
+				parameters);
 		try {
 			final Map<String, String> resultTypes = resultTypes(connection);
 			checkResultColumns(model, new ArrayList<>(resultTypes.keySet()));
 			checkLosslessConversion(connection, model, resultTypes);
+		} catch (final SQLException | RuntimeException e) {
+			dropStageAfter(connection, e);
+			throw e;
+		}
+	}
+
+	/** Rejects NULL and duplicated primary keys among the staged rows. */
+	private void checkKeys(final Connection connection, final MigrationModel model) throws SQLException {
+		final List<String> keys = model.primaryKey().stream().map(this::identifier).toList();
+		final String keyList = String.join(", ", keys);
+		final String sql = "SELECT (SELECT count(*) FROM " + STAGE + " WHERE "
+				+ keys.stream().map(key -> key + " IS NULL").collect(Collectors.joining(" OR "))
+				+ "), (SELECT count(*) FROM (SELECT " + keyList + " FROM " + STAGE + " WHERE "
+				+ keys.stream().map(key -> key + " IS NOT NULL").collect(Collectors.joining(" AND ")) + " GROUP BY "
+				+ keyList + " HAVING count(*) > 1) AS duplicated)";
+		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
+			resultSet.next();
+			final long nulls = resultSet.getLong(1);
+			final long duplicated = resultSet.getLong(2);
+			if (nulls > 0 || duplicated > 0) {
+				throw new IllegalArgumentException(
+						"New rows of incremental model " + model.name() + " cannot be merged by primary key "
+								+ model.primaryKey() + ": " + nulls + " rows with a NULL key, " + duplicated
+								+ " duplicated keys. Make the model SQL return one row per key.");
+			}
+		}
+	}
+
+	private String upsert(final MigrationModel model, final String relation) {
+		final String columns = model.columns().stream().map(column -> identifier(column.name()))
+				.collect(Collectors.joining(", "));
+		final List<String> updates = model.columns().stream()
+				.filter(column -> model.primaryKey().stream().noneMatch(key -> key.equalsIgnoreCase(column.name())))
+				.map(column -> identifier(column.name()) + " = EXCLUDED." + identifier(column.name())).toList();
+		return "INSERT INTO " + relation + " (" + columns + ")\nSELECT " + columns + " FROM " + STAGE
+				+ "\nON CONFLICT ("
+				+ model.primaryKey().stream().map(this::identifier).collect(Collectors.joining(", ")) + ") DO "
+				+ (updates.isEmpty() ? "NOTHING" : "UPDATE SET " + String.join(", ", updates));
+	}
+
+	private void dropStageAfter(final Connection connection, final Exception failure) {
+		// A failed statement can abort the transaction; keep the original error.
+		try {
+			dropStage(connection);
+		} catch (final SQLException dropFailure) {
+			failure.addSuppressed(dropFailure);
+		}
+	}
+
+	private void materializeDeclared(final Connection connection, final MigrationModel model, final String relation,
+			final String selectSql, final Map<String, Object> parameters) throws SQLException {
+		// The query runs once; the checked rows are the inserted rows.
+		stage(connection, model, selectSql, parameters);
+		try {
 			final String existing = existingType(connection, model);
 			if (existing != null) {
 				execute(connection, ("VIEW".equalsIgnoreCase(existing) ? "DROP VIEW " : "DROP TABLE ") + relation,
@@ -97,12 +222,7 @@ public final class DuckDbMigrationModelExecutor extends AbstractMigrationModelEx
 			execute(connection, "INSERT INTO " + relation + " (" + columns + ")\nSELECT " + columns + " FROM " + STAGE,
 					Map.of());
 		} catch (final SQLException | RuntimeException e) {
-			// A failed statement can abort the transaction; keep the original error.
-			try {
-				dropStage(connection);
-			} catch (final SQLException dropFailure) {
-				e.addSuppressed(dropFailure);
-			}
+			dropStageAfter(connection, e);
 			throw e;
 		}
 		dropStage(connection);

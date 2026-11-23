@@ -395,8 +395,8 @@ public final class TransferStagedReplacement {
 			// The replacement is committed; a counter failure must not be reported as a
 			// staging-cleanup problem.
 			try {
-				return withCounters(done, TransferGeneratedKeySynchronization
-						.synchronize(current.job().configuration(), original, bindings.target()));
+				return withCounters(done, TransferGeneratedKeySynchronization.synchronize(current.job().configuration(),
+						original, bindings.target()));
 			} catch (Exception failure) {
 				throw new CounterFailure(outcome(current, Phase.FINALIZATION, execution.verified, execution.schema,
 						TransferFailureDiagnostic.capture(failure, false), plan, execution.state, copied,

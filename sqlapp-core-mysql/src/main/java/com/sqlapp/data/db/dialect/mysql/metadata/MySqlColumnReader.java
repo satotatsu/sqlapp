@@ -91,11 +91,11 @@ public class MySqlColumnReader extends ColumnReader {
 		// }
 		boolean nullable = "YES".equalsIgnoreCase(getString(rs, "IS_NULLABLE"));
 		boolean autoIncrement = "auto_increment".equalsIgnoreCase(extra);
-		long autoIncrementCurrent = rs.getLong("auto_increment");
+		Long autoIncrementCurrent = getLong(rs, "auto_increment");
 		column.setNullable(nullable);
 		column.setIdentity(autoIncrement);
 		getDialect().setDbType(productDataType, getMaxLength(rs), numericScale, column);
-		if (autoIncrement) {
+		if (autoIncrement && autoIncrementCurrent != null && autoIncrementCurrent > 0) {
 			column.setIdentityLastValue(autoIncrementCurrent);
 		}
 		if (column.getDataType().isFixedSize()) {

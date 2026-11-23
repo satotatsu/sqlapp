@@ -126,6 +126,20 @@ Oracle and DuckDB use it as `START WITH`; PostgreSQL, H2 and HSQLDB keep the
 original `START WITH` and add the restart; Firebird sets the generator. Db2
 CREATE never applies it.
 
+Schema reading fills these next values where the database exposes them
+without consuming a value. Values ahead of the real counter because of
+caching are allowed; a value never falls behind it.
+
+| Read | Sequences | Identity / auto-increment |
+|---|---|---|
+| Next value | PostgreSQL (and YugabyteDB), Oracle, Db2, H2, HSQLDB, DuckDB, Firebird, SQL Server, MariaDB (`next_not_cached_value`), CockroachDB, SAP HANA (`M_SEQUENCES`) | PostgreSQL, Oracle 12c+, Db2, H2, HSQLDB, SQL Server, Firebird 3+, MySQL, SAP ASE (`next_identity`), SQLite `AUTOINCREMENT` (`sqlite_sequence`) |
+| Left unknown | Vertica (its catalog reports how many values were distributed, not the counter), Phoenix (CREATE takes an explicit `startValue` instead) | SQLite rowid keys without `AUTOINCREMENT`, which follow the inserted keys |
+
+A next value the reader may not see (missing privileges on the sequence) stays
+unknown instead of failing the read. MySQL 8.0.3+ reads `AUTO_INCREMENT` with
+`information_schema_stats_expiry` set to 0 for the read, so the cached table
+statistics do not hide recent inserts.
+
 ## Generate CREATE SQL
 
 ```groovy

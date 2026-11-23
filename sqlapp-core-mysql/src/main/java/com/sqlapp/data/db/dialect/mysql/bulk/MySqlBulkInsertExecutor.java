@@ -24,11 +24,14 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 	protected static final String ABORT_VARIABLE = "@sqlapp_abort";
 
 	/**
-	 * An expression that raises an error (not a warning, which LOAD DATA LOCAL downgrades) when the abort variable is
-	 * not NULL, or null when the server has none. It must depend on the variable, so that it is evaluated only for the
-	 * abort record. Without it, a value that cannot be encoded aborts the stream and the driver drops the connection.
+	 * An expression that raises an error (not a warning, which LOAD DATA LOCAL
+	 * downgrades) when the abort variable is not NULL, or null when the server has
+	 * none. It must depend on the variable, so that it is evaluated only for the
+	 * abort record. Without it, a value that cannot be encoded aborts the stream
+	 * and the driver drops the connection.
 	 * <p>
-	 * MySQL 5.7+: an invalid JSON cast. (A subquery returning two rows is only a warning on MySQL.)
+	 * MySQL 5.7+: an invalid JSON cast. (A subquery returning two rows is only a
+	 * warning on MySQL.)
 	 * </p>
 	 *
 	 * @param variable abort variable
@@ -52,23 +55,31 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 		java.util.Objects.requireNonNull(table, "table");
 		validateOptions(options);
 		final boolean own = options != null && options.isUseTransaction() && connection.getAutoCommit();
-		if (options != null && options.isUseTransaction()) verifyEngine(connection, table);
-		String state = connection.getAutoCommit() ? "AUTOCOMMIT: partial rows may already be committed" : "CALLER_TRANSACTION: caller must decide rollback";
+		if (options != null && options.isUseTransaction())
+			verifyEngine(connection, table);
+		String state = connection.getAutoCommit() ? "AUTOCOMMIT: partial rows may already be committed"
+				: "CALLER_TRANSACTION: caller must decide rollback";
 		long affected = -1;
 		final MySqlBulkDataInputStream input = new MySqlBulkDataInputStream(table, options);
 		boolean committing = false;
 		try {
 			if (own) {
-				try { connection.setAutoCommit(false); }
-				catch (SQLException failure) {
-					try { input.close(); } catch (IOException close) { failure.addSuppressed(close); }
+				try {
+					connection.setAutoCommit(false);
+				} catch (SQLException failure) {
+					try {
+						input.close();
+					} catch (IOException close) {
+						failure.addSuppressed(close);
+					}
 					throw failure;
 				}
 			}
 			try (input; var statement = connection.createStatement()) {
 				if (dialect instanceof com.sqlapp.data.db.dialect.mysql.MySql8019) {
 					input.useExplicitTimestampOffset();
-				} else if (input.getColumns().stream().anyMatch(column -> column.getDataType() == DataType.TIMESTAMPVERSION)) {
+				} else if (input.getColumns().stream()
+						.anyMatch(column -> column.getDataType() == DataType.TIMESTAMPVERSION)) {
 					try (var result = statement.executeQuery("SELECT @@session.time_zone")) {
 						if (!result.next()) {
 							throw new SQLException("Cannot read LOAD DATA session time zone");
@@ -77,7 +88,8 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 						if ("UTC".equalsIgnoreCase(zone) || "Etc/UTC".equalsIgnoreCase(zone)) {
 							input.setTimestampOffset(java.time.ZoneOffset.UTC);
 						} else if (zone != null && zone.matches("[+-][0-9]{1,2}:[0-9]{2}")) {
-							final String normalized = zone.length() == 5 ? zone.charAt(0) + "0" + zone.substring(1) : zone;
+							final String normalized = zone.length() == 5 ? zone.charAt(0) + "0" + zone.substring(1)
+									: zone;
 							input.setTimestampOffset(java.time.ZoneOffset.of(normalized));
 						}
 					}
@@ -97,18 +109,21 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 					final String value;
 					if (isVariableColumn(column)) {
 						sql.append("@sqlapp_bulk_").append(i);
-						value = column.getDataType() == DataType.BIT ? "CAST(CONV(@sqlapp_bulk_" + i + ",2,10) AS UNSIGNED)"
+						value = column.getDataType() == DataType.BIT
+								? "CAST(CONV(@sqlapp_bulk_" + i + ",2,10) AS UNSIGNED)"
 								: "UNHEX(@sqlapp_bulk_" + i + ")";
 					} else {
 						sql.append(dialect.quote(column.getName()));
 						value = null;
 					}
 					if (i == 0 && abort != null) {
-						// Guard: keeps the loaded value, and fails the statement on the abort record. The failing branch
-						// is wrapped so that it is typed NULL and does not change the column value's type.
+						// Guard: keeps the loaded value, and fails the statement on the abort record.
+						// The failing branch
+						// is wrapped so that it is typed NULL and does not change the column value's
+						// type.
 						final String loaded = value != null ? value : dialect.quote(column.getName());
-						assignments.add(dialect.quote(column.getName()) + "=IF(" + ABORT_VARIABLE + " IS NULL, " + loaded
-								+ ", IF(" + abort + " IS NULL, NULL, NULL))");
+						assignments.add(dialect.quote(column.getName()) + "=IF(" + ABORT_VARIABLE + " IS NULL, "
+								+ loaded + ", IF(" + abort + " IS NULL, NULL, NULL))");
 					} else if (value != null) {
 						assignments.add(dialect.quote(column.getName()) + "=" + value);
 					}
@@ -125,17 +140,30 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 				try {
 					affected = statement.executeLargeUpdate(sql.toString());
 					final var warning = statement.getWarnings();
-					if (warning != null) throw new SQLException("LOAD DATA warning " + warning.getErrorCode() + ": " + warning.getMessage(), warning.getSQLState(), warning.getErrorCode(), warning);
-					try (var diagnostics = connection.createStatement(); var result = diagnostics.executeQuery("SHOW COUNT(*) WARNINGS")) {
-						if (!result.next() || result.getLong(1) != 0) throw new SQLException("LOAD DATA server reported warnings (details may be suppressed by max_error_count)");
+					if (warning != null)
+						throw new SQLException(
+								"LOAD DATA warning " + warning.getErrorCode() + ": " + warning.getMessage(),
+								warning.getSQLState(), warning.getErrorCode(), warning);
+					try (var diagnostics = connection.createStatement();
+							var result = diagnostics.executeQuery("SHOW COUNT(*) WARNINGS")) {
+						if (!result.next() || result.getLong(1) != 0)
+							throw new SQLException(
+									"LOAD DATA server reported warnings (details may be suppressed by max_error_count)");
 					}
-					if (!input.isComplete() || input.getRowCount() != affected) throw new SQLException("Incomplete or mismatched LOAD DATA result");
+					if (!input.isComplete() || input.getRowCount() != affected)
+						throw new SQLException("Incomplete or mismatched LOAD DATA result");
 				} catch (SQLException | RuntimeException | Error e) {
 					primary = e;
 					throw e;
 				} finally {
-					try { bindInput(statement, null); }
-					catch (SQLException | RuntimeException e) { if (primary != null) primary.addSuppressed(e); else throw e; }
+					try {
+						bindInput(statement, null);
+					} catch (SQLException | RuntimeException e) {
+						if (primary != null)
+							primary.addSuppressed(e);
+						else
+							throw e;
+					}
 				}
 			}
 			if (own) {
@@ -150,33 +178,44 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 				try {
 					connection.rollback();
 					state = committing ? "COMMIT_UNKNOWN: inspect database before retry" : "ROLLED_BACK";
-					try { connection.setAutoCommit(true); } catch (SQLException reset) { e.addSuppressed(reset); }
+					try {
+						connection.setAutoCommit(true);
+					} catch (SQLException reset) {
+						e.addSuppressed(reset);
+					}
 				} catch (SQLException rollback) {
 					state = "ROLLBACK_FAILED: connection left in transaction; inspect database";
 					e.addSuppressed(rollback);
 				}
 			}
-			if (e instanceof Error error) throw error;
-			// A value that could not be encoded ended the stream with an abort record: report that value's failure,
+			if (e instanceof Error error)
+				throw error;
+			// A value that could not be encoded ended the stream with an abort record:
+			// report that value's failure,
 			// with the server's abort error attached.
 			final Throwable cause = input.getFailure() != null ? input.getFailure() : e;
-			final SQLException failure = new SQLException("LOAD DATA failed: sent=" + input.getRowCount() + ", affected=" + affected
-					+ ", complete=" + input.isComplete() + ", " + state + "; " + cause.getMessage(),
+			final SQLException failure = new SQLException(
+					"LOAD DATA failed: sent=" + input.getRowCount() + ", affected=" + affected + ", complete="
+							+ input.isComplete() + ", " + state + "; " + cause.getMessage(),
 					e instanceof SQLException sql ? sql.getSQLState() : null,
 					e instanceof SQLException sql ? sql.getErrorCode() : 0, cause);
-			if (cause != e) failure.addSuppressed(e);
-			for (Throwable suppressed : e.getSuppressed()) failure.addSuppressed(suppressed);
+			if (cause != e)
+				failure.addSuppressed(e);
+			for (Throwable suppressed : e.getSuppressed())
+				failure.addSuppressed(suppressed);
 			throw failure;
 		}
 	}
 
 	private void verifyEngine(Connection connection, Table table) throws SQLException {
-		try (var statement = connection.prepareStatement("SELECT ENGINE FROM information_schema.tables WHERE TABLE_SCHEMA=COALESCE(?,DATABASE()) AND TABLE_NAME=?")) {
+		try (var statement = connection.prepareStatement(
+				"SELECT ENGINE FROM information_schema.tables WHERE TABLE_SCHEMA=COALESCE(?,DATABASE()) AND TABLE_NAME=?")) {
 			statement.setString(1, table.getSchemaName());
 			statement.setString(2, table.getName());
 			try (var result = statement.executeQuery()) {
 				if (!result.next() || !"InnoDB".equalsIgnoreCase(result.getString(1)))
-					throw new SQLException("LOAD DATA useTransaction requires a verifiable InnoDB target (temporary tables are not verifiable)");
+					throw new SQLException(
+							"LOAD DATA useTransaction requires a verifiable InnoDB target (temporary tables are not verifiable)");
 			}
 		}
 	}
@@ -190,8 +229,8 @@ public class MySqlBulkInsertExecutor implements BulkInsertExecutor {
 	}
 
 	/**
-	 * LOAD DATA でユーザー変数に読み込み、SET 句で変換する列か。バイナリ・BIT・GEOMETRY の列が対象。 GEOMETRY は通常の INSERT と同じ
-	 * MySQL 内部形式を16進文字列で送り、UNHEX で戻す。
+	 * LOAD DATA でユーザー変数に読み込み、SET 句で変換する列か。バイナリ・BIT・GEOMETRY の列が対象。 GEOMETRY は通常の
+	 * INSERT と同じ MySQL 内部形式を16進文字列で送り、UNHEX で戻す。
 	 */
 	private static boolean isVariableColumn(final com.sqlapp.data.schemas.Column column) {
 		return column.getDataType() != null && (column.getDataType().isBinary() || column.getDataType() == DataType.BIT

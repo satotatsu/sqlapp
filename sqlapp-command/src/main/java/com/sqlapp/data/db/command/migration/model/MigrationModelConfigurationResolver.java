@@ -70,7 +70,10 @@ public final class MigrationModelConfigurationResolver {
 			final Map<String, Boolean> ids = new LinkedHashMap<>();
 			for (final var test : nullToEmpty(value.getUnitTests())) {
 				final MigrationModelUnitTest unitTest = unitTest(test);
-				plan.model(unitTest.model());
+				if (unitTest.incremental() && !plan.model(unitTest.model()).isIncremental()) {
+					throw new IllegalArgumentException("Unit test " + unitTest.id() + " sets incremental, but model "
+							+ unitTest.model() + " is not incremental.");
+				}
 				if (ids.put(unitTest.id(), Boolean.TRUE) != null) {
 					throw new IllegalArgumentException("Duplicate unit test name: " + unitTest.id());
 				}
@@ -161,7 +164,7 @@ public final class MigrationModelConfigurationResolver {
 			return MigrationModel.Materialization.valueOf(value.getMaterialized().trim().toUpperCase(Locale.ROOT));
 		} catch (IllegalArgumentException e) {
 			throw new IllegalArgumentException("Unsupported materialized value for model " + value.getName() + ": "
-					+ value.getMaterialized() + ". Use view or table.");
+					+ value.getMaterialized() + ". Use view, table or incremental.");
 		}
 	}
 
@@ -223,7 +226,8 @@ public final class MigrationModelConfigurationResolver {
 			}
 			expected.add(canonical);
 		}
-		return new MigrationModelUnitTest(value.getName(), value.getModel(), given, expected, value.isOrdered());
+		return new MigrationModelUnitTest(value.getName(), value.getModel(), given, expected, value.isOrdered(),
+				value.isIncremental());
 	}
 
 	private static MigrationModelDataTest dataTest(final MigrationModelPlan plan, final MigrationModel model,

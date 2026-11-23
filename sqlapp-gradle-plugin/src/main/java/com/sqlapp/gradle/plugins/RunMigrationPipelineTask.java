@@ -29,6 +29,7 @@ public abstract class RunMigrationPipelineTask extends AbstractDbTask<RunMigrati
 		setSourceDataSource(getProject().getObjects().newInstance(DataSourceExtension.class));
 		setTargetDataSource(getProject().getObjects().newInstance(DataSourceExtension.class));
 		getAllowExecution().convention(false);
+		getFullRefresh().convention(false);
 		getWorkspaceDirectory()
 				.convention(getProject().getLayout().getBuildDirectory().dir("sqlapp-migration/pipeline"));
 		getOutputs().upToDateWhen(task -> false);
@@ -44,6 +45,10 @@ public abstract class RunMigrationPipelineTask extends AbstractDbTask<RunMigrati
 
 	@Input
 	public abstract Property<Boolean> getAllowExecution();
+
+	/** Rebuild incremental models from all rows. */
+	@Input
+	public abstract Property<Boolean> getFullRefresh();
 
 	/** One directory per run, holding the run report and the transfer reports. */
 	@OutputDirectory
@@ -73,6 +78,7 @@ public abstract class RunMigrationPipelineTask extends AbstractDbTask<RunMigrati
 		command.setConfigurationFile(getConfigurationFile().get().getAsFile());
 		command.setWorkspaceDirectory(getWorkspaceDirectory().get().getAsFile());
 		command.setAllowExecution(getAllowExecution().get());
+		command.setFullRefresh(getFullRefresh().get());
 		command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().getOrNull());
 	}
 

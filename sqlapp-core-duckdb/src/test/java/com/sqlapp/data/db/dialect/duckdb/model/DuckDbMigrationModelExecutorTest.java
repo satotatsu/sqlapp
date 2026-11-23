@@ -244,4 +244,48 @@ class DuckDbMigrationModelExecutorTest {
 			assertEquals(List.of(List.of(3L)), query(connection, "SELECT currval('numbers')"));
 		}
 	}
+
+	@Test
+	void mergesIncrementalRowsAndRecordsTheFingerprint() throws Exception {
+		final var columns = List.of(
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("ID",
+						com.sqlapp.data.db.datatype.DataType.INT, null, null, false),
+				new com.sqlapp.data.schemas.migration.MigrationModelColumn("NAME",
+						com.sqlapp.data.db.datatype.DataType.VARCHAR, 10L, null, false));
+		final MigrationModel model = new MigrationModel("customer", null, "unused", Materialization.INCREMENTAL,
+				Map.of(), columns, List.of("ID"));
+		try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+			final MigrationModelExecutor executor = MigrationModelExecutorResolver.resolve(connection);
+			assertEquals(new MigrationModelExecutor.IncrementalState(false, null),
+					executor.incrementalState(connection, model));
+			connection.setAutoCommit(false);
+			executor.materializeIncremental(connection, model, "SELECT 1 AS ID, 'a' AS NAME UNION ALL SELECT 2, 'b'",
+					false, "sha256:first");
+			connection.commit();
+			assertEquals(new MigrationModelExecutor.IncrementalState(true, "sha256:first"),
+					executor.incrementalState(connection, model));
+			// isIncremental selects the rows to merge: one update, one insert.
+			executor.materializeIncremental(connection, model,
+					"SELECT * FROM (SELECT 2 AS ID, 'B' AS NAME UNION ALL SELECT 3, 'c')"
+							+ " /*if !isIncremental*/ WHERE FALSE /*end*/",
+					true, "sha256:first");
+			connection.commit();
+			assertEquals(List.of(Arrays.asList(1, "a"), Arrays.asList(2, "B"), Arrays.asList(3, "c")),
+					query(connection, "SELECT * FROM customer ORDER BY ID"));
+			final var e = assertThrows(IllegalArgumentException.class,
+					() -> executor.materializeIncremental(connection, model,
+							"SELECT 4 AS ID, 'x' AS NAME UNION ALL SELECT 4, 'y' UNION ALL SELECT NULL, 'z'", true,
+							"sha256:first"));
+			assertTrue(e.getMessage().contains("1 rows with a NULL key, 1 duplicated keys"), e.getMessage());
+			connection.rollback();
+			assertEquals(List.of(List.of(3L)), query(connection, "SELECT count(*) FROM customer"));
+			// A table without a recorded fingerprint, or a view, has none to compare.
+			try (var statement = connection.createStatement()) {
+				statement.execute("COMMENT ON TABLE customer IS 'other'");
+			}
+			connection.commit();
+			assertEquals(new MigrationModelExecutor.IncrementalState(true, null),
+					executor.incrementalState(connection, model));
+		}
+	}
 }

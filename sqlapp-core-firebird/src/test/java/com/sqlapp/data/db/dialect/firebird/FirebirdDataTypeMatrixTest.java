@@ -92,7 +92,10 @@ class FirebirdDataTypeMatrixTest {
 		for (int subtype : new int[] { 0, 1 }) {
 			column = new Column("VALUE");
 			com.sqlapp.data.db.dialect.firebird.metadata.FirebirdUtils.setDbType(column, 261, subtype, 8, 0, 0, 80);
-			assertEquals(80L, column.getLength());
+			// The segment size is a buffer hint, not a length.
+			org.junit.jupiter.api.Assertions.assertNull(column.getLength());
+			assertEquals("80", column.getSpecifics()
+					.get(com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder.BLOB_SEGMENT_SIZE));
 			assertEquals("BLOB SUB_TYPE " + (subtype == 0 ? "BINARY" : "TEXT") + " SEGMENT SIZE 80",
 					dialect.createSqlBuilder().addTypeDefinition(column).toString());
 			for (String invalid : new String[] { "0", "65536", "invalid" }) {

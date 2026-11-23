@@ -40,7 +40,8 @@ passes, and then runs the [data tests](#data-tests) of the built models.
 | `modifiedOnly` | `Property<Boolean>` | yes | `false` | Build only models changed since `stateFile` and their downstream models |
 | `unitTestsEnabled` | `Property<Boolean>` | yes | `true` | Run unit tests before building |
 | `testOnly` | `Property<Boolean>` | yes | `false` | Run unit tests and build nothing |
-| `dataTestsEnabled` | `Property<Boolean>` | yes | `true` | Run data tests after a complete build |
+| `dataTestsEnabled` | `Property<Boolean>` | yes | `true` | Run data tests before committing the build |
+| `fullRefresh` | `Property<Boolean>` | yes | `false` | Rebuild [incremental models](#incremental-models) from all rows |
 | `targetMappingFile` | `RegularFileProperty` | no | — | Transfer name mapping with the [declared column types](#declared-columns), written after a complete build |
 
 ## Configuration
@@ -116,13 +117,19 @@ a connection is opened.
 |---|---|---|
 | `view` | `CREATE OR REPLACE VIEW` | Stores the query only |
 | `table` | `CREATE OR REPLACE TABLE ... AS` | Replaces all rows on every run |
+| `incremental` | `INSERT ... ON CONFLICT DO UPDATE` | Merges new rows by primary key; see [Incremental models](#incremental-models) |
 
 A relation that changes between view and table is dropped and recreated.
 
-Each model is committed separately. When a model fails, its statement is rolled
-back, every downstream model is skipped, unrelated models are still built, and
-the task fails after reporting each model's status. Relations of models that
-succeeded remain. `stateFile` is not written after a failed run.
+A run is one transaction. The models are built in dependency order, then every
+[data test](#data-tests) runs on the same connection, and the transaction is
+committed only when every model was built and no `error` test failed.
+Otherwise everything the run changed is rolled back, including rows merged into
+incremental tables and their recorded fingerprints, so the engine keeps the
+state of the last successful run. The first failed model stops the build: the
+following models are reported as `SKIPPED`, models already built as
+`ROLLED_BACK`. `stateFile` and `targetMappingFile` are written only after a
+commit.
 
 ## Declared columns
 
@@ -261,11 +268,91 @@ A test query that cannot run fails the task whatever its severity. Columns
 named by a rule must be declared when the model [declares
 columns](#declared-columns).
 
-The tests run after every model was built. A failure does not roll the models
-back, but the task fails, and neither `stateFile` nor `targetMappingFile` is
-written. The log and the error report the number of failing rows for each
-test, never the values. With `modifiedOnly` only the tests of the rebuilt
-models run.
+The tests run after every model was built, in the transaction of the build, so
+a test can read any model of the run, also one built after the tested model. A
+failed `error` test rolls back every model of the run and fails the task. A
+test query that fails can abort the transaction; the tests after it are
+reported as `NOT_RUN`. The log and the error report the number of failing rows for each
+test, never the values. A test query that fails is reported with the error
+category (exception type, SQLSTATE and error code) only, because the database
+message can quote a value, such as a string that cannot be cast; run the
+query in the engine to see the message. Every data test runs, also with
+`modifiedOnly`: a test that changed runs even when its model was not
+rebuilt.
+
+## Incremental models
+
+An incremental model keeps its table and adds to it. Like in dbt, the model SQL
+selects the rows to add, and the materialization merges them:
+
+```yaml
+models:
+  - name: ORDER_FACT
+    materialized: incremental
+    columns:
+      - {name: ORDER_ID, type: INT}
+      - {name: AMOUNT, type: "DECIMAL(12,2)"}
+      - {name: UPDATED_AT, type: TIMESTAMP}
+    primaryKey: [ORDER_ID]
+    query: |
+      SELECT ORDER_ID, AMOUNT, UPDATED_AT FROM /*$ref('stg_order')*/stg_order
+      /*if isIncremental*/
+      WHERE UPDATED_AT > (SELECT max(UPDATED_AT) FROM /*$ref('ORDER_FACT')*/ORDER_FACT)
+      /*end*/
+```
+
+- An incremental model needs declared columns and a primary key.
+- It reads its own existing table with a reference to itself, which only an
+  incremental model may do.
+- The template parameter `isIncremental` is `false` when the table is built
+  from all rows and `true` when rows are added.
+- The first run, or a run with `fullRefresh`, builds the table from all rows.
+  Later runs stage the selected rows once, reject NULL and duplicated keys and
+  values that the declared types would change (counts only, no values), and
+  merge the rows by primary key: existing keys are updated, new keys inserted.
+- Rows are never deleted. A row removed from a source stays in the table until
+  `fullRefresh`.
+
+**Definitions that changed.** The table comment records a lineage fingerprint
+(`sqlapp-model:1:sha256:…`): the definition of the model and of every model and
+source it reads, directly or through upstream models, but not their rows. A
+change to any of them, such as an upstream calculation, a declared column or
+the table of a source, would leave old rows computed by the old definitions.
+The run then stops and asks for `fullRefresh`. It also stops for a table
+without a readable fingerprint, such as a table created by hand. The SQL is not
+normalized: a changed comment or whitespace also counts as a change. A change
+to an unrelated model does not.
+
+**Late data.** A filter on the latest timestamp skips rows that arrive late
+with an older timestamp. Read an overlapping window again; the merge by key
+makes this safe:
+
+```sql
+/*if isIncremental*/
+WHERE UPDATED_AT > (SELECT max(UPDATED_AT) - INTERVAL 3 DAY FROM /*$ref('ORDER_FACT')*/ORDER_FACT)
+/*end*/
+```
+
+**After a failure.** A failed model or `error` data test rolls back the merged
+rows, so the latest timestamp in the table does not move and the next run
+selects the same rows again.
+
+A unit test runs an incremental model as a first build by default. With
+`incremental: true` it runs as when rows are added, and the fixture named after
+the model stands for the existing table:
+
+```yaml
+unitTests:
+  - name: adds-newer-rows
+    model: ORDER_FACT
+    incremental: true
+    given:
+      stg_order: {sql: "SELECT 1 AS ORDER_ID, 10.00 AS AMOUNT, TIMESTAMP '2026-01-02' AS UPDATED_AT"}
+      ORDER_FACT: {sql: "SELECT TIMESTAMP '2026-01-01' AS UPDATED_AT"}
+    expect:
+      rows:
+        - [1, '10.00', '2026-01-02 00:00:00.0']
+```
 
 ## Building only what changed
 
@@ -433,6 +520,7 @@ runMigrationPipeline {
 | `targetDataSource` | data source block | to execute | — | Database written by the publish job |
 | `expectedConfigurationFingerprint` | `Property<String>` | to execute | — | Approved fingerprint |
 | `allowExecution` | `Property<Boolean>` | yes | `false` | Run the pipeline instead of reviewing it |
+| `fullRefresh` | `Property<Boolean>` | yes | `false` | Rebuild incremental models from all rows |
 | `workspaceDirectory` | `DirectoryProperty` | yes | `build/sqlapp-migration/pipeline` | One directory per run |
 
 Without `allowExecution` the task reads the definitions without connecting and
@@ -444,10 +532,12 @@ definition is still the approved one.
 The steps run in order and the first failure stops the run:
 
 1. **LOAD** runs the load job with verification.
-2. **MODELS** runs the unit tests and builds every model. It checks after the
-   build that the model definitions did not change during it.
-3. **DATA_TESTS** runs the [data tests](#data-tests) of every model; it is
-   `SKIPPED` when the models have none.
+2. **MODELS** runs the unit tests, builds every model and runs the data tests
+   in one transaction. It checks after the build that the model definitions did
+   not change during it.
+3. **DATA_TESTS** reports the [data tests](#data-tests) of that transaction; it
+   is `SKIPPED` when the models have none. When a test fails, MODELS is
+   `FAILED` with `Rolled back: data tests failed.` and the run stops here.
 4. **PUBLISH** starts only after every model of this run was built and every
    `error` data test passed. The
    declared columns of this run are written into the run directory as the
@@ -457,7 +547,15 @@ The steps run in order and the first failure stops the run:
 The load and publish jobs must copy rows directly and must not turn off
 verification; the publish job must not name a `mappingFile`, because the
 pipeline supplies the one of the run. Use `targetPreparation: STAGED_REPLACE`
-in the publish job to replace rows of existing tables.
+in the publish job to replace rows of existing tables. Set `fullRefresh = true`
+on the task to rebuild incremental models from all rows.
+
+`STAGED_REPLACE` publishes every row of the model tables, not only the rows of
+the run. When publishing fails after the models were committed, the next run
+publishes the rows merged by the failed run too, even when it merges nothing
+new. A failed replacement retains its staging tables (`SQLAPP_STG_…`) for
+inspection, and a new run stops while they exist; inspect them with the
+transfer result of the failed run and drop them before running again.
 
 Every run gets its own directory, named after its start time, with
 `pipeline-report.json`. The report is rewritten after each step and records,

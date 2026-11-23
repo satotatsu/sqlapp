@@ -39,10 +39,45 @@ public class CockroachSequenceReader extends SequenceReader {
 					result.add(object);
 				}
 			}
+			readNextValues(c, result);
 		} catch (SQLException e) {
 			throw new IllegalStateException("Cannot read CockroachDB Sequence metadata", e);
 		}
 		return result;
+	}
+
+	/**
+	 * Selecting from a sequence returns last_value without advancing it. The stored
+	 * value is already ahead of values cached by sessions, which the model's
+	 * lastValue (an upper bound of the next value) allows. Sequences the reader may
+	 * not select from keep an unknown next value.
+	 */
+	private void readNextValues(Connection c, List<Sequence> sequences) throws SQLException {
+		for (int offset = 0; offset < sequences.size(); offset += 100) {
+			var batch = sequences.subList(offset, Math.min(offset + 100, sequences.size()));
+			var parts = new ArrayList<String>();
+			for (int i = 0; i < batch.size(); i++) {
+				Sequence sequence = batch.get(i);
+				parts.add("SELECT " + i + " AS position,last_value,is_called FROM "
+						+ getDialect().quote(sequence.getSchemaName()) + "." + getDialect().quote(sequence.getName()));
+			}
+			try (var sql = c.createStatement(); var rows = sql.executeQuery(String.join(" UNION ALL ", parts))) {
+				while (rows.next()) {
+					Sequence sequence = batch.get(rows.getInt("position"));
+					var last = rows.getBigDecimal("last_value");
+					var next = rows.getBoolean("is_called") ? com.sqlapp.data.db.metadata.SequenceNextValues.after(last,
+							new java.math.BigDecimal(sequence.getIncrementBy()),
+							new java.math.BigDecimal(sequence.getMinValue()),
+							new java.math.BigDecimal(sequence.getMaxValue()), sequence.isCycle()) : last;
+					sequence.setLastValue(next == null ? null : next.toBigIntegerExact());
+				}
+			} catch (SQLException e) {
+				// Leave the batch's next values unknown, unless the failure aborted the
+				// caller's transaction.
+				if (!c.getAutoCommit())
+					throw e;
+			}
+		}
 	}
 
 }

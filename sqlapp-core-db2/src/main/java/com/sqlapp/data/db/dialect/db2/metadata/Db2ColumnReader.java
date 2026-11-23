@@ -112,6 +112,15 @@ public class Db2ColumnReader extends ColumnReader {
 				obj.setIdentityCacheSize(cache);
 			}
 			obj.setIdentityOrder("Y".equalsIgnoreCase(getString(rs, "ORDER")));
+			// The next cache allocation boundary: never below the next value to issue.
+			java.math.BigDecimal next = rs.getBigDecimal("NEXTCACHEFIRSTVALUE");
+			if (next != null) {
+				try {
+					obj.setIdentityLastValue(next.longValueExact());
+				} catch (ArithmeticException e) {
+					obj.getSpecifics().put("DB2_IDENTITY_NEXTCACHEFIRSTVALUE", next.toBigIntegerExact().toString());
+				}
+			}
 		}
 		Long length = this.getLong(rs, "LENGTH");
 		Integer scale = this.getInteger(rs, "SCALE");

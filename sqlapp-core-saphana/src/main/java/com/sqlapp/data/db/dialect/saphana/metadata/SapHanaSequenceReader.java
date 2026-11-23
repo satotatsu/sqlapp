@@ -78,6 +78,16 @@ public class SapHanaSequenceReader extends SequenceReader {
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT_BY"));
 		sequence.setCycle("TRUE".equalsIgnoreCase(rs.getString("IS_CYCLED")));
 		setSpecifics(rs, "RESET_BY_QUERY", sequence);
+		// M_SEQUENCES.CURRENT_VALUE is the highest value handed out on any host (no
+		// row before the sequence is first loaded). The model holds the next value.
+		var current = com.sqlapp.data.converter.Converters.getDefault().convertObject(rs.getObject("CURRENT_VALUE"),
+				java.math.BigDecimal.class);
+		if (current != null) {
+			var next = com.sqlapp.data.db.metadata.SequenceNextValues.after(current, rs.getBigDecimal("INCREMENT_BY"),
+					rs.getBigDecimal("MIN_VALUE"), rs.getBigDecimal("MAX_VALUE"), sequence.isCycle());
+			if (next != null)
+				sequence.setLastValue(next.toBigIntegerExact());
+		}
 		return sequence;
 	}
 }

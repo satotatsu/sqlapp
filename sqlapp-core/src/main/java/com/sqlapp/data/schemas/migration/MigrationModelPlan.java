@@ -99,7 +99,12 @@ public final class MigrationModelPlan {
 												: ""));
 					}
 					if (target == model) {
-						throw new IllegalArgumentException("Model references itself: " + model.name());
+						if (!model.isIncremental()) {
+							throw new IllegalArgumentException("Model references itself: " + model.name()
+									+ ". Only an incremental model may read its own table.");
+						}
+						// Its existing table, not a dependency.
+						continue;
 					}
 					if (!refs.contains(target.name())) {
 						refs.add(target.name());
@@ -199,6 +204,30 @@ public final class MigrationModelPlan {
 	/** Source names directly referenced by the model. */
 	public List<String> sourceDependencies(final String model) {
 		return sourceDependencies.get(model(model).name());
+	}
+
+	/**
+	 * Fingerprint of the model and of everything its rows are computed from: its
+	 * definition and source definitions and, transitively, those of every upstream
+	 * model. Source rows are not included. An incremental table built under a
+	 * different lineage fingerprint holds rows computed by other definitions.
+	 */
+	public String lineageFingerprint(final String model) {
+		final StringBuilder value = new StringBuilder();
+		final Set<String> visited = new java.util.TreeSet<>();
+		collectLineage(model(model).name(), visited);
+		for (final String name : visited) {
+			value.append(name).append('=').append(fingerprints.get(name)).append('\n');
+		}
+		return sha256(value.toString());
+	}
+
+	private void collectLineage(final String name, final Set<String> visited) {
+		if (visited.add(name)) {
+			for (final String upstream : dependencies.get(name)) {
+				collectLineage(upstream, visited);
+			}
+		}
 	}
 
 	/** Fingerprint of every model definition, its sources and its dependencies. */

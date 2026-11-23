@@ -22,12 +22,16 @@ class MySqlBulkUpsertTargetNameTest {
 	private boolean failInsert;
 	private boolean failUpdate;
 	private final List<String> transactions = new ArrayList<>();
+
 	private Connection connection(List<String> sql) {
 		java.io.InputStream[] input = { null };
 		var statement = (JdbcStatement) Proxy.newProxyInstance(getClass().getClassLoader(),
 				new Class<?>[] { JdbcStatement.class }, (p, method, args) -> switch (method.getName()) {
 				case "unwrap" -> p;
-				case "execute" -> { sql.add((String) args[0]); yield false; }
+				case "execute" -> {
+					sql.add((String) args[0]);
+					yield false;
+				}
 				case "executeUpdate" -> {
 					sql.add((String) args[0]);
 					if ((failInsert && ((String) args[0]).startsWith("INSERT INTO "))
@@ -35,10 +39,22 @@ class MySqlBulkUpsertTargetNameTest {
 						throw new java.sql.SQLException("unique conflict", "23000", 1062);
 					yield 1;
 				}
-				case "setLocalInfileInputStream" -> { input[0] = (java.io.InputStream) args[0]; yield null; }
-				case "executeLargeUpdate" -> { sql.add((String) args[0]); input[0].readAllBytes(); yield 0L; }
-				case "executeQuery" -> Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { java.sql.ResultSet.class },
-						(r, rm, ra) -> switch (rm.getName()) { case "next" -> true; case "getLong" -> 0L; case "close" -> null; default -> throw new AssertionError(rm.getName()); });
+				case "setLocalInfileInputStream" -> {
+					input[0] = (java.io.InputStream) args[0];
+					yield null;
+				}
+				case "executeLargeUpdate" -> {
+					sql.add((String) args[0]);
+					input[0].readAllBytes();
+					yield 0L;
+				}
+				case "executeQuery" -> Proxy.newProxyInstance(getClass().getClassLoader(),
+						new Class<?>[] { java.sql.ResultSet.class }, (r, rm, ra) -> switch (rm.getName()) {
+						case "next" -> true;
+						case "getLong" -> 0L;
+						case "close" -> null;
+						default -> throw new AssertionError(rm.getName());
+						});
 				case "getWarnings", "close" -> null;
 				default -> throw new AssertionError(method.getName());
 				});
@@ -46,16 +62,22 @@ class MySqlBulkUpsertTargetNameTest {
 				(p, method, args) -> switch (method.getName()) {
 				case "createStatement" -> statement;
 				case "getAutoCommit" -> autoCommit;
-				case "setAutoCommit" -> { autoCommit = (boolean) args[0]; transactions.add("auto=" + autoCommit); yield null; }
-				case "commit", "rollback" -> { transactions.add(method.getName()); yield null; }
+				case "setAutoCommit" -> {
+					autoCommit = (boolean) args[0];
+					transactions.add("auto=" + autoCommit);
+					yield null;
+				}
+				case "commit", "rollback" -> {
+					transactions.add(method.getName());
+					yield null;
+				}
 				default -> throw new AssertionError(method.getName());
 				});
 	}
 
 	@ParameterizedTest
 	@CsvSource({ "def,app,app.target_table", "app,,app.target_table", ",app,app.target_table",
-			"app,app,app.target_table", ",,target_table", "def,,def.target_table",
-			"def,app db,`app db`.target_table" })
+			"app,app,app.target_table", ",,target_table", "def,,def.target_table", "def,app db,`app db`.target_table" })
 	void resolvesTargetThroughoutExecution(String catalog, String schema, String expected) throws Exception {
 		for (int[] version : new int[][] { { 5, 1 }, { 5, 6 }, { 5, 7 }, { 8, 0 }, { 8, 4 }, { 9, 0 } }) {
 			var dialect = DialectResolver.getInstance().getDialect("mysql", version[0], version[1], 0);
@@ -66,7 +88,8 @@ class MySqlBulkUpsertTargetNameTest {
 						BulkUpsertOption.builder().insertWhenNotMatched(insert).stagingTableName("stage").build());
 				assertTrue(sql.getFirst().endsWith(" FROM " + expected + " WHERE 1 = 0"), sql.toString());
 				assertTrue(sql.get(insert ? 3 : 2).startsWith("UPDATE " + expected + " "), sql.toString());
-				if (insert) assertTrue(sql.get(4).startsWith("INSERT INTO " + expected + " "), sql.toString());
+				if (insert)
+					assertTrue(sql.get(4).startsWith("INSERT INTO " + expected + " "), sql.toString());
 				assertEquals(catalog, table.getCatalogName());
 				assertEquals(schema, table.getSchemaName());
 			}
@@ -89,7 +112,8 @@ class MySqlBulkUpsertTargetNameTest {
 		var sql = new ArrayList<String>();
 		long affected = new MySqlBulkUpsertExecutor(dialect).execute(connection(sql), table(null, null),
 				BulkUpsertOption.builder().keyColumn("payload").stagingTableName("stage").build());
-		var dml = sql.stream().filter(q -> q.startsWith("UPDATE target_table ") || q.startsWith("INSERT INTO ")).toList();
+		var dml = sql.stream().filter(q -> q.startsWith("UPDATE target_table ") || q.startsWith("INSERT INTO "))
+				.toList();
 		assertEquals(2, dml.size(), sql.toString());
 		assertTrue(dml.get(0).contains("target.payload = source.payload"));
 		assertTrue(dml.get(0).endsWith("SET target.id = source.id WHERE source.sqlapp_bulk_matched = 1"));
@@ -129,8 +153,9 @@ class MySqlBulkUpsertTargetNameTest {
 		autoCommit = true;
 		failInsert = true;
 		var sql = new ArrayList<String>();
-		assertThrows(java.sql.SQLException.class, () -> new MySqlBulkUpsertExecutor(
-				DialectResolver.getInstance().getDialect("mysql", 8, 4, 0)).execute(connection(sql), table(null, null), null));
+		assertThrows(java.sql.SQLException.class,
+				() -> new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 4, 0))
+						.execute(connection(sql), table(null, null), null));
 		assertTrue(sql.stream().anyMatch(q -> q.startsWith("UPDATE target_table ")));
 		assertTrue(transactions.contains("rollback"));
 		assertFalse(transactions.contains("commit"));
@@ -142,8 +167,9 @@ class MySqlBulkUpsertTargetNameTest {
 	void leavesCallerTransactionOpenOnInsertConflict() {
 		failInsert = true;
 		var sql = new ArrayList<String>();
-		assertThrows(java.sql.SQLException.class, () -> new MySqlBulkUpsertExecutor(
-				DialectResolver.getInstance().getDialect("mysql", 8, 4, 0)).execute(connection(sql), table(null, null), null));
+		assertThrows(java.sql.SQLException.class,
+				() -> new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 4, 0))
+						.execute(connection(sql), table(null, null), null));
 		assertTrue(transactions.isEmpty());
 		assertFalse(autoCommit);
 	}
@@ -152,8 +178,9 @@ class MySqlBulkUpsertTargetNameTest {
 	void updateConflictStopsBeforeInsert() {
 		failUpdate = true;
 		var sql = new ArrayList<String>();
-		assertThrows(java.sql.SQLException.class, () -> new MySqlBulkUpsertExecutor(
-				DialectResolver.getInstance().getDialect("mysql", 8, 4, 0)).execute(connection(sql), table(null, null), null));
+		assertThrows(java.sql.SQLException.class,
+				() -> new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 4, 0))
+						.execute(connection(sql), table(null, null), null));
 		assertFalse(sql.stream().anyMatch(q -> q.startsWith("INSERT INTO ")));
 	}
 
@@ -162,8 +189,8 @@ class MySqlBulkUpsertTargetNameTest {
 		var sql = new ArrayList<String>();
 		var table = table(null, null);
 		table.getColumns().add("SQLAPP_BULK_MATCHED", c -> c.setDataType(DataType.INT));
-		new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 4, 0))
-				.execute(connection(sql), table, BulkUpsertOption.builder().stagingTableName("stage").build());
+		new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 4, 0)).execute(connection(sql),
+				table, BulkUpsertOption.builder().stagingTableName("stage").build());
 		assertTrue(sql.getFirst().contains("(sqlapp_bulk_matched_1 TINYINT NOT NULL DEFAULT 0) AS SELECT "));
 		assertTrue(sql.stream().filter(q -> q.startsWith("INSERT INTO ")).findFirst().orElseThrow()
 				.endsWith("WHERE source.sqlapp_bulk_matched_1 = 0"));
@@ -176,7 +203,7 @@ class MySqlBulkUpsertTargetNameTest {
 		table.getColumns().add("ts", c -> c.setDataType(DataType.TIMESTAMPVERSION));
 		new MySqlBulkUpsertExecutor(DialectResolver.getInstance().getDialect("mysql", 8, 0, 19))
 				.execute(connection(sql), table, BulkUpsertOption.builder().stagingTableName("stage").build());
-		for (String prefix : new String[] {"UPDATE target_table", "INSERT INTO target_table"}) {
+		for (String prefix : new String[] { "UPDATE target_table", "INSERT INTO target_table" }) {
 			String statement = sql.stream().filter(q -> q.startsWith(prefix)).findFirst().orElseThrow();
 			assertTrue(statement.contains("UNIX_TIMESTAMP(source.ts)"), statement);
 			assertTrue(statement.contains("'+00:00'"), statement);

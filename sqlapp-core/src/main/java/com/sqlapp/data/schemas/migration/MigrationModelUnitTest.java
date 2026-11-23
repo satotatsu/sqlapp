@@ -22,9 +22,17 @@ import java.util.Map;
  * @param expectedRows expected result rows as canonical strings in query
  *                     column order
  * @param ordered      whether row order is significant
+ * @param incremental  run an incremental model as when it adds rows to its
+ *                     table: the template parameter isIncremental is true and
+ *                     the fixture named after the model is its existing table
  */
 public record MigrationModelUnitTest(String id, String model, Map<String, Fixture> given,
-		List<List<String>> expectedRows, boolean ordered) {
+		List<List<String>> expectedRows, boolean ordered, boolean incremental) {
+	public MigrationModelUnitTest(final String id, final String model, final Map<String, Fixture> given,
+			final List<List<String>> expectedRows, final boolean ordered) {
+		this(id, model, given, expectedRows, ordered, false);
+	}
+
 
 	public MigrationModelUnitTest {
 		if (id == null || id.isBlank()) {

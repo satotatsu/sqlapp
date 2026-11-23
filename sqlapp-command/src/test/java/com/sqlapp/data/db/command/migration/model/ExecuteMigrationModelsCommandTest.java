@@ -208,7 +208,7 @@ class ExecuteMigrationModelsCommandTest {
 	}
 
 	@Test
-	void failedModelSkipsDownstreamAndKeepsUnrelatedModels() throws Exception {
+	void failedModelRollsBackEveryModelOfTheRun() throws Exception {
 		write("models.yaml", CONFIGURATION.replace("SELECT customer_id, amount FROM",
 				"SELECT customer_id, missing_column AS amount FROM"));
 		final ExecuteMigrationModelsCommand command = command();
@@ -218,9 +218,10 @@ class ExecuteMigrationModelsCommandTest {
 		final RuntimeException e = assertThrows(RuntimeException.class, command::run);
 
 		assertTrue(e.getMessage().contains("stg_order"), e.getMessage());
-		assertEquals(List.of(Status.SUCCESS, Status.FAILED, Status.SKIPPED),
+		assertTrue(e.getMessage().contains("rolled back"), e.getMessage());
+		assertEquals(List.of(Status.ROLLED_BACK, Status.FAILED, Status.SKIPPED),
 				command.getResult().models().stream().map(MigrationModelRunner.ModelResult::status).toList());
-		assertEquals(List.of(List.of("raw_order"), List.of("stg_customer")),
+		assertEquals(List.of(List.of("raw_order")),
 				query("SELECT table_name FROM information_schema.tables ORDER BY table_name"));
 		assertFalse(Files.exists(directory.resolve("models.json")));
 	}

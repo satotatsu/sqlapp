@@ -14,8 +14,8 @@ import com.sqlapp.data.db.dialect.postgres.Postgres100;
 
 /**
  * PostgreSQL 10+ identity and serial columns. The owned sequence is resolved
- * with {@code pg_get_serial_sequence} and restarted with a bound {@code setval},
- * so no identifier is interpolated from model values.
+ * with {@code pg_get_serial_sequence} and restarted with a bound
+ * {@code setval}, so no identifier is interpolated from model values.
  */
 public class PostgresGeneratedKeyCounterProvider implements GeneratedKeyCounterProvider {
 	@Override

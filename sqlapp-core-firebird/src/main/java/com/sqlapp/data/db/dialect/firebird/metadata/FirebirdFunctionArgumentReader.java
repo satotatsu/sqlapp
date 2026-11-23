@@ -87,6 +87,7 @@ public class FirebirdFunctionArgumentReader extends RoutineArgumentReader<Functi
 		// Type-name resolution can reset text attributes; apply catalog values last.
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
+		FirebirdUtils.setBinaryIfOctets(obj);
 		if (getString(rs, "MODULE_NAME") != null) {
 			int position = rs.getInt("RDB$ARGUMENT_POSITION");
 			obj.setName(position == 0 ? null : "ARGUMENT_" + position);

@@ -23,8 +23,9 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 /**
  * MySQL の GEOMETRY の符号化(DBには接続しない)。
  *
- * MySQL は Z/M と GEOMETRYCOLLECTION 以外の空の図形を保存できず、そのまま符号化すると Z/M が黙って落ちたり
- * POINT EMPTY が GEOMETRYCOLLECTION EMPTY に変わったりする(Claude 側の検証環境の MySQL 8.4 で確認)ため、エラーにする。
+ * MySQL は Z/M と GEOMETRYCOLLECTION 以外の空の図形を保存できず、そのまま符号化すると Z/M が黙って落ちたり POINT
+ * EMPTY が GEOMETRYCOLLECTION EMPTY に変わったりする(Claude 側の検証環境の MySQL 8.4
+ * で確認)ため、エラーにする。
  */
 class MySqlGeometryEncodingTest {
 
@@ -32,8 +33,7 @@ class MySqlGeometryEncodingTest {
 	@ValueSource(strings = { "POINT Z(1 2 3)", "POINT M(1 2 3)", "POINT ZM(1 2 3 4)", "LINESTRING Z(0 0 1,1 1 2)",
 			"POINT EMPTY", "LINESTRING EMPTY", "MULTIPOINT EMPTY", "GEOMETRYCOLLECTION(POINT EMPTY)" })
 	void rejectsValuesMySqlCannotStore(final String wkt) {
-		assertThrows(IllegalArgumentException.class,
-				() -> MySqlGeometryJdbcTypeHandler.toMySqlBytes(Wkt.fromWkt(wkt)));
+		assertThrows(IllegalArgumentException.class, () -> MySqlGeometryJdbcTypeHandler.toMySqlBytes(Wkt.fromWkt(wkt)));
 	}
 
 	@ParameterizedTest

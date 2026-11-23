@@ -23,6 +23,7 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 		getUnitTestsEnabled().convention(true);
 		getTestOnly().convention(false);
 		getDataTestsEnabled().convention(true);
+		getFullRefresh().convention(false);
 	}
 
 	public void call(final Action<ExecuteMigrationModelsTask> action) {
@@ -59,6 +60,10 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 	@Input
 	public abstract Property<Boolean> getDataTestsEnabled();
 
+	/** Rebuild incremental models from all rows. */
+	@Input
+	public abstract Property<Boolean> getFullRefresh();
+
 	@Override
 	protected void beforeRun(final ExecuteMigrationModelsCommand command) {
 		command.setConfigurationFile(getConfigurationFile().get().getAsFile());
@@ -69,6 +74,7 @@ public abstract class ExecuteMigrationModelsTask extends AbstractDbTask<ExecuteM
 		command.setUnitTestsEnabled(getUnitTestsEnabled().get());
 		command.setTestOnly(getTestOnly().get());
 		command.setDataTestsEnabled(getDataTestsEnabled().get());
+		command.setFullRefresh(getFullRefresh().get());
 	}
 
 	@Override

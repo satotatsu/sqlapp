@@ -16,12 +16,14 @@ public enum MySqlTinyInt1Mapping {
 	/** Validates MySQL-family options; null means no override was supplied. */
 	public static MySqlTinyInt1Mapping fromOptions(final Map<String, String> options) {
 		MySqlTinyInt1Mapping result = null;
-		if (options == null) return null;
+		if (options == null)
+			return null;
 		for (var entry : options.entrySet()) {
 			if (!OPTION_NAME.equalsIgnoreCase(entry.getKey()))
 				throw new IllegalArgumentException("Unsupported MySQL-family dialect option: " + entry.getKey()
 						+ ". Supported option: " + OPTION_NAME);
-			if (result != null) throw new IllegalArgumentException("Duplicate dialect option: " + OPTION_NAME);
+			if (result != null)
+				throw new IllegalArgumentException("Duplicate dialect option: " + OPTION_NAME);
 			try {
 				result = valueOf(entry.getValue().trim().toUpperCase(Locale.ROOT));
 			} catch (IllegalArgumentException | NullPointerException e) {

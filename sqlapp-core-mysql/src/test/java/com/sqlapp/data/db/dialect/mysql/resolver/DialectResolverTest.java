@@ -100,7 +100,7 @@ public class DialectResolverTest {
 		assertEquals(MySql800.class, resolver.getDialect(8, 0, 0).getClass());
 		assertEquals(com.sqlapp.data.db.dialect.mysql.MySql801.class, resolver.getDialect(8, 0, 1).getClass());
 		for (int minor = 1; minor <= 3; minor++) {
-			for (Integer revision : new Integer[] {null, 0, 1}) {
+			for (Integer revision : new Integer[] { null, 0, 1 }) {
 				assertEquals(com.sqlapp.data.db.dialect.mysql.MySql8019.class,
 						resolver.getDialect(8, minor, revision).getClass(), "8." + minor + "." + revision);
 			}

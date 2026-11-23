@@ -38,9 +38,10 @@ class MariadbStageOneRegressionTest {
 					return null;
 				});
 		var sql = new ArrayList<String>();
-		var stage = (Statement) Proxy.newProxyInstance(getClass().getClassLoader(),
-				new Class<?>[] { Statement.class }, (p, m, a) -> {
-					if (m.getName().equals("close")) return null;
+		var stage = (Statement) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { Statement.class },
+				(p, m, a) -> {
+					if (m.getName().equals("close"))
+						return null;
 					assertEquals("execute", m.getName());
 					sql.add((String) a[0]);
 					throw new SQLException("stop after target resolution");
@@ -51,18 +52,14 @@ class MariadbStageOneRegressionTest {
 				case "createStatement" -> stage;
 				default -> throw new AssertionError(m.getName());
 				});
-		assertAll(
-				() -> assertTrue(factory.createSql(table).getFirst().getSqlText().contains("FROM DUAL")),
-				() -> {
-					dialect.getDbDataTypes().getDbType(DataType.GEOMETRY).getJdbcTypeHandler()
-							.setObject(statement, 1, null);
-					assertEquals(java.util.List.of("setBytes"), calls);
-				},
-				() -> {
-					var failure = assertThrows(SQLException.class,
-							() -> BulkUpsertResolver.resolve(dialect).execute(connection, table, null));
-					assertEquals("stop after target resolution", failure.getMessage());
-					assertTrue(sql.getFirst().endsWith(" FROM app.target_table WHERE 1 = 0"), sql.toString());
-				});
+		assertAll(() -> assertTrue(factory.createSql(table).getFirst().getSqlText().contains("FROM DUAL")), () -> {
+			dialect.getDbDataTypes().getDbType(DataType.GEOMETRY).getJdbcTypeHandler().setObject(statement, 1, null);
+			assertEquals(java.util.List.of("setBytes"), calls);
+		}, () -> {
+			var failure = assertThrows(SQLException.class,
+					() -> BulkUpsertResolver.resolve(dialect).execute(connection, table, null));
+			assertEquals("stop after target resolution", failure.getMessage());
+			assertTrue(sql.getFirst().endsWith(" FROM app.target_table WHERE 1 = 0"), sql.toString());
+		});
 	}
 }

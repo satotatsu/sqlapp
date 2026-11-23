@@ -22,6 +22,7 @@ SELECT
 	,seq.seqmax AS identity_maximum
 	,seq.seqmin AS identity_minimum
 	,seq.seqcycle AS identity_cycle
+	, CASE WHEN pg_catalog.has_sequence_privilege(seq.seqrelid, 'SELECT,USAGE') THEN pg_catalog.pg_sequence_last_value(seq.seqrelid) END AS identity_last_value
 	,a.attidentity
 	,'' AS attgenerated
 	,CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042, 1043) /*CHAR,VARCHAR*/

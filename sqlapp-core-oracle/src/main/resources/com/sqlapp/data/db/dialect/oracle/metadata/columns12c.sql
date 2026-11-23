@@ -5,6 +5,7 @@ SELECT
   , tic.GENERATION_TYPE
   , tic.SEQUENCE_NAME
   , tic.IDENTITY_OPTIONS
+  , iseq.LAST_NUMBER AS IDENTITY_LAST_NUMBER
 FROM all_tab_cols tc
 LEFT OUTER JOIN all_coll_types ic
 ON (ic.OWNER=tc.DATA_TYPE_OWNER AND ic.TYPE_NAME=tc.DATA_TYPE
@@ -25,6 +26,8 @@ ON (
      AND
      tc.COLUMN_NAME=tic.COLUMN_NAME
     )
+LEFT OUTER JOIN all_sequences iseq
+ON (iseq.SEQUENCE_OWNER=tic.OWNER AND iseq.SEQUENCE_NAME=tic.SEQUENCE_NAME)
 WHERE 1=1
   /*if containsHiddenColumns == null || !containsHiddenColumns*/
   AND (tc.HIDDEN_COLUMN='NO' OR tc.USER_GENERATED='YES')

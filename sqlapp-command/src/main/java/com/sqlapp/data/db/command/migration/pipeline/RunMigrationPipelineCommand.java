@@ -67,6 +67,11 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 	private File workspaceDirectory;
 	private String expectedConfigurationFingerprint;
 	private boolean allowExecution;
+	/**
+	 * Rebuild incremental models from all rows; required after their definitions or
+	 * the definitions they read changed.
+	 */
+	private boolean fullRefresh;
 	private DataSource sourceDataSource;
 	private DataSource targetDataSource;
 	@Setter(AccessLevel.NONE)
@@ -198,10 +203,9 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 			step(Step.LOAD, inputs.load().fingerprint(), () -> transfer(inputs.load().file(),
 					inputs.load().fingerprint(), sourceDataSource, getDataSource(), runDirectory.resolve("load")));
 		}
+		// Models and data tests share one transaction: the models are committed only
+		// when every ERROR test passed.
 		step(Step.MODELS, inputs.modelsFingerprint(), () -> models(inputs));
-		if (!inputs.models().dataTests().isEmpty()) {
-			step(Step.DATA_TESTS, inputs.modelsFingerprint(), () -> dataTests(inputs));
-		}
 		step(Step.PUBLISH, inputs.publish().fingerprint(), () -> publish(inputs));
 		finish(Status.SUCCEEDED);
 		info("Migration pipeline completed: ", reportFile);
@@ -228,6 +232,13 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 					outcome.reviewFile(), outcome.resultFile(), outcome.detail(), null), Status.RUNNING);
 			info("Migration pipeline step ", step, " succeeded",
 					outcome.detail() == null ? "" : ": " + outcome.detail());
+		} catch (final DataTestsFailed e) {
+			update(new StepReport(step, Status.FAILED, started.toString(), elapsed(start), fingerprint, null, null,
+					null, "Rolled back: data tests failed."), Status.RUNNING);
+			update(new StepReport(Step.DATA_TESTS, Status.FAILED, started.toString(), elapsed(start), fingerprint, null,
+					null, e.summary, e.getMessage()), Status.FAILED);
+			throw new CommandException("Migration pipeline stopped at " + Step.DATA_TESTS + ": " + e.getMessage()
+					+ " Report: " + reportFile, e);
 		} catch (final Exception e) {
 			final String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
 			final StepReport failed = new StepReport(step, Status.FAILED, started.toString(), elapsed(start),
@@ -275,32 +286,41 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 		command.setDataSource(getDataSource());
 		command.setCloseDataSource(false);
 		command.setUnitTestsEnabled(true);
-		command.setDataTestsEnabled(false);
-		command.run();
+		command.setDataTestsEnabled(true);
+		command.setFullRefresh(fullRefresh);
+		try {
+			command.run();
+		} catch (final RuntimeException e) {
+			final var results = command.getDataTestResults();
+			if (command.getResult() != null && command.getResult().failures().isEmpty() && results != null
+					&& !results.isSuccess()) {
+				throw new DataTestsFailed(results);
+			}
+			throw e;
+		}
 		// The publish step uses the declarations of the built models only.
 		requireUnchanged(inputs);
+		final var results = command.getDataTestResults();
+		if (results != null && !results.tests().isEmpty()) {
+			update(new StepReport(Step.DATA_TESTS, Status.SUCCEEDED, Instant.now().toString(), null,
+					inputs.modelsFingerprint(), null, null, results.summary(), null), Status.RUNNING);
+		}
 		return new Outcome(null, null, "unit tests passed: " + command.getUnitTestResults().size() + ", models built: "
-				+ command.getResult().models().size());
+				+ command.getResult().models().size() + (fullRefresh ? ", fullRefresh" : ""));
 	}
 
-	private Outcome dataTests(final Inputs inputs) throws Exception {
-		requireUnchanged(inputs);
-		final var plan = inputs.models().plan();
-		final MigrationModelDataTests.Results results;
-		try (var connection = getDataSource().getConnection()) {
-			results = MigrationModelDataTests.run(connection, plan, plan.models(), inputs.models().dataTests());
-		}
-		for (final var test : results.tests()) {
-			info("Migration model data test ", test.id(), " ", test.status(),
-					test.message() == null ? "" : " " + test.message());
-		}
-		if (!results.isSuccess()) {
-			throw new IllegalStateException("Data tests failed (" + results.summary() + "): " + results.tests().stream()
-					.filter(test -> test.status() == MigrationModelDataTests.Status.FAIL
-							|| test.status() == MigrationModelDataTests.Status.ERROR)
+	/** Data tests failed and the models of the run were rolled back. */
+	private static final class DataTestsFailed extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		private final String summary;
+
+		DataTestsFailed(final MigrationModelDataTests.Results results) {
+			super("Data tests failed (" + results.summary() + "): " + results.tests().stream()
+					.filter(test -> test.status() != MigrationModelDataTests.Status.PASS
+							&& test.status() != MigrationModelDataTests.Status.WARN)
 					.map(test -> test.id() + ": " + test.message()).collect(java.util.stream.Collectors.joining("; ")));
+			this.summary = results.summary();
 		}
-		return new Outcome(null, null, results.summary());
 	}
 
 	private void requireUnchanged(final Inputs inputs) throws IOException {

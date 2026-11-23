@@ -9,7 +9,8 @@ SELECT
 	, seqcls.relname AS sequence_name
 	, seq.seqstart AS identity_start, seq.seqincrement AS identity_increment
 	, seq.seqmax AS identity_maximum, seq.seqmin AS identity_minimum
-	, seq.seqcycle AS identity_cycle, a.attidentity, a.attgenerated
+	, seq.seqcycle AS identity_cycle
+	, CASE WHEN pg_catalog.has_sequence_privilege(seq.seqrelid, 'SELECT,USAGE') THEN pg_catalog.pg_sequence_last_value(seq.seqrelid) END AS identity_last_value, a.attidentity, a.attgenerated
 	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1042,1043) THEN CASE WHEN a.atttypmod < 0 THEN null ELSE a.atttypmod-4 END WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END) IN (1560,1562) THEN CASE WHEN a.atttypmod < 0 THEN null ELSE a.atttypmod END END AS max_length
 	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1700 AND a.atttypmod<>-1 THEN ((a.atttypmod-4)>>16)&65535 END AS numeric_precision
 	, CASE WHEN (CASE WHEN a.attndims > 0 THEN t.typelem ELSE t.oid END)=1700 AND a.atttypmod<>-1 THEN (((a.atttypmod-4)&2047)#1024)-1024 END AS numeric_scale

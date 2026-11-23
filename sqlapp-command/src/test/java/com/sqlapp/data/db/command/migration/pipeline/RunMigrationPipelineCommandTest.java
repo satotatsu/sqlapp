@@ -2,6 +2,7 @@
 package com.sqlapp.data.db.command.migration.pipeline;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -170,13 +171,34 @@ class RunMigrationPipelineCommandTest {
 		final RuntimeException e = assertThrows(RuntimeException.class, command::run);
 		assertTrue(e.getMessage().contains("stopped at DATA_TESTS"), e.getMessage());
 		final MigrationPipelineReport report = report(command);
-		assertEquals(Status.SUCCEEDED, report.step(Step.MODELS).status());
+		// Models and tests share one transaction: the models were rolled back.
+		assertEquals(Status.FAILED, report.step(Step.MODELS).status());
+		assertEquals("Rolled back: data tests failed.", report.step(Step.MODELS).message());
+		assertEquals(0L,
+				Long.parseLong(rows(engine,
+						"SELECT count(*) FROM information_schema.tables" + " WHERE table_name = 'CUSTOMER_SALES'")
+						.getFirst()));
 		assertEquals(Status.FAILED, report.step(Step.DATA_TESTS).status());
 		assertTrue(report.step(Step.DATA_TESTS).message().contains("CUSTOMER_SALES.row_count: row count 2"),
 				report.step(Step.DATA_TESTS).message());
 		assertEquals(Status.NOT_RUN, report.step(Step.PUBLISH).status());
 		assertEquals(List.of("0"), rows(target,
 				"SELECT count(*) FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_NAME = 'CUSTOMER_SALES'"));
+	}
+
+	@Test
+	void theReportCarriesNoValuesFromAFailedTestQuery() throws Exception {
+		// DuckDB quotes 'alice' in the message of the failed cast.
+		write("models.yaml", Files.readString(directory.resolve("models.yaml")).replace("      - expression: TOTAL > 0",
+				"      - sql: SELECT * FROM /*$ref('CUSTOMER_SALES')*/CUSTOMER_SALES WHERE CAST(NAME AS INTEGER) > 0"));
+		final RunMigrationPipelineCommand command = command(fingerprint());
+		final RuntimeException e = assertThrows(RuntimeException.class, command::run);
+		final MigrationPipelineReport report = report(command);
+		assertEquals(Status.FAILED, report.step(Step.DATA_TESTS).status());
+		assertTrue(report.step(Step.DATA_TESTS).message().contains("test query failed"),
+				report.step(Step.DATA_TESTS).message());
+		assertFalse(Files.readString(command.getReportFile()).contains("alice"));
+		assertFalse(e.getMessage().contains("alice"), e.getMessage());
 	}
 
 	@Test

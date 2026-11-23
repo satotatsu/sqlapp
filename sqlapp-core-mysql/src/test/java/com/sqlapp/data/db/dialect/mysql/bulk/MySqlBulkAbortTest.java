@@ -26,8 +26,8 @@ import com.sqlapp.jdbc.bulk.BulkOption;
 /**
  * 値を符号化できなかったときの LOAD DATA の中断(DBには接続しない)。
  * <p>
- * 入力ストリームから例外を投げると JDBC ドライバーが接続を切断する(Claude 側の検証環境の MySQL 8.4 / MariaDB 11.4 で確認)
- * ため、各レコードの末尾に中断フラグを付け、符号化に失敗したら中断レコードを送ってサーバー側で文を失敗させる。
+ * 入力ストリームから例外を投げると JDBC ドライバーが接続を切断する(Claude 側の検証環境の MySQL 8.4 / MariaDB 11.4
+ * で確認) ため、各レコードの末尾に中断フラグを付け、符号化に失敗したら中断レコードを送ってサーバー側で文を失敗させる。
  * </p>
  */
 class MySqlBulkAbortTest {
@@ -54,8 +54,8 @@ class MySqlBulkAbortTest {
 					yield (long) streamed.split("\u001e").length;
 				}
 				case "getWarnings" -> null;
-				case "executeQuery" -> Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { ResultSet.class },
-						(r, rm, ra) -> switch (rm.getName()) {
+				case "executeQuery" -> Proxy.newProxyInstance(getClass().getClassLoader(),
+						new Class<?>[] { ResultSet.class }, (r, rm, ra) -> switch (rm.getName()) {
 						case "next" -> true;
 						case "getLong" -> 0L;
 						case "close" -> null;

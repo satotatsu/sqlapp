@@ -124,6 +124,11 @@ public class MigrationModelConfiguration {
 		private Map<String, Given> given = new LinkedHashMap<>();
 		private Expect expect;
 		private boolean ordered;
+		/**
+		 * Test an incremental model as when it adds rows: isIncremental is true and the
+		 * fixture named after the model is its existing table.
+		 */
+		private boolean incremental;
 	}
 
 	@Getter

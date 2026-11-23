@@ -66,7 +66,9 @@ public class MySql extends Dialect {
 
 	private boolean numericTinyInt1;
 
-	/** Returns the configured interpretation; existing dialects default to BOOLEAN. */
+	/**
+	 * Returns the configured interpretation; existing dialects default to BOOLEAN.
+	 */
 	public final MySqlTinyInt1Mapping getTinyInt1Mapping() {
 		return numericTinyInt1 ? MySqlTinyInt1Mapping.NUMERIC : MySqlTinyInt1Mapping.BOOLEAN;
 	}
@@ -87,7 +89,8 @@ public class MySql extends Dialect {
 	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
 			final Integer scale, final com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
 		if (productDataType != null && BOOLEAN_TINYINT.matcher(productDataType).matches()) {
-			if (numericTinyInt1) return super.setDbType(DataType.TINYINT, productDataType, lengthOrPrecision, scale, column);
+			if (numericTinyInt1)
+				return super.setDbType(DataType.TINYINT, productDataType, lengthOrPrecision, scale, column);
 			return super.setDbType(DataType.BOOLEAN, "BOOLEAN", null, null, column);
 		}
 		return super.setDbType(dataType, productDataType, lengthOrPrecision, scale, column);

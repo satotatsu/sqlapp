@@ -57,6 +57,46 @@ public class PostgresUtils extends ReaderUtils {
 	 * @param column
 	 * @throws SQLException
 	 */
+	/**
+	 * Identity start, increment and next value (PostgreSQL 10+ catalogs). The next
+	 * value follows the model contract: the value after the last one written, or
+	 * none for an unused generator.
+	 */
+	private static void setIdentityState(ResultSet rs, AbstractColumn<?> column) throws SQLException {
+		if (!column.isIdentity()) {
+			return;
+		}
+		final java.math.BigDecimal increment = optionalDecimal(rs, "identity_increment");
+		if (increment == null) {
+			return;
+		}
+		final java.math.BigDecimal start = optionalDecimal(rs, "identity_start");
+		if (start != null) {
+			column.setIdentityStartValue(start.longValueExact());
+		}
+		column.setIdentityStep(increment.longValueExact());
+		final boolean cycle = Boolean.TRUE.equals(rs.getObject("identity_cycle"));
+		final java.math.BigDecimal next = com.sqlapp.data.db.metadata.SequenceNextValues.after(
+				optionalDecimal(rs, "identity_last_value"), increment, optionalDecimal(rs, "identity_minimum"),
+				optionalDecimal(rs, "identity_maximum"), cycle);
+		if (next != null) {
+			column.setIdentityLastValue(next.longValueExact());
+		}
+	}
+
+	private static java.math.BigDecimal optionalDecimal(ResultSet rs, String label) throws SQLException {
+		if (rs instanceof ExResultSet extended) {
+			return extended.contains(label) ? rs.getBigDecimal(label) : null;
+		}
+		final var meta = rs.getMetaData();
+		for (int i = 1; i <= meta.getColumnCount(); i++) {
+			if (label.equalsIgnoreCase(meta.getColumnLabel(i))) {
+				return rs.getBigDecimal(i);
+			}
+		}
+		return null;
+	}
+
 	public static void setColumnMetadata(ResultSet rs, Dialect dialect, AbstractColumn<?> column) throws SQLException {
 		column.setName(rs.getString("attname"));
 		column.setSchemaName(rs.getString("nspname"));
@@ -102,6 +142,7 @@ public class PostgresUtils extends ReaderUtils {
 			}
 			column.setSequence(sequence);
 		}
+		setIdentityState(rs, column);
 		column.setArrayDimension(arrayDimension);
 		String expression = rs.getString("adsrc");
 		setGeneratedExpression(column, expression, generatedType);

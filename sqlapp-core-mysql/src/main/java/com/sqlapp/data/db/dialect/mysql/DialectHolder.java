@@ -54,28 +54,15 @@ public class DialectHolder {
 	/** Resolves the same version with an isolated TINYINT(1) interpretation. */
 	public static MySql getDialect(final Dialect dialect, final MySqlTinyInt1Mapping mapping) {
 		Objects.requireNonNull(mapping, "mapping");
-		if (!(dialect instanceof MySql current) || !"MySQL".equals(current.getProductName())) throw new IllegalArgumentException("Unexpected dialect: " + dialect);
-		if (current.getTinyInt1Mapping() == mapping) return current;
-		final List<Dialect> original = List.of(
-				mysql900Dialect,
-				mysql840Dialect,
-				mysql8019Dialect,
-				mysql801Dialect,
-				mysql800Dialect,
-				mysql570Dialect,
-				mysql565Dialect,
-				mysql564Dialect,
-				defaultDialect);
-		final List<MySql> numeric = List.of(
-				mysql900DialectNumeric,
-				mysql840DialectNumeric,
-				mysql8019DialectNumeric,
-				mysql801DialectNumeric,
-				mysql800DialectNumeric,
-				mysql570DialectNumeric,
-				mysql565DialectNumeric,
-				mysql564DialectNumeric,
-				defaultDialectNumeric);
+		if (!(dialect instanceof MySql current) || !"MySQL".equals(current.getProductName()))
+			throw new IllegalArgumentException("Unexpected dialect: " + dialect);
+		if (current.getTinyInt1Mapping() == mapping)
+			return current;
+		final List<Dialect> original = List.of(mysql900Dialect, mysql840Dialect, mysql8019Dialect, mysql801Dialect,
+				mysql800Dialect, mysql570Dialect, mysql565Dialect, mysql564Dialect, defaultDialect);
+		final List<MySql> numeric = List.of(mysql900DialectNumeric, mysql840DialectNumeric, mysql8019DialectNumeric,
+				mysql801DialectNumeric, mysql800DialectNumeric, mysql570DialectNumeric, mysql565DialectNumeric,
+				mysql564DialectNumeric, defaultDialectNumeric);
 		for (int i = 0; i < original.size(); i++) {
 			if (original.get(i).getClass() == current.getClass())
 				return mapping == MySqlTinyInt1Mapping.NUMERIC ? numeric.get(i) : (MySql) original.get(i);
