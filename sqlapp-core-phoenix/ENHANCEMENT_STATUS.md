@@ -281,6 +281,11 @@ Gradle outputs; no generated source changes are intentional.
 
 ## Live-server verification still required
 
+On 2026-11-25 the isolated Phoenix 5.3.2 / HBase 2.5.14 probe verified that
+appending a nullable VARCHAR primary-key column preserves an existing row,
+and that nullable CHAR is rejected by the server. It also verified both
+directions of ALTER TABLE SET STORE_NULLS by reading SYSTEM.CATALOG.
+
 On 2026-11-25 an isolated Phoenix 5.3.2 / HBase 2.5.14 container
 verified auto-commit JDBC batch behavior. An UPSERT batch writing two
 family-qualified values returned counts [1, 1]. A later batch with an

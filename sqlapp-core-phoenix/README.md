@@ -5,7 +5,7 @@ identity, including same-name columns in different families. This prevents
 loss during attachment to the shared Schema model, which keys columns by
 simple name. Same-name columns in separate tenants remain separate.
 
-Phoenix 5.3+ table diffs support appending one nullable VARCHAR or sized CHAR column to an
+Phoenix 5.3+ table diffs support appending one nullable VARCHAR column to an
 existing primary key ending in scalar VARCHAR. The table must have no indexes
 and the extension must be the only change. Other key changes continue to
 require a separate migration.
@@ -127,7 +127,8 @@ only on supported catalog versions and emits a validated boolean CREATE option.
 SQL NULL is retained as unknown rather than an inferred flag. Setting it uses
 PhoenixDdlOptions.STORE_NULLS; transaction metadata uses TRANSACTIONAL and
 TRANSACTION_PROVIDER constants. All values use the existing specifics/XML model.
-Changing/removing STORE_NULLS through ALTER remains explicitly unsupported.
+Explicit STORE_NULLS changes on nontransactional tables are supported by
+the 5.3+ dialect. Removal requires an explicit replacement value.
 
 These additions stay in sqlapp-core-phoenix, with additive constants/capabilities
 and no existing signatures, dependencies or XML structure changed. Local tests

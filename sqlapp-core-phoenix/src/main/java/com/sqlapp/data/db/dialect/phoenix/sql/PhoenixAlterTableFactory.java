@@ -31,8 +31,7 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 				.keySet().stream().anyMatch(property -> !SchemaObjectProperties.INDEXES.getLabel().equals(property))))
 			throw new UnsupportedOperationException(
 					"Phoenix table changes alongside a native transactional definition require a separate migration");
-		for (String key : List.of(PhoenixDdlOptions.TRANSACTIONAL, PhoenixDdlOptions.TRANSACTION_PROVIDER,
-				PhoenixDdlOptions.STORE_NULLS)) {
+		for (String key : List.of(PhoenixDdlOptions.TRANSACTIONAL, PhoenixDdlOptions.TRANSACTION_PROVIDER)) {
 			final Object before = key.equals(PhoenixDdlOptions.TRANSACTION_PROVIDER) ? original.getSpecifics().get(key)
 					: PhoenixDdlOptions.booleanValue(original.getSpecifics(), key);
 			final Object after = key.equals(PhoenixDdlOptions.TRANSACTION_PROVIDER) ? target.getSpecifics().get(key)
@@ -41,6 +40,14 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 				throw new UnsupportedOperationException(
 						"Phoenix table property changes require a separate native migration: " + key);
 		}
+		final Boolean storeNulls = PhoenixDdlOptions.booleanValue(target.getSpecifics(), PhoenixDdlOptions.STORE_NULLS);
+		final boolean changeStoreNulls = !java.util.Objects.equals(storeNulls,
+				PhoenixDdlOptions.booleanValue(original.getSpecifics(), PhoenixDdlOptions.STORE_NULLS));
+		if (changeStoreNulls && (storeNulls == null
+				|| !(getDialect() instanceof com.sqlapp.data.db.dialect.phoenix.Phoenix5_3) || Boolean.TRUE.equals(
+						PhoenixDdlOptions.booleanValue(target.getSpecifics(), PhoenixDdlOptions.TRANSACTIONAL))))
+			throw new UnsupportedOperationException(
+					"Phoenix STORE_NULLS ALTER requires an explicit setting on a nontransactional 5.3+ table");
 		final var tuningChanges = new java.util.LinkedHashMap<String, String>();
 		for (String key : List.of(PhoenixDdlOptions.UPDATE_CACHE_FREQUENCY, PhoenixDdlOptions.GUIDE_POSTS_WIDTH)) {
 			final String before = PhoenixDdlOptions.tuningValue(original.getSpecifics(), key, getDialect());
@@ -130,6 +137,12 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 			builder.space()._add("SET IMMUTABLE_ROWS=")._add(immutable ? "TRUE" : "FALSE");
 			add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
 		}
+		if (changeStoreNulls) {
+			final var builder = createSqlBuilder();
+			addAlterObject(target, builder);
+			builder.space()._add("SET STORE_NULLS=")._add(storeNulls ? "TRUE" : "FALSE");
+			add(result, createOperation(builder.toString(), SqlType.ALTER, original, target));
+		}
 		if (changeWal) {
 			final var builder = createSqlBuilder();
 			addAlterObject(target, builder);
@@ -180,9 +193,7 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 	}
 
 	private static boolean isSupportedAppendedKey(Column column) {
-		return column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARCHAR
-				|| (column.getDataType() == com.sqlapp.data.db.datatype.DataType.CHAR && column.getLength() != null
-						&& column.getLength() > 0);
+		return column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARCHAR;
 	}
 
 	private static Object comparableProperty(Table table, String key) {

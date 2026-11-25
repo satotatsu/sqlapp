@@ -102,10 +102,9 @@ class PhoenixTransactionSafetyTest {
 	}
 
 	@Test
-	void rejectsTransactionAndNullStorageChangesButAllowsUnchangedTransactionalTablesToAddColumns() {
+	void rejectsTransactionChangesButAllowsUnchangedTransactionalTablesToAddColumns() {
 		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
-		for (String key : List.of(PhoenixDdlOptions.TRANSACTIONAL, PhoenixDdlOptions.TRANSACTION_PROVIDER,
-				PhoenixDdlOptions.STORE_NULLS)) {
+		for (String key : List.of(PhoenixDdlOptions.TRANSACTIONAL, PhoenixDdlOptions.TRANSACTION_PROVIDER)) {
 			final var original = table();
 			final var target = original.clone();
 			target.getSpecifics().put(key, key.equals(PhoenixDdlOptions.TRANSACTION_PROVIDER) ? "OMID" : "true");
@@ -120,5 +119,23 @@ class PhoenixTransactionSafetyTest {
 		final var target = original.clone();
 		target.getColumns().add(new Column("EXTRA").setDataType(DataType.INT));
 		assertEquals(1, registry.createSql(original.diff(target), SqlType.ALTER).size());
+	}
+
+	@Test
+	void changesStoreNullsInBothDirectionsAndRejectsAmbiguousRemoval() {
+		final var original = table();
+		original.getSpecifics().put(PhoenixDdlOptions.STORE_NULLS, false);
+		final var target = original.clone();
+		target.getSpecifics().put(PhoenixDdlOptions.STORE_NULLS, true);
+		final var registry = DialectHolder.defaultDialect5_3_1.createSqlFactoryRegistry();
+		assertTrue(registry.createSql(original.diff(target), SqlType.ALTER).get(0).getSqlText()
+				.endsWith("SET STORE_NULLS=TRUE"));
+		assertTrue(registry.createSql(target.diff(original), SqlType.ALTER).get(0).getSqlText()
+				.endsWith("SET STORE_NULLS=FALSE"));
+		assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect4_9
+				.createSqlFactoryRegistry().createSql(original.diff(target), SqlType.ALTER));
+		target.getSpecifics().remove(PhoenixDdlOptions.STORE_NULLS);
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
 	}
 }

@@ -24,8 +24,9 @@ class PhoenixNativeDdlTest {
 		assertEquals(1, sql.size());
 		assertEquals("ALTER TABLE EVENTS ADD SUFFIX VARCHAR NULL PRIMARY KEY", sql.get(0).getSqlText());
 		target.getColumns().get("SUFFIX").setDataType(DataType.CHAR).setLength(8);
-		assertEquals("ALTER TABLE EVENTS ADD SUFFIX CHAR(8) NULL PRIMARY KEY",
-				registry.createSql(original.diff(target), SqlType.ALTER).get(0).getSqlText());
+		assertThrows(UnsupportedOperationException.class,
+				() -> registry.createSql(original.diff(target), SqlType.ALTER));
+		target.getColumns().get("SUFFIX").setDataType(DataType.VARCHAR);
 		assertThrows(UnsupportedOperationException.class, () -> DialectHolder.defaultDialect.createSqlFactoryRegistry()
 				.createSql(original.diff(target), SqlType.ALTER));
 		target.getColumns().get("SUFFIX").setNotNull(true);
