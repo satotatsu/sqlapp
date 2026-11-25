@@ -755,7 +755,9 @@ explicitly obtains a definition using SHOW CREATE TABLE and stores it in
 the same model field used for recreation. It requires a global connection
 and a global object. It queries only the selected object, since this
 Phoenix command accepts one object name. The standard bulk readers do not
-invoke it. Mapped views and other complex definitions are unverified.
+invoke it. Mapped HBase views require explicit native DDL. The 5.3.2 extractor
+can return a self-referencing SELECT without the mapped columns, which the
+API rejects. Other complex definitions remain unverified.
 JDBC exposes only client major/minor. Verify that the client and server are
 5.3.2 before using the method.
 

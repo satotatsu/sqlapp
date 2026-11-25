@@ -12,10 +12,11 @@ class PhoenixNativeDefinitionsTest {
 	@Test
 	void storesNativeDdlThroughXmlAndRejectsTenantObjectsBeforeQuerying() throws Exception {
 		final String ddl = "CREATE VIEW \"Sales\".\"View One\" AS SELECT * FROM BASE";
+		final var response = new java.util.concurrent.atomic.AtomicReference<>(ddl);
 		final var calls = new AtomicInteger();
 		final var rows = proxy(ResultSet.class, (method, args) -> switch (method) {
 		case "next" -> calls.getAndIncrement() == 0;
-		case "getString" -> ddl;
+		case "getString" -> response.get();
 		default -> null;
 		});
 		final var statement = proxy(Statement.class, (method, args) -> {
@@ -45,6 +46,14 @@ class PhoenixNativeDefinitionsTest {
 		PhoenixNativeDefinitions.read(connection, view);
 		final View restored = SchemaUtils.readXml(new java.io.StringReader(view.asXml()));
 		assertEquals(ddl, String.join("\n", restored.getDefinition()));
+		calls.set(0);
+		response.set("CREATE VIEW \"Sales\".\"View One\" AS SELECT * FROM \"Sales\".\"View One\"");
+		assertThrows(SQLException.class, () -> PhoenixNativeDefinitions.read(connection, view));
+		assertEquals(ddl, String.join("\n", view.getDefinition()));
+		view.getSpecifics().put("phoenix.viewType", "MAPPED");
+		calls.set(0);
+		assertThrows(UnsupportedOperationException.class, () -> PhoenixNativeDefinitions.read(connection, view));
+		assertEquals(0, calls.get());
 	}
 
 	private static <T> T proxy(Class<T> type, java.util.function.BiFunction<String, Object[], Object> call) {

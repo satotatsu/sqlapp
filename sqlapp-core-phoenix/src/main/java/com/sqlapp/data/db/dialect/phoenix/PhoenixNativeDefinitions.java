@@ -15,12 +15,21 @@ import com.sqlapp.data.schemas.View;
 public final class PhoenixNativeDefinitions {
 	private static final Pattern VIEW = Pattern.compile("(?is)^\\s*CREATE\\s+VIEW\\b");
 	private static final Pattern INDEX = Pattern.compile("(?is)^\\s*CREATE\\s+(?:LOCAL\\s+)?INDEX\\b");
+	private static final Pattern SELF_REFERENCING_VIEW = Pattern
+			.compile("(?is)^\\s*CREATE\\s+VIEW\\s+(.+?)\\s+AS\\s+SELECT\\s+\\*\\s+FROM\\s+\\1\\s*;?\\s*$");
 
 	private PhoenixNativeDefinitions() {
 	}
 
 	public static void read(Connection connection, View view) throws SQLException {
-		view.setDefinition(read(connection, view.getCatalogName(), view.getSchemaName(), view.getName(), VIEW));
+		final String type = view.getSpecifics().get("phoenix.viewType");
+		if ("MAPPED".equalsIgnoreCase(type) || "m".equalsIgnoreCase(type))
+			throw new UnsupportedOperationException("Phoenix mapped views require an explicit native definition");
+		final String ddl = read(connection, view.getCatalogName(), view.getSchemaName(), view.getName(), VIEW);
+		if (SELF_REFERENCING_VIEW.matcher(ddl).matches())
+			throw new SQLException(
+					"Phoenix returned a self-referencing view definition without mapped columns: " + view.getName());
+		view.setDefinition(ddl);
 	}
 
 	public static void read(Connection connection, Index index) throws SQLException {

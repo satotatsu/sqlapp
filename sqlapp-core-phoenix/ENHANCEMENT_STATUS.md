@@ -281,6 +281,14 @@ Gradle outputs; no generated source changes are intentional.
 
 ## Live-server verification still required
 
+On 2026-11-25 an isolated Phoenix 5.3.2 / HBase 2.5.14 container
+verified auto-commit JDBC batch behavior. An UPSERT batch writing two
+family-qualified values returned counts [1, 1]. A later batch with an
+oversized VARCHAR value failed, and both rows from the first batch
+remained readable, with no row for the invalid value. The container probe
+used the Phoenix driver directly. The sqlapp SPI path is covered by mocked
+JDBC tests.
+
 The target for native view and functional-index reconstruction validation is
 Phoenix 5.3.2 with HBase 2.5. The Linux amd64 openEuler image
 `openeuler/phoenix:5.3.2-oe2403sp4` was pulled successfully on 2026-11-22.
@@ -288,7 +296,10 @@ The image was extended locally with Java 11 and HBase 2.5.14. In an isolated
 container, SHOW CREATE TABLE produced executable DDL for an inherited view
 with a declared column and filter, and for a descending function index.
 Both were dropped and recreated from the output and yielded identical DDL.
-This does not establish coverage for mapped views or tenant objects.
+A mapped HBase view was separately tested on 2026-11-25. SHOW CREATE TABLE
+returned a self-referencing SELECT and omitted the mapped column declarations.
+Native extraction rejects mapped views and this incomplete result. Tenant
+objects remain outside the extraction scope.
 
 No Docker/container or external database was used. Mocked JDBC results and
 query-template tests do not execute catalog SQL. A real server is required to
