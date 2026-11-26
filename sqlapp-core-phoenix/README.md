@@ -1,5 +1,12 @@
 # Apache Phoenix dialect enhancement
 
+For HFile loading, Phoenix provides the external
+`org.apache.phoenix.mapreduce.CsvBulkLoadTool`. A local 5.3.2 probe loaded
+CSV into an empty table with `--table`, `--input`, and a fresh `--output`
+directory, then verified the rows over JDBC. Use a matching Hadoop
+MapReduce client and your HBase configuration. This native command runs
+outside sqlapp's JDBC bulk UPSERT API.
+
 Column metadata rejects duplicate column names within one tenant/schema/object
 identity, including same-name columns in different families. This prevents
 loss during attachment to the shared Schema model, which keys columns by
@@ -22,6 +29,10 @@ Use `Phoenix.executeTenantBulkUpsert` to select a DataSource by the table's
 tenant ID. The empty map key represents the global connection. A missing
 mapping, a mismatched connection catalog, or a connection without auto-commit
 fails before SQL preparation. The method closes the connection it acquires.
+For other operations, `Phoenix.withTenantConnection(sources, tenantId, work)`
+uses the same selection and verification. Complete JDBC work inside the callback.
+The callback controls transaction handling and the connection closes on return
+or failure.
 
 Phoenix retains tenant identity in JDBC catalog metadata and Schema XML.
 SQL object names contain the schema and object only. Execute the generated SQL
@@ -34,6 +45,9 @@ requires a separate migration. CREATE rejects a populated `lastValue` because
 silently ignoring it could reuse previously allocated values. For a new
 destination sequence, clear `lastValue` and specify the independently verified
 next value as `startValue`.
+The tested CACHE 10 sequence returned 100, exposed catalog CURRENT_VALUE
+110, and then returned 101. The catalog value describes reserved progress
+and cannot supply the exact next value of an active cached client.
 Sequence allocation honors schema qualification. When a returned first value
 is expanded client-side, expansion fails rather than returning calculated
 values outside known bounds or guessing a cycle boundary.
@@ -97,6 +111,14 @@ No catalog columns, dependencies, public signatures or XML structure changed.
 Live-driver behavior remains unverified.
 
 ## Transaction metadata and null storage safety
+
+Phoenix 5.3.2 rejects in-place conversion from a nontransactional table to
+Omid (error 1093). In the isolated probe, a new Omid table accepted
+`UPSERT INTO destination (ID,VAL) SELECT ID,VAL FROM source`. The copied row
+and the source row were both preserved, and subsequent commit and rollback
+worked on the destination. For an actual migration, coordinate writes to
+the source, verify the copied data and dependencies, and switch consumers
+explicitly. This does not provide atomic cutover or provider conversion.
 
 For an explicitly transactional table, set `phoenix.transactionalDefinition`
 to a trusted, complete CREATE TABLE statement for the destination. On Phoenix

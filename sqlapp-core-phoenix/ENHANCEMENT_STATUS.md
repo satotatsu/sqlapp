@@ -281,6 +281,31 @@ Gradle outputs; no generated source changes are intentional.
 
 ## Live-server verification still required
 
+On 2026-11-26 the Phoenix 5.3.2 isolated sequence-cache probe created
+START WITH 100 INCREMENT BY 1 CACHE 10. After returning 100, the
+SYSTEM.SEQUENCE CURRENT_VALUE was 110 while the next client value was
+101. Catalog CURRENT_VALUE is therefore not used to populate the
+model's lastValue or infer an exact next value for migration.
+
+An isolated Phoenix 5.3.2 / HBase 2.5.14 / Omid 1.1.3 probe verified that
+DELETE and UPSERT can be rolled back together on a transactional table.
+However, when a separate connection inserted a new key after the DELETE
+and before the replacement committed, that row survived along with the
+replacement row. The staged replacement SPI requires a way to exclude
+concurrent writers. Phoenix has no registered provider for that guarantee.
+
+On 2026-11-26 the isolated Phoenix 5.3.2 / HBase 2.5.14 probe loaded two
+CSV rows into an empty table through Phoenix CsvBulkLoadTool and read both
+back through JDBC. The local MapReduce runner required hadoop-mapreduce-
+client-common and hadoop-mapreduce-client-jobclient 3.4.2 ahead of the
+HBase distribution's older MapReduce libraries. This is a native CLI
+probe. There is no sqlapp HFile loader or atomic replacement provider.
+
+The Phoenix 5.3.2 / HBase 2.5.14 / Omid 1.1.3 probe rejected in-place
+conversion to Omid with error 1093. Creating a separate Omid table and
+copying with UPSERT SELECT preserved the source and copied rows. Commit
+and rollback were verified on the new table. Cutover was not performed.
+
 On 2026-11-26 an isolated Phoenix 5.3.2 / HBase 2.5.14 container with an
 Omid 1.1.3 TSO verified transactional table creation and two-connection
 visibility. The observer saw no rows before commit, one row after commit,
@@ -346,6 +371,12 @@ supported versions. Common native DDL targets 4.1+ and the existing 5.3.1 split;
 older syntax/catalog paths are isolated but are not live-certified.
 
 ## Deliberately outside this pass
+
+- TODO (deferred by user): integrate Phoenix HFile loading into sqlapp.
+  CsvBulkLoadTool successfully loaded test CSV through HFiles on Phoenix
+  5.3.2 / HBase 2.5.14. Integration still needs an external loader execution
+  path, explicit Hadoop/HBase configuration, compatible MapReduce libraries,
+  input and temporary-output lifecycle management, and failure/retry reporting.
 
 - General reconstruction of inherited/additional view columns and mapped HBase
   views from VIEW_STATEMENT alone; provide complete CREATE DDL.

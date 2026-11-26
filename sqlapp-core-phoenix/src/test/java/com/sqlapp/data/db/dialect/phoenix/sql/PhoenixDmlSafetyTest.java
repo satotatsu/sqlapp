@@ -113,6 +113,19 @@ class PhoenixDmlSafetyTest {
 		assertEquals(3,
 				phoenix.executeTenantBulkUpsert(java.util.Map.of("tenant-a", dataSource), table, routedOptions));
 		assertTrue(connectionClosed.get());
+		connectionClosed.set(false);
+		assertThrows(IllegalArgumentException.class,
+				() -> phoenix.withTenantConnection(java.util.Map.of("tenant-b", dataSource), "tenant-b",
+						ignored -> fail("Wrong tenant callback ran")));
+		assertTrue(connectionClosed.get());
+		connectionClosed.set(false);
+		final var failure = new java.sql.SQLException("read failed");
+		assertSame(failure, assertThrows(java.sql.SQLException.class,
+				() -> phoenix.withTenantConnection(java.util.Map.of("tenant-a", dataSource), "tenant-a", verified -> {
+					assertSame(connection, verified);
+					throw failure;
+				})));
+		assertTrue(connectionClosed.get());
 	}
 
 	@Test

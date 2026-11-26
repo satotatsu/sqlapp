@@ -38,7 +38,8 @@ public class PhoenixAlterTableFactory extends AlterTableFactory {
 					: PhoenixDdlOptions.booleanValue(target.getSpecifics(), key);
 			if (!java.util.Objects.equals(before, after))
 				throw new UnsupportedOperationException(
-						"Phoenix table property changes require a separate native migration: " + key);
+						"Phoenix transaction mode/provider changes require a separate migration: " + key
+								+ "; for Omid, create a new transactional table, copy and verify the rows before cutover");
 		}
 		final Boolean storeNulls = PhoenixDdlOptions.booleanValue(target.getSpecifics(), PhoenixDdlOptions.STORE_NULLS);
 		final boolean changeStoreNulls = !java.util.Objects.equals(storeNulls,

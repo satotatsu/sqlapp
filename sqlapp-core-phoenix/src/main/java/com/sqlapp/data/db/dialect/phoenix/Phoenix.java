@@ -57,16 +57,34 @@ public class Phoenix extends Dialect {
 	public long executeTenantBulkUpsert(java.util.Map<String, ? extends javax.sql.DataSource> sources,
 			com.sqlapp.data.schemas.Table table, com.sqlapp.jdbc.bulk.BulkUpsertOption options)
 			throws java.sql.SQLException {
-		final String tenant = java.util.Objects.requireNonNullElse(table.getCatalogName(), "");
-		final var source = sources.get(tenant);
-		if (source == null)
-			throw new IllegalArgumentException("No Phoenix data source configured for the table tenant");
-		try (var connection = source.getConnection()) {
-			if (!tenant.equals(java.util.Objects.requireNonNullElse(connection.getCatalog(), "")))
-				throw new IllegalArgumentException("Configured Phoenix connection does not match the table tenant");
+		return withTenantConnection(sources, table.getCatalogName(), connection -> {
 			if (!connection.getAutoCommit())
 				throw new IllegalArgumentException("Routed Phoenix bulk UPSERT requires auto-commit");
 			return com.sqlapp.jdbc.bulk.BulkUpsertResolver.resolve(this).execute(connection, table, options);
+		});
+	}
+
+	@FunctionalInterface
+	public interface TenantConnectionWork<T> {
+		T execute(java.sql.Connection connection) throws java.sql.SQLException;
+	}
+
+	/**
+	 * Runs work on a verified tenant connection selected from the supplied map. A
+	 * null or empty tenant selects the global mapping. Resources obtained from the
+	 * connection must be consumed before the callback returns.
+	 */
+	public <T> T withTenantConnection(java.util.Map<String, ? extends javax.sql.DataSource> sources, String tenantId,
+			TenantConnectionWork<T> work) throws java.sql.SQLException {
+		java.util.Objects.requireNonNull(work, "work");
+		final String tenant = java.util.Objects.requireNonNullElse(tenantId, "");
+		final var source = sources.get(tenant);
+		if (source == null)
+			throw new IllegalArgumentException("No Phoenix data source configured for the requested tenant");
+		try (var connection = source.getConnection()) {
+			if (!tenant.equals(java.util.Objects.requireNonNullElse(connection.getCatalog(), "")))
+				throw new IllegalArgumentException("Configured Phoenix connection does not match the requested tenant");
+			return work.execute(connection);
 		}
 	}
 
