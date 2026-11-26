@@ -26,8 +26,7 @@ public class SpannerObjectPrivilegeReader extends ObjectPrivilegeReader {
 		readPrivileges(connection, getObjectName(context), grants, "TABLE_PRIVILEGES", "TABLE", "TABLE");
 		readPrivileges(connection, getObjectName(context), grants, "CHANGE_STREAM_PRIVILEGES", "CHANGE_STREAM",
 				"CHANGE STREAM");
-		readPrivileges(connection, getObjectName(context), grants, "ROUTINE_PRIVILEGES", "SPECIFIC",
-				"TABLE FUNCTION");
+		readPrivileges(connection, getObjectName(context), grants, "ROUTINE_PRIVILEGES", "SPECIFIC", "TABLE FUNCTION");
 		return grants;
 	}
 
@@ -37,8 +36,8 @@ public class SpannerObjectPrivilegeReader extends ObjectPrivilegeReader {
 		final String nameColumn = prefix + "_NAME";
 		try (var statement = connection.createStatement();
 				var rows = statement.executeQuery("SELECT " + schemaColumn + ", " + nameColumn
-						+ ", PRIVILEGE_TYPE, GRANTEE FROM INFORMATION_SCHEMA." + view + " ORDER BY "
-						+ schemaColumn + ", " + nameColumn + ", PRIVILEGE_TYPE, GRANTEE")) {
+						+ ", PRIVILEGE_TYPE, GRANTEE FROM INFORMATION_SCHEMA." + view + " ORDER BY " + schemaColumn
+						+ ", " + nameColumn + ", PRIVILEGE_TYPE, GRANTEE")) {
 			while (rows.next()) {
 				final String schema = rows.getString(1);
 				final String table = rows.getString(2);
@@ -53,24 +52,25 @@ public class SpannerObjectPrivilegeReader extends ObjectPrivilegeReader {
 		}
 	}
 
-	static ObjectPrivilege toPrivilege(final String schema, final String table, 
-			final String privilege, final String grantee) {
+	static ObjectPrivilege toPrivilege(final String schema, final String table, final String privilege,
+			final String grantee) {
 		return toPrivilege(schema, table, privilege, grantee, "TABLE");
 	}
 
-	static ObjectPrivilege toPrivilege(final String schema, final String table,
-			final String privilege, final String grantee, final String kind) {
+	static ObjectPrivilege toPrivilege(final String schema, final String table, final String privilege,
+			final String grantee, final String kind) {
 		final var supported = switch (kind) {
-			case "CHANGE STREAM" -> List.of("SELECT");
-			case "TABLE FUNCTION" -> List.of("EXECUTE");
-			default -> List.of("SELECT", "INSERT", "UPDATE", "DELETE");
+		case "CHANGE STREAM" -> List.of("SELECT");
+		case "TABLE FUNCTION" -> List.of("EXECUTE");
+		default -> List.of("SELECT", "INSERT", "UPDATE", "DELETE");
 		};
 		if (schema == null || table == null || table.isBlank() || grantee == null || grantee.isBlank()
 				|| privilege == null || !supported.contains(privilege))
 			throw new IllegalArgumentException("Invalid Spanner privilege metadata for " + kind);
 		final var grant = new ObjectPrivilege().setSchemaName(schema).setObjectName(table).setHierachy(false)
 				.setPrivilege(privilege).setGrantee(new Role(grantee));
-		grant.getSpecifics().put(com.sqlapp.data.db.dialect.spanner.sql.SpannerGrantObjectPrivilegeFactory.OBJECT_TYPE, kind);
+		grant.getSpecifics().put(com.sqlapp.data.db.dialect.spanner.sql.SpannerGrantObjectPrivilegeFactory.OBJECT_TYPE,
+				kind);
 		return grant;
 	}
 }

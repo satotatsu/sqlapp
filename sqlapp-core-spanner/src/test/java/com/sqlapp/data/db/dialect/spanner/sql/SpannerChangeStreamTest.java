@@ -23,14 +23,17 @@ class SpannerChangeStreamTest {
 		restored.setDialect(dialect);
 		assertEquals(List.of(all), SpannerChangeStreams.get(restored).orElseThrow());
 		final var registry = dialect.createSqlFactoryRegistry();
-		assertTrue(registry.createSql(original.diff(restored)).getFirst().getSqlText().startsWith("CREATE CHANGE STREAM"));
+		assertTrue(
+				registry.createSql(original.diff(restored)).getFirst().getSqlText().startsWith("CREATE CHANGE STREAM"));
 		final var changed = restored.clone().setDialect(dialect);
-		SpannerChangeStreams.set(changed, List.of(new SpannerChangeStream("Audit", SpannerChangeStream.Scope.NONE,
-				List.of(), all.options())));
+		SpannerChangeStreams.set(changed,
+				List.of(new SpannerChangeStream("Audit", SpannerChangeStream.Scope.NONE, List.of(), all.options())));
 		assertEquals("ALTER CHANGE STREAM `Audit` DROP FOR ALL",
 				registry.createSql(restored.diff(changed)).getFirst().getSqlText());
-		assertTrue(registry.createSql(restored.diff(original)).getFirst().getSqlText().startsWith("DROP CHANGE STREAM"));
-		assertTrue(registry.createSql(restored.diff(new com.sqlapp.data.schemas.Catalog("test-db").setDialect(dialect))).isEmpty());
+		assertTrue(
+				registry.createSql(restored.diff(original)).getFirst().getSqlText().startsWith("DROP CHANGE STREAM"));
+		assertTrue(registry.createSql(restored.diff(new com.sqlapp.data.schemas.Catalog("test-db").setDialect(dialect)))
+				.isEmpty());
 		final var withSchema = target.clone().setDialect(dialect);
 		withSchema.getSchemas().add(new com.sqlapp.data.schemas.Schema("Sales").setDialect(dialect));
 		final var added = registry.createSql(original.diff(withSchema));
@@ -43,10 +46,11 @@ class SpannerChangeStreamTest {
 
 	@Test
 	void distinguishesWholeTablesKeyOnlyAndSelectedColumns() {
-		final var stream = new SpannerChangeStream("Audit", SpannerChangeStream.Scope.TABLES, List.of(
-				new SpannerChangeStream.Target("Sales", "Orders", List.of("Select")),
-				new SpannerChangeStream.Target(null, "Items", List.of()),
-				new SpannerChangeStream.Target(null, "Customers", null)), null);
+		final var stream = new SpannerChangeStream("Audit", SpannerChangeStream.Scope.TABLES,
+				List.of(new SpannerChangeStream.Target("Sales", "Orders", List.of("Select")),
+						new SpannerChangeStream.Target(null, "Items", List.of()),
+						new SpannerChangeStream.Target(null, "Customers", null)),
+				null);
 		assertEquals("CREATE CHANGE STREAM IF NOT EXISTS `Audit` FOR `Sales`.`Orders`(`Select`), "
 				+ "`Items`(), `Customers`", stream.createSql(true));
 		assertEquals("DROP CHANGE STREAM IF EXISTS `Audit`", stream.dropSql(true));
@@ -67,11 +71,11 @@ class SpannerChangeStreamTest {
 
 	@Test
 	void rejectsInvalidIdentifiersAndRetention() {
-		assertThrows(IllegalArgumentException.class, () -> new SpannerChangeStream(
-				"Audit`", SpannerChangeStream.Scope.NONE, List.of(), null));
-		assertThrows(IllegalArgumentException.class, () -> new SpannerChangeStream.Options(
-				Duration.ofHours(1), null, Map.of()));
-		assertThrows(IllegalArgumentException.class, () -> new SpannerChangeStream(
-				"Audit", SpannerChangeStream.Scope.TABLES, List.of(), null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new SpannerChangeStream("Audit`", SpannerChangeStream.Scope.NONE, List.of(), null));
+		assertThrows(IllegalArgumentException.class,
+				() -> new SpannerChangeStream.Options(Duration.ofHours(1), null, Map.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new SpannerChangeStream("Audit", SpannerChangeStream.Scope.TABLES, List.of(), null));
 	}
 }

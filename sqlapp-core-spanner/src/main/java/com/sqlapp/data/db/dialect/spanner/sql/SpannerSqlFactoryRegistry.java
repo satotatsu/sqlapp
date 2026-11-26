@@ -54,12 +54,16 @@ public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(ObjectPrivilege.class, SqlType.REVOKE, SpannerRevokeObjectPrivilegeFactory.class);
 		registerSqlFactory(ObjectPrivilege.class, State.Added, SqlType.GRANT);
 		registerSqlFactory(ObjectPrivilege.class, State.Deleted, SqlType.REVOKE);
-		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.GRANT, SpannerGrantColumnPrivilegeFactory.class);
-		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.REVOKE, SpannerRevokeColumnPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.GRANT,
+				SpannerGrantColumnPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.REVOKE,
+				SpannerRevokeColumnPrivilegeFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, State.Added, SqlType.GRANT);
 		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, State.Deleted, SqlType.REVOKE);
-		registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.GRANT, SpannerGrantSchemaPrivilegeFactory.class);
-		registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.REVOKE, SpannerRevokeSchemaPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.GRANT,
+				SpannerGrantSchemaPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, SqlType.REVOKE,
+				SpannerRevokeSchemaPrivilegeFactory.class);
 		registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, State.Added, SqlType.GRANT);
 		registerSqlFactory(com.sqlapp.data.schemas.SchemaPrivilege.class, State.Deleted, SqlType.REVOKE);
 		registerSqlFactory(Schema.class, SqlType.CREATE, SpannerCreateSchemaFactory.class);

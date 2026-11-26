@@ -25,17 +25,15 @@ class SpannerCreateSchemaFactoryTest {
 		assertEquals(1, statements.size());
 		assertEquals("DROP SCHEMA `Sales`", statements.getFirst().getSqlText());
 		registry.getOptions().setDropIfExists(true);
-		assertEquals("DROP SCHEMA IF EXISTS `Sales`",
-				registry.createSql(schema, SqlType.DROP).getFirst().getSqlText());
-		for (String invalid : new String[] {null, "", " ", "information_schema", "SPANNER_SYS"})
-			assertThrows(IllegalArgumentException.class,
-					() -> registry.createSql(new Schema(invalid), SqlType.DROP));
+		assertEquals("DROP SCHEMA IF EXISTS `Sales`", registry.createSql(schema, SqlType.DROP).getFirst().getSqlText());
+		for (String invalid : new String[] { null, "", " ", "information_schema", "SPANNER_SYS" })
+			assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Schema(invalid), SqlType.DROP));
 	}
 
 	@Test
 	void createsNamedNamespaceBeforeTablesAndSkipsDefaultNamespace() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
-		for (String name : new String[] {null, "", "Sales"}) {
+		for (String name : new String[] { null, "", "Sales" }) {
 			final var schema = new Schema(name);
 			final var table = new Table("Orders");
 			table.getColumns().add(new Column("id").setDataType(DataType.BIGINT));

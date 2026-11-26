@@ -27,8 +27,8 @@ public class SpannerGrantColumnPrivilegeFactory extends SimpleSqlFactory<ColumnP
 	public List<SqlOperation> createSql(final ColumnPrivilege grant) {
 		final String privilege = Objects.toString(grant.getPrivilege(), "").toUpperCase(Locale.ROOT);
 		if (!SUPPORTED.contains(privilege) || grant.isGrantable() || grant.getGrantorName() != null
-				|| grant.getState() != null || (grant.getSpecificName() != null
-						&& !grant.getSpecificName().equals(grant.getTableName())))
+				|| grant.getState() != null
+				|| (grant.getSpecificName() != null && !grant.getSpecificName().equals(grant.getTableName())))
 			throw new UnsupportedOperationException("Unsupported Spanner column privilege or grant options");
 		if (grant.getGrantee() instanceof User || grant.getTableName() == null || grant.getTableName().isBlank()
 				|| grant.getColumnName() == null || grant.getColumnName().isBlank())
@@ -37,9 +37,8 @@ public class SpannerGrantColumnPrivilegeFactory extends SimpleSqlFactory<ColumnP
 		SpannerCreateRoleFactory.requireName(role, false);
 		final var table = new Table(grant.getTableName()).setSchemaName(grant.getSchemaName());
 		final var builder = createSqlBuilder();
-		builder._add(revoke() ? "REVOKE " : "GRANT ")._add(privilege)._add("(")
-				.name(grant.getColumnName())._add(") ON TABLE ").name(table, true)
-				._add(revoke() ? " FROM ROLE " : " TO ROLE ").name(role);
+		builder._add(revoke() ? "REVOKE " : "GRANT ")._add(privilege)._add("(").name(grant.getColumnName())
+				._add(") ON TABLE ").name(table, true)._add(revoke() ? " FROM ROLE " : " TO ROLE ").name(role);
 		return List.of(createOperation(builder.toString(), revoke() ? SqlType.REVOKE : SqlType.GRANT, grant));
 	}
 }

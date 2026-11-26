@@ -74,7 +74,6 @@ public class SpannerDropTableFactory extends AbstractDropTableFactory<SpannerSql
 
 	@Override
 	protected void addDropObject(final Table table, final SpannerSqlBuilder builder) {
-		builder.drop().table().ifExists(getOptions().isDropIfExists())
-				.name(table, getOptions().isDecorateSchemaName());
+		builder.drop().table().ifExists(getOptions().isDropIfExists()).name(table, getOptions().isDecorateSchemaName());
 	}
 }

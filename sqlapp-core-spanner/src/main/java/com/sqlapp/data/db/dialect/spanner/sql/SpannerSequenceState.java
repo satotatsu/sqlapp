@@ -56,7 +56,10 @@ public record SpannerSequenceState(String schema, String name, Long counter) {
 		return List.copyOf(states);
 	}
 
-	/** Projects a sequence for creation in a fresh database. An unused sequence retains its configured start. */
+	/**
+	 * Projects a sequence for creation in a fresh database. An unused sequence
+	 * retains its configured start.
+	 */
 	public Sequence forCreate(final Sequence definition, final long buffer) {
 		final var identity = new SpannerSequenceState(definition.getSchemaName(), definition.getName(), null);
 		if (!qualifiedName().equals(identity.qualifiedName()))

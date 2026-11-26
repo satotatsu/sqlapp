@@ -28,13 +28,13 @@ class SpannerPrimaryKeyMigrationTest {
 		assertEquals("id", source.getPrimaryKeyConstraint().getColumns().getFirst().getName());
 		for (final var key : List.of(List.<String>of(), List.of("id"), List.of("missing"), List.of("code", "code"),
 				List.of("array_value"))) {
-			assertThrows(IllegalArgumentException.class, () ->
-					SpannerPrimaryKeyMigration.plan(source, key, "Stage", "Backup"));
+			assertThrows(IllegalArgumentException.class,
+					() -> SpannerPrimaryKeyMigration.plan(source, key, "Stage", "Backup"));
 		}
 		final var index = new Index("ByCode");
 		index.getColumns().add("code");
 		source.getIndexes().add(index);
-		assertThrows(UnsupportedOperationException.class, () ->
-				SpannerPrimaryKeyMigration.plan(source, List.of("code"), "Stage", "Backup"));
+		assertThrows(UnsupportedOperationException.class,
+				() -> SpannerPrimaryKeyMigration.plan(source, List.of("code"), "Stage", "Backup"));
 	}
 }

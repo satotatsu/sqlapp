@@ -101,8 +101,8 @@ public class SpannerCatalogReader extends CatalogReader {
 	@Override
 	protected void setMetadataDetail(final Connection connection, final Catalog catalog) throws java.sql.SQLException {
 		super.setMetadataDetail(connection, catalog);
-		new SpannerChangeStreamReader().readIfSupported(connection).ifPresent(streams ->
-				com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStreams.set(catalog, streams));
+		new SpannerChangeStreamReader().readIfSupported(connection).ifPresent(
+				streams -> com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStreams.set(catalog, streams));
 	}
 
 	@Override

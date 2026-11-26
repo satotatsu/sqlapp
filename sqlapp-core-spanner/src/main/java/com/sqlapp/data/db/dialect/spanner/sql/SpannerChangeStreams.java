@@ -10,7 +10,9 @@ import java.util.TreeMap;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.util.JsonConverter;
 
-/** Stores typed stream definitions in the existing Catalog XML extension data. */
+/**
+ * Stores typed stream definitions in the existing Catalog XML extension data.
+ */
 public final class SpannerChangeStreams {
 	static final String KEY = "SPANNER_CHANGE_STREAMS";
 

@@ -60,7 +60,8 @@ public class SpannerSequenceReader extends SequenceReader {
 		final var states = captureStates(connection, sequences);
 		for (int index = 0; index < sequences.size(); index++) {
 			final Long counter = states.get(index).counter();
-			// The model describes the next counter after the observed state, before bit reversal.
+			// The model describes the next counter after the observed state, before bit
+			// reversal.
 			if (counter != null)
 				sequences.get(index).setLastValue(BigInteger.valueOf(counter).add(BigInteger.ONE));
 		}

@@ -29,6 +29,7 @@ class SpannerCreateSequenceFactoryTest extends SpannerSqlFactoryTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> sqlFactoryRegistry.createSql(new Sequence(" "), SqlType.DROP));
 	}
+
 	@Test
 	void validatesStartCounterInt64Boundary() {
 		final var maximum = BigInteger.valueOf(Long.MAX_VALUE);

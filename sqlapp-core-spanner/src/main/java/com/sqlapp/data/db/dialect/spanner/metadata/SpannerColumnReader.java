@@ -165,8 +165,8 @@ public class SpannerColumnReader extends ColumnReader {
 			throw new IllegalArgumentException("Conflicting Spanner vector lengths for " + column.getName());
 		if (column.getArrayDimension() != 1
 				|| (column.getDataType() != DataType.REAL && column.getDataType() != DataType.DOUBLE))
-			throw new IllegalArgumentException("Spanner vector_length requires a FLOAT32 or FLOAT64 array: "
-					+ column.getName());
+			throw new IllegalArgumentException(
+					"Spanner vector_length requires a FLOAT32 or FLOAT64 array: " + column.getName());
 		column.getSpecifics().put(SpannerSqlBuilder.VECTOR_LENGTH, length);
 	}
 

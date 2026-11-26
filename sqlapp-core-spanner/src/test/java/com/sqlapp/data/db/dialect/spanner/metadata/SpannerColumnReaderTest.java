@@ -115,8 +115,8 @@ class SpannerColumnReaderTest {
 		reader.doGetAll(null, new ParametersContext(), null).forEach(table.getColumns()::add);
 		assertEquals(1, reader.queries);
 		final Table restored = SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
-		final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry()
-				.createSql(restored, SqlType.CREATE).get(0).getSqlText();
+		final String sql = DialectHolder.defaultDialect.createSqlFactoryRegistry().createSql(restored, SqlType.CREATE)
+				.get(0).getSqlText();
 		assertTrue(sql.contains("ARRAY<FLOAT32> (vector_length=>3)"), sql);
 		assertTrue(sql.contains("ARRAY<FLOAT64> (vector_length=>5)"), sql);
 	}

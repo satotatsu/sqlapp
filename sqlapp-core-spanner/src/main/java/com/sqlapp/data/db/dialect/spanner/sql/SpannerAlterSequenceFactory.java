@@ -32,13 +32,15 @@ public class SpannerAlterSequenceFactory extends SimpleAlterSqlFactory<Sequence,
 					&& !SpannerCreateSequenceFactory.SKIP_RANGE_MAX.equalsIgnoreCase(property)
 					&& !SEQUENCE_DDL_STYLE.equalsIgnoreCase(property)
 					&& !RESTART_COUNTER_WITH.equalsIgnoreCase(property)) {
-				throw new UnsupportedOperationException("Spanner sequence change requires a separate migration: " + property);
+				throw new UnsupportedOperationException(
+						"Spanner sequence change requires a separate migration: " + property);
 			}
 		}
 		final String originalStyle = original.getSpecifics().get(SEQUENCE_DDL_STYLE);
 		final String targetStyle = target.getSpecifics().get(SEQUENCE_DDL_STYLE);
 		if (originalStyle != null && targetStyle != null && !originalStyle.equalsIgnoreCase(targetStyle))
-			throw new IllegalArgumentException("Spanner sequence ALTER requires the original DDL style: " + target.getName());
+			throw new IllegalArgumentException(
+					"Spanner sequence ALTER requires the original DDL style: " + target.getName());
 		final boolean rangeChanged = changes.containsKey(SpannerCreateSequenceFactory.SKIP_RANGE_MIN)
 				|| changes.containsKey(SpannerCreateSequenceFactory.SKIP_RANGE_MAX);
 		final boolean restart = changes.containsKey(RESTART_COUNTER_WITH);
@@ -57,8 +59,9 @@ public class SpannerAlterSequenceFactory extends SimpleAlterSqlFactory<Sequence,
 			throw new IllegalArgumentException("Set Spanner SEQUENCE_DDL_STYLE to CLAUSES or OPTIONS for "
 					+ sequence.getName() + " based on how the existing sequence was created");
 		final var range = SpannerCreateSequenceFactory.skipRange(sequence);
-		final Long counter = restart ? SpannerCounterRestart.value(sequence.getSpecifics().get(RESTART_COUNTER_WITH),
-				sequence.getName()) : null;
+		final Long counter = restart
+				? SpannerCounterRestart.value(sequence.getSpecifics().get(RESTART_COUNTER_WITH), sequence.getName())
+				: null;
 		builder.alter().sequence().name(sequence, getOptions().isDecorateSchemaName()).space();
 		if ("OPTIONS".equalsIgnoreCase(style)) {
 			builder._add("SET OPTIONS (");

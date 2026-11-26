@@ -17,7 +17,10 @@ import java.util.regex.Pattern;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerChangeStream.*;
 
-/** Reads visible GoogleSQL change stream definitions with a fixed number of catalog queries. */
+/**
+ * Reads visible GoogleSQL change stream definitions with a fixed number of
+ * catalog queries.
+ */
 public final class SpannerChangeStreamReader {
 	private static final Pattern RETENTION = Pattern.compile("([0-9]+)([smhd])");
 
@@ -30,10 +33,10 @@ public final class SpannerChangeStreamReader {
 		try {
 			query(connection, "SELECT CHANGE_STREAM_NAME, `ALL` FROM INFORMATION_SCHEMA.CHANGE_STREAMS "
 					+ "ORDER BY CHANGE_STREAM_NAME", rows -> {
-				final String name = rows.getString(1);
-				if (streams.putIfAbsent(name, new Definition(flag(rows, 2))) != null)
-					throw new SQLException("Duplicate Spanner change stream: " + name);
-			});
+						final String name = rows.getString(1);
+						if (streams.putIfAbsent(name, new Definition(flag(rows, 2))) != null)
+							throw new SQLException("Duplicate Spanner change stream: " + name);
+					});
 		} catch (SQLException exception) {
 			if (SpannerRoleReader.isMissingCatalogTable(exception, "CHANGE_STREAMS"))
 				return Optional.empty();
@@ -45,7 +48,8 @@ public final class SpannerChangeStreamReader {
 				+ "FROM INFORMATION_SCHEMA.CHANGE_STREAM_TABLES ORDER BY CHANGE_STREAM_NAME, TABLE_SCHEMA, TABLE_NAME",
 				rows -> {
 					final var definition = definition(streams, rows);
-					if (definition.all || definition.targets.putIfAbsent(table(rows), new WatchedTable(flag(rows, 4))) != null)
+					if (definition.all
+							|| definition.targets.putIfAbsent(table(rows), new WatchedTable(flag(rows, 4))) != null)
 						throw new SQLException("Conflicting Spanner change stream table metadata");
 				});
 		query(connection, """
@@ -63,8 +67,9 @@ public final class SpannerChangeStreamReader {
 				throw new SQLException("Unexpected Spanner change stream column metadata");
 			watched.columns.add(rows.getString(4));
 		});
-		query(connection, "SELECT CHANGE_STREAM_NAME, OPTION_NAME, OPTION_VALUE "
-				+ "FROM INFORMATION_SCHEMA.CHANGE_STREAM_OPTIONS ORDER BY CHANGE_STREAM_NAME, OPTION_NAME",
+		query(connection,
+				"SELECT CHANGE_STREAM_NAME, OPTION_NAME, OPTION_VALUE "
+						+ "FROM INFORMATION_SCHEMA.CHANGE_STREAM_OPTIONS ORDER BY CHANGE_STREAM_NAME, OPTION_NAME",
 				rows -> definition(streams, rows).option(rows.getString(2), rows.getString(3)));
 		return Optional.of(streams.entrySet().stream().map(entry -> entry.getValue().build(entry.getKey())).toList());
 	}
@@ -76,7 +81,8 @@ public final class SpannerChangeStreamReader {
 		return value;
 	}
 
-	private static Definition definition(final Map<String, Definition> streams, final ResultSet rows) throws SQLException {
+	private static Definition definition(final Map<String, Definition> streams, final ResultSet rows)
+			throws SQLException {
 		final var definition = streams.get(rows.getString(1));
 		if (definition == null)
 			throw new SQLException("Change stream metadata refers to an unknown stream");
@@ -87,7 +93,8 @@ public final class SpannerChangeStreamReader {
 		return new TableName(rows.getString(2), rows.getString(3));
 	}
 
-	private record TableName(String schema, String name) {}
+	private record TableName(String schema, String name) {
+	}
 
 	private static final class WatchedTable {
 		private final boolean all;
@@ -115,14 +122,14 @@ public final class SpannerChangeStreamReader {
 			final String value = literal.replaceAll("^(['\"])(.*)\\1$", "$2");
 			try {
 				switch (name.toLowerCase(Locale.ROOT)) {
-					case "retention_period" -> retention = retention(value);
-					case "value_capture_type" -> capture = Capture.valueOf(value);
-					default -> {
-						final var filter = Filter.valueOf(name.toUpperCase(Locale.ROOT));
-						if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
-							throw new IllegalArgumentException("Expected a boolean filter");
-						filters.put(filter, Boolean.valueOf(value));
-					}
+				case "retention_period" -> retention = retention(value);
+				case "value_capture_type" -> capture = Capture.valueOf(value);
+				default -> {
+					final var filter = Filter.valueOf(name.toUpperCase(Locale.ROOT));
+					if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
+						throw new IllegalArgumentException("Expected a boolean filter");
+					filters.put(filter, Boolean.valueOf(value));
+				}
 				}
 			} catch (IllegalArgumentException | ArithmeticException exception) {
 				throw new SQLException("Unsupported Spanner change stream option: " + name + "=" + literal, exception);
@@ -143,10 +150,10 @@ public final class SpannerChangeStreamReader {
 			throw new IllegalArgumentException("Invalid change stream retention: " + text);
 		final long amount = Long.parseLong(matcher.group(1));
 		return switch (matcher.group(2)) {
-			case "d" -> Duration.ofDays(amount);
-			case "h" -> Duration.ofHours(amount);
-			case "m" -> Duration.ofMinutes(amount);
-			default -> Duration.ofSeconds(amount);
+		case "d" -> Duration.ofDays(amount);
+		case "h" -> Duration.ofHours(amount);
+		case "m" -> Duration.ofMinutes(amount);
+		default -> Duration.ofSeconds(amount);
 		};
 	}
 
@@ -155,7 +162,8 @@ public final class SpannerChangeStreamReader {
 		void accept(ResultSet rows) throws SQLException;
 	}
 
-	private static void query(final Connection connection, final String sql, final RowConsumer consumer) throws SQLException {
+	private static void query(final Connection connection, final String sql, final RowConsumer consumer)
+			throws SQLException {
 		try (var statement = connection.createStatement(); var rows = statement.executeQuery(sql)) {
 			while (rows.next())
 				consumer.accept(rows);

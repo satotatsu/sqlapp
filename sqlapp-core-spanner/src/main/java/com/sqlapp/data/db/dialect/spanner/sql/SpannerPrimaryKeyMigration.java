@@ -23,7 +23,10 @@ public final class SpannerPrimaryKeyMigration {
 	private SpannerPrimaryKeyMigration() {
 	}
 
-	/** Execute in order with source writes paused, and require matching counts before cutover. */
+	/**
+	 * Execute in order with source writes paused, and require matching counts
+	 * before cutover.
+	 */
 	public record Plan(String createSql, String copySql, String countSql, String cutoverSql) {
 	}
 
@@ -43,7 +46,10 @@ public final class SpannerPrimaryKeyMigration {
 			foreignKeys = List.copyOf(foreignKeys);
 		}
 
-		/** Execute in order after verifying the copied rows, with applications still paused. */
+		/**
+		 * Execute in order after verifying the copied rows, with applications still
+		 * paused.
+		 */
 		public List<String> cutoverStatements() {
 			final var statements = new ArrayList<String>();
 			for (final var foreignKey : foreignKeys)
@@ -61,15 +67,18 @@ public final class SpannerPrimaryKeyMigration {
 
 	/**
 	 * Plans replacement while preserving ordinary user indexes, named CHECK
-	 * constraints and modeled foreign keys. Keep applications paused through
-	 * the moves and rename.
+	 * constraints and modeled foreign keys. Keep applications paused through the
+	 * moves and rename.
 	 */
 	public static ReplacementPlan planWithDependencies(final Table source, final List<String> primaryKey,
 			final String stagingName, final String backupName) {
 		return planWithDependencies(source, primaryKey, stagingName, backupName, List.of());
 	}
 
-	/** Supply referencing tables outside the source schema if they are not resolved in the model. */
+	/**
+	 * Supply referencing tables outside the source schema if they are not resolved
+	 * in the model.
+	 */
 	public static ReplacementPlan planWithDependencies(final Table source, final List<String> primaryKey,
 			final String stagingName, final String backupName, final List<Table> referencingTables) {
 		final Plan table = plan(source, primaryKey, stagingName, backupName, true);
@@ -83,19 +92,20 @@ public final class SpannerPrimaryKeyMigration {
 		final var moves = new ArrayList<DependencyMove>();
 		final var foreignKeys = new ArrayList<ForeignKeyMove>();
 		for (final var index : source.getIndexes()) {
-			if (SpannerIndexValidation.isManaged(index)
-					&& (!inbound.isEmpty()
-							|| source.getConstraints().stream().anyMatch(ForeignKeyConstraint.class::isInstance)))
+			if (SpannerIndexValidation.isManaged(index) && (!inbound.isEmpty()
+					|| source.getConstraints().stream().anyMatch(ForeignKeyConstraint.class::isInstance)))
 				continue;
 			SpannerIndexValidation.requireStandaloneIndex(index);
 			if (index.getIndexType() != null && index.getIndexType() != IndexType.BTree
 					|| index.getSpecifics().get(SpannerCreateIndexFactory.PARENT_TABLE_NAME) != null)
-				throw new UnsupportedOperationException("Spanner primary-key replacement requires an ordinary index: "
-						+ index.getName());
+				throw new UnsupportedOperationException(
+						"Spanner primary-key replacement requires an ordinary index: " + index.getName());
 			final String drop = registry.createSql(index, SqlType.DROP).getFirst().getSqlText();
-			moves.add(new DependencyMove(drop,
-					registry.createSql(staging.getIndexes().get(index.getName()), SqlType.CREATE).getFirst().getSqlText(),
-					drop, registry.createSql(index, SqlType.CREATE).getFirst().getSqlText()));
+			moves.add(
+					new DependencyMove(drop,
+							registry.createSql(staging.getIndexes().get(index.getName()), SqlType.CREATE).getFirst()
+									.getSqlText(),
+							drop, registry.createSql(index, SqlType.CREATE).getFirst().getSqlText()));
 		}
 		for (final var constraint : source.getConstraints()) {
 			if (constraint instanceof ForeignKeyConstraint key) {
@@ -126,11 +136,12 @@ public final class SpannerPrimaryKeyMigration {
 		if (source.getSchema() != null)
 			tables.addAll(source.getSchema().getTables());
 		for (final var table : tables) {
-			if (Objects.toString(source.getSchemaName(), "").equalsIgnoreCase(Objects.toString(table.getSchemaName(), ""))
-					&& source.getName().equalsIgnoreCase(
-							table.getSpecifics().get(SpannerCreateTableFactory.PARENT_TABLE_NAME)))
-				throw new UnsupportedOperationException("Spanner migration cannot replace an interleave parent: "
-						+ source.getName());
+			if (Objects.toString(source.getSchemaName(), "")
+					.equalsIgnoreCase(Objects.toString(table.getSchemaName(), ""))
+					&& source.getName()
+							.equalsIgnoreCase(table.getSpecifics().get(SpannerCreateTableFactory.PARENT_TABLE_NAME)))
+				throw new UnsupportedOperationException(
+						"Spanner migration cannot replace an interleave parent: " + source.getName());
 			for (final var constraint : table.getConstraints())
 				if (constraint instanceof ForeignKeyConstraint key && references(source, key))
 					candidates.add(key);
@@ -141,8 +152,9 @@ public final class SpannerPrimaryKeyMigration {
 			if (owner == null || key.getName() == null || key.getName().isBlank())
 				throw new IllegalArgumentException("Spanner migration requires a named foreign key and its owner");
 			if (!qualifiedName(source).equalsIgnoreCase(qualifiedName(owner)))
-				inbound.putIfAbsent(List.of(qualifiedName(owner).toLowerCase(Locale.ROOT),
-						key.getName().toLowerCase(Locale.ROOT)), key);
+				inbound.putIfAbsent(
+						List.of(qualifiedName(owner).toLowerCase(Locale.ROOT), key.getName().toLowerCase(Locale.ROOT)),
+						key);
 		}
 		return List.copyOf(inbound.values());
 	}
@@ -156,14 +168,15 @@ public final class SpannerPrimaryKeyMigration {
 	private static void requireReferencedKey(final Table source, final List<String> primaryKey,
 			final ForeignKeyConstraint foreignKey) {
 		final var referenced = foreignKey.getRelatedColumns().stream().map(AbstractNamedObject::getName).toList();
-		if (referenced.equals(primaryKey) || source.getIndexes().stream().anyMatch(index -> index.isUnique()
-				&& !SpannerIndexValidation.isManaged(index)
-				&& !Boolean.TRUE.equals(index.getSpecifics().get(SpannerCreateIndexFactory.IS_NULL_FILTERED, Boolean.class))
-				&& (index.getWhere() == null || index.getWhere().isBlank())
-				&& referenced.equals(index.getColumns().stream().map(AbstractNamedObject::getName).toList())))
+		if (referenced.equals(primaryKey) || source.getIndexes().stream()
+				.anyMatch(index -> index.isUnique() && !SpannerIndexValidation.isManaged(index)
+						&& !Boolean.TRUE.equals(
+								index.getSpecifics().get(SpannerCreateIndexFactory.IS_NULL_FILTERED, Boolean.class))
+						&& (index.getWhere() == null || index.getWhere().isBlank())
+						&& referenced.equals(index.getColumns().stream().map(AbstractNamedObject::getName).toList())))
 			return;
-		throw new IllegalArgumentException("Keep a unique key on " + referenced + " for Spanner foreign key "
-				+ foreignKey.getName());
+		throw new IllegalArgumentException(
+				"Keep a unique key on " + referenced + " for Spanner foreign key " + foreignKey.getName());
 	}
 
 	private static ForeignKeyMove foreignKeyMove(final SqlFactoryRegistry registry, final Table owner,
@@ -176,7 +189,8 @@ public final class SpannerPrimaryKeyMigration {
 
 	/**
 	 * Builds an explicit plan and retains the original under backupName. The caller
-	 * must verify that both new names are free and no external objects depend on the table.
+	 * must verify that both new names are free and no external objects depend on
+	 * the table.
 	 */
 	public static Plan plan(final Table source, final List<String> primaryKey, final String stagingName,
 			final String backupName) {
@@ -194,15 +208,16 @@ public final class SpannerPrimaryKeyMigration {
 		final var oldKey = source.getPrimaryKeyConstraint();
 		if (oldKey == null || (!moveDependencies && !source.getIndexes().isEmpty())
 				|| (!moveDependencies && !source.getChildRelations().isEmpty())
-				|| source.getConstraints().stream().anyMatch(constraint -> constraint != oldKey
-						&& (!moveDependencies || (!(constraint instanceof CheckConstraint)
-								&& !(constraint instanceof ForeignKeyConstraint key && key.getRelatedTableName() != null))
-								|| constraint.getName() == null || constraint.getName().isBlank()))
+				|| source.getConstraints().stream().anyMatch(constraint -> constraint != oldKey && (!moveDependencies
+						|| (!(constraint instanceof CheckConstraint) && !(constraint instanceof ForeignKeyConstraint key
+								&& key.getRelatedTableName() != null))
+						|| constraint.getName() == null || constraint.getName().isBlank()))
 				|| source.getSpecifics().get(SpannerCreateTableFactory.PARENT_TABLE_NAME) != null
 				|| source.getSpecifics().get(SpannerCreateTableFactory.ROW_DELETION_POLICY_EXPRESSION) != null
 				|| source.getColumns().stream().anyMatch(column -> column.isIdentity() || column.isHidden()
 						|| column.getFormula() != null && !column.getFormula().isBlank()))
-			throw new UnsupportedOperationException("Spanner primary-key replacement requires a plain independent table");
+			throw new UnsupportedOperationException(
+					"Spanner primary-key replacement requires a plain independent table");
 
 		final var replacement = source.clone().setName(stagingName);
 		replacement.getIndexes().clear();
@@ -215,7 +230,8 @@ public final class SpannerPrimaryKeyMigration {
 				throw new IllegalArgumentException("Spanner replacement key requires an existing scalar: " + name);
 			column.setNotNull(true);
 		}
-		if (primaryKey.isEmpty() || oldKey.getColumns().stream().map(column -> column.getName()).toList().equals(primaryKey))
+		if (primaryKey.isEmpty()
+				|| oldKey.getColumns().stream().map(column -> column.getName()).toList().equals(primaryKey))
 			throw new IllegalArgumentException("Specify a different nonempty Spanner primary key");
 		replacement.getConstraints().clear();
 		replacement.getConstraints().addPrimaryKeyConstraint(oldKey.getName(), primaryKey.toArray(String[]::new));
@@ -229,8 +245,8 @@ public final class SpannerPrimaryKeyMigration {
 			columns.add(DialectHolder.defaultDialect.createSqlBuilder().name(column).toString());
 		return new Plan(create, "INSERT INTO " + staging + " (" + columns + ") SELECT " + columns + " FROM " + original,
 				"SELECT (SELECT COUNT(*) FROM " + original + "), (SELECT COUNT(*) FROM " + staging + ")",
-				"RENAME TABLE " + renameName(source, source.getName()) + " TO " + renameName(source, backupName)
-						+ ", " + renameName(source, stagingName) + " TO " + renameName(source, source.getName()));
+				"RENAME TABLE " + renameName(source, source.getName()) + " TO " + renameName(source, backupName) + ", "
+						+ renameName(source, stagingName) + " TO " + renameName(source, source.getName()));
 	}
 
 	private static String qualifiedName(final Table table) {

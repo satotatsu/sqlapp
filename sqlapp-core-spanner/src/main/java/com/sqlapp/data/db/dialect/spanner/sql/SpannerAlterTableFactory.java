@@ -32,8 +32,8 @@ import com.sqlapp.util.CommonUtils;
  */
 public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerSqlBuilder> {
 	public static final String IDENTITY_RESTART_COUNTER_WITH = "IDENTITY_RESTART_COUNTER_WITH";
-	private static final Pattern COMMIT_TIMESTAMP_EXPRESSION = Pattern.compile(
-			"\\s*PENDING_COMMIT_TIMESTAMP\\s*\\(\\s*\\)\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern COMMIT_TIMESTAMP_EXPRESSION = Pattern
+			.compile("\\s*PENDING_COMMIT_TIMESTAMP\\s*\\(\\s*\\)\\s*", Pattern.CASE_INSENSITIVE);
 	private static final List<String> MUTABLE_TABLE_OPTIONS = List.of(SpannerCreateTableFactory.LOCALITY_GROUP,
 			SpannerCreateTableFactory.COLUMNAR_POLICY, SpannerCreateTableFactory.FULLTEXT_DICTIONARY_STALENESS);
 
@@ -43,8 +43,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		if (changed.containsKey(SchemaProperties.NAME.getLabel())) {
 			final var original = difference.getOriginal(Table.class);
 			final var target = difference.getTarget(Table.class);
-			if (original.getName() == null || original.getName().isBlank()
-					|| target.getName() == null || target.getName().isBlank())
+			if (original.getName() == null || original.getName().isBlank() || target.getName() == null
+					|| target.getName().isBlank())
 				throw new IllegalArgumentException("Spanner table rename requires original and target names");
 			// Owned indexes expose the enclosing table's name. Normalize it on a
 			// clone so those derived changes do not look like structural changes.
@@ -59,16 +59,16 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 			}
 			final var structuralChanges = original.diff(normalized).toDifference().getChangedProperties(getDialect());
 			if (!structuralChanges.isEmpty())
-				throw new UnsupportedOperationException("Spanner table rename requires a separate migration: "
-						+ structuralChanges.keySet());
+				throw new UnsupportedOperationException(
+						"Spanner table rename requires a separate migration: " + structuralChanges.keySet());
 			final var builder = createSqlBuilder();
-			builder.alter().table().name(original, getOptions().isDecorateSchemaName()).space()
-					._add("RENAME TO ").name(target, getOptions().isDecorateSchemaName());
+			builder.alter().table().name(original, getOptions().isDecorateSchemaName()).space()._add("RENAME TO ")
+					.name(target, getOptions().isDecorateSchemaName());
 			return List.of(createOperation(builder.toString(), SqlType.ALTER, original, target));
 		}
 		if (changed.containsKey(SpannerCreateTableFactory.INTERLEAVE_TYPE)) {
-			if (changed.keySet().stream().anyMatch(property ->
-					!SpannerCreateTableFactory.INTERLEAVE_TYPE.equalsIgnoreCase(property)
+			if (changed.keySet().stream()
+					.anyMatch(property -> !SpannerCreateTableFactory.INTERLEAVE_TYPE.equalsIgnoreCase(property)
 							&& !SpannerCreateTableFactory.ON_DELETE_ACTION.equalsIgnoreCase(property))) {
 				throw new UnsupportedOperationException(
 						"Spanner SET INTERLEAVE requires the same parent and a separate migration");
@@ -79,7 +79,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 			if (changed.size() != 1)
 				throw new UnsupportedOperationException(
 						"Spanner INTERLEAVE ON DELETE and other table changes require separate migrations");
-			return createInterleaveDeleteActionChange(difference.getOriginal(Table.class), difference.getTarget(Table.class));
+			return createInterleaveDeleteActionChange(difference.getOriginal(Table.class),
+					difference.getTarget(Table.class));
 		}
 		final var original = difference.getOriginal(Table.class);
 		final var table = difference.getTarget(Table.class);
@@ -87,10 +88,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		final boolean columnsChanged = changed.containsKey(SchemaObjectProperties.COLUMNS.getLabel());
 		final String ttlBefore = ttlChanged ? SpannerRowDeletionPolicy.expression(original) : null;
 		final String ttlAfter = ttlChanged || columnsChanged ? SpannerRowDeletionPolicy.expression(table) : null;
-		if (ttlChanged && changed.size() > 1
-				&& (!columnsChanged || changed.size() != 2)) {
-			throw new UnsupportedOperationException(
-					"Spanner TTL can only be combined with column changes");
+		if (ttlChanged && changed.size() > 1 && (!columnsChanged || changed.size() != 2)) {
+			throw new UnsupportedOperationException("Spanner TTL can only be combined with column changes");
 		}
 		if (columnsChanged && ttlBefore != null && ttlAfter != null)
 			SpannerRowDeletionPolicy.expression(table, ttlBefore);
@@ -142,8 +141,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 
 	private boolean isSelfReference(final ForeignKeyConstraint constraint, final Table table) {
 		return table.getName().equalsIgnoreCase(constraint.getRelatedTableName())
-				&& Objects.toString(table.getSchemaName(), "").equalsIgnoreCase(
-						Objects.toString(constraint.getRelatedTableSchemaName(), ""));
+				&& Objects.toString(table.getSchemaName(), "")
+						.equalsIgnoreCase(Objects.toString(constraint.getRelatedTableSchemaName(), ""));
 	}
 
 	private void addRowDeletionPolicyChange(final Table original, final Table table, final String before,
@@ -168,8 +167,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 			throw new IllegalArgumentException("Spanner SET INTERLEAVE requires a table name");
 
 		final var builder = createSqlBuilder();
-		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).space()
-				._add("SET INTERLEAVE ")._add(after).space()
+		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).space()._add("SET INTERLEAVE ")
+				._add(after).space()
 				.name(SpannerCreateTableFactory.interleaveParent(table), getOptions().isDecorateSchemaName());
 		if ("IN".equals(after))
 			return List.of(createOperation(builder.toString(), SqlType.ALTER, original, table));
@@ -190,8 +189,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 	private List<SqlOperation> createInterleaveDeleteActionChange(final Table original, final Table table) {
 		if (!"IN PARENT".equals(SpannerCreateTableFactory.interleaveType(original))
 				|| !"IN PARENT".equals(SpannerCreateTableFactory.interleaveType(table))) {
-			throw new UnsupportedOperationException("Spanner SET ON DELETE requires an existing INTERLEAVE IN PARENT: "
-					+ table.getName());
+			throw new UnsupportedOperationException(
+					"Spanner SET ON DELETE requires an existing INTERLEAVE IN PARENT: " + table.getName());
 		}
 		final String action = SpannerCreateTableFactory.interleaveDeleteAction(table);
 		if (action.equals(SpannerCreateTableFactory.interleaveDeleteAction(original)))
@@ -199,8 +198,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		if (table.getName() == null || table.getName().isBlank())
 			throw new IllegalArgumentException("Spanner SET ON DELETE requires a table name");
 		final var builder = createSqlBuilder();
-		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).space()
-				._add("SET ON DELETE ")._add(action);
+		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).space()._add("SET ON DELETE ")
+				._add(action);
 		return List.of(createOperation(builder.toString(), SqlType.ALTER, original, table));
 	}
 
@@ -248,7 +247,8 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 	}
 
 	private boolean changesOnlyStoredColumns(final DbObjectDifference difference) {
-		// The supported emulator accepts CREATE SEARCH INDEX but not ALTER SEARCH INDEX.
+		// The supported emulator accepts CREATE SEARCH INDEX but not ALTER SEARCH
+		// INDEX.
 		if (difference.getState() != State.Modified
 				|| difference.getOriginal(Index.class).getIndexType() == IndexType.FullText)
 			return false;
@@ -264,17 +264,16 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		return changes.size() == 1 && changes.containsKey(SpannerCreateIndexFactory.DISABLE_SEARCH);
 	}
 
-	private void addVectorSearchOptionChange(final Index original, final Index index,
-			final List<SqlOperation> result) {
+	private void addVectorSearchOptionChange(final Index original, final Index index, final List<SqlOperation> result) {
 		SpannerIndexValidation.requireStandaloneIndex(original);
 		SpannerIndexValidation.requireStandaloneIndex(index);
 		final String value = index.getSpecifics().get(SpannerCreateIndexFactory.DISABLE_SEARCH);
 		if (value != null && !"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
 			throw new IllegalArgumentException("Spanner DISABLE_SEARCH requires true or false: " + value);
 		final var builder = createSqlBuilder();
-		builder.alter().space()._add("VECTOR").index().name(index, getOptions().isDecorateSchemaName())
-				.space()._add("SET OPTIONS (disable_search = ")
-				._add(value == null ? "NULL" : value.toLowerCase(Locale.ROOT))._add(")");
+		builder.alter().space()._add("VECTOR").index().name(index, getOptions().isDecorateSchemaName()).space()
+				._add("SET OPTIONS (disable_search = ")._add(value == null ? "NULL" : value.toLowerCase(Locale.ROOT))
+				._add(")");
 		add(result, createOperation(builder.toString(), SqlType.ALTER, original, index));
 	}
 
@@ -382,43 +381,42 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		if (changed.size() == 1 && changed.containsKey(SchemaProperties.FORMULA.getLabel())) {
 			requireNonKey(original, oldColumn);
 			requireNonKey(table, column);
-			if (oldColumn.getFormula() == null || oldColumn.getFormula().isBlank()
-					|| column.getFormula() == null || column.getFormula().isBlank()
-					|| oldColumn.isFormulaPersisted() || column.isFormulaPersisted()
+			if (oldColumn.getFormula() == null || oldColumn.getFormula().isBlank() || column.getFormula() == null
+					|| column.getFormula().isBlank() || oldColumn.isFormulaPersisted() || column.isFormulaPersisted()
 					|| oldColumn.isIdentity() || column.isIdentity() || column.isNotNull()
 					|| !CommonUtils.isEmpty(column.getDefaultValue()) || !CommonUtils.isEmpty(column.getOnUpdate())
-					|| original.getIndexes().stream().anyMatch(index ->
-							index.getColumns().get(column.getName()) != null
-									|| index.getIncludes().get(column.getName()) != null)) {
+					|| original.getIndexes().stream().anyMatch(index -> index.getColumns().get(column.getName()) != null
+							|| index.getIncludes().get(column.getName()) != null)) {
 				throw new UnsupportedOperationException(
-						"Spanner can replace only an existing unindexed virtual column expression: " + column.getName());
+						"Spanner can replace only an existing unindexed virtual column expression: "
+								+ column.getName());
 			}
 			final var builder = createSqlBuilder();
-			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(column)
-					.space().definitionForAlterColumn(column);
+			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(column).space()
+					.definitionForAlterColumn(column);
 			add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 			return;
 		}
 		if (changed.size() == 1 && changed.containsKey(IDENTITY_RESTART_COUNTER_WITH)) {
-			if (!oldColumn.isIdentity() || !column.isIdentity()
-					|| column.getDataType() != DataType.BIGINT || column.getArrayDimension() != 0)
-				throw new IllegalArgumentException("Spanner counter restart requires an existing scalar INT64 identity: "
-						+ column.getName());
+			if (!oldColumn.isIdentity() || !column.isIdentity() || column.getDataType() != DataType.BIGINT
+					|| column.getArrayDimension() != 0)
+				throw new IllegalArgumentException(
+						"Spanner counter restart requires an existing scalar INT64 identity: " + column.getName());
 			final long counter = SpannerCounterRestart.value(column.getSpecifics().get(IDENTITY_RESTART_COUNTER_WITH),
 					table.getName() + "." + column.getName());
 			final var builder = createSqlBuilder();
-			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(column)
-					.space()._add("ALTER IDENTITY RESTART COUNTER WITH ")._add(counter);
+			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(column).space()
+					._add("ALTER IDENTITY RESTART COUNTER WITH ")._add(counter);
 			add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 			return;
 		}
-		if (!changed.isEmpty() && changed.keySet().stream().allMatch(property ->
-				SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN.equalsIgnoreCase(property)
+		if (!changed.isEmpty() && changed.keySet().stream()
+				.allMatch(property -> SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MIN.equalsIgnoreCase(property)
 						|| SpannerSqlBuilder.IDENTITY_SKIP_RANGE_MAX.equalsIgnoreCase(property))) {
-			if (!oldColumn.isIdentity() || !column.isIdentity()
-					|| column.getDataType() != DataType.BIGINT || column.getArrayDimension() != 0)
-				throw new IllegalArgumentException("Spanner skip range requires an existing scalar INT64 identity: "
-						+ column.getName());
+			if (!oldColumn.isIdentity() || !column.isIdentity() || column.getDataType() != DataType.BIGINT
+					|| column.getArrayDimension() != 0)
+				throw new IllegalArgumentException(
+						"Spanner skip range requires an existing scalar INT64 identity: " + column.getName());
 			final var builder = createSqlBuilder();
 			builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(column)
 					.alterIdentitySkipRange(column);
@@ -434,8 +432,7 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 			addStringBytesTypeChange(original, table, oldColumn, column, changed.keySet(), result);
 			return;
 		}
-		if (changed.containsKey(SchemaProperties.ON_UPDATE.getLabel())
-				&& changed.size() == (defaultChanged ? 2 : 1)) {
+		if (changed.containsKey(SchemaProperties.ON_UPDATE.getLabel()) && changed.size() == (defaultChanged ? 2 : 1)) {
 			addOnUpdateChange(original, table, oldColumn, column, defaultChanged, result);
 			return;
 		}
@@ -492,18 +489,19 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		add(result, createOperation(builder.toString(), SqlType.ALTER, oldColumn, column));
 	}
 
-	private void addOnUpdateChange(final Table original, final Table table, final Column oldColumn,
-			final Column column, final boolean defaultChanged, final List<SqlOperation> result) {
+	private void addOnUpdateChange(final Table original, final Table table, final Column oldColumn, final Column column,
+			final boolean defaultChanged, final List<SqlOperation> result) {
 		requireNonKey(original, oldColumn);
 		if (column.getDataType() != DataType.TIMESTAMP || column.getArrayDimension() != 0 || column.isIdentity()
 				|| !CommonUtils.isEmpty(column.getFormula()))
-			throw new IllegalArgumentException("Spanner ON UPDATE requires a scalar TIMESTAMP column: " + column.getName());
+			throw new IllegalArgumentException(
+					"Spanner ON UPDATE requires a scalar TIMESTAMP column: " + column.getName());
 		final String expression = column.getOnUpdate();
 		final boolean remove = CommonUtils.isEmpty(expression);
 		final String defaultValue = column.getDefaultValue();
 		if (!remove && (!Boolean.TRUE.equals(SpannerSqlBuilder.allowCommitTimestamp(column))
-				|| !COMMIT_TIMESTAMP_EXPRESSION.matcher(expression).matches()
-				|| defaultValue == null || !COMMIT_TIMESTAMP_EXPRESSION.matcher(defaultValue).matches())) {
+				|| !COMMIT_TIMESTAMP_EXPRESSION.matcher(expression).matches() || defaultValue == null
+				|| !COMMIT_TIMESTAMP_EXPRESSION.matcher(defaultValue).matches())) {
 			throw new IllegalArgumentException("Spanner SET ON UPDATE requires allow_commit_timestamp=true "
 					+ "and matching PENDING_COMMIT_TIMESTAMP() default and update expressions: " + column.getName());
 		}
@@ -529,20 +527,23 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 				|| before.getDataType() == DataType.VARBINARY && after.getDataType() == DataType.VARCHAR;
 		if (!supported || before.getArrayDimension() != 0 || after.getArrayDimension() != 0
 				|| !isNativeLengthName(before) || !isNativeLengthName(after)
-				|| changes.stream().anyMatch(property -> !SchemaProperties.DATA_TYPE.getLabel().equals(property)
-						&& !SchemaProperties.DATA_TYPE_NAME.getLabel().equals(property)
-						&& !SchemaProperties.LENGTH.getLabel().equals(property)))
-			throw new UnsupportedOperationException("Spanner native type migration supports scalar STRING/BYTES only: "
-					+ after.getName());
+				|| changes.stream()
+						.anyMatch(property -> !SchemaProperties.DATA_TYPE.getLabel().equals(property)
+								&& !SchemaProperties.DATA_TYPE_NAME.getLabel().equals(property)
+								&& !SchemaProperties.LENGTH.getLabel().equals(property)))
+			throw new UnsupportedOperationException(
+					"Spanner native type migration supports scalar STRING/BYTES only: " + after.getName());
 		requireNonKey(original, before);
 		if (before.isIdentity() || after.isIdentity() || !CommonUtils.isEmpty(before.getFormula())
 				|| !CommonUtils.isEmpty(after.getFormula()) || !CommonUtils.isEmpty(before.getDefaultValue())
 				|| !CommonUtils.isEmpty(after.getDefaultValue()) || !CommonUtils.isEmpty(after.getOnUpdate())
 				|| original.getConstraints().stream().anyMatch(constraint -> constraint instanceof CheckConstraint
 						|| constraint instanceof com.sqlapp.data.schemas.AbstractColumnConstraint<?> columns
-								&& columns.getColumns().stream().anyMatch(column -> column.getName().equalsIgnoreCase(before.getName())))
-				|| original.getIndexes().stream().anyMatch(index -> index.getColumns().contains(before.getName())
-						|| index.getIncludes().contains(before.getName()))
+								&& columns.getColumns().stream()
+										.anyMatch(column -> column.getName().equalsIgnoreCase(before.getName())))
+				|| original.getIndexes().stream()
+						.anyMatch(index -> index.getColumns().contains(before.getName())
+								|| index.getIncludes().contains(before.getName()))
 				|| original.getColumns().stream().anyMatch(column -> !CommonUtils.isEmpty(column.getFormula())))
 			throw new UnsupportedOperationException("Spanner type migration requires removal of modeled dependencies "
 					+ "and expressions first: " + after.getName());
@@ -550,11 +551,11 @@ public class SpannerAlterTableFactory extends AbstractAlterTableFactory<SpannerS
 		final var type = length == null ? null : getDialect().getDbDataTypes().getDbType(after.getDataType(), length);
 		if (length == null || length <= 0 || !(type instanceof LengthProperties<?> sized)
 				|| sized.getMaxLength() == null || length > sized.getMaxLength())
-			throw new IllegalArgumentException("Spanner type migration requires an explicit valid target length: "
-					+ after.getName());
+			throw new IllegalArgumentException(
+					"Spanner type migration requires an explicit valid target length: " + after.getName());
 		final var builder = createSqlBuilder();
-		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(after)
-				.space().definitionForAlterColumn(after);
+		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).alterColumn().name(after).space()
+				.definitionForAlterColumn(after);
 		add(result, createOperation(builder.toString(), SqlType.ALTER, before, after));
 	}
 

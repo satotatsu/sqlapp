@@ -31,8 +31,8 @@ class SpannerDropTableFactoryTest {
 		reference.getRelatedColumns().add("id");
 		child.getConstraints().add(reference);
 		assertEquals("Archive", reference.getRelatedTableSchemaName());
-		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry()
-				.getSqlFactory(parent, SqlType.DROP);
+		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry().getSqlFactory(parent,
+				SqlType.DROP);
 		final var operations = factory.createSql(List.of(child, parent));
 		assertEquals(2, operations.size());
 		assertTrue(operations.getFirst().getSqlText().contains("`Sales`.`Parent`"));
@@ -43,10 +43,11 @@ class SpannerDropTableFactoryTest {
 	void retainsBoundColumnReferencesWhenTheTargetNameIsOmitted() {
 		final var parent = table().setName("Parent");
 		final var child = table().setName("Child");
-		child.getConstraints().add(new ForeignKeyConstraint("ChildParent",
-				child.getColumns().getFirst(), parent.getColumns().getFirst()).setRelatedTableName(null));
-		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry()
-				.getSqlFactory(parent, SqlType.DROP);
+		child.getConstraints().add(
+				new ForeignKeyConstraint("ChildParent", child.getColumns().getFirst(), parent.getColumns().getFirst())
+						.setRelatedTableName(null));
+		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry().getSqlFactory(parent,
+				SqlType.DROP);
 		final var operations = factory.createSql(List.of(child, parent));
 		assertEquals(2, operations.size());
 		assertTrue(operations.getFirst().getSqlText().contains("`Sales`.`Child`"));
@@ -62,8 +63,8 @@ class SpannerDropTableFactoryTest {
 		reference.getColumns().add(child.getColumns().getFirst());
 		reference.getRelatedColumns().add("id");
 		child.getConstraints().add(reference);
-		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry()
-				.getSqlFactory(parent, SqlType.DROP);
+		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry().getSqlFactory(parent,
+				SqlType.DROP);
 		final var operations = factory.createSql(List.of(child, parent));
 		assertEquals(2, operations.size());
 		assertTrue(operations.getFirst().getSqlText().contains("`Sales`.`Child`"));
@@ -77,10 +78,10 @@ class SpannerDropTableFactoryTest {
 		final var child = table().setName("ZChild");
 		schema.getTables().add(parent);
 		schema.getTables().add(child);
-		child.getConstraints().add(new ForeignKeyConstraint("ChildParent",
-				child.getColumns().getFirst(), parent.getColumns().getFirst()));
-		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry()
-				.getSqlFactory(parent, SqlType.DROP);
+		child.getConstraints().add(
+				new ForeignKeyConstraint("ChildParent", child.getColumns().getFirst(), parent.getColumns().getFirst()));
+		final SqlFactory<Table> factory = DialectHolder.defaultDialect.createSqlFactoryRegistry().getSqlFactory(parent,
+				SqlType.DROP);
 		final var operations = factory.createSql(List.of(parent, child));
 		assertEquals(2, operations.size());
 		assertTrue(operations.getFirst().getSqlText().contains("`Sales`.`ZChild`"));
@@ -95,15 +96,14 @@ class SpannerDropTableFactoryTest {
 		final var first = table().setName("First");
 		final var second = table().setName("Second");
 		for (final var table : List.of(first, second)) {
-			table.getSpecifics().put(SpannerCreateTableFactory.PARENT_TABLE_NAME,
-					table == first ? "Second" : "First");
+			table.getSpecifics().put(SpannerCreateTableFactory.PARENT_TABLE_NAME, table == first ? "Second" : "First");
 			table.getSpecifics().put(SpannerCreateTableFactory.INTERLEAVE_TYPE, "IN PARENT");
 			table.getSpecifics().put(SpannerCreateTableFactory.ON_DELETE_ACTION, "CASCADE");
 		}
 		assertThrows(IllegalArgumentException.class, () -> factory.createSql(List.of(first, second)));
-		assertThrows(IllegalArgumentException.class, () -> factory.createDiffSql(List.of(
-				new DbObjectDifference(first, null, new EqualsHandler()),
-				new DbObjectDifference(second, null, new EqualsHandler()))));
+		assertThrows(IllegalArgumentException.class,
+				() -> factory.createDiffSql(List.of(new DbObjectDifference(first, null, new EqualsHandler()),
+						new DbObjectDifference(second, null, new EqualsHandler()))));
 	}
 
 	@Test
@@ -125,8 +125,7 @@ class SpannerDropTableFactoryTest {
 		assertEquals("DROP INDEX `Sales`.`ById`", operations.get(0).getSqlText());
 		assertEquals("DROP TABLE `Sales`.`AChild`", operations.get(1).getSqlText());
 		assertEquals("DROP TABLE `Sales`.`ZParent`", operations.get(2).getSqlText());
-		final var differences = factory.createDiffSql(List.of(
-				new DbObjectDifference(parent, null, new EqualsHandler()),
+		final var differences = factory.createDiffSql(List.of(new DbObjectDifference(parent, null, new EqualsHandler()),
 				new DbObjectDifference(child, null, new EqualsHandler())));
 		assertEquals(operations.stream().map(operation -> operation.getSqlText()).toList(),
 				differences.stream().map(operation -> operation.getSqlText()).toList());
@@ -173,8 +172,7 @@ class SpannerDropTableFactoryTest {
 	@Test
 	void rejectsInvalidTableNamesAndManagedFlags() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
-		assertThrows(IllegalArgumentException.class,
-				() -> registry.createSql(new Table(" "), SqlType.DROP));
+		assertThrows(IllegalArgumentException.class, () -> registry.createSql(new Table(" "), SqlType.DROP));
 		final var table = table();
 		final var index = new Index("BadFlag");
 		index.getSpecifics().put(SpannerCreateIndexFactory.SPANNER_IS_MANAGED, "unknown");

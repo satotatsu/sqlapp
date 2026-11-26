@@ -11,10 +11,12 @@ import com.sqlapp.data.schemas.Table;
 final class SpannerTableOrder {
 	static final class CyclicDependencyException extends IllegalArgumentException {
 		private static final long serialVersionUID = 1L;
+
 		CyclicDependencyException(final String name) {
 			super("Cyclic Spanner interleave/foreign-key dependencies: " + name);
 		}
 	}
+
 	private SpannerTableOrder() {
 	}
 
@@ -68,14 +70,16 @@ final class SpannerTableOrder {
 			final var related = key.getRelatedTable();
 			// Unresolved reference columns can fall back to their owning table.
 			// Use that object only when it represents the named reference target.
-			final var dependency = related != null && (key.getRelatedTableName() == null
-					|| key.getRelatedTableName().equalsIgnoreCase(related.getName()))
+			final var dependency = related != null
+					&& (key.getRelatedTableName() == null
+							|| key.getRelatedTableName().equalsIgnoreCase(related.getName()))
 					&& normalized(key.getRelatedTableSchemaName()).equals(normalized(related.getSchemaName()))
-					? identities.get(identity(related.getCatalogName(), related.getSchemaName(), related.getName()))
-					: identities.get(identity(table.getCatalogName(),
-							key.getRelatedTableSchemaName() == null ? table.getSchemaName()
-									: key.getRelatedTableSchemaName(),
-							key.getRelatedTableName()));
+							? identities
+									.get(identity(related.getCatalogName(), related.getSchemaName(), related.getName()))
+							: identities.get(identity(table.getCatalogName(),
+									key.getRelatedTableSchemaName() == null ? table.getSchemaName()
+											: key.getRelatedTableSchemaName(),
+									key.getRelatedTableName()));
 			if (dependency != null && dependency != table)
 				visit(dependency, identities, state, result, includeForeignKeys);
 		}

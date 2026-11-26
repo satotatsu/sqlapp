@@ -11,11 +11,22 @@ import java.util.Objects;
 
 /** Definition of a GoogleSQL change stream and its native DDL. */
 public record SpannerChangeStream(String name, Scope scope, List<Target> targets, Options options) {
-	public enum Scope { NONE, ALL, TABLES }
-	public enum Capture { OLD_AND_NEW_VALUES, NEW_ROW, NEW_VALUES, NEW_ROW_AND_OLD_VALUES }
-	public enum Filter { EXCLUDE_TTL_DELETES, EXCLUDE_INSERT, EXCLUDE_UPDATE, EXCLUDE_DELETE, ALLOW_TXN_EXCLUSION }
+	public enum Scope {
+		NONE, ALL, TABLES
+	}
 
-	/** A null column list tracks the entire table. An empty list tracks only its primary key. */
+	public enum Capture {
+		OLD_AND_NEW_VALUES, NEW_ROW, NEW_VALUES, NEW_ROW_AND_OLD_VALUES
+	}
+
+	public enum Filter {
+		EXCLUDE_TTL_DELETES, EXCLUDE_INSERT, EXCLUDE_UPDATE, EXCLUDE_DELETE, ALLOW_TXN_EXCLUSION
+	}
+
+	/**
+	 * A null column list tracks the entire table. An empty list tracks only its
+	 * primary key.
+	 */
 	public record Target(String schema, String table, List<String> columns) {
 		public Target {
 			checkName(table, 128);
@@ -33,9 +44,11 @@ public record SpannerChangeStream(String name, Scope scope, List<Target> targets
 		}
 
 		private String sql() {
-			final String qualified = schema == null || schema.isEmpty() ? quote(table) : quote(schema) + "." + quote(table);
+			final String qualified = schema == null || schema.isEmpty() ? quote(table)
+					: quote(schema) + "." + quote(table);
 			return columns == null ? qualified
-					: qualified + "(" + String.join(", ", columns.stream().map(SpannerChangeStream::quote).toList()) + ")";
+					: qualified + "(" + String.join(", ", columns.stream().map(SpannerChangeStream::quote).toList())
+							+ ")";
 		}
 	}
 
@@ -44,7 +57,8 @@ public record SpannerChangeStream(String name, Scope scope, List<Target> targets
 			filters = Map.copyOf(filters);
 			if (retention != null && (retention.getNano() != 0 || retention.compareTo(Duration.ofDays(1)) < 0
 					|| retention.compareTo(Duration.ofDays(30)) > 0))
-				throw new IllegalArgumentException("Change stream retention must be whole seconds between 1 and 30 days");
+				throw new IllegalArgumentException(
+						"Change stream retention must be whole seconds between 1 and 30 days");
 		}
 
 		private List<String> assignments() {
@@ -86,7 +100,10 @@ public record SpannerChangeStream(String name, Scope scope, List<Target> targets
 		return "DROP CHANGE STREAM " + (ifExists ? "IF EXISTS " : "") + quote(name);
 	}
 
-	/** Applies an explicitly selected tracking scope without changing stream options. */
+	/**
+	 * Applies an explicitly selected tracking scope without changing stream
+	 * options.
+	 */
 	public String setScopeSql() {
 		return "ALTER CHANGE STREAM " + quote(name)
 				+ (scope == Scope.NONE ? " DROP FOR ALL" : " SET FOR " + watchedObjects());

@@ -20,7 +20,8 @@ public class SpannerCreateSequenceFactory extends AbstractCreateSequenceFactory<
 	@Override
 	protected void addCreateObject(final Sequence sequence, final SpannerSqlBuilder builder) {
 		if (sequence.getSpecifics().get(SpannerAlterSequenceFactory.RESTART_COUNTER_WITH) != null)
-			throw new IllegalArgumentException("Spanner restart requests require ALTER SEQUENCE; use startValue for CREATE");
+			throw new IllegalArgumentException(
+					"Spanner restart requests require ALTER SEQUENCE; use startValue for CREATE");
 		super.addCreateObject(sequence, builder);
 	}
 

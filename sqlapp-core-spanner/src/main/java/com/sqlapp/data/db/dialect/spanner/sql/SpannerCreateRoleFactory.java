@@ -14,6 +14,7 @@ public class SpannerCreateRoleFactory extends AbstractCreateNamedObjectFactory<R
 		if (userDefined && ("public".equals(name) || name.startsWith("spanner_")))
 			throw new IllegalArgumentException("Spanner system role cannot be created or dropped: " + role.getName());
 	}
+
 	@Override
 	protected void addCreateObject(final Role role, final SpannerSqlBuilder builder) {
 		requireName(role, true);

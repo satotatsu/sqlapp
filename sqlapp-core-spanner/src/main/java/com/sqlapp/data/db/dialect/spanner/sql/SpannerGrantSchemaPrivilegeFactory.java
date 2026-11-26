@@ -14,12 +14,14 @@ import com.sqlapp.data.schemas.Role;
 import com.sqlapp.data.schemas.SchemaPrivilege;
 import com.sqlapp.data.schemas.User;
 
-/** GoogleSQL schema access and grants covering all objects of a supported kind. */
+/**
+ * GoogleSQL schema access and grants covering all objects of a supported kind.
+ */
 public class SpannerGrantSchemaPrivilegeFactory extends SimpleSqlFactory<SchemaPrivilege, SpannerSqlBuilder> {
-	private static final Set<String> SUPPORTED = Set.of("USAGE",
-			"SELECT ON ALL TABLES", "INSERT ON ALL TABLES", "UPDATE ON ALL TABLES", "DELETE ON ALL TABLES",
-			"SELECT ON ALL VIEWS", "SELECT ON ALL SEQUENCES", "UPDATE ON ALL SEQUENCES",
-			"SELECT ON ALL CHANGE STREAMS");
+	private static final Set<String> SUPPORTED = Set.of("USAGE", "SELECT ON ALL TABLES", "INSERT ON ALL TABLES",
+			"UPDATE ON ALL TABLES", "DELETE ON ALL TABLES", "SELECT ON ALL VIEWS", "SELECT ON ALL SEQUENCES",
+			"UPDATE ON ALL SEQUENCES", "SELECT ON ALL CHANGE STREAMS");
+
 	protected boolean revoke() {
 		return false;
 	}
@@ -27,9 +29,10 @@ public class SpannerGrantSchemaPrivilegeFactory extends SimpleSqlFactory<SchemaP
 	@Override
 	public List<SqlOperation> createSql(final SchemaPrivilege grant) {
 		final String privilege = Objects.toString(grant.getPrivilege(), "").toUpperCase(Locale.ROOT);
-		if (!SUPPORTED.contains(privilege) || grant.isGrantable()
-				|| grant.getGrantorName() != null || grant.getState() != null)
-			throw new UnsupportedOperationException("Unsupported Spanner schema privilege or grant options: " + privilege);
+		if (!SUPPORTED.contains(privilege) || grant.isGrantable() || grant.getGrantorName() != null
+				|| grant.getState() != null)
+			throw new UnsupportedOperationException(
+					"Unsupported Spanner schema privilege or grant options: " + privilege);
 		if (grant.getGrantee() instanceof User)
 			throw new IllegalArgumentException("Spanner schema privileges require a database role");
 		final var role = new Role(grant.getGranteeName());

@@ -25,9 +25,10 @@ public class SpannerColumnPrivilegeReader extends ColumnPrivilegeReader {
 		final String tableFilter = getTableName(context);
 		final List<ColumnPrivilege> grants = new ArrayList<>();
 		try (var statement = connection.createStatement();
-				var rows = statement.executeQuery("SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, PRIVILEGE_TYPE, GRANTEE "
-						+ "FROM INFORMATION_SCHEMA.COLUMN_PRIVILEGES ORDER BY TABLE_SCHEMA, TABLE_NAME, "
-						+ "COLUMN_NAME, PRIVILEGE_TYPE, GRANTEE")) {
+				var rows = statement
+						.executeQuery("SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, PRIVILEGE_TYPE, GRANTEE "
+								+ "FROM INFORMATION_SCHEMA.COLUMN_PRIVILEGES ORDER BY TABLE_SCHEMA, TABLE_NAME, "
+								+ "COLUMN_NAME, PRIVILEGE_TYPE, GRANTEE")) {
 			while (rows.next()) {
 				final String schema = rows.getString(1);
 				final String table = rows.getString(2);
@@ -45,10 +46,11 @@ public class SpannerColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return grants;
 	}
 
-	static ColumnPrivilege toPrivilege(final String schema, final String table, final String column, 
+	static ColumnPrivilege toPrivilege(final String schema, final String table, final String column,
 			final String privilege, final String grantee) {
-		if (schema == null || table == null || table.isBlank() || grantee == null || grantee.isBlank()
-				|| column == null || column.isBlank() || !List.of("SELECT", "INSERT", "UPDATE").contains(privilege == null ? "" : privilege))
+		if (schema == null || table == null || table.isBlank() || grantee == null || grantee.isBlank() || column == null
+				|| column.isBlank()
+				|| !List.of("SELECT", "INSERT", "UPDATE").contains(privilege == null ? "" : privilege))
 			throw new IllegalArgumentException("Invalid Spanner column privilege metadata");
 		final var grant = new ColumnPrivilege().setSchemaName(schema).setTableName(table).setColumnName(column)
 				.setPrivilege(privilege).setGrantee(new Role(grantee));

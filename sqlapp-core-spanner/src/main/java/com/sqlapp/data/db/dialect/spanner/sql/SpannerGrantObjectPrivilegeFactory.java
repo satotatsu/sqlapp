@@ -28,12 +28,12 @@ public class SpannerGrantObjectPrivilegeFactory extends SimpleSqlFactory<ObjectP
 		final String kind = Objects.toString(object.getSpecifics().get(OBJECT_TYPE), "").toUpperCase(Locale.ROOT);
 		final String privilege = Objects.toString(object.getPrivilege(), "").toUpperCase(Locale.ROOT);
 		final Set<String> supported = switch (kind) {
-			case "TABLE" -> Set.of("SELECT", "INSERT", "UPDATE", "DELETE");
-			case "VIEW", "CHANGE STREAM" -> Set.of("SELECT");
-			case "SEQUENCE" -> Set.of("SELECT", "UPDATE");
-			case "TABLE FUNCTION" -> Set.of("EXECUTE");
-			default -> throw new IllegalArgumentException(
-					"Specify Spanner OBJECT_TYPE as TABLE, VIEW, SEQUENCE, CHANGE STREAM or TABLE FUNCTION");
+		case "TABLE" -> Set.of("SELECT", "INSERT", "UPDATE", "DELETE");
+		case "VIEW", "CHANGE STREAM" -> Set.of("SELECT");
+		case "SEQUENCE" -> Set.of("SELECT", "UPDATE");
+		case "TABLE FUNCTION" -> Set.of("EXECUTE");
+		default -> throw new IllegalArgumentException(
+				"Specify Spanner OBJECT_TYPE as TABLE, VIEW, SEQUENCE, CHANGE STREAM or TABLE FUNCTION");
 		};
 		if (!supported.contains(privilege) || object.isGrantable() || object.isHierachy()
 				|| object.getGrantorName() != null || object.getState() != null
@@ -46,8 +46,8 @@ public class SpannerGrantObjectPrivilegeFactory extends SimpleSqlFactory<ObjectP
 		SpannerCreateRoleFactory.requireName(role, false);
 		final var target = new Table(object.getObjectName()).setSchemaName(object.getSchemaName());
 		final var builder = createSqlBuilder();
-		builder._add(revoke() ? "REVOKE " : "GRANT ")._add(privilege)._add(" ON ")._add(kind)
-				.space().name(target, true)._add(revoke() ? " FROM ROLE " : " TO ROLE ").name(role);
+		builder._add(revoke() ? "REVOKE " : "GRANT ")._add(privilege)._add(" ON ")._add(kind).space().name(target, true)
+				._add(revoke() ? " FROM ROLE " : " TO ROLE ").name(role);
 		return List.of(createOperation(builder.toString(), revoke() ? SqlType.REVOKE : SqlType.GRANT, object));
 	}
 }
