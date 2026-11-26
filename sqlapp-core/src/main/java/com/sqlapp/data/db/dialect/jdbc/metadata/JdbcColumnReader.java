@@ -100,6 +100,7 @@ public class JdbcColumnReader extends ColumnReader {
 		column.setSchemaName(getString(rs, "TABLE_SCHEM"));
 		column.setTableName(getString(rs, TABLE_NAME));
 		column.setDefaultValue(getString(rs, "COLUMN_DEF"));
+		column.setRemarks(getString(rs, "REMARKS"));
 		column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		return column;
 	}

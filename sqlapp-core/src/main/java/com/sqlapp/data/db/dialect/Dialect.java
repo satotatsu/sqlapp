@@ -884,13 +884,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (isEmpty(target)) {
 			return false;
 		}
-		if (target.charAt(0) == getOpenQuote() && target.charAt(target.length() - 1) == getCloseQuote()) {
+		if (target.length() >= 2 && target.charAt(0) == getOpenQuote() && target.charAt(target.length() - 1) == getCloseQuote()) {
 			return true;
 		}
 		return false;
 	}
 
-	private final Pattern quatePattern = Pattern.compile("[a-z0-9_$]+", Pattern.CASE_INSENSITIVE);
+	private final Pattern quatePattern = Pattern.compile("[a-z_$][a-z0-9_$]*", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * クォートの必要性の判定
@@ -923,7 +923,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
-	 * クォートします
+	 * 必要な識別子をクォートし、内部の終了引用符をエスケープします。
+	 * 既にクォートされている識別子はそのまま返します。
 	 * 
 	 * @param target
 	 * @return クォートした結果
@@ -943,19 +944,21 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
-		builder.append(getOpenQuote()).append(target).append(getCloseQuote());
+		final String close = String.valueOf(getCloseQuote());
+		builder.append(getOpenQuote()).append(target.replace(close, close + close)).append(getCloseQuote());
 		return builder.toString();
 	}
 
 	/**
-	 * クォートを解除します
+	 * 外側の引用符を一組だけ除去し、二重化された終了引用符を復元します。
 	 * 
 	 * @param target
 	 * @return クォートを解除した結果
 	 */
 	public String unQuote(final String target) {
 		if (isQuoted(target)) {
-			return CommonUtils.unwrap(target, this.getCloseQuote(), this.getCloseQuote());
+			final String close = String.valueOf(getCloseQuote());
+			return target.substring(1, target.length() - 1).replace(close + close, close);
 		} else {
 			return target;
 		}

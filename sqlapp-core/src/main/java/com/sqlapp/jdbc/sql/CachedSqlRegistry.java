@@ -70,6 +70,8 @@ public class CachedSqlRegistry implements SqlRegistry {
 	 */
 	public void setSqlRegistry(SqlRegistry sqlRegistry) {
 		this.sqlRegistry = sqlRegistry;
+		sqlIdMap.clear();
+		dialectSqlIdMap.clear();
 	}
 
 	/**
@@ -90,7 +92,7 @@ public class CachedSqlRegistry implements SqlRegistry {
 				.entrySet()) {
 			for (Map.Entry<String, List<SqlNode>> sqlEntry : entry.getValue()
 					.entrySet()) {
-				if (!this.contains(entry.getKey(), sqlEntry.getKey())) {
+				if (!this.contains(sqlEntry.getKey(), entry.getKey())) {
 					doubleKeyMap.put(entry.getKey(), sqlEntry.getKey(),
 							sqlEntry.getValue());
 				}
@@ -129,43 +131,13 @@ public class CachedSqlRegistry implements SqlRegistry {
 	 */
 	@Override
 	public List<SqlNode> getAll(String sqlId, Dialect dialect) {
-		String databaseProductName = getProductName(dialect);
-		ConcurrentMap<String, List<SqlNode>> sqlIdMap = this.sqlIdMap;
-		if (databaseProductName == null) {
-			List<SqlNode> nodes = sqlIdMap.get(sqlId);
-			if (CommonUtils.isEmpty(nodes)) {
-				nodes = this.getSqlRegistry().getAll(sqlId);
-				if (CommonUtils.isEmpty(nodes)) {
-					List<SqlNode> org = sqlIdMap.putIfAbsent(sqlId, nodes);
-					return org != null ? org : nodes;
-				} else {
-					return null;
-				}
-			}
-			return nodes;
-		} else {
-			sqlIdMap = dialectSqlIdMap.get(databaseProductName);
-			if (sqlIdMap == null) {
-				sqlIdMap = CommonUtils.concurrentMap();
-				ConcurrentMap<String, List<SqlNode>> org = dialectSqlIdMap.putIfAbsent(
-						databaseProductName, sqlIdMap);
-				if (org != null) {
-					sqlIdMap = org;
-				}
-			}
-			List<SqlNode> nodes = sqlIdMap.get(sqlId);
-			if (CommonUtils.isEmpty(nodes)) {
-				nodes = this.getSqlRegistry().getAll(sqlId, dialect);
-				if (CommonUtils.isEmpty(nodes)) {
-					List<SqlNode> org = sqlIdMap.putIfAbsent(sqlId, nodes);
-					return org != null ? org : nodes;
-				} else {
-					return null;
-				}
-			} else {
-				return nodes;
-			}
-		}
+		String product = getProductName(dialect);
+		ConcurrentMap<String, List<SqlNode>> cache = product == null ? sqlIdMap
+				: dialectSqlIdMap.computeIfAbsent(product, key -> concurrentMap());
+		return cache.computeIfAbsent(sqlId, key -> {
+			List<SqlNode> nodes = getSqlRegistry().getAll(key, dialect);
+			return nodes == null ? java.util.Collections.emptyList() : nodes;
+		});
 	}
 
 
@@ -192,18 +164,20 @@ public class CachedSqlRegistry implements SqlRegistry {
 	 */
 	@Override
 	public void put(String sqlId, Dialect dialect, String... sql) {
-		this.getSqlRegistry().put(sqlId, dialect, sql);
-		String databaseProductName = getProductName(dialect);
-		ConcurrentMap<String, List<SqlNode>> sqlIdMap = this.sqlIdMap;
-		if (databaseProductName == null) {
+		getSqlRegistry().put(sqlId, dialect, sql);
+		invalidate(sqlId, dialect);
+	}
+
+	private void invalidate(String sqlId, Dialect dialect) {
+		String product = getProductName(dialect);
+		if (product == null) {
 			sqlIdMap.remove(sqlId);
+			// Product caches may contain a fallback to the default SQL.
+			dialectSqlIdMap.values().forEach(cache -> cache.remove(sqlId));
 		} else {
-			sqlIdMap = dialectSqlIdMap.get(databaseProductName);
-			if (sqlIdMap == null) {
-				sqlIdMap = this.sqlIdMap;
-			}
-			if (sqlIdMap != null) {
-				sqlIdMap.remove(sqlId);
+			ConcurrentMap<String, List<SqlNode>> cache = dialectSqlIdMap.get(product);
+			if (cache != null) {
+				cache.remove(sqlId);
 			}
 		}
 	}
@@ -228,9 +202,7 @@ public class CachedSqlRegistry implements SqlRegistry {
 	 */
 	@Override
 	public void put(String sqlId, String sql) {
-		this.getSqlRegistry().put(sqlId, sql, null);
-		ConcurrentMap<String, List<SqlNode>> sqlIdMap = this.sqlIdMap;
-		sqlIdMap.remove(sqlId);
+		put(sqlId, (Dialect) null, sql);
 	}
 
 	/*
@@ -241,23 +213,13 @@ public class CachedSqlRegistry implements SqlRegistry {
 	 */
 	@Override
 	public void remove(String sqlId, Dialect dialect) {
-		String databaseProductName = getProductName(dialect);
-		if (databaseProductName != null) {
-			this.getSqlRegistry().remove(sqlId, dialect);
-			ConcurrentMap<String, List<SqlNode>> sqlIdMap = dialectSqlIdMap
-					.get(databaseProductName);
-			if (sqlIdMap != null) {
-				sqlIdMap.remove(sqlId);
-			}
-		} else {
-			this.remove(sqlId);
-		}
+		getSqlRegistry().remove(sqlId, dialect);
+		invalidate(sqlId, dialect);
 	}
 
 	@Override
 	public void remove(String sqlId) {
-		this.getSqlRegistry().remove(sqlId);
-		this.sqlIdMap.remove(sqlId);
+		remove(sqlId, null);
 	}
 
 	protected String getProductName(Dialect dialect) {
@@ -275,30 +237,11 @@ public class CachedSqlRegistry implements SqlRegistry {
 	 */
 	@Override
 	public boolean contains(String sqlId) {
-		return sqlIdMap.containsKey(sqlId);
+		return getSqlRegistry().contains(sqlId);
 	}
 
-	/**
-	 * @param sqlId
-	 * @param databaseProductName
-	 */
 	@Override
 	public boolean contains(String sqlId, String databaseProductName) {
-		ConcurrentMap<String, List<SqlNode>> sqlIdMap = this.sqlIdMap;
-		if (databaseProductName == null) {
-			return sqlIdMap.containsKey(sqlId);
-		} else {
-			sqlIdMap = dialectSqlIdMap.get(databaseProductName);
-			if (sqlIdMap == null) {
-				sqlIdMap = this.sqlIdMap;
-			}
-			if (sqlIdMap != null) {
-				return sqlIdMap.containsKey(sqlId);
-			}
-			return false;
-		}
+		return getSqlRegistry().contains(sqlId, databaseProductName);
 	}
-
-
-
 }

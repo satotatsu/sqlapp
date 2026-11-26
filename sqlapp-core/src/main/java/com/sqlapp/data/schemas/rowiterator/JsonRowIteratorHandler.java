@@ -23,6 +23,9 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -95,6 +98,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 		private Map<String, Object> current = null;
 
 		private boolean hasColumn = false;
+		private final Set<Column> fixedTypeColumns = Collections.newSetFromMap(new IdentityHashMap<>());
 
 		protected JsonConverter getJsonConverter() {
 			return this.jsonConverter;
@@ -126,6 +130,11 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void initializeColumn() throws Exception {
+			for (final Column column : table.getColumns()) {
+				if (column.getDataType() != null) {
+					fixedTypeColumns.add(column);
+				}
+			}
 			if (!CommonUtils.isEmpty(table.getColumns())) {
 				hasColumn = true;
 			}
@@ -164,6 +173,9 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 		}
 
 		private void setType(final Column column, final Object value) {
+			if (fixedTypeColumns.contains(column)) {
+				return;
+			}
 			if (value instanceof Boolean) {
 				if (column.getDataType() == null) {
 					column.setDataType(DataType.BOOLEAN);
@@ -177,7 +189,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 					column.setDataType(DataType.DECIMAL);
 					column.setLength(38);
 					column.setScale(17);
-				} else if (column.getDataType() == DataType.INT) {
+				} else if (column.getDataType() == DataType.INT || column.getDataType() == DataType.BIGINT) {
 					column.setDataType(DataType.DECIMAL);
 					column.setLength(38);
 					column.setScale(17);

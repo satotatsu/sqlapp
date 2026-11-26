@@ -21,6 +21,7 @@ package com.sqlapp.jdbc.sql;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -109,41 +110,46 @@ public class CallableJdbcHandler extends JdbcHandler {
 	 */
 	protected void setBind(final CallableStatement statement, final SqlParameterCollection sqlParameters)
 			throws SQLException {
+		if (getQueryTimeout() != null) {
+			statement.setQueryTimeout(getQueryTimeout());
+		}
 		final List<BindParameterHolder> list = sqlParameters.getBindParameters();
-		final int size = list.size();
-		for (int i = 0; i < size; i++) {
-			final BindParameterHolder bindParameterHolder = list.get(i);
-			if (bindParameterHolder.getBindParameter() != null) {
-				BindParameter bindParameter = bindParameterHolder.getBindParameter();
-				if (ParameterDirection.Output.equals(bindParameter.getDirection())) {
-					registerOutParameter(statement, sqlParameters.getDialect(), bindParameter, i + 1);
-				} else {
-					JdbcHandlerUtils.setParameters(statement, this.getDialect(), bindParameter, i + 1);
+		final Dialect dialect = getDialect() != null ? getDialect() : sqlParameters.getDialect();
+		int index = 1;
+		for (BindParameterHolder holder : list) {
+			for (BindParameter parameter : holder.stream().toList()) {
+				if (parameter.getDirection() == ParameterDirection.Output
+						|| parameter.getDirection() == ParameterDirection.Inout) {
+					registerOutParameter(statement, dialect, parameter, index);
 				}
-			} else {
-				for (BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
-					if (ParameterDirection.Output.equals(bindParameter.getDirection())) {
-						registerOutParameter(statement, sqlParameters.getDialect(), bindParameter, i + 1);
-					} else {
-						JdbcHandlerUtils.setParameters(statement, this.getDialect(), bindParameter, i + 1);
-					}
+				if (parameter.getDirection() != ParameterDirection.Output) {
+					JdbcHandlerUtils.setParameters(statement, dialect, parameter, index);
 				}
+				index++;
 			}
 		}
+	}
+
+	@Override
+	protected List<BindParameter> setBind(final PreparedStatement statement, final SqlParameterCollection sqlParameters)
+			throws SQLException {
+		setBind((CallableStatement) statement, sqlParameters);
+		return sqlParameters.getBindParameters().stream().flatMap(BindParameterHolder::stream).toList();
 	}
 
 	protected void registerOutParameter(final CallableStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
 		final DataType type = bindParameter.getDataType();
-		if (bindParameter.getDataType() != null) {
-			if (dialect != null) {
-				final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
-				statement.registerOutParameter(index, type.getJdbcType(), dbDataType.getTypeName());
-			} else {
-				statement.registerOutParameter(index, type.getJdbcType());
-			}
-		} else {
-			statement.registerOutParameter(index, type.getJdbcType());
+		if (type == null) {
+			throw new IllegalArgumentException("Output parameter '" + bindParameter.getName() + "' requires a data type");
 		}
+		if (dialect != null) {
+			final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
+			if (dbDataType != null) {
+				statement.registerOutParameter(index, type.getJdbcType(), dbDataType.getTypeName());
+				return;
+			}
+		}
+		statement.registerOutParameter(index, type.getJdbcType());
 	}
 }

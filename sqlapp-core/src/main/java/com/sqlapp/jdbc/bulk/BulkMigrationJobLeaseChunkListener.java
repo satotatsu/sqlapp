@@ -32,6 +32,15 @@ public final class BulkMigrationJobLeaseChunkListener
 		renew();
 	}
 
+	@Override
+	public void beforeCheckpointCommit(final String migrationId) throws SQLException {
+		if (heartbeat != null) {
+			heartbeat.renewAndCheck();
+		} else {
+			handle.renew();
+		}
+	}
+
 	private void renew() {
 		if (heartbeat != null) {
 			heartbeat.check();

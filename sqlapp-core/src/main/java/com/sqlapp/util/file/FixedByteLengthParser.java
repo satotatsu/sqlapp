@@ -20,6 +20,7 @@
 package com.sqlapp.util.file;
 
 import java.io.BufferedInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -106,18 +107,15 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 		return new BufferedInputStream(is);
 	}
 
+	/**
+	 * Reads complete fixed-size records, including configured line-break bytes.
+	 * @throws EOFException if the final record is incomplete
+	 */
 	public void readAll(final BiConsumer<byte[], Long> cons) throws IOException {
 		long i = 0;
 		final FixedByteLengthFileSetting setting = getCharsetSetting().clone();
 		final byte[] buffer = setting.createBuffer();
-		while (true) {
-			final int len = bis.read(buffer);
-			if (len <= 0) {
-				break;
-			}
-			if (!setting.isLineBreak(buffer, len)) {
-				continue;
-			}
+		while (readRecord(buffer)) {
 			if (i == Long.MAX_VALUE) {
 				i = 0;
 				cons.accept(buffer, i);
@@ -127,16 +125,16 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 		}
 	}
 
+	/**
+	 * Reads complete fixed-size records as schema rows.
+	 * @throws EOFException if the final record is incomplete
+	 */
 	public void readAllRecord(final BiConsumer<Row, Long> cons) throws IOException {
 		long i = 0;
 		final FixedByteLengthFileSetting setting = getCharsetSetting().clone();
 		final byte[] buffer = setting.createBuffer();
-		while (true) {
-			final int len = bis.read(buffer);
-			if (len <= 0) {
-				break;
-			}
-			final Row row = this.getSetting().toRow(buffer);
+		while (readRecord(buffer)) {
+			final Row row = setting.toRow(buffer);
 			if (i == Long.MAX_VALUE) {
 				i = 0;
 				cons.accept(row, i);
@@ -144,6 +142,21 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 				cons.accept(row, i++);
 			}
 		}
+	}
+
+	private boolean readRecord(final byte[] buffer) throws IOException {
+		if (buffer.length == 0) {
+			throw new IllegalArgumentException("Fixed record length must be greater than zero.");
+		}
+		final int length = bis.readNBytes(buffer, 0, buffer.length);
+		if (length == 0) {
+			return false;
+		}
+		if (length != buffer.length) {
+			throw new EOFException("Incomplete fixed-length record: expected " + buffer.length
+					+ " bytes but read " + length + ".");
+		}
+		return true;
 	}
 
 	@Override

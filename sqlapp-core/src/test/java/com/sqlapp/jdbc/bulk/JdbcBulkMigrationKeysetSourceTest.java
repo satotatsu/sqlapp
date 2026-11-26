@@ -102,6 +102,20 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 	}
 
 	@Test
+	void rejectsPartialUniqueIndexesUnlessAnotherKeyGuaranteesUniqueness() throws Exception {
+		testDb(connection -> {
+			final Table table = new Table("PARTIAL_KEY");
+			final Column key = new Column("ID").setDataType(DataType.INT).setNotNull(true);
+			table.getColumns().add(key);
+			table.getIndexes().add("PARTIAL_UK", key).setUnique(true).setWhere("ACTIVE = TRUE");
+			assertThrows(IllegalArgumentException.class,
+					() -> new JdbcBulkMigrationKeysetSource(connection, table, List.of("ID")));
+			table.setPrimaryKey(key);
+			new JdbcBulkMigrationKeysetSource(connection, table, List.of("ID"));
+		});
+	}
+
+	@Test
 	void rejectsInvalidCustomCodecResultsBeforeExecutingSql() throws Exception {
 		testDb(connection -> {
 			final Table table = table();

@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 public class ElseNodeFactory extends AbstractCommentNodeFactory<ElseNode> {
 
 	protected static final Pattern[] MATCH_PATTERNS = new Pattern[] {
-			Pattern.compile("\\s*(?<value>--[ ]?else[ ]+(?<expression>.+)\\s*)") };
+			Pattern.compile("[ \\t]*(?<value>--[ ]?else(?:[ \\t]+(?<expression>[^\\r\\n]+))?[ \\t]*(?=\\r?\\n|$))") };
 
 	@Override
 	public ElseNode newInstance() {

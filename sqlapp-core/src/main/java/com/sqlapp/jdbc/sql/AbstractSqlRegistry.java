@@ -82,6 +82,7 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 		for (String sql : sqls) {
 			if (!CommonUtils.isEmpty(sql)) {
 				SqlNode node = this.getSqlParser().parse(dialect, sql);
+				node.setSqlRegistry(this);
 				result.add(node);
 			}
 		}
@@ -126,12 +127,12 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 			if (contains(sqlId)) {
 				removeInternal(sqlId);
 			}
-			putInternal(sqlId, sql);
+			putInternal(sqlId, null, sql);
 		} else {
 			if (contains(sqlId, databaseProductName)) {
 				removeInternal(sqlId, databaseProductName);
 			}
-			putInternal(sqlId, sql, databaseProductName);
+			putInternal(sqlId, databaseProductName, sql);
 		}
 	}
 
@@ -159,7 +160,7 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 	 */
 	@Override
 	public void put(String sqlId, String sql) {
-		this.put(sqlId, sql, null);
+		this.put(sqlId, (Dialect) null, sql);
 	}
 
 	@Override

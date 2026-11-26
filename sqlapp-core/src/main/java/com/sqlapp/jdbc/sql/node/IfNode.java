@@ -81,6 +81,9 @@ public class IfNode extends NeedsEndNode {
 
 	public void setElseNode(ElseNode elseNode) {
 		this.elseNode = elseNode;
+		if (elseNode != null) {
+			elseNode.setParent(this);
+		}
 	}
 
 	/*
@@ -90,7 +93,15 @@ public class IfNode extends NeedsEndNode {
 	 */
 	@Override
 	public IfNode clone() {
-		return (IfNode) super.clone();
+		IfNode clone = (IfNode) super.clone();
+		clone.elseIfNodes = list();
+		for (ElseIfNode branch : elseIfNodes) {
+			ElseIfNode copy = branch.clone();
+			copy.setParent(clone);
+			clone.elseIfNodes.add(copy);
+		}
+		clone.setElseNode(elseNode == null ? null : elseNode.clone());
+		return clone;
 	}
 
 	@Override

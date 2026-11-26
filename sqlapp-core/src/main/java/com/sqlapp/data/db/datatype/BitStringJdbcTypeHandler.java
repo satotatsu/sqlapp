@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.datatype;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -93,6 +94,8 @@ public class BitStringJdbcTypeHandler implements JdbcTypeHandler, Serializable {
 	/**
 	 * 値を"0101"形式のビット文字列に変換します。
 	 *
+	 * Numeric inputs must be finite, nonnegative integers; fractional values are rejected.
+	 *
 	 * @param value  値
 	 * @param length ビット数(0以下なら桁を揃えない)
 	 */
@@ -127,8 +130,18 @@ public class BitStringJdbcTypeHandler implements JdbcTypeHandler, Serializable {
 			return builder.toString();
 		}
 		if (value instanceof Number) {
-			final BigInteger number = value instanceof BigInteger ? (BigInteger) value
-					: BigInteger.valueOf(((Number) value).longValue());
+			final BigInteger number;
+			try {
+				if (value instanceof BigInteger integer) {
+					number = integer;
+				} else if (value instanceof Double || value instanceof Float) {
+					number = new BigDecimal(((Number) value).doubleValue()).toBigIntegerExact();
+				} else {
+					number = new BigDecimal(value.toString()).toBigIntegerExact();
+				}
+			} catch (ArithmeticException | NumberFormatException e) {
+				throw new IllegalArgumentException("A bit string value must be a finite integer: " + value, e);
+			}
 			if (number.signum() < 0) {
 				throw new IllegalArgumentException("A bit string value must not be negative: " + value);
 			}

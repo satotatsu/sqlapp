@@ -26,6 +26,9 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -98,6 +101,8 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 		private String filename;
 		private Map<String, Object> current = null;
 		private boolean hasColumn = false;
+		private long lineNumber;
+		private final Set<Column> fixedTypeColumns = Collections.newSetFromMap(new IdentityHashMap<>());
 
 		@Override
 		protected void preInitialize() throws Exception {
@@ -111,6 +116,11 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void initializeColumn() throws Exception {
+			for (final Column column : table.getColumns()) {
+				if (column.getDataType() != null) {
+					fixedTypeColumns.add(column);
+				}
+			}
 			if (!CommonUtils.isEmpty(table.getColumns())) {
 				hasColumn = true;
 			}
@@ -131,11 +141,23 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 			}
 			final String value = reader.readLine();
 			current = null;
-			if (!CommonUtils.isEmpty(value)) {
+			if (value != null) {
+				lineNumber++;
+				if (value.isBlank()) {
+					throw invalidRow();
+				}
 				current = this.jsonConverter.fromJsonString(value, Map.class);
+				if (current == null) {
+					throw invalidRow();
+				}
 			}
 			readed = true;
 			return current;
+		}
+
+		private IllegalArgumentException invalidRow() {
+			return new IllegalArgumentException("Expected a JSON object at line " + lineNumber
+					+ (filename == null ? "" : " in " + filename));
 		}
 
 		@Override
@@ -167,6 +189,9 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 		}
 
 		private void setType(final Column column, final Object value) {
+			if (fixedTypeColumns.contains(column)) {
+				return;
+			}
 			if (value instanceof Boolean) {
 				if (column.getDataType() == null) {
 					column.setDataType(DataType.BOOLEAN);
@@ -180,7 +205,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 					column.setDataType(DataType.DECIMAL);
 					column.setLength(38);
 					column.setScale(17);
-				} else if (column.getDataType() == DataType.INT) {
+				} else if (column.getDataType() == DataType.INT || column.getDataType() == DataType.BIGINT) {
 					column.setDataType(DataType.DECIMAL);
 					column.setLength(38);
 					column.setScale(17);

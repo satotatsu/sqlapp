@@ -173,7 +173,7 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 				final ColumnPosition columnPosition = columnList.get(i);
 				final Column column = columnPosition.column;
 				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index, column);
-				row.put(column.getOrdinal(), obj);
+				put(row, column, obj);
 			}
 		}
 	}

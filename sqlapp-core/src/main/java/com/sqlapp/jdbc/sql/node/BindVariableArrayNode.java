@@ -204,7 +204,7 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 			sqlParameters.addSql(" ( ");
 			for (int i = 0; i < splits.size(); i++) {
 				if (i > 0) {
-					sqlParameters.addSql(" OR ");
+					sqlParameters.addSql(operator.isNegationOperator() ? " AND " : " OR ");
 				}
 				addColumnOperator(sqlParameters, operator.getSqlValue());
 				sqlParameters.addSql('(');
@@ -223,7 +223,7 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 		for (int i = 0; i < parameters.size(); i++) {
 			final BindParameter parameter = parameters.get(i);
 			current.add(parameter);
-			if (current.size() >= size) {
+			if (current.size() >= size && i + 1 < parameters.size()) {
 				current = CommonUtils.list();
 				result.add(current);
 			}

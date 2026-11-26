@@ -20,13 +20,22 @@
 package com.sqlapp.util;
 
 import java.io.Serializable;
+import java.util.AbstractList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * An ordered list of distinct elements. Bulk additions retain the first occurrence.
+ * Adding an existing element has no effect. Replacing an element with a value
+ * already held at another position throws {@link IllegalArgumentException}.
+ * Iterators and sublists preserve the same uniqueness rules across the entire list.
+ */
 public class UniqueList<T> implements List<T>,Serializable,Cloneable{
 	/**
 	 * serialVersionUID
@@ -52,6 +61,7 @@ public class UniqueList<T> implements List<T>,Serializable,Cloneable{
 
 	@Override
 	public void add(final int i, final T obj){
+		Objects.checkIndex(i, size() + 1);
 		if (innerSet.contains(obj)){
 			return;
 		}
@@ -62,35 +72,25 @@ public class UniqueList<T> implements List<T>,Serializable,Cloneable{
 
 	@Override
 	public boolean addAll(Collection<? extends T> args){
-		args=args.stream().filter(a->!innerSet.contains(a)).collect(Collectors.toList());
-		for(final T arg:args){
-			if (innerSet.contains(arg)){
-				continue;
-			}
-		}
-		final boolean ret= inner.addAll(args);
-		validate();
-		return ret;
+		return addAll(size(), args);
 	}
 
 	@Override
 	public boolean addAll(final int i, Collection<? extends T> args){
-		args=args.stream().filter(a->!innerSet.contains(a)).collect(Collectors.toList());
-		for(final T arg:args){
-			if (innerSet.contains(arg)){
-				continue;
-			}
-		}
-		final boolean ret= inner.addAll(i, args);
+		final Set<T> seen = CommonUtils.set(innerSet);
+		args = args.stream().filter(seen::add).collect(Collectors.toList());
+		final boolean ret = inner.addAll(i, args);
 		validate();
 		return ret;
 	}
 
 	protected void validate(){
+		refreshMembership();
+	}
+
+	private void refreshMembership() {
 		this.innerSet.clear();
-		for(final T arg:this){
-			this.innerSet.add(arg);
-		}
+		this.innerSet.addAll(this.inner);
 	}
 
 	@Override
@@ -110,7 +110,7 @@ public class UniqueList<T> implements List<T>,Serializable,Cloneable{
 
 	@Override
 	public Iterator<T> iterator() {
-		return inner.iterator();
+		return listIterator();
 	}
 
 	@Override
@@ -164,6 +164,7 @@ public class UniqueList<T> implements List<T>,Serializable,Cloneable{
 
 	@Override
 	public T set(final int index, final T element) {
+		checkReplacement(inner.get(index), element);
 		final T obj= inner.set(index, element);
 		validate();
 		return obj;
@@ -188,45 +189,195 @@ public class UniqueList<T> implements List<T>,Serializable,Cloneable{
 
 	@Override
 	public ListIterator<T> listIterator() {
-		return inner.listIterator();
+		return listIterator(0);
 	}
 
 	@Override
 	public ListIterator<T> listIterator(final int index) {
-		return inner.listIterator();
+		return wrap(inner.listIterator(index));
 	}
 
 	@Override
 	public List<T> subList(final int fromIndex, final int toIndex) {
-		return inner.subList(fromIndex, toIndex);
+		return view(inner.subList(fromIndex, toIndex));
 	}
 	
 	@Override
 	public boolean equals(final Object obj){
-		if (obj==null){
-			return false;
-		}
-		if (this==obj){
-			return true;
-		}
-		if (!(this instanceof UniqueList)){
-			return false;
-		}
-		final UniqueList<?> cst=(UniqueList<?>)obj;
-		if (!CommonUtils.eq(this.inner, cst.inner)){
-			return false;
-		}
-		return true;
+		return this == obj || inner.equals(obj);
 	}
-	
+
 	@Override
 	public int hashCode() {
-		final HashCodeBuilder builder=new HashCodeBuilder();
-		builder.append(this.inner);
-		builder.append(this.innerSet);
-		return builder.hashCode();
+		return inner.hashCode();
 	}
-	
+
+	@Override
+	public void sort(Comparator<? super T> comparator) {
+		inner.sort(comparator);
+		validate();
+	}
+
+	private void checkReplacement(T previous, T element) {
+		if (!Objects.equals(previous, element) && innerSet.contains(element)) {
+			throw new IllegalArgumentException("Element already exists in this list: " + element);
+		}
+	}
+
+	// Views update membership without invoking validate(): subclasses may reorder
+	// the backing list there, which would invalidate an iterator during its own update.
+	private ListIterator<T> wrap(final ListIterator<T> iterator) {
+		return new ListIterator<T>() {
+			private T previous;
+			private boolean canModify;
+
+			@Override
+			public boolean hasNext() {
+				return iterator.hasNext();
+			}
+
+			@Override
+			public boolean hasPrevious() {
+				return iterator.hasPrevious();
+			}
+
+			@Override
+			public int nextIndex() {
+				return iterator.nextIndex();
+			}
+
+			@Override
+			public int previousIndex() {
+				return iterator.previousIndex();
+			}
+
+			@Override
+			public T next() {
+				previous = iterator.next();
+				canModify = true;
+				return previous;
+			}
+
+			@Override
+			public T previous() {
+				previous = iterator.previous();
+				canModify = true;
+				return previous;
+			}
+
+			@Override
+			public void remove() {
+				iterator.remove();
+				canModify = false;
+				refreshMembership();
+			}
+
+			@Override
+			public void set(T element) {
+				if (!canModify) {
+					throw new IllegalStateException();
+				}
+				checkReplacement(previous, element);
+				iterator.set(element);
+				previous = element;
+				refreshMembership();
+			}
+
+			@Override
+			public void add(T element) {
+				if (innerSet.contains(element)) {
+					return;
+				}
+				iterator.add(element);
+				canModify = false;
+				refreshMembership();
+			}
+		};
+	}
+
+	private List<T> view(final List<T> backing) {
+		return new AbstractList<T>() {
+			@Override
+			public T get(int index) {
+				return backing.get(index);
+			}
+
+			@Override
+			public int size() {
+				return backing.size();
+			}
+
+			@Override
+			public T set(int index, T element) {
+				checkReplacement(backing.get(index), element);
+				T previous = backing.set(index, element);
+				refreshMembership();
+				return previous;
+			}
+
+			@Override
+			public void add(int index, T element) {
+				Objects.checkIndex(index, size() + 1);
+				if (innerSet.contains(element)) {
+					return;
+				}
+				backing.add(index, element);
+				refreshMembership();
+			}
+
+			@Override
+			public boolean add(T element) {
+				if (innerSet.contains(element)) {
+					return false;
+				}
+				add(size(), element);
+				return true;
+			}
+
+			@Override
+			public boolean addAll(Collection<? extends T> elements) {
+				return addAll(size(), elements);
+			}
+
+			@Override
+			public boolean addAll(int index, Collection<? extends T> elements) {
+				Set<T> seen = CommonUtils.set(innerSet);
+				List<T> additions = elements.stream().filter(seen::add).collect(Collectors.toList());
+				boolean changed = backing.addAll(index, additions);
+				refreshMembership();
+				return changed;
+			}
+
+			@Override
+			public T remove(int index) {
+				T previous = backing.remove(index);
+				refreshMembership();
+				return previous;
+			}
+
+			@Override
+			public void sort(Comparator<? super T> comparator) {
+				backing.sort(comparator);
+				refreshMembership();
+			}
+
+			@Override
+			public Iterator<T> iterator() {
+				return listIterator();
+			}
+
+			@Override
+			public ListIterator<T> listIterator(int index) {
+				return wrap(backing.listIterator(index));
+			}
+
+			@Override
+			public List<T> subList(int fromIndex, int toIndex) {
+				return view(backing.subList(fromIndex, toIndex));
+			}
+		};
+	}
+
 	@Override
 	public String toString(){
 		final SeparatedStringBuilder builder=new SeparatedStringBuilder(",");

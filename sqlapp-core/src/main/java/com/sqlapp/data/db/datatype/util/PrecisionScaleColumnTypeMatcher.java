@@ -27,9 +27,12 @@ import java.util.function.Supplier;
  */
 public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, DefaultPrecision, DefaultScale {
 
+	private Supplier<ColumnTypeMatcher> copyFactory;
+
 	private ColumnTypeMatcher internalColumnTypeMatcher;
 
 	public PrecisionScaleColumnTypeMatcher(String dataTypeName) {
+		this.copyFactory = () -> new PrecisionScaleColumnTypeMatcher(dataTypeName);
 		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher("(?<dataTypeName>" + dataTypeName
 				+ ")\\s*(\\((?<length>\\s*[0-9]+\\s*)(\\s*,\\s*(?<scale>\\s*[0-9]+\\s*))?\\))?", (m, c) -> {
 					String value = m.group("dataTypeName");
@@ -52,6 +55,7 @@ public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, Defau
 	}
 
 	public PrecisionScaleColumnTypeMatcher(String prefix, String middle, String suffix) {
+		this.copyFactory = () -> new PrecisionScaleColumnTypeMatcher(prefix, middle, suffix);
 		// "INTERVAL DAY(", ") TO MINUTE(", ")"
 		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(prefix + "\\s*(\\((?<length>\\s*[0-9]+\\s*)\\s*"
 				+ middle + "\\s*(\\s*,\\s*(?<scale>\\s*[0-9]+\\s*))?\\))?\\s*" + suffix, (m, c) -> {
@@ -68,6 +72,14 @@ public class PrecisionScaleColumnTypeMatcher implements ColumnTypeMatcher, Defau
 						setTypeInformationScale(c);
 					}
 				});
+	}
+
+	@Override
+	public ColumnTypeMatcher copy() {
+		PrecisionScaleColumnTypeMatcher copy = (PrecisionScaleColumnTypeMatcher) copyFactory.get();
+		copy.defaultPrecisionSupplier = this.defaultPrecisionSupplier;
+		copy.defaultScaleSupplier = this.defaultScaleSupplier;
+		return copy;
 	}
 
 	@Override

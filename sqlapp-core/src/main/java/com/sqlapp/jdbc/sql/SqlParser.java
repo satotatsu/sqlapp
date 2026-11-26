@@ -43,6 +43,7 @@ import com.sqlapp.jdbc.sql.node.BindVariableArrayNodeFactory;
 import com.sqlapp.jdbc.sql.node.BindVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.CommentNode;
 import com.sqlapp.jdbc.sql.node.ElseIfNode;
+import com.sqlapp.jdbc.sql.node.ElseIfNodeFactory;
 import com.sqlapp.jdbc.sql.node.ElseNode;
 import com.sqlapp.jdbc.sql.node.ElseNodeFactory;
 import com.sqlapp.jdbc.sql.node.EndNode;
@@ -50,6 +51,7 @@ import com.sqlapp.jdbc.sql.node.EndNodeFactory;
 import com.sqlapp.jdbc.sql.node.ForNodeFactory;
 import com.sqlapp.jdbc.sql.node.IfNode;
 import com.sqlapp.jdbc.sql.node.IfNodeFactory;
+import com.sqlapp.jdbc.sql.node.IncludeNodeFactory;
 import com.sqlapp.jdbc.sql.node.InputStreamNodeFactory;
 import com.sqlapp.jdbc.sql.node.NeedsEndNode;
 import com.sqlapp.jdbc.sql.node.Node;
@@ -86,7 +88,9 @@ public class SqlParser {
 		nodeFactoryList.add(new BindVariableArrayNodeFactory());
 		nodeFactoryList.add(new BindVariableNodeFactory());
 		nodeFactoryList.add(new IfNodeFactory());
+		nodeFactoryList.add(new ElseIfNodeFactory());
 		nodeFactoryList.add(new ElseNodeFactory());
+		nodeFactoryList.add(new IncludeNodeFactory());
 		nodeFactoryList.add(new ForNodeFactory());
 		nodeFactoryList.add(new ReplaceVariableNodeFactory());
 		nodeFactoryList.add(new OutputVariableNodeFactory());
@@ -212,6 +216,13 @@ public class SqlParser {
 		for (Node child : node.getChildNodes()) {
 			setParameterDefinitions(child, parameters);
 		}
+		if (node instanceof IfNode) {
+			IfNode condition = (IfNode) node;
+			condition.getElseIfNodes().forEach(branch -> setParameterDefinitions(branch, parameters));
+			if (condition.getElseNode() != null) {
+				setParameterDefinitions(condition.getElseNode(), parameters);
+			}
+		}
 	}
 
 	private void parseSql(Node node, SortedMap<Integer, Node> sortedNodes, Map<Integer, Integer> keyMap, int start,
@@ -251,25 +262,32 @@ public class SqlParser {
 	 */
 	private int parseNeedsEndNodes(NeedsEndNode node, SortedMap<Integer, Node> sortedNodes,
 			Map<Integer, Integer> keyMap, int start, int end, int nestedLevel) {
-		Node childNode = null;
-		int i = 0;
-		for (i = start; i < end; i++) {
-			int index = keyMap.get(i);
-			childNode = sortedNodes.get(index);
-			if (childNode instanceof NeedsEndNode) {
-				i = parseNeedsEndNodes((NeedsEndNode) childNode, sortedNodes, keyMap, i + 1, end, nestedLevel++);
-				node.addChildNode(childNode);
-			} else if (childNode instanceof EndNode) {
+		Node branch = node;
+		for (int i = start; i < end; i++) {
+			Node childNode = sortedNodes.get(keyMap.get(i));
+			childNode.setNestedLevel(nestedLevel);
+			if (childNode instanceof EndNode) {
 				return i;
 			} else if (node instanceof IfNode && childNode instanceof ElseIfNode) {
-				childNode.setNestedLevel(nestedLevel);
-				((IfNode) node).getElseIfNodes().add((ElseIfNode) childNode);
+				IfNode condition = (IfNode) node;
+				if (condition.getElseNode() != null) {
+					throw new SqlParseException("else if cannot follow else");
+				}
+				condition.getElseIfNodes().add((ElseIfNode) childNode);
+				childNode.setParent(node);
+				branch = childNode;
 			} else if (node instanceof IfNode && childNode instanceof ElseNode) {
-				childNode.setNestedLevel(nestedLevel);
-				((IfNode) node).setElseNode((ElseNode) childNode);
+				IfNode condition = (IfNode) node;
+				if (condition.getElseNode() != null) {
+					throw new SqlParseException("Duplicate else branch");
+				}
+				condition.setElseNode((ElseNode) childNode);
+				branch = childNode;
 			} else {
-				childNode.setNestedLevel(nestedLevel + 1);
-				node.addChildNode(childNode);
+				if (childNode instanceof NeedsEndNode) {
+					i = parseNeedsEndNodes((NeedsEndNode) childNode, sortedNodes, keyMap, i + 1, end, nestedLevel + 1);
+				}
+				branch.addChildNode(childNode);
 			}
 		}
 		String message = DataMessageReader.getInstance().getMessage("ESQL00002", node.getMatchText());
@@ -324,6 +342,9 @@ public class SqlParser {
 					sqlNodes.add(sqlNode);
 					pos = index + commentNode.getMatchText().length();
 				}
+				// Adjacent factories can overlap on whitespace. The following node
+				// still consumes its full match even when its start precedes pos.
+				pos = Math.max(pos, index + commentNode.getMatchText().length());
 			}
 			first = false;
 		}

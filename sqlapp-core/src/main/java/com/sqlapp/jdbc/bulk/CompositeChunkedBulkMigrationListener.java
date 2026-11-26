@@ -32,6 +32,11 @@ public final class CompositeChunkedBulkMigrationListener
 	}
 
 	@Override
+	public void beforeCheckpointCommit(final String migrationId) throws SQLException {
+		for (final var listener : listeners) listener.beforeCheckpointCommit(migrationId);
+	}
+
+	@Override
 	public void onChunkCompleted(final ChunkedBulkMigrationProgress progress) {
 		listeners.forEach(listener -> listener.onChunkCompleted(progress));
 	}

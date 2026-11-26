@@ -97,7 +97,8 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 		}
 		final boolean uniqueConstraint = table.getConstraints().getUniqueConstraints().stream()
 				.anyMatch(constraint -> matchesKeyColumns(table, constraint.getColumns(), columns));
-		final boolean uniqueIndex = table.getIndexes().stream().filter(index -> index.isUnique())
+		final boolean uniqueIndex = table.getIndexes().stream().filter(index -> index.isUnique()
+				&& com.sqlapp.util.CommonUtils.isEmpty(index.getWhere()))
 				.anyMatch(index -> matchesKeyColumns(table,
 						index.getColumns().stream().filter(column -> !column.isIncludedColumn()).toList(), columns));
 		if (!uniqueConstraint && !uniqueIndex) {

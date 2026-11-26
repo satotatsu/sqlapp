@@ -100,4 +100,26 @@ public class SqlSplitterTest extends AbstractTest {
 			assertEquals(0, new SqlSplitter().parse(sql).size());
 	}
 
+	@Test
+	public void preservesCarriageReturnsInLiteralValues() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:splitLiteralReturns", "SA", "");
+				var statement = connection.createStatement()) {
+			for (String value : new String[] { "a\rb", "a\r\nb", "a\nb", "a\r;''b" }) {
+				String sql = "VALUES ('" + value + "')";
+				var parts = new SqlSplitter().parse(sql + ";\r\nVALUES (1);");
+				assertEquals(2, parts.size());
+				assertEquals(sql, parts.get(0).getText());
+				try (var original = statement.executeQuery(sql)) {
+					original.next();
+					String expected = original.getString(1);
+					try (var parsed = connection.createStatement();
+							var result = parsed.executeQuery(parts.get(0).getText())) {
+						result.next();
+						assertEquals(expected, result.getString(1));
+					}
+				}
+			}
+		}
+	}
+
 }

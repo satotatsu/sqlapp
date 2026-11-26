@@ -726,7 +726,18 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	@Override
 	public T clone() {
 		try {
-			return (T) super.clone();
+			final DbDataType<?> copy = (DbDataType<?>) super.clone();
+			copy.columnTypeMatchers = list();
+			for (ColumnTypeMatcher matcher : columnTypeMatchers) {
+				ColumnTypeMatcher copiedMatcher = matcher.copy();
+				if (copiedMatcher != matcher) {
+					copy.setDefaultValueRecursive(copiedMatcher);
+				}
+				copy.columnTypeMatchers.add(copiedMatcher);
+			}
+			copy.sizeSarrogatedType = CommonUtils.cloneMap(sizeSarrogatedType);
+			copy.supportCharacterSemantics = CommonUtils.linkedSet(supportCharacterSemantics);
+			return (T) copy;
 		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}

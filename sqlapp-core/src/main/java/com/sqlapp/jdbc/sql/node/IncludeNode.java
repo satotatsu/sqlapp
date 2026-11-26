@@ -35,16 +35,27 @@ public class IncludeNode extends CommentNode {
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-		Node node = this.getSqlRegistry()
-				.get(getExpression(), sqlParameters.getDialect()).clone();
+		if (getSqlRegistry() == null) {
+			throw new IllegalStateException("SQL include requires a SqlRegistry: " + getExpression());
+		}
+		Node registered = getSqlRegistry().get(getExpression(), sqlParameters.getDialect());
+		if (registered == null) {
+			throw new IllegalArgumentException("Included SQL not found: " + getExpression());
+		}
+		Node node = registered.clone();
 		node.setParent(this);
 		return node.eval(context, sqlParameters);
 	}
 
 	@Override
 	public void setExpression(String expression) {
-		this.expression = CommonUtils.trim(CommonUtils.substring(
-				CommonUtils.trim(expression), 1, expression.length() - 1));
+		String value = CommonUtils.trim(expression);
+		if (value == null || value.length() < 2
+				|| !((value.startsWith("'") && value.endsWith("'"))
+						|| (value.startsWith("\"") && value.endsWith("\"")))) {
+			throw new IllegalArgumentException("SQL include requires a quoted SQL ID");
+		}
+		this.expression = value.substring(1, value.length() - 1);
 	}
 
 	/*

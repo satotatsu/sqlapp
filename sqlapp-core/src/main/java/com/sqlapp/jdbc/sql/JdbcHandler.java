@@ -138,7 +138,7 @@ public class JdbcHandler {
 	 * @throws SQLException
 	 */
 	public <T extends JdbcHandler> T execute(final Connection connection, final Object context) throws SQLException {
-		return this.execute(connection, context, null);
+		return this.execute(connection, context, generatedKeyHandler);
 	}
 
 	/**
@@ -150,7 +150,7 @@ public class JdbcHandler {
 	 */
 	public <T extends JdbcHandler> T execute(final Connection connection, final ParametersContext context)
 			throws SQLException {
-		return this.execute(connection, context, null);
+		return this.execute(connection, context, generatedKeyHandler);
 	}
 
 	/**
@@ -274,7 +274,7 @@ public class JdbcHandler {
 	protected void handleMoreResults(final PreparedStatement statement) throws SQLException {
 		boolean moreResults = statement.getMoreResults();
 		long updateCount = getUpdateCount(statement);
-		while (moreResults) {
+		while (moreResults || updateCount != -1) {
 			if (updateCount != -1) {
 				handleUpdate(statement, updateCount);
 				handleGeneratedKeys(statement);
@@ -288,7 +288,7 @@ public class JdbcHandler {
 				}
 			}
 			moreResults = statement.getMoreResults();
-			updateCount = statement.getUpdateCount();
+			updateCount = getUpdateCount(statement);
 		}
 	}
 
@@ -452,6 +452,10 @@ public class JdbcHandler {
 	public <T extends JdbcHandler> T setQueryTimeout(final Integer queryTimeout) {
 		this.queryTimeout = queryTimeout;
 		return (T) this;
+	}
+
+	protected Integer getQueryTimeout() {
+		return queryTimeout;
 	}
 
 	/**

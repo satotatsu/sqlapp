@@ -230,6 +230,10 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 		return row;
 	}
 
+	/**
+	 * Encodes a row without truncating fields.
+	 * @throws IllegalArgumentException if an encoded value exceeds its configured byte length
+	 */
 	protected void setByteRow(final Row row, final byte[] buffer) {
 		int position = 0;
 		boolean first = true;
@@ -249,6 +253,10 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			final String text = ((Converter) fieldSetting.getConverter()).format(value);
 			final byte[] bytes = text.getBytes(charset);
+			if (bytes.length > fieldSetting.length) {
+				throw new IllegalArgumentException("Field '" + fieldSetting.getName() + "' requires "
+						+ bytes.length + " bytes but its configured length is " + fieldSetting.length + ".");
+			}
 			fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
 			position = position + fieldSetting.length;
 			first = false;

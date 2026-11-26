@@ -76,6 +76,10 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 				first[0] = false;
 			});
 		}
+		if (first[0]) {
+			throw new IllegalArgumentException("No updatable non-key columns for table " + obj.getName()
+					+ "; include an updatable non-key column or skip UPDATE generation.");
+		}
 		addKeyColumnsCondition(obj, sqlSignature, builder);
 		addUpdateAfter(obj, sqlSignature, builder);
 	}

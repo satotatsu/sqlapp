@@ -32,6 +32,25 @@ import com.sqlapp.data.schemas.Table;
 
 class BulkMigrationJobExecutorTest {
 	@Test
+	void rejectsChunkDependentDuplicateSelectionWhenUpdatesAreDisabled() {
+		for (final var strategy : List.of(BulkUpsertDuplicateKeyStrategy.KEEP_LAST,
+				BulkUpsertDuplicateKeyStrategy.CUSTOM)) {
+			final var builder = BulkUpsertOption.builder().updateWhenMatched(false)
+					.duplicateKeyStrategy(strategy);
+			if (strategy == BulkUpsertDuplicateKeyStrategy.CUSTOM) {
+				builder.duplicateRowSelector((retained, candidate) -> candidate)
+						.duplicateRowSelectorFingerprint("last-v1");
+			}
+			final var upsert = builder.build();
+			assertThrows(IllegalArgumentException.class, () -> ChunkedBulkMigrationOption.builder()
+					.migrationId("duplicates").bulkUpsertOption(upsert).build());
+		}
+		ChunkedBulkMigrationOption.builder().migrationId("first")
+				.bulkUpsertOption(BulkUpsertOption.builder().updateWhenMatched(false)
+						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST).build()).build();
+	}
+
+	@Test
 	void targetIdentityChangesPlanAndChunkWriteIdentity() {
 		final Table source = table("SOURCE").setSchemaName("legacy");
 		final Table target = source.clone().setName("CUSTOMERS").setSchemaName("app");

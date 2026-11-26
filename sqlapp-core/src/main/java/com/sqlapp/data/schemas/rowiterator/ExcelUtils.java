@@ -224,15 +224,15 @@ public class ExcelUtils {
 		case _NONE:
 			return null;
 		case BOOLEAN:
-			return cell.getBooleanCellValue();
+			return value.getBooleanValue();
 		case NUMERIC:
 			if (DateUtil.isCellDateFormatted(cell)) {
 				return DateUtil.getJavaDate(value.getNumberValue());
 			} else {
-				return toNumber(cell.getNumericCellValue());
+				return toNumber(value.getNumberValue());
 			}
 		case STRING:
-			return cell.getStringCellValue();
+			return value.getStringValue();
 		default:
 			;
 		}

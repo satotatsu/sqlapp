@@ -206,6 +206,9 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 			if (skipHeaderRowsSize == 1) {
 				columns = CommonUtils.list();
 				final String[] list = fileReader.parseNext();
+				if (list == null) {
+					return;
+				}
 				if (CommonUtils.isEmpty(table.getColumns())) {
 					int i = 0;
 					for (final String columnName : list) {

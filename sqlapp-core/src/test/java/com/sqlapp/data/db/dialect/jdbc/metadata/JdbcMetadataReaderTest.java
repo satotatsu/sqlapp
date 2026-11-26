@@ -252,6 +252,25 @@ class JdbcMetadataReaderTest {
 		return new Function(name).setCatalogName("CAT").setSchemaName("S").setSpecificName(specific);
 	}
 
+	@Test
+	void preservesColumnRemarksThroughJdbcAndXml() throws Exception {
+		try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:mem:columnRemarks", "SA", "");
+				Statement statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE T (ID INTEGER, V VARCHAR(12))");
+			statement.execute("COMMENT ON COLUMN T.V IS 'keep me'");
+			var reader = new JdbcColumnReader(dialect);
+			var context = new ParametersContext();
+			context.put("schemaName", "PUBLIC");
+			context.put("tableName", "T");
+			var columns = reader.doGetAll(connection, context, null);
+			Column column = columns.stream().filter(value -> value.getName().equals("V")).findFirst().orElseThrow();
+			assertEquals("keep me", column.getRemarks());
+			Column restored = SchemaUtils.readXml(new java.io.StringReader(column.asXml()));
+			assertEquals("keep me", restored.getRemarks());
+			assertNull(columns.stream().filter(value -> value.getName().equals("ID")).findFirst().orElseThrow().getRemarks());
+		}
+	}
+
 	private Map<String, Object> routineColumn(String prefix, String name, String specific, String column, int type) {
 		return row(prefix + "_CAT", "CAT", prefix + "_SCHEM", "S", prefix + "_NAME", name, "SPECIFIC_NAME", specific,
 				"COLUMN_NAME", column, "COLUMN_TYPE", type, "DATA_TYPE", Types.DECIMAL, "TYPE_NAME", "DECIMAL",

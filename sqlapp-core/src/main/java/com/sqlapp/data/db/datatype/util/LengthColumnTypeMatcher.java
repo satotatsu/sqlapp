@@ -27,13 +27,17 @@ import java.util.function.Supplier;
  */
 public class LengthColumnTypeMatcher implements ColumnTypeMatcher, DefaultLength {
 
+	private Supplier<ColumnTypeMatcher> copyFactory;
+
 	private ColumnTypeMatcher internalColumnTypeMatcher;
 
 	public LengthColumnTypeMatcher(String dataTypeName) {
+		this.copyFactory = () -> new LengthColumnTypeMatcher(dataTypeName);
 		this.internalColumnTypeMatcher = createColumnTypeMatcher(dataTypeName);
 	}
 
 	public LengthColumnTypeMatcher(String prefix, String suffix) {
+		this.copyFactory = () -> new LengthColumnTypeMatcher(prefix, suffix);
 		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(
 				prefix + "\\s*(\\(((?<length>\\s*[0-9]+)\\s*(?<multi>K|M|G)?(?<byte>CHAR|BYTE|C|B)?)\\))?\\s*" + suffix,
 				(m, c) -> {
@@ -85,6 +89,13 @@ public class LengthColumnTypeMatcher implements ColumnTypeMatcher, DefaultLength
 						}
 					});
 		}
+	}
+
+	@Override
+	public ColumnTypeMatcher copy() {
+		LengthColumnTypeMatcher copy = (LengthColumnTypeMatcher) copyFactory.get();
+		copy.defaultLengthSupplier = this.defaultLengthSupplier;
+		return copy;
 	}
 
 	@Override

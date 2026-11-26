@@ -32,6 +32,9 @@ import com.sqlapp.util.SimpleBeanUtils;
 
 /**
  * SQLコメントのFor要素
+ * <p>
+ * Loop variables shadow variables with the same name in the input context.
+ * The input context is not modified.
  * 
  */
 public class ForNode extends NeedsEndNode implements Cloneable {
@@ -90,23 +93,18 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 		final String indexName = getIndexName();
 		@SuppressWarnings("rawtypes")
 		final Map copyContext = cloneMap(context);
-		final boolean containts = context.containsKey(variableName);
 		AbstractIterator<Object> itr = new AbstractIterator<Object>(this.getEvaluator()) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected void handle(Object obj, int index) {
 				copyContext.put(indexName, index);
-				if (!containts) {
-					copyContext.put(variableName, obj);
-				}
+				copyContext.put(variableName, obj);
 				evalChilds(copyContext, sqlParameters);
 			}
 
 			@Override
 			protected void executeFinally() {
-				if (!containts) {
-					copyContext.remove(variableName);
-				}
+				copyContext.remove(variableName);
 				copyContext.remove(indexName);
 			}
 		};

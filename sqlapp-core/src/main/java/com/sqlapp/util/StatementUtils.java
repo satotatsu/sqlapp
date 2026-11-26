@@ -32,7 +32,9 @@ import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.Node;
 
 /**
- * SQLを実行するためのクラス
+ * SQLを実行するためのクラス。
+ * ステートメント作成メソッドは評価済みパラメータをバインドして返します。
+ * 返されたステートメントのクローズは呼び出し元が行ってください。
  */
 public class StatementUtils {
 
@@ -131,7 +133,7 @@ public class StatementUtils {
 		SqlParameterCollection sqlParameters = node.eval(parametersContext);
 		PreparedStatement statement = connection.prepareStatement(sqlParameters.getSql(), ResultSet.TYPE_FORWARD_ONLY,
 				ResultSet.CONCUR_READ_ONLY);
-		return statement;
+		return bind(statement, sqlParameters);
 	}
 
 	/**
@@ -147,10 +149,10 @@ public class StatementUtils {
 		PreparedStatement statement;
 		try {
 			statement = connection.prepareStatement(sqlParameters.getSql());
+			return bind(statement, sqlParameters);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
-		return statement;
 	}
 
 	/**
@@ -167,10 +169,10 @@ public class StatementUtils {
 		try {
 			statement = connection.prepareCall(sqlParameters.getSql(), ResultSet.TYPE_FORWARD_ONLY,
 					ResultSet.CONCUR_READ_ONLY);
+			return bind(statement, sqlParameters);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
-		return statement;
 	}
 
 	/**
@@ -183,12 +185,22 @@ public class StatementUtils {
 	public static CallableStatement createCallableStatement(Connection connection, Node node,
 			ParametersContext parametersContext) throws SQLException {
 		SqlParameterCollection sqlParameters = node.eval(parametersContext);
-		CallableStatement statement = null;
+		CallableStatement statement = connection.prepareCall(sqlParameters.getSql());
+		return bind(statement, sqlParameters);
+	}
+
+	private static <T extends PreparedStatement> T bind(T statement, SqlParameterCollection sqlParameters)
+			throws SQLException {
 		try {
-			statement = connection.prepareCall(sqlParameters.getSql());
-		} finally {
-			close(statement);
+			sqlParameters.setBind(statement);
+			return statement;
+		} catch (SQLException | RuntimeException | Error e) {
+			try {
+				statement.close();
+			} catch (SQLException closeFailure) {
+				e.addSuppressed(closeFailure);
+			}
+			throw e;
 		}
-		return statement;
 	}
 }

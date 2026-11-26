@@ -583,7 +583,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		try {
 			Node clone = (Node) super.clone();
 			if (this.childNodeList != null) {
-				clone.childNodeList.clear();
+				clone.childNodeList = new ArrayList<Node>(childNodeList.size());
 				for (Node node : childNodeList) {
 					clone.addChildNode(node.clone());
 				}

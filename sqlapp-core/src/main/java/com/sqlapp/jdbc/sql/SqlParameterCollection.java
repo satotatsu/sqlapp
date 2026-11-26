@@ -62,7 +62,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	/**
 	 * パラメタ
 	 */
-	private final List<BindParameterHolder> parameters = new ArrayList<BindParameterHolder>();
+	private List<BindParameterHolder> parameters = new ArrayList<BindParameterHolder>();
 	private StringBuilder sql = new StringBuilder();
 	/** フェッチサイズ */
 	private Integer fetchSize;
@@ -689,9 +689,16 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		try {
 			SqlParameterCollection clone = (SqlParameterCollection) super.clone();
 			clone.sql = new StringBuilder(this.sql);
-			List<BindParameterHolder> parameters = CommonUtils.list(this.parameters);
-			clone.parameters.clear();
-			clone.parameters.addAll(parameters);
+			clone.parameters = new ArrayList<>(this.parameters.size());
+			for (BindParameterHolder holder : this.parameters) {
+				if (holder.getBindParameter() != null) {
+					clone.parameters.add(new BindParameterHolder(holder.getBindParameter().clone()));
+				} else {
+					BindParameterHolder copy = new BindParameterHolder();
+					holder.getBindParameters().forEach(parameter -> copy.getBindParameters().add(parameter.clone()));
+					clone.parameters.add(copy);
+				}
+			}
 			return clone;
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException(e);

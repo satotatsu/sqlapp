@@ -45,4 +45,49 @@ class DbDataTypeMatchingTest {
 		assertEquals(50L, type.getLength(50L));
 		assertEquals("VARCHAR(50)", type.getColumCreateDefinition(type.getLength(50L), null));
 	}
+	@Test
+	void repeatedOverflowResolutionUsesSourceMatcherAndReturnsFreshInformation() {
+		DbDataTypeCollection types = new DbDataTypeCollection();
+		types.addVarchar(10);
+		types.addClob("CLOB", 1000L);
+		for (Long length : new Long[] {20L, null}) {
+			var first = types.matchTypeInformation("VARCHAR(20)", length).orElseThrow();
+			assertEquals(DataType.CLOB, first.getDataType().orElseThrow());
+			var expectedLength = first.getLength();
+			first.setLength(1L);
+			first.setDataTypeName("CHANGED");
+			var second = types.matchTypeInformation("VARCHAR(20)", length).orElseThrow();
+			assertEquals(DataType.CLOB, second.getDataType().orElseThrow());
+			assertEquals("VARCHAR", second.getDataTypeName().orElseThrow());
+			assertEquals(expectedLength, second.getLength());
+		}
+		assertEquals(DataType.VARCHAR,
+				types.matchTypeInformation("VARCHAR(5)", 5L).orElseThrow().getDataType().orElseThrow());
+	}
+
+	@Test
+	void clonedLengthMatcherUsesIndependentDefaultsAndCollections() {
+		VarcharType original = new VarcharType().setDefaultLength(10L);
+		VarcharType copy = original.clone().setDefaultLength(20L);
+		assertEquals(20L, copy.matchDataTypeName("VARCHAR").orElseThrow().getLength().orElseThrow());
+		assertEquals(10L, original.matchDataTypeName("VARCHAR").orElseThrow().getLength().orElseThrow());
+		copy.setSizeSarrogation(5L, DataType.CLOB);
+		assertEquals(null, original.getSizeSarrogation(5L));
+		copy.clearColumnTypeMatchers();
+		assertTrue(original.matchDataTypeName("VARCHAR").isPresent());
+	}
+
+	@Test
+	void clonedNumericMatchersUseIndependentPrecisionAndScaleDefaults() {
+		DecimalType original = new DecimalType().setDefaultPrecision(10).setDefaultScale(2);
+		DecimalType copy = original.clone().setDefaultPrecision(20).setDefaultScale(4);
+		var info = copy.matchDataTypeName("DECIMAL").orElseThrow();
+		assertEquals(20L, info.getLength().orElseThrow());
+		assertEquals(4, info.getScale().orElseThrow());
+		assertEquals(2, original.matchDataTypeName("DECIMAL").orElseThrow().getScale().orElseThrow());
+		FloatType floatType = new FloatType().setDefaultPrecision(10);
+		assertEquals(20L, floatType.clone().setDefaultPrecision(20)
+				.matchDataTypeName("FLOAT").orElseThrow().getLength().orElseThrow());
+		assertEquals(10L, floatType.matchDataTypeName("FLOAT").orElseThrow().getLength().orElseThrow());
+	}
 }

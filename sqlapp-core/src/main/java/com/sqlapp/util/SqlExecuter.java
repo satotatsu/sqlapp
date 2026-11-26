@@ -78,7 +78,7 @@ public class SqlExecuter {
 	 * @param part
 	 */
 	public SqlExecuter addAnd(String part){
-		this.sql.append(" AND");
+		this.sql.append(" AND ").append(part);
 		return this;
 	}
 
@@ -415,9 +415,10 @@ public class SqlExecuter {
 			Object val=resultSet.getObject(columnIndex);
 			return (T)Converters.getDefault().convertObject(val, clazz);
 		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		} finally {
 			close(resultSet);
 			close(statement);
-			throw new RuntimeException(e);
 		}
 	}
 
@@ -438,9 +439,10 @@ public class SqlExecuter {
 			Object val=resultSet.getObject(columnName);
 			return (T)Converters.getDefault().convertObject(val, clazz);
 		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		} finally {
 			close(resultSet);
 			close(statement);
-			throw new RuntimeException(e);
 		}
 	}
 

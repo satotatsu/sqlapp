@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 public class ElseIfNodeFactory extends AbstractCommentNodeFactory<ElseIfNode>{
 
 	protected static final Pattern[] MATCH_PATTERNS=new Pattern[]{
-		Pattern.compile("\\s*(?<value>--\\s*else\\s+if[ ]+(?<expression>.+)\\s*)")
+		Pattern.compile("[ \\t]*(?<value>--[ \\t]*else[ \\t]+if[ ]+(?<expression>[^\\r\\n]+))")
 	};
 
 	@Override

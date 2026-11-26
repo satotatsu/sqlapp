@@ -261,6 +261,7 @@ public final class ChunkedBulkMigrationExecutor {
 				saveCompletionWithRetry(targetConnection, checkpointStore, complete,
 						options, listener);
 			} else {
+				listener.beforeCheckpointCommit(complete.getMigrationId());
 				checkpointStore.save(complete);
 			}
 			return new ChunkedBulkMigrationResult(previouslyProcessed, processed,
@@ -300,6 +301,7 @@ public final class ChunkedBulkMigrationExecutor {
 				try (var transaction = BulkUpsertTransaction.begin(connection, true)) {
 					try {
 						checkpointStore.save(complete);
+						listener.beforeCheckpointCommit(complete.getMigrationId());
 						transaction.commit();
 					} catch (SQLException | RuntimeException | Error failure) {
 						transaction.rollback(failure);
@@ -329,7 +331,7 @@ public final class ChunkedBulkMigrationExecutor {
 		while (true) {
 			try {
 				executeChunkAttempt(connection, chunk, source, options, checkpointStore,
-						checkpoint, transactional);
+						checkpoint, transactional, listener);
 				return;
 			} catch (SQLException failure) {
 				final BulkMigrationRetryOption retry = options.getRetryOption();
@@ -364,13 +366,15 @@ public final class ChunkedBulkMigrationExecutor {
 			final Table chunk, final Table source,
 			final ChunkedBulkMigrationOption options,
 			final BulkMigrationCheckpointStore checkpointStore,
-			final BulkMigrationCheckpoint checkpoint, final boolean transactional)
+			final BulkMigrationCheckpoint checkpoint, final boolean transactional,
+			final ChunkedBulkMigrationListener listener)
 			throws SQLException {
 		if (transactional) {
 			try (var transaction = BulkUpsertTransaction.begin(connection, true)) {
 				try {
 					if (!chunk.getRows().isEmpty()) write(connection, chunk, source, options, true);
 					checkpointStore.save(checkpoint);
+					listener.beforeCheckpointCommit(checkpoint.getMigrationId());
 					transaction.commit();
 				} catch (SQLException | RuntimeException | Error failure) {
 					transaction.rollback(failure);
@@ -381,6 +385,7 @@ public final class ChunkedBulkMigrationExecutor {
 			if (!chunk.getRows().isEmpty()) {
 				write(connection, chunk, source, options, false);
 			}
+			listener.beforeCheckpointCommit(checkpoint.getMigrationId());
 			checkpointStore.save(checkpoint);
 		}
 	}

@@ -11,6 +11,12 @@ public interface ChunkedBulkMigrationListener {
 	default void onChunkStarted(final ChunkedBulkMigrationProgress progress) {
 	}
 
+	/** Checks ownership after checkpoint DML and immediately before a managed commit.
+	 * In external-store mode this runs before saving the checkpoint; data writes may already be durable.
+	 * Also invoked for the final completion checkpoint and on every retry. */
+	default void beforeCheckpointCommit(final String migrationId) throws SQLException {
+	}
+
 	default void onChunkCompleted(final ChunkedBulkMigrationProgress progress) {
 	}
 

@@ -158,7 +158,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 */
 	@Override
 	public T remove(final Object key) {
-		return inner.remove(key);
+		return inner.remove(convertKey((String) key));
 	}
 
 	/*

@@ -74,9 +74,9 @@ public enum ColumnAnalyzer {
 			List<UniqueConstraint> uks = getUniqueConstrainsts(table);
 			if (!rows.isEmpty()) {
 				Row row = rows.get(0);
-				boolean notNull = true;
 				for (UniqueConstraint uk : uks) {
 					Set<Column> columns = getColumnsByUk(uk);
+					boolean notNull = !columns.isEmpty();
 					for (Column column : columns) {
 						if (row.get(column) == null) {
 							notNull = false;
@@ -198,9 +198,9 @@ public enum ColumnAnalyzer {
 			final List<Index> indexes = getUniqueIndexex(table);
 			if (!rows.isEmpty()) {
 				Row row = rows.get(0);
-				boolean notNull = true;
 				for (Index index : indexes) {
 					Set<Column> columns = getColumnsByIndex(index);
+					boolean notNull = !columns.isEmpty();
 					for (Column column : columns) {
 						if (row.get(column) == null) {
 							notNull = false;
@@ -446,7 +446,9 @@ public enum ColumnAnalyzer {
 	}
 
 	protected static List<Index> getUniqueIndexex(Table table) {
-		return table.getIndexes().stream().filter(index -> index.isUnique()).toList();
+		// A partial index only guarantees uniqueness for rows satisfying its predicate.
+		return table.getIndexes().stream()
+				.filter(index -> index.isUnique() && CommonUtils.isBlank(index.getWhere())).toList();
 	}
 
 	public static Set<Column> and(Set<Column> columns1, Set<Column> columns2) {

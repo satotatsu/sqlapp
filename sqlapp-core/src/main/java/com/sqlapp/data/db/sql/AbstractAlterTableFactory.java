@@ -160,11 +160,11 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 		final Map<String, Difference<?>> colDiff = diff.toDifference().getProperties(this.getDialect(), State.Added,
 				State.Modified);
 		final Difference<?> nameDiff = colDiff.get(SchemaProperties.NAME.getLabel());
-		if (colDiff.size() > 1 || (nameDiff == null && colDiff.size() == 1)) {
-			addAlterColumn(originalTable, table, oldColumn, column, diff, result);
-		}
 		if (nameDiff != null) {
 			addRenameColumn(originalTable, table, oldColumn, column, diff, result);
+		}
+		if (colDiff.size() > 1 || (nameDiff == null && colDiff.size() == 1)) {
+			addAlterColumn(originalTable, table, oldColumn, column, diff, result);
 		}
 	}
 

@@ -72,7 +72,7 @@ public abstract class AbstractDropTableFactory<S extends AbstractSqlBuilder<?>>
 		final List<Table> sortedTables = tableOrder.sort(tables);
 		final List<DbObjectDifference> result = new FlexList<DbObjectDifference>();
 		for (int i = 0; i < sortedTables.size(); i++) {
-			final Table table = tables.get(i);
+			final Table table = sortedTables.get(i);
 			for (final DbObjectDifference dbObjectDifference : list) {
 				if (table == dbObjectDifference.getOriginal()) {
 					result.add(dbObjectDifference);

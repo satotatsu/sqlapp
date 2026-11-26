@@ -27,9 +27,12 @@ import java.util.function.Supplier;
  */
 public class PrecisionColumnTypeMatcher implements ColumnTypeMatcher, DefaultPrecision {
 
+	private Supplier<ColumnTypeMatcher> copyFactory;
+
 	private ColumnTypeMatcher internalColumnTypeMatcher;
 
 	public PrecisionColumnTypeMatcher(String dataTypeName) {
+		this.copyFactory = () -> new PrecisionColumnTypeMatcher(dataTypeName);
 		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(
 				"(?<dataTypeName>" + dataTypeName + ")\\s*(\\((?<length>\\s*[0-9]+\\s*)\\))?", (m, c) -> {
 					String value = m.group("dataTypeName");
@@ -46,6 +49,7 @@ public class PrecisionColumnTypeMatcher implements ColumnTypeMatcher, DefaultPre
 	}
 
 	public PrecisionColumnTypeMatcher(String prefix, String suffix) {
+		this.copyFactory = () -> new PrecisionColumnTypeMatcher(prefix, suffix);
 		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(
 				prefix + "\\s*(\\(((?<length>\\s*[0-9]+)\\s*)\\))?\\s*" + suffix, (m, c) -> {
 					String length = m.group("length");
@@ -55,6 +59,13 @@ public class PrecisionColumnTypeMatcher implements ColumnTypeMatcher, DefaultPre
 						setTypeInformationPrecision(c);
 					}
 				});
+	}
+
+	@Override
+	public ColumnTypeMatcher copy() {
+		PrecisionColumnTypeMatcher copy = (PrecisionColumnTypeMatcher) copyFactory.get();
+		copy.defaultPrecisionSupplier = this.defaultPrecisionSupplier;
+		return copy;
 	}
 
 	@Override

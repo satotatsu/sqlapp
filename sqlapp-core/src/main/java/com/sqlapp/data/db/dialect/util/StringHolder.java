@@ -42,13 +42,8 @@ public class StringHolder implements Cloneable, Serializable {
 	}
 
 	private String normalize(String original) {
-		StringBuilder builder = new StringBuilder(original.length() + 1);
-		String[] splits = original.split("\n");
-		for (String arg : splits) {
-			builder.append(arg.replace("\r", ""));
-			builder.append('\n');
-		}
-		return builder.toString();
+		// Keep literal contents intact; the scanner only needs a final line boundary.
+		return original.endsWith("\n") ? original : original + '\n';
 	}
 
 	public boolean isSpace(int start, int end) {
