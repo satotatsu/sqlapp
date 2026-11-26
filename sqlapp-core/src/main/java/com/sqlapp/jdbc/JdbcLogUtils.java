@@ -28,7 +28,7 @@ public class JdbcLogUtils {
 	 * @param sql
 	 */
 	public static void logSql(AbstractJdbc<?> jdbc, final String sql, long start, long end) {
-		if (jdbc==null){
+		if (jdbc == null) {
 			return;
 		}
 		if (jdbc.isSqlLogEnabled()) {
@@ -37,7 +37,7 @@ public class JdbcLogUtils {
 			jdbc.info(sql);
 		}
 	}
-	
+
 	/**
 	 * SQLのログ出力
 	 * 
@@ -45,7 +45,7 @@ public class JdbcLogUtils {
 	 * @param value
 	 */
 	public static void info(AbstractJdbc<?> jdbc, String value) {
-		if (jdbc==null){
+		if (jdbc == null) {
 			return;
 		}
 		jdbc.info(value);

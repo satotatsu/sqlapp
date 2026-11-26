@@ -37,7 +37,7 @@ public class SqlappStatement extends AbstractStatement<Statement> {
 
 	@Override
 	protected ResultSet getResultSet(ResultSet rs, Statement statement) {
-		SqlappResultSet<Statement> resultSet=new SqlappResultSet<Statement>(rs, statement);
+		SqlappResultSet<Statement> resultSet = new SqlappResultSet<Statement>(rs, statement);
 		this.initializeChild(resultSet);
 		return resultSet;
 	}

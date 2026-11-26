@@ -23,18 +23,15 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 
-public class SqlappDatabaseMetaData extends AbstractDatabaseMetaData implements
-		DatabaseMetaData {
+public class SqlappDatabaseMetaData extends AbstractDatabaseMetaData implements DatabaseMetaData {
 
-	public SqlappDatabaseMetaData(DatabaseMetaData nativeObject,
-			Connection connection) {
+	public SqlappDatabaseMetaData(DatabaseMetaData nativeObject, Connection connection) {
 		super(nativeObject, connection);
 	}
 
 	@Override
-	protected ResultSet getResultSet(ResultSet rs,
-			DatabaseMetaData databaseMetaData) {
-		SqlappResultSet<DatabaseMetaData> resultSet= new SqlappResultSet<DatabaseMetaData>(rs, databaseMetaData);
+	protected ResultSet getResultSet(ResultSet rs, DatabaseMetaData databaseMetaData) {
+		SqlappResultSet<DatabaseMetaData> resultSet = new SqlappResultSet<DatabaseMetaData>(rs, databaseMetaData);
 		this.initializeChild(resultSet);
 		return resultSet;
 	}

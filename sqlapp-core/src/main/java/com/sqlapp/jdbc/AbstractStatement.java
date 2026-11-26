@@ -117,7 +117,7 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 	 */
 	@Override
 	public void clearWarnings() throws SQLException {
-		nativeObject.cancel();
+		nativeObject.clearWarnings();
 	}
 
 	/*

@@ -184,7 +184,10 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 
 	@Override
 	public void setArray(final int parameterIndex, final Array x) throws SQLException {
-		parameters.set(parameterIndex - 1, x.toString());
+		if (isSqlLogEnabled()) {
+			parameters.set(parameterIndex - 1, x == null ? "null" : x.toString());
+		}
+		this.nativeObject.setArray(parameterIndex, x);
 	}
 
 	/*
@@ -194,7 +197,10 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 	 */
 	@Override
 	public void setAsciiStream(final int parameterIndex, final InputStream x) throws SQLException {
-		setStringParameter(parameterIndex - 1, x.toString());
+		if (isSqlLogEnabled()) {
+			setStringParameter(parameterIndex - 1, x == null ? null : x.toString());
+		}
+		this.nativeObject.setAsciiStream(parameterIndex, x);
 	}
 
 	/**
@@ -212,21 +218,6 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 	}
 
 	/**
-	 * 文字型のパラメタの設定
-	 * 
-	 * @param parameterIndex
-	 * @param value
-	 * @param length
-	 */
-	private void setStringParameter(final int parameterIndex, final String value, final int length) {
-		if (value == null) {
-			parameters.set(parameterIndex, "null");
-		} else {
-			parameters.set(parameterIndex, "'" + value.substring(0, length) + "'");
-		}
-	}
-
-	/**
 	 * ユニコード文字型のパラメタの設定
 	 * 
 	 * @param parameterIndex
@@ -237,21 +228,6 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 			parameters.set(parameterIndex, "null");
 		} else {
 			parameters.set(parameterIndex, "N'" + value + "'");
-		}
-	}
-
-	/**
-	 * ユニコード文字型のパラメタの設定
-	 * 
-	 * @param parameterIndex
-	 * @param value
-	 * @param length
-	 */
-	private void setNStringParameter(final int parameterIndex, final String value, final int length) {
-		if (value == null) {
-			parameters.set(parameterIndex, "null");
-		} else {
-			parameters.set(parameterIndex, "N'" + value.substring(0, length) + "'");
 		}
 	}
 
@@ -317,9 +293,9 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 	public void setAsciiStream(final int parameterIndex, final InputStream x, final int length) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
-				setStringParameter(parameterIndex - 1, null, length);
+				setStringParameter(parameterIndex - 1, null);
 			} else {
-				setStringParameter(parameterIndex - 1, x.toString(), length);
+				setStringParameter(parameterIndex - 1, x.toString());
 			}
 		}
 		this.nativeObject.setAsciiStream(parameterIndex, x, length);
@@ -335,9 +311,9 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 	public void setAsciiStream(final int parameterIndex, final InputStream x, final long length) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
-				setStringParameter(parameterIndex - 1, null, (int) length);
+				setStringParameter(parameterIndex - 1, null);
 			} else {
-				setStringParameter(parameterIndex - 1, x.toString(), (int) length);
+				setStringParameter(parameterIndex - 1, x.toString());
 			}
 		}
 		this.nativeObject.setAsciiStream(parameterIndex, x, length);
@@ -538,7 +514,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 			if (reader == null) {
 				setStringParameter(parameterIndex - 1, null);
 			} else {
-				setStringParameter(parameterIndex - 1, reader.toString(), length);
+				setStringParameter(parameterIndex - 1, reader.toString());
 			}
 		}
 		this.nativeObject.setCharacterStream(parameterIndex, reader, length);
@@ -556,7 +532,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 			if (reader == null) {
 				setStringParameter(parameterIndex - 1, null);
 			} else {
-				setStringParameter(parameterIndex - 1, reader.toString(), (int) length);
+				setStringParameter(parameterIndex - 1, reader.toString());
 			}
 		}
 		this.nativeObject.setCharacterStream(parameterIndex, reader, length);
@@ -607,7 +583,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 			if (reader == null) {
 				setStringParameter(parameterIndex - 1, null);
 			} else {
-				setStringParameter(parameterIndex - 1, reader.toString(), (int) length);
+				setStringParameter(parameterIndex - 1, reader.toString());
 			}
 		}
 		this.nativeObject.setClob(parameterIndex, reader, length);
@@ -730,7 +706,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 			if (value == null) {
 				setNStringParameter(parameterIndex - 1, null);
 			} else {
-				setNStringParameter(parameterIndex - 1, value.toString(), (int) length);
+				setNStringParameter(parameterIndex - 1, value.toString());
 			}
 		}
 		this.nativeObject.setNCharacterStream(parameterIndex, value, length);
@@ -781,7 +757,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement> ext
 			if (reader == null) {
 				setNStringParameter(parameterIndex - 1, null);
 			} else {
-				setNStringParameter(parameterIndex - 1, reader.toString(), (int) length);
+				setNStringParameter(parameterIndex - 1, reader.toString());
 			}
 		}
 		this.nativeObject.setNClob(parameterIndex, reader, length);
