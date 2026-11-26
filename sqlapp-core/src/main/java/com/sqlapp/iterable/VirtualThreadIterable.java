@@ -24,8 +24,15 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+/**
+ * Produces values on a virtual thread. The returned iterator is
+ * {@link AutoCloseable}; close it when stopping early to interrupt the producer
+ * and cancel pending notifications. Producer code must cooperate with
+ * interruption for cancellation to complete.
+ */
 public class VirtualThreadIterable<T> implements Iterable<T> {
 
 	private final Consumer<Consumer<T>> producer;
@@ -49,6 +56,7 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 	@Override
 	public Iterator<T> iterator() {
 		BlockingQueue<Message<T>> queue = new ArrayBlockingQueue<>(queueSize);
+		final AtomicBoolean cancelled = new AtomicBoolean();
 
 		Thread producerThread = Thread.ofVirtual().start(() -> {
 			Throwable failure = null;
@@ -76,22 +84,23 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 					}
 				} finally {
 					if (failure != null) {
-						offerTerminalMessage(queue, new Failure<>(failure));
+						offerTerminalMessage(queue, new Failure<>(failure), cancelled);
 					}
-					offerTerminalMessage(queue, End.instance());
+					offerTerminalMessage(queue, End.instance(), cancelled);
 				}
 			}
 		});
 
-		return new VirtualThreadIterator<>(queue, producerThread);
+		return new VirtualThreadIterator<>(queue, producerThread, cancelled);
 	}
 
-	private static <T> void offerTerminalMessage(BlockingQueue<Message<T>> queue, Message<T> message) {
+	private static <T> void offerTerminalMessage(BlockingQueue<Message<T>> queue, Message<T> message,
+			AtomicBoolean cancelled) {
 		/*
 		 * Producerが正常に完了した場合、Consumerはキューを消費中なので、 通常はputで問題ない。
 		 */
 		boolean interrupted = false;
-		for (;;) {
+		while (!cancelled.get()) {
 			try {
 				queue.put(message);
 				break;
@@ -135,15 +144,17 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 
 		private final BlockingQueue<Message<T>> queue;
 		private final Thread producerThread;
+		private final AtomicBoolean cancelled;
 
 		private T next;
 		private boolean nextReady;
 		private boolean finished;
 		private boolean closed;
 
-		VirtualThreadIterator(BlockingQueue<Message<T>> queue, Thread producerThread) {
+		VirtualThreadIterator(BlockingQueue<Message<T>> queue, Thread producerThread, AtomicBoolean cancelled) {
 			this.queue = queue;
 			this.producerThread = producerThread;
+			this.cancelled = cancelled;
 		}
 
 		@Override
@@ -197,6 +208,7 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 				return;
 			}
 			closed = true;
+			cancelled.set(true);
 			finished = true;
 			next = null;
 			nextReady = false;

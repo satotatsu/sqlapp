@@ -109,8 +109,7 @@ public class FileIterables {
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
 		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator,
-				p -> readSupportedAsMap(p),
-				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+				p -> readSupportedAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, String filterExpression,
@@ -122,8 +121,7 @@ public class FileIterables {
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, String filterExpression,
 			CachedMvelEvaluator cmvelEvaluator) {
 		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator,
-				p -> readSupportedAsMap(p),
-				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
+				p -> readSupportedAsMap(p), p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	private static <T> List<Iterable<Map<String, Object>>> readAllInternalAsMap(T pathObj, Predicate<T> filePredicate,

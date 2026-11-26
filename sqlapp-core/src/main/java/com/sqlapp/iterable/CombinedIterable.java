@@ -20,7 +20,9 @@
 package com.sqlapp.iterable;
 
 import java.util.Collections;
-import java.util.IdentityHashMap;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -30,8 +32,10 @@ import java.util.function.Consumer;
 import com.sqlapp.util.iterator.IteratorCloseUtils;
 
 /**
- * Combined Iterable
- * 
+ * Combined Iterable {@link Iterator#remove()} delegates to the iterator that
+ * returned the last element, even when {@code hasNext()} has advanced to
+ * another iterable.
+ *
  * @param <E>
  */
 public class CombinedIterable<E> implements Iterable<E> {
@@ -61,8 +65,10 @@ public class CombinedIterable<E> implements Iterable<E> {
 
 		private final Iterator<? extends Iterable<? extends E>> iterableIterator;
 		private Iterator<? extends E> currentIterator = Collections.emptyIterator();
+		private Iterator<? extends E> lastReturnedIterator;
 		private final Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer;
-		private final Set<Iterator<?>> closedIterators = Collections.newSetFromMap(new IdentityHashMap<>());
+		private final Set<IteratorReference> closedIterators = new HashSet<>();
+		private final ReferenceQueue<Iterator<?>> collectedIterators = new ReferenceQueue<>();
 		private boolean closed;
 
 		CombinedIterator(final List<? extends Iterable<? extends E>> iterableList,
@@ -83,8 +89,8 @@ public class CombinedIterable<E> implements Iterable<E> {
 						close();
 						return false;
 					}
-					currentIterator = java.util.Objects.requireNonNull(iterableIterator.next(),
-							"combined iterable").iterator();
+					currentIterator = java.util.Objects.requireNonNull(iterableIterator.next(), "combined iterable")
+							.iterator();
 					currentIterator = java.util.Objects.requireNonNull(currentIterator,
 							"combined iterable returned a null iterator");
 					switchConsumer.accept(iterableIterator);
@@ -102,7 +108,9 @@ public class CombinedIterable<E> implements Iterable<E> {
 				throw new NoSuchElementException();
 			}
 			try {
-				return currentIterator.next();
+				final E value = currentIterator.next();
+				lastReturnedIterator = currentIterator;
+				return value;
 			} catch (final RuntimeException | Error e) {
 				closeOnFailure(e);
 				throw e;
@@ -111,7 +119,11 @@ public class CombinedIterable<E> implements Iterable<E> {
 
 		@Override
 		public void remove() {
-			currentIterator.remove();
+			if (lastReturnedIterator == null) {
+				throw new IllegalStateException();
+			}
+			lastReturnedIterator.remove();
+			lastReturnedIterator = null;
 		}
 
 		@Override
@@ -132,13 +144,47 @@ public class CombinedIterable<E> implements Iterable<E> {
 		}
 
 		private void closeOne(final Throwable failure, final Iterator<?>... iterators) {
-			final List<Iterator<?>> open = new java.util.ArrayList<>(iterators.length);
+			IteratorReference collected;
+			while ((collected = (IteratorReference) collectedIterators.poll()) != null) {
+				closedIterators.remove(collected);
+			}
+			List<Iterator<?>> open = null;
 			for (final Iterator<?> iterator : iterators) {
-				if (closedIterators.add(iterator)) {
+				if (iterator instanceof AutoCloseable
+						&& closedIterators.add(new IteratorReference(iterator, collectedIterators))) {
+					if (open == null) {
+						open = new java.util.ArrayList<>(iterators.length);
+					}
 					open.add(iterator);
 				}
 			}
-			IteratorCloseUtils.close(failure, open.toArray(Iterator<?>[]::new));
+			if (open != null) {
+				IteratorCloseUtils.close(failure, open.toArray(Iterator<?>[]::new));
+			}
+		}
+
+		/**
+		 * Tracks close identity without retaining completed iterators or their data.
+		 */
+		private static final class IteratorReference extends WeakReference<Iterator<?>> {
+			private final int hash;
+
+			IteratorReference(Iterator<?> iterator, ReferenceQueue<Iterator<?>> queue) {
+				super(iterator, queue);
+				hash = System.identityHashCode(iterator);
+			}
+
+			@Override
+			public int hashCode() {
+				return hash;
+			}
+
+			@Override
+			public boolean equals(Object other) {
+				final Iterator<?> iterator = get();
+				return this == other || other instanceof IteratorReference reference && iterator != null
+						&& iterator == reference.get();
+			}
 		}
 	}
 }

@@ -20,16 +20,17 @@
 package com.sqlapp.iterable;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 
 /**
- * 指定した回数だけ値を返すIterable
- * 
+ * 指定した回数だけ値を返すIterable インデックスは開始値（省略時は0）を含み、上限値を含まない。
+ *
  * @param <E>
  */
 public class CountIterable<E> implements Iterable<E> {
 
-	private final long start;;
+	private final long start;
 	private final long limit;
 
 	private final Function<Long, E> valueSupplier;
@@ -69,13 +70,15 @@ public class CountIterable<E> implements Iterable<E> {
 
 		@Override
 		public boolean hasNext() {
-			count++;
-			return count <= limit;
+			return count < limit;
 		}
 
 		@Override
 		public E next() {
-			return valueSupplier.apply(count - 1);
+			if (!hasNext()) {
+				throw new NoSuchElementException();
+			}
+			return valueSupplier.apply(count++);
 		}
 	}
 }
