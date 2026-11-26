@@ -43,8 +43,7 @@ public class SqlServerGeneratedKeyCounterProvider implements GeneratedKeyCounter
 			return null;
 		}
 		// last_value is NULL until the first row was inserted; the seed is next then.
-		return identity[0] == null ? identity[1].toBigIntegerExact()
-				: identity[0].add(identity[2]).toBigIntegerExact();
+		return identity[0] == null ? identity[1].toBigIntegerExact() : identity[0].add(identity[2]).toBigIntegerExact();
 	}
 
 	@Override
@@ -66,8 +65,9 @@ public class SqlServerGeneratedKeyCounterProvider implements GeneratedKeyCounter
 			statement.setString(1, qualified(dialect, table));
 			statement.setString(2, column.getName());
 			try (var rows = statement.executeQuery()) {
-				return rows.next() ? new BigDecimal[] { rows.getBigDecimal(1), rows.getBigDecimal(2),
-						rows.getBigDecimal(3) } : null;
+				return rows.next()
+						? new BigDecimal[] { rows.getBigDecimal(1), rows.getBigDecimal(2), rows.getBigDecimal(3) }
+						: null;
 			}
 		}
 	}
