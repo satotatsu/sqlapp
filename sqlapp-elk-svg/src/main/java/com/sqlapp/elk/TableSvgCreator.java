@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -315,6 +316,7 @@ public class TableSvgCreator {
 	private SchemaLayoutResult layoutSchema(Schema schema) {
 		ElkNode rootNode = createRootNodeForTable();
 		SchemaNode schemaNode = svgDrawMode.createSchemaNode(schema, rootNode, rootNode);
+		schemaNode.setNameMode(nameMode);
 		List<TableNode> tableNodeList = createTableNodes(rootNode, schema.getTables());
 		schemaNode.getTableNodes().addAll(tableNodeList);
 		addEdges(tableNodeList);
@@ -436,7 +438,7 @@ public class TableSvgCreator {
 		// SVGレンダリング
 		IndentStringBuilder svg = new IndentStringBuilder();
 		// 【修正】widthがtotalHeightになっていたバグを修正
-		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>",
+		svg.append(String.format(Locale.ROOT, "<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>",
 				totalHolder.totalWidth, totalHolder.totalHeight));
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
@@ -466,10 +468,10 @@ public class TableSvgCreator {
 			double endY = getAbsoluteY(relation.referencingSchema, relation.referencingTable)
 					+ EdgeUtils.calulucateY(relation.referencingTable, relation.foreignKeyConstraint.getColumns());
 			double middleX = (startX + endX) / 2.0;
-			String pathData = String.format("M%f,%f L%f,%f L%f,%f L%f,%f", startX, startY, middleX, startY, middleX,
-					endY, endX, endY);
+			String pathData = String.format(Locale.ROOT, "M%f,%f L%f,%f L%f,%f L%f,%f", startX, startY, middleX, startY,
+					middleX, endY, endX, endY);
 			String constraintName = EscapeUtils.escapeXml(relation.foreignKeyConstraint.getName());
-			svg.appendLine(String.format(
+			svg.appendLine(String.format(Locale.ROOT,
 					"<path class='relation cross-schema' data-constraint='%s' d='%s' fill='none' "
 							+ "stroke='#1565C0' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />",
 					constraintName, pathData));
@@ -488,16 +490,17 @@ public class TableSvgCreator {
 		for (SchemaNode schemaNode : schemaNodes) {
 			// スキーマ自体の絶対座標（親ノードの座標）を取得
 			ElkNode sNode = schemaNode.getNode();
-			svg.appendLine(
-					String.format("<g id=\"" + schemaNode.getSchema().getName() + "\" transform=\"translate(%f,%f)\">",
-							sNode.getX() + padding, sNode.getY() + padding));
+			svg.appendLine(String.format(Locale.ROOT, "<g id=\"%s\" transform=\"translate(%f,%f)\">",
+					EscapeUtils.escapeXml(schemaNode.getSchema().getName()), sNode.getX() + padding,
+					sNode.getY() + padding));
 			svg.addIndentLevel(1);
-			svg.appendLine(String.format(
+			svg.appendLine(String.format(Locale.ROOT,
 					"<rect x='%f' y='%f' width='%f' height='%f' rx='10' "
 							+ "fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>",
 					0.0, 0.0, sNode.getWidth(), sNode.getHeight()));
-			svg.appendLine(String.format("<text x='%f' y='%f' font-size='16' " + "font-weight='bold'>%s</text>", 10.0,
-					22.0, schemaNode.getName()));
+			svg.appendLine(
+					String.format(Locale.ROOT, "<text x='%f' y='%f' font-size='16' " + "font-weight='bold'>%s</text>",
+							10.0, 22.0, EscapeUtils.escapeXml(schemaNode.getName())));
 			//
 			for (TableNode tableNode : schemaNode.getTableNodes()) {
 				drawSvg(svg, tableNode, withOffset);
@@ -545,24 +548,14 @@ public class TableSvgCreator {
 			double schemaX = sNode.getX();
 			double schemaY = sNode.getY();
 
-			for (TableNode tableNode : schemaNode.getTableNodes()) {
-				ElkNode n = tableNode.getNode();
-				double absRight = schemaX + n.getX() + n.getWidth();
-				double absBottom = schemaY + n.getY() + n.getHeight();
-
-				if (absRight > maxRight) {
-					maxRight = absRight;
-				}
-				if (absBottom > maxBottom) {
-					maxBottom = absBottom;
-				}
-			}
+			maxRight = Math.max(maxRight, schemaX + sNode.getWidth());
+			maxBottom = Math.max(maxBottom, schemaY + sNode.getHeight());
 		}
 
 		TotalHolder total = new TotalHolder();
-		// マージン分（背景Rectの余白30px + padding）を考慮
-		total.totalWidth = maxRight + (padding * 2) + 30;
-		total.totalHeight = maxBottom + (padding * 2) + 30;
+		// Include the schema background and the outer padding on both sides.
+		total.totalWidth = maxRight + (padding * 2);
+		total.totalHeight = maxBottom + (padding * 2);
 		return total;
 	}
 
@@ -713,7 +706,7 @@ public class TableSvgCreator {
 	private SVGResult toSvg(TotalHolder totalHolder, List<TableNode> tableNodeList, ElkNode rootNode,
 			boolean withOffset) {
 		IndentStringBuilder svg = new IndentStringBuilder();
-		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>",
+		svg.append(String.format(Locale.ROOT, "<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>",
 				totalHolder.totalWidth, totalHolder.totalHeight));
 		svg.lineBreak();
 		svg.append(SVG_DEFS);
@@ -742,14 +735,17 @@ public class TableSvgCreator {
 		for (ElkEdge edge : tableNode.getInheritanceEdges()) {
 			for (ElkEdgeSection section : edge.getSections()) {
 				StringBuilder pathData = new StringBuilder();
-				pathData.append(String.format("M%f,%f ", section.getStartX() + offsetX, section.getStartY() + offsetY));
+				pathData.append(String.format(Locale.ROOT, "M%f,%f ", section.getStartX() + offsetX,
+						section.getStartY() + offsetY));
 				if (section.getBendPoints() != null) {
 					for (ElkBendPoint bp : section.getBendPoints()) {
-						pathData.append(String.format("L%f,%f ", bp.getX() + offsetX, bp.getY() + offsetY));
+						pathData.append(
+								String.format(Locale.ROOT, "L%f,%f ", bp.getX() + offsetX, bp.getY() + offsetY));
 					}
 				}
-				pathData.append(String.format("L%f,%f", section.getEndX() + offsetX, section.getEndY() + offsetY));
-				svg.appendLine(String.format(
+				pathData.append(
+						String.format(Locale.ROOT, "L%f,%f", section.getEndX() + offsetX, section.getEndY() + offsetY));
+				svg.appendLine(String.format(Locale.ROOT,
 						"<path class='relation inherits' d='%s' fill='none' stroke='#555' "
 								+ "stroke-width='1.5' stroke-dasharray='4' marker-end='url(#inherits)' />",
 						pathData.toString()));
@@ -769,10 +765,10 @@ public class TableSvgCreator {
 				double startX = section.getStartX() + offsetX;
 				double startY = section.getStartY() + offsetY;
 				if (srcPosition != null && srcPosition.isCrowded()) {
-					pathData.append(
-							String.format("M%f,%f L%f,%f ", startX, startY, startX + PORT_FANOUT_LENGTH, startY));
+					pathData.append(String.format(Locale.ROOT, "M%f,%f L%f,%f ", startX, startY,
+							startX + PORT_FANOUT_LENGTH, startY));
 				} else {
-					pathData.append(String.format("M%f,%f ", startX, startY));
+					pathData.append(String.format(Locale.ROOT, "M%f,%f ", startX, startY));
 				}
 
 				double endX = section.getEndX() + offsetX;
@@ -788,14 +784,15 @@ public class TableSvgCreator {
 						ElkBendPoint bp = section.getBendPoints().get(i);
 						double bx = bp.getX() + offsetX;
 						double by = bp.getY() + offsetY;
-						pathData.append(String.format("L%f,%f ", bx, by));
+						pathData.append(String.format(Locale.ROOT, "L%f,%f ", bx, by));
 					}
 				}
 				if (tgtPosition != null && tgtPosition.isCrowded()) {
-					pathData.append(
-							String.format("L%f,%f L%f,%f", approachX, endY, endX - MANY_COMPACT_MARKER_LENGTH, endY));
+					pathData.append(String.format(Locale.ROOT, "L%f,%f L%f,%f", approachX, endY,
+							endX - MANY_COMPACT_MARKER_LENGTH, endY));
 				} else {
-					pathData.append(String.format("L%f,%f L%f,%f", approachX, endY, endX - MANY_MARKER_LENGTH, endY));
+					pathData.append(String.format(Locale.ROOT, "L%f,%f L%f,%f", approachX, endY,
+							endX - MANY_MARKER_LENGTH, endY));
 				}
 
 				String markerStart = srcPosition != null && srcPosition.isCrowded() ? " marker-start='url(#oneCompact)'"
@@ -804,14 +801,15 @@ public class TableSvgCreator {
 						: " marker-end='url(#many)'";
 
 				if (isInheritance) {
-					svg.appendLine(String.format(
+					svg.appendLine(String.format(Locale.ROOT,
 							"<path d='%s' fill='none' stroke='#555' stroke-width='1.5' stroke-dasharray='4' marker-end='url(#inherits)' />",
 							pathData.toString()));
 				} else if (isIdentifying) {
-					svg.appendLine(String.format("<path d='%s' fill='none' stroke='#333' stroke-width='1.5'%s%s />",
-							pathData.toString(), markerStart, markerEnd));
+					svg.appendLine(String.format(Locale.ROOT,
+							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5'%s%s />", pathData.toString(),
+							markerStart, markerEnd));
 				} else {
-					svg.appendLine(String.format(
+					svg.appendLine(String.format(Locale.ROOT,
 							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3'%s%s />",
 							pathData.toString(), markerStart, markerEnd));
 				}
@@ -825,12 +823,12 @@ public class TableSvgCreator {
 				} else {
 					y = label.getY() + offsetY - TableSvgCreator.FONT_SIZE;
 				}
-				svg.appendLine(String.format(
+				svg.appendLine(String.format(Locale.ROOT,
 						"<rect x='%f' y='%f' width='%f' height='%f' " + "fill='white' opacity='0.85' rx='2'/>", x - 2,
 						y - 9, label.getWidth() + 4, label.getHeight() + 2));
 				if (!CommonUtils.isEmpty(label.getText())) {
-					svg.appendLine(
-							String.format("<text x='%f' y='%f' class='edge-label'>%s</text>", x, y, label.getText()));
+					svg.appendLine(String.format(Locale.ROOT, "<text x='%f' y='%f' class='edge-label'>%s</text>", x, y,
+							label.getText()));
 				}
 			}
 		}
@@ -862,22 +860,24 @@ public class TableSvgCreator {
 		double x = node.getX() + offsetX;
 		double y = node.getY() + offsetY;
 		String url = urlFunction.apply(table);
-		svg.appendLine(String.format("<g transform='translate(%f, %f)'>", x, y));
+		svg.appendLine(String.format(Locale.ROOT, "<g transform='translate(%f, %f)'>", x, y));
 		svg.addIndentLevel(1);
-		svg.appendLine(
-				String.format("<rect width='%f' height='%f' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>",
-						node.getWidth(), node.getHeight()));
+		svg.appendLine(String.format(Locale.ROOT,
+				"<rect width='%f' height='%f' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>",
+				node.getWidth(), node.getHeight()));
 		svg.addIndentLevel(1);
-		svg.appendLine(String.format("<foreignObject width='%f' height='%f'>", node.getWidth(), node.getHeight()));
+		svg.appendLine(String.format(Locale.ROOT, "<foreignObject width='%f' height='%f'>", node.getWidth(),
+				node.getHeight()));
 		svg.appendLine("<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>");
 		svg.addIndentLevel(1);
 		if (!CommonUtils.isEmpty(url)) {
-			svg.appendLine(String.format("<a href='%s' target='_blank'>", url));
+			svg.appendLine(String.format(Locale.ROOT, "<a href='%s' target='_blank'>", EscapeUtils.escapeXml(url)));
 		}
 		svg.appendLine("<div class='table-th'>");
 		svg.addIndentLevel(1);
-		svg.appendLine(String.format("<div style='padding: 0 8px; color: white;text-align: center;'>%s</div>",
-				tableNode.getName()));
+		svg.appendLine(
+				String.format(Locale.ROOT, "<div style='padding: 0 8px; color: white;text-align: center;'>%s</div>",
+						EscapeUtils.escapeXml(tableNode.getName())));
 		svg.addIndentLevel(-1);
 		svg.appendLine("</div>");
 
@@ -897,19 +897,23 @@ public class TableSvgCreator {
 //				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
 //						nameColumnWidth, typeColumnWidth));
 //			}
-			svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx %fpx %fpx;'>",
-					COLUMN_PREFIX_WIDTH, nameColumnWidth, typeColumnWidth, COLUMN_SUFFIX_WIDTH));
+			svg.appendLine(String.format(Locale.ROOT,
+					"<div class='table-row' style='grid-template-columns: %fpx %fpx %fpx %fpx;'>", COLUMN_PREFIX_WIDTH,
+					nameColumnWidth, typeColumnWidth, COLUMN_SUFFIX_WIDTH));
 			svg.addIndentLevel(1);
-			svg.appendLine(String.format("<div class='table-cell key-icons'>%s</div>", tableNode.getKeyIcons(col)));
-			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
-			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.build(col)));
-			svg.appendLine(String.format("<div class='table-cell related-key-icon'>%s</div>",
+			svg.appendLine(String.format(Locale.ROOT, "<div class='table-cell key-icons'>%s</div>",
+					tableNode.getKeyIcons(col)));
+			svg.appendLine(String.format(Locale.ROOT, "<div class='table-cell name'>%s</div>",
+					EscapeUtils.escapeXml(tableNode.getName(col))));
+			svg.appendLine(String.format(Locale.ROOT, "<div class='table-cell'>%s</div>",
+					EscapeUtils.escapeXml(tableNode.build(col))));
+			svg.appendLine(String.format(Locale.ROOT, "<div class='table-cell related-key-icon'>%s</div>",
 					tableNode.getRelatedKeyIcon(col)));
 			svg.addIndentLevel(-1);
 			svg.appendLine("</div>");
 		}
 		if (!CommonUtils.isEmpty(url)) {
-			svg.append(String.format("</a>"));
+			svg.append("</a>");
 		}
 		svg.addIndentLevel(-1);
 		svg.appendLine("</div>");

@@ -185,7 +185,7 @@ public class TableNode {
 	public int getColumnSize() {
 		int i = 0;
 		for (Column col : table.getColumns()) {
-			if (!columnFilter.test(col)) {
+			if (!test(col)) {
 				continue;
 			}
 			i++;
@@ -196,7 +196,7 @@ public class TableNode {
 	public List<Column> getColumns() {
 		List<Column> columns = CommonUtils.list();
 		for (Column col : table.getColumns()) {
-			if (!columnFilter.test(col)) {
+			if (!test(col)) {
 				continue;
 			}
 			columns.add(col);

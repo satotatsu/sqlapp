@@ -43,9 +43,12 @@ class TableMermaidCreatorTest {
 		parent.setPrimaryKey("PK_PARENT", parent.getColumns().get("ID"), parent.getColumns().get("OTHER"));
 		child.getConstraints().addForeignKeyConstraint("COMPOSITE", child.getColumns().toArray(Column[]::new),
 				parent.getColumns().toArray(Column[]::new));
-		child.getConstraints().addForeignKeyConstraint("PARALLEL", child.getColumns().get("ID"), parent.getColumns().get("ID"));
-		parent.getConstraints().addForeignKeyConstraint("SELF", parent.getColumns().get("OTHER"), parent.getColumns().get("ID"));
-		parent.getConstraints().addForeignKeyConstraint("CYCLE", parent.getColumns().get("ID"), child.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("PARALLEL", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		parent.getConstraints().addForeignKeyConstraint("SELF", parent.getColumns().get("OTHER"),
+				parent.getColumns().get("ID"));
+		parent.getConstraints().addForeignKeyConstraint("CYCLE", parent.getColumns().get("ID"),
+				child.getColumns().get("ID"));
 		String source = new TableMermaidCreator().generate(List.of(parent, child, isolated));
 		assertTrue(source.contains("t0[\"A.ITEM\"]"));
 		assertTrue(source.contains("t1[\"B.ITEM\"]"));
@@ -67,7 +70,8 @@ class TableMermaidCreatorTest {
 		Table child = table(schema, "CHILD");
 		child.setPrimaryKey("PK", child.getColumns().get("ID"));
 		child.getColumns().get("ID").setNotNull(false);
-		child.getConstraints().addForeignKeyConstraint("FK", child.getColumns().get("ID"), parent.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
 		String source = new TableMermaidCreator().generate(List.of(parent, child));
 		assertTrue(source.contains("t0 |o--o| t1 : \"FK\""));
 		assertTrue(source.contains("INT ID PK, FK\n"));
@@ -135,7 +139,8 @@ class TableMermaidCreatorTest {
 		partition.setPartitionParent(parent, "1", "10");
 		partition.getInherits().add(parent);
 		nested.setPartitionParent(partition, "1", "5");
-		child.getConstraints().addForeignKeyConstraint("FK", child.getColumns().get("ID"), parent.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
 		var tables = List.of(parent, other, child, partition, nested);
 		for (NameMode names : NameMode.values()) {
 			for (SVGDrawMode mode : SVGDrawMode.values()) {
