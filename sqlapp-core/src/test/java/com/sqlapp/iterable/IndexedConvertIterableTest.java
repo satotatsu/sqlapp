@@ -85,8 +85,8 @@ class IndexedConvertIterableTest {
 				throw closeFailure;
 			}
 		}
-		final Iterator<String> iterator = new IndexedConvertIterable<Integer, String>(
-				() -> new ClosingIterator(), (index, value) -> {
+		final Iterator<String> iterator = new IndexedConvertIterable<Integer, String>(() -> new ClosingIterator(),
+				(index, value) -> {
 					throw conversionFailure;
 				}).iterator();
 

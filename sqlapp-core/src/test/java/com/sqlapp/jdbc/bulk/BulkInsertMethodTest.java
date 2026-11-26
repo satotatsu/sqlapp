@@ -10,9 +10,12 @@ class BulkInsertMethodTest extends AbstractDbTest {
 	void portableMethodAndAutomaticFallbackDoNotRequireAVendorProvider() throws Exception {
 		testDb(connection -> {
 			var dialect = getDialect(connection);
-			assertInstanceOf(JdbcBatchBulkInsertExecutor.class, BulkInsertResolver.resolve(dialect, BulkInsertMethod.JDBC_BATCH));
-			assertInstanceOf(JdbcBatchBulkInsertExecutor.class, BulkInsertResolver.resolve(dialect, BulkInsertMethod.AUTO));
-			assertThrows(IllegalArgumentException.class, () -> BulkInsertResolver.resolve(dialect, BulkInsertMethod.NATIVE));
+			assertInstanceOf(JdbcBatchBulkInsertExecutor.class,
+					BulkInsertResolver.resolve(dialect, BulkInsertMethod.JDBC_BATCH));
+			assertInstanceOf(JdbcBatchBulkInsertExecutor.class,
+					BulkInsertResolver.resolve(dialect, BulkInsertMethod.AUTO));
+			assertThrows(IllegalArgumentException.class,
+					() -> BulkInsertResolver.resolve(dialect, BulkInsertMethod.NATIVE));
 			assertThrows(IllegalArgumentException.class, () -> BulkInsertResolver.resolve(dialect));
 		});
 	}
@@ -21,7 +24,8 @@ class BulkInsertMethodTest extends AbstractDbTest {
 	void omittedMethodRetainsAutomaticDefaultsAndUpsertRejectsUnsupportedExplicitSelection() {
 		assertEquals(BulkInsertMethod.AUTO, BulkOption.defaults().getInsertMethod());
 		assertEquals(BulkInsertMethod.AUTO, BulkOption.builder().insertMethod(null).build().getInsertMethod());
-		assertThrows(IllegalArgumentException.class, () -> ChunkedBulkMigrationOption.builder().migrationId("test")
-				.mode(BulkMigrationMode.UPSERT).bulkOption(BulkOption.builder().insertMethod(BulkInsertMethod.JDBC_BATCH).build()).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> ChunkedBulkMigrationOption.builder().migrationId("test").mode(BulkMigrationMode.UPSERT)
+						.bulkOption(BulkOption.builder().insertMethod(BulkInsertMethod.JDBC_BATCH).build()).build());
 	}
 }

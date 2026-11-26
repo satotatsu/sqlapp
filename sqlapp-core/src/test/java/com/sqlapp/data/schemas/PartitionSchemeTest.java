@@ -33,7 +33,8 @@ public class PartitionSchemeTest extends AbstractDbObjectTest<PartitionScheme> {
 	@org.junit.jupiter.api.Test
 	void repeatedDestinationsSurviveCloneXmlAndBulkInsertion() throws Exception {
 		PartitionScheme scheme = new PartitionScheme("PS");
-		for (int i = 1; i <= 4; i++) scheme.getTableSpaces().add(new TableSpace("PRIMARY").setId(Integer.toString(i)));
+		for (int i = 1; i <= 4; i++)
+			scheme.getTableSpaces().add(new TableSpace("PRIMARY").setId(Integer.toString(i)));
 		PartitionScheme copy = scheme.clone();
 		org.junit.jupiter.api.Assertions.assertEquals(scheme, copy);
 		org.junit.jupiter.api.Assertions.assertEquals(4, copy.getTableSpaces().size());

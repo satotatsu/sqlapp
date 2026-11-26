@@ -46,7 +46,8 @@ class RowDialectXmlFormattingTest {
 		row.put("B", new byte[] { 0, 1, (byte) 255 });
 		table.getRows().add(row);
 		final String original = table.asXml();
-		table.setDialect(new Dialect(() -> null) { });
+		table.setDialect(new Dialect(() -> null) {
+		});
 		assertEquals(original, table.asXml());
 		assertTrue(original.contains("2024-11-19"));
 	}

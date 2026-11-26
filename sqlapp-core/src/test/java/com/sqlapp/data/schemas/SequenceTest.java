@@ -79,11 +79,13 @@ public class SequenceTest extends AbstractDbObjectTest<Sequence> {
 	@Test
 	void unsignedBigintRetains64BitRangeThroughTypeAssignmentAndXml() throws Exception {
 		BigInteger maximum = BigInteger.ONE.shiftLeft(64).subtract(BigInteger.ONE);
-		for (boolean typeFirst : new boolean[] {true, false}) {
+		for (boolean typeFirst : new boolean[] { true, false }) {
 			Sequence sequence = new Sequence("unsigned_range");
-			if (typeFirst) sequence.setDataType(DataType.UBIGINT);
+			if (typeFirst)
+				sequence.setDataType(DataType.UBIGINT);
 			sequence.setMaxValue(maximum.subtract(BigInteger.ONE));
-			if (!typeFirst) sequence.setDataType(DataType.UBIGINT);
+			if (!typeFirst)
+				sequence.setDataType(DataType.UBIGINT);
 			assertEquals(maximum.subtract(BigInteger.ONE), sequence.getMaxValue());
 			Sequence restored = SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
 			assertEquals(maximum.subtract(BigInteger.ONE), restored.getMaxValue());

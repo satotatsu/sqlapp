@@ -10,8 +10,8 @@ import com.sqlapp.data.db.datatype.DataType;
 class DomainLengthXmlTest {
 	@Test
 	void retainsSourceSizesForDomainsAndArrayDomains() throws Exception {
-		for (DataType dataType : List.of(DataType.BLOB, DataType.CLOB, DataType.NCLOB,
-				DataType.DECIMALFLOAT, DataType.DATALINK)) {
+		for (DataType dataType : List.of(DataType.BLOB, DataType.CLOB, DataType.NCLOB, DataType.DECIMALFLOAT,
+				DataType.DATALINK)) {
 			Domain domain = new Domain("D").setDataType(dataType).setLength(34L).setOctetLength(68L);
 			domain.setArrayDimension(1).setArrayDimensionUpperBound(17);
 			Domain restored = SchemaUtils.readXml(new StringReader(domain.asXml()));

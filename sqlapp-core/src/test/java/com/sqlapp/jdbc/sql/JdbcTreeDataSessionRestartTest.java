@@ -28,8 +28,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.JdbcBulkMigrationCheckpointStore;
 
 /**
- * Periodic commits and restart of free-form root SELECTs, including drivers that
- * close the root cursor at commit as JDBC allows.
+ * Periodic commits and restart of free-form root SELECTs, including drivers
+ * that close the root cursor at commit as JDBC allows.
  */
 class JdbcTreeDataSessionRestartTest {
 	private static final String CHECKPOINT_SQL = """
@@ -44,9 +44,8 @@ class JdbcTreeDataSessionRestartTest {
 		try (var raw = database()) {
 			var connection = closingCursorsAtCommit(raw, new AtomicInteger());
 			var table = table(connection);
-			var failure = assertThrows(IllegalStateException.class,
-					() -> run(connection, table, JdbcTreeDataRestart.none(), "SELECT ID, V FROM ROOT_TABLE ORDER BY ID",
-							new ArrayList<>(), -1));
+			var failure = assertThrows(IllegalStateException.class, () -> run(connection, table,
+					JdbcTreeDataRestart.none(), "SELECT ID, V FROM ROOT_TABLE ORDER BY ID", new ArrayList<>(), -1));
 			assertTrue(failure.getMessage().contains("closes the root cursor at commit"), failure.getMessage());
 			assertEquals(0, sum(raw));
 		}
@@ -75,7 +74,8 @@ class JdbcTreeDataSessionRestartTest {
 			var restart = JdbcTreeDataRestart.checkpoint("orders", List.of("ID"),
 					new JdbcBulkMigrationCheckpointStore(connection, "TREE_CHECKPOINTS"));
 			var first = new ArrayList<Integer>();
-			// The business code fails while processing root 4: roots 1 and 2 were committed.
+			// The business code fails while processing root 4: roots 1 and 2 were
+			// committed.
 			assertThrows(IllegalStateException.class, () -> run(connection, table, restart, CHECKPOINT_SQL, first, 4));
 			assertEquals(2, sum(raw));
 			var second = new ArrayList<Integer>();
@@ -136,16 +136,16 @@ class JdbcTreeDataSessionRestartTest {
 					() -> run(raw, table, restart, changed, new ArrayList<>(), -1));
 			assertTrue(failure.getMessage().contains("changed since checkpoint 'orders'"), failure.getMessage());
 			var noVariable = "SELECT ID, V FROM ROOT_TABLE ORDER BY ID";
-			failure = assertThrows(IllegalStateException.class, () -> run(raw, table, JdbcTreeDataRestart
-					.checkpoint("plain", List.of("ID"), store), noVariable, new ArrayList<>(), -1));
+			failure = assertThrows(IllegalStateException.class, () -> run(raw, table,
+					JdbcTreeDataRestart.checkpoint("plain", List.of("ID"), store), noVariable, new ArrayList<>(), -1));
 			assertTrue(failure.getMessage().contains("'checkpoint' variable"), failure.getMessage());
 			var foreign = JdbcTreeDataRestart.checkpoint("foreign", List.of("ID"),
 					new JdbcBulkMigrationCheckpointStore(other, "TREE_CHECKPOINTS"));
 			assertThrows(IllegalArgumentException.class,
 					() -> run(raw, table, foreign, CHECKPOINT_SQL, new ArrayList<>(), -1));
-			assertThrows(IllegalArgumentException.class, () -> run(raw, table,
-					JdbcTreeDataRestart.checkpoint("bad", List.of("MISSING"), store), CHECKPOINT_SQL,
-					new ArrayList<>(), -1));
+			assertThrows(IllegalArgumentException.class,
+					() -> run(raw, table, JdbcTreeDataRestart.checkpoint("bad", List.of("MISSING"), store),
+							CHECKPOINT_SQL, new ArrayList<>(), -1));
 		}
 	}
 
@@ -209,8 +209,8 @@ class JdbcTreeDataSessionRestartTest {
 	 */
 	private static Connection closingCursorsAtCommit(Connection connection, AtomicInteger queries) {
 		int[] commits = { 0 };
-		return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
-				(proxy, method, args) -> {
+		return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+				new Class<?>[] { Connection.class }, (proxy, method, args) -> {
 					if (method.getName().equals("getMetaData")) {
 						DatabaseMetaData metaData = connection.getMetaData();
 						return Proxy.newProxyInstance(DatabaseMetaData.class.getClassLoader(),

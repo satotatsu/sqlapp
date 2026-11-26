@@ -53,8 +53,7 @@ public class SpatialGeometryConversionsTest {
 
 	/** sqlapp → 空間型 の期待値と、空間型 → sqlapp で元に戻ること */
 	static Stream<Arguments> lossless() {
-		return Stream.of(
-				Arguments.of(new Point(1.5, -2), "POINT(1.5 -2)"),
+		return Stream.of(Arguments.of(new Point(1.5, -2), "POINT(1.5 -2)"),
 				Arguments.of(new Lseg(0, 0, 1, 1), "LINESTRING(0 0,1 1)"),
 				Arguments.of(new Path(true, 0, 0, 1, 1, 2, 0), "LINESTRING(0 0,1 1,2 0)"),
 				Arguments.of(new Path(false, 0, 0, 1, 1, 2, 0), "LINESTRING(0 0,1 1,2 0,0 0)"),
@@ -82,8 +81,8 @@ public class SpatialGeometryConversionsTest {
 		final Geometry<?> spatial = SpatialGeometryConversions.toSpatial(new Box(0, 1, 2, 3));
 		assertEquals("POLYGON((0 1,2 1,2 3,0 3,0 1))", wkt(spatial));
 		assertEquals(new Box(2, 3, 0, 1), SpatialGeometryConversions.fromSpatial(spatial, Box.class));
-		assertEquals(new Box(2, 3, 0, 1), SpatialGeometryConversions
-				.fromSpatial(Wkt.fromWkt("POLYGON((0 1,0 3,2 3,2 1,0 1))"), Box.class));
+		assertEquals(new Box(2, 3, 0, 1),
+				SpatialGeometryConversions.fromSpatial(Wkt.fromWkt("POLYGON((0 1,0 3,2 3,2 1,0 1))"), Box.class));
 	}
 
 	@Test
@@ -97,7 +96,8 @@ public class SpatialGeometryConversionsTest {
 			assertEquals(3d, Math.hypot(p[0] - 1, p[1] - 2), 1e-12);
 		}
 		// 近似のため円には戻せない
-		assertThrows(IllegalArgumentException.class, () -> SpatialGeometryConversions.fromSpatial(spatial, Circle.class));
+		assertThrows(IllegalArgumentException.class,
+				() -> SpatialGeometryConversions.fromSpatial(spatial, Circle.class));
 	}
 
 	static Stream<Arguments> notConvertibleToSpatial() {
@@ -116,8 +116,7 @@ public class SpatialGeometryConversionsTest {
 	}
 
 	static Stream<Arguments> notConvertibleFromSpatial() {
-		return Stream.of(
-				Arguments.of("POINT Z(1 2 3)", Point.class), Arguments.of("POINT M(1 2 3)", Point.class),
+		return Stream.of(Arguments.of("POINT Z(1 2 3)", Point.class), Arguments.of("POINT M(1 2 3)", Point.class),
 				Arguments.of("POINT EMPTY", Point.class), Arguments.of("LINESTRING(0 0,1 1)", Point.class),
 				Arguments.of("LINESTRING(0 0,1 1,2 2)", Lseg.class), Arguments.of("POINT(1 2)", Path.class),
 				Arguments.of("POLYGON((0 0,10 0,10 10,0 0),(1 1,2 1,2 2,1 1))", Polygon.class),
@@ -125,7 +124,8 @@ public class SpatialGeometryConversionsTest {
 				Arguments.of("GEOMETRYCOLLECTION(POINT(1 2))", Point.class),
 				Arguments.of("POLYGON((0 0,1 1,1 0,0 0))", Box.class),
 				Arguments.of("POLYGON((0 0,2 0,2 1,1 2,0 1,0 0))", Box.class),
-				Arguments.of("LINESTRING(0 0,1 1)", Line.class), Arguments.of("POLYGON((0 0,1 1,1 0,0 0))", Circle.class),
+				Arguments.of("LINESTRING(0 0,1 1)", Line.class),
+				Arguments.of("POLYGON((0 0,1 1,1 0,0 0))", Circle.class),
 				Arguments.of("LINESTRING Z(0 0 1,1 1 2)", Path.class));
 	}
 
@@ -140,8 +140,8 @@ public class SpatialGeometryConversionsTest {
 	public void testSridIsDropped() {
 		assertEquals(new Point(139.7, 35.6),
 				SpatialGeometryConversions.fromSpatial(Wkt.fromWkt("SRID=4326;POINT(139.7 35.6)"), Point.class));
-		assertEquals(new Path(true, 0, 0, 1, 1), SpatialGeometryConversions
-				.fromSpatial(Wkt.fromWkt("SRID=3857;LINESTRING(0 0,1 1)"), Path.class));
+		assertEquals(new Path(true, 0, 0, 1, 1),
+				SpatialGeometryConversions.fromSpatial(Wkt.fromWkt("SRID=3857;LINESTRING(0 0,1 1)"), Path.class));
 	}
 
 	@Test

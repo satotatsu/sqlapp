@@ -28,8 +28,20 @@ class IteratorCloseUtilsTest {
 			this.failure = failure;
 		}
 
-		@Override public boolean hasNext() { return false; }
-		@Override public Object next() { throw new java.util.NoSuchElementException(); }
-		@Override public void close() { closes++; throw failure; }
+		@Override
+		public boolean hasNext() {
+			return false;
+		}
+
+		@Override
+		public Object next() {
+			throw new java.util.NoSuchElementException();
+		}
+
+		@Override
+		public void close() {
+			closes++;
+			throw failure;
+		}
 	}
 }

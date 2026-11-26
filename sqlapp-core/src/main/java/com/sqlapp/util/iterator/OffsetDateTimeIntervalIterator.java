@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>java.time.OffsetDateTime</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class OffsetDateTimeIntervalIterator extends AbstractObjectIterator<OffsetDateTime, Interval>{
+final class OffsetDateTimeIntervalIterator extends AbstractObjectIterator<OffsetDateTime, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,37 +38,38 @@ final class OffsetDateTimeIntervalIterator extends AbstractObjectIterator<Offset
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public OffsetDateTimeIntervalIterator(final OffsetDateTime start, final OffsetDateTime end, final Interval step){
+	public OffsetDateTimeIntervalIterator(final OffsetDateTime start, final OffsetDateTime end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected OffsetDateTime getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public OffsetDateTimeIntervalIterator clone(){
-		OffsetDateTimeIntervalIterator clone=new OffsetDateTimeIntervalIterator(this.start, this.end, this.step);
+	public OffsetDateTimeIntervalIterator clone() {
+		OffsetDateTimeIntervalIterator clone = new OffsetDateTimeIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

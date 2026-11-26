@@ -46,9 +46,11 @@ class MigrationModelPlanTest {
 
 	@Test
 	void rejectsInvalidDefinitions() {
-		final var cycle = assertThrows(IllegalArgumentException.class, () -> MigrationModelPlan.of(List.of(
-				model("a", "SELECT * FROM /*$ref('b')*/b"), model("b", "SELECT * FROM /*$ref('c')*/c"),
-				model("c", "SELECT * FROM /*$ref('a')*/a"), model("d", "SELECT 1")), List.of()));
+		final var cycle = assertThrows(IllegalArgumentException.class,
+				() -> MigrationModelPlan.of(
+						List.of(model("a", "SELECT * FROM /*$ref('b')*/b"), model("b", "SELECT * FROM /*$ref('c')*/c"),
+								model("c", "SELECT * FROM /*$ref('a')*/a"), model("d", "SELECT 1")),
+						List.of()));
 		assertTrue(cycle.getMessage().contains("a -> b -> c -> a"), cycle.getMessage());
 
 		assertThrows(IllegalArgumentException.class,
@@ -74,15 +76,14 @@ class MigrationModelPlanTest {
 		final var previous = MigrationModelPlan.of(before, List.of(RAW));
 
 		assertEquals(previous.fingerprint(), MigrationModelPlan.of(before, List.of(RAW)).fingerprint());
-		assertTrue(MigrationModelPlan.of(before, List.of(RAW)).modifiedAndDownstream(previous.nodeManifest())
-				.isEmpty());
+		assertTrue(
+				MigrationModelPlan.of(before, List.of(RAW)).modifiedAndDownstream(previous.nodeManifest()).isEmpty());
 
-		final var sqlChanged = MigrationModelPlan.of(List.of(
-				model("stg", "SELECT id FROM /*$source('raw_customer')*/c"),
-				model("customer", "SELECT * FROM /*$ref('stg')*/stg"), model("other", "SELECT 1 AS id"),
-				model("added", "SELECT 2 AS id")), List.of(RAW));
-		assertEquals(Set.of("stg", "customer", "added"),
-				sqlChanged.modifiedAndDownstream(previous.nodeManifest()));
+		final var sqlChanged = MigrationModelPlan
+				.of(List.of(model("stg", "SELECT id FROM /*$source('raw_customer')*/c"),
+						model("customer", "SELECT * FROM /*$ref('stg')*/stg"), model("other", "SELECT 1 AS id"),
+						model("added", "SELECT 2 AS id")), List.of(RAW));
+		assertEquals(Set.of("stg", "customer", "added"), sqlChanged.modifiedAndDownstream(previous.nodeManifest()));
 		assertNotEquals(previous.fingerprint(), sqlChanged.fingerprint());
 
 		final var sourceChanged = MigrationModelPlan.of(before,
@@ -104,31 +105,31 @@ class MigrationModelPlanTest {
 		assertTrue(model.columns().get(0).notNull(), "primary key columns are NOT NULL");
 		assertEquals("VARCHAR(50)", model.columns().get(1).typeText());
 
-		assertThrows(IllegalArgumentException.class, () -> new MigrationModel("v", null, "SELECT 1", Materialization.VIEW,
-				null, List.of(id), List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> new MigrationModel("v", null, "SELECT 1", Materialization.VIEW, null, List.of(id), List.of()));
 		assertThrows(IllegalArgumentException.class, () -> new MigrationModel("t", null, "SELECT 1",
 				Materialization.TABLE, null, List.of(id), List.of("NAME")));
 		assertThrows(IllegalArgumentException.class, () -> new MigrationModel("t", null, "SELECT 1",
 				Materialization.TABLE, null, List.of(id, id), List.of()));
-		assertThrows(IllegalArgumentException.class, () -> new MigrationModel("t", null, "SELECT 1",
-				Materialization.TABLE, null, List.of(), List.of("ID")));
-		final var noLength = assertThrows(IllegalArgumentException.class,
-				() -> new MigrationModelColumn("NAME", com.sqlapp.data.db.datatype.DataType.VARCHAR, null, null, false));
+		assertThrows(IllegalArgumentException.class,
+				() -> new MigrationModel("t", null, "SELECT 1", Materialization.TABLE, null, List.of(), List.of("ID")));
+		final var noLength = assertThrows(IllegalArgumentException.class, () -> new MigrationModelColumn("NAME",
+				com.sqlapp.data.db.datatype.DataType.VARCHAR, null, null, false));
 		assertTrue(noLength.getMessage().contains("VARCHAR(50)"), noLength.getMessage());
 		assertThrows(IllegalArgumentException.class,
 				() -> new MigrationModelColumn("D", com.sqlapp.data.db.datatype.DataType.DECIMAL, 5L, 6, false));
 
 		// Declared columns are part of the definition fingerprint.
 		final var before = MigrationModelPlan.of(List.of(model), List.of());
-		final var wider = new MigrationModel("customer", null, model.sql(), Materialization.TABLE, null,
-				List.of(id, new MigrationModelColumn("NAME", com.sqlapp.data.db.datatype.DataType.VARCHAR, 60L, null,
-						false)),
+		final var wider = new MigrationModel("customer", null, model.sql(), Materialization.TABLE, null, List.of(id,
+				new MigrationModelColumn("NAME", com.sqlapp.data.db.datatype.DataType.VARCHAR, 60L, null, false)),
 				List.of("ID"));
 		assertEquals(Set.of("customer"),
 				MigrationModelPlan.of(List.of(wider), List.of()).modifiedAndDownstream(before.nodeManifest()));
 		// Models without declared columns keep their previous fingerprint.
 		assertEquals(MigrationModelPlan.of(List.of(model("a", "SELECT 1")), List.of()).fingerprint(),
-				MigrationModelPlan.of(List.of(new MigrationModel("a", null, "SELECT 1", Materialization.VIEW, null)),
-						List.of()).fingerprint());
+				MigrationModelPlan
+						.of(List.of(new MigrationModel("a", null, "SELECT 1", Materialization.VIEW, null)), List.of())
+						.fingerprint());
 	}
 }

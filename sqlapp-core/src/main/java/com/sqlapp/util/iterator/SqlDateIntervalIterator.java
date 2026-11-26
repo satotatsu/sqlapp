@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>java.util.Date</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class SqlDateIntervalIterator extends AbstractObjectIterator<Date, Interval>{
+final class SqlDateIntervalIterator extends AbstractObjectIterator<Date, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,37 +38,38 @@ final class SqlDateIntervalIterator extends AbstractObjectIterator<Date, Interva
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public SqlDateIntervalIterator(final Date start, final Date end, final Interval step){
+	public SqlDateIntervalIterator(final Date start, final Date end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected Date getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public SqlDateIntervalIterator clone(){
-		SqlDateIntervalIterator clone=new SqlDateIntervalIterator(this.start, this.end, this.step);
+	public SqlDateIntervalIterator clone() {
+		SqlDateIntervalIterator clone = new SqlDateIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

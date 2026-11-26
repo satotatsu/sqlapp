@@ -11,7 +11,8 @@ class ColumnDomainReferenceTest {
 		Schema schema = new Schema("APP");
 		Domain domain = new Domain("D").setDataType(DataType.INT);
 		schema.getDomains().add(domain);
-		Table table = new Table("T"); schema.getTables().add(table);
+		Table table = new Table("T");
+		schema.getTables().add(table);
 		Column column = new Column("C").setDataType(DataType.INT).setDomainName("D");
 		table.getColumns().add(column);
 		assertSame(domain, column.getDomain());
@@ -20,7 +21,8 @@ class ColumnDomainReferenceTest {
 		Schema restored = SchemaUtils.readXml(new java.io.StringReader(schema.asXml()));
 		restored.getDomains().get("RENAMED").setName("AFTER_XML");
 		assertEquals("AFTER_XML", restored.getTables().get("T").getColumns().get("C").getDomainName());
-		assertSame(restored.getDomains().get("AFTER_XML"), restored.getTables().get("T").getColumns().get("C").getDomain());
+		assertSame(restored.getDomains().get("AFTER_XML"),
+				restored.getTables().get("T").getColumns().get("C").getDomain());
 		Schema clone = schema.clone();
 		Column copied = clone.getTables().get("T").getColumns().get("C");
 		assertSame(clone.getDomains().get("RENAMED"), copied.getDomain());

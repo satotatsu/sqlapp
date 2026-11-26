@@ -47,17 +47,17 @@ import com.sqlapp.util.file.TextFileWriter;
 /**
  * 幾何型の CSV 入出力の回帰テスト。
  *
- * 書き込みは ExportDataCommand / ConvertDataCommand と同じく {@link DataFormat#createCsvListWriter} と
- * {@link Column#getFormatter()} を使い、読み込みは ImportDataCommand と同じく
- * {@link FileRowIteratorFactory} を使う。
+ * 書き込みは ExportDataCommand / ConvertDataCommand と同じく
+ * {@link DataFormat#createCsvListWriter} と {@link Column#getFormatter()}
+ * を使い、読み込みは ImportDataCommand と同じく {@link FileRowIteratorFactory} を使う。
  */
 public class GeometryCsvRoundTripTest {
 
 	@TempDir
 	File directory;
 
-	private static final DataType[] TYPES = { DataType.POINT, DataType.BOX, DataType.LSEG, DataType.LINE,
-			DataType.PATH, DataType.POLYGON, DataType.CIRCLE };
+	private static final DataType[] TYPES = { DataType.POINT, DataType.BOX, DataType.LSEG, DataType.LINE, DataType.PATH,
+			DataType.POLYGON, DataType.CIRCLE };
 
 	private static Table newTable() {
 		final Table table = new Table("GEOMETRIES");
@@ -103,8 +103,8 @@ public class GeometryCsvRoundTripTest {
 
 	private static List<Row> read(final File file) {
 		final Table table = newTable();
-		table.setRowIteratorHandler(FileRowIteratorFactory.create(file, "UTF-8", 1, 1, null, null, null,
-				(r, c, v) -> v));
+		table.setRowIteratorHandler(
+				FileRowIteratorFactory.create(file, "UTF-8", 1, 1, null, null, null, (r, c, v) -> v));
 		final List<Row> rows = new ArrayList<>();
 		for (final Row row : table.getRows()) {
 			rows.add(row);
@@ -138,7 +138,8 @@ public class GeometryCsvRoundTripTest {
 			final Object[] expected = ROWS.get(r);
 			for (int i = 1; i < expected.length; i++) {
 				final Column column = expectedTable.getColumns().get(i);
-				assertEquals(expected[i], rows.get(r).get(column.getName()), "row=" + r + ", column=" + column.getName());
+				assertEquals(expected[i], rows.get(r).get(column.getName()),
+						"row=" + r + ", column=" + column.getName());
 			}
 		}
 		final Path open = rows.get(0).get(DataType.PATH.name());
@@ -185,8 +186,7 @@ public class GeometryCsvRoundTripTest {
 	@Test
 	public void testReadPostgresCopyCsv() throws Exception {
 		final File file = new File(directory, "copy.csv");
-		Files.writeString(file.toPath(), String.join("\n",
-				"ID,POINT,BOX,LSEG,LINE,PATH,POLYGON,CIRCLE",
+		Files.writeString(file.toPath(), String.join("\n", "ID,POINT,BOX,LSEG,LINE,PATH,POLYGON,CIRCLE",
 				"1,\"(1,2)\",\"(1,1),(0,0)\",\"[(0,0),(1,1)]\",\"{1,-1,0}\",\"[(0,0),(1,1)]\",\"((0,0),(1,1),(1,0))\",\"<(0,0),1>\"",
 				"2,,,,,\"((0,0),(1,1))\",,", ""), StandardCharsets.UTF_8);
 		final List<Row> rows = read(file);

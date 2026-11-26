@@ -17,8 +17,15 @@ class FixedByteLengthLifecycleTest {
 	void parserPropagatesInputCloseFailure() {
 		final IOException failure = new IOException("input close failed");
 		final InputStream input = new InputStream() {
-			@Override public int read() { return -1; }
-			@Override public void close() throws IOException { throw failure; }
+			@Override
+			public int read() {
+				return -1;
+			}
+
+			@Override
+			public void close() throws IOException {
+				throw failure;
+			}
 		};
 		final FixedByteLengthParser parser = new FixedByteLengthParser(input, StandardCharsets.UTF_8);
 
@@ -31,8 +38,14 @@ class FixedByteLengthLifecycleTest {
 	void writerPropagatesOutputCloseFailure() {
 		final IOException failure = new IOException("output close failed");
 		final OutputStream output = new OutputStream() {
-			@Override public void write(final int value) { }
-			@Override public void close() throws IOException { throw failure; }
+			@Override
+			public void write(final int value) {
+			}
+
+			@Override
+			public void close() throws IOException {
+				throw failure;
+			}
 		};
 		final FixedByteLengthWriter writer = new FixedByteLengthWriter(output, StandardCharsets.UTF_8);
 

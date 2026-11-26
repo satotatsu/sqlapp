@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>java.time.LocalDate</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class LocalDateIntervalIterator extends AbstractObjectIterator<LocalDate, Interval>{
+final class LocalDateIntervalIterator extends AbstractObjectIterator<LocalDate, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,37 +38,38 @@ final class LocalDateIntervalIterator extends AbstractObjectIterator<LocalDate, 
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public LocalDateIntervalIterator(final LocalDate start, final LocalDate end, final Interval step){
+	public LocalDateIntervalIterator(final LocalDate start, final LocalDate end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected LocalDate getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public LocalDateIntervalIterator clone(){
-		LocalDateIntervalIterator clone=new LocalDateIntervalIterator(this.start, this.end, this.step);
+	public LocalDateIntervalIterator clone() {
+		LocalDateIntervalIterator clone = new LocalDateIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

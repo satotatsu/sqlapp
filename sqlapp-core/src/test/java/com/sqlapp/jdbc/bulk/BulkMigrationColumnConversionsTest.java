@@ -21,9 +21,8 @@ class BulkMigrationColumnConversionsTest {
 	@Test
 	void convertsWithValueColumnAndUnconvertedRowContext() {
 		var table = table();
-		var conversions = BulkMigrationColumnConversions.mvel(table,
-				Map.of("NAME", "value.trim().toUpperCase()", "AMOUNT", "row['NAME'].length() + value",
-						"NOTE", "value == null ? column : value"));
+		var conversions = BulkMigrationColumnConversions.mvel(table, Map.of("NAME", "value.trim().toUpperCase()",
+				"AMOUNT", "row['NAME'].length() + value", "NOTE", "value == null ? column : value"));
 		var row = conversions.apply(row(table, 1, " ab ", 10, null));
 		assertEquals(1, (Integer) row.get("ID"));
 		assertEquals("AB", row.get("NAME"));
@@ -45,9 +44,8 @@ class BulkMigrationColumnConversionsTest {
 		var a = BulkMigrationColumnConversions.mvel(table, first);
 		assertTrue(a.getFingerprint().matches("sha256:[0-9a-f]{64}"), a.getFingerprint());
 		assertEquals(a.getFingerprint(), BulkMigrationColumnConversions.mvel(table, second).getFingerprint());
-		assertNotEquals(a.getFingerprint(),
-				BulkMigrationColumnConversions.mvel(table, Map.of("NAME", "value.strip()", "NOTE", "value"))
-						.getFingerprint());
+		assertNotEquals(a.getFingerprint(), BulkMigrationColumnConversions
+				.mvel(table, Map.of("NAME", "value.strip()", "NOTE", "value")).getFingerprint());
 		assertTrue(BulkMigrationColumnConversions.mvel(table, Map.of()).isEmpty());
 		assertNull(BulkMigrationColumnConversions.mvel(table, null).getFingerprint());
 		// A changed copy type is part of the identity even without expressions.
@@ -126,11 +124,11 @@ class BulkMigrationColumnConversionsTest {
 		var table = table();
 		var conversions = BulkMigrationColumnConversions.mvel(table, Map.of("NAME", "value + '!'"));
 		var plain = table.clone();
-		plain.setRowIteratorHandler(rows -> List.of(row(plain, 1, "a", 1, null), row(plain, 2, "b", 2, null))
-				.iterator());
+		plain.setRowIteratorHandler(
+				rows -> List.of(row(plain, 1, "a", 1, null), row(plain, 2, "b", 2, null)).iterator());
 		var converted = plain.clone();
-		converted.setRowIteratorHandler(conversions.rowIteratorHandler(rows -> List
-				.of(row(converted, 1, "a", 1, null), row(converted, 2, "b", 2, null)).iterator()));
+		converted.setRowIteratorHandler(conversions.rowIteratorHandler(
+				rows -> List.of(row(converted, 1, "a", 1, null), row(converted, 2, "b", 2, null)).iterator()));
 		var names = new ArrayList<Object>();
 		converted.getRows().forEach(row -> names.add(row.get("NAME")));
 		assertEquals(List.of("a!", "b!"), names);

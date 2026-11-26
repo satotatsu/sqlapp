@@ -157,20 +157,17 @@ public class CollectionMutationPathTest {
 
 	@Test
 	public void removingColumnThroughAnyPathCompactsRowValues() {
-		for (final java.util.function.Consumer<ColumnCollection> removeB : List
-				.<java.util.function.Consumer<ColumnCollection>>of(
-						columns -> columns.remove("B"),
-						columns -> columns.removeIf(col -> "B".equals(col.getName())),
-						columns -> columns.removeAll(List.of(columns.get("B"))),
-						columns -> columns.retainAll(List.of(columns.get("A"), columns.get("C"))),
-						columns -> {
-							final Iterator<Column> it = columns.iterator();
-							while (it.hasNext()) {
-								if ("B".equals(it.next().getName())) {
-									it.remove();
-								}
-							}
-						})) {
+		for (final java.util.function.Consumer<ColumnCollection> removeB : List.<java.util.function.Consumer<ColumnCollection>>of(
+				columns -> columns.remove("B"), columns -> columns.removeIf(col -> "B".equals(col.getName())),
+				columns -> columns.removeAll(List.of(columns.get("B"))),
+				columns -> columns.retainAll(List.of(columns.get("A"), columns.get("C"))), columns -> {
+					final Iterator<Column> it = columns.iterator();
+					while (it.hasNext()) {
+						if ("B".equals(it.next().getName())) {
+							it.remove();
+						}
+					}
+				})) {
 			final Table table = new Table("T");
 			table.getColumns().add("A").add("B").add("C");
 			final Row row = table.newRow();

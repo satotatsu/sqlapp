@@ -33,8 +33,8 @@ import com.sqlapp.TestCaseBase;
 import com.sqlapp.data.converter.Converter;
 
 /**
- * TIME/TIMESTAMP WITH TIME ZONE keep their offset and fractional seconds through
- * text conversion and JDBC.
+ * TIME/TIMESTAMP WITH TIME ZONE keep their offset and fractional seconds
+ * through text conversion and JDBC.
  */
 class ZonedTemporalTypesTest extends TestCaseBase {
 
@@ -155,8 +155,7 @@ class ZonedTemporalTypesTest extends TestCaseBase {
 		try (Connection connection = DriverManager
 				.getConnection("jdbc:hsqldb:mem:tz_" + UUID.randomUUID().toString().replace("-", ""), "SA", "")) {
 			try (var statement = connection.createStatement()) {
-				statement.execute(
-						"CREATE TABLE T (ID INT, TS TIMESTAMP(9) WITH TIME ZONE, TM TIME(9) WITH TIME ZONE)");
+				statement.execute("CREATE TABLE T (ID INT, TS TIMESTAMP(9) WITH TIME ZONE, TM TIME(9) WITH TIME ZONE)");
 			}
 			try (var insert = connection.prepareStatement("INSERT INTO T VALUES (?, ?, ?)")) {
 				insert.setInt(1, 1);

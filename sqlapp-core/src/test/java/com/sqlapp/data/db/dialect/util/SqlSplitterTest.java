@@ -49,6 +49,7 @@ public class SqlSplitterTest extends AbstractTest {
 		final List<SplitResult> list = splitter.getStatements();
 		assertEquals(5, list.size());
 	}
+
 	@Test
 	public void adjacentStatementsRetainFirstCharacter() {
 		List<SplitResult> parts = new SqlSplitter().parse("SELECT 1;SELECT 2;SELECT 3");
@@ -63,7 +64,9 @@ public class SqlSplitterTest extends AbstractTest {
 			@Override
 			protected SqlTokenizer createSqlTokenizer(String input) {
 				return new SqlTokenizer(input) {
-					{ setDelimiter("//"); }
+					{
+						setDelimiter("//");
+					}
 				};
 			}
 		};
@@ -73,12 +76,10 @@ public class SqlSplitterTest extends AbstractTest {
 		assertEquals("SELECT 2", parts.get(1).getText());
 	}
 
-
 	@Test
 	public void quotedTokensAndInlineCommentsProtectDelimiters() {
-		for (String body : new String[] { "SELECT \"a;b\" FROM t", "SELECT 'a'';b'",
-				"SELECT 1 -- comment; ignored\n", "SELECT 1 /* comment; ' \" */",
-				"SELECT '--;/*'", "SELECT \"a\"\";b\" FROM t" }) {
+		for (String body : new String[] { "SELECT \"a;b\" FROM t", "SELECT 'a'';b'", "SELECT 1 -- comment; ignored\n",
+				"SELECT 1 /* comment; ' \" */", "SELECT '--;/*'", "SELECT \"a\"\";b\" FROM t" }) {
 			var parts = new SqlSplitter().parse(body + ";SELECT 2;");
 			assertEquals(2, parts.size(), body);
 			assertEquals(body.stripTrailing(), parts.get(0).getText());

@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>java.sql.Timestamp</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class TimestampIntervalIterator extends AbstractObjectIterator<Timestamp, Interval>{
+final class TimestampIntervalIterator extends AbstractObjectIterator<Timestamp, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,37 +38,38 @@ final class TimestampIntervalIterator extends AbstractObjectIterator<Timestamp, 
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public TimestampIntervalIterator(final Timestamp start, final Timestamp end, final Interval step){
+	public TimestampIntervalIterator(final Timestamp start, final Timestamp end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected Timestamp getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public TimestampIntervalIterator clone(){
-		TimestampIntervalIterator clone=new TimestampIntervalIterator(this.start, this.end, this.step);
+	public TimestampIntervalIterator clone() {
+		TimestampIntervalIterator clone = new TimestampIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 

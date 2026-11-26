@@ -89,24 +89,22 @@ class DialectToTextTest {
 
 	@Test
 	void nullTextIsSkipped() {
-		assertEquals("DELETE FROM A\n;\n", PLAIN.toTextFromSqlOperation(
-				java.util.Arrays.asList(new SqlOperation(null, SqlType.DELETE), new SqlOperation("DELETE FROM A",
-						SqlType.DELETE))));
+		assertEquals("DELETE FROM A\n;\n", PLAIN.toTextFromSqlOperation(java.util.Arrays
+				.asList(new SqlOperation(null, SqlType.DELETE), new SqlOperation("DELETE FROM A", SqlType.DELETE))));
 	}
 
 	@Test
 	void delimiterSwitchWrapsTheBodyAndTerminatesIt() {
-		var text = SWITCHING.toTextFromSqlOperation(List.of(
-				new SqlOperation("CREATE PROCEDURE P() BEGIN SELECT 1; END", SqlType.CREATE),
-				new SqlOperation("SELECT 2", SqlType.SELECT)));
+		var text = SWITCHING.toTextFromSqlOperation(
+				List.of(new SqlOperation("CREATE PROCEDURE P() BEGIN SELECT 1; END", SqlType.CREATE),
+						new SqlOperation("SELECT 2", SqlType.SELECT)));
 		assertEquals("delimiter $$\nCREATE PROCEDURE P() BEGIN SELECT 1; END\n$$\ndelimiter ;\nSELECT 2\n;\n", text);
 	}
 
 	@Test
 	void identicalTerminatorAndEndAreWrittenOnce() {
-		var text = SLASH.toTextFromSqlOperation(
-				List.of(new SqlOperation("BEGIN NULL; END;", SqlType.CREATE), new SqlOperation("SELECT 1 FROM DUAL",
-						SqlType.SELECT)));
+		var text = SLASH.toTextFromSqlOperation(List.of(new SqlOperation("BEGIN NULL; END;", SqlType.CREATE),
+				new SqlOperation("SELECT 1 FROM DUAL", SqlType.SELECT)));
 		assertEquals("BEGIN NULL; END;\n/\nSELECT 1 FROM DUAL\n;\n", text);
 	}
 

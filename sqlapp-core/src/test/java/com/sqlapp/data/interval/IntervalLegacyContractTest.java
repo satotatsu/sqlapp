@@ -40,7 +40,8 @@ class IntervalLegacyContractTest {
 		assertThrows(ArithmeticException.class, () -> new IntervalSecond(Integer.MIN_VALUE));
 		assertThrows(ArithmeticException.class, () -> new IntervalDay(24_856));
 		assertThrows(ArithmeticException.class, () -> new IntervalYear(Integer.MAX_VALUE));
-		assertThrows(ArithmeticException.class, () -> new IntervalSecond(0, Integer.MAX_VALUE).scale(Integer.MAX_VALUE));
+		assertThrows(ArithmeticException.class,
+				() -> new IntervalSecond(0, Integer.MAX_VALUE).scale(Integer.MAX_VALUE));
 		assertThrows(IllegalArgumentException.class, () -> new IntervalSecond(Double.NaN));
 		assertThrows(IllegalArgumentException.class, () -> new IntervalSecond(Double.POSITIVE_INFINITY));
 	}
@@ -174,8 +175,8 @@ class IntervalLegacyContractTest {
 	@ParameterizedTest
 	@ValueSource(strings = { "INTERVAL '1' DAY xyz!!", "INTERVAL '1#2' DAY", "INTERVAL '1' DAY TO YEAR",
 			"INTERVAL '1::2' HOUR TO SECOND", "INTERVAL '1.0000000001' SECOND", "INTERVAL '1' DAY(0)",
-			"INTERVAL '1.1234567' SECOND(9,6)", "INTERVAL '1' DAY TO SECOND(10)",
-			"INTERVAL '123' YEAR(2)", "INTERVAL '1234' DAY(3)", "INTERVAL '1:2:3' HOUR TO MINUTE" })
+			"INTERVAL '1.1234567' SECOND(9,6)", "INTERVAL '1' DAY TO SECOND(10)", "INTERVAL '123' YEAR(2)",
+			"INTERVAL '1234' DAY(3)", "INTERVAL '1:2:3' HOUR TO MINUTE" })
 	void invalidOrLossySqlTextIsNeverParsable(final String text) {
 		assertFalse(Interval.isParsable(text));
 		assertThrows(RuntimeException.class, () -> Interval.parse(text));

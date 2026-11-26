@@ -74,7 +74,9 @@ class IntegerIterator implements Iterator<Integer>, Serializable, Cloneable {
 			throw new NoSuchElementException();
 		}
 		int value = current;
-		current += step;
+		final int candidate = current + step;
+		final boolean overflow = step > 0 ? candidate < current : candidate > current;
+		current = overflow ? end : candidate;
 		return value;
 	}
 

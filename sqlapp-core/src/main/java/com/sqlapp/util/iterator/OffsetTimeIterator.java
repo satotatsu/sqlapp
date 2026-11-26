@@ -23,57 +23,46 @@ import java.time.OffsetTime;
 
 /**
  * For文の代わりに使用する<code>java.time.OffsetTime</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class OffsetTimeIterator extends AbstractObjectIterator<OffsetTime, Integer>{
+final class OffsetTimeIterator extends AbstractObjectIterator<OffsetTime, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public OffsetTimeIterator(final OffsetTime start, final OffsetTime end){
+	public OffsetTimeIterator(final OffsetTime start, final OffsetTime end) {
 		this(start, end, 3600);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public OffsetTimeIterator(final OffsetTime start, final OffsetTime end, final Integer step){
+	public OffsetTimeIterator(final OffsetTime start, final OffsetTime end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			if (this.start.compareTo(this.next)>=0){
-				return false;
-			}else{
-				if (next.compareTo(end)<0){
-					return true;
-				}
-			}
-		} else{
-			if (this.start.compareTo(this.next)<=0){
-				return false;
-			}else{
-				if (next.compareTo(end)>0){
-					return true;
-				}
-			}
-		}
-		return false;
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
@@ -81,12 +70,14 @@ final class OffsetTimeIterator extends AbstractObjectIterator<OffsetTime, Intege
 		return this.current.plusSeconds(step.intValue());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public OffsetTimeIterator clone(){
-		OffsetTimeIterator clone=new OffsetTimeIterator(this.start, this.end, this.step);
+	public OffsetTimeIterator clone() {
+		OffsetTimeIterator clone = new OffsetTimeIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

@@ -19,8 +19,8 @@ class JsonLineRowIteratorLifecycleTest {
 	void propagatesCloseFailureAndClosesOnce() throws Exception {
 		final IOException failure = new IOException("close failed");
 		final TrackingReader reader = new TrackingReader(failure);
-		final var iterator = new JsonLineRowIteratorHandler.JsonlineRowIterator(
-				new Table("ITEMS").getRows(), reader, new JsonConverter(), 0L, (row, column, value) -> value);
+		final var iterator = new JsonLineRowIteratorHandler.JsonlineRowIterator(new Table("ITEMS").getRows(), reader,
+				new JsonConverter(), 0L, (row, column, value) -> value);
 
 		final IllegalStateException thrown = assertThrows(IllegalStateException.class, iterator::close);
 		iterator.close();

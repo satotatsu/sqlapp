@@ -75,8 +75,8 @@ public class DialectTest {
 
 	@Test
 	public void preservesQuotedQualifiedNamesInMatchingAndColumnSetters() {
-		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"",
-				"public.\"Mixed Case\"", "\"Space  Schema\".\"Type  Name\"" }) {
+		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"", "public.\"Mixed Case\"",
+				"\"Space  Schema\".\"Type  Name\"" }) {
 			Column matched = createColumn();
 			dialect.setDbType("  " + name + "  ", null, null, matched);
 			assertEquals(name, matched.getDataTypeName());

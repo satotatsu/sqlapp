@@ -22,8 +22,10 @@ class CrossSchemaForeignKeyXmlTest {
 		assertEquals("REMOTE", copy.getRelatedTableSchemaName());
 		assertEquals("T", copy.getRelatedTableName());
 		assertEquals("REMOTE", copy.getRelatedColumns().get(0).getColumn().getSchemaName());
-		assertNotSame(restored.getTables().get("T").getColumns().get("ID"), copy.getRelatedColumns().get(0).getColumn());
-		assertEquals("REMOTE", restored.clone().getTables().get("T").getConstraints().getForeignKeyConstraints().get(0).getRelatedTableSchemaName());
+		assertNotSame(restored.getTables().get("T").getColumns().get("ID"),
+				copy.getRelatedColumns().get(0).getColumn());
+		assertEquals("REMOTE", restored.clone().getTables().get("T").getConstraints().getForeignKeyConstraints().get(0)
+				.getRelatedTableSchemaName());
 	}
 
 	@Test

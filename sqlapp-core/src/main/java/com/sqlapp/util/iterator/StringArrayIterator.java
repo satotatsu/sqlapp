@@ -22,79 +22,92 @@ package com.sqlapp.util.iterator;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import com.sqlapp.util.ToStringBuilder;
+
 /**
  * For文の代わりに使用するIterator
+ * 
  * @author satoh
  *
  */
-final class StringArrayIterator implements Iterator<String>, Serializable, Cloneable{
+final class StringArrayIterator implements Iterator<String>, Serializable, Cloneable {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
 	private final String[] args;
-	private int pos=0;
+	private int pos = 0;
 
 	/**
 	 * 文字列の配列を指定するコンストラクタ
+	 * 
 	 * @param args 文字列の配列
 	 */
-	public StringArrayIterator(final String... args){
-		assert (args!=null);
-		this.args=args;
+	public StringArrayIterator(final String... args) {
+		assert (args != null);
+		this.args = args;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		return pos<this.args.length;
+		return pos < this.args.length;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#next()
 	 */
 	@Override
 	public String next() {
-		if (this.hasNext()){
-			String val=args[pos];
+		if (this.hasNext()) {
+			String val = args[pos];
 			pos++;
 			return val;
 		}
-		return null;
+		throw new NoSuchElementException();
 	}
 
 	@Override
 	public void remove() {
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
-	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder(StringArrayIterator.class);
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder(StringArrayIterator.class);
 		builder.add(Arrays.toString(args));
 		return builder.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
-	public int hashCode(){
-		return (int)(Arrays.hashCode(args));
+	public int hashCode() {
+		return (int) (Arrays.hashCode(args));
 	}
-	
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public StringArrayIterator clone(){
-		StringArrayIterator clone=new StringArrayIterator(args);
+	public StringArrayIterator clone() {
+		StringArrayIterator clone = new StringArrayIterator(args);
 		return clone;
 	}
 }

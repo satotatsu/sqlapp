@@ -114,10 +114,11 @@ class BulkUpsertPlanTest {
 			}
 		}
 		table.setRowIteratorHandler(rows -> new ClosingIterator());
-		final Iterator<Row> rows = BulkUpsertPlan.resolve(table,
-				BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
-						.duplicateRowSelectorFingerprint("invalid-selector-v1")
-						.duplicateRowSelector((retained, candidate) -> new Row()).build())
+		final Iterator<Row> rows = BulkUpsertPlan
+				.resolve(table,
+						BulkUpsertOption.builder().duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.CUSTOM)
+								.duplicateRowSelectorFingerprint("invalid-selector-v1")
+								.duplicateRowSelector((retained, candidate) -> new Row()).build())
 				.createStagingTable("stage").getRows().iterator();
 
 		final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, rows::hasNext);

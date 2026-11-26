@@ -9,9 +9,12 @@ import com.sqlapp.data.schemas.Table;
 class MergeEmptyUpdateTest extends AbstractStandardFactoryTest {
 	public static class MergeTableFactory extends AbstractMergeTableFactory<com.sqlapp.util.AbstractSqlBuilder<?>> {
 	}
+
 	public static class MergeRowsFactory extends AbstractMergeRowsFactory<com.sqlapp.util.AbstractSqlBuilder<?>> {
 	}
-	@Test void allKeyTablesOmitMatchedUpdateAcrossSharedMergeFactories() {
+
+	@Test
+	void allKeyTablesOmitMatchedUpdateAcrossSharedMergeFactories() {
 		final var table = new Table("keyonly");
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 		table.setPrimaryKey("pk", table.getColumns().get(0));
@@ -24,7 +27,8 @@ class MergeEmptyUpdateTest extends AbstractStandardFactoryTest {
 		}
 	}
 
-	@Test void nonUpdateableColumnsDoNotCreateAnEmptyMatchedClause() {
+	@Test
+	void nonUpdateableColumnsDoNotCreateAnEmptyMatchedClause() {
 		final var table = new Table("items");
 		table.getColumns().add("id", c -> c.setDataType(DataType.INT));
 		table.getColumns().add("value", c -> c.setDataType(DataType.VARCHAR).setLength(20));

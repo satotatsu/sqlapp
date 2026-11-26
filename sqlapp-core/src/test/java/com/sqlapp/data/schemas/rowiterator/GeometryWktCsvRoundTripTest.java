@@ -46,8 +46,9 @@ import com.sqlapp.util.file.TextFileWriter;
 /**
  * 汎用 GEOMETRY 型の CSV 入出力の回帰テスト。
  *
- * 書き込みは ExportDataCommand と同じく {@link DataFormat#createCsvListWriter} と {@link Column#getFormatter()}
- * を使い、読み込みは ImportDataCommand と同じく {@link FileRowIteratorFactory} を使う。
+ * 書き込みは ExportDataCommand と同じく {@link DataFormat#createCsvListWriter} と
+ * {@link Column#getFormatter()} を使い、読み込みは ImportDataCommand と同じく
+ * {@link FileRowIteratorFactory} を使う。
  */
 public class GeometryWktCsvRoundTripTest {
 
@@ -63,8 +64,8 @@ public class GeometryWktCsvRoundTripTest {
 
 	private static List<Row> read(final File file) {
 		final Table table = newTable();
-		table.setRowIteratorHandler(FileRowIteratorFactory.create(file, "UTF-8", 1, 1, null, null, null,
-				(r, c, v) -> v));
+		table.setRowIteratorHandler(
+				FileRowIteratorFactory.create(file, "UTF-8", 1, 1, null, null, null, (r, c, v) -> v));
 		final List<Row> rows = new ArrayList<>();
 		for (final Row row : table.getRows()) {
 			rows.add(row);
@@ -96,8 +97,7 @@ public class GeometryWktCsvRoundTripTest {
 		}
 		final String csv = Files.readString(file.toPath(), StandardCharsets.UTF_8);
 		// 出力形式(PostGIS EWKT)と、カンマを含む値の引用
-		assertTrue(csv.contains("0,SRID=4326;POINT(139 35)\n") || csv.contains("0,SRID=4326;POINT(139 35)\r\n"),
-				csv);
+		assertTrue(csv.contains("0,SRID=4326;POINT(139 35)\n") || csv.contains("0,SRID=4326;POINT(139 35)\r\n"), csv);
 		assertTrue(csv.contains("\"SRID=4326;LINESTRING(0 0,1 1)\""), csv);
 		assertTrue(csv.contains("POINT EMPTY"), csv);
 
@@ -112,10 +112,10 @@ public class GeometryWktCsvRoundTripTest {
 				new double[] { 1, 2, 3, 4 });
 		// EMPTY は null と区別される
 		assertGeometry(rows.get(4).get("G"), GeometryType.POINT, noSrid(), false, false, true);
-		assertGeometry(rows.get(5).get("G"), GeometryType.LINESTRING, 4326, false, false, false,
-				new double[] { 0, 0 }, new double[] { 1, 1 });
-		assertGeometry(rows.get(6).get("G"), GeometryType.POLYGON, noSrid(), false, false, false,
-				new double[] { 0, 0 }, new double[] { 1, 0 }, new double[] { 1, 1 }, new double[] { 0, 0 });
+		assertGeometry(rows.get(5).get("G"), GeometryType.LINESTRING, 4326, false, false, false, new double[] { 0, 0 },
+				new double[] { 1, 1 });
+		assertGeometry(rows.get(6).get("G"), GeometryType.POLYGON, noSrid(), false, false, false, new double[] { 0, 0 },
+				new double[] { 1, 0 }, new double[] { 1, 1 }, new double[] { 0, 0 });
 		assertEquals(GeometryType.MULTIPOLYGON, ((Geometry<?>) rows.get(7).get("G")).getGeometryType());
 		assertEquals(8, ((Geometry<?>) rows.get(7).get("G")).getNumPositions());
 		assertGeometry(rows.get(8).get("G"), GeometryType.GEOMETRYCOLLECTION, noSrid(), false, false, false,
@@ -125,17 +125,18 @@ public class GeometryWktCsvRoundTripTest {
 	}
 
 	/**
-	 * PostgreSQL + PostGIS の COPY ... CSV 出力(16進EWKB)を読み込めること。
-	 * 値は Claude 側の検証環境(PostgreSQL 16 + PostGIS)で取得したもの。
+	 * PostgreSQL + PostGIS の COPY ... CSV 出力(16進EWKB)を読み込めること。 値は Claude
+	 * 側の検証環境(PostgreSQL 16 + PostGIS)で取得したもの。
 	 */
 	@Test
 	public void testReadPostgisCopyCsv() throws Exception {
 		final File file = new File(directory, "copy.csv");
-		Files.writeString(file.toPath(), String.join("\n", "ID,G",
-				"1,0101000020E610000000000000006061400000000000804140",
-				"2,01010000A0E6100000000000000060614000000000008041400000000000002440",
-				"3,0101000040000000000000F03F00000000000000400000000000000840",
-				"4,0101000000000000000000F87F000000000000F87F", "5,", ""), StandardCharsets.UTF_8);
+		Files.writeString(file.toPath(),
+				String.join("\n", "ID,G", "1,0101000020E610000000000000006061400000000000804140",
+						"2,01010000A0E6100000000000000060614000000000008041400000000000002440",
+						"3,0101000040000000000000F03F00000000000000400000000000000840",
+						"4,0101000000000000000000F87F000000000000F87F", "5,", ""),
+				StandardCharsets.UTF_8);
 		final List<Row> rows = read(file);
 		assertEquals(5, rows.size());
 		assertGeometry(rows.get(0).get("G"), GeometryType.POINT, 4326, false, false, false, new double[] { 139, 35 });
@@ -164,9 +165,8 @@ public class GeometryWktCsvRoundTripTest {
 	@Test
 	public void testEmptyCoordinateDimensionsThroughCsv() throws Exception {
 		final Table table = newTable();
-		final String[] sources = { "SRID=4326;POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY",
-				"LINESTRING ZM EMPTY", "POLYGON Z EMPTY", "MULTIPOINT Z EMPTY",
-				"GEOMETRYCOLLECTION Z(POINT Z EMPTY,POINT Z(1 2 3))" };
+		final String[] sources = { "SRID=4326;POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY", "LINESTRING ZM EMPTY",
+				"POLYGON Z EMPTY", "MULTIPOINT Z EMPTY", "GEOMETRYCOLLECTION Z(POINT Z EMPTY,POINT Z(1 2 3))" };
 		final List<Geometry<?>> expected = new ArrayList<>();
 		final File file = new File(directory, "empty-dimensions.csv");
 		try (TextFileWriter writer = DataFormat.CSV.createCsvListWriter(file, "UTF-8")) {

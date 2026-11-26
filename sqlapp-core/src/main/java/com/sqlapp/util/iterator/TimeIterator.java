@@ -25,57 +25,46 @@ import java.sql.Time;
 
 /**
  * For文の代わりに使用する<code>java.sql.Time</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class TimeIterator extends AbstractObjectIterator<Time, Integer>{
+final class TimeIterator extends AbstractObjectIterator<Time, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public TimeIterator(final Time start, final Time end){
+	public TimeIterator(final Time start, final Time end) {
 		this(start, end, 3600);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public TimeIterator(final Time start, final Time end, final Integer step){
+	public TimeIterator(final Time start, final Time end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			if (this.start.compareTo(this.next)>=0){
-				return false;
-			}else{
-				if (next.compareTo(end)<0){
-					return true;
-				}
-			}
-		} else{
-			if (this.start.compareTo(this.next)<=0){
-				return false;
-			}else{
-				if (next.compareTo(end)>0){
-					return true;
-				}
-			}
-		}
-		return false;
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
@@ -83,12 +72,14 @@ final class TimeIterator extends AbstractObjectIterator<Time, Integer>{
 		return addSeconds(this.current, step.intValue());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public TimeIterator clone(){
-		TimeIterator clone=new TimeIterator(this.start, this.end, this.step);
+	public TimeIterator clone() {
+		TimeIterator clone = new TimeIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

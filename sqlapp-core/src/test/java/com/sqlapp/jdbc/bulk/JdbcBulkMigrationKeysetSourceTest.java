@@ -25,19 +25,26 @@ class JdbcBulkMigrationKeysetSourceTest extends AbstractDbTest {
 					"INSERT INTO TEMPORAL_EXPORT VALUES(1,TIME '12:34:56.123456')");
 			final var table = new Table("TEMPORAL_EXPORT");
 			final var id = new Column("ID").setDataType(DataType.INT).setNotNull(true);
-			table.getColumns().add(id); table.setPrimaryKey(id);
+			table.getColumns().add(id);
+			table.setPrimaryKey(id);
 			table.getColumns().add(new Column("T").setDataType(DataType.VARCHAR));
 			final var source = new JdbcBulkMigrationKeysetSource(connection, table) {
-				@Override protected Object readColumn(java.sql.ResultSet rows, int index, Column column,
+				@Override
+				protected Object readColumn(java.sql.ResultSet rows, int index, Column column,
 						com.sqlapp.data.db.datatype.DbDataType<?> type) throws java.sql.SQLException {
-					return column.getName().equals("T") ? rows.getString(index) : super.readColumn(rows, index, column, type);
+					return column.getName().equals("T") ? rows.getString(index)
+							: super.readColumn(rows, index, column, type);
 				}
 			};
 			final var rows = source.iterator(null);
-			try { assertEquals("12:34:56.123456", rows.next().get("T")); }
-			finally { com.sqlapp.util.iterator.IteratorCloseUtils.close(null, rows); }
+			try {
+				assertEquals("12:34:56.123456", rows.next().get("T"));
+			} finally {
+				com.sqlapp.util.iterator.IteratorCloseUtils.close(null, rows);
+			}
 		});
 	}
+
 	@Test
 	void readsAndResumesACompositeKeyThroughSelectByRowFactory() throws Exception {
 		testDb(connection -> {

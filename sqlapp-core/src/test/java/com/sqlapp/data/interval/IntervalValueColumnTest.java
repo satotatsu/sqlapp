@@ -22,7 +22,8 @@ class IntervalValueColumnTest {
 	void everyIntervalColumnKeepsCanonicalValuesWithoutLegacyProjection() {
 		final IntervalValue value = IntervalValue.parse("P-14M3DT-90000.123456S");
 		for (DataType type : DataType.values()) {
-			if (type.getMetaTtype() != MetaType.INTERVAL) continue;
+			if (type.getMetaTtype() != MetaType.INTERVAL)
+				continue;
 			final Table table = new Table("values");
 			final Column column = new Column("value").setDataType(type);
 			table.getColumns().add(column);

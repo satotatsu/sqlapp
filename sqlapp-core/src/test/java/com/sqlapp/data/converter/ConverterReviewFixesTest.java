@@ -45,8 +45,7 @@ class ConverterReviewFixesTest {
 		assertEquals(123456000, converters.convertObject("2026-1-1 10:00:00.123456", Timestamp.class).getNanos());
 		assertEquals(500000000, converters.convertObject("2026-1-1 10:00:00.5", Timestamp.class).getNanos());
 		assertEquals(123000000, converters.convertObject("2026-01-01 10:00:00.123", Timestamp.class).getNanos());
-		assertEquals(123456789,
-				converters.convertObject("2026-01-01 10:00:00.123456789", Timestamp.class).getNanos());
+		assertEquals(123456789, converters.convertObject("2026-01-01 10:00:00.123456789", Timestamp.class).getNanos());
 	}
 
 	@Test
@@ -69,8 +68,8 @@ class ConverterReviewFixesTest {
 		// quoted dots and output formatters are not changed
 		assertSame(com.sqlapp.util.Java8DateUtils.getDateTimeFormatter("H:m:s'.SSS'"),
 				com.sqlapp.util.Java8DateUtils.getParseDateTimeFormatter("H:m:s'.SSS'"));
-		assertEquals("01:02:03.400",
-				LocalTime.of(1, 2, 3, 400000000).format(com.sqlapp.util.Java8DateUtils.getDateTimeFormatter("HH:mm:ss.SSS")));
+		assertEquals("01:02:03.400", LocalTime.of(1, 2, 3, 400000000)
+				.format(com.sqlapp.util.Java8DateUtils.getDateTimeFormatter("HH:mm:ss.SSS")));
 	}
 
 	@Test
@@ -126,7 +125,8 @@ class ConverterReviewFixesTest {
 				final int n = i;
 				tasks.add(() -> {
 					assertEquals(Color.GREEN, converters.convertObject("GREEN", Color.class));
-					assertEquals(Locale.JAPAN.getClass(), converters.getConverter(Locale.class).convertObject("ja_JP").getClass());
+					assertEquals(Locale.JAPAN.getClass(),
+							converters.getConverter(Locale.class).convertObject("ja_JP").getClass());
 					assertTrue((Object) converters.getConverter(CustomTimestamp.class) instanceof TimestampConverter);
 					assertEquals(n, converters.convertObject(String.valueOf(n), Integer.class));
 					return Boolean.TRUE;
@@ -183,11 +183,13 @@ class ConverterReviewFixesTest {
 		assertEquals(new BooleanConverter(), new BooleanConverter());
 		assertNotEquals(new BooleanConverter(), new BooleanConverter().setTrueString("true"));
 	}
+
 	@Test
 	void compactDigitsAreLocalDateTimes() {
 		final Converters converters = new Converters();
 		assertEquals(LocalDateTime.of(2026, 11, 21, 0, 0), converters.convertObject("20261121", LocalDateTime.class));
-		assertEquals(java.time.LocalDate.of(2026, 11, 21), converters.convertObject("20261121", java.time.LocalDate.class));
+		assertEquals(java.time.LocalDate.of(2026, 11, 21),
+				converters.convertObject("20261121", java.time.LocalDate.class));
 		assertEquals(LocalDateTime.of(2026, 11, 21, 10, 30, 15),
 				converters.convertObject("20261121103015", LocalDateTime.class));
 		assertEquals(LocalDateTime.of(2026, 11, 21, 10, 30, 15, 123000000),

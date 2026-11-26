@@ -41,8 +41,9 @@ import com.sqlapp.data.schemas.Column;
 /**
  * 汎用 GEOMETRY 型の文字列変換({@link GeometryConverter})の回帰テスト。
  *
- * 往復結果の equals だけでは、出力と再読込の双方で同じ情報を失う問題を検出できないため、 図形の種類・SRID・Z/M・空状態・各座標値を直接確認する。
- * 16進EWKB の入力値は PostgreSQL 16 + PostGIS の COPY ... CSV が出力した値(Claude 側の検証環境で取得)。
+ * 往復結果の equals だけでは、出力と再読込の双方で同じ情報を失う問題を検出できないため、
+ * 図形の種類・SRID・Z/M・空状態・各座標値を直接確認する。 16進EWKB の入力値は PostgreSQL 16 + PostGIS の COPY
+ * ... CSV が出力した値(Claude 側の検証環境で取得)。
  */
 public class GeometryConverterWktTest {
 
@@ -114,15 +115,17 @@ public class GeometryConverterWktTest {
 				expect("0101000000000000000000F87F000000000000F87F", GeometryType.POINT, none, false, false, true,
 						NONE),
 				expect("0102000020E61000000200000000000000000000000000000000000000000000000000F03F000000000000F03F",
-						GeometryType.LINESTRING, 4326, false, false, false, new double[] { 0, 0 }, new double[] { 1, 1 }),
+						GeometryType.LINESTRING, 4326, false, false, false, new double[] { 0, 0 },
+						new double[] { 1, 1 }),
 				// ビッグエンディアン(XDR)
 				expect("0020000002000010E600000002000000000000000000000000000000003FF00000000000003FF0000000000000",
-						GeometryType.LINESTRING, 4326, false, false, false, new double[] { 0, 0 }, new double[] { 1, 1 }),
+						GeometryType.LINESTRING, 4326, false, false, false, new double[] { 0, 0 },
+						new double[] { 1, 1 }),
 				expect("0106000000020000000103000000010000000400000000000000000000000000000000000000000000000000F03F"
 						+ "0000000000000000000000000000F03F000000000000F03F00000000000000000000000000000000"
 						+ "0103000000010000000400000000000000000014400000000000001440000000000000184000000000000014400000"
-						+ "000000001840000000000000184000000000000014400000000000001440", GeometryType.MULTIPOLYGON, none,
-						false, false, false, new double[] { 0, 0 }, new double[] { 1, 0 }, new double[] { 1, 1 },
+						+ "000000001840000000000000184000000000000014400000000000001440", GeometryType.MULTIPOLYGON,
+						none, false, false, false, new double[] { 0, 0 }, new double[] { 1, 0 }, new double[] { 1, 1 },
 						new double[] { 0, 0 }, new double[] { 5, 5 }, new double[] { 6, 5 }, new double[] { 6, 6 },
 						new double[] { 5, 5 }),
 				expect("0107000000020000000101000000000000000000F03F000000000000004001020000000200000000000000000000"
@@ -135,8 +138,8 @@ public class GeometryConverterWktTest {
 
 	@ParameterizedTest(name = "[{index}] {0}")
 	@MethodSource("accepted")
-	public void testParse(final String text, final GeometryType type, final int srid, final boolean z,
-			final boolean m, final boolean empty, final double[][] coordinates) {
+	public void testParse(final String text, final GeometryType type, final int srid, final boolean z, final boolean m,
+			final boolean empty, final double[][] coordinates) {
 		final Geometry<?> geometry = converter().convertObject(text);
 		assertGeometry(geometry, type, srid, z, m, empty, coordinates);
 	}
@@ -194,13 +197,10 @@ public class GeometryConverterWktTest {
 			"SRID=4326POINT(1 2)", "SRID=4326;", "FOO(1 2)", "POINT(1,2)", "POINT(1 2);", "   ", "POINT(a b)",
 			"GEOMETRYCOLLECTION(POINT(1 2)",
 			// 16進EWKB: 奇数桁 / 末尾の余分なバイト / 途中で切れたデータ / 不正なバイト順
-			"0101000020E61000000000000000606140000000000080414",
-			"0101000020E61000000000000000606140000000000080414000",
-			"0101000020E6100000000000000060614000000000008041",
-			"0201000020E610000000000000006061400000000000804140",
+			"0101000020E61000000000000000606140000000000080414", "0101000020E61000000000000000606140000000000080414000",
+			"0101000020E6100000000000000060614000000000008041", "0201000020E610000000000000006061400000000000804140",
 			// 構成要素の途中で切れたコレクション / 末尾に余分なデータがあるコレクション
-			"0107000000020000000101000000000000000000F03F0000000000000040",
-			"01070000000000000000" })
+			"0107000000020000000101000000000000000000F03F0000000000000040", "01070000000000000000" })
 	public void testRejected(final String text) {
 		assertThrows(IllegalArgumentException.class, () -> converter().convertObject(text));
 	}
@@ -212,10 +212,9 @@ public class GeometryConverterWktTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY",
-			"SRID=4326;POINT Z EMPTY", "SRID=4326;LINESTRING ZM EMPTY", "POLYGON Z EMPTY",
-			"MULTIPOINT Z EMPTY", "MULTILINESTRING Z EMPTY", "MULTIPOLYGON ZM EMPTY",
-			"GEOMETRYCOLLECTION Z EMPTY",
+	@ValueSource(strings = { "POINT Z EMPTY", "POINT M EMPTY", "POINT ZM EMPTY", "SRID=4326;POINT Z EMPTY",
+			"SRID=4326;LINESTRING ZM EMPTY", "POLYGON Z EMPTY", "MULTIPOINT Z EMPTY", "MULTILINESTRING Z EMPTY",
+			"MULTIPOLYGON ZM EMPTY", "GEOMETRYCOLLECTION Z EMPTY",
 			"GEOMETRYCOLLECTION Z(POINT Z EMPTY,POINT Z(1 2 3))" })
 	public void testEmptyDimensionsSurviveFormatting(final String text) {
 		final Geometry<?> before = converter().convertObject(text);
@@ -229,19 +228,15 @@ public class GeometryConverterWktTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "GEOMETRYCOLLECTION Z(POINT(1 2))",
-			"GEOMETRYCOLLECTION ZM(LINESTRING(1 2 3,4 5 6))",
-			"GEOMETRYCOLLECTION Z(GEOMETRYCOLLECTION(POINT(1 2)))",
-			"GEOMETRYCOLLECTION Z(POINT M(1 2 3))",
-			"GEOMETRYCOLLECTION M(POINT Z EMPTY)",
-			"GEOMETRYCOLLECTION ZM(GEOMETRYCOLLECTION M EMPTY)" })
+	@ValueSource(strings = { "GEOMETRYCOLLECTION Z(POINT(1 2))", "GEOMETRYCOLLECTION ZM(LINESTRING(1 2 3,4 5 6))",
+			"GEOMETRYCOLLECTION Z(GEOMETRYCOLLECTION(POINT(1 2)))", "GEOMETRYCOLLECTION Z(POINT M(1 2 3))",
+			"GEOMETRYCOLLECTION M(POINT Z EMPTY)", "GEOMETRYCOLLECTION ZM(GEOMETRYCOLLECTION M EMPTY)" })
 	public void testRejectConflictingCollectionDimensions(final String text) {
 		assertThrows(IllegalArgumentException.class, () -> converter().convertObject(text));
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "GEOMETRYCOLLECTION Z(POINT(1 2 3))",
-			"GEOMETRYCOLLECTION M(POINT(1 2 3))",
+	@ValueSource(strings = { "GEOMETRYCOLLECTION Z(POINT(1 2 3))", "GEOMETRYCOLLECTION M(POINT(1 2 3))",
 			"GEOMETRYCOLLECTION ZM(GEOMETRYCOLLECTION(POINT(1 2 3 4)))" })
 	public void testInheritedCollectionDimensions(final String text) {
 		final Geometry<?> geometry = converter().convertObject(text);

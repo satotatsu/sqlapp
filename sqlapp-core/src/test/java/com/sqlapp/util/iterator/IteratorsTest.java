@@ -20,6 +20,9 @@
 package com.sqlapp.util.iterator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -29,6 +32,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +42,59 @@ import com.sqlapp.data.interval.IntervalMonth;
 import com.sqlapp.util.DateUtils;
 
 public class IteratorsTest {
+	@Test
+	void numericRangesStopAtOverflow() {
+		assertSingle(Integer.MAX_VALUE - 1, Iterators.range(Integer.MAX_VALUE - 1, Integer.MAX_VALUE, 2));
+		assertSingle(Long.MIN_VALUE + 1, Iterators.range(Long.MIN_VALUE + 1, Long.MIN_VALUE, -2L));
+	}
+
+	@Test
+	void temporalRangesIncludeStartAndExcludeEnd() {
+		final Instant start = Instant.EPOCH;
+		assertSingle(start, Iterators.range(start, start.plusSeconds(1), 1));
+		assertSingle(start, Iterators.range(start, start.minusSeconds(1), -2));
+		final LocalDate date = LocalDate.of(2026, 1, 1);
+		assertSingle(date, Iterators.range(date, date.plusDays(1)));
+		assertSingle(date, Iterators.range(date, date.plusDays(1), new IntervalDay(1)));
+		assertSingle(java.sql.Date.valueOf(date),
+				Iterators.range(java.sql.Date.valueOf(date), java.sql.Date.valueOf(date.plusDays(1))));
+		assertThrows(NoSuchElementException.class, Iterators.range(start, start, 1).iterator()::next);
+	}
+
+	@Test
+	void rejectsZeroTemporalStep() {
+		final Instant start = Instant.EPOCH;
+		assertThrows(IllegalArgumentException.class, () -> Iterators.range(start, start.minusSeconds(1), 0));
+		final LocalDate date = LocalDate.of(2026, 1, 1);
+		assertThrows(IllegalArgumentException.class, () -> Iterators.range(date, date.plusDays(1), new IntervalDay(0)));
+	}
+
+	@Test
+	void exhaustedStringIteratorDistinguishesNullFromEnd() {
+		assertSingle(null, Iterators.range((String) null));
+	}
+
+	@Test
+	void temporalIteratorEqualityIncludesTraversalState() {
+		final Instant start = Instant.EPOCH;
+		final Instant end = start.plusSeconds(2);
+		final Iterator<Instant> left = Iterators.range(start, end, 1).iterator();
+		final Iterator<Instant> right = Iterators.range(start, end, 1).iterator();
+		assertEquals(left, right);
+		assertEquals(left.hashCode(), right.hashCode());
+		assertNotEquals(left, "unrelated");
+		left.next();
+		assertNotEquals(left, right);
+		right.next();
+		assertEquals(left, right);
+	}
+
+	private static <T> void assertSingle(final T expected, final Iterable<T> range) {
+		final Iterator<T> iterator = range.iterator();
+		assertEquals(expected, iterator.next());
+		assertFalse(iterator.hasNext());
+		assertThrows(NoSuchElementException.class, iterator::next);
+	}
 
 	@Test
 	public void testIntRange0_10_1() {

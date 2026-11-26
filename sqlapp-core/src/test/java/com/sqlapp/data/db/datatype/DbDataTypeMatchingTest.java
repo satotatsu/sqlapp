@@ -12,10 +12,8 @@ class DbDataTypeMatchingTest {
 	@Test
 	void regexConvenienceMethodsApplyCallbacksAndPreserveNames() {
 		RangeType type = new RangeType();
-		type.setPetternColumnTypeMatcher("(?<name>INT4RANGE)",
-				(m, info) -> info.setDataTypeName(m.group("name")));
-		type.addPetternColumnTypeMatcher("(?<name>DATERANGE)",
-				(m, info) -> info.setDataTypeName(m.group("name")));
+		type.setPetternColumnTypeMatcher("(?<name>INT4RANGE)", (m, info) -> info.setDataTypeName(m.group("name")));
+		type.addPetternColumnTypeMatcher("(?<name>DATERANGE)", (m, info) -> info.setDataTypeName(m.group("name")));
 		for (String name : new String[] { "INT4RANGE", "DATERANGE" }) {
 			Column column = new Column();
 			type.matchDataTypeName(name).orElseThrow().set(column);
@@ -28,8 +26,8 @@ class DbDataTypeMatchingTest {
 	@Test
 	void explicitMatcherNameSurvivesAndMissingNameUsesRegisteredType() {
 		RangeType type = new RangeType();
-		type.setColumnTypeMatcher(new RegexColumnTypeMatcher("INT4RANGE",
-				(m, info) -> info.setDataTypeName("INT4RANGE")));
+		type.setColumnTypeMatcher(
+				new RegexColumnTypeMatcher("INT4RANGE", (m, info) -> info.setDataTypeName("INT4RANGE")));
 		assertEquals("INT4RANGE", type.matchDataTypeName("INT4RANGE").orElseThrow().getDataTypeName().orElseThrow());
 		type.setPetternColumnTypeMatcher("INT4RANGE");
 		assertEquals("RANGE", type.matchDataTypeName("INT4RANGE").orElseThrow().getDataTypeName().orElseThrow());

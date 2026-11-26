@@ -45,11 +45,15 @@ class CachedMvelEvaluatorCacheTest {
 	}
 
 	public static final class FirstValue {
-		public static String get() { return "first"; }
+		public static String get() {
+			return "first";
+		}
 	}
 
 	public static final class SecondValue {
-		public static String get() { return "second"; }
+		public static String get() {
+			return "second";
+		}
 	}
 
 	@Test
@@ -75,8 +79,16 @@ class CachedMvelEvaluatorCacheTest {
 	}
 
 	public static final class StaticFunctions {
-		public static String customValue() { return "no-arguments"; }
-		public static String customValue(int value) { return "number-" + value; }
-		public static String customValue(String value) { return "text-" + value; }
+		public static String customValue() {
+			return "no-arguments";
+		}
+
+		public static String customValue(int value) {
+			return "number-" + value;
+		}
+
+		public static String customValue(String value) {
+			return "text-" + value;
+		}
 	}
 }

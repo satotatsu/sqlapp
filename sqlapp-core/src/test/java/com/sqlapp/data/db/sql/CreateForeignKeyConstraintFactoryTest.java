@@ -86,8 +86,8 @@ public class CreateForeignKeyConstraintFactoryTest extends AbstractStandardFacto
 	void decoratesReferenceInSameSchemaWhenRequested() {
 		Table parent = createTable().setSchemaName("schemaA");
 		Table child = createTable1().setSchemaName("schemaA");
-		ForeignKeyConstraint fk = child.getConstraints().addForeignKeyConstraint("FK1",
-				child.getColumns().get("colA"), parent.getColumns().get("colA"));
+		ForeignKeyConstraint fk = child.getConstraints().addForeignKeyConstraint("FK1", child.getColumns().get("colA"),
+				parent.getColumns().get("colA"));
 		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
 		assertTrue(operationfactory.createSql(fk).get(0).getSqlText().split("REFERENCES")[1].contains("schemaA"));
 		sqlFactoryRegistry.getOptions().setDecorateSchemaName(false);

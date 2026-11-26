@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 
 class UserPrivilegeCollectionTest {
 	private UserPrivilege privilege(String grantor, String kind) {
-		var privilege = new UserPrivilege().setGranteeName("PRINCIPAL").setGrantorName(grantor).setPrivilege("AUTHORITY");
+		var privilege = new UserPrivilege().setGranteeName("PRINCIPAL").setGrantorName(grantor)
+				.setPrivilege("AUTHORITY");
 		privilege.getSpecifics().put("principalKind", kind);
 		return privilege;
 	}
@@ -19,14 +20,16 @@ class UserPrivilegeCollectionTest {
 		var grants = List.of(privilege("A", "USER"), privilege("B", "USER"), privilege("A", "ROLE"));
 		assertTrue(catalog.getUserPrivileges().addAll(grants));
 		assertEquals(3, catalog.getUserPrivileges().size());
-		for (var privilege : catalog.getUserPrivileges()) assertSame(catalog.getUserPrivileges(), privilege.getParent());
+		for (var privilege : catalog.getUserPrivileges())
+			assertSame(catalog.getUserPrivileges(), privilege.getParent());
 		assertFalse(catalog.getUserPrivileges().addAll(List.of()));
 	}
 
 	@Test
 	void catalogAndCollectionCloningKeepAllGrantorsAndSupplementalIdentities() {
 		Catalog catalog = new Catalog();
-		catalog.getUserPrivileges().addAll(List.of(privilege("A", "USER"), privilege("B", "USER"), privilege("A", "ROLE")));
+		catalog.getUserPrivileges()
+				.addAll(List.of(privilege("A", "USER"), privilege("B", "USER"), privilege("A", "ROLE")));
 		var clone = catalog.clone();
 		assertEquals(3, clone.getUserPrivileges().size());
 		assertEquals(catalog, clone);

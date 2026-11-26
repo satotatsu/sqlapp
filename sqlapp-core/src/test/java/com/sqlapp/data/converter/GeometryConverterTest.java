@@ -43,8 +43,7 @@ import com.sqlapp.data.geometry.Polygon;
 public class GeometryConverterTest {
 
 	static Stream<Arguments> postgresOutput() {
-		return Stream.of(
-				Arguments.of(Point.class, "(1,2)", new Point(1, 2)),
+		return Stream.of(Arguments.of(Point.class, "(1,2)", new Point(1, 2)),
 				Arguments.of(Point.class, "(100,-Infinity)", new Point(100, Double.NEGATIVE_INFINITY)),
 				Arguments.of(Box.class, "(1,1),(0,0)", new Box(1, 1, 0, 0)),
 				Arguments.of(Lseg.class, "[(0,0),(1,1)]", new Lseg(0, 0, 1, 1)),
@@ -62,11 +61,8 @@ public class GeometryConverterTest {
 	}
 
 	static Stream<Arguments> values() {
-		return Stream.of(
-				Arguments.of(Point.class, new Point(1.5, -2)),
-				Arguments.of(Box.class, new Box(1, 1, 0, 0)),
-				Arguments.of(Lseg.class, new Lseg(0, 0, 1, 1)),
-				Arguments.of(Line.class, new Line(0, 0, 1, 1)),
+		return Stream.of(Arguments.of(Point.class, new Point(1.5, -2)), Arguments.of(Box.class, new Box(1, 1, 0, 0)),
+				Arguments.of(Lseg.class, new Lseg(0, 0, 1, 1)), Arguments.of(Line.class, new Line(0, 0, 1, 1)),
 				Arguments.of(Path.class, new Path(true, 0, 0, 1, 1)),
 				Arguments.of(Path.class, new Path(false, 0, 0, 1, 1)),
 				Arguments.of(Polygon.class, new Polygon(0, 0, 1, 1, 1, 0)),

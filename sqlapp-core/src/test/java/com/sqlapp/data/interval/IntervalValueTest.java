@@ -28,11 +28,10 @@ import com.sqlapp.util.file.CsvWriter;
 
 class IntervalValueTest {
 	@ParameterizedTest
-	@CsvSource({ "P1Y,P12M", "P1Y2M-3DT4H5M6.123456789S,P14M-3DT14706.123456789S",
-			"P1D,P1D", "PT24H,PT86400S", "PT25H,PT90000S", "P1DT-1H,P1DT-3600S",
-			"PT-0.000000001S,PT-0.000000001S", "PT-1.5S,PT-1.5S", "PT1H-60M,PT0S",
-			"P1Y-12M,PT0S", "P+2M-3DT+4.120000000S,P2M-3DT4.12S", "p1dt2h,P1DT7200S",
-			"PT0S,PT0S", "P-0D,PT0S", "PT-0.000000000S,PT0S", "P-0Y+0M-0DT-0H+0M-0S,PT0S" })
+	@CsvSource({ "P1Y,P12M", "P1Y2M-3DT4H5M6.123456789S,P14M-3DT14706.123456789S", "P1D,P1D", "PT24H,PT86400S",
+			"PT25H,PT90000S", "P1DT-1H,P1DT-3600S", "PT-0.000000001S,PT-0.000000001S", "PT-1.5S,PT-1.5S",
+			"PT1H-60M,PT0S", "P1Y-12M,PT0S", "P+2M-3DT+4.120000000S,P2M-3DT4.12S", "p1dt2h,P1DT7200S", "PT0S,PT0S",
+			"P-0D,PT0S", "PT-0.000000000S,PT0S", "P-0Y+0M-0DT-0H+0M-0S,PT0S" })
 	void parsesAndEmitsCanonicalText(final String input, final String canonical) {
 		final IntervalValue value = IntervalValue.parse(input);
 		assertEquals(canonical, value.toString());
@@ -40,10 +39,9 @@ class IntervalValueTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "", "P", "PT", "P1DT", "P1M1Y", "P1D1D", "PT1S1H", "P1W", "P1.5D",
-			"P1.5Y", "P1.5M", "PT1.5H", "PT1.5M", "PT.5S", "PT1.S", "PT1,5S", "PT1.1234567890S",
-			" P1D", "P1D ", "-P1D", "P1DT2", "PTNaNS", "PTInfinityS", "P１D", "INTERVAL '1' DAY",
-			"1-2-3 4:5:6", "PT1S\n", "P1DT1Sgarbage" })
+	@ValueSource(strings = { "", "P", "PT", "P1DT", "P1M1Y", "P1D1D", "PT1S1H", "P1W", "P1.5D", "P1.5Y", "P1.5M",
+			"PT1.5H", "PT1.5M", "PT.5S", "PT1.S", "PT1,5S", "PT1.1234567890S", " P1D", "P1D ", "-P1D", "P1DT2",
+			"PTNaNS", "PTInfinityS", "P１D", "INTERVAL '1' DAY", "1-2-3 4:5:6", "PT1S\n", "P1DT1Sgarbage" })
 	void rejectsInvalidSyntaxWithoutFallback(final String input) {
 		assertThrows(DateTimeParseException.class, () -> IntervalValue.parse(input));
 	}
@@ -129,14 +127,16 @@ class IntervalValueTest {
 						IntervalValue.parse("PT0.000000001S") },
 				{ new IntervalValue(Long.MIN_VALUE, 0, Duration.ZERO), IntervalValue.parse("P-1M") },
 				{ new IntervalValue(0, Long.MIN_VALUE, Duration.ZERO), IntervalValue.parse("P-1D") },
-				{ new IntervalValue(0, 0, Duration.ofSeconds(Long.MIN_VALUE)), IntervalValue.parse("PT-0.000000001S") } }) {
+				{ new IntervalValue(0, 0, Duration.ofSeconds(Long.MIN_VALUE)),
+						IntervalValue.parse("PT-0.000000001S") } }) {
 			assertThrows(ArithmeticException.class, () -> pair[0].plus(pair[1]));
 			assertThrows(ArithmeticException.class, () -> pair[0].minus(pair[1].negated()));
 			assertThrows(ArithmeticException.class, () -> pair[0].multipliedBy(2));
 		}
 		assertThrows(ArithmeticException.class, () -> new IntervalValue(Long.MIN_VALUE, 0, Duration.ZERO).negated());
 		assertThrows(ArithmeticException.class, () -> new IntervalValue(0, Long.MIN_VALUE, Duration.ZERO).negated());
-		assertThrows(ArithmeticException.class, () -> new IntervalValue(0, 0, Duration.ofSeconds(Long.MIN_VALUE)).negated());
+		assertThrows(ArithmeticException.class,
+				() -> new IntervalValue(0, 0, Duration.ofSeconds(Long.MIN_VALUE)).negated());
 	}
 
 	@Test
@@ -188,13 +188,15 @@ class IntervalValueTest {
 				IntervalValue.parse("P14M-3DT-0.123456789S"),
 				new IntervalValue(Long.MIN_VALUE, Long.MAX_VALUE, Duration.ofSeconds(Long.MIN_VALUE, 1)) };
 		final var text = new StringWriter();
-		try (var writer = new CsvWriter(text, settings -> {})) {
+		try (var writer = new CsvWriter(text, settings -> {
+		})) {
 			for (IntervalValue value : values) {
 				writer.writeRow(value.toString());
 			}
 		}
 		final int[] index = { 0 };
-		try (var parser = new CsvParser(new StringReader(text.toString()), settings -> {})) {
+		try (var parser = new CsvParser(new StringReader(text.toString()), settings -> {
+		})) {
 			parser.readAll((row, number) -> assertEquals(values[index[0]++], IntervalValue.parse(row[0])));
 		}
 		assertEquals(values.length, index[0]);

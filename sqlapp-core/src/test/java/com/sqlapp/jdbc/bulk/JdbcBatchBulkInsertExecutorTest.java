@@ -20,7 +20,8 @@ class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 	@Test
 	void copiesAuditTimestampsAndVersionCountersVerbatimIncludingNulls() throws Exception {
 		testDb(connection -> {
-			execute(connection, "CREATE TABLE BULK_AUDIT_VALUES(ID INTEGER, CREATED_AT TIMESTAMP, UPDATED_AT TIMESTAMP, LOCK_VERSION INTEGER, VERSION_NO INTEGER)");
+			execute(connection,
+					"CREATE TABLE BULK_AUDIT_VALUES(ID INTEGER, CREATED_AT TIMESTAMP, UPDATED_AT TIMESTAMP, LOCK_VERSION INTEGER, VERSION_NO INTEGER)");
 			var table = new Table("BULK_AUDIT_VALUES");
 			table.getColumns().add(new Column("ID").setDataType(DataType.INT));
 			for (String name : List.of("CREATED_AT", "UPDATED_AT"))
@@ -39,13 +40,19 @@ class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 			}
 			assertEquals(2, new JdbcBatchBulkInsertExecutor(getDialect(connection)).execute(connection, table,
 					BulkOption.builder().batchSize(1).build()));
-			try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT CREATED_AT,UPDATED_AT,LOCK_VERSION,VERSION_NO FROM BULK_AUDIT_VALUES ORDER BY ID")) {
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery(
+							"SELECT CREATED_AT,UPDATED_AT,LOCK_VERSION,VERSION_NO FROM BULK_AUDIT_VALUES ORDER BY ID")) {
 				assertTrue(rows.next());
-				assertEquals(timestamp, rows.getTimestamp(1)); assertEquals(null, rows.getTimestamp(2));
-				assertEquals(7, rows.getInt(3)); assertEquals(9, rows.getInt(4));
+				assertEquals(timestamp, rows.getTimestamp(1));
+				assertEquals(null, rows.getTimestamp(2));
+				assertEquals(7, rows.getInt(3));
+				assertEquals(9, rows.getInt(4));
 				assertTrue(rows.next());
-				assertEquals(null, rows.getTimestamp(1)); assertEquals(timestamp, rows.getTimestamp(2));
-				assertEquals(null, rows.getObject(3)); assertEquals(0, rows.getInt(4));
+				assertEquals(null, rows.getTimestamp(1));
+				assertEquals(timestamp, rows.getTimestamp(2));
+				assertEquals(null, rows.getObject(3));
+				assertEquals(0, rows.getInt(4));
 				assertFalse(rows.next());
 			}
 		});
@@ -59,15 +66,27 @@ class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 			table.getColumns().add(new Column("Key Id").setDataType(DataType.INT));
 			table.getColumns().add(new Column("Display Name").setDataType(DataType.VARCHAR).setLength(32));
 			for (int id = 1; id <= 2; id++) {
-				final var row = table.newRow(); row.put("Key Id", id); row.put("Display Name", id == 1 ? "value" : null); table.getRows().add(row);
+				final var row = table.newRow();
+				row.put("Key Id", id);
+				row.put("Display Name", id == 1 ? "value" : null);
+				table.getRows().add(row);
 			}
-			assertEquals(2, new JdbcBatchBulkInsertExecutor(getDialect(connection)).execute(connection, table, BulkOption.defaults()));
-			try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT \"Key Id\", \"Display Name\" FROM \"Batch Items\" ORDER BY \"Key Id\"")) {
-				assertTrue(rows.next()); assertEquals(1, rows.getInt(1)); assertEquals("value", rows.getString(2));
-				assertTrue(rows.next()); assertEquals(2, rows.getInt(1)); assertEquals(null, rows.getString(2)); assertFalse(rows.next());
+			assertEquals(2, new JdbcBatchBulkInsertExecutor(getDialect(connection)).execute(connection, table,
+					BulkOption.defaults()));
+			try (var statement = connection.createStatement();
+					var rows = statement.executeQuery(
+							"SELECT \"Key Id\", \"Display Name\" FROM \"Batch Items\" ORDER BY \"Key Id\"")) {
+				assertTrue(rows.next());
+				assertEquals(1, rows.getInt(1));
+				assertEquals("value", rows.getString(2));
+				assertTrue(rows.next());
+				assertEquals(2, rows.getInt(1));
+				assertEquals(null, rows.getString(2));
+				assertFalse(rows.next());
 			}
 		});
 	}
+
 	@Test
 	void bindsBinaryAndNullValuesWithoutCommittingCallerTransaction() throws Exception {
 		testDb(connection -> {
@@ -104,6 +123,7 @@ class JdbcBatchBulkInsertExecutorTest extends AbstractDbTest {
 			}
 		});
 	}
+
 	@Test
 	void validatesPortableBulkSizesBeforeExecution() {
 		assertThrows(IllegalArgumentException.class, () -> BulkOption.builder().batchSize(0).build());

@@ -38,8 +38,8 @@ class JdbcTreeDataExecutionTrackerTest {
 		var tracker = new JdbcTreeDataExecutionTracker();
 		tracker.record(new Table("A"), SqlType.DELETE_BY_ROOT_ROWS, (long) Integer.MAX_VALUE + 10);
 		tracker.committed();
-		assertEquals((long) Integer.MAX_VALUE + 10, tracker.snapshot(true, TransactionOutcome.COMMITTED)
-				.operations().getFirst().committed().knownAffectedRows());
+		assertEquals((long) Integer.MAX_VALUE + 10, tracker.snapshot(true, TransactionOutcome.COMMITTED).operations()
+				.getFirst().committed().knownAffectedRows());
 	}
 
 	@Test

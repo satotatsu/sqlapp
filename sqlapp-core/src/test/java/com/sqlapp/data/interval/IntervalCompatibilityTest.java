@@ -59,7 +59,8 @@ class IntervalCompatibilityTest {
 			};
 			final int expectedNanos = switch (name) {
 			case "Interval", "IntervalSecond", "IntervalDayToSecond", "IntervalHourToSecond",
-					"IntervalMinuteToSecond" -> 123_456_789;
+					"IntervalMinuteToSecond" ->
+				123_456_789;
 			default -> 0;
 			};
 			assertEquals(expectedMonths, value.getMonthsFull(), name);
@@ -94,7 +95,8 @@ class IntervalCompatibilityTest {
 		}
 		assertEquals("-5-11,3 4:5:6\n", text.toString());
 		final int[] rows = { 0 };
-		try (var parser = new CsvParser(new StringReader(text.toString()), settings -> {})) {
+		try (var parser = new CsvParser(new StringReader(text.toString()), settings -> {
+		})) {
 			parser.readAll((row, number) -> {
 				rows[0]++;
 				final var restored = yearMonth.convertObject(row[0]);

@@ -20,8 +20,7 @@ class MvelEvaluatorTest {
 		context.put("path", "aaa.png");
 
 		assertEquals(LocalDate.of(2026, 9, 23), evaluator("LocalDate.of(2026, 9, 23)").eval(context));
-		assertEquals(LocalDate.of(2026, 9, 23),
-				evaluator("LocalDate.of(2026, 9, 23)").eval(context, LocalDate.class));
+		assertEquals(LocalDate.of(2026, 9, 23), evaluator("LocalDate.of(2026, 9, 23)").eval(context, LocalDate.class));
 		assertTrue(evaluator("LocalDate.of(2026, 9, 23).year == 2026").evalBoolean(context));
 		assertEquals(new File("aaa.png"), evaluator("new File(path)").eval((Map<?, ?>) context));
 	}

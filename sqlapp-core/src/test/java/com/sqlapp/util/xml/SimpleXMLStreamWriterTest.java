@@ -35,8 +35,10 @@ public class SimpleXMLStreamWriterTest {
 			final var output = new StringWriter();
 			final var writer = new SimpleXMLStreamWriter(output);
 			writer.writeStartElement("test");
-			if (cdata) writer.writeCData(value);
-			else writer.writeCharacters(value);
+			if (cdata)
+				writer.writeCData(value);
+			else
+				writer.writeCharacters(value);
 			writer.writeEndElement();
 			writer.flush();
 			final var reader = javax.xml.stream.XMLInputFactory.newFactory()
@@ -44,9 +46,12 @@ public class SimpleXMLStreamWriterTest {
 			try {
 				reader.nextTag();
 				org.junit.jupiter.api.Assertions.assertEquals(value, reader.getElementText());
-			} finally { reader.close(); }
+			} finally {
+				reader.close();
+			}
 		}
 	}
+
 	@Test
 	public void preservesAttributeWhitespaceAndSupplementaryCharacters() throws Exception {
 		final String value = "𠮷<&\"\tfirst\r\nsecond\nthird\rfourth";

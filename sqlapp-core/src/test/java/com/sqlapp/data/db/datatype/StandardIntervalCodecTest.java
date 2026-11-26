@@ -34,7 +34,8 @@ class StandardIntervalCodecTest {
 		assertTrue(converted.warnings().isEmpty());
 		var metadata = codec.columnTypeMatcher().match("INTERVAL " + codec.qualifier()).orElseThrow();
 		assertEquals(18L, metadata.getLength().orElseThrow());
-		if (type.name().endsWith("SECOND")) assertEquals(9, metadata.getScale().orElseThrow());
+		if (type.name().endsWith("SECOND"))
+			assertEquals(9, metadata.getScale().orElseThrow());
 	}
 
 	@Test
@@ -57,10 +58,10 @@ class StandardIntervalCodecTest {
 		assertThrows(IllegalArgumentException.class, () -> ym.convert(IntervalValue.parse("P1M1D")));
 		assertThrows(IllegalArgumentException.class, () -> ds.convert(IntervalValue.parse("P1M")));
 		assertThrows(IllegalArgumentException.class, () -> ym.convert(Duration.ofDays(30)));
-		assertThrows(ArithmeticException.class, () -> new StandardIntervalCodec(DataType.INTERVAL_YEAR, 9, 9)
-				.convert(IntervalValue.parse("P13M")));
-		assertThrows(ArithmeticException.class, () -> new StandardIntervalCodec(DataType.INTERVAL_DAY, 9, 9)
-				.convert(Duration.ofHours(25)));
+		assertThrows(ArithmeticException.class,
+				() -> new StandardIntervalCodec(DataType.INTERVAL_YEAR, 9, 9).convert(IntervalValue.parse("P13M")));
+		assertThrows(ArithmeticException.class,
+				() -> new StandardIntervalCodec(DataType.INTERVAL_DAY, 9, 9).convert(Duration.ofHours(25)));
 	}
 
 	@Test
@@ -93,12 +94,12 @@ class StandardIntervalCodecTest {
 			assertEquals(value, ds.parse(ds.convert(value).text()));
 		}
 		assertThrows(ArithmeticException.class, () -> ds.convert(new IntervalValue(0, Long.MAX_VALUE, Duration.ZERO)));
-		assertThrows(ArithmeticException.class, () -> ds.convert(new IntervalValue(0, 1,
-				Duration.ofSeconds(Long.MAX_VALUE))));
+		assertThrows(ArithmeticException.class,
+				() -> ds.convert(new IntervalValue(0, 1, Duration.ofSeconds(Long.MAX_VALUE))));
 		assertThrows(ArithmeticException.class, () -> ds.parse("+999999999999999999 00:00:00"));
 		// Compute the final sum exactly, without a spurious intermediate overflow.
-		assertEquals(IntervalValue.parse("PT1S"), ds.convert(new IntervalValue(0, 106751991167300L,
-				Duration.ofSeconds(-9223372036854719999L))).value());
+		assertEquals(IntervalValue.parse("PT1S"),
+				ds.convert(new IntervalValue(0, 106751991167300L, Duration.ofSeconds(-9223372036854719999L))).value());
 	}
 
 	@Test
@@ -115,6 +116,8 @@ class StandardIntervalCodecTest {
 			assertEquals("+0 00:00:01.123456789", codec.convert(Duration.ofSeconds(1, 123456789)).text());
 			assertEquals(IntervalValue.ZERO, codec.parse("-0 00:00:00.000"));
 			assertEquals("+0 00:00:00", codec.convert(IntervalValue.ZERO).text());
-		} finally { Locale.setDefault(previous); }
+		} finally {
+			Locale.setDefault(previous);
+		}
 	}
 }

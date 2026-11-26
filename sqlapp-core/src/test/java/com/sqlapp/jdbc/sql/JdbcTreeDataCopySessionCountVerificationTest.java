@@ -66,7 +66,8 @@ class JdbcTreeDataCopySessionCountVerificationTest {
 							copy.setRootBatchSize(batch);
 							copy.setCommitEveryRootBatches(1);
 						}, id -> id != 2));
-				// Batch 1 fails at the periodic commit after the skipped root, batch 100 at the final commit.
+				// Batch 1 fails at the periodic commit after the skipped root, batch 100 at the
+				// final commit.
 				var expected = batch == 1 ? "(read 2, copied 1, inserted 1)" : "(read 3, copied 2, inserted 2)";
 				assertTrue(failure.getMessage().contains("Row count mismatch SRC -> TGT " + expected),
 						failure.getMessage());

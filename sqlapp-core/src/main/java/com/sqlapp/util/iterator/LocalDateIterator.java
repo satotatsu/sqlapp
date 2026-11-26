@@ -41,7 +41,7 @@ final class LocalDateIterator extends AbstractObjectIterator<LocalDate, Integer>
 	 * @param end
 	 */
 	public LocalDateIterator(final LocalDate start, final LocalDate end) {
-		this(start, end, 3600 * 24);
+		this(start, end, 1);
 	}
 
 	/**
@@ -49,7 +49,7 @@ final class LocalDateIterator extends AbstractObjectIterator<LocalDate, Integer>
 	 * 
 	 * @param start 開始
 	 * @param end   終了
-	 * @param step  ステップ(秒単位)
+	 * @param step  ステップ(日単位)
 	 */
 	public LocalDateIterator(final LocalDate start, final LocalDate end, final Integer step) {
 		super(start, end, step);
@@ -62,11 +62,7 @@ final class LocalDateIterator extends AbstractObjectIterator<LocalDate, Integer>
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step > 0) {
-			return (next.compareTo(end) < 0);
-		} else {
-			return (next.compareTo(end) > 0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override

@@ -7,7 +7,8 @@ import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 class IndexTypeTest {
-	@Test void serializedEnumNamesAreAcceptedWithoutLosingVendorAliases() {
+	@Test
+	void serializedEnumNamesAreAcceptedWithoutLosingVendorAliases() {
 		for (var type : IndexType.values()) {
 			assertSame(type, IndexType.parse(type.name()));
 			assertSame(type, IndexType.parse(type.name().toLowerCase(Locale.ROOT)));
@@ -15,14 +16,21 @@ class IndexTypeTest {
 		assertSame(IndexType.Function, IndexType.parse("FUNCTION NORMAL"));
 		assertSame(IndexType.FunctionBitmap, IndexType.parse("FUNCTION BITMAP"));
 	}
-	@Test void allIndexTypesSurviveXmlRoundTrips() throws Exception {
+
+	@Test
+	void allIndexTypesSurviveXmlRoundTrips() throws Exception {
 		for (var type : IndexType.values()) {
-			var original = new Index("I").setIndexType(type); original.getColumns().add("C");
+			var original = new Index("I").setIndexType(type);
+			original.getColumns().add("C");
 			Index restored = SchemaUtils.readXml(new StringReader(original.asXml()));
 			assertSame(type, restored.getIndexType(), type.name());
 		}
 	}
-	@Test void absentAndUnknownTypesKeepTheirExistingBehavior() {
-		assertNull(IndexType.parse(null)); assertNull(IndexType.parse("")); assertNull(IndexType.parse("unknown index type"));
+
+	@Test
+	void absentAndUnknownTypesKeepTheirExistingBehavior() {
+		assertNull(IndexType.parse(null));
+		assertNull(IndexType.parse(""));
+		assertNull(IndexType.parse("unknown index type"));
 	}
 }

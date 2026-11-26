@@ -27,7 +27,8 @@ class SequenceNextValuesTest {
 	void cyclesOnlyWhenRequestedAndBoundsAreKnown() {
 		assertEquals(d(1), SequenceNextValues.after(d(98), d(5), d(1), d(100), true));
 		assertEquals(d(100), SequenceNextValues.after(d(3), d(-5), d(1), d(100), true));
-		// Without CYCLE an exhausted sequence stays beyond its bound so recreation fails clearly.
+		// Without CYCLE an exhausted sequence stays beyond its bound so recreation
+		// fails clearly.
 		assertEquals(d(103), SequenceNextValues.after(d(98), d(5), d(1), d(100), false));
 		assertEquals(d(103), SequenceNextValues.after(d(98), d(5), null, d(100), true));
 		assertEquals(d(100), SequenceNextValues.after(d(95), d(5), d(1), d(100), true));

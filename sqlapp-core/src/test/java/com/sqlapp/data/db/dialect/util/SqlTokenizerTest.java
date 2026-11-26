@@ -98,6 +98,7 @@ public class SqlTokenizerTest extends AbstractTest {
 				if (!statement.isBlank())
 					statements.add(statement.strip());
 			}
+
 			@Override
 			protected void onComment(String comment) {
 				comments.add(comment);

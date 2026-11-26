@@ -61,8 +61,8 @@ class MultiIteratorTest {
 
 	@Test
 	void listBackedIterableCanBeTraversedMoreThanOnce() {
-		final MultiIterable<List<Integer>, Integer> iterable = new MultiIterable<>(
-				List.of(List.of(1), List.of(2)), List::iterator);
+		final MultiIterable<List<Integer>, Integer> iterable = new MultiIterable<>(List.of(List.of(1), List.of(2)),
+				List::iterator);
 
 		assertEquals(List.of(1, 2), collect(iterable));
 		assertEquals(List.of(1, 2), collect(iterable));
@@ -82,17 +82,36 @@ class MultiIteratorTest {
 		final AtomicInteger closes = new AtomicInteger();
 		final class ParentIterator implements Iterator<Integer>, AutoCloseable {
 			private final Iterator<Integer> delegate = List.of(1).iterator();
-			@Override public boolean hasNext() { return delegate.hasNext(); }
-			@Override public Integer next() { return delegate.next(); }
-			@Override public void close() throws Exception {
+
+			@Override
+			public boolean hasNext() {
+				return delegate.hasNext();
+			}
+
+			@Override
+			public Integer next() {
+				return delegate.next();
+			}
+
+			@Override
+			public void close() throws Exception {
 				closes.incrementAndGet();
 				throw parentCloseFailure;
 			}
 		}
 		final class CurrentIterator implements Iterator<String>, AutoCloseable {
-			@Override public boolean hasNext() { throw readFailure; }
-			@Override public String next() { throw new AssertionError("next must not be called"); }
-			@Override public void close() throws Exception {
+			@Override
+			public boolean hasNext() {
+				throw readFailure;
+			}
+
+			@Override
+			public String next() {
+				throw new AssertionError("next must not be called");
+			}
+
+			@Override
+			public void close() throws Exception {
 				closes.incrementAndGet();
 				throw currentCloseFailure;
 			}

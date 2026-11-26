@@ -53,7 +53,8 @@ class ExpressionConverterTest {
 
 	@Test
 	void missingFileIsAnIoFailure() {
-		assertThrows(IOException.class, () -> converter().convert("${new File('absent.png')}", new ParametersContext()));
+		assertThrows(IOException.class,
+				() -> converter().convert("${new File('absent.png')}", new ParametersContext()));
 	}
 
 	private ExpressionConverter converter() {

@@ -43,9 +43,11 @@ class DomainChecksTest {
 	@Test
 	void namesMustBePresentAndUniqueWhileQuotedCaseRemainsDistinct() {
 		Domain domain = new Domain("D");
-		assertThrows(IllegalArgumentException.class, () -> domain.getChecks().add(new DomainCheckConstraint(null, "VALUE > 0")));
+		assertThrows(IllegalArgumentException.class,
+				() -> domain.getChecks().add(new DomainCheckConstraint(null, "VALUE > 0")));
 		domain.getChecks().add(new DomainCheckConstraint("CK", "VALUE > 0"));
-		assertThrows(IllegalArgumentException.class, () -> domain.getChecks().add(new DomainCheckConstraint("CK", "VALUE > 1")));
+		assertThrows(IllegalArgumentException.class,
+				() -> domain.getChecks().add(new DomainCheckConstraint("CK", "VALUE > 1")));
 		domain.getChecks().add(new DomainCheckConstraint("ck", "VALUE < 100"));
 		assertEquals(2, domain.getChecks().size());
 	}

@@ -37,11 +37,10 @@ class BulkMigrationJobExecutorTest {
 		final Table target = source.clone().setName("CUSTOMERS").setSchemaName("app");
 		target.getColumns().get(0).setName("CUSTOMER_ID");
 		final var options = options("renamed-target");
-		final var unchanged = BulkMigrationJobTask.builder().taskId("task").sourceTable(source)
-				.options(options).build();
-		final var renamed = BulkMigrationJobTask.builder().taskId("task").sourceTable(source)
-				.targetTable(target).columnMappings(java.util.Map.of("ID", "CUSTOMER_ID"))
-				.options(options).build();
+		final var unchanged = BulkMigrationJobTask.builder().taskId("task").sourceTable(source).options(options)
+				.build();
+		final var renamed = BulkMigrationJobTask.builder().taskId("task").sourceTable(source).targetTable(target)
+				.columnMappings(java.util.Map.of("ID", "CUSTOMER_ID")).options(options).build();
 
 		assertNotEquals(BulkMigrationJobPlanner.plan(List.of(unchanged)).getFingerprint(),
 				BulkMigrationJobPlanner.plan(List.of(renamed)).getFingerprint());
@@ -57,15 +56,17 @@ class BulkMigrationJobExecutorTest {
 	void rejectsInvalidProgrammaticColumnMappingsBeforePlanning() {
 		final Table source = table("SOURCE");
 		final Table target = table("TARGET");
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobTask.builder()
-				.taskId("missing-target").sourceTable(source).columnMappings(java.util.Map.of("ID", "TARGET_ID"))
-				.options(options("missing-target")).build());
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobTask.builder()
-				.taskId("unknown-source").sourceTable(source).targetTable(target)
-				.columnMappings(java.util.Map.of("UNKNOWN", "ID")).options(options("unknown-source")).build());
-		assertThrows(IllegalArgumentException.class, () -> BulkMigrationJobTask.builder()
-				.taskId("missing-column").sourceTable(source).targetTable(target)
-				.columnMappings(java.util.Map.of("ID", "TARGET_ID")).options(options("missing-column")).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobTask.builder().taskId("missing-target").sourceTable(source)
+						.columnMappings(java.util.Map.of("ID", "TARGET_ID")).options(options("missing-target"))
+						.build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobTask.builder().taskId("unknown-source").sourceTable(source).targetTable(target)
+						.columnMappings(java.util.Map.of("UNKNOWN", "ID")).options(options("unknown-source")).build());
+		assertThrows(IllegalArgumentException.class,
+				() -> BulkMigrationJobTask.builder().taskId("missing-column").sourceTable(source).targetTable(target)
+						.columnMappings(java.util.Map.of("ID", "TARGET_ID")).options(options("missing-column"))
+						.build());
 	}
 
 	@Test
@@ -84,8 +85,8 @@ class BulkMigrationJobExecutorTest {
 				.build();
 		final var tracker = ChunkedBulkMigrationExecutor.duplicateTracker(source, target,
 				java.util.Map.of("ID", "TARGET_ID"), option, false,
-				BulkMigrationCheckpoint.builder().migrationId("mapped-duplicates")
-						.sourceFingerprint("source").targetFingerprint("target").chunkSize(10).build());
+				BulkMigrationCheckpoint.builder().migrationId("mapped-duplicates").sourceFingerprint("source")
+						.targetFingerprint("target").chunkSize(10).build());
 
 		assertEquals(List.of(first), tracker.filter(List.of(first)));
 		assertThrows(IllegalArgumentException.class, () -> tracker.filter(List.of(duplicate)));
@@ -101,14 +102,13 @@ class BulkMigrationJobExecutorTest {
 		final Row duplicate = source.newRow();
 		duplicate.put("ID", 1);
 		final var option = ChunkedBulkMigrationOption.builder().migrationId("mapped-keep-first")
-				.sourceFingerprint("source").targetFingerprint("target")
-				.bulkUpsertOption(BulkUpsertOption.builder()
+				.sourceFingerprint("source").targetFingerprint("target").bulkUpsertOption(BulkUpsertOption.builder()
 						.duplicateKeyStrategy(BulkUpsertDuplicateKeyStrategy.KEEP_FIRST).build())
 				.build();
 		final var tracker = ChunkedBulkMigrationExecutor.duplicateTracker(source, target,
 				java.util.Map.of("ID", "TARGET_ID"), option, false,
-				BulkMigrationCheckpoint.builder().migrationId("mapped-keep-first")
-						.sourceFingerprint("source").targetFingerprint("target").chunkSize(10).build());
+				BulkMigrationCheckpoint.builder().migrationId("mapped-keep-first").sourceFingerprint("source")
+						.targetFingerprint("target").chunkSize(10).build());
 
 		tracker.skip(first);
 		assertTrue(tracker.filter(List.of(duplicate)).isEmpty());
@@ -138,13 +138,12 @@ class BulkMigrationJobExecutorTest {
 		}
 		final Table source = table("SOURCE");
 		source.setRowIteratorHandler(rows -> new FailingIterator());
-		final ChunkedBulkMigrationOption options = ChunkedBulkMigrationOption.builder()
-				.migrationId("close-failure").mode(BulkMigrationMode.INSERT).resume(false)
-				.checkpointMode(BulkMigrationCheckpointMode.CUSTOM).build();
+		final ChunkedBulkMigrationOption options = ChunkedBulkMigrationOption.builder().migrationId("close-failure")
+				.mode(BulkMigrationMode.INSERT).resume(false).checkpointMode(BulkMigrationCheckpointMode.CUSTOM)
+				.build();
 
-		final RuntimeException thrown = assertThrows(RuntimeException.class,
-				() -> ChunkedBulkMigrationExecutor.execute(connection(), source, options,
-						new InMemoryBulkMigrationCheckpointStore()));
+		final RuntimeException thrown = assertThrows(RuntimeException.class, () -> ChunkedBulkMigrationExecutor
+				.execute(connection(), source, options, new InMemoryBulkMigrationCheckpointStore()));
 
 		assertSame(readFailure, thrown);
 		assertEquals(1, closes.get());

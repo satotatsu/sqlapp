@@ -15,8 +15,8 @@ class ColumnArrayConversionTest {
 		table.getColumns().add(strings);
 		table.getColumns().add(new Column("matrix").setDataType(DataType.INT).setArrayDimension(2));
 		table.getColumns().add(new Column("scalar").setDataType(DataType.INT));
-		String[] values = {"one", "two,three", null};
-		Integer[][] matrix = {{1, 2}, {3, 4}};
+		String[] values = { "one", "two,three", null };
+		Integer[][] matrix = { { 1, 2 }, { 3, 4 } };
 		Row row = table.newRow();
 		row.put("strings", values);
 		row.put("matrix", matrix);

@@ -84,8 +84,7 @@ public class GeometryTextFormatTest {
 						new Polygon(0, 0, 1, 1, 1, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "(0,0),(1,1),(1,0)",
 						new Polygon(0, 0, 1, 1, 1, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "(0,0,1,1,1,0)",
-						new Polygon(0, 0, 1, 1, 1, 0)),
+				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "(0,0,1,1,1,0)", new Polygon(0, 0, 1, 1, 1, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "0,0,1,1,1,0", new Polygon(0, 0, 1, 1, 1, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, "((0,0))", new Polygon(0, 0)),
 				// circle
@@ -107,8 +106,7 @@ public class GeometryTextFormatTest {
 	}
 
 	static Stream<Arguments> rejected() {
-		return Stream.of(
-				Arguments.of((Supplier<AbstractGeometry>) Point::new, "[1,2]"),
+		return Stream.of(Arguments.of((Supplier<AbstractGeometry>) Point::new, "[1,2]"),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "(1,2,3)"),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "(1,2)x"),
 				Arguments.of((Supplier<AbstractGeometry>) Point::new, "(1,2"),
@@ -197,8 +195,7 @@ public class GeometryTextFormatTest {
 	// ---- 自身の出力の読み戻し ----
 
 	static Stream<Arguments> roundTrip() {
-		return Stream.of(
-				Arguments.of((Supplier<AbstractGeometry>) Point::new, new Point(1.5, -2)),
+		return Stream.of(Arguments.of((Supplier<AbstractGeometry>) Point::new, new Point(1.5, -2)),
 				Arguments.of((Supplier<AbstractGeometry>) Circle::new, new Circle(1, 2, 3.5)),
 				Arguments.of((Supplier<AbstractGeometry>) Box::new, new Box(1, 1, 0, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Lseg::new, new Lseg(0, 0, 1, 1)),
@@ -207,8 +204,7 @@ public class GeometryTextFormatTest {
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, new Path(false, 0, 0, 1, 1, 2, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Path::new, new Path(true, 0, 0)),
 				Arguments.of((Supplier<AbstractGeometry>) Polygon::new, new Polygon(0, 0, 1, 1, 1, 0)),
-				Arguments.of((Supplier<AbstractGeometry>) Point::new,
-						new Point(Double.NaN, Double.POSITIVE_INFINITY)));
+				Arguments.of((Supplier<AbstractGeometry>) Point::new, new Point(Double.NaN, Double.POSITIVE_INFINITY)));
 	}
 
 	@ParameterizedTest(name = "[{index}] {1}")

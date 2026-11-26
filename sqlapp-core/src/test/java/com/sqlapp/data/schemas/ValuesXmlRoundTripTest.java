@@ -21,6 +21,7 @@ class ValuesXmlRoundTripTest {
 		Column restoredColumn = SchemaUtils.readXml(new StringReader(column.asXml()));
 		assertEquals(values, List.copyOf(restoredColumn.getValues()));
 	}
+
 	@Test
 	void legacyCommaSeparatedPropertyInputRemainsSupported() {
 		Column column = new Column("choice");

@@ -49,8 +49,8 @@ class JdbcTreeDataCopySessionRestartTest {
 
 	@ParameterizedTest
 	@EnumSource(value = HoldCursorStrategy.class, names = { "HOLD", "REOPEN" })
-	void checkpointOnTheTargetConnectionResumesWithoutDuplicatesAndLeavesTheSourceUnchanged(
-			HoldCursorStrategy cursor) throws Exception {
+	void checkpointOnTheTargetConnectionResumesWithoutDuplicatesAndLeavesTheSourceUnchanged(HoldCursorStrategy cursor)
+			throws Exception {
 		try (var source = source(); var target = target()) {
 			var restart = restart(target);
 			var first = new ArrayList<Integer>();
@@ -91,9 +91,9 @@ class JdbcTreeDataCopySessionRestartTest {
 	void unorderedSourceRootsAreRejected() throws Exception {
 		try (var source = source(); var target = target()) {
 			var restart = restart(target);
-			var failure = assertThrows(IllegalStateException.class, () -> copy(source, target, restart,
-					ROOT_SQL.replace("ORDER BY ID", "ORDER BY ID DESC"), HoldCursorStrategy.HOLD, Set.of(), -1,
-					new ArrayList<>()));
+			var failure = assertThrows(IllegalStateException.class,
+					() -> copy(source, target, restart, ROOT_SQL.replace("ORDER BY ID", "ORDER BY ID DESC"),
+							HoldCursorStrategy.HOLD, Set.of(), -1, new ArrayList<>()));
 			assertTrue(failure.getMessage().contains("strictly increasing"), failure.getMessage());
 			assertEquals(0, count(target, "TGT_PARENT"));
 		}
@@ -184,9 +184,9 @@ class JdbcTreeDataCopySessionRestartTest {
 		table.setDialect(DialectResolver.getInstance().getDialect(connection));
 		for (String column : columns) {
 			String[] parts = column.split(" ");
-			table.getColumns().add(new Column(parts[0])
-					.setDataType(parts[1].equals("INT") ? DataType.INT : DataType.VARCHAR).setLength(
-							parts[1].equals("INT") ? null : 20));
+			table.getColumns()
+					.add(new Column(parts[0]).setDataType(parts[1].equals("INT") ? DataType.INT : DataType.VARCHAR)
+							.setLength(parts[1].equals("INT") ? null : 20));
 		}
 		return table;
 	}
@@ -199,8 +199,8 @@ class JdbcTreeDataCopySessionRestartTest {
 					+ " PRIMARY KEY(PARENT_ID, NO), FOREIGN KEY(PARENT_ID) REFERENCES SRC_PARENT(ID))");
 			for (int id = 1; id <= 5; id++) {
 				statement.execute("INSERT INTO SRC_PARENT VALUES(" + id + ",'P" + id + "')");
-				statement.execute("INSERT INTO SRC_CHILD VALUES(" + id + ",1,'C" + id + "-1'),(" + id + ",2,'C" + id
-						+ "-2')");
+				statement.execute(
+						"INSERT INTO SRC_CHILD VALUES(" + id + ",1,'C" + id + "-1'),(" + id + ",2,'C" + id + "-2')");
 			}
 		}
 		connection.setAutoCommit(false);
@@ -230,8 +230,9 @@ class JdbcTreeDataCopySessionRestartTest {
 	}
 
 	private static int orphans(Connection target) throws SQLException {
-		try (var statement = target.createStatement(); var rs = statement.executeQuery(
-				"SELECT COUNT(*) FROM TGT_PARENT P WHERE (SELECT COUNT(*) FROM TGT_CHILD C WHERE C.PARENT_ID=P.ID) <> 2")) {
+		try (var statement = target.createStatement();
+				var rs = statement.executeQuery(
+						"SELECT COUNT(*) FROM TGT_PARENT P WHERE (SELECT COUNT(*) FROM TGT_CHILD C WHERE C.PARENT_ID=P.ID) <> 2")) {
 			rs.next();
 			return rs.getInt(1);
 		}

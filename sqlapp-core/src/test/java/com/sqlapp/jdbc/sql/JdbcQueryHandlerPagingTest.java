@@ -14,25 +14,43 @@ class JdbcQueryHandlerPagingTest {
 	private static class Capture extends JdbcQueryHandler {
 		List<Object> bindings;
 		boolean scroll;
-		Capture(SqlNode node) { super(node, null); }
-		@Override protected StatementSqlParametersHolder createStatement(Connection connection, Object context, Integer limit) {
+
+		Capture(SqlNode node) {
+			super(node, null);
+		}
+
+		@Override
+		protected StatementSqlParametersHolder createStatement(Connection connection, Object context, Integer limit) {
 			var parameters = getNode().eval(context);
 			createStatement(connection, parameters, limit);
 			return new StatementSqlParametersHolder(null, parameters);
 		}
-		@Override protected PreparedStatement createStatement(Connection connection, SqlParameterCollection parameters, Integer limit) {
+
+		@Override
+		protected PreparedStatement createStatement(Connection connection, SqlParameterCollection parameters,
+				Integer limit) {
 			bindings = parameters.getBindParameters().stream().flatMap(p -> p.stream()).map(p -> p.getValue()).toList();
 			return null;
 		}
-		@Override protected PreparedStatement createStatementScrollInsensitive(Connection connection, SqlParameterCollection parameters) {
+
+		@Override
+		protected PreparedStatement createStatementScrollInsensitive(Connection connection,
+				SqlParameterCollection parameters) {
 			scroll = true;
 			return createStatement(connection, parameters, null);
 		}
-		@Override protected StatementSqlParametersHolder createStatementScrollInsensitive(Connection connection, ParametersContext context) {
+
+		@Override
+		protected StatementSqlParametersHolder createStatementScrollInsensitive(Connection connection,
+				ParametersContext context) {
 			scroll = true;
 			return createStatement(connection, context, null);
 		}
-		@Override protected void executeQueryCallback(Connection connection, PreparedStatement statement, Integer limit, Integer offset) { }
+
+		@Override
+		protected void executeQueryCallback(Connection connection, PreparedStatement statement, Integer limit,
+				Integer offset) {
+		}
 	}
 
 	private Capture handler(String sql) {

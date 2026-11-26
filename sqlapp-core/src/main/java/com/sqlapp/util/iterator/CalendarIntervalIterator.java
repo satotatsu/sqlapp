@@ -25,10 +25,11 @@ import com.sqlapp.data.interval.Interval;
 
 /**
  * For文の代わりに使用する<code>org.joda.util.Calendar</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class CalendarIntervalIterator extends AbstractObjectIterator<Calendar, Interval>{
+final class CalendarIntervalIterator extends AbstractObjectIterator<Calendar, Interval> {
 
 	/**
 	 * serialVersionUID
@@ -37,37 +38,38 @@ final class CalendarIntervalIterator extends AbstractObjectIterator<Calendar, In
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public CalendarIntervalIterator(final Calendar start, final Calendar end, final Interval step){
+	public CalendarIntervalIterator(final Calendar start, final Calendar end, final Interval step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step.isPositive()){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step.isPositive());
 	}
 
 	@Override
 	protected Calendar getNext() {
-		return step.add(start, (int)this.count);
+		return step.add(start, (int) this.count);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public CalendarIntervalIterator clone(){
-		CalendarIntervalIterator clone=new CalendarIntervalIterator(this.start, this.end, this.step);
+	public CalendarIntervalIterator clone() {
+		CalendarIntervalIterator clone = new CalendarIntervalIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

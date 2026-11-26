@@ -11,15 +11,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class ClassSearchLinkageTest {
-	@TempDir Path directory;
+	@TempDir
+	Path directory;
 
 	@ParameterizedTest
 	@ValueSource(booleans = { false, true })
 	void normalJarDiscoveryRetainsPackageNamesWithoutInitializingClasses(boolean recursive) throws Exception {
 		var source = directory.resolve("Healthy.java");
-		Files.writeString(source, "package fixture; public class Healthy { static { if (Boolean.parseBoolean(\"true\")) throw new IllegalStateException(\"must not initialize\"); } }\n");
-		assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null,
-				"-encoding", "UTF-8", "-d", directory.toString(), source.toString()));
+		Files.writeString(source,
+				"package fixture; public class Healthy { static { if (Boolean.parseBoolean(\"true\")) throw new IllegalStateException(\"must not initialize\"); } }\n");
+		assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "-encoding", "UTF-8", "-d",
+				directory.toString(), source.toString()));
 		var jar = directory.resolve("healthy.jar");
 		try (var output = new JarOutputStream(Files.newOutputStream(jar))) {
 			output.putNextEntry(new JarEntry("fixture/Healthy.class"));
@@ -44,9 +46,11 @@ class ClassSearchLinkageTest {
 		Files.writeString(broken, "package fixture; public class Broken extends Parent {}\n");
 		var compiler = ToolProvider.getSystemJavaCompiler();
 		assertNotNull(compiler);
-		assertEquals(0, compiler.run(null, null, null, "-encoding", "UTF-8", "-d", directory.toString(), parent.toString(), broken.toString()));
+		assertEquals(0, compiler.run(null, null, null, "-encoding", "UTF-8", "-d", directory.toString(),
+				parent.toString(), broken.toString()));
 		Files.writeString(parent, "package fixture; public final class Parent {}\n");
-		assertEquals(0, compiler.run(null, null, null, "-encoding", "UTF-8", "-d", directory.toString(), parent.toString()));
+		assertEquals(0,
+				compiler.run(null, null, null, "-encoding", "UTF-8", "-d", directory.toString(), parent.toString()));
 		URL root = directory.toUri().toURL();
 		if (mode.contains("JAR")) {
 			var jar = directory.resolve("fixture.jar");

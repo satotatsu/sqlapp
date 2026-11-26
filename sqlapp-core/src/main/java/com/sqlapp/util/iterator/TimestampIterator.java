@@ -25,44 +25,46 @@ import java.sql.Timestamp;
 
 /**
  * For文の代わりに使用する<code>java.sql.Timestamp</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class TimestampIterator extends AbstractObjectIterator<Timestamp, Integer>{
+final class TimestampIterator extends AbstractObjectIterator<Timestamp, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public TimestampIterator(final Timestamp start, final Timestamp end){
-		this(start, end, 3600*24);
+	public TimestampIterator(final Timestamp start, final Timestamp end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public TimestampIterator(final Timestamp start, final Timestamp end, final Integer step){
+	public TimestampIterator(final Timestamp start, final Timestamp end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
-		}
+		return hasNextInDirection(step > 0);
 	}
 
 	@Override
@@ -70,12 +72,14 @@ final class TimestampIterator extends AbstractObjectIterator<Timestamp, Integer>
 		return addSeconds(this.current, step.intValue());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public TimestampIterator clone(){
-		TimestampIterator clone=new TimestampIterator(this.start, this.end, this.step);
+	public TimestampIterator clone() {
+		TimestampIterator clone = new TimestampIterator(this.start, this.end, this.step);
 		return clone;
 	}
 

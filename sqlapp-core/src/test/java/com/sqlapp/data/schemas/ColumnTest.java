@@ -38,11 +38,15 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	@Test
 	void renamesForeignKeyColumnWithoutRecursing() {
 		final Schema schema = new Schema("APP");
-		final Table parent = new Table("P"); schema.getTables().add(parent);
-		final Column id = new Column("ID").setDataType(DataType.INT); parent.getColumns().add(id);
+		final Table parent = new Table("P");
+		schema.getTables().add(parent);
+		final Column id = new Column("ID").setDataType(DataType.INT);
+		parent.getColumns().add(id);
 		parent.setPrimaryKey("PK_P", id);
-		final Table child = new Table("C"); schema.getTables().add(child);
-		final Column parentId = new Column("PID").setDataType(DataType.INT); child.getColumns().add(parentId);
+		final Table child = new Table("C");
+		schema.getTables().add(child);
+		final Column parentId = new Column("PID").setDataType(DataType.INT);
+		child.getColumns().add(parentId);
 		final var key = child.getConstraints().addForeignKeyConstraint("FK_C", parentId, id);
 		parentId.setName("PARENT_ID");
 		assertEquals("PARENT_ID", key.getColumns().getFirst().getName());
@@ -53,6 +57,7 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 		assertEquals("PARENT", key.getRelatedTableName());
 		assertEquals(parent, key.getRelatedTable());
 	}
+
 	@Test
 	void namedIdentitySequenceSurvivesXml() throws Exception {
 		var column = new Column("ID").setDataType(DataType.INT).setIdentity(true);
@@ -172,7 +177,8 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 		org.junit.jupiter.api.Assertions.assertTrue(table.asXml().contains("<checkConstraint"));
 		Table restoredTable = SchemaUtils.readXml(new StringReader(table.asXml()));
 		assertEquals(table, restoredTable);
-		org.junit.jupiter.api.Assertions.assertSame(restoredTable, restoredTable.getColumns().get(0).getCheckConstraint().getTable());
+		org.junit.jupiter.api.Assertions.assertSame(restoredTable,
+				restoredTable.getColumns().get(0).getCheckConstraint().getTable());
 	}
 
 	@Override
