@@ -281,6 +281,34 @@ Gradle outputs; no generated source changes are intentional.
 
 ## Live-server verification still required
 
+On 2026-11-26 an isolated Phoenix 5.3.2 / HBase 2.5.14 container with an
+Omid 1.1.3 TSO verified transactional table creation and two-connection
+visibility. The observer saw no rows before commit, one row after commit,
+and still one after a second write was rolled back. The probe used the
+Phoenix JDBC driver directly and did not exercise provider conversion.
+
+On 2026-11-26 a Java 25 sqlapp client ran against the isolated Phoenix 5.3.2 /
+HBase 2.5.14 instance. PhoenixNativeDefinitions populated a view definition;
+the registry-generated DDL recreated the view. BulkUpsertResolver applied
+three family-qualified rows in batches of two and one, and all values were
+read back. The probe classpath overrode hadoop-common and hadoop-auth with
+3.4.3 because Hadoop 3.4.2 fails on Java 25 at Subject.getSubject. The
+repository dependency versions were not changed.
+
+On 2026-11-26 an isolated Phoenix 5.3.2 / HBase 2.5.14 container
+verified INTEGER ARRAY binding and read-back, plus index DISABLE and
+REBUILD after an intervening row update. The observed catalog state
+changed from a to x and back to a. The ALTER factory now uses Phoenix's
+serialized x for DISABLE and d for UNUSABLE.
+
+The isolated Phoenix 5.3.2 / HBase 2.5.14 probe verified tenant visibility
+using two connections and same-named tenant views. Each connection read
+only its own row and reported its tenant ID as the JDBC catalog. A bound
+three-value descending sequence reservation returned one row per call,
+with first values 10 and 4 and increment -2. A separate run with MINVALUE 0
+was rejected by Phoenix with its sequence lower-bound error. These probes
+used the Phoenix JDBC driver directly.
+
 On 2026-11-25 the isolated Phoenix 5.3.2 / HBase 2.5.14 probe verified that
 appending a nullable VARCHAR primary-key column preserves an existing row,
 and that nullable CHAR is rejected by the server. It also verified both
@@ -303,8 +331,12 @@ with a declared column and filter, and for a descending function index.
 Both were dropped and recreated from the output and yielded identical DDL.
 A mapped HBase view was separately tested on 2026-11-25. SHOW CREATE TABLE
 returned a self-referencing SELECT and omitted the mapped column declarations.
-Native extraction rejects mapped views and this incomplete result. Tenant
-objects remain outside the extraction scope.
+Native extraction rejects mapped views and this incomplete result. In a
+separate 2026-11-26 probe, two tenants successfully created same-named views
+with different declared columns. SHOW CREATE TABLE under each tenant returned
+Phoenix error 1012 (Table undefined). The same result was reproduced for
+successfully created, same-named function indexes on those tenant views.
+Tenant objects remain outside the native extraction scope.
 
 No Docker/container or external database was used. Mocked JDBC results and
 query-template tests do not execute catalog SQL. A real server is required to

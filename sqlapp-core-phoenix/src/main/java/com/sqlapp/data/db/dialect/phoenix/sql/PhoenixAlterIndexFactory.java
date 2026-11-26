@@ -57,8 +57,8 @@ public class PhoenixAlterIndexFactory extends SimpleSqlFactory<Index, PhoenixSql
 			throw new IllegalArgumentException("Phoenix index ALTER requires an explicit " + STATE);
 		return switch (value.strip().toUpperCase(java.util.Locale.ROOT)) {
 		case "A", "ACTIVE", "USABLE" -> "ACTIVE";
-		case "D", "DISABLE" -> "DISABLE";
-		case "UNUSABLE" -> "UNUSABLE";
+		case "X", "DISABLE" -> "DISABLE";
+		case "D", "UNUSABLE" -> "UNUSABLE";
 		default -> throw new UnsupportedOperationException("Phoenix index state requires a separate operation: " + value
 				+ "; select SqlType.REBUILD explicitly when a rebuild is intended");
 		};

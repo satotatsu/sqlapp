@@ -29,8 +29,9 @@ class PhoenixAlterIndexTest {
 		for (var dialect : List.of(DialectHolder.defaultDialect, DialectHolder.defaultDialect4_8,
 				DialectHolder.defaultDialect4_9, DialectHolder.defaultDialect5_3, DialectHolder.defaultDialect5_3_1)) {
 			for (boolean view : new boolean[] { false, true }) {
-				for (String[] transition : new String[][] { { "a", "DISABLE", "DISABLE" }, { "a", "d", "DISABLE" },
-						{ "ACTIVE", "unusable", "UNUSABLE" }, { "UNUSABLE", "USABLE", "USABLE" } }) {
+				for (String[] transition : new String[][] { { "a", "DISABLE", "DISABLE" }, { "a", "x", "DISABLE" },
+						{ "a", "d", "UNUSABLE" }, { "ACTIVE", "unusable", "UNUSABLE" },
+						{ "UNUSABLE", "USABLE", "USABLE" } }) {
 					final var original = table(view, transition[0]);
 					final Table target = SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
 					target.getIndexes().get(0).getSpecifics().put(PhoenixAlterIndexFactory.STATE, transition[1]);
@@ -74,7 +75,7 @@ class PhoenixAlterIndexTest {
 	@Test
 	void rejectsUnknownStatesAndDisabledReactivationWithoutImplicitRebuild() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
-		for (String source : new String[] { "DISABLE", "d", "INACTIVE", "PENDING_DISABLE", "", null }) {
+		for (String source : new String[] { "DISABLE", "x", "INACTIVE", "PENDING_DISABLE", "", null }) {
 			final var original = table(false, source);
 			final var target = original.clone();
 			target.getIndexes().get(0).getSpecifics().put(PhoenixAlterIndexFactory.STATE, "ACTIVE");

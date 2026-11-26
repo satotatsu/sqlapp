@@ -759,6 +759,10 @@ Phoenix command accepts one object name. The standard bulk readers do not
 invoke it. Mapped HBase views require explicit native DDL. The 5.3.2 extractor
 can return a self-referencing SELECT without the mapped columns, which the
 API rejects. Other complex definitions remain unverified.
+On the tested 5.3.2 deployment, SHOW CREATE TABLE returned error 1012 for
+tenant-local views and function indexes even on their matching tenant
+connections. Supply the native DDL explicitly and execute it on the intended
+tenant connection.
 JDBC exposes only client major/minor. Verify that the client and server are
 5.3.2 before using the method.
 
@@ -788,7 +792,8 @@ salting clause, allowing metadata-to-DDL recreation. Positive LOCAL bucket
 counts remain visible and cannot be recreated by the modeled CREATE factory.
 GLOBAL zero still explicitly overrides inherited salting.
 
-Index ALTER diffs accept the catalog's disabled state code `d` as DISABLE.
+Index ALTER diffs accept the catalog state codes `x` as DISABLE and
+`d` as UNUSABLE.
 An explicit rebuild is still required to re-enable a disabled index.
 
 Index metadata rejects blank index or owner names, out-of-range salt counts,
