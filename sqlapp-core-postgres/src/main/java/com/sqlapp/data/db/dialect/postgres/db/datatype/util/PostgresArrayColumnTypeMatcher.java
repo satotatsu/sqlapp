@@ -58,6 +58,11 @@ public class PostgresArrayColumnTypeMatcher implements ColumnTypeMatcher, Column
 	}
 
 	@Override
+	public ColumnTypeMatcher copy() {
+		return new PostgresArrayColumnTypeMatcher(internalMatcher.copy());
+	}
+
+	@Override
 	public ColumnTypeMatcher getInternal() {
 		return internalMatcher;
 	}
