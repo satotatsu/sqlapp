@@ -668,8 +668,12 @@ public final class BinaryUtils {
 	 * @param hex
 	 *            16進数の文字列
 	 * @return バイト配列
+	 * @throws IllegalArgumentException if the input has an odd number of digits
 	 */
 	public static byte[] toBinaryFromHex(String hex) {
+		if (hex.length() % 2 != 0) {
+			throw new IllegalArgumentException("Hex string must contain an even number of digits.");
+		}
 		byte[] bytes = new byte[hex.length() / 2];
 		for (int i = 0; i < bytes.length; i++) {
 			bytes[i] = (byte) Integer.parseInt(hex.substring(i * 2, (i + 1) * 2), 16);

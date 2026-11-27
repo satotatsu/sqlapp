@@ -31,6 +31,11 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public class UpdateTableFactory extends AbstractUpdateFactory<AbstractSqlBuilder<?>> {
 
 	@Override
+	protected boolean requiresKeyColumns() {
+		return false;
+	}
+
+	@Override
 	protected SqlType getSqlType() {
 		return SqlType.UPDATE_TABLE;
 	}

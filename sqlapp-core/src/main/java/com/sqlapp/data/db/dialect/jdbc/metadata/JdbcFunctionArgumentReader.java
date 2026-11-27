@@ -100,6 +100,7 @@ public class JdbcFunctionArgumentReader extends RoutineArgumentReader<Function> 
 		obj.setCatalogName(catalog_name);
 		obj.setSchemaName(schema_name);
 		String productDataType = getString(rs, "TYPE_NAME");
+		length = JdbcMetadataUtils.columnPrecision(sqlType, productDataType, length);
 		boolean allowDBNull = false;
 		if (nullable != DatabaseMetaData.functionNullableUnknown) {
 			if (nullable == DatabaseMetaData.functionNullable) {

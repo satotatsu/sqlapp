@@ -76,8 +76,13 @@ public class CallableJdbcHandler extends JdbcHandler {
 	protected StatementSqlParametersHolder createStatement(final Connection connection, final Object context,
 			final Integer limit) throws SQLException {
 		final SqlParameterCollection sqlParameters = getNode().eval(context);
-		final CallableStatement statement = createStatement(connection, sqlParameters, limit);
-		return new StatementSqlParametersHolder(statement, sqlParameters);
+		try {
+			final CallableStatement statement = createStatement(connection, sqlParameters, limit);
+			return new StatementSqlParametersHolder(statement, sqlParameters);
+		} catch (SQLException | RuntimeException | Error failure) {
+			close(null, sqlParameters);
+			throw failure;
+		}
 	}
 
 	/**
@@ -90,8 +95,13 @@ public class CallableJdbcHandler extends JdbcHandler {
 	protected CallableStatement createStatement(final Connection connection, final SqlParameterCollection sqlParameters,
 			final Integer limit) throws SQLException {
 		final CallableStatement statement = getStatement(connection, sqlParameters, limit);
-		setBind(statement, sqlParameters);
-		return statement;
+		try {
+			setBind(statement, sqlParameters);
+			return statement;
+		} catch (SQLException | RuntimeException | Error failure) {
+			close(statement, null);
+			throw failure;
+		}
 	}
 
 	@Override

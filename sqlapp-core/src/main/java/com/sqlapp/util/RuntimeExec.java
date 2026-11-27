@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static com.sqlapp.util.FileUtils.*;
-
 /**
  * Runtime実行クラス
  *
@@ -107,8 +105,12 @@ public class RuntimeExec {
 	static class StreamReaderThread extends Thread{
 		private BufferedReader reader=null;
 		private List<String> result=new ArrayList<String>();
+		private IOException failure;
 		
 		public List<String> getResult(){
+			if (failure != null) {
+				throw new RuntimeException("Failed to read process output.", failure);
+			}
 			return result;
 		}
 		public StreamReaderThread(InputStream stream, String charsetName){
@@ -128,17 +130,15 @@ public class RuntimeExec {
 		}
 		
 		@Override
-	    public void run(){
-	    	String line=null;
-	    	try {
-				while(reader.ready()){
-					line=reader.readLine();
+		public void run(){
+			String line=null;
+			try (BufferedReader input = reader) {
+				while ((line = input.readLine()) != null) {
 					result.add(line);
 				}
 			} catch (IOException e) {
-				e.printStackTrace();
+				failure = e;
 			}
-			close(reader);
-	    }
+		}
 	}
 }

@@ -52,6 +52,35 @@ public class MvelUtilsTest {
 	Path temporaryDirectory;
 
 	@Test
+	void floatRandomValuesStayInsideBoundsAfterRounding() {
+		for (int i = 0; i < 1000; i++) {
+			float value = MvelUtils.nextFloat(0.5d, 1d);
+			assertTrue(value >= 0.5d && value < 1d);
+			value = MvelUtils.nextFloat(1d, Math.nextUp(1d));
+			assertEquals(1f, value);
+			value = MvelUtils.nextFloat(-1d, Math.nextUp(-1d));
+			assertEquals(-1f, value);
+			value = MvelUtils.nextFloat(Double.MIN_VALUE);
+			assertEquals(0f, value);
+			value = MvelUtils.nextFloat(Double.MAX_VALUE);
+			assertTrue(Float.isFinite(value) && value >= 0d && value < Double.MAX_VALUE);
+		}
+	}
+
+	@Test
+	void rejectsFloatIntervalsWithoutRepresentableValuesOrValidBounds() {
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(0.99999999d, 1d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.MIN_VALUE, (double) Float.MIN_VALUE));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.MAX_VALUE / 2d, Double.MAX_VALUE));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(0d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(-1d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(1d, 1d));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.NaN));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.POSITIVE_INFINITY));
+		assertThrows(IllegalArgumentException.class, () -> MvelUtils.nextFloat(Double.NEGATIVE_INFINITY, 0d));
+	}
+
+	@Test
 	void addsYearsToYearValues() {
 		assertEquals(Year.of(2026), MvelUtils.addYears(Year.of(2025), 1));
 		assertEquals(Year.of(2024), MvelUtils.addYears(Year.of(2025), -1));

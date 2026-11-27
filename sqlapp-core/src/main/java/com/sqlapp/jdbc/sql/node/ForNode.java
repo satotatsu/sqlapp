@@ -19,10 +19,13 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.cloneMap;
 import static com.sqlapp.util.CommonUtils.map;
 
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.Set;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -45,6 +48,45 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 	 * 変数名
 	 */
 	private String variableName = null;
+
+	/** Local writes with the original Map's lookup behavior for other names. */
+	private static final class LoopContext extends AbstractMap<Object, Object> {
+		private final Map<?, ?> source;
+		private final Map<Object, Object> locals = new LinkedHashMap<>();
+
+		LoopContext(Map<?, ?> source) {
+			this.source = source;
+		}
+
+		@Override
+		public Object get(Object key) {
+			return locals.containsKey(key) ? locals.get(key) : source.get(key);
+		}
+
+		@Override
+		public boolean containsKey(Object key) {
+			return locals.containsKey(key) || source.containsKey(key);
+		}
+
+		@Override
+		public Object put(Object key, Object value) {
+			Object previous = get(key);
+			locals.put(key, value);
+			return previous;
+		}
+
+		@Override
+		public Object remove(Object key) {
+			return locals.remove(key);
+		}
+
+		@Override
+		public Set<Entry<Object, Object>> entrySet() {
+			Map<Object, Object> entries = new LinkedHashMap<>(source);
+			entries.putAll(locals);
+			return Collections.unmodifiableMap(entries).entrySet();
+		}
+	}
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
@@ -91,10 +133,8 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 	private void execLoop(final Map<?, ?> context, final SqlParameterCollection sqlParameters, Object val) {
 		final String variableName = this.getVariableName();
 		final String indexName = getIndexName();
-		@SuppressWarnings("rawtypes")
-		final Map copyContext = cloneMap(context);
+		final Map<Object, Object> copyContext = new LoopContext(context);
 		AbstractIterator<Object> itr = new AbstractIterator<Object>(this.getEvaluator()) {
-			@SuppressWarnings("unchecked")
 			@Override
 			protected void handle(Object obj, int index) {
 				copyContext.put(indexName, index);

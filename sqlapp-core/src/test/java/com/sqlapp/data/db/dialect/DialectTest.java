@@ -75,7 +75,8 @@ public class DialectTest {
 
 	@Test
 	public void preservesQuotedQualifiedNamesInMatchingAndColumnSetters() {
-		for (String name : new String[] { "\"Other.Schema\".\"Type \"\"Name\"\"\"", "public.\"Mixed Case\"",
+		for (String name : new String[] { "\"Type  Name\"", "\"Mixed Case\"", "\"Type \"\"Name\"\"\"",
+				"\"Other.Schema\".\"Type \"\"Name\"\"\"", "public.\"Mixed Case\"",
 				"\"Space  Schema\".\"Type  Name\"" }) {
 			Column matched = createColumn();
 			dialect.setDbType("  " + name + "  ", null, null, matched);
@@ -94,6 +95,26 @@ public class DialectTest {
 		Column column = new Column();
 		column.setDialect(dialect);
 		return column;
+	}
+
+	@Test
+	public void quotedUserTypeSurvivesXmlAndDdl() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:quotedUserType", "SA", "");
+				var statement = connection.createStatement()) {
+			statement.execute("CREATE DOMAIN \"Type  Name\" AS INTEGER");
+			Column column = createColumn();
+			column.setName("C");
+			column.setDataTypeName("\"Type  Name\"");
+			Column restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(column.asXml()));
+			assertEquals("\"Type  Name\"", restored.getDataTypeName());
+			assertEquals("\"Type  Name\"", column.clone().getDataTypeName());
+			statement.execute("CREATE TABLE T (C " + dialect.createSqlBuilder().definition(restored, false) + ")");
+			statement.execute("INSERT INTO T VALUES(7)");
+			try (var result = statement.executeQuery("SELECT C FROM T")) {
+				result.next();
+				assertEquals(7, result.getInt(1));
+			}
+		}
 	}
 
 	@Test

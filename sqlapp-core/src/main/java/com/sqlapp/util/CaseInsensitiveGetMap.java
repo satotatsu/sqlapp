@@ -70,15 +70,20 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, C
 	 */
 	@Override
 	public T put(final String key, final T value) {
-		T obj = null;
-		if (!map.containsKey(key)) {
-			obj = map.put(key, value);
+		T obj = map.put(key, value);
+		if (!caseInsensitiveMap.containsKey(key) || caseInsensitiveMap.keySet().contains(key)) {
+			caseInsensitiveMap.put(key, value);
+		}
+		return obj;
+	}
+
+	private void refreshLookup() {
+		caseInsensitiveMap.clear();
+		map.forEach((key, value) -> {
 			if (!caseInsensitiveMap.containsKey(key)) {
 				caseInsensitiveMap.put(key, value);
 			}
-			return obj;
-		}
-		return obj;
+		});
 	}
 
 	/*
@@ -125,7 +130,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, C
 	 */
 	@Override
 	public Set<Map.Entry<String, T>> entrySet() {
-		return map.entrySet();
+		return MapMutationViews.of(map, this::refreshLookup).entrySet();
 	}
 
 	/*
@@ -135,7 +140,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, C
 	 */
 	@Override
 	public T get(final Object key) {
-		return get(key.toString());
+		return get(key == null ? null : key.toString());
 	}
 
 	public T get(final String key) {
@@ -162,7 +167,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, C
 	 */
 	@Override
 	public Set<String> keySet() {
-		return map.keySet();
+		return MapMutationViews.of(map, this::refreshLookup).keySet();
 	}
 
 	/*
@@ -175,7 +180,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, C
 		T obj = null;
 		if (map.containsKey(key)) {
 			obj = map.remove(key);
-			caseInsensitiveMap.remove(key);
+			refreshLookup();
 		}
 		return obj;
 	}
@@ -197,7 +202,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, C
 	 */
 	@Override
 	public Collection<T> values() {
-		return map.values();
+		return MapMutationViews.of(map, this::refreshLookup).values();
 	}
 
 	/*

@@ -49,12 +49,9 @@ public class ReplaceVariableNode extends CommentNode {
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-		if (sqlParameters.getSqlParts().containsKey(this)) {
-			sqlParameters.addSql(sqlParameters.getSqlParts().get(this));
-			return true;
-		}
 		Object val = evalExpression(this.getExpression(), context);
 		if (val != null) {
+			sqlParameters.registerEvaluatedParameter(getExpression());
 			String text = sanitize(val.toString());
 			if (this.getSqlKeywordCheck() != null && this.getSqlKeywordCheck().booleanValue()) {
 				checkSqlSecurity(text);

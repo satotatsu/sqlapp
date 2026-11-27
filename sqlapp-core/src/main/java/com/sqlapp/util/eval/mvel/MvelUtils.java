@@ -687,9 +687,10 @@ public final class MvelUtils {
 	 * 
 	 * @param bound 上限(含まず)
 	 * @return 生成した値
+	 * @throws IllegalArgumentException if the bound is not finite and positive
 	 */
 	public static float nextFloat(double bound) {
-		return (float) nextDouble(bound);
+		return nextFloat(0d, bound);
 	}
 
 	/**
@@ -698,9 +699,26 @@ public final class MvelUtils {
 	 * @param origin 開始値
 	 * @param bound  上限(含まず)
 	 * @return 生成した値
+	 * @throws IllegalArgumentException if the bounds are not finite and increasing,
+	 *         or the interval contains no finite float value
 	 */
 	public static float nextFloat(double origin, double bound) {
-		return (float) nextDouble(origin, bound);
+		if (!Double.isFinite(origin) || !Double.isFinite(bound) || origin >= bound) {
+			throw new IllegalArgumentException("Float bounds must be finite and origin < bound");
+		}
+		float minimum = (float) origin;
+		if (minimum < origin) {
+			minimum = Math.nextUp(minimum);
+		}
+		float maximum = (float) bound;
+		if (maximum >= bound) {
+			maximum = Math.nextDown(maximum);
+		}
+		if (!Float.isFinite(minimum) || !Float.isFinite(maximum) || minimum > maximum) {
+			throw new IllegalArgumentException("Interval contains no finite float value: [" + origin + ", " + bound + ")");
+		}
+		final float value = (float) nextDouble(origin, bound);
+		return Math.max(minimum, Math.min(maximum, value));
 	}
 
 	/**

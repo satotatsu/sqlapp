@@ -242,7 +242,7 @@ public enum ColumnAnalyzer {
 			final List<Index> indexes = getUniqueIndexex(table);
 			for (Index index : indexes) {
 				final Set<Column> columns = getNotNullColumnsByIndex(index);
-				if (columns.isEmpty()) {
+				if (!columns.isEmpty()) {
 					result.addAll(columns);
 				}
 			}
@@ -415,9 +415,11 @@ public enum ColumnAnalyzer {
 		Set<Column> result = CommonUtils.linkedSet();
 		for (ReferenceColumn rCol : index.getColumns()) {
 			Column column = rCol.getColumn();
-			if (column != null) {
-				result.add(column);
+			if (column == null) {
+				// An expression or unresolved component cannot be omitted from a unique key.
+				return CommonUtils.linkedSet();
 			}
+			result.add(column);
 		}
 		return result;
 	}

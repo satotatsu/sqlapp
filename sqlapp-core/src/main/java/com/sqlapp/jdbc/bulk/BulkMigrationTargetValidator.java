@@ -27,6 +27,14 @@ public final class BulkMigrationTargetValidator {
 		validate(connection, plan, false);
 	}
 
+	/** Enforces task opt-in emptiness before lifecycle maintenance or writes. */
+	static void validateRequiredEmptyTargets(final Connection connection, final BulkMigrationJobPlan plan)
+			throws SQLException {
+		for (final BulkMigrationJobTask task : plan.getTasks()) {
+			if (task.isRequireEmptyTarget()) validate(connection, task, true);
+		}
+	}
+
 	private static void validate(final Connection connection, final BulkMigrationJobPlan plan, boolean checkEmpty) throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();

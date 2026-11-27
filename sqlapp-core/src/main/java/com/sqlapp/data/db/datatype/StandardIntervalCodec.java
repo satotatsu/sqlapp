@@ -86,9 +86,11 @@ public final class StandardIntervalCodec {
 			info.setDataTypeName("INTERVAL " + type.name().substring("INTERVAL_".length()).replace('_', ' '));
 			String length = matcher.group("length");
 			info.setLength(length == null ? leadingPrecision : length);
+			info.setSetDefaultLength(length == null);
 			if (last == 5) {
 				String scale = matcher.group("scale");
 				info.setScale(scale == null ? fractionalPrecision : scale);
+				info.setSetDefaultScale(scale == null);
 			}
 		});
 	}

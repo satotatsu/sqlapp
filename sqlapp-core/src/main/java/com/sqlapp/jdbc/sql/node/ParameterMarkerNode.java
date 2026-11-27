@@ -47,6 +47,7 @@ public class ParameterMarkerNode extends CommentNode {
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		sqlParameters.registerEvaluatedParameter(parameterName);
 		return true;
 	}
 

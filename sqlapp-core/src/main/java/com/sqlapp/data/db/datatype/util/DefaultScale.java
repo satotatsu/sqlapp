@@ -35,5 +35,6 @@ public interface DefaultScale {
 			return;
 		}
 		typeInformation.setScale(val);
+		typeInformation.setSetDefaultScale(true);
 	}
 }

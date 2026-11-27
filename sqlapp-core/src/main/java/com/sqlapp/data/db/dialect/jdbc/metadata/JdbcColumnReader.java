@@ -64,6 +64,8 @@ public class JdbcColumnReader extends ColumnReader {
 			List<Column> result = list();
 			while (rs.next()) {
 				Column column = createColumn(rs);
+				completeColumn(connection, rs, column);
+				validateGeneratedColumn(rs, column);
 				result.add(column);
 			}
 			return result;
@@ -79,6 +81,7 @@ public class JdbcColumnReader extends ColumnReader {
 		int sqlType = rs.getInt("DATA_TYPE");
 		String productDataType = getString(rs, "TYPE_NAME");
 		Long precision = rs.getLongValue("COLUMN_SIZE");
+		precision = JdbcMetadataUtils.columnPrecision(sqlType, productDataType, precision);
 		Integer scale = rs.getInteger("DECIMAL_DIGITS");
 		int nullable = rs.getInt("NULLABLE");
 		boolean allowDBNull = false;
@@ -103,5 +106,20 @@ public class JdbcColumnReader extends ColumnReader {
 		column.setRemarks(getString(rs, "REMARKS"));
 		column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		return column;
+	}
+
+	/** Completes vendor metadata before generated-column validation. The default needs no additional metadata. */
+	protected void completeColumn(Connection connection, ExResultSet rs, Column column) throws SQLException {
+	}
+
+	/** JDBC reports generated-column status but not its expression. Fail rather than recreate a plain column.
+	 * Readers that supply an expression in createColumn are accepted; bulk enrichment readers may override this hook.
+	 */
+	protected void validateGeneratedColumn(ExResultSet rs, Column column) throws SQLException {
+		if ("YES".equalsIgnoreCase(getString(rs, "IS_GENERATEDCOLUMN"))
+				&& (column.getFormula() == null || column.getFormula().isBlank())) {
+			throw new SQLException("Cannot preserve generated column " + column.getTableName() + "." + column.getName()
+					+ ": JDBC does not expose its expression; use a vendor metadata reader that reads the formula or table DDL");
+		}
 	}
 }

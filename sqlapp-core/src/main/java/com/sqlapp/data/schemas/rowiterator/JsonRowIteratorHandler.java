@@ -23,17 +23,12 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.Collections;
-import java.util.IdentityHashMap;
 
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.iterable.JsonMapIterable;
-import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 
 /**
@@ -85,6 +80,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 			super(c, index, valueConverter);
 			this.file = file;
 			this.filename = file.getAbsolutePath();
+			this.rowSchema = new JsonRowSchema(table);
 			this.jsonConverter = jsonConverter;
 		}
 
@@ -97,8 +93,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		private Map<String, Object> current = null;
 
-		private boolean hasColumn = false;
-		private final Set<Column> fixedTypeColumns = Collections.newSetFromMap(new IdentityHashMap<>());
+		private final JsonRowSchema rowSchema;
 
 		protected JsonConverter getJsonConverter() {
 			return this.jsonConverter;
@@ -123,21 +118,13 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 				iterator = list.iterator();
 				return;
 			}
-			final Object value = jsonConverter.fromJsonString(file, Object.class);
+			final Object value = JsonRowSchema.reader(jsonConverter, Object.class).readValue(file);
 			list = JsonMapIterable.getRows(value, file.getAbsolutePath());
 			iterator = list.iterator();
 		}
 
 		@Override
 		protected void initializeColumn() throws Exception {
-			for (final Column column : table.getColumns()) {
-				if (column.getDataType() != null) {
-					fixedTypeColumns.add(column);
-				}
-			}
-			if (!CommonUtils.isEmpty(table.getColumns())) {
-				hasColumn = true;
-			}
 		}
 
 		@Override
@@ -156,55 +143,13 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 			row.setDataSourceInfo(filename);
 			row.setDataSourceRowNumber(count + 1);
 			map.forEach((columnName, value) -> {
-				Column column = searchColumn(table, columnName);
-				if (!hasColumn) {
-					if (column == null) {
-						column = new Column(columnName);
-						table.getColumns().add(column);
-					}
-				}
+				final Column column = rowSchema.resolve(columnName, name -> searchColumn(table, name));
 				if (column != null) {
 					if (value != null) {
-						setType(column, value);
-						put(row, column, value);
+						put(row, column, rowSchema.prepare(column, value));
 					}
 				}
 			});
-		}
-
-		private void setType(final Column column, final Object value) {
-			if (fixedTypeColumns.contains(column)) {
-				return;
-			}
-			if (value instanceof Boolean) {
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.BOOLEAN);
-				}
-			} else if (value instanceof Integer || value instanceof Long) {
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.BIGINT);
-				}
-			} else if (value instanceof Number) {
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.DECIMAL);
-					column.setLength(38);
-					column.setScale(17);
-				} else if (column.getDataType() == DataType.INT || column.getDataType() == DataType.BIGINT) {
-					column.setDataType(DataType.DECIMAL);
-					column.setLength(38);
-					column.setScale(17);
-				}
-			} else {
-				final String val = value.toString();
-				final long len = getTypeLength(val);
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.VARCHAR);
-					column.setLength(len);
-				}
-				if (column.getLength() != null) {
-					column.setLength(Math.max(len, column.getLength()));
-				}
-			}
 		}
 
 		@Override

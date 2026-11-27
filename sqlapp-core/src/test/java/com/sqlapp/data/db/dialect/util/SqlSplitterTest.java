@@ -122,4 +122,24 @@ public class SqlSplitterTest extends AbstractTest {
 		}
 	}
 
+	@Test
+	public void lineCommentsEndAtEverySqlLineBoundary() throws Exception {
+		try (var connection = java.sql.DriverManager.getConnection("jdbc:hsqldb:mem:commentBoundaries", "SA", "");
+				var statement = connection.createStatement()) {
+			for (String newline : new String[] { "\r", "\n", "\r\n" }) {
+				var parts = new SqlSplitter().parse("VALUES(1); -- comment" + newline + "VALUES('a\rb');");
+				assertEquals(3, parts.size());
+				assertEquals(SqlSplitter.TextType.COMMENT, parts.get(1).getTextType());
+				assertEquals("-- comment", parts.get(1).getText());
+				assertEquals(SqlSplitter.TextType.SQL, parts.get(2).getTextType());
+				try (var result = statement.executeQuery(parts.get(2).getText())) {
+					result.next();
+					assertEquals("a\rb", result.getString(1));
+				}
+				parts = new SqlSplitter().parse("VALUES(1) -- inline" + newline + ";VALUES(2);");
+				assertEquals(2, parts.size());
+			}
+		}
+	}
+
 }

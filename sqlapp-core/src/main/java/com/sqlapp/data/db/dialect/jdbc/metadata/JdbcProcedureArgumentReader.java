@@ -90,6 +90,7 @@ public class JdbcProcedureArgumentReader extends RoutineArgumentReader<Procedure
 		obj.setCatalogName(catalog_name);
 		obj.setSchemaName(schema_name);
 		String productDataType = getString(rs, "TYPE_NAME");
+		length = JdbcMetadataUtils.columnPrecision(sqlType, productDataType, length);
 		boolean allowDBNull = false;
 		if (nullable != DatabaseMetaData.procedureNullableUnknown) {
 			if (nullable == DatabaseMetaData.procedureNullable) {

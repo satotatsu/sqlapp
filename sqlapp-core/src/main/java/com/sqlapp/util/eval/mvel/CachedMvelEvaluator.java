@@ -57,9 +57,13 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	}
 
 	/**
+	 * Updates the configuration for subsequent evaluations. In-flight evaluations
+	 * may complete using the previous configuration. Configure this evaluator via
+	 * its methods rather than mutating the supplied ParserContext concurrently.
+	 *
 	 * @param parserContext the parserContext to set
 	 */
-	public void setParserContext(ParserContext parserContext) {
+	public synchronized void setParserContext(ParserContext parserContext) {
 		this.parserContext = parserContext;
 		clearCache();
 	}
@@ -68,7 +72,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 		addImport(Class.forName(clazzName));
 	}
 
-	public void addImport(Class<?> clazz) {
+	public synchronized void addImport(Class<?> clazz) {
 		parserContext.addImport(clazz);
 		clearCache();
 	}
@@ -87,7 +91,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 		addPackageImport(packageName);
 	}
 
-	public void addPackageImport(String packageName) {
+	public synchronized void addPackageImport(String packageName) {
 		parserContext.addPackageImport(packageName);
 		clearCache();
 	}
@@ -107,7 +111,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	 * 
 	 * @param clazz
 	 */
-	public void addAllStaticMethodsImport(Class<?> clazz) {
+	public synchronized void addAllStaticMethodsImport(Class<?> clazz) {
 		List<Method> methods = getAllStaticMethods(clazz);
 		for (Method method : methods) {
 			addImport(parserContext, method);
@@ -142,7 +146,7 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	}
 
 	@Override
-	protected Evaluator createEvalExecutor(String expression) {
+	protected synchronized Evaluator createEvalExecutor(String expression) {
 		return new MvelCompiledEvaluator(expression, this.parserContext);
 	}
 

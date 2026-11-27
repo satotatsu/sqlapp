@@ -253,6 +253,89 @@ class JdbcMetadataReaderTest {
 	}
 
 	@Test
+	void datetimeDisplayWidthsRoundTripAsFractionalPrecision() throws Exception {
+		try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:mem:datetimePrecision", "SA", "");
+				Statement statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE T (TS0 TIMESTAMP(0), TS3 TIMESTAMP(3), TS9 TIMESTAMP(9), TM0 TIME(0), TM2 TIME(2), TM9 TIME(9))");
+			var context = new ParametersContext();
+			context.put("schemaName", "PUBLIC");
+			context.put("tableName", "T");
+			var columns = new JdbcColumnReader(dialect).doGetAll(connection, context, null);
+			assertEquals(List.of(0L, 3L, 9L, 0L, 2L, 9L), columns.stream().map(Column::getLength).toList());
+			String definitions = columns.stream().map(column -> column.getName() + " "
+					+ dialect.createSqlBuilder().definition(column, false)).collect(java.util.stream.Collectors.joining(", "));
+			statement.execute("CREATE TABLE COPY (" + definitions + ")");
+			try (var result = statement.executeQuery("SELECT * FROM COPY")) {
+				assertEquals(List.of(0L, 3L, 9L, 0L, 2L, 9L), JdbcMetadataUtils.getColumnMetadata(result, dialect)
+						.stream().map(Column::getLength).toList());
+			}
+		}
+		assertEquals(4L, JdbcMetadataUtils.columnPrecision(Types.TIMESTAMP_WITH_TIMEZONE, "TIMESTAMP WITH TIME ZONE", 30L));
+		assertEquals(2L, JdbcMetadataUtils.columnPrecision(Types.TIME_WITH_TIMEZONE, "TIME WITH TIME ZONE", 17L));
+		assertEquals(40L, JdbcMetadataUtils.columnPrecision(Types.VARCHAR, "VARCHAR", 40L));
+		assertThrows(SQLException.class, () -> JdbcMetadataUtils.columnPrecision(Types.TIMESTAMP, "TIMESTAMP", 20L));
+		assertThrows(SQLException.class, () -> JdbcMetadataUtils.columnPrecision(Types.TIME, "TIME", null));
+	}
+
+	@Test
+	void generatedColumnsRequireAnExpressionInsteadOfBecomingPlainColumns() throws Exception {
+		try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:mem:generatedColumnSafety", "SA", "");
+				Statement statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE T (ID INTEGER, CALC INTEGER GENERATED ALWAYS AS (ID+1))");
+			var context = new ParametersContext();
+			context.put("schemaName", "PUBLIC");
+			context.put("tableName", "T");
+			var failure = assertThrows(RuntimeException.class,
+					() -> new JdbcColumnReader(dialect).doGetAll(connection, context, null));
+			assertTrue(failure.getCause().getMessage().contains("T.CALC"));
+			assertTrue(failure.getCause().getMessage().contains("vendor metadata reader"));
+			var reader = new JdbcColumnReader(dialect) {
+				@Override
+				protected Column createColumn(com.sqlapp.jdbc.ExResultSet result) throws SQLException {
+					Column column = super.createColumn(result);
+					if (column.getName().equals("CALC")) column.setFormula("ID+1");
+					return column;
+				}
+			};
+			var columns = reader.doGetAll(connection, context, null);
+			assertEquals("ID+1", columns.get(1).getFormula());
+		}
+	}
+
+	@Test
+	void routineDatetimeArgumentsRoundTripTheirFractionalPrecision() throws Exception {
+		try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:mem:routineDatetimePrecision", "SA", "");
+				Statement statement = connection.createStatement()) {
+			statement.execute("CREATE TABLE LOG (TS TIMESTAMP(9), TM TIME(9))");
+			for (int precision : new int[] { 0, 3, 9 }) {
+				String types = "(P TIMESTAMP(" + precision + "), T TIME(" + precision + "))";
+				statement.execute("CREATE FUNCTION F" + precision + types + " RETURNS TIMESTAMP(" + precision + ") RETURN P");
+				var functions = new JdbcFunctionReader(dialect);
+				functions.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+				functions.setSchemaName("PUBLIC");
+				functions.setObjectName("F" + precision);
+				var arguments = functions.getAllFull(connection).getFirst().getArguments();
+				assertEquals(List.of((long) precision, (long) precision), arguments.stream().map(NamedArgument::getLength).toList());
+				String timestamp = dialect.createSqlBuilder().typeDefinition(arguments.get(0).getDataType(),
+						arguments.get(0).getDataTypeName(), arguments.get(0).getLength(), arguments.get(0).getScale()).toString();
+				String time = dialect.createSqlBuilder().typeDefinition(arguments.get(1).getDataType(),
+						arguments.get(1).getDataTypeName(), arguments.get(1).getLength(), arguments.get(1).getScale()).toString();
+				statement.execute("CREATE FUNCTION FC" + precision + "(P " + timestamp + ", T " + time
+						+ ") RETURNS TIMESTAMP(" + precision + ") RETURN P");
+				statement.execute("CREATE PROCEDURE P" + precision + types + " MODIFIES SQL DATA INSERT INTO LOG VALUES(P,T)");
+				var procedures = new JdbcProcedureReader(dialect);
+				procedures.setReaderOptions(new com.sqlapp.data.db.metadata.ReaderOptions());
+				procedures.setSchemaName("PUBLIC");
+				procedures.setObjectName("P" + precision);
+				var parameters = procedures.getAllFull(connection).getFirst().getArguments();
+				assertEquals(List.of((long) precision, (long) precision), parameters.stream().map(NamedArgument::getLength).toList());
+				statement.execute("CREATE PROCEDURE PC" + precision + "(P " + timestamp + ", T " + time
+						+ ") MODIFIES SQL DATA INSERT INTO LOG VALUES(P,T)");
+			}
+		}
+	}
+
+	@Test
 	void preservesColumnRemarksThroughJdbcAndXml() throws Exception {
 		try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:mem:columnRemarks", "SA", "");
 				Statement statement = connection.createStatement()) {

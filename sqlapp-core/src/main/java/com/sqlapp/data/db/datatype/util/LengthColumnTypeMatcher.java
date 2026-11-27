@@ -20,25 +20,25 @@
 package com.sqlapp.data.db.datatype.util;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
  * 正規表現でLengthを持つカラムの型を処理します
  */
-public class LengthColumnTypeMatcher implements ColumnTypeMatcher, DefaultLength {
+public class LengthColumnTypeMatcher implements ColumnTypeMatcher, DefaultLength, Cloneable {
 
-	private Supplier<ColumnTypeMatcher> copyFactory;
+	private Function<LengthColumnTypeMatcher, ColumnTypeMatcher> matcherFactory;
 
 	private ColumnTypeMatcher internalColumnTypeMatcher;
 
 	public LengthColumnTypeMatcher(String dataTypeName) {
-		this.copyFactory = () -> new LengthColumnTypeMatcher(dataTypeName);
-		this.internalColumnTypeMatcher = createColumnTypeMatcher(dataTypeName);
+		this.matcherFactory = target -> target.createColumnTypeMatcher(dataTypeName);
+		this.internalColumnTypeMatcher = matcherFactory.apply(this);
 	}
 
 	public LengthColumnTypeMatcher(String prefix, String suffix) {
-		this.copyFactory = () -> new LengthColumnTypeMatcher(prefix, suffix);
-		this.internalColumnTypeMatcher = new RegexColumnTypeMatcher(
+		this.matcherFactory = target -> new RegexColumnTypeMatcher(
 				prefix + "\\s*(\\(((?<length>\\s*[0-9]+)\\s*(?<multi>K|M|G)?(?<byte>CHAR|BYTE|C|B)?)\\))?\\s*" + suffix,
 				(m, c) -> {
 					String bt = m.group("byte");
@@ -51,9 +51,10 @@ public class LengthColumnTypeMatcher implements ColumnTypeMatcher, DefaultLength
 						// if ("BYTE".equalsIgnoreCase(dataTypeName))
 						c.setLength(length, multi);
 					} else {
-						setTypeInformationLength(c);
+						target.setTypeInformationLength(c);
 					}
 				});
+		this.internalColumnTypeMatcher = matcherFactory.apply(this);
 	}
 
 	private RegexColumnTypeMatcher createColumnTypeMatcher(String dataTypeName) {
@@ -91,11 +92,16 @@ public class LengthColumnTypeMatcher implements ColumnTypeMatcher, DefaultLength
 		}
 	}
 
+	/** Preserves subclass overrides; subclass fields follow Object.clone semantics. */
 	@Override
 	public ColumnTypeMatcher copy() {
-		LengthColumnTypeMatcher copy = (LengthColumnTypeMatcher) copyFactory.get();
-		copy.defaultLengthSupplier = this.defaultLengthSupplier;
-		return copy;
+		try {
+			LengthColumnTypeMatcher copy = (LengthColumnTypeMatcher) super.clone();
+			copy.internalColumnTypeMatcher = copy.matcherFactory.apply(copy);
+			return copy;
+		} catch (CloneNotSupportedException e) {
+			throw new AssertionError(e);
+		}
 	}
 
 	@Override

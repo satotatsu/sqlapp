@@ -37,6 +37,7 @@ public class OutputVariableNode extends CommentNode implements Cloneable {
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
 		Object val = evalExpression(this.getExpression(), context);
 		if (val != null) {
+			sqlParameters.registerEvaluatedParameter(getExpression());
 			String strVal = Converters.getDefault().convertString(val, val.getClass());
 			String sql = sanitizeSimple(strVal);
 			sqlParameters.addSql(sql);

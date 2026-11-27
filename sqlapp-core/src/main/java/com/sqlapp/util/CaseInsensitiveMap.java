@@ -127,7 +127,14 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable, Clon
 	 */
 	@Override
 	public Set<Map.Entry<String, T>> entrySet() {
-		return map.entrySet();
+		return MapMutationViews.of(map, this::refreshKeys).entrySet();
+	}
+
+	private void refreshKeys() {
+		keyMap.clear();
+		for (String key : map.keySet()) {
+			keyMap.put(key, key);
+		}
 	}
 
 	/*
@@ -172,7 +179,7 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable, Clon
 	 */
 	@Override
 	public Set<String> keySet() {
-		return map.keySet();
+		return MapMutationViews.of(map, this::refreshKeys).keySet();
 	}
 
 	/*
@@ -182,6 +189,10 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable, Clon
 	 */
 	@Override
 	public T remove(final Object key) {
+		if (key == null) {
+			keyMap.remove(null);
+			return map.remove(null);
+		}
 		String originalKey = keyMap.get(key);
 		T ret;
 		if (originalKey != null) {
@@ -210,7 +221,7 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable, Clon
 	 */
 	@Override
 	public Collection<T> values() {
-		return map.values();
+		return MapMutationViews.of(map, this::refreshKeys).values();
 	}
 
 	/*

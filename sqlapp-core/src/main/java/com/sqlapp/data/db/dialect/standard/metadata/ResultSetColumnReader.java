@@ -26,12 +26,12 @@ import static com.sqlapp.util.DbUtils.close;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcMetadataUtils;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -102,32 +102,12 @@ public class ResultSetColumnReader extends ColumnReader {
 			pattern = Pattern.compile(columnName.replaceAll("[%]", ".*"),
 					Pattern.CASE_INSENSITIVE);
 		}
-		ResultSetMetaData metaData = rs.getMetaData();
-		int colCount = metaData.getColumnCount();
-		List<Column> result = list(colCount);
-		for (int i = 1; i <= colCount; i++) {
-			String colName = metaData.getColumnName(i);
-			int sqlType = metaData.getColumnType(i);
-			String productDataType = metaData.getColumnTypeName(i);
-			long precision = metaData.getPrecision(i);
-			int nullable = metaData.isNullable(i);
-			int scale = metaData.getScale(i);
-			boolean allowDBNull = false;
-			if (nullable != ResultSetMetaData.columnNullableUnknown) {
-				if (nullable == ResultSetMetaData.columnNullable) {
-					allowDBNull = true;
-				}
-			}
-			boolean autoIncrement = metaData.isAutoIncrement(i);
-			Column column = new Column(colName);
-			this.getDialect().setDbType(sqlType, productDataType, precision,
-					scale, column);
-			column.setNotNull(!allowDBNull);
-			column.setIdentity(autoIncrement);
+		List<Column> result = list();
+		for (Column column : JdbcMetadataUtils.getColumnMetadata(rs, getDialect())) {
 			if (pattern == null) {
 				result.add(column);
 			} else {
-				if (pattern.matcher(colName).matches()) {
+				if (pattern.matcher(column.getName()).matches()) {
 					result.add(column);
 				}
 			}

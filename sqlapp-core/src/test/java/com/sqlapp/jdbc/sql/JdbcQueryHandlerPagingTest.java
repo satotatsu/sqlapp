@@ -101,6 +101,17 @@ class JdbcQueryHandlerPagingTest {
 	}
 
 	@Test
+	void includedNativeParametersReceiveZeroLimitBeforeExpansion() throws Exception {
+		MapSqlRegistry registry = new MapSqlRegistry();
+		registry.put("page", "LIMIT /*_row*/1 OFFSET /*_offset*/0");
+		registry.put("query", "SELECT 1 /*include 'page'*/");
+		Capture handler = new Capture(registry.get("query"));
+		handler.execute(null, new ParametersContext(), 0, 1);
+		assertEquals(List.of(0, 1), handler.bindings);
+		assertFalse(handler.scroll);
+	}
+
+	@Test
 	void sqlWithoutPagingParametersRetainsClientSideFallback() throws Exception {
 		var handler = handler("SELECT 1");
 		var context = new ParametersContext();

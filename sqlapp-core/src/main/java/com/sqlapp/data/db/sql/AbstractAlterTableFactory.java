@@ -318,7 +318,15 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 			final Constraint originalConstraint, final Constraint constraint, final DbObjectDifference diff,
 			final List<SqlOperation> result) {
 		final S builder = createSqlBuilder();
-		dropConstraintDefinition(originalConstraint, builder);
+		Constraint dropConstraint = originalConstraint;
+		if (!CommonUtils.eq(originalTable.getName(), table.getName())) {
+			// Preserve dialect overrides and the original model while using the renamed owner.
+			final Table renamedOriginal = originalTable.clone();
+			renamedOriginal.setName(table.getName());
+			dropConstraint = renamedOriginal.getConstraints()
+					.get(originalTable.getConstraints().indexOf(originalConstraint));
+		}
+		dropConstraintDefinition(dropConstraint, builder);
 		add(result, createOperation(builder.toString(), SqlType.ALTER, originalConstraint));
 	}
 

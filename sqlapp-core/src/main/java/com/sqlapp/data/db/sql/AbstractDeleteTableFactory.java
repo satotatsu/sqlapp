@@ -41,13 +41,18 @@ public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>
 		final SqlSignature sqlSignature = this.createSqlSignature(table);
 		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 				.getDeleteKeyColumnsMatchingStrategy().apply(table);
-		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy, requiresKeyColumns());
 		addDeleteFromTable(table, sqlSignature, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
 	}
 
 	protected abstract SqlType getSqlType();
+
+	/** Whether this operation identifies rows through the selected key. */
+	protected boolean requiresKeyColumns() {
+		return true;
+	}
 
 	protected void addDeleteFromTable(final Table table, final SqlSignature sqlSignature, final S builder) {
 		builder.delete().from();

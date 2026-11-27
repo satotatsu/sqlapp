@@ -26,16 +26,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
-import java.util.Collections;
-import java.util.IdentityHashMap;
 
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
-import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 
 /**
@@ -77,6 +72,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 		JsonlineRowIterator(final RowCollection c, final File file, final JsonConverter jsonConverter, final long index,
 				final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
+			this.rowSchema = new JsonRowSchema(table);
 			this.file = file;
 			this.jsonConverter = jsonConverter;
 		}
@@ -84,6 +80,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 		JsonlineRowIterator(final RowCollection c, final Reader reader, final JsonConverter jsonConverter,
 				final long index, final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
+			this.rowSchema = new JsonRowSchema(table);
 			this.file = null;
 			this.jsonConverter = jsonConverter;
 			if (reader instanceof BufferedReader) {
@@ -100,9 +97,8 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 		private BufferedReader reader;
 		private String filename;
 		private Map<String, Object> current = null;
-		private boolean hasColumn = false;
 		private long lineNumber;
-		private final Set<Column> fixedTypeColumns = Collections.newSetFromMap(new IdentityHashMap<>());
+		private final JsonRowSchema rowSchema;
 
 		@Override
 		protected void preInitialize() throws Exception {
@@ -116,14 +112,6 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void initializeColumn() throws Exception {
-			for (final Column column : table.getColumns()) {
-				if (column.getDataType() != null) {
-					fixedTypeColumns.add(column);
-				}
-			}
-			if (!CommonUtils.isEmpty(table.getColumns())) {
-				hasColumn = true;
-			}
 		}
 
 		@Override
@@ -146,7 +134,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 				if (value.isBlank()) {
 					throw invalidRow();
 				}
-				current = this.jsonConverter.fromJsonString(value, Map.class);
+				current = JsonRowSchema.reader(jsonConverter, Map.class).readValue(value);
 				if (current == null) {
 					throw invalidRow();
 				}
@@ -172,55 +160,13 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler {
 			row.setDataSourceInfo(filename);
 			row.setDataSourceRowNumber(count + 1);
 			map.forEach((columnName, value) -> {
-				Column column = searchColumn(table, columnName);
-				if (!hasColumn) {
-					if (column == null) {
-						column = new Column(columnName);
-						table.getColumns().add(column);
-					}
-				}
+				final Column column = rowSchema.resolve(columnName, name -> searchColumn(table, name));
 				if (column != null) {
 					if (value != null) {
-						setType(column, value);
-						put(row, column, value);
+						put(row, column, rowSchema.prepare(column, value));
 					}
 				}
 			});
-		}
-
-		private void setType(final Column column, final Object value) {
-			if (fixedTypeColumns.contains(column)) {
-				return;
-			}
-			if (value instanceof Boolean) {
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.BOOLEAN);
-				}
-			} else if (value instanceof Integer || value instanceof Long) {
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.BIGINT);
-				}
-			} else if (value instanceof Number) {
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.DECIMAL);
-					column.setLength(38);
-					column.setScale(17);
-				} else if (column.getDataType() == DataType.INT || column.getDataType() == DataType.BIGINT) {
-					column.setDataType(DataType.DECIMAL);
-					column.setLength(38);
-					column.setScale(17);
-				}
-			} else {
-				final String val = value.toString();
-				final long len = getTypeLength(val);
-				if (column.getDataType() == null) {
-					column.setDataType(DataType.VARCHAR);
-					column.setLength(len);
-				}
-				if (column.getLength() != null) {
-					column.setLength(Math.max(len, column.getLength()));
-				}
-			}
 		}
 
 		@Override

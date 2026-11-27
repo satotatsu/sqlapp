@@ -354,12 +354,12 @@ public class DbDataTypeCollection implements Serializable {
 			if (column.isLengthOver()) {
 				// 取得した型が桁数を超えていた場合、型を差し替える
 				String dataTypeName = column.getDataTypeName().orElse(null);
-				dbDataType = getDbType(column.getDataType().get(), column.getLength().get());
+				Long declaredLength = column.getLength().orElseThrow();
+				dbDataType = getDbType(column.getDataType().get(), declaredLength);
 				column.setDbDataType(dbDataType);
 				column.setDataTypeName(dataTypeName);// 退避しておいた型を元に戻す
-				Optional<Long> opLong = column.getDefaultLength();
-				if (opLong.isPresent()) {
-					column.setLength(opLong.get());
+				if (dbDataType instanceof LengthProperties || dbDataType instanceof PrecisionProperties) {
+					column.setLength(declaredLength);
 				}
 			}
 			return optional;

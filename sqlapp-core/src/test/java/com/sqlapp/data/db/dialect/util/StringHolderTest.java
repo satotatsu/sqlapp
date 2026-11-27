@@ -34,4 +34,17 @@ public class StringHolderTest extends AbstractTest {
 		assertEquals(5, pos);
 	}
 
+	@Test
+	public void lineNavigationRecognizesCrLfAndCrLfPairs() {
+		for (String newline : new String[] { "\r", "\n", "\r\n" }) {
+			StringHolder holder = new StringHolder("SELECT 1" + newline + "GO" + newline + "SELECT 2");
+			assertEquals("SELECT 1", holder.getLine());
+			assertEquals(8 + newline.length(), holder.searchLineOf(java.util.regex.Pattern.compile("GO"), 0));
+			holder.nextLine();
+			assertEquals("GO", holder.getLine());
+			holder.nextLine();
+			assertEquals("SELECT 2", holder.getLine());
+		}
+	}
+
 }

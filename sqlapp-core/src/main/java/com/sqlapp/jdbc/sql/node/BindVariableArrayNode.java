@@ -55,7 +55,14 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 	@Override
 	public boolean eval(final Object context, final SqlParameterCollection sqlParameters) {
 		final Object val = evalExpression(bindParameter.getName(), context);
-		addValues(sqlParameters, context, val);
+		final SqlParameterCollection fragment = new SqlParameterCollection(sqlParameters.getDialect());
+		addValues(fragment, context, val);
+		sqlParameters.addSql(fragment.getSql());
+		fragment.getBindParameters().forEach(holder -> {
+			holder.getBindParameter().setOrdinal(sqlParameters.getBindParameters().size());
+			sqlParameters.add(holder);
+		});
+		sqlParameters.getSqlParts().put(this, fragment.getSql());
 		return true;
 	}
 
@@ -69,16 +76,12 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context, final Object val) {
 		final String operatorText = this.getColumnOperator(bindParameter.getName(), context);
-		final List<BindParameter> parameters = getParameters(sqlParameters, context, val, operatorText);
+		final List<BindParameter> parameters = getParameters(context, val, operatorText);
 		buildColumnOperator(operatorText, parameters, sqlParameters);
 	}
 
-	private List<BindParameter> getParameters(final SqlParameterCollection sqlParameters, final Object context,
+	private List<BindParameter> getParameters(final Object context,
 			final Object val, final String operatorText) {
-		List<BindParameter> list = sqlParameters.getBindParameters(this);
-		if (!list.isEmpty()) {
-			return list;
-		}
 		final BindParameter originalParameter = this.bindParameter;
 		final Column column = this.getColumn(context, originalParameter.getName());
 		final List<BindParameter> parameters = CommonUtils.list();

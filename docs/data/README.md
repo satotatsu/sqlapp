@@ -6,7 +6,9 @@
 |---|---|
 | Generate large test datasets from Excel rules | [Test-data generation](test-data-generation.md) |
 | Convert Java and JDBC values | [Value converters](converters.md) |
+| Read and write CSV, TSV and fixed-byte records | [Text file I/O](text-file-io.md) |
 | Insert or upsert Schema table rows | [Bulk insert and upsert](bulk-insert.md) |
+| Execute JDBC SQL templates and batch updates | [JDBC SQL templates](jdbc-sql.md) |
 | Process related rows as a hierarchy | [JDBC tree data sessions](jdbc-tree-data-session.md) |
 | Port hierarchical COBOL processing to Java | [COBOL migration example](jdbc-tree-data-cobol-migration-example.md) |
 | Export or convert saved data files with Gradle | [Custom tasks](../gradle-plugin/custom-tasks-and-migrations.md) |

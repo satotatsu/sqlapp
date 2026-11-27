@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -13,6 +16,64 @@ import org.mvel2.ParserContext;
 import com.sqlapp.util.eval.Evaluator;
 
 class CachedMvelEvaluatorCacheTest {
+
+	@Test
+	void inFlightCompilationCannotRestoreOldParserContext() throws Exception {
+		verifyConcurrentInvalidation(true);
+	}
+
+	@Test
+	void inFlightCompilationCannotRestoreOldStaticImport() throws Exception {
+		verifyConcurrentInvalidation(false);
+	}
+
+	private void verifyConcurrentInvalidation(boolean replaceContext) throws Exception {
+		final ParserContext first = new ParserContext();
+		first.addImport("Value", FirstValue.class);
+		first.addImport("get", FirstValue.class.getMethod("get"));
+		final CountDownLatch compiled = new CountDownLatch(1);
+		final CountDownLatch release = new CountDownLatch(1);
+		final AtomicInteger compilations = new AtomicInteger();
+		final CachedMvelEvaluator evaluator = new CachedMvelEvaluator(first) {
+			@Override
+			protected Evaluator createEvalExecutor(String expression) {
+				Evaluator result = super.createEvalExecutor(expression);
+				if (compilations.incrementAndGet() == 1) {
+					compiled.countDown();
+					try {
+						if (!release.await(10, TimeUnit.SECONDS)) {
+							throw new IllegalStateException("Timed out waiting for configuration update");
+						}
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException(e);
+					}
+				}
+				return result;
+			}
+		};
+		String expression = replaceContext ? "Value.get()" : "get()";
+		FutureTask<String> evaluation = new FutureTask<>(() -> evaluator.eval(expression, Map.of()));
+		Thread worker = Thread.ofPlatform().start(evaluation);
+		try {
+			assertTrue(compiled.await(10, TimeUnit.SECONDS));
+			if (replaceContext) {
+				ParserContext second = new ParserContext();
+				second.addImport("Value", SecondValue.class);
+				evaluator.setParserContext(second);
+			} else {
+				evaluator.addAllStaticMethodsImport(SecondValue.class);
+			}
+		} finally {
+			release.countDown();
+			worker.join(10000);
+		}
+		String inFlightResult = evaluation.get(10, TimeUnit.SECONDS);
+		assertTrue("first".equals(inFlightResult) || "second".equals(inFlightResult));
+		assertEquals("second", evaluator.eval(expression, Map.of()));
+		assertEquals("second", evaluator.eval(expression, Map.of()));
+		assertEquals(2, compilations.get());
+	}
 
 	@Test
 	void booleanMapEvaluationReusesItsCompiledExpression() {

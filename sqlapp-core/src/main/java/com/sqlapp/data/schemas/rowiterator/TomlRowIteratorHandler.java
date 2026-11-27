@@ -70,7 +70,7 @@ public class TomlRowIteratorHandler extends JsonRowIteratorHandler {
 				this.setIterator(list.iterator());
 				return;
 			}
-			Object obj = this.getJsonConverter().fromJsonString(this.getFile(), Object.class);
+			Object obj = JsonRowSchema.reader(this.getJsonConverter(), Object.class).readValue(this.getFile());
 			Object items = null;
 			if (obj instanceof Map) {
 				Map<String, Object> map = (Map<String, Object>) obj;

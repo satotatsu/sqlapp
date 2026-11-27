@@ -41,6 +41,11 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 
 	private final List<String> batchSqlList = list();
 
+	/** Records a SQL snapshot for the next batch execution. */
+	protected final void recordBatchSql(final String sql) {
+		batchSqlList.add(sql);
+	}
+
 	/**
 	 * SQLを成型するメソッド
 	 * 
@@ -70,7 +75,12 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 	@Override
 	protected void logBefore() {
 		if (connection instanceof AbstractConnection) {
-			ThreadContext.put("dialect", ((AbstractConnection) connection).getDialect().toString());
+			var dialect = ((AbstractConnection) connection).getDialect();
+			if (dialect != null) {
+				ThreadContext.put("dialect", dialect.toString());
+			} else {
+				ThreadContext.remove("dialect");
+			}
 		}
 	}
 
@@ -81,10 +91,10 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 	 */
 	@Override
 	public void addBatch(final String sql) throws SQLException {
+		nativeObject.addBatch(sql);
 		if (isSqlLogEnabled()) {
 			batchSqlList.add(sql);
 		}
-		nativeObject.addBatch(sql);
 	}
 
 	/*
@@ -104,10 +114,8 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 	 */
 	@Override
 	public void clearBatch() throws SQLException {
-		if (isSqlLogEnabled()) {
-			batchSqlList.clear();
-		}
 		nativeObject.clearBatch();
+		batchSqlList.clear();
 	}
 
 	/*
@@ -205,18 +213,21 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 		try {
 			return nativeObject.executeBatch();
 		} finally {
-			final long end = System.currentTimeMillis();
-			if (isSqlLogEnabled()) {
-				final int size = batchSqlList.size();
-				logSql("=====START BATCH=====", start, end);
-				final StringBuilder builder = new StringBuilder();
-				for (int i = 0; i < size; i++) {
-					builder.append(batchSqlList.get(i));
-					builder.append(';');
-					builder.append('\n');
+			try {
+				final long end = System.currentTimeMillis();
+				if (isSqlLogEnabled()) {
+					final int size = batchSqlList.size();
+					logSql("=====START BATCH=====", start, end);
+					final StringBuilder builder = new StringBuilder();
+					for (int i = 0; i < size; i++) {
+						builder.append(batchSqlList.get(i));
+						builder.append(';');
+						builder.append('\n');
+					}
+					logSql(builder.toString(), start, end);
+					logSql("=====END BATCH=====", start, end);
 				}
-				logSql(builder.toString(), start, end);
-				logSql("=====END BATCH=====", start, end);
+			} finally {
 				batchSqlList.clear();
 			}
 		}
@@ -607,7 +618,11 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 
 	@Override
 	public long[] executeLargeBatch() throws SQLException {
-		return nativeObject.executeLargeBatch();
+		try {
+			return nativeObject.executeLargeBatch();
+		} finally {
+			batchSqlList.clear();
+		}
 	}
 
 	@Override

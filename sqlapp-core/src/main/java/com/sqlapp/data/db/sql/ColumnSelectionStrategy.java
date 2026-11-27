@@ -125,7 +125,7 @@ public enum ColumnSelectionStrategy {
 			if (isNotEmptyKey(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
-			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
+			return checkKeyValue(sqlSignature);
 		}
 	},
 	UNIQUE_KEY_OR_PRIMARY_KEY {

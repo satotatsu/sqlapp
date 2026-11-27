@@ -117,9 +117,10 @@ public class CompiledScriptEvaluator extends AbstractEvaluator {
 	 * @see com.sqlapp.util.eval.AbstractEvalExecutor#doEvalBoolean(com.sqlapp.data.
 	 * parameter.ParametersContext)
 	 */
+	/** Converts the result using the same rules as the Map and Object overloads. */
 	@Override
 	public boolean evalBoolean(ParametersContext bindings) {
-		return (Boolean) eval(bindings);
+		return Converters.getDefault().convertObject(eval(bindings), boolean.class);
 	}
 
 	@SuppressWarnings("unchecked")

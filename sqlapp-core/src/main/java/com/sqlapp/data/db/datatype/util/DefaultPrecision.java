@@ -35,5 +35,6 @@ public interface DefaultPrecision {
 			return;
 		}
 		typeInformation.setLength(val.longValue());
+		typeInformation.setSetDefaultLength(true);
 	}
 }

@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -106,7 +107,27 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 
 	private Map<CommentNode, String> sqlParts = CommonUtils.linkedMap();
 
+	private Set<String> evaluatedParameterNames = CommonUtils.linkedSet();
+
+	/** Records a parameter marker or value that was actually evaluated. */
+	public void registerEvaluatedParameter(String name) {
+		if (name != null) {
+			if (evaluatedParameterNames == null) {
+				evaluatedParameterNames = CommonUtils.linkedSet();
+			}
+			evaluatedParameterNames.add(name.trim());
+		}
+	}
+
+	/** Includes markers and literal substitutions, not only JDBC bind values. */
+	public boolean hasEvaluatedParameter(String name) {
+		return evaluatedParameterNames != null && evaluatedParameterNames.contains(name);
+	}
+
 	public Map<CommentNode, String> getSqlParts() {
+		if (sqlParts == null) {
+			sqlParts = CommonUtils.linkedMap();
+		}
 		return sqlParts;
 	}
 
@@ -330,6 +351,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		parameter.setBindingName("?");
 		parameter.setOrdinal(pos);
 		parameters.add(new BindParameterHolder(parameter));
+		registerEvaluatedParameter(parameter.getName());
 		appendSqlPart(parameter.getBindingName());
 		parameterSize++;
 	}
@@ -359,6 +381,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	public void add(BindParameterHolder parameter) {
 		parameters.add(parameter);
+		parameter.stream().forEach(value -> registerEvaluatedParameter(value.getName()));
 		if (parameter.getBindParameter() != null) {
 			parameterSize++;
 		} else {
@@ -410,6 +433,10 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	public SqlParameterCollection merge(SqlParameterCollection sqlParameters) {
 		this.sql.append(sqlParameters.getSql());
+		if (sqlParameters.evaluatedParameterNames != null) {
+			sqlParameters.evaluatedParameterNames.forEach(this::registerEvaluatedParameter);
+		}
+		getSqlParts().putAll(sqlParameters.getSqlParts());
 		for (BindParameterHolder parameter : sqlParameters.getBindParameters()) {
 			this.parameters.add(parameter);
 		}
@@ -612,12 +639,17 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 				statement = connection.prepareStatement(getSql());
 			}
 		}
-		if (getFetchSize() != null) {
-			statement.setFetchSize(getFetchSize().intValue());
+		try {
+			if (getFetchSize() != null) {
+				statement.setFetchSize(getFetchSize().intValue());
+			}
+			statement.setFetchDirection(
+					getFetchDirection() != null ? getFetchDirection().getValue() : FetchDirection.getDefault().getValue());
+			return statement;
+		} catch (SQLException | RuntimeException | Error failure) {
+			FileUtils.close(statement);
+			throw failure;
 		}
-		statement.setFetchDirection(
-				getFetchDirection() != null ? getFetchDirection().getValue() : FetchDirection.getDefault().getValue());
-		return statement;
 	}
 
 	/**
@@ -689,6 +721,14 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		try {
 			SqlParameterCollection clone = (SqlParameterCollection) super.clone();
 			clone.sql = new StringBuilder(this.sql);
+			clone.sqlParts = CommonUtils.linkedMap();
+			if (this.sqlParts != null) {
+				clone.sqlParts.putAll(this.sqlParts);
+			}
+			clone.evaluatedParameterNames = CommonUtils.linkedSet();
+			if (this.evaluatedParameterNames != null) {
+				clone.evaluatedParameterNames.addAll(this.evaluatedParameterNames);
+			}
 			clone.parameters = new ArrayList<>(this.parameters.size());
 			for (BindParameterHolder holder : this.parameters) {
 				if (holder.getBindParameter() != null) {

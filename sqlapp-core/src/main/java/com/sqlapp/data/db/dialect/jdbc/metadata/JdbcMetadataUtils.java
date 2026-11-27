@@ -39,6 +39,29 @@ import com.sqlapp.data.schemas.View;
 
 public class JdbcMetadataUtils {
 
+	/** Converts the standard JDBC datetime display width to fractional-second precision.
+	 * Vendor declarations (for example DATETIME qualifiers) remain the owning reader's responsibility.
+	 */
+	public static Long columnPrecision(int sqlType, String typeName, Long displaySize) throws SQLException {
+		if (typeName == null || !typeName.matches("(?is)(TIME|TIMESTAMP)(?:\\s*\\(\\d+\\))?(?:\\s+(?:WITH|WITHOUT)\\s+TIME\\s+ZONE)?")) {
+			return displaySize;
+		}
+		int base = switch (sqlType) {
+		case java.sql.Types.TIME -> 8;
+		case java.sql.Types.TIMESTAMP -> 19;
+		case java.sql.Types.TIME_WITH_TIMEZONE -> 14;
+		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE -> 25;
+		default -> -1;
+		};
+		if (base < 0) return displaySize;
+		if (displaySize != null && displaySize == base) return 0L;
+		if (displaySize != null && displaySize >= base + 2 && displaySize <= base + 10) {
+			return displaySize - base - 1;
+		}
+		throw new SQLException("Cannot resolve fractional-second precision for " + typeName + " from JDBC COLUMN_SIZE="
+				+ displaySize + "; use a vendor metadata reader for this datetime representation");
+	}
+
 	static final String SELECTED_TABLES = JdbcMetadataUtils.class.getName() + ".tables";
 
 	@FunctionalInterface
@@ -164,11 +187,18 @@ public class JdbcMetadataUtils {
 			}
 			boolean autoIncrement = metaData.isAutoIncrement(i);
 			Column column = new Column(colName);
-			dialect.setDbType(sqlType, productDataType, precision, scale, column);
+			// ResultSetMetaData.getScale directly reports fractional-second precision for datetime values.
+			Long length = isTemporal(sqlType) ? Long.valueOf(scale) : Long.valueOf(precision);
+			dialect.setDbType(sqlType, productDataType, length, scale, column);
 			column.setNullable(allowDBNull);
 			column.setIdentity(autoIncrement);
 			result.add(column);
 		}
 		return result;
+	}
+
+	static boolean isTemporal(int sqlType) {
+		return sqlType == java.sql.Types.TIME || sqlType == java.sql.Types.TIMESTAMP
+				|| sqlType == java.sql.Types.TIME_WITH_TIMEZONE || sqlType == java.sql.Types.TIMESTAMP_WITH_TIMEZONE;
 	}
 }

@@ -1293,7 +1293,7 @@ public class SchemaUtils {
 		if (value != null && value.stripLeading().matches("(?is)(STRUCT|MAP|UNION)\\s*\\(.*")) {
 			return trim(value);
 		}
-		if (isQuotedQualifiedTypeName(value)) {
+		if (isQuotedQualifiedTypeName(value) || isQuotedUserTypeName(value)) {
 			return trim(value);
 		}
 		value = trim(value).replaceAll("\s+", " ");
@@ -1351,6 +1351,15 @@ public class SchemaUtils {
 			}
 		}
 		return builder.toString();
+	}
+
+	/** Preserves a quoted, unqualified user type while retaining builtin type aliases. */
+	public static boolean isQuotedUserTypeName(String value) {
+		if (value == null) return false;
+		String text = trim(value);
+		if (!text.matches("\"(?:[^\"]|\"\")*\"")) return false;
+		String name = text.substring(1, text.length() - 1).replace("\"\"", "\"");
+		return com.sqlapp.data.db.datatype.DataType.toType(name) == com.sqlapp.data.db.datatype.DataType.OTHER;
 	}
 
 	/** Returns whether a type name contains quoted identifiers and an unquoted qualification dot. */

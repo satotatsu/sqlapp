@@ -302,14 +302,22 @@ public class JdbcHandler {
 	}
 
 	protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
-		final int i = 0;
+		long count = 0;
 		final long start = System.currentTimeMillis();
-		while (resultSet.next()) {
-			handleResultSetNext(resultSet);
+		try {
+			while (resultSet.next()) {
+				handleResultSetNext(resultSet);
+				count++;
+			}
+		} finally {
+			recordFetchResult(count, System.currentTimeMillis() - start);
 		}
-		final long end = System.currentTimeMillis();
-		fetchSizeResult = fetchSizeResult + i;
-		totalFetchProcessTime = totalFetchProcessTime + (end - start);
+	}
+
+	/** Accumulates successfully handled rows, including limited query results. */
+	protected void recordFetchResult(long count, long elapsedMillis) {
+		fetchSizeResult += count;
+		totalFetchProcessTime += elapsedMillis;
 	}
 
 	protected void handleResultSetNext(final ExResultSet resultSet) throws SQLException {
@@ -347,8 +355,13 @@ public class JdbcHandler {
 	protected PreparedStatement createStatement(final Connection connection, final SqlParameterCollection sqlParameters,
 			final Integer limit) throws SQLException {
 		final PreparedStatement statement = getStatement(connection, sqlParameters, limit);
-		setBind(statement, sqlParameters);
-		return statement;
+		try {
+			setBind(statement, sqlParameters);
+			return statement;
+		} catch (SQLException | RuntimeException | Error failure) {
+			close(statement, null);
+			throw failure;
+		}
 	}
 
 	/**
@@ -361,8 +374,13 @@ public class JdbcHandler {
 	protected StatementSqlParametersHolder createStatement(final Connection connection, final Object context,
 			final Integer limit) throws SQLException {
 		final SqlParameterCollection sqlParameters = createSqlParameterCollection(context);
-		final PreparedStatement preparedStatement = createStatement(connection, sqlParameters, limit);
-		return new StatementSqlParametersHolder(preparedStatement, sqlParameters);
+		try {
+			final PreparedStatement preparedStatement = createStatement(connection, sqlParameters, limit);
+			return new StatementSqlParametersHolder(preparedStatement, sqlParameters);
+		} catch (SQLException | RuntimeException | Error failure) {
+			close(null, sqlParameters);
+			throw failure;
+		}
 	}
 
 	protected SqlParameterCollection createSqlParameterCollection(final Object context) {
@@ -413,20 +431,25 @@ public class JdbcHandler {
 				statement = connection.prepareStatement(sqlParameters.getSql());
 			}
 		}
-		if (sqlParameters.getFetchSize() != null) {
-			statement.setFetchSize(sqlParameters.getFetchSize());
-		} else {
-			if (limit != null && limit.intValue() > 0) {
-				if (limit.intValue() < 1024) {
-					statement.setFetchSize(limit);
-				} else {
-					statement.setFetchSize(1024);
-				}
+		try {
+			if (sqlParameters.getFetchSize() != null) {
+				statement.setFetchSize(sqlParameters.getFetchSize());
 			} else {
-				statement.setFetchSize(256);
+				if (limit != null && limit.intValue() > 0) {
+					if (limit.intValue() < 1024) {
+						statement.setFetchSize(limit);
+					} else {
+						statement.setFetchSize(1024);
+					}
+				} else {
+					statement.setFetchSize(256);
+				}
 			}
+			return statement;
+		} catch (SQLException | RuntimeException | Error failure) {
+			close(statement, null);
+			throw failure;
 		}
-		return statement;
 	}
 
 	/**

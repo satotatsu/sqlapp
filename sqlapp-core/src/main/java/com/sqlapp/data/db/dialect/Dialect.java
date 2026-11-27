@@ -309,10 +309,12 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		Optional<TypeInformation> optional = getDbDataTypes().matchTypeInformation(productDataType, lengthOrPrecision);
 		if (optional.isPresent()) {
 			TypeInformation typeInformation = optional.get();
-			if (typeInformation.getLength().isEmpty()) {
+			if (typeInformation.getLength().isEmpty()
+					|| (lengthOrPrecision != null && typeInformation.isSetDefaultLength())) {
 				typeInformation.setLength(lengthOrPrecision);
 			}
-			if (typeInformation.getScale().isEmpty()) {
+			if (typeInformation.getScale().isEmpty()
+					|| (scale != null && typeInformation.isSetDefaultScale())) {
 				typeInformation.setScale(scale);
 			}
 			return optional;
@@ -366,7 +368,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	private String normalize(String dataTypeName) {
 		String text = trim(dataTypeName);
 		if (text != null && text.matches("(?is)(STRUCT|MAP|UNION)\\s*\\(.*")) return text;
-		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)) return text;
+		if (com.sqlapp.data.schemas.SchemaUtils.isQuotedQualifiedTypeName(text)
+				|| com.sqlapp.data.schemas.SchemaUtils.isQuotedUserTypeName(text)) return text;
 		text = CommonUtils.unwrap(text, '"');
 		return text.replaceAll("\s+", " ");
 	}

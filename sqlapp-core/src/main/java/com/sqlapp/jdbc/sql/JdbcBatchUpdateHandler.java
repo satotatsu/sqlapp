@@ -23,8 +23,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.sql.node.BindVariableNode;
@@ -33,6 +37,7 @@ import com.sqlapp.jdbc.sql.node.ParameterMarkerNode;
 import com.sqlapp.jdbc.sql.node.SqlPartNode;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.AbstractIterator;
+import com.sqlapp.util.FileUtils;
 
 public class JdbcBatchUpdateHandler extends JdbcHandler {
 
@@ -122,6 +127,29 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 			String sql;
 			int pending;
 			final List<SqlParameterCollection> evaluated = new ArrayList<>();
+			final Set<Closeable> retiredResources = Collections.newSetFromMap(new IdentityHashMap<>());
+
+			void rememberResources() {
+				for (BindParameterHolder holder : sqlParameters.getBindParameters()) {
+					holder.stream().forEach(parameter -> {
+						if (parameter.getValue() instanceof Closeable) {
+							retiredResources.add((Closeable) parameter.getValue());
+						}
+					});
+				}
+			}
+
+			void closeRetiredResources() {
+				if (retiredResources.isEmpty()) {
+					return;
+				}
+				// The current parameter collection still owns its current values.
+				for (BindParameterHolder holder : sqlParameters.getBindParameters()) {
+					holder.stream().forEach(parameter -> retiredResources.remove(parameter.getValue()));
+				}
+				retiredResources.forEach(FileUtils::close);
+				retiredResources.clear();
+			}
 
 			@Override
 			protected void handle(Object obj, int index) throws SQLException {
@@ -150,8 +178,11 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 					}
 					sqlParameters = next;
 					sql = nextSql;
-				} else if (!getNode().reEval(obj, sqlParameters)) {
-					throw new IllegalArgumentException("Batch parameter structure changed; use setEvaluateSqlPerRow(true)");
+				} else {
+					rememberResources();
+					if (!getNode().reEval(obj, sqlParameters)) {
+						throw new IllegalArgumentException("Batch parameter structure changed; use setEvaluateSqlPerRow(true)");
+					}
 				}
 				if (statement == null) {
 					statement = getStatement(connection, sqlParameters, null);
@@ -185,11 +216,14 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 				if (evaluateSqlPerRow) {
 					evaluated.forEach(parameters -> close(null, parameters));
 					evaluated.clear();
+				} else {
+					closeRetiredResources();
 				}
 			}
 
 			void closeResources() {
 				close(statement, null);
+				closeRetiredResources();
 				evaluated.forEach(parameters -> close(null, parameters));
 			}
 		}

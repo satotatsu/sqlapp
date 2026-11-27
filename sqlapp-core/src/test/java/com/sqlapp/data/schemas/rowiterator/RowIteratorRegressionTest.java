@@ -30,7 +30,7 @@ class RowIteratorRegressionTest {
 	void inferredIntegerColumnsPromoteToDecimal(final DataFormat format) throws Exception {
 		final Table table = new Table("ITEMS");
 		try (var iterator = (AbstractIterator) format.createRowIteratorHandler(numericFile(format)).iterator(table.getRows())) {
-			assertEquals(9007199254740993L, iterator.next().get("V"));
+			assertEquals(9007199254740993L, iterator.next().<Long>get("V"));
 			assertTrue(iterator.hasNext());
 			assertTrue(iterator.hasNext());
 			assertEquals(new BigDecimal("1.5"), iterator.next().get("V"));
@@ -78,7 +78,7 @@ class RowIteratorRegressionTest {
 		final var reader = new TrackingReader("{\"V\":1}\n" + invalid + "\n{\"V\":2}\n");
 		try (var iterator = new JsonLineRowIteratorHandler.JsonlineRowIterator(new Table("ITEMS").getRows(),
 				reader, new JsonConverter(), 0L, (row, column, value) -> value)) {
-			assertEquals(1L, iterator.next().get("V"));
+			assertEquals(1L, iterator.next().<Long>get("V"));
 			final RuntimeException failure = assertThrows(RuntimeException.class, iterator::hasNext);
 			assertTrue(failure.getCause().getMessage().contains("JSON object at line 2"));
 			assertEquals(1, reader.closes);

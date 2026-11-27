@@ -64,29 +64,44 @@ public abstract class AbstractDeleteByRootRowsFactory<S extends AbstractSqlBuild
 			return;
 		}
 		builder.lineBreak();
+		final boolean useAliases = listParents.size() > 1;
+		final String rootAlias = useAliases ? "p" + (listParents.size() - 1) : null;
 		builder.and().exists().space().brackets(true, () -> {
 			builder.select().space()._add("1");
 			builder.lineBreak();
-			String previousAlias = null;
-			TableRelation previous = null;
-			previous = listParents.get(0);
-			builder.from().name(previous.getTable());
+			String previousAlias = useAliases ? "p0" : null;
+			TableRelation previous = listParents.get(0);
+			builder.from();
+			if (useAliases) {
+				builder.nameAs(previous.getTable(), previousAlias);
+			} else {
+				builder.name(previous.getTable());
+			}
 			for (int i = 1; i < listParents.size(); i++) {
 				TableRelation parent = listParents.get(i);
-				previous.addJoin(previousAlias, null, builder);
+				String parentAlias = "p" + i;
+				previous.addJoin(previousAlias, parentAlias, builder);
+				previousAlias = parentAlias;
 				previous = parent;
 			}
-			previous = listParents.get(listParents.size() - 1);
 			builder.lineBreak();
 			builder.where().true_();
 			builder.indent(() -> {
 				obj.forEach((i, col, rcol) -> {
 					builder.lineBreak();
-					builder.and().name(col, true).eq().name(rcol, true);
+					builder.and().name(col, true).eq();
+					if (useAliases) {
+						builder.name("p0.", rcol);
+					} else {
+						builder.name(rcol, true);
+					}
 				});
 				builder.lineBreak();
 				builder._add("/*ROWS=(");
 				builder._add("target=ROOT");
+				if (useAliases) {
+					builder._add(";prefix=" + rootAlias + ".");
+				}
 				builder._add(")*/");
 			});
 		});

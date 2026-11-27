@@ -78,6 +78,9 @@ public final class ChunkedBulkMigrationExecutor {
 			throw new IllegalArgumentException("A checkpoint store is required for checkpointMode="
 					+ options.getCheckpointMode());
 		}
+		if (!targetConnection.getAutoCommit()) {
+			throw new IllegalStateException("Database checkpoint mode requires an auto-commit connection");
+		}
 		return execute(targetConnection, source, targetTable, options,
 				new JdbcBulkMigrationCheckpointStore(targetConnection, options.getCheckpointTableName()), listener);
 	}
@@ -87,6 +90,13 @@ public final class ChunkedBulkMigrationExecutor {
 			final Map<String, String> columnMappings, final ChunkedBulkMigrationOption options,
 			final ChunkedBulkMigrationListener listener) throws SQLException {
 		Objects.requireNonNull(options, "options");
+		if (options.getCheckpointMode() != BulkMigrationCheckpointMode.DATABASE) {
+			throw new IllegalArgumentException("A checkpoint store is required for checkpointMode="
+					+ options.getCheckpointMode());
+		}
+		if (!targetConnection.getAutoCommit()) {
+			throw new IllegalStateException("Database checkpoint mode requires an auto-commit connection");
+		}
 		return execute(targetConnection, source, targetTable, columnMappings, options,
 				new JdbcBulkMigrationCheckpointStore(targetConnection, options.getCheckpointTableName()), listener);
 	}

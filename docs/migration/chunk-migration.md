@@ -133,3 +133,20 @@ bulk INSERT remain eligible for database checkpoints.
 | Oracle, SAP HANA, Sybase ASE | supported | use `FILE` |
 | Vertica | use `FILE` | use `FILE` |
 
+
+Keyset ordering requires a key unique across the entire source table. Partial or
+filtered unique indexes do not establish that guarantee and are rejected unless
+another complete key proves uniqueness.
+
+Chunked UPSERT with `KEEP_LAST` or `CUSTOM` requires `updateWhenMatched=true`.
+When updates are disabled, use `KEEP_FIRST` or `ERROR`; otherwise the selected
+value could depend on chunk boundaries. Standalone bulk UPSERT is unchanged.
+
+`ChunkedBulkMigrationListener.beforeCheckpointCommit(migrationId)` is called
+after checkpoint DML and immediately before each managed commit, including the
+completion checkpoint and retries. An exception rolls back the transaction.
+The job lease listener renews and checks ownership there. In external checkpoint
+mode the callback runs before checkpoint persistence; it cannot undo data already
+committed by the provider. A lease renewal is not an atomic database fencing
+lock: loss between the check and commit still requires database-level fencing
+for strict exclusion.
