@@ -109,7 +109,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 
 	private Set<String> evaluatedParameterNames = CommonUtils.linkedSet();
 
-	/** Records a parameter marker or value that was actually evaluated. */
+	/** Records a parameter used to emit SQL or bind a value; declarations alone do not count. */
 	public void registerEvaluatedParameter(String name) {
 		if (name != null) {
 			if (evaluatedParameterNames == null) {
@@ -119,7 +119,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		}
 	}
 
-	/** Includes markers and literal substitutions, not only JDBC bind values. */
+	/** Includes literal substitutions, not only JDBC bind values. */
 	public boolean hasEvaluatedParameter(String name) {
 		return evaluatedParameterNames != null && evaluatedParameterNames.contains(name);
 	}
@@ -437,8 +437,9 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 			sqlParameters.evaluatedParameterNames.forEach(this::registerEvaluatedParameter);
 		}
 		getSqlParts().putAll(sqlParameters.getSqlParts());
-		for (BindParameterHolder parameter : sqlParameters.getBindParameters()) {
-			this.parameters.add(parameter);
+		// Snapshot supports self-merge and add() maintains the physical bind count.
+		for (BindParameterHolder parameter : new ArrayList<>(sqlParameters.getBindParameters())) {
+			add(parameter);
 		}
 		return this;
 	}
@@ -734,7 +735,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 				if (holder.getBindParameter() != null) {
 					clone.parameters.add(new BindParameterHolder(holder.getBindParameter().clone()));
 				} else {
-					BindParameterHolder copy = new BindParameterHolder();
+					BindParameterHolder copy = new BindParameterHolder(holder.getRowCount());
 					holder.getBindParameters().forEach(parameter -> copy.getBindParameters().add(parameter.clone()));
 					clone.parameters.add(copy);
 				}

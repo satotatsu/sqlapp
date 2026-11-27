@@ -24,7 +24,11 @@ import static com.sqlapp.util.CommonUtils.map;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.AbstractMap;
-import java.util.Collections;
+import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
@@ -53,6 +57,8 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 	private static final class LoopContext extends AbstractMap<Object, Object> {
 		private final Map<?, ?> source;
 		private final Map<Object, Object> locals = new LinkedHashMap<>();
+		private final Set<Object> removed = new HashSet<>();
+		private boolean cleared;
 
 		LoopContext(Map<?, ?> source) {
 			this.source = source;
@@ -60,31 +66,84 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 
 		@Override
 		public Object get(Object key) {
-			return locals.containsKey(key) ? locals.get(key) : source.get(key);
+			if (locals.containsKey(key)) return locals.get(key);
+			return cleared || removed.contains(key) ? null : source.get(key);
 		}
 
 		@Override
 		public boolean containsKey(Object key) {
-			return locals.containsKey(key) || source.containsKey(key);
+			return locals.containsKey(key) || (!cleared && !removed.contains(key) && source.containsKey(key));
 		}
 
 		@Override
 		public Object put(Object key, Object value) {
 			Object previous = get(key);
+			removed.remove(key);
 			locals.put(key, value);
 			return previous;
 		}
 
 		@Override
 		public Object remove(Object key) {
-			return locals.remove(key);
+			Object previous = get(key);
+			locals.remove(key);
+			removed.add(key);
+			return previous;
+		}
+
+		@Override
+		public void clear() {
+			locals.clear();
+			removed.clear();
+			cleared = true;
+		}
+
+		private Set<Object> visibleKeys() {
+			Set<Object> keys = new LinkedHashSet<>();
+			if (!cleared) keys.addAll(source.keySet());
+			keys.removeAll(removed);
+			keys.addAll(locals.keySet());
+			return keys;
 		}
 
 		@Override
 		public Set<Entry<Object, Object>> entrySet() {
-			Map<Object, Object> entries = new LinkedHashMap<>(source);
-			entries.putAll(locals);
-			return Collections.unmodifiableMap(entries).entrySet();
+			return new AbstractSet<>() {
+				@Override
+				public int size() { return visibleKeys().size(); }
+				@Override
+				public void clear() { LoopContext.this.clear(); }
+				@Override
+				public Iterator<Entry<Object, Object>> iterator() {
+					Iterator<Object> keys = new ArrayList<>(visibleKeys()).iterator();
+					return new Iterator<>() {
+						private Object current;
+						private boolean canRemove;
+						@Override
+						public boolean hasNext() { return keys.hasNext(); }
+						@Override
+						public Entry<Object, Object> next() {
+							Object key = keys.next();
+							current = key;
+							canRemove = true;
+							return new SimpleEntry<>(key, LoopContext.this.get(key)) {
+								@Override
+								public Object setValue(Object value) {
+									Object previous = LoopContext.this.put(key, value);
+									super.setValue(value);
+									return previous;
+								}
+							};
+						}
+						@Override
+						public void remove() {
+							if (!canRemove) throw new IllegalStateException();
+							LoopContext.this.remove(current);
+							canRemove = false;
+						}
+					};
+				}
+			};
 		}
 	}
 

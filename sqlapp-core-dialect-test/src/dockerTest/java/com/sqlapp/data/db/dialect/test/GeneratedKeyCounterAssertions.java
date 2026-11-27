@@ -26,9 +26,9 @@ public final class GeneratedKeyCounterAssertions {
 	 * @param insertDefault inserts one row with a generated key
 	 * @param selectNewKey  selects the key of that generated row
 	 */
-	public static void assertRaisesPastImportedKeys(final Connection connection, final Table table,
-			final Column column, final boolean explicit, final String insertKeys, final String insertDefault,
-			final String selectNewKey) throws SQLException {
+	public static void assertRaisesPastImportedKeys(final Connection connection, final Table table, final Column column,
+			final boolean explicit, final String insertKeys, final String insertDefault, final String selectNewKey)
+			throws SQLException {
 		assertRaisesPastImportedKeys(connection, table, column, explicit, true, insertKeys, insertDefault,
 				selectNewKey);
 	}
@@ -36,11 +36,11 @@ public final class GeneratedKeyCounterAssertions {
 	/**
 	 * @param catalogTracksRestart false for databases whose catalog reports a
 	 *                             restart only after the next generated value
-	 *                             (Db2); a repeated run is then checked to keep
-	 *                             the same restart point
+	 *                             (Db2); a repeated run is then checked to keep the
+	 *                             same restart point
 	 */
-	public static void assertRaisesPastImportedKeys(final Connection connection, final Table table,
-			final Column column, final boolean explicit, final boolean catalogTracksRestart, final String insertKeys,
+	public static void assertRaisesPastImportedKeys(final Connection connection, final Table table, final Column column,
+			final boolean explicit, final boolean catalogTracksRestart, final String insertKeys,
 			final String insertDefault, final String selectNewKey) throws SQLException {
 		execute(connection, insertKeys);
 		final var restarted = GeneratedKeyCounters.synchronize(connection, table, column, 100L, explicit);

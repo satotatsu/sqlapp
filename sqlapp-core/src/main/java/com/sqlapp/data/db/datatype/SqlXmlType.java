@@ -54,10 +54,10 @@ public class SqlXmlType extends AbstractLengthType<SqlXmlType>{
 	}
 
 	/**
-	 * XMLをVarcharとして扱う設定
+	 * XMLをVarcharとして扱う設定。値とNULLをVARCHARのJDBC型コードでバインドします。
 	 */
 	public SqlXmlType setAsVarchar(){
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
+		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(DataType.VARCHAR.getJdbcType(), converter));
 		return this;
 	}
 

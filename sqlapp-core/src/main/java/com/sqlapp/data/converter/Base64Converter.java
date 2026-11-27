@@ -19,8 +19,7 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.BinaryUtils.decodeBase64;
-import static com.sqlapp.util.BinaryUtils.encodeBase64;
+import java.util.Base64;
 
 /**
  * @author SATOH
@@ -42,12 +41,38 @@ public class Base64Converter extends AbstractBinaryConverter {
 
 	@Override
 	protected byte[] stringToBinary(final String value) {
-		return decodeBase64(value);
+		// MIME line breaks and other whitespace are accepted; standard and
+		// URL-safe alphabets, with or without padding. Any other character is an
+		// error instead of being skipped (the MIME decoder returned [] for "!!!").
+		final StringBuilder builder = new StringBuilder(value.length());
+		for (int i = 0; i < value.length(); i++) {
+			final char c = value.charAt(i);
+			if (!Character.isWhitespace(c)) {
+				builder.append(c);
+			}
+		}
+		final String text = builder.toString();
+		try {
+			if (text.indexOf('-') >= 0 || text.indexOf('_') >= 0) {
+				return Base64.getUrlDecoder().decode(text);
+			}
+			return Base64.getDecoder().decode(text);
+		} catch (final IllegalArgumentException e) {
+			throw new ConverterException("Invalid Base64 text: " + abbreviate(value), e);
+		}
 	}
 
+	private static String abbreviate(final String value) {
+		return value.length() <= 64 ? value : value.substring(0, 64) + "...";
+	}
+
+	/**
+	 * One line without line breaks, so the value can be written to CSV, JSON or a
+	 * single SQL literal.
+	 */
 	@Override
 	protected String binaryToString(final byte[] value) {
-		return encodeBase64(value);
+		return Base64.getEncoder().encodeToString(value);
 	}
 
 	/*

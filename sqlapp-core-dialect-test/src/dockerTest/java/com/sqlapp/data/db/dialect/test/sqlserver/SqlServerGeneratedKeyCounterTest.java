@@ -34,8 +34,7 @@ class SqlServerGeneratedKeyCounterTest {
 	}
 
 	private static Connection connection() throws Exception {
-		return DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(),
-				SQL_SERVER.getPassword());
+		return DriverManager.getConnection(SQL_SERVER.getJdbcUrl(), SQL_SERVER.getUsername(), SQL_SERVER.getPassword());
 	}
 
 	@Test

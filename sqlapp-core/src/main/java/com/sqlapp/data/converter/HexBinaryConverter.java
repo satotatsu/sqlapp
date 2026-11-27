@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.BinaryUtils.toBinaryFromHex;
 import static com.sqlapp.util.BinaryUtils.toHexString;
 
 /**
@@ -37,7 +36,43 @@ public class HexBinaryConverter extends AbstractBinaryConverter {
 
 	@Override
 	protected byte[] stringToBinary(String value) {
-		return toBinaryFromHex(value);
+		return parseHex(value);
+	}
+
+	/**
+	 * Reads hexadecimal text: optional {@code 0x}, {@code \\x} (PostgreSQL bytea)
+	 * or {@code X'...'} (SQL literal) notation and whitespace are accepted, and an
+	 * odd number of digits is read as a number with a leading zero ("ABC" is
+	 * 0x0ABC). Other characters are an error.
+	 */
+	static byte[] parseHex(final String value) {
+		String text = value.trim();
+		if (text.length() >= 3 && (text.charAt(0) == 'X' || text.charAt(0) == 'x') && text.charAt(1) == '\''
+				&& text.charAt(text.length() - 1) == '\'') {
+			text = text.substring(2, text.length() - 1);
+		} else if (text.startsWith("0x") || text.startsWith("0X") || text.startsWith("\\x")) {
+			text = text.substring(2);
+		}
+		final StringBuilder digits = new StringBuilder(text.length() + 1);
+		for (int i = 0; i < text.length(); i++) {
+			final char c = text.charAt(i);
+			if (Character.isWhitespace(c)) {
+				continue;
+			}
+			if (Character.digit(c, 16) < 0) {
+				throw new ConverterException("Invalid hexadecimal text: " + value);
+			}
+			digits.append(c);
+		}
+		if (digits.length() % 2 != 0) {
+			digits.insert(0, '0');
+		}
+		final byte[] bytes = new byte[digits.length() / 2];
+		for (int i = 0; i < bytes.length; i++) {
+			bytes[i] = (byte) ((Character.digit(digits.charAt(i * 2), 16) << 4)
+					| Character.digit(digits.charAt(i * 2 + 1), 16));
+		}
+		return bytes;
 	}
 
 	@Override

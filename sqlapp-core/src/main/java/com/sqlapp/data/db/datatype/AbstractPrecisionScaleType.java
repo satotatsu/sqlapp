@@ -39,6 +39,7 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>> extend
 	 * @param typeName
 	 */
 	protected void initialize(String typeName) {
+		this.setTypeName(typeName);
 		this.setFixedPrecision(true);
 		this.setFixedScale(true);
 		this.setCreateFormat(typeName + "(", ",", ")");

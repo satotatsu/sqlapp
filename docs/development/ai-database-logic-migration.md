@@ -523,3 +523,70 @@ M1（Triggerの棚卸しと依頼の出力）を実装した。M2以降（返却
 ### M2への申し送り
 
 - 最初の結合テストは、M1が実際に出力した一式をそのまま読み込む。同じmanifestに`REQUESTED`、`TARGET_TABLE_UNRESOLVED`、表に属さないTriggerを含め、棚卸し全体を読めることと、返却の`results`をREQUESTEDに限定することを同時に確認する。
+
+## 15. M2実装状況（2026-11-27）
+
+M2（返却の取り込み、PostgreSQLのCREATE識別、モデルへの取り込みとDDL再生成）を実装した。M3（リハーサル先での作成とカタログ差分）以降は未実装。
+
+### 入口
+
+- command: `com.sqlapp.data.db.command.migration.logic.ImportLogicMigrationResponseCommand`
+- Gradle: `importLogicMigrationResponse`（`workDir`）
+
+M1が作った`workDir`の`response/`に、変換者が`response.json`とSQLファイルを置いてから実行する。DB・AIへの接続は行わず、`request/`と`response/`を変更しない。
+
+### 処理と出力
+
+1. `request-state.json`と`request/manifest.json`、manifestが参照する入力4ファイルの指紋を照合する。§13の契約で厳密に読み込み（未知項目・重複キー・末尾の余分なトークンを拒否）、`REQUESTED`の対象に表と移行先表があることを確かめる。
+2. `response.json`を厳密に読み込み、構造を検査する。問題はすべて集めてから、取り込み全体を失敗させる（`import/`は作らない）。
+3. 返却SQLを1ファイルずつ識別し、依頼と照合する。問題は対象ごとに記録し、その対象だけを`REJECTED`にする。
+4. 受理した対象を`request/target.xml`のモデルへ`definition`として加え、Schema XMLへ書き出して読み戻し、PostgreSQLのSQL Factoryで再生成する。再生成したDDLが返却DDLと一致しない対象は`REJECTED`にして作り直す。
+5. 新しい`import/`を原子的に公開する。中身は、返却の固定コピー（`response/`）、証跡`import.json`、`target-with-logic.xml`、適用順に並べた`logic.sql`。`import/`が既にあれば上書きせずエラーにする。
+
+`import.json`は依頼の全対象を持ち、状態を次のいずれかにする。
+
+| 状態 | 意味 |
+|---|---|
+| `ACCEPTED_CANDIDATE` | CONVERTEDで、M2の構造検査をすべて通った候補。DBでの作成・レビュー・動作確認は未実施 |
+| `REJECTED` | CONVERTEDだが検査で問題があった。適用しない |
+| `UNRESOLVED` | 変換者が未解決と返した。`suggestion`もそのまま記録する。適用しない |
+| `MISSING` | REQUESTEDだが返却に結果がない。適用しない |
+| `NOT_REQUESTED` | 依頼対象外。M1の`eligibility`を併記し、棚卸し全体を残す |
+
+各artifactには、返却SQLのファイル指紋、識別した宣言（`orReplace`、名前、timing・events・orientation、呼び出すFunctionなど）、再生成DDLの指紋、問題を記録する。
+
+### 全体を失敗させる問題
+
+- 依頼一式の指紋の不一致、`request-state.json`の欠落、別の依頼の`requestId`
+- 形式・版の違い、未知項目、重複キー、必須項目の欠落、サイズ上限（JSON・SQLとも1 MiB）超過
+- 未知の`sourceId`、REQUESTED以外への結果、結果の重複、`UNRESOLVED`で`notes`が空、`CONVERTED`でartifactが空
+- `suggestion`の不備（UNRESOLVED以外での指定、REPLACE_WITH_SCHEMAの`targetColumn`欠落、NOT_NEEDEDでの`targetColumn`指定）
+- artifactの不備：ID形式（`a`＋数字）、重複、未参照、複数の結果からの参照（共有）、別の対象のartifactへの`dependsOn`、循環、FUNCTIONの`argumentTypes`欠落や`table`指定、TRIGGERの`table`欠落や`argumentTypes`指定、同名オブジェクトの重複宣言
+- ファイルの不備：`response/`直下の単純な`*.sql`名以外、複数artifactからの参照、欠落、`response/`内の宣言外のファイル
+
+### 対象ごとに`REJECTED`にする問題
+
+- 1ファイルに文が1つでない、CREATE FUNCTION／CREATE TRIGGER以外、識別できない構文
+- FUNCTION：スキーマ修飾のない名前、宣言との名前の不一致、引数あり、`RETURNS trigger`以外、`LANGUAGE plpgsql`以外、本体（`AS`）なし、`SECURITY DEFINER`、移行先スキーマの不在、移行先モデルに同名Functionがある、どのTriggerからも呼ばれない
+- TRIGGER：`CREATE CONSTRAINT TRIGGER`、スキーマ修飾したTrigger名、依頼の移行先表と異なる表、スキーマ修飾のない表名や呼出先、宣言との不一致、呼出先が同じ対象のFUNCTION artifactでない、そのFunctionを`dependsOn`に含めない、移行先モデルに同名Triggerがある
+- CONVERTEDなのにTRIGGERを1つも返さない
+- 再生成したDDLが返却DDLと一致しない（前後の空白と末尾のセミコロン1つは無視）
+
+元Triggerとtiming・events・orientationが異なる場合は、拒否せず`TRIGGER_FORM_CHANGED`のWARN診断を出す（PostgreSQLで分割・変更が必要な場合があるため、判断はレビューに委ねる）。
+
+### §13から追加・具体化した決定（要レビュー）
+
+1. 名前のスキーマ修飾を必須にした（Function名、Triggerの`ON`の表、`EXECUTE FUNCTION`の呼出先）。search_pathに依存する解決を推測しないため。`request.md`にも同じ指示を追加した。
+2. `OR REPLACE`は受理し、宣言に`orReplace: true`として記録する。既存オブジェクトを置き換えるかどうかの判断はM3/M4で行う。
+3. `SECURITY DEFINER`と`CREATE CONSTRAINT TRIGGER`は初期版では拒否する。
+4. 取り込み直しは、`import/`を手で削除するか、新しい`workDir`で依頼し直す。`import-<n>`のような複数回の取り込みを残す方式はM4の再試行入口と合わせて検討する。
+5. PostgreSQLの外側CREATE識別（`PostgresCreateStatement`）は、当面sqlapp-commandに置いた。方言モジュールへ移すかは、他の移行先DBを追加する時点で判断する。
+6. 方言モジュール（sqlapp-core-postgres）は、受理候補があってDDLを再生成するときだけ必要にした。未解決の返却だけなら方言なしで取り込める。
+
+### 検証
+
+- `PostgresCreateStatementTest`（7件）：本体・コメント・文字列内の語句や`;`を無視した識別、引用識別子と大小文字の扱い、複数文・CREATE以外・非対応形式の拒否。
+- `ImportLogicMigrationResponseCommandTest`（10件）：M1が実際に出力した一式（REQUESTED、TARGET_TABLE_UNRESOLVED、表に属さないTriggerを含む）への取り込み、1対多の受理と適用順、XML読み戻しとFactory再生成、入力の不変、再取り込みの拒否、対象ごとの拒否と他対象の継続、MISSINGと形の変化の診断、REQUESTED以外への返却・別依頼・未知項目・重複キー・依頼の改ざん・共有・循環・範囲外パス・宣言外ファイル・状態ファイル欠落での全体失敗。
+- `ImportLogicMigrationResponseTaskTest`（2件）、`DbPluginTaskGroupTest`（タスク数を54件に更新）。
+- `:sqlapp-command:test`は1164件中、既存の`ImportFileReadingTest`（TOML変換、2件）を除いて成功。`:sqlapp-gradle-plugin:test`は既存の4件（`BulkMigrationFacadeIntegrationTest`、`CountAllTableTaskTest`、`SqlQueryTaskTest`、`docs/examples`を参照する`GenerateDataTaskPropertiesTest`）を除いて成功。これらはM2の変更を外した状態でも失敗することを確認した。
+- 実行環境はLinux上のJava 25.0.5.1とGradle 9.8.1（Wrapperと同じ版）。実際のPostgreSQLでの作成確認はM3で行う。

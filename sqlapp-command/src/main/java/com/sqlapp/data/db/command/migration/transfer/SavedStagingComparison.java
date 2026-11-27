@@ -109,6 +109,39 @@ final class SavedStagingComparison {
 		}
 	}
 
+	/** Recorded outcome of a staged replacement, enough to release its stages. */
+	record Settled(TransferStagedReplacement.State state, String jobFingerprint, DatabaseIdentity targetIdentity,
+			List<TransferStagedReplacement.Target> targets) {
+		Settled {
+			targets = List.copyOf(targets);
+		}
+	}
+
+	/**
+	 * Reads the state, job fingerprint, target identity and staging tables recorded
+	 * in a transfer-result.json. Nothing from the report is executed.
+	 */
+	static Settled readSettled(Path resultReport) {
+		var resultFile = resultReport.toAbsolutePath().normalize();
+		try {
+			var result = report(resultFile, "outcome").document();
+			var outcome = result.path("outcome");
+			var staging = outcome.path("staging");
+			var state = TransferStagedReplacement.State.valueOf(text(staging, "state"));
+			var identity = result.get("targetIdentity");
+			if (identity == null)
+				identity = report(sibling(resultFile.getParent(), "transfer-review.json"), "review").document()
+						.path("review").path("targetIdentity");
+			return new Settled(state, text(outcome.path("prepared").path("job"), "fingerprint"),
+					new DatabaseIdentity(text(identity, "productName"), text(identity, "productVersion"),
+							text(identity, "connectionFingerprint")),
+					targets(staging.path("targets")));
+		} catch (Exception failure) {
+			throw new TransferSchemaPreparation.ValidationException(
+					"The saved result of the staged replacement is missing or inconsistent.");
+		}
+	}
+
 	private static Evidence readFileImport(Path directory, Report snapshot, JsonNode outcome, JsonNode staging)
 			throws Exception {
 		var report = snapshot.document();

@@ -28,6 +28,8 @@ import com.sqlapp.data.db.command.migration.transfer.TransferDatabaseCommand;
 import com.sqlapp.data.db.command.migration.transfer.TransferJobConfiguration;
 import com.sqlapp.data.db.command.migration.transfer.TransferJobConfigurationIO;
 import com.sqlapp.data.db.command.migration.transfer.TransferNameMappingIO;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement;
+import com.sqlapp.util.JsonConverter;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.MessageDigests;
 
@@ -53,14 +55,17 @@ import lombok.Setter;
  * run directory as the contract mapping of the publish transfer; the publish
  * job must not name a mapping file itself. Every run gets its own directory
  * with a report that is rewritten after each step. A failed run is not resumed:
- * run the pipeline again.
+ * run the pipeline again. Staging tables that a failed publish retained are
+ * dropped by the next run when that replacement settled (it did not start,
+ * rolled back, or committed); after an unconfirmed commit or rollback the run
+ * stops for inspection.
  * </p>
  * The engine is {@link #getDataSource()}.
  */
 @Getter
 @Setter
 public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
-	private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT)
+	private static final DateTimeFormatter RUN_ID = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmssSSS'Z'", Locale.ROOT)
 			.withZone(ZoneOffset.UTC);
 
 	private File configurationFile;
@@ -76,6 +81,10 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 	private DataSource targetDataSource;
 	@Setter(AccessLevel.NONE)
 	private String configurationFingerprint;
+	/** Detail of the running step that is kept when it fails. */
+	@Getter(AccessLevel.NONE)
+	@Setter(AccessLevel.NONE)
+	private String stepNote;
 	@Setter(AccessLevel.NONE)
 	private Path runDirectory;
 	@Setter(AccessLevel.NONE)
@@ -228,6 +237,7 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 		info("Migration pipeline step ", step, " started");
 		try {
 			final Outcome outcome = action.run();
+			stepNote = null;
 			update(new StepReport(step, Status.SUCCEEDED, started.toString(), elapsed(start), fingerprint,
 					outcome.reviewFile(), outcome.resultFile(), outcome.detail(), null), Status.RUNNING);
 			info("Migration pipeline step ", step, " succeeded",
@@ -242,7 +252,8 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 		} catch (final Exception e) {
 			final String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
 			final StepReport failed = new StepReport(step, Status.FAILED, started.toString(), elapsed(start),
-					fingerprint, failedFile(e, true), failedFile(e, false), null, message);
+					fingerprint, failedFile(e, true), failedFile(e, false), stepNote, message);
+			stepNote = null;
 			update(failed, Status.FAILED);
 			throw new CommandException(
 					"Migration pipeline stopped at " + step + ": " + message + " Report: " + reportFile, e);
@@ -350,8 +361,64 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 				job.dataMode(), job.files(), job.compatibilityPolicy(), job.allowDestructiveSchemaChanges(),
 				job.generatedKeyColumn(), job.insertMethod(), job.targetPreparation(), job.generatedKeyCounters());
 		final var written = io.write(directory.resolve("publish.yaml"), io.format(derived), null);
-		return transfer(written.file(), written.fingerprint(), getDataSource(), targetDataSource,
+		stepNote = releaseRetainedStage();
+		final Outcome outcome = transfer(written.file(), written.fingerprint(), getDataSource(), targetDataSource,
 				runDirectory.resolve("publish"));
+		return new Outcome(outcome.reviewFile(), outcome.resultFile(),
+				stepNote == null ? outcome.detail() : outcome.detail() + ", " + stepNote);
+	}
+
+	/**
+	 * Drops the staging tables that the latest earlier failed publish retained,
+	 * when its staged replacement settled. Runs are read newest first; a run that
+	 * published successfully ends the search, since a successful replacement drops
+	 * its stages. An unconfirmed commit or rollback stops the run.
+	 *
+	 * @return a note for the report, or null when nothing was dropped
+	 */
+	private String releaseRetainedStage() throws IOException {
+		final List<Path> runs;
+		try (var stream = Files.list(workspaceDirectory.toPath())) {
+			runs = stream.filter(Files::isDirectory).filter(run -> !run.equals(runDirectory))
+					.sorted(java.util.Comparator.comparing(Path::getFileName).reversed()).toList();
+		}
+		for (final Path run : runs) {
+			final Path file = run.resolve("pipeline-report.json");
+			if (!Files.isRegularFile(file)) {
+				continue;
+			}
+			final MigrationPipelineReport earlier;
+			try {
+				earlier = new JsonConverter().fromJsonString(Files.readString(file), MigrationPipelineReport.class);
+			} catch (RuntimeException e) {
+				continue;
+			}
+			final StepReport publish = earlier.step(Step.PUBLISH);
+			if (publish.status() == Status.SUCCEEDED) {
+				return null;
+			}
+			if (publish.status() != Status.FAILED || publish.resultFile() == null
+					|| !Files.isRegularFile(Path.of(publish.resultFile()))) {
+				continue;
+			}
+			final TransferStagedReplacement.Release release;
+			try {
+				release = TransferStagedReplacement.releaseSettledStage(Path.of(publish.resultFile()),
+						targetDataSource);
+			} catch (RuntimeException e) {
+				throw new IllegalStateException("The failed publish of run " + earlier.runId()
+						+ " retained staging tables that cannot be released: " + e.getMessage()
+						+ " Compare them with its transfer result, then drop them before running again.", e);
+			}
+			if (release.droppedStages().isEmpty()) {
+				return null;
+			}
+			final String note = "released staging of run " + earlier.runId() + " (" + release.state() + "): "
+					+ String.join(", ", release.droppedStages());
+			info("Migration pipeline ", note);
+			return note;
+		}
+		return null;
 	}
 
 	/** Contract mapping of the published model tables with declared columns. */

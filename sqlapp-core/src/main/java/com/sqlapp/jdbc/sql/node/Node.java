@@ -234,12 +234,24 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * Array bindings are refreshed only when their SQL and parameter counts remain
 	 * unchanged. Non-fixed arrays inside loops or VALUES require a new {@link #eval(Object)}
 	 * evaluation and return false without updating existing values.
+	 * Grouped bindings also require the recorded source row count to match.
 	 * 
 	 * @param context
 	 * @param sqlParameters
 	 * @return SQL再評価が不要か?
 	 */
 	public boolean reEval(Object context, SqlParameterCollection sqlParameters) {
+		// Reject changed or unknown row shapes before updating scalar or grouped values.
+		for (BindParameterHolder holder : sqlParameters.getBindParameters()) {
+			if (holder.getBindParameter() == null
+					&& holder.stream().anyMatch(parameter -> !parameter.isFixed())) {
+				List<Row> rows = getRowList(context);
+				if (rows == null || rows.isEmpty() || holder.getRowCount() != rows.size()
+						|| holder.getBindParameters().size() % rows.size() != 0) {
+					return false;
+				}
+			}
+		}
 		// Validate array SQL before changing any existing bind values.
 		Map<BindParameter, Object> arrayValues = new IdentityHashMap<>();
 		Map<BindVariableArrayNode, Boolean> arrays = new IdentityHashMap<>();
@@ -288,6 +300,10 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 				}
 				cnt++;
 			} else {
+				if (bindParameterHolder.stream().allMatch(BindParameter::isFixed)) {
+					cnt += bindParameterHolder.getBindParameters().size();
+					continue;
+				}
 				final List<Row> rows = getRowList(context);
 				int rowSize = rows.size();
 				int paramSize = bindParameterHolder.getBindParameters().size();
@@ -296,6 +312,10 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 					Row row = rows.get(i);
 					for (int j = i * columnSize; j < ((i + 1) * columnSize); j++) {
 						final BindParameter bindParameter = bindParameterHolder.getBindParameters().get(j);
+						if (bindParameter.isFixed()) {
+							cnt++;
+							continue;
+						}
 						if (isRowNumber(bindParameter)) {
 							bindParameter.setValue(SchemaUtils.getInternalRowId(row));
 							cnt++;

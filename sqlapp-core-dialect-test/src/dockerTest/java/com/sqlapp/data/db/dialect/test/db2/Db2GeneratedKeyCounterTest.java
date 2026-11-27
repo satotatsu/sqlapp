@@ -15,7 +15,9 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.GeneratedKeyCounters;
 
-/** Db2 restarts an identity only when synchronization is requested explicitly. */
+/**
+ * Db2 restarts an identity only when synchronization is requested explicitly.
+ */
 class Db2GeneratedKeyCounterTest {
 	private static final SqlReadyDb2Container DB2 = new SqlReadyDb2Container("icr.io/db2_community/db2:12.1.5.0");
 
@@ -46,8 +48,8 @@ class Db2GeneratedKeyCounterTest {
 			assertEquals(GeneratedKeyCounters.Action.UNSUPPORTED,
 					GeneratedKeyCounters.synchronize(connection, table, column, 100L, false).action());
 			GeneratedKeyCounterAssertions.assertRaisesPastImportedKeys(connection, table, column, true, false,
-					"INSERT INTO KEY_COUNTER_T(ID, V) VALUES (5, 1), (42, 2)", "INSERT INTO KEY_COUNTER_T(V) VALUES (3)",
-					"SELECT ID FROM KEY_COUNTER_T WHERE V = 3");
+					"INSERT INTO KEY_COUNTER_T(ID, V) VALUES (5, 1), (42, 2)",
+					"INSERT INTO KEY_COUNTER_T(V) VALUES (3)", "SELECT ID FROM KEY_COUNTER_T WHERE V = 3");
 		}
 	}
 }

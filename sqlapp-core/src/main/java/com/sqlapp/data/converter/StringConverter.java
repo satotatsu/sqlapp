@@ -80,7 +80,11 @@ public class StringConverter extends AbstractConverter<String> {
 		} else if (value instanceof Clob) {
 			final Clob lob = (Clob) value;
 			try {
-				return lob.getSubString(1, (int) lob.length());
+				final long length = lob.length();
+				if (length > Integer.MAX_VALUE) {
+					throw new ConverterException("Clob is too large for String: " + length + " characters");
+				}
+				return lob.getSubString(1, (int) length);
 			} catch (final SQLException e) {
 				throw new ConverterException(e.getMessage(), e);
 			}

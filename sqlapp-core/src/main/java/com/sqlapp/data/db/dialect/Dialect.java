@@ -101,16 +101,27 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			final int maxPrecision, final boolean fixedPrecision, final String currentTimeDefault) {
 		if (source.getDataType() != DataType.TIMESTAMPVERSION
 				|| !"TIMESTAMP".equalsIgnoreCase(source.getDataTypeName())) {
-			return new ColumnMigration.Result(null, java.util.List.of(
-					"No native timestamp migration rule for " + source.getDataType() + " on " + getProductName()));
+			return ColumnMigration.noRule(source, this);
 		}
 		return ColumnMigration.mapNativeTimestamp(source, this, maxPrecision, fixedPrecision, currentTimeDefault);
 	}
 
-	/** Target-specific rules used only by explicit column migration. */
+	/**
+	 * Target-specific type rules used only by explicit column migration. Without
+	 * a rule the result reports that no rule exists.
+	 */
 	protected ColumnMigration.Result convertColumnForMigration(final Column source) {
-		return new ColumnMigration.Result(null, java.util.List.of(
-				"No column migration rule for " + source.getDataType() + " on " + getProductName()));
+		return ColumnMigration.noRule(source, this);
+	}
+
+	/**
+	 * Recognition and rendering of column default expressions for migration
+	 * between dialects.
+	 *
+	 * @return default expression support of this dialect
+	 */
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new com.sqlapp.data.db.dialect.defaultvalue.StandardDefaultExpressionSupport(this);
 	}
 
 	/**

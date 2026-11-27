@@ -16,7 +16,9 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.bulk.GeneratedKeyCounters;
 import org.testcontainers.oracle.OracleContainer;
 
-/** Raises an Oracle identity past imported keys with a restated identity clause. */
+/**
+ * Raises an Oracle identity past imported keys with a restated identity clause.
+ */
 class OracleGeneratedKeyCounterTest {
 	private static final OracleContainer ORACLE = ReusableTestcontainers
 			.configure(new OracleContainer(OracleTestEnvironment.image()));

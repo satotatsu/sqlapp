@@ -306,3 +306,41 @@ Run changed tests first, then affected modules and direct dependents. Keep real
 database tests separate and require explicit authorization for their targets,
 credentials and destructive behavior. No external database access is implied
 by this design document.
+
+## Implementation status
+
+Updated: 2026-11-27. Core foundation and the SQL Server to PostgreSQL path.
+
+Implemented:
+
+- `com.sqlapp.data.db.dialect.defaultvalue`: conversion-local expression model
+  (`DefaultExpression`, `TemporalSemantics`), a bounded tokenizer, the
+  `DefaultExpressionSupport` dialect extension point with
+  `StandardDefaultExpressionSupport`, and `DefaultValueMigration`
+  (same-product preservation, literal and current date/time translation,
+  candidate ranking by time basis, evaluation point and precision, column
+  coercion reporting, strict mode, column overrides).
+- `ColumnMigration.Result` carries `MigrationDiagnostic` (INFO, WARNING,
+  UNRESOLVED) and the default result. `requireComplete()` blocks only on
+  UNRESOLVED findings or a missing candidate. String issues from existing rules
+  remain UNRESOLVED. New `ColumnMigration.convert(source, sourceDialect, target)`
+  converts the type with the target's rule when one exists, then the default;
+  the existing two-argument `convert` is unchanged.
+- `Dialect.getDefaultExpressionSupport()`, implemented for SQL Server
+  (`SqlServerDefaultExpressionSupport`) and PostgreSQL
+  (`PostgresDefaultExpressionSupport`), using the forms their readers return.
+  PostgreSQL serial `nextval` defaults are recognized as generator defaults and
+  reported as requiring action until generator conversion exists.
+
+Verified: unit tests in core, SQL Server and PostgreSQL modules, and
+`SqlServerToPostgresDefaultMigrationTest` (dockerTest): defaults read from SQL
+Server 2022 are converted, the table is created on PostgreSQL 17, inserted
+values are checked, statement-start evaluation is checked within one
+transaction, and the stored PostgreSQL defaults are recognized again.
+
+Not yet implemented: Oracle, MySQL/MariaDB and SQLite supports, the serial to
+identity conversion and next-value restoration, transfer/command integration
+(`TransferSchemaPreparation` still copies defaults verbatim), configuration of
+overrides and function mappings, report output, and transfer-impact decisions.
+PostgreSQL DATE candidates use `CURRENT_DATE` rather than the existing
+`getCurrentDateFunction()` text, whose semantics are the same.

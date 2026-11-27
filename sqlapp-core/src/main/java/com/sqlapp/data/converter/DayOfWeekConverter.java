@@ -48,7 +48,31 @@ public class DayOfWeekConverter extends EnumConverter<DayOfWeek> {
 			return DayOfWeek.from((TemporalAccessor) value);
 		} else if (value instanceof CharSequence && value.toString().matches("[+-]?[0-9]+")) {
 			return DayOfWeek.of(Integer.parseInt(value.toString()));
+		} else if (value instanceof CharSequence) {
+			final DayOfWeek byName = byName(value.toString().trim());
+			if (byName != null) {
+				return byName;
+			}
 		}
 		return super.convertObject(value);
+	}
+
+	/**
+	 * English and Japanese full or short names, case-insensitive ("MONDAY",
+	 * "mon", "月曜日" / "NOVEMBER", "Nov", "11月").
+	 */
+	private static DayOfWeek byName(final String text) {
+		for (final DayOfWeek candidate : DayOfWeek.values()) {
+			for (final java.util.Locale locale : new java.util.Locale[] { java.util.Locale.ENGLISH,
+					java.util.Locale.JAPANESE }) {
+				for (final java.time.format.TextStyle style : new java.time.format.TextStyle[] {
+						java.time.format.TextStyle.FULL, java.time.format.TextStyle.SHORT }) {
+					if (candidate.getDisplayName(style, locale).equalsIgnoreCase(text)) {
+						return candidate;
+					}
+				}
+			}
+		}
+		return null;
 	}
 }

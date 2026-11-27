@@ -553,9 +553,28 @@ on the task to rebuild incremental models from all rows.
 `STAGED_REPLACE` publishes every row of the model tables, not only the rows of
 the run. When publishing fails after the models were committed, the next run
 publishes the rows merged by the failed run too, even when it merges nothing
-new. A failed replacement retains its staging tables (`SQLAPP_STG_…`) for
-inspection, and a new run stops while they exist; inspect them with the
-transfer result of the failed run and drop them before running again.
+new.
+
+A failed replacement retains its staging tables (`SQLAPP_STG_…`), and a
+transfer does not reuse them. Before publishing, the pipeline looks for the
+latest earlier run whose publish failed and reads its transfer result:
+
+- When the replacement settled (`NOT_STARTED`, `STAGING_FAILED`,
+  `STAGE_VERIFIED`, `ROLLED_BACK` or `COMMITTED_STAGE_CLEANUP_FAILED`), the
+  target rows are known and the stages hold nothing the target needs. The
+  pipeline drops the stages named in the result and records them in the
+  PUBLISH detail, such as `released staging of run 20261127T… (ROLLED_BACK):
+  SQLAPP_STG_…`.
+- After `COMMIT_UNCERTAIN` or `ROLLBACK_FAILED` the run stops. Compare the
+  stages with the target as described in
+  [Compare retained staging](direct-transfer.md#compare-retained-staging-with-gradle),
+  then drop them yourself.
+- Only names that follow from the job fingerprint recorded in the result are
+  dropped, and only on the database the result was recorded for; on another
+  database nothing is dropped. Stages that no longer exist are skipped.
+
+Outside the pipeline, `TransferStagedReplacement.releaseSettledStage(resultFile,
+target)` does the same for a saved `transfer-result.json`.
 
 Every run gets its own directory, named after its start time, with
 `pipeline-report.json`. The report is rewritten after each step and records,

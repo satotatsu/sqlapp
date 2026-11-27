@@ -23,9 +23,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Set;
+import java.util.Objects;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -40,38 +38,36 @@ public class JdbcQueryHandler extends JdbcHandler {
 
 	private ResultSetNextHandler resultSetNextHandler = null;
 
-	// Scoped per thread and restored for reentrant execution from row callbacks.
-	private final ThreadLocal<QueryCreation> queryCreation = new ThreadLocal<>();
+	// Only the requested paging values are scoped; SQL is evaluated by the
+	// selected legacy factory, after that factory has adjusted the context.
+	private final ThreadLocal<PagingRequest> pagingRequest = new ThreadLocal<>();
 
-	private static final class QueryCreation {
+	private static final class PagingRequest {
 		final Object context;
-		final SqlParameterCollection parameters;
-		boolean closed;
+		final Integer limit;
+		final Integer offset;
 
-		QueryCreation(Object context, SqlParameterCollection parameters) {
+		PagingRequest(Object context, Integer limit, Integer offset) {
 			this.context = context;
-			this.parameters = parameters;
+			this.limit = limit;
+			this.offset = offset;
 		}
 	}
 
 	@Override
-	protected SqlParameterCollection createSqlParameterCollection(Object context) {
-		QueryCreation creation = queryCreation.get();
-		return creation != null && creation.context == context ? creation.parameters
-				: super.createSqlParameterCollection(context);
+	protected PreparedStatement createStatement(Connection connection, SqlParameterCollection parameters, Integer limit)
+			throws SQLException {
+		PagingRequest request = pagingRequest.get();
+		if (request != null && request.offset != null
+				&& !hasNativeParameter(parameters, ParameterDefinition.OFFSET_KEY_PARANETER_NAME)) {
+			return createStatementScrollInsensitive(connection, parameters);
+		}
+		return super.createStatement(connection, parameters, limit);
 	}
 
-	@Override
-	protected void close(PreparedStatement statement, SqlParameterCollection parameters) {
-		QueryCreation creation = queryCreation.get();
-		if (creation != null && creation.parameters == parameters) {
-			if (creation.closed) {
-				super.close(statement, null);
-				return;
-			}
-			creation.closed = true;
-		}
-		super.close(statement, parameters);
+	private void restoreRequest(PagingRequest previous) {
+		if (previous == null) pagingRequest.remove();
+		else pagingRequest.set(previous);
 	}
 
 	public JdbcQueryHandler(final SqlNode node, final ResultSetNextHandler resultSetNextHandler) {
@@ -132,10 +128,16 @@ public class JdbcQueryHandler extends JdbcHandler {
 		try {
 			boolean nativeOffset = hasNativeParameter(sqlParameters, ParameterDefinition.OFFSET_KEY_PARANETER_NAME);
 			boolean nativeLimit = hasNativeParameter(sqlParameters, ParameterDefinition.ROW_KEY_PARANETER_NAME);
-			if (offset != null && !nativeOffset) {
-				statement = createStatementScrollInsensitive(connection, sqlParameters);
-			} else {
-				statement = createStatement(connection, sqlParameters, limit);
+			PagingRequest previous = pagingRequest.get();
+			pagingRequest.set(new PagingRequest(sqlParameters, limit, offset));
+			try {
+				if (offset != null && !nativeOffset) {
+					statement = createStatementScrollInsensitive(connection, sqlParameters);
+				} else {
+					statement = createStatement(connection, sqlParameters, limit);
+				}
+			} finally {
+				restoreRequest(previous);
 			}
 			executeQueryCallback(connection, statement, nativeLimit ? null : limit, nativeOffset ? null : offset);
 		} finally {
@@ -153,7 +155,10 @@ public class JdbcQueryHandler extends JdbcHandler {
 			final ParametersContext parametersContext) throws SQLException {
 		final SqlParameterCollection sqlParameters = createSqlParameterCollection(parametersContext);
 		try {
-			final PreparedStatement preparedStatement = createStatementScrollInsensitive(connection, sqlParameters);
+			PagingRequest request = pagingRequest.get();
+			final PreparedStatement preparedStatement = request != null && request.context == parametersContext
+					? createStatement(connection, sqlParameters, request.limit)
+					: createStatementScrollInsensitive(connection, sqlParameters);
 			return new StatementSqlParametersHolder(preparedStatement, sqlParameters);
 		} catch (SQLException | RuntimeException | Error failure) {
 			close(null, sqlParameters);
@@ -210,73 +215,50 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 */
 	protected void executeQueryCallback(final Connection connection, final ParametersContext parametersContext,
 			final Integer limit, final Integer offset) throws SQLException {
-		// Seed a copy before expansion so includes can bind explicit paging values.
-		// Do not add reserved keys to the caller's context for client-side paging.
-		ParametersContext evaluationContext = parametersContext.clone();
-		if (limit != null) {
-			evaluationContext.put(ParameterDefinition.ROW_KEY_PARANETER_NAME, limit);
-		}
-		if (offset != null) {
-			evaluationContext.put(ParameterDefinition.OFFSET_KEY_PARANETER_NAME, offset);
-		}
-		SqlParameterCollection parameters = createSqlParameterCollection(evaluationContext);
-		if (limit != null && hasNativeParameter(parameters, ParameterDefinition.ROW_KEY_PARANETER_NAME)) {
-			parametersContext.put(ParameterDefinition.ROW_KEY_PARANETER_NAME, limit);
-		}
-		if (offset != null && hasNativeParameter(parameters, ParameterDefinition.OFFSET_KEY_PARANETER_NAME)) {
-			parametersContext.put(ParameterDefinition.OFFSET_KEY_PARANETER_NAME, offset);
-		}
-		QueryCreation previous = queryCreation.get();
-		QueryCreation creation = new QueryCreation(parametersContext, parameters);
-		queryCreation.set(creation);
+		String rowName = ParameterDefinition.ROW_KEY_PARANETER_NAME;
+		String offsetName = ParameterDefinition.OFFSET_KEY_PARANETER_NAME;
+		boolean hadRow = parametersContext.containsKeyInternal(rowName);
+		boolean hadOffset = parametersContext.containsKeyInternal(offsetName);
+		Object previousRow = hadRow ? parametersContext.get(rowName) : null;
+		Object previousOffset = hadOffset ? parametersContext.get(offsetName) : null;
+		PagingRequest previous = pagingRequest.get();
 		StatementSqlParametersHolder holder = null;
 		try {
-			if (offset != null && !hasNativeParameter(parameters, ParameterDefinition.OFFSET_KEY_PARANETER_NAME)) {
-				holder = createStatementScrollInsensitive(connection, parametersContext);
-			} else {
-				holder = createStatement(connection, parametersContext, limit);
+			pagingRequest.set(new PagingRequest(parametersContext, limit, offset));
+			try {
+				if (limit != null) parametersContext.put(rowName, limit);
+				if (offset != null) parametersContext.put(offsetName, offset);
+				// Preserve which context hook existing subclasses override. The
+				// default factory selects the real statement type after evaluation.
+				if (offset != null && getNode().getOffsetParameter() == null) {
+					holder = createStatementScrollInsensitive(connection, parametersContext);
+				} else {
+					holder = createStatement(connection, parametersContext, limit);
+				}
+			} finally {
+				restoreRequest(previous);
+				SqlParameterCollection actual = holder == null ? null : holder.getSqlParameters();
+				restoreUnusedPagingValue(parametersContext, rowName, limit, hadRow, previousRow,
+						actual != null && hasNativeParameter(actual, rowName));
+				restoreUnusedPagingValue(parametersContext, offsetName, offset, hadOffset, previousOffset,
+						actual != null && hasNativeParameter(actual, offsetName));
 			}
 			SqlParameterCollection actual = holder.getSqlParameters();
 			executeQueryCallback(connection, holder.getPreparedStatement(),
-					hasNativeParameter(actual, ParameterDefinition.ROW_KEY_PARANETER_NAME) ? null : limit,
-					hasNativeParameter(actual, ParameterDefinition.OFFSET_KEY_PARANETER_NAME) ? null : offset);
+					hasNativeParameter(actual, rowName) ? null : limit,
+					hasNativeParameter(actual, offsetName) ? null : offset);
 		} finally {
-			try {
-				close(holder);
-				if (!creation.closed) {
-					closeUnusedEvaluation(parameters, holder == null ? null : holder.getSqlParameters());
-				}
-			} finally {
-				if (previous == null) {
-					queryCreation.remove();
-				} else {
-					queryCreation.set(previous);
-				}
-			}
+			close(holder);
 		}
 	}
 
-	// A legacy factory override may evaluate its own parameter collection. Close
-	// evaluation-only resources without closing values also owned by that holder.
-	private void closeUnusedEvaluation(SqlParameterCollection evaluated, SqlParameterCollection used) {
-		if (used == null) {
-			close(null, evaluated);
-			return;
+	private void restoreUnusedPagingValue(ParametersContext context, String name, Integer supplied,
+			boolean wasPresent, Object previous, boolean nativePaging) {
+		// Retain explicit writes made by a subclass; remove only our temporary seed.
+		if (supplied != null && !nativePaging && Objects.equals(context.get(name), supplied)) {
+			if (wasPresent) context.put(name, previous);
+			else context.remove(name);
 		}
-		Set<Object> shared = Collections.newSetFromMap(new IdentityHashMap<>());
-		used.getBindParameters().stream().flatMap(BindParameterHolder::stream)
-				.forEach(parameter -> shared.add(parameter.getValue()));
-		shared.add(used.getInputStream());
-		shared.add(used.getOutputStream());
-		SqlParameterCollection unused = evaluated.clone();
-		unused.getBindParameters().stream().flatMap(BindParameterHolder::stream).forEach(parameter -> {
-			if (shared.contains(parameter.getValue())) {
-				parameter.setValue(null);
-			}
-		});
-		if (shared.contains(unused.getInputStream())) unused.setInputStream(null);
-		if (shared.contains(unused.getOutputStream())) unused.setOutputStream(null);
-		close(null, unused);
 	}
 
 	private boolean hasNativeParameter(SqlParameterCollection parameters, String name) {

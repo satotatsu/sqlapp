@@ -8,7 +8,8 @@ class MatcherCloneTest {
 	@Test
 	void cloneRebindsDefaultsThroughNestedWrappers() {
 		var original = new DecimalType().setDefaultPrecision(10).setDefaultScale(2);
-		original.convertColumnTypeMatchers(m -> new PostgresArrayColumnTypeMatcher(new PostgresArrayColumnTypeMatcher(m)));
+		original.convertColumnTypeMatchers(
+				m -> new PostgresArrayColumnTypeMatcher(new PostgresArrayColumnTypeMatcher(m)));
 		var copy = original.clone().setDefaultPrecision(20).setDefaultScale(4);
 		var info = copy.matchDataTypeName("DECIMAL").orElseThrow();
 		assertEquals(20L, info.getLength().orElseThrow());

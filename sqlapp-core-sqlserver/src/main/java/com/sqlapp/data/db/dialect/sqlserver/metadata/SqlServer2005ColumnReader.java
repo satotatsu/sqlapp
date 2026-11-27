@@ -21,7 +21,6 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.CommonUtils.replace;
 import static com.sqlapp.util.CommonUtils.trim;
 
 import java.sql.Connection;
@@ -73,8 +72,8 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 		Column column = super.createColumn(rs);
 		column.setFormula(getString(rs, "formula"));
 		column.setFormulaPersisted(rs.getBoolean("formula_persisted"));
-		String check_definition = replace(trim(SqlServerUtils.unwrapParentheses(getString(rs, "check_definition"))),
-				"[" + column.getName() + "]", column.getName());
+		String check_definition = SqlServerUtils.replaceNames(
+				trim(SqlServerUtils.unwrapParentheses(getString(rs, "check_definition"))), column.getName());
 		String check_constraint_name = getString(rs, "check_constraint_name");
 		if (!isEmpty(check_definition)) {
 			CheckConstraint checkConstraint = new CheckConstraint(check_constraint_name, check_definition);

@@ -40,7 +40,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
@@ -90,24 +89,33 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 
 	protected T parseDate(final String value) {
 		final int size = parseFormats.length;
-		DateTimeParseException ext = null;
+		// DateTimeException too: "2026-02-30" matches a format but is not a date
+		DateTimeException ext = null;
 		// Prefer a format that reads the whole text, so that a shorter format
 		// listed first (for example ".SSS" before ".nnnnnnnnn") cannot silently
 		// drop the rest of the value.
-		for (int i = 0; i < size; i++) {
-			final DateTimeFormatter dateTimeFormatter = parseFormats[i];
-			if (!readsWholeText(value, dateTimeFormatter)) {
-				continue;
+		// parseTemporal returns null for a prefix match while WHOLE_TEXT is set, so
+		// each format is parsed once per pass.
+		final Boolean previous = WHOLE_TEXT.get();
+		WHOLE_TEXT.set(Boolean.TRUE);
+		try {
+			for (int i = 0; i < size; i++) {
+				try {
+					final T dateTime = parse(value, parseFormats[i]);
+					if (dateTime != null) {
+						return dateTime;
+					}
+				} catch (final DateTimeException e) {
+					if (ext == null) {
+						ext = e;
+					}
+				}
 			}
-			try {
-				final T dateTime = parse(value, dateTimeFormatter);
-				if (dateTime != null) {
-					return dateTime;
-				}
-			} catch (final DateTimeParseException e) {
-				if (ext == null) {
-					ext = e;
-				}
+		} finally {
+			if (previous == null) {
+				WHOLE_TEXT.remove();
+			} else {
+				WHOLE_TEXT.set(previous);
 			}
 		}
 		// Otherwise keep the lenient behavior: the first format that reads a prefix.
@@ -118,7 +126,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 				if (dateTime != null) {
 					return dateTime;
 				}
-			} catch (final DateTimeParseException e) {
+			} catch (final DateTimeException e) {
 				if (ext == null) {
 					ext = e;
 				}
@@ -128,15 +136,8 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		throw new UnsupportedOperationException(message, ext);
 	}
 
-	private static boolean readsWholeText(final String value, final DateTimeFormatter dateTimeFormatter) {
-		final ParsePosition position = new ParsePosition(0);
-		try {
-			dateTimeFormatter.parseUnresolved(value, position);
-		} catch (final RuntimeException e) {
-			return false;
-		}
-		return position.getErrorIndex() < 0 && position.getIndex() == value.length();
-	}
+	/** Set by parseDate while only formats that read the whole text are accepted. */
+	private static final ThreadLocal<Boolean> WHOLE_TEXT = new ThreadLocal<>();
 
 	protected abstract T parse(String value, DateTimeFormatter dateTimeFormatter);
 
@@ -381,7 +382,8 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	protected Temporal parseTemporal(final String value, final DateTimeFormatter dateTimeFormatter) {
 		final ParsePosition position = new ParsePosition(0);
 		final TemporalAccessor temporalAccessor = dateTimeFormatter.parseUnresolved(value, position);
-		if (position.getErrorIndex() < 0) {
+		if (position.getErrorIndex() < 0
+				&& (!Boolean.TRUE.equals(WHOLE_TEXT.get()) || position.getIndex() == value.length())) {
 			final int year = getYear(temporalAccessor);
 			final int month = getMonth(temporalAccessor);
 			final int dayOfMonth = getDayOfMonth(temporalAccessor);

@@ -65,25 +65,36 @@ as `new SqlNode("SELECT 1")` have empty parameter metadata and can also be queri
 Statement creation and binding failures release partially created statements;
 the original execution error is propagated.
 
-Native paging is detected from evaluated parameter usage, including markers and
+Native paging is detected from evaluated parameter usage, including bind values and
 literal substitutions in nested includes. A paging clause in an unselected
-branch does not disable client-side limit/offset. `SqlParameterCollection`
+branch does not disable client-side limit/offset. A parameter declaration such
+as `/*@name=_row;type=int@*/` alone does not indicate that SQL uses native paging. `SqlParameterCollection`
 records this information through `registerEvaluatedParameter` and
 `hasEvaluatedParameter`; custom nodes that emit paging literals can record the
 reserved name in the same way. Clones have independent SQL-fragment and
 evaluated-parameter metadata.
 
 The context-based `createStatement` and scrollable-statement extension points
-remain active. Default implementations reuse the evaluated collection instead
-of evaluating SQL twice. Row callbacks can execute another query through the
-same handler without replacing the outer query's creation scope. The handler's
+remain active. SQL is evaluated by the selected factory after that hook has
+adjusted the context; a legacy factory that evaluates SQL itself also runs once.
+Default factories select the actual statement type from the evaluated SQL usage,
+so a context entry point does not force an unnecessary scrollable statement for
+native paging. Explicit paging values are temporarily available during creation;
+unused temporary values are restored before row callbacks. Row callbacks can
+execute another query through the same handler without retaining a creation scope. The handler's
 fetch statistics accumulate successfully handled rows across executions,
 including client-side limited queries. This does not make the handler's mutable
 statistics or caller contexts safe for concurrent use.
 
 Loop-local variables shadow exact names while other lookups delegate to the
 input Map, retaining custom lookup such as `CaseInsensitiveGetMap` without
-modifying that input.
+modifying that input. Removal, clear and view-based updates affect only the loop
+scope, including removal of names inherited from the input Map.
+
+`SqlParameterCollection.merge()` accumulates the physical bind count, including
+grouped holders, so a merged fixed SQL collection can refresh its values with
+`reEval()`. Self-merge duplicates its SQL and bindings without modifying the list
+while iterating it.
 
 `CallableJdbcHandler` binds INOUT parameters and registers them as outputs.
 OUT and INOUT parameters require an explicit data type. A generated-key handler

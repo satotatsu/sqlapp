@@ -57,7 +57,12 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).doubleValue();
+			final double number = ((Number) value).doubleValue();
+			// a BigDecimal/BigInteger beyond the double range: error, not Infinity
+			if (Double.isInfinite(number) && !(value instanceof Float)) {
+				throw new ConverterException("Value out of range for Double: " + value);
+			}
+			return number;
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -75,7 +80,15 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			return Double.valueOf(value);
+			try {
+				final double number = Double.parseDouble(value);
+				if (Double.isInfinite(number) && !value.toLowerCase().contains("infinity")) {
+					throw new ConverterException("Value out of range for Double: " + value);
+				}
+				return number;
+			} catch (final NumberFormatException e) {
+				throw new ConverterException("Cannot convert to Double: " + value, e);
+			}
 		}
 		return parse(value).doubleValue();
 	}

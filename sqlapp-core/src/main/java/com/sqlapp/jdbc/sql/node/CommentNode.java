@@ -77,7 +77,7 @@ public class CommentNode extends Node {
 	 * @param text
 	 */
 	protected static String sanitize(String text) {
-		if (text == null) {
+		if (text == null || text.isEmpty()) {
 			return text;
 		}
 		if (text.charAt(0) == '\'' && text.charAt(text.length() - 1) == '\'') {

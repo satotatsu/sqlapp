@@ -8,6 +8,7 @@ import java.math.BigInteger;
 import java.lang.reflect.Proxy;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -37,5 +38,26 @@ class BitStringJdbcTypeHandlerTest {
 			assertThrows(IllegalArgumentException.class, () -> handler.setObject(statement, 1, value));
 		}
 		assertEquals(List.of(), calls);
+	}
+
+	@Test
+	void bitSetUsesTheSameBitOrderAsNumbers() {
+		assertEquals("0101", BitStringJdbcTypeHandler.toBitString(BitSet.valueOf(new long[] { 5L }), 4));
+		assertEquals(BitStringJdbcTypeHandler.toBitString(5, 4),
+				BitStringJdbcTypeHandler.toBitString(BitSet.valueOf(new long[] { 5L }), 4));
+		assertEquals("101", BitStringJdbcTypeHandler.toBitString(BitSet.valueOf(new long[] { 5L }), 0));
+		assertEquals("0000", BitStringJdbcTypeHandler.toBitString(new BitSet(), 4));
+		assertThrows(IllegalArgumentException.class,
+				() -> BitStringJdbcTypeHandler.toBitString(BitSet.valueOf(new long[] { 16L }), 4));
+	}
+
+	@Test
+	void rightAlignedBytesDropOnlyZeroPadding() {
+		assertEquals("0101", BitStringJdbcTypeHandler.toBitString(new byte[] { 0x05 }, 4));
+		assertEquals("0000000100000001",
+				BitStringJdbcTypeHandler.toBitString(new byte[] { 0x01, 0x01 }, 0));
+		assertEquals("100000001", BitStringJdbcTypeHandler.toBitString(new byte[] { 0x01, 0x01 }, 9));
+		assertThrows(IllegalArgumentException.class,
+				() -> BitStringJdbcTypeHandler.toBitString(new byte[] { (byte) 0xF0 }, 4));
 	}
 }

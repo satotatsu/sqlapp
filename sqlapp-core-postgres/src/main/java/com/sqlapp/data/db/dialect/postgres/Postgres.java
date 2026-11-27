@@ -730,6 +730,11 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new PostgresDefaultExpressionSupport(this);
+	}
+
+	@Override
 	public boolean supportsFunctionOverload() {
 		return true;
 	}

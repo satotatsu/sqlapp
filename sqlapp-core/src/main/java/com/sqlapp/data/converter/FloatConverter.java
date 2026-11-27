@@ -57,7 +57,7 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).floatValue();
+			return toFloat(((Number) value).doubleValue(), value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -75,9 +75,26 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			return Double.valueOf(value).floatValue();
+			try {
+				return toFloat(Double.parseDouble(value), value);
+			} catch (final NumberFormatException e) {
+				throw new ConverterException("Cannot convert to Float: " + value, e);
+			}
 		}
-		return parse(value).floatValue();
+		return toFloat(parse(value).doubleValue(), value);
+	}
+
+	/**
+	 * A finite value beyond the float range is an error, as for the integral
+	 * types, instead of silently becoming Infinity. NaN and Infinity themselves
+	 * are kept.
+	 */
+	private static Float toFloat(final double number, final Object original) {
+		final float result = (float) number;
+		if (Float.isInfinite(result) && !Double.isInfinite(number)) {
+			throw new ConverterException("Value out of range for Float: " + original);
+		}
+		return result;
 	}
 
 	@Override

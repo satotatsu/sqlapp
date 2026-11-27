@@ -5,6 +5,7 @@
  */
 package com.sqlapp.data.converter;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -281,5 +282,136 @@ class ConverterReviewFixesTest {
 				new Converters().convertObject(date, java.time.Duration.class));
 		assertEquals(new Converters().convertObject(new java.sql.Date(0), java.time.Period.class),
 				new Converters().convertObject(date, java.time.Period.class));
+	}
+	@Test
+	void sqlDateKeepsTheWrittenDate() {
+		final Converters converters = new Converters();
+		final java.sql.Date expected = java.sql.Date.valueOf("2026-11-21");
+		assertEquals(expected, converters.convertObject(LocalDateTime.of(2026, 11, 21, 10, 0), java.sql.Date.class));
+		assertEquals(expected, converters.convertObject(OffsetDateTime.of(2026, 11, 21, 23, 0, 0, 0, ZoneOffset.ofHours(-5)),
+				java.sql.Date.class));
+		assertEquals(expected, converters.convertObject(
+				java.time.ZonedDateTime.of(2026, 11, 21, 23, 0, 0, 0, ZoneId.of("America/New_York")), java.sql.Date.class));
+		assertEquals(expected,
+				converters.convertObject(java.time.chrono.JapaneseDate.of(2026, 11, 21), java.sql.Date.class));
+		assertEquals(expected, converters.convertObject("2026-11-21 23:00:00 -05:00", java.sql.Date.class));
+		assertEquals(expected, converters.convertObject((java.util.function.Supplier<Object>) () -> "2026-11-21",
+				java.sql.Date.class));
+	}
+
+	@Test
+	void sqlTimeFromDateIsMidnight() {
+		assertEquals(java.sql.Time.valueOf("00:00:00"),
+				new Converters().convertObject(java.time.LocalDate.of(2026, 11, 21), java.sql.Time.class));
+	}
+
+	@Test
+	void bigDecimalIsExact() {
+		final BigDecimalConverter converter = new BigDecimalConverter();
+		assertEquals(new java.math.BigDecimal("123456789012345678901234567890"),
+				converter.convertObject(new java.math.BigInteger("123456789012345678901234567890")));
+		assertEquals(new java.math.BigDecimal("0.1"), converter.convertObject(0.1f));
+		assertEquals(new java.math.BigDecimal("0.1"), converter.convertObject(0.1d));
+		assertEquals(java.math.BigDecimal.valueOf(7), converter.convertObject(new java.util.concurrent.atomic.AtomicLong(7)));
+		assertThrows(ConverterException.class, () -> converter.convertObject(Double.NaN));
+		assertThrows(ConverterException.class, () -> converter.convertObject("abc"));
+	}
+
+	@Test
+	void base64IsStrictAndSingleLine() {
+		final Base64Converter converter = new Base64Converter();
+		final byte[] data = new byte[100];
+		for (int i = 0; i < data.length; i++) {
+			data[i] = (byte) i;
+		}
+		final String text = converter.format(data);
+		assertFalse(text.contains("\n") || text.contains("\r"), text);
+		assertArrayEquals(data, converter.convertObject(text));
+		// MIME text with line breaks and URL-safe text are still read
+		assertArrayEquals(data, converter.convertObject(java.util.Base64.getMimeEncoder().encodeToString(data)));
+		assertArrayEquals(new byte[] { (byte) 0xfb, (byte) 0xff }, converter.convertObject("-_8"));
+		assertThrows(ConverterException.class, () -> converter.convertObject("!!!"));
+	}
+
+	@Test
+	void hexAcceptsCommonNotations() {
+		final HexBinaryConverter converter = new HexBinaryConverter();
+		assertArrayEquals(new byte[] { 0x0A, 0x0B }, converter.convertObject("0x0A0B"));
+		assertArrayEquals(new byte[] { 0x0A, 0x0B }, converter.convertObject("X'0a0b'"));
+		assertArrayEquals(new byte[] { 0x0A, 0x0B }, converter.convertObject("\\x0A0B"));
+		assertArrayEquals(new byte[] { 0x0A, (byte) 0xBC }, converter.convertObject("ABC"));
+		assertArrayEquals(new byte[] { 0x0A, 0x0B }, converter.convertObject("0A 0B"));
+		assertThrows(ConverterException.class, () -> converter.convertObject("0G"));
+	}
+
+	@Test
+	void unknownTimeZoneIsAnError() {
+		final Converters converters = new Converters();
+		assertEquals("Asia/Tokyo", converters.convertObject("Asia/Tokyo", TimeZone.class).getID());
+		assertEquals("GMT", converters.convertObject("GMT", TimeZone.class).getID());
+		assertEquals(9 * 3600 * 1000, converters.convertObject("+09:00", TimeZone.class).getRawOffset());
+		assertEquals(9 * 3600 * 1000, converters.convertObject("UTC+9", TimeZone.class).getRawOffset());
+		assertThrows(ConverterException.class, () -> converters.convertObject("Bogus/Zone", TimeZone.class));
+	}
+
+	@Test
+	void uuidNotations() {
+		final Converters converters = new Converters();
+		final java.util.UUID expected = java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+		assertEquals(expected, converters.convertObject("550E8400E29B41D4A716446655440000", java.util.UUID.class));
+		assertEquals(expected, converters.convertObject("urn:uuid:550e8400-e29b-41d4-a716-446655440000", java.util.UUID.class));
+		assertEquals(expected, converters.convertObject("{550E8400-E29B-41D4-A716-446655440000}", java.util.UUID.class));
+		assertThrows(ConverterException.class, () -> converters.convertObject("zzz", java.util.UUID.class));
+		assertThrows(ConverterException.class, () -> converters.convertObject(new byte[8], java.util.UUID.class));
+	}
+
+	@Test
+	void floatingPointOverflowIsAnError() {
+		final Converters converters = new Converters();
+		assertThrows(ConverterException.class, () -> converters.convertObject(1e40, Float.class));
+		assertThrows(ConverterException.class, () -> converters.convertObject("1e40", Float.class));
+		assertThrows(ConverterException.class, () -> converters.convertObject(new java.math.BigDecimal("1e400"), Double.class));
+		assertThrows(ConverterException.class, () -> converters.convertObject("1e400", Double.class));
+		assertThrows(ConverterException.class, () -> converters.convertObject("abc", Double.class));
+		assertEquals(Float.POSITIVE_INFINITY, converters.convertObject("Infinity", Float.class));
+		assertEquals(Double.POSITIVE_INFINITY, converters.convertObject("Infinity", Double.class));
+		assertTrue(converters.convertObject(Double.NaN, Float.class).isNaN());
+	}
+
+	@Test
+	void numberConverterWorksOnItsOwn() {
+		assertEquals(new java.math.BigDecimal("1.5"), new NumberConverter().convertObject("1.5"));
+		assertEquals("2", new NumberConverter().format(2));
+	}
+
+	@Test
+	void negativeYearsKeepTheSign() {
+		final Converters converters = new Converters();
+		assertEquals("-0005", converters.convertString(java.time.Year.of(-5)));
+		assertEquals("-0005-01-01", converters.convertString(java.time.LocalDate.of(-5, 1, 1)));
+		assertEquals("2026-11", converters.convertString(java.time.YearMonth.of(2026, 11)));
+	}
+
+	@Test
+	void moreTextIsAccepted() {
+		final Converters converters = new Converters();
+		assertEquals(java.time.YearMonth.of(2026, 11), converters.convertObject("202611", java.time.YearMonth.class));
+		assertEquals(java.time.Duration.ofMinutes(90), converters.convertObject("01:30:00", java.time.Duration.class));
+		assertEquals(java.time.Duration.ofHours(26).plusMillis(500),
+				converters.convertObject("1 02:00:00.5", java.time.Duration.class));
+		assertEquals(java.time.Duration.ofMinutes(-90), converters.convertObject("-1:30", java.time.Duration.class));
+		assertEquals(java.time.DayOfWeek.MONDAY, converters.convertObject("mon", java.time.DayOfWeek.class));
+		assertEquals(java.time.DayOfWeek.MONDAY, converters.convertObject("月曜日", java.time.DayOfWeek.class));
+		assertEquals(java.time.Month.NOVEMBER, converters.convertObject("Nov", java.time.Month.class));
+		assertEquals(java.time.Month.NOVEMBER, converters.convertObject("11月", java.time.Month.class));
+	}
+
+	@Test
+	void invalidDatesFallThroughToTheParseError() {
+		final Converters converters = new Converters();
+		assertThrows(UnsupportedOperationException.class,
+				() -> converters.convertObject("2026-02-30 10:00:00", LocalDateTime.class));
+		assertThrows(UnsupportedOperationException.class,
+				() -> converters.convertObject("2026-02-30", java.time.LocalDate.class));
 	}
 }

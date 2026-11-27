@@ -395,7 +395,7 @@ public class SqlSignature {
 
 		public BindParameterHolder addInParameters(final Dialect dialect, final List<Row> rows, String prefix,
 				final SqlBuilder builder) {
-			final BindParameterHolder holder = new BindParameterHolder();
+			final BindParameterHolder holder = new BindParameterHolder(rows.size());
 			if (getKeyColumns().size() == 1) {
 				Column column = CommonUtils.first(getKeyColumns());
 				addName(column, prefix, builder);

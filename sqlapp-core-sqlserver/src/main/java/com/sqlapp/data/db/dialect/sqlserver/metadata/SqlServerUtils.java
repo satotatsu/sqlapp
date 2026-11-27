@@ -36,25 +36,110 @@ import com.sqlapp.util.CommonUtils;
 
 public class SqlServerUtils extends ReaderUtils {
 
+	/**
+	 * Removes the brackets around the given column name where the name is a regular
+	 * identifier. See {@link #replaceNames(String)}.
+	 */
 	protected static String replaceNames(String definition, String name) {
 		if (name == null) {
 			return replaceNames(definition);
 		}
-		return definition.replace("[" + name + "]", name);
+		return unquoteNames(definition, name);
 	}
 
-	private static Pattern QUOTE_PATTERN = Pattern.compile("\\[[^\\]\\s]+\\]", Pattern.MULTILINE);
-
+	/**
+	 * Removes the brackets around names that are valid without them.
+	 * <p>
+	 * A bracketed name stays quoted when it is not a regular identifier (for
+	 * example {@code [a-b]}, {@code [c)]} or {@code [my col]}) or is a reserved
+	 * keyword (for example {@code [order]}). Text inside string literals (such as a
+	 * LIKE pattern {@code '[abc]%'}) and double-quoted identifiers is unchanged.
+	 * </p>
+	 */
 	protected static String replaceNames(String definition) {
-		if (CommonUtils.isEmpty(definition)) {
+		return unquoteNames(definition, null);
+	}
+
+	private static String unquoteNames(final String definition, final String target) {
+		if (CommonUtils.isEmpty(definition) || definition.indexOf('[') < 0) {
 			return definition;
 		}
-		Matcher matcher = QUOTE_PATTERN.matcher(definition);
-		while (matcher.find()) {
-			String val = matcher.group(0);
-			definition = definition.replace(val, val.substring(1, val.length() - 1));
+		final int length = definition.length();
+		final StringBuilder builder = new StringBuilder(length);
+		int i = 0;
+		while (i < length) {
+			final char c = definition.charAt(i);
+			if (c == '\'' || c == '"' || c == '[') {
+				final int end = skipQuoted(definition, i, c == '[' ? ']' : c);
+				if (end < 0) {
+					builder.append(definition, i, length);
+					break;
+				}
+				if (c == '[') {
+					final String name = definition.substring(i + 1, end);
+					if ((target == null || target.equals(name)) && isRegularIdentifier(name)) {
+						builder.append(name);
+					} else {
+						builder.append(definition, i, end + 1);
+					}
+				} else {
+					builder.append(definition, i, end + 1);
+				}
+				i = end + 1;
+			} else {
+				builder.append(c);
+				i++;
+			}
 		}
-		return definition;
+		return builder.toString();
+	}
+
+	/**
+	 * Transact-SQL reserved keywords, which must be delimited when used as names.
+	 */
+	private static final java.util.Set<String> RESERVED_WORDS = java.util.Set.of("ADD", "ALL", "ALTER", "AND", "ANY",
+			"AS", "ASC", "AUTHORIZATION", "BACKUP", "BEGIN", "BETWEEN", "BREAK", "BROWSE", "BULK", "BY", "CASCADE",
+			"CASE", "CHECK", "CHECKPOINT", "CLOSE", "CLUSTERED", "COALESCE", "COLLATE", "COLUMN", "COMMIT", "COMPUTE",
+			"CONSTRAINT", "CONTAINS", "CONTAINSTABLE", "CONTINUE", "CONVERT", "CREATE", "CROSS", "CURRENT",
+			"CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "CURRENT_USER", "CURSOR", "DATABASE", "DBCC",
+			"DEALLOCATE", "DECLARE", "DEFAULT", "DELETE", "DENY", "DESC", "DISK", "DISTINCT", "DISTRIBUTED", "DOUBLE",
+			"DROP", "DUMP", "ELSE", "END", "ERRLVL", "ESCAPE", "EXCEPT", "EXEC", "EXECUTE", "EXISTS", "EXIT",
+			"EXTERNAL", "FETCH", "FILE", "FILLFACTOR", "FOR", "FOREIGN", "FREETEXT", "FREETEXTTABLE", "FROM", "FULL",
+			"FUNCTION", "GOTO", "GRANT", "GROUP", "HAVING", "HOLDLOCK", "IDENTITY", "IDENTITY_INSERT", "IDENTITYCOL",
+			"IF", "IN", "INDEX", "INNER", "INSERT", "INTERSECT", "INTO", "IS", "JOIN", "KEY", "KILL", "LEFT", "LIKE",
+			"LINENO", "LOAD", "MERGE", "NATIONAL", "NOCHECK", "NONCLUSTERED", "NOT", "NULL", "NULLIF", "OF", "OFF",
+			"OFFSETS", "ON", "OPEN", "OPENDATASOURCE", "OPENQUERY", "OPENROWSET", "OPENXML", "OPTION", "OR", "ORDER",
+			"OUTER", "OVER", "PERCENT", "PIVOT", "PLAN", "PRECISION", "PRIMARY", "PRINT", "PROC", "PROCEDURE", "PUBLIC",
+			"RAISERROR", "READ", "READTEXT", "RECONFIGURE", "REFERENCES", "REPLICATION", "RESTORE", "RESTRICT",
+			"RETURN", "REVERT", "REVOKE", "RIGHT", "ROLLBACK", "ROWCOUNT", "ROWGUIDCOL", "RULE", "SAVE", "SCHEMA",
+			"SECURITYAUDIT", "SELECT", "SEMANTICKEYPHRASETABLE", "SEMANTICSIMILARITYDETAILSTABLE",
+			"SEMANTICSIMILARITYTABLE", "SESSION_USER", "SET", "SETUSER", "SHUTDOWN", "SOME", "STATISTICS",
+			"SYSTEM_USER", "TABLE", "TABLESAMPLE", "TEXTSIZE", "THEN", "TO", "TOP", "TRAN", "TRANSACTION", "TRIGGER",
+			"TRUNCATE", "TRY_CONVERT", "TSEQUAL", "UNION", "UNIQUE", "UNPIVOT", "UPDATE", "UPDATETEXT", "USE", "USER",
+			"VALUES", "VARYING", "VIEW", "WAITFOR", "WHEN", "WHERE", "WHILE", "WITH", "WITHIN", "WRITETEXT");
+
+	/**
+	 * Whether the name can be written without delimiters: it starts with a letter
+	 * or underscore, continues with letters, digits, {@code _ @ $ #}, and is not a
+	 * reserved keyword. Names starting with {@code @} or {@code #} are treated as
+	 * needing delimiters because of their special meaning.
+	 */
+	static boolean isRegularIdentifier(final String name) {
+		if (name.isEmpty()) {
+			return false;
+		}
+		int codePoint = name.codePointAt(0);
+		if (!Character.isLetter(codePoint) && codePoint != '_') {
+			return false;
+		}
+		for (int i = Character.charCount(codePoint); i < name.length(); i += Character.charCount(codePoint)) {
+			codePoint = name.codePointAt(i);
+			if (!Character.isLetterOrDigit(codePoint) && codePoint != '_' && codePoint != '@' && codePoint != '$'
+					&& codePoint != '#') {
+				return false;
+			}
+		}
+		return !RESERVED_WORDS.contains(name.toUpperCase(java.util.Locale.ROOT));
 	}
 
 	/**

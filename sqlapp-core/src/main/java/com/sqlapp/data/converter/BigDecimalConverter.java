@@ -22,7 +22,10 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.DecimalFormat;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author SATOH
@@ -49,12 +52,8 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 			return (BigDecimal) value;
 		} else if (value instanceof String) {
 			return convert(((String) value).trim());
-		} else if (value instanceof Float) {
-			return BigDecimal.valueOf(((Float) value));
-		} else if (value instanceof Double) {
-			return BigDecimal.valueOf(((Double) value));
 		} else if (value instanceof Number) {
-			return BigDecimal.valueOf(((Number) value).longValue());
+			return toBigDecimal((Number) value);
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return BigDecimal.ONE;
@@ -65,13 +64,48 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 		return convert(value.toString());
 	}
 
+	/**
+	 * Exact conversion: a BigInteger beyond the long range keeps its value
+	 * (instead of the wrapped {@code longValue()}), and float/double use their
+	 * shortest decimal text as before.
+	 */
+	private static BigDecimal toBigDecimal(final Number value) {
+		if (value instanceof BigInteger integer) {
+			return new BigDecimal(integer);
+		} else if (value instanceof Integer || value instanceof Long || value instanceof Short
+				|| value instanceof Byte || value instanceof AtomicInteger || value instanceof AtomicLong) {
+			return BigDecimal.valueOf(value.longValue());
+		} else if (value instanceof Double || value instanceof Float) {
+			final double number = value.doubleValue();
+			if (Double.isNaN(number) || Double.isInfinite(number)) {
+				throw new ConverterException("Cannot convert to BigDecimal: " + value);
+			}
+			return value instanceof Float ? new BigDecimal(value.toString()) : BigDecimal.valueOf(number);
+		}
+		try {
+			return new BigDecimal(value.toString());
+		} catch (final NumberFormatException e) {
+			final double number = value.doubleValue();
+			if (Double.isNaN(number) || Double.isInfinite(number)) {
+				throw new ConverterException("Cannot convert to BigDecimal: " + value, e);
+			}
+			return BigDecimal.valueOf(number);
+		}
+	}
+
 	private BigDecimal convert(final String value) {
 		if (getNumberFormat() == null) {
-			return new BigDecimal(value);
+			try {
+				return new BigDecimal(value);
+			} catch (final NumberFormatException e) {
+				throw new ConverterException("Cannot convert to BigDecimal: " + value, e);
+			}
 		}
-		final DecimalFormat format = (DecimalFormat) getNumberFormat();
-		format.setParseBigDecimal(true);
-		return (BigDecimal) parse(value);
+		if (getNumberFormat() instanceof DecimalFormat format) {
+			format.setParseBigDecimal(true);
+			return (BigDecimal) parse(value);
+		}
+		return toBigDecimal(parse(value));
 	}
 
 	@Override

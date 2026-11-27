@@ -74,6 +74,11 @@ final class LogicRequestPrompt {
 				- A helper `FUNCTION` called by that trigger: no arguments, `RETURNS trigger`, \
 				`LANGUAGE plpgsql`. A helper function belongs to exactly one source trigger and must not be shared.
 
+				In the SQL, schema-qualify the function name, the table in `ON`, and the function in \
+				`EXECUTE FUNCTION` (for example `app.orders`); do not qualify the trigger name. Write a dollar-quoted \
+				body (`AS $$ ... $$`). Do not use `SECURITY DEFINER`, `CREATE CONSTRAINT TRIGGER` or objects that \
+				already exist in `target.xml`. The trigger must list its helper function in `dependsOn`.
+
 				Example `response.json` (one source trigger converted into a function and a trigger):
 
 				```json

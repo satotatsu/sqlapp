@@ -60,7 +60,8 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 		} else if (value instanceof Instant) {
 			return DateUtils.toTime(java.sql.Time.from((Instant) value));
 		} else if (value instanceof ChronoLocalDate) {
-			return DateUtils.toTime(java.sql.Time.from(Instant.EPOCH));
+			// a date has no time of day: midnight (not the UTC epoch in the default zone)
+			return java.sql.Time.valueOf(LocalTime.MIDNIGHT);
 		} else if (value instanceof LocalTime) {
 			final LocalTime localTime = LocalTime.class.cast(value);
 			return java.sql.Time.valueOf(localTime);

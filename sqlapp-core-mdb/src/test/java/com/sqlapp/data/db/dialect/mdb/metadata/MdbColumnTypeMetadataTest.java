@@ -74,6 +74,29 @@ class MdbColumnTypeMetadataTest {
 	}
 
 	@Test
+	void calculatedColumnsAreEnrichedBeforeGeneratedColumnValidation() throws Exception {
+		final Path path = directory.resolve("calculated.accdb");
+		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010, path.toFile())) {
+			new TableBuilder("CALC").addColumn(new ColumnBuilder("ID", DataType.LONG))
+					.addColumn(new ColumnBuilder("RESULT", DataType.LONG).withCalculatedInfo("[ID]+1"))
+					.toTable(database).addRow(10, null);
+		}
+		try (var connection = DriverManager.getConnection("jdbc:ucanaccess://" + path.toAbsolutePath())) {
+			final var reader = DialectHolder.defaultDialect.getCatalogReader().getSchemaReader().getTableReader();
+			reader.setObjectName("CALC");
+			Table table = reader.getAllFull(connection).getFirst();
+			assertEquals("[ID]+1", table.getColumns().get("RESULT").getFormula());
+			Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+			assertEquals("[ID]+1", restored.getColumns().get("RESULT").getFormula());
+			try (var statement = connection.createStatement();
+					var result = statement.executeQuery("SELECT RESULT FROM CALC")) {
+				assertTrue(result.next());
+				assertEquals(11, result.getInt(1));
+			}
+		}
+	}
+
+	@Test
 	void autoNumberDdlFollowsColumnType() {
 		final var registry = DialectHolder.defaultDialect.createSqlFactoryRegistry();
 		final Table guid = new Table("G");

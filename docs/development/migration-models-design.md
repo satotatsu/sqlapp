@@ -133,7 +133,16 @@ file in `sqlapp-command`. No external database is involved.
      with a full rebuild (expensive and noisy), deletes, microbatch,
      incremental loading. Publishing stays a full STAGED_REPLACE of the model
      tables, so rows merged before a failed publish are published by the next
-     run; retained staging tables must be removed by the operator first.
+     run.
+   - Retained staging after a failed publish (decided 2026-11-27): dbt drops
+     its own temporary relations at the start of the next run and keeps no
+     evidence; sqlapp keeps them for an unconfirmed commit. Compromise: the
+     pipeline drops the stages of the latest failed publish only when its
+     recorded state is settled (not started, rolled back, or committed with a
+     failed cleanup), the names follow from the recorded job fingerprint and
+     the connection reaches the recorded database. COMMIT_UNCERTAIN and
+     ROLLBACK_FAILED still stop for inspection. Implemented as
+     `TransferStagedReplacement.releaseSettledStage`.
 2. **Types.** Declared columns cover the target types of table models. Still
    open: byte-length targets (lengths are checked in characters), CHAR padding,
    time zones, and declared columns for views.

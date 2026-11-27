@@ -47,7 +47,7 @@ public class ParameterMarkerNode extends CommentNode {
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-		sqlParameters.registerEvaluatedParameter(parameterName);
+		// A declaration does not prove that the parameter was emitted in SQL.
 		return true;
 	}
 

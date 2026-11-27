@@ -19,32 +19,24 @@ class JdbcQueryHandlerPagingTest {
 			super(node, null);
 		}
 
+		// Capture actual statement selection, after the context hook evaluates SQL.
 		@Override
-		protected StatementSqlParametersHolder createStatement(Connection connection, Object context, Integer limit) {
-			var parameters = getNode().eval(context);
-			createStatement(connection, parameters, limit);
-			return new StatementSqlParametersHolder(null, parameters);
-		}
-
-		@Override
-		protected PreparedStatement createStatement(Connection connection, SqlParameterCollection parameters,
-				Integer limit) {
-			bindings = parameters.getBindParameters().stream().flatMap(p -> p.stream()).map(p -> p.getValue()).toList();
+		protected PreparedStatement getStatement(Connection connection, SqlParameterCollection parameters, Integer limit) {
 			return null;
 		}
 
 		@Override
-		protected PreparedStatement createStatementScrollInsensitive(Connection connection,
-				SqlParameterCollection parameters) {
-			scroll = true;
-			return createStatement(connection, parameters, null);
+		protected List<BindParameter> setBind(PreparedStatement statement, SqlParameterCollection parameters) {
+			List<BindParameter> values = parameters.getBindParameters().stream().flatMap(BindParameterHolder::stream).toList();
+			bindings = values.stream().map(BindParameter::getValue).toList();
+			return values;
 		}
 
 		@Override
-		protected StatementSqlParametersHolder createStatementScrollInsensitive(Connection connection,
-				ParametersContext context) {
+		protected PreparedStatement createStatementScrollInsensitive(Connection connection, SqlParameterCollection parameters) {
 			scroll = true;
-			return createStatement(connection, context, null);
+			setBind(null, parameters);
+			return null;
 		}
 
 		@Override

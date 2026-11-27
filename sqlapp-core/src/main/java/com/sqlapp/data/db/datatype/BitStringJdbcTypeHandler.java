@@ -116,15 +116,25 @@ public class BitStringJdbcTypeHandler implements JdbcTypeHandler, Serializable {
 			}
 			// Bytes are right-aligned (MySQL): the value is in the last bits.
 			if (length > 0 && builder.length() > length) {
-				return builder.substring(builder.length() - length);
+				final int excess = builder.length() - length;
+				if (builder.substring(0, excess).indexOf("1") >= 0) {
+					throw new IllegalArgumentException(
+							"A bit string value exceeds " + length + " bits: " + builder);
+				}
+				return builder.substring(excess);
 			}
 			return pad(builder.toString(), length);
 		}
 		if (value instanceof BitSet) {
+			// Bit i represents 2^i, so the most significant bit is written first, as for numbers.
 			final BitSet bitSet = (BitSet) value;
+			if (length > 0 && bitSet.length() > length) {
+				throw new IllegalArgumentException(
+						"A bit string value exceeds " + length + " bits: " + bitSet);
+			}
 			final int size = Math.max(length, bitSet.length());
 			final StringBuilder builder = new StringBuilder(size);
-			for (int i = 0; i < size; i++) {
+			for (int i = size - 1; i >= 0; i--) {
 				builder.append(bitSet.get(i) ? '1' : '0');
 			}
 			return builder.toString();

@@ -810,12 +810,12 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	}
 
 	/**
-	 * Jdbcタイプハンドラーを設定します
+	 * Jdbcタイプハンドラーを設定します。NULLのバインドには{@link #getJdbcType()}を使用します。
 	 * 
 	 * @param converter
 	 */
 	public T setJdbcTypeHandler(final Converter<?> converter) {
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
+		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getJdbcType(), converter));
 		return this.instance();
 	}
 
@@ -825,7 +825,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 */
 	public T setJdbcTypeHandler(final Converter<?> statementConverter, final Converter<?> resultSetconverter) {
 		this.setJdbcTypeHandler(
-				new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), statementConverter, resultSetconverter));
+				new DefaultJdbcTypeHandler(this.getJdbcType(), statementConverter, resultSetconverter));
 		return this.instance();
 	}
 

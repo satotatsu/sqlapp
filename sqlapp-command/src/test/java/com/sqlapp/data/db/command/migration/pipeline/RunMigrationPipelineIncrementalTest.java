@@ -2,7 +2,9 @@
 package com.sqlapp.data.db.command.migration.pipeline;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -21,6 +23,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.Status;
 import com.sqlapp.data.db.command.migration.pipeline.MigrationPipelineReport.Step;
+import com.sqlapp.data.db.command.migration.transfer.TransferSchemaPreparation;
+import com.sqlapp.data.db.command.migration.transfer.TransferStagedReplacement;
 import com.sqlapp.util.JsonConverter;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -106,22 +110,66 @@ class RunMigrationPipelineIncrementalTest {
 		assertEquals(List.of("1 | 100.00", "2 | 200.00"),
 				rows(target, "SELECT ID, AMOUNT FROM ORDER_FACT ORDER BY ID"));
 
-		// The failed replacement keeps its staging tables for inspection; a new run
-		// does not reuse them, so the operator removes them after inspection.
-		final List<String> stages = rows(target,
-				"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES" + " WHERE TABLE_NAME LIKE 'SQLAPP_STG_%'");
-		assertEquals(1, stages.size(), stages.toString());
-		for (final String stage : stages) {
-			execute(target, "DROP TABLE \"" + stage + "\"");
-		}
+		// The failed replacement rolled back and kept its staging tables.
+		final Path result = Path.of(report.step(Step.PUBLISH).resultFile());
+		assertEquals(1, stages().size(), stages().toString());
+		refusesToReleaseUnsettledOrForeignStages(result);
+		assertEquals(1, stages().size(), stages().toString());
+
 		// Nothing is newer than the merged rows, yet the whole table is published.
 		execute(target, "ALTER TABLE ORDER_FACT DROP CONSTRAINT LIMIT_AMOUNT");
 		assertEquals(List.of("0"),
 				rows(engine, "SELECT count(*) FROM ORDERS WHERE VERSION > (SELECT max(VERSION) FROM ORDER_FACT)"));
 		final RunMigrationPipelineCommand retried = run(fingerprint);
 		assertEquals(Status.SUCCEEDED, report(retried).status());
+		// The settled stages of the failed run were dropped before publishing.
+		assertTrue(
+				report(retried).step(Step.PUBLISH).detail()
+						.contains("released staging of run " + report.runId() + " (ROLLED_BACK): SQLAPP_STG_"),
+				report(retried).step(Step.PUBLISH).detail());
+		assertEquals(List.of(), stages());
 		assertEquals(List.of("1 | 5000.00", "2 | 200.00"),
 				rows(target, "SELECT ID, AMOUNT FROM ORDER_FACT ORDER BY ID"));
+	}
+
+	private void refusesToReleaseUnsettledOrForeignStages(final Path result) throws Exception {
+		final String text = Files.readString(result);
+		assertTrue(text.contains("\"ROLLED_BACK\""), "recorded state");
+		// An unconfirmed commit keeps its stages for comparison.
+		final Path uncertain = copy(result, "uncertain", text.replace("\"ROLLED_BACK\"", "\"COMMIT_UNCERTAIN\""));
+		final var refused = assertThrows(TransferSchemaPreparation.ValidationException.class,
+				() -> TransferStagedReplacement.releaseSettledStage(uncertain, target));
+		assertTrue(refused.getMessage().contains("COMMIT_UNCERTAIN"), refused.getMessage());
+		// Names that do not follow from the recorded job are never dropped.
+		final String stage = stages().getFirst();
+		final Path tampered = copy(result, "tampered", text.replace(stage, "ORDER_FACT"));
+		final var e = assertThrows(TransferSchemaPreparation.ValidationException.class,
+				() -> TransferStagedReplacement.releaseSettledStage(tampered, target));
+		assertTrue(e.getMessage().contains("do not follow"), e.getMessage());
+		// Another database is left alone.
+		final JDBCDataSource other = new JDBCDataSource();
+		other.setUrl("jdbc:hsqldb:mem:other_" + UUID.randomUUID());
+		other.setUser("SA");
+		other.setPassword("");
+		final var release = TransferStagedReplacement.releaseSettledStage(result, other);
+		assertFalse(release.recordedTarget());
+		assertEquals(List.of(), release.droppedStages());
+		execute(other, "SHUTDOWN");
+	}
+
+	/** Copies a transfer result folder with a changed result report. */
+	private Path copy(final Path result, final String name, final String text) throws Exception {
+		final Path folder = Files.createDirectories(directory.resolve(name));
+		try (var files = Files.list(result.getParent())) {
+			for (final Path file : files.filter(Files::isRegularFile).toList()) {
+				Files.copy(file, folder.resolve(file.getFileName()));
+			}
+		}
+		return Files.writeString(folder.resolve(result.getFileName()), text, StandardCharsets.UTF_8);
+	}
+
+	private List<String> stages() throws Exception {
+		return rows(target, "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'SQLAPP_STG_%'");
 	}
 
 	private RunMigrationPipelineCommand run(final String fingerprint) throws Exception {

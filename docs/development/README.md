@@ -13,6 +13,7 @@
 | Review migration UX and mapping priorities | [Data migration plan](data-migration-plan.md) |
 | Review SELECT-defined model design and follow-up work | [Migration models design](migration-models-design.md) |
 | Continue dialect implementation and verification | [Dialect enhancement continuation](dialect-enhancement-continuation.md) |
+| Review shared SQL generation fixes and verification limitations | [SQL generation review](sql-generation-review.md) |
 | Verify data type resolution, ranges and real-engine recreation | [Dialect data types](dialect-data-types.md) |
 | Review time zone value handling and the ZonedDateTime memo | [Time zone values](time-zone-values.md) |
 | Read and recreate PostgreSQL-only schema objects | [PostgreSQL schema objects](postgresql-schema-objects.md) |

@@ -437,14 +437,14 @@ public class Converters implements Serializable {
 				InstantConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat("yyyy-MM-dd HH:mm:ss"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat("uuuu-MM-dd HH:mm:ss"));
 		puts(new InstantArrayConverter(this.getConverter(java.time.Instant.class)), java.time.Instant[].class);
 		// LocalDate
 		put(java.time.LocalDate.class,
 				LocalDateConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d", "uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m").setFormat("yyyy-MM-dd"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m").setFormat("uuuu-MM-dd"));
 		puts(new LocalDateArrayConverter(this.getConverter(java.time.LocalDate.class)), java.time.LocalDate[].class);
 		// LocalDateTime
 		put(java.time.LocalDateTime.class,
@@ -471,13 +471,13 @@ public class Converters implements Serializable {
 				YearMonthConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d", "uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M").setFormat("yyyy-MM"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M", "uuuuMM").setFormat("uuuu-MM"));
 		puts(new YearMonthArrayConverter(this.getConverter(java.time.YearMonth.class)), java.time.YearMonth[].class);
 		// Year
 		put(java.time.Year.class, YearConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 				, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 				"uuuu-M-d", "uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-				"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M", "uuuu").setFormat("yyyy"));
+				"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M", "uuuu").setFormat("uuuu"));
 		puts(new YearArrayConverter(this.getConverter(java.time.Year.class)), java.time.Year[].class);
 		return zonedDateTimeConverter;
 	}

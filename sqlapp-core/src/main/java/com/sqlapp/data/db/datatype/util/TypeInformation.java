@@ -279,6 +279,9 @@ public class TypeInformation {
 	/**
 	 * lengthを設定します
 	 * 
+	 * Explicit values retain their length after unit expansion. Defaults apply
+	 * only when the value is omitted; maxima do not truncate explicit values.
+	 *
 	 * @param value length
 	 * @param multi K OR M OR G
 	 */
@@ -296,6 +299,7 @@ public class TypeInformation {
 				length = Optional.of(getCaluculatedLength(val.longValue() * CommonUtils.LEN_1GB));
 			}
 		}
+		setDefaultLength = val == null && length.isPresent();
 	}
 
 	private Long getCaluculatedLength(Long val) {
@@ -305,25 +309,14 @@ public class TypeInformation {
 		if (dbDataType instanceof AbstractNoSizeType) {
 			return null;
 		}
+		if (val != null) {
+			return val;
+		}
 		Optional<Integer> defPre = getDefaultPrecision();
 		if (defPre.isPresent()) {
-			if (val == null) {
-				return Converters.getDefault().convertObject(defPre.get(), Long.class);
-			} else {
-				return Converters.getDefault().convertObject(defPre.get(), Long.class);
-			}
+			return defPre.get().longValue();
 		}
-		Optional<Long> defLen = getDefaultLength();
-		if (defLen.isPresent()) {
-			if (val == null) {
-				return defLen.get();
-			} else {
-				if (defLen.get().longValue() < val) {
-					return defLen.get();
-				}
-			}
-		}
-		return val;
+		return getDefaultLength().orElse(null);
 	}
 
 	public Optional<Integer> getDefaultPrecision() {

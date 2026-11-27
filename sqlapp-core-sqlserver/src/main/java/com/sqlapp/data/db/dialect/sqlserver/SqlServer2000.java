@@ -308,6 +308,11 @@ public class SqlServer2000 extends Dialect {
 		return true;
 	}
 
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new SqlServerDefaultExpressionSupport(this);
+	}
+
 	/**
 	 * 計算列(col AS (expr))のサポート
 	 */
