@@ -1,0 +1,10 @@
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.CUSTOMERS, PUBLIC.ORDERS]
+dataMode: SCHEMA_ONLY
+schemaMode: APPLY_DIFFERENCES
+# targetSchema: public
+# Review Schema SQL and warnings first. Data-impacting SQL remains blocked unless
+# this explicit setting is enabled and the saved job is reviewed again:
+# allowDestructiveSchemaChanges: true

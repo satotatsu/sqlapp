@@ -7,11 +7,33 @@ The `com.sqlapp.db` plugin registers the tasks in the first table. Additional
 public task types can be registered by a consuming build. Task names and
 property names are user-facing API.
 
+Data export and conversion accept `outputFileType = 'PARQUET'`; import detects
+`.parquet`. See [Parquet data files](../data/parquet.md) for the supported types,
+limitations and an executable task definition. Verified CSV transfer packages
+remain a separate format.
+
 “Database effect” describes the task's intended behavior. A read-only task may
 still open a connection and execute metadata or SELECT statements. A mutating
 task can issue DDL or DML and must be configured with the intended target.
 
 ## Tasks registered by `com.sqlapp.db`
+
+Each task belongs to one of these groups, so `gradlew tasks` lists them by
+purpose. Use `gradlew tasks --group "sqlapp migration"` to show one group.
+
+| Group | Tasks |
+|---|---|
+| `sqlapp schema` | `countAllTables`, `exportSchemaXml`, `exportAccessSchemaXml`, `exportSqliteSchemaXml`, `diffSchemaXml`, `generateDiffSql`, `generateSql`, `generateHtmlDocs` |
+| `sqlapp schema transformation` | `firstNormalForm`, `generateNormalizationPlan`, `columnRuleTransform` |
+| `sqlapp migration` | `migration`, `migrationInsert`, `migrationRepair`, `migrationValidate`, `migrationPlan`, `migrationEnvironmentSnapshot`, `compareMigrationEnvironments`, `verifyMigrationExecutionReport` |
+| `sqlapp migration assessment` | `assessMigration`, `assessDatabaseMigration`, `assessAccessOracleMigration`, `verifyDatabaseMigrationDdlPhases` |
+| `sqlapp bulk migration` | `generateAccessBulkMigrationJobConfiguration`, `validateBulkMigrationTarget`, `executeBulkMigrationJob`, `generateBulkMigrationOperationalReport`, `verifyBulkMigrationEvidence`, `verifyBulkMigrationEvidenceReport`, `generateBulkMigrationJobRepairPlanReport`, `executeBulkMigrationJobRepair`, `verifyBulkMigrationJobRepairEvidence`, `verifyBulkMigrationJobRepairFailureEvidence`, `verifyBulkMigrationJobRepairOutcome`, `verifyBulkMigrationJobRepairOutcomeReport` |
+| `sqlapp migration snapshot` | `generateMigrationSnapshotApprovalReport`, `executeMigrationSnapshot`, `verifyMigrationSnapshotReport`, `verifyMigrationSnapshotFailureReport` |
+| `sqlapp transfer` | `transferDatabase`, `exportTransferFile`, `importTransferFile`, `compareTransferStaging` |
+| `sqlapp legacy migration` | `pliSchemaImport`, `cobolSchemaImport`, `generateLegacyMigrationContract`, `generatePliCsvExtractor`, `generateLegacyRdbLoader`, `loadLegacyHierarchy` |
+
+Task types registered by a consuming build have no group unless the build sets
+one.
 
 | Task name | Task class | Primary configuration | Result | Database effect |
 |---|---|---|---|---|
@@ -33,6 +55,10 @@ task can issue DDL or DML and must be configured with the intended target.
 | `generateBulkMigrationJobRepairPlanReport` | `GenerateBulkMigrationJobRepairPlanReportTask` | `plan`, `targetFile` | JSON review artifact | No database access by the task |
 | `executeBulkMigrationJobRepair` | `ExecuteBulkMigrationJobRepairTask` | `configurationFile`, `approvedRepairPlanFile`, source and target data sources; optional approved-plan SHA-256, age and byte-size gates plus an evidence-file byte-size gate; configuration, assessment, DDL-verification and fresh target-validation approval gates; concise `repairReportDirectory` or individual execution, failure, post-repair verification and outcome files | Approved repair result, optional replay-count or failure JSON, verification JSON, and unified outcome with artifact provenance | Re-verifies approval and data before writes, verifies repaired data, then can publish the unified result |
 | `executeBulkMigrationJob` | `ExecuteBulkMigrationJobTask` | Exactly one of `plan` or `configurationFile`; target `dataSource`; source data source for declarative jobs; optional configuration, assessment, DDL-verification and fresh target-validation approval gates; optional `executionReportFile`, `executionFailureReportFile` and `maxExecutionReportFileSizeBytes` | Migration, checkpoints, mutually distinct success/failure execution reports and optional verification/operational reports with artifact provenance | Mutates target |
+| `exportTransferFile` | `ExportTransferFileTask` | Required shared transfer `configurationFile`; source `dataSource`; FILE CSV/TSV/JSONL settings, optional name mapping and output directory in YAML | Unique package with canonical source Schema, original data fields, optional captured/pinned name mapping, actual counts, byte fingerprints and final manifest; always runs, caching disabled | Reads source in a read-only SERIALIZABLE transaction; no target access |
+| `transferDatabase` | `TransferDatabaseTask` | Shared `configurationFile`, `sourceDataSource`, target `dataSource`; `allowExecution=false` by default, execution requires `expectedConfigurationFingerprint`; `workspaceDirectory` defaults to `build/sqlapp-transfer/direct` | Captured preparation, `transfer-review.json`, optional `transfer-result.json`; always runs, caching disabled | Reviews only by default; JDBC execution creates requested missing tables, INSERTs and optionally verifies. Keyless tables use non-resumable full-scan INSERT with multiset verification; `CREATE_MISSING_WITH_IDENTITY` optionally adds a target-only PK to new keyless tables. `SCHEMA_ONLY` creates missing table definitions; optional `APPLY_DIFFERENCES` changes existing selected tables. Data-impacting SQL additionally requires YAML `allowDestructiveSchemaChanges=true`; [guide](direct-transfer.md) |
+| `compareTransferStaging` | `CompareTransferStagingTask` | Required `resultFile` from an unconfirmed staged replacement, sibling review and plan files, and target `dataSource`; optional `failOnDifference` (default `false`); `workspaceDirectory` defaults to `build/sqlapp-transfer/compare` | Separate `staging-comparison.json` in a new run folder; always runs, caching disabled | Reads the current target and staging in one snapshot. The historical result remains uncertain. [Guide](direct-transfer.md#compare-retained-staging-with-gradle) |
+| `importTransferFile` | `ImportTransferFileTask` | Required `manifestFile`, `expectedManifestFingerprint`, target `dataSource`; explicit `allowExecution=true` (default false); `workspaceDirectory` defaults to `build/sqlapp-transfer/import` | Captured package and pinned name mapping, optional missing-table/target-only PK DDL, mapped INSERT chunks, default verification and `import-result.json`; always runs, caching disabled | May create missing ordinary tables per job, then inserts into empty targets; no source access; see [limits](file-transfer.md) |
 | `validateBulkMigrationTarget` | `ValidateBulkMigrationTargetTask` | Required `configurationFile`, source `sourceDataSource` and target `dataSource`; optional `expectedConfigurationFingerprint`, `assessmentReportFile`, `ddlVerificationReportFile`, `targetEnvironmentId` and JSON `reportFile` | Resolves the same declarative plan as execution, verifies supplied approval artifacts, and validates target tables, mapped columns, non-null unique keys and `requireEmptyTarget` without migrating rows | Reads source configuration context and live target metadata/data; optionally writes atomic validation evidence with target database identity; no database mutations |
 | `verifyBulkMigrationEvidence` | `VerifyBulkMigrationEvidenceTask` | Required operational and verification reports; optional configuration, assessment, DDL-verification and target-validation files, `expectedTargetEnvironmentId` and JSON `outputFile`; completion, data-match and provenance policies default to `true` | Verifies matching plans, provenance, target environment, success, data equality and supplied artifact fingerprints; optionally writes a format 1 audit artifact | File-only; no database access |
 | `verifyBulkMigrationEvidenceReport` | `VerifyBulkMigrationEvidenceReportTask` | Required evidence, operational and verification report files; optional original configuration, assessment, DDL-verification and target-validation files, expected target environment, approved evidence, plan and configuration fingerprints, and `maxEvidenceAgeSeconds` | Revalidates the saved audit artifact against exact source reports, optional original artifacts, approved identities and freshness policy | File-only; no database access |
@@ -55,6 +81,7 @@ task can issue DDL or DML and must be configured with the intended target.
 | `generateNormalizationPlan` | `GenerateNormalizationPlanTask` | `targetFile`, `outputDirectory`, optional mapping and analysis thresholds | YAML plan and optional preview Schema XML | No database access |
 | `columnRuleTransform` | `ColumnRuleTransformTask` | `targetFile`, `rulesFile`, `outputDirectory` | Transformed Schema XML and optional mapping | No database access |
 | `pliSchemaImport` | `PliSchemaImportTask` | `configurationFile`, `targetFile`, `outputDirectory` | Schema XML and optional migration mapping | No database access |
+| `cobolSchemaImport` | `CobolSchemaImportTask` | `configurationFile`, `targetFile`, `outputDirectory` | Schema XML and optional migration mapping with storage layout | No database access |
 | `generateLegacyMigrationContract` | `GenerateLegacyMigrationContractTask` | `mappingFile`, `outputDirectory` | Extraction/load contract | No database access |
 | `generatePliCsvExtractor` | `GeneratePliCsvExtractorTask` | `contractFile`, `outputDirectory` | PL/I CSV extraction artifacts | No database access |
 | `generateLegacyRdbLoader` | `GenerateLegacyRdbLoaderTask` | `contractFile`, `schemaFile`, `outputDirectory`, database identity/options | Load plan and optional runner template | No database access |
@@ -153,10 +180,39 @@ dataSource {
 }
 ```
 
-Keep the local connection file out of version control. The current loader skips
-a missing path, directory, or unrecognized extension, so validate the file path
-in CI instead of assuming that declaring it proves it was loaded. A task that
-needs a connection will still fail later if required JDBC settings are absent.
+A missing path, a directory, an unsupported extension or an unreadable file now
+stops the task with a message naming the file; earlier versions skipped missing
+files silently. Parser errors do not echo file contents. Setting names HikariCP
+does not know are still skipped, but are now reported as a build warning.
+
+The desktop application reads the same files with the same rules (shared
+`DataSourceConfigFiles` in sqlapp-command), so a connection loaded in a GUI
+connection form behaves the same in Gradle. The GUI saves new connection files
+as YAML:
+
+```yaml
+# src/main/config/sqlserver/dataSource.yaml
+driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
+jdbcUrl: jdbc:sqlserver://localhost;databaseName=master;encrypt=true
+username: sa
+passwordEnv: SQLSERVER_PASSWORD
+```
+
+#### Supplying the password
+
+Use whichever fits; later options override earlier ones:
+
+| Method | Example | Notes |
+|---|---|---|
+| In the file | `password: secret` | Simplest; keep such files out of version control |
+| Second file | `properties file('config/sqlserver.yaml'), file("${System.getProperty('user.home')}/.sqlapp/sqlserver-secret.yaml")` | Later files override earlier keys, so the shared file can omit the password |
+| Environment variable named in the file | `passwordEnv: SQLSERVER_PASSWORD` | Read when the task runs; an unset variable stops the task |
+| Environment variable named in the build | `passwordEnv = 'SQLSERVER_PASSWORD'` | Same as above, set on the `dataSource` block |
+| Explicit value | `password = providers.environmentVariable('SQLSERVER_PASSWORD')` | Always wins |
+
+`dataSource.<name>` and `dataSourceProperties.<name>` keys (or a nested
+`dataSourceProperties:` map in YAML/JSON) become JDBC driver properties, for
+example `dataSource.cachePrepStmts=true`.
 
 ## Schema and table selection
 
@@ -281,7 +337,7 @@ registered by `DbPlugin` under a fixed name:
 | `DropObjectsTask` | Drop selected objects/tables | Mutates target destructively |
 | `ExportDataTask` | Export selected table rows | Read-only database; writes files |
 | `GenerateDataConfigTask` | Generate data-generator configuration from metadata | Read-only database; writes files |
-| `GenerateDataTask` | Generate/load relational test data | Mutates target |
+| `GenerateDataTask` | Generate/load relational test data; optionally preview samples | Mutates target unless `preview=true` |
 | `ImportDataTask` | Import data files | Mutates target |
 | `MigrationDownTask` | Apply down migrations | Mutates target destructively |
 | `MigrationSeriesDownTask` | Apply series-based down migrations | Mutates target destructively |
@@ -303,6 +359,32 @@ tasks.register('exportCustomerData', ExportDataTask) {
 
 Registration alone does not add the task to `build` or make it depend on
 another sqlapp task.
+
+`GenerateDataTask` additionally accepts optional `randomSeed` (`Property<Long>`)
+and `baseTime` (`Property<String>`, ISO local date/time, for example
+`2026-01-02T03:04:00`). Both are `@Input` properties with no default value.
+`countRowsBeforeInsert` (`Property<Boolean>`, `@Input`, convention `true`)
+keeps the exact total/percentage display. Set it to `false` to skip count-only
+source scans and display processed rows, elapsed time and throughput instead.
+It is optional to configure and has no effect on Gradle task caching.
+
+`preview` (`Property<Boolean>`, `@Input`, convention `false`) displays generated
+sample values and runtime Java types without executing INSERT or lifecycle SQL.
+`previewLimit` (`Property<Integer>`, `@Input`, convention `10`) limits samples
+per generator configuration and must be positive in preview mode. Preview skips
+count-only scans regardless of `countRowsBeforeInsert`. StartValueSQL and used
+Query/File lookups still run; row monitors and commit callbacks do not run.
+Preview also displays advisory column diagnostics for explicit NOT NULL/null
+mismatches, known character lengths and exact DECIMAL/NUMERIC precision/scale.
+Diagnostics do not reject samples or change normal insertion.
+See [the executable preview example](../examples/generator-preview/preview.init.gradle)
+and [preview behavior and limits](../data/generator-reproducibility.md#preview-generated-values).
+
+
+`randomSeed` controls RANDOM lookup selection, including weighted selection;
+`baseTime` is exposed as `_baseTime` in generator expressions. See
+[generator validation and reproducibility](../data/generator-reproducibility.md).
+
 
 ## Safety and caching
 

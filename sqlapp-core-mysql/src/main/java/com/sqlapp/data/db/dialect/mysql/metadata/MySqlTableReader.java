@@ -82,6 +82,7 @@ public class MySqlTableReader extends TableReader {
 		table.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		table.setLastAlteredAt(rs.getTimestamp("UPDATE_TIME"));
 		table.setCollation(getString(rs, "TABLE_COLLATION"));
+		table.setCharacterSet(getString(rs, "TABLE_CHARACTER_SET"));
 		this.setSpecifics(rs, "ENGINE", table);
 		Statistics.ROWS.setValue(rs, "TABLE_ROWS", table);
 		Statistics.AVG_ROW_LENGTH.setValue(rs, "AVG_ROW_LENGTH", table);
@@ -91,6 +92,7 @@ public class MySqlTableReader extends TableReader {
 		this.setStatistics(rs, "DATA_FREE", table);
 		this.setStatistics(rs, "ROW_FORMAT", table);
 		final String format = getString(rs, "ROW_FORMAT");
+		this.setSpecifics(rs, "ROW_FORMAT", table);
 		if ("COMPRESSED".equalsIgnoreCase(format)) {
 			table.setCompression(true);
 		}

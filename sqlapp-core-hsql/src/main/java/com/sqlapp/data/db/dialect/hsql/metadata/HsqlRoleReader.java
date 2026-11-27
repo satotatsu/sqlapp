@@ -67,7 +67,7 @@ public class HsqlRoleReader extends RoleReader {
 	 * @return SqlNode
 	 */
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("roles.sql");
+		return getSqlNodeCache().getString(productVersionInfo.getMajorVersion() >= 2 ? "roles2.sql" : "roles.sql");
 	}
 
 	/***

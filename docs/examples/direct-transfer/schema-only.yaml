@@ -1,0 +1,9 @@
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.CUSTOMERS, PUBLIC.ORDERS]
+dataMode: SCHEMA_ONLY
+schemaMode: CREATE_MISSING
+# targetSchema: public
+# The target schema must exist. Existing tables are skipped with warnings.
+# WARN permits trying target-dialect DDL; inspect it before execution.

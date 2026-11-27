@@ -37,15 +37,10 @@ public class SqlServer2022 extends SqlServer2019 {
 	/**
 	 * serialVersionUID
 	 */
-	private static final long serialVersionUID = -5751173741801001354L;
+	private static final long serialVersionUID = 5963055706796193397L;
 
 	protected SqlServer2022(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-	}
-
-	@Override
-	public int hashCode() {
-		return super.hashCode() + 1;
 	}
 
 	@Override
@@ -58,16 +53,4 @@ public class SqlServer2022 extends SqlServer2019 {
 		return new SqlServer2022CatalogReader(this);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
-	}
 }

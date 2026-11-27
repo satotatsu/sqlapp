@@ -63,6 +63,13 @@ public class LegacyMigrationLoadPlan {
 
 	private boolean deleteCommittedRoots = true;
 
+	/**
+	 * With {@link TableOperationMode#INSERT}, verifies before every commit that each
+	 * staging row read is inserted into its target table exactly once. Disable only
+	 * for JDBC drivers that do not report batch insert counts.
+	 */
+	private boolean verifyCounts = true;
+
 	private RootCursorStrategy rootCursorStrategy = RootCursorStrategy.DIALECT;
 
 	private TransactionPolicy transaction = new TransactionPolicy();

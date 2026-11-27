@@ -6,6 +6,14 @@ SELECT
     WHERE opt.CATALOG=seq.CATALOG
       AND opt.SCHEMA=seq.SCHEMA
       AND opt.NAME=seq.NAME
+      AND opt.OPTION_NAME='sequence_kind'
+  ) AS SEQUENCE_KIND
+, (
+    SELECT opt.OPTION_VALUE
+    FROM INFORMATION_SCHEMA.SEQUENCE_OPTIONS opt
+    WHERE opt.CATALOG=seq.CATALOG
+      AND opt.SCHEMA=seq.SCHEMA
+      AND opt.NAME=seq.NAME
       AND opt.OPTION_NAME='start_with_counter'
   ) AS START_WITH_COUNTER
 , (

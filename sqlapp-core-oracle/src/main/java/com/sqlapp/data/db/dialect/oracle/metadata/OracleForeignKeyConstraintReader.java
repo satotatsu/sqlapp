@@ -77,6 +77,8 @@ public class OracleForeignKeyConstraintReader extends ForeignKeyConstraintReader
 					c.setTableName(table_name);
 					c.setEnable("ENABLED".equalsIgnoreCase(getString(rs, "STATUS")));
 					c.setValid(!"INVALID".equalsIgnoreCase(getString(rs, "INVALID")));
+					setSpecifics(rs, "VALIDATED", c);
+					setSpecifics(rs, "RELY", c);
 					c.setUpdateRule(CascadeRule.None);
 					c.setDeleteRule(rs.getString(DELETE_RULE));
 					String deferrable = getString(rs, "DEFERRABLE");

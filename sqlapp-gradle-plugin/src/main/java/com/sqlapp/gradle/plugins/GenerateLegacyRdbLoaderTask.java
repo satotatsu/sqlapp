@@ -17,18 +17,21 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.migration.legacy.GenerateLegacyRdbLoaderCommand;
+import com.sqlapp.gradle.plugins.properties.DialectOptionsTaskProperty;
 
 /**
  * Gradle task for generating restartable legacy RDB loader artifacts.
  */
 @DisableCachingByDefault
-public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateLegacyRdbLoaderCommand> {
+public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateLegacyRdbLoaderCommand>
+		implements DialectOptionsTaskProperty {
 
 	public GenerateLegacyRdbLoaderTask() {
 		getTableOperationMode().convention("INSERT_IGNORE");
 		getRootBatchSize().convention(500);
 		getCommitEveryRootBatches().convention(500L);
 		getDeleteCommittedRoots().convention(true);
+		getVerifyCounts().convention(true);
 		getRootCursorStrategy().convention("DIALECT");
 		getDatabaseProductMajorVersion().convention(0);
 		getDatabaseProductMinorVersion().convention(0);
@@ -63,6 +66,9 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 
 	@Input
 	public abstract Property<Boolean> getDeleteCommittedRoots();
+
+	@Input
+	public abstract Property<Boolean> getVerifyCounts();
 
 	@Input
 	@org.gradle.api.tasks.Optional
@@ -108,6 +114,7 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		command.setRootBatchSize(getRootBatchSize().get());
 		command.setCommitEveryRootBatches(getCommitEveryRootBatches().get());
 		command.setDeleteCommittedRoots(getDeleteCommittedRoots().get());
+		command.setVerifyCounts(getVerifyCounts().get());
 		if (getStagingTablePrefix().isPresent()) {
 			command.setStagingTablePrefix(getStagingTablePrefix().get());
 		}

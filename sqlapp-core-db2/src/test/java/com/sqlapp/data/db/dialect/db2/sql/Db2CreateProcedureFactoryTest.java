@@ -37,9 +37,9 @@ import com.sqlapp.util.CommonUtils;
 
 /**
  * DB2用のCreate Procedure
- * 
+ *
  * @author tatsuo satoh
- * 
+ *
  */
 public class Db2CreateProcedureFactoryTest extends AbstractDb2SqlFactoryTest {
 	SqlFactory<Procedure> operation;
@@ -54,6 +54,7 @@ public class Db2CreateProcedureFactoryTest extends AbstractDb2SqlFactoryTest {
 		Procedure obj = getProcedure("test_goto");
 		obj.setSchemaName("Purchasing");
 		obj.setExecuteAs("CALLER");
+		obj.setLanguage("PLSQL");
 		NamedArgument arg = new NamedArgument("p1");
 		arg.setDataType(DataType.INT);
 		obj.getArguments().add(arg);

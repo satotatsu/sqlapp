@@ -87,7 +87,7 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 				if (columnsHolder.getKeyColumns().contains(column)) {
 					continue;
 				}
-				if (isFormulaColumn(column)) {
+				if (!isUpdateable(column)) {
 					continue;
 				}
 				final String def = this.getValueDefinitionForUpdate(column);
@@ -120,6 +120,13 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 					});
 					i++;
 				}
+			}
+			if (i == 0) {
+				// MySQL requires an assignment even when a duplicate row needs no changes.
+				final Column column = table.getColumns().stream().filter(c -> !isFormulaColumn(c)).findFirst()
+						.orElseThrow(() -> new IllegalArgumentException(
+								"MySQL MERGE requires a non-generated column: " + table.getName()));
+				builder.lineBreak().name(column).eq().name(column);
 			}
 		});
 		addSql(sqlList, builder, SqlType.MERGE, table);

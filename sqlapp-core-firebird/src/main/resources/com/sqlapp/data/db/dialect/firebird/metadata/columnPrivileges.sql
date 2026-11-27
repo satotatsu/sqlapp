@@ -5,8 +5,11 @@ SELECT
 , RDB$USER AS grantee
 , RDB$PRIVILEGE AS privilege_type
 , RDB$GRANT_OPTION AS is_grantable
+, RDB$USER_TYPE AS grantee_type
 FROM RDB$USER_PRIVILEGES
 WHERE 1=1
+  AND RDB$OBJECT_TYPE IN (0, 1)
+  AND RDB$PRIVILEGE IN ('U', 'R')
   /*if isNotEmpty(objectName) */
   AND RDB$RELATION_NAME IN /*objectName*/('%')
   /*end*/

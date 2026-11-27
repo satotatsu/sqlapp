@@ -1,0 +1,461 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.swing;
+
+import static org.junit.jupiter.api.Assertions.*;
+import java.nio.file.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import javax.swing.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.io.TempDir;
+import com.sqlapp.data.db.command.migration.transfer.*;
+
+class TransferJobSettingsPanelTest {
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void savesStagedReplacementWithMandatoryVerification(boolean fileRoute) throws Exception {
+		var file = Files.writeString(directory.resolve("staged.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nverify: false\n"
+						+ (fileRoute ? "dataMode: FILE\nfiles: {directory: packages}\n" : ""));
+		var panel = load(file, new AtomicReference<>());
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(panel.stagedReplace.isSelected());
+			if (fileRoute)
+				assertTrue(SwingUtilities.isDescendingFrom(panel.stagedReplace, panel.importSettings));
+			panel.stagedReplace.doClick(0);
+			assertTrue(panel.verify.isSelected());
+			assertFalse(panel.verify.isEnabled());
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		var config = io.read(file).configuration();
+		assertEquals(TransferJobConfiguration.TargetPreparation.STAGED_REPLACE, config.targetPreparation());
+		assertTrue(config.verify());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void insertMethodRoundTripsForDirectAndFileJobsWithoutChangingOtherSettings(boolean fileRoute) throws Exception {
+		var file = Files.writeString(directory.resolve("insert-method.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\nchunkSize: 123\n"
+						+ (fileRoute ? "dataMode: FILE\nfiles: {directory: packages, format: CSV}\n" : ""));
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO, panel.insertMethod.getSelectedItem());
+			if (fileRoute)
+				assertTrue(SwingUtilities.isDescendingFrom(panel.insertMethod, panel.importSettings));
+			panel.insertMethod.setSelectedItem(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH);
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		var result = io.read(file).configuration();
+		assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH, result.effectiveInsertMethod());
+		assertEquals(123, result.chunkSize());
+		assertEquals(java.util.List.of("ITEMS"), result.tables());
+		var reopened = load(file, new AtomicReference<>());
+		SwingUtilities.invokeAndWait(() -> assertEquals(com.sqlapp.jdbc.bulk.BulkInsertMethod.JDBC_BATCH,
+				reopened.insertMethod.getSelectedItem()));
+	}
+
+	@TempDir
+	Path directory;
+	private final TransferJobConfigurationIO io = new TransferJobConfigurationIO();
+
+	@Test
+	void editsFileEncodingAndHeaderModeOfflineAndRejectsInvalidEncodingWithoutWriting() throws Exception {
+		var file = Files.writeString(directory.resolve("file-options.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: REQUIRE_EXISTING\ndataMode: FILE\nfiles: {directory: packages, format: TSV, nullValue: __NULL__}\n");
+		var original = Files.readString(file);
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.fileOptions.isVisible());
+			assertFalse(panel.importSettings.isVisible());
+			assertTrue(panel.editMapping.isEnabled());
+			assertTrue(SwingUtilities.isDescendingFrom(panel.mappingFile, panel.importSettings));
+			panel.showImportSettings.doClick(0);
+			assertTrue(panel.importSettings.isVisible());
+			assertEquals("UTF-8", panel.fileOptions.encoding.getSelectedItem());
+			panel.fileOptions.encoding.getEditor().setItem("invalid-encoding");
+			panel.save.doClick(0);
+			assertFalse(panel.isBusy());
+			assertTrue(panel.status.getText().contains("character encoding"));
+		});
+		assertNull(saved.get());
+		assertEquals(original, Files.readString(file));
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			panel.fileOptions.encoding.getEditor().setItem("windows-31j");
+			panel.fileOptions.headerMode.setSelectedItem(TransferJobConfiguration.HeaderMode.SKIP);
+			onIdle(panel, done);
+			panel.save.doClick(0);
+			assertFalse(panel.fileOptions.encoding.isEnabled());
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertEquals("windows-31j", io.read(file).configuration().files().encoding());
+		assertEquals(TransferJobConfiguration.HeaderMode.SKIP, io.read(file).configuration().files().headerMode());
+		var reopened = load(file, new AtomicReference<>());
+		SwingUtilities.invokeAndWait(() -> assertEquals(TransferJobConfiguration.HeaderMode.SKIP,
+				reopened.fileOptions.headerMode.getSelectedItem()));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "JDBC_DIRECT", "SCHEMA_ONLY", "FILE" })
+	void editsTableSelectionOnlyInMemoryUntilSaveAndPreservesOtherSettings(String route) throws Exception {
+		String options = route.equals("FILE")
+				? "schemaMode: CREATE_MISSING\nmappingFile: names.yaml\nfiles: {directory: packages, nullValue: __NULL__, unsupportedTemporalPolicy: ERROR}\n"
+				: route.equals("SCHEMA_ONLY")
+						? "schemaMode: APPLY_DIFFERENCES\nallowDestructiveSchemaChanges: true\nmappingFile: names.yaml\n"
+						: "schemaMode: CREATE_MISSING_WITH_IDENTITY\ngeneratedKeyColumn: ROW_ID\nmappingFile: names.yaml\n";
+		var file = Files.writeString(directory.resolve("tables.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [PUBLIC.OLD]\nsourceSchema: PUBLIC\ntargetSchema: ARCHIVE\nchunkSize: 123\ncompatibilityPolicy: ERROR\ndataMode: "
+						+ route + "\n" + options);
+		String bytes = Files.readString(file);
+		var original = io.read(file).configuration();
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.editTables.isEnabled());
+			panel.updateSelectedTables(java.util.List.of("PUBLIC.PARENTS", "PUBLIC.CHILDREN"));
+			assertTrue(panel.tableCount.getText().contains("not saved"));
+			assertThrows(IllegalArgumentException.class, () -> panel.updateSelectedTables(java.util.List.of()));
+		});
+		assertEquals(bytes, Files.readString(file));
+		SwingUtilities.invokeAndWait(() -> {
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		var updated = io.read(file).configuration();
+		assertEquals(java.util.List.of("PUBLIC.PARENTS", "PUBLIC.CHILDREN"), updated.tables());
+		assertEquals(original.source(), updated.source());
+		assertEquals(original.target(), updated.target());
+		assertEquals(original.schemaMode(), updated.schemaMode());
+		assertEquals(original.sourceSchema(), updated.sourceSchema());
+		assertEquals(original.targetSchema(), updated.targetSchema());
+		assertEquals(original.mappingFile(), updated.mappingFile());
+		assertEquals(original.chunkSize(), updated.chunkSize());
+		assertEquals(original.verify(), updated.verify());
+		assertEquals(original.dataMode(), updated.dataMode());
+		assertEquals(original.files(), updated.files());
+		assertEquals(original.compatibilityPolicy(), updated.compatibilityPolicy());
+		assertEquals(original.allowDestructiveSchemaChanges(), updated.allowDestructiveSchemaChanges());
+		assertEquals(original.generatedKeyColumn(), updated.generatedKeyColumn());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "JDBC_DIRECT", "SCHEMA_ONLY", "FILE" })
+	void generatedKeyColumnCanBeEditedInEveryTransport(String route) throws Exception {
+		var file = Files.writeString(directory.resolve("custom-key.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n"
+						+ "generatedKeyColumn: SQLAPP_ROW_ID\ndataMode: " + route + "\n"
+						+ (route.equals("FILE") ? "files: {directory: packages}\n" : ""));
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertEquals("SQLAPP_ROW_ID", panel.generatedKeyColumn.getText());
+			assertTrue(panel.generatedKeyColumn.isEnabled());
+			panel.generatedKeyColumn.setText("移行ID");
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		assertEquals("移行ID", io.read(file).configuration().generatedKeyColumn());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void differenceSettingsRoundTripExplicitPermissionOrClearItWhenDifferencesAreDisabled(boolean keepDifferences)
+			throws Exception {
+		var file = Files.writeString(directory.resolve("difference.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\n"
+						+ "dataMode: SCHEMA_ONLY\nschemaMode: APPLY_DIFFERENCES\nallowDestructiveSchemaChanges: true\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.applyDifferences.isSelected());
+			assertTrue(panel.allowDestructive.isSelected());
+			assertTrue(panel.createMissing.isSelected());
+			assertTrue(panel.allowDestructive.isVisible());
+			if (!keepDifferences) {
+				panel.applyDifferences.doClick(0);
+				assertFalse(panel.allowDestructive.isSelected());
+			}
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		var configuration = io.read(file).configuration();
+		assertEquals(keepDifferences ? TransferJobConfiguration.SchemaMode.APPLY_DIFFERENCES
+				: TransferJobConfiguration.SchemaMode.CREATE_MISSING, configuration.schemaMode());
+		assertEquals(keepDifferences, configuration.allowDestructiveSchemaChanges());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void schemaOnlySettingsRoundTripThroughDirectRouteWithoutEnablingDataOptions(boolean alreadySchemaOnly)
+			throws Exception {
+		var file = Files.writeString(directory.resolve("schema.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [NO_KEY]\nschemaMode: CREATE_MISSING\ndataMode: "
+						+ (alreadySchemaOnly ? "SCHEMA_ONLY" : "JDBC_DIRECT") + "\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			if (!alreadySchemaOnly)
+				panel.schemaOnly.doClick(0);
+			assertTrue(panel.schemaOnly.isSelected());
+			assertFalse(panel.verify.isEnabled());
+			assertFalse(panel.createMissing.isEnabled());
+			assertFalse(panel.chunk.isEnabled());
+			panel.targetSchema.setText("ARCHIVE");
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		var actual = io.read(file).configuration();
+		assertEquals(TransferJobConfiguration.DataMode.SCHEMA_ONLY, actual.dataMode());
+		assertFalse(actual.verify());
+		assertEquals("ARCHIVE", actual.targetSchema());
+	}
+
+	private Path job() throws Exception {
+		return Files.writeString(directory.resolve("transfer.yaml"), """
+				formatVersion: 1
+				source: from
+				target: to
+				tables: [PUBLIC.ITEMS]
+				schemaMode: REQUIRE_EXISTING
+				sourceSchema: PUBLIC
+				mappingFile: maps/mapping.yaml
+				dataMode: FILE
+				files: {directory: packages, nullValue: __NULL__, unsupportedTemporalPolicy: ERROR}
+				""");
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void generatedTargetKeyOptionRoundTripsAndCanBeRemoved(boolean keepGeneratedKey) throws Exception {
+		var file = Files.writeString(directory.resolve("generated-key.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [NO_KEY]\nschemaMode: CREATE_MISSING_WITH_IDENTITY\n");
+		var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		var panel = load(file, saved);
+		var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.createMissing.isSelected());
+			assertTrue(panel.generatedKey.isSelected());
+			assertTrue(panel.generatedKey.isVisible());
+			assertEquals("ID", panel.generatedKeyColumn.getText());
+			if (!keepGeneratedKey)
+				panel.generatedKey.doClick(0);
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNotNull(saved.get());
+		assertEquals(
+				keepGeneratedKey ? TransferJobConfiguration.SchemaMode.CREATE_MISSING_WITH_IDENTITY
+						: TransferJobConfiguration.SchemaMode.CREATE_MISSING,
+				io.read(file).configuration().schemaMode());
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void nameMappingSavesRelativePathAndCanBeCleared(boolean schemaOnly) throws Exception {
+		var file = Files.writeString(directory.resolve("names.yaml"),
+				"formatVersion: 1\nsource: from\ntarget: to\ntables: [ITEMS]\ndataMode: "
+						+ (schemaOnly ? "SCHEMA_ONLY" : "JDBC_DIRECT") + "\nschemaMode: CREATE_MISSING\n");
+		for (String mapping : java.util.List.of("maps/名前.yaml", "")) {
+			var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+			var panel = load(file, saved);
+			var done = new CountDownLatch(1);
+			SwingUtilities.invokeAndWait(() -> {
+				assertTrue(panel.mappingFile.isShowing() || panel.mappingFile.getParent().isVisible());
+				assertNotNull(panel.mappingFile.getTransferHandler());
+				assertTrue(panel.editMapping.isEnabled());
+				panel.mappingFile.setText(mapping);
+				onIdle(panel, done);
+				panel.save.doClick(0);
+			});
+			assertTrue(done.await(5, TimeUnit.SECONDS));
+			assertNotNull(saved.get());
+			assertEquals(mapping.isEmpty() ? null : mapping, io.read(file).configuration().mappingFile());
+		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(booleans = { false, true })
+	void savesEditableSettingsAndPreservesSelectionsRelativePathsAndAdvancedOptions(boolean fileTransport)
+			throws Exception {
+		final var file = job();
+		if (!fileTransport)
+			Files.writeString(file, Files.readString(file).replace(
+					"dataMode: FILE\nfiles: {directory: packages, nullValue: __NULL__, unsupportedTemporalPolicy: ERROR}\n",
+					"dataMode: JDBC_DIRECT\n"));
+		final var original = io.read(file);
+		final var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		final var panel = load(file, saved);
+		final var finished = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			assertTrue(panel.verify.isSelected());
+			assertFalse(panel.strict.isSelected());
+			panel.targetSchema.setText("Archive Schema");
+			panel.createMissing.setSelected(true);
+			panel.verify.setSelected(false);
+			panel.strict.setSelected(true);
+			panel.chunk.setValue(42);
+			onIdle(panel, finished);
+			panel.save.doClick(0);
+			assertTrue(panel.isBusy());
+			assertFalse(panel.cancel.isEnabled());
+		});
+		assertTrue(finished.await(5, TimeUnit.SECONDS));
+		final var actual = io.read(file);
+		assertNotNull(saved.get());
+		assertNotEquals(original.fingerprint(), actual.fingerprint());
+		final var config = actual.configuration();
+		assertEquals("Archive Schema", config.targetSchema());
+		assertEquals(42, config.chunkSize());
+		assertFalse(config.verify());
+		assertEquals(TransferJobConfiguration.SchemaMode.CREATE_MISSING, config.schemaMode());
+		assertEquals(TransferJobConfiguration.CompatibilityPolicy.ERROR, config.compatibilityPolicy());
+		assertEquals(original.configuration().files(), config.files());
+		assertEquals(original.configuration().tables(), config.tables());
+		assertEquals(original.configuration().sourceSchema(), config.sourceSchema());
+		assertEquals(original.mappingFile(), actual.mappingFile());
+		assertEquals(original.filesDirectory(), actual.filesDirectory());
+		assertEquals("from", config.source());
+		assertEquals("to", config.target());
+	}
+
+	@Test
+	void externalChangeIsNotOverwrittenAndDoesNotPublishSuccessfulSave() throws Exception {
+		final var file = job();
+		final var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		final var panel = load(file, saved);
+		final String external = Files.readString(file) + "# changed externally\n";
+		Files.writeString(file, external);
+		final var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			panel.targetSchema.setText("OTHER");
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNull(saved.get());
+		assertEquals(external, Files.readString(file));
+		SwingUtilities.invokeAndWait(
+				() -> assertTrue(panel.status.getText().contains("changed outside"), panel.status.getText()));
+	}
+
+	@Test
+	void invalidChunkInputCannotWriteOrPublishSettings() throws Exception {
+		final var file = job();
+		final String original = Files.readString(file);
+		final var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		final var panel = load(file, saved);
+		SwingUtilities.invokeAndWait(() -> {
+			((JSpinner.DefaultEditor) panel.chunk.getEditor()).getTextField().setText("0");
+			panel.save.doClick(0);
+			assertFalse(panel.isBusy());
+			assertTrue(panel.status.getText().contains("Check chunk size"));
+		});
+		assertNull(saved.get());
+		assertEquals(original, Files.readString(file));
+	}
+
+	@Test
+	void completedPackageAndWrongRouteCannotBeEdited() throws Exception {
+		final var file = job();
+		final var done = new CountDownLatch(1);
+		final var ref = new AtomicReference<TransferJobSettingsPanel>();
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new TransferJobSettingsPanel(TransferJobConfiguration.DataMode.JDBC_DIRECT,
+					value -> fail("Wrong route"), () -> {
+					});
+			ref.set(panel);
+			onIdle(panel, done);
+			panel.load(file);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(ref.get().save.isEnabled());
+			assertTrue(ref.get().status.getText().contains("route"));
+		});
+		Files.writeString(directory.resolve("manifest.json"), "{}");
+		Files.writeString(directory.resolve("source-schema.xml"), "<schema/>");
+		final var blocked = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new TransferJobSettingsPanel(TransferJobConfiguration.DataMode.FILE,
+					value -> fail("Package"), () -> {
+					});
+			ref.set(panel);
+			onIdle(panel, blocked);
+			panel.load(file);
+		});
+		assertTrue(blocked.await(5, TimeUnit.SECONDS));
+		SwingUtilities.invokeAndWait(() -> {
+			assertFalse(ref.get().save.isEnabled());
+			assertTrue(ref.get().status.getText().contains("Completed packages"));
+		});
+	}
+
+	@Test
+	void packageCreatedAfterLoadAlsoPreventsSave() throws Exception {
+		final var file = job();
+		final String original = Files.readString(file);
+		final var saved = new AtomicReference<TransferJobConfigurationIO.Snapshot>();
+		final var panel = load(file, saved);
+		Files.writeString(directory.resolve("manifest.json"), "{}");
+		Files.writeString(directory.resolve("source-schema.xml"), "<schema/>");
+		final var done = new CountDownLatch(1);
+		SwingUtilities.invokeAndWait(() -> {
+			onIdle(panel, done);
+			panel.save.doClick(0);
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		assertNull(saved.get());
+		assertEquals(original, Files.readString(file));
+	}
+
+	private TransferJobSettingsPanel load(Path file, AtomicReference<TransferJobConfigurationIO.Snapshot> saved)
+			throws Exception {
+		final var done = new CountDownLatch(1);
+		final var ref = new AtomicReference<TransferJobSettingsPanel>();
+		final var actualMode = io.read(file).configuration().dataMode();
+		final var mode = actualMode == TransferJobConfiguration.DataMode.SCHEMA_ONLY
+				? TransferJobConfiguration.DataMode.JDBC_DIRECT
+				: actualMode;
+		SwingUtilities.invokeAndWait(() -> {
+			final var panel = new TransferJobSettingsPanel(mode, saved::set, () -> {
+			});
+			ref.set(panel);
+			onIdle(panel, done);
+			panel.load(file);
+			assertTrue(panel.isBusy());
+		});
+		assertTrue(done.await(5, TimeUnit.SECONDS));
+		return ref.get();
+	}
+
+	private static void onIdle(TransferJobSettingsPanel panel, CountDownLatch done) {
+		panel.cancel.addPropertyChangeListener("enabled", event -> {
+			if (Boolean.TRUE.equals(event.getNewValue()))
+				done.countDown();
+		});
+	}
+}

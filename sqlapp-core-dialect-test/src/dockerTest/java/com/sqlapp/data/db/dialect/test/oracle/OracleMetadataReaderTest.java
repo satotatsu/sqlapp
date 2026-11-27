@@ -36,6 +36,525 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** Oracle Database integration coverage for the metadata reader tree. */
 class OracleMetadataReaderTest {
+	private void assertCapturedSchedulerScript(com.sqlapp.data.schemas.Event source,
+			com.sqlapp.data.schemas.Event restored) throws Exception {
+		assertEquals("AVAILABLE", restored.getSpecifics().get("oracle.scheduler.definitionStatus"));
+		assertEquals(source.getDefinition(), restored.getDefinition());
+		assertTrue(restored.getDefinition().isEmpty(), "Native PROCOBJ script is not a complete Event definition");
+		String ddl = restored.getSpecifics().get("oracle.scheduler.definition");
+		assertEquals(source.getSpecifics().get("oracle.scheduler.definition"), ddl);
+		assertTrue(ddl.toUpperCase(Locale.ROOT).contains("CREATE_JOB"));
+		assertTrue(ddl.contains(restored.getName()));
+		assertEquals("SOURCE_OWNER", restored.getSpecifics().get("oracle.scheduler.definitionContext"));
+		var review = com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview
+				.collect(java.util.List.of(restored));
+		assertEquals(restored.asXml(), review.jobs().getFirst().xml());
+	}
+
+	@Test
+	void disabledSchedulerDependenciesAndDefaultsSurviveXml() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			try (Connection admin = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+					Statement statement = admin.createStatement()) {
+				statement.execute("GRANT CREATE JOB TO " + ORACLE.getUsername().toUpperCase(Locale.ROOT));
+			}
+			String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12)
+					.toUpperCase(Locale.ROOT);
+			String program = "SCHED_P_" + suffix, schedule = "SCHED_S_" + suffix;
+			String first = "SCHED_J1_" + suffix, second = "SCHED_J2_" + suffix;
+			String defaultValue = " default\n'quoted' ";
+			var created = new java.util.ArrayList<String[]>();
+			var droppedForRestore = new java.util.HashSet<String>();
+			Throwable primary = null;
+			try {
+				try (var statement = connection.prepareCall(
+						"BEGIN DBMS_SCHEDULER.CREATE_PROGRAM(program_name=>?, program_type=>'STORED_PROCEDURE', "
+								+ "program_action=>'SYS.DBMS_OUTPUT.PUT_LINE', number_of_arguments=>1, enabled=>FALSE); END;")) {
+					statement.setString(1, program);
+					statement.execute();
+					created.add(new String[] { "PROGRAM", program });
+				}
+				try (var statement = connection.prepareCall(
+						"BEGIN DBMS_SCHEDULER.DEFINE_PROGRAM_ARGUMENT(program_name=>?, argument_position=>1, "
+								+ "argument_name=>'TEXT_ARG', argument_type=>'VARCHAR2', default_value=>?); END;")) {
+					statement.setString(1, program);
+					statement.setString(2, defaultValue);
+					statement.execute();
+				}
+				try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.CREATE_SCHEDULE(schedule_name=>?, "
+						+ "start_date=>TO_TIMESTAMP_TZ('2050-01-01 10:00:00 Asia/Tokyo', 'YYYY-MM-DD HH24:MI:SS TZR'), repeat_interval=>'FREQ=DAILY'); END;")) {
+					statement.setString(1, schedule);
+					statement.execute();
+					created.add(new String[] { "SCHEDULE", schedule });
+				}
+				try (var statement = connection.prepareCall(
+						"BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, program_name=>?, schedule_name=>?, enabled=>FALSE, auto_drop=>FALSE); END;")) {
+					for (String name : java.util.List.of(first, second)) {
+						statement.setString(1, name);
+						statement.setString(2, program);
+						statement.setString(3, schedule);
+						statement.execute();
+						created.add(new String[] { "JOB", name });
+					}
+				}
+				try (var statement = connection.prepareCall(
+						"BEGIN DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE(job_name=>?, argument_position=>1, argument_value=>'override'); END;")) {
+					statement.setString(1, first);
+					statement.execute();
+				}
+				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				OracleTestEnvironment.assertExpectedDialect(dialect);
+				var reader = dialect.getCatalogReader().getSchemaReader().getEventReader();
+				reader.setSchemaName(ORACLE.getUsername().toUpperCase(Locale.ROOT));
+				var jobs = reader.getAllFull(connection).stream()
+						.filter(job -> first.equals(job.getName()) || second.equals(job.getName())).toList();
+				assertEquals(2, jobs.size());
+				var review = com.sqlapp.data.db.dialect.oracle.util.OracleSchedulerScriptReview.collect(jobs);
+				assertEquals(4, review.scripts().size());
+				assertEquals(2, review.jobs().size());
+				for (String[] object : created.reversed()) {
+					try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.DROP_" + object[0] + "("
+							+ object[0].toLowerCase(Locale.ROOT) + "_name=>?, force=>FALSE); END;")) {
+						statement.setString(1, object[1]);
+						statement.execute();
+						droppedForRestore.add(object[1]);
+					}
+				}
+				boolean createDependencies = true;
+				for (var source : jobs) {
+					com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
+							.readXml(new java.io.StringReader(source.asXml()));
+					assertCapturedSchedulerScript(source, job);
+					org.junit.jupiter.api.Assertions.assertFalse(job.isEnable());
+					assertEquals("AVAILABLE", job.getSpecifics().get("oracle.scheduler.program.status"));
+					assertEquals("AVAILABLE", job.getSpecifics().get("oracle.scheduler.schedule.status"));
+					assertEquals("AVAILABLE", job.getSpecifics().get("oracle.scheduler.program.definitionStatus"));
+					assertEquals("AVAILABLE", job.getSpecifics().get("oracle.scheduler.schedule.definitionStatus"));
+					assertTrue(job.getSpecifics().get("oracle.scheduler.program.definition").toUpperCase(Locale.ROOT)
+							.contains("CREATE_PROGRAM"));
+					assertTrue(job.getSpecifics().get("oracle.scheduler.schedule.definition").toUpperCase(Locale.ROOT)
+							.contains("CREATE_SCHEDULE"));
+					assertEquals("1", job.getSpecifics().get("oracle.scheduler.program.argumentCount"));
+					assertEquals(defaultValue,
+							job.getSpecifics().get("oracle.scheduler.program.argument.1.defaultValue"));
+					assertEquals("TEXT_ARG", job.getSpecifics().get("oracle.scheduler.program.argument.1.name"));
+					assertEquals("FREQ=DAILY", job.getSpecifics().get("oracle.scheduler.schedule.REPEAT_INTERVAL"));
+					assertTrue(job.getSpecifics().get("oracle.scheduler.schedule.START_DATE_TEXT").contains("+09:00"));
+					if (first.equals(job.getName()))
+						assertEquals("override", job.getSpecifics().get("oracle.scheduler.argument.1.value"));
+					var result = createDependencies
+							? com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+									.restoreWithDependencies(connection, job)
+							: com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+									.restore(connection, job);
+					assertEquals(createDependencies, result.completedOperations().contains("CREATE_PROGRAM"));
+					assertEquals(createDependencies, result.completedOperations().contains("CREATE_SCHEDULE"));
+					if (createDependencies) {
+						droppedForRestore.remove(program);
+						droppedForRestore.remove(schedule);
+						createDependencies = false;
+					}
+					droppedForRestore.remove(job.getName());
+					assertEquals(first.equals(job.getName()), result.completedOperations().contains("SET_ARGUMENT_1"));
+					var restored = reader.getAllFull(connection).stream()
+							.filter(candidate -> job.getName().equals(candidate.getName())).findFirst().orElseThrow();
+					org.junit.jupiter.api.Assertions.assertFalse(restored.isEnable());
+					for (String field : java.util.List.of("PROGRAM_NAME", "SCHEDULE_NAME", "argumentCount",
+							"argument.1.value", "program.argument.1.defaultValue", "program.ENABLED",
+							"schedule.START_DATE_TEXT", "schedule.REPEAT_INTERVAL"))
+						assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+								restored.getSpecifics().get("oracle.scheduler." + field), field);
+				}
+				for (String name : java.util.List.of(first, second))
+					dropSchedulerFixture(connection, "JOB", name, droppedForRestore);
+				try (var statement = connection.prepareCall("""
+						BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, program_name=>?,
+						 start_date=>TO_TIMESTAMP_TZ('2050-01-01 10:00:00 Asia/Tokyo', 'YYYY-MM-DD HH24:MI:SS TZR'),
+						 repeat_interval=>'FREQ=DAILY', enabled=>FALSE, auto_drop=>FALSE); END;
+						""")) {
+					statement.setString(1, first);
+					statement.setString(2, program);
+					statement.execute();
+					droppedForRestore.remove(first);
+				}
+				try (var statement = connection.prepareCall("""
+						BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, schedule_name=>?,
+						 job_type=>'PLSQL_BLOCK', job_action=>'BEGIN NULL; END;',
+						 enabled=>FALSE, auto_drop=>FALSE); END;
+						""")) {
+					statement.setString(1, second);
+					statement.setString(2, schedule);
+					statement.execute();
+					droppedForRestore.remove(second);
+				}
+				var mixed = reader.getAllFull(connection).stream()
+						.filter(job -> first.equals(job.getName()) || second.equals(job.getName())).toList();
+				assertEquals(2, mixed.size());
+				for (var source : mixed)
+					dropSchedulerFixture(connection, "JOB", source.getName(), droppedForRestore);
+				dropSchedulerFixture(connection, "PROGRAM", program, droppedForRestore);
+				dropSchedulerFixture(connection, "SCHEDULE", schedule, droppedForRestore);
+				for (var source : mixed) {
+					com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
+							.readXml(new java.io.StringReader(source.asXml()));
+					boolean namedProgram = first.equals(job.getName());
+					var result = com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+							.restoreWithDependencies(connection, job);
+					assertEquals(namedProgram, result.completedOperations().contains("CREATE_PROGRAM"));
+					assertEquals(!namedProgram, result.completedOperations().contains("CREATE_SCHEDULE"));
+					droppedForRestore.remove(job.getName());
+					droppedForRestore.remove(namedProgram ? program : schedule);
+					var restored = reader.getAllFull(connection).stream()
+							.filter(candidate -> job.getName().equals(candidate.getName())).findFirst().orElseThrow();
+					org.junit.jupiter.api.Assertions.assertFalse(restored.isEnable());
+					assertEquals(job.getStatement(), restored.getStatement());
+					for (String field : java.util.List.of("PROGRAM_NAME", "SCHEDULE_NAME", "START_DATE_TEXT",
+							"REPEAT_INTERVAL", "program.argument.1.defaultValue"))
+						assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+								restored.getSpecifics().get("oracle.scheduler." + field), field);
+				}
+			} catch (Exception | AssertionError failure) {
+				primary = failure;
+				throw failure;
+			} finally {
+				SQLException cleanup = null;
+				for (String[] object : created.reversed()) {
+					try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.DROP_" + object[0] + "("
+							+ object[0].toLowerCase(Locale.ROOT) + "_name=>?, force=>FALSE); END;")) {
+						statement.setString(1, object[1]);
+						statement.execute();
+					} catch (SQLException failure) {
+						if (droppedForRestore.contains(object[1])
+								&& java.util.Set.of(27475, 27476).contains(failure.getErrorCode()))
+							continue;
+						if (cleanup == null)
+							cleanup = failure;
+						else
+							cleanup.addSuppressed(failure);
+					}
+				}
+				if (cleanup != null) {
+					if (primary != null)
+						primary.addSuppressed(cleanup);
+					else
+						throw cleanup;
+				}
+			}
+		}
+	}
+
+	private static void dropSchedulerFixture(Connection connection, String kind, String name,
+			java.util.Set<String> dropped) throws SQLException {
+		try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.DROP_" + kind + "("
+				+ kind.toLowerCase(Locale.ROOT) + "_name=>?, force=>FALSE); END;")) {
+			statement.setString(1, name);
+			statement.execute();
+			dropped.add(name);
+		}
+	}
+
+	@Test
+	void disabledSchedulerJobArgumentsSurviveXml() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12)
+					.toUpperCase(Locale.ROOT);
+			String jobName = "SCHED_ARG_" + suffix, procedureName = "SCHED_PROC_" + suffix;
+			try (Connection admin = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+					Statement statement = admin.createStatement()) {
+				statement.execute(
+						"GRANT CREATE JOB, CREATE PROCEDURE TO " + ORACLE.getUsername().toUpperCase(Locale.ROOT));
+			}
+			boolean procedureCreated = false, jobCreated = false;
+			boolean restorationAttempted = false;
+			Throwable primary = null;
+			try {
+				try (Statement statement = connection.createStatement()) {
+					statement.execute("CREATE PROCEDURE " + procedureName
+							+ "(p_text VARCHAR2, p_number NUMBER) AS BEGIN NULL; END;");
+					procedureCreated = true;
+				}
+				try (var statement = connection
+						.prepareCall("BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, job_type=>'STORED_PROCEDURE', "
+								+ "job_action=>?, number_of_arguments=>2, enabled=>FALSE, auto_drop=>FALSE); END;")) {
+					statement.setString(1, jobName);
+					statement.setString(2, procedureName);
+					statement.execute();
+					jobCreated = true;
+				}
+				String text = "  first\n'quoted'; second  ";
+				try (var statement = connection.prepareCall(
+						"BEGIN DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE(job_name=>?, argument_position=>?, argument_value=>?); END;")) {
+					for (int position : new int[] { 1, 2 }) {
+						statement.setString(1, jobName);
+						statement.setInt(2, position);
+						statement.setString(3, position == 1 ? text : "42");
+						statement.execute();
+					}
+				}
+				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				OracleTestEnvironment.assertExpectedDialect(dialect);
+				var reader = dialect.getCatalogReader().getSchemaReader().getEventReader();
+				reader.setSchemaName(ORACLE.getUsername().toUpperCase(Locale.ROOT));
+				reader.setObjectName(jobName);
+				var jobs = reader.getAllFull(connection);
+				assertEquals(1, jobs.size());
+				com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(jobs.get(0).asXml()));
+				assertCapturedSchedulerScript(jobs.get(0), job);
+				org.junit.jupiter.api.Assertions.assertFalse(job.isEnable());
+				assertEquals("2", job.getSpecifics().get("oracle.scheduler.NUMBER_OF_ARGUMENTS"));
+				assertEquals("2", job.getSpecifics().get("oracle.scheduler.argumentCount"));
+				assertEquals(text, job.getSpecifics().get("oracle.scheduler.argument.1.value"));
+				assertEquals("42", job.getSpecifics().get("oracle.scheduler.argument.2.value"));
+				assertEquals("TEXT", job.getSpecifics().get("oracle.scheduler.argument.1.representation"));
+				assertEquals("TEXT", job.getSpecifics().get("oracle.scheduler.argument.2.representation"));
+				try (var statement = connection
+						.prepareStatement("SELECT CASE WHEN A.ANYDATA_VALUE IS NULL THEN 'FALSE' ELSE 'TRUE' END "
+								+ "FROM ALL_SCHEDULER_JOB_ARGS A WHERE A.OWNER=? AND A.JOB_NAME=? AND A.ARGUMENT_POSITION=1")) {
+					statement.setString(1, ORACLE.getUsername().toUpperCase(Locale.ROOT));
+					statement.setString(2, jobName);
+					try (var result = statement.executeQuery()) {
+						assertTrue(result.next());
+						assertEquals(result.getString(1),
+								job.getSpecifics().get("oracle.scheduler.argument.1.hasAnydataValue"));
+					}
+				}
+				try (var statement = connection
+						.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
+					statement.setString(1, jobName);
+					statement.execute();
+					jobCreated = false;
+				}
+				restorationAttempted = true;
+				var result = com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+						.restore(connection, job);
+				assertEquals(java.util.List.of("CREATE_JOB", "SET_NLS_ENV", "SET_ARGUMENT_1", "SET_ARGUMENT_2",
+						"VERIFY_ARGUMENTS", "VERIFY_DISABLED"), result.completedOperations());
+				var recreated = reader.getAllFull(connection);
+				assertEquals(1, recreated.size());
+				org.junit.jupiter.api.Assertions.assertFalse(recreated.getFirst().isEnable());
+				assertEquals(job.getStatement(), recreated.getFirst().getStatement());
+				for (String field : java.util.List.of("JOB_TYPE", "NUMBER_OF_ARGUMENTS", "argumentCount", "NLS_ENV",
+						"argument.1.value", "argument.2.value", "argument.1.representation",
+						"argument.2.representation"))
+					assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+							recreated.getFirst().getSpecifics().get("oracle.scheduler." + field), field);
+				try (var statement = connection.prepareCall("BEGIN DBMS_SCHEDULER.SET_JOB_ANYDATA_VALUE(job_name=>?, "
+						+ "argument_position=>2, argument_value=>SYS.ANYDATA.ConvertNumber(42)); END;")) {
+					statement.setString(1, jobName);
+					statement.execute();
+				}
+				var opaque = reader.getAllFull(connection).getFirst();
+				assertEquals("UNSUPPORTED", opaque.getSpecifics().get("oracle.scheduler.argument.2.representation"));
+				org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+						() -> com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+								.restore(connection, opaque));
+			} catch (Exception | AssertionError failure) {
+				primary = failure;
+				throw failure;
+			} finally {
+				try {
+					if (jobCreated || restorationAttempted)
+						try (var statement = connection
+								.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
+							statement.setString(1, jobName);
+							statement.execute();
+						} catch (SQLException cleanup) {
+							if (!(restorationAttempted && cleanup.getErrorCode() == 27475)) {
+								if (primary == null)
+									throw cleanup;
+								primary.addSuppressed(cleanup);
+							}
+						}
+				} finally {
+					if (procedureCreated)
+						try (Statement statement = connection.createStatement()) {
+							statement.execute("DROP PROCEDURE " + procedureName);
+						}
+				}
+			}
+		}
+	}
+
+	@Test
+	void disabledSchedulerJobsRetainCalendarAndTimezoneThroughXml() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			try (Connection admin = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+					Statement statement = admin.createStatement()) {
+				statement.execute("GRANT CREATE JOB TO " + ORACLE.getUsername().toUpperCase(Locale.ROOT));
+			}
+			String name = "SCHED_INV_"
+					+ java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
+			boolean created = false;
+			boolean restorationAttempted = false;
+			Throwable primary = null;
+			try {
+				try (var statement = connection
+						.prepareCall("BEGIN DBMS_SCHEDULER.CREATE_JOB(job_name=>?, job_type=>'PLSQL_BLOCK', "
+								+ "job_action=>'BEGIN NULL; END;', start_date=>TO_TIMESTAMP_TZ('2050-01-01 10:00:00 Asia/Tokyo', 'YYYY-MM-DD HH24:MI:SS TZR'), "
+								+ "repeat_interval=>'FREQ=DAILY;BYHOUR=10', enabled=>FALSE, auto_drop=>FALSE); END;")) {
+					statement.setString(1, name);
+					statement.execute();
+					created = true;
+				}
+				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				OracleTestEnvironment.assertExpectedDialect(dialect);
+				var reader = dialect.getCatalogReader().getSchemaReader().getEventReader();
+				reader.setSchemaName(ORACLE.getUsername().toUpperCase(Locale.ROOT));
+				reader.setObjectName(name);
+				var jobs = reader.getAllFull(connection);
+				assertEquals(1, jobs.size());
+				com.sqlapp.data.schemas.Event job = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(jobs.get(0).asXml()));
+				assertCapturedSchedulerScript(jobs.get(0), job);
+				assertEquals(name, job.getName());
+				assertEquals("0", job.getSpecifics().get("oracle.scheduler.argumentCount"));
+				org.junit.jupiter.api.Assertions.assertFalse(job.isEnable());
+				assertEquals("PLSQL_BLOCK", job.getSpecifics().get("oracle.scheduler.JOB_TYPE"));
+				assertEquals("FREQ=DAILY;BYHOUR=10", job.getSpecifics().get("oracle.scheduler.REPEAT_INTERVAL"));
+				assertTrue(job.getSpecifics().get("oracle.scheduler.START_DATE_TEXT").toUpperCase(Locale.ROOT)
+						.contains("ASIA/TOKYO"));
+				assertTrue(job.getSpecifics().get("oracle.scheduler.START_DATE_TEXT").contains("+09:00"));
+				org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+						() -> dialect.createSqlFactoryRegistry().createSql(job, com.sqlapp.data.db.sql.SqlType.CREATE));
+				try (var statement = connection
+						.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
+					statement.setString(1, name);
+					statement.execute();
+					created = false;
+				}
+				restorationAttempted = true;
+				var result = com.sqlapp.data.db.dialect.oracle.util.OracleDisabledSchedulerJobRestorer
+						.restore(connection, job);
+				assertEquals(java.util.List.of("CREATE_JOB", "SET_NLS_ENV", "VERIFY_DISABLED"),
+						result.completedOperations());
+				var recreated = reader.getAllFull(connection);
+				assertEquals(1, recreated.size());
+				org.junit.jupiter.api.Assertions.assertFalse(recreated.getFirst().isEnable());
+				assertEquals(job.getStatement(), recreated.getFirst().getStatement());
+				for (String field : java.util.List.of("JOB_TYPE", "NUMBER_OF_ARGUMENTS", "argumentCount",
+						"START_DATE_TEXT", "END_DATE_TEXT", "REPEAT_INTERVAL", "JOB_CLASS", "AUTO_DROP", "NLS_ENV"))
+					assertEquals(job.getSpecifics().get("oracle.scheduler." + field),
+							recreated.getFirst().getSpecifics().get("oracle.scheduler." + field), field);
+			} catch (Exception | AssertionError failure) {
+				primary = failure;
+				throw failure;
+			} finally {
+				if (created || restorationAttempted)
+					try (var statement = connection
+							.prepareCall("BEGIN DBMS_SCHEDULER.DROP_JOB(job_name=>?, force=>FALSE); END;")) {
+						statement.setString(1, name);
+						statement.execute();
+					} catch (SQLException cleanup) {
+						// A rejected/failed restoration may not have created the target.
+						if (!(restorationAttempted && cleanup.getErrorCode() == 27475)) {
+							if (primary == null)
+								throw cleanup;
+							primary.addSuppressed(cleanup);
+						}
+					}
+			}
+		}
+	}
+
+	@Test
+	void externalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		verifyExternalLocations(0);
+	}
+
+	@Test
+	void partitionedExternalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		verifyExternalLocations(1);
+	}
+
+	@Test
+	void subpartitionedExternalLocationsSurviveMetadataXmlAndRecreation() throws Exception {
+		verifyExternalLocations(2);
+	}
+
+	private void verifyExternalLocations(int partitionMode) throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			grantDirectoryAccess();
+			String name = "EXT_MULTI_"
+					+ java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
+			String schemaName = ORACLE.getUsername().toUpperCase(Locale.ROOT);
+			boolean created = false;
+			try {
+				try (Statement statement = connection.createStatement()) {
+					String locations = partitionMode == 0
+							? "LOCATION ('a,''quoted.csv', DATA_PUMP_DIR:'b.csv')) REJECT LIMIT 10"
+							: ") REJECT LIMIT 10 PARTITION BY RANGE(ID) " + (partitionMode == 1
+									? "(PARTITION P1 VALUES LESS THAN(100) LOCATION ('a,''quoted.csv'), PARTITION P2 VALUES LESS THAN(MAXVALUE) LOCATION ('b.csv'))"
+									: "SUBPARTITION BY LIST(BUCKET) (PARTITION P1 VALUES LESS THAN(MAXVALUE) "
+											+ "(SUBPARTITION S1 VALUES(1) LOCATION ('a,''quoted.csv'), SUBPARTITION S2 VALUES(DEFAULT) LOCATION ('b.csv')))");
+					statement.execute("CREATE TABLE " + name
+							+ " (ID NUMBER, BUCKET NUMBER) ORGANIZATION EXTERNAL (TYPE ORACLE_LOADER "
+							+ "DEFAULT DIRECTORY DATA_PUMP_DIR ACCESS PARAMETERS (RECORDS DELIMITED BY NEWLINE) "
+							+ locations);
+					created = true;
+				}
+				Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				var externalReader = schemaReader.getExternalTableReader();
+				externalReader.setSchemaName(schemaName);
+				var external = externalReader.getAll(connection).stream().filter(t -> name.equals(t.getName()))
+						.findFirst().orElseThrow();
+				com.sqlapp.data.schemas.ExternalTable externalXml = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(external.asXml()));
+				assertEquals("2", externalXml.getSpecifics().get("oracle.external.locationCount"));
+				assertEquals("a,'quoted.csv", externalXml.getSpecifics().get("oracle.external.location.0.file"));
+				assertEquals("b.csv", externalXml.getSpecifics().get("oracle.external.location.1.file"));
+				if (partitionMode > 0) {
+					assertEquals("P1", externalXml.getSpecifics().get("oracle.external.location.0.partition"));
+					assertEquals(partitionMode == 1 ? "P2" : "P1",
+							externalXml.getSpecifics().get("oracle.external.location.1.partition"));
+				}
+				if (partitionMode == 2) {
+					assertEquals("S1", externalXml.getSpecifics().get("oracle.external.location.0.subpartition"));
+					assertEquals("S2", externalXml.getSpecifics().get("oracle.external.location.1.subpartition"));
+				}
+				var tableReader = schemaReader.getTableReader();
+				tableReader.setSchemaName(schemaName);
+				tableReader.setObjectName(name);
+				Table table = tableReader.getAllFull(connection).get(0);
+				assertEquals(name, table.getName());
+				assertEquals("true", table.getSpecifics().get("oracle.table.external"));
+				Table restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(table.asXml()));
+				var registry = dialect.createSqlFactoryRegistry();
+				var createOperations = registry.createSql(restored, com.sqlapp.data.db.sql.SqlType.CREATE);
+				try (Statement statement = connection.createStatement()) {
+					statement.execute("DROP TABLE " + name);
+					for (var operation : createOperations)
+						statement.execute(operation.getSqlText());
+					String locationView = partitionMode == 0 ? "ALL_EXTERNAL_LOCATIONS WHERE OWNER"
+							: partitionMode == 1 ? "ALL_XTERNAL_LOC_PARTITIONS WHERE OWNER"
+									: "ALL_XTERNAL_LOC_SUBPARTITIONS WHERE TABLE_OWNER";
+					try (var result = statement.executeQuery("SELECT COUNT(*) FROM " + locationView + "='" + schemaName
+							+ "' AND TABLE_NAME='" + name + "'")) {
+						assertTrue(result.next());
+						assertEquals(2, result.getInt(1));
+					}
+				}
+				var recreated = externalReader.getAll(connection).stream().filter(t -> name.equals(t.getName()))
+						.findFirst().orElseThrow();
+				assertEquals(externalXml.getSpecifics(), recreated.getSpecifics());
+			} finally {
+				if (created)
+					try (Statement statement = connection.createStatement()) {
+						drop(statement, "DROP TABLE " + name, 942);
+					}
+			}
+		}
+	}
+
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = ORACLE.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "FLOAT", "BINARY_FLOAT",
+					"BINARY_DOUBLE", "NUMBER(12,3)", "VARCHAR2(12)", "XMLTYPE");
+		}
+	}
+
 	private static final OracleContainer ORACLE = ReusableTestcontainers
 			.configure(new OracleContainer(OracleTestEnvironment.image()));
 
@@ -54,6 +573,74 @@ class OracleMetadataReaderTest {
 		try (Connection connection = ORACLE.createConnection("")) {
 			OracleMetadataAuditAssertions.verify(connection);
 			com.sqlapp.data.db.dialect.test.SequenceMetadataAuditAssertions.verify(connection, true);
+		}
+	}
+
+	@Test
+	void generatedRoutineArgumentsSurviveMetadataXmlAndRecreation() throws Exception {
+		try (Connection connection = ORACLE.createConnection("")) {
+			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			var registry = dialect.createSqlFactoryRegistry();
+			var procedure = new com.sqlapp.data.schemas.Procedure("ROUNDTRIP_ARGUMENTS");
+			procedure.setStatement("IS BEGIN RESULT := \"input value\"; STATE := STATE + 1; END;");
+			procedure.getArguments().add(new com.sqlapp.data.schemas.NamedArgument("input value")
+					.setDataType(DataType.INT).setDefaultValue("42"));
+			var output = new com.sqlapp.data.schemas.NamedArgument("RESULT").setDataType(DataType.INT);
+			output.setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Output);
+			procedure.getArguments().add(output);
+			var inout = new com.sqlapp.data.schemas.NamedArgument("STATE").setDataType(DataType.INT);
+			inout.setDirection(com.sqlapp.jdbc.sql.ParameterDirection.Inout);
+			procedure.getArguments().add(inout);
+			var function = new com.sqlapp.data.schemas.Function("ROUNDTRIP_DEFAULT");
+			function.getReturning().setDataType(DataType.INT);
+			function.getArguments().add(
+					new com.sqlapp.data.schemas.NamedArgument("N").setDataType(DataType.INT).setDefaultValue("1 + 2"));
+			function.setStatement("IS BEGIN RETURN N * 2; END;");
+			try (Statement sql = connection.createStatement()) {
+				for (var operation : registry.createSql(procedure, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				for (var operation : registry.createSql(function, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				var procedureReader = schemaReader.getProcedureReader();
+				procedureReader.setSchemaName(connection.getMetaData().getUserName().toUpperCase(Locale.ROOT));
+				procedureReader.setObjectName(procedure.getName());
+				var savedProcedure = procedureReader.getAllFull(connection).get(0);
+				assertEquals(3, savedProcedure.getArguments().size());
+				assertNotNull(savedProcedure.getDefinition());
+				com.sqlapp.data.schemas.Procedure restoredProcedure = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(savedProcedure.asXml()));
+				var functionReader = schemaReader.getFunctionReader();
+				functionReader.setSchemaName(savedProcedure.getSchemaName());
+				functionReader.setObjectName(function.getName());
+				var savedFunction = functionReader.getAllFull(connection).get(0);
+				assertNotNull(savedFunction.getDefinition());
+				com.sqlapp.data.schemas.Function restoredFunction = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(savedFunction.asXml()));
+				sql.execute("DROP PROCEDURE ROUNDTRIP_ARGUMENTS");
+				sql.execute("DROP FUNCTION ROUNDTRIP_DEFAULT");
+				for (var operation : registry.createSql(restoredProcedure, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				for (var operation : registry.createSql(restoredFunction, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				try (var call = connection.prepareCall("BEGIN ROUNDTRIP_ARGUMENTS(RESULT => ?, STATE => ?); END;")) {
+					call.registerOutParameter(1, java.sql.Types.NUMERIC);
+					call.setInt(2, 9);
+					call.registerOutParameter(2, java.sql.Types.NUMERIC);
+					call.execute();
+					assertEquals(42, call.getInt(1));
+					assertEquals(10, call.getInt(2));
+				}
+				try (var result = sql.executeQuery("SELECT ROUNDTRIP_DEFAULT() FROM DUAL")) {
+					assertTrue(result.next());
+					assertEquals(6, result.getInt(1));
+				}
+			} finally {
+				try (Statement sql = connection.createStatement()) {
+					drop(sql, "DROP PROCEDURE ROUNDTRIP_ARGUMENTS", 4043);
+					drop(sql, "DROP FUNCTION ROUNDTRIP_DEFAULT", 4043);
+				}
+			}
 		}
 	}
 
@@ -171,12 +758,13 @@ class OracleMetadataReaderTest {
 			assertNotNull(procedure);
 			assertEquals(1, procedure.getArguments().size());
 			assertEquals("P_PARENT_ID", procedure.getArguments().get(0).getName());
-			assertTrue(String.join("\n", procedure.getStatement()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
+			assertTrue(
+					String.join("\n", procedure.getDefinition()).toUpperCase(Locale.ROOT).contains("METADATA_CHILD"));
 			var function = schema.getFunctions().get("METADATA_FUNCTION");
 			assertNotNull(function);
 			assertEquals(1, function.getArguments().size());
 			assertEquals("P_AMOUNT", function.getArguments().get(0).getName());
-			assertTrue(String.join("\n", function.getStatement()).toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
+			assertTrue(String.join("\n", function.getDefinition()).toUpperCase(Locale.ROOT).contains("P_AMOUNT * 2"));
 			Trigger trigger = schema.getTriggers().get("METADATA_TRIGGER");
 			assertNotNull(trigger);
 			assertEquals("METADATA_CHILD", trigger.getTableName());
@@ -186,12 +774,100 @@ class OracleMetadataReaderTest {
 			assertNotNull(schema.getSynonyms().get("METADATA_PARENT_SYNONYM"));
 			var metadataPackage = schema.getPackages().get("METADATA_PACKAGE");
 			assertNotNull(metadataPackage);
-			assertNotNull(metadataPackage.getStatement());
-			assertTrue(metadataPackage.getStatement().stream().anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
+			assertNotNull(metadataPackage.getDefinition());
+			assertTrue(metadataPackage.getDefinition().stream().anyMatch(line -> line.contains("DOUBLE_AMOUNT")));
 			assertNotNull(metadataPackage.getBody());
-			assertNotNull(metadataPackage.getBody().getStatement());
-			assertTrue(metadataPackage.getBody().getStatement().stream()
+			assertNotNull(metadataPackage.getBody().getDefinition());
+			assertTrue(metadataPackage.getBody().getDefinition().stream()
 					.anyMatch(line -> line.contains("RETURN P_AMOUNT * 2")));
+		}
+	}
+
+	@Test
+	void recreatesIotAndReadOnlyViewThroughMetadataXml() throws Exception {
+		try (Connection connection = ORACLE.createConnection(""); Statement sql = connection.createStatement()) {
+			try {
+				sql.execute(
+						"CREATE TABLE ROUNDTRIP_IOT (ID NUMBER PRIMARY KEY, VALUE VARCHAR2(4000)) ORGANIZATION INDEX OVERFLOW");
+				sql.execute(
+						"CREATE VIEW ROUNDTRIP_VIEW (ITEM_ID, ITEM_VALUE) AS SELECT ID, VALUE FROM ROUNDTRIP_IOT WITH READ ONLY CONSTRAINT ROUNDTRIP_RO");
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				String owner = connection.getMetaData().getUserName().toUpperCase(Locale.ROOT);
+				var schemaReader = dialect.getCatalogReader().getSchemaReader();
+				var tableReader = schemaReader.getTableReader();
+				tableReader.setSchemaName(owner);
+				tableReader.setObjectName("ROUNDTRIP_IOT");
+				Table table = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(tableReader.getAllFull(connection).get(0).asXml()));
+				var viewReader = schemaReader.getViewReader();
+				viewReader.setSchemaName(owner);
+				viewReader.setObjectName("ROUNDTRIP_VIEW");
+				com.sqlapp.data.schemas.View view = com.sqlapp.data.schemas.SchemaUtils
+						.readXml(new java.io.StringReader(viewReader.getAllFull(connection).get(0).asXml()));
+				assertEquals("ROUNDTRIP_RO", view.getSpecifics().get("oracle.view.readOnlyConstraint"));
+				sql.execute("DROP VIEW ROUNDTRIP_VIEW");
+				sql.execute("DROP TABLE ROUNDTRIP_IOT PURGE");
+				var registry = dialect.createSqlFactoryRegistry();
+				for (var operation : registry.createSql(table, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				for (var operation : registry.createSql(view, com.sqlapp.data.db.sql.SqlType.CREATE))
+					sql.execute(operation.getSqlText());
+				sql.execute("INSERT INTO ROUNDTRIP_IOT VALUES (1, 'restored')");
+				try (var result = sql.executeQuery("SELECT ITEM_VALUE FROM ROUNDTRIP_VIEW WHERE ITEM_ID = 1")) {
+					assertTrue(result.next());
+					assertEquals("restored", result.getString(1));
+				}
+				assertEquals("ROUNDTRIP_RO",
+						viewReader.getAllFull(connection).get(0).getSpecifics().get("oracle.view.readOnlyConstraint"));
+				try (var result = sql.executeQuery(
+						"SELECT IOT_TYPE, IOT_NAME FROM USER_TABLES WHERE TABLE_NAME = 'ROUNDTRIP_IOT' OR IOT_NAME = 'ROUNDTRIP_IOT'")) {
+					int count = 0;
+					while (result.next()) {
+						assertTrue("IOT".equals(result.getString(1)) || "IOT_OVERFLOW".equals(result.getString(1)));
+						count++;
+					}
+					assertEquals(2, count);
+				}
+			} finally {
+				drop(sql, "DROP VIEW ROUNDTRIP_VIEW", 942);
+				drop(sql, "DROP TABLE ROUNDTRIP_IOT PURGE", 942);
+			}
+		}
+	}
+
+	@Test
+	void retainsMviewQueryWithoutCatalogRoleAndReadsDdlAfterGrant() throws Exception {
+		try (Connection admin = DriverManager.getConnection(ORACLE.getJdbcUrl(), "system", ORACLE.getPassword());
+				Statement sql = admin.createStatement();
+				Connection connection = ORACLE.createConnection("")) {
+			String user = ORACLE.getUsername().toUpperCase(Locale.ROOT);
+			boolean roleGranted = false;
+			try {
+				sql.execute("CREATE TABLE SYSTEM.ROUNDTRIP_MV_BASE (ID NUMBER)");
+				sql.execute("CREATE MATERIALIZED VIEW SYSTEM.ROUNDTRIP_MV AS SELECT ID FROM SYSTEM.ROUNDTRIP_MV_BASE");
+				sql.execute("GRANT SELECT ON SYSTEM.ROUNDTRIP_MV TO " + user);
+				var dialect = DialectResolver.getInstance().getDialect(connection);
+				var reader = dialect.getCatalogReader().getSchemaReader().getMviewReader();
+				reader.setSchemaName("SYSTEM");
+				reader.setObjectName("ROUNDTRIP_MV");
+				var limited = reader.getAll(connection);
+				assertEquals(1, limited.size());
+				assertTrue(limited.get(0).getDefinition() == null || limited.get(0).getDefinition().isEmpty());
+				assertTrue(String.join("\n", limited.get(0).getStatement()).contains("ROUNDTRIP_MV_BASE"));
+				sql.execute("GRANT SELECT_CATALOG_ROLE TO " + user);
+				roleGranted = true;
+				try (Connection privileged = ORACLE.createConnection("")) {
+					var complete = reader.getAll(privileged);
+					assertEquals(1, complete.size());
+					assertNotNull(complete.get(0).getDefinition());
+					assertTrue(String.join("\n", complete.get(0).getDefinition()).contains("CREATE MATERIALIZED VIEW"));
+				}
+			} finally {
+				if (roleGranted)
+					sql.execute("REVOKE SELECT_CATALOG_ROLE FROM " + user);
+				drop(sql, "DROP MATERIALIZED VIEW SYSTEM.ROUNDTRIP_MV", 12003);
+				drop(sql, "DROP TABLE SYSTEM.ROUNDTRIP_MV_BASE PURGE", 942);
+			}
 		}
 	}
 

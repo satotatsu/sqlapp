@@ -47,6 +47,22 @@ public class Postgres84 extends Postgres83 {
 		return true;
 	}
 
+	/**
+	 * WITH clause is supported since PostgreSQL 8.4.
+	 */
+	@Override
+	public boolean supportsWith() {
+		return true;
+	}
+
+	/**
+	 * WITH RECURSIVE is supported since PostgreSQL 8.4.
+	 */
+	@Override
+	public boolean supportsWithRecursive() {
+		return true;
+	}
+
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Postgres84CatalogReader(this);

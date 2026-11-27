@@ -27,10 +27,13 @@ public class OracleCreateDirectoryFactory extends AbstractCreateDirectoryFactory
 
 	@Override
 	protected void addCreateObject(final Directory obj, OracleSqlBuilder builder) {
+		if (obj.getDirectoryPath() == null || obj.getDirectoryPath().isBlank())
+			throw new IllegalArgumentException("Oracle directory path is required: " + obj.getName());
 		builder.create().or().replace().directory();
 		builder.space();
 		builder.name(obj);
 		builder.as();
+		builder.space();
 		builder.sqlChar(obj.getDirectoryPath());
 	}
 }

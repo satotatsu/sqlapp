@@ -19,22 +19,32 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+import java.util.Locale;
 import java.util.Map;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader;
+import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.db.sql.AddTableObjectDetailFactory;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.OnOffType;
 
 public class SqlServerCreateIndexFactory extends AbstractCreateIndexFactory<SqlServerSqlBuilder>
 		implements AddTableObjectDetailFactory<Index, SqlServerSqlBuilder> {
 
 	@Override
 	public void addObjectDetail(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
+		if (isColumnStore(obj)) {
+			addColumnStoreIndex(obj, table, builder);
+			return;
+		}
 		builder.unique(obj.isUnique());
 		addIndexType(obj, table, builder);
 		builder.index().space();
@@ -50,6 +60,137 @@ public class SqlServerCreateIndexFactory extends AbstractCreateIndexFactory<SqlS
 		addObjectDetailAfter(obj, table, builder);
 	}
 
+	protected static boolean isColumnStore(final Index obj) {
+		return obj.getIndexType() != null && obj.getIndexType().isColumnStore();
+	}
+
+	/**
+	 * CREATE [NON]CLUSTERED COLUMNSTORE INDEX を追加します。
+	 * クラスタ化列ストアは列リストを持たず、Indexの列はORDER句(SQL Server 2022以降)として扱います。
+	 */
+	protected void addColumnStoreIndex(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
+		validateColumnStoreIndex(obj);
+		final boolean clustered = obj.getIndexType().isClusterd();
+		if (clustered) {
+			builder.clustered();
+		} else {
+			builder.nonclustered();
+		}
+		builder.columnstore().index().space();
+		builder.name(obj, false);
+		if (table != null) {
+			builder.on();
+			builder.name(table);
+		}
+		if (!clustered) {
+			builder.space().brackets(() -> {
+				builder.names(obj.getColumns());
+				builder.space();
+			});
+		} else if (!obj.getColumns().isEmpty()) {
+			builder.lineBreak().order().space().brackets(() -> {
+				builder.space();
+				builder.names(obj.getColumns());
+				builder.space();
+			});
+		}
+		addObjectDetailAfter(obj, table, builder);
+	}
+
+	private static final String COMPRESSION_DELAY = SqlServerIndexOptions.COMPRESSION_DELAY.toString();
+	private static final String DATA_COMPRESSION = SqlServerIndexOptions.DATA_COMPRESSION.toString();
+
+	private boolean isBefore(final int majorVersion) {
+		final Dialect boundary = SqlServerDialectResolver.getInstance().getDialect(majorVersion, 0);
+		return getDialect().compareTo(boundary) < 0;
+	}
+
+	/**
+	 * 列ストアインデックスの定義がこのバージョンで作成できるかを検証します。作成できない場合は例外にします。
+	 */
+	protected void validateColumnStoreIndex(final Index obj) {
+		final boolean clustered = obj.getIndexType().isClusterd();
+		final String target = " index=" + obj.getName();
+		if (isBefore(11)) {
+			throw new IllegalArgumentException("Columnstore indexes require SQL Server 2012 or later." + target);
+		}
+		if (clustered && isBefore(12)) {
+			throw new IllegalArgumentException(
+					"Clustered columnstore indexes require SQL Server 2014 or later." + target);
+		}
+		if (obj.isUnique()) {
+			throw new IllegalArgumentException("Columnstore indexes cannot be UNIQUE." + target);
+		}
+		if (!CommonUtils.isEmpty(obj.getIncludes())) {
+			throw new IllegalArgumentException(
+					"Columnstore indexes do not support INCLUDE. List the columns in the index column list instead."
+							+ target);
+		}
+		for (final ReferenceColumn column : obj.getColumns()) {
+			if (column.getOrder() == Order.Desc) {
+				throw new IllegalArgumentException(
+						"Columnstore index columns cannot be DESC. column=" + column.getName() + target);
+			}
+		}
+		if (!clustered && obj.getColumns().isEmpty()) {
+			throw new IllegalArgumentException(
+					"Nonclustered columnstore indexes require at least one column." + target);
+		}
+		if (clustered && !obj.getColumns().isEmpty() && isBefore(16)) {
+			throw new IllegalArgumentException(
+					"Ordered clustered columnstore indexes (ORDER) require SQL Server 2022 or later." + target);
+		}
+		if (!CommonUtils.isEmpty(obj.getWhere())) {
+			if (clustered) {
+				throw new IllegalArgumentException(
+						"Clustered columnstore indexes cannot have a filter (WHERE)." + target);
+			}
+			if (isBefore(13)) {
+				throw new IllegalArgumentException(
+						"Filtered nonclustered columnstore indexes require SQL Server 2016 or later." + target);
+			}
+		}
+		if (obj.getSpecifics().get(COMPRESSION_DELAY) != null && isBefore(13)) {
+			throw new IllegalArgumentException("COMPRESSION_DELAY requires SQL Server 2016 or later." + target);
+		}
+		final String compression = obj.getSpecifics().get(DATA_COMPRESSION);
+		if (compression != null) {
+			final String upper = compression.toUpperCase(Locale.ROOT);
+			if (!"COLUMNSTORE".equals(upper) && !"COLUMNSTORE_ARCHIVE".equals(upper)) {
+				throw new IllegalArgumentException(
+						"DATA_COMPRESSION of a columnstore index must be COLUMNSTORE or COLUMNSTORE_ARCHIVE. value="
+								+ compression + target);
+			}
+			if (isBefore(12)) {
+				throw new IllegalArgumentException(
+						"DATA_COMPRESSION on columnstore indexes requires SQL Server 2014 or later." + target);
+			}
+		}
+	}
+
+	/**
+	 * 列ストアインデックスで指定できるWITHオプションだけを返します。
+	 * (PAD_INDEX、FILLFACTOR、ALLOW_ROW_LOCKSなどの行ストア用オプションは列ストアでは指定できない)
+	 */
+	protected Map<String, String> createColumnStoreIndexWithOption(final Index obj, final Table table) {
+		final Map<String, String> map = CommonUtils.linkedMap();
+		for (final String key : new String[] { "DROP_EXISTING", "MAXDOP", "ONLINE", COMPRESSION_DELAY,
+				DATA_COMPRESSION }) {
+			final String val = obj.getSpecifics().get(key);
+			if (val == null) {
+				continue;
+			}
+			if ("DROP_EXISTING".equals(key) || "ONLINE".equals(key)) {
+				map.put(key, OnOffType.parse(val).toString());
+			} else if (DATA_COMPRESSION.equals(key)) {
+				map.put(key, val.toUpperCase(Locale.ROOT));
+			} else {
+				map.put(key, val);
+			}
+		}
+		return map;
+	}
+
 	protected void addIndexType(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
 		if (obj.getIndexType() != null && obj.getIndexType().isClusterd()) {
 			builder.clustered();
@@ -61,7 +202,8 @@ public class SqlServerCreateIndexFactory extends AbstractCreateIndexFactory<SqlS
 	}
 
 	protected void addIndexWithOption(final Index obj, final Table table, final SqlServerSqlBuilder builder) {
-		final Map<String, String> map = createIndexWithOption(obj, table);
+		final Map<String, String> map = isColumnStore(obj) ? createColumnStoreIndexWithOption(obj, table)
+				: createIndexWithOption(obj, table);
 		if (!map.isEmpty()) {
 			builder.lineBreak();
 			builder.with().space().brackets(() -> {

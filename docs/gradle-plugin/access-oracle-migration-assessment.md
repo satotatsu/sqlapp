@@ -162,7 +162,7 @@ individual gates when an approved exception is needed.
 
 ## Initial Access data load
 
-For a complete one-to-one mapping that uses no conversion expressions, generate
+For a complete one-to-one mapping, generate
 an initial-load job for the existing
 bulk migration task:
 
@@ -202,9 +202,9 @@ It binds resumable checkpoints to the captured Access source and reviewed
 mapping fingerprints. Qualified Access table names are retained in task IDs,
 and checkpoint IDs are additionally namespaced by `jobId`. Generation does not
 execute the job. The supplied Schema XML is checked against the assessment
-source fingerprint when present. Mappings that rename identifiers or use
-conversion expressions are rejected because the current declarative bulk
-executor cannot apply those transformations safely.
+source fingerprint when present. Identifier renames become `columnMappings` and
+conversion expressions become `columnConversions`, applied while source rows are
+read so verification compares the converted values.
 
 Type references: [Oracle 19c types](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Data-Types.html),
 [Oracle NULL behavior](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Nulls.html),

@@ -5,12 +5,14 @@
  */
 package com.sqlapp.data.db.dialect.mdb.sql;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 import com.sqlapp.data.db.dialect.mdb.util.MdbSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractAlterTableFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Constraint;
 import com.sqlapp.data.schemas.DbObjectDifference;
@@ -24,10 +26,19 @@ public class MdbAlterTableFactory extends AbstractAlterTableFactory<MdbSqlBuilde
 	public List<SqlOperation> createDiffSql(final DbObjectDifference difference) {
 		final Table original = difference.getOriginal(Table.class);
 		final Table target = difference.getTarget(Table.class);
-		if (original != null && target != null && !Objects.equals(original.getName(), target.getName())) {
-			throw unsupported("table rename");
+		if (original == null || target == null || Objects.equals(original.getName(), target.getName())) {
+			return super.createDiffSql(difference);
 		}
-		return super.createDiffSql(difference);
+		// A table rename also changes the owning table name of indexes/constraints.
+		// Compare after renaming so these are not treated as DROP/recreate changes.
+		final Table renamed = original.clone().setName(target.getName());
+		final List<SqlOperation> result = new ArrayList<>();
+		final MdbSqlBuilder builder = createSqlBuilder();
+		builder.alter().table().name(original, getOptions().isDecorateSchemaName());
+		builder.rename().to().name(target, getOptions().isDecorateSchemaName());
+		result.add(createOperation(builder.toString(), SqlType.ALTER, original, target));
+		result.addAll(super.createDiffSql(renamed.diff(target)));
+		return result;
 	}
 
 	@Override
@@ -63,6 +74,6 @@ public class MdbAlterTableFactory extends AbstractAlterTableFactory<MdbSqlBuilde
 
 	private UnsupportedOperationException unsupported(final String operation) {
 		return new UnsupportedOperationException(
-				"Microsoft Access " + operation + " is not persistently supported by UCanAccess 5.1.6");
+				"Microsoft Access " + operation + " is not persistently supported by UCanAccess 5.2.0");
 	}
 }

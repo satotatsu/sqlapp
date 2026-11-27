@@ -23,11 +23,11 @@ import com.sqlapp.data.db.command.AbstractGenerateCreateSqlTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 
-public class SqlServerGenerateCreateSqlTest extends AbstractGenerateCreateSqlTest{
+public class SqlServerGenerateCreateSqlTest extends AbstractGenerateCreateSqlTest {
 
 	@Override
 	protected Dialect getDialect() {
 		return DialectResolver.getInstance().getDialect("MS SQL", 15, 0);
 	}
-	
+
 }

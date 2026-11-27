@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.firebird.util.FirebirdPrivilege;
 import com.sqlapp.data.db.metadata.ObjectPrivilegeReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ObjectPrivilege;
@@ -61,11 +62,16 @@ public class FirebirdObjectPrivilegeReader extends ObjectPrivilegeReader {
 
 	protected ObjectPrivilege createPrivilege(ExResultSet rs) throws SQLException {
 		ObjectPrivilege obj = new ObjectPrivilege();
+		obj.setHierachy(false);
 		obj.setObjectName(getString(rs, OBJECT_NAME));
 		obj.setPrivilege(FirebirdUtils.getPrivilege(getString(rs, PRIVILEGE_TYPE)));
 		obj.setGrantorName(getString(rs, GRANTOR));
-		obj.setGranteeName(getString(rs, GRANTEE));
+		obj.setGranteeName(
+				FirebirdPrivilege.granteeName(getString(rs, GRANTEE), rs.getInt("grantee_type"), getDialect()));
 		obj.setGrantable("1".equals(getString(rs, "is_grantable")));
+		obj.getSpecifics().put(FirebirdPrivilege.OBJECT_TYPE, FirebirdPrivilege.objectType(rs.getInt("object_type")));
+		obj.getSpecifics().put(FirebirdPrivilege.GRANTEE_TYPE,
+				FirebirdPrivilege.granteeType(rs.getInt("grantee_type")));
 		return obj;
 	}
 }

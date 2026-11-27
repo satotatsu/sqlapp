@@ -174,6 +174,7 @@ public final class BulkMigrationRepairPlan {
 			update(digest, (Object) null);
 			return;
 		}
+		if (option.getInsertMethod() != BulkInsertMethod.AUTO) update(digest, "insertMethod", option.getInsertMethod());
 		update(digest, option.getBatchSize(), option.getBulkCopyTimeout(),
 				option.isCheckConstraints(), option.isFireTriggers(), option.isKeepIdentity(),
 				option.isKeepNulls(), option.isTableLock(), option.isUseTransaction(),

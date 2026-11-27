@@ -1,0 +1,5 @@
+formatVersion: 1
+tables:
+  PUBLIC.ITEMS:
+    targetTable: ITEMS_COPY
+    columns: {ID: ITEM_ID}

@@ -19,12 +19,15 @@
 
 package com.sqlapp.gradle.plugins.extension;
 
+
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.sql.DataSource;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
@@ -33,26 +36,51 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
-import com.sqlapp.gradle.plugins.ConfigUtils;
-import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.SimpleBeanUtils;
+import com.sqlapp.data.db.command.datasource.DataSourceConfigFiles;
+import com.sqlapp.gradle.plugins.util.CreatedDataSources;
+import com.sqlapp.jdbc.SqlappDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 public abstract class DataSourceExtension {
-
-	public DataSourceExtension() {
-		this.getProperties().from();
-	}
 
 	public void call(Action<DataSourceExtension> cons) {
 		cons.execute(this);
 	}
 
 	public DataSource createDataSource() {
-		final DataSource ds = new HikariDataSource(toConfig());
-		return ds;
+		final Map<String, String> dialectOptions = resolveDialectOptions();
+		if (dialectOptions.isEmpty()) {
+			// Closed by AbstractTask when the task action finishes.
+			return CreatedDataSources.register(new HikariDataSource(toConfig()));
+		}
+		// The wrapper closes the pool and passes the options to dialect resolution.
+		return CreatedDataSources
+				.register(new SqlappDataSource(new HikariDataSource(toConfig())).setDialectOptions(dialectOptions));
 	}
+
+	/**
+	 * Dialect options from the settings files ({@code dialect.*}) overridden by
+	 * {@link #getDialectOptions()}.
+	 */
+	public Map<String, String> resolveDialectOptions() {
+		final var options = new LinkedHashMap<String, String>();
+		if (!getProperties().isEmpty()) {
+			options.putAll(DataSourceConfigFiles.dialectOptions(DataSourceConfigFiles
+					.read(getProperties().getFiles().stream().map(java.io.File::toPath).toList())));
+		}
+		options.putAll(getDialectOptions().getOrElse(Map.of()));
+		return options;
+	}
+
+	/**
+	 * sqlapp dialect options for connections of this data source. For Oracle,
+	 * {@code oracle.maxStringSize} (STANDARD or EXTENDED) overrides the
+	 * MAX_STRING_SIZE detected from the database.
+	 */
+	@Input
+	@Optional
+	public abstract MapProperty<String, String> getDialectOptions();
 
 	/** Whether enough intent exists to create an optional task DataSource. */
 	@Internal
@@ -103,11 +131,19 @@ public abstract class DataSourceExtension {
 	public abstract Property<String> getUsername();
 
 	/**
-	 * JDBC Password
+	 * JDBC Password. Internal so that it is not recorded in task history or
+	 * build scans; database tasks are never UP-TO-DATE anyway.
+	 */
+	@Internal
+	public abstract Property<String> getPassword();
+
+	/**
+	 * Name of an environment variable holding the JDBC password. An explicit
+	 * {@code password} takes precedence.
 	 */
 	@Input
 	@Optional
-	public abstract Property<String> getPassword();
+	public abstract Property<String> getPasswordEnv();
 
 	/**
 	 * Default Catalog
@@ -244,11 +280,20 @@ public abstract class DataSourceExtension {
 
 	private void setConfig(final HikariConfig config) {
 		if (!getProperties().isEmpty()) {
-			Map<String, Object> map = CommonUtils.map();
-			ConfigUtils.readConfig(null, map, this.getProperties().getFiles());
-			for (Map.Entry<String, Object> entry : map.entrySet()) {
-				SimpleBeanUtils.setValueCI(config, entry.getKey(), entry.getValue());
-			}
+			// Shared with the desktop application: same formats, merge order and errors.
+			final var unknown = DataSourceConfigFiles.applyTo(config, DataSourceConfigFiles
+					.read(getProperties().getFiles().stream().map(java.io.File::toPath).toList()), System::getenv);
+			if (!unknown.isEmpty())
+				org.gradle.api.logging.Logging.getLogger(DataSourceExtension.class).warn(
+						"Ignored unknown data source setting(s): {}. Use HikariCP names such as jdbcUrl, username or passwordEnv.",
+						String.join(", ", unknown));
+		}
+		if (getPasswordEnv().isPresent()) {
+			final String variable = getPasswordEnv().get();
+			final String value = System.getenv(variable);
+			if (value == null)
+				throw new IllegalArgumentException("Environment variable " + variable + " named by passwordEnv is not set.");
+			config.setPassword(value);
 		}
 		if (getJdbcUrl().isPresent()) {
 			config.setJdbcUrl(getJdbcUrl().get());
@@ -303,7 +348,8 @@ public abstract class DataSourceExtension {
 		}
 		if (getMaximumPoolSize().isPresent()) {
 			config.setMaximumPoolSize(getMaximumPoolSize().get());
-		} else {
+		} else if (config.getMaximumPoolSize() < 1) {
+			// default only when no properties file set it
 			config.setMaximumPoolSize(5);
 		}
 		if (getMaxLifetime().isPresent()) {
@@ -311,7 +357,8 @@ public abstract class DataSourceExtension {
 		}
 		if (getMinimumIdle().isPresent()) {
 			config.setMinimumIdle(getMinimumIdle().get());
-		} else {
+		} else if (config.getMinimumIdle() < 0) {
+			// default only when no properties file set it
 			config.setMinimumIdle(0);
 		}
 		if (getPoolName().isPresent()) {

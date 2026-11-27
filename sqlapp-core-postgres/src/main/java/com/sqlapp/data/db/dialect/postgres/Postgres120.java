@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.postgres;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.metadata.Postgres120CatalogReader;
 import com.sqlapp.data.db.dialect.postgres.sql.Postgres120SqlFactoryRegistry;
@@ -46,19 +47,9 @@ public class Postgres120 extends Postgres110 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.Postgres93#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
+		// PostgreSQL 12 removed abstime; preserve second precision using a supported
+		// type.
+		getDbDataTypes().getDbType(DataType.SMALLDATETIME).setCreateFormat("TIMESTAMP(0) WITH TIME ZONE");
 	}
 
 	/*

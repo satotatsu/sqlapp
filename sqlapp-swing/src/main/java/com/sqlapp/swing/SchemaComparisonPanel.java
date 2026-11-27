@@ -1,0 +1,405 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.swing;
+
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingWorker;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
+final class SchemaComparisonPanel extends JPanel {
+	private static final long serialVersionUID = 1L;
+	final JTextField original = new JTextField();
+	final JTextField target = new JTextField();
+	final JButton compare = new JButton("Compare");
+	final JButton save = new JButton("Save review…");
+	final RSyntaxTextArea preview = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, false);
+	final RSyntaxTextArea sqlPreview = CodeEditors.create(SyntaxConstants.SYNTAX_STYLE_SQL, false);
+	final ReadOnlyCodePanel reviewCode = new ReadOnlyCodePanel(preview);
+	final ReadOnlyCodePanel sqlCode = new ReadOnlyCodePanel(sqlPreview);
+	final JButton saveSql = new JButton("Save SQL draft…");
+	final JButton useDirectory = new JButton("Use saved SQL directory");
+	final JButton editSql = new JButton("Edit saved SQL…");
+	private java.util.function.Predicate<Path> sqlEditor;
+	private Path savedSql;
+	private java.util.function.Predicate<Path> directoryReceiver;
+	private boolean busy;
+	final javax.swing.JTabbedPane tabs = new javax.swing.JTabbedPane();
+	private SchemaComparisonService.Result result;
+	private long revision;
+	private final Comparer comparer;
+	private final Saver saver;
+
+	@FunctionalInterface
+	interface Comparer {
+		SchemaComparisonService.Result inspect(Path original, Path target) throws Exception;
+	}
+
+	@FunctionalInterface
+	interface Saver {
+		void save(SchemaComparisonService.Result result, Path destination, boolean sqlDraft) throws Exception;
+	}
+
+	final JLabel status = new JLabel(
+			"Select Schema XML or use Read DB. Compare is offline; database capture is explicit.");
+	final EditorStatusPanel statusPanel = new EditorStatusPanel(status);
+	private final EditorFileChooser inputDialogs = new EditorFileChooser();
+	private final EditorFileChooser outputDialogs = new EditorFileChooser();
+	private final JButton beforeBrowse = new JButton("Browse…");
+	private final JButton afterBrowse = new JButton("Browse…");
+	final JButton beforeDatabase = new JButton("Read DB…");
+	final JButton afterDatabase = new JButton("Read DB…");
+	private final EditorFileChooser captureDialogs = new EditorFileChooser();
+
+	SchemaComparisonPanel() {
+		this(new SchemaComparisonService()::inspect, new SchemaComparisonService()::save);
+	}
+
+	SchemaComparisonPanel(final Comparer comparer, final Saver saver) {
+		super(new BorderLayout(8, 8));
+		this.comparer = java.util.Objects.requireNonNull(comparer, "comparer");
+		this.saver = java.util.Objects.requireNonNull(saver, "saver");
+		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+		final var inputs = new JPanel(new GridLayout(2, 1, 4, 4));
+		inputs.add(fileRow("Before Schema XML",
+				FieldHints.placeholder(original, "Schema XML of the current state; or use Read DB… to capture it"),
+				beforeBrowse, beforeDatabase));
+		inputs.add(fileRow("After Schema XML",
+				FieldHints.placeholder(target, "Schema XML of the desired state; or use Read DB… to capture it"),
+				afterBrowse, afterDatabase));
+		add(inputs, BorderLayout.NORTH);
+		preview.setEditable(false);
+		sqlPreview.setEditable(false);
+		tabs.addTab("Review", reviewCode);
+		tabs.addTab("SQL draft", sqlCode);
+		add(tabs, BorderLayout.CENTER);
+		final var footer = new JPanel(new BorderLayout());
+		final var actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+		actions.add(compare);
+		actions.add(save);
+		actions.add(saveSql);
+		actions.add(useDirectory);
+		actions.add(editSql);
+		editSql.setEnabled(false);
+		editSql.addActionListener(event -> editSavedSql());
+		footer.add(statusPanel, BorderLayout.NORTH);
+		footer.add(actions, BorderLayout.SOUTH);
+		add(footer, BorderLayout.SOUTH);
+		save.setEnabled(false);
+		saveSql.setEnabled(false);
+		useDirectory.setEnabled(false);
+		useDirectory.addActionListener(event -> useSavedDirectory());
+		DisabledReason.install(save,
+				() -> busy ? "Wait for the current operation to finish." : "Choose Compare first.");
+		DisabledReason.install(saveSql, () -> busy ? "Wait for the current operation to finish."
+				: result == null ? "Choose Compare first." : "The comparison found no SQL changes to save.");
+		DisabledReason.install(useDirectory, () -> busy ? "Wait for the current operation to finish."
+				: result == null ? "Choose Compare first." : savedSql == null ? "Save the SQL draft first." : null);
+		DisabledReason.install(editSql, () -> busy ? "Wait for the current operation to finish."
+				: result == null ? "Choose Compare first." : savedSql == null ? "Save the SQL draft first." : null);
+		final DocumentListener changed = new DocumentListener() {
+			public void insertUpdate(final DocumentEvent event) {
+				invalidatePreview();
+			}
+
+			public void removeUpdate(final DocumentEvent event) {
+				invalidatePreview();
+			}
+
+			public void changedUpdate(final DocumentEvent event) {
+				invalidatePreview();
+			}
+		};
+		original.getDocument().addDocumentListener(changed);
+		target.getDocument().addDocumentListener(changed);
+		compare.addActionListener(event -> compare());
+		save.addActionListener(event -> chooseSave(false));
+		saveSql.addActionListener(event -> chooseSave(true));
+	}
+
+	private JPanel fileRow(final String label, final JTextField field, final JButton browse, final JButton database) {
+		FileDropHandler.path(field, false, java.util.List.of("xml"), () -> !busy,
+				FileDropHandler.errors(status, statusPanel));
+		final var row = new JPanel(new BorderLayout(8, 0));
+		row.add(new JLabel(label), BorderLayout.WEST);
+		row.add(field, BorderLayout.CENTER);
+		final var actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+		actions.add(browse);
+		actions.add(database);
+		row.add(actions, BorderLayout.EAST);
+		database.addActionListener(event -> {
+			if (busy)
+				return;
+			final var chooser = captureDialogs.forDirectory("");
+			chooser.setDialogTitle("Choose a folder for captured Schema XML");
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				final Path folder = chooser.getSelectedFile().toPath();
+				captureInto(field == original, () -> showCapture(folder, field == original ? "Before" : "After"));
+				captureDialogs.rememberDirectory(folder);
+			}
+		});
+		browse.addActionListener(event -> {
+			final var chooser = inputChooser(field.getText());
+			if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				field.setText(chooser.getSelectedFile().getAbsolutePath());
+			}
+		});
+		return row;
+	}
+
+	void captureInto(boolean before, java.util.function.Supplier<Path> presenter) {
+		if (busy)
+			return;
+		final long requested = revision;
+		busy(true);
+		try {
+			final Path file = presenter.get();
+			if (requested != revision)
+				status.setText("Inputs changed. " + (file == null ? "Schema capture selection was discarded."
+						: "Captured XML was not selected: " + file));
+			else if (file == null)
+				status.setText("Schema capture cancelled. Existing comparison retained.");
+			else {
+				(before ? original : target).setText(file.toAbsolutePath().normalize().toString());
+				inputDialogs.remember(file);
+				status.setText("Captured " + (before ? "Before" : "After")
+						+ " Schema XML. Compare when ready; no migration SQL executed.");
+			}
+		} catch (RuntimeException failure) {
+			status.setText("Schema capture failed. Existing comparison retained; see Details.");
+			statusPanel.setDetails(status.getText() + "\n" + EditorStatusPanel.failureDetails(failure));
+		} finally {
+			busy(false);
+		}
+	}
+
+	private Path showCapture(Path folder, String side) {
+		final var selected = new java.util.concurrent.atomic.AtomicReference<Path>();
+		final var dialog = new javax.swing.JDialog(javax.swing.SwingUtilities.getWindowAncestor(this),
+				"Read " + side + " Schema from database", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
+		final var panel = new SchemaCapturePanel(folder, file -> {
+			selected.set(file);
+			dialog.dispose();
+		}, dialog::dispose);
+		dialog.setContentPane(panel);
+		dialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+		dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent event) {
+				if (!panel.isBusy()) {
+					panel.connection.password.setText("");
+					dialog.dispose();
+				}
+			}
+		});
+		dialog.setSize(900, 470);
+		dialog.setLocationRelativeTo(this);
+		dialog.setVisible(true);
+		return selected.get();
+	}
+
+	private void invalidatePreview() {
+		revision++;
+		result = null;
+		savedSql = null;
+		useDirectory.setEnabled(false);
+		editSql.setEnabled(false);
+		reviewCode.showText("");
+		sqlCode.showText("");
+		save.setEnabled(false);
+		saveSql.setEnabled(false);
+		status.setText("Inputs changed. Compare to generate a new review.");
+	}
+
+	JFileChooser inputChooser(final String path) {
+		final String hint = path == null || path.isBlank()
+				? (target.getText().isBlank() ? original.getText() : target.getText())
+				: path;
+		return inputDialogs.forFile(new javax.swing.filechooser.FileNameExtensionFilter("Schema XML", "xml"), hint);
+	}
+
+	JFileChooser outputChooser(final boolean sqlDraft) {
+		return outputDialogs.forOutput(
+				new javax.swing.filechooser.FileNameExtensionFilter(sqlDraft ? "Migration SQL draft" : "Schema review",
+						sqlDraft ? "sql" : "txt"),
+				sqlDraft ? SchemaComparisonService.defaultSqlDraftName() : "schema-review.txt", target.getText());
+	}
+
+	private void busy(final boolean busy) {
+		this.busy = busy;
+		reviewCode.navigation.setBusy(busy);
+		sqlCode.navigation.setBusy(busy);
+		original.setEnabled(!busy);
+		target.setEnabled(!busy);
+		beforeBrowse.setEnabled(!busy);
+		afterBrowse.setEnabled(!busy);
+		beforeDatabase.setEnabled(!busy);
+		afterDatabase.setEnabled(!busy);
+		compare.setEnabled(!busy);
+		save.setEnabled(!busy && result != null);
+		saveSql.setEnabled(!busy && result != null && result.statements() > 0);
+		useDirectory.setEnabled(!busy && savedSql != null && result != null && directoryReceiver != null);
+		editSql.setEnabled(!busy && savedSql != null && result != null && sqlEditor != null);
+	}
+
+	private void compare() {
+		final String before = original.getText().trim();
+		final String after = target.getText().trim();
+		invalidatePreview();
+		final long requestedRevision = revision;
+		busy(true);
+		status.setText("Comparing Schemas…");
+		new SwingWorker<SchemaComparisonService.Result, Void>() {
+			protected SchemaComparisonService.Result doInBackground() throws Exception {
+				if (before.isEmpty() || after.isEmpty()) {
+					throw new IllegalArgumentException("Select both before and after Schema XML files.");
+				}
+				return comparer.inspect(Path.of(before), Path.of(after));
+			}
+
+			protected void done() {
+				try {
+					if (revision != requestedRevision)
+						return;
+					final var compared = get();
+					result = compared;
+					inputDialogs.remember(compared.target());
+					reviewCode.showText(result.review());
+					sqlCode.showText(result.sqlDraft());
+					status.setText("Review generated: " + result.statements()
+							+ " SQL statements. Draft requires review; no SQL executed.");
+				} catch (final InterruptedException exception) {
+					Thread.currentThread().interrupt();
+					failure(exception);
+				} catch (final ExecutionException exception) {
+					failure(exception.getCause());
+				} finally {
+					busy(false);
+				}
+			}
+		}.execute();
+	}
+
+	private void chooseSave(final boolean sqlDraft) {
+		if (result == null)
+			return;
+		final var chooser = outputChooser(sqlDraft);
+		if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION)
+			return;
+		final Path destination = chooser.getSelectedFile().toPath();
+		if (Files.exists(destination) && JOptionPane.showConfirmDialog(this, "Replace " + destination + "?",
+				"Replace artifact", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION)
+			return;
+		saveTo(destination, sqlDraft);
+	}
+
+	void saveTo(final Path destination, final boolean sqlDraft) {
+		if (result == null || !(sqlDraft ? saveSql : save).isEnabled())
+			return;
+		final var snapshot = result;
+		final long requestedRevision = revision;
+		busy(true);
+		new SwingWorker<Void, Void>() {
+			protected Void doInBackground() throws Exception {
+				saver.save(snapshot, destination, sqlDraft);
+				return null;
+			}
+
+			protected void done() {
+				try {
+					get();
+					if (sqlDraft && revision == requestedRevision)
+						savedSql = destination.toAbsolutePath().normalize();
+					outputDialogs.remember(destination);
+					status.setText(
+							"Saved " + (sqlDraft ? "SQL draft (review before use): " : "review: ") + destination);
+				} catch (final InterruptedException exception) {
+					Thread.currentThread().interrupt();
+					failure(exception);
+				} catch (final ExecutionException exception) {
+					failure(exception.getCause());
+				} finally {
+					busy(false);
+				}
+			}
+		}.execute();
+	}
+
+	boolean isBusy() {
+		return busy;
+	}
+
+	void setDirectoryReceiver(final java.util.function.Predicate<Path> receiver) {
+		directoryReceiver = receiver;
+		busy(busy);
+	}
+
+	void useSavedDirectory() {
+		if (!useDirectory.isEnabled())
+			return;
+		final var snapshot = result;
+		final Path saved = savedSql;
+		final long requestedRevision = revision;
+		busy(true);
+		status.setText("Checking saved draft and versioned SQL directory…");
+		new SwingWorker<Path, Void>() {
+			protected Path doInBackground() throws Exception {
+				return new SchemaComparisonService().migrationDirectory(snapshot, saved);
+			}
+
+			protected void done() {
+				try {
+					if (revision != requestedRevision)
+						return;
+					final Path directory = get();
+					if (directoryReceiver.test(directory))
+						status.setText(
+								"Selected Up SQL directory. Review all files there and build a new connected plan.");
+					else
+						status.setText(
+								"Migration plan screen is busy. Saved draft retained; try again after it finishes.");
+				} catch (final InterruptedException exception) {
+					Thread.currentThread().interrupt();
+					failure(exception);
+				} catch (final ExecutionException exception) {
+					failure(exception.getCause());
+				} finally {
+					busy(false);
+				}
+			}
+		}.execute();
+	}
+
+	void setSqlEditor(final java.util.function.Predicate<Path> editor) {
+		sqlEditor = editor;
+		busy(busy);
+	}
+
+	void editSavedSql() {
+		if (!editSql.isEnabled())
+			return;
+		status.setText(
+				sqlEditor.test(savedSql) ? "Editing saved SQL. Save it in the editor and build a new migration plan."
+						: "SQL editor did not open the file. Current comparison retained.");
+	}
+
+	private void failure(final Throwable failure) {
+		status.setText("Operation failed: " + failure);
+		statusPanel.setDetails(EditorStatusPanel.failureDetails(failure));
+	}
+}

@@ -20,6 +20,10 @@ int j=0;
 	</div>
 	<div class="tab-content">
 		<div id="Base">
+			@if{obj.projections.size()>0}
+			<h3>@{getMessage("Projections")}</h3>
+			<ul>@foreach{projection : obj.projections}<li><a href="../projections/@{escape(objectFullPath(projection))}.html">@{escape(projection.name)}</a></li>@end{}</ul>
+			@end{}
 			<table @{attr("class", renderOptions.tableClass)}>
 				<thead>
 					<tr>

@@ -213,9 +213,14 @@ class GenerateAccessBulkMigrationJobConfigurationCommandTest {
 				BulkMigrationJobConfiguration.class);
 		assertEquals(java.util.Map.of("ID", "CUSTOMER_ID"), renamedColumn.getTasks().getFirst().getColumnMappings());
 
-		Files.writeString(report, report(schema, "CUSTOMERS", "ID", "CAST(ID AS BIGINT)"));
+		// Conversions are applied by the job, except on keys that drive resumable
+		// reads.
+		Files.writeString(report, report(schema, "CUSTOMERS", "ID", "value + 1"));
 		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
-				.contains("cannot apply mapping conversion"));
+				.contains("primary key column CUSTOMERS.ID"));
+		Files.writeString(report, report(schema, "CUSTOMERS", "ID", "value.("));
+		assertTrue(assertThrows(CommandException.class, command::run).getMessage()
+				.contains("Invalid column conversion expression for CUSTOMERS.ID"));
 
 		Files.writeString(report, report(schema, "CUSTOMERS", "ID", null)
 				.replace("\"type\":\"unmappedTables\",\"count\":0", "\"type\":\"unmappedTables\",\"count\":1"));

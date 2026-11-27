@@ -539,8 +539,18 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 		return instance();
 	}
 
+	/**
+	 * Returns the schema of bound target columns when available. For name-only
+	 * references, an explicit target schema takes precedence over owner fallback.
+	 */
 	@Override
 	public String getRelatedTableSchemaName() {
+		// A name-only reference collection can fall back to the owning table.
+		// Preserve an explicit target schema unless actual target columns are bound.
+		if (this.relatedTableSchemaName != null && this.relatedColumns.stream()
+				.noneMatch(column -> column.getColumn() != null && column.getColumn().getTable() != null)) {
+			return this.relatedTableSchemaName;
+		}
 		if (!CommonUtils.isEmpty(this.relatedColumns)) {
 			String name = this.relatedColumns.getSchemaName();
 			if (name != null) {

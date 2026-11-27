@@ -32,19 +32,25 @@ final class OracleMetadataAuditAssertions {
 				var reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 				reader.setSchemaName(owner);
 				AtomicInteger count = new AtomicInteger();
+				AtomicInteger ddlCount = new AtomicInteger();
 				var counted = CountingJdbc.wrap(connection, text -> {
 					String upper = text.toUpperCase(Locale.ROOT);
 					return upper.contains("ALL_PART_TABLES") || upper.contains("ALL_PART_INDEXES")
 							|| upper.contains("ALL_PART_KEY_COLUMNS") || upper.contains("ALL_SUBPART_KEY_COLUMNS")
 							|| upper.contains("ALL_TAB_SUBPARTITIONS") || upper.contains("ALL_IND_SUBPARTITIONS");
 				}, count);
+				var ddlCounted = CountingJdbc.wrap(counted,
+						text -> text.toUpperCase(Locale.ROOT).contains("DBMS_METADATA.GET_DDL('TABLE'"), ddlCount);
 				reader.setObjectName(prefix + "0");
-				assertEquals(1, reader.getAllFull(counted).size());
+				assertEquals(1, reader.getAllFull(ddlCounted).size());
+				assertEquals(1, ddlCount.get());
 				int single = count.get();
 				count.set(0);
+				ddlCount.set(0);
 				reader.setObjectName(null);
-				var tables = reader.getAllFull(counted);
-				assertEquals(8, single);
+				var tables = reader.getAllFull(ddlCounted);
+				assertEquals(9, single); // Eight catalog queries plus one batched complete-DDL query.
+				assertEquals(1, ddlCount.get(), "Complete DDL must be fetched in one query for multiple tables");
 				assertEquals(single, count.get(),
 						"Partition query count must stay constant for multiple tables and indexes");
 				for (int i = 0; i < 2; i++) {

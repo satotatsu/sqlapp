@@ -34,7 +34,7 @@ public class SqliteTruncateTableFactory extends AbstractTruncateTableFactory<Sql
 	@Override
 	protected void addTruncateTable(final Table obj, final SqliteSqlBuilder builder) {
 		builder.delete().from();
-		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		builder.name(obj, obj.getSchemaName() != null);
 		this.addTableComment(obj, builder);
 	}
 }

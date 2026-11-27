@@ -67,13 +67,17 @@ public class H2TableReader extends TableReader {
 		obj.setSchemaName(getString(rs, TABLE_SCHEMA));
 		obj.setRemarks(getString(rs, REMARKS));
 		obj.setTableType(getString(rs, "STORAGE_TYPE"));
+		String kind = getString(rs, "TABLE_TYPE");
+		if (kind != null && kind.contains("TEMPORARY")) {
+			obj.setTableType(Table.TableType.Temporary);
+			obj.getSpecifics().put("h2.tableKind", kind);
+		}
 		this.setStatistics(rs, "ROW_COUNT_ESTIMATE", obj);
 		return obj;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("tables_200.sql");
 		}
 		return getSqlNodeCache().getString("tables.sql");

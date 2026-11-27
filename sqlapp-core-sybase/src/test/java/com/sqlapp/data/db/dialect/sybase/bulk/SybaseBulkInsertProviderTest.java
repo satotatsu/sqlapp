@@ -14,14 +14,12 @@ import com.sqlapp.jdbc.bulk.SetBasedMigrationSnapshotResolver;
 class SybaseBulkInsertProviderTest {
 	@Test
 	void resolvesSybaseProvider() {
-		assertInstanceOf(SybaseBulkInsertExecutor.class,
-				BulkInsertResolver.resolve(DialectHolder.defaultDialect));
+		assertInstanceOf(SybaseBulkInsertExecutor.class, BulkInsertResolver.resolve(DialectHolder.defaultDialect));
 	}
 
 	@Test
 	void resolvesSybaseUpsertProvider() {
-		assertInstanceOf(SybaseBulkUpsertExecutor.class,
-				BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
+		assertInstanceOf(SybaseBulkUpsertExecutor.class, BulkUpsertResolver.resolve(DialectHolder.defaultDialect));
 	}
 
 	@Test

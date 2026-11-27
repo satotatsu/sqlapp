@@ -103,6 +103,62 @@ public final class Column extends AbstractColumn<Column>
 	private boolean hidden = false;
 	/** MaskingFunction */
 	private String maskingFunction = null;
+	private Domain domain;
+	private String domainColumnName;
+	private transient DomainColumn domainColumn;
+
+	public String getDomainColumnName() {
+		if (domainColumn != null) return domainColumn.getName();
+		if (getDomain() != null && domainColumnName != null) {
+			domainColumn = getDomain().getColumns().get(domainColumnName);
+		}
+		return domainColumn == null ? domainColumnName : domainColumn.getName();
+	}
+
+	public Column setDomainColumnName(String name) {
+		domainColumnName = name;
+		domainColumn = null;
+		getDomainColumnName();
+		return this;
+	}
+
+	/** Resolves within this catalog/schema and retains the canonical object for rename propagation. */
+	public Domain getDomain() {
+		if (domain != null) domain = SchemaUtils.getDomainFromParent(domain, this);
+		return domain;
+	}
+
+	@Override
+	protected void validate() {
+		super.validate();
+		getDomain();
+		getDomainColumnName();
+	}
+
+	public Column setDomain(Domain domain) {
+		this.domain = domain;
+		domainColumn = null;
+		if (domain == null) domainColumnName = null;
+		return this;
+	}
+
+	public String getDomainName() { return getDomain() == null ? null : getDomain().getName(); }
+	public String getDomainSchemaName() { return getDomain() == null ? null : getDomain().getSchemaName(); }
+
+	public Column setDomainName(String name) {
+		String schema = getDomainSchemaName();
+		domain = name == null ? null : new Domain(name).setSchemaName(schema);
+		domainColumn = null;
+		if (name == null) domainColumnName = null;
+		return this;
+	}
+
+	public Column setDomainSchemaName(String schema) {
+		String name = getDomainName();
+		domain = new Domain(name).setSchemaName(schema);
+		domainColumn = null;
+		return this;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -118,7 +174,15 @@ public final class Column extends AbstractColumn<Column>
 			return false;
 		}
 		final Column val = (Column) obj;
+		if (!equals("domainName", val, getDomainName(), val.getDomainName(), equalsHandler)
+				|| !equals("domainSchemaName", val, getDomainSchemaName(), val.getDomainSchemaName(), equalsHandler)
+				|| !equals("domainColumnName", val, getDomainColumnName(), val.getDomainColumnName(), equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.CHECK, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals("checkConstraint", val, getCheckConstraint(), val.getCheckConstraint(), equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaProperties.MASKING_FUNCTION, val, equalsHandler)) {
@@ -146,7 +210,9 @@ public final class Column extends AbstractColumn<Column>
 		super.cloneProperties(clone);
 		clone.setConverter(this.getConverter());
 		clone.setExtendedProperties(cloneMap(getExtendedProperties()));
-		clone.setCheckConstraint(this.getCheckConstraint());
+		clone.setCheckConstraint(this.getCheckConstraint() == null ? null : this.getCheckConstraint().clone());
+		clone.domain = getDomain() == null ? null : new Domain(getDomainName()).setSchemaName(getDomainSchemaName());
+		clone.domainColumnName = getDomainColumnName();
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -384,12 +450,21 @@ public final class Column extends AbstractColumn<Column>
 		return instance();
 	}
 
+	private boolean hasDetailedCheckConstraint() {
+		CheckConstraint check = getCheckConstraint();
+		return check != null && (!isEmpty(check.getName()) || !check.isEnable() || !check.getSpecifics().isEmpty()
+				|| check.getDeferrability() != null || !isEmpty(check.getRemarks()));
+	}
+
 	@Override
 	protected void writeXmlOptionalAttributes(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
-		stax.writeAttribute(SchemaProperties.CHECK, this);
+		if (!hasDetailedCheckConstraint()) stax.writeAttribute(SchemaProperties.CHECK, this);
 		stax.writeAttribute(SchemaProperties.MASKING_FUNCTION, this);
 		stax.writeAttribute(SchemaProperties.ON_UPDATE, this);
+		stax.writeAttribute("domainName", getDomainName());
+		stax.writeAttribute("domainSchemaName", getDomainSchemaName());
+		stax.writeAttribute("domainColumnName", getDomainColumnName());
 		if (this.isHidden()) {
 			stax.writeAttribute(SchemaProperties.HIDDEN, this);
 		}
@@ -398,6 +473,7 @@ public final class Column extends AbstractColumn<Column>
 	@Override
 	protected void writeXmlOptionalValues(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
+		if (hasDetailedCheckConstraint()) getCheckConstraint().writeXml(stax);
 		if (!isEmpty(this.getExtendedProperties())) {
 			stax.newLine();
 			stax.indent();
@@ -411,6 +487,22 @@ public final class Column extends AbstractColumn<Column>
 			@Override
 			protected void initializeSetValue() {
 				super.initializeSetValue();
+				register("domainName", new AbstractSetValue<Column, String>() {
+					@Override public void setValue(Column target, String name, String value) { target.setDomainName(value); }
+				});
+				register("domainSchemaName", new AbstractSetValue<Column, String>() {
+					@Override public void setValue(Column target, String name, String value) { target.setDomainSchemaName(value); }
+				});
+				register("domainColumnName", new AbstractSetValue<Column, String>() {
+					@Override public void setValue(Column target, String name, String value) { target.setDomainColumnName(value); }
+				});
+				register("checkConstraint", new AbstractSetValue<Column, CheckConstraint>() {
+					@Override
+					public void setValue(Column target, String name, CheckConstraint value) throws XMLStreamException {
+						target.setCheckConstraint(value);
+					}
+				});
+				registerChild(new CheckConstraint().getDbObjectXmlReaderHandler().setSetParent(false));
 				// Other
 				final String keyName = Column.EXTENDED_PROPERTIES;
 				register(keyName, new AbstractSetValue<Column, Map<String, Object>>() {
@@ -643,7 +735,7 @@ public final class Column extends AbstractColumn<Column>
 		}
 		columnsList.forEach(cc -> {
 			for (final Column column : cc) {
-				if (CommonUtils.eq(column.getName(), originalName)) {
+				if (column != this && CommonUtils.eq(column.getName(), originalName)) {
 					column.setName(name);
 				}
 			}

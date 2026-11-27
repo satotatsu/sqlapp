@@ -295,7 +295,7 @@ class AssessDatabaseMigrationCommandTest {
 				        targetType: VARCHAR2(2 CHAR)
 				        nullable: false
 				        defaultExpression: "'unknown'"
-				        conversion: preserve Unicode text
+				        conversion: "value == null ? null : value.trim()"
 				      - sourceColumn: 金額
 				        targetColumn: AMOUNT
 				        targetType: NUMBER(4,2)

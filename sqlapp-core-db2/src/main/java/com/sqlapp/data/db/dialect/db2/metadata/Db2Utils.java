@@ -53,17 +53,31 @@ public class Db2Utils {
 			throws SQLException {
 		obj.setName(getString(rs, ROUTINE_NAME));
 		obj.setDialect(dialect);
-		obj.setSpecificName(getString(rs, SPECIFIC_NAME));
+		obj.setSpecificNameLiteral(getString(rs, SPECIFIC_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setLanguage(getString(rs, "LANGUAGE"));
-		String definition = getString(rs, "ROUTINE_DEFINITION");
+		String definition = getString(rs, "TEXT");
+		String replayDefinition = dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
+				&& "SQL".equals(obj.getLanguage())
+						? com.sqlapp.data.db.dialect.db2.util.Db2RoutineDefinition.preserveSpecificName(definition,
+								obj.getSpecificName())
+						: definition;
 		if (readerOption.isReadDefinition()) {
-			obj.setDefinition(definition);
+			obj.setDefinition(replayDefinition);
 		}
 		if (readerOption.isReadStatement()) {
 			int offset = rs.getInt("TEXT_BODY_OFFSET");
-			if (offset > 0 && definition != null) {
+			if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && definition != null
+					&& (offset <= 0 || offset >= definition.length()
+							|| "PL/SQL".equalsIgnoreCase(getString(rs, "DIALECT"))
+							|| "Y".equals(getString(rs, "AUTONOMOUS")))) {
+				// The requested body cannot safely recreate these native routine forms.
+				obj.setDefinition(replayDefinition);
+			} else if (offset > 0 && definition != null) {
 				obj.setStatement(definition.substring(offset));
+				if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && "SQL".equals(obj.getLanguage()))
+					obj.getSpecifics().put("DB2_ROUTINE_DDL_BASE64", java.util.Base64.getEncoder()
+							.encodeToString(replayDefinition.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 			}
 		}
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
@@ -71,6 +85,14 @@ public class Db2Utils {
 		obj.setClassName(getString(rs, "CLASS"));
 		obj.setValid("Y".equalsIgnoreCase(getString(rs, "VALID")));
 		obj.setRemarks(getString(rs, "REMARKS"));
+		if (dialect instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			for (String key : java.util.List.of("QUALIFIER", "FUNC_PATH", "RESULT_SETS", "SQL_DATA_ACCESS",
+					"COMMIT_ON_RETURN", "AUTONOMOUS", "DETERMINISTIC")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					obj.getSpecifics().put(key, value);
+			}
+		}
 	}
 
 	protected static String getString(ExResultSet rs, String name) throws SQLException {

@@ -1,0 +1,15 @@
+<div class="panel panel-default">
+<h2>@{getMessage("Projections")}</h2>
+<!-- include(incSearchable.html) -->
+<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+<thead><tr><th>@{getMessage("Schema")}</th><th>@{getMessage("Name")}</th><th>Source table schema</th><th>Source table</th><th>Columns</th><th>Sort columns</th></tr></thead>
+<tbody>@foreach{obj : list}
+<tr>
+<td>@{escape(obj.schemaName)}</td>
+<td><a href="projections/@{escape(objectFullPath(obj))}.html">@{escape(obj.name)}</a></td>
+<td>@{escape(obj.tableSchemaName)}</td><td>@{escape(obj.tableName)}</td>
+<td>@foreach{column : obj.columns}<span>@{escape(column.name)} </span>@end{}</td>
+<td>@foreach{column : obj.sortColumns}<span>@{escape(column.name)} @{escape(column.order)} </span>@end{}</td>
+</tr>@end{}</tbody>
+</table>
+</div>

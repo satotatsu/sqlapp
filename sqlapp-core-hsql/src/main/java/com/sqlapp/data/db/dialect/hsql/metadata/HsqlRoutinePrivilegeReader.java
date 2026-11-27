@@ -49,6 +49,11 @@ public class HsqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				RoutinePrivilege obj = createPrivilege(connection, rs);
+				if (productVersionInfo.getMajorVersion() >= 2) {
+					obj.setHierachy(false);
+					obj.getSpecifics().put("hsql.routineGrantScope.v1",
+							"YES".equals(getString(rs, "FAMILY_COMPLETE")) ? "FAMILY" : "SPECIFIC");
+				}
 				result.add(obj);
 			}
 		});
@@ -56,7 +61,8 @@ public class HsqlRoutinePrivilegeReader extends RoutinePrivilegeReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("routinePrivileges.sql");
+		return getSqlNodeCache().getString(
+				productVersionInfo.getMajorVersion() >= 2 ? "routinePrivileges2.sql" : "routinePrivileges.sql");
 	}
 
 	protected RoutinePrivilege createPrivilege(Connection connection, ExResultSet rs) throws SQLException {

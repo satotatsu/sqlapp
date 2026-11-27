@@ -61,6 +61,24 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		boolean packages = getDialect()
+				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect30) >= 0;
+		boolean parameterAttributes = getDialect()
+				.compareTo(com.sqlapp.data.db.dialect.firebird.DialectHolder.defaultDialect25) >= 0;
+		boolean columnReferences = parameterAttributes;
+		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null) {
+			int major = productVersionInfo.getMajorVersion();
+			packages = major >= 3;
+			Integer minor = productVersionInfo.getMinorVersion();
+			parameterAttributes = major > 2 || major == 2 && minor != null && minor >= 1;
+			columnReferences = major > 2 || major == 2 && minor != null && minor >= 5;
+		}
+		if (packages)
+			return getSqlNodeCache().getString("procedureArguments30.sql");
+		if (columnReferences)
+			return getSqlNodeCache().getString("procedureArguments25.sql");
+		if (parameterAttributes)
+			return getSqlNodeCache().getString("procedureArguments21.sql");
 		return getSqlNodeCache().getString("procedureArguments.sql");
 	}
 
@@ -79,11 +97,8 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 		short nullFlag = rs.getShort("NULL_FLAG");
 		int type = rs.getInt("FIELD_TYPE");
 		int subType = rs.getInt("FIELD_SUB_TYPE");
-		if (nullFlag == 1) {
-			obj.setNullable(true);
-		} else {
-			obj.setNullable(false);
-		}
+		obj.setNullable(nullFlag != 1);
+		FirebirdUtils.setDefaultConstraint(obj, trim(getString(rs, "DEFAULT_SOURCE")));
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setRemarks(getString(rs, REMARKS));
@@ -95,6 +110,8 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 			obj.setArrayDimensionUpperBound(upperBound);
 		}
 		FirebirdUtils.setDbType(obj, type, subType, length, precision, scale, segmentLength);
+		if (type == 14 || type == 37)
+			obj.setLength(rs.getInt("CHAR_LEN"));
 		int direction = rs.getInt("PARAMETER_TYPE");
 		if (direction == 0) {
 			obj.setDirection(ParameterDirection.Input);
@@ -103,6 +120,8 @@ public class FirebirdProcedureArgumentReader extends RoutineArgumentReader<Proce
 		} else if (direction == 2) {
 			obj.setDirection(ParameterDirection.Inout);
 		}
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.firebird.Firebird25 && rs.contains("TYPE_DOMAIN"))
+			FirebirdRoutineTypeMetadata.apply(obj, rs);
 		return obj;
 	}
 

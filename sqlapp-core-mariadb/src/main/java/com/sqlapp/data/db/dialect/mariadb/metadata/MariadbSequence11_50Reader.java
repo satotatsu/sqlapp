@@ -41,7 +41,14 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 				Sequence sequence = new Sequence(getString(rs, "SEQUENCE_NAME"));
 				sequence.setCatalogName(getString(rs, "SEQUENCE_CATALOG"));
 				sequence.setSchemaName(getString(rs, "SEQUENCE_SCHEMA"));
-				sequence.setDataTypeName(getString(rs, "DATA_TYPE"));
+				sequence.setRemarks(getString(rs, "TABLE_COMMENT"));
+				String engine = getString(rs, "ENGINE");
+				if (engine != null)
+					sequence.getSpecifics().put("ENGINE", engine);
+				final var type = new com.sqlapp.data.schemas.Column();
+				getDialect().setDbType(getString(rs, "DATA_TYPE"), null, null, type);
+				sequence.setDataType(type.getDataType());
+				sequence.setDataTypeName(type.getDataTypeName());
 				sequence.setPrecision(getInteger(rs, "NUMERIC_PRECISION"));
 				sequence.setScale(getInteger(rs, "NUMERIC_SCALE"));
 				sequence.setStartValue(toBigInteger(rs.getBigDecimal("START_VALUE")));
@@ -52,10 +59,51 @@ public class MariadbSequence11_50Reader extends SequenceReader {
 				result.add(sequence);
 			}
 		});
+		readCacheSizes(connection, result);
 		return result;
 	}
 
+	private void readCacheSizes(Connection connection, List<Sequence> sequences) {
+		int batchSize = MariadbSequence10_30Reader.BATCH_SIZE;
+		for (int offset = 0; offset < sequences.size(); offset += batchSize) {
+			List<Sequence> batch = sequences.subList(offset, Math.min(offset + batchSize, sequences.size()));
+			boolean[] seen = new boolean[batch.size()];
+			StringBuilder sql = new StringBuilder();
+			for (int i = 0; i < batch.size(); i++) {
+				if (i > 0)
+					sql.append(" UNION ALL ");
+				Sequence sequence = batch.get(i);
+				sql.append("SELECT ").append(i).append(" AS sequence_id, cache_size FROM ")
+						.append(MariadbSequence10_30Reader.quote(sequence.getSchemaName())).append('.')
+						.append(MariadbSequence10_30Reader.quote(sequence.getName()));
+			}
+			SqlNode storageQuery = new SqlNode(sql.toString());
+			storageQuery.setParameters(java.util.Collections.emptySet());
+			execute(connection, storageQuery, new ParametersContext(), new ResultSetNextHandler() {
+				@Override
+				public void handleResultSetNext(ExResultSet rs) throws SQLException {
+					int id = rs.getInt("sequence_id");
+					if (id < 0 || id >= batch.size() || seen[id]) {
+						throw new IllegalStateException("Invalid or duplicate MariaDB cache batch row id: " + id);
+					}
+					seen[id] = true;
+					BigDecimal value = rs.getBigDecimal("cache_size");
+					if (value == null || value.signum() < 0) {
+						throw new IllegalStateException(
+								"Missing or negative MariaDB sequence cache size: " + batch.get(id).getName());
+					}
+					int size = value.intValueExact();
+					batch.get(id).setCacheSize(size).setCache(size > 0);
+				}
+			});
+			for (int i = 0; i < seen.length; i++) {
+				if (!seen[i])
+					throw new IllegalStateException("Missing MariaDB cache storage row: " + batch.get(i).getName());
+			}
+		}
+	}
+
 	private static java.math.BigInteger toBigInteger(BigDecimal value) {
-		return value == null ? null : value.toBigInteger();
+		return value == null ? null : value.toBigIntegerExact();
 	}
 }

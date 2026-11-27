@@ -1,5 +1,6 @@
 SELECT
-  t.TABLE_CATALOG AS `table_catalog`
+  t.*
+, t.TABLE_CATALOG AS `table_catalog`
 , t.TABLE_SCHEMA AS `table_schema`
 , t.TABLE_NAME AS `table_name`
 , t.PARENT_TABLE_NAME AS `parent_table_name`

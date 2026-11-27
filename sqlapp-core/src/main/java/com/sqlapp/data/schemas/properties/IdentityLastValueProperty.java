@@ -19,6 +19,10 @@
 
 package com.sqlapp.data.schemas.properties;
 
+/**
+ * Next identity value to be issued, with the same meaning as
+ * {@link LastValueProperty}.
+ */
 public interface IdentityLastValueProperty<T> {
 	Long getIdentityLastValue();
 

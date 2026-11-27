@@ -57,7 +57,16 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
 	@Override
 	public SpannerSqlBuilder definition(final Column column, final boolean withRemarks) {
-		super.definition(column, withRemarks);
+		// GoogleSQL orders NOT NULL before DEFAULT and requires a parenthesized
+		// expression.
+		final Column structural = column.clone().setDefaultValue(null).setOnUpdate(null);
+		super.definition(structural, false);
+		if (!column.isIdentity() && !CommonUtils.isEmpty(column.getDefaultValue())) {
+			space().default_().space()._add("(")._add(column.getDefaultValue())._add(")");
+		}
+		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
+			onUpdateDefinition(column);
+		}
 		if (!CommonUtils.isEmpty(column.getFormula())) {
 			space().as().space()._add("(")._add(column.getFormula())._add(")");
 			if (column.isFormulaPersisted()) {
@@ -67,14 +76,10 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 		if (column.isHidden()) {
 			space()._add("HIDDEN");
 		}
-		final Boolean allowCommitTimestamp = column.getSpecifics().get(ALLOW_COMMIT_TIMESTAMP, Boolean.class);
+		final Boolean allowCommitTimestamp = allowCommitTimestamp(column);
 		final String localityGroup = column.getSpecifics().get(LOCALITY_GROUP);
 		boolean hasOption = false;
 		if (Boolean.TRUE.equals(allowCommitTimestamp)) {
-			if (column.getDataType() != DataType.TIMESTAMP) {
-				throw new IllegalArgumentException(
-						"Cloud Spanner allow_commit_timestamp requires " + "a TIMESTAMP column: " + column.getName());
-			}
 			space()._add("OPTIONS").space()._add("(")._add("allow_commit_timestamp=true");
 			hasOption = true;
 		}
@@ -89,6 +94,46 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 		}
 		if (hasOption) {
 			_add(')');
+		}
+		if (withRemarks && !CommonUtils.isEmpty(column.getRemarks())) {
+			comment(column);
+		}
+		return this;
+	}
+
+	/**
+	 * Reads the optional column flag without coercing malformed values to false.
+	 */
+	public static Boolean allowCommitTimestamp(final Column column) {
+		final String value = column.getSpecifics().get(ALLOW_COMMIT_TIMESTAMP);
+		if (value == null)
+			return null;
+		if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value)) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner " + ALLOW_COMMIT_TIMESTAMP + " must be true or false: " + column.getName());
+		}
+		if (column.getDataType() != DataType.TIMESTAMP || column.getArrayDimension() != 0) {
+			throw new IllegalArgumentException(
+					"Cloud Spanner allow_commit_timestamp requires a scalar TIMESTAMP column: " + column.getName());
+		}
+		return Boolean.valueOf(value);
+	}
+
+	@Override
+	public SpannerSqlBuilder definitionForAlterColumn(final Column column) {
+		if (column.isIdentity() || !CommonUtils.isEmpty(column.getFormula())) {
+			throw new UnsupportedOperationException(
+					"Cloud Spanner identity/generated columns require a separate ALTER migration: " + column.getName());
+		}
+		typeDefinition(column);
+		notNullDefinition(column);
+		// These clauses are removed by a typed ALTER if omitted, so restate the target
+		// values.
+		if (!CommonUtils.isEmpty(column.getDefaultValue())) {
+			space().default_().space()._add("(")._add(column.getDefaultValue())._add(")");
+		}
+		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
+			onUpdateDefinition(column);
 		}
 		return this;
 	}
@@ -148,21 +193,12 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 
 		final Boolean bitReversed = column.getSpecifics().get(IDENTITY_BIT_REVERSED_POSITIVE, Boolean.class);
 		final Long start = column.getIdentityStartValue();
-		final Long skipMin = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MIN, Long.class);
-		final Long skipMax = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MAX, Long.class);
-		if ((skipMin == null) != (skipMax == null)) {
-			throw new IllegalArgumentException("Cloud Spanner identity skip range requires both "
-					+ "minimum and maximum values: " + column.getName());
-		}
-		if (skipMin != null && skipMin.longValue() > skipMax.longValue()) {
-			throw new IllegalArgumentException(
-					"Cloud Spanner identity skip range minimum must not " + "exceed maximum: " + column.getName());
-		}
+		final var range = identitySkipRange(column);
 		if (start != null && start.longValue() <= 0L) {
 			throw new IllegalArgumentException(
 					"Cloud Spanner identity start counter must be positive: " + column.getName());
 		}
-		if (Boolean.TRUE.equals(bitReversed) || start != null || skipMin != null) {
+		if (Boolean.TRUE.equals(bitReversed) || start != null || range.minimum() != null) {
 			space()._add("(");
 			boolean delimiter = false;
 			if (Boolean.TRUE.equals(bitReversed)) {
@@ -173,12 +209,40 @@ public class SpannerSqlBuilder extends AbstractSqlBuilder<SpannerSqlBuilder> {
 				space(delimiter)._add("START COUNTER WITH").space()._add(start);
 				delimiter = true;
 			}
-			if (skipMin != null) {
-				space(delimiter)._add("SKIP RANGE").space()._add(skipMin)._add(",").space()._add(skipMax);
+			if (range.minimum() != null) {
+				space(delimiter);
+				appendIdentitySkipRange(range);
 			}
 			space()._add(")");
 		}
 		return this;
+	}
+
+	public SpannerSqlBuilder alterIdentitySkipRange(final Column column) {
+		final var range = identitySkipRange(column);
+		space()._add("ALTER IDENTITY SET").space();
+		if (range.minimum() == null)
+			return _add("NO SKIP RANGE");
+		return appendIdentitySkipRange(range);
+	}
+
+	private SpannerSqlBuilder appendIdentitySkipRange(final IdentitySkipRange range) {
+		return _add("SKIP RANGE").space()._add(range.minimum())._add(",").space()._add(range.maximum());
+	}
+
+	private static IdentitySkipRange identitySkipRange(final AbstractColumn<?> column) {
+		final Long minimum = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MIN, Long.class);
+		final Long maximum = column.getSpecifics().get(IDENTITY_SKIP_RANGE_MAX, Long.class);
+		if ((minimum == null) != (maximum == null))
+			throw new IllegalArgumentException("Cloud Spanner identity skip range requires both "
+					+ "minimum and maximum values: " + column.getName());
+		if (minimum != null && minimum > maximum)
+			throw new IllegalArgumentException(
+					"Cloud Spanner identity skip range minimum must not exceed maximum: " + column.getName());
+		return new IdentitySkipRange(minimum, maximum);
+	}
+
+	private record IdentitySkipRange(Long minimum, Long maximum) {
 	}
 
 	@Override

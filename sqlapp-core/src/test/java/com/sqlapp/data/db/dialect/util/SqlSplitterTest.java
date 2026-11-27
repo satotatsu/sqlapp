@@ -49,4 +49,54 @@ public class SqlSplitterTest extends AbstractTest {
 		final List<SplitResult> list = splitter.getStatements();
 		assertEquals(5, list.size());
 	}
+	@Test
+	public void adjacentStatementsRetainFirstCharacter() {
+		List<SplitResult> parts = new SqlSplitter().parse("SELECT 1;SELECT 2;SELECT 3");
+		assertEquals(3, parts.size());
+		assertEquals("SELECT 2", parts.get(1).getText());
+		assertEquals("SELECT 3", parts.get(2).getText());
+	}
+
+	@Test
+	public void adjacentStatementsWithMultiCharacterDelimiter() {
+		SqlSplitter splitter = new SqlSplitter() {
+			@Override
+			protected SqlTokenizer createSqlTokenizer(String input) {
+				return new SqlTokenizer(input) {
+					{ setDelimiter("//"); }
+				};
+			}
+		};
+		List<SplitResult> parts = splitter.parse("SELECT 1//SELECT 2//");
+		assertEquals(2, parts.size());
+		assertEquals("SELECT 1", parts.get(0).getText());
+		assertEquals("SELECT 2", parts.get(1).getText());
+	}
+
+
+	@Test
+	public void quotedTokensAndInlineCommentsProtectDelimiters() {
+		for (String body : new String[] { "SELECT \"a;b\" FROM t", "SELECT 'a'';b'",
+				"SELECT 1 -- comment; ignored\n", "SELECT 1 /* comment; ' \" */",
+				"SELECT '--;/*'", "SELECT \"a\"\";b\" FROM t" }) {
+			var parts = new SqlSplitter().parse(body + ";SELECT 2;");
+			assertEquals(2, parts.size(), body);
+			assertEquals(body.stripTrailing(), parts.get(0).getText());
+			assertEquals("SELECT 2", parts.get(1).getText());
+		}
+	}
+
+	@Test
+	public void incompleteLexicalTokensFail() {
+		for (String sql : new String[] { "SELECT 'missing", "SELECT \"missing", "SELECT 1 /* missing" })
+			org.junit.jupiter.api.Assertions.assertThrows(com.sqlapp.exceptions.InvalidTextException.class,
+					() -> new SqlSplitter().parse(sql));
+	}
+
+	@Test
+	public void emptyAndWhitespaceOnlyInputHaveNoParts() {
+		for (String sql : new String[] { "", "\n", "\n\n", " \t\n" })
+			assertEquals(0, new SqlSplitter().parse(sql).size());
+	}
+
 }

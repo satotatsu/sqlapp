@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.sql;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
 import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.util.CommonUtils;
@@ -28,7 +29,13 @@ public class MySqlCreateProcedureFactory extends AbstractCreateProcedureFactory<
 
 	@Override
 	protected void addCreateObject(final Procedure obj, MySqlSqlBuilder builder) {
-		builder.create().procedure();
+		if (!CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
+		builder.create();
+		MySqlDefiner.append(builder, obj.getSpecifics());
+		builder.procedure();
 		builder.name(obj);
 		builder.space().arguments(obj.getArguments());
 		if (obj.getDeterministic() != null) {
@@ -43,7 +50,7 @@ public class MySqlCreateProcedureFactory extends AbstractCreateProcedureFactory<
 			builder.lineBreak()._add(obj.getSqlDataAccess());
 		}
 		if (obj.getSqlSecurity() != null) {
-			builder.lineBreak()._add(obj.getSqlSecurity());
+			builder.lineBreak()._add("SQL ")._add(obj.getSqlSecurity());
 		}
 		if (!CommonUtils.isEmpty(obj.getRemarks())) {
 			builder.lineBreak().comment().space();

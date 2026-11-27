@@ -122,6 +122,8 @@ public class BulkMigrationJobPlan {
 				final Table table = sourceTable(task);
 				final Table target = task.getEffectiveTargetTable();
 				final ChunkedBulkMigrationOption option = task.getOptions();
+				if (task.isFullScan())
+					update(digest, "FULL_SCAN_INSERT_V1");
 				update(digest, task.getTaskId(), table.getCatalogName(), table.getSchemaName(),
 						table.getName(), target.getCatalogName(), target.getSchemaName(), target.getName(),
 						task.getKeysetSource() != null,
@@ -238,6 +240,7 @@ public class BulkMigrationJobPlan {
 			update(digest, (Object) null);
 			return;
 		}
+		if (option.getInsertMethod() != BulkInsertMethod.AUTO) update(digest, "insertMethod", option.getInsertMethod());
 		update(digest, option.getBatchSize(), option.getBulkCopyTimeout(),
 				option.isCheckConstraints(), option.isFireTriggers(), option.isKeepIdentity(),
 				option.isKeepNulls(), option.isTableLock(), option.isUseTransaction(),

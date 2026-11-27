@@ -12,13 +12,13 @@ LEFT OUTER JOIN SYSCAT.COLIDENTATTRIBUTES ci
   AND c.COLNAME=ci.COLNAME)
 WHERE 1=1 
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(c.TABSCHEMA) IN /*schemaName*/('%')
+  AND c.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(c.TABNAME) IN /*tableName*/('%')
+  AND c.TABNAME IN /*tableName*/('%')
   /*end*/
   /*if isNotEmpty(columnName)*/
-  AND rtrim(c.COLNAME) IN /*columnName*/('%')
+  AND c.COLNAME IN /*columnName*/('%')
   /*end*/
 ORDER BY c.TABSCHEMA, c.TABNAME, c.COLNO
 WITH UR

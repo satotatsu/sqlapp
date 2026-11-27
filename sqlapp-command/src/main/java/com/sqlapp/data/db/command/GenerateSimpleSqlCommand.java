@@ -20,7 +20,9 @@
 package com.sqlapp.data.db.command;
 
 import java.util.List;
+import java.util.Map;
 
+import com.sqlapp.data.db.command.properties.DialectOptionsProperty;
 import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
@@ -48,7 +50,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateSimpleSqlCommand extends AbstractCommand
-		implements SchemaOptionsProperty, SqlTypeProperty, SqlFactoryRegistryProperty {
+		implements SchemaOptionsProperty, SqlTypeProperty, SqlFactoryRegistryProperty, DialectOptionsProperty {
 	/**
 	 * Output targetFilePath
 	 */
@@ -61,6 +63,11 @@ public class GenerateSimpleSqlCommand extends AbstractCommand
 	private SqlType sqlType = SqlType.CREATE;
 
 	private Options schemaOptions = new Options();
+
+	/**
+	 * Dialectオプション(例: oracle.maxStringSize=STANDARD)
+	 */
+	private Map<String, String> dialectOptions = Map.of();
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
@@ -85,7 +92,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand
 	private SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target) {
 		SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
 		if (sqlFactoryRegistry == null) {
-			final Dialect dialect = SchemaUtils.getDialect(target);
+			final Dialect dialect = applyDialectOptions(SchemaUtils.getDialect(target));
 			sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		}
 		if (this.getSchemaOptions() != null) {

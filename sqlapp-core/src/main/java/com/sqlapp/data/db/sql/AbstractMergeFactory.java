@@ -54,6 +54,10 @@ public abstract class AbstractMergeFactory<S extends AbstractSqlBuilder<?>> exte
 				builder.appendIndent(1);
 			}
 			for (final Column column : obj.getColumns()) {
+				if (this.isFormulaColumn(column)) {
+					// 計算列(仮想列)は値を指定できないのでUSINGに含めない
+					continue;
+				}
 				final String def = this.getValueDefinitionForMerge(column);
 				builder.lineBreak();
 				builder.comma(i > 0).space(2, i == 0);
@@ -63,8 +67,11 @@ public abstract class AbstractMergeFactory<S extends AbstractSqlBuilder<?>> exte
 				i++;
 			}
 			if (!supportValues) {
-				builder.lineBreak();
-				builder.from().space()._add(this.getDialect().getSelectDummyTableName());
+				final String dummyTableName = this.getDialect().getSelectDummyTableName();
+				if (!CommonUtils.isEmpty(dummyTableName)) {
+					builder.lineBreak();
+					builder.from().space()._add(dummyTableName);
+				}
 			} else {
 				builder.appendIndent(-1);
 				builder.lineBreak();

@@ -136,11 +136,13 @@ tasks instead share the `migration` extension described in the
 | `jdbcUrl` | `Property<String>` | JDBC URL; use this name, not `url` |
 | `driverClassName` | `Property<String>` | Explicit JDBC driver class when needed |
 | `username`, `password` | `Property<String>` | Connection credentials |
+| `passwordEnv` | `Property<String>` | Name of an environment variable holding the password; `password` wins when both are set |
 | `catalog`, `schema` | `Property<String>` | Default connection catalog/schema |
 | `maximumPoolSize` | `Property<Integer>` | Defaults to 5 when not set on the extension |
 | `minimumIdle` | `Property<Integer>` | Defaults to 0 when not set on the extension |
 | `autoCommit` | `Property<Boolean>` | Optional connection setting; command transaction handling still applies |
 | `properties` | `ConfigurableFileCollection` | Connection configuration files |
+| `dialectOptions` | `MapProperty<String, String>` | sqlapp dialect options for this connection, such as `oracle.maxStringSize`; see [Dialect options](#dialect-options) |
 
 For example, load an existing Hikari properties file and override credentials:
 
@@ -166,9 +168,58 @@ extension when you need to override the fallbacks. Avoid storing credentials
 in a committed build script or properties file.
 
 The configuration loader also recognizes Java-properties XML, JSON, YAML, and
-YML files. More than one file may be supplied through repeated `properties`
-calls. See the [task reference](task-reference.md#configure-a-data-source-from-a-file)
-for merge behavior, the companion-project pattern, and missing-file behavior.
+YML files, and stops with a clear message when a listed file is missing; unknown
+setting names are reported as a warning. More than one file may be supplied through repeated
+`properties` calls. A file can name the password's environment variable with
+`passwordEnv`. See the [task reference](task-reference.md#configure-a-data-source-from-a-file)
+for merge behavior, password options and the companion-project pattern.
+
+### Dialect options
+
+sqlapp chooses the dialect from the connected database. A few database settings
+that change the generated SQL can be fixed per data source with `dialectOptions`,
+or with `dialect.*` keys in a configuration file. Values set on the extension
+override file values. An option the connected database does not support, or an
+invalid value, stops the task.
+
+| Option | Values | Meaning |
+|---|---|---|
+| `oracle.maxStringSize` | `STANDARD`, `EXTENDED` | Oracle `MAX_STRING_SIZE`. Maximum length of VARCHAR2/NVARCHAR2 (4000 or 32767 bytes) and RAW (2000 or 32767 bytes). Oracle 12c or later accepts `EXTENDED` |
+
+Without the option sqlapp detects `MAX_STRING_SIZE` on Oracle 12c or later by
+running `SELECT CAST(NULL AS VARCHAR2(32767)) FROM DUAL`, which needs no extra
+privilege. The result is cached per JDBC URL for the life of the JVM (the Gradle
+daemon). When no connection is available, for example when SQL is generated
+from a schema XML file, `STANDARD` is used. The tasks that generate SQL without
+a connection (`generateSql`, `generateDiffSql` and `generateLegacyRdbLoader`)
+accept the same options as a task property:
+
+```groovy
+tasks.named('generateDiffSql') {
+    dialectOptions.put('oracle.maxStringSize', 'EXTENDED')
+}
+```
+
+The desktop application reads `dialect.*` keys from the data source settings
+file it loaded. Set the option to override the
+detected value, for example when a transfer must create only tables that also
+fit a database with `MAX_STRING_SIZE=STANDARD`:
+
+```groovy
+tasks.named('transferDatabase') {
+    dataSource {
+        jdbcUrl = 'jdbc:oracle:thin:@//target.example:1521/app'
+        dialectOptions.put('oracle.maxStringSize', 'STANDARD')
+    }
+}
+```
+
+```yaml
+jdbcUrl: jdbc:oracle:thin:@//target.example:1521/app
+dialect:
+  oracle:
+    maxStringSize: STANDARD
+```
 
 ## Troubleshooting
 

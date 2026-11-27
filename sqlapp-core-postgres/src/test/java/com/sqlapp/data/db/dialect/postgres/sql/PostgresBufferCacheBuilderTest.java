@@ -10,6 +10,22 @@ import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 class PostgresBufferCacheBuilderTest {
 
 	@Test
+	void testEvictReturnsEvictionAndFlushStatus() {
+		PostgresBufferCacheBuilder builder = new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180);
+		assertEquals("SELECT buffer_evicted, buffer_flushed FROM pg_buffercache_evict(1)", builder.evict(1));
+		assertEquals("SELECT buffer_evicted, buffer_flushed FROM pg_buffercache_evict(2147483647)",
+				builder.evict(Integer.MAX_VALUE));
+	}
+
+	@Test
+	void testEvictRejectsInvalidBufferId() {
+		PostgresBufferCacheBuilder builder = new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180);
+		assertThrows(IllegalArgumentException.class, () -> builder.evict(0));
+		assertThrows(IllegalArgumentException.class, () -> builder.evict(-1));
+		assertThrows(IllegalArgumentException.class, () -> builder.evict(Integer.MIN_VALUE));
+	}
+
+	@Test
 	void testEvictRelationAndAll() {
 		PostgresBufferCacheBuilder builder = new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180);
 
@@ -23,6 +39,7 @@ class PostgresBufferCacheBuilderTest {
 	@Test
 	void testRejectBeforePostgres18AndEmptyName() {
 		PostgresBufferCacheBuilder postgres17 = new PostgresBufferCacheBuilder(DialectHolder.postgreSQL170);
+		assertThrows(IllegalArgumentException.class, () -> postgres17.evict(1));
 		assertThrows(IllegalArgumentException.class, postgres17::evictAll);
 		assertThrows(IllegalArgumentException.class, () -> postgres17.evictRelation("events"));
 		assertThrows(IllegalArgumentException.class,

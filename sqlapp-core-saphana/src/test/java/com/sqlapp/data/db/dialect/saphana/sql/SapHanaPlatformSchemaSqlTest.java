@@ -41,7 +41,7 @@ class SapHanaPlatformSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 		table.getColumns().add(language);
 		final Index index = new Index("IDX_DOCUMENTS_TEXT", content).setIndexType(IndexType.FullText);
 		index.getSpecifics().put(SapHanaCreateIndexFactory.LANGUAGE_COLUMN, language.getName());
-		index.getSpecifics().put(SapHanaCreateIndexFactory.FAST_PREPROCESS, true);
+		index.getSpecifics().put(SapHanaCreateIndexFactory.FAST_PREPROCESS, false);
 		index.getSpecifics().put(SapHanaCreateIndexFactory.FUZZY_SEARCH_INDEX, false);
 		index.getSpecifics().put(SapHanaCreateIndexFactory.FLUSH_EVERY_MINUTES, 5);
 		index.getSpecifics().put(SapHanaCreateIndexFactory.FLUSH_AFTER_DOCUMENTS, 1000);
@@ -52,7 +52,7 @@ class SapHanaPlatformSchemaSqlTest extends AbstractSapHanaSqlFactoryTest {
 				" ");
 		assertTrue(sql.contains("CREATE FULLTEXT INDEX IDX_DOCUMENTS_TEXT ON DOCUMENTS ( CONTENT)"), sql);
 		assertTrue(sql.contains("LANGUAGE COLUMN LANGUAGE_CODE"), sql);
-		assertTrue(sql.contains("FAST PREPROCESS ON"), sql);
+		assertTrue(sql.contains("FAST PREPROCESS OFF"), sql);
 		assertTrue(sql.contains("FUZZY SEARCH INDEX OFF"), sql);
 		assertTrue(sql.contains("ASYNC FLUSH EVERY 5 MINUTES OR AFTER 1000 DOCUMENTS"), sql);
 		assertTrue(sql.contains("CONFIGURATION 'EXTRACTION_CORE'"), sql);

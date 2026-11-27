@@ -142,7 +142,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.HOLD);
 			JdbcTreeStagingLoader loader = new JdbcTreeStagingLoader(connection, schema, plan);
 
-			assertEquals(2, loader.load());
+			assertEquals(2, loader.load().roots());
 			assertEquals(2, count(connection, "COMPANY_MASTER"));
 			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
 			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
@@ -154,8 +154,58 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 					   OR (C.COMPANY_ID='C002' AND E.EMP_ID='E003')
 					"""));
 
-			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan).load().roots());
 			assertEquals(0, count(connection, "TMP_EMPLOYEE_LIST"));
+		}
+	}
+
+	@Test
+	void testInsertVerifiesRowCountsPerDataSet() throws Exception {
+		for (boolean verify : new boolean[] { true, false }) {
+			try (HikariDataSource dataSource = newInternalDataSource();
+					Connection connection = dataSource.getConnection()) {
+				createTables(connection);
+				Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+				connection.setAutoCommit(false);
+				LegacyMigrationLoadPlan plan = plan();
+				plan.setTableOperationMode(LegacyMigrationLoadPlan.TableOperationMode.INSERT);
+				plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.HOLD);
+				plan.setVerifyCounts(verify);
+
+				JdbcTreeStagingLoadResult result = new JdbcTreeStagingLoader(connection, schema, plan).load();
+
+				assertEquals(2, result.roots());
+				assertEquals(
+						java.util.List.of(new JdbcTreeStagingLoadResult.DataSetCount("company", 2, 2, 2L, verify),
+								new JdbcTreeStagingLoadResult.DataSetCount("employee", 3, 3, 3L, verify)),
+						result.dataSets());
+				assertEquals(3, count(connection, "EMPLOYEE_LIST"));
+			}
+		}
+	}
+
+	@Test
+	void testInsertIgnoreReportsIgnoredRows() throws Exception {
+		try (HikariDataSource dataSource = newInternalDataSource();
+				Connection connection = dataSource.getConnection()) {
+			createTables(connection);
+			executeSql(connection, "INSERT INTO COMPANY_MASTER(COMPANY_ID) VALUES ('C001')");
+			connection.commit();
+			Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
+			connection.setAutoCommit(false);
+			LegacyMigrationLoadPlan plan = plan();
+			plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.HOLD);
+
+			JdbcTreeStagingLoadResult result = new JdbcTreeStagingLoader(connection, schema, plan).load();
+
+			JdbcTreeStagingLoadResult.DataSetCount company = result.dataSets().getFirst();
+			assertEquals("company", company.dataSetId());
+			assertEquals(2, company.read());
+			assertEquals(2, company.copied());
+			assertEquals(1L, company.inserted());
+			assertEquals(1, company.ignored());
+			assertEquals(false, company.verified());
+			assertEquals(2, count(connection, "COMPANY_MASTER"));
 		}
 	}
 
@@ -187,7 +237,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			plan.getDataSets().add(second);
 			connection.setAutoCommit(false);
 
-			assertEquals(3, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertEquals(3, new JdbcTreeStagingLoader(connection, schema, plan).load().roots());
 			assertEquals(2, count(connection, "COMPANY_MASTER"));
 			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
 			assertEquals(1, count(connection, "SECOND_ROOT WHERE CODE='S001'"));
@@ -276,7 +326,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 				Schema schema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 				connection.setAutoCommit(false);
 
-				assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan()).load());
+				assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan()).load().roots());
 			}
 
 			try (Connection verification = dataSource.getConnection()) {
@@ -322,7 +372,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			connection.setAutoCommit(false);
 
-			assertEquals(1, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(1, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load().roots());
 			assertEquals(2, count(connection, "COMPANY_MASTER"));
 			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
 		}
@@ -361,13 +411,13 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			connection.setAutoCommit(false);
 
-			assertEquals(1, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(1, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load().roots());
 			assertEquals(2, count(connection, "COMPANY_MASTER"));
 			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
 			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
 			assertEquals(1, count(connection, "TMP_EMPLOYEE_LIST"));
 
-			assertEquals(0, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(0, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load().roots());
 			assertEquals(0, count(connection, "TMP_EMPLOYEE_LIST"));
 		}
 	}
@@ -402,7 +452,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			connection.setAutoCommit(false);
 
-			assertEquals(2, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(2, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load().roots());
 			assertEquals(2, count(connection, "COMPANY_MASTER"));
 			assertEquals(3, count(connection, "EMPLOYEE_LIST"));
 			assertEquals(0, count(connection, "TMP_COMPANY_MASTER"));
@@ -420,10 +470,10 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			plan.setRootCursorStrategy(LegacyMigrationLoadPlan.RootCursorStrategy.REOPEN);
 			connection.setAutoCommit(false);
 
-			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, plan).load().roots());
 			assertEquals(2, count(connection, "TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED'"));
 			assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
-			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan).load().roots());
 		}
 	}
 
@@ -467,7 +517,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			Schema resumedSchema = SchemaUtils.getSchema(connection, "PUBLIC").orElseThrow();
 			connection.setAutoCommit(false);
 
-			assertEquals(1, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load());
+			assertEquals(1, new JdbcTreeStagingLoader(connection, resumedSchema, plan).load().roots());
 			assertEquals(2, count(connection, "COMPANY_MASTER"));
 			assertEquals(2, count(connection,
 					"TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED' AND SQLAPP_LOADED_AT IS NOT NULL"));
@@ -485,7 +535,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 				retainedPlan.setDeleteCommittedRoots(false);
 				connection.setAutoCommit(false);
 
-				assertEquals(2, new JdbcTreeStagingLoader(connection, schema, retainedPlan).load());
+				assertEquals(2, new JdbcTreeStagingLoader(connection, schema, retainedPlan).load().roots());
 				assertEquals(2, count(connection, "TMP_COMPANY_MASTER WHERE SQLAPP_LOAD_STATUS='LOADED'"));
 				assertEquals(3, count(connection, "TMP_EMPLOYEE_LIST"));
 			}
@@ -493,7 +543,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			try (Connection connection = dataSource.getConnection()) {
 				connection.setAutoCommit(false);
 
-				assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan()).load());
+				assertEquals(0, new JdbcTreeStagingLoader(connection, schema, plan()).load().roots());
 			}
 
 			try (Connection verification = dataSource.getConnection()) {
@@ -515,7 +565,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			retainedPlan.setDeleteCommittedRoots(false);
 			connection.setAutoCommit(false);
 
-			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, retainedPlan).load());
+			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, retainedPlan).load().roots());
 			executeSql(connection, """
 					ALTER TABLE COMPANY_MASTER ADD CONSTRAINT CK_COMPANY_ID
 					CHECK (COMPANY_ID <> 'FAIL')
@@ -731,7 +781,7 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			plan.getDataSets().get(1).getSourceBusinessKey().add("EMP_ID");
 			connection.setAutoCommit(false);
 
-			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, plan).load());
+			assertEquals(2, new JdbcTreeStagingLoader(connection, schema, plan).load().roots());
 			assertDoesNotThrow(() -> new JdbcTreeStagingLoader(connection, schema, plan));
 		}
 	}
@@ -767,12 +817,12 @@ class JdbcTreeStagingLoaderTest extends AbstractDbCommandTest {
 			retainedPlan.setDeleteCommittedRoots(false);
 			connection.setAutoCommit(false);
 
-			assertEquals(1, new JdbcTreeStagingLoader(connection, schema, retainedPlan).load());
+			assertEquals(1, new JdbcTreeStagingLoader(connection, schema, retainedPlan).load().roots());
 			assertEquals(1, count(connection, "\"Order\" WHERE \"Id\"='K001' AND \"Value\"='quoted'"));
 			assertEquals(1,
 					count(connection, "\"Select\" WHERE SQLAPP_LOAD_STATUS='LOADED' AND SQLAPP_LOADED_AT IS NOT NULL"));
 
-			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, quotedPlan()).load());
+			assertEquals(0, new JdbcTreeStagingLoader(connection, schema, quotedPlan()).load().roots());
 			assertEquals(0, count(connection, "\"Select\""));
 		}
 	}

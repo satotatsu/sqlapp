@@ -23,7 +23,7 @@ public class CockroachCreateIndexFactory extends Postgres110CreateIndexFactory {
 		if (index.getRemarks() != null) {
 			builder = createSqlBuilder().comment().on().index().space();
 			CockroachDropIndexFactory.name(index, builder, getOptions().isDecorateSchemaName());
-			builder.is().sqlChar(index.getRemarks());
+			builder.is().space()._add("'")._add(index.getRemarks().replace("'", "''"))._add("'");
 			addSql(result, builder, com.sqlapp.data.db.sql.SqlType.SET_COMMENT, index);
 		}
 		return result;

@@ -33,6 +33,10 @@ public class SybaseSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, SqlType.CREATE, SybaseCreateDefinitionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, SqlType.CREATE,
+				SybaseCreateDefinitionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, SqlType.CREATE, SybaseCreateDefinitionFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, SybaseCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SybaseAlterTableFactory.class);

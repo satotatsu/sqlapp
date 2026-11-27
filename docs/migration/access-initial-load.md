@@ -274,7 +274,9 @@ before rows are renamed for the target. This applies across chunk boundaries
 and to count-based resume history. A resumed JDBC keyset migration still
 requires `KEEP_LAST`, because rows preceding its resume token are unavailable
 for reconstructing `KEEP_FIRST`, `ERROR`, or custom selection history.
-Mapping conversion expressions are not supported by the initial-load executor.
+Mapping `conversion` expressions are written to the job as `columnConversions`
+and applied while source rows are read, so copy and verification use the same
+converted values.
 Every mapped table and column must match the supplied Schema XML,
 and each table must have a primary key for resumable keyset reads; the
 generator also requires every primary-key column to resolve and be `NOT NULL`,
@@ -474,9 +476,9 @@ creating target tables.
 
 `nullable` is optional. When it is `false`, `scanData=true` turns observed
 source NULLs into blockers; without complete scalar coverage it produces a
-review item rather than asserting there are no NULLs. `conversion` records the
-chosen conversion intent in JSON and HTML. It is descriptive text: this task
-does not execute it or transform values. When at least one conversion is present,
+review item rather than asserting there are no NULLs. `conversion` is an MVEL
+expression recorded in JSON and HTML and applied by the generated initial-load
+job; this assessment task only validates it. When at least one conversion is present,
 the Phase 2 completion gate requires representative, boundary and NULL values to
 be checked against the approved conversion result.
 

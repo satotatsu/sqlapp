@@ -30,6 +30,57 @@ public class Db2_1110SqlFactoryRegistry extends Db2_1050SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterFunctionFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterProcedureFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2DropIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Db2_1110CreateSynonymFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2_1110DropSynonymFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterSynonymFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Synonym.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Db2_1110CreateSequenceFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2DropSequenceFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterSequenceFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Sequence.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Db2CreateTriggerFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2DropTriggerFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterTriggerFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Trigger.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.CREATE,
+				Db2CreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.DROP,
+				Db2DropViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.db.sql.SqlType.ALTER,
+				Db2AlterViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+	}
+
+	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Function.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
+		registerSqlFactory(com.sqlapp.data.schemas.Procedure.class, com.sqlapp.data.schemas.State.Modified,
+				com.sqlapp.data.db.sql.SqlType.ALTER);
 	}
 
 }

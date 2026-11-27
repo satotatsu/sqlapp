@@ -40,7 +40,7 @@ public class MySqlColumn570Reader extends MySqlColumn564Reader {
 		final String expression = getString(rs, "GENERATION_EXPRESSION");
 		if (!CommonUtils.isEmpty(expression)) {
 			column.setFormula(expression);
-			if (extra == null || extra.contains("VIRTUAL")) {
+			if (extra == null || extra.toUpperCase(java.util.Locale.ROOT).contains("VIRTUAL")) {
 				column.setFormulaPersisted(false);
 			} else {
 				column.setFormulaPersisted(true);

@@ -69,6 +69,7 @@ public class Postgres83OperatorClassReader extends OperatorClassReader {
 
 	protected OperatorClass createOperatorClass(ExResultSet rs) throws SQLException {
 		OperatorClass obj = new OperatorClass(getString(rs, "operator_class_name"));
+		obj.setId(getString(rs, "oid"));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDialect(this.getDialect());
 		obj.setIndexType(getString(rs, "index_type"));

@@ -29,6 +29,14 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
 
 /** MySQL 5.7 compatibility coverage for the metadata reader tree. */
 class MySql57MetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "FLOAT", "REAL",
+					"DOUBLE PRECISION", "DECIMAL(12,3)");
+		}
+	}
+
 	private static final MySQLContainer MYSQL = ReusableTestcontainers.configure(new MySQLContainer("mysql:5.7"));
 
 	@BeforeAll
@@ -101,5 +109,12 @@ class MySql57MetadataReaderTest {
 		statement.execute("CREATE VIEW metadata57_view AS " + "SELECT id, code FROM metadata57_parent");
 		statement.execute("CREATE PROCEDURE metadata57_procedure(IN p_id BIGINT) "
 				+ "SELECT code FROM metadata57_parent WHERE id = p_id");
+	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MYSQL.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
+		}
 	}
 }

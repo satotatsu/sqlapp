@@ -20,19 +20,31 @@ class Db2PartitionRoutingTest {
 	@Test
 	void skipsSchemaTableCrossProductRowsAndEmptySelections() throws Exception {
 		var count = new AtomicInteger();
-		var reader = new Db2TableReader(DialectHolder.defaultDialect) {
-			@Override protected ParametersContext defaultParametersContext(Connection connection) { return new ParametersContext(); }
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
+		var reader = new Db2TableReader(DialectHolder.Db2_910Dialect) {
+			@Override
+			protected ParametersContext defaultParametersContext(Connection connection) {
+				return new ParametersContext();
+			}
+
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
 				count.incrementAndGet();
 				try {
 					handler.handleResultSetNext(new ExResultSet(null) {
-						@Override public String getString(String name) { return name.equals("schema_name") ? "A" : "T2"; }
+						@Override
+						public String getString(String name) {
+							return name.equals("schema_name") ? "A" : "T2";
+						}
 					});
-				} catch (SQLException e) { throw new RuntimeException(e); }
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
 				return null;
 			}
 		};
-		var tables = SchemaUtils.toDoubleKeyMap(List.of(new Table("T1").setSchemaName("A"), new Table("T2").setSchemaName("B")));
+		var tables = SchemaUtils
+				.toDoubleKeyMap(List.of(new Table("T1").setSchemaName("A"), new Table("T2").setSchemaName("B")));
 		reader.setPartitionExpression(null, tables);
 		reader.setPartitioning(null, tables);
 		assertEquals(2, count.get());

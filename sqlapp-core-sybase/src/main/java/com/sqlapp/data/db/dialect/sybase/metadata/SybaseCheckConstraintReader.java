@@ -54,6 +54,7 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
+		final java.util.Map<CheckConstraint, StringBuilder> text = new java.util.LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -64,12 +65,19 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 				if (c == null) {
 					c = createCheckConstraint(rs);
 					map.put(catalog_name, schema_name, constraint_name, c);
-				} else {
-					c.setExpression(c.getExpression() + getString(rs, "definition"));
+					text.put(c, new StringBuilder());
 				}
+				text.get(c).append(SybaseSourceText.required(rs, "definition", constraint_name));
 			}
 		});
 		List<CheckConstraint> list = map.toList();
+		text.forEach((constraint, source) -> {
+			final String expression = unwrap(source.toString(), '(', ')');
+			if (expression == null || expression.isBlank()) {
+				throw new IllegalStateException("Empty SAP ASE CHECK source: " + constraint.getName());
+			}
+			constraint.setExpression(expression);
+		});
 		return list;
 	}
 
@@ -82,7 +90,7 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 		String columnName = getString(rs, COLUMN_NAME);
 		String tableName = getString(rs, TABLE_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
-		String definition = unwrap(getString(rs, "definition"), '(', ')');
+		String definition = null;
 		CheckConstraint c = new CheckConstraint(constraint_name, definition);
 		c.setCatalogName(getString(rs, CATALOG_NAME));
 		c.setSchemaName(getString(rs, SCHEMA_NAME));

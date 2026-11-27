@@ -33,6 +33,20 @@ import com.sqlapp.data.db.metadata.TableReader;
  * 
  */
 public class Firebird30SchemaReader extends Firebird25SchemaReader {
+	@Override
+	protected com.sqlapp.data.db.metadata.DomainReader newDomainReader() {
+		return new Firebird30DomainReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.TriggerReader newTriggerReader() {
+		return new Firebird30TriggerReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.ProcedureReader newProcedureReader() {
+		return new Firebird30ProcedureReader(getDialect());
+	}
 
 	protected Firebird30SchemaReader(Dialect dialect) {
 		super(dialect);

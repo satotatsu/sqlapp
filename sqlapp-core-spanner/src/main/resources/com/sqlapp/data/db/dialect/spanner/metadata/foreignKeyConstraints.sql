@@ -4,6 +4,7 @@ SELECT
 , fk.CONSTRAINT_NAME AS `constraint_name`
 , fk.TABLE_NAME AS `table_name`
 , fk.COLUMN_NAME AS `column_name`
+, fk.ORDINAL_POSITION AS `ordinal_position`
 , pk.TABLE_CATALOG AS `referenced_table_catalog`
 , pk.TABLE_SCHEMA AS `referenced_table_schema`
 , pk.TABLE_NAME AS `referenced_table_name`

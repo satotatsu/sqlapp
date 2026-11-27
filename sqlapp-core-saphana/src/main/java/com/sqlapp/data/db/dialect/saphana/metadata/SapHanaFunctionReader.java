@@ -47,15 +47,46 @@ public class SapHanaFunctionReader extends FunctionReader {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final Dialect dialact = this.getDialect();
 		final List<Function> result = list();
+		final java.util.Map<java.util.List<String>, Function> functions = new java.util.LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Function function = createFunction(rs);
-				function.setDialect(dialact);
-				result.add(function);
+				var key = java.util.Arrays.asList(getString(rs, SCHEMA_NAME), getString(rs, FUNCTION_NAME));
+				Function function = functions.get(key);
+				if (function == null) {
+					function = createFunction(rs);
+					function.setDialect(dialact);
+					functions.put(key, function);
+					result.add(function);
+				}
+				if (rs.getString("TABLE_COLUMN_NAME") != null) {
+					function.setFunctionType(com.sqlapp.data.schemas.FunctionType.Table);
+					function.getReturning().toTable().getTable().getColumns()
+							.add(SapHanaRoutineArguments.readColumn(getDialect(), rs));
+				}
 			}
 		});
 		return result;
+	}
+
+	@Override
+	protected void setMetadataDetail(final Connection connection, final ParametersContext context,
+			final List<Function> functions) throws SQLException {
+		super.setMetadataDetail(connection, context, functions);
+		for (Function function : functions) {
+			if (function.getReturning().getTable() != null) {
+				continue;
+			}
+			var outputs = function.getArguments().stream()
+					.filter(argument -> argument.getDirection() == com.sqlapp.jdbc.sql.ParameterDirection.Output)
+					.toList();
+			if (outputs.size() == 1) {
+				var argument = outputs.getFirst();
+				function.getReturning().setName(argument.getName()).setDataType(argument.getDataType())
+						.setDataTypeName(argument.getDataTypeName()).setLength(argument.getLength())
+						.setScale(argument.getScale());
+			}
+		}
 	}
 
 	protected Function createFunction(ExResultSet rs) throws SQLException {

@@ -21,6 +21,35 @@ package com.sqlapp.data.schemas;
 
 public class TriggerTest extends AbstractDbObjectTest<Trigger> {
 
+	@org.junit.jupiter.api.Test
+	void tableIdentitySurvivesSetterOrderAndXml() throws Exception {
+		Trigger trigger = new Trigger("tr");
+		trigger.setTableSchemaName("other");
+		trigger.setTableName("source");
+		org.junit.jupiter.api.Assertions.assertEquals("other", trigger.getTableSchemaName());
+		trigger.setTableSchemaName("main");
+		org.junit.jupiter.api.Assertions.assertEquals("source", trigger.getTableName());
+		Trigger restored = SchemaUtils.readXml(new java.io.StringReader(trigger.asXml()));
+		org.junit.jupiter.api.Assertions.assertEquals("main", restored.getTableSchemaName());
+		org.junit.jupiter.api.Assertions.assertEquals("source", restored.getTableName());
+		Table original = new Table("bound").setSchemaName("original");
+		trigger.setTable(original);
+		trigger.setTableName("renamed");
+		trigger.setTableSchemaName("changed");
+		org.junit.jupiter.api.Assertions.assertEquals("original", original.getSchemaName());
+		org.junit.jupiter.api.Assertions.assertEquals("bound", original.getName());
+	}
+
+	@org.junit.jupiter.api.Test
+	void partitionParentPreservesBothTableIdentifiers() {
+		PartitionParent parent = new PartitionParent();
+		parent.setTableName("parent");
+		parent.setTableSchemaName("other");
+		org.junit.jupiter.api.Assertions.assertEquals("parent", parent.getTableName());
+		parent.setTableName("renamed");
+		org.junit.jupiter.api.Assertions.assertEquals("other", parent.getTableSchemaName());
+	}
+
 	public static Trigger getTrigger(String triggerName) {
 		Trigger obj = new Trigger(triggerName);
 		obj.setEventManipulation("INSERT", "UPDATE");

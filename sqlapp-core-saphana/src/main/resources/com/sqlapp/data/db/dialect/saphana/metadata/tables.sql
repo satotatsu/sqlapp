@@ -2,6 +2,7 @@ SELECT
   t.*
 FROM TABLES t
 WHERE 1=1
+  AND COALESCE(t.IS_USER_DEFINED_TYPE, 'FALSE') = 'FALSE'
   /*if isNotEmpty(schemaName)*/
   AND t.SCHEMA_NAME IN /*schemaName;type=NVARCHAR*/('%')
   /*end*/

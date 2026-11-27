@@ -81,10 +81,10 @@ AbstractNamedObjectCollectionXmlReaderHandler<TableCollection> {
 		int size = columns.size();
 		for (int i = 0; i < size; i++) {
 			ReferenceColumn column = columns.get(i);
-			Table table = tables.get(column.getTable().getName());
+			Table table = SchemaUtils.getTableOnlyFromParent(column.getSchemaName(), column.getTableName(), tables);
 			if (table != null) {
 				Column fkColumn = table.getColumns().get(column.getName());
-				column.setColumn(fkColumn);
+				if (fkColumn != null) column.setColumn(fkColumn);
 			}
 		}
 	}

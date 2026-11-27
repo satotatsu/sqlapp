@@ -19,22 +19,9 @@
 
 package com.sqlapp.data.db.dialect.firebird.sql;
 
-import java.math.BigInteger;
-
-import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractAlterSequenceFactory;
-import com.sqlapp.data.schemas.Sequence;
-import com.sqlapp.util.CommonUtils;
-
-public class Firebird20AlterSequenceFactory extends AbstractAlterSequenceFactory<FirebirdSqlBuilder> {
-
-	@Override
-	protected void addCreateObject(Sequence obj, FirebirdSqlBuilder builder) {
-		BigInteger val = CommonUtils.coalesce(obj.getLastValue(), obj.getStartValue());
-		if (val == null || val.equals(BigInteger.ZERO)) {
-			return;
-		}
-		builder.alter().sequence().space().name(obj).space().restart().with().space()._add(val);
-	}
-
+/**
+ * Uses version-independent current-value semantics; increment ALTER is
+ * version-gated.
+ */
+public class Firebird20AlterSequenceFactory extends FirebirdAlterSequenceFactory {
 }

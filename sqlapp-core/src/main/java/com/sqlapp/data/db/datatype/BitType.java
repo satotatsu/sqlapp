@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.converter.BooleanConverter;
-import com.sqlapp.data.converter.Converter;
 
 /**
  * BITを表す型
@@ -32,11 +30,6 @@ public class BitType extends AbstractLengthType<BitType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
-	/**
-	 * Booleanのコンバータ
-	 */
-	protected Converter<Boolean> converter = new BooleanConverter();
-
 	/**
 	 * コンストラクタ
 	 */
@@ -50,12 +43,13 @@ public class BitType extends AbstractLengthType<BitType> {
 	public BitType(String dataTypeName) {
 		this.setDataType(DataType.BIT);
 		initialize(dataTypeName);
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
+		// Values are bit strings such as "0101".
+		this.setJdbcTypeHandler(new BitStringJdbcTypeHandler());
 		setCaseSensitive(true);
 		setSearchableWithLike(true);
 		setLiteralPrefix("b'");
 		setLiteralSuffix("'");
-		setDefaultValueLiteral(withLiteral(""));
+		setDefaultValueLiteral(withLiteral("0"));
 		setDefaultLength(1);
 	}
 

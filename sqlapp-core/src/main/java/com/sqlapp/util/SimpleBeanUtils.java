@@ -324,6 +324,11 @@ public class SimpleBeanUtils {
 		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.setField(obj, fieldName, value);
 	}
+
+	/** Sets a field, explicitly allowing null for reference fields. */
+	public static boolean setNullableField(final Object obj, final String fieldName, final Object value) {
+		return SimpleBeanUtils.getInstance(obj.getClass()).setNullableField(obj, fieldName, value);
+	}
 	
 	/**
 	 * Field(大文字、小文字、アンダースコア無視)へ値を設定します

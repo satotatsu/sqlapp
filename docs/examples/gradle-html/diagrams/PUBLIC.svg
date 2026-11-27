@@ -1,0 +1,826 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='2290.866667' height='1423.500000'>
+<defs>
+	<marker id="manyLeft" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
+	    <path d="
+	        M17,3  L3,9
+	        M17,9  L3,9
+	        M17,15 L3,9"
+	        fill="none" stroke="#444" stroke-width="1.4"/>
+	</marker>
+	<marker id="manyRight" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
+	    <path d="
+	        M1,3  L15,9
+	        M1,9  L15,9
+	        M1,15 L15,9"
+	        fill="none" stroke="#444" stroke-width="1.4"/>
+	</marker>
+	<marker id="many" markerWidth="14" markerHeight="14" refX="2" refY="7" orient="0">
+	    <path d="
+	        M13,2  L2,7
+	        M13,7  L2,7
+	        M13,12 L2,7"
+	        fill="none" stroke="#444" stroke-width="1.2"/>
+	</marker>
+	<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
+		<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
+	</marker>
+	<marker id='oneCompact' markerWidth='10' markerHeight='8' refX='0' refY='4' orient='auto'>
+		<path d='M4,0 L4,8 M7,0 L7,8' fill='none' stroke='#444' stroke-width='1.2'/>
+	</marker>
+	<marker id='manyCompact' markerWidth='10' markerHeight='8' refX='1' refY='4' orient='0'>
+		<path d='M9,0 L1,4 M9,4 L1,4 M9,8 L1,4'
+			fill='none' stroke='#444' stroke-width='1.1'/>
+	</marker>
+	<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
+		<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
+	</marker>
+</defs>
+<style>
+  .table-container { font-family: sans-serif; font-size: 11px; border-collapse: collapse; width: 100%; height: 100%; background: #fff; box-sizing: border-box; }
+  .table-th { background: #283593; font-weight: bold; height: 32px; line-height: 32px; font-size: 12px; text-align: left; }
+  .table-th-link { display: block; width: 100%; height: 100%; padding: 0 8px; color: white; text-decoration: none; box-sizing: border-box; }
+  .table-th-link:hover { background: #1a237e; opacity: 0.9; }
+  .table-row { display: grid; height: 24px; line-height: 24px; border-bottom: 1px solid #e8e8e8; box-sizing: border-box; }
+  .table-cell { padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .key-icons { padding: 0; text-align: center; overflow: visible; }
+  .related-key-icon { padding: 0; text-align: center; overflow: visible; }
+  .pk { background:#58bcfa; }
+  .fk { background:#D5D9FA; }
+  a { text-decoration: none; color: #000000;}
+  .uk { font-weight: bold; color: #E53935; text-align: center; }
+  .name { color: #000000; text-align: left; font-size: 10px; padding-right: 4px; }
+  .type { color: #595656; text-align: right; font-size: 10px; padding-right: 4px; }
+  .edge-label { font-family: sans-serif; font-size: 10px; font-weight: 500; }
+</style>
+
+<g transform='translate(681.000000, 383.500000)'>
+	<rect width='195.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='195.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_CUSTOMERS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>CUSTOMERS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 123.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>CUSTOMER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 123.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>CUSTOMER_CODE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 123.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>CUSTOMER_NAME</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 123.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>CLOSING_DAY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 123.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>CREATED_AT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1123.613333, 951.250000)'>
+	<rect width='184.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='184.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_PRODUCTS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>PRODUCTS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>PRODUCT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>PRODUCT_CODE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>PRODUCT_NAME</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>CATEGORY_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>ACTIVE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1492.053333, 412.500000)'>
+	<rect width='187.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='187.000000' height='106.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_SHIPMENTS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>SHIPMENTS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 115.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>SHIPMENT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 115.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>SHIPMENT_NO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 115.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>SHIPMENT_DATE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1105.613333, 777.250000)'>
+	<rect width='202.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='202.000000' height='106.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_WAREHOUSES.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>WAREHOUSES</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>WAREHOUSE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>WAREHOUSE_CODE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>WAREHOUSE_NAME</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1104.613333, 32.000000)'>
+	<rect width='199.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='199.000000' height='106.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_ACCOUNTS_RECEIVABLE.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>ACCOUNTS_RECEIVABLE</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 127.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗🔑</div>
+				<div class='table-cell name'>CUSTOMER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 127.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>BALANCE_AMOUNT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 127.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>UPDATED_AT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1117.280000, 332.000000)'>
+	<rect width='184.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='184.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_INVOICES.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>INVOICES</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>INVOICE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>INVOICE_NO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>CUSTOMER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>INVOICE_DATE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 112.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>TOTAL_AMOUNT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1116.113333, 603.250000)'>
+	<rect width='180.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='180.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_ORDERS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>ORDERS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>ORDER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>ORDER_NO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>CUSTOMER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>ORDER_DATE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>ORDER_STATUS</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1104.613333, 158.000000)'>
+	<rect width='203.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='203.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_RECEIPTS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>RECEIPTS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 131.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>RECEIPT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 131.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>RECEIPT_NO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 131.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>CUSTOMER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 131.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>RECEIPT_DATE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 131.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>RECEIVED_AMOUNT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1107.113333, 1297.500000)'>
+	<rect width='198.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='198.000000' height='106.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_SALES_RETURNS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>SALES_RETURNS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 126.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>SALES_RETURN_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 126.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>CUSTOMER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 126.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>RETURN_DATE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1419.053333, 538.500000)'>
+	<rect width='202.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='202.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_PRODUCT_PRICES.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>PRODUCT_PRICES</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>PRODUCT_PRICE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>PRODUCT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>VALID_FROM</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>VALID_TO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 130.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>UNIT_PRICE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1419.053333, 1070.750000)'>
+	<rect width='180.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='180.000000' height='106.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_INVENTORY_BALANCES.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>INVENTORY_BALANCES</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗🔑</div>
+				<div class='table-cell name'>WAREHOUSE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗🔑</div>
+				<div class='table-cell name'>PRODUCT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 108.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>QUANTITY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1419.053333, 712.500000)'>
+	<rect width='260.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='260.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_INVENTORY_TRANSACTIONS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>INVENTORY_TRANSACTIONS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 188.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>INVENTORY_TRANSACTION_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 188.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>WAREHOUSE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 188.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>PRODUCT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 188.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>TRANSACTION_TYPE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 188.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>QUANTITY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1441.053333, 886.500000)'>
+	<rect width='194.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='194.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_ORDER_DETAILS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>ORDER_DETAILS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 122.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>ORDER_DETAIL_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 122.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗⭐</div>
+				<div class='table-cell name'>ORDER_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 122.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>⭐</div>
+				<div class='table-cell name'>LINE_NO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 122.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>PRODUCT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 122.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>QUANTITY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1419.053333, 134.000000)'>
+	<rect width='237.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='237.000000' height='130.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_RECEIPT_ALLOCATIONS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>RECEIPT_ALLOCATIONS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 165.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>RECEIPT_ALLOCATION_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 165.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>RECEIPT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 165.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>INVOICE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 165.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>ALLOCATED_AMOUNT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1419.053333, 1273.500000)'>
+	<rect width='247.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='247.000000' height='130.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_SALES_RETURN_DETAILS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>SALES_RETURN_DETAILS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>SALES_RETURN_DETAIL_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>SALES_RETURN_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>PRODUCT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>QUANTITY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(1782.546667, 494.000000)'>
+	<rect width='217.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='217.000000' height='130.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_SHIPMENT_DETAILS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>SHIPMENT_DETAILS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>SHIPMENT_DETAIL_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'>🔗</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>SHIPMENT_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>ORDER_DETAIL_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>SHIPPED_QUANTITY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(2053.866667, 425.500000)'>
+	<rect width='217.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='217.000000' height='130.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_INVOICE_DETAILS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>INVOICE_DETAILS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>INVOICE_DETAIL_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>INVOICE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔗</div>
+				<div class='table-cell name'>SHIPMENT_DETAIL_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 145.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>AMOUNT</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(414.000000, 32.000000)'>
+	<rect width='247.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='247.000000' height='130.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_PAYMENT_TERMS.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>PAYMENT_TERMS</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>PAYMENT_TERM_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>CLOSING_DAY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>PAYMENT_MONTH_OFFSET</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 175.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>PAYMENT_DAY</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(32.000000, 32.000000)'>
+	<rect width='167.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='167.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_TAX_RATES.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>TAX_RATES</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 95.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>TAX_RATE_ID</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 95.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>TAX_CODE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 95.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>RATE</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 95.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>VALID_FROM</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 95.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>VALID_TO</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<g transform='translate(219.000000, 32.000000)'>
+	<rect width='175.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+		<foreignObject width='175.000000' height='154.000000'>
+		<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+			<a href='../tables/PUBLIC_changelog.html' target='_blank'>
+			<div class='table-th'>
+				<div style='padding: 0 8px; color: white;text-align: center;'>changelog</div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 103.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'>🔑</div>
+				<div class='table-cell name'>change_number</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 103.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>applied_by</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 103.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>applied_at</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 103.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>status</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div>
+			<div class='table-row' style='grid-template-columns: 32.000000px 103.000000px 20.000000px 20.000000px;'>
+				<div class='table-cell key-icons'></div>
+				<div class='table-cell name'>description</div>
+				<div class='table-cell'></div>
+				<div class='table-cell related-key-icon'></div>
+			</div></a>
+		</div>
+	</foreignObject>
+</g>
+<path d='M876.000000,420.500000 L894.000000,420.500000 L1074.613333,76.000000 L1089.613333,76.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M876.000000,424.000000 L894.000000,424.000000 L1087.280000,424.000000 L1102.280000,424.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M876.000000,427.500000 L894.000000,427.500000 L1086.113333,695.250000 L1101.113333,695.250000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M876.000000,431.000000 L894.000000,431.000000 L1074.613333,250.000000 L1089.613333,250.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M876.000000,434.500000 L894.000000,434.500000 L1077.113333,1365.500000 L1092.113333,1365.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,988.250000 L1325.613333,988.250000 L1389.053333,606.500000 L1404.053333,606.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,991.750000 L1325.613333,991.750000 L1389.053333,1138.750000 L1404.053333,1138.750000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,817.750000 L1325.613333,817.750000 L1389.053333,1114.750000 L1404.053333,1114.750000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,995.250000 L1325.613333,995.250000 L1389.053333,804.500000 L1404.053333,804.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,824.750000 L1325.613333,824.750000 L1389.053333,780.500000 L1404.053333,780.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1296.113333,647.250000 L1307.613333,647.250000 L1411.053333,954.500000 L1426.053333,954.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,998.750000 L1325.613333,998.750000 L1411.053333,1002.500000 L1426.053333,1002.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1301.280000,372.500000 L1319.280000,372.500000 L1307.613333,372.500000 L1389.053333,226.000000 L1404.053333,226.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,202.000000 L1389.053333,202.000000 L1404.053333,202.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1307.613333,1002.250000 L1325.613333,1002.250000 L1389.053333,1365.500000 L1404.053333,1365.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1305.113333,1341.500000 L1389.053333,1341.500000 L1404.053333,1341.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1635.053333,930.500000 L1679.053333,930.500000 L1752.546667,586.000000 L1767.546667,586.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1679.053333,456.500000 L1752.546667,562.000000 L1767.546667,562.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1301.280000,379.500000 L1319.280000,379.500000 L1999.546667,379.500000 L2023.866667,493.500000 L2038.866667,493.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#oneCompact)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+<path d='M1999.546667,538.000000 L2023.866667,517.500000 L2038.866667,517.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+<rect x='18.000000' y='11.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
+</svg>

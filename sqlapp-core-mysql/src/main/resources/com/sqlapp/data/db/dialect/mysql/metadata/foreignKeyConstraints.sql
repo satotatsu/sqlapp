@@ -3,7 +3,7 @@ SELECT
   , rc.constraint_schema
   , rc.constraint_name
   , rc.unique_constraint_catalog AS referenced_table_catalog
-  , rc.unique_constraint_schema AS referenced_table_schema
+  , kc.referenced_table_schema
   , rc.unique_constraint_name
   , rc.match_option
   , rc.update_rule

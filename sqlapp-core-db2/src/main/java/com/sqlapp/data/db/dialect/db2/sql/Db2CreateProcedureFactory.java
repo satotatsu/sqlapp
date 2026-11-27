@@ -24,12 +24,59 @@ import com.sqlapp.data.db.sql.AbstractCreateProcedureFactory;
 import com.sqlapp.data.schemas.Procedure;
 
 public class Db2CreateProcedureFactory extends AbstractCreateProcedureFactory<Db2SqlBuilder> {
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(Procedure procedure) {
+		return Db2RoutineSql.create(procedure, getDialect(), () -> super.createSql(procedure),
+				(sql, type) -> createOperation(sql, type, procedure), getOptions().isDecorateSchemaName());
+	}
 
 	@Override
 	protected void addCreateObject(final Procedure obj, Db2SqlBuilder builder) {
+		if (!com.sqlapp.util.CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
+		if (com.sqlapp.util.CommonUtils.isEmpty(obj.getStatement())) {
+			throw new IllegalArgumentException("Db2 procedure requires a definition or statement: " + obj.getName());
+		}
+		// Retain the existing PL/SQL path for compatibility-mode callers.
+		if (obj.getLanguage() == null || "SQL".equalsIgnoreCase(obj.getLanguage())) {
+			builder.create().procedure().space();
+			Db2RoutineSql.name(builder, obj, false, getOptions().isDecorateSchemaName());
+			builder.space()._add("(");
+			int argumentCount = 0;
+			for (var argument : obj.getArguments()) {
+				builder.comma(argumentCount++ > 0);
+				Db2RoutineArgumentSql.append(argument, builder);
+			}
+			builder._add(")");
+			if (obj.getSpecificName() != null) {
+				builder.lineBreak().specific().space();
+				Db2RoutineSql.identifier(builder, obj.getSpecificName());
+			}
+			builder.lineBreak().language().space()._add("SQL");
+			Db2RoutineSql.procedureOptions(obj, builder);
+			builder.lineBreak()._add(obj.getStatement());
+			return;
+		}
+		if (!"PLSQL".equalsIgnoreCase(obj.getLanguage())) {
+			throw new IllegalArgumentException("External Db2 procedure requires complete definition: " + obj.getName());
+		}
 		builder.create().or().replace().procedure();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		builder.space().arguments(obj.getArguments());
+		builder.space()._add("(");
+		int count = 0;
+		for (com.sqlapp.data.schemas.NamedArgument argument : obj.getArguments()) {
+			builder.comma(count++ > 0);
+			builder._add(argument.getName()).space();
+			if (argument.getDirection() != null
+					&& argument.getDirection() != com.sqlapp.jdbc.sql.ParameterDirection.Input) {
+				builder._add(argument.getDirection()).space();
+			}
+			builder.typeDefinition(argument.getDataType(), argument.getDataTypeName(), argument.getLength(),
+					argument.getScale());
+		}
+		builder._add(")");
 		builder.lineBreak().as();
 		builder.lineBreak().begin();
 		builder.appendIndent(1);

@@ -37,15 +37,10 @@ public class SqlServer2019 extends SqlServer2017 {
 	/**
 	 * serialVersionUID
 	 */
-	private static final long serialVersionUID = -5751173741801001354L;
+	private static final long serialVersionUID = 4312439759678281982L;
 
 	protected SqlServer2019(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-	}
-
-	@Override
-	public int hashCode() {
-		return super.hashCode() + 1;
 	}
 
 	/*
@@ -63,16 +58,4 @@ public class SqlServer2019 extends SqlServer2017 {
 		return new SqlServer2019SqlFactoryRegistry(this);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
-	}
 }

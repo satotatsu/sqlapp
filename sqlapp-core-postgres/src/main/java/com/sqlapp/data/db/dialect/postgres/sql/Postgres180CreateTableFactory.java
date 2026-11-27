@@ -14,7 +14,7 @@ import com.sqlapp.util.CommonUtils;
 /**
  * PostgreSQL 18 table creation, including named NOT NULL constraints.
  */
-public class Postgres180CreateTableFactory extends PostgresCreateTableFactory {
+public class Postgres180CreateTableFactory extends Postgres100CreateTableFactory {
 	@Override
 	protected void addColumnDefinition(Column column, PostgresSqlBuilder builder) {
 		NotNullConstraint constraint = findNotNullConstraint(column);

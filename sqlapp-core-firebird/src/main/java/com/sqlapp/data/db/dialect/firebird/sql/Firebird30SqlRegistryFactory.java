@@ -24,6 +24,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.PackageBody;
 import com.sqlapp.data.schemas.Package;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.data.schemas.Function;
 
 public class Firebird30SqlRegistryFactory extends Firebird25SqlFactoryRegistry {
 
@@ -34,10 +35,15 @@ public class Firebird30SqlRegistryFactory extends Firebird25SqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Function.class, SqlType.CREATE, Firebird30CreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.ALTER, Firebird30AlterFunctionFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.CREATE, Firebird30CreateSequenceFactory.class);
 		//
 		registerSqlFactory(Package.class, SqlType.CREATE, Firebird30CreatePackageFactory.class);
+		registerSqlFactory(Package.class, SqlType.ALTER, Firebird30AlterPackageFactory.class);
 		//
 		registerSqlFactory(PackageBody.class, SqlType.CREATE, Firebird30CreatePackageBodyFactory.class);
+		registerSqlFactory(PackageBody.class, SqlType.ALTER, Firebird30AlterPackageBodyFactory.class);
+		registerSqlFactory(PackageBody.class, SqlType.DROP, Firebird30DropPackageBodyFactory.class);
 	}
 }

@@ -47,4 +47,43 @@ public class PostgresSqlSplitterTest extends AbstractTest {
 				splits.get(i++).getText());
 	}
 
+	@Test
+	public void anonymousBlocksAndDollarLiterals() {
+		for (String body : new String[] { "DO $$ BEGIN PERFORM 1; BEGIN PERFORM 2; END; END $$",
+				"DO LANGUAGE plpgsql $body$ BEGIN RAISE NOTICE 'it''s; /*'; END $body$",
+				"DO $body$ BEGIN PERFORM $inner$a;b$inner$; END $body$ LANGUAGE plpgsql", "DO 'BEGIN PERFORM 1; END'",
+				"SELECT $$a'b;--/*$$", "SELECT '$missing$;text'", "SELECT name$body$", "SELECT $名前$a;b$名前$",
+				"CREATE FUNCTION f() RETURNS void AS $$BEGIN PERFORM 1; END$$ LANGUAGE plpgsql",
+				"CREATE PROCEDURE p() LANGUAGE plpgsql AS $$BEGIN PERFORM 1; END$$", "SELECT \"a;b\"",
+				"SELECT E'it\\'s;fine'", "SELECT 1 /* outer ; /* $missing$ */ ; */" }) {
+			List<SplitResult> parts = dialect.createSqlSplitter().parse(body + ";SELECT 3;");
+			assertEquals(2, parts.size(), body);
+			assertEquals(body, parts.get(0).getText());
+			assertEquals("SELECT 3", parts.get(1).getText());
+		}
+	}
+
+	@Test
+	public void commentsAndMissingTags() {
+		List<SplitResult> parts = dialect.createSqlSplitter().parse("-- $missing$;\nDO $$BEGIN END$$;SELECT 3;");
+		assertEquals(3, parts.size());
+		assertEquals(SqlSplitter.TextType.COMMENT, parts.get(0).getTextType());
+		for (String sql : new String[] { "DO $$ BEGIN;", "DO $body$ BEGIN; $BODY$;", "SELECT 'unclosed",
+				"/* unclosed" }) {
+			org.junit.jupiter.api.Assertions.assertThrows(com.sqlapp.exceptions.InvalidTextException.class,
+					() -> dialect.createSqlSplitter().parse(sql), sql);
+		}
+	}
+
+	@Test
+	public void olderDialectResolutionRetainsDollarQuotes() {
+		var resolver = new com.sqlapp.data.db.dialect.postgres.resolver.PostgresDialectResolver.PostgresVersionResolver();
+		for (int[] version : new int[][] { { 8, 0 }, { 8, 2 }, { 8, 4 }, { 9, 0 }, { 9, 6 }, { 15, 0 }, { 18, 0 } }) {
+			Dialect resolved = resolver.getDialect(version[0], version[1], null);
+			assertEquals(2, resolved.createSqlSplitter().parse("SELECT $$a;b$$;SELECT 3;").size());
+			if (version[0] >= 9)
+				assertEquals(2, resolved.createSqlSplitter().parse("DO $$BEGIN PERFORM 1; END$$;SELECT 3;").size());
+		}
+	}
+
 }

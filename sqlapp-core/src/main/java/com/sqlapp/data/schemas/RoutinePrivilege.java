@@ -81,9 +81,10 @@ public final class RoutinePrivilege extends
 	@Override
 	protected void writeAttributeXml(StaxWriter stax) throws XMLStreamException {
 		super.writeAttributeXml(stax);
-		if (isHierachy()) {
-			stax.writeAttribute(SchemaProperties.HIERACHY.getLabel(), this.isHierachy());
-		}
+		// The specific name remains meaningful even when equal to the routine name.
+		if (getSpecificName() != null && getSpecificName().equals(getObjectName()))
+			stax.writeAttribute(SchemaProperties.SPECIFIC_NAME.getLabel(), getSpecificName());
+		stax.writeAttribute(SchemaProperties.HIERACHY.getLabel(), this.isHierachy());
 	}
 
 	@Override

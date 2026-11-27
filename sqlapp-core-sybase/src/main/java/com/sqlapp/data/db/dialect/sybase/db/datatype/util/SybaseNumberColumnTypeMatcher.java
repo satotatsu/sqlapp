@@ -29,7 +29,8 @@ import com.sqlapp.data.db.datatype.util.TypeInformation;
 
 public class SybaseNumberColumnTypeMatcher implements ColumnTypeMatcher, ColumnTypeMatcherWrapper {
 
-	private static final Pattern PATTERN = Pattern.compile("(?<dataTypeName>.*?)\\S+IDENTITY");
+	private static final Pattern PATTERN = Pattern.compile("(?<dataTypeName>.*?)\\s+IDENTITY\\s*",
+			Pattern.CASE_INSENSITIVE);
 
 	private ColumnTypeMatcher internalMatcher;
 

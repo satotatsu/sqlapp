@@ -33,11 +33,11 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  * @author SATOH
  *
  */
-public class Oracle11gR2 extends Oracle10g {
+public class Oracle11gR2 extends Oracle11g {
 	/**
 	 * serialVersionUID
 	 */
-	private static final long serialVersionUID = -6436736419643892528L;
+	private static final long serialVersionUID = 4512868130245717716L;
 
 	/**
 	 * コンストラクタ
@@ -46,20 +46,8 @@ public class Oracle11gR2 extends Oracle10g {
 		super(nextVersionDialectSupplier);
 	}
 
-	@Override
-	public int hashCode() {
-		return getProductName().hashCode() + 1;
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
+	protected Oracle11gR2(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
 	}
 
 	/*

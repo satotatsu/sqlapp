@@ -23,10 +23,12 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.ReferenceColumnCollection;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -49,8 +51,24 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	}
 
 	@Override
+	protected MySqlSqlBuilder typeDefinition(Column column) {
+		String type = column.getDataTypeName();
+		if (type == null && column.getDataType() != null)
+			type = column.getDataType().getTypeName();
+		if (column.getDomain() == null && MySqlSpatialReference.isSpatialType(type)) {
+			return _add(MySqlSpatialReference.sqlTypeName(type));
+		}
+		return super.typeDefinition(column);
+	}
+
+	@Override
 	public MySqlSqlBuilder definition(Column column, boolean withRemarks) {
-		super.definition(column, withRemarks);
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			generatedDefinition(column, withRemarks);
+		} else {
+			super.definition(column, withRemarks);
+		}
+		MySqlSpatialReference.append(this, column);
 		if (column.isHidden()) {
 			space()._add("INVISIBLE");
 		}
@@ -59,11 +77,36 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 
 	@Override
 	public MySqlSqlBuilder definitionForAlterColumn(Column column) {
-		super.definitionForAlterColumn(column);
+		if (!CommonUtils.isEmpty(column.getFormula())) {
+			generatedDefinition(column, true);
+		} else {
+			super.definitionForAlterColumn(column);
+		}
+		MySqlSpatialReference.append(this, column);
 		if (column.isHidden()) {
 			space()._add("INVISIBLE");
 		}
 		return instance();
+	}
+
+	private void generatedDefinition(Column column, boolean withRemarks) {
+		if (!getDialect().supportsColumnFormula()) {
+			throw new IllegalArgumentException("Generated columns are not supported by this dialect: " + getDialect());
+		}
+		if (column.isIdentity() || !CommonUtils.isEmpty(column.getDefaultValue())
+				|| !CommonUtils.isEmpty(column.getOnUpdate())) {
+			throw new IllegalArgumentException(
+					"MySQL generated column cannot have AUTO_INCREMENT, DEFAULT or ON UPDATE: " + column.getName());
+		}
+		typeDefinition(column);
+		characterSetDefinition(column);
+		collateDefinition(column);
+		space()._add("GENERATED ALWAYS AS (")._add(column.getFormula())._add(")");
+		space()._add(column.isFormulaPersisted() ? "STORED" : "VIRTUAL");
+		notNullDefinition(column);
+		if (withRemarks) {
+			comment(column);
+		}
 	}
 
 	@Override
@@ -102,7 +145,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 				characterSet().space()._add(column.getCharacterSet());
 			}
 		} else {
-			if (CommonUtils.isEmpty(column.getCharacterSet())) {
+			if (!CommonUtils.isEmpty(column.getCharacterSet())) {
 				characterSet().space()._add(column.getCharacterSet());
 			}
 		}
@@ -136,7 +179,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 				collate().space()._add(column.getCollation());
 			}
 		} else {
-			if (CommonUtils.isEmpty(column.getCollation())) {
+			if (!CommonUtils.isEmpty(column.getCollation())) {
 				collate().space()._add(column.getCollation());
 			}
 		}
@@ -257,11 +300,54 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 			this._add(" ");
 		}
 		if (argument.getName() != null) {
-			this._add(argument.getName());
+			this.name(argument.getName());
 			this._add(" ");
 		}
-		this.typeDefinition(argument);
+		if (argument.getDataType() == DataType.ENUM || argument.getDataType() == DataType.SET) {
+			if (argument.getValues().isEmpty()) {
+				throw new IllegalArgumentException(
+						"MySQL ENUM/SET routine argument requires a nonempty value list: " + argument.getName());
+			}
+			_add(argument.getDataType())._add("(");
+			int index = 0;
+			for (String value : argument.getValues()) {
+				comma(index++ > 0);
+				if (value.startsWith("'") && value.endsWith("'")) {
+					_add(value);
+				} else {
+					sqlChar(value);
+				}
+			}
+			_add(")");
+		} else {
+			this.typeDefinition(argument);
+		}
+		addRoutineCharacterAttributes(argument);
 		return instance();
+	}
+
+	@Override
+	protected MySqlSqlBuilder typeDefinition(FunctionReturning returning) {
+		if (!CommonUtils.isEmpty(returning.getDefinition())) {
+			_add(returning.getDefinition());
+		} else {
+			super.typeDefinition(returning);
+		}
+		addRoutineCharacterAttributes(returning);
+		return instance();
+	}
+
+	private void addRoutineCharacterAttributes(DataTypeSetProperties<?> type) {
+		if (type.getDataType() == null || (!type.getDataType().isCharacter() && type.getDataType() != DataType.ENUM
+				&& type.getDataType() != DataType.SET)) {
+			return;
+		}
+		if (!CommonUtils.isEmpty(type.getCharacterSet())) {
+			space().characterSet().space().name(type.getCharacterSet());
+		}
+		if (!CommonUtils.isEmpty(type.getCollation())) {
+			space().collate().space().name(type.getCollation());
+		}
 	}
 
 	/**
@@ -271,17 +357,6 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	 */
 	@Override
 	protected MySqlSqlBuilder defaultDefinition(Column column) {
-		if (column.getDefaultValue() == null) {
-			return instance();
-		}
-		if (column.getDataType() == DataType.DATETIME || column.getDataType() == DataType.TIME) {
-			if (CommonUtils.isEmpty(column.getDefaultValue())) {
-				return instance();
-			}
-			if (!column.getDefaultValue().startsWith("'")) {
-				return instance();
-			}
-		}
 		return super.defaultDefinition(column);
 	}
 

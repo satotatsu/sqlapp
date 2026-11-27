@@ -67,8 +67,15 @@ tables:
         targetType: VARCHAR2(200 CHAR)
         nullable: false
         defaultExpression: "'unknown'"
-        conversion: preserve Unicode text and reject empty required values
+        conversion: "value == null ? null : value.trim()"
 ```
+
+`conversion` is an optional MVEL expression applied to each source value by the
+generated initial-load job (see [Initial Access data load](../gradle-plugin/access-oracle-migration-assessment.md#initial-access-data-load)).
+It receives `value`, `column` and `row` (the unconverted source values), must
+compile, and cannot be set on primary-key columns, which identify rows for
+resumable loading. The result is stored through the Schema XML column type before
+the target JDBC driver converts it to `targetType`.
 
 ```groovy
 tasks.named('assessDatabaseMigration') {

@@ -58,7 +58,7 @@ public class OracleCreateTruncateTableFactoryTest extends AbstractOracleSqlFacto
 		String expected = """
 				CREATE GLOBAL TEMPORARY TABLE "tableA"
 				(
-					  "cola" NUMBER(9,0)
+					  "cola" NUMBER(10,0)
 					, "colb" VARCHAR2(50 Byte)
 					, "colc" DATE
 				) ON COMMIT PRESERVE ROWS""";

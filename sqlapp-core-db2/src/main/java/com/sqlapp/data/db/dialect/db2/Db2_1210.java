@@ -12,7 +12,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 /**
  * Db2 LUW 12.1 dialect.
  */
-public class Db2_1210 extends Db2_1150 {
+public class Db2_1210 extends Db2_1155 {
 
 	private static final long serialVersionUID = 1L;
 

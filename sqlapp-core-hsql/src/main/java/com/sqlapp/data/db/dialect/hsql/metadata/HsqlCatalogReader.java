@@ -116,7 +116,7 @@ public class HsqlCatalogReader extends AbstractISCatalogReader {
 
 	@Override
 	protected RoleMemberReader newRoleMemberReader() {
-		return null;
+		return new HsqlRoleMemberReader(getDialect());
 	}
 
 	@Override
@@ -126,7 +126,7 @@ public class HsqlCatalogReader extends AbstractISCatalogReader {
 
 	@Override
 	protected SettingReader newSettingReader() {
-		return null;
+		return new HsqlSettingReader(getDialect());
 	}
 
 	@Override

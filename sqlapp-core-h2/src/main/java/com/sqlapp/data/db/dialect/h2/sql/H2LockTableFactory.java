@@ -23,5 +23,13 @@ import com.sqlapp.data.db.dialect.h2.util.H2SqlBuilder;
 import com.sqlapp.data.db.sql.AbstractSelectTableForUpdateFactory;
 
 public class H2LockTableFactory extends AbstractSelectTableForUpdateFactory<H2SqlBuilder> {
+	@Override
+	protected void addLockTable(com.sqlapp.data.schemas.Table table, H2SqlBuilder builder) {
+		var mode = getTableOptions().getLockMode().apply(table);
+		if (mode == null || !mode.isExclusive())
+			throw new IllegalArgumentException(
+					"H2 LOCK supports SELECT FOR UPDATE; shared/table lock modes are not available");
+		super.addLockTable(table, builder);
+	}
 
 }

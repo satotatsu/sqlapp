@@ -9,7 +9,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 
 /** Firebird 5.0 catalog metadata reader. */
-public class Firebird50CatalogReader extends Firebird30CatalogReader {
+public class Firebird50CatalogReader extends Firebird40CatalogReader {
 
 	public Firebird50CatalogReader(final Dialect dialect) {
 		super(dialect);

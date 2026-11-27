@@ -346,6 +346,20 @@ public final class ReferenceColumn extends AbstractNamedObject<ReferenceColumn>
 	}
 
 	@Override
+	protected void cloneProperties(final ReferenceColumn clone) {
+		super.cloneProperties(clone);
+		if (column != null) {
+			Column reference = column.clone();
+			if (column.getTable() != null) {
+				Table table = new Table(column.getTableName()).setSchemaName(column.getSchemaName())
+						.setCatalogName(column.getCatalogName());
+				table.getColumns().add(reference);
+			}
+			clone.setColumn(reference);
+		}
+	}
+
+	@Override
 	public boolean isIncludedColumn() {
 		return includedColumn;
 	}

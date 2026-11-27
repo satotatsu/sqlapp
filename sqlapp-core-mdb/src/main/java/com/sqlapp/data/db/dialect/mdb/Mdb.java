@@ -64,6 +64,9 @@ public class Mdb extends Dialect {
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar("TEXT", 255, type -> {
+			// UCanAccess JDBC metadata exposes Access short text as VARCHAR.
+			type.addColumnTypeMatcher("VARCHAR");
+			type.addColumnTypeMatcher("CHARACTER VARYING");
 			type.setLiteral("'", "'");
 		});
 		// LONGVARCHAR
@@ -130,6 +133,8 @@ public class Mdb extends Dialect {
 		});
 		// Date
 		getDbDataTypes().addDateTime("DATETIME", type -> {
+			// UCanAccess exposes Access Date/Time columns as JDBC TIMESTAMP.
+			type.addColumnTypeMatcher("TIMESTAMP");
 			type.setLiteral("#", "#").setJdbcTypeHandler(new DateTimeTypeHandler(DataType.DATETIME.getJdbcType(),
 					Converters.getDefault().getConverter(java.util.Date.class)));
 		});

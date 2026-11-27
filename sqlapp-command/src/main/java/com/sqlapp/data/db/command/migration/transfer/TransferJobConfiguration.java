@@ -1,0 +1,247 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.data.db.command.migration.transfer;
+
+import java.util.List;
+
+/**
+ * Connection-free intent for an initial RDB transfer. Connection names refer to
+ * runtime-supplied connections, not URLs or persisted credentials. This
+ * definition alone is neither an executable plan nor an execution approval.
+ */
+@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+public record TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+		SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges,
+		String generatedKeyColumn, com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod,
+		TargetPreparation targetPreparation) {
+	public enum TargetPreparation {
+		REQUIRE_EMPTY, STAGED_REPLACE
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges, String generatedKeyColumn,
+			com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, generatedKeyColumn,
+				insertMethod, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public TargetPreparation effectiveTargetPreparation() {
+		return targetPreparation == null ? TargetPreparation.REQUIRE_EMPTY : targetPreparation;
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges, String generatedKeyColumn) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, generatedKeyColumn, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public com.sqlapp.jdbc.bulk.BulkInsertMethod effectiveInsertMethod() {
+		return insertMethod == null ? com.sqlapp.jdbc.bulk.BulkInsertMethod.AUTO : insertMethod;
+	}
+
+	/**
+	 * Retains the previous constructor; an omitted generated key name defaults to
+	 * ID.
+	 */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, null);
+	}
+
+	@com.fasterxml.jackson.annotation.JsonIgnore
+	public String effectiveGeneratedKeyColumn() {
+		return generatedKeyColumn == null ? TransferKeylessChecks.GENERATED_COLUMN : generatedKeyColumn;
+	}
+
+	/**
+	 * Retains the existing construction API; data-impacting changes are not
+	 * authorized by default.
+	 */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, false);
+	}
+
+	public enum CompatibilityPolicy {
+		WARN, ERROR
+	}
+
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, CompatibilityPolicy.WARN);
+	}
+
+	/**
+	 * Transfer intent; SCHEMA_ONLY prepares definitions without a source row-copy
+	 * job.
+	 */
+	public enum DataMode {
+		JDBC_DIRECT, FILE, SCHEMA_ONLY
+	}
+
+	public enum FileFormat {
+		CSV, JSONL, TSV
+	}
+
+	public enum TemporalPolicy {
+		WARN, ERROR
+	}
+
+	/** A header is one parsed record, including any quoted line breaks. */
+	public enum HeaderMode {
+		VALIDATE, SKIP, NONE
+	}
+
+	public enum EmptyFieldMode {
+		NULL, EMPTY_STRING
+	}
+
+	/**
+	 * Saved file-transport intent, not a claim that export/import is implemented.
+	 * CSV/TSV exporters must reject literal null-token collisions rather than lose
+	 * data.
+	 */
+	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+	public record FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
+			TemporalPolicy unsupportedTemporalPolicy, HeaderMode headerMode, EmptyFieldMode emptyFieldMode) {
+		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue) {
+			this(directory, format, encoding, nullValue, TemporalPolicy.WARN, null);
+		}
+
+		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
+				TemporalPolicy unsupportedTemporalPolicy) {
+			this(directory, format, encoding, nullValue, unsupportedTemporalPolicy, null);
+		}
+
+		public FileTransfer(String directory, FileFormat format, String encoding, String nullValue,
+				TemporalPolicy unsupportedTemporalPolicy, HeaderMode headerMode) {
+			this(directory, format, encoding, nullValue, unsupportedTemporalPolicy, headerMode, null);
+		}
+
+		public FileTransfer {
+			unsupportedTemporalPolicy = unsupportedTemporalPolicy == null ? TemporalPolicy.WARN
+					: unsupportedTemporalPolicy;
+			if (directory == null || directory.isBlank())
+				throw new IllegalArgumentException("files.directory is required for file transport.");
+			format = format == null ? FileFormat.CSV : format;
+			emptyFieldMode = emptyFieldMode == null ? EmptyFieldMode.NULL : emptyFieldMode;
+			if (format == FileFormat.JSONL && emptyFieldMode != EmptyFieldMode.NULL)
+				throw new IllegalArgumentException("JSONL uses native JSON values; omit files.emptyFieldMode.");
+			headerMode = headerMode == null ? format == FileFormat.JSONL ? HeaderMode.NONE : HeaderMode.VALIDATE
+					: headerMode;
+			if (format == FileFormat.JSONL && headerMode != HeaderMode.NONE)
+				throw new IllegalArgumentException("JSONL has no header row; omit files.headerMode or use NONE.");
+			encoding = encoding == null ? "UTF-8" : encoding;
+			final java.nio.charset.Charset charset = java.nio.charset.Charset.forName(encoding);
+			encoding = charset.name();
+			if (format != FileFormat.JSONL) {
+				final char delimiter = format == FileFormat.TSV ? '\t' : ',';
+				if (nullValue != null && (nullValue.isBlank()
+						|| nullValue.chars().anyMatch(c -> c == delimiter || c == '"' || c == '\r' || c == '\n')))
+					throw new IllegalArgumentException(format
+							+ " files require an explicit nonblank nullValue without delimiters, quotes or line breaks.");
+				if (nullValue != null && !charset.newEncoder().canEncode(nullValue))
+					throw new IllegalArgumentException(format + " nullValue must be representable in files.encoding.");
+				if (emptyFieldMode != EmptyFieldMode.NULL && nullValue == null)
+					throw new IllegalArgumentException(
+							"Empty text mode requires files.nullValue to distinguish exported SQL NULL.");
+			} else if (nullValue != null) {
+				throw new IllegalArgumentException("JSONL uses JSON null; omit files.nullValue.");
+			}
+		}
+	}
+
+	/** Target preparation; differences are opt-in and limited to SCHEMA_ONLY. */
+	public enum SchemaMode {
+		CREATE_MISSING, REQUIRE_EXISTING, APPLY_DIFFERENCES, CREATE_MISSING_WITH_IDENTITY
+	}
+
+	/** Common initial-copy intent with verification and default chunk sizing. */
+	public TransferJobConfiguration(String source, String target, List<String> tables, SchemaMode schemaMode) {
+		this(1, source, target, tables, schemaMode, null, null, null, null, null);
+	}
+
+	/** Retains the original direct-JDBC construction API and defaults. */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, null, null);
+	}
+
+	public TransferJobConfiguration {
+		if (generatedKeyColumn != null) {
+			if (schemaMode != SchemaMode.CREATE_MISSING_WITH_IDENTITY)
+				throw new IllegalArgumentException("generatedKeyColumn requires CREATE_MISSING_WITH_IDENTITY.");
+			if (generatedKeyColumn.isBlank() || !generatedKeyColumn.equals(generatedKeyColumn.strip())
+					|| generatedKeyColumn.codePoints().anyMatch(Character::isISOControl)
+					|| !java.nio.charset.StandardCharsets.UTF_8.newEncoder().canEncode(generatedKeyColumn))
+				throw new IllegalArgumentException(
+						"generatedKeyColumn must be a nonblank Unicode column name without control or surrounding whitespace.");
+		}
+		allowDestructiveSchemaChanges = Boolean.TRUE.equals(allowDestructiveSchemaChanges);
+		compatibilityPolicy = compatibilityPolicy == null ? CompatibilityPolicy.WARN : compatibilityPolicy;
+		if (formatVersion != 1)
+			throw new IllegalArgumentException("Transfer job formatVersion must be 1.");
+		source = connectionName(source, "source");
+		target = connectionName(target, "target");
+		if (tables == null || tables.isEmpty() || tables.stream().anyMatch(value -> value == null || value.isBlank()))
+			throw new IllegalArgumentException("Select at least one source table with a nonblank identity.");
+		tables = List.copyOf(tables);
+		if (tables.stream().distinct().count() != tables.size())
+			throw new IllegalArgumentException("Select each source table only once.");
+		if (schemaMode == null)
+			throw new IllegalArgumentException("Choose schemaMode: CREATE_MISSING or REQUIRE_EXISTING.");
+		if ((sourceSchema != null && sourceSchema.isBlank()) || (targetSchema != null && targetSchema.isBlank()))
+			throw new IllegalArgumentException("Omit unspecified schema names rather than using blank names.");
+		if (mappingFile != null && mappingFile.isBlank())
+			throw new IllegalArgumentException("Omit mappingFile when no explicit mapping is needed.");
+		chunkSize = chunkSize == null ? 10_000 : chunkSize;
+		if (chunkSize < 1 || chunkSize > 1_000_000)
+			throw new IllegalArgumentException("chunkSize must be between 1 and 1000000.");
+		dataMode = dataMode == null ? DataMode.JDBC_DIRECT : dataMode;
+		if (dataMode == DataMode.SCHEMA_ONLY && insertMethod != null)
+			throw new IllegalArgumentException("insertMethod requires a data-copy job.");
+		verify = verify == null ? dataMode != DataMode.SCHEMA_ONLY : verify;
+		if (targetPreparation == TargetPreparation.STAGED_REPLACE && (dataMode == DataMode.SCHEMA_ONLY || !verify))
+			throw new IllegalArgumentException("STAGED_REPLACE requires a data-copy job and verify: true.");
+		if (dataMode == DataMode.SCHEMA_ONLY && targetPreparation != null)
+			throw new IllegalArgumentException("targetPreparation requires a data-copy job.");
+		if (dataMode == DataMode.SCHEMA_ONLY && (schemaMode == SchemaMode.REQUIRE_EXISTING || verify || files != null))
+			throw new IllegalArgumentException(
+					"SCHEMA_ONLY requires CREATE_MISSING, CREATE_MISSING_WITH_IDENTITY or APPLY_DIFFERENCES, verify: false and no files settings.");
+		if (schemaMode == SchemaMode.APPLY_DIFFERENCES && dataMode != DataMode.SCHEMA_ONLY)
+			throw new IllegalArgumentException("APPLY_DIFFERENCES is available only for SCHEMA_ONLY jobs.");
+		if (allowDestructiveSchemaChanges
+				&& (dataMode != DataMode.SCHEMA_ONLY || schemaMode != SchemaMode.APPLY_DIFFERENCES))
+			throw new IllegalArgumentException(
+					"allowDestructiveSchemaChanges requires SCHEMA_ONLY and APPLY_DIFFERENCES.");
+		if (dataMode == DataMode.FILE && files == null)
+			throw new IllegalArgumentException("FILE dataMode requires files settings.");
+		if (dataMode == DataMode.JDBC_DIRECT && files != null)
+			throw new IllegalArgumentException(
+					"files settings require FILE dataMode; they cannot be ignored in JDBC_DIRECT mode.");
+	}
+
+	private static String connectionName(String value, String field) {
+		if (value == null || !value.matches("[A-Za-z][A-Za-z0-9_.-]{0,127}"))
+			throw new IllegalArgumentException(
+					field + " must name a runtime connection, not a JDBC URL or credentials.");
+		return value;
+	}
+}

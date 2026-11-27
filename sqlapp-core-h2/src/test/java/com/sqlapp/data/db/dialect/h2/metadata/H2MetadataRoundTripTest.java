@@ -132,7 +132,7 @@ public class H2MetadataRoundTripTest {
 			assertNotNull(domain);
 			assertEquals("Positive amount", domain.getRemarks());
 			assertEquals("0", domain.getDefaultValue());
-			assertTrue(domain.getCheck().contains("VALUE >= 0"), domain.getCheck());
+			assertTrue(domain.getChecks().stream().anyMatch(check -> check.getExpression().contains("VALUE >= 0")));
 			assertNotNull(schema.getConstants().get("APP_VERSION"));
 			assertNotNull(schema.getTableLinks().get("LINKED_REMOTE"));
 

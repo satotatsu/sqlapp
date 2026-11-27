@@ -11,6 +11,8 @@ SELECT
 , C.LAST_CHANGE
 , C.STATUS   --ENABLED OR DISABLED
 , C.INVALID  --INVALID OR NULLL
+, C.VALIDATED
+, C.RELY
 FROM all_constraints c
 INNER JOIN all_cons_columns cc
 ON (

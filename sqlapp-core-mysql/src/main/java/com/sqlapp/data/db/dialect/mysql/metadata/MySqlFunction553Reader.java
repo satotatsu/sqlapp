@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.mysql.metadata;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.RoutineArgumentReader;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.ProductVersionInfo;
@@ -58,7 +59,10 @@ public class MySqlFunction553Reader extends MySqlFunctionReader {
 		Function obj = new Function(getString(rs, ROUTINE_NAME));
 		obj.setDialect(getDialect());
 		MySqlUtils.setRoutineInfo(rs, obj);
-		String productDataType = getString(rs, "DATA_TYPE");
+		String productDataType = getString(rs, "DTD_IDENTIFIER");
+		if (CommonUtils.isEmpty(productDataType)) {
+			productDataType = getString(rs, "DATA_TYPE");
+		}
 		long maxLength = rs.getLong("CHARACTER_MAXIMUM_LENGTH");
 		long octetLength = rs.getLong("CHARACTER_OCTET_LENGTH");
 		long numericPrecision = rs.getLong("NUMERIC_PRECISION");
@@ -69,6 +73,10 @@ public class MySqlFunction553Reader extends MySqlFunctionReader {
 		this.getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, numericPrecision), numericScale,
 				obj.getReturning());
 		obj.getReturning().setOctetLength(octetLength);
+		if (obj.getReturning().getDataType() == DataType.ENUM || obj.getReturning().getDataType() == DataType.SET) {
+			// FunctionReturning has no value-list property; retain executable type SQL.
+			obj.getReturning().setDefinition(productDataType);
+		}
 		return obj;
 	}
 

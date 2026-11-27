@@ -44,13 +44,21 @@ public class HsqlCreateTableFactoryTest extends AbstractHsqlSqlFactoryTest {
 	}
 
 	@Test
+	public void namedSequenceRequiresHsql21() {
+		Table table = new Table("T");
+		Column column = new Column("ID").setDataType(DataType.INT).setIdentity(true).setSequenceName("S");
+		table.getColumns().add(column);
+		org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+				() -> sqlFactory.createSql(table));
+	}
+
+	@Test
 	public void testCreateTest1() {
 		Table table = new Table("tablea");
 		Column column = new Column();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);
 		column.setIdentityStartValue(1);
-		column.setSequenceName("seq1");
 		table.getColumns().add(column);
 		List<SqlOperation> operations = sqlFactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(operations);

@@ -15,6 +15,13 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
 class H2ModernSchemaSqlTest extends AbstractH2SqlFactoryTest {
+	@Test
+	void explicitDomainReferenceIsGenerated() {
+		Table table = new Table("T");
+		table.getColumns()
+				.add(new Column("C").setDataType(DataType.INT).setDomain(new com.sqlapp.data.schemas.Domain("D")));
+		assertTrue(sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText().contains("C D"));
+	}
 
 	@Test
 	void testCreateTableIfNotExists() {

@@ -117,6 +117,19 @@ public abstract class Routine<T extends Routine<T>> extends
 		return instance();
 	}
 
+	/** Sets an unqualified, already resolved identifier from metadata or Schema XML. */
+	public T setSpecificNameLiteral(String specificName) {
+		this.specificName = specificName;
+		return instance();
+	}
+
+	@Override
+	protected void cloneProperties(final T clone) {
+		super.cloneProperties(clone);
+		clone.setSchemaName(getSchemaName());
+		clone.setSpecificNameLiteral(specificName);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

@@ -28,6 +28,5 @@ import com.sqlapp.data.db.sql.AbstractTruncateTemporaryTableFactory;
  * @author satoh
  * 
  */
-public class SybaseTruncateTemporaryTableFactory
-		extends AbstractTruncateTemporaryTableFactory<SybaseSqlBuilder> {
+public class SybaseTruncateTemporaryTableFactory extends AbstractTruncateTemporaryTableFactory<SybaseSqlBuilder> {
 }

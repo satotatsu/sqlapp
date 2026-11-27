@@ -64,7 +64,16 @@ public class FirebirdFunctionReader extends FunctionReader {
 
 	protected Function createFunction(ExResultSet rs) throws SQLException {
 		String name = trim(getString(rs, "RDB$FUNCTION_NAME"));
-		return new Function(name);
+		Function function = new Function(name);
+		function.setRemarks(getString(rs, "RDB$DESCRIPTION"));
+		String module = trim(getString(rs, "RDB$MODULE_NAME"));
+		if (module != null) {
+			function.getSpecifics().put("firebird.udf.module", module);
+			function.getSpecifics().put("firebird.udf.entrypoint", trim(getString(rs, "RDB$ENTRYPOINT")));
+			function.getSpecifics().put("firebird.udf.returnPosition",
+					String.valueOf(rs.getInt("RDB$RETURN_ARGUMENT")));
+		}
+		return function;
 	}
 
 	@Override
@@ -76,20 +85,38 @@ public class FirebirdFunctionReader extends FunctionReader {
 		initializeChild(reader);
 		reader.setObjectName(null);
 		reader.setReadDbObjectPredicate((obj, metadataReader) -> true);
-		List<NamedArgument> arguments = reader.getAllFull(connection);
+		var arguments = FirebirdRoutineArguments.read(connection, context, functions, reader);
 		for (Function function : functions) {
 			function.setDialect(this.getDialect());
-			for (NamedArgument argument : arguments) {
+			for (NamedArgument argument : arguments.getOrDefault(function.getName(), java.util.List.of())) {
 				if (function.getName().equals(argument.getRoutineName())) {
-					if (argument.getName() == null) {
+					boolean legacyReturn = argument.getSpecifics().get("firebird.udf.position") != null
+							&& argument.getSpecifics().get("firebird.udf.position")
+									.equals(function.getSpecifics().get("firebird.udf.returnPosition"));
+					if (argument.getName() == null || legacyReturn) {
 						function.getReturning().setDataType(argument.getDataType())
 								.setDataTypeName(argument.getDataTypeName()).setLength(argument.getLength())
 								.setScale(argument.getScale()).setCharacterSet(argument.getCharacterSet())
 								.setCollation(argument.getCollation());
-					} else {
+						com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.set(
+								function.getReturning().getSpecifics(),
+								com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference
+										.get(argument.getSpecifics()));
+						if (argument.isNotNull())
+							function.getReturning().getSpecifics().put("firebird.notNull", "true");
+						if (legacyReturn)
+							function.getSpecifics().put("firebird.udf.returnMechanism",
+									argument.getSpecifics().get("firebird.udf.mechanism"));
+					}
+					if (argument.getName() != null) {
 						function.getArguments().add(argument);
 					}
 				}
+			}
+			if (getReaderOptions().isReadStatement() && function.getSpecifics().containsKey("firebird.udf.module")) {
+				var operations = getDialect().createSqlFactoryRegistry().createSql(function,
+						com.sqlapp.data.db.sql.SqlType.CREATE);
+				function.setDefinition(operations.get(0).getSqlText());
 			}
 		}
 	}

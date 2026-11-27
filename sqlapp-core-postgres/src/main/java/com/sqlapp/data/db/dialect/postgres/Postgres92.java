@@ -48,22 +48,13 @@ public class Postgres92 extends Postgres91 {
 		super.registerDataType();
 		// SmallSerial
 		getDbDataTypes().addSmallSerial(type -> {
+			// smallserial[] is not a valid column type: serial is only a column shorthand.
+			type.setSupportsArray(false);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		getDbDataTypes().addJsonType(type -> {
-			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+			enableArray(type);
 		});
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

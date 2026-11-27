@@ -25,6 +25,13 @@ import com.sqlapp.data.schemas.Mask;
 import com.sqlapp.data.schemas.Table;
 
 public class Db2_1010SqlFactoryRegistry extends Db2_980SqlFactoryRegistry {
+	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+		registerSqlFactory(Mask.class, com.sqlapp.data.schemas.State.Added, SqlType.CREATE);
+		registerSqlFactory(Mask.class, com.sqlapp.data.schemas.State.Deleted, SqlType.DROP);
+		registerSqlFactory(Mask.class, com.sqlapp.data.schemas.State.Modified, SqlType.ALTER);
+	}
 
 	public Db2_1010SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);

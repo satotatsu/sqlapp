@@ -39,8 +39,9 @@ public class SapHanaCloudCreateIndexFactory extends SapHanaCreateIndexFactory {
 	private void addFuzzySearchIndex(final Index index, final Table table, final SapHanaSqlBuilder builder) {
 		final Column column = validateFuzzySearchIndex(index, table);
 		final String searchMode = searchMode(index);
-		builder.space()._add("FUZZY SEARCH INDEX").space().name(index, false).on().name(table, false).space()._add("(")
-				.name(index.getColumns().get(0))._add(")").space()._add("SEARCH MODE").space()._add(searchMode);
+		builder.space()._add("FUZZY SEARCH INDEX").space().name(index, false).on()
+				.name(table, getOptions().isDecorateSchemaName()).space()._add("(").name(index.getColumns().get(0))
+				._add(")").space()._add("SEARCH MODE").space()._add(searchMode);
 		final String tokenSeparators = index.getSpecifics().get(TOKEN_SEPARATORS);
 		if (tokenSeparators != null && !tokenSeparators.isBlank()) {
 			if (!"TEXT".equals(searchMode)) {
@@ -84,7 +85,7 @@ public class SapHanaCloudCreateIndexFactory extends SapHanaCreateIndexFactory {
 		if (value == null || value.isBlank()) {
 			value = "TEXT";
 		} else {
-			value = value.trim().toUpperCase();
+			value = value.trim().toUpperCase(java.util.Locale.ROOT);
 		}
 		if (!SEARCH_MODES.contains(value)) {
 			throw new IllegalArgumentException("Unsupported SAP HANA Cloud fuzzy search mode: " + value);

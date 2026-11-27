@@ -30,6 +30,16 @@ import com.sqlapp.util.StringUtils;
 import com.sqlapp.util.ToStringBuilder;
 
 public enum DbObjects {
+	PROJECTIONS(ProjectionCollection.class) {
+		@Override public boolean isCollection() { return true; }
+		@Override public DbObjects getParentType() { return SCHEMA; }
+		@Override public ProjectionCollection newInstance() { return new ProjectionCollection(); }
+	},
+	PROJECTION(Projection.class) {
+		@Override public DbObjects getCollectionType() { return PROJECTIONS; }
+		@Override public DbObjects[] getDepends() { return array(TABLE); }
+		@Override public Projection newInstance() { return new Projection(); }
+	},
 	CATALOG(Catalog.class) {
 		@Override
 		public Catalog newInstance() {
@@ -2267,7 +2277,25 @@ public enum DbObjects {
 		public Row newInstance() {
 			return new Row();
 		}
-	},;
+	},
+	DOMAIN_COLUMNS("columns", DomainColumnCollection.class) {
+		@Override public boolean isCollection() { return true; }
+		@Override public DbObjects getParentType() { return DOMAIN; }
+		@Override public DomainColumnCollection newInstance() { return new DomainColumnCollection(); }
+	},
+	DOMAIN_COLUMN("column", DomainColumn.class) {
+		@Override public DbObjects getCollectionType() { return DOMAIN_COLUMNS; }
+		@Override public DomainColumn newInstance() { return new DomainColumn(); }
+	},
+	DOMAIN_CHECK_CONSTRAINTS("checks", DomainCheckConstraintCollection.class) {
+		@Override public boolean isCollection() { return true; }
+		@Override public DbObjects getParentType() { return DOMAIN; }
+		@Override public DomainCheckConstraintCollection newInstance() { return new DomainCheckConstraintCollection(); }
+	},
+	DOMAIN_CHECK_CONSTRAINT(DomainCheckConstraint.class) {
+		@Override public DbObjects getCollectionType() { return DOMAIN_CHECK_CONSTRAINTS; }
+		@Override public DomainCheckConstraint newInstance() { return new DomainCheckConstraint(); }
+	};
 
 	@SuppressWarnings("rawtypes")
 	private final Class<? extends DbCommonObject> type;

@@ -9,7 +9,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
 
 /** Firebird 5.0 table metadata reader. */
-public class Firebird50TableReader extends Firebird30TableReader {
+public class Firebird50TableReader extends Firebird40TableReader {
 
 	protected Firebird50TableReader(final Dialect dialect) {
 		super(dialect);

@@ -1,0 +1,22 @@
+@code{
+sourceTable = obj.resolveSourceTable();
+}
+<!-- include(incDetailTitle.html) -->
+<div class="menu-tabs tab-block">
+<!-- include(incDetailHeader.html) -->
+<div class="tab-content"><div id="Base">
+<h3>Source table</h3>
+@if{sourceTable!=null}
+<a href="../tables/@{escape(objectFullPath(sourceTable))}.html">@{escape(obj.tableSchemaName)}.@{escape(obj.tableName)}</a>
+@else{}
+<span>@{escape(obj.tableSchemaName)}.@{escape(obj.tableName)}</span>
+@end{}
+<h3>Output columns</h3>
+<ol>@foreach{column : obj.columns}<li>@{escape(column.name)}</li>@end{}</ol>
+<h3>Sort columns</h3>
+<ol>@foreach{column : obj.sortColumns}<li>@{escape(column.name)} @{escape(column.order)}</li>@end{}</ol>
+<!-- include(incStatement.html) -->
+<!-- include(incDefinition.html) -->
+</div>
+<!-- include(incDetailCommon.html) -->
+</div></div>

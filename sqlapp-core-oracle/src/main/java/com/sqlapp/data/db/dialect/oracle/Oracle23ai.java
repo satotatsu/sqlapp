@@ -47,6 +47,10 @@ public class Oracle23ai extends Oracle21c {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected Oracle23ai(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
+	}
+
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();

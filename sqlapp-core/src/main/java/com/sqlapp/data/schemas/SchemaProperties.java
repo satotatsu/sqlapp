@@ -6792,6 +6792,22 @@ public enum SchemaProperties implements ISchemaProperty {
 	},
 	VALUES() {
 		@Override
+		public List<StaxElementHandler> getXmlHandlers() {
+			return java.util.List.of(new SetHandler(), new ValueHandler() {
+				@Override
+				protected void callParent(com.sqlapp.util.StaxReader reader, String name, Object parentObject,
+						Object value) throws javax.xml.stream.XMLStreamException {
+					// An explicit XML value element is one value, not a comma-separated property string.
+					if (parentObject instanceof ValuesProperty<?> property) {
+						property.getValues().add((String) value);
+					} else {
+						super.callParent(reader, name, parentObject, value);
+					}
+				}
+			}, new EmptyTextSkipHandler());
+		}
+
+		@Override
 		public final Class<?> getPropertyClass() {
 			return ValuesProperty.class;
 		}

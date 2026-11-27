@@ -43,6 +43,14 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 
 /** SQL Server 2025 integration coverage for the full metadata reader tree. */
 class SqlServerMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesDataTypeServerRoundTrips() throws Exception {
+		try (var connection = createTestDatabaseConnection()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "TINYINT", "FLOAT", "REAL",
+					"DECIMAL(12,3)", "NVARCHAR(12)", "XML");
+		}
+	}
+
 	private static final String IMAGE = "mcr.microsoft.com/mssql/server:2025-latest";
 	private static final String DATABASE_NAME = "METADATA_READER_TEST";
 
@@ -172,7 +180,8 @@ class SqlServerMetadataReaderTest {
 			Index clusteredColumnStoreIndex = columnStoreTable.getIndexes().get("IDX_METADATA_COLUMNSTORE");
 			assertNotNull(clusteredColumnStoreIndex);
 			assertEquals(IndexType.ClusteredColumnStore, clusteredColumnStoreIndex.getIndexType());
-			assertEquals(2, clusteredColumnStoreIndex.getColumns().size());
+			// クラスタ化列ストアは全列を含むため、ORDER句の列だけを保持する(このテストのCCIは順序指定なし)
+			assertTrue(clusteredColumnStoreIndex.getColumns().isEmpty());
 			Index spatialIndex = schema.getTables().get("METADATA_SPATIAL").getIndexes()
 					.get("IDX_METADATA_SPATIAL_LOCATION");
 			assertNotNull(spatialIndex);

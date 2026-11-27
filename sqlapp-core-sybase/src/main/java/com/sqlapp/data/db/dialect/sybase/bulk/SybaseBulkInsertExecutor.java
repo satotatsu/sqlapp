@@ -19,8 +19,7 @@ public class SybaseBulkInsertExecutor extends JdbcBatchBulkInsertExecutor {
 	}
 
 	@Override
-	public long execute(final Connection connection, final Table table,
-			final BulkOption options) throws SQLException {
+	public long execute(final Connection connection, final Table table, final BulkOption options) throws SQLException {
 		final boolean keepIdentity = options != null && options.isKeepIdentity();
 		if (!keepIdentity) {
 			return super.execute(connection, table, options);

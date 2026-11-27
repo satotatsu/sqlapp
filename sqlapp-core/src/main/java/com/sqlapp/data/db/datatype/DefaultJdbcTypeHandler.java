@@ -142,6 +142,17 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	}
 
 	/**
+	 * Converter applied to a value before it is bound to a statement. Other
+	 * transports, such as a native bulk appender, use it to convert values the
+	 * same way as a bound parameter.
+	 *
+	 * @return the statement converter
+	 */
+	public ConvertObject<?> getStatementConverter() {
+		return statementConverter;
+	}
+
+	/**
 	 * @param statementConverter the statementConverter to set
 	 */
 	public DefaultJdbcTypeHandler setStatementConverter(Converter<?> statementConverter) {

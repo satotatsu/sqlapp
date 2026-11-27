@@ -30,10 +30,15 @@ public final class MySqlIndexAuditAssertions {
 				var count = new AtomicInteger();
 				var counted = CountingJdbc.wrap(connection,
 						sql -> sql.toLowerCase().contains("information_schema.statistics"), count);
+				var indexCount = new AtomicInteger();
+				counted = CountingJdbc.wrap(counted,
+						sql -> sql.toLowerCase().contains("s.seq_in_index as ordinal_position"), indexCount);
 				var indexes = reader.getAllFull(counted).stream()
 						.filter(t -> a.equals(t.getName()) || b.equals(t.getName()))
 						.flatMap(t -> t.getIndexes().stream()).filter(i -> "shared_index".equals(i.getName())).toList();
-				assertEquals(1, count.get());
+				// One UniqueConstraint query joins STATISTICS; one Index query reads it.
+				assertEquals(2, count.get());
+				assertEquals(1, indexCount.get());
 				assertEquals(2, indexes.size());
 				var first = indexes.stream().filter(i -> a.equals(i.getTableName())).findFirst().orElseThrow();
 				var second = indexes.stream().filter(i -> b.equals(i.getTableName())).findFirst().orElseThrow();

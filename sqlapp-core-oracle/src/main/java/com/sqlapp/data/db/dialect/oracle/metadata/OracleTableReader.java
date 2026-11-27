@@ -84,6 +84,8 @@ public class OracleTableReader extends TableReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g)
+			return getSqlNodeCache().getString("tables10g.sql");
 		return getSqlNodeCache().getString("tables.sql");
 	}
 
@@ -93,8 +95,38 @@ public class OracleTableReader extends TableReader {
 		Table table = createTable(getString(rs, TABLE_NAME));
 		table.setSchemaName(getString(rs, "OWNER"));
 		table.setRemarks(comments);
-		if (!"DISABLED".equalsIgnoreCase(compression)) {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g
+				&& "YES".equals(getString(rs, "IS_EXTERNAL")))
+			table.getSpecifics().put("oracle.table.external", true);
+		if ("ENABLED".equalsIgnoreCase(compression)) {
 			table.setCompression(true);
+		}
+		table.setTableSpaceName(getString(rs, "TABLESPACE_NAME"));
+		table.setLobTableSpaceName(getString(rs, "LOB_TABLESPACE_NAME"));
+		if ("IOT".equals(getString(rs, "IOT_TYPE"))) {
+			table.getSpecifics().put("oracle.table.organization", "INDEX");
+			if (table.getTableSpaceName() == null)
+				table.setTableSpaceName(getString(rs, "IOT_TABLESPACE_NAME"));
+			if ("YES".equals(getString(rs, "IOT_COMPLEX")))
+				table.getSpecifics().put("oracle.table.iotComplex", true);
+			String threshold = getString(rs, "IOT_PCT_THRESHOLD");
+			if (threshold != null)
+				table.getSpecifics().put("oracle.table.iot.pctThreshold", threshold);
+			String iotCompression = getString(rs, "IOT_COMPRESSION");
+			if ("ENABLED".equals(iotCompression)) {
+				String prefix = getString(rs, "IOT_PREFIX_LENGTH");
+				if (prefix == null)
+					throw new IllegalStateException("Compressed IOT is missing its prefix length: " + table.getName());
+				table.getSpecifics().put("oracle.table.iot.compressionPrefixLength", prefix);
+			} else if (iotCompression != null && !"DISABLED".equals(iotCompression)) {
+				table.getSpecifics().put("oracle.table.iotComplex", true);
+			}
+		}
+		if ("Y".equals(getString(rs, "TEMPORARY"))) {
+			table.setTableType(Table.TableType.Temporary);
+			String duration = getString(rs, "DURATION");
+			if (duration != null)
+				table.getSpecifics().put("oracle.table.duration", duration);
 		}
 		String partitioned = getString(rs, PARTTITIONED_KEY);
 		if ("YES".equalsIgnoreCase(partitioned)) {
@@ -120,6 +152,54 @@ public class OracleTableReader extends TableReader {
 		}
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitioning(connection, tables);
+		if (!deferTableDefinitions())
+			readTableDefinitions(connection, tableList);
+	}
+
+	protected boolean deferTableDefinitions() {
+		return false;
+	}
+
+	protected void readTableDefinitions(Connection connection, List<Table> tables) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle10g))
+			return;
+		var targets = new java.util.LinkedHashMap<List<String>, Table>();
+		for (Table table : tables)
+			if ("INDEX".equals(table.getSpecifics().get("oracle.table.organization"))
+					|| "true".equals(table.getSpecifics().get("oracle.table.external"))
+					|| table.getPartitioning() != null && table.getPartitioning().getSubPartitioningType() != null)
+				targets.put(List.of(table.getSchemaName(), table.getName()), table);
+		if (targets.isEmpty())
+			return;
+		ParametersContext context = new ParametersContext();
+		context.put("schemaName", targets.keySet().stream().map(key -> key.get(0)).distinct().toList());
+		context.put("tableName", targets.keySet().stream().map(key -> key.get(1)).distinct().toList());
+		var definitions = new java.util.LinkedHashMap<List<String>, String>();
+		try {
+			execute(connection, getSqlNodeCache().getString("iotDefinitions.sql"), context, new ResultSetNextHandler() {
+				@Override
+				public void handleResultSetNext(ExResultSet rs) throws SQLException {
+					var key = List.of(getString(rs, "OWNER"), getString(rs, "TABLE_NAME"));
+					if (targets.containsKey(key))
+						definitions.put(key, rs.getString("TABLE_DEFINITION"));
+				}
+			});
+		} catch (RuntimeException error) {
+			if (!OracleMetadataAccess.isDenied(error))
+				throw error;
+			logger.warn(
+					"Oracle DBMS_METADATA access denied or object inaccessible; IOT/composite/external table definitions skipped, catalog metadata retained.");
+			return;
+		}
+		for (var entry : targets.entrySet()) {
+			String ddl = definitions.get(entry.getKey());
+			if (ddl == null || ddl.isBlank())
+				throw new IllegalStateException("Oracle table DDL unavailable: " + entry.getKey());
+		}
+		for (var entry : targets.entrySet()) {
+			String ddl = definitions.get(entry.getKey());
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.set(entry.getValue(), ddl);
+		}
 	}
 
 	/**
@@ -179,6 +259,10 @@ public class OracleTableReader extends TableReader {
 			partitioning.setPartitioningType(partitioningType);
 		}
 		Partition partition = addPartition(rs, partitioning);
+		if (partition.getTableSpaceName() == null
+				&& "INDEX".equals(table.getSpecifics().get("oracle.table.organization"))) {
+			partition.setTableSpaceName(getString(rs, "IOT_TABLESPACE_NAME"));
+		}
 		if (initializePartitioning && !"NONE".equalsIgnoreCase(subPartitioningType)) {
 			partitioning.setSubPartitioningType(subPartitioningType);
 		}
@@ -194,13 +278,13 @@ public class OracleTableReader extends TableReader {
 
 	private void setPartitionDetails(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
 		String highValue = getString(rs, "HIGH_VALUE");
-		String compression = getString(rs, "COMPRESSION");
 		partition.setHighValue(highValue);
-		if (!"DISABLED".equalsIgnoreCase(compression)) {
-			partition.setCompression(true);
-		}
+		readPartitionCompression(rs, partition);
 		partition.setTableSpaceName(rs.getString("TABLESPACE_NAME"));
 		for (String key : OracleUtils.getTableStatisticsKeys()) {
+			if ("LOGGING".equals(key) && "NONE".equalsIgnoreCase(getString(rs, key))) {
+				continue; // Composite parent has no logging default.
+			}
 			this.setSpecifics(rs, key, partition);
 		}
 		//
@@ -211,6 +295,13 @@ public class OracleTableReader extends TableReader {
 		this.setStatistics(rs, "AVG_SPACE", partition);
 		this.setStatistics(rs, "CHAIN_CNT", partition);
 		this.setStatistics(rs, "SAMPLE_SIZE", partition);
+	}
+
+	void readPartitionCompression(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
+		// NONE on composite parents means that no compression default was set.
+		partition.setCompression("ENABLED".equalsIgnoreCase(getString(rs, "COMPRESSION")));
+		partition.setCompressionType(
+				partition.isCompression() && rs.contains("COMPRESS_FOR") ? getString(rs, "COMPRESS_FOR") : null);
 	}
 
 	/**

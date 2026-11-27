@@ -56,6 +56,9 @@ public class H2UserReader extends UserReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (H2Versions.isModern(productVersionInfo)) {
+			return getSqlNodeCache().getString("users_200.sql");
+		}
 		return getSqlNodeCache().getString("users.sql");
 	}
 

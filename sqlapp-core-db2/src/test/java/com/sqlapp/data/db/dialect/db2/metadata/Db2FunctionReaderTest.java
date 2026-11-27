@@ -30,6 +30,22 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.FunctionType;
 
 public class Db2FunctionReaderTest extends AbstractDb2SqlFactoryTest {
+	@Test
+	void quotedReturnColumnsAndBodyParenthesesAreHandled() {
+		var reader = new Db2FunctionReader(dialect);
+		Function function = new Function("F").setDialect(dialect).setFunctionType(FunctionType.Table);
+		reader.setRowTableDefinition(function,
+				"CREATE FUNCTION F() RETURNS TABLE (\"amount, net\" DECIMAL(12, 4), \"a\"\" b\" VARCHAR(20)) "
+						+ "LANGUAGE SQL RETURN SELECT DECIMAL(1, 12, 4), VARCHAR('a,b)', 20) FROM SYSIBM.SYSDUMMY1");
+		var columns = function.getReturning().getTable().getColumns();
+		assertEquals(2, columns.size());
+		assertEquals("amount, net", columns.get(0).getName());
+		assertEquals(DataType.DECIMAL, columns.get(0).getDataType());
+		assertEquals(Integer.valueOf(4), columns.get(0).getScale());
+		assertEquals("a\" b", columns.get(1).getName());
+		assertEquals(DataType.VARCHAR, columns.get(1).getDataType());
+		reader.setRowTableDefinition(new Function("EXTERNAL").setFunctionType(FunctionType.Table), null);
+	}
 
 	@Test
 	public void testReturningType() {

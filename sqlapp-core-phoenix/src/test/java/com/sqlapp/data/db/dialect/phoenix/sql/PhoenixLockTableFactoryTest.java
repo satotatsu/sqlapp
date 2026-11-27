@@ -19,46 +19,22 @@
 
 package com.sqlapp.data.db.dialect.phoenix.sql;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.List;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.dialect.phoenix.DialectHolder;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.CommonUtils;
 
-/**
- * DB2用のLock Table
- * 
- * @author tatsuo satoh
- * 
- */
-public class PhoenixLockTableFactoryTest extends AbstractPhoenixSqlFactoryTest {
-	SqlFactory<Table> operation;
-
-	@BeforeEach
-	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.LOCK);
-	}
-
+class PhoenixLockTableFactoryTest {
 	@Test
-	public void testGetDdlTableTable1() {
-		Table table1 = getTable("tableA");
-		List<SqlOperation> list = operation.createDiffSql(table1.diff(table1));
-		SqlOperation operation = CommonUtils.first(list);
-		System.out.println(list);
-		String expected = getResource("lock_table1.sql");
-		assertEquals(expected, operation.getSqlText());
+	void rejectsUnsupportedLockForBothVersionsAndEntryPoints() {
+		for (final var dialect : java.util.List.of(DialectHolder.defaultDialect, DialectHolder.defaultDialect5_3_1)) {
+			final var registry = dialect.createSqlFactoryRegistry();
+			final var table = new Table("events");
+			final com.sqlapp.data.db.sql.SqlFactory<Table> factory = registry.getSqlFactory(table, SqlType.LOCK);
+			assertThrows(UnsupportedOperationException.class, () -> factory.createSql(table));
+			assertThrows(UnsupportedOperationException.class, () -> factory.createDiffSql(table.diff(table)));
+		}
 	}
-
-	private Table getTable(String tableName) {
-		Table table = new Table(tableName);
-		return table;
-	}
-
 }

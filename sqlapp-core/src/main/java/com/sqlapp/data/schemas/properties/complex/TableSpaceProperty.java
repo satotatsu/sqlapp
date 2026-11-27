@@ -48,7 +48,7 @@ public interface TableSpaceProperty<T extends DbCommonObject<?>> extends TableSp
 		if (this instanceof DbCommonObject){
 			value=SchemaUtils.getTableSpaceFromParent(value, (DbCommonObject<?>)this);
 		}
-		SimpleBeanUtils.setField(this, DbObjects.TABLE_SPACE.getCamelCase(), value);
+		SimpleBeanUtils.setNullableField(this, DbObjects.TABLE_SPACE.getCamelCase(), value);
 		return (T)this;
 	}
 

@@ -20,6 +20,9 @@
 package com.sqlapp.data.db.dialect.phoenix.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.db.dialect.phoenix.Phoenix;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -46,8 +49,61 @@ public class PhoenixSqlBuilder extends AbstractSqlBuilder<PhoenixSqlBuilder> {
 	 */
 	@Override
 	public PhoenixSqlBuilder count() {
-		appendElement("COUNT_BIG");
+		appendElement("COUNT");
 		return instance();
+	}
+
+	@Override
+	protected PhoenixSqlBuilder typeDefinition(final Column column) {
+		if (column.getArrayDimension() < 0 || column.getArrayDimension() > 1)
+			throw new IllegalArgumentException("Phoenix supports only one-dimensional arrays: " + column.getName());
+		if (column.getArrayDimensionUpperBound() < 0 || (column.getArrayDimension() == 1
+				&& column.getArrayDimensionLowerBound() != 0 && column.getArrayDimensionLowerBound() != 1))
+			throw new IllegalArgumentException(
+					"Phoenix arrays require a nonnegative capacity and one-based indexing: " + column.getName());
+		final String nativeType = column.getDataTypeName();
+		if (nativeType != null && java.util.Set
+				.of("UNSIGNED_FLOAT", "UNSIGNED_DOUBLE", "UNSIGNED_DATE", "UNSIGNED_TIME", "UNSIGNED_TIMESTAMP")
+				.contains(nativeType.toUpperCase(java.util.Locale.ROOT))) {
+			_add(nativeType.toUpperCase(java.util.Locale.ROOT));
+		} else if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARCHAR
+				&& (column.getLength() == null || column.getLength() == 0)) {
+			_add("VARCHAR");
+		} else {
+			super.typeDefinition(column);
+		}
+		if (column.getArrayDimension() == 1) {
+			if (column.getDataType() == com.sqlapp.data.db.datatype.DataType.VARBINARY)
+				throw new IllegalArgumentException("Phoenix does not support VARBINARY ARRAY: " + column.getName());
+			space()._add("ARRAY");
+			if (column.getArrayDimensionUpperBound() > 0)
+				_add("[")._add(column.getArrayDimensionUpperBound())._add("]");
+		}
+		return instance();
+	}
+
+	@Override
+	public PhoenixSqlBuilder definition(final Column column, final boolean withRemarks) {
+		if (!CommonUtils.isEmpty(column.getOnUpdate()) || !CommonUtils.isEmpty(column.getCheck()))
+			throw new UnsupportedOperationException(
+					"Phoenix column ON UPDATE and CHECK clauses are unsupported: " + column.getName());
+		if (!CommonUtils.isEmpty(column.getDefaultValue())
+				&& (!(getDialect() instanceof Phoenix phoenix) || !phoenix.supportsColumnDefault()))
+			throw new UnsupportedOperationException("Phoenix column DEFAULT requires version 4.9 or later: "
+					+ column.getName() + "; select a versioned dialect using the known server version");
+		if (column.isIdentity() || column.getFormula() != null)
+			throw new UnsupportedOperationException(
+					"Phoenix columns do not support generic IDENTITY or computed formulas; "
+							+ "use an explicit sequence or view expression: " + column.getName());
+		if (!CommonUtils.isEmpty(column.getDefaultValue())) {
+			// Phoenix's column grammar places NULL/NOT NULL before DEFAULT.
+			super.definition(column.clone().setDefaultValue(null), false);
+			defaultDefinition(column);
+			if (withRemarks && !CommonUtils.isEmpty(column.getRemarks()))
+				comment(column);
+			return this;
+		}
+		return super.definition(column, withRemarks);
 	}
 
 	@Override

@@ -34,6 +34,11 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 	private final BulkMigrationKeysetCodec codec;
 	private final int fetchSize;
 
+	/** Override value extraction for a projection while retaining shared SQL, ordering and cursor lifetime. Index is one-based. */
+	protected Object readColumn(ResultSet resultSet, int index, Column column, DbDataType<?> type) throws SQLException {
+		return type.getJdbcTypeHandler().getObject(resultSet, index);
+	}
+
 	/** Uses the table's complete primary key in declared order. */
 	public JdbcBulkMigrationKeysetSource(final Connection connection, final Table table) {
 		this(connection, table, primaryKeyNames(table));
@@ -271,7 +276,7 @@ public class JdbcBulkMigrationKeysetSource implements BulkMigrationKeysetSource 
 			final Row row = table.newRow();
 			try {
 				for (int i = 0; i < types.size(); i++) {
-					row.put(i, types.get(i).getJdbcTypeHandler().getObject(resultSet, i + 1));
+					row.put(i, readColumn(resultSet, i + 1, table.getColumns().get(i), types.get(i)));
 				}
 				return row;
 			} catch (SQLException e) {

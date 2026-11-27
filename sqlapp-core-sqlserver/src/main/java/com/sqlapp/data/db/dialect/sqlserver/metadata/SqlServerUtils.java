@@ -92,7 +92,7 @@ public class SqlServerUtils extends ReaderUtils {
 			if ("xml".equalsIgnoreCase(productDataType)) {
 				maxLength = null;
 			} else {
-				maxLength = CommonUtils.LEN_2GB;
+				maxLength = CommonUtils.LEN_2GB - 1;
 			}
 		}
 		Long precision = getLong(rs, "precision");

@@ -12,6 +12,6 @@ create TABLE sequence_numbers
 
 -- ###################################################################################################
 
---//@UNDO
+-- Undo statements
 use appdata_common/*#schemaNameSuffix*/;
 DROP TABLE sequence_numbers;

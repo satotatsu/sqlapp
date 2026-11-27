@@ -19,8 +19,14 @@
 
 package com.sqlapp.data.db.dialect.oracle;
 
+import java.util.List;
+import java.util.Objects;
+
 import com.sqlapp.data.db.dialect.Dialect;
 
+/**
+ * OracleのDialect。12c以降はMAX_STRING_SIZE=STANDARD(既定)とEXTENDEDのDialectを持つ。
+ */
 public class DialectHolder {
 
 	public final static Dialect oracle26aiDialect = new Oracle26ai(() -> null);
@@ -38,5 +44,53 @@ public class DialectHolder {
 	public final static Dialect oracle11gDialect = new Oracle11g(() -> oracle11gR2Dialect);
 	public final static Dialect oracle10gDialect = new Oracle10g(() -> oracle11gDialect);
 	public final static Dialect defaultDialect = new Oracle(() -> oracle10gDialect);
+
+	// MAX_STRING_SIZE=EXTENDED
+	public final static Dialect oracle26aiExtendedDialect = new Oracle26ai(() -> null, OracleMaxStringSize.EXTENDED);
+	public final static Dialect oracle23aiExtendedDialect = new Oracle23ai(() -> oracle26aiExtendedDialect,
+			OracleMaxStringSize.EXTENDED);
+	public final static Dialect oracle21cExtendedDialect = new Oracle21c(() -> oracle23aiExtendedDialect,
+			OracleMaxStringSize.EXTENDED);
+	public final static Dialect oracle19cExtendedDialect = new Oracle19c(() -> oracle21cExtendedDialect,
+			OracleMaxStringSize.EXTENDED);
+	public final static Dialect oracle18cExtendedDialect = new Oracle18c(() -> oracle19cExtendedDialect,
+			OracleMaxStringSize.EXTENDED);
+	public final static Dialect oracle12cExtendedDialect = new Oracle12c(() -> oracle18cExtendedDialect,
+			OracleMaxStringSize.EXTENDED);
+
+	private static final List<Dialect> STANDARD_DIALECTS = List.of(oracle12cDialect, oracle18cDialect, oracle19cDialect,
+			oracle21cDialect, oracle23aiDialect, oracle26aiDialect);
+
+	private static final List<Dialect> EXTENDED_DIALECTS = List.of(oracle12cExtendedDialect, oracle18cExtendedDialect,
+			oracle19cExtendedDialect, oracle21cExtendedDialect, oracle23aiExtendedDialect, oracle26aiExtendedDialect);
+
+	/**
+	 * 同じバージョンで指定したMAX_STRING_SIZEのDialectを返します。
+	 * 
+	 * @param dialect       OracleのDialect
+	 * @param maxStringSize MAX_STRING_SIZE
+	 * @return Dialect
+	 * @throws IllegalArgumentException 12c未満でEXTENDEDを指定した場合
+	 */
+	public static Oracle getDialect(final Dialect dialect, final OracleMaxStringSize maxStringSize) {
+		Objects.requireNonNull(maxStringSize, "maxStringSize");
+		if (!(dialect instanceof Oracle)) {
+			throw new IllegalArgumentException("Not an Oracle dialect: " + dialect);
+		}
+		final Oracle oracle = (Oracle) dialect;
+		if (oracle.getMaxStringSize() == maxStringSize) {
+			return oracle;
+		}
+		final List<Dialect> from = oracle.getMaxStringSize() == OracleMaxStringSize.STANDARD ? STANDARD_DIALECTS
+				: EXTENDED_DIALECTS;
+		final List<Dialect> to = maxStringSize == OracleMaxStringSize.STANDARD ? STANDARD_DIALECTS : EXTENDED_DIALECTS;
+		for (int i = 0; i < from.size(); i++) {
+			if (from.get(i).getClass() == oracle.getClass()) {
+				return (Oracle) to.get(i);
+			}
+		}
+		throw new IllegalArgumentException("MAX_STRING_SIZE=" + maxStringSize + " requires Oracle 12c or later: "
+				+ dialect.getClass().getSimpleName());
+	}
 
 }

@@ -20,21 +20,51 @@
 package com.sqlapp.data.db.dialect.db2.sql;
 
 import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
+import com.sqlapp.data.db.dialect.db2.util.Db2CreationContext;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table;
+import java.util.List;
+import java.util.ArrayList;
 import com.sqlapp.data.db.sql.AbstractCreateMaskFactory;
 import com.sqlapp.data.schemas.Mask;
 import com.sqlapp.util.CommonUtils;
 
 public class Db2_1010CreateMaskFactory extends AbstractCreateMaskFactory<Db2SqlBuilder> {
+	@Override
+	public List<SqlOperation> createSql(Mask mask) {
+		if ("N".equals(mask.getSpecifics().get("SOURCE_VALID")))
+			throw new IllegalArgumentException("Cannot recreate invalid Db2 column mask: " + mask.getName());
+		var result = new ArrayList<SqlOperation>();
+		for (String sql : Db2CreationContext.sql(mask.getSpecifics().get("QUALIFIER"),
+				mask.getSpecifics().get("FUNC_PATH"))) {
+			addSql(result, createSqlBuilder()._add(sql), SqlType.SET_SEARCH_PATH_TO_SCHEMA, mask);
+		}
+		result.addAll(super.createSql(mask));
+		return result;
+	}
 
 	@Override
 	protected void addCreateObject(final Mask obj, Db2SqlBuilder builder) {
+		if (!CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
+		if (CommonUtils.isEmpty(obj.getStatement()))
+			throw new IllegalArgumentException("Db2 column mask requires an expression or definition");
 		builder.create().or().replace().mask();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		builder.on().name(obj.getTable(), !CommonUtils.eq(obj.getTableSchemaName(), obj.getSchemaName()));
+		var table = new Table(obj.getTableName());
+		table.setSchemaName(obj.getTableSchemaName() == null ? obj.getSchemaName() : obj.getTableSchemaName());
+		builder.on().name(table,
+				getOptions().isDecorateSchemaName() || !CommonUtils.eq(table.getSchemaName(), obj.getSchemaName()));
+		String correlation = obj.getSpecifics().get("TABCORRELATION");
+		if (correlation != null && !correlation.isBlank())
+			builder.as().space().name(correlation);
 		builder.for_().column().name(obj.getColumn()).return_();
 		builder.appendIndent(1);
 		builder.lineBreak()._add(obj.getStatement());
 		builder.appendIndent(-1);
-		builder.lineBreak().end().enable(obj.isEnable()).disable(!obj.isEnable());
+		builder.lineBreak().enable(obj.isEnable()).disable(!obj.isEnable());
 	}
 }

@@ -145,7 +145,7 @@ for the individual exception gates and verification-report fields.
 
 ## Initial Access data load
 
-For a complete one-to-one mapping that uses no conversion expressions, generate
+For a complete one-to-one mapping, generate
 an initial-load job for the existing
 bulk migration task:
 
@@ -184,8 +184,8 @@ Server. Post-load count and ordered chunk-hash verification is enabled by
 default and writes JSON evidence; a separate operational JSON report records
 progress and failures. Resume checkpoints are bound to the captured Access
 source and reviewed mapping fingerprints. Task IDs retain the qualified Access
-table name, while checkpoint IDs also include `jobId`. Identifier renames and conversion expressions are
-rejected until the declarative bulk executor can apply them explicitly. The
+table name, while checkpoint IDs also include `jobId`. Identifier renames become
+`columnMappings` and conversion expressions become `columnConversions`. The
 supplied Schema XML is also checked against the assessment source fingerprint
 when present.
 

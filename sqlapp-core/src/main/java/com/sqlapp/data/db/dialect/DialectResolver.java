@@ -40,6 +40,8 @@ import org.apache.logging.log4j.Logger;
 import com.sqlapp.data.db.dialect.resolver.DefaultDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.jdbc.AbstractConnection;
+import com.sqlapp.jdbc.AbstractDatabaseMetaData;
 import com.sqlapp.util.ClassFinder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
@@ -58,22 +60,79 @@ public class DialectResolver extends AbstractDialectResolver {
 
 	private final Map<String, ProductNameDialectResolver> resolverMap = new ConcurrentHashMap<String, ProductNameDialectResolver>();
 
-	private static volatile DialectResolver instance;
+	/**
+	 * Resolvers per class loader used to discover dialect implementations.
+	 */
+	private static final Map<ClassLoader, DialectResolver> INSTANCES = new ConcurrentHashMap<ClassLoader, DialectResolver>();
 
 	private static final Dialect DEFAULT_DIALECT = new Dialect(null);
 
+	private final ClassLoader classLoader;
+
+	/**
+	 * Returns the resolver for the current thread's context class loader.
+	 * 
+	 * @return the resolver whose dialects are discovered through the context
+	 *         class loader
+	 */
 	public static DialectResolver getInstance() {
-		if (instance == null) {
-			synchronized (DialectResolver.class) {
-				if (instance == null) {
-					instance = new DialectResolver();
-				}
-			}
-		}
-		return instance;
+		return getInstance(Thread.currentThread().getContextClassLoader());
 	}
 
-	private DialectResolver() {
+	/**
+	 * Returns the resolver whose dialects are discovered through the specified
+	 * class loader. The resolver is cached until {@link #release(ClassLoader)}
+	 * is called for the class loader.
+	 * 
+	 * @param classLoader class loader used to discover dialects. {@code null}
+	 *                    means the class loader of this class.
+	 * @return the resolver
+	 */
+	public static DialectResolver getInstance(final ClassLoader classLoader) {
+		final ClassLoader key = toKey(classLoader);
+		DialectResolver resolver = INSTANCES.get(key);
+		if (resolver != null) {
+			return resolver;
+		}
+		synchronized (INSTANCES) {
+			resolver = INSTANCES.get(key);
+			if (resolver == null) {
+				// Not computeIfAbsent: a resolver may call getInstance while it is
+				// being constructed.
+				resolver = new DialectResolver(key);
+				final DialectResolver existing = INSTANCES.putIfAbsent(key, resolver);
+				if (existing != null) {
+					resolver = existing;
+				}
+			}
+			return resolver;
+		}
+	}
+
+	/**
+	 * Discards the resolver cached for the specified class loader. Call this
+	 * before closing a class loader that was used to resolve dialects, so that
+	 * its classes are no longer referenced and a later call discovers dialects
+	 * again.
+	 * 
+	 * @param classLoader the class loader
+	 */
+	public static void release(final ClassLoader classLoader) {
+		if (classLoader != null) {
+			INSTANCES.remove(classLoader);
+		}
+	}
+
+	private static ClassLoader toKey(final ClassLoader classLoader) {
+		if (classLoader != null) {
+			return classLoader;
+		}
+		final ClassLoader own = DialectResolver.class.getClassLoader();
+		return own != null ? own : ClassLoader.getSystemClassLoader();
+	}
+
+	private DialectResolver(final ClassLoader classLoader) {
+		this.classLoader = classLoader;
 		initializeResolverList();
 	}
 
@@ -103,7 +162,8 @@ public class DialectResolver extends AbstractDialectResolver {
 	}
 
 	private List<ProductNameDialectResolver> getResolversByServiceLoader() {
-		final ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		final ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class,
+				classLoader);
 		final List<ProductNameDialectResolver> list = CommonUtils.list();
 		for (ProductNameDialectResolver resolver : loader) {
 			list.add(resolver);
@@ -116,8 +176,7 @@ public class DialectResolver extends AbstractDialectResolver {
 	}
 
 	private List<ProductNameDialectResolver> getResolvers() {
-		List<Class<? extends ProductNameDialectResolver>> classes = getResolvers(
-				Thread.currentThread().getContextClassLoader());
+		List<Class<? extends ProductNameDialectResolver>> classes = getResolvers(classLoader);
 		if (classes.size() == 0) {
 			// classes = getResolvers(Thread.class.getClassLoader());
 			classes = getResolvers(DialectResolver.class.getClassLoader());
@@ -163,7 +222,7 @@ public class DialectResolver extends AbstractDialectResolver {
 	 * @param connection
 	 */
 	public Dialect getDialect(final Connection connection) {
-		return getDialect(getDatabaseMetaData(connection));
+		return getDialect(getDatabaseMetaData(connection), getDialectOptions(connection));
 	}
 
 	/**
@@ -185,15 +244,93 @@ public class DialectResolver extends AbstractDialectResolver {
 	 * @param databaseMetaData
 	 */
 	public Dialect getDialect(final DatabaseMetaData databaseMetaData) {
+		Map<String, String> dialectOptions = Map.of();
+		if (databaseMetaData instanceof AbstractDatabaseMetaData) {
+			// sqlappでラップした接続のメタデータはDialectオプションを持つ接続を返す
+			try {
+				dialectOptions = getDialectOptions(databaseMetaData.getConnection());
+			} catch (final SQLException e) {
+				throw new IllegalStateException("Cannot read the connection of the database metadata", e);
+			}
+		}
+		return getDialect(databaseMetaData, dialectOptions);
+	}
+
+	/**
+	 * Dialectの取得
+	 * 
+	 * @param databaseMetaData DatabaseMetaData
+	 * @param dialectOptions   データソースで指定したDialectオプション(例: oracle.maxStringSize)
+	 * @throws IllegalArgumentException 接続先のDBで使用できないオプションや不正な値の場合
+	 */
+	public Dialect getDialect(final DatabaseMetaData databaseMetaData, final Map<String, String> dialectOptions) {
+		final Map<String, String> options = dialectOptions == null ? Map.of() : dialectOptions;
 		for (ProductNameDialectResolver resolver : getResolverList()) {
-			final Dialect dialect = resolver.resolveDatabaseMetaData(databaseMetaData);
+			final Dialect dialect = resolver.resolveDatabaseMetaData(databaseMetaData, options);
 			if (dialect != null) {
-				return dialect;
+				return options.isEmpty() ? dialect : resolver.applyDialectOptions(dialect, options);
 			}
 		}
 		final ProductVersionInfo productVersionInfo = DbUtils.getProductVersionInfo(databaseMetaData);
 		return getDialect(productVersionInfo.getName(), productVersionInfo.getMajorVersion(),
-				productVersionInfo.getMinorVersion(), productVersionInfo.getRevision());
+				productVersionInfo.getMinorVersion(), productVersionInfo.getRevision(), options);
+	}
+
+	/**
+	 * Dialectの取得
+	 * 
+	 * @param dbProductName  DB製品名
+	 * @param majorVersion   メジャーバージョン
+	 * @param minorVersion   マイナーバージョン
+	 * @param revision       リビジョン
+	 * @param dialectOptions Dialectオプション(例: oracle.maxStringSize)
+	 * @throws IllegalArgumentException 対象のDBで使用できないオプションや不正な値の場合
+	 */
+	public Dialect getDialect(final String dbProductName, final int majorVersion, final int minorVersion,
+			final Integer revision, final Map<String, String> dialectOptions) {
+		final Dialect dialect = getDialect(dbProductName, majorVersion, minorVersion, revision);
+		if (dialectOptions == null || dialectOptions.isEmpty()) {
+			return dialect;
+		}
+		final String name = dbProductName == null ? null : dbProductName.trim();
+		final ProductNameDialectResolver resolver = name == null ? null : getResolverMap().get(name);
+		if (resolver == null) {
+			throw new IllegalArgumentException(
+					"Dialect options " + dialectOptions.keySet() + " cannot be applied to " + dbProductName);
+		}
+		return resolver.applyDialectOptions(dialect, dialectOptions);
+	}
+
+	/**
+	 * 解決済みのDialectにDialectオプションを適用します。Schema XMLの製品情報から求めたDialectなど、接続のない場合に使用します。
+	 * 
+	 * @param dialect        Dialect
+	 * @param dialectOptions Dialectオプション(例: oracle.maxStringSize)
+	 * @return オプションを適用したDialect
+	 * @throws IllegalArgumentException 対象のDBで使用できないオプションや不正な値の場合
+	 */
+	public Dialect applyDialectOptions(final Dialect dialect, final Map<String, String> dialectOptions) {
+		if (dialectOptions == null || dialectOptions.isEmpty() || dialect == null) {
+			if (dialect == null && dialectOptions != null && !dialectOptions.isEmpty()) {
+				throw new IllegalArgumentException(
+						"Dialect options " + dialectOptions.keySet() + " require a database product.");
+			}
+			return dialect;
+		}
+		for (final ProductNameDialectResolver resolver : getResolverList()) {
+			if (resolver.matchesProductName(dialect.getProductName())) {
+				return resolver.applyDialectOptions(dialect, dialectOptions);
+			}
+		}
+		throw new IllegalArgumentException(
+				"Dialect options " + dialectOptions.keySet() + " cannot be applied to " + dialect.getProductName());
+	}
+
+	private static Map<String, String> getDialectOptions(final Connection connection) {
+		if (connection instanceof AbstractConnection) {
+			return ((AbstractConnection) connection).getDialectOptions();
+		}
+		return Map.of();
 	}
 
 	public Dialect getDefaultDialect() {

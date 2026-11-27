@@ -51,6 +51,7 @@ public class OracleExternalTableReader extends ExternalTableReader {
 	protected List<ExternalTable> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		boolean partitionLocations = supportsPartitionLocations(productVersionInfo);
 		final DoubleKeyMap<String, String, ExternalTable> map = doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -62,13 +63,46 @@ public class OracleExternalTableReader extends ExternalTableReader {
 					obj = createExternalTable(rs);
 					map.put(schema_name, name, obj);
 				}
+				String location = getString(rs, "LOCATION");
+				if (location != null) {
+					int count = Integer.parseInt(obj.getSpecifics().getOrDefault("oracle.external.locationCount", "0"));
+					String prefix = "oracle.external.location." + count + ".";
+					obj.getSpecifics().put(prefix + "file", location);
+					String directory = getString(rs, "DIRECTORY_NAME");
+					if (directory != null)
+						obj.getSpecifics().put(prefix + "directory", directory);
+					String owner = getString(rs, "DIRECTORY_OWNER");
+					if (owner != null)
+						obj.getSpecifics().put(prefix + "directoryOwner", owner);
+					if (partitionLocations) {
+						String partition = getString(rs, "PARTITION_NAME");
+						String subpartition = getString(rs, "SUBPARTITION_NAME");
+						if (partition != null)
+							obj.getSpecifics().put(prefix + "partition", partition);
+						if (subpartition != null)
+							obj.getSpecifics().put(prefix + "subpartition", subpartition);
+					}
+					obj.getSpecifics().put("oracle.external.locationCount", Integer.toString(count + 1));
+				}
 			}
 		});
 		return map.toList();
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (supportsPartitionLocations(productVersionInfo))
+			return getSqlNodeCache().getString("externalTables12cR2.sql");
 		return getSqlNodeCache().getString("externalTables.sql");
+	}
+
+	private boolean supportsPartitionLocations(ProductVersionInfo version) {
+		if (version != null && version.getMajorVersion() != null) {
+			int major = version.getMajorVersion();
+			return major > 12 || major == 12 && version.getMinorVersion() != null && version.getMinorVersion() >= 2;
+		}
+		// The 12c dialect also represents 12.1. Only a later dialect is sufficient
+		// evidence when the exact server version is unavailable.
+		return getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c;
 	}
 
 	protected ExternalTable createExternalTable(ExResultSet rs) throws SQLException {

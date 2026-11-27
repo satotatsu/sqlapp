@@ -24,6 +24,8 @@ module com.sqlapp.core.db2mod {
 
 	exports com.sqlapp.data.db.dialect.db2;
 	exports com.sqlapp.data.db.dialect.db2.bulk;
+	exports com.sqlapp.data.db.dialect.db2.common;
+	exports com.sqlapp.data.db.dialect.db2.common.metadata;
 	exports com.sqlapp.data.db.dialect.db2.metadata;
 	exports com.sqlapp.data.db.dialect.db2.resolver;
 	exports com.sqlapp.data.db.dialect.db2.sql;

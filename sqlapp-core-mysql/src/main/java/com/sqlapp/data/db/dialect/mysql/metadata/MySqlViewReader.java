@@ -27,6 +27,10 @@ import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.ExcludeConstraintReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.db.dialect.mysql.sql.MySqlCreateViewFactory;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.jdbc.ExResultSet;
 
 /**
@@ -47,14 +51,37 @@ public class MySqlViewReader extends AbstractISViewReader {
 		table.setCatalogName(getString(rs, TABLE_CATALOG));
 		table.setSchemaName(getString(rs, TABLE_SCHEMA));
 		Boolean updatable = toBoolean(getString(rs, "IS_UPDATABLE"));
-		table.setReadonly(!updatable.booleanValue());
+		if (updatable != null) {
+			table.setReadonly(!updatable.booleanValue());
+		}
 		table.setStatement(getString(rs, "VIEW_DEFINITION"));
+		MySqlDefiner.read(table.getSpecifics(), rs.getString("DEFINER"));
+		com.sqlapp.data.db.dialect.mysql.util.MySqlStoredObjectContext.read(rs, table);
+		String check = getString(rs, "CHECK_OPTION");
+		if (check != null && !"NONE".equalsIgnoreCase(check)) {
+			table.getSpecifics().put(MySqlCreateViewFactory.CHECK_OPTION, check);
+		}
+		String security = getString(rs, "SECURITY_TYPE");
+		if (security != null) {
+			table.getSpecifics().put(MySqlCreateViewFactory.SECURITY_TYPE, security);
+		}
+		if ("MariaDB".equalsIgnoreCase(getDialect().getProductName())) {
+			String algorithm = getString(rs, "ALGORITHM");
+			if (algorithm != null) {
+				table.getSpecifics().put(MySqlCreateViewFactory.ALGORITHM, algorithm);
+			}
+		}
 		return table;
 	}
 
 	@Override
+	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache(MySqlViewReader.class).getString("views.sql");
+	}
+
+	@Override
 	protected ColumnReader newColumnReader() {
-		return new MySqlColumnReader(this.getDialect());
+		return getDialect().getCatalogReader().getSchemaReader().getTableReader().getColumnReader();
 	}
 
 	/*

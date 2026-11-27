@@ -38,22 +38,21 @@ import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.FlexList;
 import com.sqlapp.util.TripleKeyMap;
+
 /**
  * SqlServerの外部キー制約作成クラス
  * 
  * @author satoh
  * 
  */
-public class SybaseForeignKeyConstraintReader extends
-		ForeignKeyConstraintReader {
+public class SybaseForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 
 	public SybaseForeignKeyConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -70,10 +69,8 @@ public class SybaseForeignKeyConstraintReader extends
 				String fk_table_name = getString(rs, "referential_table_name");
 				String fk_columnName = getString(rs, "referential_column_name");
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				ForeignKeyConstraint c = tCMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog,
-						pk_table_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setCatalogName(pk_table_catalog);
@@ -84,8 +81,7 @@ public class SybaseForeignKeyConstraintReader extends
 					c.setEnable(rs.getInt("IsDisabled") != 1);
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
-					tColMap.put(pk_table_catalog, pk_table_schema, fk_name,
-							colList);
+					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

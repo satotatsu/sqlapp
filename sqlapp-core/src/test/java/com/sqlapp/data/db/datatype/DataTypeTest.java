@@ -28,6 +28,17 @@ import com.sqlapp.data.converter.Converters;
 
 public class DataTypeTest {
 	@Test
+	public void testDistinctNativeTypeIdentities() {
+		assertEquals("LINE", DataType.LINE.getTypeName());
+		assertEquals(DataType.LINE, new LineType().getDataType());
+		assertEquals("LINE", new LineType().getTypeName());
+		assertEquals(DataType.MACADDR, new MacAddrType().getDataType());
+		assertEquals("MACADDR", new MacAddrType().getTypeName());
+		assertEquals(DataType.CIRCLE, new CircleType().getDataType());
+		assertEquals("CIRCLE", new CircleType().getTypeName());
+	}
+
+	@Test
 	public void testToType() {
 		assertEquals(DataType.toType("TIMESTAMP_WITH_TIMEZONE"), DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
 		assertEquals(DataType.toType("TIMESTAMP WITH TIMEZONE"), DataType.TIMESTAMP_WITH_TIMEZONE, "OK");

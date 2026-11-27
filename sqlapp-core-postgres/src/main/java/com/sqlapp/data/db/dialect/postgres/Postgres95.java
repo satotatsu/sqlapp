@@ -51,19 +51,6 @@ public class Postgres95 extends Postgres94 {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.sqlapp.data.db.dialect.Postgres93#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
 	 */
 	@Override

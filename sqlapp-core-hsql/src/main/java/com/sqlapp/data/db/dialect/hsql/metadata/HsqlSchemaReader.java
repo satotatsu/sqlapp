@@ -50,6 +50,14 @@ import com.sqlapp.data.db.metadata.ViewReader;
 import com.sqlapp.data.db.metadata.XmlSchemaReader;
 import com.sqlapp.data.schemas.CharacterSemantics;
 import com.sqlapp.data.schemas.Schema;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.db.dialect.hsql.HsqlDdlDependencies;
+import com.sqlapp.data.db.dialect.hsql.HsqlDdlDependencies.ObjectId;
+import com.sqlapp.data.db.dialect.hsql.HsqlDdlDependencies.Dependency;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 
 /**
  * HSQLのスキーマ読み込み
@@ -66,6 +74,37 @@ public class HsqlSchemaReader extends AbstractISSchemaReader {
 	@Override
 	protected void setSchemaBefore(Connection connection, Schema schema) {
 		schema.setCharacterSemantics(CharacterSemantics.Char);
+	}
+
+	@Override
+	protected void setSchemaAfter(Connection connection, Schema schema) {
+		HsqlDdlDependencies.set(schema, getDependencies(connection, schema.getName()));
+	}
+
+	/**
+	 * Reads the full visible dependency graph in one catalog query (HSQLDB 2.x).
+	 */
+	public java.util.List<Dependency> getDependencies(Connection connection) {
+		return getDependencies(connection, null);
+	}
+
+	private java.util.List<Dependency> getDependencies(Connection connection, String schemaName) {
+		if (getProductVersionInfo(connection).getMajorVersion() < 2)
+			return java.util.List.of();
+		var dependencies = new ArrayList<Dependency>();
+		var context = new ParametersContext();
+		context.put("schemaName", schemaName);
+		execute(connection, getSqlNodeCache().getString("dependencies.sql"), context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				dependencies.add(new Dependency(
+						new ObjectId(getString(rs, "OBJECT_KIND").strip(), getString(rs, "OBJECT_SCHEMA"),
+								getString(rs, "OBJECT_NAME")),
+						new ObjectId(getString(rs, "REFERENCED_KIND").strip(), getString(rs, "REFERENCED_SCHEMA"),
+								getString(rs, "REFERENCED_NAME"))));
+			}
+		});
+		return java.util.List.copyOf(dependencies);
 	}
 
 	@Override
@@ -100,7 +139,7 @@ public class HsqlSchemaReader extends AbstractISSchemaReader {
 
 	@Override
 	protected SynonymReader newSynonymReader() {
-		return null;
+		return new HsqlSynonymReader(this.getDialect());
 	}
 
 	@Override
@@ -135,7 +174,7 @@ public class HsqlSchemaReader extends AbstractISSchemaReader {
 
 	@Override
 	protected TypeReader newTypeReader() {
-		return null;
+		return new HsqlTypeReader(this.getDialect());
 	}
 
 	@Override

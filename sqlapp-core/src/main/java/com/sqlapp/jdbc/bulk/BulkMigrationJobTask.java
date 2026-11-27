@@ -15,6 +15,8 @@ public class BulkMigrationJobTask {
 	private final String taskId;
 	private final Table sourceTable;
 	private final BulkMigrationKeysetSource keysetSource;
+	/** Unordered single-pass INSERT; no MERGE, resume or key-based repair. */
+	private final boolean fullScan;
 	private final Table targetTable;
 	private final Map<String, String> columnMappings;
 	private final boolean requireEmptyTarget;
@@ -24,6 +26,7 @@ public class BulkMigrationJobTask {
 
 	private BulkMigrationJobTask(final String taskId, final Table sourceTable,
 			final BulkMigrationKeysetSource keysetSource,
+			final boolean fullScan,
 			final Table targetTable,
 			final Map<String, String> columnMappings,
 			final boolean requireEmptyTarget,
@@ -40,6 +43,7 @@ public class BulkMigrationJobTask {
 		this.taskId = taskId;
 		this.sourceTable = sourceTable;
 		this.keysetSource = keysetSource;
+		this.fullScan = fullScan;
 		this.targetTable = targetTable;
 		final Table source = sourceTable != null ? sourceTable : keysetSource.getTable();
 		final var resolvedMappings = new java.util.LinkedHashMap<String, String>();
@@ -72,6 +76,9 @@ public class BulkMigrationJobTask {
 			}
 		}
 		this.options = java.util.Objects.requireNonNull(options, "options");
+		if (fullScan && (sourceTable == null || options.getMode() != BulkMigrationMode.INSERT || options.isResume()
+				|| !requireEmptyTarget))
+			throw new IllegalArgumentException("Full-scan copy requires a Table source, INSERT, resume: false and requireEmptyTarget: true.");
 		this.checkpointStore = checkpointStore;
 		this.chunkListener = chunkListener;
 	}

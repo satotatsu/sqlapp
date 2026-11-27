@@ -35,8 +35,8 @@ public class SqliteTruncateTemporaryTableFactory extends AbstractTruncateTempora
 	protected void addTruncateTable(final Table obj, final SqliteSqlBuilder builder) {
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
-		builder.delete().from().table();
-		builder.space()._add(
+		builder.delete().from().name("temp")._add(".");
+		builder._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
 	}
 }

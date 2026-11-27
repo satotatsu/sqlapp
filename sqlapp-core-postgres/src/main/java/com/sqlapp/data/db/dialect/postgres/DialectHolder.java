@@ -40,6 +40,6 @@ public class DialectHolder {
 	public final static Dialect postgreSQL90 = new Postgres90(() -> postgreSQL91);
 	public final static Dialect postgreSQL84 = new Postgres84(() -> postgreSQL90);
 	public final static Dialect postgreSQL83 = new Postgres83(() -> postgreSQL84);
-	public final static Dialect postgreSQL82 = new Postgres83(() -> postgreSQL83);
+	public final static Dialect postgreSQL82 = new Postgres82(() -> postgreSQL83);
 	public final static Dialect defaultDialect = new Postgres(() -> postgreSQL82);
 }

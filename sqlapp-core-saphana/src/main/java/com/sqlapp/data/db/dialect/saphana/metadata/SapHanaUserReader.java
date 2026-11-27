@@ -68,13 +68,16 @@ public class SapHanaUserReader extends UserReader {
 	protected User createUser(ExResultSet rs) throws SQLException {
 		User obj = new User(getString(rs, USER_NAME));
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
-		obj.setPassword(getString(rs, PASSWORD));
+		// USERS does not expose a reusable password. Replays must supply one.
 		setDbSpecificInfo(rs, obj);
 		setDbDynamicInfo(rs, obj);
 		return obj;
 	}
 
 	protected void setDbSpecificInfo(ExResultSet rs, User obj) throws SQLException {
+		setSpecifics(rs, "IS_RESTRICTED", obj);
+		setSpecifics(rs, "IS_PASSWORD_ENABLED", obj);
+		setSpecifics(rs, "IS_PASSWORD_LIFETIME_CHECK_ENABLED", "PASSWORD_LIFETIME_CHECK_ENABLED", obj);
 	}
 
 	protected void setDbDynamicInfo(ExResultSet rs, User obj) throws SQLException {
@@ -83,7 +86,7 @@ public class SapHanaUserReader extends UserReader {
 		setSpecifics(rs, "LAST_INVALID_CONNECT_ATTEMPT", obj);
 		setSpecifics(rs, "INVALID_CONNECT_ATTEMPTS", obj);
 		setSpecifics(rs, "ADMIN_GIVEN_PASSWORD", obj);
-		setSpecifics(rs, "PASSWORD_CHANGE_TIME", obj);
+		setSpecifics(rs, "LAST_PASSWORD_CHANGE_TIME", "PASSWORD_CHANGE_TIME", obj);
 		setSpecifics(rs, "PASSWORD_CHANGE_NEEDED", obj);
 		setSpecifics(rs, "USER_DEACTIVATED", obj);
 		setSpecifics(rs, "DEACTIVATION_TIME", obj);

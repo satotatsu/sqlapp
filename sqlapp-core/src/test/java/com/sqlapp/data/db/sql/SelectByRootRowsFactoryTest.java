@@ -41,6 +41,27 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
 public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
+	@Test
+	public void rootItselfCanBeSelectedAndDeleted() throws IOException {
+		Table table = new Table("root_table");
+		table.getColumns().add(new com.sqlapp.data.schemas.Column("id")
+				.setDataType(com.sqlapp.data.db.datatype.DataType.INT));
+		table.setPrimaryKey((String)null,table.getColumns().get("id"));
+		var relation = new TableRelationTreeHolder(table).getTableRelation(table);
+		var row = table.getRows().newElement(); row.put("id",7);
+		for (SqlType type : List.of(SqlType.SELECT_BY_ROOT_ROWS,SqlType.DELETE_BY_ROOT_ROWS)) {
+			var node = sqlFactoryRegistry.createSqlNodes(relation,type).get(0);
+			try (var parameters = node.eval(relation,List.of(row))) {
+				assertEquals(1,parameters.getParameterSize());
+				org.junit.jupiter.api.Assertions.assertFalse(parameters.getSql().contains("a0."));
+			}
+			try (var parameters = node.eval(relation,List.of())) {
+				org.junit.jupiter.api.Assertions.assertTrue(parameters.getSql().contains("1=0"));
+				assertEquals(0,parameters.getParameterSize());
+			}
+		}
+	}
+
 	SqlFactory<TableRelation> operationfactory;
 
 	@BeforeEach

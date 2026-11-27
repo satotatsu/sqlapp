@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.saphana.metadata;
 
-import static com.sqlapp.util.CommonUtils.list;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -47,15 +45,15 @@ public class SapHanaProcedureArgumentReader extends RoutineArgumentReader<Proced
 	protected List<NamedArgument> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final List<NamedArgument> result = list();
+		final SapHanaRoutineArguments result = new SapHanaRoutineArguments(getDialect());
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				NamedArgument column = createNamedArgument(rs);
-				result.add(column);
+				result.add(column, rs);
 			}
 		});
-		return result;
+		return result.finish();
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
@@ -75,8 +73,6 @@ public class SapHanaProcedureArgumentReader extends RoutineArgumentReader<Proced
 		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE")).booleanValue();
 		obj.setNullable(nullable);
 		getDialect().setDbType(productDataType, maxLength, numericScale, obj);
-		obj.setCharacterSet(getString(rs, "CHARACTER_SET_NAME"));
-		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_TYPE")));
 		return obj;
 	}

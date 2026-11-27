@@ -85,6 +85,9 @@ public class PostgresIndexReader extends IndexReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
+				if (!includePrimaryIndexes() && rs.getBoolean("is_primary")) {
+					return;
+				}
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String index_name = getString(rs, INDEX_NAME);
 				String table_name = getString(rs, TABLE_NAME);
@@ -188,6 +191,10 @@ public class PostgresIndexReader extends IndexReader {
 	 * Optional vendor hook using the definition already returned by the bulk query.
 	 */
 	protected void readDefinition(Index index, String definition) {
+	}
+
+	protected boolean includePrimaryIndexes() {
+		return true;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {

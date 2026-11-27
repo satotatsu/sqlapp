@@ -41,9 +41,9 @@ import com.sqlapp.util.CommonUtils;
 
 /**
  * DB2 create table
- * 
+ *
  * @author tatsuo satoh
- * 
+ *
  */
 public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 	SqlFactory<Table> operation;
@@ -83,7 +83,7 @@ public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 		table.getColumns().add(column);
 		//
 		Index index = new Index("indexa");
-		index.setIndexType(IndexType.Hash);
+		index.setIndexType(IndexType.BTree);
 		table.getIndexes().add(index);
 		index.getColumns().add("colc");
 		Partitioning partitionInfo = getPartitionInfo(table);

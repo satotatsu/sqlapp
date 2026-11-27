@@ -78,8 +78,13 @@ import com.sqlapp.util.CommonUtils;
 public enum DataType {
 	ARRAY(java.sql.JDBCType.ARRAY, MetaType.OTHER) {
 	},
-	// ビット型
+	/** 可変長ビット列型(値は"0101"形式の文字列) */
 	VARBIT(java.sql.JDBCType.BIT, "VARBIT", String.class, MetaType.CHARACTER) {
+		@Override
+		public boolean isFixedSize() {
+			return true;
+		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
@@ -100,26 +105,35 @@ public enum DataType {
 			return false;
 		}
 	},
-	// 整数型
-	BIT(java.sql.JDBCType.BIT, Boolean.class, MetaType.NUMERIC) {
+	/**
+	 * 固定長ビット列型(値は"0101"形式の文字列)。PostgreSQLのBIT(n)、MySQLのBIT(n)など。
+	 * 真偽値はBOOLEANで表します(SQL ServerのBITはBOOLEANです)。JDBCの{@link java.sql.Types#BIT}
+	 * はJDBC仕様に従いBOOLEANとして扱います。
+	 */
+	BIT(java.sql.JDBCType.BIT, String.class, MetaType.CHARACTER) {
 		@Override
-		public DataType getSurrogate() {
-			return BOOLEAN;
+		public boolean isFixedSize() {
+			return true;
 		}
 
 		@Override
-		public DataType getUpperSurrogate() {
-			return TINYINT;
+		public DataType getSurrogate() {
+			return VARBIT;
 		}
 
 		@Override
 		public OleDbType getOleDbType() {
-			return OleDbType.Boolean;
+			return OleDbType.BSTR;
 		}
 
 		@Override
 		public Object getDefaultValue() {
-			return Boolean.FALSE;
+			return "0";
+		}
+
+		@Override
+		protected boolean isJdbcBaseType() {
+			return false;
 		}
 	},
 	/** 8bit整数型 */
@@ -618,6 +632,14 @@ public enum DataType {
 	},
 	/** 10進数可変浮動小数点型 */
 	DECIMALFLOAT(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
+		/**
+		 * DECFLOAT(16)とDECFLOAT(34)は別の型のため、精度を保持します。
+		 */
+		@Override
+		public boolean isFixedSize() {
+			return true;
+		}
+
 		@Override
 		public DataType getSurrogate() {
 			return DECIMAL;
@@ -640,9 +662,12 @@ public enum DataType {
 	},
 	/** BOOLEAN型 */
 	BOOLEAN(java.sql.JDBCType.BOOLEAN, Boolean.class, MetaType.NUMERIC) {
+		/**
+		 * BOOLEANを持たないDBでは0/1の整数で表します(BITはビット列のため代替にしません)。
+		 */
 		@Override
 		public DataType getSurrogate() {
-			return BIT;
+			return TINYINT;
 		}
 
 		@Override
@@ -1884,7 +1909,7 @@ public enum DataType {
 		}
 	},
 	/** LINE型 */
-	LINE(java.sql.JDBCType.OTHER, "CIRCLE", Line.class, MetaType.OTHER) {
+	LINE(java.sql.JDBCType.OTHER, "LINE", Line.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
@@ -2325,6 +2350,9 @@ public enum DataType {
 		for (final DataType type : values()) {
 			addJdbcMap(type);
 		}
+		// JDBC maps java.sql.Types.BIT to boolean, and drivers (PostgreSQL boolean,
+		// MySQL BIT(1), SQL Server bit) report true/false columns as BIT.
+		jdbcMap.put(java.sql.JDBCType.BIT, BOOLEAN);
 	}
 
 	private static void addJdbcMap(final DataType type) {
@@ -2631,7 +2659,7 @@ public enum DataType {
 	 * 
 	 */
 	public boolean isBoolean() {
-		return this == BOOLEAN || this == BIT;
+		return this == BOOLEAN;
 	}
 
 	/**

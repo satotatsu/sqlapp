@@ -122,7 +122,9 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	}
 
 	protected void testDiffString(final DbObjectDifference diff) {
-		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
+		// Resource files start with a lower-case letter (column.diff); case-sensitive file systems need the exact name.
+		final String name = this.getClass().getSimpleName().replace("Test", "");
+		testDiffString(name.substring(0, 1).toLowerCase(java.util.Locale.ROOT) + name.substring(1), diff);
 	}
 
 	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {

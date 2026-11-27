@@ -32,8 +32,12 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.JoinKeyWrapper;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.LoadDataSetWrapper;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.LoadFieldWrapper;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.sql.JdbcTreeDataColumnMapping;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopyExecutionResult;
 import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataExecutionResult;
 import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession.HoldCursorStrategy;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
@@ -86,34 +90,113 @@ public class JdbcTreeStagingLoader {
 	 * the next invocation to avoid recursive deletes for every chunk. The
 	 * connection must have auto-commit disabled.
 	 *
-	 * @return number of staged root rows processed
+	 * @return staged root rows processed and row counts per data set
 	 */
-	public long load() throws SQLException {
+	public JdbcTreeStagingLoadResult load() throws SQLException {
 		if (connection.getAutoCommit()) {
 			throw new CommandException("JdbcTreeStagingLoader requires autoCommit=false.");
 		}
 		long cleaned = cleanupOrphanedStagingRows();
 		long count = 0;
+		List<JdbcTreeStagingLoadResult.DataSetCount> counts = new ArrayList<>();
 		for (LoadDataSetWrapper root : roots()) {
-			count += loadRoot(root);
+			count += loadRoot(root, counts);
 		}
 		if (cleaned > 0 || count > 0) {
 			connection.commit();
 		}
-		return count;
+		return new JdbcTreeStagingLoadResult(count, counts);
 	}
 
-	private long loadRoot(LoadDataSetWrapper root) throws SQLException {
+	private long loadRoot(LoadDataSetWrapper root, List<JdbcTreeStagingLoadResult.DataSetCount> counts)
+			throws SQLException {
 		long[] loaded = { 0 };
 		JdbcTreeDataSession reader = createReader(root);
 		JdbcTreeDataSession writer = createWriter(root);
-		createCopySession(root, reader, writer).execute(copySession -> {
+		JdbcTreeDataCopyExecutionResult result = createCopySession(root, reader, writer).execute(copySession -> {
 			while (copySession.next(stagingTables.get(root.getId()))) {
 				copyHierarchy(copySession, root);
 				loaded[0]++;
 			}
 		});
+		for (LoadDataSetWrapper dataSet : hierarchy(root)) {
+			counts.add(count(dataSet, result));
+		}
 		return loaded[0];
+	}
+
+	private JdbcTreeStagingLoadResult.DataSetCount count(LoadDataSetWrapper dataSet,
+			JdbcTreeDataCopyExecutionResult result) {
+		Table staging = stagingTables.get(dataSet.getId());
+		Table target = targetTables.get(dataSet.getId());
+		var pair = result.counts().stream()
+				.filter(count -> same(count.source(), staging) && same(count.target(), target)).findFirst();
+		Long inserted = null;
+		if (plan.getTableOperationMode() == LegacyMigrationLoadPlan.TableOperationMode.INSERT
+				|| plan.getTableOperationMode() == LegacyMigrationLoadPlan.TableOperationMode.INSERT_IGNORE) {
+			inserted = insertedRows(result.target(), target);
+		}
+		return new JdbcTreeStagingLoadResult.DataSetCount(dataSet.getId(), pair.map(count -> count.read()).orElse(0L),
+				pair.map(count -> count.copied()).orElse(0L), inserted, verifiesCounts());
+	}
+
+	private static Long insertedRows(JdbcTreeDataExecutionResult result, Table table) {
+		long known = 0;
+		for (var operation : result.operations()) {
+			if (operation.operation() == SqlType.INSERT && same(operation.table(), table)) {
+				var counts = operation.committed();
+				if (counts.unknownCounts() + counts.failedCounts() + counts.unreportedCounts() > 0) {
+					return null;
+				}
+				known += counts.knownAffectedRows();
+			}
+		}
+		return known;
+	}
+
+	private static boolean same(JdbcTreeDataExecutionResult.TableIdentity identity, Table table) {
+		return java.util.Objects.equals(identity.catalog(), table.getCatalogName())
+				&& java.util.Objects.equals(identity.schema(), table.getSchemaName())
+				&& java.util.Objects.equals(identity.table(), table.getName());
+	}
+
+	private boolean verifiesCounts() {
+		return plan.isVerifyCounts()
+				&& plan.getTableOperationMode() == LegacyMigrationLoadPlan.TableOperationMode.INSERT;
+	}
+
+	/**
+	 * Copies the extracted, non-generated fields from the staging column to the
+	 * target column; every other staging column, including load status columns, is
+	 * excluded.
+	 */
+	private JdbcTreeDataColumnMapping columnMapping(LoadDataSetWrapper dataSet, Table staging, Table target) {
+		JdbcTreeDataColumnMapping.Builder builder = JdbcTreeDataColumnMapping.builder();
+		Set<String> mapped = new LinkedHashSet<>();
+		for (LoadFieldWrapper field : dataSet.getFields()) {
+			if (!field.isExtracted() || field.isTargetGenerated() || field.getInner().getTargetColumn() == null || field
+					.getAction() == com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
+				continue;
+			}
+			Column stagingColumn = staging.getColumns().get(field.getInner().getStagingColumn());
+			Column targetColumn = target.getColumns().get(field.getInner().getTargetColumn());
+			if (stagingColumn == null || targetColumn == null) {
+				throw new CommandException("Load field column was not found: " + dataSet.getId() + "."
+						+ field.getInner().getStagingColumn() + " -> " + field.getInner().getTargetColumn());
+			}
+			try {
+				builder.rename(stagingColumn.getName(), targetColumn.getName());
+			} catch (IllegalArgumentException e) {
+				throw new CommandException("Invalid load field mapping: " + dataSet.getId() + ". " + e.getMessage(), e);
+			}
+			mapped.add(stagingColumn.getName());
+		}
+		for (Column column : staging.getColumns()) {
+			if (!mapped.contains(column.getName())) {
+				builder.exclude(column.getName());
+			}
+		}
+		return builder.build();
 	}
 
 	private JdbcTreeDataCopySession createCopySession(LoadDataSetWrapper root, JdbcTreeDataSession reader,
@@ -124,6 +207,18 @@ public class JdbcTreeStagingLoader {
 		copySession.setHoldCursorStrategy(HoldCursorStrategy.valueOf(plan.getRootCursorStrategy().name()));
 		copySession.setProcessedRootHandler(
 				rows -> completeStagingRoots(root, rows.stream().map(row -> keyValues(root, row)).toList()));
+		for (LoadDataSetWrapper dataSet : hierarchy(root)) {
+			Table staging = stagingTables.get(dataSet.getId());
+			Table target = targetTables.get(dataSet.getId());
+			try {
+				copySession.setColumnMapping(staging, target, columnMapping(dataSet, staging, target));
+			} catch (IllegalArgumentException e) {
+				throw new CommandException("Invalid load field mapping: " + dataSet.getId() + ". " + e.getMessage(), e);
+			}
+			if (verifiesCounts()) {
+				copySession.verifyCounts(staging, target);
+			}
+		}
 		return copySession;
 	}
 
@@ -146,9 +241,8 @@ public class JdbcTreeStagingLoader {
 	}
 
 	private void copyHierarchy(JdbcTreeDataCopySession copySession, LoadDataSetWrapper dataSet) throws SQLException {
-		Row source = copySession.getRow(dataSet.getStagingTable());
-		Row target = copySession.newRow(dataSet.getTargetTable());
-		copyTargetValues(dataSet, source, target);
+		Row source = copySession.getRow(stagingTables.get(dataSet.getId()));
+		copySession.newCopy(source, targetTables.get(dataSet.getId()));
 		for (LoadDataSetWrapper child : children(dataSet.getId())) {
 			Table childTable = stagingTables.get(child.getId());
 			while (copySession.next(childTable)) {
@@ -284,24 +378,6 @@ public class JdbcTreeStagingLoader {
 			}
 		}
 		return new Where(sql.toString(), parameters);
-	}
-
-	private void copyTargetValues(LoadDataSetWrapper dataSet, Row source, Row target) {
-		for (LoadFieldWrapper field : dataSet.getFields()) {
-			if (!field.isExtracted() || field.isTargetGenerated() || field.getTargetColumn() == null || field
-					.getAction() == com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction.DROP) {
-				continue;
-			}
-			if (field.getTargetColumn() == null) {
-				field.setTargetColumn(
-						target.getParent().getParent().getColumns().get(field.getInner().getTargetColumn()));
-			}
-			if (field.getStagingColumn() == null) {
-				field.setStagingColumn(
-						source.getParent().getParent().getColumns().get(field.getInner().getStagingColumn()));
-			}
-			target.put(field.getTargetColumn(), source.get(field.getStagingColumn()));
-		}
 	}
 
 	private Map<String, Object> keyValues(LoadDataSetWrapper root, Row values) {

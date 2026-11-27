@@ -12,6 +12,7 @@ WHERE t.TABLE_TYPE IN (
   , 'GLOBAL TEMPORARY'
   , 'LOCAL TEMPORARY'
 )
+  AND t.STORAGE_TYPE <> 'TABLE LINK'
   /*if isNotEmpty(catalogName)*/
   AND t.TABLE_CATALOG IN /*catalogName*/('%')
   /*end*/

@@ -1,0 +1,11 @@
+SELECT e.FROM_USER, e.FROM_HOST, e.TO_USER, e.TO_HOST, e.WITH_ADMIN_OPTION
+     , CASE WHEN d.DEFAULT_ROLE_USER IS NULL THEN 'N' ELSE 'Y' END AS IS_DEFAULT
+FROM mysql.role_edges e
+LEFT JOIN mysql.default_roles d
+  ON d.USER=e.TO_USER AND d.HOST=e.TO_HOST
+ AND d.DEFAULT_ROLE_USER=e.FROM_USER AND d.DEFAULT_ROLE_HOST=e.FROM_HOST
+WHERE 1=1
+  /*if isNotEmpty(grantee)*/
+  AND e.TO_USER = /*granteeUser*/'' AND e.TO_HOST = /*granteeHost*/''
+  /*end*/
+ORDER BY e.TO_USER, e.TO_HOST, e.FROM_USER, e.FROM_HOST

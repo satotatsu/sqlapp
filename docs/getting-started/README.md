@@ -10,10 +10,12 @@ change review, verified data migration, and hierarchical business processing.
 
 | Goal | Guide |
 |---|---|
+| Browse a larger generated business schema | [Gradle HTML example](gradle-html-example.md) |
 | Try documentation, change review, and migration together | [Guided demo tour](demo-tour.md) |
 | See HTML, ER diagrams, and table DDL without a database | [Offline customer/order demo](offline-demo.md) |
 | Inspect a schema change without applying SQL | [Offline change-review demo](offline-demo.md#review-a-schema-change) |
 | See transfer and mismatch detection without a DB server | [In-memory migration demo](offline-migration.md) |
+| Generate relational test data with Excel templates | [Test-data generator](../data/test-data-generation.md) |
 | Add tasks to a Gradle build | [Gradle plugin getting started](../gradle-plugin/getting-started.md) |
 | Build Schema models and generate SQL in Java | [Java API](java-api.md) |
 | Declare dependencies in Maven | [Maven setup](maven.md) |

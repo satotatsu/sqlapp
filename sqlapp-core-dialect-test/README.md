@@ -15,7 +15,22 @@ Compile the Docker tests without starting containers:
 ./gradlew :sqlapp-core-dialect-test:compileDockerTestJava
 ```
 
-Run all Docker tests explicitly:
+The MariaDB metadata/XML/DDL round-trip tests use Testcontainers like the other
+Docker tests. `dockerTest` runs them on MariaDB 11.8. Run the fixed
+10.5/11.4/11.8 matrix with:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:mariadbIntegrationTest
+```
+
+To run one baseline, select `mariadb105CompatibilityTest`,
+`mariadb114CompatibilityTest`, or `mariadb118CompatibilityTest` in this module.
+The matrix always uses disposable containers. No connection environment
+variables or PowerShell scripts are needed. See
+[MariaDB integration tests](../sqlapp-core-mariadb/INTEGRATION_TESTS.md) for
+scenarios and cleanup details.
+
+Run all Testcontainers tests explicitly:
 
 ```shell
 ./gradlew :sqlapp-core-dialect-test:dockerTest
@@ -75,6 +90,16 @@ occurs before any sqlapp test or SQL Server container is started.
 
 ## Coverage order
 
+Targeted type regression tests execute generated DDL, round-trip floating and
+integer boundary values, read column metadata and recreate the resulting model:
+
+```powershell
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests '*verifiesDataTypeServerRoundTrips' --tests '*FirebirdSchemaRoundTripTest.dataTypeServerRoundTrips' --console=plain
+```
+
+See [data type validation](../docs/development/dialect-data-types.md) for the
+qualified engines, corrections, commands and remaining version limitations.
+
 The planned order is SQL Server, PostgreSQL, Oracle, MySQL, and then other
 supported databases. H2 and HSQLDB are included only when an actual
 version-dependent behavior needs an additional integration test.
@@ -98,6 +123,196 @@ identity values, rejection of explicit `ALWAYS` identity values, multiple root
 batches, uneven child counts, and an open SELECT cursor during hierarchical
 inserts. It also covers intermediate commit visibility and the final partial
 batch committed when the session closes.
+
+Run the Oracle metadata and recreation acceptance cases with:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest'
+```
+
+The suite reads representative schema objects, checks constant partition query
+counts and recreates local indexes. It also creates modeled routines with quoted
+argument names, defaults and OUT/IN OUT parameters, reads them through metadata
+and Schema XML, recreates them and verifies their results by invoking them.
+IOT coverage recreates an overflow segment and a named READ ONLY view restriction
+through metadata and XML. These tests create and drop objects only in the owned
+Testcontainers database; container reuse is disabled by default.
+The materialized-view permission case creates disposable SYSTEM-owned fixtures
+inside that container, grants SELECT to the test user and verifies the warning
+fallback without SELECT_CATALOG_ROLE. It then temporarily grants that role on a
+new connection to verify full DDL retrieval, revokes it and drops the fixtures.
+
+Run the same metadata cases against the Oracle 26ai compatibility baseline:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest' \
+  -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart \
+  -PoracleExpectedDialect=26ai
+```
+
+This explicitly checks that JDBC product metadata resolves to the expected
+Oracle dialect as well as running the metadata and recreation assertions.
+
+Partition maintenance has a separate acceptance test:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OraclePartitionMaintenanceTest'
+```
+
+It reads heap and index-organized RANGE tables from the real catalog, generates
+ADD, DROP, SPLIT and MERGE operations from model differences and executes them.
+It verifies the original rows, requested local index partition names and USABLE states after
+each operation. The IOT case also executes the generated PL/SQL name-resolution,
+rename and rebuild block. ADD/DROP cases insert a row into the new partition,
+drop that partition and verify that the original rows remain while that row is
+deleted; global indexes must also retain valid states. The same Oracle image/dialect
+properties shown above select the 26ai baseline. Full DBMS_METADATA retrieval for partitioned IOTs may
+take several minutes in a fresh container. These cases do not cover partition
+MOVE, composite partition changes or recovery after partial DDL failure.
+
+MOVE has separate acceptance cases:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleTableMoveTest'
+```
+
+These cases create a disposable 128 MB tablespace in the container's database
+data-file directory and grant the test user a quota there. They move heap and
+index-organized tables, or one RANGE partition, through the standard table diff
+factory. They verify the actual target tablespace, unchanged rows and index
+locations, valid/usable indexes, and preservation of IOT prefix compression.
+The tablespace and its data file are dropped before the container is stopped.
+The same image/dialect properties select the 26ai baseline.
+
+Composite partition acceptance cases run separately:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleCompositePartitionTest'
+```
+
+They exercise RANGE-HASH parent ADD/DROP, RANGE-LIST child ADD/DROP and HASH
+child COALESCE using metadata-derived model diffs. They verify local index
+segment names and usable states, global index validity, and the exact rows
+removed by DROP. COALESCE starts with a populated removed bucket and must retain
+all 33 rows. Each maintenance case reads the resulting complete CREATE DDL,
+round-trips Schema XML, drops and recreates the table and indexes, reinserts
+the expected rows, and verifies child storage attributes and tablespaces.
+Complete DDL uses the existing guarded table-definition representation;
+changed models cannot replay stale CREATE SQL. The LIST case checks that catalog
+COMPRESSION=NONE is read as uncompressed. Another case reads a SYSTEM-owned
+composite table with SELECT alone, then with SELECT_CATALOG_ROLE: denied complete
+DDL must retain catalog metadata, and the role must enable complete DDL retrieval.
+The role and test table are removed afterwards.
+Use the same image/dialect properties for 26ai. These tests use
+owned disposable containers with reuse disabled by default and drop their tables;
+they do not qualify composite SPLIT/MERGE/MOVE or HASH parent ADD.
+
+The metadata query-count case also checks that complete table DDL uses one
+batched SELECT for either one or multiple composite tables. Its partition-related
+count is now nine SELECTs (eight catalog queries plus one complete-DDL query).
+Oracle 10g and later use this optional DDL retrieval; older dialects keep catalog
+reading. Without DBMS_METADATA access a warning is logged and catalog metadata
+remains available, but unsupported child storage attributes still prevent
+structured CREATE rather than being silently discarded.
+
+Composite SPLIT/MERGE and MOVE have a separate acceptance suite:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest \
+  --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleCompositeAlterTest'
+```
+
+It covers RANGE and LIST child SPLIT/MERGE, RANGE/LIST/HASH child MOVE,
+including moving children of one or multiple parents and returning them to their original
+tablespaces while retaining index placement and usable states,
+simple HASH partition MOVE, and RANGE/LIST parents with HASH/RANGE/LIST children.
+The routing cases require a single child key and matching child layouts.
+Parent SPLIT also preserves finite terminal child bounds; parent MERGE requires
+a terminal MAXVALUE/DEFAULT child. Model diffs come
+from actual metadata. Parent cases cover table defaults smaller and larger than
+the requested HASH child count, exercising both ADD and COALESCE restoration.
+SPLIT cases gather parent/child/index statistics before reading and merging.
+Each operation verifies exact rows, named table and Local
+index segments, target and unaffected tablespaces, root index placement, and
+valid/usable Global and Local indexes. Moved segments contain rows. Parent
+splitting/merging restores the requested HASH child count with row-preserving
+ADD/COALESCE when Oracle uses table defaults, then restores Oracle-assigned child
+names. Two bulk catalog queries cover HASH parent counts and child names, with
+preflight name/count checks and two-phase renames. This is a sequence of
+committing DDL statements; recovery after a partial failure is not automatic.
+
+The suite creates a disposable 128 MB tablespace and quota in its owned Oracle
+container, drops tables, then drops the tablespace and data file before stopping
+the container. Use the same image/dialect properties for 26ai. Current planners
+support isolated changes with inherited physical defaults, ordinary indexes, and explicitly usable
+affected Local segments. RANGE/LIST parent SPLIT uses one additional set-based
+catalog query to check inherited bounds; MERGE uses two to read children and
+validate the actual terminal bound before restoring routing.
+Compression cases exercise BASIC/OLTP MOVE, decompression, multiple parents,
+and BASIC child SPLIT/MERGE with explicit ONLINE opt-in on Oracle18c+.
+Explicit child compression clauses require Oracle11gR2+ in this dialect model.
+Compression changes must specify PCT_FREE=0 for BASIC or retain the source value for OLTP/NOCOMPRESS
+when that attribute is present in the model; incompatible values fail before DDL.
+Parent compression cases cover BASIC/ADVANCED defaults inherited by HASH/RANGE/LIST
+children of RANGE/LIST parents, with both uncompressed and BASIC/ADVANCED table
+defaults. Table defaults must remain unchanged.
+Local compression cases cover prefix compression and ADVANCED LOW/HIGH inherited
+by all affected index segments, for parent SPLIT/MERGE, child SPLIT/MERGE and
+HASH/RANGE/LIST child MOVE. They also cover table compression and finite parent
+SPLIT in combination with compressed Local indexes. Root compression and prefix
+length remain unchanged; per-parent/per-child index compression overrides are
+rejected during parent SPLIT/MERGE. ADD also supports inherited Local compression
+for RANGE/LIST parents and supported child shapes; newly requested compression
+overrides are rejected. ADD/DROP and HASH child COALESCE cases verify all rows,
+index compression and prefix length, and complete recreation through Schema XML.
+Existing advanced-compression version guards
+remain in effect (LOW: 12c; HIGH: 18c).
+Table/parent BASIC and ADVANCED defaults are also covered by parent and child ADD.
+New table segment compression follows the requested model: compressed segments
+emit explicit compression clauses, while compression=false under a compressed
+default emits NOCOMPRESS. BASIC ADD accepts an explicit PCT_FREE=0 because its
+compression clause establishes that value, without emitting a PCTFREE override.
+Other new PCTFREE/storage overrides remain rejected.
+These cases cover Local compression coexistence and full XML recreation; existing
+segment compression and known PCTFREE values must remain unchanged.
+Child RANGE/LIST SPLIT/MERGE also covers BASIC/ADVANCED table or parent defaults,
+including explicitly uncompressed children and prefix-compressed Local indexes.
+Requested modes are emitted explicitly when a compressed default could change
+the result. Known non-BASIC PCTFREE must match the parent default; arbitrary
+physical overrides remain rejected.
+Mixed parent/child compression during parent SPLIT/MERGE, arbitrary child physical
+overrides, finite terminal child routing during parent MERGE, LOB-specific placement
+and automatic failure recovery are outside this suite.
+Multi-step parent restoration cannot request whole-plan ONLINE.
+Composite parent/child ADD and DROP also cover names differing only by case,
+with corresponding Local index segments and XML recreation. Duplicate checks
+follow the same explicit quoting and builder quoting policy as generated SQL.
+Quoted-name coverage also includes parent RANGE-HASH/RANGE-RANGE/RANGE-LIST
+SPLIT/MERGE under BASIC table compression and child RANGE/LIST SPLIT/MERGE under
+ADVANCED table compression, with prefix-compressed Local indexes. Both phases
+compare case-sensitive names, routing, rows, compression, PCTFREE and index state.
+The same quoted-name combinations extend to LIST-HASH/LIST-RANGE/LIST-LIST
+parents and ONLINE RANGE/LIST child SPLIT/MERGE. ONLINE coverage checks generated
+clauses and post-operation state; it does not measure concurrent DML or lock waits.
+Finite RANGE text boundaries containing MAXVALUE also cover simple table ADD,
+composite parent ADD and child ADD. The tests retain the literal boundary,
+insert that exact value plus a later value after ADD, and compare all rows and
+the resulting catalog boundaries. Actual unbounded markers remain rejected.
+IOT text-boundary coverage includes ADD/DROP after a finite 'MAXVALUE' boundary
+and SPLIT/MERGE at that literal value. Each phase checks all rows and values,
+catalog bounds, Local secondary index names/status, IOT identity, enabled primary
+key and usable root indexes. DROP intentionally removes only the added rows.
+Multicolumn RANGE coverage also uses a finite first key followed by MAXVALUE
+for simple/composite ADD and IOT ADD/DROP/SPLIT/MERGE. Rows equal to the finite
+prefix stay in the existing partition; dropping the added partition preserves
+those rows even when inserted after ADD. Leading MAXVALUE remains unbounded.
+Version guards retain RANGE-LIST at 10g, RANGE-RANGE/LIST-* at 11g,
+and HASH-* at 18c because the shared 12c dialect also represents 12.1.
 
 MySQL coverage uses MySQL 8.4 and verifies generic one-column generated-key
 result sets from Connector/J, parent-key propagation across multiple root
@@ -254,3 +469,21 @@ disposable writable target, credential environment variables and
 with CASCADE and writes test rows/checkpoints. See the
 [AlloyDB guide](../sqlapp-core-alloydb/README.md) for prerequisites and remaining
 cloud qualification work.
+
+## Aurora MySQL: upstream compatibility only
+
+```shell
+./gradlew :sqlapp-core-dialect-test:auroraMySqlCompatibilityTest
+```
+
+Runs `AuroraMySqlCompatibilityTest` separately on disposable local `mysql:8.0`
+and `mysql:8.4` containers with local-infile enabled. Individual tasks are
+`auroraMySql80CompatibilityTest` and `auroraMySql84CompatibilityTest`.
+The Aurora dialect is selected explicitly for metadata/DDL and bulk execution;
+ordinary connection-based detection must still resolve MySQL and preserve the
+caller's transaction. Coverage includes type metadata and DDL round trips,
+table/view recreation, escaped text/Unicode/NULL/empty/binary bulk values,
+and INSERT/UPSERT rollback, plus owned UPSERT commit visibility and autocommit
+restoration. Executed on 2026-11-03: MySQL 8.0.46 and 8.4.11 each passed six
+tests with no failures/errors/skips. The tests do not contact or emulate Aurora.
+See [scope and limitations](../sqlapp-core-aurora-mysql/README.md).

@@ -315,6 +315,10 @@ public abstract class AbstractStatement<T extends Statement> extends AbstractJdb
 	 */
 	@Override
 	public Connection getConnection() throws SQLException {
+		// このStatementを作成したラップ済みのConnection(Dialectオプションを保持する)を返す
+		if (connection != null) {
+			return connection;
+		}
 		return nativeObject.getConnection();
 	}
 

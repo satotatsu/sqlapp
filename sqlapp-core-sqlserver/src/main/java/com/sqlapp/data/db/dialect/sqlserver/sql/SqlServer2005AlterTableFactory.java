@@ -51,10 +51,15 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 		final SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.alter().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
+		if (column.getCheckConstraint() != null)
+			SqlServerConstraintSupport.addPrefix(column.getCheckConstraint(), builder);
 		builder.add();
 		builder.name(column);
 		builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 		add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
+		if (column.getCheckConstraint() != null)
+			SqlServerConstraintSupport.restore(column.getCheckConstraint(), createSqlBuilder(),
+					getOptions().isDecorateSchemaName(), false, result);
 	}
 
 	/**
@@ -95,4 +100,92 @@ public class SqlServer2005AlterTableFactory extends AbstractAlterTableFactory<Sq
 				.getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
 		addObjectDetail.addObjectDetail(table.getPartitioning(), builder);
 	}
+
+	@Override
+	protected void addConstraintDefinition(Table originalTable, Table table, Constraint original, Constraint target,
+			DbObjectDifference diff, List<SqlOperation> result) {
+		if (diff.getState() == com.sqlapp.data.schemas.State.Modified
+				&& (target instanceof com.sqlapp.data.schemas.CheckConstraint
+						|| target instanceof com.sqlapp.data.schemas.ForeignKeyConstraint)
+				&& SqlServerConstraintSupport.stateOnly(original, target)) {
+			SqlServerConstraintSupport.changeState(target, createSqlBuilder(), getOptions().isDecorateSchemaName(),
+					result);
+			return;
+		}
+		super.addConstraintDefinition(originalTable, table, original, target, diff, result);
+	}
+
+	@Override
+	protected void addCreateConstraintDefinition(Table originalTable, Table table, Constraint originalConstraint,
+			Constraint constraint, DbObjectDifference diff, List<SqlOperation> result) {
+		if (constraint instanceof com.sqlapp.data.schemas.CheckConstraint
+				|| constraint instanceof com.sqlapp.data.schemas.ForeignKeyConstraint) {
+			result.addAll(getSqlFactoryRegistry().createSql(constraint, SqlType.CREATE));
+		} else {
+			super.addCreateConstraintDefinition(originalTable, table, originalConstraint, constraint, diff, result);
+		}
+	}
+
+	@Override
+	protected void addRenameOrAlterColumn(Table originalTable, Table table, DbObjectDifference diff,
+			List<SqlOperation> result) {
+		Column original = diff.getOriginal(Column.class), target = diff.getTarget(Column.class);
+		if (!java.util.Objects.equals(original.getCheckConstraint(), target.getCheckConstraint())) {
+			Column normalized = target.clone();
+			normalized.setCheckConstraint(
+					original.getCheckConstraint() == null ? null : original.getCheckConstraint().clone());
+			if (!original.equals(normalized))
+				throw new IllegalArgumentException(
+						"Change a column CHECK separately from its column definition: " + target.getName());
+			return; // The CHECK is handled below as a named constraint, never ALTER COLUMN ...
+					// CHECK.
+		}
+		if (original.getCheckConstraint() != null)
+			throw new IllegalArgumentException(
+					"Remove the column CHECK before altering its column definition: " + target.getName());
+		super.addRenameOrAlterColumn(originalTable, table, diff, result);
+	}
+
+	@Override
+	protected void addOtherDefinitions(Map<String, Difference<?>> allDiff, Table originalTable, Table table,
+			List<SqlOperation> result) {
+		super.addOtherDefinitions(allDiff, originalTable, table, result);
+		for (Column column : table.getColumns()) {
+			Column original = originalTable.getColumns().get(column.getName());
+			if (original == null
+					|| java.util.Objects.equals(original.getCheckConstraint(), column.getCheckConstraint()))
+				continue;
+			if (original.getCheckConstraint() != null && column.getCheckConstraint() != null
+					&& SqlServerConstraintSupport.stateOnly(original.getCheckConstraint(),
+							column.getCheckConstraint())) {
+				SqlServerConstraintSupport.changeState(column.getCheckConstraint(), createSqlBuilder(),
+						getOptions().isDecorateSchemaName(), result);
+				continue;
+			}
+			if (original.getCheckConstraint() != null)
+				dropColumnCheck(original, table, result);
+			if (column.getCheckConstraint() != null)
+				result.addAll(getSqlFactoryRegistry().createSql(column.getCheckConstraint(), SqlType.CREATE));
+		}
+	}
+
+	private void dropColumnCheck(Column column, Table table, List<SqlOperation> result) {
+		String name = column.getCheckConstraint().getName();
+		if (name == null || name.isBlank())
+			throw new IllegalArgumentException(
+					"Read the database-assigned CHECK name before changing or dropping column " + column.getName());
+		SqlServerSqlBuilder builder = createSqlBuilder();
+		builder.alter().table().name(table, getOptions().isDecorateSchemaName()).drop().constraint().space().name(name);
+		result.add(createOperation(builder.toString(), SqlType.ALTER, column.getCheckConstraint()));
+	}
+
+	@Override
+	protected void addDeleteColumn(Table originalTable, Table table, DbObjectDifference diff,
+			List<SqlOperation> result) {
+		Column column = diff.getOriginal(Column.class);
+		if (column.getCheckConstraint() != null)
+			dropColumnCheck(column, table, result);
+		super.addDeleteColumn(originalTable, table, diff, result);
+	}
+
 }

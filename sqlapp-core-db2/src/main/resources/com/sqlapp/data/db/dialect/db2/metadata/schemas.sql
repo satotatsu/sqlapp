@@ -4,7 +4,7 @@ SELECT
 FROM SYSCAT.SCHEMATA s
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(SCHEMANAME) IN /*schemaName*/('%')
+  AND SCHEMANAME IN /*schemaName*/('%')
   /*end*/
 ORDER BY SCHEMANAME
 WITH UR

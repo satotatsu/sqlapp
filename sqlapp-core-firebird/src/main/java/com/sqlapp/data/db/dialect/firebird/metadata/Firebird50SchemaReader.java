@@ -9,7 +9,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.TableReader;
 
 /** Firebird 5.0 schema metadata reader. */
-public class Firebird50SchemaReader extends Firebird30SchemaReader {
+public class Firebird50SchemaReader extends Firebird40SchemaReader {
 
 	protected Firebird50SchemaReader(final Dialect dialect) {
 		super(dialect);

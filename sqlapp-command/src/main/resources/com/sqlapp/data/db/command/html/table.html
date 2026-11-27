@@ -10,6 +10,9 @@ boolean first=true;
 		<ul class="nav">
 			<li class="active default"><a href="#Base">@{getMessage("Base")}</a></li>
 			<li><a href="#DDL">@{getMessage("DDL")}</a></li>
+			@if{relations!=null||relations_logical!=null}
+			<li><a href="#Relationships">@{getMessage("Relationships")}</a></li>
+			@end{}
 			@if{!obj.isDefaultRowIteratorHandler()||obj.rows.size()>0}
 			<li><a href="#Rows">@{getMessage("Rows")}</a></li>
 			@end{}
@@ -437,6 +440,8 @@ boolean first=true;
 			<!-- include(incStatement.html) -->
 			<!-- include(incDefinition.html) -->
 		</div>
+
+		<!-- include(incDetailRelations.html) -->
 
 		<div id="DDL">
 			<div class="panel panel-default">

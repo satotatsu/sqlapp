@@ -23,7 +23,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.JsonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
-public class Oracle23aiIndexReader extends OracleIndexReader {
+public class Oracle23aiIndexReader extends Oracle11gIndexReader {
 
 	public static final String ORGANIZATION = "ORGANIZATION";
 	public static final String TARGET_ACCURACY = "TARGET_ACCURACY";
@@ -62,9 +62,10 @@ public class Oracle23aiIndexReader extends OracleIndexReader {
 	@Override
 	protected void setMetadataDetail(final Connection connection, final ParametersContext originalContext,
 			final List<Index> indexes) throws SQLException {
-		super.setMetadataDetail(connection, originalContext, indexes);
+		readPartitionDetails(connection, originalContext, indexes);
 		readVectorDetails(connection, indexes, false);
 		readVectorDetails(connection, indexes, true);
+		readIndexDefinitions(connection, indexes);
 	}
 
 	@Override

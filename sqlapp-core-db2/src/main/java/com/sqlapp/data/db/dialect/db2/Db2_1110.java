@@ -58,6 +58,18 @@ public class Db2_1110 extends Db2_1050 {
 		getDbDataTypes().addBoolean("BOOLEAN", type -> {
 			type.setDefaultValueLiteral("FALSE");
 		});
+		// Native binary string types (11.1). CHAR/VARCHAR FOR BIT DATA columns read
+		// from
+		// the catalog keep their original spelling through the DB2_FOR_BIT_DATA
+		// specific.
+		getDbDataTypes().addBinary("BINARY", 255, type -> {
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
+		});
+		getDbDataTypes().addVarBinary("VARBINARY", 32672, type -> {
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
+			type.addColumnTypeMatcher(
+					new com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
+		});
 	}
 
 	/*
@@ -78,6 +90,14 @@ public class Db2_1110 extends Db2_1050 {
 	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
 	 */
+	/**
+	 * OFFSET n ROWS / FETCH FIRST n ROWS ONLY (Db2 LUW 11.1 or later).
+	 */
+	@Override
+	public boolean supportsStandardOffsetFetchRows() {
+		return true;
+	}
+
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Db2_1110CatalogReader(this);

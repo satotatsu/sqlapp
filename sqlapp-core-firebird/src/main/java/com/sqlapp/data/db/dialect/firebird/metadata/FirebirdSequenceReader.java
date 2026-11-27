@@ -62,6 +62,8 @@ public class FirebirdSequenceReader extends SequenceReader {
 		String name = trim(getString(rs, "RDB$GENERATOR_NAME"));
 		Sequence sequence = new Sequence(name);
 		sequence.setCycle(false);
+		if (rs.contains("RDB$GENERATOR_INCREMENT"))
+			sequence.setIncrementBy(rs.getBigDecimal("RDB$GENERATOR_INCREMENT"));
 		return sequence;
 	}
 
@@ -76,8 +78,37 @@ public class FirebirdSequenceReader extends SequenceReader {
 	 * @param sequence   Sequence
 	 */
 	protected void setMetadataDetail(Connection connection, Sequence sequence) throws SQLException {
-		BigDecimal lastNumber = getCurrentNumber(connection, sequence.getName());
-		sequence.setLastValue(lastNumber);
+		// Current values are fetched in batches by the collection overload.
+	}
+
+	@Override
+	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Sequence> sequences)
+			throws SQLException {
+		// GEN_ID requires a literal identifier, so build one projection per requested
+		// sequence, in bounded batches below the legacy row/column limits.
+		for (int offset = 0; offset < sequences.size(); offset += 500) {
+			var batch = sequences.subList(offset, Math.min(offset + 500, sequences.size()));
+			StringBuilder sql = new StringBuilder("SELECT ");
+			for (int i = 0; i < batch.size(); i++) {
+				if (i > 0)
+					sql.append(',');
+				sql.append("GEN_ID(\"").append(batch.get(i).getName().replace("\"", "\"\"")).append("\",0) AS VALUE_")
+						.append(i);
+			}
+			sql.append(" FROM RDB$DATABASE");
+			boolean[] found = { false };
+			execute(connection, com.sqlapp.jdbc.sql.SqlParser.getInstance().parse(getDialect(), sql.toString()),
+					context, new ResultSetNextHandler() {
+						@Override
+						public void handleResultSetNext(ExResultSet rs) throws SQLException {
+							found[0] = true;
+							for (int i = 0; i < batch.size(); i++)
+								batch.get(i).setLastValue(next(batch.get(i), rs.getBigDecimal("VALUE_" + i)));
+						}
+					});
+			if (!found[0])
+				throw new SQLException("Firebird sequence current-value query returned no row");
+		}
 	}
 
 	/**
@@ -88,7 +119,16 @@ public class FirebirdSequenceReader extends SequenceReader {
 	 */
 	protected BigDecimal getCurrentNumber(Connection connection, String sequenceName) {
 		SqlExecuter sql = new SqlExecuter("SELECT GEN_ID(");
-		sql.addSqlLine(sequenceName + ", 0) FROM RDB$DATABASE");
+		sql.addSqlLine("\"" + sequenceName.replace("\"", "\"\"") + "\", 0) FROM RDB$DATABASE");
 		return sql.executeScalar(connection, BigDecimal.class, 1);
+	}
+
+	/**
+	 * GEN_ID(g, 0) is the current value; the model holds the next value to issue.
+	 */
+	private static java.math.BigDecimal next(Sequence sequence, java.math.BigDecimal current) {
+		var increment = sequence.getIncrementBy();
+		return com.sqlapp.data.db.metadata.SequenceNextValues.after(current,
+				increment == null ? null : new java.math.BigDecimal(increment), null, null, false);
 	}
 }

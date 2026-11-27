@@ -7,6 +7,7 @@ SELECT
   , ps.is_default
   , ps.type_desc
   , dd.destination_id
+  , f.fanout
 FROM sys.partition_schemes ps
 INNER JOIN sys.partition_functions f 
   ON (ps.function_id = f.function_id)
@@ -19,6 +20,7 @@ WHERE 1=1
   AND ps.name IN /*partitionSchemeName;type=NVARCHAR*/('%')
   /*end*/
 ORDER BY ps.data_space_id, dd.destination_id
+  , f.fanout
 
 --65602	myRangePS1	FG1	myRangePF1
 --65602	myRangePS1	FG2	myRangePF1

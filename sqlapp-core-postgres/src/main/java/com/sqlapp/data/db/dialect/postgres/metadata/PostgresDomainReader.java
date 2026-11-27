@@ -33,6 +33,7 @@ import com.sqlapp.data.db.metadata.DomainReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Deferrability;
 import com.sqlapp.data.schemas.Domain;
+import com.sqlapp.data.schemas.DomainCheckConstraint;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
@@ -64,9 +65,11 @@ public class PostgresDomainReader extends DomainReader {
 				Domain existing = byId.putIfAbsent(obj.getId(), obj);
 				if (existing == null) {
 					result.add(obj);
-				} else if (!CommonUtils.isEmpty(obj.getCheck())) {
-					existing.setCheck(CommonUtils.isEmpty(existing.getCheck()) ? obj.getCheck()
-							: "(" + existing.getCheck() + ") AND (" + obj.getCheck() + ")");
+				}
+				Domain domain = existing == null ? obj : existing;
+				String expression = getString(rs, "consrc");
+				if (!CommonUtils.isEmpty(expression)) {
+					domain.getChecks().add(new DomainCheckConstraint(getString(rs, "constraint_name"), expression));
 				}
 			}
 		});
@@ -98,7 +101,6 @@ public class PostgresDomainReader extends DomainReader {
 		obj.setRemarks(getString(rs, "remarks"));
 		obj.setArrayDimension(arrayDimension);
 		obj.setDefaultValue(getString(rs, "typdefault"));
-		obj.setCheck(getString(rs, "consrc")); // ドメイン制約式
 		boolean is_deferrable = rs.getBoolean("is_deferrable");
 		boolean initially_deferred = rs.getBoolean("initially_deferred");
 		obj.setDeferrability(Deferrability.getDeferrability(is_deferrable, initially_deferred));

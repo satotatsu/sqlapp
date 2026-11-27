@@ -1,0 +1,2612 @@
+# Oracle DialectとPostgreSQL Dialectの比較
+
+確認日: 2026-10-15。比較対象はDB固有のSQL構文の数ではなく、共有Schemaモデル、メタデータ読取、DDL再生成、バージョン分離、テストの実装状況。
+ソースコード・単体テストと各節に記載したDocker実DBによる確認であり、全Oracleバージョンの実DB互換性は未検証。
+
+日付別の「残件」「未検証」は記録時点の状態であり、後続の実装・Docker検証結果は末尾の
+2026-10-18／2026-10-19の各節に記載する。基本比較とOracle固有の高度な拡張は区別する。
+
+## 比較結果
+
+### 現在も残る主な制限（2026-10-19）
+
+下記は現在の実装で明示的に制限しているOracle固有の拡張であり、後続の日付節で実装済みの
+一般的な複合SPLIT／MERGE、圧縮保守や単純IOTまで未対応という意味ではない。
+過去の日付節の「未対応」は、その時点の状態として読む。
+
+- 複合HASH親のADD。子HASHのADD／COALESCEとは別の経路。
+- 複数のRANGE／LIST子キーを持つ親SPLIT／MERGEのルーティング復元と、有限末尾の子を持つ親MERGE。
+  複数列RANGEのADD・単純／IOT SPLIT／MERGEとは別の制限。
+- 保守中の任意の個別物理属性編集、親SPLIT／MERGEの混在圧縮、複雑なIOT全体MOVE。
+  対応済みの圧縮モード・PCTFREE・表領域変更の範囲は各節とREADMEに記載する。
+- 完全DDLとして保存するオブジェクト内部の任意の構造化編集と、custom indextype／Text preference等の
+  前提オブジェクトの自動再生成。
+- 複数DDLを使う保守計画全体のONLINE保証、自動ロールバック・再開。
+
+実DB検証は各節に明示した所有DockerのOracle23／固定26aiのケースに限定する。
+全Oracle版・全オプションの互換性、並行DML負荷・ロック待ち時間を一括して確認したものではない。
+
+### 2026-10-17時点の完了判定と残件の区分
+
+比較の完了条件は、共有Schemaで扱う基本オブジェクトについて読取・再CREATE・基本ALTER・
+版境界・取得権限不足時の挙動を確認し、確認された欠落を修正すること。
+Oracle固有構文をすべて構造化して編集可能にすることを、PostgreSQLとの基本比較の
+完了条件に追加し続けない。過去の「残件」はOracle固有の高度な拡張も含んでいる。
+
+- 基本経路の確定不具合: 今回、通常CREATE TABLEのpartition生成呼出し欠落、
+  LISTのVALUES IN、空のsubpartition括弧、HASH子個数の欠落を修正した。
+- 高度な拡張として未対応: 複合HASH親ADD、複合SPLIT/MERGE、高度な物理属性編集、
+  複雑なIOT MOVE、opaque DDL内部の構造化編集、LISTの複数キー・式の差分保守。
+- 前提モデルの設計が必要: custom indextype/Text preference等の自動再生成。
+  INDEXTYPE等の共通表現・依存順・共有前提の重複処理を含むため、通常の索引DDL再生成とは区別する。
+- 検証上の残件: 実Oracleでの取得→CREATE/ALTER往復。外部DB接続は未承認であり実施していない。
+
+単体テスト成功だけで全体同等性を認定しない。追加する構文数ではなく、基本経路の
+確認結果と具体的な未対応範囲を完了報告の基準とする。
+
+| 領域 | Oracleの実装状況と今回の確認 |
+| --- | --- |
+| バージョン解決 | `OracleDialectResolver`に旧版～26aiの分岐がある。26aiの`23.26`境界は既存実装を維持。 |
+| テーブル・列・制約・索引 | 専用ReaderとSQL Factoryがある。11g/12c/23aiの差分Reader、索引・パーティションの一括補完処理を確認。存在確認であり全オプションの同等性を認定するものではない。 |
+| ビュー・マテリアライズドビュー | 23ai/26aiのduality view補完、MviewのCREATE／REFRESHと基本設定、10g以降の完全DDL保持に対応。高度な設定の構造化編集と実DB検証は残る。 |
+| シーケンス | 共通Schemaモデルを使用し、18c以降のscale/session用クエリを分離。既存単体テストあり。 |
+| 関数・プロシージャ | PostgreSQLと同様に再生成情報を保持すべき経路で、Oracleの引数既定値・ヘッダーが失われる問題を修正。 |
+| トリガー | PostgreSQLは所有スキーマと定義を保持。Oracleのスキーマ欠落、ヘッダー消失、不正な文レベルトリガーSQL、条件欠落、無効状態の欠落を修正。 |
+| Oracle固有オブジェクト | package/type/synonym/db link/dimension等の既存Reader/Factoryあり。PACKAGE／TYPEと各BODYは完全ソースDDLを保持し、ヘッダー・名前付きENDの欠落とCREATEの二重付与を修正。PostgreSQL固有のextension/publication等との件数比較は機能不足の判定に使わない。 |
+| bulk処理 | 既存のinsert/upsert/set-based snapshot providerと単体テストあり。今回変更なし。 |
+| Domain | 23ai/26aiの単一列・複数列、26aiのFlexible関連付け、完全DDL保持、CREATE／ALTER／DROPの依存順に対応。構造化ALTERはDISPLAY／ORDER・object注釈に限定し、型・制約・完全definitionの変更は明示的に拒否する。 |
+
+## 修正した再生成経路
+
+`OracleFunctionReader`と`OracleProcedureReader`は、既存の一括`ALL_SOURCE`取得結果を
+完全な`CREATE OR REPLACE` DDLとして`definition`へ保存する。
+`ALL_ARGUMENTS.DEFAULTED`から既定式を復元することはできないため、引数の既定値を
+`NULL`と推測しない。代わりに引数の`specifics.DEFAULTED=true`を保持し、正確な式は
+ルーチン全体の定義から再生成する。`AUTHID`、SQL macro、名前付きEND等もソースに残る。
+ソースが取得できなければ対象名を含む例外で失敗する。
+
+Function/ProcedureのCREATE Factoryは完全なDDLを受け付けるとともに、従来の
+`FUNCTION ...` / `PROCEDURE ...`で始まるユーザー定義も引き続き受け付ける。
+公開メソッド、モジュール依存、設定形式の変更はない。読み出したSchema XMLでは
+これらのルーチンの主な再生成情報が`statement`から`definition`へ移る。
+定義内の識別子や引数を変更する場合は定義自体も更新する必要がある。
+
+`OracleTriggerReader`は`OWNER`を設定し、`DESCRIPTION`、`WHEN_CLAUSE`と`TRIGGER_BODY`から完全な
+CREATE DDLを保持する。これにより`UPDATE OF`、`REFERENCING`、`WHEN`、複合トリガーや
+DBイベントのヘッダーを汎用モデルへ無理に分解せず保存する。定義の取得失敗を明示する。
+CREATE Factoryはこの定義を使用し、無効トリガーには後続の`ALTER TRIGGER ... DISABLE`を生成する。
+モデルから生成する文レベルトリガーでは`FOR EACH STATEMENT`を生成せず、行レベルの条件は`WHEN`で生成する。
+名前変更と有効状態変更はOracle構文に合わせて別々のALTER操作として返す。
+
+すべてOracleの基本Dialectから継承する範囲の変更であり、新しいカタログ列やバージョン固有SQLは追加していない。
+オブジェクトごとの追加SELECTもない。
+
+## 検証
+
+- `OracleRoutineRecreationTest`: 基本Dialect、11gR2、19c、21c、23ai、26aiで既定式・AUTHID・名前付きENDの再生成、Schema XML往復、従来形式の定義、ソース欠落。
+- `OracleTriggerRecreationTest`: 所有者・ヘッダー・本体・無効状態の保持、Schema XML往復、モデルからの行/文トリガー生成。
+- `OracleTriggerFactoryTest`: 既存CREATEと、名前変更→無効化の2操作。
+- Java 21、repository Gradle WrapperでOracleモジュール全体の単体テストを実行。
+- PostgreSQLモジュールのtestタスクは成功（UP-TO-DATE）。実DBテストは今回実行していない。
+- CommandのOracle移行評価関連テストとGradleプラグインのOracle関連テストも成功。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を各コマンドに指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-core-postgres:test
+.\gradlew.bat :sqlapp-command:test --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*'
+```
+
+初回のWrapper取得はネットワーク制約で失敗し、許可された再実行で取得した。
+追加テストの初回コンパイルでFactory取得メソッド名を修正し、再実行で成功。
+利用側テストの短い`*Oracle*`フィルタはWindowsでディレクトリ名へ展開されタスク選択に失敗したため、
+完全修飾クラス名のフィルタで再実行して成功した。
+
+高度なdata use case domainのモデル化、duality viewの詳細、権限差による挙動、実DBでのDDL実行を含む
+全体の同等性は、この単体テスト結果だけでは確認できない。既存の
+`sqlapp-core-dialect-test/src/dockerTest`を使う実DB検証は別途必要。
+
+## 継続対応: 26ai Duality ViewとDomain
+
+Oracle26aiに専用Catalog/Schema/View ReaderとSQL Factory Registryを追加した。
+既存の一括Duality Viewクエリに`LOGICAL_REPLICATION`を追加し、23ai側のクエリには
+追加していない。Oracleの資料はこの列をRU 23.6以降と記載しているが、既存の
+DialectResolverは23.26以降を26aiとして解決するため、今回の対応は26aiの境界に限定する。
+23.xの途中RUを一律に対応済みと推測しない。
+
+```java
+View view = new View("CUSTOMER_DV");
+view.setSchemaName("APP");
+OracleJsonDualityViewUtils.setJsonRelationalDualityView(view, true);
+view.setStatement("SELECT JSON {'_id': c.ID} FROM CUSTOMERS c");
+view.getSpecifics().put(OracleJsonDualityViewUtils.LOGICAL_REPLICATION, true);
+// Oracle26aiのCREATE Factoryが AS ENABLE LOGICAL REPLICATION を生成する。
+```
+
+`false`はDISABLE、未設定なら句を追加しない。不正値、通常ビューへの設定、
+旧Dialectへの設定、完全な`definition`とこのオプションの併用は明示的なエラーになる。
+完全な`definition`のみを指定したDuality Viewは、その定義をそのまま生成する。
+生成SQLの実行にはOracle側のsupplemental logging等の前提設定が必要であり、
+sqlappはDB全体の設定を自動変更しない。
+
+追加修正:
+
+- 無名Domain CHECKでは不正な`CONSTRAINT CHECK`を生成せず、`CHECK`のみ生成する。
+- Domain注釈・Duality View補完の対象を所有者と名前の完全一致で照合する。引用識別子の大小文字を混同しない。
+- 23ai/26aiのViewReaderで23ai用ColumnReaderを使い、VECTOR等の列メタデータを旧Readerで読み落とさない。
+
+公開メソッドの削除、共有SchemaモデルやXML形式の変更、新しいモジュール依存はない。
+既存`LOGICAL_REPLICATION`キーを使用する。無視されていた不正・未対応設定は今回からエラーになる。
+クエリ数はDuality補完1回、Domain本体1回＋注釈1回を維持し、N+1 SELECTを追加していない。
+
+追加テストは`Oracle26aiDualityViewTest`、`OracleDualityMetadataTest`、
+`OracleDomainCheckTest`、`OracleDomainAnnotationIdentityTest`。
+SQL生成、XML往復、旧版との境界、設定エラー、引用識別子の照合、クエリ数を検証する。
+Oracle全119単体テストと前掲Command／GradleプラグインのOracle関連テストが成功した。
+追加テストの初回はViewの継承APIの戻り型・型定数とResultSetモック不足で失敗し、修正後に再実行して成功した。
+実DBでのレプリケーション実行は未検証。複数列／flexible／enumerated Domain、
+複数制約の完全モデル、26aiのduality table/column詳細は引き続き未対応。
+
+仕様参照:
+
+- [ALL_JSON_DUALITY_VIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_JSON_DUALITY_VIEWS.html)
+- [CREATE構文](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlqr/SQL-Statements.html)
+- [レプリケーション前提条件](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/alter-json-relational-duality-view.html)
+
+## 継続対応: 複数の名前付きDomain CHECK
+
+Oracleの`useCaseDomains.sql`がCHECKを先頭1件へ絞り込む処理を廃止した。
+PostgreSQLでも式をANDで結合して制約名を失っていたため、共有Schemaモデルに
+`DomainCheckConstraint`と`Domain.getChecks()`を追加し、両Dialectで使用する。
+Oracle 23ai/26aiの変更であり、旧Oracleのcollection type用Domain生成は変更しない。
+
+単純な設定は従来どおり:
+
+```java
+Domain domain = new Domain("POSITIVE").setDataType(DataType.INT).setCheck("VALUE > 0");
+```
+
+名前付き／複数CHECKが必要な場合:
+
+```java
+Domain domain = new Domain("BOUNDED").setDataType(DataType.INT);
+domain.getChecks().add(new DomainCheckConstraint("CK_LOWER", "VALUE > 0"));
+domain.getChecks().add(new DomainCheckConstraint("CK_UPPER", "VALUE < 100"));
+```
+
+Oracleでは制約ごとに`setDeferrability`、`setEnable`を指定できる。
+Oracle固有の検証状態・RELYは各CHECKの`specifics.VALIDATED`（`VALIDATED`/`NOT VALIDATED`）と
+`specifics.RELY`（`RELY`/`NORELY`）で保持する。これらはコンパイル有効性を示す`valid`とは別。
+遅延制約は`DEFERRABLE INITIALLY DEFERRED/IMMEDIATE`として生成し、従来の単一checkも同じ生成規則を使う。
+PostgreSQLのDomain CHECKは有効・遅延不可として生成し、無効化や遅延設定はエラーにする。
+
+再生成テストで見つかった無制限`NUMBER`の`NUMBER(0,0)`への変化も修正した。
+Oracle Domainのカタログ精度・スケールがNULLの場合はNULLのまま共有モデルへ保存する。
+汎用decimal生成の既定値で意味が変わるこのケースのみOracle Factoryで`NUMBER`、
+スケールだけ指定されている場合は`NUMBER(*,scale)`を生成する。
+
+`check`と`checks`の併用、名前や式の欠落、重複名、未対応Factoryへの新コレクションの入力を
+明示的なエラーにする。引用名の大小文字は別名として保持する。ENUMへのDomain CHECKも拒否する。
+
+既存メソッドの削除や既存XMLの読取形式変更はない。新コレクションを使う場合だけ
+`<checks><domainCheckConstraint name="..." expression="..."/></checks>`が追加される。
+この新要素を含むXMLの読取には対応したsqlappバージョンが必要。
+Oracle/PostgreSQLの読取CHECKは`getCheck()`ではなく`getChecks()`へ格納するため、
+メタデータ利用側で式を直接参照するコードは新コレクションも扱う必要がある。
+従来の単一checkを手で作成するコードは継続して使用できる。
+
+共有モデルのXML、clone、所有関係、差分、型登録をテストし、Oracle/PostgreSQLでは
+一括読取→XML→DDLの経路とクエリ数を検証する。OracleのDomain本体＋CHECKは1クエリ、
+注釈は1クエリ、PostgreSQLは1クエリであり、オブジェクトごとの追加SELECTはない。
+実DBテストは今回も未実行。複数列、Flexible、Enumerated Domain、名前付きNOT NULL、
+代替型やDomain参照の完全なモデル化は引き続き残る。
+
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests 'com.sqlapp.data.schemas.DomainChecksTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests 'com.sqlapp.data.db.dialect.oracle.metadata.OracleDomainNamedChecksTest' :sqlapp-core-postgres:test --tests 'com.sqlapp.data.db.dialect.postgres.metadata.PostgresDomainNamedChecksTest'
+.\gradlew.bat :sqlapp-core:test
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*'
+```
+
+初回の共有モデルコンパイルで必須メソッド、広域テストで新Schema型のFactory登録・型数期待値を修正した。
+`sqlapp-core:test`は最終状態で1184テスト成功。Oracleの遅延設定テストの失敗はDEFERRABLE生成の修正で解消した。
+最終結果はOracle 122件、PostgreSQL 299件、H2 48件も失敗0件。
+Commandの生成系・Oracle関連とGradleプラグインのOracle関連テストも成功した。
+生成物はテスト実行に伴うもののみで、意図的な生成済みファイルのコミット対象変更はない。
+
+仕様参照: [Oracle CREATE DOMAIN](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/create-domain.html)、
+[Oracle ALL_DOMAIN_CONSTRAINTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_CONSTRAINTS.html)、
+[PostgreSQL CREATE DOMAIN](https://www.postgresql.org/docs/18/sql-createdomain.html)。
+
+## 継続対応: 複数列Domain・参照・Duality詳細
+
+共有モデルに任意の`Domain.columns`と`DomainColumn`を追加した。
+従来のscalar Domainの設定やXMLは維持し、列を設定した場合だけ追加のXML要素を出力する。
+Oracle 23ai/26aiのCREATE Factoryは次のモデルを`AS (CITY AS ..., ZIP AS ...)`形式で生成する。
+未対応Factory、型が欠落した列、重複列名、scalar型／default／nullabilityとcolumnsの併用はエラーになる。
+
+```java
+Domain address = new Domain("ADDRESS");
+address.getColumns().add(new DomainColumn("CITY").setDataType(DataType.VARCHAR).setLength(80));
+address.getColumns().add(new DomainColumn("ZIP").setDataType(DataType.INT));
+address.getChecks().add(new DomainCheckConstraint("CK_ZIP", "ZIP > 0"));
+```
+
+Oracle26aiの専用DomainReaderでは通常Domainの列定義を対象集合全体で一括取得する。
+本体とCHECKの取得1回、複数列の場合の列取得1回、注釈取得1回に加え、完全DDLと依存関係を各1回で取得する。
+JDBCでのSELECT回数はDomain数に比例しない。完全DDLのクエリ内では対象ごとにDBMS_METADATAを評価する。
+期待する列数に足りない場合は失敗する。26aiで代替型がある場合は主型の構成列を補助情報として保持し、
+代替型を含む完全DDLをdefinitionの正本として再出力する。
+新しい`ALL_DOMAINS.TYPE`列を使うクエリは26aiに限定する。
+23aiも既存の`COLS`と列カタログを使って複数列Domainを読み、列定義の一括取得処理を26aiと共有する。
+23aiでは本体・CHECK、複数列の列定義、注釈を各1回で取得する。
+既存のCOLUMN_NAMEによる絞り込みを外し、object-level／column-level注釈を別々に保持する。
+古いrelease updateでのカタログ内容は実DB未検証であり、26ai固有列を23aiへ追加したものではない。
+Flexible／Enumerated Domain、代替型、NOT NULL制約、scalar Domainのobject-level注釈など、
+構造化モデルだけでは完全再現できないものは`DBMS_METADATA.GET_DDL('SQL_DOMAIN', ...)`で
+実行可能な定義を保持する。これらの`definition`が正本であり、補助的なcolumns／checksは必須ではない。
+SQL_DOMAINは26aiでも利用可能な互換名称である。メタデータの権限不足やDDL取得失敗は伝播する。
+
+Domain間の参照は`ALL_DEPENDENCIES`から一括取得し、ownerとnameの組をJSONのspecificsへ保持する。
+読取とCREATE集合の生成で参照先を先に並べ、循環参照や不正な依存情報はエラーとする。
+取得対象外の参照先は事前に存在する必要がある。
+Oracle 23ai/26aiのCatalog CREATEは登録済みSchema Factoryを使い、型・シーケンス等を各Schemaで
+生成した後、全SchemaのDomainを依存順に生成してからテーブルを生成する。
+Schema単独のCREATEは従来どおりであり、Catalog入力のSchemaやDomainコレクションの順序を変更しない。
+個々のSchemaを別々に生成する場合や、Domain以外のオブジェクト間のSchema横断依存は呼出側で管理する。
+definition内のSQL識別子は名前変更に自動追従しない。
+
+`Column.setDomain`は共有SchemaモデルのDomainを参照する。XMLには`domainName`と
+必要な`domainSchemaName`、複数列対応には`domainColumnName`を保持し、読取後にSchema内の
+同一Domainへ解決する。型や長さが指定されたOracle列は物理型を保って`DOMAIN`句を生成する。
+型を省略した単一列参照はDomain自体を型名として使用する。
+
+複数列Domainを関連付ける場合:
+
+```java
+table.getColumns().add(new Column("LOCATION").setDomain(address).setDomainColumnName("CITY"));
+table.getColumns().add(new Column("POSTCODE").setDomain(address).setDomainColumnName("ZIP"));
+// DOMAIN ADDRESS(LOCATION, POSTCODE) をDomainの列順で生成する。
+```
+
+同じDomainを複数回関連付ける場合は各グループの列に同じ
+`specifics.oracle.domain.associationId`を指定する。メタデータ読取ではOracleの
+`DOMAIN_ASSOCIATION_ID`を保持する。関連付けの欠落や同一グループ内の重複はエラーとなる。
+Domainと参照先componentの名前変更は参照へ追従し、cloneではコピー先Schemaへ解決する。
+CHECK等のSQL式そのものを名前変更する機能はこの変更には含まない。
+PostgreSQLはこの共有参照からscalar Domain型を生成する。未対応の汎用SQL Builderは参照を黙って落とさず拒否する。
+
+26ai Duality Viewでは概要のほかテーブル／列詳細を各1回の一括クエリで読む。
+親子table number、relationship、WHERE、flex、JSON key、hidden/generated、PK／ETAG／ORDER位置、更新可否を保持する。
+`OracleJsonDualityViewUtils.getTableDetails(view)`と`getColumnDetails(view)`で取り出せる。
+詳細は型を保持したJSONカタログ行として既存の`specifics`へ保存し、XMLでも維持する。
+DDLの正本は従来のView statementであり、詳細行から別のGraphQL本文を合成しない。
+カタログ参照権限／ビュー不在は警告で区別し、SQLの誤り等は伝播する。
+
+検証は共有モデルのXML・clone・差分・名前変更、両Dialectの関連付けSQL、Oracleの
+一括読取→XML→DDL、Dualityの詳細と権限エラーの区別を対象とする。実DBへの接続は行っていない。
+共有変更時のモジュール単体テストはcore 1187件、Oracle 135件、PostgreSQL 300件、H2 49件がすべて成功した。
+その後、23aiの複数列読取とSchema横断Domain順序の変更後にOracle全139件の成功を確認した。
+追加の対象テストは`OracleMultiColumnDomainTest`と`OracleCatalogDomainOrderTest`。
+Schema横断の作成順・循環検出、XML往復、入力順の保持、DomainがないCatalogの従来順序を確認する。
+今回の変更モジュールはsqlapp-core-oracleと開発資料のみ。既存公開API・XML形式・依存関係の破壊的変更はない。
+追加テストの初回はResultSetモックとSQL空白の期待値を修正して再実行した。
+注釈対象の条件式は型推論でコンパイルが長引いたため中断し、明示的な共通型へ変更して再実行した。
+完全DDLの追加テストではコンストラクターとdefinitionのリスト表現に関する期待値を修正して再実行した。
+
+主な実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests 'com.sqlapp.data.schemas.DomainColumnsTest' --tests 'com.sqlapp.data.schemas.ColumnDomainReferenceTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests 'com.sqlapp.data.db.dialect.oracle.metadata.OracleMultiColumnDomainTest' --tests 'com.sqlapp.data.db.dialect.oracle.metadata.Oracle26aiDualityDetailsTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-oracle:test :sqlapp-core-postgres:test :sqlapp-core-h2:test --continue
+.\gradlew.bat :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*'
+```
+
+Flexible／Enumerated Domain、名前付きNOT NULL、single-column Domainの注釈scopeの
+構造化編集APIは引き続き残るが、26aiの完全DDLによる保存・再出力には対応する。
+古い23ai release updateの実DB互換性、実DBでの全DDL実行検証は残る。
+
+仕様参照:
+
+- [Oracle複数列Domain](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/create-domain.html)
+- [ALL_DOMAINS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAINS.html)
+- [DBMS_METADATA](https://docs.oracle.com/en/database/oracle/oracle-database/26/arpls/DBMS_METADATA.html)
+- [Domain依存関係](https://docs.oracle.com/en/error-help/db/oci-11502/index.html)
+- [Duality tables](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_JSON_DUALITY_VIEW_TABS.html)
+- [Duality columns](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_JSON_DUALITY_VIEW_TAB_COLS.html)
+
+## 2026-10-16: Domain型情報の追加確認
+
+Oracle 23ai/26aiのscalar Domainクエリに既存カタログのCOLLATIONを追加し、
+Domainモデル・XML・CREATE DOMAINのCOLLATE句まで保持する。
+複数列Domainのcomponentに未対応のENUMや配列型を設定した場合は、型情報を落としたDDLを
+生成せず、対象名を含むエラーで完全なdefinitionの指定を案内する。
+完全DDLがある場合に補助componentを必須としない既存動作は維持する。
+
+変更はOracleモジュール内に限定し、公開API・XML形式・モジュール依存に変更はない。
+対象テストはOracleDomainCheckTestとOracleMultiColumnDomainTest。
+対象テスト成功後、Gradle WrapperでOracle全141件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。core・PostgreSQL・H2は今回未変更のため再実行していない。
+DISPLAY／ORDERの複数行式は既存specificsのXML属性で改行が正規化されるため制限を維持する。
+この確認の初回テストでは改行保持の期待値が失敗し、その変更を取り下げて対象テストを再実行した。
+実DBへの接続と生成DDLの実行は行っていない。
+
+## 2026-10-16: 完全DDLのDomainとテーブル関連付け
+
+代替型Domainでも主型の構成列を一括取得し、テーブル列との対応順をXML経由で保持する。
+構成列クエリはDATA_TYPE_ID=1に限定する。代替型自体は完全DDLで保持し、補助列から作り直さない。
+DDL取得が成功した後の一時フラグ判定は、Mapの存在判定ではなく実際の値を確認する。
+追加した読取→XML→Domain DDL／テーブルDDLのテストで、この成功経路の誤判定も修正した。
+
+Flexible Domainのテーブル関連付けはUSINGのdiscriminant対応が必須である。
+構成列が解決できていない参照では、不正なscalar形式やUSINGなしのDDLを生成せずエラーを返す。
+以下の継続対応で構成列がある場合のUSING生成を追加した。Domain自体の完全DDL出力は維持する。
+変更はOracleモジュール内で、公開API・XML形式・依存関係に変更はない。実DBテストは未実施。
+対象テスト成功後、Gradle WrapperでOracle全143件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+
+## 2026-10-16: Flexible DomainのUSING対応
+
+Oracle26aiのReaderはFLEXIBLE Domainの構成列を追加の一括SELECTで取得する。
+ALL_DOMAIN_COLS.DISCRIMINANTをDomainColumnのspecifics.oracle.domain.discriminantへ保持し、
+同じDomain.columnsの中で通常構成列と判別列を区別する。通常構成列・判別列の順序はそれぞれカタログ順を保つ。
+Domainの選択式は完全definitionが正本で、関連付けのために同じDDLを解析しない。
+この情報はXML・cloneに維持され、既存のdomainColumnNameとassociationIdでテーブル列へ対応付ける。
+
+例えば次の関連付けを生成できる:
+
+```sql
+CREATE TABLE T (
+    CATEGORY NUMBER,
+    PAYLOAD VARCHAR2(80),
+    DOMAIN APP.CHOICE(PAYLOAD) USING (CATEGORY)
+);
+```
+
+手動モデルではOracleDomainAssociationUtils.KINDにFLEXIBLE、判別用DomainColumnの
+OracleDomainAssociationUtils.DISCRIMINANTにtrueを設定する。各テーブル列は物理型を明示する。
+Oracle23aiへの生成、未解決構成列、欠落した対応、判別列のないFlexible Domainはエラーとする。
+Flexible Domain自体のCREATEには完全definitionが必要である。選択式の構造化編集は未対応。
+Oracle26ai固有カタログ列の参照は26aiのReader内に限定し、共通モデル・公開API・XML形式の破壊的変更はない。
+対象テストはOracleAdvancedDomainDefinitionTestとOracleDomainAssociationTest。実DBテストは未実施。
+対象テスト成功後、Gradle WrapperでOracle全145件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+
+仕様参照: [ALL_DOMAIN_COLS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_COLS.html)、
+[Flexible Domain関連付け](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 2026-10-16: 単一列Domain参照のALTER TABLE
+
+Oracle23ai/26ai用のALTER TABLE Factoryを追加した。単一列のDomain解除・別Domainへの切替では、
+既存の列変更処理より前に専用の`MODIFY (column) DROP DOMAIN`を生成する。
+Domainの解除は他の列変更と同一文に混ぜず、型・default・nullability等の変更は既存Factoryへ委譲する。
+解除後の物理型がない場合は推測せずエラーとする。
+
+```sql
+ALTER TABLE APP.T MODIFY (V) DROP DOMAIN;
+ALTER TABLE APP.T MODIFY (V VARCHAR2(40) DOMAIN APP.NEW_DOMAIN);
+```
+
+Domain由来制約の扱いはOracle標準のDROP DOMAINに従う。PRESERVE CONSTRAINTSの指定は今回追加しない。
+Domain付き列のrenameと他変更を同時に行う差分は、既存処理のDROP/ADDによるデータ消失を避けるため拒否する。
+複数列／Flexible Domainの関連付け変更については、以下の継続対応でグループ単位のALTER生成を追加した。
+Oracle21c以前のFactory登録は維持し、共通モデル・XML・モジュール依存は変更していない。
+対象テストはOracleDomainAlterTableTest。初回は引用識別子の期待値を修正して再実行した。
+対象テスト成功後、Gradle WrapperでOracle全148件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+実DBテストは未実施。
+
+仕様参照: [Domain関連付け解除](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 2026-10-16: 複数列DomainのグループALTER
+
+CREATEとALTERで関連付けグループの解決・構成列検証・通常列／判別列の順序を共有する。
+ALTERは元と先のグループを比較し、変更された旧グループを解除してから列変更処理へ委譲し、
+変更された新グループを最後に関連付ける。関連列の追加・削除にも同じ順序を適用する。
+不完全なグループ、対応しない構成列、重複構成列は生成前に拒否する。
+
+```sql
+ALTER TABLE APP.T MODIFY (CX, CY) DROP DOMAIN;
+-- 必要な物理列変更
+ALTER TABLE APP.T MODIFY (CX, CY) ADD DOMAIN APP.PAIR;
+```
+
+Flexible DomainのALTERでは通常構成列を先に、判別列を後に並べる。
+Oracle公式のALTER構文に従い、CREATEのUSING句とは異なり一つのMODIFY列リストへ列を並べる。
+Oracle23aiへのFlexible関連付けは拒否し、renameと他変更の同時指定に対する既存の安全検証は維持する。
+Domain由来制約はOracle標準のDROP DOMAINの扱いに従う。
+変更はOracleモジュールと資料のみで、共通モデル・XML形式・依存関係は変更していない。
+対象テストはOracleDomainAlterTableTest、OracleDomainAssociationTest。実DBテストは未実施。
+関連列の追加・削除とFlexibleの通常列／判別列順も検証した。
+Gradle WrapperでOracle全149件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した。未変更のcore・PostgreSQL・H2は再実行していない。
+
+仕様参照: [複数列／Flexible Domainの関連付け変更](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/registering-application-data-usage-database.html)。
+
+## 2026-10-16: ライフサイクル・依存順・読取再現性の一括対応
+
+次の経路を一まとまりとして実装・検証した。
+
+- 構造化Domain本体のDISPLAY／ORDERのADD・MODIFY・DROP、object注釈のADD・REPLACE・DROP。
+- Domain集合のCREATE差分では参照先が先、DROP集合・削除差分では参照元が先になる順序。
+- Schema／Catalog差分では、参照元テーブルの変更・関連付け解除後にDomainをDROPする順序。
+- 製品情報のない手動モデルやcloneが汎用Dialectへ戻る場合、明示選択したOracle23ai/26ai Registryを使用する処理。
+- 26aiで複数行DISPLAY／ORDER式を検出した場合の完全DDL保持。specificsのXML属性で改行が変わっても、再生成はdefinitionの正本を使う。
+- 手動Domain・DomainColumnのBYTE／CHAR指定をCREATEへ反映する処理。26aiで読み取った文字型Domainは元の長さ指定を推測せず完全DDLを保持する。
+
+```sql
+ALTER DOMAIN APP.D ADD DISPLAY TO_CHAR(VALUE);
+ALTER DOMAIN APP.D MODIFY ORDER -VALUE;
+ALTER DOMAIN APP.D ANNOTATIONS (REPLACE Label 'New label');
+ALTER DOMAIN APP.D DROP DISPLAY;
+```
+
+Domain／Schema／CatalogのState.Modifiedを対応Factoryへ登録した。
+型、CHECK、名前、Flexible選択式、完全definitionなどの未対応なDomain本体変更はDROP/CREATEへ
+置き換えず、対象名を含むエラーとする。構造化ALTERを使うには完全definitionを正本としないDomainモデルが必要である。
+Domainを参照する別Schemaを含むCatalog差分の削除ではdecorateSchemaName=trueが必要。
+Catalog追加差分のDomain依存順は次の継続対応で解決する。
+個別に生成したSchemaの組合せ、Domain以外のSchema横断依存については引き続き呼出側で順序を管理する。
+
+26aiのALL_DOMAIN_COLSにはCHAR_USED相当の明確な識別列がないため、文字型Domainの
+完全DDL取得も同じ一括クエリへ含める。DBMS_METADATAの権限不足は取得失敗として伝播する。
+旧23aiのメタデータはこの26ai用クエリを使わない。手動の複数行DISPLAY／ORDER式に対する制限は維持する。
+
+変更モジュールはsqlapp-core-oracleと開発資料のみ。共通モデル・XML形式・モジュール依存の破壊的変更はない。
+OracleSqlBuilder.domainTypeDefinitionを追加し、既存の一般的な型出力APIは変更しない。
+対象テストはOracleAlterDomainTest、OracleDomainDependenciesTest、OracleDomainMigrationOrderTest、
+OracleAdvancedDomainDefinitionTest、OracleDomainCheckTest。
+初回の継承・差分API指定によるコンパイル失敗を修正し、Schema／Catalog統合テストで見つかった汎用Dialectへの戻りも修正して再実行した。
+最終検証はOracle全157件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が成功。
+core 1187件、PostgreSQL 300件、H2 49件のtestタスクも成功（この3モジュールはUP-TO-DATEで再実行なし）。
+今回実行した対象の失敗・skipは0件。git diff --checkも成功した。
+実DBへの接続、実DDL実行、生成物の意図的な変更は行っていない。
+
+主な検証コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleAlterDomainTest' --tests '*OracleDomainDependenciesTest' --tests '*OracleDomainMigrationOrderTest' --tests '*OracleAdvancedDomainDefinitionTest' --tests '*OracleDomainCheckTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-oracle:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照: [ALTER DOMAIN](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/alter-domain.html)、
+[Annotations](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/annotations_clause.html)、
+[ALL_DOMAIN_COLS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_DOMAIN_COLS.html)。
+
+## 2026-10-16: Catalog追加差分のSchema横断依存順
+
+Oracle23ai/26aiのCatalog ALTERは追加Domainと、その前提・利用側のSQLを依存関係で並べる。
+追加するシーケンス・型・package等やCatalog-level作成オブジェクトを前提にし、Domain間の依存情報を
+使って参照先を先に作成する。既存テーブルへDomainを設定するALTERと、新規テーブルのCREATEの両方を扱う。
+テーブル変更・索引・ビュー等の既存の処理順序は維持し、前提とDomainのSQLを必要に応じて先に実行する。
+通常列と判別列を含むFlexible Domainにも同じ順序を適用する。
+
+検証した代表例は次の順序になる:
+
+```text
+BASE.SEQ / BASE.X → BASE.D → APP.CHOICE → APP.T → APP.Tの索引 → APP.TV
+```
+
+既存Schemaの変更だけでなく、新規Schemaを含むCatalog差分も対象とする。
+元のSchemaモデル・コレクション順は変更しない。Domainの追加・削除を含むCatalog差分には
+decorateSchemaName=trueが必要で、未指定のSchemaを実行時のsearch pathから推測しない。
+Domainのない処理は既存の順序を維持する。循環依存は対象名を含むエラーで拒否する。
+追加Domain間の参照は既存のspecifics.oracle.domain.dependenciesを使い、完全DDL本文からSQL解析で推測しない。
+読取モデルでは一括取得した情報を使用し、手動で完全DDLを作る場合は依存先も指定する。
+Catalog外の参照先や必要なEXECUTE等の権限、Domain以外のSchema横断参照は呼出側の前提として残る。
+
+さらにSchema／Catalogの変更後モデルを検証し、削除DomainへのTable列参照やDomain間参照が
+残っている場合は生成時に拒否する。依存先を先にDROPして実DBで失敗するSQLを返さない。
+Catalogに含まれない実DB上の依存オブジェクトについては未検証である。
+
+変更モジュールはsqlapp-core-oracleと資料のみ。共通モデル・XML形式・公開設定形式は変更しない。
+対象テストはOracleCatalogDomainAdditionOrderTest、OracleDomainMigrationOrderTest。
+XML往復、23ai/26ai、既存テーブル、新規Schema、前提オブジェクト、索引・ビューの順序、
+循環、不完全な削除、非修飾名の拒否、入力コレクション順保持を確認する。
+実DBへの接続・DDL実行は行っていない。
+対象テスト成功後、Oracle全164件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した（失敗・skip 0件）。
+未変更のcore・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+
+主な実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCatalogDomainAdditionOrderTest' --tests '*OracleDomainMigrationOrderTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: Domainメタデータの整合性と文字型推定
+
+対象はOracle 23ai/26ai、変更モジュールはsqlapp-core-oracleのみ。
+公開API・共通モデル・XML形式は変更していない。
+
+- 26aiのFlexible Domain一括クエリで通常構成列の取得件数と
+  ALL_DOMAINS.DISCRIMINANTCOLSを返し、読取後の構成列数を照合する。
+  欠落・不整合はDomain名を含むエラーとし、SELECT数は増やしていない。
+  通常列の件数は取得行集合に基づくため、カタログ自体の欠落の検出を保証しない。
+- 23ai/26aiの構成列注釈は識別子を完全一致で解決し、不明な列への注釈を拒否する。
+- 26aiの改行を含む列注釈は完全DDLを保持し、XML往復で改行が正規化されても
+  CREATE文で元の値を再現する。
+- 完全DDLを持つDomainから物理文字列型を推定する場合、BYTE/CHARを推測しない。
+  Domain構成列のcharacterSemantics、またはテーブル列の物理型を明示する。
+
+OracleDomainMetadataIntegrityTestとOracleDomainAssociationTestで、構成列不足、
+識別子の大小文字、注釈のXML往復、文字型推定の拒否と明示指定を検証する。
+実DBへの接続・DDL実行は行っていない。23aiの改行注釈の完全DDL保存は未対応。
+対象4クラスのテスト成功後、Oracle全168件、commandのgenerator／Oracle評価関連149件、
+Gradle pluginのOracle関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+初回のテストコンパイルではnull引数のオーバーロードが曖昧だったため、
+テストのenum型を明示して修正した。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainMetadataIntegrityTest' --tests '*OracleAdvancedDomainDefinitionTest' --tests '*OracleDomainAssociationTest' --tests '*OracleDomainAnnotationIdentityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: PACKAGE／TYPEと各BODYの再生成
+
+OraclePackageReader／OraclePackageBodyReaderは、従来の正規表現による本文抽出をやめ、
+一括ALL_SOURCEのヘッダーと本文を完全なCREATE OR REPLACE DDLとしてdefinitionへ保存する。
+AUTHID、引数既定値、初期化ブロック、名前付きENDを保持する。
+OracleTypeReader／OracleTypeBodyReaderも同じ経路へ揃え、4種類ともソースが取得できない場合は
+所有者・対象名を含むエラーとする。オブジェクトごとの追加SELECTはない。
+
+対応する4種類のCREATE Factoryは完全DDLにCREATEを重複付与せず、既存の
+PACKAGE／TYPEで始まるdefinitionと、statementからの生成も引き続き受け付ける。
+この変更は基本Oracle Dialectから26aiまでの継承範囲が対象。
+変更モジュールはsqlapp-core-oracleのみで、公開API・XML形式・依存関係は変更しない。
+読取結果の主な再生成情報はdefinitionとなり、定義内の識別子を変更する場合は
+DDL自体の更新も必要になる。構造化TYPE列は補助メタデータとして引き続き保持する。
+
+OraclePackageTypeRecreationTestでは基本版、11gR2、19c、21c、23ai、26aiについて、
+4種類の完全DDL・従来形式、XML往復、AUTHID／既定引数／名前付きEND、ソース欠落を検証する。
+関数・プロシージャの既存OracleRoutineRecreationTestも併せて成功した。
+実DBでの読取・DDL実行は未検証。
+Oracle全170件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が
+成功した（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイルの変更はない。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePackageTypeRecreationTest' --tests '*OracleRoutineRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: Materialized ViewのCREATE／REFRESH
+
+OracleCreateMviewFactoryの構造化生成から不正なOR REPLACEを除去し、
+既存Readerが保持するspecifics.BUILD_MODE（IMMEDIATE／DEFERRED）、
+REFRESH_METHOD（FAST／COMPLETE／FORCE／NEVER）、REFRESH_MODE（COMMIT／DEMAND／NEVER）
+をSQLへ反映する。未指定時はOracleの既定動作を維持する。
+NEVERはNEVER REFRESHとして生成し、矛盾する設定、不正値、クエリ欠落を拒否する。
+PREBUILTとON STATEMENTは追加の前提やオプションを構造化情報だけで再現しきれないため、
+完全definitionを要求する。完全DDLは書き換えず、構造化オプションは補助情報とする。
+
+OracleRefreshMviewFactoryは従来のALTER MATERIALIZED VIEW ... REFRESHの代わりに
+BEGIN DBMS_MVIEW.REFRESH(list => 'schema.name'); END;を生成する。
+識別子の引用と文字列リテラルのエスケープ、decorateSchemaNameを適用する。
+refresh methodは省略し、DB上の既定メソッドを使用する。NEVER REFRESHのモデルは
+無操作で成功したように扱わず、生成時に拒否する。
+
+変更はsqlapp-core-oracleと資料のみ。公開API、設定キー、モデル、XML形式に変更はなく、
+追加クエリもない。基本Oracle Dialectから26aiまでの共通経路を修正した。
+OracleMviewRecreationTestは読取オプションのXML往復、CREATE／REFRESH、
+基本版・11gR2・19c・21c・23ai・26ai、引用識別子、不正値、NEVER、完全DDLを検証する。
+初回はテストの継承setter戻り型とResultSetモック不足で失敗し、修正後に対象5件が成功した。
+
+実DBでの読取・DDL・refreshは実行していない。物理ストレージ、refreshスケジュール、
+query rewrite、ROWID／PRIMARY KEY等の詳細再現はこの対応の範囲外である。
+DBリンクReaderに残るオブジェクト単位のDDL問合せも別途対応が必要。
+Oracle全175件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が
+成功した（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+DialectResolverの既存バージョン境界を確認し、変更していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleMviewRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [CREATE MATERIALIZED VIEW](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-MATERIALIZED-VIEW.html)
+- [ALL_MVIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_MVIEWS.html)
+- [DBMS_MVIEW](https://docs.oracle.com/en/database/oracle/oracle-database/19/arpls/DBMS_MVIEW.html)
+
+## 2026-10-16: 残る一括読取・Materialized View再現性・注釈識別子
+
+Oracle10gMviewReaderの既存一覧クエリにDBMS_METADATA.GET_DDL('MATERIALIZED_VIEW',...)
+を加え、完全なCREATE DDLをdefinitionに保持する。statementのqueryと構造化列は補助情報として
+残す。PREBUILTの精度設定、refreshスケジュール、query rewrite等はDDLから再生成できる。
+JDBC SELECTは件数に関係なく1回で、サーバー側のGET_DDL評価は各行で行われる。
+DDLが空なら対象名付きエラーとし、GET_DDLの権限・取得失敗も伝播する。
+ALL_MVIEWSが見えるだけでは他SchemaのDDLを取得できるとは限らず、DBMS_METADATAの
+必要権限が追加の前提となる。既定Readerが扱う旧8/9系のSQLは変更しない。
+DDL内の識別子・物理設定はモデル変更に自動追従せず、実行環境に合わせた更新が必要。
+
+23ai/26aiは専用Oracle23aiMviewReaderを登録し、23ai用ColumnReader／IndexReaderを使う。
+旧Readerに新カタログ列を追加せず、VECTOR等の補助メタデータの読落としを防ぐ。
+手動の構造化Mviewモデルでは、列コレクション順の引用付き列別名もCREATEへ反映する。
+
+OracleDbLinkReader／OraclePublicDbLinkReaderの個別GET_DDLを除去した。
+ALL_DB_LINKS.USERNAMEがNULLのリンクは固定ユーザーではない場合があり、そこから
+パスワードや認証方式を推定できない。既存一覧の名前・所有者・HOST・USERNAME・作成日時を保持し、
+passwordは未取得のままとする。固定ユーザーの認証情報回復、connected/current userの区別、
+DBリンクCREATE／DROPの新実装は今回含めていない。既存公開Pattern定数は互換性のため残す。
+
+23ai/26aiのTable／Column／Index注釈は所有者と識別子を完全一致で照合する。
+APPとApp、Tとt、Cとc、Iとiを混同しない。不一致の取得行は対象外として扱い、
+追加SELECTは発行しない。
+
+変更モジュールはsqlapp-core-oracleのみ。公開API・モデル・XML形式・モジュール依存は変更しない。
+OracleObjectMetadataBulkTestは25件のMview完全DDL／XML往復、DDL欠落、Readerバージョン境界、
+private/public DBリンクの件数に依存しないクエリ回数を確認する。
+OracleMviewRecreationTestは列別名、OracleTableAnnotationIdentityTestは引用識別子を確認する。
+対象テストで列別名の許容空白と、索引Schema名の親優先規則に合わせたテスト修正後に成功した。
+実DBへの接続、DBリンク接続、DDLやrefreshの実行は行っていない。
+Oracle全182件、commandのgenerator／Oracle評価関連149件、Gradle pluginのOracle関連1件が
+成功した（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイルの変更はない。
+
+実行コマンド（`--gradle-user-home .gradle-user-home`を指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleObjectMetadataBulkTest' --tests '*OracleMviewRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTableAnnotationIdentityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [DBMS_METADATA](https://docs.oracle.com/en/database/oracle/oracle-database/19/arpls/DBMS_METADATA.html)
+- [ALL_DB_LINKS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_DB_LINKS.html)
+- [Distributed Database Concepts](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/distributed-database-concepts.html)
+
+## 2026-10-16: DBMS_METADATA権限不足時の継続
+
+上記のMview完全DDL取得を、通常一覧とDDL補完の2つの一括SELECTに分離した。
+10g～26aiでDBMS_METADATAが許可されればdefinitionを保持し、
+ORA-01031（権限不足）またはORA-31603（対象が見えない／取得できない）の場合は
+警告を出し、通常一覧のstatement・specifics・列情報の読取を継続する。
+ORA-31603は対象消失でも発生し得るため、警告は権限不足または対象不可視として扱う。
+取得途中で権限エラーになったMviewのDDL補完結果は適用せず、通常メタデータを保持する。
+DDL補完は空一覧なら実行せず、件数に依存しない最大2回のSELECTとなる。
+
+26ai DomainのDBMS_METADATA補完にも同じ警告・継続処理を適用した。
+未取得の高度なDomainを推測して追加することはせず、取得済みの通常メタデータを保持する。
+完全DDLが未取得のDomainにはoracle.domain.definitionRequiredを残し、
+CREATE時は完全definitionを指定するまで明示的に拒否する。
+権限がある場合の通常読取・再生成は維持する。
+構文・接続等のその他エラーや、成功クエリが返す空／欠落DDLは警告扱いにせず伝播する。
+
+対象はsqlapp-core-oracleのみ。公開API・XML形式・設定形式・旧版Readerに変更なし。
+OracleMetadataPermissionTestで原因例外／SQLExceptionチェーン、権限不足時の継続、
+通常エラーの伝播、Domainの不完全再生成拒否を検証する。
+OracleObjectMetadataBulkTestでは権限ありの2回一括読取と完全DDLのXML往復を確認する。
+初回はテストのstatementをStringと比較して失敗し、List形式に修正して対象テストが成功した。
+実DBの権限変更・接続・DDL実行は行っていない。
+Oracle全185件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+対象テストはOracleMetadataPermissionTest、OracleObjectMetadataBulkTest、
+OracleAdvancedDomainDefinitionTestをGradleの--testsで指定して実行した後、
+前節と同じOracle全体・command generator／Oracle assessment・plugin Oracleの
+テストコマンドを実行した。いずれも--gradle-user-home .gradle-user-homeを指定した。
+
+## 2026-10-16: DDL補完途中の権限失敗
+
+26ai Domainの完全DDL補完を一時コレクションへ保存し、補完SELECTが成功してから
+通常読取モデルへ反映するように修正した。途中で権限エラーが発生した場合、
+途中まで取得したFlexible Domain等を追加せず、通常カタログから取得済みのDomainを保持する。
+これにより、権限エラーを警告で継続した後、不完全なFlexible構成列読取で失敗する経路を防ぐ。
+既存のMview補完も同じ方針である。SELECT回数、公開API、XML形式に変更はない。
+
+OracleMetadataPermissionTestに以下を追加した:
+
+- Domain補完で1行取得後に権限エラーとなっても、未完了のFlexible Domainを追加しない。
+- Mview補完で1行取得後に権限エラーとなっても、全対象の通常メタデータを保持する。
+- 権限エラーがないのに対象DDLが欠落している場合は、対象名を含むエラーで失敗する。
+- 空Mview一覧ではDDL補完SELECTを実行しない。
+
+対象モジュールはsqlapp-core-oracleのみ。対象テストと既存の高度Domain・メタデータ整合性テストは成功。
+実DBの権限変更・接続・DDL実行は行っていない。
+Oracle全188件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleMetadataPermissionTest' --tests '*OracleAdvancedDomainDefinitionTest' --tests '*OracleDomainMetadataIntegrityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+## 2026-10-16: GET_DDLなしのMview補助設定
+
+OracleMviewReaderは既存ALL_MVIEWS一覧からREWRITE_ENABLED、USE_NO_INDEX、
+COMPILE_STATEをspecificsに保持し、COMPILE_STATEが取得できた場合はvalidにも反映する。
+OracleCreateMviewFactoryはREWRITE_ENABLED=Y/NをENABLE/DISABLE QUERY REWRITEへ、
+USE_NO_INDEX=YをUSING NO INDEXへ変換する。Nは既定索引動作を維持し、未設定時は句を追加しない。
+Y/N以外の値は生成時に拒否する。完全definitionがあれば従来どおりそのDDLを優先する。
+
+これらは通常カタログから読めるため、DBMS_METADATA権限不足時の継続結果にも残る。
+OracleMetadataPermissionTestで権限エラー後のCREATE再生成、OracleMviewRecreationTestで
+両フラグのY/N、XML往復、コンパイル状態、不正値の拒否を確認した。
+Oracle9iの公式カタログにも存在する列であり、旧Readerには新しい固定カタログ列を追加していない。
+SQLは既存A.*を使い、列がない場合は既存のsetSpecificsの判定で未設定とする。
+変更はsqlapp-core-oracleと資料のみ。公開API・XML形式・SELECT回数は変更しない。
+実DBでの読取・DDL・権限変更は行っていない。
+Oracle全189件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleMviewRecreationTest' --tests '*OracleMetadataPermissionTest' --tests '*OracleObjectMetadataBulkTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [Oracle9i ALL_MVIEWS](https://docs.oracle.com/cd/B10500_01/server.920/a96536/ch286.htm)
+- [Oracle19c ALL_MVIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_MVIEWS.html)
+
+## 2026-10-16: テーブル・列・制約・索引の一括再監査
+
+今回の変更はsqlapp-core-oracle内に限定し、共有Schemaモデルと既存のSQL Factory経路を使用した。
+公開APIの削除、XML／設定形式の変更、モジュール依存追加、追加SELECTはない。
+DialectResolverの既存境界を維持し、生成列の新版構文は生成時に対応版を確認する。
+
+| 領域 | 確認した欠落と修正 |
+| --- | --- |
+| 外部キー | 対象Schema／Tableのフィルタを参照先にも適用し、対象外の親へのFKを落としていた。参照先制約はALL_CONSTRAINTSから所有者・制約名で照合する。CTEは子のR制約のみと必要列に限定し、不要なLONG SEARCH_CONDITIONも除いた。 |
+| 制約状態 | CHECK／UNIQUE／PK／FKの遅延、有効／無効、VALIDATE／NOVALIDATE、RELY／NORELYをCREATE TABLEとALTER TABLE ADDへ反映する。後二者の読取も補った。 |
+| NOT NULLチェック | 全件除外をやめ、名前付き・無効・未検証・遅延のチェックを保持する。通常の有効・検証済み・遅延不可なシステム生成NOT NULLだけは列nullabilityへ任せる。 |
+| NUMBER | JDBC NULL精度を0へ変換せず保持。NUMBERとNUMBER(*,scale)を列CREATEでも再現する。 |
+| 仮想列 | 11g以降のVIRTUAL_COLUMNのDATA_DEFAULTをformulaへ保存し、DEFAULTではなくGENERATED ALWAYS AS (...) VIRTUALを生成する。 |
+| IDENTITY | 12c以降でALWAYS／BY DEFAULT／BY DEFAULT ON NULLと共有Sequenceの開始・増分・範囲・cycle・cache・order設定を再生成する。 |
+| DEFAULT ON NULL | 12c以降の通常列にも読取・生成を追加する。 |
+| テーブル | 表領域、一時表、SYS$SESSION／SYS$TRANSACTIONの行保持期間を保持・生成する。圧縮状態NULLを有効扱いせず、COMPRESS_FORを有効な圧縮句へ変換する。 |
+| 索引 | CREATE INDEXの索引名もdecorateSchemaNameに従ってSchema修飾する。表名だけ修飾して索引を接続先のSchemaに作る問題を防ぐ。 |
+
+手動モデルの一時表はTable.TableType.Temporaryを指定する。行保持期間は任意の
+specifics.oracle.table.duration=SYS$SESSIONまたはSYS$TRANSACTIONで、未指定時は
+Oracle既定のON COMMIT DELETE ROWSを使用する。一時表への永続表領域／圧縮、
+不正な保持期間、不正な圧縮・制約状態、未対応のON UPDATE／ON DELETE動作は明示的に拒否する。
+11g未満の仮想列、12c未満のIDENTITY／DEFAULT ON NULLも拒否する。
+
+生成列のCREATEとALTER TABLE ADDは対応するが、既存IDENTITY／仮想列の構造化変更は
+単純rename以外を拒否する。未対応のMODIFYにCREATE用句を流用したり、黙って属性を捨てない。
+名前付きNOT NULLは補助のCheckConstraintとして保持するため、再生成時は名前付きCHECKになる。
+
+OracleSchemaParityRegressionTestでメタデータ読取、XML往復、CREATE／ALTER ADD、
+基本版・11gR2・19c・23ai・26ai、生成列の版境界、親が取得対象外のFKクエリ構造、
+各制約Readerの1回クエリ、引用Schema／索引名、型NULL、圧縮・一時表を検証する。
+FKのSQLはソース構造と読取モデルを検証したもので、Oracle上でのクエリ実行検証ではない。
+初回のテストはResultSetモックの大小文字／統計値取得、IF NOT EXISTS、
+IDENTITYの暗黙NOT NULLの期待値が原因で失敗し、修正後に対象テストが成功した。
+
+残る範囲は、実DBでの読取→XML→DDL実行、旧RU差分、不可視列や高度な列属性、
+既存生成列のALTER、IOT／外部表／LOBストレージ、索引の高度な圧縮・式・運用状態等。
+今回の検証だけでテーブル・索引の全オプションの同等性を認定しない。
+実DBへの接続・DDL実行・本番データ変更は行っていない。
+手動のDECIMAL／NUMERIC列も精度が未指定の場合はOracleのNUMBERとして生成する。
+圧縮方式の版・エディション・ストレージ要件は実行対象Oracleとの整合を呼出側で確認する必要がある。
+OracleのUNIQUE／PKには降順列を指定できないため拒否する。IDENTITYと独立DEFAULT式の併用も拒否する。
+
+最終実装でOracle全199件、commandのgenerator／Oracle評価関連149件、Gradle plugin関連1件が成功した。
+その後、同じ実装に対する最終テストassertion追加を含むOracleSchemaParityRegressionTest全10件も成功した。
+失敗・skipは最終実行で0件。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest' --tests '*OracleIndexPlacementRegressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest' --tests '*OracleColumnDomainReferenceTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest' --tests '*OracleDomainAlterTableTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSchemaParityRegressionTest'
+```
+
+仕様参照:
+
+- [Oracle constraint](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/constraint.html)
+- [Oracle Data Types](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Data-Types.html)
+- [ALL_TABLES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_TABLES.html)
+- [CREATE TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/CREATE-TABLE.html)
+
+## 2026-10-16: 不可視列・IDENTITY生成方式ALTER・共通LOB表領域
+
+12c以降の通常列クエリは、HIDDEN_COLUMN=YESかつUSER_GENERATED=YESの不可視列を
+通常のユーザー列と一緒に取得する。システム隠し列の専用取得とは分け、不可視列には
+specifics.oracle.column.invisible=trueを保存する。共有hidden属性はシステム隠し列用に維持する。
+列取得はCOLUMN_IDに加えてINTERNAL_COLUMN_IDで順序を安定させる。11g以前のSQLは変更しない。
+
+CREATE／ADDは通常・IDENTITY・仮想列のいずれもINVISIBLEを一度だけ生成する。
+明示falseはVISIBLEとなり、不正値と12c未満への指定は拒否する。
+ALTERはVISIBLE／INVISIBLEだけの変更を単独のMODIFY句で生成する。
+同時に型・名前・default等を変更する場合は別操作を求め、属性を落とさない。
+
+既存IDENTITY列はALWAYS／BY DEFAULT／BY DEFAULT ON NULLの切替をALTERで生成できる。
+型・Sequence・開始値等は変更せず、START WITHやDROP／CREATEを生成しない。
+Sequenceや物理列属性も変わる場合、不正な生成方式の場合は明示的に拒否する。
+仮想列の式変更やIDENTITYの開始値／増分変更は引き続き未対応である。
+
+LOB表領域は既存のTable.lobTableSpaceNameを使用する。通常テーブル一覧へALL_LOBSの
+所有者・テーブル単位集約をJOINし、全LOBの表領域が非NULLで一意の場合だけ保存する。
+SQLは1回の一覧SELECTのままで、LOBごとの追加SELECTはない。
+列別やpartitioned LOBの配置を単一値に推測してまとめない。
+CREATEではBLOB／CLOB／NCLOB列の順でLOB (...) STORE AS (TABLESPACE ...)を生成する。
+LOB列がない指定、一時表への永続LOB表領域指定は拒否する。
+
+変更モジュールはsqlapp-core-oracleのみ。公開API・共通モデル・XML形式・依存関係は変更しない。
+OracleColumnVisibilityTestで通常／不可視／システム隠し列の区別、XML往復、版境界、
+可視性の両方向ALTER、IDENTITY生成方式の両方向切替、開始値を再設定しないこと、
+共通LOB表領域の読取・生成と不正指定を検証する。
+最初の可視性ALTERテストは括弧内の空白の期待値を修正後に成功した。
+
+IOTは親・overflow・mapping表やPK索引との対応、LOBの詳細は列／partitionごとの
+SecureFile／BasicFile・圧縮・cache等を保持するモデルが必要で、今回の単一LOB表領域対応では
+解決していない。共有Tableは完全definitionを保持する型でもないため、specificsへ完全DDLを
+押し込む回避は行っていない。これらの構造化対応と実DB再実行検証は残る。
+実DBの接続・DDL実行・権限変更は行っていない。
+Oracle全205件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleColumnVisibilityTest' --tests '*OracleSchemaParityRegressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+.\gradlew.bat :sqlapp-core-oracle:test
+```
+
+仕様参照:
+
+- [Managing Tables](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html)
+- [ALTER TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
+- [ALL_LOBS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_LOBS.html)
+- [LOB Storage](https://docs.oracle.com/en/database/oracle/oracle-database/19/adlob/managing-LOBs.html)
+
+## 2026-10-16: IDENTITYオプションALTERとXML属性順
+
+Oracle 12c以降の既存IDENTITY列で、生成方式だけでなくINCREMENT BY、MINVALUE／MAXVALUE、
+CYCLE／NOCYCLE、CACHE／NOCACHE、ORDER／NOORDERの変更をALTER TABLE MODIFYへ反映する。
+変更項目だけを出力し、内部SequenceをALTER SEQUENCEで直接変更しない。
+START WITH・現在値・Sequence識別子・未対応属性の変更、列の型等との同時変更は拒否する。
+OracleではSTART WITH変更時に他オプションの既定値が使われるため、開始位置の再設定は
+自動化せず引き続き未対応とする。MIN／MAXの明示的削除はNOMINVALUE／NOMAXVALUE、
+cache=0またはcache=falseはNOCACHEとなる。増分0、cache=1／負数、不正な最小最大、
+変更後の増分／cacheサイズが曖昧な設定は拒否する。
+
+検証中、共有AbstractColumnのsetIdentityOrder／Cycle／Cacheがidentity=falseの時点では
+値を捨てるため、XMLの属性適用順によりORDERが失われることを確認した。
+数値のIDENTITY setterと同様、Sequenceを必要に応じて作成し、フラグ設定前でも値を保持する。
+identityフラグそのものは変更しない。Oracle固有の分岐をcoreへ追加していない。
+XML形式・公開メソッド・既定値・モジュール依存は維持する。
+変更モジュールはsqlapp-coreとsqlapp-core-oracleで、共有setterの利用者は全Dialectとなる。
+
+IdentityColumnOptionsTestでsetter順、XML往復、cloneの独立性を確認する。
+OracleIdentityOptionsTestでXML往復後の差分SQL、変更項目だけの出力、開始値を出さないこと、
+境界・曖昧な指定・再開始の拒否を検証する。初回のORDERの差分テストが失敗し、
+XML属性の消失を切り分けて共有setterを修正した後に成功した。
+実DBへの接続、IDENTITY値の発行、DDL実行は行っていない。
+対象テスト成功後、core 1189件、PostgreSQL 300件、H2 49件、Oracle 208件、
+command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core:test --tests '*IdentityColumnOptionsTest' :sqlapp-core-oracle:test --tests '*OracleIdentityOptionsTest' --tests '*OracleColumnVisibilityTest' --tests '*OracleSchemaParityRegressionTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER TABLE identity_options](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
+
+## 2026-10-16: 仮想列の式ALTERとコメント差分
+
+11g以降の既存仮想列は、formulaだけの変更をALTER TABLE MODIFY
+(column GENERATED ALWAYS AS (...) VIRTUAL)で生成する。DROP／ADD、型・DEFAULTの再指定は行わない。
+同時に型・名前等を変える場合、空白式、persisted／identityとの併用は拒否する。
+モデルに索引または制約があるテーブルでは、依存関係の変更を先に別操作で行うようエラーにする。
+対象外の実DB上の依存や式のOracle上での妥当性は生成時には検証できない。
+
+コメントだけの列変更はMODIFYへ流さずCOMMENT ONを生成する。
+OracleAlterTableFactoryで、物理storageの差分がないとコメント処理へ到達しない問題、
+remarks差分のString値をColumnへcastする問題、削除時にIS IS NULLとなる問題を修正した。
+通常・仮想・IDENTITY列とTableのコメント追加／削除、引用符を含む値を対象とする。
+式変更とコメント変更を同時に行う場合は別操作を求める。
+
+変更モジュールはsqlapp-core-oracleのみ。公開API・XML形式・依存関係・SELECT数に変更はない。
+OracleGeneratedColumnAlterTestで式のXML往復、MODIFY生成、DROPしないこと、
+依存／同時変更の拒否、3種類の列とTableのコメント追加・削除を検証する。
+初回のコメントテストで既存cast不具合を検出し、修正後に対象テストが成功した。
+実DBの接続・DDL実行は行っていない。
+Oracle全211件、command関連149件、Gradle plugin関連1件が成功した（失敗・error・skip 0件）。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkも成功した。
+意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleGeneratedColumnAlterTest' --tests '*OracleIdentityOptionsTest' --tests '*OracleColumnVisibilityTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [Managing Tables](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html)
+- [ALTER TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)
+- [modify_virtcol_properties](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlqr/Subclauses.html)
+
+## 2026-10-16: 単純IOTと索引圧縮の再生成
+
+sqlapp-core-oracleで、単純な索引構成表をORGANIZATION INDEXとして再生成する。
+ALL_TABLESとALL_INDEXESを一括参照してIOTの表領域を保持し、overflow/mapping用の内部表と
+IOT - TOP索引を独立オブジェクトとして生成しない。主キーがない構成、無効・遅延可能な主キー、
+overflow/mapping・partitioning・compression・temporaryの複合構成は明示的に拒否する。
+Oracle 10g以降の既存readerに適用し、追加のSELECT往復は行わない。
+
+索引のENABLED圧縮とPREFIX_LENGTH、ADVANCED LOW/HIGHを共通compressionTypeと
+specificsで保持する。CREATE INDEXはCOMPRESS nまたはCOMPRESS ADVANCED LOW/HIGHを生成する。
+LOWは12c以降、HIGHはこのプロジェクトのバージョン区分では18c以降に限定する
+（12.2専用Dialectがないため12cではHIGHを拒否する）。不正なprefix長やbitmapとの組合せも拒否する。
+partition/subpartition単位の詳細な圧縮と索引状態のライフサイクルは引き続き未対応。
+
+公開API・XML形式・依存関係の変更なし。OracleIotIndexRecreationTestでmetadata→Table XML→DDL、
+バージョン境界と未対応構成の拒否を検証する。実DB接続・DDL実行は行っていない。
+対象6件、Oracle全215件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功し、意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotIndexRecreationTest' --tests '*OracleIndexPlacementRegressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALL_TABLES](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/ALL_TABLES.html)
+- [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/23/admin/managing-indexes.html)
+
+## 2026-10-16: 索引の可視性と使用可否の再生成
+
+sqlapp-core-oracleでALL_INDEXES.STATUSをoracle.index.statusに保持し、通常の非partition索引の
+UNUSABLEをCREATE INDEXへ反映する。制約のenableとは別の情報として扱う。
+11g以降は専用Oracle11gIndexReaderでVISIBILITYをoracle.index.visibilityに保持し、
+CREATE時にVISIBLE/INVISIBLEを生成する。Table・Mviewのreader選択と23ai reader継承を更新した。
+10g以前のreaderはVISIBILITYを参照しない。既存の一括SELECTを使用し、SELECT数は増えない。
+
+不正なvisibility/status、旧Dialectへのvisibility指定、partitioned索引のUNUSABLE指定は拒否する。
+Vector索引の非標準状態も無視せず拒否する。既存索引のALTER/REBUILD、partition別状態、
+関数索引のFUNCIDX_STATUSなど追加の状態管理は未対応。公開設定形式・依存関係は変更せず、
+既存specificsのXML表現を利用する。追加readerとprotected hookは既存APIへの追加のみ。
+実DB接続・DDL実行は行っていない。
+
+OracleIndexStateTestでXML→DDL、旧バージョンのカラム非参照、reader選択、
+未対応値・構成の拒否を検証する。最初のテストで不完全なpartitionモデルに由来する失敗を検出し、
+テストモデルを修正後、対象12件が成功した。
+Oracle全220件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+意図的な生成ファイル変更はなく、git diff --checkも成功した。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexStateTest' --tests '*OracleIotIndexRecreationTest' --tests '*Oracle23aiIndexReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [11g Managing Indexes](https://docs.oracle.com/cd/E11882_01/server.112/e25494/indexes.htm)
+- [ALL_INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_INDEXES.html)
+- [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/CREATE-INDEX.html)
+
+## 2026-10-16: 索引partitionの圧縮と継承
+
+sqlapp-core-oracleで、既存のALL_IND_PARTITIONS/ALL_IND_SUBPARTITIONS一括取得から
+ENABLED・ADVANCED LOW/HIGH・DISABLEDを保持する。nullを圧縮有効と誤認しない。
+有効な圧縮方式は共通compressionTypeを利用し、明示的なDISABLEDはXML往復で失われないよう
+oracle.index.compression specificも保持する。共通XML形式・依存関係は変更しない。
+
+Localおよびglobal range索引のpartitionにCOMPRESS・COMPRESS ADVANCED LOW/HIGH・NOCOMPRESSを
+生成する。prefix長は索引本体の設定を利用し、partitionでprefix圧縮を使うには索引本体の
+prefix圧縮を必須とする。subpartitionには圧縮句を直接生成せず、partitionからの継承を検証する。
+Hash partitionの個別変更は拒否し、同じ設定は継承させる。ADVANCEDのバージョン制限は
+通常索引と同じくLOWが12c以降、HIGHが18c以降。不正値・bitmapの圧縮・継承矛盾は拒否する。
+
+Global partition生成でTABLESPACEに不要な等号が入る問題と、VALUES LESS THAN (MAXVALUE)の
+括弧が欠落する問題も修正した。共通のOracle partition factoryを使用する表の同じ構文にも適用する。
+Global composite index指定は明示的に拒否する。変更モジュールはsqlapp-core-oracleのみで、
+公開APIにはprotected metadata hookの追加のみ。追加SELECTや実DBアクセス・DDL実行はない。
+
+OracleIndexPartitionCompressionTestでmetadata→XML→DDL、圧縮無効の上書き、
+subpartition継承、バージョン境界、hash制限、global境界構文を検証する。
+最初のテストでXML往復時のDISABLED消失を検出し、修正後に対象13件が成功した。
+Oracle全体の初回実行では旧構文を期待する3件が失敗したため、対応する手書きSQL fixtureを
+正しい構文に更新し、ALTERと圧縮の対象20件が成功した。
+最終的にOracle全227件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。最後の再実行ではcommand/pluginは変更がなくUP-TO-DATEで、
+直前の実行結果を利用している。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+索引ALTER/REBUILD、partition別の状態管理や追加の高度な物理属性は引き続き未対応。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexPartitionCompressionTest' --tests '*OracleIndexPlacementRegressionTest' --tests '*OracleIotIndexRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleAlterTableFactoryTest' --tests '*OracleIndexPartitionCompressionTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [Using Key Compression with Partitioned Indexes](https://docs.oracle.com/database/121/VLDBG/GUID-0C13E8A8-568B-4A60-8A46-F1120D193EFE.htm)
+- [ALL_IND_PARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_IND_PARTITIONS.html)
+- [ALL_IND_SUBPARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_IND_SUBPARTITIONS.html)
+- [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
+
+## 2026-10-16: 既存索引の状態ALTERとREBUILD
+
+sqlapp-core-oracleでIndexのALTER/REBUILD factoryを登録した。
+Table差分でも、既存索引の可視性・使用可否だけの変更はDROP/CREATEではなくALTER INDEXを生成する。
+11g以降のVISIBLE/INVISIBLE変更、VALID（または未指定）からUNUSABLEへの変更、
+UNUSABLEから明示的なVALIDへのREBUILDに対応する。可視性と状態を同時に変更する場合は
+別々のSQLに分ける。REBUILD後の可視性も明示的に変更できる。
+Schema modelに存在しない状態を推測しないため、targetの状態削除・不正な遷移は拒否する。
+
+通常のBTree・bitmap・関数索引が対象で、構造や他のspecificsとの同時変更は拒否する。
+Partition索引の全体可視性は変更できるが、全体REBUILD/状態変更は拒否する。
+Temporary table上の索引REBUILD、特殊索引（Domain/Vector/Clustered等）の状態操作も拒否する。
+明示的なREBUILDは既存のregistry.createSql(index, SqlType.REBUILD)を利用し、
+ALTERはcreateDiffSql(original.diff(target))を利用する。直接ALTERだけを指定する操作は拒否する。
+10gの従来registryにもREBUILDを登録し、11gのvisibility制限を保つ。resolver変更なし。
+
+新規の公開factoryを追加するが、既存API・設定形式・依存関係の変更はない。
+状態変更を含まないTable内の索引構造変更は既存の差分経路を維持する。
+SELECT数に変更はなく、実DB接続・DDL実行は行っていない。
+Partition/subpartition単位のALTER/REBUILD、ONLINE・tablespace移動や圧縮変更、renameは引き続き未対応。
+
+OracleIndexLifecycleTestでTable差分経由、XML往復、引用符付きschema/index名、
+状態回復・別SQL生成、旧/新Dialectの登録、未対応操作の拒否とno-opを検証する。
+初回はspecificsがflattenされた差分の扱いとテストモデルの組み立てで失敗し、修正後に対象テストが成功した。
+対象21件、Oracle全235件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexLifecycleTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexLifecycleTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+- [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-indexes.html)
+- [Oracle 10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
+
+## 2026-10-16: 索引partition/subpartitionの状態と回復
+
+sqlapp-core-oracleで既存のALL_IND_PARTITIONS/ALL_IND_SUBPARTITIONS一括取得から
+STATUSを各partition/subpartitionのoracle.index.statusへ保持する。
+10g以降の既存readerで利用でき、追加SELECTはない。XML形式・依存関係は変更しない。
+通常索引本体のVALIDとは区別し、物理セグメントの状態にはUSABLE/UNUSABLEを使う。
+
+Table差分またはIndexのALTER factoryで、USABLE（または未指定）→UNUSABLEは
+ALTER INDEX MODIFY PARTITION/SUBPARTITION name UNUSABLEを生成し、
+UNUSABLE→USABLEはALTER INDEX REBUILD PARTITION/SUBPARTITION nameを生成する。
+名前は既存builderで引用し、schema装飾オプションも適用する。
+Local/globalの単純partitionとLocal複合索引のsubpartitionを扱う。
+構造・表領域・圧縮・その他の属性を同時に変更した場合や状態値の削除・不正な遷移は拒否する。
+複合索引の親partitionは物理セグメントではないため、親の状態変更を拒否してsubpartition操作を求める。
+Temporary table上のREBUILDと特殊索引の状態操作も従来同様に拒否する。
+
+CREATE INDEXにも各物理セグメントのUNUSABLEを反映する。
+USABLEは既定状態とし、複合親のN/AはDDLへ出力しない。再生成と差分生成を同じ状態表現に揃えた。
+公開APIはprotected metadata hookの追加のみで、利用者は既存のTable/Index差分生成を使用する。
+明示的な索引全体のREBUILDはpartition索引では引き続き拒否する。
+ONLINE・表領域移動・圧縮ALTER・partition構造変更・複雑なIOTは未対応。
+実DB接続・DDL実行は行っていない。
+
+OracleIndexPartitionLifecycleTestとOracleIndexStateTestで、metadata/XML/CREATE、
+Table差分の個別状態変更と回復、global索引、引用符付き識別子、未対応構成の拒否を検証する。
+最初のコンパイルでSchemaPropertiesとSchemaObjectPropertiesの参照を修正し、対象20件が成功した。
+Oracle全242件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexPartitionLifecycleTest' --tests '*OracleIndexLifecycleTest' --tests '*OracleIndexStateTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+- [Managing Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/26/admin/managing-indexes.html)
+- [ALL_IND_SUBPARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_IND_SUBPARTITIONS.html)
+- [Oracle 10g Partition Maintenance](https://docs.oracle.com/cd/B12037_01/server.101/b10739/partiti.htm)
+
+## 2026-10-16: IOTを除く索引REBUILDオプションをまとめて対応
+
+sqlapp-core-oracleで、通常索引の表領域移動・prefix/advanced圧縮変更をREBUILDにまとめる。
+CREATE/REBUILDの圧縮構文とバージョン検証はOracleIndexCompressionへ共通化し、
+圧縮無効化はNOCOMPRESSを生成する。表領域削除は移動先を推測せず拒否する。
+状態回復と物理変更を同時指定してもREBUILDは重複しない。
+分割索引本体の表領域はMODIFY DEFAULT ATTRIBUTES TABLESPACEで既定値だけを変更し、
+実際のセグメント移動はpartition/subpartitionの表領域差分から個別REBUILDを生成する。
+
+非複合partitionでは移動・圧縮変更・回復を1回のREBUILDにまとめる。
+複合圧縮は親のMODIFY PARTITIONに続いて全subpartitionをREBUILDする。
+対象モデルの子の圧縮方式は親と一致し、物理再構築後は明示的なUSABLEを求める。
+個別subpartitionの圧縮変更や複合親の物理移動は拒否する。
+直接Index差分のRENAMEにも対応し、同時に再構築する場合は最後にRENAME TOを生成する。
+Tableの索引名対応が解決できないrenameを推測する機能は追加しない。
+
+ONLINEは既存TableOptions.setOnlineIndex(boolean/predicate)で指定し、既定値falseを維持する。
+明示的/差分由来REBUILDに適用し、10gの通常索引と11g以降のsubpartitionを扱う。
+遅延可能な一意制約を支える索引、join index、bitmap index、Local hashセグメントでは拒否する。
+bitmapは本generatorの保守的制限。JOIN_INDEXは既存ALL_INDEXES一括SELECTから保持する。
+Local hash再構築はTABLESPACE以外の追加オプションを拒否する。
+advanced圧縮の既存version制限（LOWは12c以降、HIGHは18c以降）は維持する。
+追加SELECT・実DB接続・DDL実行はなく、IOT実装は変更していない。
+
+表領域参照へのnull代入が無視される共通不具合も修正した。
+当初SimpleBeanWrapper.setFieldを一律変更したところ、core全体で従来のnull無視に依存する
+clone初期化が12件失敗したため、その変更を戻した。
+最終実装ではSimpleBeanWrapper/SimpleBeanUtilsに明示的なsetNullableFieldを追加し、
+TableSpacePropertyだけで使用する。非primitive参照の明示的なクリアを可能にし、
+既存setFieldの動作、構造参照のclone契約、primitive/null拒否を保つ。
+この不具合はTableSpacePropertyを利用する複数の共通モデルに関係するため、
+Dialect内の回避策ではなくsqlapp-coreで修正した。既存API signature・XML形式・依存関係は変更しない。
+新しい補助APIの追加と、表領域setterへのnull指定が実際に反映される動作修正がある。
+
+OracleIndexRebuildOptionsTestは通常/partition/subpartitionの移動・圧縮・ONLINE、
+XML往復、複合操作順、既定表領域、rename、version境界と未対応操作の拒否を検証する。
+SimpleBeanReferenceNullTestは明示的null・不正型拒否・clone独立性とlegacy動作を検証する。
+初回のOracle対象4件の失敗で参照null問題を検出し、最終修正後の対象テストは成功した。
+最終回帰はcore全1191件、PostgreSQL全300件、H2全49件、Oracle全254件、
+command関連149件、Gradle plugin関連1件が成功した（合計1944件、失敗・error・skip 0件）。
+最後の再実行ではcore/PostgreSQL/H2は変更がなくUP-TO-DATEで、直前の成功結果を利用している。
+一時表上のUNUSABLE変更も明示的に拒否する。git diff --checkは成功し、意図的な生成ファイル変更はない。
+IOT、特殊索引専用のライフサイクル、partition境界や個数の変更、実DB再生成検証は対象外。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core:test --tests '*SimpleBeanReferenceNullTest' --tests '*SimpleBeanUtilsTest' --tests '*SimpleBeanWrapperTest' :sqlapp-core-oracle:test --tests '*OracleIndexRebuildOptionsTest' --tests '*OracleIndexPartitionLifecycleTest' --tests '*OracleIndexLifecycleTest'
+.\gradlew.bat :sqlapp-core:test --tests '*SimpleBeanReferenceNullTest' --tests '*UniqueConstraintTest' --tests '*ExcludeConstraintTest' --tests '*CatalogTest' --tests '*TableTest4' :sqlapp-core-oracle:test --tests '*OracleIndexRebuildOptionsTest' --tests '*OracleIndexPartitionLifecycleTest' --tests '*OracleIndexLifecycleTest'
+.\gradlew.bat :sqlapp-core:test :sqlapp-core-postgres:test :sqlapp-core-h2:test :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+- [11g ALTER INDEX](https://docs.oracle.com/cd/B28359_01/server.111/b28286/statements_1009.htm)
+- [10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
+
+## 2026-10-16: Domain索引の再生成とパラメータALTER
+
+sqlapp-core-oracleの既存ALL_INDEXES一括取得で、Domain/FunctionDomain索引の
+ITYP_OWNER・ITYP_NAME・PARAMETERS・DOMIDX_STATUS・DOMIDX_OPSTATUSを保持する。
+通常のSchema Domainとは別の、Oracle Text/Spatial等のindextypeを使う索引が対象。
+10g以降の非partition Domain索引を、1カラムまたは式とINDEXTYPE IS owner.name、
+PARAMETERS文字列から再生成する。Schemaモデルのspecificsを利用し、公開API・XML形式・依存関係は変更しない。
+
+パラメータ文字列はODCIへ渡す不透明な文字列として扱う。末尾空白・引用符を保持し、
+SQL literalの引用符だけをescapeする。改行・CR・TABを含むcatalog値はXML属性の正規化を避けるため
+oracle.index.domain.parametersBase64へUTF-8/Base64で保持する。通常の値はPARAMETERSに保持し、
+両方ある場合は明示的なPARAMETERS値を優先する。不正なBase64/UTF-8は拒否する。
+ODCI固有のパラメータ構文とデータベース文字集合による長さ制約は実DBでの検証が必要。
+
+Table/Index差分のPARAMETERS変更はDROP/CREATEではなくALTER INDEX ... PARAMETERSを生成し、
+同時renameは別のRENAME TOとする。パラメータ削除は推測せず、明示的なtarget文字列を求める。
+明示的REBUILDも登録済みの共通入口から利用できるが、CREATE用PARAMETERSを再送しない。
+CREATE用設定がREBUILD用のODCI命令としても有効とは限らないためである。
+Domain索引のONLINE・partition構成・一意/圧縮/表領域等の通常索引用属性・異常状態は明示的に拒否する。
+type未指定や不足する定義を通常索引として生成しない。
+
+NORMAL/REVのメタデータをBTreeとoracle.index.reverseへ保持し、非partition BTreeのCREATEで
+REVERSEを再現する。Join索引はFROM/join述語が共通モデルにないためCREATEを拒否し、
+未対応のcatalog索引種別もoracle.index.unmodeledTypeを保持してCREATEを拒否する。
+既存23ai Vector/Hybrid Vectorの専用生成経路は維持する。IOT実装は変更していない。
+
+OracleDomainIndexRecreationTestでmetadata→XML→CREATE、パラメータALTER、REBUILD、
+reverse-key、引用符・改行・末尾空白、不正設定と不足定義の拒否、一括取得1クエリを検証する。
+最初の対象テストでXML属性による改行消失を検出し、保存形式を修正した。
+テストmockの大文字カラム名処理とschema装飾の期待値も修正し、対象12件が成功した。
+Oracle全体の初回実行では、FullTextを通常BTreeとして生成する旧期待により1件が失敗した。
+旧テストをindextype不足の拒否検証に更新し、対象22件が成功した。
+最終的にOracle全263件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。最後の再実行のcommand/pluginはUP-TO-DATEで直前の成功結果を利用した。
+core・PostgreSQL・H2は今回再実行していない。git diff --checkは成功し、意図的な生成ファイル変更はない。
+追加SELECT・実DB接続・DDL実行はない。Domain partition/特殊状態の回復、Join索引の完全DDL、
+custom indextype自体の作成・依存解決、partition構造変更は未対応。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexRecreationTest' --tests '*Oracle23aiIndexReaderTest' --tests '*Oracle23aiCreateIndexFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexRecreationTest' --tests '*Oracle23aiIndexReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexRecreationTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALL_INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_INDEXES.html)
+- [Building Domain Indexes](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/addci/building-domain-indexes.html)
+- [Oracle 10g ALTER INDEX](https://docs.oracle.com/cd/B13789_01/server.101/b10759/statements_1008.htm)
+
+## 2026-10-16: Local Domain索引のpartition対応
+
+sqlapp-core-oracleで、既存のALL_IND_PARTITIONS一括取得からDomain/FunctionDomain索引の
+partitionごとのPARAMETERSとDOMIDX_OPSTATUSを保持する。改行等を含む値は索引本体と同じ
+任意のUTF-8/Base64 specificへ保持し、通常値はPARAMETERSを使う。SELECT数は増やさない。
+Oracle 10g以降のsimple Local Domain索引を対象に、
+INDEXTYPE IS ... LOCAL (PARTITION name PARAMETERS (...)) PARAMETERS (...)を生成する。
+Local partitionは表から境界を継承するため、索引CREATEでVALUES LESS THANなどは生成しない。
+
+Table/Index差分でpartition固有のPARAMETERS変更はMODIFY PARTITION ... PARAMETERSを生成する。
+UNUSABLE→USABLEはREBUILD PARTITION、USABLE/未指定→UNUSABLEはMODIFY PARTITION ... UNUSABLEを生成する。
+回復と明示的パラメータ変更を組み合わせる場合は1回のREBUILD PARTITION ... PARAMETERSへまとめる。
+回復だけならCREATE用PARAMETERSを再送しない。索引本体のパラメータ変更とrenameは別SQLで生成する。
+
+構造・境界・物理属性を同時に変更する操作、Global/composite Domain索引、異常な操作状態、
+ONLINEとLocal索引全体のREBUILDは拒否する。Domain CREATEのpartition句ではUNUSABLE状態を
+直接表現できないため、その状態でのCREATEは明示的に拒否し、既存索引への差分操作だけを扱う。
+通常索引用TABLESPACE/圧縮属性もPARAMETERSへ勝手に変換せず拒否する。
+indextypeがpartition操作を実装していることとODCI固有パラメータの妥当性は実DBでの確認が必要。
+IOT・共通Schema形式・依存関係は変更せず、公開APIにはprotected metadata hookの追加のみ。
+実DB接続・DDL実行は行っていない。
+
+OracleDomainIndexPartitionTestでmetadata→XML→CREATE、引用符/改行/末尾空白の保持、
+XML往復のno-op、partitionのパラメータ変更・状態変更・回復、同時変更のSQL統合と拒否境界を検証する。
+対象15件が成功した。
+Oracle全269件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleDomainIndexPartitionTest' --tests '*OracleDomainIndexRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [ALL_IND_PARTITIONS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_IND_PARTITIONS.html)
+- [11g ALL_IND_PARTITIONS](https://docs.oracle.com/cd/B28359_01/server.111/b28320/statviews_1092.htm)
+- [10g ALL_IND_PARTITIONS](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_1058.htm)
+- [CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
+- [ALTER INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-INDEX.html)
+
+## 2026-10-16: 特殊索引の完全DDLとGlobal partition構造変更
+
+IOTを除き、sqlapp-core-oracleの残項目をまとめて対応した。
+JOIN・未対応catalog種別・Domain索引の完全DDLをDBMS_METADATA.GET_DDL('INDEX', name, owner)で
+追加の一括SELECTから取得する。個々の索引ごとのSELECTは発行しない。
+10g以降で取得し、古いbase Dialectでは補助SQLを発行しない。resolver変更なし。
+23aiではVector/Hybrid判定後に取得し、専用生成経路を維持する。
+
+ORA-1031/31603は警告してcatalog metadataを維持し、途中までの定義を適用しない。
+他のエラー・成功時の欠落定義は例外とする。完全DDLが必須のJOIN・未対応種別・複合Domain等は
+definitionRequiredを保持し、取得不能なら生成時に拒否する。単純Domainは従来の構造化情報へfallbackできる。
+Indexには共通definition属性がないため、完全DDLをoracle.index.definitionBase64へ保持し、
+definitionFingerprintで取得時のモデルsnapshotを検証する。列や名前を変更した後の古いDDL再利用は拒否する。
+XML往復・Table CREATEも同じ生成経路を使用し、23ai annotationsを重複付与しない。
+完全DDLのschema自動変換・下位バージョンへの変換は行わない。
+公開補助utilityとprotected reader hookを追加したが、既存API・XML形式・依存関係は変更しない。
+
+通常のGlobal RANGE/HASH索引のpartition境界・個数・方式の変更は、targetのCREATEを先に検証し、
+DROP INDEXとCREATE INDEXへまとめる。表や行をDROPする操作ではない。
+ONLINE、制約を支える索引、状態/物理属性との同時変更は拒否する。
+Local索引の構造は基表に従うため、索引だけの境界変更は拒否して基表の変更を求める。
+Globalの方式はRANGE/HASHに限定し、明示的なHASH一覧がある場合はPARTITIONS数を重複生成しない。
+一覧がないHASHでは正のpartition数を必須とする。
+
+旧OracleにもCREATE INDEX IF NOT EXISTSを生成していた不具合も修正した。
+23ai以降だけで生成し、RUを識別しない19cでは19.28以降の機能を推測しない。
+11g用の手書き期待SQL fixtureを更新した。IOT実装・実DB接続・DDL実行の変更はない。
+
+OracleIndexDefinitionTestで一括1クエリ、通常索引0クエリ、権限不足後の途中結果破棄、
+XML/Table CREATE、古いDDLの拒否、その他エラーの伝播を検証する。
+OracleIndexStructureChangeTestで境界/個数変更、HASH構文、Local/同時変更/制約/ONLINEの拒否と
+CREATE IF NOT EXISTSのversion境界を検証し、対象25件が成功した。
+最終再実行の初回要求は利用上限で自動承認レビューが完了せず未実行だったが、続行指示後に同じ承認経路で再試行した。
+再試行は成功し、Oracle全281件、command関連149件、Gradle plugin関連1件が成功した
+（失敗・error・skip 0件）。core・PostgreSQL・H2は今回再実行していない。
+git diff --checkも成功した。意図的な生成ファイル変更はない。
+
+実行コマンド（すべて--gradle-user-home .gradle-user-homeを指定）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexDefinitionTest' --tests '*Oracle23aiIndexReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexStructureChangeTest' --tests '*OracleIndexDefinitionTest' --tests '*OracleIndexPartitionLifecycleTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIndexStructureChangeTest' --tests '*OracleIndexDefinitionTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様参照:
+
+- [DBMS_METADATA for dependent indexes](https://docs.oracle.com/en/database/oracle/oracle-database/26/adjsn/handling-dependent-objects.html)
+- [23ai CREATE INDEX](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/img_text/create_index.html)
+- [19c CREATE INDEX: 19.28 boundary](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-INDEX.html)
+
+実DB往復検証、custom indextype/Text preference等の前提オブジェクト作成、完全DDL内部の構造編集、
+Local索引の基表と一体のpartition構造変更は残る。
+
+## 2026-10-16: Local索引と基表のRANGE partition SPLIT
+
+Oracle 10g以降のheap表について、単一の単純RANGE partitionを二分する差分を
+`ALTER TABLE ... SPLIT PARTITION ... AT (...) INTO (...) UPDATE INDEXES (...)`に変換する。
+Local索引の新partition名と表領域を明示し、変更のないGlobal索引も同じ文で保守する。
+元partitionの上限と前後のpartitionを保持し、DROP/ADDによる行削除を避ける。
+
+索引partitionの対応は位置で検証する。対象Local索引は単純・非圧縮・明示的USABLEに限定する。
+列や索引属性の同時変更、partitionキー変更、複合partition、特殊索引、ONLINE、IOT、
+ADD/DROP/MERGEなどはこの経路では明示的に拒否する。境界式の順序・妥当性はOracleの実行時検証に委ねる。
+公開APIや設定項目の追加はない。metadata readerは変更しない。
+
+`OracleLocalPartitionSplitTest`でSQL、後続partitionの維持、Global索引との共存、
+上限・設定変更・UNUSABLE・列変更・ONLINE・IOTの拒否を検証する。
+実DBへの接続とDDL実行は未実施。custom indextype/Text preferenceの前提作成と、
+SPLIT以外のLocal partition構造変更は残る。
+
+検証はJava 21とGradle Wrapperで実施。Oracle全288件、関連command 149件、plugin 1件が成功。
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleLocalPartitionSplitTest' --tests '*OracleIndexStructureChangeTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+.\gradlew.bat :sqlapp-core-oracle:test
+```
+
+仕様: [Oracle ALTER TABLEのSPLITとUPDATE INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-16: IOT再生成・明示オプション・MOVEとLocal索引MERGE
+
+IOTを対象に追加した。Oracle 10g以降のIOTはDBMS_METADATA.GET_DDL('TABLE',...)を
+対象集合で一括取得し、完全CREATE TABLE DDLをUTF-8/Base64の
+`oracle.table.definitionBase64`に保存する。Tableには共通definitionプロパティがないため、
+既存のspecifics形式を使用する。overflow/mapping、partition、圧縮、内部segmentの詳細は
+完全DDLを再出力し、埋め込み済みの列・主キー・制約は重複生成しない。
+secondary indexとコメントは別の既存経路で生成する。
+
+権限不足・対象の不可視（ORA-01031/31603）は警告してカタログ情報の読取を継続し、
+途中まで読んだDDLは適用しない。他のエラーやDDL欠落は伝播する。
+旧8/9系Dialectにはこの追加問合せを行わない。23ai以降は注釈取得後にsnapshotを確定する。
+カタログの既存問合せからIOT rootのPCTTHRESHOLDとprefix圧縮長も読む。
+
+完全DDLは変更検知用fingerprintと組にし、所有者や列・制約などを変更したモデルへの
+古いDDL再適用を拒否する。secondary indexは完全TABLE DDLに含まれないので別管理できる。
+識別子の書換えや別バージョンへのSQL変換はしない。opaque IOTの構造ALTERも明示的に拒否する。
+
+手書きモデルの単純IOTは、既存`oracle.table.organization=INDEX`に次のoptional specificsを指定できる。
+
+| キー（`oracle.table.iot.`接頭辞） | 内容 |
+| --- | --- |
+| `pctThreshold` | 1～50 |
+| `compressionPrefixLength` | 1～主キー列数-1 |
+| `mapping` | `true`/`false`。trueはMAPPING TABLE |
+| `overflow` | `true`/`false`。trueはOVERFLOW |
+| `including` | overflow=true時の既存非主キー列 |
+| `overflowTableSpace` | overflow=true時の表領域 |
+
+未知キー、不正値、heap表へのIOTオプション、欠落列・主キー列のINCLUDING指定は拒否する。
+単純・非partition IOTの孤立したroot表領域変更は`ALTER TABLE ... MOVE TABLESPACE`を生成する。
+mapping、複雑なIOT、表領域の曖昧な削除、同時変更は専用の移行計画が必要。
+
+Local索引を伴うheap表の単純RANGE partitionについて、隣接する二つを一つにするMERGEも追加した。
+上限境界と変更外partitionを保持し、`UPDATE INDEXES`でLocal/global索引を保守する。
+Local索引の結果partition名・表領域を指定する。SPLITと同じ範囲・状態の検証を適用する。
+
+変更はsqlapp-core-oracleと本ドキュメント/roadmap。共通モデル、既存公開API、依存関係、
+DialectResolverは変更しない。新しいOracleTableDefinitionユーティリティを追加した。
+実DB接続・DDL実行・生成ファイルの意図的な変更はない。
+
+残る範囲はcustom indextype/Text preference等の前提オブジェクト作成、opaque DDL内部の構造編集、
+Local索引を伴うADD/DROP等、IOTのpartition操作・複雑なMOVE、実DB往復検証。
+これらを含む全Oracle機能への対応完了を意味しない。
+
+Java 21とGradle WrapperでOracle全306件、関連command 149件、plugin 1件が成功。
+失敗・エラー・skipはいずれも0。実DBテストは未実施。
+今回の変更はOracleモジュール内なのでcore/PostgreSQL/H2の全体テストは再実行していない。
+実行コマンド（すべて`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotDefinitionTest' --tests '*OracleIotIndexRecreationTest' --tests '*Oracle23aiTableReaderTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleLocalPartitionSplitTest' --tests '*OracleIotDefinitionTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotOptionsTest' --tests '*OracleIotIndexRecreationTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotDefinitionTest' --tests '*Oracle23aiCreateTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+仕様: [IOT CREATE options](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/CREATE-TABLE.html)、
+[IOT ALTERとpartition索引保守の制限](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、
+[MERGE partition](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
+
+## 2026-10-16: Local索引ADD/DROPとIOT partition保守
+
+Table ALTERの高水準入口に専用plannerを追加した。共通モデル、設定形式、公開API、
+依存関係、MetadataReader、DialectResolverは変更しない。
+対象は単純RANGEで、heap表はOracle 10g以降、IOTはOracle 12c以降に限定する。
+旧版のReaderと今回の対象外の通常表ALTERは既存経路を維持する。
+
+- ADD: 既存partitionを維持して末尾に一つ追加する差分を`ADD PARTITION ... VALUES LESS THAN`にする。
+  Local索引はOracleが表partitionと同名で追加する仕様を使い、必要なら後続でRENAME PARTITIONと
+  REBUILD PARTITION TABLESPACEを出す。表領域の省略時は索引のdefaultを継承する。
+  自動名の衝突、MAXVALUE後の追加、新segmentのUNUSABLE/圧縮/余分な属性は拒否する。
+- DROP: 既存partitionを一つ削除し、残りが同一の差分を明示的なDROPとして返す。
+  対応するLocal索引partitionの削除も検証する。heap表はUPDATE INDEXES、IOTはUPDATE GLOBAL INDEXES。
+  SqlOperationの型はDROPで、削除partitionをoriginalに保持する。このSQLは当該partitionの行も削除する。
+  行を保持するMERGEを意図する場合は、統合後のpartitionを新しい名前でモデル化する。
+  最後のpartitionの削除や、他のpartition・Local segmentの同時変更は拒否する。
+- 既存`TableOptions.allowAddPartition`/`allowDropPartition`がfalseなら、該当SQLの生成を明示的に拒否する。
+- IOT SPLIT/MERGE: 通常のGlobal secondary indexが変更されない場合に、一つを二分・隣接二つを統合できる。
+  上限境界を保持し、IOTには使用できないUPDATE INDEXESを付けない。
+- IOT MOVE PARTITION: 一つのpartitionの表領域変更を生成する。通常のLocal/global secondary indexは
+  変更しない。Oracleのlogical ROWIDにより索引のUSABLE状態を維持する。
+  移動後のsecondary indexのROWID guess更新による性能調整は、この処理では実施しない。
+
+partitionキー・型・default、表の列・制約、索引属性、複合partitionや特殊索引の同時変更は拒否する。
+ONLINEも専用計画が必要。境界式の大小関係・実DBの権限や参照制約はOracleが実行時に検証する。
+
+完全IOT DDLを持つモデルでも、検証済みの上記partition差分は古いCREATE文を使わず生成できる。
+生成処理はbefore/afterモデルを変更しない。afterの保存CREATE DDLは古いsnapshotのままなので、
+後でCREATEを生成するにはメタデータを再取得して定義を更新する必要がある。
+before自体のsnapshotが古い場合や、別の構造変更を混在させる場合は拒否する。
+
+`OracleTablePartitionMaintenanceTest`でSQL・Local対応・DROP操作種別・設定・版境界・
+名前衝突・上限・未知の変更・IOT snapshotを検証する。既存のLocal SPLIT/MERGEとIOT定義テストも実行。
+検証中に追加テストのnull引数のoverload曖昧性でcompileTestJavaが一度失敗し、String型指定で修正した。
+識別子引用設定の追加テストでも継承不足を検出し、設定を適用する共通builder生成経路へ修正した。
+実DB・外部DBテストは未実施。生成ファイルの意図的な変更はない。
+最終検証はOracle全321件、関連command 149件、plugin 1件が成功し、失敗・エラー・skipは0。
+変更がOracle内に閉じているため、core/PostgreSQL/H2の全体テストは今回再実行していない。
+
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleIotDefinitionTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTablePartitionMaintenanceTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+残る範囲はcustom indextype/Text preferenceの前提作成、IOT Local secondary indexを伴うSPLIT/MERGE、
+複合/hash/list partition、複雑なroot MOVE、opaque DDL内部の構造編集と実DB往復検証。
+
+仕様: [Oracle 11g ADDのLocal索引自動名](https://docs.oracle.com/html/E26088_01/statements_3001.htm)、
+[Oracle 12.2 IOT ALTER制約](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、
+[Oracle partition保守](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
+
+## 2026-10-16: IOT Local索引のSPLIT/MERGEと匿名PL/SQLのSQL往復
+
+Oracle 12c以降の単純RANGE IOTについて、通常・非圧縮Local secondary indexを伴う
+SPLIT/MERGEを追加した。主処理のALTER TABLEにはUPDATE INDEXESを付けず、
+後続のSqlOperationで対象Local segmentを保守する。Global secondary indexは従来どおり変更しない。
+
+IOTのSPLIT/MERGEでLocal索引partitionがUNUSABLEになり得ることと、名前をOracleが割り当てることを
+前提に、対象をowner/index/partition positionで一括解決する。全Local索引を一つの
+`SELECT ... BULK COLLECT`にまとめる。これは生成DDLの実行時に必要な解決であり、
+MetadataReaderの追加SELECTやオブジェクト単位の読取を増やすものではない。
+
+対象件数、索引partition総数、対象外segmentとの名前衝突と一時名衝突を、rename前に検証する。
+Oracleから返された実名を一旦決定的な一時名へ変更してから、モデル上の結果名へ変更する。
+これによりOracleが自動名を割り当てる場合や、対象内で名前が入れ替わる場合に対応する。
+状態がUSABLEならREBUILDする。UNUSABLEが要求された場合は明示的にMODIFY PARTITION UNUSABLEを生成し、
+表領域変更も要求されていれば先にREBUILDで表領域を反映する。
+識別子は実行時にも二重引用符をescapeし、カタログ検索の文字列literalは単一引用符をescapeする。
+Schema省略時はCURRENT_SCHEMAで解決し、既存の識別子引用設定も反映する。
+segment表領域が省略され、索引の既定表領域をモデルから解決できる場合はその値を用いる。
+テンプレートの予約文字列を識別子に含む場合も、データとして保持する。
+
+Local索引の変更外partition、root属性、partition keyを維持する。
+対象segmentは明示的USABLE/UNUSABLEと境界・名前・表領域・非圧縮属性に限定する。
+圧縮、複合partition、未知の物理属性・状態、曖昧な対応、ONLINEは引き続き拒否する。
+before/afterモデルと完全DDL snapshotは変更せず、古いCREATE DDLの再利用拒否も維持する。
+
+主な追加テストは`OracleIotLocalIndexMaintenanceTest`の13件と`OracleSqlSplitterTest`の3件。
+生成SQL、単一のbulk解決、複数Local索引、名前衝突検証、状態と表領域、XML、既定値・引用設定、
+literal中の予約文字列、生成SQLファイル往復、未対応属性の拒否を検証する。
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:compileJava
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotLocalIndexMaintenanceTest' --tests '*OracleSqlSplitterTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleTablePartitionMaintenanceTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+最終検証: Oracle全337件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+共通コードの変更はないため、core/PostgreSQL/H2の全体テストは今回再実行していない。
+
+OracleSqlSplitterは匿名DECLARE/BEGINを、literal/comment外の独立した`/`行まで一文として読む。
+JDBC実行に必要な末尾のセミコロンを保持し、slash欠落は明確なエラーにする。
+既存のCREATE PROCEDURE等の分割処理は維持する。新しいPL/SQLを含む生成SQLファイルが
+主ALTER TABLEと後続匿名ブロックの二文へ往復することをテストした。
+
+変更はsqlapp-core-oracleとドキュメントのみ。新しい公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverの変更はない。実DBに接続していないため、PL/SQLのOracle上での
+compile/実行は未検証。Oracle DDLはcommitを伴うので、後続処理に失敗すれば主partition操作や
+一部renameが完了している可能性がある。このSQL生成器はatomic実行や自動resumeを保証しない。
+
+custom indextype/Text preferenceの調査で確認した点:
+
+- `OracleSchemaReader.newOperatorClassReader()`はnullで、Oracle INDEXTYPEのSchema collectionはない。
+  `Type`は実際のCREATE TYPE、`OperatorClass`はPostgreSQLのoperator classなので代用しない。
+- custom indextypeの`ODCIIndexGetMetadata`は、辞書にない実装固有情報をExport/Import用に返す拡張点。
+  GET_DDL('INDEX')だけで、任意のcustom実装の設定まで取得できるとは仮定しない。
+- Oracle Textの`CTX_REPORT.CREATE_INDEX_SCRIPT`はpreference込みのSQL*Plusスクリプトを返すが、
+  preference名を変更する。元のPARAMETERSを参照する既存CREATE INDEX DDLと単純結合できない。
+  前提情報と対応する索引DDLを一体で表現し、共有前提の依存順・重複・ライフサイクルを扱う設計が残る。
+
+この調査を前提情報の自動再生成の実装完了とは扱わない。残件はこの前提モデル、圧縮Local索引、
+複合/hash/list partition、複雑なroot MOVE・opaque DDL編集、実DB往復検証。
+
+仕様: [IOT SPLITのLocal索引状態](https://docs.oracle.com/en/database/oracle/oracle-database/18/vldbg/maintenance-partition-tables-indexes.html)、
+[ODCIIndexGetMetadata](https://docs.oracle.com/en/database/oracle/oracle-database/19/addci/extensible-indexing-interface.html)、
+[CTX_REPORT.CREATE_INDEX_SCRIPT](https://docs.oracle.com/en/database/oracle/oracle-database/19/ccref/CTX_REPORT-package.html)。
+
+## 2026-10-16: 圧縮Local secondary indexと保存DDLを持つ単純IOTのroot MOVE
+
+IOT SPLIT/MERGE後のLocal索引保守に、prefix圧縮、ADVANCED LOW/HIGH、明示的NOCOMPRESSを追加した。
+既存の`OracleIndexCompression`と`OracleIndexPartitionCompression`を使って生成・検証する。
+rootでprefix/advanced圧縮が有効になっていること、prefix長、Bitmap制約、既存のDialect境界を検証する。
+対応範囲は単純RANGE IOTの通常Local secondary index。既存境界に従いLOWは12c以降、HIGHは18c以降。
+
+結果segmentの有効な圧縮設定を親索引のdefaultからも解決し、REBUILDに圧縮句を明示する。
+source segmentや親defaultが圧縮されている場合には、結果状態がUNUSABLEでもREBUILDを行って
+圧縮・表領域を反映した後にUNUSABLEへ変更する。すべて非圧縮で物理変更のないUNUSABLE指定には
+不要なREBUILDを追加しない。一括catalog解決と二段階renameの構造は維持し、追加SELECTはない。
+
+単純・非partition IOTの孤立したroot表領域変更は、保存CREATE DDLを持つモデルでも生成できる。
+beforeのsnapshotを検証し、古いCREATE DDLを再実行せず`ALTER TABLE ... MOVE TABLESPACE`を出す。
+既知の主キーprefix圧縮はCOMPRESS nで保持する。完全DDLに主キーが埋め込まれている場合には、
+重複するPKモデルを必須にしない。保存DDL自体の同時編集、列・制約などの同時変更、
+不明な移動先、partitioned/complex/mapping構成とBitmap secondary indexは拒否する。
+afterの古いDDLはそのまま保持し、再CREATEにはメタデータ再取得が必要という既存の保護を維持する。
+
+変更はsqlapp-core-oracleと文書のみ。公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverは変更しない。
+`OracleIotLocalIndexMaintenanceTest`に5件、`OracleIotOptionsTest`に4件を追加し、
+圧縮の継承・解除・版境界・UNUSABLE・不正prefix、opaque root MOVE、定義編集・移動先の拒否、
+完全DDL内の主キーを重複入力しない経路を検証する。以前のopaque構造ALTER拒否テストは
+単純な表領域変更ではなく未対応の列追加を検証するよう更新した。
+
+実行コマンド（各コマンドに`--gradle-user-home .gradle-user-home`を付与）:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleIotOptionsTest' --tests '*OracleIotLocalIndexMaintenanceTest' --tests '*OracleIotDefinitionTest' --tests '*OracleAlterTableFactoryTest'
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue
+```
+
+最終検証: Oracle全346件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+共通コードの変更はないため、core/PostgreSQL/H2の全体テストは今回再実行していない。
+
+実DBへの接続・PL/SQLのOracle上でのcompile/実行は未実施。生成ファイルの意図的な変更はない。
+前提オブジェクトの自動再生成、複合/hash/list partition、complex/mapping root MOVE、
+opaque DDL内部の構造編集と実DB往復検証は残る。
+
+仕様: [ALTER INDEXとpartition圧縮](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/ALTER-INDEX.html)、
+[IOT MOVEとoverflow/mapping制約](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: 単純LIST表とLocal索引のADD/DROP PARTITION
+
+Oracle 10g以降のheap表で、単純LIST partitionを一つ末尾に追加、または一つ削除する
+変更をLocal索引保守プランナーで扱う。ADDは`VALUES (...)`を生成し、自動生成される
+Local索引partitionのrenameと表領域変更を既存のRANGE経路と同じ検証で扱う。
+DROPは対応するLocal索引partitionの削除を検証し、`UPDATE INDEXES`を生成する。
+DROPは行の削除を伴う。既存のallowAddPartition/allowDropPartitionを尊重する。
+
+既存DEFAULT partitionがある場合のADDは拒否する。文字列値`'DEFAULT'`は
+DEFAULTキーワードとして扱わない。値リストの重複や型の妥当性はOracleが検証する。
+IOTのLIST構成、複合partition、LISTのSPLIT/MERGE・値編集、索引の同時変更は未対応。
+新規Local segmentの圧縮やUNUSABLE指定も従来どおり拒否する。
+MetadataReader、DialectResolver、共通モデル、公開API、依存関係は変更しない。
+
+`OracleTablePartitionMaintenanceTest`に4件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全350件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+追加の版境界テストで存在しないDialectHolder定数を参照した初回compile失敗は、
+既存defaultDialectへの修正後に再実行して解消した。
+実DBへの接続・実行は未実施。共通コードの変更はなく、core/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。前提オブジェクトの自動再生成、複合/HASH partition、
+LISTのSPLIT/MERGE、複雑なIOT MOVE、実DB往復検証は残る。
+仕様: [Oracle ALTER TABLE・LIST partitionの制限](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: Local索引を伴うLIST SPLIT/MERGE
+
+Oracle 10g以降のheap表で、単純LIST partitionの二分割と隣接位置の二partition結合を
+既存RANGEプランナーに統合した。`SPLIT PARTITION ... VALUES (...)`と
+`MERGE PARTITIONS ... INTO PARTITION ... UPDATE INDEXES (...)`を生成し、通常Local索引の
+segment名・表領域を明示する。Global索引は変更を許可せず、同じUPDATE INDEXESで保守する。
+
+単一partitionキーの通常文字列・national文字列・数値・NULL literalのみ比較する。
+引用文字列内のcommaと二重apostropheを保持し、値順序と外側空白は無視する。
+数値表記の同値性、collation、式評価は推測しない。分割結果に重複がなく、元の値集合を
+過不足なく保持することを検証し、Local索引の値集合と表partitionの対応も検証する。
+DEFAULTの分割では右側DEFAULTを必須とし、逆の結合でもDEFAULTを保持する。
+型・collationに依存する妥当性や他partitionとの値衝突はOracleの検証が必要。
+
+結合は配列上で隣接する二partitionが対象。生存partitionを完全に変更せず一つ除去するdiffは
+従来どおり行削除を伴うDROPと解釈する。DEFAULTへの行保持結合には、結果partitionへ新しい名前を
+指定するなど、DROPと区別できるdiffが必要。複数キー・tuple・式・日時literal・複合partition、
+特殊索引、圧縮segment・UNUSABLE・ONLINE指定はこの経路では未対応。
+変更はsqlapp-core-oracleと文書のみ。公開API、モデル、設定形式、MetadataReader、
+DialectResolver、依存関係は変更しない。既存オプションを反映するbuilderを使い、
+RANGE/LISTのpartition操作で識別子の引用設定を保持する。
+
+`OracleListPartitionSplitTest`に9件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleListPartitionSplitTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全359件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・SQL実行は未実施。共通コードの変更はなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合/HASH partition、複雑なIOT MOVE、
+前提オブジェクト自動再生成、LISTの複数キー・式・非隣接結合、実DB往復検証は残る。
+仕様: [Oracle 10g ALTER TABLE](https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_3001.htm)、
+[LIST SPLIT/MERGEとDEFAULT](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。
+
+## 2026-10-17: 単純HASH表のADD/COALESCEとLocal索引保守
+
+Oracle 10g以降の単純HASH heap表で、末尾partitionを一つ追加、または一つ減らすdiffを扱う。
+ADDは`ADD PARTITION name [TABLESPACE name] UPDATE INDEXES`を生成し、再hashに伴う
+Local索引UNUSABLE化を防ぐ。新Local segmentの自動名との衝突を拒否し、必要なら
+renameと表領域変更のREBUILDを続ける。明示的な表領域変更がなければ索引defaultを継承する。
+
+末尾の削減は`COALESCE PARTITION UPDATE INDEXES`を生成する。Oracleが末尾partitionの行を
+残存partitionへ再分配するため、行削除を伴うDROP PARTITIONに変換しない。
+操作種別はALTERとし、残る表partition・Local segmentが変更されないことを検証する。
+Local索引のない表、Global索引のみの表もこの経路を使う。Global索引の同時変更は拒否する。
+
+既存のallowAddPartition/allowDropPartitionでADD/COALESCEをそれぞれ制御する。
+COALESCEは行を保持するがpartition数を減らすので、保守的にallowDropPartitionの対象とする。
+明示的なpartition一覧を必要とし、途中のpartition除去、全partition除去、複数同時変更、
+境界値、IOT、複合partition、表/Local索引圧縮、UNUSABLEなLocal segment、特殊索引、
+ONLINE、列などの同時変更はこの経路では未対応として拒否する。
+
+変更はsqlapp-core-oracleと文書のみ。共通モデル、公開API、設定形式、依存関係、
+MetadataReaderとDialectResolverは変更しない。8/9用defaultDialectではこの生成を拒否し、
+10g以降は継承した同じ実装を使う。メタデータの追加SELECTはない。
+`OracleHashPartitionMaintenanceTest`に10件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleHashPartitionMaintenanceTest' --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全369件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コードの変更はなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合partition、HASHの圧縮/高度な物理属性、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [Oracle 10g ALTER TABLE](https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_3001.htm)、
+[Oracle ALTER TABLE・HASH ADD/COALESCE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: 複合partitionのDROPとHASH COALESCE
+
+複合heap表の変更を専用プランナーで検証する。RANGE-HASH/RANGE-LISTはOracle 10g以降、
+それ以外のRANGE/LIST/HASHの組合せは保守的に12c以降を対象とする。
+MetadataReaderとDialectResolverは変更せず、古いDialectでは未対応操作として拒否する。
+
+対応操作は親partitionを一つ除去、または一つの親からsubpartitionを一つ除去するdiff。
+RANGE/LISTは`DROP PARTITION`/`DROP SUBPARTITION ... UPDATE INDEXES`を生成し、行削除を伴う。
+HASHは末尾のみ許可し、行を再分配する`COALESCE PARTITION`または
+`MODIFY PARTITION parent COALESCE SUBPARTITION ... UPDATE INDEXES`を生成する。
+DROPは操作種別DROP、COALESCEはALTER。すべてallowDropPartitionを尊重する。
+
+残存要素、親属性、partitionキー・型・template/default、Global索引を変更しないことを検証する。
+Local索引は親/子の数と除去位置の対応を検証し、対応するsegmentだけが除去されるdiffを要求する。
+HASH COALESCEではLocal subpartitionの明示的USABLE状態を必須とし、状態変化を隠さない。
+DROP SUBPARTITIONの名前は表全体で一意に解決できる必要がある。
+Local索引のない表もこのプランナーを通す。追加SELECT・依存関係・公開API・共通モデル・
+設定形式の変更はない。変更モジュールはsqlapp-core-oracleと文書のみ。
+
+全partition/全subpartition除去、複数箇所編集、IOT、特殊索引、ONLINE、
+ADD/SPLIT/MERGE、template変更と同時編集はこの経路では未対応として拒否する。
+DROPで行を保持したい場合に自動でMERGEへ読み替えることはしない。
+
+`OracleCompositePartitionMaintenanceTest`に12件を追加。初回の型比較compile失敗と、
+テストfixtureのpartitioning置換時のNPEは修正し、対象テストを再実行した。
+実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleHashPartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全381件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コードの変更はなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合ADD/SPLIT/MERGE、高度な物理属性編集、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [Oracle DROP PARTITION/SUBPARTITION](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/ALTER-TABLE.html)、
+[HASH COALESCE SUBPARTITION](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)。
+
+## 2026-10-17: 既存親へのsubpartition ADD
+
+複合heap表の既存親へ、RANGE/LIST/HASH subpartitionを一つ末尾追加するdiffに対応した。
+RANGE-HASH/RANGE-LISTはOracle 10g以降、RANGE-RANGEとLIST-LISTは保守的に12c以降。
+`ALTER TABLE ... MODIFY PARTITION ... ADD SUBPARTITION ... UPDATE INDEXES`を生成する。
+Local索引がある場合は`(index (SUBPARTITION name [TABLESPACE name]))`を明示し、
+Oracleが割り当てる名前を推測しない。Global索引・既存Local segment・他の親/子の変更を拒否する。
+
+追加要素は名前・境界・表領域のみ、Local側はさらに明示的USABLE状態を必要とする。
+Local/表の型・数・新規境界の対応、名前衝突、既存親属性・キー・template/defaultの保持を検証する。
+HASHでは既存の影響対象Local segmentもUSABLEを必要とし、UPDATE INDEXESで再hash時に保守する。
+LISTの既存DEFAULT、RANGEのMAXVALUE/境界欠落、圧縮root/親/索引、IOT、ONLINE、
+複数同時追加や同時編集はこの経路では拒否する。値の重複・大小・型はOracleが検証する。
+allowAddPartitionを使い、allowDropPartitionとは独立して制御する。
+
+変更はsqlapp-core-oracleと文書のみ。公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverは変更せず、追加SELECTもない。
+既存テストクラスへ6件追加。初回テストでGlobal索引変更の検証不足を検出し、索引ごとの
+明示的検証で修正した。SQLの空白差は比較時に正規化する。
+実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全387件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。core/PostgreSQL/H2全体は共通コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。複合親ADD、複合SPLIT/MERGE、高度な物理属性編集、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [Oracle ADD SUBPARTITION](https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_3001.htm)、
+[UPDATE INDEXES構文](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/update_all_indexes_clause.html)、
+[Local subpartition指定](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/update_index_subpartition.html)。
+
+## 2026-10-17: 複合RANGE/LIST親partitionのADD
+
+複合heap表のRANGE/LIST親partitionを一つ末尾追加するdiffに対応した。
+新しい親はsubpartition一覧を明示し、templateから生成される名前を推測しない。
+RANGE-HASH/RANGE-LISTは10g以降、それ以外は既存の保守的な12c以降の境界を維持する。
+`ADD PARTITION ... (SUBPARTITION ...) UPDATE INDEXES`を生成し、Local索引については
+`index (PARTITION name (SUBPARTITION name ...))`に親・子segment名と任意の表領域を明示する。
+
+新しい表/Local親の境界と子の数・順序・境界が一致すること、既存親・子・索引属性・
+Global索引・キー・template/defaultが変わらないことを検証する。追加子名の既存要素との衝突、
+DEFAULT/MAXVALUE後の追加、subpartition一覧欠落、圧縮root/索引・新規物理属性・
+UNUSABLEな追加Local segment、IOT、ONLINE、複数追加・同時編集は拒否する。
+新規Local親の状態は未指定・N/A・USABLE、子は明示的USABLEのみを受け付ける。
+HASH親のADDは未対応のまま。値の型・大小・重複はOracleの検証を必要とする。
+allowAddPartitionを尊重し、Local索引のない表も同じプランナーを使う。
+
+変更はsqlapp-core-oracleと文書のみ。公開API、共通モデル、設定形式、依存関係、
+MetadataReader、DialectResolverの変更と追加SELECTはない。
+既存テストクラスへ6件追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全393件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コード変更がないためcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。複合HASH親ADD、複合SPLIT/MERGE、高度な物理属性編集、
+複雑なIOT MOVE、前提オブジェクト自動再生成、LISTの複数キー・式、実DB往復検証は残る。
+仕様: [複合親ADDとLocal索引](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/ALTER-TABLE.html)、
+[UPDATE INDEXES親・子指定](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/update_index_partition.html)。
+
+## 2026-10-17: 通常CREATE TABLEのpartition再生成を修正
+
+OracleCreateTableFactoryからOracleCreatePartitioningFactoryへの呼出しがなく、
+通常CREATE TABLEのSQLからSchemaのpartition情報が欠落していた。addOptionの末尾で
+登録済みの共通detail経路を呼び、列・制約・table/LOBオプションの後へpartition句を追加する。
+完全DDLを使うIOTの再生成経路は引き続きその完全DDLを使用する。
+
+LISTの不正なVALUES INをVALUESへ修正した。子一覧を省略した複合親では空括弧を生成せず、
+Oracle既定のHASH子1個・DEFAULT LIST子・MAXVALUE RANGE子へ委ねる。
+HASH subPartitionSizeをSUBPARTITIONS nとして出力し、明示子一覧はその親で既定個数を上書きする。
+0/負数や非HASH用の子個数、temporary tableのpartitioningは明示的に拒否する。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共通モデル・設定形式・依存関係・
+MetadataReader・DialectResolverの変更はない。既存の基本CREATE経路から継承し、
+10g/12c/26aiでLIST生成を検証する。新しい版専用構文は追加しない。
+OraclePartitionRecreationTestを8件追加し、detail単独ではなく実際のCREATE TABLEから検証する。
+初回テストで呼出し欠落を確認し、接続後の空白差を修正して再実行した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --tests '*OracleCreateTableFactoryTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全401件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DBへの接続・実行は未実施。共通コードを変更しないためcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。Oracle固有の高度な拡張と実DB検証は冒頭の区分を参照。
+仕様: [CREATE TABLEのpartition・既定subpartition](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)。
+
+## 2026-10-17: partition CREATEの入力検証
+
+通常CREATE TABLEへpartition生成を接続した経路で、キー欠落、RANGE/LISTの一覧欠落、
+境界欠落、HASHへの境界指定、未対応の親partition型を明示的なエラーにした。
+構造化生成で出力できない表partition/subpartitionの圧縮も黙って落とさず拒否する。
+既存の索引partition圧縮は専用生成器へ委ね、拒否対象に含めない。
+変更はOracleモジュールと文書のみ。公開API・共通モデル・読取・版解決の変更はない。
+OraclePartitionRecreationTestへ2件追加。初回compileのnull overload曖昧性はString castで修正した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全403件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+初回の全体実行ではHASH索引テストfixtureにRANGE用境界が残る1件が失敗した。
+境界を持たない正しいHASHモデルへ修正し、対象テストと全体を再実行して成功した。
+実DB未実施。共通コードを変更しないためcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。構文ごとのCREATE版境界と高度な属性の網羅監査は未完了。
+
+## 2026-10-17: 複合partitionのCREATE/ALTER版境界
+
+OraclePartitionVersionsでCREATEと複合ALTERの判定を共通化した。
+RANGE-LISTは8/9共通Dialectへ漏らさず保守的に10g以降、LIST-*とRANGE-RANGEは11g以降。
+11gと11gR2は別継承系統なので双方を許可する。HASH-*は12.2の資料で対応を確認できるが、
+現在のOracle12cは12.1も表すため18c以降に限定する。以前の12c一律許可を修正した。
+基本RANGE/HASHと既存RANGE-HASHの旧Dialect動作は維持する。
+メタデータReaderとDialectResolver、公開API、共通モデル、設定形式、依存関係は変更しない。
+変更はsqlapp-core-oracleと文書のみ。実DBの12.2まで対応済みと推測しない。
+
+CREATEの境界テストを3件追加し、複合HASH COALESCEの12c拒否/18c成功も検証する。
+初回テストで11gR2の継承系統の見落としを検出し、修正して再実行した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全406件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共通コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。高度な属性の網羅監査と実DB往復検証は未完了。
+仕様: [11gのpartition方式](https://docs.oracle.com/cd/E24693_01/server.11203/e16541/partition.htm)、
+[12.2の複合HASH方式](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/vldbg/partition-concepts.html)。
+
+## 2026-10-17: RANGE/LIST親partitionの物理属性再生成
+
+OracleTableReaderがspecificsへ保持する物理属性とCREATE出力を照合した。
+RANGE/LIST親partitionのPCT_FREE/PCT_USED/INI_TRANS/MAX_TRANS/LOGGINGと、
+extent・freelist・PCT_INCREASE・BUFFER_POOLのSTORAGE属性を既存OracleSqlBuilderで出力する。
+数値以外の入力、LOGGING/BUFFER_POOLの不正値、不明な非null属性は明示的に拒否する。
+数値の範囲やtablespace管理方式による実効性はOracleでの検証が必要。
+
+HASH親・subpartitionでは物理属性を直接指定できないため、この構造化経路で指定されれば拒否する。
+カタログから取得した継承済み属性も該当し、継承元との等価性を自動判定する機能は未対応。
+表partitionのremarksから不正なCOMMENT=を出す処理も止め、明示的にエラーとする。
+圧縮とINTERVAL等の未対応属性は既存の専用表現または今後の実装を必要とし、無視しない。
+索引partitionの既存圧縮・状態生成には手を加えない。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共通モデル・設定形式・読取・版解決・依存関係に
+変更はなく、追加SELECTもない。テスト3件を追加。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全409件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+初回全体実行では旧ALTERテスト3件がinline COMMENT=指定のため失敗した。
+Oracle用fixtureと期待SQLからその不正指定を除去し、対象テストと全体を再実行して成功した。
+実DB未実施。core/PostgreSQL/H2全体は共通コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。継承済み物理属性の解決を含む網羅監査と実DB往復検証は残る。
+仕様: [physical_attributes_clause](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/physical_attributes_clause.html)、
+[HASH/subpartitionの属性制限](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)。
+
+## 2026-10-17: HASH/subpartitionの継承物理属性を解決
+
+カタログ由来のHASH/subpartition物理属性が、表または親からの継承値と一致する場合に
+再CREATEできるようにした。subpartitionは親の明示値を優先し、なければ表の値を使う。
+HASH親は表の値を使う。数値は先頭ゼロを正規化し、LOGGINGのYES/TRUE・NO/FALSEを同値とする。
+一致した継承値はHASH/subpartitionのDDLへ重複出力しない。表・親の既定値を生成して保持する。
+継承元が不明、値が不一致、不正な属性は明示的に拒否し、データベース既定値を推測しない。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共有モデル・設定形式・Reader・Resolver・
+依存関係の変更と追加SELECTはない。既存CREATE Factoryの内部処理を拡張した。
+OraclePartitionRecreationTestへ3件追加し、HASHの表既定値、親優先、STORAGE継承と不一致を検証する。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OraclePartitionRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+実DB未実施。core/PostgreSQL/H2全体は共有コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。
+
+最終検証: Oracle全412件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+
+### この監査で確認した範囲と保留事項
+
+今回のpartition再生成監査で確認した呼出し欠落・LIST構文・既定子・HASH個数・版境界・
+物理属性保持/継承の不具合は修正した。通常CREATEのテストを通し、detail単体だけで判定しない。
+これをOracle全体の完全互換性や全ALTER構文の実行可能性の認定とは扱わない。
+基本オブジェクトの取得・再CREATEについても実Oracleの往復検証は未実施。
+
+未対応を固定して扱う範囲は、複合HASH親ADD、複合SPLIT/MERGE、高度な圧縮・INTERVAL等の
+構造化編集、複雑なIOT MOVE、opaque DDL内部編集、LIST複数キー・式、
+custom indextype/Text preference等の前提オブジェクト自動再生成。
+これらを新しい必須構文として自動的に追加し続けず、現状は明示的な制限として記録する。
+
+## 2026-10-17: NULL圧縮値とリモートsynonymの再生成
+
+OracleTableReaderのpartition/subpartition共通処理が、COMPRESSION=NULLを圧縮ありと
+扱っていた。NULLから圧縮を推測しないよう修正し、DISABLED/ENABLEDの既存解釈を維持した。
+新しいcatalog列やSQLは追加せず、対象版とクエリ数は変わらない。
+カタログ行のmockからReaderを通し、通常CREATE TABLEまで圧縮句なしで再生成するテストを追加した。
+
+private/public synonym ReaderはDB_LINKを保持していたが、CREATE Factoryが出力していなかった。
+両Factoryで共有する内部target生成器を追加し、`FOR schema.object@dblink`を生成する。
+所有者なしのtargetも許可し、ローカル参照は従来どおり。DB linkのdomainをschemaと誤解して
+分割引用しない。標準ASCIIの識別子/domain形式を検証し、空・空白・引用符・SQL断片等を拒否する。
+この検証範囲外の特殊なlink形式を対応済みとは扱わない。接続・linkの作成・資格情報処理はしない。
+
+変更はsqlapp-core-oracleと文書のみ。公開API・共通モデル・設定形式・依存関係・Resolverに変更なし。
+既存の基本Dialectから継承するので新しい版固有構文はない。
+Readerテスト2件、synonym生成テスト5件を追加。初回はResultSet mockのcontainsとFactoryの
+wildcard型で失敗したが、テスト補助を修正して再実行した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSynonymRecreationTest' --tests '*OracleTablePartitionCompressionTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全419件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。core/PostgreSQL/H2全体は共有コード変更がないため再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅確認・実DB往復は未完了。
+仕様: [CREATE SYNONYMのremote target](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-SYNONYM.html)。
+
+## 2026-10-17: synonymの差分変更とPUBLIC DROP
+
+private/public synonymのALTER Factory登録がなかったため、CREATE Factoryを差分変更にも登録した。
+変更状態から通常のregistry経路で解決し、参照先所有者・オブジェクト名・DB linkだけの変更を
+CREATE OR REPLACE SYNONYMとして生成する。SQL操作種別はALTER、無変更はSQLを返さない。
+既存CREATE経路と同じtarget生成・検証を使う。名前・所有者・他の属性変更は拒否し、
+無条件のDROP/CREATEへ読み替えない。型synonymの依存先等でOracle側がOR REPLACEを
+許可しない場合は実行時に失敗する。依存先や権限を自動変更する機能は追加しない。
+
+DROPの監査で、汎用FactoryがPUBLICSYNONYMという不正なkeywordを生成する問題も確認した。
+OracleDropPublicSynonymFactoryを登録し、DROP PUBLIC SYNONYMを生成する。
+private DROPは既存の正しい汎用Factoryを維持する。
+
+変更はsqlapp-core-oracleと文書のみ。既存公開API・共有モデル・設定形式・Reader・Resolver・
+依存関係に変更なし。専用DROP Factoryクラスを追加した。基本Dialectから旧版にも継承する。
+既存synonymテストに5件を追加し、通常のModified状態解決、ALTER種別、remote→local、
+identity拒否、無変更、private/public DROPを検証した。初回のDROPテストが不正keywordを検出し、
+専用Factory追加後の対象テストは成功した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSynonymRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全424件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅監査と実DB往復は未完了。
+仕様: [Oracle CREATE SYNONYM・OR REPLACEの制約](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-SYNONYM.html)。
+
+## 2026-10-17: sequenceオプションと複数語DROPの監査
+
+PACKAGE BODY/TYPE BODYは既存専用Factoryで正しく生成されていることをregistry経由で確認し、
+旧Dialect/10g/26aiを通す回帰テストを追加した。誤りを確認していないDROP実装は変更しない。
+
+SequenceのSCALE/EXTEND/SESSIONは、旧Dialectでは黙って落ち、不正な真偽値もfalseと扱われていた。
+基本CREATE Factoryで検証し、有効指定は既存の18c以降のFactoryだけに許可する。
+不正な真偽値とSCALEなしEXTENDを明示的に拒否する。未指定と明示falseは旧版互換を維持する。
+既存の18c側句生成・Reader・Resolverを変更せず、追加SELECTはない。
+既存API、共通モデル、設定形式、依存関係に変更なし。Oracleモジュールと文書のみ変更した。
+
+Sequenceテスト3件、複数語DROPテスト1件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleSequenceOptionsTest' --tests '*OracleMultiwordDropTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全428件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+初回全体実行では旧版のSCALEを無視する期待の既存テスト1件が失敗したため、
+明示拒否を期待するよう更新し、対象テストと全体を再実行して成功した。
+旧版の有効指定・不正値がエラーになる点は意図的な動作変更である。
+実DB未実施。共有コードを変更せずcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅監査と実DB往復は未完了。
+
+## 2026-10-17: Local索引なしのheap partition変更経路
+
+単純RANGE/LIST表でLocal索引がない場合、旧ALTER経路が不正なADD構文や
+UPDATE INDEXESなしのDROPを生成していた。同じ検証済みプランナーへ統一し、
+10g以降で一つのADD/DROP、二分割/二partition結合を扱う。
+Global索引のみ・索引なしの場合も行を保持するSPLIT/MERGEを生成する。
+Local索引句がない場合はUPDATE INDEXESのみを出し、空の括弧を追加しない。
+Local索引がある場合のsegment名・表領域指定と既存の検証は維持する。
+
+partitioning null↔nonnullの変換は、旧経路の不正なALTER TABLE PARTITION BY等を出さず
+明示的なOracle移行計画を要求する。Oracleの新しい版で可能な変換も自動実装済みとは扱わない。
+末尾以外の複数追加などもサポート範囲外として拒否する。旧8/9共通Dialectはこの保守経路を拒否する。
+古いテスト4件は不正SQLを期待していたため明示拒否へ変更し、DROP期待にはUPDATE INDEXESを追加した。
+未使用の過去fixtureは削除していない。
+
+変更はsqlapp-core-oracleと文書のみ。既存公開API・共有モデル・設定形式・Reader・Resolver・
+依存関係に変更なし。追加SELECTなし。OracleHeapPartitionMaintenanceTestを4件追加した。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleHeapPartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleAlterTableFactoryTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全432件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コードを変更せずcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。高度な変換・全操作経路の網羅確認と実DB往復は未完了。
+
+## 2026-10-17: 通常ビューの列・制限・コメントと差分変更
+
+通常ビューが汎用Factoryを使い、モデルの列名一覧とCHECK OPTION/READ ONLYを再生成していなかった。
+OracleCreateViewFactoryを追加・登録し、`CREATE VIEW name (columns) AS statement`と
+`WITH CHECK OPTION/READ ONLY [CONSTRAINT name]`を生成する。新しいspecificsは
+`oracle.view.checkConstraint`/`oracle.view.readOnlyConstraint`で、値は制約名、空文字なら無名。
+両制限の併用、本文欠落、完全definitionと別制限の併用を拒否する。完全definitionは単独で保持する。
+表/列コメントはOracleのCOMMENT ON TABLE/COLUMNを別操作で生成する。
+
+既存views.sqlへALL_CONSTRAINTSのV/O制約を集約JOINし、所有者とビュー名で照合する。
+一つの一覧クエリのままでN+1を追加しない。旧Oracleでも使えるDECODEと既存辞書列だけを使う。
+Oracle8の辞書にもV/O制約があり、版固有Readerは追加しない。
+
+通常ビューのALTERを登録し、本文・列名・制限の変更はCREATE OR REPLACE VIEWで生成する。
+操作種別はALTER、無変更はSQLなし。所有者/名前変更、未対応属性、duality view差分を拒否する。
+本文を変えずに列数・型等のメタデータだけを変えるケースも拒否する。
+単純な列名変更は再CREATEで扱う。コメント変更のみならCOMMENT操作だけを生成し、
+削除はIS NULLを明示する。完全definitionが変わらないまま本文・列名だけを変更することは拒否する。
+Oracleの依存先再検証・OR REPLACE制約は実行時に適用される。権限や依存先を自動変更しない。
+
+23ai Factoryの通常ビュー経路はこのFactoryを継承し、duality専用CREATEは既存のまま。
+変更はsqlapp-core-oracleと文書のみ。既存API・共有モデル・依存関係・Resolverの変更はない。
+専用Factoryとspecificsを追加した。ReaderテストとSQLテストを合わせて8件追加し、
+2ビュー1クエリ、XML往復、列名/制約名の引用、コメント、ALTER種別、identity拒否と型変更拒否を検証。
+初回テストではViewの継承戻り型、SQL空白、specifics差分ラベルの扱いを修正して再実行した。
+通常ビューの共通IF NOT EXISTSオプションは従来どおり句を生成しない。
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleViewRecreationTest' --tests '*Oracle26aiDualityViewTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全440件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全オブジェクト/全ALTER経路の網羅確認と実DB往復は未完了。
+仕様: [Oracle8のV/O制約](https://docs.oracle.com/cd/A58617_01/server.804/a58242/ch2.htm)、
+[ALL_VIEWSだけではCHECK OPTIONを判定できない理由](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/Oracle-Compliance-To-Core-SQL2011.html)。
+
+## 2026-10-17: function/procedureの完全定義置換とdirectory入力検証
+
+PostgreSQLはfunction ALTERを登録しているが、Oracleはfunction/procedureの変更経路がなかった。
+OracleAlterRoutineFactoryを両型に登録し、更新した完全definitionをCREATE OR REPLACEで出す。
+操作種別はALTERで、DROPは生成しない。既定引数・AUTHID・本体・名前付きENDをそのまま保持する。
+DDLヘッダーの種別・名前・所有者をモデルと照合し、所有者がモデルにあれば明示的に修飾する。
+引用名と名前中のperiodも単一識別子として扱う。元モデルとtarget definitionは変更しない。
+
+元と対象が揃ったdiffを必須とし、identity変更、更新されないdefinition、モデル本文だけの
+編集、ヘッダー不一致を拒否する。CREATE付き/なしの従来形式を扱うが、EDITIONABLEや
+先行comment等のこのヘッダー検証が解釈しない形式は未対応として拒否する。
+SQL/PLSQL本文の版互換性・signature変更時の依存先再検証はOracleでの実行検証が必要。
+このFactoryが任意のPLSQLを解析・書き換えたり依存先・権限を自動変更することはない。
+
+directoryのパスは既存sqlCharで正しく引用されていた。NULL/空白パスから不正DDLを作らず
+明示的なエラーにした。パス中apostropheとDROPのテストを追加し、実際のfilesystemや
+DB directory objectは変更しない。
+
+変更はsqlapp-core-oracleと文書のみ。既存API・共有モデル・設定形式・Reader・Resolver・
+依存関係は変更せず、専用ALTER Factoryを追加した。旧Dialectにも同じ基本構文を継承する。
+Routine置換4件、directory2件を追加。実行コマンド:
+
+```powershell
+.\gradlew.bat :sqlapp-core-oracle:test --tests '*OracleRoutineReplacementTest' --tests '*OracleRoutineRecreationTest' --tests '*OracleDirectoryRecreationTest' --gradle-user-home .gradle-user-home
+.\gradlew.bat :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終検証: Oracle全446件、関連command 149件、plugin 1件が成功。失敗・エラー・skipは0。
+実DB未実施。共有コード変更がなくcore/PostgreSQL/H2全体は再実行していない。
+生成ファイルの意図的な変更はない。全操作経路の網羅確認と実DB往復は未完了。
+
+## 2026-10-17: モデルから生成するルーチン引数
+
+- 対象はOracleの既存基底Dialectから26aiまでのFUNCTION／PROCEDURE生成。完全DDLを使用する経路は維持する。
+- `OracleSqlBuilder.argument`で引数名、モード、型の順に生成する。従来のOUT重複と型の後への出力、INOUT表記を修正し、IN OUTとして生成する。
+- 引数名を識別子として引用し、IN引数の`defaultValue`をDEFAULT式として保持する。OUT／IN OUTの既定値、名前や型が欠落した引数は明示的にエラーにする。
+- 公開API、Schema XML、メタデータSQLは変更しない。追加SELECT、外部DBへのアクセスはない。
+- `OracleRoutineArgumentsTest`で旧基底／10g／26ai、引用識別子、文字列・数式の既定値、モード、型制約省略、不正入力を検証する。完全DDLの再生成・置換の既存テストも実行する。
+- 構文参照: [Oracle PL/SQL Subprograms](https://docs.oracle.com/en/database/oracle/oracle-database/18/lnpls/plsql-subprograms.html)。実Oracle上のコンパイル・実行は未検証。
+- 検証結果: Oracleモジュール449件、関連Command149件、Gradle Plugin1件が成功（失敗・エラー・スキップ0件）。対象クラスのテスト後、モジュール全体と関連テストを実行した。
+
+## 2026-10-17: Docker実DBでの再生成・権限検証
+
+- 使用環境: ローカルTestcontainersのOracle Free 23（`gvenzl/oracle-free:23-slim-faststart`）。コンテナ再利用を無効にし、既存コンテナ・外部DB・本番データは変更しない。
+- `OracleMetadataReaderTest`に、モデルから生成したFUNCTION／PROCEDUREの読取→Schema XML→DROP／再CREATE→呼出しを追加。引用引数名、DEFAULT式、OUT／IN OUTの値を実際に検証する。
+- IOT（OVERFLOWあり）と名前付きREAD ONLYビューも読取→XML→再CREATEし、ビュー経由のデータ取得、制約名、IOT／OVERFLOWのカタログ状態を確認する。
+- 別所有者のマテリアライズドビューにSELECTだけを付与したケースでは、DBMS_METADATAによるDDL取得が拒否されてもQUERYを保持して継続する。SELECT_CATALOG_ROLE付与後の新規接続では完全DDLを取得できる。ロールを取り消し、テスト用オブジェクトを削除する。
+- 実DBで検出した不具合を修正: トリガーのLONG列TRIGGER_BODYを二度読むとORA-17027になるため、一度の読取結果を再利用する。ALL_VIEWS.TEXTにはWITH READ ONLY／CHECK OPTIONが既に含まれるため、別途モデル化した制限句と重複しないよう読取時に分離する。文字列・引用識別子・コメント・Oracleのq引用を区別する回帰テストを追加する。
+- 既存統合テストのFUNCTION／PROCEDURE／PACKAGEの検証先を、現在の完全DDL表現であるdefinitionに更新する。公開API、XML形式、依存関係、メタデータクエリ数の変更はない。
+- 実行結果: Oracle単体450件成功。Oracle 23の全統合22件を実行し21件成功・READ ONLY再生成1件失敗を確認した後、修正と権限ケース追加後のメタデータ5件はすべて成功。全統合で成功したメタデータ以外の18件と合わせ、Oracle 23で異なる23件の成功を確認した（単一の全件再実行ではない）。
+- Oracle 26aiの固定イメージ`gvenzl/oracle-free:23.26.3-slim-faststart`でも、Dialect解決、ルーチン／IOT／ビュー再生成、マテリアライズドビュー権限切替、代表スキーマ読取、一定クエリ数の5件がすべて成功した。失敗・エラー・スキップは0件。終了後に稼働中のDockerコンテナがないことを確認した。
+- 関連Command149件・Gradle Plugin1件も修正後に実行し、失敗・エラー・スキップ0件で成功した。追跡対象の生成物・依存バージョン・公開設定の変更はない。
+- 再実行手順と固定26aiイメージの指定は`sqlapp-core-dialect-test/README.md`に記載する。旧版Oracleの実DB互換性と、未対応の高度なDDL操作全般の保証は今回の検証には含まない。
+
+主な実行コマンド（Windowsでは`./gradlew`を`.\gradlew.bat`に置き換え）:
+
+```shell
+# 全Oracle統合テスト。初回はREAD ONLY重複生成で1件失敗。
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.oracle.*' --gradle-user-home .gradle-user-home
+# 修正・権限ケース追加後。単体450件とメタデータ5件が成功。
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest' --gradle-user-home .gradle-user-home
+# 26aiのメタデータ5件が成功。
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests 'com.sqlapp.data.db.dialect.test.oracle.OracleMetadataReaderTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+# 関連Command149件・Gradle Plugin1件が成功。
+./gradlew :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-17: RANGEパーティション保守の実DB実行
+
+- `sqlapp-core-dialect-test`に`OraclePartitionMaintenanceTest`を追加した。既存のSQL文字列検証に加え、ヒープ表とIOTそれぞれで、実カタログから取得したTableモデルの差分を標準ALTER Factoryに渡してSPLIT／MERGEを実行する。
+- SPLIT後に再取得したモデルからMERGE差分を作る。各操作後、元の3行のキー・値が保持されること、ローカル索引パーティションの名前・順序とUSABLE状態を確認する。IOTでは生成されたPL/SQLの名前解決・二段階RENAME・REBUILDも実行する。
+- Oracle Free 23の2件は成功した。初回は追加テスト自身の不要な自動コミット中のcommit呼出しで2件失敗し、呼出しを除去して再実行した結果、2件とも失敗・エラー・スキップ0件で成功した。本体の実装修正は必要なかった。
+- 同じSPLIT／MERGEの2件は固定26aiイメージでも成功した。追加で、通常表／IOTのADD／DROPを検証する2ケースを用意し、P3への追加行220がDROP後に消え、元の3行が保持されることとローカル索引状態・グローバル索引のVALID／N/A状態を確認する。Oracle 23ではこの追加2件も成功した（SPLIT／MERGEと分けて実行し、計4種類のケースが成功）。
+- 26aiのADD／DROPの追加2件も成功。最終結果はOracle 23／26aiそれぞれ異なる4ケース、計8件が成功（各版でSPLIT／MERGEとADD／DROPの2件ずつに分けて実行）。失敗・エラー・スキップ0件で、各Gradle呼出しはBUILD SUCCESSFUL。実装コードに変更がないため、前回成功した単体・Command・Pluginテストは今回再実行していない。テスト終了後、稼働中のDockerコンテナがないことも確認した。
+- 初回のパーティション付きIOT読取には時間がかかり、テスト接続の状態を確認した時点ではOracle内部の`SYS.KU$_PIOTABLE_VIEW`に対するDBMS_METADATAのXML取得SQLが実行中だった。ロック待ちによる停止ではなく、最終的にテストは終了した。根拠なしにDDL取得を省略したりセッション設定を変更したりしていない。
+- 変更はDockerテストと文書のみ。公開API・Schema表現・DDL生成・依存バージョンは変更しない。通常のtest/check/buildはDockerテストを起動しない。テスト用コンテナの再利用は無効で、既存コンテナ・外部DB・本番データは対象外。
+- 今回の範囲は単一キーRANGE、通常索引、基本的なヒープ表／IOTのADD／DROP／SPLIT／MERGEである。MOVE、複合パーティション、圧縮、異常終了後のDDL再開、旧版Oracleの実DB互換性を網羅したものではない。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+# ADD／DROPの2ケースを追加後、個別に実行。
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest.*AddAndDrop*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OraclePartitionMaintenanceTest.*AddAndDrop*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-17: 通常表MOVE実装とIOTパーティション表領域読取
+
+- 通常表の非パーティション表領域変更は従来の共通ALTER経路では反映されなかった。OracleAlterTableFactoryで、単一の表領域変更を`MOVE TABLESPACE ... UPDATE INDEXES`に変換する。12c Dialectは12.1／12.2を区別できないため、安全に構文を使える18c以降を対象とし、それより前、複数変更、空の移動先、一時表、特殊索引、ONLINE指定は明示的に拒否する。
+- 単純RANGE／LIST通常表の単一パーティションMOVEにも対応する。既存プランナーのIOT MOVEと検証を共用し、索引変更を伴わない表領域変更だけを扱う。通常表ではUPDATE INDEXESを付け、IOTでは従来どおりネイティブMOVEと論理ROWIDによる索引維持を使う。通常表は10g以降、IOTパーティションは従来どおり12c以降に限定する。HASH／複合パーティションMOVEはこの変更の対象外。
+- 実DBテストで、IOTのALL_TAB_PARTITIONS.TABLESPACE_NAMEがNULLになることを確認した。既存の一括tablePartitions.sqlにIOT - TOP索引とALL_IND_PARTITIONSをLEFT JOINし、パーティション位置に対応する実体の表領域を取得する。通常のTABLESPACE_NAMEがNULLのIOTだけを補完する。追加SELECTはなく、既存カタログ列だけを使う。Schema XML形式・公開API・依存関係は変更しないが、IOTパーティションの表領域値は従来より完全になる。
+- OracleHeapMoveTestで引用、18c／12c境界、10g／旧基底境界、複数変更、特殊索引の拒否を検証し、OracleTablePartitionCompressionTestにIOT表領域補完／通常表と既存値の維持を追加した。
+- OracleTableMoveTestは専用128MB表領域とテストユーザーの割当て枠を使い、通常表・IOTのルート／RANGEパーティションMOVEを検証する。実カタログからのモデル差分を使い、移動先と非対象パーティション、索引名・表領域・VALID／USABLE、索引経由の3行のデータ、IOTのCOMPRESS 1を確認する。表領域とデータファイルはコンテナ内で作成・削除し、外部DB・既存コンテナは対象にしない。
+- 初回のOracle 23では通常表ルート・圧縮IOTルートが成功し、通常表パーティションは試験用10MB表領域の容量不足、IOTパーティションは表領域メタデータ欠落で失敗した。容量と割当て枠を128MBへ修正し、読取も補完した。容量修正後の通常表2件は成功し、索引配置の維持も確認した。
+- 修正後のOracle単体454件は失敗・エラー・スキップ0件で成功した。IOT表領域メタデータの改善による影響を確認するため、Oracle 23で既存のADD／DROP／SPLIT／MERGEの4ケースも再実行し、すべて成功した。
+- 修正後のOracle 23ではMOVEの4ケースも成功し、同じGradle呼出しで単体454件・Docker8件がすべて成功した。通常表全体、通常表パーティション、圧縮IOT全体、IOTパーティションの移動先を確認できた。
+- 固定26aiイメージ`gvenzl/oracle-free:23.26.3-slim-faststart`でもMOVE全4件が成功した。索引経由のデータ取得、索引状態・配置、IOT圧縮、移動先表領域を両版で確認した。
+- 関連Command149件・Gradle Plugin1件も成功した。Oracle 23の既存`partitionMetadataUsesConstantQueryCounts`を追加実行し、単一表／複数表で関連SELECTが8回のまま一定であることを確認した。最終的に単体454件、関連150件、Oracle 23のDocker9件（8件とクエリ数1件は別実行）、26aiのDocker4件が成功。失敗・エラー・スキップ0件。テスト用表領域・データファイル・コンテナは後片付け済みで、追跡対象の生成物や依存バージョンの変更はない。共有実装を変更していないためcore／PostgreSQL等の全体テストは再実行していない。
+- 仕様参照: [Oracle 12.2 ALTER TABLEのMOVEとUPDATE INDEXES](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-TABLE.html)、[Oracle 10gのMOVE PARTITIONと索引維持](https://docs.oracle.com/cd/B19306_01/server.102/b14231/partiti.htm)。旧版Oracleの実DB、HASH／複合MOVE、ONLINE、LOB／ネスト表の個別再配置、DDL途中失敗後の再開は今回の実DB検証範囲外。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleHeapMoveTest' --tests '*OracleTablePartitionCompressionTest' --tests '*OracleTablePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleTableMoveTest' --tests '*oracle.OraclePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleTableMoveTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleMetadataReaderTest.partitionMetadataUsesConstantQueryCounts' --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-17: 複合パーティションの実DB検証と未指定属性の読取
+
+- `OracleCompositePartitionTest`を追加し、実カタログから取得したモデルの差分でRANGE-HASH親ADD／DROP、RANGE-LIST子ADD／DROP、HASH子COALESCEを実行する。親子の名前、ローカル索引セグメント名とUSABLE状態、グローバル索引の有効状態、索引経由の行データを確認する。DROPでは追加した行だけが消え、COALESCEでは削除対象バケットに行があることを確認したうえで全33行を保持する。
+- 初回のOracle 23では親ADD／DROPとCOALESCEは成功したが、LIST子ADDが圧縮ありと誤判定されて失敗した。`ALL_TAB_PARTITIONS.COMPRESSION=NONE`を有効と扱っていたため、`ENABLED`のみを圧縮ありとして読み取るよう修正した。
+- XML経由のCREATE生成も試し、複合親の`LOGGING=NONE`が不正値として拒否されることを確認した。読取時にこの未指定値を省略し、YES／NOは保持する。これは[OracleのALL_TAB_PARTITIONS仕様](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_TAB_PARTITIONS.html)の未指定属性の意味に合わせた修正である。
+- 修正後も、実カタログ由来の子`INITIAL_EXTENT`を現在のCREATE生成が保持できず拒否することを確認した。このケースの再作成は未対応として残す。統合テストではXMLに保持したモデルから生成すると明示的に失敗し、既存表とデータが維持されることを検証する。属性を捨てた再作成成功とは扱わない。
+- 変更モジュールは`sqlapp-core-oracle`と`sqlapp-core-dialect-test`。既存基底Readerを継承するOracle各版に適用する。公開API・Schema XML形式・DialectResolver・メタデータSQL・依存関係に変更はなく、追加SELECTやN+1はない。NONEだった読取値の表現のみ改善する。NULL／DISABLED／ENABLED、大小文字、LOGGINGのNONE／YES／NOの単体回帰テストを追加した。
+- 単体テストは対象クラスから実行し、続けてOracle全456件が失敗・エラー・スキップ0件で成功した。旧版Oracleの実DB、複合SPLIT／MERGE／MOVE、HASH親ADD、DDL途中失敗後の再開は今回の検証範囲外である。
+- 最終テストはOracle Free 23と固定26aiイメージで各3件、計6件がすべて成功した。関連Command149件・Gradle Plugin1件も成功し、失敗・エラー・スキップ0件。実行手順は下記とdialect-test READMEに記載した。専用コンテナだけを使用し、終了後に稼働中コンテナがないことを確認した。外部DB・本番データへのアクセス、生成物・依存バージョンの意図的な変更はない。共有コードを変更していないためcore／PostgreSQL全体は再実行していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleTablePartitionCompressionTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 複合表の完全DDLによる再作成
+
+- 前回残った、実カタログ由来の子`INITIAL_EXTENT`を含む複合表の再作成に対応した。[Oracle CREATE TABLEの制限](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-TABLE.html)では、子パーティションに任意の物理／STORAGE句を指定できない。カタログ値を捨てたり、不正な子STORAGE句を生成したりせず、IOTで使用している完全CREATE TABLE DDLの保存・再生経路を複合表にも適用する。
+- Oracle10g以降の`OracleTableReader`で、IOTと子パーティションを持つ表を同じ一括GET_DDL問い合わせの対象にする。既存SQLに`ALL_PART_TABLES`のEXISTS条件を追加し、旧版から存在する列だけを使う。旧基底Dialectでは問い合わせを追加しない。Resolverとバージョン継承は変更しない。
+- 完全DDLは既存のUTF-8 Base64とモデル指紋の表現を再利用し、XMLに保存する。CREATE TABLEに含まれる制約と別途生成するセカンダリ索引を分ける。構造や所有者を変更したモデルから古いCREATEを再生することは拒否する。対応済みの複合親／子ADD・DROP・HASH子COALESCEは既存の専用ALTER経路で実行でき、実行後にメタデータを再取得して最新DDLを保存する。
+- DBMS_METADATAの権限不足／対象へのアクセス拒否では警告を出してカタログ読取を継続し、取得途中のDDLを適用しない。他のSQL失敗は引き続き伝播する。権限不足時に完全DDLがない表は、構造化CREATEで表現できる範囲に限られる。子ストレージ属性が再現できない場合の拒否は維持する。
+- `OracleIotDefinitionTest`に複合表の一括取得、XML再生成、所有者変更の拒否、権限不足時の部分結果破棄、他のエラー伝播を追加し、旧版の非取得テストも複合表で確認する。対象クラスと保守プランナーのテスト後、Oracle全459件が失敗・エラー・スキップ0件で成功した。
+- Dockerの3保守ケースを、各操作後のメタデータ→XML→DROP／再CREATE→データ再投入まで拡張した。行、パーティション名、ローカル索引の親子名とUSABLE状態、グローバル索引の有効性に加え、各子のspecificsと表領域が再取得結果と一致することを確認する。Oracle 23の初回3件はすべて成功した。
+- `OracleMetadataAuditAssertions`は一表／複数表でGET_DDLを含むSELECTが各1回であることも確認する。関連クエリは従来のカタログ8回に完全DDL一括取得1回を加えた9回となり、表数に比例するSELECTは追加しない。
+- Oracle 23の最終実行では、複合表4件（3保守・再作成と権限切替）、クエリ数1件、既存IOT／READ ONLYビュー再作成1件の計6件が成功した。権限不足時の警告継続、カタログロール付与後の取得、一表／複数表の一定クエリ数、既存IOTの再生成も実DBで確認できた。
+- 固定26aiイメージでも同じ6件がすべて成功した。Oracle 23／26aiの最終実行は計12件、失敗・エラー・スキップ0件である。
+- 関連Command149件・Gradle Plugin1件も成功した。最終結果はOracle単体459件、関連150件、Docker12件が成功。テスト終了後、稼働中のDockerコンテナがないことを確認した。専用コンテナの表・ロールを後片付けし、外部DB・本番データへはアクセスしていない。生成物・依存バージョンの意図的な変更はなく、共有実装を変更していないためcore／PostgreSQL等の全体テストは再実行していない。
+- 変更は`sqlapp-core-oracle`、`sqlapp-core-dialect-test`と文書。公開API・設定形式・共有モデル・依存バージョンの変更はない。完全DDLを持つ複合表の一般的な構造変更や所有者変更には最新DDLまたは明示的な移行計画が必要であり、任意のDDL解析・書換えはしない。旧版Oracleの実DB、複合SPLIT／MERGE／MOVE、HASH親ADD、DDL途中失敗後の再開は今回の対象外である。
+
+実行コマンド（Windowsでは`./gradlew`を`.\gradlew.bat`に置き換え）:
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleIotDefinitionTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' --tests '*oracle.OracleMetadataReaderTest.partitionMetadataUsesConstantQueryCounts' --tests '*oracle.OracleMetadataReaderTest.recreatesIotAndReadOnlyViewThroughMetadataXml' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' --tests '*oracle.OracleMetadataReaderTest.partitionMetadataUsesConstantQueryCounts' --tests '*oracle.OracleMetadataReaderTest.recreatesIotAndReadOnlyViewThroughMetadataXml' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 複合パーティション保守とHASH MOVEの一括実装
+
+- Oracleの既存ALTER Table Factoryから、複合表のRANGE／LIST子SPLIT・MERGE、RANGE／LIST／HASH子MOVE、単純HASHパーティションMOVE、RANGE-HASH親SPLIT・MERGEを扱う。変更はOracleモジュールとDockerテスト、文書に限定し、公開API・Schema XML・設定形式・依存関係・DialectResolverは変更しない。
+- 子の分割・結合では、対象親のSchema子モデルを単純パーティションとして投影し、既存`OracleLocalPartitionSplit`の境界保存・LIST集合・索引対応・不変属性の検証を共用する。SQLのPARTITION／SUBPARTITION切替を生成時に行い、識別子や文字列をSQL生成後の置換で書き換えない。他の親や索引の同時変更、名前衝突、ローカル索引の境界不一致、圧縮、特殊索引、ONLINE指定は拒否する。
+- SPLITは二分割、MERGEは隣接する二つを一つへ結合する差分を扱う。従来どおり、既存パーティションがそのまま一つ消える差分は行を削除するDROPとして扱う。結合には`PLOW(150), PHIGH(200) → P2(200)`のように結合先の識別子も明示し、単純削除と区別する。意図しないDROPを防ぐには既存のAllowDropPartitionオプションを無効にできる。
+- MOVEは単一の表領域変更に限定し、UPDATE INDEXESで索引を維持する。子MOVEでは影響するローカル索引子が明示的にUSABLEであることを要求する。単純HASH MOVEは既存のRANGE／LIST MOVE検証を共用し、カタログ由来の物理属性を保持したモデルでも動作する。
+- 親SPLIT／MERGEは、非圧縮のRANGE-HASHでHASH子の数・配置属性を維持する場合を扱う。既存の単純親プランナーで境界と索引属性を検証してネイティブDDLを生成し、続くPL/SQLでOracleが付けた子名を一括解決する。Oracleの既定値で変わる子数を一括確認し、行を保持するHASH ADD／COALESCEで要求数に揃える。続いて表／索引の子を同じ一括SELECTで取得し、子数・名前衝突を検査してから、一時名を経由した二段階RENAMEを行う。必要な表領域とUSABLE状態も復元する。カタログ取得は親数と子名の計2回で、子ごとに追加SELECTを発行しない。
+- 親保守はネイティブDDLと名前復元の2操作を返す。Oracle DDLはコミットを伴い、名前や子数の不一致・後続DDL失敗が起きた場合の自動ロールバック／再開は保証しない。実行前にモデルを検証し、実行中の不整合はRAISE_APPLICATION_ERRORで明示的に失敗させる。実行後はメタデータを読み直して最新の完全CREATE DDLを保持する。
+- 対象版: 単純HASH MOVEとRANGE-LIST子操作、RANGE-HASH親保守は10g以降。RANGE-RANGE／LIST-*は11g／11gR2以降。HASH-*は12.2追加だが共有12c Dialectが12.1も表すため18c以降に限定する。旧基底Dialect、IOT、圧縮された対象、HASH子のSPLIT／MERGEは拒否する。旧版Oracleの実DBは未検証。
+- `OracleCompositeAlterTest`は専用128MB表領域を使い、8ケースで実カタログ由来のモデル差分を実行する。SPLIT／MERGE前後の全行、MOVE対象が空でないこと、移動先と非対象の表領域、表とローカル索引の親子名、子の物理specificsと圧縮状態、ルート索引の配置、グローバル索引の有効性とローカル索引のUSABLE状態を確認する。親MERGEは既定値1から2子へ戻すADDと、既定値4から2子へ戻すCOALESCEの両方を用意する。
+- 初回の子／MOVEの6件は5件成功し、LISTケースは読取値`20, 30`と期待値`20,30`の空白比較で失敗した。数値リストの検証を修正した再実行では6件とも成功した。親ケースは、索引の圧縮なしが`compressionType=DISABLED`として読み取られることを検証条件が扱えず実行前に拒否した。DISABLEDを非圧縮として認め、同じ表現の単体回帰テストを追加した。
+- 親SPLITの初回実行では子名と行の復元を確認したが、未指定の索引親表領域が継承先USERSとして読まれる差で検証が失敗した。試験モデルに移動先を明示した後、MERGEが表の既定値に従って子数を変えるケースで子集合の不一致を検出した。HASH ADD／COALESCEによる子数調整を追加して再実行し、親SPLIT／MERGEの1ケースが成功した。観測統計をDDL属性から分離する単体テストを追加し、元のSchemaモデルを変更しないことも確認した。実DBでも分割後にDBMS_STATSで親子・索引の統計を収集してから再読取・結合する。
+- 物理specificsの全Map比較では、未割当ての子に領域が確保されてINITIAL_EXTENT／NEXT_EXTENTが初めて具体化するケースを検出した。検証では、既知の属性はすべて一致を要求し、以前未指定だったextent割当て属性だけが追加されることを許容する。新規の不明属性や、既知の圧縮・物理属性・索引状態の変化は許容しない。
+- 最終のOracle単体472件は失敗・エラー・スキップ0件で成功した。Oracle 23では既存4件が成功した実行に続き、新規8件を修正後にすべて再実行して成功し、異なる12ケースの成功を確認した（単一の12件実行ではない）。親MERGE直後のカタログで子数1と4を実際に読み取り、要求数2へのADD／COALESCE後に全34行・既知の物理属性・名前・表領域・索引状態が一致することを両ケースで確認した。
+- 固定26aiイメージでは新規8件・既存4件を同じ呼出しで実行し、12件すべてが成功した。Oracle 23／26aiを合わせて異なる24ケースが成功した。最終点検でローカル索引親の境界が表と異なる入力も生成前に拒否する検証を追加し、対象クラス、Oracle全472件、関連Command149件・Gradle Plugin1件を再実行して成功した。この追加は入力検証のみで生成SQLを変更しない。最終の失敗・エラー・スキップは0件である。
+- 検証は所有する使い捨てDockerコンテナのみを使用した。表領域・データファイル・コンテナを後片付けし、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセス、生成物・依存バージョンの意図的な変更はない。共有実装を変更していないためcore／PostgreSQL全体は再実行していない。物理既定値を継承する基本構成を実DB検証範囲とし、任意の個別物理属性上書きや高度なテンプレートの再構成は別途検証を要する。
+- 構文参照: [Oracle ALTER TABLE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)、[パーティション保守](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)。他の複合親ファミリーのSPLIT／MERGE、複合親の表領域既定値変更と全子の一括移動、圧縮・ONLINE・LOB固有配置・途中失敗からの自動回復は今回の対応範囲外である。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --tests '*OracleListPartitionSplitTest' --tests '*OracleHashPartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest.parentRangeHashSplitAndMergePreserveChildNamesAndIndexes' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' --tests '*oracle.OracleCompositePartitionTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' --tests '*oracle.OracleCompositePartitionTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: LIST-HASH親のSPLIT／MERGE
+
+- RANGE-HASH親の既存プランナーをLIST-HASHにも適用した。親の値集合とDEFAULTの検証・SQL生成は共通のLIST保守処理を使い、HASH子の数・属性・名前とLocal索引状態の復元は既存の一括カタログ処理を使う。[Oracleの保守仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)に従う。
+- LIST-*の既存バージョン境界によりOracle11g以降を対象とし、10gでは拒否する。Resolver、公開API、設定形式、共有Schemaモデル、依存バージョンは変更しない。変更モジュールはOracleとdialect-test。
+- 単体テストでは通常値とDEFAULTの分割・結合、Local索引なし、不正な値集合、10g／11g境界を追加した。Dockerケースは実メタデータからの分割・統計収集・再読取・結合を行い、34行のデータ、親子名、表領域、物理属性、Global／Local索引状態を検証する。表の既定子数が要求数より少ない場合と多い場合を分ける。
+- 制限は既存RANGE-HASH経路と同じく、非圧縮・通常索引・固定HASH子数と属性を維持する独立変更。子がRANGE／LISTの複合親、親MOVE、ONLINE、高度な個別物理属性、途中失敗後の自動再開は未対応。DDLは複数回コミットされる。旧版Oracleの実DB検証は行っていない。
+- Oracle単体474件と、Oracle23の追加2件・固定26aiの保守クラス全10件が成功し、失敗・エラー・スキップ0件。26aiでは既存RANGE-HASH親、子SPLIT／MERGE、各MOVEも再検証した。DEFAULTは単体テストでの検証であり、追加Dockerケースは通常の数値LISTを使用する。共有core／PostgreSQL全体は変更がないため再実行していない。
+- 関連Command149件・Gradle Plugin1件も成功。テスト専用表・表領域・データファイルを削除し、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセス、生成物・依存バージョンの意図的な変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.parentListHash*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 同じ複合親の複数子MOVE
+
+- Oracleは複合親に対する直接の`MOVE PARTITION`を禁止しており、[ORA-14257の対処](https://docs.oracle.com/en/error-help/db/ora-14257/)は子を個別に移動することとなる。既存のSchema差分による子MOVEを拡張し、同じ親の複数の子に対する表領域変更から、子の順序で`MOVE SUBPARTITION ... TABLESPACE ... UPDATE INDEXES`を生成する。子ごとに異なる移動先も指定できる。
+- すべての変更・索引状態を検証してからSQL一覧を返す。親属性・境界・子数・名前・索引配置は変更しない。移動対象Local子は明示的USABLEを必須とし、通常索引、非圧縮、ONLINEなしという既存制限を維持する。親のTABLESPACEは既定属性なので、この操作では自動変更しない。親に属する全子を移動する場合も、Schemaモデルの対象子それぞれのTABLESPACEを設定する。
+- 新しい問い合わせは追加しない。公開API、設定、依存関係、Resolverと旧版の継承は変更しない。対象は既存の子MOVEと同じOracle10g以降で、LIST-*／RANGE-RANGEは11g以降、HASH-*は共有12c Dialectが12.1も表すため18c以降とする。変更はOracle、dialect-test、文書に限定する。
+- 単体テストは9種類の複合方式、別々の移動先、原本不変、最後の子の不正属性／索引状態、親既定属性の混在、Local索引なし、追加／削除禁止オプション、旧版と空の移動先を検証する。Dockerは子RANGE／LIST／HASHの各2個について、データ入りセグメントを専用表領域へ移動し、再読取モデルから元へ戻す。各段階で行、親子属性、表領域、Global／Local索引の配置と有効状態を検証する。
+- 複数の子MOVEはそれぞれコミットされるため、全体のロールバックや途中失敗後の自動再開は保証しない。複数の親の同時変更、親の既定属性変更、圧縮・ONLINE・個別LOB配置、子RANGE／LISTを持つ複合親SPLIT／MERGEは今回の対象外。
+- 対象単体40件とOracle全477件が成功。追加した空移動先テストの初回実行では、元の表領域も未指定だったため空文字の正規化後に変更自体がなくなるというテスト前提の誤りが1件あった。元の表領域をUSERSとして再実行し成功した。Oracle23の追加Docker3件もすべて成功した。
+- 固定26aiでは複数子の往復MOVE3件と既存単一子MOVE3件の計6件が成功した。最終実行の失敗・エラー・スキップは0件。テスト専用表・表領域・データファイルを削除し、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセスや生成物の意図的変更はない。共有core／PostgreSQL全体、旧版Oracle実DB、他の複合保守Dockerケース全体は今回再実行していない。
+- 関連Command149件・Gradle Plugin1件も成功した。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.grouped*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.grouped*' --tests '*OracleCompositeAlterTest.*ChildMove*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 複合親の境界復元、圧縮とONLINE保守
+
+- RANGE-RANGE／RANGE-LIST／LIST-RANGE／LIST-LIST親のSPLIT／MERGEを追加した。既存の親境界・Local索引検証を再利用し、ネイティブ親DDLの後に対象親の子を行を削除せず結合・再分割して境界を復元し、既存の名前・表領域・Local索引状態の復元へつなぐ。[Oracle仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)上、親MERGEに子の境界を直接指定することはできない。
+- この境界復元は単一の子キー、同じ子数・境界・物理属性を維持する変更、末尾MAXVALUE／DEFAULTを対象とする。子ごとの表領域と名前は復元できる。子数や境界変更、個別の異なる物理属性、有限の末尾境界、複数子キーは事前に拒否する。Oracleがテンプレートから有限末尾を生成した場合も、復元前に実カタログを調べ明示的に停止する。親DDLは既にコミットされている可能性があり、自動ロールバックは保証しない。
+- 子の取得と実末尾境界の確認は2回の集合問い合わせを使う。既存の数・名前復元2回と合わせ、対象数によらず計4回であり、子ごとのSELECTは追加しない。HIGH_VALUEはLONGのため、末尾の集合を1つのカーソルで取得してPL/SQL側で比較し、SQLのLONG比較制限を避ける。HASHの既存経路は2回のままとする。
+- 子MOVEでBASIC／OLTP圧縮の指定・維持・解除を追加した。列指向圧縮や不明なモード、矛盾したcompressionTypeとCOMPRESS_FORは拒否する。10gの子MOVEはTABLESPACEだけを許すため、明示的な子圧縮句はこの実装では11gR2以降に限定する。複数の親にまたがる子MOVEも、既存の単一親検証を合成し、すべて検証してからSQL一覧を返す。子RANGE／LISTのSPLIT／MERGEも明示圧縮を保持するが、圧縮された表・親の既定属性や圧縮Local索引を伴う組合せは引き続き対象外。
+- 圧縮MOVEの初回Docker検証3件で、BASIC指定がPCTFREEを10から0へ変えることを検出した。個別MODIFY SUBPARTITION PCTFREEによる補正もORA-14169となり、[実際の構文](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Subclauses.html)では許可されない。専用の一時表でも、BASICが0に設定し、続くOLTP／NOCOMPRESSは0を維持することを確認した。比較テストは緩めず、対象モデルのPCT_FREEがBASICの0、OLTP／圧縮解除の元の子の値と矛盾する場合はSQL生成前に必要値を示して拒否する。呼出側が意図したPCT_FREEも明示して圧縮変更を指定する。未指定の場合はOracleの設定を使用する。圧縮解除してもPCTFREEが圧縮前の10へ戻るとは限らない。単体テストで空の移動先の拒否が1件失敗した点も修正し、事前検証を維持する。
+- Oracle専用`OracleAlterTableFactory#setOnlinePartitionMaintenance(boolean)`を追加した。既定falseの追加APIであり、共有coreやTableOptions、XML形式は変えない。Oracle18c以降のheapのネイティブMOVE／SPLIT／MERGEにONLINEを付ける。SYS、オブジェクト型／LONG、特殊索引・bitmap、DROP／ADD／COALESCEや境界・子名復元PL/SQLを含む親の複数段階計画は拒否する。既存onlineIndexは索引専用のまま維持する。ONLINE指定は無停止・無ロックや計画全体の原子性を意味しない。
+- 変更はOracle、dialect-testと文書。Resolver・旧版継承・依存バージョンは変更しない。旧版実DB、列指向圧縮、高度な個別物理属性・LOB配置、圧縮された親の保守、複数段階全体のONLINE保証、自動再開は未検証または未対応である。
+- ONLINEの実DBテストはDDL実行後のデータ・属性・索引状態を検証する。並行DML負荷やロック待ち時間の検証は行っていない。OLTP圧縮句はOracle23のカタログではADVANCEDと返るため、Dockerの期待モデルはこの実表現を使用する。
+- 最終単体は対象47件、Oracle全484件、関連Command149件・Gradle Plugin1件が成功した。固定26aiは保守クラス全22件が1回の実行で成功し、失敗・エラー・スキップ0件。Oracle23は複合親4方式と圧縮子SPLIT／MERGE2件の成功に、修正後の圧縮MOVE3件の成功を合わせて追加9ケースを確認した。23の9件は複数実行の成功を合計したものであり、試行中のPCTFREE・不正MODIFY・OLTP表現の失敗は上記のとおり修正した。最後の23圧縮MOVE3件も失敗・エラー・スキップ0件。合計31の異なるDB・ケース組合せの成功を確認した。
+- 専用の表・表領域・データファイルと調査用一時表を削除し、稼働中コンテナがないことを確認した。外部DB・本番データへのアクセスはなく、生成物・依存バージョンの意図的変更もない。共有core／PostgreSQL全体や他のOracle Dockerクラスは今回再実行していない。
+
+```java
+var factory = (OracleAlterTableFactory) dialect.createSqlFactoryRegistry().getSqlFactory(after, SqlType.ALTER);
+factory.setOnlinePartitionMaintenance(true);
+var operations = factory.createDiffSql(before.diff(after));
+```
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.*RestoresRoutingAndIndexes' --tests '*OracleCompositeAlterTest.compressedOnline*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.compressedOnline*ChildrenMoveAndReturn' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-18: 圧縮親と有限境界を持つ子のSPLIT
+
+- RANGE／LIST親のSPLITでは、子RANGE／LISTの境界をOracleが既存パーティションから継承するため、再結合・再分割を省く。分割後に名前・順序で子を一括取得し、HIGH_VALUEと件数が要求モデルに一致することを確認してから、既存の名前・表領域・索引状態を復元する。子ごとのSELECTは追加せず、非HASHのSPLITは集合問い合わせ3回、MERGEは従来の4回となる。[Oracleの継承仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)に従う。
+- これにより、単一キーの有限RANGE末尾やDEFAULTなしのLIST子も親SPLITで保持できる。境界を変える同時変更、重複LIST値、異なる個別物理属性、4000 UTF-8バイトを超える比較境界はSQL生成前に拒否する。比較は文字列リテラルの大文字小文字を保持し、引用符をエスケープする。有限末尾の親MERGEは、OracleがMAXVALUE／DEFAULTを生成する場合に余剰の子を安全に削除できないため、引き続き明示的に拒否する。
+- 圧縮されたRANGE／LIST親のSPLIT／MERGEでは、BASIC／ADVANCED（OLTP句）を親から子が継承する組合せを許可した。子数・境界・属性は維持し、親の圧縮句を明示する。圧縮された表全体、親と異なる個別子圧縮、圧縮Local索引は対象外。明示圧縮句は既存の11gR2以降の境界を使い、非圧縮の方式別境界やResolverは変更しない。
+- 変更はOracle、dialect-testと文書で、公開API、設定形式、共有モデル、依存バージョンの追加変更はない。ネイティブ親DDLと後続の確認・復元はそれぞれコミットされるため、途中のメタデータ不一致や失敗に対する自動ロールバック・再開、計画全体のONLINE保証は引き続き行わない。
+- 単体では有限境界のSPLIT／MERGEの区別、圧縮継承、Local圧縮の拒否、引用符と長い境界を追加した。従来の有限LIST子を持つ親SPLITの拒否テスト1件は、新たな対応範囲に合わせて更新した。Dockerケースは有限境界4方式と、RANGE／LIST親×子3方式×圧縮2モードの12方式を追加し、実メタデータからのSQL生成、行、親子の圧縮・PCTFREE・表領域、Global／Local索引状態を比較する。
+- 検証結果は対象単体50件、Oracle全487件、Command149件、Gradle Plugin1件が成功。Oracle23の追加16件、固定26aiの既存22件を含む全38件も成功し、DB・ケースの組合せは計54件、最終XMLの失敗・エラー・スキップはすべて0件。23の最初の一括実行はDocker停止による初期化エラーでテスト本体が未実行だったが、既存設定のRancher Desktopを起動し、16件すべてを再実行して成功した。検証用表領域・データファイルと所有コンテナは終了時に削除し、外部・本番DBには接続していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.finiteParentRangeListSplit*' --tests '*OracleCompositeAlterTest.compressedParentRangeHashBasic' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.finiteParent*' --tests '*OracleCompositeAlterTest.compressedParent*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 表レベル圧縮既定値を持つ複合親の保守
+
+- RANGE／LIST親のSPLIT／MERGEで、表レベルに圧縮既定値がある場合の一律拒否を除いた。既存の親圧縮句と子の属性継承・境界復元を使い、表の設定を変更せずに保守する。Oracleの[パーティション圧縮](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/partition-table-compression.html)と[保守時の継承](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/maintenance-partition-tables-indexes.html)に従う。
+- 対象はBASIC／ADVANCED（OLTP）で、親と子が同じ圧縮設定を持ち、Local索引が非圧縮の組合せ。表既定値の同時変更、親子で異なる圧縮、圧縮Local索引、有限末尾の親MERGEは引き続き拒否する。明示圧縮句の11gR2以降という判定とResolverは変更しない。過去バージョンの実DB検証は今回の対象外。実DB検証は所有する使い捨てDockerだけで行い、表領域・データファイルとコンテナを終了時に削除した。外部・本番DBには接続していない。
+- 読込側では、分割表の圧縮既定値がALL_TABLESだけでは取得できない点を修正した。11gR2以降の専用SQLでALL_PART_TABLESのDEF_COMPRESSION／DEF_COMPRESS_FORを一括結合し、Tableのcompression／compressionTypeへ取り込む。非分割表はALL_TABLES.COMPRESS_FORを使い、IOTは従来の索引圧縮表現を保持する。[11gR2のカタログ仕様](https://docs.oracle.com/cd/E18283_01/server.112/e17110/statviews_2006.htm)を参照し、旧ReaderのSQLは変更しない。
+- 変更モジュールはOracleとdialect-test。公開API・設定形式・共有モデル・依存関係の変更はなく、カタログ問い合わせ回数の追加もない。読み取る圧縮モードが以前より正確になるため、Schema XMLや差分に従来なかったcompressionTypeが現れる場合がある。親DDLと後続復元がそれぞれコミットされる従来の制限は維持する。READMEとこの対応表を更新した。
+- 単体には親2方式×子3方式×圧縮2モードと、表設定同時変更・旧版拒否を追加。Dockerには同じ12組合せを追加し、表の圧縮既定値、親子の圧縮・PCTFREE・表領域、全行、Global／Local索引の状態を検証する。
+- 最終Oracle単体490件（対象保守51件＋圧縮メタデータ2件を含む）、Command149件、Gradle Plugin1件が成功。Reader修正後のOracle23追加12件と、最終26ai保守全50件も成功し、62のDB・ケース組合せを確認した。最終XMLの失敗・エラー・スキップは0件。最初の単体試行ではLISTの入力値集合とResultSetモックの不足を修正した。また、初期DB試行は圧縮既定値をTableへ読めていなかったため、その成功を修正後の62件には数えていない。修正後は圧縮フラグ・モードを明示検証し、Oracle固有COMPRESS_FORの同期・XML再作成も単体と最終26aiで確認した。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test --tests '*OracleTableCompressionMetadataTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.tableCompressed*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 圧縮Local索引を持つ親子の保守
+
+- 親SPLIT／MERGEで圧縮Local索引を一律拒否していた制約を、索引・親・子が同じモードを継承する場合に緩和した。prefix圧縮とADVANCED LOW／HIGHを既存のOracleIndexCompression／OracleIndexPartitionCompressionで検証し、既存の版境界（LOWは12c、HIGHは18c）を維持する。親・子の圧縮上書きと、保守と同時の索引属性変更は拒否する。古いDBの実DB検証は行わない。
+- 単純パーティションの既存Local索引SPLIT検証も同じ継承条件に揃え、複合子のSPLIT／MERGEから再利用する。子MOVEは既存のUPDATE INDEXES経路を検証する。カタログ問い合わせの追加はなく、親保守は既存の子数・名前・表領域・索引状態の集合取得と復元を使う。[OracleのLocal索引保守](https://docs.oracle.com/en/database/oracle/oracle-database/21/vldbg/maintenance-partition-tables-indexes.html)に従い、索引ルート・prefix長を維持する。Schemaモデル自体は書き換えない。
+- Oracleとdialect-test、READMEとこの対応表のみを変更し、公開API・設定形式・依存関係は変更しない。単体は親2方式×子3方式×圧縮3モード、子SPLIT／MERGE・MOVE、有限境界、旧版とモード変更の拒否を追加した。実DBは親18方式、子SPLIT／MERGE6方式、子MOVE9方式、表圧縮との併用2方式、有限親SPLIT2方式の37ケースを追加し、圧縮を明示的に読み取った上でルート・親・子のモード、prefix長、行、表領域、Global／Local索引状態を比較する。
+- 親子で異なる表圧縮、任意PCTFREE、圧縮Local索引の個別上書き、有限末尾の親MERGE、計画全体のONLINE保証と自動復旧は引き続き対象外。複数DDLがそれぞれコミットされる制限は維持する。
+- 最終単体は対象54件、Oracle全493件、関連Command149件・Gradle Plugin1件が成功。Oracle23の追加35件と、固定26aiの既存50件＋追加37件の全87件も成功し、計122のDB・ケース組合せを確認した。有限境界との併用2件は26aiでの追加検証であり、23の35件には含めない。最終XMLの失敗・エラー・スキップはすべて0件。検証用の表・表領域・データファイル・所有コンテナは終了時に削除し、外部・本番DBには接続していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.compressedLocal*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositeAlterTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 圧縮Local索引のADD／COALESCEとXML再作成
+
+- 複合親・子のADDで圧縮Local索引を一律拒否していた制約を緩和し、追加セグメントがルート圧縮設定を継承する場合に対応した。prefix圧縮とADVANCED LOW／HIGHは既存ヘルパーで検証する。追加セグメントの上書き、索引ルートの同時変更、既存セグメントの変更は拒否する。[OracleのLocal索引属性継承](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/index-partitioning.html)に従い、SQLは既存のUPDATE INDEXES経路を使う。カタログ問い合わせと公開API・設定形式・依存関係の追加変更はない。
+- 単体はRANGE／LIST親×子HASH／RANGE／LIST×圧縮3モード、対応する子ADD、モード上書きと旧版拒否を確認する。親ADDは既存の親子を維持し、子ADDはRANGE-*／LIST-LISTという従来の方式制限を維持する。表・親の圧縮、HASH親ADD、任意の物理属性上書きは今回広げない。版境界も従来の圧縮・方式別検証を使う。
+- 実DBにはRANGE-HASH親ADD／DROP、RANGE-LIST子ADD／DROP、RANGE-HASH子COALESCEの圧縮3モード計9件と、LIST-HASH親ADD／DROP・LIST-LIST子ADD／DROPの計6件を追加した。COALESCEは既存経路の追加検証。各操作で全行、名前、索引ルート・親・子の圧縮モード、prefix長、Local／Global索引の使用可能状態を確認し、最新メタデータ→Schema XML→完全CREATE→データ再投入でも同じ状態を確認する。変更モジュールはOracleとdialect-test、文書はREADMEとこの対応表。
+- さらにRANGE-HASH子ADD→COALESCE、RANGE-RANGE子ADD／DROPも3モードずつ計6件を追加し、実DBの追加シナリオは計21件となる。HASH ADDでは既存データを再分配した後、新たに行を追加してCOALESCEし、追加行を含む全行を保持して再作成できることを確認する。
+- 検証は対象単体55件、Oracle全494件、関連Command149件・Gradle Plugin1件が成功。Oracle23は最初の追加9件、固定26aiは既存4件と追加21件の全25件が成功し、計34のDB・ケース組合せを確認した。LIST親、HASH子ADD、RANGE子ADDの追加12件は26aiで検証し、23の9件には含めない。最終XMLの失敗・エラー・スキップはすべて0件。今回はADD経路に絞って実DBを広げ、前節のSPLIT／MERGEクラス87件は再実行していない。検証表と所有コンテナは削除済みで、外部・本番DBには接続していない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.compressed*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 表・親の圧縮既定値があるADD
+
+- 圧縮表・親からのADDの一律拒否を除き、新規の表親・子モデルに指定されたBASIC／ADVANCED（OLTP句）を既存ヘルパーで検証・生成する。親ADDはRANGE／LIST、子ADDはRANGE-*／LIST-LISTという方式境界を維持する。既存セグメントや索引ルートは変更せず、新規モデルがcompression=falseの場合は圧縮既定値の場所でもNOCOMPRESSを明示する。[Oracleの圧縮パーティション仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/vldbg/partition-table-compression.html)に従う。新規PCTFREE・任意物理属性、HCC方式の指定は今回広げない。
+- 読込側では、従来specifics.COMPRESS_FORだけに保持していた親・子の圧縮モードを共通compressionTypeにも設定する。既存結果セットにCOMPRESS_FOR列がある場合だけ読み、NONE／DISABLEDや列のない過去版ではモードを推測しない。問い合わせ・列のSELECT・公開API・依存関係は追加しないが、読み取ったSchema XMLには親・子のcompressionTypeが現れ、過去の保存モデルとの比較で属性差になる場合がある。既存の圧縮子MOVEテストも要求モードを共通フィールドへ設定するように揃え、アサーションは維持する。
+- 単体には親2方式×子3方式×BASIC／ADVANCED、明示NOCOMPRESS、旧版・競合モード・新規物理属性の拒否、親・子と列のない旧版でのモード読込を追加した。実DBは親・各子ADD／DROPとHASH ADD→COALESCE、LIST親・LIST-LIST子、Local索引圧縮との併用、NOCOMPRESSの計16件を追加し、全行・表と索引の圧縮モード・既存PCTFREE・使用可能状態、XML再作成を確認する。変更はOracle、dialect-testとREADME・この文書。
+- 子ADDのNOCOMPRESS生成は、親だけでなく表の圧縮既定値も考慮する。親がNONE／非圧縮でも表の圧縮既定値へ依存して要求モデルと異なる圧縮にならないよう、非圧縮の要求は明示する。この境界を単体と別の実DBケースで確認する。
+- 検証は対象単体60件（保守57件・メタデータ3件）、Oracle全497件、関連Command149件・Gradle Plugin1件が成功。Oracle23の追加16件、固定26aiのADD全41件と既存ONLINE保守5件、最後の非圧縮親の境界1件を合わせ、63の異なるDB・ケース組合せが成功した。26aiの境界1件は表既定値も考慮する最終修正後に別実行し、他の46件に影響しない分岐を検証した。最終XMLの失敗・エラー・スキップは0件。最初の23試行では親子の共通compressionTypeが未設定だったため14件が失敗し、Readerを修正して16件すべてを再実行した。アサーションは緩めていない。
+- 古いOracleの実DB、SPLIT／MERGEクラス全体、共有core・PostgreSQL全体は今回再実行していない。高度な物理属性編集、有限末尾の親MERGE、複数DDLの自動ロールバック・再開と計画全体のONLINE保証は引き続き対象外。
+- 検証は所有する使い捨てDockerだけを使用し、検証表と所有コンテナの削除を確認した。外部・本番DBへの接続、依存バージョンや生成物の意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleTableCompressionMetadataTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.row*' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*oracle.OracleCompositePartitionTest' --tests '*OracleCompositeAlterTest.compressedOnline*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終境界ケースとOracle全単体・関連テストの再確認:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.rowChildNocompressWithUncompressedParent' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 圧縮既定値配下の子SPLIT／MERGE
+
+- 表・親が圧縮されている場合の子SPLIT／MERGEの一律拒否を除いた。対象は既存のRANGE／LIST子とBASIC／ADVANCEDで、境界・圧縮モード・その他属性を維持する既存のLocal索引保守経路を再利用する。内部で親子モデルを平坦化するときも表または親の圧縮既定値を保持し、非圧縮の子にはNOCOMPRESSを明示する。Local索引のDDLへ表圧縮句は付与しない。[Oracle ALTER TABLE仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ALTER-TABLE.html)に従う。
+- 親や表の同時変更、子の圧縮モード変更、HASH子のSPLIT／MERGE、任意のPCTFREEは広げない。BASICは従来どおり明示PCT_FREE=0を要求し、ADVANCEDと圧縮既定値配下のNOCOMPRESSでは明示PCT_FREEが親の既定値と異なる場合に拒否する。版境界・Resolverは変更せず、明示圧縮は11gR2以降の既存判定を使う。公開API・設定形式・メタデータ問い合わせ・依存関係の追加変更はない。
+- 変更モジュールはOracleとdialect-test。単体は親／表既定値・子2方式・圧縮2モード・非圧縮子・版境界・同時変更・不整合PCTFREEを追加した。Dockerには同じ既定値の8組合せと非圧縮子2ケースを追加し、prefix圧縮Local索引、全行、親子の圧縮・PCTFREE・表領域、索引状態をSPLITとMERGEの双方で比較する。
+- 最終対象単体58件、Oracle全498件、関連Command149件・Gradle Plugin1件が成功。固定26aiでは追加10件と既存ONLINE保守5件の計15件が成功し、失敗・エラー・スキップは0件。最初の単体試行は非圧縮経路のSQLにもNOCOMPRESSを追加したため既存のSQL比較1件が失敗し、圧縮既定値のある場合だけ明示するよう修正した。Docker実行中に不整合PCTFREEの拒否を補強し、SQLを変えない検証追加後の最終単体58件とOracle全498件を再実行した。
+- 今回は26aiの選択15件に実DB検証を限定し、Oracle23・古いOracle・同クラス全体・共有core・PostgreSQL全体は再実行していない。専用表・表領域はテストの後処理で削除し、所有コンテナの削除も確認した。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更はない。複数DDLの自動復旧と計画全体のONLINE保証、親SPLIT／MERGEの混在圧縮、有限末尾の親MERGEは引き続き対象外。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.defaultChild*' --tests '*OracleCompositeAlterTest.compressedOnline*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+最終PCTFREE検証追加後のOracle全単体:
+
+```shell
+./gradlew :sqlapp-core-oracle:test --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: BASIC ADDの既知PCTFREE
+
+- 親・子ADDでBASIC圧縮とともに指定されたspecifics.PCT_FREE=0を許可した。圧縮句自体がこの値を決めるためPCTFREE句は生成しない。[OracleのBASIC圧縮既定値](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/CREATE-TABLE.html)に従う。従来どおりBASICの非ゼロ値、ADVANCED／非圧縮の個別PCTFREE、その他物理属性は拒否する。
+- 最小変更箇所はOracleのADD属性検証で、共有Schema・公開API・設定形式・生成SQL・版境界・DialectResolver・メタデータ取得は変更しない。対象は既存の11gR2以降のBASIC明示圧縮と、対応済みのRANGE／LIST親・RANGE-*／LIST-LIST子ADD。Oracleとdialect-testを変更し、親2方式×子3方式、個別子ADDと不正モード・値の単体検証を追加した。DockerのBASIC ADDケースは要求モデルにPCT_FREE=0を明示し、親・子の読取値、既存属性、データ、索引状態とXML再作成を検証する。
+- 対象単体59件、Oracle全499件、関連Command149件・Gradle Plugin1件が成功。DockerはOracle23と固定26aiで7件ずつ、計14のDB・ケース組合せが成功し、失敗・エラー・スキップは0件。検証は所有する使い捨てDockerだけで実施し、検証表と所有コンテナの削除を確認した。古いOracleの実DB、他のDockerクラス、共有core・PostgreSQL全体は今回再実行していない。外部・本番DBへの接続、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.row*Basic' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ7ケース:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.row*Basic' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 複合保守の引用識別子
+
+- 複合パーティションの名前重複・DROP対象の一意性チェックが、大文字小文字を一律に無視していた点を修正した。SQL生成・集合カタログ照合で使っている識別子変換を共有し、明示引用名とSQL Builderの引用設定を反映する。`S11`と`"s11"`は区別し、`S11`と`"S11"`は衝突として扱う。[Oracleの識別子規則](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Database-Object-Names-and-Qualifiers.html)に従う。
+- 対象は複合親／子ADD、子DROP、子MOVE・SPLIT／MERGEと親SPLIT／MERGEの名前チェック、Local索引の対応セグメント。SQL構文・版境界・Resolver・公開API・設定形式・メタデータ問い合わせは変更しない。変更はOracleとdialect-test、README・この文書で、既存の方式制限や不正モデルの拒否は維持する。
+- 単体には大小文字を区別する既存子と新規子、DROP・子SPLIT・親SPLIT、同じDB識別子になる引用名の拒否、Builderの引用ON／OFFを追加した。Dockerには大小文字だけが異なる表・Local索引の子名を使う親ADD／DROPと子ADD／DROPを追加し、全行・名前・索引状態とSchema XMLからの再作成を検証する。
+- 対象単体61件、Oracle全501件、Command149件・Gradle Plugin1件が成功。Oracle23と固定26aiの追加2件ずつ、計4のDB・ケース組合せが成功し、最終XMLの失敗・エラー・スキップは0件。最初のDocker試行2件はDDL実行後の比較で、明示引用符を含む要求名と引用符を外して返すメタデータの文字列表現が異なり失敗した。要求モデルを通常のメタデータと同じ小文字名へ揃え、Builder既定の引用ONのまま再実行した。大小文字の比較は緩めていない。
+- 検証表と所有コンテナは削除済み。外部・本番DBに接続せず、生成物・依存バージョンの意図的変更もない。古いOracleの実DB、他のDockerクラス、共有core・PostgreSQL全体は今回再実行していない。SPLIT／MERGEの引用名は単体での検証であり、今回のDocker追加2ケースはADD／DROP・XML再作成に限定する。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.quotedCase*' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ2ケース:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.quotedCase*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 引用名SPLIT／MERGEの実DB検証追加
+
+- 前節で単体確認に留めていた引用名の親・子SPLIT／MERGEを、圧縮表とprefix圧縮Local索引との組合せでDocker検証する。既存親／子の`P1`と`p1`、`S11`と`s11`に加え、分割後も`plow`と`PLOW`、`c0`と`C0`等を区別し、名前・ルーティング・全行・圧縮モード・PCTFREE・表領域・索引状態をSPLITとMERGE双方で比較する。親3方式（RANGE-HASH／RANGE-RANGE／RANGE-LIST）はBASIC、子RANGE／LISTの2方式は表既定値ADVANCEDを使用する。
+- 変更はdialect-testとREADME・この文書。既存の保守テストを拡張し、MERGE直後の診断問い合わせも固定名P2から要求モデルの親名を使うバインド問い合わせへ変更した。公開API・設定形式・製品コード・Reader・版境界・依存関係は変更しない。新たなOracle構文のサポート追加ではなく、前節の引用識別子修正を既存保守経路の実DBで検証する。
+- Oracle23と固定26aiで追加5件ずつ、計10のDB・ケース組合せが成功し、失敗・エラー・スキップは0件。各ケースでSPLITとMERGEの双方を実行した。親3方式ではMERGE直後の1子から要求する2子へ復元されることを確認した。Oracle単体501件と関連Command149件・Gradle Plugin1件のタスクも指定したが、変更がないためUP-TO-DATEで再実行していない。既存結果を今回実行したテスト件数には含めない。
+- 専用表・表領域・データファイルと所有コンテナは後処理で削除済み。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更もない。今回の実DB追加範囲は上記5方式で、LIST親の組合せ、引用名のONLINE・並行DML、古いOracle、全Dockerクラスや共有core・PostgreSQL全体は再実行していない。保守計画全体の自動復旧・ONLINE保証等の制限は引き続き維持する。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedRouting*' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ5ケース:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedRouting*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 引用名LIST親とONLINE子の検証追加
+
+- 引用名・表圧縮・prefix圧縮Local索引を組み合わせた検証を、LIST-HASH／LIST-RANGE／LIST-LIST親のSPLIT→MERGEと、RANGE／LIST子のONLINE SPLIT→MERGEへ広げた。大小文字を区別する名前、親子の境界・圧縮モード・PCTFREE・表領域、全行、Local／Global索引状態を各操作後に比較する。ONLINE子では実行前に生成DDLのONLINE句も検証する。
+- 変更はdialect-test、READMEとこの文書。テスト内部の引用名モードをNONE／OFFLINE／ONLINEで区別し、親の複数DDL計画へONLINEを指定しないようテスト側でも検証する。公開API・設定形式・製品コード・Reader・版境界・依存関係は変更しない。今回のONLINEはDDL実行と事後状態の検証であり、並行DML負荷やロック待ち時間を測定するものではない。
+- Oracle23と固定26aiで5件ずつ、計10のDB・ケース組合せが成功し、失敗・エラー・スキップは0件。各ケースでSPLITとMERGEを実行し、LIST親3方式ではMERGE直後の1子から2子へ境界・名前を復元できることを確認した。今回は追加Dockerケースとコンパイルのみを実行し、既存のOracle単体501件・関連150件は再実行していない。
+- 検証表・専用表領域・データファイルと所有コンテナは削除済み。所有する使い捨てDocker以外のDBには接続せず、生成物・依存バージョンの意図的変更はない。古いOracle、全Dockerクラス、共有core・PostgreSQL全体は今回の検証対象外。複数DDL計画全体のONLINE保証・自動復旧等の制限は維持する。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedList*' --tests '*OracleCompositeAlterTest.quotedOnline*' --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ5ケース:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositeAlterTest.quotedList*' --tests '*OracleCompositeAlterTest.quotedOnline*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: RANGEの文字列MAXVALUE誤判定
+
+- RANGE保守で境界文字列にMAXVALUEという部分文字列があるだけで無限境界と扱っていた点を修正した。文字列`'MAXVALUE'`や代替引用の内容、コメント、引用識別子、別の識別子の一部を除き、独立したMAXVALUEトークンだけを検出する。[Oracleのリテラル仕様](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Literals.html)に従い、通常の引用符エスケープ、q／nq代替引用を扱う。ブロック・行コメントにも対応し、閉じていない引用・ブロックコメントはSQL生成前に拒否する。境界式の評価・並び順・全SQL構文の検証を行うものではない。
+- 変更箇所はOracle内の単純表／IOT ADD、IOT SPLIT／MERGE、複合親／子ADDの有限境界チェック。既存のFactory・Schemaモデル・SQL生成を使い、公開API・設定形式・Reader・問い合わせ・依存関係・DialectResolverや方式ごとの版境界は変更しない。対応済みの各Oracle版で誤拒否を修正するもので、新しいDDL構文を追加しない。
+- 単体は通常・国際化文字列・代替引用・コメント・複数キーの無限境界・閉じ忘れと、単純／IOT／複合ADD、IOT SPLITの回帰を追加した。Dockerは単純表、RANGE-HASH複合親、RANGE-RANGE子の3経路で、最後の既存境界が`'MAXVALUE'`でもADDを実行でき、その文字列自体と後続値の行を挿入して全4行・境界を読み戻せることを確認する。
+- 最終対象単体86件、Oracle全507件、Command149件・Gradle Plugin1件が成功。Oracle23と固定26aiの3件ずつ、計6のDB・ケース組合せも成功し、失敗・エラー・スキップは0件。23の後に代替引用のUnicode区切りを補強し、最終単体・Oracle全体・関連テストと26aiを再実行した。古いOracle、今回の文字列境界を持つIOTの実DB、他のDockerクラス、共有core・PostgreSQL全体は今回再実行していない。
+- 検証表と所有コンテナは削除済み。所有する使い捨てDockerのみを使用し、外部・本番DBへの接続、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleRangePartitionBoundTest' --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleCompositePartitionMaintenanceTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteMaxvalueText*' :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+固定26aiと最終回帰:
+
+```shell
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteMaxvalueText*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: IOTの有限文字列境界を実DBで検証
+
+- 前節で単体確認に留めていたIOTの文字列MAXVALUE境界を、Local二次索引付きIOTの実DBケースへ追加した。ADD→DROPでは既存の有限境界`'MAXVALUE'`の後へパーティションを追加し、文字列MAXVALUEと後続値を挿入する。DROP後は追加パーティション内の行だけが削除されることを確認する。SPLIT→MERGEでは`'MAXVALUE'`を分割点に使い、4行すべてを保持する。
+- 各操作後に全行のキー・値、境界、Local二次索引のセグメント名とUSABLE状態、IOT_TYPE、主キーの有効状態、ルート索引の状態を確認する。変更はdialect-test、READMEとこの文書で、公開API・設定形式・製品コード・Reader・版境界・依存関係は変更しない。
+- Oracle23と固定26aiで2件ずつ、計4のDB・ケース組合せが成功し、最終XMLの失敗・エラー・スキップは0件。26aiの最初の試行はDockerバックエンドへの接続がHyper-V socket timeoutで失敗し、テスト本体は未実行だった。Dockerの稼働復帰を読み取り確認した後、設定変更・再起動をせず同じ2ケースを再実行して成功した。初期化失敗は成功件数に含めない。
+- 検証表と所有コンテナは削除済み。今回は追加Dockerケースとコンパイルのみを実行し、既存Oracle単体507件・関連150件や他のDockerクラス、古いOracleは再実行していない。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OraclePartitionMaintenanceTest.finiteTextIot*' --gradle-user-home .gradle-user-home
+```
+
+固定26aiの同じ2ケース:
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OraclePartitionMaintenanceTest.finiteTextIot*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 複数列RANGEの後続MAXVALUE
+
+- 前節のトークン判定をさらに修正し、先頭キーが有限で後続キーがMAXVALUEである境界を有限として扱う。例えば`(10, MAXVALUE)`の後へのADDや、その境界でのSPLITを一律拒否しない。一方、`(MAXVALUE, 0)`や`(MAXVALUE, MAXVALUE)`は全体として無限境界になるため、先頭のMAXVALUEによる拒否を維持する。[Oracleの複数列RANGE規則](https://docs.oracle.com/database/121/VLDBG/GUID-814DE2FF-7147-42DE-9CAF-5E019BAB8C18.htm)に従う。文字列・代替引用・コメントの除外と閉じ忘れ検証は維持する。境界式の評価や並び順の推測は行わない。
+- 変更はOracleの共通境界判定と単純／IOT／複合ADD、IOT SPLIT／MERGEの呼出し。単純・複合保守で再利用するLocal索引SPLITの分割点も同じ判定に揃え、空白やコメント付きの先頭MAXVALUEを拒否する。公開API・設定形式・Reader・問い合わせ・依存関係・Resolver・各保守方式の版境界は変更しない。複数子キーを持つ親SPLIT／MERGEのルーティング復元制限は広げない。
+- 単体は2列キーの単純／IOT／複合ADD、IOTとLocal索引付きSPLIT／MERGE、先頭MAXVALUEの拒否を追加した。Dockerは単純表・複合親・複合子のADDとIOT ADD／DROP・SPLIT／MERGEの5ケースで、後続MAXVALUEを含む境界・データを確認する。先頭キーが境界値に等しい行は既存区画に残り、後続の先頭キー値だけが追加区画へ入ることも検証する。IOT DROPでは後から挿入した行でも既存区画に入った行は保持する。
+- 対象単体98件、Oracle全510件、Command149件・Gradle Plugin1件と、固定26aiの追加5ケースが成功し、最終XMLの失敗・エラー・スキップは0件。最初の単体試行ではIOT用補助関数が分割右境界を単一値200へ戻しており1件が失敗したため、右境界も200, MAXVALUEへ揃えて対象98件を再実行した。上限保持の検証は維持している。
+- 今回の実DBは固定26aiの5ケースに限定し、Oracle23・古いOracle、他のDockerクラスや共有core・PostgreSQL全体は再実行していない。検証表と所有コンテナは削除済み。外部・本番DBには接続せず、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-oracle:test --tests '*OracleRangePartitionBoundTest' --tests '*OracleTablePartitionMaintenanceTest' --tests '*OracleCompositePartitionMaintenanceTest' --tests '*OracleLocalPartitionSplitTest' --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-dialect-test:compileDockerTestJava --gradle-user-home .gradle-user-home
+./gradlew :sqlapp-core-oracle:test :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteTuple*' --tests '*OraclePartitionMaintenanceTest.finiteTuple*' -PoracleTestImage=gvenzl/oracle-free:23.26.3-slim-faststart -PoracleExpectedDialect=26ai :sqlapp-command:test --tests 'com.sqlapp.data.db.command.generator.*' --tests 'com.sqlapp.data.db.command.migration.assessment.*Oracle*' :sqlapp-gradle-plugin:test --tests 'com.sqlapp.gradle.plugins.*Oracle*' --continue --gradle-user-home .gradle-user-home
+```
+
+## 2026-10-19: 複数列RANGEのOracle23追加検証
+
+- 前節で固定26aiに限定していた5ケースを、所有する使い捨てOracle23 Dockerでも実行した。対象は後続キーがMAXVALUEの単純表・複合親・複合子ADDと、Local二次索引付きIOTのADD／DROP・SPLIT／MERGE。前節と同じアサーションで行・境界・索引状態と有限先頭キーに等しい行の格納先を比較した。
+- 追加実装は行わず、製品コード・テストコード・公開API・設定形式・Reader・版境界・依存関係は変更しない。文書冒頭には現在も残る制限を整理し、過去の未対応記録と区別できるようにした。
+- Oracle23の5ケースが成功し、失敗・エラー・スキップは0件。前節の固定26ai成功5ケースと合わせ、10の異なるDB・ケース組合せを確認した。今回実行したのは23の5ケースのみで、既存単体510件・関連150件、他のDockerクラス、古いOracleは再実行していない。検証表と所有コンテナは削除済みで、外部・本番DBへの接続、生成物・依存バージョンの意図的変更はない。
+
+```shell
+./gradlew :sqlapp-core-dialect-test:dockerTest --tests '*OracleCompositePartitionTest.finiteTuple*' --tests '*OraclePartitionMaintenanceTest.finiteTuple*' --gradle-user-home .gradle-user-home
+```
+
+## 2026-11-14: Dialect本体の設定値の修正
+
+Dialectクラス(`Oracle`～`Oracle26ai`、`DialectHolder`、`OracleDialectResolver`)のレビューで確認した、誤ったSQLを生成する設定値を修正した。
+
+- DATE型の既定値リテラルが基底クラスの`CURRENT_DATETIME`(Oracleに存在しない)になり、created_at/updated_at列のINSERT/UPDATEで使われていた。`getCurrentDateTimeFunction()`を`CURRENT_DATE`、`getCurrentDateFunction()`を`TRUNC(CURRENT_DATE)`とした。TIMESTAMPの`CURRENT_TIMESTAMP`と同じくセッションタイムゾーン基準。
+- UUID(RAW(16))の既定値リテラル`NEW_GUID()`を`SYS_GUID()`へ修正。
+- 11g以降は仮想列をformulaとして読み取りCREATEも生成していたが、`supportsColumnFormula()`がfalseのためINSERT/UPDATE/MERGEに式が値として出力されていた(ORA-54013)。11g以降でtrueとし、`Oracle11gR2`の継承元を`Oracle10g`から`Oracle11g`へ修正した。これに伴い`instanceof Oracle11g || instanceof Oracle11gR2`の重複判定を整理した。10g以前はfalseのまま。
+- 共通の`AbstractMergeFactory`で計算列をUSINGの列から除外した。従来は値定義がnullの列も出力していた。
+- Oracleはテーブル別名に`AS`を使用できないが、MERGEの`_target_`/`_source_`に`AS`を付けていた。`AbstractMergeTableFactory`で`supportsTableNameAlias()`に従うようにした。`supportsTableNameAlias()`がfalseのDialectはOracleのみ。
+- 23ai/26aiは`getSelectDummyTableName()`がnullのため、`INSERT_SELECT_NOT_EXISTS`が`FROM WHERE NOT EXISTS`となっていた。共通Factoryでダミーテーブルがない場合はFROM句を省略する(23aiはFROMなしSELECTでWHEREを使用可能)。MERGEのSELECT側も同様にnullを出力しない。
+- 12c以降で再登録するVARCHAR2(32767)にBYTE/CHARセマンティクスの指定がなく、VARCHARの代表型でセマンティクスが失われていた。
+- `matchDataTypeName`が常にtrueを返していた。VARCHAR2/NVARCHAR2のような末尾2の型名だけを追加で一致させる。
+- `getTemporaryTableName`が引数のスキーマ修飾指定を無視していた。既定の`decorateSchemaName=true`では出力は変わらない。
+- システムスキーマに12c以降のOracle管理ユーザー(AUDSYS、XDB、WMSYS、GSMADMIN_INTERNAL等)を追加し、配列はコピーを返す。
+- 冗長な`hashCode`/`equals`の再定義と、`OracleDialectResolver`の9/8系の重複分岐を削除した。等価性はクラス単位のままで動作は変わらない。
+
+## 2026-11-15: MAX_STRING_SIZEの切り替え
+
+12c以降のVARCHAR2/NVARCHAR2/RAWの最大長は`MAX_STRING_SIZE`で決まる(STANDARD: 4000/4000/2000バイト、EXTENDED: 32767バイト)。従来は12c以降で常にEXTENDEDを前提としていたが、次のように変更した。
+
+- `OracleMaxStringSize`(STANDARD/EXTENDED)を追加し、`Oracle#getMaxStringSize()`で参照できる。既定の`DialectHolder.oracle12cDialect`～`oracle26aiDialect`はSTANDARD、`oracle12cExtendedDialect`～`oracle26aiExtendedDialect`がEXTENDED。`Oracle#withMaxStringSize`または`DialectHolder.getDialect(dialect, size)`で切り替える。同じバージョンでもMAX_STRING_SIZEが異なるDialectは`equals`しない。11gR2以前でEXTENDEDを指定するとエラー。
+- 接続から判定する場合は`OracleDialectResolver`が`SELECT CAST(NULL AS VARCHAR2(32767)) FROM DUAL`を実行し、成功すればEXTENDED、ORA-00910ならSTANDARDとする。権限は不要。結果はJDBC URLごとにJVM内でキャッシュする。それ以外のエラーは、Dialectオプションで指定するよう促すメッセージ付きで失敗させる。
+- 接続がない場合(Schema XMLからのSQL生成や製品名とバージョンからの解決)はSTANDARD。
+- Dialectオプション`oracle.maxStringSize`で判定結果を上書きできる。共通の仕組みとして`SqlappDataSource#setDialectOptions`、`AbstractConnection#getDialectOptions`、`DialectResolver#getDialect(DatabaseMetaData, Map)`、`ProductNameDialectResolver#applyDialectOptions`を追加した。接続先で使用できないオプションや不正な値はエラー。
+- Gradleプラグインは`dataSource { dialectOptions.put('oracle.maxStringSize', 'STANDARD') }`、設定ファイルは`dialect.oracle.maxStringSize`(YAMLでは`dialect:`の入れ子)で指定する。`DataSourceConfigFiles#dialectOptions`で取り出し、HikariCPの設定としては扱わない。デスクトップアプリは読み込んだ設定ファイルの`dialect.*`を接続に渡す(`PlanningJdbc`。オプションがある場合だけ接続を`SqlappConnection`でラップする)。
+- 接続なしでSQLを生成するコマンド(`GenerateSimpleSqlCommand`、`GenerateDiffSqlCommand`、`GenerateLegacyRdbLoaderCommand`)は`DialectOptionsProperty`でオプションを受け取り、Schema XMLの製品情報や製品名から求めたDialectに`DialectResolver#applyDialectOptions`で適用する。Gradleでは`generateSql`、`generateDiffSql`、`generateLegacyRdbLoader`タスクの`dialectOptions`。
+- `AbstractStatement#getConnection()`は、ラップ済みのConnectionを返すようにした。これにより、Statementから取得したConnectionでもDialectオプションが失われない。
+
+単体テスト`OracleDialectCorrectnessTest`(12件)を追加し、修正前のコードでは10件が失敗することを確認した。`OracleMergeFactoryTest`の期待値は`AS`なしの別名へ更新した。sqlapp-coreと全`sqlapp-core-*`モジュールの単体テストを実行し、失敗は修正前から失敗している`PostgresAlterTableSqlFactoryTest.testRenameTable`と`SpannerLengthMigrationTest.rejectsArraysKeysAndMixedTypeChanges`の2件のみ。実DBでは未検証。
+
+## 過去のOracle仕様参照
+
+- [ALL_ARGUMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_ARGUMENTS.html): DEFAULTEDは有無のみ、DEFAULT_VALUEは将来用。
+- [ALL_TRIGGERS](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_TRIGGERS.html): DESCRIPTIONは作成文の再構築用、TRIGGER_BODYは本体。
+- [ALTER TRIGGER構文](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/img_text/alter_trigger.html): RENAMEとENABLE/DISABLEは別の選択肢。

@@ -27,6 +27,7 @@ dependencies {
 	}
 	implementation project(':sqlapp-core-mdb')
 	implementation project(':sqlapp-core-sqlite')
+	implementation project(':sqlapp-core-duckdb')
 	
 	api('jakarta.activation:jakarta.activation-api:2.1.4')
 
@@ -37,10 +38,11 @@ dependencies {
 
 	testImplementation('org.hsqldb:hsqldb:2.7.3')
 	testImplementation project(':sqlapp-core-hsql')
+	testImplementation project(':sqlapp-core-duckdb')
 	testRuntimeOnly project(':sqlapp-core-oracle')
 	// Exercise SQL Server assessment discovery without adding a plugin runtime dependency.
 	testRuntimeOnly project(':sqlapp-core-sqlserver')
-	testImplementation('io.github.spannm:ucanaccess:5.1.6')
+	testImplementation('io.github.spannm:ucanaccess:5.2.0')
 	
 	//JUnit
 	testImplementation(platform('org.junit:junit-bom:6.1.0'))

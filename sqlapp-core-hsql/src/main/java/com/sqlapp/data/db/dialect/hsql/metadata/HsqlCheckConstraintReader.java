@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.hsql.metadata;
 
-import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.trim;
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
@@ -58,12 +57,6 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
-		String tableName = this.getTableName(context);
-		if (isEmpty(tableName)) {
-			context.put("checkClause", (String) null);
-		} else {
-			context.put("checkClause", "%" + tableName + ".%");
-		}
 		final List<CheckConstraint> result = list();
 		final TripleKeyMap<String, String, String, List<Column>> colMap = tripleKeyMap();
 		final TripleKeyMap<String, String, String, CheckConstraint> tMap = tripleKeyMap();
@@ -89,7 +82,6 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
-					convertConstraint(c);
 					cols = list();
 					tMap.put(catalogName, schemaName, name, c);
 					colMap.put(catalogName, schemaName, name, cols);
@@ -112,21 +104,17 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	private boolean isNotNullConstraint(String schemaName, String tableName, String columnName, String expression) {
-		Pattern pattern = Pattern
-				.compile(schemaName + "\\." + tableName + "\\." + columnName + "[\\s]+IS[\\s]+NOT[\\s]+NULL");
+		if (columnName == null || expression == null) {
+			return false;
+		}
+		Pattern pattern = Pattern.compile("(?:" + identifier(schemaName) + "\\.)?(?:" + identifier(tableName) + "\\.)?"
+				+ identifier(columnName) + "\\s+IS\\s+NOT\\s+NULL", Pattern.CASE_INSENSITIVE);
 		Matcher matcher = pattern.matcher(expression);
 		return matcher.matches();
 	}
 
-	/**
-	 * チェック制約の式のスキーマ名を除きます。
-	 * 
-	 * @param c
-	 */
-	private void convertConstraint(CheckConstraint c) {
-		String convert = c.getExpression().replace(c.getSchemaName() + "." + c.getTableName() + ".",
-				c.getTableName() + ".");
-		c.setExpression(convert);
+	private String identifier(String name) {
+		return "(?:" + Pattern.quote(name) + "|" + Pattern.quote("\"" + name.replace("\"", "\"\"") + "\"") + ")";
 	}
 
 }

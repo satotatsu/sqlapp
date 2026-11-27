@@ -266,4 +266,39 @@ public class Hsql extends Dialect {
 		return new HsqlSqlSplitter(this);
 	}
 
+	@Override
+	public void setChangeAndResetSqlDelimiter(String sql, com.sqlapp.data.db.dialect.util.SqlTerminator terminator) {
+		terminator.setStartStatementTerminator(null);
+		terminator.setTerminator(";\n");
+		terminator.setEndStatementTerminator(";");
+	}
+
+	@Override
+	public String toTextFromSqlOperation(java.util.Collection<com.sqlapp.data.db.sql.SqlOperation> operations) {
+		// Parameterized DML templates retain the shared renderer's existing format.
+		if (operations.stream().allMatch(op -> op.getSqlType() != null && op.getSqlType().isDml())) {
+			return super.toTextFromSqlOperation(operations);
+		}
+		return script(operations, com.sqlapp.data.db.sql.SqlOperation::getSqlText,
+				op -> op.getSqlType() != null && !op.getSqlType().isSql());
+	}
+
+	@Override
+	public String toText(java.util.Collection<com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult> results) {
+		return script(results, com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult::getText,
+				result -> result.getTextType().isComment());
+	}
+
+	private static <T> String script(java.util.Collection<T> values, java.util.function.Function<T, String> text,
+			java.util.function.Predicate<T> comment) {
+		var sql = new StringBuilder();
+		for (var value : values) {
+			String statement = java.util.Objects.requireNonNull(text.apply(value), "SQL text");
+			sql.append(statement).append('\n');
+			if (!comment.test(value) && !statement.isBlank())
+				sql.append(";\n");
+		}
+		return sql.toString();
+	}
+
 }

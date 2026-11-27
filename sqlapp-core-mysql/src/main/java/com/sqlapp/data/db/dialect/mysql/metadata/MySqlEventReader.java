@@ -24,12 +24,14 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.EventReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Event;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.db.dialect.mysql.sql.MySqlCreateEventFactory;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -67,11 +69,18 @@ public class MySqlEventReader extends EventReader {
 
 	protected Event createEvent(ExResultSet rs, final ProductVersionInfo productVersionInfo) throws SQLException {
 		Event obj = new Event(getString(rs, EVENT_NAME));
-		obj.setDefiner(getString(rs, "DEFINER"));
+		obj.setCatalogName(getString(rs, "EVENT_CATALOG"));
+		obj.setSchemaName(getString(rs, "EVENT_SCHEMA"));
+		obj.setDefiner(rs.getString("DEFINER"));
+		com.sqlapp.data.db.dialect.mysql.util.MySqlStoredObjectContext.read(rs, obj);
 		obj.setIntervalField(getString(rs, "INTERVAL_FIELD"));
-		obj.setIntervalValue(rs.getInt("INTERVAL_VALUE"));
-		if (rs.wasNull()) {
-			obj.setIntervalValue(null);
+		String interval = getString(rs, "INTERVAL_VALUE");
+		if (interval != null) {
+			try {
+				obj.setIntervalValue(Integer.valueOf(interval));
+			} catch (NumberFormatException e) {
+				obj.getSpecifics().put(MySqlCreateEventFactory.INTERVAL_VALUE, interval);
+			}
 		}
 		if (productVersionInfo.gte(5, 1, 12)) {
 			obj.setStatement(rs.getString("EVENT_DEFINITION"));
@@ -83,7 +92,13 @@ public class MySqlEventReader extends EventReader {
 		obj.setOnCompletion(getString(rs, "ON_COMPLETION"));
 		obj.setStarts(rs.getTimestamp("STARTS"));
 		obj.setEnds(rs.getTimestamp("ENDS"));
-		obj.setEnable("ENABLED".equalsIgnoreCase(getString(rs, "STATUS")));
+		String status = getString(rs, "STATUS");
+		if (!Set.of("ENABLED", "DISABLED", "SLAVESIDE_DISABLED").contains(status == null ? "" : status))
+			throw new SQLException("Unsupported MySQL event status: " + status);
+		obj.setEnable("ENABLED".equals(status));
+		if ("SLAVESIDE_DISABLED".equals(status))
+			obj.getSpecifics().put(MySqlCreateEventFactory.STATUS, status);
+		obj.setLastExecuted(rs.getTimestamp("LAST_EXECUTED"));
 		obj.setCreatedAt(rs.getTimestamp("CREATED"));
 		obj.setLastAlteredAt(rs.getTimestamp("LAST_ALTERED"));
 		obj.setRemarks(getString(rs, "EVENT_COMMENT"));

@@ -48,12 +48,18 @@ public class InformixViewReader extends JdbcViewReader {
 					result.add(view);
 					definitions.put(view, new StringBuilder());
 				}
-				definitions.get(view).append(getString(rs, "view_definition"));
+				final String text = rs.getString("view_definition");
+				if (text == null)
+					throw new IllegalStateException("Missing Informix view text: " + schemaName + "." + name);
+				definitions.get(view).append(text);
 			}
 		});
 		definitions.forEach((view, definition) -> {
 			if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
-				view.setDefinition(definition.toString());
+				final String text = definition.toString().stripTrailing();
+				if (text.isBlank())
+					throw new IllegalStateException("Missing Informix CREATE VIEW text: " + view.getName());
+				view.setDefinition(text);
 			}
 		});
 		return result;

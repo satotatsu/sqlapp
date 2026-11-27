@@ -71,7 +71,8 @@ public class Db2TableReader extends TableReader {
 	}
 
 	protected SqlNode getSqlNode(final ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables.sql");
+		return getSqlNodeCache(Db2TableReader.class).getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "tablesNicknames.sql" : "tables.sql");
 	}
 
 	protected Table createTable(final ExResultSet rs) throws SQLException {
@@ -79,6 +80,13 @@ public class Db2TableReader extends TableReader {
 		table.setDialect(getDialect());
 		table.setSchemaName(getString(rs, SCHEMA_NAME));
 		table.setRemarks(getString(rs, REMARKS));
+		if ("N".equals(getString(rs, "TYPE"))) {
+			com.sqlapp.data.db.dialect.db2.Db2Nickname.set(table,
+					new com.sqlapp.data.db.dialect.db2.Db2Nickname.Snapshot(1, getString(rs, "nickname_server"),
+							getString(rs, "nickname_remote_schema"), getString(rs, "nickname_remote_table"),
+							getString(rs, "nickname_wrapper_type"), getString(rs, "nickname_caching"),
+							java.util.Map.of(), java.util.Map.of()));
+		}
 		table.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		table.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
 		table.setTableSpaceName(getString(rs, TABLESPACE_NAME));
@@ -99,6 +107,26 @@ public class Db2TableReader extends TableReader {
 			}
 		}
 		this.setSpecifics(rs, "PCTFREE", table);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 && !"N".equals(getString(rs, "TYPE"))) {
+			for (String key : List.of("TYPE", "TABLEORG", "CLUSTERED", "APPEND_MODE", "LOCKSIZE", "VOLATILE")) {
+				String value = getString(rs, key);
+				if (value != null && !value.isBlank())
+					table.getSpecifics().put(key, value);
+			}
+			if (comp != null && !comp.isBlank()) {
+				table.getSpecifics().put("DB2_COMPRESSION", comp);
+				table.setCompression(java.util.Set.of("B", "V", "R").contains(comp));
+				if ("V".equals(comp))
+					table.setCompressionType("VALUE");
+				else if ("R".equals(comp) || "B".equals(comp)) {
+					String mode = getString(rs, "ROWCOMPMODE");
+					table.setCompressionType("A".equals(mode) || "S".equals(mode)
+							? "ROW " + ("A".equals(mode) ? "ADAPTIVE" : "STATIC") + ("B".equals(comp) ? " VALUE" : "")
+							: "ROW");
+				} else if (!"N".equals(comp))
+					throw new SQLException("Invalid Db2 compression code: " + comp);
+			}
+		}
 		Statistics.ROWS.setValue(rs, "CARD", table);
 		Statistics.AVG_ROW_LENGTH.setValue(rs, "AVGROWSIZE", table);
 		Statistics.AVG_COMPRESSED_ROW_LENGTH.setValue(rs, "AVGCOMPRESSEDROWSIZE", table);
@@ -114,10 +142,51 @@ public class Db2TableReader extends TableReader {
 			return;
 		}
 		super.setMetadataDetail(connection, context, tableList);
+		setNicknameOptions(connection, context, tableList);
 		final DoubleKeyMap<String, String, Table> tables = SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitionExpression(connection, tables);
 		setPartitioning(connection, tables);
 		setDimensionColumns(connection, tables);
+	}
+
+	/** One bulk query for both nickname and column options, never remote data. */
+	protected void setNicknameOptions(Connection connection, ParametersContext context, List<Table> tableList) {
+		var nicknames = tableList.stream().filter(com.sqlapp.data.db.dialect.db2.Db2Nickname::isNickname).toList();
+		if (nicknames.isEmpty())
+			return;
+		var tables = SchemaUtils.toDoubleKeyMap(nicknames);
+		var parameters = new ParametersContext();
+		parameters.putAll(context);
+		parameters.put(SCHEMA_NAME, tables.keySet());
+		parameters.put(TABLE_NAME, tables.secondKeySet());
+		var options = new java.util.IdentityHashMap<Table, java.util.Map<String, String>>();
+		var columns = new java.util.IdentityHashMap<Table, java.util.Map<String, java.util.Map<String, String>>>();
+		for (var table : nicknames) {
+			options.put(table, new java.util.TreeMap<>());
+			columns.put(table, new java.util.TreeMap<>());
+		}
+		execute(connection, getSqlNodeCache(Db2TableReader.class).getString("nicknameOptions.sql"), parameters,
+				new ResultSetNextHandler() {
+					@Override
+					public void handleResultSetNext(ExResultSet rs) throws SQLException {
+						var table = tables.get(getString(rs, SCHEMA_NAME), getString(rs, TABLE_NAME));
+						if (table == null)
+							return;
+						String column = rs.getString("column_name");
+						var target = column == null ? options.get(table)
+								: columns.get(table).computeIfAbsent(column, key -> new java.util.TreeMap<>());
+						String option = rs.getString("option_name"), value = rs.getString("SETTING");
+						if (option == null || value == null || target.putIfAbsent(option, value) != null)
+							throw new SQLException("Missing or duplicate Db2 nickname option: " + option);
+					}
+				});
+		for (var table : nicknames) {
+			var previous = com.sqlapp.data.db.dialect.db2.Db2Nickname.get(table);
+			com.sqlapp.data.db.dialect.db2.Db2Nickname.set(table,
+					new com.sqlapp.data.db.dialect.db2.Db2Nickname.Snapshot(1, previous.serverName(),
+							previous.remoteSchema(), previous.remoteTable(), previous.wrapperType(),
+							previous.cachingAllowed(), options.get(table), columns.get(table)));
+		}
 	}
 
 	protected void setDimensionColumns(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
@@ -153,6 +222,8 @@ public class Db2TableReader extends TableReader {
 	 */
 	protected void setPartitionExpression(final Connection connection,
 			final DoubleKeyMap<String, String, Table> tables) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_910))
+			return;
 		final SqlNode node = getPartitionExpressionSqlNode();
 		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
@@ -180,18 +251,25 @@ public class Db2TableReader extends TableReader {
 			table.getPartitioning().setPartitioningType(PartitioningType.Range);
 		}
 		final String expression = getString(rs, "DATAPARTITIONEXPRESSION");
-		final boolean nullsFirst = "Y".equalsIgnoreCase(getString(rs, "NULLSFIRST"));
+		if (expression == null || expression.isBlank())
+			throw new SQLException("Missing Db2 range partition expression");
+		final String nullsFlag = getString(rs, "NULLSFIRST");
+		if (!java.util.Set.of("Y", "N").contains(nullsFlag == null ? "" : nullsFlag))
+			throw new SQLException("Invalid Db2 partition NULLSFIRST flag: " + nullsFlag);
+		final boolean nullsFirst = "Y".equals(nullsFlag);
 		NullsOrder nullsOrder;
 		if (nullsFirst) {
 			nullsOrder = NullsOrder.NullsFirst;
 		} else {
 			nullsOrder = NullsOrder.NullsLast;
 		}
-		final Column column = table.getColumns().get(expression);
+		final Column column = table.getColumns().get(getDialect().unQuote(expression));
 		if (column != null) {
 			table.getPartitioning().getPartitioningColumns().add(column, nullsOrder);
 		} else {
-			table.getPartitioning().getPartitioningColumns().add(expression, nullsOrder);
+			var reference = new com.sqlapp.data.schemas.ReferenceColumn(expression).setNullsOrder(nullsOrder);
+			reference.getStatement().add(expression);
+			table.getPartitioning().getPartitioningColumns().add(reference);
 		}
 	}
 
@@ -202,6 +280,8 @@ public class Db2TableReader extends TableReader {
 	 * @param tables
 	 */
 	protected void setPartitioning(final Connection connection, final DoubleKeyMap<String, String, Table> tables) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_910))
+			return;
 		final SqlNode node = getPartitionSqlNode();
 		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
@@ -224,11 +304,9 @@ public class Db2TableReader extends TableReader {
 	}
 
 	protected Partition readPartition(final ExResultSet rs, final Table table) throws SQLException {
-		final Dialect dialect = this.getDialect();
 		final String partitionName = getString(rs, "DATAPARTITIONNAME");
 		final String highValue = getString(rs, "HIGHVALUE");
 		final String lowValue = getString(rs, "LOWVALUE");
-		final String partitionExpression = dialect.unQuote(getString(rs, "PARTITION_EXPRESSION"));
 		final String tableSpace = getString(rs, "TABLE_SPACE");
 		final String lobTableSpace = getString(rs, "LOB_TABLE_SPACE");
 		Partitioning partitioning = null;
@@ -239,19 +317,25 @@ public class Db2TableReader extends TableReader {
 		} else {
 			partitioning = table.getPartitioning();
 		}
-		if (!isEmpty(partitionExpression) && !partitioning.getPartitioningColumns().contains(partitionExpression)) {
-			partitioning.getPartitioningColumns().add(partitionExpression);
-		}
 		Partition partition = partitioning.getPartitions().get(partitionName);
 		if (partition == null) {
 			partition = new Partition(partitionName);
 			partition.setLowValue(lowValue);
 			partition.setHighValue(highValue);
+			partition.setLowValueInclusive(readInclusive(rs, "LOWINCLUSIVE"));
+			partition.setHighValueInclusive(readInclusive(rs, "HIGHINCLUSIVE"));
 			partition.setTableSpaceName(tableSpace);
 			partition.setLobTableSpaceName(lobTableSpace);
 			partitioning.getPartitions().add(partition);
 		}
 		return partition;
+	}
+
+	private boolean readInclusive(ExResultSet rs, String key) throws SQLException {
+		String flag = getString(rs, key);
+		if (!"Y".equals(flag) && !"N".equals(flag))
+			throw new SQLException("Invalid Db2 partition " + key + " flag: " + flag);
+		return "Y".equals(flag);
 	}
 
 	@Override

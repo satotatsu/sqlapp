@@ -44,6 +44,11 @@ public class Oracle11gTableReader extends OracleTableReader {
 	}
 
 	@Override
+	protected com.sqlapp.data.db.metadata.IndexReader newIndexReader() {
+		return new Oracle11gIndexReader(getDialect());
+	}
+
+	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
 		return table;

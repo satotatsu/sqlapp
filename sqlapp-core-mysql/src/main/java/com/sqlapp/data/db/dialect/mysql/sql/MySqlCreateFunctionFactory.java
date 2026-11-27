@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.sql;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
 import com.sqlapp.data.db.sql.AbstractCreateFunctionFactory;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.util.CommonUtils;
@@ -28,7 +29,13 @@ public class MySqlCreateFunctionFactory extends AbstractCreateFunctionFactory<My
 
 	@Override
 	protected void addCreateObject(final Function obj, MySqlSqlBuilder builder) {
-		builder.create().function();
+		if (!CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
+		builder.create();
+		MySqlDefiner.append(builder, obj.getSpecifics());
+		builder.function();
 		builder.name(obj);
 		builder.space().arguments(obj.getArguments());
 		builder.space().returns().space()._add(obj.getReturning());
@@ -38,15 +45,14 @@ public class MySqlCreateFunctionFactory extends AbstractCreateFunctionFactory<My
 			} else {
 				builder.lineBreak().not();
 			}
-			builder.lineBreak().not().deterministic();
+			builder.deterministic();
 		}
 		if (obj.getSqlDataAccess() != null) {
 			builder.lineBreak()._add(obj.getSqlDataAccess());
 		}
 		if (obj.getSqlSecurity() != null) {
-			builder.lineBreak()._add(obj.getSqlSecurity());
+			builder.lineBreak()._add("SQL ")._add(obj.getSqlSecurity());
 		}
-		builder.lineBreak()._add(obj.getStatement());
 		if (!CommonUtils.isEmpty(obj.getRemarks())) {
 			builder.lineBreak().comment().space();
 			builder.sqlChar(obj.getRemarks());

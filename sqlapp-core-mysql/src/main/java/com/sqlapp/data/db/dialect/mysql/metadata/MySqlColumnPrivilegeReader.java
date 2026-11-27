@@ -74,7 +74,9 @@ public class MySqlColumnPrivilegeReader extends ColumnPrivilegeReader {
 		obj.setSchemaName(schemaName);
 		obj.setObjectName(objectName);
 		// obj.setGrantor(getString(rs, "GRANTOR"));
-		obj.setGranteeName(getString(rs, "GRANTEE"));
+		obj.setGranteeName("MySQL".equalsIgnoreCase(getDialect().getProductName())
+				? com.sqlapp.data.db.dialect.mysql.util.MySqlAccount.fromGrantee(getString(rs, "GRANTEE"))
+				: getString(rs, "GRANTEE"));
 		obj.setColumnName(getString(rs, COLUMN_NAME));
 		obj.setPrivilege(getString(rs, "PRIVILEGE_TYPE"));
 		obj.setGrantable("YES".equals(getString(rs, "IS_GRANTABLE")));

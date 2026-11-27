@@ -17,24 +17,43 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 class SybaseIndexIdentityTest {
 	private static void rows(ResultSetNextHandler handler) {
 		try {
-			for (String table : new String[] {"first", "second"}) {
+			for (String table : new String[] { "first", "second" }) {
 				handler.handleResultSetNext(new ExResultSet(null) {
-					@Override public int getInt(String name) { return 0; }
-					@Override public String getString(String name) {
-						return switch (name) { case "catalog_name" -> "db"; case "schema_name" -> "dbo";
-						case "table_name" -> table; case "index_name" -> "shared"; case "column_name" -> table + "_column"; default -> null; };
+					@Override
+					public int getInt(String name) {
+						return 0;
+					}
+
+					@Override
+					public String getString(String name) {
+						return switch (name) {
+						case "catalog_name" -> "db";
+						case "schema_name" -> "dbo";
+						case "table_name" -> table;
+						case "index_name" -> "shared";
+						case "column_name" -> table + "_column";
+						default -> null;
+						};
 					}
 				});
 			}
-		} catch (SQLException e) { throw new RuntimeException(e); }
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
+
 	@Test
 	void keepsTableScopedIndexesSeparate() {
 		var reader = new SybaseIndexReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
-				rows(handler); return null;
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				rows(handler);
+				return null;
 			}
-			@Override protected Index createIndex(ExResultSet rs) throws SQLException {
+
+			@Override
+			protected Index createIndex(ExResultSet rs) throws SQLException {
 				return new Index(rs.getString("index_name")).setTableName(rs.getString("table_name"));
 			}
 		};
@@ -45,13 +64,19 @@ class SybaseIndexIdentityTest {
 			assertEquals(index.getTableName() + "_column", index.getColumns().get(0).getName());
 		}
 	}
+
 	@Test
 	void keepsTableScopedUniqueIndexesSeparate() {
 		var reader = new SybaseUniqueConstraintReader(DialectHolder.defaultDialect) {
-			@Override protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context, ResultSetNextHandler handler) {
-				rows(handler); return null;
+			@Override
+			protected JdbcQueryHandler execute(Connection connection, SqlNode node, ParametersContext context,
+					ResultSetNextHandler handler) {
+				rows(handler);
+				return null;
 			}
-			@Override protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
+
+			@Override
+			protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
 				var constraint = new UniqueConstraint(rs.getString("index_name"));
 				constraint.setTableName(rs.getString("table_name"));
 				return constraint;

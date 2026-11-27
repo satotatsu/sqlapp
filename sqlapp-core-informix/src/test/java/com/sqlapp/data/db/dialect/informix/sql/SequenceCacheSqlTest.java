@@ -9,6 +9,17 @@ import com.sqlapp.data.schemas.Sequence;
 
 class SequenceCacheSqlTest {
 	@Test
+	void retainsExplicitOrderAcrossXml() throws Exception {
+		var registry = DialectResolver.getInstance().getDialect("Informix", 12, 10).createSqlFactoryRegistry();
+		for (boolean ordered : java.util.List.of(true, false)) {
+			var sequence = new Sequence("ids").setOrder(ordered).setCache(false);
+			Sequence restored = com.sqlapp.data.schemas.SchemaUtils.readXml(new java.io.StringReader(sequence.asXml()));
+			assertTrue(registry.createSql(restored, SqlType.CREATE).get(0).getSqlText()
+					.endsWith(ordered ? " ORDER" : " NOORDER"));
+		}
+	}
+
+	@Test
 	void preservesCacheSettingsAndRejectsInvalidSizes() {
 		var registry = DialectResolver.getInstance().getDialect("Informix", 14, 10).createSqlFactoryRegistry();
 		var sequence = new Sequence("audit_seq");

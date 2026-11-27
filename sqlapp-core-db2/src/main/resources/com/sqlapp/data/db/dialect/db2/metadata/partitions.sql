@@ -9,11 +9,12 @@ LEFT OUTER JOIN SYSCAT.TABLESPACES ts
   ON (dp.TBSPACEID=ts.TBSPACEID)
 LEFT OUTER JOIN SYSCAT.TABLESPACES lts
   ON (dp.LONG_TBSPACEID=lts.TBSPACEID)
-WHERE 1=1
+WHERE EXISTS (SELECT 1 FROM SYSCAT.DATAPARTITIONEXPRESSION e
+              WHERE e.TABSCHEMA=dp.TABSCHEMA AND e.TABNAME=dp.TABNAME)
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(dp.TABSCHEMA) IN /*schemaName*/('%')
+  AND dp.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(dp.TABNAME) IN /*tableName*/('%')
+  AND dp.TABNAME IN /*tableName*/('%')
   /*end*/
 ORDER BY dp.TABSCHEMA, dp.TABNAME, dp.SEQNO

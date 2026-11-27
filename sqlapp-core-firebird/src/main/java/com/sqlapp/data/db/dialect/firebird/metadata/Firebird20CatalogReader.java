@@ -29,6 +29,15 @@ import com.sqlapp.data.db.metadata.SchemaReader;
  * 
  */
 public class Firebird20CatalogReader extends FirebirdCatalogReader {
+	@Override
+	protected com.sqlapp.data.db.metadata.TableSpaceReader newTableSpaceReader() {
+		return new FirebirdTableSpaceReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.RoleReader newRoleReader() {
+		return new Firebird20RoleReader(getDialect());
+	}
 
 	public Firebird20CatalogReader(Dialect dialect) {
 		super(dialect);

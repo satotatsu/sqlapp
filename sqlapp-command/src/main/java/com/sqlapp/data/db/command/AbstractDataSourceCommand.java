@@ -159,6 +159,13 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand
 			connection = dataSource.getConnection();
 		} catch (SQLException e) {
 			logger.error(e.getMessage(), e);
+			try {
+				if (releaseConnectionHandler != null)
+					releaseConnectionHandler.accept(dataSource, null);
+			} catch (SQLException | RuntimeException cleanupFailure) {
+				if (e != cleanupFailure)
+					e.addSuppressed(cleanupFailure);
+			}
 			throw new RuntimeException(e);
 		}
 		try {

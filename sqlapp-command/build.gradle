@@ -12,7 +12,7 @@ dependencies {
 	testImplementation project(':sqlapp-core-test')
 	// Create local Access fixtures for offline assessment tests.
 	testRuntimeOnly project(':sqlapp-core-mdb')
-	testImplementation('io.github.spannm:ucanaccess:5.1.6')
+	testImplementation('io.github.spannm:ucanaccess:5.2.0')
 	//JDBC
 	api("com.zaxxer:HikariCP:7.0.2")
 	
@@ -37,6 +37,11 @@ dependencies {
 	testImplementation project(':sqlapp-core-oracle')
 	testImplementation project(':sqlapp-core-postgres')
 	testImplementation project(':sqlapp-core-sqlserver')
+	// Migration models are executed on DuckDB.
+	testImplementation project(':sqlapp-core-duckdb')
+	testImplementation('org.duckdb:duckdb_jdbc:2.0.0.1')
+	// IBM CCSID 1390/1399 charsets for COBOL host data set extraction tests (not in the JDK).
+	testImplementation('com.ibm.icu:icu4j-charset:78.1')
 	testImplementation(project(":sqlapp-core-test"))
 }
 

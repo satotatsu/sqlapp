@@ -29,5 +29,79 @@ import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
  * 
  */
 public class FirebirdCreateTableFactory extends AbstractCreateTableFactory<FirebirdSqlBuilder> {
+	@Override
+	protected void addCreateIndexDefinition(com.sqlapp.data.schemas.Table table, com.sqlapp.data.schemas.Index index,
+			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		result.addAll(getSqlFactoryRegistry().createSql(index, com.sqlapp.data.db.sql.SqlType.CREATE));
+	}
+
+	@Override
+	protected void addOtherDefinitions(com.sqlapp.data.schemas.Table table,
+			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (table.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(table, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+		for (var column : table.getColumns())
+			if (column.getRemarks() != null)
+				result.addAll(getSqlFactoryRegistry().createSql(column, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+		for (var key : table.getConstraints().getForeignKeyConstraints()) {
+			var builder = createSqlBuilder();
+			FirebirdConstraintSql.indexComment(key, builder);
+			if (key.getSpecifics().get("firebird.indexComment") != null)
+				addSql(result, builder, com.sqlapp.data.db.sql.SqlType.SET_COMMENT, key);
+		}
+	}
+
+	@Override
+	public java.util.List<com.sqlapp.data.db.sql.SqlOperation> createSql(com.sqlapp.data.schemas.Table table) {
+		FirebirdConstraintSql.validateTable(table);
+		var result = super.createSql(table);
+		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary
+				&& table.getSpecifics().containsKey("firebird.sqlSecurity")) {
+			var builder = createSqlBuilder()._add("ALTER TABLE ").name(table, getOptions().isDecorateSchemaName())
+					._add(" ALTER");
+			FirebirdRoutineSql.addSecurity(table.getSpecifics(), builder);
+			addSql(result, builder, com.sqlapp.data.db.sql.SqlType.ALTER, table);
+		}
+		return result;
+	}
+
+	@Override
+	protected void addCreateObject(com.sqlapp.data.schemas.Table table, FirebirdSqlBuilder builder) {
+		String externalFile = table.getSpecifics().get("firebird.external.file");
+		if (externalFile != null || table.getTableType() == com.sqlapp.data.schemas.Table.TableType.File) {
+			if (externalFile == null || externalFile.isBlank())
+				throw new IllegalArgumentException("Firebird external table requires firebird.external.file");
+			if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary
+					|| table.getSpecifics().containsKey("firebird.onCommit"))
+				throw new IllegalArgumentException("Firebird external table cannot be temporary");
+			if (!table.getConstraints().isEmpty() || !table.getIndexes().isEmpty())
+				throw new IllegalArgumentException("Firebird external tables cannot have constraints or indexes");
+			for (var column : table.getColumns())
+				if (column.getArrayDimension() > 0 || column.isIdentity() || column.getFormula() != null
+						|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.BLOB
+						|| column.getDataType() == com.sqlapp.data.db.datatype.DataType.CLOB)
+					throw new IllegalArgumentException(
+							"Firebird external table cannot contain arrays, blobs, computed or identity columns");
+			builder._add("CREATE TABLE ").name(table.getName())._add(" EXTERNAL FILE ").sqlChar(externalFile);
+			return;
+		}
+		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary) {
+			FirebirdTemporaryTableSql.requireSupportedDialect(builder);
+			builder.create().global().temporary().table().name(table, getOptions().isDecorateSchemaName());
+		} else {
+			if (table.getSpecifics().containsKey("firebird.onCommit"))
+				throw new IllegalArgumentException("firebird.onCommit requires a temporary table");
+			super.addCreateObject(table, builder);
+		}
+	}
+
+	@Override
+	protected void addOption(com.sqlapp.data.schemas.Table table, FirebirdSqlBuilder builder) {
+		if (table.getTableType() == com.sqlapp.data.schemas.Table.TableType.Temporary)
+			FirebirdTemporaryTableSql.addOnCommit(table,
+					getTableOptions().getTempTableOnCommitPreserveRows().test(table), builder);
+		else
+			FirebirdRoutineSql.addSecurity(table.getSpecifics(), builder);
+	}
 
 }

@@ -34,7 +34,17 @@ public class PhoenixSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, PhoenixCreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.DROP, PhoenixDropViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.ALTER, PhoenixAlterViewFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, PhoenixCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, PhoenixAlterTableFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE, PhoenixCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.DROP, PhoenixDropSequenceFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.CREATE, PhoenixCreateIndexFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Index.class, SqlType.DROP, PhoenixDropIndexFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, PhoenixLockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE, PhoenixTruncateTableFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, PhoenixSequenceNextValuesFactory.class);
 	}
 }

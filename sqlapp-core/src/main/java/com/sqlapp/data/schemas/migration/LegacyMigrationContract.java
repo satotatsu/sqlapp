@@ -75,7 +75,12 @@ public class LegacyMigrationContract {
 	}
 
 	public enum OccurrenceSourceMode {
-		NUMBERED_COLUMNS
+		NUMBERED_COLUMNS,
+		/**
+		 * Child records numbered in file order after their parent record, as with
+		 * header and detail records; there is no maximum.
+		 */
+		RECORD_SEQUENCE
 	}
 
 	@Getter

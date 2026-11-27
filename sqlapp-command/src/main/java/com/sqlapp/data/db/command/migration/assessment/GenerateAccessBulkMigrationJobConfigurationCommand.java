@@ -116,7 +116,6 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 		configuration.setProvenance(provenance);
 		final var taskIds = new java.util.HashSet<String>();
 		for (final var table : mapping.tables()) {
-			validateDirectLoad(table);
 			final Table sourceTable = validateSourceSchema(table, sourceTables);
 			final var task = new BulkMigrationJobConfiguration.Task();
 			final String sourceTableName = qualified(table.sourceTable().catalog(), table.sourceTable().schema(),
@@ -145,10 +144,20 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 				if (!same(column.sourceColumn().name(), column.targetColumn())) {
 					task.getColumnMappings().put(column.sourceColumn().name(), column.targetColumn());
 				}
+				if (column.conversion() != null && !column.conversion().isBlank()) {
+					task.getColumnConversions().put(column.sourceColumn().name(), column.conversion());
+				}
 			}
 			task.setKeysetColumns(sourceTable.getPrimaryKeyConstraint().getColumns().stream().map(
 					reference -> reference.getColumn() == null ? reference.getName() : reference.getColumn().getName())
 					.toList());
+			try {
+				// Fail while generating rather than when the reviewed job first runs.
+				com.sqlapp.jdbc.bulk.BulkMigrationColumnConversions.mvel(sourceTable, task.getColumnConversions())
+						.requireUnconverted(task.getKeysetColumns(), "primary key");
+			} catch (final IllegalArgumentException e) {
+				throw new CommandException(e.getMessage(), e);
+			}
 			task.setVerificationColumns(sourceTable.getColumns().stream().filter(column -> !column.isHidden())
 					.filter(column -> column.getFormula() == null || column.getFormula().isEmpty())
 					.map(column -> column.getName()).toList());
@@ -245,16 +254,6 @@ public class GenerateAccessBulkMigrationJobConfigurationCommand extends Abstract
 			}
 		}
 		return table;
-	}
-
-	private static void validateDirectLoad(final ResolvedMigrationTargetMapping.TableMapping table) {
-		final var source = table.sourceTable();
-		for (final var column : table.columns()) {
-			if (column.conversion() != null && !column.conversion().isBlank()) {
-				throw new CommandException("Existing bulk migration cannot apply mapping conversion: " + source.name()
-						+ "." + column.sourceColumn().name());
-			}
-		}
 	}
 
 	private void validateProperties() {

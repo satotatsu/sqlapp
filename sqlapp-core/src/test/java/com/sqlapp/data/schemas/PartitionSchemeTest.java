@@ -30,6 +30,20 @@ public class PartitionSchemeTest extends AbstractDbObjectTest<PartitionScheme> {
 		return obj;
 	}
 
+	@org.junit.jupiter.api.Test
+	void repeatedDestinationsSurviveCloneXmlAndBulkInsertion() throws Exception {
+		PartitionScheme scheme = new PartitionScheme("PS");
+		for (int i = 1; i <= 4; i++) scheme.getTableSpaces().add(new TableSpace("PRIMARY").setId(Integer.toString(i)));
+		PartitionScheme copy = scheme.clone();
+		org.junit.jupiter.api.Assertions.assertEquals(scheme, copy);
+		org.junit.jupiter.api.Assertions.assertEquals(4, copy.getTableSpaces().size());
+		PartitionScheme restored = SchemaUtils.readXml(new java.io.StringReader(scheme.asXml()));
+		org.junit.jupiter.api.Assertions.assertEquals(scheme, restored);
+		copy.getTableSpaces().clear();
+		copy.getTableSpaces().addAll(0, scheme.getTableSpaces());
+		org.junit.jupiter.api.Assertions.assertEquals(scheme, copy);
+	}
+
 	@Override
 	protected PartitionScheme getObject() {
 		return getPartitionScheme("PartitionSchemeA");

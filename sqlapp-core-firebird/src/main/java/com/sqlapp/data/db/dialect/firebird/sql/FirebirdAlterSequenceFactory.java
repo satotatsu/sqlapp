@@ -20,9 +20,14 @@
 package com.sqlapp.data.db.dialect.firebird.sql;
 
 import java.math.BigInteger;
+import java.util.*;
 
+import com.sqlapp.data.db.dialect.firebird.DialectHolder;
 import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractAlterSequenceFactory;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.util.CommonUtils;
 
@@ -30,11 +35,47 @@ public class FirebirdAlterSequenceFactory extends AbstractAlterSequenceFactory<F
 
 	@Override
 	protected void addCreateObject(Sequence obj, FirebirdSqlBuilder builder) {
-		BigInteger val = CommonUtils.coalesce(obj.getLastValue(), obj.getStartValue());
-		if (val == null || val.equals(BigInteger.ZERO)) {
-			return;
+		BigInteger next = CommonUtils.coalesce(obj.getLastValue(), obj.getStartValue());
+		if (next == null)
+			throw new IllegalArgumentException("Sequence ALTER requires an explicit next value (lastValue)");
+		validateValue(next);
+		// SET GENERATOR takes the current value, one increment before the next value.
+		builder.set().generator().space().name(obj).space().to().space()
+				._add(FirebirdCreateSequenceFactory.currentBefore(next, obj.getIncrementBy()));
+	}
+
+	@Override
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+		Sequence target = FirebirdAlterSql.target(difference, Sequence.class,
+				Set.of("lastValue", "incrementBy", "remarks"));
+		var changed = difference.getChangedProperties();
+		List<SqlOperation> result = new ArrayList<>();
+		if (changed.containsKey("incrementBy")) {
+			if (getDialect().compareTo(DialectHolder.defaultDialect30) < 0)
+				throw new IllegalArgumentException("Sequence increment ALTER requires Firebird 3.0 or later");
+			BigInteger increment = target.getIncrementBy();
+			if (increment == null || increment.signum() == 0)
+				throw new IllegalArgumentException("Sequence increment must be an explicit non-zero integer");
+			validateValue(increment);
+			addSql(result, createSqlBuilder(getDialect())._add("ALTER SEQUENCE ").name(target.getName())
+					._add(" INCREMENT BY ")._add(increment), SqlType.ALTER, target);
 		}
-		builder.set().generator().space().name(obj).space().to().space()._add(val);
+		if (changed.containsKey("lastValue")) {
+			if (target.getLastValue() == null)
+				throw new IllegalArgumentException("Sequence next value cannot be cleared");
+			// SET GENERATOR means the current value on every supported version, so the
+			// next value is converted; RESTART WITH means the next value only on 4.0+.
+			result.addAll(createSql(target));
+		}
+		if (changed.containsKey("remarks"))
+			result.addAll(getSqlFactoryRegistry().createSql(target, SqlType.SET_COMMENT));
+		return result;
+	}
+
+	private static void validateValue(BigInteger value) {
+		if (value.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0
+				|| value.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0)
+			throw new IllegalArgumentException("Firebird sequence values must fit a signed 64-bit integer");
 	}
 
 }

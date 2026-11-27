@@ -14,18 +14,9 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 
 class SybaseColumnReaderTest {
 	@ParameterizedTest
-	@CsvSource({
-			"12,5,columns.sql",
-			"14,0,columns.sql",
-			"15,0,columns15.sql",
-			"16,0,columns15.sql"
-	})
-	void selectsVersionCompatibleCatalogQuery(final int major,
-			final int minor, final String expected) {
-		var version = new ProductVersionInfo()
-				.setMajorVersion(major)
-				.setMinorVersion(minor);
-		assertEquals(expected,
-				SybaseColumnReader.getColumnSqlResource(version));
+	@CsvSource({ "12,5,columns.sql", "14,0,columns.sql", "15,0,columns15.sql", "16,0,columns15.sql" })
+	void selectsVersionCompatibleCatalogQuery(final int major, final int minor, final String expected) {
+		var version = new ProductVersionInfo().setMajorVersion(major).setMinorVersion(minor);
+		assertEquals(expected, SybaseColumnReader.getColumnSqlResource(version));
 	}
 }

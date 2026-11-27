@@ -32,4 +32,9 @@ public class Oracle10gSchemaReader extends OracleSchemaReader {
 	protected MviewReader newMviewReader() {
 		return new Oracle10gMviewReader(this.getDialect());
 	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.EventReader newEventReader() {
+		return new Oracle10gEventReader(getDialect());
+	}
 }

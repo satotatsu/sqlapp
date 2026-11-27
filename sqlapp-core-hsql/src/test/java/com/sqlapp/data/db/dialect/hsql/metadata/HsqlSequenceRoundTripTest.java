@@ -15,7 +15,7 @@ class HsqlSequenceRoundTripTest {
 			var dialect = DialectResolver.getInstance().getDialect(connection);
 			var reader = dialect.getCatalogReader().getSchemaReader().getSequenceReader();
 			reader.setSchemaName("PUBLIC");
-			for (boolean cycle : new boolean[] {true, false}) {
+			for (boolean cycle : new boolean[] { true, false }) {
 				statement.execute("CREATE SEQUENCE AUDIT_SEQ START WITH 50 INCREMENT BY 5 MINVALUE 5 MAXVALUE 1000 "
 						+ (cycle ? "CYCLE" : "NO CYCLE") + "");
 				var sequence = reader.getAll(connection).get(0);

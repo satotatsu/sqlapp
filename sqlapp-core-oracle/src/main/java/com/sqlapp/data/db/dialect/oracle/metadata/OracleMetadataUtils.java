@@ -208,6 +208,21 @@ public class OracleMetadataUtils {
 	 * @param obj        オブジェクト
 	 * @param difinition 定義
 	 */
+	protected static void setRoutineDefinition(Routine<?> routine, List<String> source) {
+		routine.setDefinition(getSourceDefinition(routine, source));
+	}
+
+	/** Preserves the complete ALL_SOURCE header and body without parsing PL/SQL. */
+	protected static String getSourceDefinition(AbstractSchemaObject<?> obj, List<String> source) {
+		if (source == null || source.isEmpty() || source.stream().allMatch(s -> s == null || s.isBlank())) {
+			throw new IllegalStateException(
+					"Oracle object source unavailable: " + obj.getSchemaName() + "." + obj.getName());
+		}
+		// ALL_ARGUMENTS does not expose default expressions. Preserve the original
+		// signature, AUTHID, compiler clauses and body together rather than guessing.
+		return "CREATE OR REPLACE " + String.join("\n", source);
+	}
+
 	protected static String getFunctionStatement(AbstractSchemaObject<?> obj, List<String> difinition) {
 		Pattern pattern = Pattern.compile(
 				"FUNCTION\\s+(" + obj.getName() + "|\"" + obj.getName()
@@ -416,7 +431,7 @@ public class OracleMetadataUtils {
 		String productDataType = getString(rs, "DATA_TYPE");
 		String def = getString(rs, "DEFAULTED");
 		if ("Y".equals(def)) {
-			obj.setDefaultValue("NULL");
+			obj.getSpecifics().put("DEFAULTED", Boolean.TRUE);
 		}
 		long max_length = rs.getLong("CHAR_LENGTH");
 		long precision = rs.getLong("DATA_PRECISION");

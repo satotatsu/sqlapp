@@ -38,6 +38,45 @@ class MdbJackcessSupportTest {
 	Path tempDirectory;
 
 	@Test
+	void invalidExplicitMappingsCannotSilentlyLoseRowsOrValues() throws Exception {
+		final Path source = tempDirectory.resolve("mapping-source.accdb");
+		try (var file = DatabaseBuilder.create(Database.FileFormat.V2010, source.toFile())) {
+			new TableBuilder("OLD").addColumn(new ColumnBuilder("TXT", io.github.spannm.jackcess.DataType.TEXT))
+					.toTable(file).addRow("retained");
+		}
+		final byte[] before = java.nio.file.Files.readAllBytes(source);
+		final Schema schema = MdbFileLoader.load(source);
+		schema.getTables().get("OLD").setName("NEW");
+		final Path target = tempDirectory.resolve("mapping-target.accdb");
+		final List<Map<String, String>> invalidTables = List.of(Map.of("NEW", "MISSING"), Map.of("MISSING", "OLD"),
+				Map.of("NEW", "OLD", "new", "OLD"), Map.of("NEW", " "));
+		for (final var mapping : invalidTables) {
+			assertThrows(IllegalArgumentException.class,
+					() -> MdbJackcessSupport.rebuild(source, target, schema, mapping, Map.of()));
+			assertFalse(java.nio.file.Files.exists(target));
+		}
+		final List<Map<String, Map<String, String>>> invalidColumns = List.of(Map.of("MISSING", Map.of("TXT", "TXT")),
+				Map.of("NEW", Map.of("MISSING", "TXT")), Map.of("NEW", Map.of("TXT", "MISSING")),
+				Map.of("NEW", Map.of("TXT", "TXT", "txt", "TXT")));
+		for (final var mapping : invalidColumns) {
+			assertThrows(IllegalArgumentException.class,
+					() -> MdbJackcessSupport.rebuild(source, target, schema, Map.of("NEW", "OLD"), mapping));
+			assertFalse(java.nio.file.Files.exists(target));
+		}
+		final var text = schema.getTables().get("NEW").getColumns().get("TXT");
+		text.setFormula("'computed'");
+		assertThrows(IllegalArgumentException.class, () -> MdbJackcessSupport.rebuild(source, target, schema,
+				Map.of("NEW", "OLD"), Map.of("NEW", Map.of("TXT", "TXT"))));
+		assertFalse(java.nio.file.Files.exists(target));
+		text.setFormula(null);
+		MdbJackcessSupport.rebuild(source, target, schema, Map.of("new", "old"), Map.of("new", Map.of("txt", "txt")));
+		try (var file = new DatabaseBuilder().withPath(target).withReadOnly(true).open()) {
+			assertEquals("retained", file.getTable("NEW").iterator().next().get("TXT"));
+		}
+		org.junit.jupiter.api.Assertions.assertArrayEquals(before, java.nio.file.Files.readAllBytes(source));
+	}
+
+	@Test
 	void bulkCrudReturnsEveryAutoNumberAndUsesPrimaryKey() throws Exception {
 		final Path file = tempDirectory.resolve("bulk.accdb");
 		try (Database database = DatabaseBuilder.create(Database.FileFormat.V2010, file.toFile())) {

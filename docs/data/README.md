@@ -4,6 +4,7 @@
 
 | Goal | Guide |
 |---|---|
+| Generate large test datasets from Excel rules | [Test-data generation](test-data-generation.md) |
 | Convert Java and JDBC values | [Value converters](converters.md) |
 | Insert or upsert Schema table rows | [Bulk insert and upsert](bulk-insert.md) |
 | Process related rows as a hierarchy | [JDBC tree data sessions](jdbc-tree-data-session.md) |

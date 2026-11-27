@@ -37,9 +37,9 @@ import com.sqlapp.data.schemas.Synonym;
 
 /**
  * DB2のシノニム読み込み
- * 
+ *
  * @author satoh
- * 
+ *
  */
 public class Db2SynonymReader extends SynonymReader {
 
@@ -49,7 +49,7 @@ public class Db2SynonymReader extends SynonymReader {
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * com.sqlapp.data.db.dialect.metadata.AbstractDBMetadataFactory#getMetadata
 	 * (java.sql.Connection, com.sqlapp.data.parameter.ParametersContext)
@@ -70,6 +70,11 @@ public class Db2SynonymReader extends SynonymReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
+		Integer major = productVersionInfo.getMajorVersion(), minor = productVersionInfo.getMinorVersion();
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_970
+				|| major != null && (major > 9 || major == 9 && minor != null && minor >= 7)) {
+			return getSqlNodeCache().getString("synonyms970.sql");
+		}
 		return getSqlNodeCache().getString("synonyms.sql");
 	}
 
@@ -78,6 +83,7 @@ public class Db2SynonymReader extends SynonymReader {
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setObjectSchemaName(getString(rs, "base_schema"));
 		obj.setObjectName(getString(rs, "base_object"));
+		obj.getSpecifics().put("ALIAS_TYPE", getString(rs, "alias_type"));
 		obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		obj.setRemarks(getString(rs, REMARKS));
 		return obj;

@@ -20,6 +20,8 @@
 package com.sqlapp.data.schemas;
 
 import java.util.function.Supplier;
+import java.util.Collection;
+import java.util.ArrayList;
 
 /**
  * UserPrivilegeのコレクション
@@ -54,6 +56,28 @@ public final class UserPrivilegeCollection extends
 	@Override
 	public UserPrivilegeCollection clone(){
 		return (UserPrivilegeCollection)super.clone();
+	}
+
+	/** Preserve grants with distinct grantors or supplemental principal identities. */
+	@Override
+	public boolean addAll(Collection<? extends UserPrivilege> privileges) {
+		boolean changed = false;
+		for (UserPrivilege privilege : new ArrayList<>(privileges)) {
+			changed |= add(privilege);
+		}
+		return changed;
+	}
+
+	@Override
+	public boolean addAll(int index, Collection<? extends UserPrivilege> privileges) {
+		if (index < 0 || index > size()) throw new IndexOutOfBoundsException(index);
+		int cursor = index;
+		for (UserPrivilege privilege : new ArrayList<>(privileges)) {
+			int before = size();
+			add(cursor, privilege);
+			if (size() > before) cursor++;
+		}
+		return cursor != index;
 	}
 	
 	@Override

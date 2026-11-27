@@ -23,6 +23,10 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreatePartitionSchemeFactory;
 import com.sqlapp.data.schemas.PartitionScheme;
 import com.sqlapp.data.schemas.TableSpace;
+import java.util.List;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerPartitionOptions;
 
 public class SqlServer2005CreatePartitionSchemeFactory
 		extends AbstractCreatePartitionSchemeFactory<SqlServerSqlBuilder> {
@@ -42,11 +46,20 @@ public class SqlServer2005CreatePartitionSchemeFactory
 				boolean first = true;
 				for (final TableSpace tableSpace : obj.getTableSpaces()) {
 					builder._add(", ", !first);
-					builder._add(tableSpace.getName());
+					if ("PRIMARY".equalsIgnoreCase(tableSpace.getName()))
+						builder._add("[PRIMARY]");
+					else
+						builder.name(tableSpace.getName());
 					first = false;
 				}
 			}
 			builder.space();
 		});
+	}
+
+	@Override
+	protected void addOptions(PartitionScheme scheme, List<SqlOperation> result) {
+		if (SqlServerPartitionOptions.getNextUsed(scheme) != null)
+			result.addAll(getSqlFactoryRegistry().createSql(scheme, SqlType.ALTER));
 	}
 }

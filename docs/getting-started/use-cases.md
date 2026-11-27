@@ -215,6 +215,23 @@ complete example, its focused Gradle test command, and transaction controls.
 For a procedural migration walkthrough, see the
 [COBOL example](../data/jdbc-tree-data-cobol-migration-example.md).
 
+## Generate relational test datasets
+
+Generate an Excel workbook from database metadata, edit value rules and lookup
+definitions, then load test rows through JDBC batches. This is useful for
+integration and load tests where a small handwritten fixture is insufficient.
+The workbook describes generation rules rather than storing every output row;
+iteration counts can target million-row datasets without filling Excel with
+all generated records.
+
+Use column expressions and candidate values for business codes and categories,
+and SQL/file lookup groups for related values. Batch size and commit controls
+can be tuned separately from the dataset definition. Actual throughput and
+memory use depend on the database, driver, rules, and lookup sizes.
+
+See the [test-data generator guide](../data/test-data-generation.md) for the
+two-task workflow, workbook sheets, scale planning, and result checks.
+
 ## Choose the operation you actually need
 
 These workflows can share a model while serving different goals. Begin with

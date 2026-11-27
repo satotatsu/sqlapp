@@ -52,4 +52,13 @@ public class Db2SqlSplitterTest extends AbstractTest {
 		List<SplitResult> splits = sqlSplitter.parse(text);
 		assertEquals(14, splits.size());
 	}
+
+	@Test
+	public void adjacentStatementsRetainFirstCharacter() {
+		var parts = dialect.createSqlSplitter().parse("SELECT 1;SELECT 2;SELECT 3");
+		assertEquals(3, parts.size());
+		assertEquals("SELECT 2", parts.get(1).getText());
+		assertEquals("SELECT 3", parts.get(2).getText());
+	}
+
 }

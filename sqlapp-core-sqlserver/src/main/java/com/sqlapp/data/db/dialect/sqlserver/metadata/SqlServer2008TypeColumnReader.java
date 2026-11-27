@@ -86,7 +86,7 @@ public class SqlServer2008TypeColumnReader extends TypeColumnReader {
 		if (obj.isIdentity()) {
 			obj.setIdentityStartValue(rs.getLong("ident_seed"));
 			obj.setIdentityStep(rs.getLong("ident_increment"));
-			obj.setIdentityLastValue(rs.getLong("ident_current"));
+			// Table types keep no identity counter of their own.
 		}
 		obj.setRemarks(getString(rs, "remarks"));
 		String check_definition = trim(unwrap(getString(rs, "check_definition"), '(', ')'));

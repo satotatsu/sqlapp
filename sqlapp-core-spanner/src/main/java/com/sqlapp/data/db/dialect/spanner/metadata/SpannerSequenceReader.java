@@ -10,6 +10,9 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.spanner.sql.SpannerCreateSequenceFactory;
@@ -35,10 +38,15 @@ public class SpannerSequenceReader extends SequenceReader {
 			final ProductVersionInfo productVersionInfo) {
 		final SqlNode node = getSqlNode(productVersionInfo);
 		final List<Sequence> result = list();
+		final Set<List<String>> identities = new HashSet<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
-				result.add(createSequence(rs));
+				final Sequence sequence = createSequence(rs);
+				if (!identities
+						.add(Arrays.asList(sequence.getCatalogName(), sequence.getSchemaName(), sequence.getName())))
+					throw new IllegalArgumentException("Duplicate Spanner sequence metadata: " + sequence.getName());
+				result.add(sequence);
 			}
 		});
 		return result;
@@ -53,13 +61,33 @@ public class SpannerSequenceReader extends SequenceReader {
 		sequence.setDialect(getDialect());
 		sequence.setCatalogName(getString(rs, "CATALOG"));
 		sequence.setSchemaName(getString(rs, "SCHEMA"));
+		if (sequence.getName() == null || sequence.getName().isBlank())
+			throw new IllegalArgumentException("Spanner sequence metadata requires a name");
 		sequence.setDataTypeName(getString(rs, "DATA_TYPE"));
+		final String kind = getString(rs, "SEQUENCE_KIND");
+		if (kind != null) {
+			// OPTION_VALUE can be a SQL string literal; the emulator exposes the raw name.
+			if (!"bit_reversed_positive".equalsIgnoreCase(kind) && !"'bit_reversed_positive'".equalsIgnoreCase(kind)
+					&& !"\"bit_reversed_positive\"".equalsIgnoreCase(kind))
+				throw new IllegalArgumentException(
+						"Unknown Spanner sequence kind for " + sequence.getName() + ": " + kind);
+			sequence.getSpecifics().put("SEQUENCE_KIND", "bit_reversed_positive");
+		}
 		final Long start = getLong(rs, "START_WITH_COUNTER");
 		if (start != null) {
+			if (start <= 0)
+				throw new IllegalArgumentException(
+						"Spanner sequence start counter must be positive: " + sequence.getName());
 			sequence.setStartValue(start);
 		}
 		final Long skipMin = getLong(rs, "SKIP_RANGE_MIN");
 		final Long skipMax = getLong(rs, "SKIP_RANGE_MAX");
+		if ((skipMin == null) != (skipMax == null))
+			throw new IllegalArgumentException(
+					"Spanner sequence skip range requires both bounds: " + sequence.getName());
+		if (skipMin != null && skipMin > skipMax)
+			throw new IllegalArgumentException(
+					"Spanner sequence skip range minimum exceeds maximum: " + sequence.getName());
 		if (skipMin != null) {
 			sequence.getSpecifics().put(SpannerCreateSequenceFactory.SKIP_RANGE_MIN, skipMin);
 		}

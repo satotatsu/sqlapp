@@ -20,6 +20,10 @@
 package com.sqlapp.data.schemas;
 
 import java.util.function.Supplier;
+import javax.xml.stream.XMLStreamException;
+import com.sqlapp.data.schemas.properties.OwnerNameProperty;
+import com.sqlapp.util.StaxWriter;
+import com.sqlapp.util.ToStringBuilder;
 
 /**
  * ビュークラス
@@ -27,7 +31,31 @@ import java.util.function.Supplier;
  * @author tatsuo satoh
  * 
  */
-public class Mview extends Table {
+public class Mview extends Table implements OwnerNameProperty<Mview> {
+	private String ownerName;
+
+	@Override
+	public String getOwnerName() {
+		return ownerName;
+	}
+
+	@Override
+	public Mview setOwnerName(String ownerName) {
+		this.ownerName = ownerName;
+		return this;
+	}
+
+	@Override
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
+		super.writeXmlOptionalAttributes(stax);
+		stax.writeAttribute(SchemaProperties.OWNER_NAME.getLabel(), getOwnerName());
+	}
+
+	@Override
+	protected void toString(ToStringBuilder builder) {
+		super.toString(builder);
+		builder.add(SchemaProperties.OWNER_NAME, getOwnerName());
+	}
 
 	/**
 	 * serialVersionUID
@@ -66,7 +94,7 @@ public class Mview extends Table {
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
-		return true;
+		return equals(SchemaProperties.OWNER_NAME, (Mview) obj, equalsHandler);
 	}
 	
 	@Override

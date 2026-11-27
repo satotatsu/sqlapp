@@ -26,18 +26,21 @@ import com.sqlapp.data.db.sql.AbstractCreatePackageFactory;
 import com.sqlapp.data.schemas.Package;
 
 public class Firebird30CreatePackageFactory extends AbstractCreatePackageFactory<FirebirdSqlBuilder> {
+	@Override
+	protected void addOtherDefinitions(Package obj, java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		if (obj.getRemarks() != null)
+			result.addAll(getSqlFactoryRegistry().createSql(obj, com.sqlapp.data.db.sql.SqlType.SET_COMMENT));
+	}
 
 	@Override
 	protected void addCreateObject(final Package obj, FirebirdSqlBuilder builder) {
 		if (!isEmpty(obj.getDefinition())) {
-			builder.create().or().alter();
-			builder.space();
 			builder._add(obj.getDefinition());
 		} else {
-			builder.create().or().alter().package_();
+			builder.create().package_();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
-			builder.lineBreak().as();
-			builder.lineBreak()._add(obj.getStatement());
+			FirebirdRoutineSql.addSecurity(obj.getSpecifics(), builder);
+			FirebirdRoutineSql.addBody(obj.getStatement(), builder);
 		}
 	}
 }

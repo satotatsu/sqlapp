@@ -44,7 +44,7 @@ class FirebirdJdbcTreeDataSessionTest {
 	private static final GenericContainer<?> FIREBIRD = ReusableTestcontainers
 			.configure(new GenericContainer<>(DockerImageName.parse("jacobalberty/firebird:v5.0"))
 					.withEnv("ISC_PASSWORD", PASSWORD).withEnv("FIREBIRD_DATABASE", "test.fdb").withExposedPorts(3050)
-					.waitingFor(Wait.forListeningPort()));
+					.waitingFor(Wait.forHealthcheck()));
 
 	@BeforeAll
 	static void startContainer() {
@@ -171,8 +171,8 @@ class FirebirdJdbcTreeDataSessionTest {
 	}
 
 	private Connection createConnection() throws SQLException {
-		String url = "jdbc:firebirdsql://localhost:" + FIREBIRD.getMappedPort(3050)
-				+ "//firebird/data/test.fdb?encoding=UTF8";
+		String url = "jdbc:firebirdsql://" + FIREBIRD.getHost() + ":" + FIREBIRD.getMappedPort(3050)
+				+ "//firebird/data/test.fdb?encoding=UTF8&connectTimeout=30&soTimeout=60000";
 		return DriverManager.getConnection(url, "SYSDBA", PASSWORD);
 	}
 

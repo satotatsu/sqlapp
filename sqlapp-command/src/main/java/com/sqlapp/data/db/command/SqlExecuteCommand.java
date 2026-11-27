@@ -90,6 +90,12 @@ public class SqlExecuteCommand extends AbstractSqlCommand implements FilesProper
 
 	private void executeSql(final SqlConverter sqlConverter, final Dialect dialect, final Connection connection,
 			final SplitResult splitResult) throws SQLException {
+		if (splitResult.getTextType() == SqlSplitter.TextType.COMMENT) {
+			// A plain comment does nothing; some drivers (DuckDB) reject it as an empty
+			// statement.
+			// COMMENT_DIRECTIVE (e.g. MySQL /*! ... */) is executable and still runs.
+			return;
+		}
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, splitResult.getText());

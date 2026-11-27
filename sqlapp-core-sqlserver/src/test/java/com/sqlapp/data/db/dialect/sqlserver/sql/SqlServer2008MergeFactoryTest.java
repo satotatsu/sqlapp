@@ -63,8 +63,8 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					VALUES (
 						  /*cola*/0
 						, /*colb*/''
-						, CURRENT_TIMESTAMP
-						, COALESCE(/*updated_at*/CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+						, SYSDATETIME()
+						, COALESCE(/*updated_at*/'', SYSDATETIME())
 						, 0
 					)
 				)
@@ -110,8 +110,8 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					VALUES (
 						  /*cola*/0
 						, /*colb*/''
-						, CURRENT_TIMESTAMP
-						, CURRENT_TIMESTAMP
+						, SYSDATETIME()
+						, SYSDATETIME()
 						, 0
 					)
 				)
@@ -158,8 +158,8 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					VALUES (
 						  /*cola*/0
 						, /*colb*/''
-						, CURRENT_TIMESTAMP
-						, CURRENT_TIMESTAMP
+						, SYSDATETIME()
+						, SYSDATETIME()
 						, 0
 					)
 				)

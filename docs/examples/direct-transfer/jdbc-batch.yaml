@@ -1,0 +1,6 @@
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.ITEMS]
+schemaMode: REQUIRE_EXISTING
+insertMethod: JDBC_BATCH

@@ -50,12 +50,22 @@ public class H2TriggerReader extends TriggerReader {
 	protected List<Trigger> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
+		boolean modern = H2Versions.isModern(productVersionInfo);
 		final Dialect dialect = this.getDialect();
 		final List<Trigger> result = list();
+		final var triggers = new java.util.LinkedHashMap<java.util.List<String>, Trigger>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Trigger trigger = new Trigger(getString(rs, TRIGGER_NAME));
+				String name = getString(rs, TRIGGER_NAME);
+				var key = java.util.Arrays.asList(getString(rs, "TRIGGER_CATALOG"), getString(rs, "TRIGGER_SCHEMA"),
+						name);
+				Trigger trigger = triggers.get(key);
+				if (trigger != null) {
+					trigger.getEventManipulation().add(getString(rs, "TRIGGER_TYPE"));
+					return;
+				}
+				trigger = new Trigger(name);
 				trigger.setDialect(dialect);
 				String before = getString(rs, "BEFORE");
 				trigger.setActionTiming(before);
@@ -67,15 +77,23 @@ public class H2TriggerReader extends TriggerReader {
 				trigger.setClassName(getString(rs, "JAVA_CLASS"));
 				trigger.setDefinition(getString(rs, "SQL"));
 				trigger.setRemarks(getString(rs, REMARKS));
+				if (modern) {
+					trigger.setActionOrientation(getString(rs, "ACTION_ORIENTATION"));
+					trigger.getSpecifics().put("h2.queueSize", getString(rs, "QUEUE_SIZE"));
+					if (rs.getBoolean("NO_WAIT"))
+						trigger.getSpecifics().put("h2.noWait", "true");
+					if (rs.getBoolean("IS_ROLLBACK"))
+						trigger.getEventManipulation().add("ROLLBACK");
+				}
 				result.add(trigger);
+				triggers.put(key, trigger);
 			}
 		});
 		return result;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("triggers_200.sql");
 		}
 		return getSqlNodeCache().getString("triggers.sql");

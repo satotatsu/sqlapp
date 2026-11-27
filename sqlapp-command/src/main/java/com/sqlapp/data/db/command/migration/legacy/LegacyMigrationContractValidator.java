@@ -227,7 +227,11 @@ public class LegacyMigrationContractValidator {
 		if (!configured) {
 			return;
 		}
-		if (dataSet.getMaximumOccurrences() == null || dataSet.getMaximumOccurrences() <= 0
+		boolean recordSequence = dataSet
+				.getOccurrenceSourceMode() == LegacyMigrationContract.OccurrenceSourceMode.RECORD_SEQUENCE;
+		if ((recordSequence
+				? dataSet.getMaximumOccurrences() != null || hasIndexedSources || dataSet.getParentDataSetId() == null
+				: dataSet.getMaximumOccurrences() == null || dataSet.getMaximumOccurrences() <= 0)
 				|| blank(dataSet.getOccurrenceColumn()) || occurrenceFields.size() != 1) {
 			throw new CommandException("Data set occurrence configuration is invalid: " + dataSet.getId());
 		}
@@ -242,7 +246,7 @@ public class LegacyMigrationContractValidator {
 			throw new CommandException("Data set occurrence source mode is inconsistent: " + dataSet.getId());
 		}
 		for (Field field : dataSet.getFields()) {
-			if (field.getIndexedSources().stream()
+			if (!recordSequence && field.getIndexedSources().stream()
 					.anyMatch(source -> source.getIndex() > dataSet.getMaximumOccurrences())) {
 				throw new CommandException("Indexed source exceeds occurrence maximum: " + dataSet.getId());
 			}

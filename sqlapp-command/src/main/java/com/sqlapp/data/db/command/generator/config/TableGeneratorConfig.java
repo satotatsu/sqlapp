@@ -58,6 +58,27 @@ public class TableGeneratorConfig {
 	/** Schema Name */
 	@JsonProperty(index = 0)
 	private String schemaName;
+	/** Optional seed for lookup selection. */
+	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+	private Long randomSeed;
+	/** Fixed date/time available to generation expressions as _baseTime. */
+	@JsonIgnore
+	private java.time.LocalDateTime baseTime;
+	@JsonIgnore
+	private final Map<Object, Map<String, Object>> selectedRows = new java.util.IdentityHashMap<>();
+
+	public java.util.Random createSelectionRandom(String group) {
+		if (randomSeed == null) {
+			return new java.util.Random();
+		}
+		String identity = String.valueOf(table == null ? schemaName : table.getSchemaName()) + ":" + name + ":" + group;
+		long seed = randomSeed;
+		for (int i = 0; i < identity.length(); i++) {
+			seed = seed * 31 + identity.charAt(i);
+		}
+		return new java.util.Random(seed);
+	}
+
 	/** Table Name */
 	@JsonProperty(index = 1)
 	private String name;
@@ -184,9 +205,32 @@ public class TableGeneratorConfig {
 	 * 値のチェックを行います。
 	 */
 	public void check() {
+		formatColumns.clear();
+		columns.values().stream().filter(c -> !CommonUtils.isBlank(c.getFormatExpression()))
+				.forEach(formatColumns::add);
+		queries.values().forEach(q -> {
+			validateLookup(q.getGenerationGroup(), q.getLimit(), q.getOffset(), q.getSelectionStrategy());
+			if (CommonUtils.isBlank(q.getSelectSql())) {
+				throw invalid("Query selectSql is required: " + q.getGenerationGroup());
+			}
+			q.setTableGeneratorConfig(this);
+		});
+		files.values().forEach(f -> {
+			validateLookup(f.getLookupGroup(), f.getLimit(), f.getOffset(), f.getSelectionStrategy());
+			if (CommonUtils.isBlank(f.getDataSourceExpression())) {
+				throw invalid("File dataSourceExpression is required: " + f.getLookupGroup());
+			}
+			f.setTableGeneratorConfig(this);
+		});
 		columns.entrySet().forEach(entry -> {
 			final String genGroup = entry.getValue().getLookupGroup();
+			entry.getValue().setQueryGeneratorConfig(null);
+			entry.getValue().setFileGeneratorConfig(null);
 			if (!CommonUtils.isEmpty(genGroup)) {
+				if (queries.containsKey(genGroup) == files.containsKey(genGroup)) {
+					throw invalid("Column " + entry.getKey() + ": lookupGroup must identify exactly one query or file: "
+							+ genGroup);
+				}
 				final QueryGeneratorConfig queryDef = queries.get(genGroup);
 				if (queryDef != null) {
 					entry.getValue().setQueryGeneratorConfig(queryDef);
@@ -199,11 +243,38 @@ public class TableGeneratorConfig {
 		});
 	}
 
-	/**
-	 * 初期値を評価します
-	 * 
-	 */
+	private IllegalArgumentException invalid(String message) {
+		return new IllegalArgumentException(
+				"Generator table=" + schemaName + "." + name + ", file=" + file + ": " + message);
+	}
+
+	private void validateLookup(String group, int limit, int offset,
+			com.sqlapp.data.db.command.generator.config.strategy.ValueSelectStrategy strategy) {
+		if (limit <= 0 || offset < 0 || strategy == null) {
+			throw invalid("Lookup " + group + " requires limit > 0, offset >= 0 and selectionStrategy");
+		}
+	}
+
+	/** Validate loaded lookup data before initialization SQL and INSERT. */
+	public void validateLoadedData() {
+		columns.values().forEach(c -> {
+			List<Map<String, Object>> values = c.getQueryGeneratorConfig() != null
+					? c.getQueryGeneratorConfig().getValues()
+					: c.getFileGeneratorConfig() != null ? c.getFileGeneratorConfig().getValues() : null;
+			if (!CommonUtils.isEmpty(c.getLookupGroup()) && CommonUtils.isEmpty(values)) {
+				throw invalid("Column " + c.getName() + ": empty lookupGroup " + c.getLookupGroup());
+			}
+		});
+	}
+
+	/** Reset generation state, evaluate initial values and validate bounds. */
 	public synchronized void calculateInitialObjectValues() {
+		previousValues = CommonUtils.map();
+		startValues.clear();
+		minValues.clear();
+		maxValues.clear();
+		selectedRows.clear();
+		generateCount = 0;
 		int i = 1;
 		for (Map.Entry<String, ColumnGeneratorConfig> entry : columns.entrySet()) {
 			final ColumnGeneratorConfig colConfig = entry.getValue();
@@ -243,16 +314,33 @@ public class TableGeneratorConfig {
 			}
 		}
 		maxValues.remove(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
+		columns.values().forEach(c -> {
+			if (c.getMinValueObject() != null && c.getMaxValueObject() != null
+					&& compare(c.getMaxValueObject(), c.getMinValueObject()) < 0) {
+				throw invalid("Column " + c.getName() + ": minValue exceeds maxValue");
+			}
+		});
 	}
 
 	@SuppressWarnings("unchecked")
 	protected <S> S eval(String expression) {
-		return (S) evaluator.eval(expression, Collections.emptyMap());
+		return (S) evaluator.eval(expression, expressionContext());
 	}
 
 	@SuppressWarnings("unchecked")
 	protected <S> S eval(String expression, Object arg) {
+		if (arg instanceof Map<?, ?> values) {
+			Map<Object, Object> context = new LinkedHashMap<>(expressionContext());
+			context.putAll(values);
+			return (S) evaluator.eval(expression, context);
+		}
 		return (S) evaluator.eval(expression, arg);
+	}
+
+	private Map<String, Object> expressionContext() {
+		Map<String, Object> context = new LinkedHashMap<>();
+		context.put("_baseTime", baseTime);
+		return context;
 	}
 
 	public void setSqlStartValue(final Map<String, Object> map) {
@@ -309,7 +397,9 @@ public class TableGeneratorConfig {
 	 * @return 生成した値
 	 */
 	public Map<String, Object> generateValue(long rowNumber, long index) {
+		selectedRows.clear();
 		final Map<String, Object> map = CommonUtils.linkedMap();
+		map.put("_baseTime", baseTime);
 		map.put(ROW_NO_KEY, rowNumber);
 		map.put(INDEX_KEY, index);
 		previousValues.remove(PREVIOUS_KEY);
@@ -322,7 +412,8 @@ public class TableGeneratorConfig {
 			for (final Map.Entry<String, ColumnGeneratorConfig> entry : columns.entrySet()) {
 				final ColumnGeneratorConfig colConfig = entry.getValue();
 				Object obj = startValues.get(colConfig.getName());
-				if (obj == null) {
+				if (obj == null || colConfig.getQueryGeneratorConfig() != null
+						|| colConfig.getFileGeneratorConfig() != null) {
 					ResultHolder resultHolder = generateInternal(0, colConfig, map);
 					if (resultHolder.isPresent()) {
 						map.put(colConfig.getName(), resultHolder.get());
@@ -394,7 +485,9 @@ public class TableGeneratorConfig {
 		final int intIndex = (int) (rowNumber % Integer.MAX_VALUE);
 		// クエリグループから取得
 		if (colConfig.getQueryGeneratorConfig() != null) {
-			final Map<String, Object> queryValueMapOptional = colConfig.getQueryGeneratorConfig().getValueMap(intIndex);
+			final Map<String, Object> queryValueMapOptional = selectedRows.computeIfAbsent(
+					colConfig.getQueryGeneratorConfig(),
+					k -> colConfig.getQueryGeneratorConfig().getValueMap(intIndex));
 			if (queryValueMapOptional != null) {
 				return ResultHolder.Of(queryValueMapOptional.get(colConfig.getName()));
 			}
@@ -402,7 +495,8 @@ public class TableGeneratorConfig {
 		}
 		// ファイルグループから取得
 		if (colConfig.getFileGeneratorConfig() != null) {
-			final Map<String, Object> valueMap = colConfig.getFileGeneratorConfig().getValueMap(intIndex);
+			final Map<String, Object> valueMap = selectedRows.computeIfAbsent(colConfig.getFileGeneratorConfig(),
+					k -> colConfig.getFileGeneratorConfig().getValueMap(intIndex));
 			if (valueMap != null) {
 				Object obj = valueMap.get(colConfig.getName());
 				return ResultHolder.Of(obj);
@@ -423,8 +517,9 @@ public class TableGeneratorConfig {
 		try {
 			value = eval(expression, map);
 		} catch (RuntimeException e) {
-			throw new ExpressionExecutionException("Column nextValue expression is invalid. tablName" + this.getName()
-					+ ", columnName=" + colConfig.getName() + " expression=expression", e);
+			throw new ExpressionExecutionException("Generator table=" + schemaName + "." + name + ", column="
+					+ colConfig.getName() + ", phase=nextValue, rowNumberArgument=" + map.get(ROW_NO_KEY)
+					+ ", generationIndex=" + map.get(INDEX_KEY) + ", expression=[" + expression + "]", e);
 		}
 		if (colConfig.getMaxValueObject() != null) {
 			int comp = compare(colConfig.getMaxValueObject(), value);
@@ -453,7 +548,15 @@ public class TableGeneratorConfig {
 		}
 		final Map<String, Object> copy = CommonUtils.map(map);
 		copy.put(VALUE, map.get(colConfig.getName()));
-		final Object formatted = this.getEvaluator().eval(colConfig.getFormatExpression(), copy);
+		final Object formatted;
+		try {
+			formatted = this.getEvaluator().eval(colConfig.getFormatExpression(), copy);
+		} catch (RuntimeException e) {
+			throw new ExpressionExecutionException("Generator table=" + schemaName + "." + name + ", column="
+					+ colConfig.getName() + ", phase=formatExpression, rowNumberArgument=" + map.get(ROW_NO_KEY)
+					+ ", generationIndex=" + map.get(INDEX_KEY) + ", expression=[" + colConfig.getFormatExpression()
+					+ "]", e);
+		}
 		return Optional.of(formatted);
 	}
 
@@ -464,13 +567,14 @@ public class TableGeneratorConfig {
 			final ColumnGeneratorConfig colConfig = entry.getValue();
 			final Column column = table.getColumns().get(entry.getKey());
 			if (column == null) {
-				continue;
+				throw invalid("Unknown column: " + entry.getKey());
 			}
 			colConfig.setPrimaryKeyAndForeignKeyColumn(TableGeneratorConfigFactory.isPKFKColumn(table, fk, column));
 			colConfig.setColumn(column);
 			if (column.isIdentity()) {
 				colConfig.setPrimaryKeyOrIdentityColumn(true);
-			} else if (table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
+			} else if (table.getPrimaryKeyConstraint() != null
+					&& table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
 				colConfig.setPrimaryKeyOrIdentityColumn(column.getDataType().isNumeric());
 			}
 		}
@@ -487,6 +591,9 @@ public class TableGeneratorConfig {
 		} else {
 			if (o2 == null) {
 				return 1;
+			}
+			if (o1 instanceof Number && o2 instanceof Number) {
+				return new java.math.BigDecimal(o1.toString()).compareTo(new java.math.BigDecimal(o2.toString()));
 			}
 			if (o1.getClass().equals(o2.getClass())) {
 				if (o1 instanceof Comparable) {
@@ -544,24 +651,45 @@ public class TableGeneratorConfig {
 		final Object tmp = this.getEvaluator().eval(this.getDataSourceExpression(), map);
 		checkTypeCheck("Table.dataSourceExpression", this.getDataSourceExpression(), tmp, Iterable.class);
 		final Iterable<?> iterable = CommonUtils.cast(tmp);
-		long i = 0;
-		for (Object obj : iterable) {
-			if (i == 0) {
-				final Object ret = this.getEvaluator().eval(this.getColumnMappingExpression(), obj);
-				checkTypeCheck("Table.columnMappingExpression", this.getColumnMappingExpression(), ret, Map.class);
-			}
-			i++;
+		Long knownSize = iterable instanceof com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils.CountedIterable counted
+				? counted.size()
+				: iterable instanceof java.util.Collection<?> collection ? (long) collection.size() : null;
+		if (knownSize != null && knownSize == 0) {
+			return 0;
 		}
-		return i;
+		java.util.Iterator<?> iterator = iterable.iterator();
+		Throwable failure = null;
+		try {
+			long count = 0;
+			while (iterator.hasNext()) {
+				Object obj = iterator.next();
+				if (count == 0 && !CommonUtils.isBlank(getColumnMappingExpression())) {
+					Object ret = getEvaluator().eval(getColumnMappingExpression(), obj);
+					if (ret != null) {
+						checkTypeCheck("Table.columnMappingExpression", getColumnMappingExpression(), ret, Map.class);
+					}
+				}
+				if (knownSize != null) {
+					return knownSize;
+				}
+				count++;
+			}
+			return count;
+		} catch (RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
+			com.sqlapp.util.iterator.IteratorCloseUtils.close(failure, iterator);
+		}
 	}
 
 	private void checkTypeCheck(final String expressionPath, String expression, final Object obj, Class<?> clazz) {
 		if (obj == null) {
-			throw new InvalidExpressionResultTypeException(expressionPath, expression, null, Iterable.class,
+			throw new InvalidExpressionResultTypeException(expressionPath, expression, null, clazz,
 					"Invalid expression result type.");
 		}
 		if (!(clazz.isAssignableFrom(obj.getClass()))) {
-			throw new InvalidExpressionResultTypeException(expressionPath, expression, obj, Iterable.class,
+			throw new InvalidExpressionResultTypeException(expressionPath, expression, obj, clazz,
 					"Invalid expression result type.");
 		}
 	}
@@ -584,8 +712,12 @@ public class TableGeneratorConfig {
 		if (map == null) {
 			return null;
 		}
-		Map<String, Object> ret = this.getEvaluator().eval(this.getColumnMappingExpression(), map);
-		return ret;
+		try {
+			return this.getEvaluator().eval(this.getColumnMappingExpression(), map);
+		} catch (RuntimeException e) {
+			throw new ExpressionExecutionException("Generator table=" + schemaName + "." + name
+					+ ", phase=columnMappingExpression, expression=[" + getColumnMappingExpression() + "]", e);
+		}
 	}
 
 	@FunctionalInterface

@@ -24,10 +24,10 @@ ON (
 WHERE 1=1
   /*if isNotEmpty(containsHiddenColumns)*/
   /*if !containsHiddenColumns*/
-  AND tc.HIDDEN_COLUMN='NO'
+  AND (tc.HIDDEN_COLUMN='NO' OR tc.USER_GENERATED='YES')
   /*end*/
   /*if containsHiddenColumns*/
-  AND tc.HIDDEN_COLUMN='YES'
+  AND tc.HIDDEN_COLUMN='YES' AND tc.USER_GENERATED='NO'
   /*end*/
   /*end*/
   /*if isNotEmpty(schemaName)*/
@@ -39,4 +39,4 @@ WHERE 1=1
   /*if isNotEmpty(columnName)*/
   AND tc.COLUMN_NAME IN /*columnName*/('%')
   /*end*/
-ORDER BY tc.OWNER, tc.TABLE_NAME, tc.COLUMN_ID
+ORDER BY tc.OWNER, tc.TABLE_NAME, tc.COLUMN_ID, tc.INTERNAL_COLUMN_ID

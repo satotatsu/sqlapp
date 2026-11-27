@@ -19,10 +19,10 @@ documentation change.
 
 | Component | Current baseline | Compatibility statement |
 |---|---|---|
-| Published Java artifacts | Java 21 | Sources are compiled with a Java 21 toolchain. Consumers should use a Java 21 or later runtime compatible with the published bytecode. |
-| Repository build | Gradle Wrapper 9.6.1 | This is the checked-in, supported build path for release verification. |
-| Gradle plugin | Java 21; tested by this repository with Gradle 9.6.1 | A lower or upper Gradle compatibility range has not yet been established. Do not infer one from Gradle API compilation alone. |
-| Companion example | Java 21; Gradle Wrapper 9.6.1 | The `develop` branch of `sqlapp-gradle-example` uses the same current baseline. |
+| Published Java artifacts | Java 25 | Sources are compiled with a Java 25 toolchain. Consumers should use a Java 25 or later runtime compatible with the published bytecode. |
+| Repository build | Gradle Wrapper 9.8.1 | This is the checked-in, supported build path for release verification. |
+| Gradle plugin | Java 25; tested by this repository with Gradle 9.8.1 | A lower or upper Gradle compatibility range has not yet been established. Do not infer one from Gradle API compilation alone. |
+| Companion example | Java 25; Gradle Wrapper 9.8.1 | The `develop` branch of `sqlapp-gradle-example` uses the same current baseline. |
 
 Before publishing, the release build should run with the checked-in wrapper.
 If compatibility with older Gradle releases is promised, add a TestKit matrix
@@ -44,6 +44,7 @@ release checklist must record which integration suites were actually run.
 | Database family | Artifact | Version-aware implementation in source | Current real-engine evidence | Current confidence boundary |
 |---|---|---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | 9.5, 9.7, 9.8, 10.1, 10.5, 11.1, 11.5, 12.1.0, 12.1.2, 12.1.5 | Db2 Community 11.5.8.0 and 12.1.5.0 test images | Older resolver branches are retained but are not all represented by current container runs. |
+| DuckDB | `sqlapp-core-duckdb` | 1.0 (resolution only), 1.1, 1.2, 1.4 (also 1.5 / 2.x) | `duckdbCompatibilityTest` (in-process, no container): metadata round trip with DuckDB JDBC 1.1.3, 1.2.2.0, 1.4.4.0, 1.5.6.0 and 2.0.0.1; 1.0.0 fails clearly as designed | Constraint metadata requires 1.1+; DuckDB does not keep constraint names, index order or named ENUM types. See [scope and limits](../sqlapp-core-duckdb/README.md). |
 | Firebird | `sqlapp-core-firebird` | 2.0, 2.5, 3.0, 5.0 | Firebird 3.0 and 5.0 test images | Firebird 2.x compatibility is code-level/module coverage in the current suite. |
 | H2 | `sqlapp-core-h2` | Pre-2.x and 2.x split | Module-level H2 tests | The 1.x reader is preserved; current real-engine version evidence is not recorded here. |
 | HSQLDB | `sqlapp-core-hsql` | 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.3.4, 2.4.0 | Module/in-process tests; JDBC dependency 2.7.4 | Version branches older than the current driver remain compatibility code. |
@@ -54,7 +55,9 @@ release checklist must record which integration suites were actually run.
 | Oracle Database | `sqlapp-core-oracle` | 10g, 11g, 11g R2, 12c, 18c, 19c, 21c, 23ai, 26ai | Oracle Database Free 23ai image; optional pinned 26ai image | Oracle 26ai reports product version `23.26.x`; older branches are not all container-tested. Dialect support does not imply that the current test JDBC driver is certified for every server version; verify the exact driver/JDK/database combination for legacy sources. |
 | Apache Phoenix | `sqlapp-core-phoenix` | Generic resolver plus a 5.3.1 feature boundary | Module SQL, resolver, and sequence-block tests | Phoenix 5.3.1 multi-row UPSERT still requires verification against a real cluster. |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | PostgreSQL engine 11 and 15 baselines | Module tests and local containers 2024.2.11.0-b36 / 2026.1.2.0-b137 | Supported relational compatibility scope: schema recreation, COPY/upsert, checkpoint/resume and conflict handling verified on both baselines. Physical/distributed extensions and multi-node failover excluded; see [scope and limits](../sqlapp-core-yugabyte/README.md). |
+| EDB Postgres Advanced Server | `sqlapp-core-edb-oracle` | EPAS 14–18 | Module tests; upstream PostgreSQL 14–18 controls passed, no EPAS execution | Experimental PostgreSQL baseline for the Oracle-compatible product. EPAS and Oracle-specific objects unverified. See [scope](../sqlapp-core-edb-oracle/README.md). |
 | Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
+| Aurora MySQL | `sqlapp-core-aurora-mysql` | Aurora 3.x (MySQL 8.0) and 8.4 | Upstream MySQL 8.0.46 / 8.4.11 containers; no Aurora execution | Experimental; [scope and tests](../sqlapp-core-aurora-mysql/README.md). |
 | PostgreSQL | `sqlapp-core-postgres` | Explicit branches from 8.2 through 18 | PostgreSQL 14 and 18.4 test images | Historical branches are preserved, but current containers do not rerun every major release. |
 | SAP HANA | `sqlapp-core-saphana` | Platform and HANA Cloud split | SAP HANA Express 2.0 (`2.00.088`) image | HANA Cloud vector-index and fuzzy-search catalog behavior requires a HANA Cloud tenant. |
 | Google Cloud Spanner | `sqlapp-core-spanner` | Generic Cloud Spanner resolver | Cloud Spanner emulator | Search/vector index, locality/storage, and some service-only metadata require a real service environment. |
@@ -98,6 +101,7 @@ are not a declaration that applications must use exactly these versions.
 
 | Database | JDBC dependency used by current build/test configuration |
 |---|---|
+| DuckDB | `org.duckdb:duckdb_jdbc:2.0.0.1` |
 | Firebird | Jaybird `6.0.5` in dialect integration tests; dialect artifact currently uses `5.0.6.java11` |
 | HSQLDB | `org.hsqldb:hsqldb:2.7.4` |
 | Informix | `com.ibm.informix:jdbc:15.0.1.2` |
@@ -106,6 +110,7 @@ are not a declaration that applications must use exactly these versions.
 | MySQL | `com.mysql:mysql-connector-j:9.7.0` |
 | Oracle | `com.oracle.database.jdbc:ojdbc11:23.26.2.0.0` |
 | Aurora PostgreSQL | `sqlapp-core-aurora-postgres` | PostgreSQL engine 14, 15, 16 and 17 | Upstream PostgreSQL compatibility matrix; no Aurora execution | Experimental; actual Aurora roles/extensions/service behavior remain unverified. See [scope and tests](../sqlapp-core-aurora-postgres/README.md). |
+| Aurora MySQL | `sqlapp-core-aurora-mysql` | Aurora 3.x (MySQL 8.0) and 8.4 | Upstream MySQL 8.0.46 / 8.4.11 containers; no Aurora execution | Experimental; [scope and tests](../sqlapp-core-aurora-mysql/README.md). |
 | PostgreSQL | `org.postgresql:postgresql:42.7.11` |
 | SAP HANA | `com.sap.cloud.db.jdbc:ngdbc:2.29.7` |
 | Cloud Spanner | `com.google.cloud:google-cloud-spanner-jdbc:2.41.0` |
@@ -2609,3 +2614,176 @@ incremental final checks); the disposable database matrix succeeded in 3m05s.
 
 Documentation validation passed (670 local links, 59 reachable current pages,
 closed code fences). No generated files are intentionally retained.
+
+
+## EDB Oracle-compatible product dialect (2026-10-13)
+
+Added `sqlapp-core-edb-oracle` for EDB Postgres Advanced Server 14–18.
+This name distinguishes EPAS from EDB's PostgreSQL-only distributions.
+The initial version inherits matching PostgreSQL metadata/SQL behavior and
+registers its own dialect and bulk providers. Existing APIs and Schema XML
+formats are unchanged. The dependency on `sqlapp-core-postgres` reuses the
+existing implementations and PostgreSQL JDBC dependency without adding a driver.
+Settings, publication aggregation and opt-in integration-test wiring include the
+new module; command and Gradle task APIs are unchanged.
+
+Oracle-specific SPL/packages/types/catalogs are not implemented by this initial
+baseline. Product detection does not establish the database's initialization
+mode. COPY currently requires an `org.postgresql` BaseConnection; EDB `com.edb`
+COPY support is not claimed. See the [module guide](../sqlapp-core-edb-oracle/README.md)
+for detection, supported aliases, commands and remaining qualification work.
+
+Focused module tests passed (6). PostgreSQL control tests compiled but failed
+before database startup because Docker was unavailable. No external or EPAS
+server was contacted; no database verification is claimed for this addition.
+
+
+Final Java 21 verification succeeded:
+
+```powershell
+.\gradlew.bat :sqlapp-core-edb-oracle:test :sqlapp-core-edb-oracle:assemble :sqlapp-core-postgres:test --continue --console=plain
+```
+
+**271 passing tests**: EDB 6, PostgreSQL 265; zero failures/errors/skips.
+New module assembly succeeded. Documentation validation passed (704 local links,
+62 reachable current pages, closed code fences). The Docker environment failure
+above remains unresolved; no database test success is inferred from compilation.
+No generated files are intentionally retained.
+
+
+### EPAS standalone SPL and type recognition follow-up
+
+EPAS 14–18 now has dialect-local catalog/schema reader subclasses that keep the
+nearest PostgreSQL version behavior and replace only the function-reader hook.
+Standalone `edbspl` functions/procedures store executable CREATE DDL in `definition`,
+retain overloaded identity and avoid per-routine/argument type lookup SELECTs.
+One set-based pg_catalog query reads the requested set. Complete DDL remains
+self-contained through Schema XML and SQL generation; missing requested DDL fails.
+
+VARCHAR2/NVARCHAR2, NUMBER (including negative scales) and RAW are recognized
+through existing Schema types without changing PostgreSQL preferred types.
+Raw bytes use BLOB/BYTEA semantics; DATE is not globally remapped because EPAS
+Redwood DATE is stored as timestamp and plain PostgreSQL DATE must stay date-only.
+Existing APIs, dependency versions and Schema XML formats are unchanged.
+
+These additions have synthetic/unit coverage; EPAS execution is still unverified.
+Docker was rechecked and remains unavailable, so no new real-database pass is
+claimed. Package specification/body, synonyms and database links remain pending.
+See the [updated scope and references](../sqlapp-core-edb-oracle/README.md).
+
+
+Follow-up verification (Java 21 / repository wrapper):
+
+```powershell
+.\gradlew.bat :sqlapp-core-edb-oracle:test :sqlapp-core-edb-oracle:assemble :sqlapp-core-postgres:test :sqlapp-core-dialect-test:compileDockerTestJava --continue --console=plain
+```
+
+**275 tests passed** (EDB 10, PostgreSQL 265; zero failures/errors/skips).
+Module assembly and integration-test compilation succeeded. No database tests
+were run in this follow-up because the Docker named pipe was unavailable.
+Intermediate test-fixture errors and alias precision loss were corrected before
+final verification. NUMBER uses an explicit RegexColumnTypeMatcher: the existing
+DbDataType.addPetternColumnTypeMatcher overload currently ignores its supplied
+MatcherColumn callbacks. That separate shared-method defect is not changed by
+this dialect-local patch and merits a caller audit before a common fix.
+
+
+### EPAS package specification/body follow-up
+
+Package and PackageBody readers/factories are wired for EPAS 14–18. The documented
+ALL_SOURCE catalog is discovered in sys/pg_catalog, then read in one set-based
+query per reader. Source lines retain ordering/newline boundaries; filters are
+bound; missing source or unrecognized declarations fail. Complete, schema-qualified
+CREATE OR REPLACE definitions survive Schema XML and DDL output. DROP PACKAGE
+and DROP PACKAGE BODY factories retain the matching PostgreSQL factory baseline.
+
+Synthetic coverage checks bounded SELECT counts, filters, absent catalogs,
+failure propagation, spec/body headers, schema quoting, XML and CREATE/DROP.
+No real EPAS execution is claimed; Docker was checked and remains unavailable.
+Missing compatibility catalogs return no packages. Privilege filtering, wrapped
+source, comments preceding headers and actual server DDL require EPAS validation.
+Synonyms, database links and remaining Oracle-specific types are still pending.
+See the [module guide](../sqlapp-core-edb-oracle/README.md) for references.
+
+
+Final package follow-up verification: **280 tests passed** (EDB 15 + PostgreSQL 265), zero failures/errors/skips. Module assembly and integration-test compilation succeeded. Java 21 command:
+
+
+```powershell
+.\gradlew.bat :sqlapp-core-edb-oracle:test :sqlapp-core-edb-oracle:assemble :sqlapp-core-postgres:test :sqlapp-core-dialect-test:compileDockerTestJava --continue --console=plain
+```
+
+No real database tests were executed. Package member interaction with pg_proc,
+source-catalog visibility and EPAS execution still require server qualification.
+
+
+### EDB Docker matrix and synonym/database-link follow-up (2026-10-13)
+
+Docker was available for this follow-up. The EDB dialect now has private/PUBLIC
+synonym and database-link readers, with two set-based SELECTs per reader, bound
+filters and qualified compatibility catalog discovery. Synonym targets use
+table_schema_name rather than table_owner, preserving the owner/schema distinction.
+CREATE/DROP factories handle local/remote synonyms and both link visibility types.
+
+Database-link metadata never selects passwords or user mappings and never connects
+to a remote target. Recreating a link requires caller-supplied user/password,
+complete connection string and edb.dbLink.transport (postgres_fdw, oci or legacy).
+The remote catalog type is retained separately and does not imply transport.
+Encrypted/missing credentials and unsupported transport values fail. SQL literals
+preserve quotes/backslashes. Private links use the existing owner-keyed DbLink
+model representation; owner/schema attachment limitations are documented.
+
+The EPAS routine query excludes package-member child namespaces through optional
+nspparent metadata (JSON lookup keeps ordinary PostgreSQL compatible). Native
+PostgreSQL routine metadata/DDL recreation was verified in the control matrix.
+An actual EPAS server is still needed to qualify the optional vendor field and
+package/SPL metadata/DDL. No unsupported EDB catalog columns are queried directly.
+
+Final executed commands (Java 21 / repository wrapper):
+
+```powershell
+.\gradlew.bat :sqlapp-core-edb-oracle:test :sqlapp-core-edb-oracle:assemble :sqlapp-core-postgres:test :sqlapp-core-dialect-test:edbOracleCompatibilityTest --continue --console=plain
+.\gradlew.bat :sqlapp-core-dialect-test:edbOracleCompatibilityTest --continue --console=plain
+```
+
+**309 passing tests**, zero failures/errors/skips: EDB unit 19, PostgreSQL unit
+265, and 5 control tests on each of PostgreSQL 14.22/15.17/16.13/17.9/18.4 (25).
+Module assembly succeeded. Control tests exercise ordinary PostgreSQL detection,
+caller transaction preservation, COPY/upsert rollback, sequence/index and routine
+recreation, and simulated ALL_SOURCE/ALL_SYNONYMS/ALL_DB_LINKS queries. Simulated
+views verify query execution and mapping, not Oracle grammar or EPAS behavior.
+
+Intermediate development caught a remote-synonym whitespace assertion and a
+Gradle task-order closure capturing its own task; both were corrected before
+final successful verification. No generated outputs are intentionally retained.
+
+No EPAS image was present in the local inventory. Actual EPAS Oracle mode,
+catalog namespaces/visibility/PUBLIC markers, package-member filtering, native
+Oracle DDL/types/empty-string behavior and com.edb-driver COPY remain unverified.
+No registry credentials/licenses, external databases or remote link targets were
+accessed. Existing public APIs/Schema XML/dependency versions remain unchanged.
+See the [current EDB guide](../sqlapp-core-edb-oracle/README.md) for usage,
+qualification boundaries and official references.
+
+## Aurora MySQL implementation boundary
+
+`sqlapp-core-aurora-mysql` supports Aurora 3.x / MySQL 8.0 and Aurora 8.4 / MySQL 8.4
+through inherited MySQL readers and factories. Actual Aurora execution is unverified.
+See [usage, detection and limitations](../sqlapp-core-aurora-mysql/README.md).
+
+Aurora MySQL upstream validation on 2026-11-03 (Java 25 / repository wrapper):
+
+```powershell
+.\gradlew.bat :sqlapp-core-dialect-test:auroraMySqlCompatibilityTest :sqlapp-core-aurora-mysql:test --console=plain
+```
+
+MySQL 8.0.46 and 8.4.11 each passed all six integration tests (12 total), with no
+failures, errors or skips. Coverage includes native/portable type metadata and DDL
+recreation, table primary-key enforcement and view recreation, bulk text/binary
+preservation, caller-owned INSERT/UPSERT rollback, owned UPSERT commit visibility,
+and ordinary MySQL detection without transaction changes. The Aurora unit test
+task was UP-TO-DATE from its prior 21-test successful run. Real AWS Aurora was not
+accessed; positive AWS identification remains mock-tested. No production APIs,
+configuration formats or dependency versions changed in this validation step.
+See the [validation record](../sqlapp-core-aurora-mysql/README.md) for image digests
+and remaining Aurora-specific qualification. Build outputs are ignored.

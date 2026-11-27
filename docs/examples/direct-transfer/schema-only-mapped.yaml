@@ -1,0 +1,9 @@
+formatVersion: 1
+source: from
+target: to
+tables: [PUBLIC.CUSTOMERS, PUBLIC.ORDERS]
+dataMode: SCHEMA_ONLY
+schemaMode: CREATE_MISSING
+mappingFile: name-mapping.yaml
+# Adjust source table/column identities in both files to your captured Schema.
+# targetSchema: public

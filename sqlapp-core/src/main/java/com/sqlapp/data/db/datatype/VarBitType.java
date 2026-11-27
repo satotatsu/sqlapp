@@ -45,13 +45,15 @@ public class VarBitType extends AbstractLengthType<VarBitType> {
 	public VarBitType(String dataTypeName) {
 		this.setDataType(DataType.VARBIT);
 		initialize(dataTypeName);
+		// Values are bit strings such as "0101".
+		this.setJdbcTypeHandler(new BitStringJdbcTypeHandler());
 		this.setLiteralPrefix("B'");
 		this.setLiteralSuffix("'");
 		setDefaultValueLiteral(this.withLiteral("0"));
 		setDefaultLength(1);
 		if (this.getDataType().matchName(dataTypeName)) {
-			setColumnTypeMatcher(new LengthColumnTypeMatcher("VABIT"));
-			addColumnTypeMatcher(new LengthColumnTypeMatcher("BIT", "VARYING"));
+			setColumnTypeMatcher(new LengthColumnTypeMatcher("VARBIT"));
+			addColumnTypeMatcher(new LengthColumnTypeMatcher("BIT\\s+VARYING"));
 		}
 	}
 

@@ -34,6 +34,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.FloatType;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -111,7 +113,10 @@ public class SqlServer2000 extends Dialect {
 			type.setConverter(booleanConverter);
 		});
 		// SByte
-		getDbDataTypes().addTinyInt(type -> {
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			type.clearColumnTypeMatchers();
+		});
+		getDbDataTypes().addUTinyInt("TINYINT", type -> {
 			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// SMALLINT
@@ -135,6 +140,7 @@ public class SqlServer2000 extends Dialect {
 		});
 		// Single
 		getDbDataTypes().addFloat(53);
+		FloatType.class.cast(getDbDataTypes().getDbType(DataType.FLOAT)).setDefaultPrecision(53);
 		// SmallDateTime
 		getDbDataTypes().addSmallDateTime(type -> {
 			type.setLiteral("{ts '", "'}").setCreateFormat("SMALLDATETIME")
@@ -154,11 +160,11 @@ public class SqlServer2000 extends Dialect {
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
 			type.addColumnTypeMatcher("DEC");
-			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
+			type.setMaxPrecision(38).setDefaultPrecision(18).setDefaultScale(0);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
-			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
+			type.setMaxPrecision(38).setDefaultPrecision(18).setDefaultScale(0);
 		});
 		// 行バージョン型
 		getDbDataTypes().addRowVersion("TIMESTAMP", type -> {
@@ -301,9 +307,20 @@ public class SqlServer2000 extends Dialect {
 		return true;
 	}
 
+	/**
+	 * 計算列(col AS (expr))のサポート
+	 */
+	@Override
+	public boolean supportsColumnFormula() {
+		return true;
+	}
+
+	/**
+	 * SQL ServerのDROP TABLEにはCASCADE CONSTRAINTSが無い
+	 */
 	@Override
 	public boolean supportsDropCascade() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -316,14 +333,12 @@ public class SqlServer2000 extends Dialect {
 		return false;
 	}
 
+	/**
+	 * SQL Server 2000はNO ACTIONとCASCADEのみ(SET NULL/SET DEFAULTは2005以降)
+	 */
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
-		// || rule == Rule.SetDefault
-				|| rule == CascadeRule.Cascade) {
-			return true;
-		}
-		return false;
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade;
 	}
 
 	@Override
@@ -331,14 +346,12 @@ public class SqlServer2000 extends Dialect {
 		return true;
 	}
 
+	/**
+	 * SQL Server 2000はNO ACTIONとCASCADEのみ(SET NULL/SET DEFAULTは2005以降)
+	 */
 	@Override
 	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
-		// || rule == Rule.SetDefault
-				|| rule == CascadeRule.Cascade) {
-			return true;
-		}
-		return false;
+		return rule == CascadeRule.None || rule == CascadeRule.Cascade;
 	}
 
 	/**
@@ -368,28 +381,13 @@ public class SqlServer2000 extends Dialect {
 	 */
 	@Override
 	public boolean isOptimisticLockColumn(final Column column) {
+		if (column.getDataType() == DataType.ROWVERSION) {
+			return true;
+		}
 		if (column.getDataType().isBinary() && column.getName().equalsIgnoreCase("TIMESTAMP")) {
 			return true;
 		}
 		return super.isOptimisticLockColumn(column);
-	}
-
-	@Override
-	public int hashCode() {
-		return getProductName().hashCode();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*
@@ -459,10 +457,14 @@ public class SqlServer2000 extends Dialect {
 		if (!CommonUtils.isEmpty(prefix)) {
 			name = prefix + table.getName();
 		} else {
-			name = "#" + table.getName();
+			name = table.getName();
 		}
 		if (!CommonUtils.isEmpty(suffix)) {
 			name = name + suffix;
+		}
+		// SQL Serverの一時テーブルは#(ローカル)または##(グローバル)で始まる必要がある
+		if (!name.startsWith("#")) {
+			name = "#" + name;
 		}
 		return getObjectFullName(name);
 	}

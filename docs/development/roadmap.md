@@ -24,9 +24,10 @@ workbooks are output-only artifacts or supported inputs.
 
 Columns and catalogs currently retain a collation name, but the shared Schema
 model does not represent a collation definition as an independent object.
-PostgreSQL 18 `PG_UNICODE_FAST` creation and removal is therefore available
-through the PostgreSQL dialect SQL builder, while full metadata/XML/HTML
-round trips remain deferred.
+PostgreSQL retains complete collation definitions through the dialect-local
+[schema-object metadata extension](postgresql-schema-objects.md), including
+metadata/XML/DDL recreation and PostgreSQL 18 `PG_UNICODE_FAST`. A portable
+shared model and dedicated HTML object pages remain deferred.
 
 Before adding a shared collation object, compare provider, locale,
 determinism, rules and version concepts across PostgreSQL, DB2, Oracle,
@@ -61,6 +62,11 @@ type remains deferred.
 
 ## PostgreSQL modern feature follow-up
 
+PostgreSQL-only object metadata and DDL recreation are documented in
+[PostgreSQL schema objects](postgresql-schema-objects.md). The scope includes
+extensions, collations, FDW/server/user-mapping/foreign-table objects, RLS,
+extended statistics, publications and disconnected subscription recreation.
+
 The PostgreSQL dialect currently has explicit version boundaries through
 PostgreSQL 18. The implemented PostgreSQL 18 scope includes virtual generated
 columns, temporal and named `NOT NULL` constraints, `OLD`/`NEW` returning,
@@ -72,25 +78,88 @@ The PostgreSQL 18 table metadata reader retains `pg_class.relallfrozen` and the
 new cumulative vacuum/analyze timing columns. Its catalog SQL does not depend
 on the removed `pg_attribute.attcacheoff` column.
 
-The following enhancements are candidates for future work, not release
-commitments:
+`PostgresBufferCacheBuilder.evict(bufferId)` generates a PostgreSQL 18 SELECT
+that exposes both `buffer_evicted` and `buffer_flushed`, complementing the
+relation/all eviction operations. Buffer IDs must be positive; the server
+checks the actual pool bounds. For example:
 
-- PostgreSQL 18 integration tests against a real server for complete metadata
-  loading, including tables, columns, constraints, indexes, generated columns
-  and statistics
-- `pgcrypto` additions: `sha256crypt`, `sha512crypt`, CFB encryption mode and
-  `fips_mode()`
-- monitoring access for `pg_aios`, `pg_stat_get_backend_io()`,
-  `pg_stat_get_backend_wal()`, `pg_stat_reset_backend_stats()`, and the new
-  `pg_stat_statements` parallel/WAL fields
-- `pg_buffercache_evict()` result handling for the PostgreSQL 18
-  `buffer_flushed` output, complementing the supported relation/all operations
-- optional support for `pg_logicalinspect`, `pg_overexplain`,
-  `pg_get_loaded_modules()`, and NUMA-related functions and views
-- PostgreSQL 18 database-management behavior such as
-  `CREATE DATABASE ... STRATEGY=FILE_COPY` and validation of unsupported
-  unlogged partitioned tables
-- optional extension settings such as `passwordcheck.min_password_length`
+```java
+new PostgresBufferCacheBuilder(DialectHolder.postgreSQL180).evict(1);
+// SELECT buffer_evicted, buffer_flushed FROM pg_buffercache_evict(1)
+```
+
+Execution requires the `pg_buffercache` extension and superuser privileges.
+These operations are intended for developer testing, and concurrent activity
+can change the reported buffer state immediately. PostgreSQL 17's scalar
+eviction result is not supported by this new method.
+
+The modern-feature follow-up now provides these optional SQL entry points:
+
+| Entry point | Scope |
+| --- | --- |
+| `PostgresPgcryptoBuilder` | SHA-256/SHA-512 crypt salts, explicit iteration bounds, `crypt`, CFB encryption/decryption with explicit IV, and `fips_mode()` |
+| `PostgresMonitoringBuilder` | AIO handles, backend I/O/WAL counters, explicit backend-statistics reset, pg_stat_statements 1.12 parallel/WAL fields, loaded modules and NUMA information |
+| `PostgresLogicalInspectBuilder` | Snapshot metadata/information, with escaped filenames and rejection of directory paths |
+| `PostgresExplainBuilder.debug/rangeTable` | Optional pg_overexplain diagnostics |
+| `PostgresCreateDatabaseBuilder` | Explicit database creation from a Schema `Catalog`, with optional template and `FILE_COPY`/`WAL_LOG` strategy |
+| `PostgresExtensionSettingsBuilder` | Session-scoped `passwordcheck.min_password_length`, measured in bytes |
+
+These new operations require PostgreSQL 18, except database creation strategy,
+which is supported from PostgreSQL 15. Database creation without a strategy
+preserves the server default. Catalog CREATE continues to recreate contained
+objects; database creation is an explicit separate operation. For example:
+
+```java
+var dialect = DialectHolder.postgreSQL180;
+var crypto = new PostgresPgcryptoBuilder(dialect);
+String expression = crypto.crypt("?", crypto.genSalt("sha512crypt", 10000));
+// Use expression in a prepared SELECT; bind the password through JDBC.
+String ioSql = new PostgresMonitoringBuilder(dialect).backendIo(1234);
+String databaseSql = new PostgresCreateDatabaseBuilder(dialect)
+    .template("template0").strategy("FILE_COPY").build(new Catalog("reporting"));
+```
+
+Expression arguments are trusted SQL, not string values. Bind passwords, keys
+and IVs through JDBC placeholders. Iteration count omission uses the server
+default, not an application security recommendation. Raw CFB encryption does
+not authenticate ciphertext. pgcrypto requires OpenSSL and the installed
+extension. The server still validates extension availability, runtime settings,
+permissions and actual object/process identities; SQL generation does not
+probe a connection or suppress server errors.
+
+pg_stat_statements must be preloaded and upgraded to version 1.12 for the new
+fields; its optional schema argument supports non-default installation schemas.
+pg_overexplain and passwordcheck must be loaded in the executing session.
+Logical snapshot inspection requires pg_logicalinspect plus superuser or
+server-file privileges. NUMA views require a compatible server build and host.
+Database creation requires CREATEDB privileges and must execute outside a
+transaction block. FILE_COPY can force checkpoints. Backend reset and eviction
+are explicit calls with side effects, never automatic monitoring operations.
+
+Table CREATE now rejects an UNLOGGED partitioned parent rather than generating
+unsupported DDL. Ordinary UNLOGGED tables remain supported. Existing methods,
+configuration formats, shared Schema classes and module dependencies are unchanged.
+
+`PostgresMetadataReaderTest` contains disposable PostgreSQL 18.4 coverage for
+tables, columns, constraints, indexes, stored/virtual generated columns, named
+NOT NULL, table statistics and extension/monitoring SQL. NUMA execution has a
+separate test that explicitly skips on an unsupported host. Logical snapshot
+inspection is exercised against a real serialized snapshot generated through
+a logical replication slot in the disposable server.
+
+Run it with the repository wrapper and a local Docker engine:
+
+```bat
+.\gradlew.bat :sqlapp-core-dialect-test:dockerTest --tests com.sqlapp.data.db.dialect.test.postgres.PostgresMetadataReaderTest
+```
+
+Server contracts: [pgcrypto](https://www.postgresql.org/docs/18/pgcrypto.html),
+[statistics](https://www.postgresql.org/docs/18/monitoring-stats.html),
+[pg_logicalinspect](https://www.postgresql.org/docs/18/pglogicalinspect.html),
+[pg_overexplain](https://www.postgresql.org/docs/18/pgoverexplain.html), and
+[CREATE DATABASE](https://www.postgresql.org/docs/18/sql-createdatabase.html).
+The new statement-statistics columns follow the upstream
+[pg_stat_statements 1.12 definition](https://github.com/postgres/postgres/blob/REL_18_STABLE/contrib/pg_stat_statements/pg_stat_statements--1.11--1.12.sql).
 
 Command-line applications such as `pg_dump`, `pg_upgrade`, `vacuumdb`,
 `pg_createsubscriber`, and `pg_recvlogical`, as well as `psql` commands and
@@ -100,6 +169,50 @@ administration-command module.
 
 Shared collation objects and cross-database constraint lifecycle state remain
 covered by their dedicated roadmap sections above.
+
+## Type-changing conversions in assessment mappings
+
+Assessment mapping `conversion` values are MVEL expressions applied by the
+generated Access initial-load job. The expression result is currently stored
+through the Schema XML source column type before the target JDBC driver converts
+it to `targetType`, so a conversion whose result has a different type (for
+example, an integer code converted to text) can fail or lose precision while
+copying. Transfer mappings already avoid this with a dialect-independent column
+`type` that becomes the bulk task's `columnTypes`.
+
+`targetType` is product-specific DDL text such as `VARCHAR2(200 CHAR)` or
+`NVARCHAR(50)` and cannot be mapped reliably to a sqlapp DataType in general.
+Before implementation, choose between an explicit optional copy type on the
+assessment column mapping (for example `copyType: VARCHAR(200)`) and deriving the
+DataType from `targetType` through the target dialect, with a clear error when
+the derivation is ambiguous. Either way, the generated job must emit
+`columnTypes`, keep key columns in their source type, include the copy type in the
+mapping fingerprint and coverage report, and test a type-changing conversion end
+to end through copy and verification.
+
+## Tree-level value verification for copy sessions
+
+`JdbcTreeDataCopySession` verifies only row counts (`verifyCounts`). Comparing the
+copied values tree by tree, by projecting each source tree through the column
+mapping and comparing it with the target tree, is deferred because:
+
+- the source tree must be read again with the session's free-form SQL, and source
+  changes after the copy produce false mismatches; with the default `none()`
+  restart the copied source roots no longer exist;
+- the target tree needs its own SELECTs that follow generated keys and foreign
+  keys, which the copy session does not build today;
+- child rows have no guaranteed natural key, so rows must be matched as a
+  multiset of values without generated keys and foreign keys;
+- cross-database type differences (timestamp precision, DECIMAL scale, CHAR
+  padding) need normalization by the target column type, or every difference
+  becomes a false mismatch.
+
+A cheaper follow-up is to record, in the target transaction with the checkpoint,
+the source root key to target root key mapping plus a hash of the values written
+per root (after type conversion, without generated keys and foreign keys), and to
+verify later by reading only the target. That detects lost, duplicated, truncated
+or later modified rows, also with `none()`, but not wrong conversion rules, which
+remain the job of mapping tests and sampled checks.
 
 ## Data use case domains
 
@@ -113,7 +226,7 @@ The Oracle dialect currently generates:
 - `CREATE DOMAIN` and `DROP DOMAIN`
 - base data type and `STRICT`
 - `DEFAULT` and `DEFAULT ON NULL`
-- `NOT NULL` and one `CHECK` constraint
+- `NOT NULL` and single or multiple named `CHECK` constraints
 - constraint deferrability
 - `DISPLAY` and `ORDER` expressions
 - object-level schema annotations
@@ -126,22 +239,228 @@ On Oracle 23ai, `Domain` represents a data use case domain. The older Oracle
 mapping of `Domain` to `CREATE TYPE ... VARRAY/TABLE OF` is not retained for
 that version.
 
+Oracle package/type specifications and bodies retain complete executable
+ALL_SOURCE definitions, including AUTHID and named END clauses, using the same
+source-preservation approach as functions and procedures. Missing source fails
+with the object identity. CREATE factories accept both complete CREATE DDL and
+legacy definitions without duplicating CREATE; no per-object SELECT was added.
+These paths are verified with unit tests and XML round trips, not a live database.
+
 ### Deferred scope
 
 The following Oracle features are intentionally deferred:
 
-- multiple-column domains
-- flexible domains
-- enumerated domains
-- domain-column annotations
-- multiple named constraints and complete constraint state
+- live-database recreation verification and older release-update boundaries;
+  table/column/constraint/index unit coverage does not certify all Oracle options
+- structured modification of existing identity/virtual columns beyond simple
+  renames (CREATE/ADD preserves formulas and 12c+ identity/default-on-null)
+- advanced invisible-column, IOT/external-table/LOB-storage and index lifecycle
+  options beyond the explicitly tested generation paths
+
+Oracle 12c+ invisible user columns are now retained independently from system
+hidden columns, and support CREATE/ADD plus isolated visibility ALTERs. Existing
+identity columns support isolated ALWAYS/BY DEFAULT/ON NULL mode changes without
+restarting the sequence. Shared table-level LOB tablespaces are read only when
+all LOB segments have one non-null tablespace, and generated for BLOB/CLOB/NCLOB
+columns. Simple IOT metadata and ORGANIZATION INDEX generation now preserve the
+root tablespace and primary key; overflow/mapping and other complex IOT variants
+fail explicitly. Index prefix compression and advanced LOW/HIGH compression now
+survive metadata/XML/CREATE generation with dialect version checks.
+Index visibility (11g+) and nonpartitioned UNUSABLE state also survive recreation;
+Isolated ordinary-index visibility/usability ALTER and nonpartitioned REBUILD now
+use ALTER INDEX through Table diffs and the SQL factory registry. Whole partitioned
+index rebuilds, structural combinations and special-index state changes fail explicitly.
+Isolated physical index partition/subpartition usability transitions now use
+MODIFY ... UNUSABLE or REBUILD ... through Table/Index diffs. Metadata/XML/CREATE
+preserves segment state; composite parent state changes and structural combinations
+fail explicitly. Ordinary index/physical segment tablespace moves and compression
+changes now use REBUILD; composite compression modifies the parent then rebuilds
+its children. The existing onlineIndex option controls ONLINE with version,
+deferrable-constraint, bitmap/join and local-hash restrictions. Partitioned root
+tablespace changes affect default attributes only. Explicit Index diffs can also
+rename indexes after other operations. Partition structure changes remain deferred.
+Nonpartitioned Domain/FunctionDomain indexes now retain qualified indextype and
+opaque parameters for recreation, parameter ALTER and explicit REBUILD. Multiline
+catalog parameters survive XML via an optional encoded specific. Reverse-key
+BTree recreation preserves REVERSE. Join/unknown index CREATE fails explicitly
+when the model lacks the required definition. Simple Local Domain partitions now
+preserve opaque parameters and support CREATE, parameter ALTER and usability
+transitions through individual REBUILD/MODIFY PARTITION. Global/composite Domain
+indexes, CREATE of unusable Domain partitions and custom indextype dependencies
+remain deferred.
+Complete DBMS_METADATA index DDL now enables JOIN/unknown and advanced Domain
+recreation when available, with batched reads, permission-denial fallback and a
+fingerprint guard against stale DDL. Global RANGE/HASH index structure changes
+use validated DROP/CREATE; Local structure follows the base table and independent
+changes are rejected. Constraint-backed indexes and ONLINE replacement are guarded.
+Structured editing of opaque DDL and custom indextype prerequisites remain deferred.
+An isolated simple RANGE table partition split or adjacent two-partition merge now maintains ordinary Local/global
+indexes with UPDATE INDEXES and explicit Local segment names/tablespaces. Other
+Appending or explicitly deleting one simple RANGE partition now coordinates Local
+index partitions, including deterministic automatic names, optional rename/rebuild
+and global-index maintenance on DROP. Existing allowAddPartition/allowDropPartition
+options are honored. Oracle 10g+ heap tables also support appending or deleting one
+simple LIST partition with coordinated Local segments; ADD with an existing DEFAULT
+partition is rejected. Two-way LIST SPLIT/MERGE also maintains ordinary Local
+indexes using UPDATE INDEXES on Oracle 10g+ heap tables. Single-key literal value
+sets are validated for preservation, including DEFAULT; expressions and tuple
+keys are rejected. Simple HASH heap tables support appending one partition or
+coalescing the last partition with UPDATE INDEXES, including Local segment
+rename/tablespace handling after ADD. Middle-partition removal is rejected;
+COALESCE preserves rows and is classified as ALTER. Composite heap tables support
+one parent partition DROP, one RANGE/LIST subpartition DROP, or last HASH
+partition/subpartition COALESCE, with corresponding Local segments and UPDATE
+INDEXES. RANGE-HASH/LIST uses Oracle 10g+; LIST-* and RANGE-RANGE use 11g+,
+and composite HASH uses a conservative 18c+ boundary because Oracle12c also
+represents 12.1. Existing RANGE-* and LIST-LIST parents also
+support one appended subpartition, with explicit Local segment names/tablespaces
+in UPDATE INDEXES and validation of all existing segments. RANGE/LIST composite
+parents support one appended parent with explicit child descriptions and Local
+parent/child names and tablespaces. Composite HASH parent ADD, SPLIT/MERGE and
+ONLINE maintenance remain deferred.
+Normal Oracle CREATE TABLE now invokes the partition detail factory: partition
+metadata is retained, LIST uses VALUES rather than VALUES IN, omitted child lists
+use Oracle defaults without empty parentheses, and HASH child counts are emitted.
+The parity audit separates these basic recreation fixes from optional advanced
+Oracle syntax and unexecuted real-database verification; see oracle-dialect-parity.md.
+IOT metadata now reads root prefix compression and PCTTHRESHOLD in the existing
+catalog query. Oracle 10g+ IOTs additionally retain batched DBMS_METADATA CREATE
+TABLE DDL, allowing overflow/mapping/compressed/partitioned forms to be recreated
+without losing unmodeled attributes. Permission-denial logs a warning and retains
+catalog metadata. Opaque table DDL has a model fingerprint and cannot be silently
+replayed after structural edits. Simple authored IOTs support PCTTHRESHOLD,
+INCLUDING, OVERFLOW tablespace, MAPPING TABLE and prefix compression options;
+isolated nonpartitioned root tablespace changes use ALTER TABLE MOVE TABLESPACE.
+Oracle 12c+ IOTs support simple RANGE partition ADD/DROP, SPLIT/MERGE with unchanged
+ordinary global secondary indexes, and a single partition tablespace MOVE with
+unchanged ordinary secondary indexes. DROP uses UPDATE GLOBAL INDEXES; IOT
+SPLIT/MERGE/MOVE omit the unsupported UPDATE INDEXES clause. Supported plans do
+not replay opaque CREATE DDL; it must be refreshed before later CREATE generation.
+Simple RANGE IOT SPLIT/MERGE now also handles ordinary Local secondary indexes,
+including prefix compression, ADVANCED LOW/HIGH and explicit NOCOMPRESS under
+the existing root-compression and dialect guards. A following PL/SQL operation resolves all affected Oracle-assigned segment
+names in one bulk catalog query, checks counts/name conflicts, renames through
+deterministic temporary names and rebuilds or explicitly marks the desired segments
+UNUSABLE. Requested tablespace/compression changes are applied before the final
+unusable state, including a rebuild when compressed source/default attributes
+would otherwise survive incorrectly. The existing CREATE/REBUILD compression
+helpers validate root prefixes, modes, bitmap restrictions and version boundaries.
+Oracle script parsing now preserves anonymous BEGIN/DECLARE blocks and their final
+semicolon using standalone slash delimiters outside literals/comments. The PL/SQL
+has unit-level SQL generation/script round-trip coverage; real Oracle execution
+and atomic/restart guarantees are not verified or provided by this generator.
+An isolated simple nonpartitioned IOT root tablespace MOVE now accepts an unchanged
+saved CREATE definition without replaying it, preserves a known primary-key prefix
+explicitly, and leaves the stale after-definition guarded until metadata refresh.
+Complex/mapping/partitioned root moves, bitmap secondary indexes, concurrent edits
+and blank/removed destination tablespaces remain rejected. Other opaque IOT structural ALTER, complex root IOT MOVE and custom indextype/Text
+preference prerequisite creation remain deferred.
+Local/global range index partition compression modes and explicit NOCOMPRESS now
+survive metadata/XML/DDL. Subpartition compression inherits its partition setting;
+incompatible overrides and hash partition compression changes fail explicitly.
+Per-column/per-partition LOB storage and IOT overflow/mapping models,
+identity sequence restart and complex virtual-column changes remain deferred.
+
+Identity increment/bounds/cache/cycle/order changes are now generated as changed
+options only through ALTER TABLE MODIFY on Oracle 12c+. Identity sequence restart,
+current-position changes remain deferred. Shared
+identity boolean setters retain values independently of the identity flag's
+assignment order, preserving XML round trips without changing the XML format.
+
+Isolated virtual-expression ALTERs are now generated for Oracle 11g+ tables
+without modeled indexes/constraints; combined physical changes and dependencies
+require separate handling. Plain, virtual and identity column comment changes
+use COMMENT ON without a MODIFY. Identity restart/current-position changes and
+complex virtual-column dependencies remain deferred.
+
+- complete structured materialized-view storage, refresh schedules and advanced
+  options (basic BUILD/REFRESH settings and DBMS_MVIEW refresh are implemented;
+  Oracle 10g+ retains executable DDL for advanced settings; PREBUILT/ON STATEMENT
+  in manually authored models require complete executable definitions)
+- structured DB-link authentication and CREATE/DROP generation; catalog readers
+  no longer query DDL per link or guess credentials from null usernames
+
+DBMS_METADATA enrichment for materialized views and 26ai domains is optional
+when access is denied: ORA-01031 and ORA-31603 produce a warning and retain
+available catalog metadata. Other failures propagate. Materialized-view catalog
+and definition reads use two bulk SELECTs; missing domain definitions prevent
+unsafe CREATE regeneration until a complete definition is supplied.
+
+- advanced association forms beyond the implemented flexible-domain USING mappings
+- structured flexible-domain selector editing (26ai retains executable DDL)
+- structured enumeration values/aliases (26ai retains executable DDL)
+- domain-column annotations for alternative type specifications
+- complete annotation scope preservation for single-column domains
+- named `NOT NULL` constraints and complete lifecycle state beyond CHECKs
 - alternative data types for a domain column
-- domain association details on table columns
-- complete metadata and XML/DDL round trips for multiple-column, flexible and
-  enumerated domains
+- structured metadata editing for flexible and enumerated domains (26ai retains executable DDL)
+- older 23ai release-update metadata coverage for multiple-column domains
 - domain-specific HTML documentation
 
 ### Required design work
+
+Named domain CHECKs now use `Domain.getChecks()` and the shared
+`DomainCheckConstraint` model. Oracle 23ai/26ai readers retain all CHECK rows,
+including per-check deferrability, enable state and Oracle validation/rely
+metadata. PostgreSQL readers retain separate constraint names and expressions
+instead of combining them with AND. Legacy `Domain.check` and its XML attribute
+remain available for a single unnamed expression. See `oracle-dialect-parity.md`
+for API examples, XML compatibility and verification scope.
+
+Regular multi-column domains now use optional `Domain.getColumns()` and
+`DomainColumn` components. Oracle 23ai/26ai CREATE factories generate the row
+form; Oracle23ai and Oracle26ai readers share batched regular-domain components
+and column annotations. The newer domain-kind catalog field stays isolated to
+26ai; the 23ai query uses the existing domain column count.
+`Column.setDomain` and optional `domainColumnName` retain Schema object
+references through XML and cloning. Oracle CREATE TABLE supports ordered
+multi-column associations and explicit groups for repeated associations;
+PostgreSQL accepts the shared scalar-domain reference.
+
+Oracle26ai also retains executable `definition` DDL for flexible/enumerated
+domains and regular domains whose alternatives, NOT NULL constraints or
+annotation scope cannot be reproduced from the structured model. Definitions
+and domain dependencies are retrieved in bulk. Domain collections are created
+in dependency order; prerequisites outside the supplied collection must already
+exist. Oracle23ai/26ai Catalog creation composes the registered Schema factory
+by object kind, placing all domain prerequisites first, then domains in global
+dependency order, then tables. Independent Schema CREATE calls and dependencies
+between other object kinds still require caller ordering.
+Structured editing of these advanced forms remains deferred; identifiers inside
+complete definition SQL do not follow Schema-model renames automatically.
+
+Oracle26ai flexible-domain components are read in one additional bulk query.
+The reader validates the returned value-column count and the declared
+discriminant count, and rejects incomplete mappings. Unknown annotation
+component names are rejected using exact identifier matching on 23ai/26ai.
+On 26ai, multiline annotation values retain complete executable domain DDL
+through XML. Physical character-column inference from a complete domain
+definition requires explicit BYTE/CHAR semantics or an explicit table-column
+type; ambiguous length semantics are not guessed.
+`DomainColumn.specifics.oracle.domain.discriminant=true` identifies USING
+components. CREATE TABLE maps ordinary components to DOMAIN arguments and
+discriminants to USING arguments, preserving each component order through XML.
+Table columns must specify physical data types; a flexible selector still needs
+a complete Domain definition. Oracle23ai and unresolved/incomplete mappings fail
+explicitly rather than emitting a scalar association.
+
+Oracle23ai/26ai ALTER DOMAIN now handles structured DISPLAY/ORDER and
+object annotations without dropping the domain. Unsupported type, constraint,
+name, flexible-selector and complete-definition changes fail explicitly.
+Added domain differences are dependency-sorted; deleted domain collections and
+differences use the reverse order. Schema/Catalog migrations postpone domain
+removals until table detachments and dependent-object changes have completed.
+Cross-schema catalog additions and removals require qualified identifiers.
+Added domains in Catalog differences are dependency-ordered after new sequences,
+types and catalog prerequisites, before consuming table changes. Ordinary
+operation order is preserved for indexes, views and other later operations.
+New schemas and existing-table associations use the same path. Target models
+that retain table/domain references to removed domains fail before returning SQL.
+Dependencies outside the supplied Catalog, privileges and cross-schema
+references unrelated to domains remain caller prerequisites.
+Oracle26ai preserves complete DDL for multiline DISPLAY/ORDER expressions and
+character-domain length semantics; manually authored scalar/component domains
+retain explicit BYTE/CHAR semantics in generated DDL.
 
 Before implementing the deferred scope:
 
@@ -164,8 +483,9 @@ with references surviving object and column renames.
 
 ## Oracle AI Database 26ai
 
-`Oracle26ai` has a separate dialect and resolver boundary and currently
-inherits the compatible Oracle 23ai behavior. Oracle reports 26ai releases as
+`Oracle26ai` has a separate dialect and resolver boundary and inherits
+compatible Oracle 23ai behavior, with dedicated duality-view readers and CREATE
+factories for logical replication. Oracle reports 26ai releases as
 product version `23.26.x`; the resolver treats `23.26` and later release updates
 as `Oracle26ai` while preserving `Oracle23ai` for earlier `23.x` releases.
 
@@ -186,9 +506,6 @@ metadata readers where Oracle exposes suitable catalog views.
 
 The following work is intentionally deferred:
 
-- JSON relational duality view logical-replication DDL and metadata
-- Oracle 26ai duality-view table and column detail metadata from
-  `ALL_JSON_DUALITY_VIEW_TABS` and related views
 - structured modeling of duality-view GraphQL fields, nested objects,
   generated or hidden fields, flex columns and field-level directives
 - broader schema-annotation coverage beyond the currently supported table,
@@ -205,6 +522,19 @@ Duality-view definitions remain in the existing `View.statement` property.
 Oracle-only flags and discovered metadata remain in `View.specifics`. A shared
 structured model should be introduced only if another database exposes an
 equivalent feature or sqlapp needs to transform individual definition nodes.
+
+Oracle26ai now reads `ALL_JSON_DUALITY_VIEWS.LOGICAL_REPLICATION` and generates
+`AS ENABLE LOGICAL REPLICATION` or `AS DISABLE LOGICAL REPLICATION` from
+`View.specifics.LOGICAL_REPLICATION` (Boolean). Omitting the option preserves
+the default CREATE path. Earlier dialects reject the option rather than ignore
+it; support for earlier 23.x release updates is not inferred from the major
+version alone. See `oracle-dialect-parity.md` for examples and validation limits.
+
+Oracle26ai also reads `ALL_JSON_DUALITY_VIEW_TABS` and
+`ALL_JSON_DUALITY_VIEW_TAB_COLS` once per requested object set. Typed JSON
+catalog rows are retained in View specifics, with helpers for table and column
+details. The original view statement remains the DDL source; discovered flags
+are supplemental metadata rather than a second GraphQL definition.
 
 ## Less-covered database dialects
 

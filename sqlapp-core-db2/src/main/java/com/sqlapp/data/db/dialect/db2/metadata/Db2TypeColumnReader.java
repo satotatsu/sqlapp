@@ -65,7 +65,9 @@ public class Db2TypeColumnReader extends TypeColumnReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("typeColumns.sql");
+		return getSqlNodeCache()
+				.getString(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "typeColumns1110.sql"
+						: "typeColumns.sql");
 	}
 
 	protected TypeColumn createTypeColumn(ExResultSet rs) throws SQLException {
@@ -76,6 +78,23 @@ public class Db2TypeColumnReader extends TypeColumnReader {
 		Integer scale = this.getInteger(rs, "SCALE");
 		String productDataType = getString(rs, DATA_TYPE);
 		this.getDialect().setDbType(productDataType, length, scale, obj);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			if (productDataType == null || productDataType.isBlank())
+				throw new SQLException("Missing Db2 row/attribute field data type");
+			obj.setDialect(getDialect());
+			obj.getSpecifics().put("TYPENAME", productDataType);
+			for (String key : List.of("LENGTH", "SCALE", "CODEPAGE", "TYPESTRINGUNITS", "STRINGUNITSLENGTH",
+					"COLLATIONSCHEMA", "COLLATIONNAME", "COMPACT", "ORDINAL")) {
+				String value = getString(rs, key);
+				if (value != null)
+					obj.getSpecifics().put(key, value);
+			}
+			String schema = getString(rs, "data_type_schema"), module = getString(rs, "data_type_module");
+			if (schema != null)
+				obj.getSpecifics().put("DB2_TYPE_SCHEMA", schema);
+			if (module != null)
+				obj.getSpecifics().put("DB2_TYPE_MODULE", module);
+		}
 		String logged = trim(getString(rs, "LOGGED"));
 		if (!isEmpty(logged)) {
 			setSpecifics(rs, "LOGGED", obj);

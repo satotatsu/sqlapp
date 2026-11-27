@@ -26,6 +26,11 @@ import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Function;
+import com.sqlapp.data.schemas.Procedure;
+import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.Synonym;
+import com.sqlapp.data.schemas.PublicSynonym;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
@@ -36,17 +41,60 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Role.class, SqlType.CREATE, SapHanaCreateRoleFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Role.class, SqlType.DROP, SapHanaDropRoleFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.GRANT,
+				SapHanaGrantSystemPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UserPrivilege.class, SqlType.REVOKE,
+				SapHanaRevokeSystemPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RolePrivilege.class, SqlType.GRANT,
+				SapHanaGrantSystemPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RolePrivilege.class, SqlType.REVOKE,
+				SapHanaRevokeSystemPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.GRANT,
+				SapHanaColumnPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ColumnPrivilege.class, SqlType.REVOKE,
+				SapHanaColumnPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.User.class, SqlType.CREATE, SapHanaCreateUserFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.User.class, SqlType.ALTER, SapHanaAlterUserFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.User.class, SqlType.DROP, SapHanaDropUserFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoleMember.class, SqlType.GRANT,
+				SapHanaGrantRoleMemberFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoleMember.class, SqlType.REVOKE,
+				SapHanaRevokeRoleMemberFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.GRANT,
+				SapHanaGrantObjectPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.ObjectPrivilege.class, SqlType.REVOKE,
+				SapHanaRevokeObjectPrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoutinePrivilege.class, SqlType.GRANT,
+				SapHanaGrantRoutinePrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoutinePrivilege.class, SqlType.REVOKE,
+				SapHanaRevokeRoutinePrivilegeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.Type.class, SqlType.CREATE, SapHanaCreateTypeFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, SapHanaCreateFunctionFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.CREATE, SapHanaCreateProcedureFactory.class);
+		registerSqlFactory(Trigger.class, SqlType.CREATE, SapHanaCreateTriggerFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.CREATE, SapHanaCreateSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.CREATE, SapHanaCreatePublicSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.DROP, SapHanaDropPublicSynonymFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, SapHanaCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SapHanaAlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SapHahaCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SapHanaTruncateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, SapHanaSelectForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, SapHanaMergeFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.UniqueConstraint.class, SqlType.CREATE,
+				SapHanaCreateUniqueConstraintFactory.class);
 		registerSqlFactory(Index.class, SqlType.CREATE, SapHanaCreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.DROP, SapHanaDropIndexFactory.class);
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF, SapHanaDdlAutoCommitOffFactory.class);
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON, SapHanaDdlAutoCommitOnFactory.class);
 		//
 		registerSqlFactory(Partition.class, SqlType.TRUNCATE, SapHanaTruncatePartitionFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, SapHanaCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.ALTER, SapHanaAlterSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, SapHanaSequenceNextValuesFactory.class);
 	}
 }

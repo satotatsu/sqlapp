@@ -54,6 +54,8 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.CREATE, OracleCreateViewFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.View.class, SqlType.ALTER, OracleCreateViewFactory.class);
 		// Schema
 		registerSqlFactory(Schema.class, SqlType.CREATE, OracleCreateSchemaFactory.class);
 		// Table
@@ -65,6 +67,8 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, OracleTruncateTemporaryTableFactory.class);
 		// Index
 		registerSqlFactory(Index.class, SqlType.CREATE, OracleCreateIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.ALTER, OracleAlterIndexFactory.class);
+		registerSqlFactory(Index.class, SqlType.REBUILD, OracleRebuildIndexFactory.class);
 		// ForeignKeyConstraint
 		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE, OracleCreateForeignKeyConstraintFactory.class);
 		// UniqueConstraint
@@ -78,14 +82,19 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, OracleSequenceNextValuesFactory.class);
 		// Synonym
 		registerSqlFactory(Synonym.class, SqlType.CREATE, OracleCreateSynonymFactory.class);
+		registerSqlFactory(Synonym.class, SqlType.ALTER, OracleCreateSynonymFactory.class);
 		// Public Synonym
 		registerSqlFactory(PublicSynonym.class, SqlType.CREATE, OracleCreatePublicSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.ALTER, OracleCreatePublicSynonymFactory.class);
+		registerSqlFactory(PublicSynonym.class, SqlType.DROP, OracleDropPublicSynonymFactory.class);
 		// Dimension
 		registerSqlFactory(Dimension.class, SqlType.CREATE, OracleCreateDimensionFactory.class);
 		// Function
 		registerSqlFactory(Function.class, SqlType.CREATE, OracleCreateFunctionFactory.class);
+		registerSqlFactory(Function.class, SqlType.ALTER, OracleAlterRoutineFactory.class);
 		// Procedure
 		registerSqlFactory(Procedure.class, SqlType.CREATE, OracleCreateProcedureFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.ALTER, OracleAlterRoutineFactory.class);
 		// Trigger
 		registerSqlFactory(Trigger.class, SqlType.CREATE, OracleCreateTriggerFactory.class);
 		// Trigger

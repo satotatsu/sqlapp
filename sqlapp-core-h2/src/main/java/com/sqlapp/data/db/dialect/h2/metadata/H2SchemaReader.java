@@ -121,7 +121,7 @@ public class H2SchemaReader extends SchemaReader {
 
 	@Override
 	protected SynonymReader newSynonymReader() {
-		return null;
+		return getDialect() instanceof com.sqlapp.data.db.dialect.h2.H2_200 ? new H2SynonymReader(getDialect()) : null;
 	}
 
 	@Override

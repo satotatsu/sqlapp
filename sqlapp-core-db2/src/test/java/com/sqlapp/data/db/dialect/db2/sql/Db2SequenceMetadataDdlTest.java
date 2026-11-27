@@ -17,6 +17,7 @@ class Db2SequenceMetadataDdlTest extends AbstractDb2SqlFactoryTest {
 			assertFalse(text.contains("CACHE 0"), text);
 		}
 	}
+
 	@Test
 	void retainsPositiveCacheSize() {
 		assertTrue(sql(new Sequence("S").setCacheSize(7)).contains("CACHE 7"));
@@ -37,7 +38,8 @@ class Db2SequenceMetadataDdlTest extends AbstractDb2SqlFactoryTest {
 	}
 
 	private String sql(Sequence sequence) {
-		com.sqlapp.data.db.sql.SqlFactory<Sequence> factory = sqlFactoryRegistry.getSqlFactory(sequence, SqlType.CREATE);
+		com.sqlapp.data.db.sql.SqlFactory<Sequence> factory = sqlFactoryRegistry.getSqlFactory(sequence,
+				SqlType.CREATE);
 		return factory.createSql(sequence).get(0).getSqlText();
 	}
 }

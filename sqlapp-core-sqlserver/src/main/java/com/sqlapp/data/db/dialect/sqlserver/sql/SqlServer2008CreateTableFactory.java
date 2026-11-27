@@ -43,6 +43,12 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 	@Override
 	protected void addOption(final Table table, final SqlServerSqlBuilder builder) {
 		super.addOption(table, builder);
+		if (table.isCompression() && table.getCompressionType() != null
+				&& table.getCompressionType().toUpperCase().startsWith("COLUMNSTORE")) {
+			throw new IllegalArgumentException("DATA_COMPRESSION=" + table.getCompressionType()
+					+ " applies to columnstore indexes, not tables. Set DATA_COMPRESSION on the columnstore index of table "
+					+ table.getName() + ".");
+		}
 		if (table.isCompression()) {
 			builder.lineBreak();
 			builder.with().space().brackets(() -> {
@@ -51,10 +57,6 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 					builder.row();
 				} else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
 					builder.page();
-				} else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
-					builder.columnstore();
-				} else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
-					builder.columnstoreArchive();
 				} else {
 					builder.row();
 				}
@@ -74,6 +76,10 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
+		if ((!table.getTemporalPeriods().isEmpty() || table.getSystemVersioning() != null)
+				&& getDialect().compareTo(com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver
+						.getInstance().getDialect(13, 0)) < 0)
+			throw new IllegalArgumentException("Temporal tables require SQL Server 2016 or later");
 		List<SqlOperation> result = super.createSql(table);
 		String escalation = table.getSpecifics().get("LOCK_ESCALATION");
 		if (escalation != null) {
@@ -119,14 +125,17 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 		boolean[] first = new boolean[] { true };
 		map.forEach((k, v) -> {
 			String key = k.toLowerCase(Locale.ROOT);
-			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v)))
-					|| (key.equals("temporal_type") && ("0".equals(v) || "NON_TEMPORAL_TABLE".equals(v)))
+			if ((key.startsWith("is_") && ("false".equalsIgnoreCase(v) || "0".equals(v))) || key.equals("temporal_type")
 					|| (key.equals("ledger_type") && ("0".equals(v) || "NON_LEDGER_TABLE".equals(v))))
 				return;
 			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k) || "LOCK_ESCALATION".equalsIgnoreCase(k)
 					|| "text_in_row_limit".equalsIgnoreCase(k) || "is_track_columns_updated_on".equalsIgnoreCase(k)
 					|| "large_value_types_out_of_row".equalsIgnoreCase(k) || "has_var_decimal".equalsIgnoreCase(k)) {
 				return;
+			}
+			if (SqlServerIndexOptions.COMPRESSION_DELAY.toString().equalsIgnoreCase(k)) {
+				throw new IllegalArgumentException("COMPRESSION_DELAY applies to columnstore indexes, not tables. "
+						+ "Set COMPRESSION_DELAY on the columnstore index of table " + table.getName() + ".");
 			}
 			if (!first[0]) {
 				builder.space().comma();

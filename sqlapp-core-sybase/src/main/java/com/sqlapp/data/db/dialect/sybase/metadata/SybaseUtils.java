@@ -57,8 +57,8 @@ public class SybaseUtils extends ReaderUtils {
 		return IndexType.BTree;
 	}
 
-	protected static void setNamedArgument(Dialect dialect, ResultSet rs,
-			NamedArgument obj, Routine<?> routine) throws SQLException {
+	protected static void setNamedArgument(Dialect dialect, ResultSet rs, NamedArgument obj, Routine<?> routine)
+			throws SQLException {
 		routine.setCatalogName(getString(rs, MetadataReader.CATALOG_NAME));
 		routine.setSchemaName(getString(rs, MetadataReader.SCHEMA_NAME));
 		routine.setName(getString(rs, MetadataReader.ROUTINE_NAME));
@@ -71,8 +71,7 @@ public class SybaseUtils extends ReaderUtils {
 		Integer scale = getInteger(rs, "scale");
 		obj.setDefaultValue(getString(rs, "default_value"));
 		obj.setReadonly(getBoolean(rs, "is_readonly"));
-		dialect.setDbType(productDataType, notZero(max_length, precision),
-				scale, obj);
+		dialect.setDbType(productDataType, getTypeLength(productDataType, max_length, precision), scale, obj);
 	}
 
 	/**
@@ -82,35 +81,29 @@ public class SybaseUtils extends ReaderUtils {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected static String getString(ResultSet rs, String name)
-			throws SQLException {
+	protected static String getString(ResultSet rs, String name) throws SQLException {
 		return rtrim(rs.getNString(name));
 	}
 
-	private static final Pattern PROCEDURE_PATTERN1 = Pattern.compile(
-			".*CREATE.*?PROC(EDURE){0,1}.*?\\s+AS(.*)",
+	private static final Pattern PROCEDURE_PATTERN1 = Pattern.compile(".*CREATE.*?PROC(EDURE){0,1}.*?\\s+AS(.*)",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern PROCEDURE_PATTERN2 = Pattern
-			.compile(
-					".*CREATE.*?PROC(EDURE){0,1}.*EXECUTE\\s+AS\\s+[^\\s]+.*?\\s+AS(.*)",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern PROCEDURE_PATTERN2 = Pattern.compile(
+			".*CREATE.*?PROC(EDURE){0,1}.*EXECUTE\\s+AS\\s+[^\\s]+.*?\\s+AS(.*)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern FIRST_SPACE_PATTERN = Pattern.compile(
-			"[ \\t]*\\n(.*)", Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-					+ Pattern.DOTALL);
+	private static final Pattern FIRST_SPACE_PATTERN = Pattern.compile("[ \\t]*\\n(.*)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * プロシージャー定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            プロシージャー定義
+	 * @param definition プロシージャー定義
 	 * @return ステートメント
 	 */
 	public static String getProcedureStatement(String definition) {
 		definition = rtrim(definition);
-		if (CommonUtils.isEmpty(definition)){
+		if (CommonUtils.isEmpty(definition)) {
 			return definition;
 		}
 		Matcher matcher = PROCEDURE_PATTERN2.matcher(definition);
@@ -146,8 +139,7 @@ public class SybaseUtils extends ReaderUtils {
 	/**
 	 * 関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	public static String getFunctionStatement(String definition, String type) {
@@ -161,15 +153,13 @@ public class SybaseUtils extends ReaderUtils {
 		return definition;
 	}
 
-	private static final Pattern FUNCTION_FN_PATTERN1 = Pattern.compile(
-			".*CREATE.*?FUNCTION.*?RETURNS.*?(BEGIN.*END)",
+	private static final Pattern FUNCTION_FN_PATTERN1 = Pattern.compile(".*CREATE.*?FUNCTION.*?RETURNS.*?(BEGIN.*END)",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * 'FN' SQL スカラー関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	protected static String getFunctionStatementFN(String definition) {
@@ -192,8 +182,7 @@ public class SybaseUtils extends ReaderUtils {
 	/**
 	 * 'IF' SQL インライン テーブル値関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	protected static String getFunctionStatementIF(String definition) {
@@ -211,17 +200,14 @@ public class SybaseUtils extends ReaderUtils {
 			".*CREATE.*?FUNCTION.*?RETURNS\\s+.*?\\s*(@\\S+).*?TABLE\\s+(.*)",
 			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern FUNCTION_TF_PATTERN2 = Pattern
-			.compile(
-					".*?(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(\\s*AS\\s*){0,1}.*?\\s*(BEGIN.*END).*",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern FUNCTION_TF_PATTERN2 = Pattern.compile(
+			".*?(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(\\s*AS\\s*){0,1}.*?\\s*(BEGIN.*END).*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * 'TF' SQL テーブル値関数定義からステートメント部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return ステートメント
 	 */
 	protected static String getFunctionStatementTF(String definition) {
@@ -243,8 +229,7 @@ public class SybaseUtils extends ReaderUtils {
 	/**
 	 * 'TF' SQL テーブル値関数定義からリターン変数名を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return リターン変数名
 	 */
 	public static String getFunctionReturnName(String definition) {
@@ -256,23 +241,18 @@ public class SybaseUtils extends ReaderUtils {
 		return matcher.group(1);
 	}
 
-	private static final Pattern FUNCTION_FT_PATTERN1 = Pattern
-			.compile(
-					".*CREATE.*?FUNCTION.*?RETURNS\\s+.*?TABLE\\s+.*?(.*)\\s*EXTERNAL\\s+NAME\\s+([\\S]+).*",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern FUNCTION_FT_PATTERN1 = Pattern.compile(
+			".*CREATE.*?FUNCTION.*?RETURNS\\s+.*?TABLE\\s+.*?(.*)\\s*EXTERNAL\\s+NAME\\s+([\\S]+).*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
-	private static final Pattern FUNCTION_FT_PATTERN2 = Pattern
-			.compile(
-					"(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(ORDER\\s+.*?){0,1}(\\s*AS\\s*){0,1}.*",
-					Pattern.CASE_INSENSITIVE + Pattern.MULTILINE
-							+ Pattern.DOTALL);
+	private static final Pattern FUNCTION_FT_PATTERN2 = Pattern.compile(
+			"(\\(.*\\))\\s+.*(WITH\\s.*?){0,1}(ORDER\\s+.*?){0,1}(\\s*AS\\s*){0,1}.*",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE + Pattern.DOTALL);
 
 	/**
 	 * 'TF' SQL テーブル値関数定義からテーブル定義部分を抽出します
 	 * 
-	 * @param definition
-	 *            関数定義
+	 * @param definition 関数定義
 	 * @return リターンテーブル定義
 	 */
 	public static String getFunctionReturnTable(String definition) {
@@ -302,11 +282,42 @@ public class SybaseUtils extends ReaderUtils {
 		return statement;
 	}
 
+	static Long getTypeLength(String productDataType, Long length, Long precision) {
+		if (productDataType != null)
+			productDataType = productDataType.strip();
+		if (productDataType != null && java.util.Set.of("TEXT", "UNITEXT", "IMAGE", "NTEXT")
+				.contains(productDataType.toUpperCase(java.util.Locale.ROOT)))
+			return null; // syscolumns.length is a LOB locator width, not the content capacity.
+		if ("FLOAT".equalsIgnoreCase(productDataType)) {
+			if (precision != null && precision > 0)
+				return precision;
+			if (Long.valueOf(4).equals(length))
+				return 15L;
+			if (Long.valueOf(8).equals(length))
+				return 48L;
+			return null;
+		}
+		if (productDataType != null && java.util.Set.of("NUMERIC", "DECIMAL", "DEC")
+				.contains(productDataType.toUpperCase(java.util.Locale.ROOT))) {
+			return precision;
+		}
+		return notZero(length, precision);
+	}
+
 	public static Long getMaxLength(String productDataType, Long byteLength) {
-		productDataType = productDataType.toUpperCase();
-		if (productDataType.startsWith("NTEXT")
-				|| productDataType.startsWith("NCHAR")
-				|| productDataType.startsWith("NVARCHAR") && byteLength != null) {
+		return getMaxLength(productDataType, byteLength, null);
+	}
+
+	public static Long getMaxLength(String productDataType, Long byteLength, Integer nationalCharacterSize) {
+		productDataType = productDataType.toUpperCase(java.util.Locale.ROOT);
+		if (byteLength != null && byteLength > 0
+				&& (productDataType.equals("NCHAR") || productDataType.equals("NVARCHAR"))) {
+			if (nationalCharacterSize == null || nationalCharacterSize < 1 || byteLength % nationalCharacterSize != 0)
+				throw new IllegalArgumentException("ASE NCHAR/NVARCHAR length requires a valid server @@ncharsize");
+			return byteLength / nationalCharacterSize;
+		}
+		if (byteLength != null && (productDataType.startsWith("UNICHAR") || productDataType.startsWith("UNIVARCHAR")
+				|| productDataType.startsWith("UNITEXT") || productDataType.startsWith("NTEXT"))) {
 			if (byteLength.longValue() > 0) {
 				return byteLength.longValue() / 2;
 			}

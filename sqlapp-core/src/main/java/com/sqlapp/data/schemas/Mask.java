@@ -20,6 +20,7 @@
 package com.sqlapp.data.schemas;
 
 import java.util.function.Supplier;
+import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.ColumnNameProperty;
 import com.sqlapp.data.schemas.properties.EnableProperty;
@@ -27,6 +28,7 @@ import com.sqlapp.data.schemas.properties.SchemaNameProperty;
 import com.sqlapp.data.schemas.properties.TableNameProperty;
 import com.sqlapp.data.schemas.properties.TableSchemaNameProperty;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.ToStringBuilder;
 
 /**
@@ -84,6 +86,11 @@ public final class Mask extends AbstractSchemaObject<Mask> implements
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
+		Mask mask = (Mask) obj;
+		if (!equals(SchemaProperties.TABLE_SCHEMA_NAME, mask, equalsHandler)) return false;
+		if (!equals(SchemaProperties.TABLE_NAME, mask, equalsHandler)) return false;
+		if (!equals(SchemaProperties.COLUMN_NAME, mask, equalsHandler)) return false;
+		if (!equals(SchemaProperties.ENABLE, mask, equalsHandler)) return false;
 		return equalsHandler.equalsResult(this, obj);
 	}
 
@@ -118,6 +125,19 @@ public final class Mask extends AbstractSchemaObject<Mask> implements
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
+		builder.add(SchemaProperties.TABLE_SCHEMA_NAME, getTableSchemaName());
+		builder.add(SchemaProperties.TABLE_NAME, getTableName());
+		builder.add(SchemaProperties.COLUMN_NAME, getColumnName());
+		builder.add(SchemaProperties.ENABLE, isEnable());
+	}
+
+	@Override
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
+		super.writeXmlOptionalAttributes(stax);
+		stax.writeAttribute(SchemaProperties.TABLE_SCHEMA_NAME.getLabel(), getTableSchemaName());
+		stax.writeAttribute(SchemaProperties.TABLE_NAME.getLabel(), getTableName());
+		stax.writeAttribute(SchemaProperties.COLUMN_NAME.getLabel(), getColumnName());
+		if (!isEnable()) stax.writeAttribute(SchemaProperties.ENABLE.getLabel(), false);
 	}
 
 	@Override
@@ -130,17 +150,9 @@ public final class Mask extends AbstractSchemaObject<Mask> implements
 
 	@Override
 	public Mask setColumnName(String columnName) {
-		if (this.column==null){
-			this.column=new Column();
-			this.column.setName(columnName);
-		} else{
-			if (!CommonUtils.eq(this.column.getName(), columnName)&&this.column.getName()!=null){
-				Column column=new Column(columnName);
-				this.column=column;
-			} else{
-				this.column.setName(columnName);
-			}
-		}
+		if (this.column == null) this.column = new Column();
+		else if (!CommonUtils.eq(this.column.getName(), columnName)) this.column = copyColumnReference();
+		this.column.setName(columnName);
 		return instance();
 	}
 
@@ -167,18 +179,9 @@ public final class Mask extends AbstractSchemaObject<Mask> implements
 
 	@Override
 	public Mask setTableName(String tableName) {
-		if (this.column==null){
-			this.column=new Column();
-			this.column.setTableName(tableName);
-		} else{
-			if (!CommonUtils.eq(this.column.getTableName(), tableName)&&this.column.getTableName()!=null){
-				Column column=new Column(this.column.getName());
-				column.setTableName(tableName);
-				this.column=column;
-			} else{
-				this.column.setTableName(tableName);
-			}
-		}
+		if (this.column == null) this.column = new Column();
+		else if (!CommonUtils.eq(this.column.getTableName(), tableName)) this.column = copyColumnReference();
+		this.column.setTableName(tableName);
 		return instance();
 	}
 
@@ -192,19 +195,17 @@ public final class Mask extends AbstractSchemaObject<Mask> implements
 
 	@Override
 	public Mask setTableSchemaName(String tableSchemaName) {
-		if (this.column==null){
-			this.column=new Column();
-			this.column.setSchemaName(tableSchemaName);
-		} else{
-			if (!CommonUtils.eq(this.column.getSchemaName(), tableSchemaName)&&this.column.getSchemaName()!=null){
-				Column column=new Column(this.column.getName());
-				column.setSchemaName(tableSchemaName);
-				this.column=column;
-			} else{
-				this.column.setTableName(tableSchemaName);
-			}
-		}
+		if (this.column == null) this.column = new Column();
+		else if (!CommonUtils.eq(this.column.getSchemaName(), tableSchemaName)) this.column = copyColumnReference();
+		this.column.setSchemaName(tableSchemaName);
 		return instance();
+	}
+
+	private Column copyColumnReference() {
+		Column reference = new Column(column.getName());
+		reference.setSchemaName(column.getSchemaName());
+		reference.setTableName(column.getTableName());
+		return reference;
 	}
 
 	@Override

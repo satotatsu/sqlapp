@@ -10,6 +10,8 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlSpatialReference;
 import com.sqlapp.jdbc.ExResultSet;
 
 /**
@@ -22,10 +24,29 @@ public class MySqlColumn800Reader extends MySqlColumn570Reader {
 	}
 
 	@Override
+	protected Column createColumn(Connection connection, ExResultSet rs, ProductVersionInfo productVersionInfo)
+			throws SQLException {
+		Column column = super.createColumn(connection, rs, productVersionInfo);
+		if ("MySQL".equalsIgnoreCase(getDialect().getProductName()) && productVersionInfo.gte(8, 0, 3)) {
+			String srid = rs.getString("SRS_ID");
+			if (srid != null)
+				column.getSpecifics().put(MySqlSpatialReference.SRID, MySqlSpatialReference.normalize(srid));
+		}
+		return column;
+	}
+
+	@Override
 	protected Column createColumn(Connection connection, ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(connection, rs);
 		String extra = getString(rs, "EXTRA");
-		column.setHidden(extra != null && extra.toUpperCase().contains("INVISIBLE"));
+		column.setHidden(extra != null && extra.toUpperCase(java.util.Locale.ROOT).contains("INVISIBLE"));
+		if (extra != null && extra.toUpperCase(java.util.Locale.ROOT).contains("DEFAULT_GENERATED")) {
+			String expression = getString(rs, "COLUMN_DEFAULT");
+			if (expression != null && !(column.getDataType().isDateTime()
+					&& expression.matches("(?i)current_timestamp(?:\\(\\d*\\))?"))) {
+				column.setDefaultValue("(" + expression + ")");
+			}
+		}
 		return column;
 	}
 }

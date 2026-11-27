@@ -27,6 +27,14 @@ public class HsqlCreateProcedureFactory extends AbstractCreateProcedureFactory<H
 
 	@Override
 	protected void addCreateObject(final Procedure obj, HsqlSqlBuilder builder) {
+		if (!com.sqlapp.util.CommonUtils.isEmpty(obj.getDefinition())) {
+			builder._add(obj.getDefinition());
+			return;
+		}
+		String language = obj.getLanguage() == null ? "SQL" : obj.getLanguage();
+		if (obj.getSqlSecurity() == com.sqlapp.data.schemas.SqlSecurity.Invoker) {
+			throw new IllegalArgumentException("HSQLDB does not support SQL SECURITY INVOKER: " + obj.getName());
+		}
 		builder.create().procedure();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.space().arguments(obj.getArguments());
@@ -34,7 +42,7 @@ public class HsqlCreateProcedureFactory extends AbstractCreateProcedureFactory<H
 			builder.lineBreak().specific();
 			builder.name(obj.getSpecificName());
 		}
-		builder.lineBreak().language().space()._add(obj.getLanguage());
+		builder.lineBreak().language().space()._add(language);
 		if (obj.getDeterministic() != null) {
 			if (obj.getDeterministic().booleanValue()) {
 				builder.lineBreak();
@@ -46,16 +54,13 @@ public class HsqlCreateProcedureFactory extends AbstractCreateProcedureFactory<H
 		if (obj.getSqlDataAccess() != null) {
 			builder.lineBreak()._add(obj.getSqlDataAccess());
 		}
-		if (obj.getSqlSecurity() != null) {
-			builder.lineBreak()._add(obj.getSqlSecurity());
-		}
 		if (obj.getSavepointLevel() != null) {
 			builder.lineBreak()._add(obj.getSavepointLevel());
 		}
 		if (obj.getMaxDynamicResultSets() != null && obj.getMaxDynamicResultSets().intValue() > 0) {
 			builder.lineBreak().dynamic().result().sets().space()._add(obj.getMaxDynamicResultSets());
 		}
-		if ("SQL".equals(obj.getLanguage())) {
+		if ("SQL".equalsIgnoreCase(language)) {
 			builder.lineBreak()._add(obj.getStatement());
 		} else {
 			String methodFullPath = null;

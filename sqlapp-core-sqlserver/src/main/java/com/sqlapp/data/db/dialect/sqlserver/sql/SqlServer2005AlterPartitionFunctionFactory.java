@@ -51,11 +51,20 @@ public class SqlServer2005AlterPartitionFunctionFactory
 			return createSql((PartitionFunction) obj.getTarget());
 		}
 		if (obj.getState() == State.Deleted) {
-			// TODO
-			return Collections.emptyList();
+			PartitionFunction original = obj.getOriginal(PartitionFunction.class);
+			return requiredFactory(original, SqlType.DROP).createSql(original);
 		}
 		PartitionFunction original = obj.getOriginal(PartitionFunction.class);
 		PartitionFunction target = obj.getTarget(PartitionFunction.class);
+		PartitionFunction normalized = target.clone();
+		normalized.getValues().clear();
+		normalized.getValues().addAll(original.getValues());
+		if (!normalized.equals(original)) {
+			throw new IllegalArgumentException(
+					"SQL Server ALTER PARTITION FUNCTION supports boundary value changes only; "
+							+ "migrate dependent schemes and tables explicitly before changing its name, type or RANGE LEFT/RIGHT: "
+							+ original.getName());
+		}
 		Set<String> deleted = CommonUtils.linkedSet();
 		Set<String> added = CommonUtils.linkedSet();
 		for (String val : original.getValues()) {
@@ -88,10 +97,13 @@ public class SqlServer2005AlterPartitionFunctionFactory
 
 	@Override
 	public List<SqlOperation> createSql(PartitionFunction obj) {
-		SqlFactory<PartitionFunction> sqlFactory = this.getSqlFactoryRegistry().getSqlFactory(obj, SqlType.CREATE);
-		if (sqlFactory != null) {
-			return sqlFactory.createSql(obj);
-		}
-		return Collections.emptyList();
+		return requiredFactory(obj, SqlType.CREATE).createSql(obj);
+	}
+
+	private SqlFactory<PartitionFunction> requiredFactory(PartitionFunction object, SqlType type) {
+		SqlFactory<PartitionFunction> factory = getSqlFactoryRegistry().getSqlFactory(object, type);
+		if (factory == null)
+			throw new IllegalStateException("No SQL Server partition function " + type + " factory is registered");
+		return factory;
 	}
 }

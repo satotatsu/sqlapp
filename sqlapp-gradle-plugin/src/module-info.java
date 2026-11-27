@@ -24,5 +24,4 @@ module com.sqlapp.gradle.plugin {
 	requires transitive com.sqlapp.core;
 	requires transitive com.sqlapp.data.db.command;
 	exports com.sqlapp.gradle.plugins;
-	exports com.sqlapp.gradle.plugins.pojo;
 }

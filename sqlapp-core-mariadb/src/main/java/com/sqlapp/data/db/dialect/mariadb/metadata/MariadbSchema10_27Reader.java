@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.mariadb.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.metadata.MySqlSchema564Reader;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.db.metadata.SequenceReader;
 
 /**
  * Mariadb 10.0 Schema Reader
@@ -33,6 +34,11 @@ public class MariadbSchema10_27Reader extends MySqlSchema564Reader {
 
 	public MariadbSchema10_27Reader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected SequenceReader newSequenceReader() {
+		return getDialect().supportsSequence() ? new MariadbSequence10_30Reader(getDialect()) : null;
 	}
 
 	@Override

@@ -59,7 +59,7 @@ public class Firebird20TruncateTemporaryTableFactoryTest extends Firebird20SqlFa
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
-				DELETE FROM TABLE "tableA\"""";
+				DELETE FROM "tableA\"""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

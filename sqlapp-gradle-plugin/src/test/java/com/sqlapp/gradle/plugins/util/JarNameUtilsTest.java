@@ -34,6 +34,10 @@ class JarNameUtilsTest {
 		assertEquals(true, JarNameUtils.isTarget(new File("sqlapp-core.jar")));
 		assertEquals(true, JarNameUtils.isTarget(new File("sqlapp-command.jar")));
 		assertEquals(false, JarNameUtils.isTarget(new File("sqlapp-core-hsql-0.40.0.jar")));
+		assertEquals(true, JarNameUtils.isTarget(new File("sqlapp-core-0.81.0-SNAPSHOT.jar")));
+		assertEquals(true, JarNameUtils.isTarget(new File("sqlapp-command-0.81.0-rc1.jar")));
+		assertEquals(false, JarNameUtils.isTarget(new File("sqlapp-core-hsql-0.81.0-SNAPSHOT.jar")));
+		assertEquals(false, JarNameUtils.isTarget(new File("sqlapp-command-extra.jar")));
 	}
 
 }

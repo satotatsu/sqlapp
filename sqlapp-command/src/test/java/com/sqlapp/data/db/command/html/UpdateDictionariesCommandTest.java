@@ -36,7 +36,7 @@ public class UpdateDictionariesCommandTest {
 	public void testRun() {
 		UpdateDictionariesCommand command = new UpdateDictionariesCommand();
 		command.setWithSchema((o) -> true);
-		command.setTargetFile(new File("src/test/resources/schemas/Catalog.xml"));
+		command.setTargetFile(new File("src/test/resources/schemas/catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/mysql/catalog.xml"));
 		// command.setFile(new File("src/test/resources/oracle/catalog.xml"));
 		command.setDirectory(testProjectDir);

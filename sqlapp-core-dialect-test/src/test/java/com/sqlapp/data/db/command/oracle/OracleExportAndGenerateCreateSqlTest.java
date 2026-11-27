@@ -22,11 +22,11 @@ package com.sqlapp.data.db.command.oracle;
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.util.CommonUtils;
 
-public class OracleExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class OracleExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName="oracle.jdbc.driver.OracleDriver";
+	private String driverClassName = "oracle.jdbc.driver.OracleDriver";
 	/**
 	 * JDBC URL
 	 */
@@ -39,14 +39,14 @@ public class OracleExportAndGenerateCreateSqlTest extends AbstractExportAndGener
 	 * JDBC Password
 	 */
 	private String password;
-	
-	public OracleExportAndGenerateCreateSqlTest(){
-		this.setIncludeSchemas(CommonUtils.split(getTestProp("oracle.includeSchemas"),","));
-		this.url=getTestProp("oracle.jdbc.url");
-		this.username=getTestProp("oracle.jdbc.username");
-		this.password=getTestProp("oracle.jdbc.password");
+
+	public OracleExportAndGenerateCreateSqlTest() {
+		this.setIncludeSchemas(CommonUtils.split(getTestProp("oracle.includeSchemas"), ","));
+		this.url = getTestProp("oracle.jdbc.url");
+		this.username = getTestProp("oracle.jdbc.username");
+		this.password = getTestProp("oracle.jdbc.password");
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -74,6 +74,5 @@ public class OracleExportAndGenerateCreateSqlTest extends AbstractExportAndGener
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

@@ -85,6 +85,12 @@ public class OracleMviewReader extends MviewReader {
 		setSpecifics(rs, "REFRESH_METHOD", table);
 		setSpecifics(rs, "BUILD_MODE", table);
 		setSpecifics(rs, "FAST_REFRESHABLE", table);
+		setSpecifics(rs, "REWRITE_ENABLED", table);
+		setSpecifics(rs, "USE_NO_INDEX", table);
+		setSpecifics(rs, "COMPILE_STATE", table);
+		String compileState = table.getSpecifics().get("COMPILE_STATE");
+		if (compileState != null)
+			table.setValid("VALID".equals(compileState));
 		return table;
 	}
 
@@ -100,6 +106,9 @@ public class OracleMviewReader extends MviewReader {
 
 	@Override
 	protected IndexReader newIndexReader() {
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g
+				|| getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2)
+			return new Oracle11gIndexReader(getDialect());
 		return new OracleIndexReader(this.getDialect());
 	}
 

@@ -85,13 +85,13 @@ public class PostgresAlterTableSqlFactoryTest extends AbstractPostgresSqlFactory
 		List<SqlOperation> list = sqlFactory.createDiffSql(diff);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = getResource("rename_Table1.sql");
+		String expected = getResource("rename_table1.sql");
 		assertEquals(expected, operation.getSqlText());
 		//
 		list = sqlFactory.createDiffSql(diff.reverse());
 		operation = CommonUtils.first(list);
 		System.out.println(list);
-		expected = getResource("rename_Table1_reverse.sql");
+		expected = getResource("rename_table1_reverse.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 

@@ -19,9 +19,13 @@
 
 package com.sqlapp.data.db.dialect.firebird.util;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.firebird.resolver.FirebirdDialectResolver.FirebirdVersionResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.NamedArgument;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.db.dialect.firebird.DialectHolder;
+import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -31,9 +35,28 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * 
  */
 public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
+	public static final String ARRAY_BOUNDS = "firebird.array.bounds";
+	public static final String BLOB_SEGMENT_SIZE = "firebird.blob.segmentSize";
 
 	public FirebirdSqlBuilder(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	public FirebirdSqlBuilder cascadeRule(com.sqlapp.data.schemas.ForeignKeyConstraint constraint) {
+		addCascadeRule("DELETE", constraint.getDeleteRule());
+		addCascadeRule("UPDATE", constraint.getUpdateRule());
+		return instance();
+	}
+
+	private void addCascadeRule(String event, com.sqlapp.data.schemas.CascadeRule rule) {
+		if (rule == null)
+			return;
+		space()._add("ON ")._add(event).space();
+		if (rule == com.sqlapp.data.schemas.CascadeRule.Restrict || rule == com.sqlapp.data.schemas.CascadeRule.None)
+			_add("NO ACTION");
+		else
+			_add(rule);
 	}
 
 	/**
@@ -87,11 +110,184 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 	}
 
 	@Override
+	protected FirebirdSqlBuilder typeDefinition(final Column column) {
+		if (column.getDomain() != null) {
+			if (column.getDomainName() == null || column.getDomainSchemaName() != null
+					|| column.getDomainColumnName() != null || !column.getDomain().getColumns().isEmpty())
+				throw new IllegalArgumentException("Firebird column domain requires an unqualified domain name");
+			if (column.getCharacterSet() != null)
+				throw new IllegalArgumentException(
+						"Firebird domain column inherits CHARACTER SET; configure it on the domain, or override column COLLATE");
+			if (column.isIdentity() || column.getFormula() != null)
+				throw new IllegalArgumentException("Firebird domain column cannot also be identity or computed");
+			return name(column.getDomainName());
+		}
+		var dataType = column.getDataType();
+		if ((dataType == DataType.NUMERIC || dataType == DataType.DECIMAL)
+				&& !"INT128".equalsIgnoreCase(column.getDataTypeName())) {
+			long precision = column.getLength() == null ? 9 : column.getLength();
+			int scale = column.getScale() == null ? 0 : column.getScale();
+			int maximum = getDialect().compareTo(DialectHolder.defaultDialect40) < 0 ? 18 : 38;
+			if (precision < 1 || precision > maximum || scale < 0 || scale > precision)
+				throw new IllegalArgumentException(
+						"Firebird numeric precision must be 1.." + maximum + " and scale 0..precision");
+		}
+		if (column.getArrayDimension() > 0 && (dataType == DataType.BLOB || dataType == DataType.CLOB))
+			throw new IllegalArgumentException("Firebird does not support BLOB arrays");
+		if (dataType == DataType.DECIMALFLOAT) {
+			if (getDialect().compareTo(DialectHolder.defaultDialect40) < 0)
+				throw new IllegalArgumentException("DECFLOAT requires Firebird 4.0 or later");
+			if (column.getLength() != null && column.getLength() != 16 && column.getLength() != 34)
+				throw new IllegalArgumentException("Firebird DECFLOAT precision must be 16 or 34");
+		}
+		if ("INT128".equalsIgnoreCase(column.getDataTypeName())) {
+			if (getDialect().compareTo(DialectHolder.defaultDialect40) < 0) {
+				throw new IllegalArgumentException("INT128 requires Firebird 4.0 or later");
+			}
+			_add("INT128");
+		} else {
+			super.typeDefinition(column);
+		}
+		String segment = column.getSpecifics().get(BLOB_SEGMENT_SIZE);
+		if (segment != null) {
+			try {
+				int size = Integer.parseInt(segment);
+				if ((dataType != DataType.BLOB && dataType != DataType.CLOB) || size < 1 || size > 65535)
+					throw new IllegalArgumentException("Firebird BLOB segment size must be 1..65535 on a BLOB/CLOB");
+				_add(" SEGMENT SIZE " + size);
+			} catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Invalid Firebird BLOB segment size: " + segment, e);
+			}
+		}
+		if (column.getArrayDimension() > 0) {
+			String bounds = column.getSpecifics().get(ARRAY_BOUNDS);
+			if (bounds == null && column.getArrayDimension() == 1)
+				bounds = column.getArrayDimensionLowerBound() + ":" + column.getArrayDimensionUpperBound();
+			if (bounds == null || bounds.split(",", -1).length != column.getArrayDimension()
+					|| column.getArrayDimension() > 16)
+				throw new IllegalArgumentException(
+						"Firebird array requires explicit bounds for each of up to 16 dimensions");
+			for (String dimension : bounds.split(",")) {
+				String[] range = dimension.split(":", -1);
+				try {
+					if (range.length != 2 || Integer.parseInt(range[0]) > Integer.parseInt(range[1]))
+						throw new IllegalArgumentException("Invalid Firebird array bounds: " + bounds);
+				} catch (NumberFormatException e) {
+					throw new IllegalArgumentException("Invalid Firebird array bounds: " + bounds, e);
+				}
+			}
+			_add("[")._add(bounds)._add("]");
+		}
+		return instance();
+	}
+
+	public FirebirdSqlBuilder columnType(Column column) {
+		return typeDefinition(column);
+	}
+
+	@Override
+	protected FirebirdSqlBuilder characterSetDefinition(Column column) {
+		if (column.getDomain() == null && column.getCharacterSet() != null)
+			space()._add("CHARACTER SET ").name(column.getCharacterSet());
+		return instance();
+	}
+
+	public FirebirdSqlBuilder typeDefinition(com.sqlapp.data.schemas.Domain domain) {
+		Column type = new Column(domain.getName()).setDataType(domain.getDataType())
+				.setDataTypeName(domain.getDataTypeName()).setLength(domain.getLength()).setScale(domain.getScale())
+				.setArrayDimension(domain.getArrayDimension())
+				.setArrayDimensionLowerBound(domain.getArrayDimensionLowerBound())
+				.setArrayDimensionUpperBound(domain.getArrayDimensionUpperBound());
+		type.getSpecifics().putAll(domain.getSpecifics());
+		return typeDefinition(type);
+	}
+
+	@Override
+	protected FirebirdSqlBuilder collateDefinition(Column column) {
+		return instance();
+	}
+
+	private void appendCollation(Column column) {
+		if (column.getCollation() != null)
+			space()._add("COLLATE ").name(column.getCollation());
+	}
+
+	@Override
+	public FirebirdSqlBuilder definition(Column column, boolean withRemarks) {
+		if (column.getFormula() == null || column.getFormula().isBlank()) {
+			super.definition(column, withRemarks);
+			appendCollation(column);
+			return instance();
+		}
+		if (column.isIdentity() || column.getArrayDimension() > 0 || column.getDefaultValue() != null)
+			throw new IllegalArgumentException(
+					"Firebird computed column cannot also specify identity, array or default");
+		typeDefinition(column);
+		characterSetDefinition(column);
+		space()._add("COMPUTED BY (")._add(column.getFormula())._add(")");
+		appendCollation(column);
+		return instance();
+	}
+
+	@Override
+	public FirebirdSqlBuilder argument(final NamedArgument argument) {
+		name(argument).space();
+		var reference = com.sqlapp.data.db.dialect.firebird.FirebirdRoutineTypeReference.get(argument.getSpecifics());
+		if (reference == null)
+			typeDefinition(argument);
+		else
+			reference.appendTo(this);
+		if (reference == null && argument.getCharacterSet() != null)
+			space()._add("CHARACTER SET ").name(argument.getCharacterSet());
+		if (argument.isNotNull()) {
+			space().not().null_();
+		}
+		if (argument.getCollation() != null)
+			space()._add("COLLATE ").name(argument.getCollation());
+		if (argument.getDirection() != ParameterDirection.Output && argument.getDefaultValue() != null) {
+			space()._add("DEFAULT ")._add(argument.getDefaultValue());
+		}
+		return instance();
+	}
+
+	@Override
 	protected FirebirdSqlBuilder autoIncrement(AbstractColumn<?> column) {
-		FirebirdVersionResolver resolver = new FirebirdVersionResolver();
-		Dialect dialect = resolver.getDialect(3, 0, 0);
-		if (this.getDialect().compareTo(dialect) >= 0) {
-			space().generated().by().default_().as().identity();
+		var type = column.getDataType();
+		boolean integral = type == com.sqlapp.data.db.datatype.DataType.SMALLINT
+				|| type == com.sqlapp.data.db.datatype.DataType.INT
+				|| type == com.sqlapp.data.db.datatype.DataType.BIGINT;
+		boolean numeric = type == com.sqlapp.data.db.datatype.DataType.NUMERIC
+				|| type == com.sqlapp.data.db.datatype.DataType.DECIMAL;
+		if ((!integral && !numeric) || (column.getScale() != null && column.getScale() != 0)
+				|| (numeric && column.getLength() != null && column.getLength() > 18) || column.getArrayDimension() > 0
+				|| "INT128".equalsIgnoreCase(column.getDataTypeName()))
+			throw new IllegalArgumentException(
+					"Firebird identity requires a scalar integer or NUMERIC/DECIMAL with precision at most 18 and scale 0");
+		if (column instanceof Column value && value.getDefaultValue() != null)
+			throw new IllegalArgumentException("Firebird identity columns cannot have an explicit DEFAULT");
+		if (getDialect().compareTo(DialectHolder.defaultDialect30) < 0)
+			throw new IllegalArgumentException("Identity columns require Firebird 3.0 or later");
+		boolean always = column.getIdentityGenerationType() == com.sqlapp.data.schemas.IdentityGenerationType.Always;
+		boolean modern = getDialect().compareTo(DialectHolder.defaultDialect40) >= 0;
+		if (always && !modern)
+			throw new IllegalArgumentException("GENERATED ALWAYS identity requires Firebird 4.0 or later");
+		if (column.getIdentityStep() != null && column.getIdentityStep() != 1 && !modern)
+			throw new IllegalArgumentException("Identity increments require Firebird 4.0 or later");
+		if (column.getIdentityStep() != null && column.getIdentityStep() == 0)
+			throw new IllegalArgumentException("Identity increment must not be zero");
+		space().generated();
+		if (always)
+			always();
+		else
+			by().default_();
+		as().identity();
+		if (column.getIdentityStartValue() != null || column.getIdentityStep() != null && modern) {
+			_add(" (");
+			if (column.getIdentityStartValue() != null)
+				_add("START WITH ")._add(column.getIdentityStartValue());
+			if (column.getIdentityStep() != null && modern)
+				space()._add("INCREMENT BY ")._add(column.getIdentityStep());
+			_add(")");
 		}
 		return instance();
 	}

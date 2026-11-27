@@ -55,7 +55,7 @@ public class MySqlColumnReader extends ColumnReader {
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Column column = createColumn(connection, rs);
+				Column column = createColumn(connection, rs, productVersionInfo);
 				result.add(column);
 			}
 		});
@@ -64,6 +64,15 @@ public class MySqlColumnReader extends ColumnReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("columns.sql");
+	}
+
+	/**
+	 * Version-aware mapping without mutable reader state; legacy overrides remain
+	 * the default path.
+	 */
+	protected Column createColumn(Connection connection, ExResultSet rs, ProductVersionInfo productVersionInfo)
+			throws SQLException {
+		return createColumn(connection, rs);
 	}
 
 	protected Column createColumn(final Connection connection, ExResultSet rs) throws SQLException {
@@ -94,8 +103,8 @@ public class MySqlColumnReader extends ColumnReader {
 				column.setOctetLength(octetLength);
 			}
 		}
-		Matcher matcher = ON_UPDATE_PATTERN.matcher(extra);
-		if (matcher.matches()) {
+		Matcher matcher = ON_UPDATE_PATTERN.matcher(extra == null ? "" : extra);
+		if (matcher.find()) {
 			column.setOnUpdate(matcher.group(1));
 		}
 		column.setRemarks(getString(rs, "COLUMN_COMMENT"));
@@ -111,6 +120,10 @@ public class MySqlColumnReader extends ColumnReader {
 	protected void setDefaultValue(final Connection connection, final ExResultSet rs, final Column column,
 			final String def) {
 		if (def != null) {
+			if (column.getDataType().isDateTime() && CURRENT_TIMESTAMP_PATTERN.matcher(def).matches()) {
+				column.setDefaultValue(def);
+				return;
+			}
 			DbDataType<?> dataType = this.getDialect().getDbDataType(column);
 			column.setDefaultValue(dataType.withLiteral(def));
 		}
@@ -122,7 +135,10 @@ public class MySqlColumnReader extends ColumnReader {
 		return CommonUtils.coalesce(maxLength, numericPrecision);
 	}
 
-	private static final Pattern ON_UPDATE_PATTERN = Pattern.compile("on\\s+update\\s+(.*?)\\s*",
+	private static final Pattern ON_UPDATE_PATTERN = Pattern
+			.compile("\\bon\\s+update\\s+(current_timestamp(?:\\(\\d*\\))?)", Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern CURRENT_TIMESTAMP_PATTERN = Pattern.compile("current_timestamp(?:\\(\\d*\\))?",
 			Pattern.CASE_INSENSITIVE);
 
 	private static final Pattern FUNCTION_PATTERN = Pattern.compile("^[^0-9].*");

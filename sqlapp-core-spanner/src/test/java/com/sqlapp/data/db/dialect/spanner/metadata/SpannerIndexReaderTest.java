@@ -7,6 +7,7 @@ package com.sqlapp.data.db.dialect.spanner.metadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,5 +29,12 @@ class SpannerIndexReaderTest {
 		assertEquals(VectorDistanceType.DotProduct, SpannerIndexReader.toVectorDistanceType("DOT_PRODUCT"));
 		assertEquals(VectorDistanceType.Euclidean, SpannerIndexReader.toVectorDistanceType("EUCLIDEAN"));
 		assertNull(SpannerIndexReader.toVectorDistanceType(null));
+	}
+
+	@Test
+	void rejectsUnknownTypesInsteadOfDefaultingToBtree() {
+		for (String type : java.util.Arrays.asList(null, "", "HASH", "PRIMARY_KEY"))
+			assertThrows(IllegalArgumentException.class, () -> SpannerIndexReader.toIndexType(type));
+		assertEquals(IndexType.BTree, SpannerIndexReader.toIndexType("index"));
 	}
 }

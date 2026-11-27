@@ -51,20 +51,8 @@ public class Postgres140 extends Postgres130 {
 			type.addPetternColumnTypeMatcher(
 					"(?<dataTypeName>INT4MULTIRANGE|INT8MULTIRANGE|NUMMULTIRANGE|TSMULTIRANGE|TSTZMULTIRANGE|DATEMULTIRANGE)",
 					(matcher, information) -> information.setDataTypeName(matcher.group("dataTypeName")));
+			enableArray(type);
 		});
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.Postgres93#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
 	}
 
 	/*

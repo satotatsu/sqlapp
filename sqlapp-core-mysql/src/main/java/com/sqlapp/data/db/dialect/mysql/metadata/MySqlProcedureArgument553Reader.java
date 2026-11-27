@@ -86,11 +86,15 @@ public class MySqlProcedureArgument553Reader extends MySqlProcedureArgumentReade
 		SchemaUtils.setRoutine(obj, routine);
 		obj.setCatalogName(getString(rs, SPECIFIC_CATALOG));
 		obj.setSchemaName(getString(rs, SPECIFIC_SCHEMA));
-		String productDataType = getString(rs, "DATA_TYPE");
+		String productDataType = getString(rs, "DTD_IDENTIFIER");
+		if (com.sqlapp.util.CommonUtils.isEmpty(productDataType)) {
+			productDataType = getString(rs, "DATA_TYPE");
+		}
 		long maxLength = rs.getLong("CHARACTER_MAXIMUM_LENGTH");
 		long numericPrecision = rs.getLong("NUMERIC_PRECISION");
 		Integer numericScale = getInteger(rs, "NUMERIC_SCALE");
 		getDialect().setDbType(productDataType, notZero(maxLength, numericPrecision), numericScale, obj);
+		MySqlUtils.setRoutineArgumentValues(productDataType, obj);
 		obj.setCharacterSet(getString(rs, CHARACTER_SET_NAME));
 		obj.setCollation(getString(rs, COLLATION_NAME));
 		obj.setDirection(ParameterDirection.parse(getString(rs, "PARAMETER_MODE")));

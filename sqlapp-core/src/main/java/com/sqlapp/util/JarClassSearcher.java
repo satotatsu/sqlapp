@@ -44,7 +44,7 @@ public class JarClassSearcher extends AbstractClassSearcher {
 						String name = resourceNameToClassName(jarEntry.getName());
 						Class<T> clazz;
 						try {
-							clazz = (Class<T>) getClassLoader().loadClass(name);
+							clazz = (Class<T>) JarClassSearcher.this.loadDiscoveryClass(name);
 							if (this.getFilter().test(clazz)) {
 								resources.add(clazz);
 							}
@@ -63,7 +63,7 @@ public class JarClassSearcher extends AbstractClassSearcher {
 						Class<T> clazz;
 						String name = resourceNameToClassName(jarEntry.getName());
 						try {
-							clazz = (Class<T>) getClassLoader().loadClass(name);
+							clazz = (Class<T>) JarClassSearcher.this.loadDiscoveryClass(name);
 							if (this.getFilter().test(clazz)) {
 								resources.add(clazz);
 							}
@@ -97,6 +97,6 @@ public class JarClassSearcher extends AbstractClassSearcher {
 	}
 
 	private String resourceNameToClassName(String resourceName) {
-		return fileNameToClassName(resourceName).replace('/', '.');
+		return resourceName.substring(0, resourceName.length() - ".class".length()).replace('/', '.');
 	}
 }

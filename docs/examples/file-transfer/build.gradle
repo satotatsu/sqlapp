@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+    id 'com.sqlapp.db'
+}
+repositories { mavenCentral() }
+dependencies {
+    runtimeOnly providers.gradleProperty('sqlappDialect')
+    runtimeOnly providers.gradleProperty('jdbcDriver')
+}
+
+tasks.named('exportTransferFile') {
+    configurationFile.set(layout.projectDirectory.file('transfer.yaml'))
+    dataSource.jdbcUrl.set(providers.environmentVariable('SOURCE_JDBC_URL'))
+    dataSource.username.set(providers.environmentVariable('SOURCE_JDBC_USER'))
+    dataSource.password.set(providers.environmentVariable('SOURCE_JDBC_PASSWORD'))
+}
+tasks.named('importTransferFile') {
+    manifestFile.set(layout.projectDirectory.file(providers.gradleProperty('manifestFile').orElse('missing-manifest.json').get()))
+    expectedManifestFingerprint.set(providers.gradleProperty('manifestFingerprint'))
+    allowExecution.set(providers.gradleProperty('allowImport').map { it.toBoolean() }.orElse(false))
+    dataSource.jdbcUrl.set(providers.environmentVariable('TARGET_JDBC_URL'))
+    dataSource.username.set(providers.environmentVariable('TARGET_JDBC_USER'))
+    dataSource.password.set(providers.environmentVariable('TARGET_JDBC_PASSWORD'))
+}

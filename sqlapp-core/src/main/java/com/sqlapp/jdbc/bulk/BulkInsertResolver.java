@@ -23,12 +23,25 @@ public final class BulkInsertResolver {
 	}
 
 	public static BulkInsertExecutor resolve(final Dialect dialect) {
+		return resolve(dialect, BulkInsertMethod.NATIVE);
+	}
+
+	public static BulkInsertExecutor resolve(final Connection connection, final BulkOption options) throws SQLException {
+		Objects.requireNonNull(connection, "connection");
+		return resolve(DialectResolver.getInstance().getDialect(connection),
+				options == null ? BulkInsertMethod.AUTO : options.getInsertMethod());
+	}
+
+	public static BulkInsertExecutor resolve(final Dialect dialect, final BulkInsertMethod method) {
 		Objects.requireNonNull(dialect, "dialect");
+		Objects.requireNonNull(method, "method");
+		if (method == BulkInsertMethod.JDBC_BATCH) return new JdbcBatchBulkInsertExecutor(dialect);
 		final List<BulkInsertProvider> providers = ServiceLoader
 				.load(BulkInsertProvider.class).stream()
 				.map(ServiceLoader.Provider::get)
 				.filter(provider -> provider.supports(dialect)).toList();
 		if (providers.isEmpty()) {
+			if (method == BulkInsertMethod.AUTO) return new JdbcBatchBulkInsertExecutor(dialect);
 			throw new IllegalArgumentException(
 					"No bulk insert provider supports: " + dialect.getProductName());
 		}
@@ -44,7 +57,7 @@ public final class BulkInsertResolver {
 
 	public static long execute(final Connection connection, final Table table,
 			final BulkOption options) throws SQLException {
-		return resolve(connection).execute(connection,
+		return resolve(connection, options).execute(connection,
 				Objects.requireNonNull(table, "table"),
 				options == null ? BulkOption.defaults() : options);
 	}

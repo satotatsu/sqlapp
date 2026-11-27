@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Columns</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/themes/prism.min.css"/>
+<style type="text/css">
+<!--
+:root {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --border: #d0d7de;
+    --border-light: #eaeef2;
+    --header-bg: linear-gradient(180deg, #2b6cb0 0%, #1e4f8c 100%);
+    --header-text: #ffffff;
+    --hover: #eef6ff;
+    --primary: #0969da;
+    --text: #24292f;
+    --muted: #57606a;
+    --radius: 8px;
+    --col-sharp: 48px;
+    --col-name: 220px;
+}
+/* =========================================================
+   Base
+   ========================================================= */
+* {
+    box-sizing: border-box;
+}
+html {
+    scroll-behavior: smooth;
+}
+body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+/* =========================================================
+   Navigation
+   ========================================================= */
+.rootTabs > .nav,
+.tabs > .nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+    padding: 8px;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+.rootTabs > .nav li,
+.tabs > .nav li {
+    flex: 0 0 auto;
+}
+.rootTabs > .nav a,
+.tabs > .nav a {
+    display: block;
+    padding: 8px 14px;
+    text-decoration: none;
+    color: var(--muted);
+    border-radius: 6px;
+}
+.rootTabs > .nav li.active a,
+.tabs > .nav li.active a {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+/* =========================================================
+   Detail Header
+   ========================================================= */
+.object-hero {
+	background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	padding: 20px 24px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.object-hero-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.object-hero h1 {
+    margin: 6px 0 4px;
+    font-size: 32px;
+    line-height: 1.2;
+}
+.object-type {
+	background: #dbeafe;
+	color: #1d4ed8;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .04em;
+}
+.schema-badge {
+	background: #fff;
+	border: 1px solid var(--border);
+	color: var(--text);
+	text-decoration: none;
+	padding: 6px 12px;
+	border-radius: 999px;
+	font-weight: 600;
+}
+.object-display-name {
+    margin: 0;
+    color: var(--muted);
+    font-size: 17px;
+    font-family: Consolas, "Courier New", monospace;
+}
+.object-description {
+    margin-top: 14px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 900px;
+}
+.object-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+.object-meta-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+}
+.schema-badge {
+    background: #eef6ff;
+    border: 1px solid #c7def8;
+    color: var(--text);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+.schema-badge:hover {
+    background: #dceeff;
+}
+/* =========================================================
+   Panel
+   ========================================================= */
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+/* =========================================================
+   Toolbar
+   ========================================================= */
+.toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    flex-wrap: wrap;
+}
+input[type="search"] {
+    width: 320px;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+}
+/* =========================================================
+   Table
+   ========================================================= */
+table {
+    width: 100%;
+    min-width: max-content;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+/* ---------- header ---------- */
+thead th {
+    background: var(--header-bg);
+    color: var(--header-text);
+    border: 1px solid #1e4f8c;
+}
+thead ._col_sharp_ {
+    background: var(--header-bg);
+    color: var(--header-text);
+}
+/* 1段目の colspan セル（Cascade Rule など） */
+thead tr:first-child th[colspan] {
+    height: 36px;
+}
+thead tr:first-child th {
+    border-top: 1px solid var(--border);
+}
+thead th:first-child {
+    border-left: 1px solid var(--border);
+}
+/* rowspan のセルを中央配置 */
+thead th[rowspan] {
+    vertical-align: middle;
+}
+/* ---------- body ---------- */
+tbody td,
+tfoot td {
+    padding: 8px 12px;
+    border-right: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+tbody td:first-child,
+tfoot td:first-child {
+    border-left: 1px solid var(--border-light);
+}
+tbody tr:nth-child(even) {
+    background: #fbfcfd;
+}
+tbody tr:hover {
+    background: var(--hover);
+}
+/* ---------- footer ---------- */
+tfoot td {
+    font-weight: 600;
+    background: #fafbfc;
+    border-top: 2px solid var(--border);
+}
+/* =========================================================
+   Sticky first column (#)
+   ========================================================= */
+._col_sharp_ {
+    width: var(--col-sharp);
+    min-width: var(--col-sharp);
+    max-width: var(--col-sharp);
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    text-align: center;
+    vertical-align: middle;
+}
+/* 背景色を行ごとに合わせる */
+thead ._col_sharp_ {
+    background: var(--header-bg);
+}
+tbody ._col_sharp_ {
+    background: white;
+}
+tbody tr:nth-child(even) ._col_sharp_ {
+    background: #fbfcfd;
+}
+tfoot ._col_sharp_ {
+    background: #fafbfc;
+}
+/* =========================================================
+   Name column
+   ========================================================= */
+._col_Name_ {
+    min-width: var(--col-name);
+}
+._col_Name_ a,
+._col_DisplayName_ a,
+._col_Schema_ a {
+    color: var(--primary);
+    text-decoration: none;
+}
+._col_Name_ a {
+    font-weight: 600;
+}
+._col_Name_ a:hover,
+._col_DisplayName_ a:hover,
+._col_Schema_ a:hover {
+    text-decoration: underline;
+}
+/* =========================================================
+   Details
+   ========================================================= */
+details.columnFilter,
+#columnFilter {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fafbfc;
+}
+#columnFilter label {
+    display: inline-block;
+    margin: 4px 10px 4px 0;
+    white-space: nowrap;
+}
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width: 900px) {
+    body {
+        padding: 8px;
+    }
+    .toolbar {
+        align-items: stretch;
+    }
+    input[type="search"] {
+        width: 100%;
+    }
+    thead th,
+    tbody td,
+    tfoot td {
+        padding: 7px 10px;
+        font-size: 13px;
+    }
+    ._col_Name_ {
+        min-width: 160px;
+    }
+}
+-->
+</style>
+</head>
+<body>
+<div class="menu-tabs tab-block">
+	<div class="rootTabs">
+	<ul class="nav">
+		<li><a href="index.html"><span class="icon icon64 icon-list"></span>General</a></li>
+		<li><a href="schemas.html"><span class="icon icon64 icon-table"></span>Schemas</a></li>
+		<li><a href="tables.html"><span class="icon icon64 icon-table"></span>Tables</a></li>
+		<li class="active default"><a href="columns.html"><span class="icon icon64 icon-table"></span>Columns</a></li>
+		<li><a href="indexes.html"><span class="icon icon64 icon-table"></span>Indexes</a></li>
+		<li><a href="relationships.html"><span class="icon icon64 icon-sitemap"></span>Relationships</a></li>
+		<li><a href="users.html"><span class="icon icon64 icon-table"></span>Users</a></li>
+		<li><a href="roles.html"><span class="icon icon64 icon-table"></span>Roles</a></li>
+		<li><a href="objectprivileges.html"><span class="icon icon64 icon-table"></span>Object Privileges</a></li>
+		<li><a href="columnprivileges.html"><span class="icon icon64 icon-table"></span>Column Privileges</a></li>
+	</ul>
+	<div class="tab-content">
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<div class="toolbar">
+			<input type="search" class="searchableArea" placeholder="Search..." />
+		</div>
+			<details class="column-filter">
+				<summary>ColumnFilter</summary>
+				<div class="column-filter-content"></div>
+			</details>
+		<table id="mainTable" class="outline-header border box-header outline">
+		<thead>
+			<tr>
+				<th rowspan="2" class="_col_sharp_">#</th>
+				<th rowspan="2" class="_col_DisplayName_">Display Name</th>
+				<th rowspan="2" class="_col_Name_">Name</th>
+				<th rowspan="2" class="_col_Schema_">Schema</th>
+				<th rowspan="2" class="_col_Table_">Table</th>
+				<th rowspan="2" class="_col_DataType_">Data Type</th>
+				<th rowspan="2" class="_col_Length_">Length</th>
+				<th rowspan="2" class="_col_Scale_">Scale</th>
+				<th rowspan="2" class="_col_NotNull_">Not Null</th>
+				<th rowspan="2" class="_col_DefaultValue_">Default<br/>Value</th>
+				<th rowspan="2" class="_col_Primary_">Primary</th>
+				<th rowspan="2" class="_col_Identity_">Identity</th>
+				<th rowspan="2" class="_col_CharacterSemantics_">Character<br/>Semantics</th>
+				<th rowspan="2" class="_col_DisplayRemarks_">Display Remarks</th>
+			</tr>
+			<tr>
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<td class="_col_sharp_"></td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">89 Columns</td>
+				<td class="_col_Schema_"></td>
+				<td class="_col_Table_"></td>
+				<td class="_col_DataType_"></td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">
+			<tr>
+				<td class="_col_sharp_">1</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">ACTIVE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCTS.html">PRODUCTS</a></td>
+				<td class="_col_DataType_">BOOLEAN</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_">TRUE</td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">2</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">ALLOCATED_AMOUNT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPT_ALLOCATIONS.html">RECEIPT_ALLOCATIONS</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">3</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">AMOUNT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICE_DETAILS.html">INVOICE_DETAILS</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">4</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">AMOUNT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">5</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">BALANCE_AMOUNT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ACCOUNTS_RECEIVABLE.html">ACCOUNTS_RECEIVABLE</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">6</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CATEGORY_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCTS.html">PRODUCTS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">7</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CLOSING_DAY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_CUSTOMERS.html">CUSTOMERS</a></td>
+				<td class="_col_DataType_">INT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">8</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CLOSING_DAY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PAYMENT_TERMS.html">PAYMENT_TERMS</a></td>
+				<td class="_col_DataType_">INT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">9</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CREATED_AT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_CUSTOMERS.html">CUSTOMERS</a></td>
+				<td class="_col_DataType_">TIMESTAMP</td>
+				<td class="_col_Length_">6</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_">CURRENT_TIMESTAMP</td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">10</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_CODE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_CUSTOMERS.html">CUSTOMERS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">20</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">11</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ACCOUNTS_RECEIVABLE.html">ACCOUNTS_RECEIVABLE</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">12</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_CUSTOMERS.html">CUSTOMERS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">13</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICES.html">INVOICES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">14</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDERS.html">ORDERS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">15</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPTS.html">RECEIPTS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">16</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURNS.html">SALES_RETURNS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">17</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">CUSTOMER_NAME</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_CUSTOMERS.html">CUSTOMERS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">200</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">18</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVENTORY_TRANSACTION_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_TRANSACTIONS.html">INVENTORY_TRANSACTIONS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">19</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVOICE_DATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICES.html">INVOICES</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">20</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVOICE_DETAIL_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICE_DETAILS.html">INVOICE_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">21</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVOICE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICES.html">INVOICES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">22</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVOICE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICE_DETAILS.html">INVOICE_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">23</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVOICE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPT_ALLOCATIONS.html">RECEIPT_ALLOCATIONS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">24</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">INVOICE_NO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICES.html">INVOICES</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">30</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">25</td>
+				<td class="_col_DisplayName_">Line No</td>
+				<td class="_col_Name_">LINE_NO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">INT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_">Line No </td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">26</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">ORDER_DATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDERS.html">ORDERS</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">27</td>
+				<td class="_col_DisplayName_">Order Detail ID</td>
+				<td class="_col_Name_">ORDER_DETAIL_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">28</td>
+				<td class="_col_DisplayName_">Order Detail ID</td>
+				<td class="_col_Name_">ORDER_DETAIL_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENT_DETAILS.html">SHIPMENT_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">29</td>
+				<td class="_col_DisplayName_">Order ID</td>
+				<td class="_col_Name_">ORDER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDERS.html">ORDERS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">30</td>
+				<td class="_col_DisplayName_">Order ID</td>
+				<td class="_col_Name_">ORDER_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">31</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">ORDER_NO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDERS.html">ORDERS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">30</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">32</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">ORDER_STATUS</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDERS.html">ORDERS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">20</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">33</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">PAYMENT_DAY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PAYMENT_TERMS.html">PAYMENT_TERMS</a></td>
+				<td class="_col_DataType_">INT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">34</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">PAYMENT_MONTH_OFFSET</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PAYMENT_TERMS.html">PAYMENT_TERMS</a></td>
+				<td class="_col_DataType_">INT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">35</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">PAYMENT_TERM_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PAYMENT_TERMS.html">PAYMENT_TERMS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">36</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">PRODUCT_CODE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCTS.html">PRODUCTS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">30</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">37</td>
+				<td class="_col_DisplayName_">Product ID</td>
+				<td class="_col_Name_">PRODUCT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_BALANCES.html">INVENTORY_BALANCES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">38</td>
+				<td class="_col_DisplayName_">Product ID</td>
+				<td class="_col_Name_">PRODUCT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_TRANSACTIONS.html">INVENTORY_TRANSACTIONS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">39</td>
+				<td class="_col_DisplayName_">Product ID</td>
+				<td class="_col_Name_">PRODUCT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">40</td>
+				<td class="_col_DisplayName_">Product ID</td>
+				<td class="_col_Name_">PRODUCT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCTS.html">PRODUCTS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">41</td>
+				<td class="_col_DisplayName_">Product ID</td>
+				<td class="_col_Name_">PRODUCT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCT_PRICES.html">PRODUCT_PRICES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">42</td>
+				<td class="_col_DisplayName_">Product ID</td>
+				<td class="_col_Name_">PRODUCT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURN_DETAILS.html">SALES_RETURN_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">43</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">PRODUCT_NAME</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCTS.html">PRODUCTS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">200</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">44</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">PRODUCT_PRICE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCT_PRICES.html">PRODUCT_PRICES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">45</td>
+				<td class="_col_DisplayName_">Quantity</td>
+				<td class="_col_Name_">QUANTITY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_BALANCES.html">INVENTORY_BALANCES</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">46</td>
+				<td class="_col_DisplayName_">Quantity</td>
+				<td class="_col_Name_">QUANTITY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_TRANSACTIONS.html">INVENTORY_TRANSACTIONS</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">47</td>
+				<td class="_col_DisplayName_">Quantity</td>
+				<td class="_col_Name_">QUANTITY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">48</td>
+				<td class="_col_DisplayName_">Quantity</td>
+				<td class="_col_Name_">QUANTITY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURN_DETAILS.html">SALES_RETURN_DETAILS</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">49</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_TAX_RATES.html">TAX_RATES</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">5</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">50</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RECEIPT_ALLOCATION_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPT_ALLOCATIONS.html">RECEIPT_ALLOCATIONS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">51</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RECEIPT_DATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPTS.html">RECEIPTS</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">52</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RECEIPT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPTS.html">RECEIPTS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">53</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RECEIPT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPT_ALLOCATIONS.html">RECEIPT_ALLOCATIONS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">54</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RECEIPT_NO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPTS.html">RECEIPTS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">30</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">55</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RECEIVED_AMOUNT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_RECEIPTS.html">RECEIPTS</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">56</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">RETURN_DATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURNS.html">SALES_RETURNS</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">57</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SALES_RETURN_DETAIL_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURN_DETAILS.html">SALES_RETURN_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">58</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SALES_RETURN_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURNS.html">SALES_RETURNS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">59</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SALES_RETURN_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SALES_RETURN_DETAILS.html">SALES_RETURN_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">60</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPMENT_DATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENTS.html">SHIPMENTS</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">61</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPMENT_DETAIL_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICE_DETAILS.html">INVOICE_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">62</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPMENT_DETAIL_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENT_DETAILS.html">SHIPMENT_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">63</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPMENT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENTS.html">SHIPMENTS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">64</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPMENT_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENT_DETAILS.html">SHIPMENT_DETAILS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">65</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPMENT_NO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENTS.html">SHIPMENTS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">30</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">66</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">SHIPPED_QUANTITY</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_SHIPMENT_DETAILS.html">SHIPMENT_DETAILS</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">67</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">TAX_CODE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_TAX_RATES.html">TAX_RATES</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">20</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">68</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">TAX_RATE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_TAX_RATES.html">TAX_RATES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">69</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">TOTAL_AMOUNT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVOICES.html">INVOICES</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">70</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">TRANSACTION_DATE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_TRANSACTIONS.html">INVENTORY_TRANSACTIONS</a></td>
+				<td class="_col_DataType_">TIMESTAMP</td>
+				<td class="_col_Length_">6</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">71</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">TRANSACTION_TYPE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_TRANSACTIONS.html">INVENTORY_TRANSACTIONS</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">20</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">72</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">UNIT_PRICE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ORDER_DETAILS.html">Order Detail</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">73</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">UNIT_PRICE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCT_PRICES.html">PRODUCT_PRICES</a></td>
+				<td class="_col_DataType_">DECIMAL</td>
+				<td class="_col_Length_">15</td>
+				<td class="_col_Scale_">2</td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">74</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">UPDATED_AT</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_ACCOUNTS_RECEIVABLE.html">ACCOUNTS_RECEIVABLE</a></td>
+				<td class="_col_DataType_">TIMESTAMP</td>
+				<td class="_col_Length_">6</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">75</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">VALID_FROM</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCT_PRICES.html">PRODUCT_PRICES</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">76</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">VALID_FROM</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_TAX_RATES.html">TAX_RATES</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">77</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">VALID_TO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_PRODUCT_PRICES.html">PRODUCT_PRICES</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">78</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">VALID_TO</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_TAX_RATES.html">TAX_RATES</a></td>
+				<td class="_col_DataType_">DATE</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">79</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">WAREHOUSE_CODE</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_WAREHOUSES.html">WAREHOUSES</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">20</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">80</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">WAREHOUSE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_BALANCES.html">INVENTORY_BALANCES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">81</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">WAREHOUSE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_INVENTORY_TRANSACTIONS.html">INVENTORY_TRANSACTIONS</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">82</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">WAREHOUSE_ID</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_WAREHOUSES.html">WAREHOUSES</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_">✓</td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">83</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">WAREHOUSE_NAME</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_WAREHOUSES.html">WAREHOUSES</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">200</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">84</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">applied_at</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_changelog.html">changelog</a></td>
+				<td class="_col_DataType_">TIMESTAMP</td>
+				<td class="_col_Length_">6</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">85</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">applied_by</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_changelog.html">changelog</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">255</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">86</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">change_number</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_changelog.html">changelog</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_">✓</td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_">✓</td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">87</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">description</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_changelog.html">changelog</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">1023</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">88</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">series_number</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_changelog.html">changelog</a></td>
+				<td class="_col_DataType_">BIGINT</td>
+				<td class="_col_Length_"></td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_"></td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+			<tr>
+				<td class="_col_sharp_">89</td>
+				<td class="_col_DisplayName_"></td>
+				<td class="_col_Name_">status</td>
+				<td class="_col_Schema_"><a href="schemas/PUBLIC.html">PUBLIC</a></td>
+				<td class="_col_Table_"><a href="tables/PUBLIC_changelog.html">changelog</a></td>
+				<td class="_col_DataType_">VARCHAR</td>
+				<td class="_col_Length_">31</td>
+				<td class="_col_Scale_"></td>
+				<td class="_col_NotNull_"></td>
+				<td class="_col_DefaultValue_"></td>
+				<td class="_col_Primary_"></td>
+				<td class="_col_Identity_"></td>
+				<td class="_col_CharacterSemantics_">Char</td>
+				<td class="_col_DisplayRemarks_"></td>
+			</tr>
+		</tbody>
+		</table>
+	</div>
+</div>
+	</div>
+	</div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/js/jquery.tablesorter.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/css/theme.blue.min.css"/>
+<!-- Latest compiled and minified JavaScript -->
+<script>
+function tableWithColumnFilter(columnFilter) {
+    if (!columnFilter || columnFilter.length === 0) {
+        return;
+    }
+    var container = columnFilter.find(".column-filter-content");
+    if (container.length === 0) {
+        container = columnFilter;
+    }
+    var table = columnFilter.nextAll("table").first();
+    if (table.length === 0) {
+        return;
+    }
+    var rows = table.find("tr");
+    var added = {};
+    var defaultHidden = { remarks:true ,specifics:true ,statistics:true ,createdAt:true ,lastAlteredAt:true };
+    function toColumnName(text) {
+        text = $.trim(text);
+        if (text === "#") {
+            return "sharp";
+        }
+        var pos = text.indexOf("(");
+        if (pos >= 0) {
+            text = text.substring(0, pos);
+        }
+        return text.replace(/\s+/g, "");
+    }
+    function addCheckbox(text, colName) {
+        text = $.trim(text);
+        var checked = !defaultHidden[colName.toLowerCase()];
+        var label = $("<label style='margin-right:12px; white-space:nowrap;'></label>");
+        var checkbox = $("<input type='checkbox'>")
+            .attr("name", colName)
+            .prop("checked", checked);
+        label.append(checkbox).append(" " + text);
+        container.append(label);
+    }
+	table.find("thead tr").first().children("th").each(function () {
+        var th = $(this);
+        var cls = (th.attr("class") || "")
+            .match(/_col_([^ ]+)_/);
+        if (cls) {
+            addCheckbox(th.text(), cls[1]);
+        }
+	});
+    container.find("input[type='checkbox']").each(function () {
+        var cb = $(this);
+        var colName = cb.attr("name");
+        if (!cb.prop("checked")) {
+            rows.children("._col_" + colName + "_").hide();
+        }
+    });
+    container.on("change", "input[type='checkbox']", function () {
+        var cb = $(this);
+        var colName = cb.attr("name");
+        if (cb.prop("checked")) {
+            rows.children("._col_" + colName + "_").show();
+        } else {
+            rows.children("._col_" + colName + "_").hide();
+        }
+    });
+    // tablesorter
+    if ($.fn.tablesorter) {
+        var sortable = table.data("sortable");
+        if (sortable === undefined || sortable) {
+            table.tablesorter();
+        }
+    }
+}
+$(".columnFilter, .column-filter").each(function () {
+    tableWithColumnFilter($(this));
+});
+</script>
+<script>
+function tableWithSearchArea(searchArea) {
+    // 一番近い body から table を探す
+    var table = searchArea.closest(".body").find("table").first();
+    if (table.length === 0) {
+        return;
+    }
+    searchArea.on("input", function () {
+        var keyword = $(this).val().toLowerCase();
+        table.find("tbody tr").each(function () {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.indexOf(keyword) >= 0);
+        });
+    });
+}
+function activateTabs(anchor, hash){
+	var li=anchor.parent();
+	if (anchor[0]){
+		var tab=li.closest(".tabs");
+		var tabContent=tab.next(".tab-content");
+		if (!(tabContent[0])){
+			return;
+		}
+		var id=anchor.attr("href");
+		var brothers=li.parent().children("li");
+		brothers.each(function(i, val){
+			var brotherLi=$(val);
+			var brotherAnchor=brotherLi.children("a");
+			var brotherId=brotherAnchor.attr("href");
+			if (brotherId==hash){
+				brotherLi.addClass("active");
+				var brotherTab=$(brotherId);
+				brotherTab.show();
+			} else{
+				brotherLi.removeClass("active");
+				$(brotherId).hide();
+			}
+		});
+		var parent=anchor.data("parent");
+		if (parent&&parent!=""){
+			var parentAnchor=$('.tabs').find("a[href='#"+parent+"']");
+			activateTabs(parentAnchor, "#"+parent);
+		}
+	}
+}
+$(window).on('hashchange', function(){
+	$('.tabs').each(function(){
+		var tab=$(this);
+		var nav=tab.children(".nav");
+		var tabContent=tab.next(".tab-content");
+		if (!(tabContent[0])){
+			return;
+		}
+		var lis=nav.children("li");
+		lis.each(function(i, val){
+			var li = $(val);
+			var anchor=li.find("a");
+			var id=anchor.attr("href");
+			if (id&&id.substring(0,1)=="#"){
+				var tab=tabContent.find(id);
+				if (!li.hasClass("default")){
+					li.removeClass("active");
+					tab.hide();
+				} else{
+					li.addClass("active");
+					tab.show();
+				}
+			}
+		});
+	});
+	if (location.hash&&location.hash!=''){
+		var anchor=$("a[href='"+location.hash+"']");
+		activateTabs(anchor, location.hash);
+	}
+});
+$('.tabs').each(function(){
+	var tab=$(this);
+	var nav=tab.children(".nav");
+	var tabContent=tab.next(".tab-content");
+	if (!(tabContent[0])){
+		return;
+	}
+	var lis=nav.children("li");
+	lis.on('click',function(){
+		var li = $(this);
+		var anchor=li.find("a");
+		var id=anchor.attr("href");
+		if (id&&id.substring(0,1)=="#"){
+			var target=id.substring(1);
+			lis.removeClass("active");
+			li.addClass("active");
+			tabContent.children().each(function(i, val){
+				var area=$(val);
+				if (area.attr("id")==target){
+					window.location.hash=target;
+					area.show();
+				} else{
+					area.hide();
+				}
+			});
+			return false;
+		} else{
+			return true;
+		}
+	});
+	lis.each(function(i, val){
+		var li = $(val);
+		var anchor=li.find("a");
+		var id=anchor.attr("href");
+		if (id&&id.substring(0,1)=="#"){
+			var tab=tabContent.find(id);
+			if (!li.hasClass("active")){
+				tab.hide();
+			} else{
+				tab.show();
+			}
+		}
+	});
+	var hash=window.location.hash;
+	if (hash&&hash!=""){
+		var anchor=$("a[href='"+hash+"']");
+		activateTabs(anchor, hash);
+	}
+});
+$(".searchableArea, input[type='search']").each(function () {
+	tableWithSearchArea($(this));
+});
+</script>
+</body>
+</html>

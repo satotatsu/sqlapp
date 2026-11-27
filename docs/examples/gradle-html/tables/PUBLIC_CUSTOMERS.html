@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/themes/prism.min.css"/>
+<style type="text/css">
+<!--
+:root {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --border: #d0d7de;
+    --border-light: #eaeef2;
+    --header-bg: linear-gradient(180deg, #2b6cb0 0%, #1e4f8c 100%);
+    --header-text: #ffffff;
+    --hover: #eef6ff;
+    --primary: #0969da;
+    --text: #24292f;
+    --muted: #57606a;
+    --radius: 8px;
+    --col-sharp: 48px;
+    --col-name: 220px;
+}
+/* =========================================================
+   Base
+   ========================================================= */
+* {
+    box-sizing: border-box;
+}
+html {
+    scroll-behavior: smooth;
+}
+body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+/* =========================================================
+   Navigation
+   ========================================================= */
+.rootTabs > .nav,
+.tabs > .nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+    padding: 8px;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+.rootTabs > .nav li,
+.tabs > .nav li {
+    flex: 0 0 auto;
+}
+.rootTabs > .nav a,
+.tabs > .nav a {
+    display: block;
+    padding: 8px 14px;
+    text-decoration: none;
+    color: var(--muted);
+    border-radius: 6px;
+}
+.rootTabs > .nav li.active a,
+.tabs > .nav li.active a {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+/* =========================================================
+   Detail Header
+   ========================================================= */
+.object-hero {
+	background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	padding: 20px 24px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.object-hero-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.object-hero h1 {
+    margin: 6px 0 4px;
+    font-size: 32px;
+    line-height: 1.2;
+}
+.object-type {
+	background: #dbeafe;
+	color: #1d4ed8;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .04em;
+}
+.schema-badge {
+	background: #fff;
+	border: 1px solid var(--border);
+	color: var(--text);
+	text-decoration: none;
+	padding: 6px 12px;
+	border-radius: 999px;
+	font-weight: 600;
+}
+.object-display-name {
+    margin: 0;
+    color: var(--muted);
+    font-size: 17px;
+    font-family: Consolas, "Courier New", monospace;
+}
+.object-description {
+    margin-top: 14px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 900px;
+}
+.object-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+.object-meta-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+}
+.schema-badge {
+    background: #eef6ff;
+    border: 1px solid #c7def8;
+    color: var(--text);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+.schema-badge:hover {
+    background: #dceeff;
+}
+/* =========================================================
+   Panel
+   ========================================================= */
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+/* =========================================================
+   Toolbar
+   ========================================================= */
+.toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    flex-wrap: wrap;
+}
+input[type="search"] {
+    width: 320px;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+}
+/* =========================================================
+   Table
+   ========================================================= */
+table {
+    width: 100%;
+    min-width: max-content;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+/* ---------- header ---------- */
+thead th {
+    background: var(--header-bg);
+    color: var(--header-text);
+    border: 1px solid #1e4f8c;
+}
+thead ._col_sharp_ {
+    background: var(--header-bg);
+    color: var(--header-text);
+}
+/* 1段目の colspan セル（Cascade Rule など） */
+thead tr:first-child th[colspan] {
+    height: 36px;
+}
+thead tr:first-child th {
+    border-top: 1px solid var(--border);
+}
+thead th:first-child {
+    border-left: 1px solid var(--border);
+}
+/* rowspan のセルを中央配置 */
+thead th[rowspan] {
+    vertical-align: middle;
+}
+/* ---------- body ---------- */
+tbody td,
+tfoot td {
+    padding: 8px 12px;
+    border-right: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+tbody td:first-child,
+tfoot td:first-child {
+    border-left: 1px solid var(--border-light);
+}
+tbody tr:nth-child(even) {
+    background: #fbfcfd;
+}
+tbody tr:hover {
+    background: var(--hover);
+}
+/* ---------- footer ---------- */
+tfoot td {
+    font-weight: 600;
+    background: #fafbfc;
+    border-top: 2px solid var(--border);
+}
+/* =========================================================
+   Sticky first column (#)
+   ========================================================= */
+._col_sharp_ {
+    width: var(--col-sharp);
+    min-width: var(--col-sharp);
+    max-width: var(--col-sharp);
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    text-align: center;
+    vertical-align: middle;
+}
+/* 背景色を行ごとに合わせる */
+thead ._col_sharp_ {
+    background: var(--header-bg);
+}
+tbody ._col_sharp_ {
+    background: white;
+}
+tbody tr:nth-child(even) ._col_sharp_ {
+    background: #fbfcfd;
+}
+tfoot ._col_sharp_ {
+    background: #fafbfc;
+}
+/* =========================================================
+   Name column
+   ========================================================= */
+._col_Name_ {
+    min-width: var(--col-name);
+}
+._col_Name_ a,
+._col_DisplayName_ a,
+._col_Schema_ a {
+    color: var(--primary);
+    text-decoration: none;
+}
+._col_Name_ a {
+    font-weight: 600;
+}
+._col_Name_ a:hover,
+._col_DisplayName_ a:hover,
+._col_Schema_ a:hover {
+    text-decoration: underline;
+}
+/* =========================================================
+   Details
+   ========================================================= */
+details.columnFilter,
+#columnFilter {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fafbfc;
+}
+#columnFilter label {
+    display: inline-block;
+    margin: 4px 10px 4px 0;
+    white-space: nowrap;
+}
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width: 900px) {
+    body {
+        padding: 8px;
+    }
+    .toolbar {
+        align-items: stretch;
+    }
+    input[type="search"] {
+        width: 100%;
+    }
+    thead th,
+    tbody td,
+    tfoot td {
+        padding: 7px 10px;
+        font-size: 13px;
+    }
+    ._col_Name_ {
+        min-width: 160px;
+    }
+}
+-->
+</style>
+</head>
+<body>
+<div class="tabs">
+<ul class="nav">
+	<li><a href="../index.html"><span class="icon icon64 icon-list"></span>General</a></li>
+	<li><a href="../schemas.html"><span class="icon icon64 icon-table"></span>Schemas</a></li>
+	<li><a href="../tables.html"><span class="icon icon64 icon-table"></span>Tables</a></li>
+	<li><a href="../columns.html"><span class="icon icon64 icon-table"></span>Columns</a></li>
+	<li><a href="../indexes.html"><span class="icon icon64 icon-table"></span>Indexes</a></li>
+	<li><a href="../relationships.html"><span class="icon icon64 icon-sitemap"></span>Relationships</a></li>
+	<li><a href="../users.html"><span class="icon icon64 icon-table"></span>Users</a></li>
+	<li><a href="../roles.html"><span class="icon icon64 icon-table"></span>Roles</a></li>
+	<li><a href="../objectprivileges.html"><span class="icon icon64 icon-table"></span>Object Privileges</a></li>
+	<li><a href="../columnprivileges.html"><span class="icon icon64 icon-table"></span>Column Privileges</a></li>
+</ul>
+<div class="tab-content">
+<header class="object-hero">
+	<div class="object-hero-head">
+		<span class="object-type">Table</span>
+	</div>
+	<h1>CUSTOMERS</h1>
+	<div class="object-meta">
+	<span class="object-meta-label">Schema Name</span>
+	<a class="schema-badge" href="../schemas/PUBLIC.html">PUBLIC</a></dd>
+	</div>
+</header>
+<div class="menu-tabs tab-block">
+	<div class="tabs">
+		<ul class="nav">
+			<li class="active default"><a href="#Base">Base</a></li>
+			<li><a href="#DDL">DDL</a></li>
+		</ul>
+	</div>
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Columns</div>
+				<div class="body">
+			<details class="column-filter">
+				<summary>ColumnFilter</summary>
+				<div class="column-filter-content"></div>
+			</details>
+					<table class="outline-header border box-header outline">
+					<thead>
+						<tr>
+							<th rowspan="2" class="_col_sharp_">#</th>
+							<th rowspan="2" class="_col_Name_">Name</th>
+							<th rowspan="2" class="_col_DataType_">Data Type</th>
+							<th rowspan="2" class="_col_Length_">Length</th>
+							<th rowspan="2" class="_col_Scale_">Scale</th>
+							<th rowspan="2" class="_col_NotNull_">Not Null</th>
+							<th rowspan="2" class="_col_DefaultValue_">Default<br/>Value</th>
+							<th rowspan="2" class="_col_Primary_">Primary</th>
+							<th rowspan="2" class="_col_Identity_">Identity</th>
+							<th rowspan="2" class="_col_CharacterSemantics_">Character<br/>Semantics</th>
+						</tr>
+						<tr>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						<tr>
+							<td class="_col_sharp_">1</td>
+							<td class="_col_Name_">CUSTOMER_ID</td>
+							<td class="_col_DataType_">BIGINT</td>
+							<td class="_col_Length_"></td>
+							<td class="_col_Scale_"></td>
+							<td class="_col_NotNull_">✓</td>
+							<td class="_col_DefaultValue_"></td>
+							<td class="_col_Primary_">✓</td>
+							<td class="_col_Identity_">✓</td>
+							<td class="_col_CharacterSemantics_"></td>
+						</tr>
+						<tr>
+							<td class="_col_sharp_">2</td>
+							<td class="_col_Name_">CUSTOMER_CODE</td>
+							<td class="_col_DataType_">VARCHAR</td>
+							<td class="_col_Length_">20</td>
+							<td class="_col_Scale_"></td>
+							<td class="_col_NotNull_">✓</td>
+							<td class="_col_DefaultValue_"></td>
+							<td class="_col_Primary_"></td>
+							<td class="_col_Identity_"></td>
+							<td class="_col_CharacterSemantics_">Char</td>
+						</tr>
+						<tr>
+							<td class="_col_sharp_">3</td>
+							<td class="_col_Name_">CUSTOMER_NAME</td>
+							<td class="_col_DataType_">VARCHAR</td>
+							<td class="_col_Length_">200</td>
+							<td class="_col_Scale_"></td>
+							<td class="_col_NotNull_">✓</td>
+							<td class="_col_DefaultValue_"></td>
+							<td class="_col_Primary_"></td>
+							<td class="_col_Identity_"></td>
+							<td class="_col_CharacterSemantics_">Char</td>
+						</tr>
+						<tr>
+							<td class="_col_sharp_">4</td>
+							<td class="_col_Name_">CLOSING_DAY</td>
+							<td class="_col_DataType_">INT</td>
+							<td class="_col_Length_"></td>
+							<td class="_col_Scale_"></td>
+							<td class="_col_NotNull_"></td>
+							<td class="_col_DefaultValue_"></td>
+							<td class="_col_Primary_"></td>
+							<td class="_col_Identity_"></td>
+							<td class="_col_CharacterSemantics_"></td>
+						</tr>
+						<tr>
+							<td class="_col_sharp_">5</td>
+							<td class="_col_Name_">CREATED_AT</td>
+							<td class="_col_DataType_">TIMESTAMP</td>
+							<td class="_col_Length_">6</td>
+							<td class="_col_Scale_"></td>
+							<td class="_col_NotNull_">✓</td>
+							<td class="_col_DefaultValue_">CURRENT_TIMESTAMP</td>
+							<td class="_col_Primary_"></td>
+							<td class="_col_Identity_"></td>
+							<td class="_col_CharacterSemantics_"></td>
+						</tr>
+					</tbody>
+					</table>
+				</div>
+			</div>
+			<div class="panel panel-default">
+				<div class="header">Unique Constraints</div>
+				<div class="body">
+			<details class="column-filter">
+				<summary>ColumnFilter</summary>
+				<div class="column-filter-content"></div>
+			</details>
+					<table class="outline-header border box-header outline" data-sortable="false">
+						<thead>
+							<tr>
+								<th rowspan="2" class="_col_sharp_">#</th>
+								<th rowspan="2" class="_col_Name_">Name</th>
+								<th rowspan="2" class="_col_Primary_">Primary</th>
+								<th rowspan="2" class="_col_Enable_">Enable</th>
+								<th rowspan="2" class="_col_Columns_">Columns</th>
+							</tr>
+							<tr>
+							</tr>
+						</thead>
+						<tbody class="tbody_class">
+							<tr>
+								<td rowspan="1" class="_col_sharp_">1</td>
+								<td rowspan="1" class="_col_Name_">SYS_PK_10151</td>
+								<td rowspan="1" class="_col_Primary_">✓</td>
+								<td rowspan="1" class="_col_Enable_">✓</td>
+								<td class="_col_Columns_">CUSTOMER_ID</td>
+							</tr>
+							<tr>
+								<td rowspan="1" class="_col_sharp_">2</td>
+								<td rowspan="1" class="_col_Name_">SYS_CT_10155</td>
+								<td rowspan="1" class="_col_Primary_"></td>
+								<td rowspan="1" class="_col_Enable_">✓</td>
+								<td class="_col_Columns_">CUSTOMER_CODE</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<div id="DDL">
+			<div class="panel panel-default">
+				<div class="header">DDL</div>
+				<div class="body" style="overflow:auto">
+					<pre class="line-numbers"><code class="language-sql">CREATE TABLE PUBLIC.CUSTOMERS
+(
+	  CUSTOMER_ID BIGINT GENERATED ALWAYS AS IDENTITY
+	, CUSTOMER_CODE VARCHAR(20) NOT NULL
+	, CUSTOMER_NAME VARCHAR(200) NOT NULL
+	, CLOSING_DAY INT
+	, CREATED_AT TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP NOT NULL
+	, CONSTRAINT SYS_PK_10151 PRIMARY KEY ( CUSTOMER_ID )
+	, CONSTRAINT SYS_CT_10155 UNIQUE ( CUSTOMER_CODE )
+)</code></pre>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/js/jquery.tablesorter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/components/prism-css-extras.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/components/prism-csharp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/components/prism-sql.min.js"></script>
+<!-- Latest compiled and minified JavaScript -->
+<script>
+function tableWithColumnFilter(columnFilter) {
+    if (!columnFilter || columnFilter.length === 0) {
+        return;
+    }
+    var container = columnFilter.find(".column-filter-content");
+    if (container.length === 0) {
+        container = columnFilter;
+    }
+    var table = columnFilter.nextAll("table").first();
+    if (table.length === 0) {
+        return;
+    }
+    var rows = table.find("tr");
+    var added = {};
+    var defaultHidden = { remarks:true ,specifics:true ,statistics:true ,createdAt:true ,lastAlteredAt:true };
+    function toColumnName(text) {
+        text = $.trim(text);
+        if (text === "#") {
+            return "sharp";
+        }
+        var pos = text.indexOf("(");
+        if (pos >= 0) {
+            text = text.substring(0, pos);
+        }
+        return text.replace(/\s+/g, "");
+    }
+    function addCheckbox(text, colName) {
+        text = $.trim(text);
+        var checked = !defaultHidden[colName.toLowerCase()];
+        var label = $("<label style='margin-right:12px; white-space:nowrap;'></label>");
+        var checkbox = $("<input type='checkbox'>")
+            .attr("name", colName)
+            .prop("checked", checked);
+        label.append(checkbox).append(" " + text);
+        container.append(label);
+    }
+	table.find("thead tr").first().children("th").each(function () {
+        var th = $(this);
+        var cls = (th.attr("class") || "")
+            .match(/_col_([^ ]+)_/);
+        if (cls) {
+            addCheckbox(th.text(), cls[1]);
+        }
+	});
+    container.find("input[type='checkbox']").each(function () {
+        var cb = $(this);
+        var colName = cb.attr("name");
+        if (!cb.prop("checked")) {
+            rows.children("._col_" + colName + "_").hide();
+        }
+    });
+    container.on("change", "input[type='checkbox']", function () {
+        var cb = $(this);
+        var colName = cb.attr("name");
+        if (cb.prop("checked")) {
+            rows.children("._col_" + colName + "_").show();
+        } else {
+            rows.children("._col_" + colName + "_").hide();
+        }
+    });
+    // tablesorter
+    if ($.fn.tablesorter) {
+        var sortable = table.data("sortable");
+        if (sortable === undefined || sortable) {
+            table.tablesorter();
+        }
+    }
+}
+$(".columnFilter, .column-filter").each(function () {
+    tableWithColumnFilter($(this));
+});
+</script>
+<script>
+function activateTabs(anchor, hash){
+	var li=anchor.parent();
+	if (anchor[0]){
+		var tab=li.closest(".tabs");
+		var tabContent=tab.next(".tab-content");
+		if (!(tabContent[0])){
+			return;
+		}
+		var id=anchor.attr("href");
+		var brothers=li.parent().children("li");
+		brothers.each(function(i, val){
+			var brotherLi=$(val);
+			var brotherAnchor=brotherLi.children("a");
+			var brotherId=brotherAnchor.attr("href");
+			if (brotherId==hash){
+				brotherLi.addClass("active");
+				var brotherTab=$(brotherId);
+				brotherTab.show();
+			} else{
+				brotherLi.removeClass("active");
+				$(brotherId).hide();
+			}
+		});
+		var parent=anchor.data("parent");
+		if (parent&&parent!=""){
+			var parentAnchor=$('.tabs').find("a[href='#"+parent+"']");
+			activateTabs(parentAnchor, "#"+parent);
+		}
+	}
+}
+$(window).on('hashchange', function(){
+	$('.tabs').each(function(){
+		var tabPane=$(this);
+		var nav=tab.children(".nav");
+		var tabContent=tabPane.next(".tab-content");
+		if (!(tabContent[0])){
+			return;
+		}
+		var lis=nav.children("li");
+		lis.each(function(i, val){
+			var li = $(val);
+			var anchor=li.find("a");
+			var id=anchor.attr("href");
+			if (id&&id.substring(0,1)=="#"){
+				var tab=tabContent.find(id);
+				if (!li.hasClass("default")){
+					li.removeClass("active");
+					tab.hide();
+				} else{
+					li.addClass("active");
+					tab.show();
+				}
+			}
+		});
+	});
+	if (location.hash&&location.hash!=''){
+		var anchor=$("a[href='"+location.hash+"']");
+		activateTabs(anchor, location.hash);
+	}
+});
+$('.tabs').each(function(){
+	var tab=$(this);
+	var nav=tab.children(".nav");
+	var tabContent=tab.next(".tab-content");
+	if (!(tabContent[0])){
+		return;
+	}
+	var lis=nav.children("li");
+	lis.on("click",function(){
+		var li = $(this);
+		var anchor=li.find("a");
+		var id=anchor.attr("href");
+		if (id&&id.substring(0,1)=="#"){
+			var target=id.substring(1);
+			lis.removeClass("active");
+			li.addClass("active");
+			tabContent.children().each(function(i, val){
+				var area=$(val);
+				if (area.attr("id")==target){
+					window.location.hash=target;
+					area.show();
+				} else{
+					area.hide();
+				}
+			});
+			return false;
+		} else{
+			return true;
+		}
+	});
+	lis.each(function(i, val){
+		var li = $(val);
+		var anchor=li.find("a");
+		var id=anchor.attr("href");
+		if (id&&id.substring(0,1)=="#"){
+			var tab=tabContent.find(id);
+			if (!li.hasClass("active")){
+				tab.hide();
+			} else{
+				tab.show();
+			}
+		}
+	});
+	var hash=window.location.hash;
+	if (hash&&hash!=""){
+		var anchor=$("a[href='"+hash+"']");
+		activateTabs(anchor, hash);
+	}
+});
+$(".columnFilter").each(function(i,val){
+	tableWithColumnFilter($(val));
+});
+$(".searchableArea").each(function(i,val){
+	tableWithSearchArea($(val));
+});
+</script>
+</body>
+</html>

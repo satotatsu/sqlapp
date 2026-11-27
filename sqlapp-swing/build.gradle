@@ -1,0 +1,29 @@
+plugins {
+    id 'com.sqlapp.java-library-conventions'
+    id 'application'
+}
+
+dependencies {
+    implementation project(':sqlapp-command')
+    // Desktop-only appearance and syntax editing; do not leak into command/core APIs.
+    implementation 'com.formdev:flatlaf:3.7.2'
+    implementation 'com.fifesoft:rsyntaxtextarea:4.0.1'
+    // Dialects used by comparison and planning; HSQLDB also supplies an embedded JDBC driver.
+    runtimeOnly project(':sqlapp-core-hsql')
+    runtimeOnly project(':sqlapp-core-postgres')
+    runtimeOnly project(':sqlapp-core-mysql')
+    runtimeOnly project(':sqlapp-core-oracle')
+    runtimeOnly project(':sqlapp-core-sqlserver')
+    runtimeOnly project(':sqlapp-core-sqlite')
+    runtimeOnly project(':sqlapp-core-duckdb')
+    // File-based Access migration needs both the MDB dialect and its existing UCanAccess driver.
+    runtimeOnly project(':sqlapp-core-mdb')
+}
+
+application {
+    mainClass = 'com.sqlapp.swing.MigrationApplication'
+    // FlatLaf loads native libraries from the classpath (JDK 24+ restricted JNI access).
+    applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED']
+}
+
+apply from: 'gradle/packaging.gradle'

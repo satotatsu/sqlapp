@@ -46,7 +46,7 @@ public class FirebirdProcedureReader extends ProcedureReader {
 	@Override
 	protected List<Procedure> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNodeCache().getString("procedures.sql");
+		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Procedure> result = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -58,10 +58,19 @@ public class FirebirdProcedureReader extends ProcedureReader {
 		return result;
 	}
 
+	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("procedures.sql");
+	}
+
 	protected Procedure createProcedure(ExResultSet rs) throws SQLException {
 		String name = trim(getString(rs, "RDB$PROCEDURE_NAME"));
 		String source = trim(getString(rs, "RDB$PROCEDURE_SOURCE"));
 		Procedure procedure = new Procedure(name);
+		procedure.setRemarks(getString(rs, "RDB$DESCRIPTION"));
+		String owner = trim(getString(rs, "RDB$OWNER_NAME"));
+		if (owner != null) {
+			procedure.getSpecifics().put("firebird.owner", owner);
+		}
 		if (this.getReaderOptions().isReadStatement()) {
 			procedure.setStatement(source);
 		}
@@ -71,20 +80,16 @@ public class FirebirdProcedureReader extends ProcedureReader {
 	@Override
 	protected void setMetadataDetail(Connection connection, ParametersContext context, List<Procedure> procedures)
 			throws SQLException {
-		FirebirdProcedureArgumentReader reader = new FirebirdProcedureArgumentReader(this.getDialect());
+		FirebirdProcedureArgumentReader reader = (FirebirdProcedureArgumentReader) newRoutineArgumentReader();
 		reader.setCatalogName(this.getCatalogName());
 		reader.setSchemaName(this.getSchemaName());
 		initializeChild(reader);
 		reader.setObjectName(null);
 		reader.setReadDbObjectPredicate((obj, metadataReader) -> true);
-		List<NamedArgument> arguments = reader.getAllFull(connection);
+		var arguments = FirebirdRoutineArguments.read(connection, context, procedures, reader);
 		for (Procedure procedure : procedures) {
 			procedure.setDialect(this.getDialect());
-			for (NamedArgument argument : arguments) {
-				if (procedure.getName().equals(argument.getRoutineName())) {
-					procedure.getArguments().add(argument);
-				}
-			}
+			procedure.getArguments().addAll(arguments.getOrDefault(procedure.getName(), java.util.List.of()));
 		}
 	}
 

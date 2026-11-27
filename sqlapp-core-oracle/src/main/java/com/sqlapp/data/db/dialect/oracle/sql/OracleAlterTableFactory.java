@@ -49,12 +49,171 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSqlBuilder> {
+	private boolean onlinePartitionMaintenance;
+
+	/** Requests ONLINE for native heap partition MOVE/SPLIT/MERGE statements. */
+	public void setOnlinePartitionMaintenance(boolean value) {
+		this.onlinePartitionMaintenance = value;
+	}
+
+	public boolean isOnlinePartitionMaintenance() {
+		return onlinePartitionMaintenance;
+	}
+
+	private String partitionStatement(String statement, Table table) {
+		if (!onlinePartitionMaintenance)
+			return statement;
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c)
+				|| OracleTablePartitionMaintenance.iot(table) || "SYS"
+						.equalsIgnoreCase(table.getSchemaName() == null ? null
+								: getDialect().unQuote(table.getSchemaName()))
+				|| table.getColumns().stream().anyMatch(column -> column.getDataType() != null && java.util.Set
+						.of("STRUCT", "JAVA_OBJECT", "ARRAY", "REF", "LONGVARCHAR", "LONGNVARCHAR", "LONGVARBINARY")
+						.contains(column.getDataType().name())))
+			throw new IllegalArgumentException(
+					"ONLINE partition maintenance requires Oracle18c+ heap tables without object or LONG columns");
+		for (var index : table.getIndexes()) {
+			OracleTablePartitionMaintenance.ordinary(index);
+			if (index.getIndexType() != null && index.getIndexType().isBitMap()
+					|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
+				throw new IllegalArgumentException(
+						"ONLINE partition maintenance with bitmap indexes requires a dedicated plan");
+		}
+		if (!statement.startsWith("ALTER TABLE ")
+				|| !(statement.contains(" MOVE PARTITION ") || statement.contains(" MOVE SUBPARTITION ")
+						|| statement.contains(" SPLIT PARTITION ") || statement.contains(" SPLIT SUBPARTITION ")
+						|| statement.contains(" MERGE PARTITIONS ") || statement.contains(" MERGE SUBPARTITIONS ")))
+			throw new IllegalArgumentException(
+					"ONLINE is supported only for native heap MOVE/SPLIT/MERGE; composite routing restoration is a committing multi-step operation");
+		return statement + " ONLINE";
+	}
+
+	@Override
+	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
+		Table before = difference.getOriginal(Table.class), after = difference.getTarget(Table.class);
+		if (onlinePartitionMaintenance && (before == null || after == null
+				|| java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())))
+			throw new IllegalArgumentException("ONLINE partition maintenance requires a partition change");
+		if (before != null && after != null
+				&& (OracleExternalTableOptions.isExternal(before) || OracleExternalTableOptions.isExternal(after))) {
+			if (difference.getState().isChanged())
+				throw new IllegalArgumentException(
+						"Oracle external table ALTER requires an explicit external-table migration plan: "
+								+ before.getName());
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(after);
+			return List.of();
+		}
+		if (before != null && after != null
+				&& !java.util.Objects.equals(before.getPartitioning(), after.getPartitioning())
+				&& (before.getPartitioning() != null || after.getPartitioning() != null)) {
+			if (before.getPartitioning() == null || after.getPartitioning() == null)
+				throw new IllegalArgumentException(
+						"Converting between partitioned and nonpartitioned tables requires an explicit Oracle migration plan");
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
+			if (after.getIndexes().stream().anyMatch(index -> getTableOptions().getOnlineIndex().test(after, index)))
+				throw new IllegalArgumentException(
+						"ONLINE index maintenance is not supported by the table partition planner");
+			var plan = OracleTablePartitionMaintenance.create(before, after, getDialect(),
+					getOptions().isDecorateSchemaName(), getTableOptions().getAllowAddPartition().test(after),
+					getTableOptions().getAllowDropPartition().test(after), () -> createSqlBuilder(getDialect()));
+			if (plan != null) {
+				List<SqlOperation> operations = new java.util.ArrayList<>();
+				for (String statement : plan.statements())
+					operations.add(plan.removed() == null
+							? createOperation(partitionStatement(statement, before), SqlType.ALTER, before, after)
+							: createOperation(statement, SqlType.DROP, plan.removed(), null));
+				if (onlinePartitionMaintenance && plan.removed() != null)
+					throw new IllegalArgumentException("ONLINE partition DROP is not supported");
+				return operations;
+			}
+			OracleSqlBuilder builder = createSqlBuilder(getDialect());
+			OracleLocalPartitionSplit.add(before, after, getDialect(), getOptions().isDecorateSchemaName(), builder);
+			return List
+					.of(createOperation(partitionStatement(builder.toString(), before), SqlType.ALTER, before, after));
+		}
+		boolean rootMove = before != null && after != null && OracleTablePartitionMaintenance.iot(before)
+				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName());
+		if (before != null && after != null) {
+			// An opaque table definition cannot silently become inconsistent after ALTER.
+			com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(before);
+			if (!rootMove) {
+				com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.get(after);
+				if (before.getSpecifics()
+						.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)
+						|| after.getSpecifics()
+								.containsKey(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.DEFINITION)) {
+					if (!com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(before)
+							.equals(com.sqlapp.data.db.dialect.oracle.util.OracleTableDefinition.fingerprint(after)))
+						throw new IllegalArgumentException(
+								"Structural ALTER of a complete Oracle table definition requires an explicit migration plan");
+				}
+			}
+		}
+		if (rootMove) {
+			var changes = before.diff(after).toDifference().getChangedProperties(getDialect());
+			if (changes.size() != 1 || !changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
+					|| before.getPartitioning() != null || before.getTableType() == Table.TableType.Temporary
+					|| before.getSpecifics().containsKey("oracle.table.iotComplex")
+					|| "true".equals(before.getSpecifics().get("oracle.table.iot.mapping"))
+					|| after.getTableSpaceName() == null || after.getTableSpaceName().isBlank())
+				throw new IllegalArgumentException(
+						"IOT root MOVE requires one isolated nonpartitioned tablespace change");
+			for (var index : after.getIndexes()) {
+				OracleTablePartitionMaintenance.ordinary(index);
+				if (index.getIndexType() != null && index.getIndexType().isBitMap()
+						|| "true".equalsIgnoreCase(index.getSpecifics().get("oracle.index.bitmap")))
+					throw new IllegalArgumentException(
+							"IOT root MOVE with bitmap indexes requires explicit index-state handling");
+				if (getTableOptions().getOnlineIndex().test(after, index))
+					throw new IllegalArgumentException("ONLINE IOT MOVE requires a dedicated table option");
+			}
+			OracleSqlBuilder builder = createSqlBuilder(getDialect());
+			builder.alter().table().space().name(before, getOptions().isDecorateSchemaName()).space()
+					._add("MOVE TABLESPACE ").name(after.getTableSpaceName());
+			OracleIotOptions.addPreservedPrefix(before, builder);
+			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
+		}
+		if (before != null && after != null
+				&& !java.util.Objects.equals(before.getTableSpaceName(), after.getTableSpaceName())) {
+			var changes = before.diff(after).toDifference().getChangedProperties(getDialect());
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle18c) || changes.size() != 1
+					|| !changes.containsKey(SchemaProperties.TABLE_SPACE_NAME.getLabel())
+					|| before.getPartitioning() != null || before.getTableType() == Table.TableType.Temporary
+					|| after.getTableSpaceName() == null || after.getTableSpaceName().isBlank())
+				throw new IllegalArgumentException(
+						"Heap MOVE requires Oracle 18c or later and one isolated nonpartitioned tablespace change");
+			for (var index : after.getIndexes()) {
+				OracleTablePartitionMaintenance.ordinary(index);
+				if (getTableOptions().getOnlineIndex().test(after, index))
+					throw new IllegalArgumentException("ONLINE heap MOVE requires a dedicated table option");
+			}
+			OracleSqlBuilder builder = createSqlBuilder(getDialect());
+			builder.alter().table().space().name(before, getOptions().isDecorateSchemaName())._add(" MOVE TABLESPACE ")
+					.name(after.getTableSpaceName())._add(" UPDATE INDEXES");
+			return List.of(createOperation(builder.toString(), SqlType.ALTER, before, after));
+		}
+		return super.createDiffSql(difference);
+	}
+
+	@Override
+	protected void addIndexDefinition(Table originalTable, Table table, com.sqlapp.data.schemas.Index originalIndex,
+			com.sqlapp.data.schemas.Index index, DbObjectDifference diff, List<SqlOperation> result) {
+		if (diff.getState() == State.Modified && (OracleAlterIndexFactory.hasStateChange(originalIndex, index)
+				|| OracleIndexRebuildOptions.physicalChange(originalIndex, index)
+				|| OracleIndexPartitionLifecycle.structureChanged(originalIndex, index, getDialect()))) {
+			result.addAll(getSqlFactoryRegistry().getSqlFactory(index, SqlType.ALTER).createDiffSql(diff));
+			return;
+		}
+		super.addIndexDefinition(originalTable, table, originalIndex, index, diff, result);
+	}
 
 	@Override
 	protected void addOtherDefinitions(final Map<String, Difference<?>> allDiff, final Table originalTable,
 			final Table table, final List<SqlOperation> result) {
 		final Map<String, Difference<?>> diff = this.getAll(allDiff, OracleUtils.getTableStatisticsKeys());
 		if (diff.isEmpty()) {
+			addCommentDefinitions(allDiff, originalTable, table, result);
 			return;
 		}
 		final OracleSqlBuilder builder = createSqlBuilder();
@@ -112,21 +271,21 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		final Difference<?> tableProp = allDiff.get(SchemaProperties.REMARKS.getLabel());
 		if (tableProp != null && tableProp.getState().isChanged()) {
 			final OracleSqlBuilder builder = this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().$if(
-					table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.is().null_());
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
+					.$if(table.getRemarks() != null, () -> builder.sqlChar(table.getRemarks()), () -> builder.null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		final DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.COLUMNS.getLabel());
 		if (colsDiff != null) {
-			final List<DbObjectPropertyDifference> diffs = colsDiff.findModifiedProperties(this.getDialect(),
-					SchemaProperties.REMARKS.getLabel(), Column.class);
-			for (final DbObjectPropertyDifference diff : diffs) {
+			for (final DbObjectDifference diff : colsDiff.getList(State.Modified)) {
 				final Column obj = diff.getTarget(Column.class);
+				if (CommonUtils.eq(diff.getOriginal(Column.class).getRemarks(), obj.getRemarks()))
+					continue;
 				final OracleSqlBuilder builder = this.createSqlBuilder();
 				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName())
-						.is().$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()),
-								() -> builder.is().null_());
+						.is()
+						.$if(obj.getRemarks() != null, () -> builder.sqlChar(obj.getRemarks()), () -> builder.null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -209,6 +368,91 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		for (final DbObjectDifference diff : diffs) {
 			final Column oldColumn = diff.getOriginal(Column.class);
 			final Column column = diff.getTarget(Column.class);
+			boolean generated = oldColumn.isIdentity() || column.isIdentity()
+					|| !CommonUtils.isEmpty(oldColumn.getFormula()) || !CommonUtils.isEmpty(column.getFormula());
+			Column commentOnly = oldColumn.clone().setRemarks(column.getRemarks());
+			if (commentOnly.equals(column))
+				continue;
+			if (!CommonUtils.isEmpty(oldColumn.getFormula()) && !CommonUtils.isEmpty(column.getFormula())
+					&& !CommonUtils.eq(oldColumn.getFormula(), column.getFormula())) {
+				if (column.getFormula().isBlank() || column.isIdentity() || column.isFormulaPersisted())
+					throw new IllegalArgumentException(
+							"Invalid Oracle virtual column expression settings: " + column.getName());
+				Column expressionOnly = oldColumn.clone().setFormula(column.getFormula());
+				if (!expressionOnly.equals(column))
+					throw new IllegalArgumentException(
+							"Change virtual column expression separately from other properties: " + column.getName());
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g)
+						&& !(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2))
+					throw new IllegalArgumentException("Virtual columns require Oracle 11g or later");
+				if (!originalTable.getIndexes().isEmpty() || !originalTable.getConstraints().isEmpty())
+					throw new IllegalArgumentException(
+							"Remove modeled indexes/constraints before changing a virtual column expression: "
+									+ column.getName());
+				OracleSqlBuilder expression = createSqlBuilder();
+				expression.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(")
+						.name(column).space()._add("GENERATED ALWAYS AS (")._add(column.getFormula())
+						._add(") VIRTUAL)");
+				addSql(result, expression, SqlType.ALTER, column);
+				continue;
+			}
+			if (!CommonUtils.eq(oldColumn.getSpecifics().get("oracle.column.invisible"),
+					column.getSpecifics().get("oracle.column.invisible"))) {
+				Column oldVisible = oldColumn.clone(), newVisible = column.clone();
+				oldVisible.getSpecifics().remove("oracle.column.invisible");
+				newVisible.getSpecifics().remove("oracle.column.invisible");
+				if (!oldVisible.equals(newVisible))
+					throw new IllegalArgumentException(
+							"Change column visibility separately from other column properties: " + column.getName());
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+					throw new IllegalArgumentException("Invisible columns require Oracle 12c or later");
+				String value = column.getSpecifics().get("oracle.column.invisible");
+				if (value != null && !"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
+					throw new IllegalArgumentException("Invalid column visibility: " + column.getName());
+				OracleSqlBuilder visibility = createSqlBuilder();
+				visibility.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(")
+						.name(column).space()._add(Boolean.parseBoolean(value) ? "INVISIBLE" : "VISIBLE")._add(")");
+				addSql(result, visibility, SqlType.ALTER, column);
+				continue;
+			}
+			boolean renameOnly = !CommonUtils.eq(oldColumn.getName(), column.getName())
+					&& diff.getProperties().size() == 1;
+			if (oldColumn.isIdentity() && column.isIdentity() && !renameOnly) {
+				Column modeOnly = oldColumn.clone().setIdentityGenerationType(column.getIdentityGenerationType());
+				var identityOptions = OracleIdentityOptions.changes(oldColumn.getSequence(), column.getSequence());
+				modeOnly.setSequence(column.getSequence() == null ? null : column.getSequence().clone());
+				modeOnly.getSpecifics().remove("DEFAULT_ON_NULL");
+				if (column.getSpecifics().containsKey("DEFAULT_ON_NULL"))
+					modeOnly.getSpecifics().put("DEFAULT_ON_NULL", column.getSpecifics().get("DEFAULT_ON_NULL"));
+				if (!modeOnly.equals(column))
+					throw new IllegalArgumentException(
+							"Change identity generation mode separately; identity sequence and physical column changes are not supported: "
+									+ column.getName());
+				if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+					throw new IllegalArgumentException("Identity columns require Oracle 12c or later");
+				String onNull = column.getSpecifics().get("DEFAULT_ON_NULL");
+				if (onNull != null && !"true".equalsIgnoreCase(onNull) && !"false".equalsIgnoreCase(onNull))
+					throw new IllegalArgumentException("Invalid DEFAULT_ON_NULL: " + column.getName());
+				if (column.getIdentityGenerationType() == null
+						|| column.getIdentityGenerationType() == com.sqlapp.data.schemas.IdentityGenerationType.Always
+								&& Boolean.parseBoolean(onNull))
+					throw new IllegalArgumentException("Invalid identity generation mode: " + column.getName());
+				OracleSqlBuilder identity = createSqlBuilder();
+				identity.alter().table().name(table, getOptions().isDecorateSchemaName()).modify().space()._add("(")
+						.name(column).space()._add("GENERATED ")._add(column.getIdentityGenerationType().getSqlValue());
+				if (Boolean.parseBoolean(onNull))
+					identity.space()._add("ON NULL");
+				identity.space()._add("AS IDENTITY");
+				if (!identityOptions.isEmpty())
+					identity.space()._add("(")._add(String.join(" ", identityOptions))._add(")");
+				identity._add(")");
+				addSql(result, identity, SqlType.ALTER, column);
+				continue;
+			}
+			if (generated && !renameOnly)
+				throw new IllegalArgumentException(
+						"Structured modification of Oracle identity/virtual columns is not supported: "
+								+ column.getName());
 			if (!CommonUtils.eq(oldColumn.getName(), column.getName())) {
 				if (diff.getProperties().size() == 1) {
 					renameList.add(diff);

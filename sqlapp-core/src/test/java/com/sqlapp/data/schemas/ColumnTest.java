@@ -35,6 +35,36 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.StaxWriter;
 
 public class ColumnTest extends AbstractDbObjectTest<Column> {
+	@Test
+	void renamesForeignKeyColumnWithoutRecursing() {
+		final Schema schema = new Schema("APP");
+		final Table parent = new Table("P"); schema.getTables().add(parent);
+		final Column id = new Column("ID").setDataType(DataType.INT); parent.getColumns().add(id);
+		parent.setPrimaryKey("PK_P", id);
+		final Table child = new Table("C"); schema.getTables().add(child);
+		final Column parentId = new Column("PID").setDataType(DataType.INT); child.getColumns().add(parentId);
+		final var key = child.getConstraints().addForeignKeyConstraint("FK_C", parentId, id);
+		parentId.setName("PARENT_ID");
+		assertEquals("PARENT_ID", key.getColumns().getFirst().getName());
+		id.setName("KEY");
+		assertEquals("KEY", key.getRelatedColumns().getFirst().getName());
+		assertEquals("KEY", parent.getPrimaryKeyConstraint().getColumns().getFirst().getName());
+		parent.setName("PARENT");
+		assertEquals("PARENT", key.getRelatedTableName());
+		assertEquals(parent, key.getRelatedTable());
+	}
+	@Test
+	void namedIdentitySequenceSurvivesXml() throws Exception {
+		var column = new Column("ID").setDataType(DataType.INT).setIdentity(true);
+		column.setSequence(new Sequence("Named.Sequence").setSchemaName("Other.Schema"));
+		column.setIdentityStartValue(17L).setIdentityStep(3L);
+		Column restored = SchemaUtils.readXml(new StringReader(column.asXml()));
+		assertEquals("Named.Sequence", restored.getSequenceName());
+		assertEquals("Other.Schema", restored.getSequenceSchemaName());
+		assertEquals(17L, restored.getIdentityStartValue());
+		assertEquals(3L, restored.getIdentityStep());
+		assertEquals(true, restored.isIdentity());
+	}
 
 	@Override
 	protected Column getObject() {
@@ -105,6 +135,44 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 		assertEquals(3L, clone.getIdentityStep());
 		assertEquals(20, clone.getIdentityCacheSize());
 		assertEquals(3L, table.clone().getColumns().get("ID").getIdentityStep());
+	}
+
+	@Test
+	public void testCloneKeepsCheckConstraintOwnershipAndStateIndependent() {
+		Table original = new Table("Original");
+		Column column = new Column("ID").setDataType(DataType.INT);
+		column.setCheckConstraint(new CheckConstraint("CK", "ID > 0"));
+		column.getCheckConstraint().getSpecifics().put("is_not_trusted", "false");
+		original.getColumns().add(column);
+		Table copy = original.clone();
+		CheckConstraint copied = copy.getColumns().get(0).getCheckConstraint();
+		assertNotSame(column.getCheckConstraint(), copied);
+		org.junit.jupiter.api.Assertions.assertSame(original, column.getCheckConstraint().getTable());
+		org.junit.jupiter.api.Assertions.assertSame(copy, copied.getTable());
+		copied.setEnable(false);
+		copied.getSpecifics().put("is_not_trusted", "true");
+		org.junit.jupiter.api.Assertions.assertTrue(column.getCheckConstraint().isEnable());
+		assertEquals("false", column.getCheckConstraint().getSpecifics().get("is_not_trusted"));
+		org.junit.jupiter.api.Assertions.assertFalse(original.equals(copy));
+		assertEquals(State.Modified, original.diff(copy).getState());
+		assertEquals(State.Modified, column.diff(copy.getColumns().get(0)).getState());
+	}
+
+	@Test
+	public void testDetailedAndLegacyCheckXmlRoundTrip() throws Exception {
+		Column legacy = new Column("ID").setDataType(DataType.INT).setCheck("ID > 0");
+		org.junit.jupiter.api.Assertions.assertTrue(legacy.asXml().contains("check=\"ID &gt; 0\""));
+		Column restored = SchemaUtils.readXml(new StringReader(legacy.asXml()));
+		assertEquals(legacy, restored);
+		Table table = new Table("T");
+		table.getColumns().add(legacy);
+		legacy.getCheckConstraint().setName("CK");
+		legacy.getCheckConstraint().setEnable(false);
+		legacy.getCheckConstraint().getSpecifics().put("is_not_trusted", "true");
+		org.junit.jupiter.api.Assertions.assertTrue(table.asXml().contains("<checkConstraint"));
+		Table restoredTable = SchemaUtils.readXml(new StringReader(table.asXml()));
+		assertEquals(table, restoredTable);
+		org.junit.jupiter.api.Assertions.assertSame(restoredTable, restoredTable.getColumns().get(0).getCheckConstraint().getTable());
 	}
 
 	@Override

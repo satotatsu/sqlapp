@@ -9,8 +9,7 @@ import com.sqlapp.jdbc.bulk.BulkInsertProvider;
 public class SybaseBulkInsertProvider implements BulkInsertProvider {
 	@Override
 	public boolean supports(final Dialect dialect) {
-		return dialect != null && "Adaptive Server Enterprise"
-				.equalsIgnoreCase(dialect.getProductName());
+		return dialect != null && "Adaptive Server Enterprise".equalsIgnoreCase(dialect.getProductName());
 	}
 
 	@Override

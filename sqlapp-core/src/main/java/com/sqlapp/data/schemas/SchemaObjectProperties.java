@@ -38,6 +38,53 @@ import com.sqlapp.util.StringUtils;
 import com.sqlapp.util.xml.StaxElementHandler;
 
 public enum SchemaObjectProperties implements ISchemaProperty {
+	PROJECTIONS {
+		@Override public Class<?> getPropertyClass() { return ProjectionsProperty.class; }
+		@Override public Class<ProjectionsGetter> getGetterPropertyClass() { return ProjectionsGetter.class; }
+		@Override public Class<ProjectionCollection> getValueClass() { return ProjectionCollection.class; }
+		@Override public ProjectionCollection getDefaultValue() { return SchemaUtils.newInstanceAtSchemas(getValueClass()); }
+		@Override public boolean isInstanceof(Object obj) { return obj instanceof ProjectionsProperty; }
+		@Override public boolean isGetterInstanceof(Object obj) { return obj instanceof ProjectionsGetter; }
+		@Override protected boolean setValueInternal(Object obj, Object value) { return super.setValueCollectionInternal(obj, value); }
+		@Override public ProjectionCollection getValue(Object obj) { return obj instanceof ProjectionsGetter getter ? getter.getProjections() : null; }
+	},
+	SORT_COLUMNS("sortColumns") {
+		@Override public Class<?> getPropertyClass() { return SortColumnsProperty.class; }
+		@Override public Class<SortColumnsGetter> getGetterPropertyClass() { return SortColumnsGetter.class; }
+		@Override public Class<ReferenceColumnCollection> getValueClass() { return ReferenceColumnCollection.class; }
+		@Override public ReferenceColumnCollection getDefaultValue() { return SchemaUtils.newInstanceAtSchemas(getValueClass()); }
+		@Override public boolean isInstanceof(Object obj) { return obj instanceof SortColumnsProperty; }
+		@Override public boolean isGetterInstanceof(Object obj) { return obj instanceof SortColumnsGetter; }
+		@Override protected boolean setValueInternal(Object obj, Object value) { return super.setValueCollectionInternal(obj, value); }
+		@Override public ReferenceColumnCollection getValue(Object obj) { return obj instanceof SortColumnsGetter getter ? getter.getSortColumns() : null; }
+		@Override public List<StaxElementHandler> getXmlHandlers() {
+			return java.util.List.of(new ReferenceColumnCollectionXmlReaderHandler("sortColumns"));
+		}
+	},
+	DOMAIN_COLUMNS("columns") {
+		@Override public Class<?> getPropertyClass() { return DomainColumnsProperty.class; }
+		@Override public Class<DomainColumnsGetter> getGetterPropertyClass() { return DomainColumnsGetter.class; }
+		@Override public Class<DomainColumnCollection> getValueClass() { return DomainColumnCollection.class; }
+		@Override public DomainColumnCollection getDefaultValue() { return getValueClass().cast(super.getDefaultValue()); }
+		@Override public boolean isInstanceof(Object obj) { return obj instanceof DomainColumnsProperty; }
+		@Override public boolean isGetterInstanceof(Object obj) { return obj instanceof DomainColumnsGetter; }
+		@Override protected boolean setValueInternal(Object obj, Object value) { return super.setValueCollectionInternal(obj, value); }
+		@Override public DomainColumnCollection getValue(Object obj) {
+			return obj instanceof DomainColumnsGetter getter ? getter.getColumns() : null;
+		}
+	},
+	DOMAIN_CHECKS("checks") {
+		@Override public Class<?> getPropertyClass() { return DomainChecksProperty.class; }
+		@Override public Class<DomainChecksGetter> getGetterPropertyClass() { return DomainChecksGetter.class; }
+		@Override public Class<DomainCheckConstraintCollection> getValueClass() { return DomainCheckConstraintCollection.class; }
+		@Override public DomainCheckConstraintCollection getDefaultValue() { return getValueClass().cast(super.getDefaultValue()); }
+		@Override public boolean isInstanceof(Object obj) { return obj instanceof DomainChecksProperty; }
+		@Override public boolean isGetterInstanceof(Object obj) { return obj instanceof DomainChecksGetter; }
+		@Override protected boolean setValueInternal(Object obj, Object value) { return super.setValueCollectionInternal(obj, value); }
+		@Override public DomainCheckConstraintCollection getValue(Object obj) {
+			return obj instanceof DomainChecksGetter getter ? getter.getChecks() : null;
+		}
+	},
 	ASSEMBLY_FILES {
 		@Override
 		public final Class<?> getPropertyClass() {

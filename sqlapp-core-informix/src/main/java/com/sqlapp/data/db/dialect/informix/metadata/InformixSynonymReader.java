@@ -25,6 +25,7 @@ public class InformixSynonymReader extends SynonymReader {
 	public static final String INFORMIX_SYNONYM_TYPE = "INFORMIX_SYNONYM_TYPE";
 	public static final String INFORMIX_DATABASE_NAME = "INFORMIX_DATABASE_NAME";
 	public static final String INFORMIX_SERVER_NAME = "INFORMIX_SERVER_NAME";
+	public static final String INFORMIX_ANSI_DATABASE = "INFORMIX_ANSI_DATABASE";
 
 	public InformixSynonymReader(final Dialect dialect) {
 		super(dialect);
@@ -48,18 +49,25 @@ public class InformixSynonymReader extends SynonymReader {
 	}
 
 	protected Synonym createSynonym(final ExResultSet rs) throws SQLException {
-		final Synonym synonym = new Synonym(rs.getString(3));
-		synonym.setSchemaName(rs.getString(2));
-		synonym.setObjectSchemaName(rs.getString(5));
-		synonym.setObjectName(rs.getString(6));
-		putSpecific(synonym, INFORMIX_DATABASE_NAME, rs.getString(4));
-		putSpecific(synonym, INFORMIX_SYNONYM_TYPE, rs.getString(7));
-		putSpecific(synonym, INFORMIX_SERVER_NAME, rs.getString(8));
+		final Synonym synonym = new Synonym(getString(rs, "object_name"));
+		synonym.setCatalogName(getString(rs, CATALOG_NAME));
+		synonym.setSchemaName(getString(rs, SCHEMA_NAME));
+		synonym.setObjectSchemaName(getString(rs, "base_schema"));
+		synonym.setObjectName(getString(rs, "base_object"));
+		putSpecific(synonym, INFORMIX_DATABASE_NAME, getString(rs, "base_catalog"));
+		putSpecific(synonym, INFORMIX_SYNONYM_TYPE, getString(rs, "synonym_type"));
+		putSpecific(synonym, INFORMIX_SERVER_NAME, getString(rs, "server_name"));
+		final String ansi = getString(rs, "ansi_database");
+		if (!"0".equals(ansi) && !"1".equals(ansi))
+			throw new IllegalStateException("Cannot resolve Informix database ANSI mode: " + synonym.getName());
+		putSpecific(synonym, INFORMIX_ANSI_DATABASE, Boolean.toString("1".equals(ansi)));
+		if (synonym.getObjectName() == null || synonym.getObjectSchemaName() == null)
+			throw new IllegalStateException("Cannot resolve Informix synonym target: " + synonym.getName());
 		return synonym;
 	}
 
 	private void putSpecific(final Synonym synonym, final String key, final String value) {
-		if (value != null) {
+		if (value != null && !value.isBlank()) {
 			synonym.getSpecifics().put(key, value);
 		}
 	}

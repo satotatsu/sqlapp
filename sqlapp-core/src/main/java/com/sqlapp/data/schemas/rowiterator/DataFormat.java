@@ -379,9 +379,23 @@ public enum DataFormat {
 		public JsonConverter createJsonConverter() {
 			return new YamlConverter();
 		}
-	},;
+	},
+	PARQUET() {
+		@Override
+		public String getFileExtension() {
+			return "parquet";
+		}
+
+		@Override
+		public boolean isParquet() {
+			return true;
+		}
+	};
 
 	public Iterable<Map<String, Object>> createMapIterable(File file) {
+		if (isParquet()) {
+			return ParquetTableIO.maps(file.toPath());
+		}
 		if (file != null && isEmptyRegularFile(file.toPath()) && supportsEmptyTextData()) {
 			return java.util.Collections.emptyList();
 		}
@@ -402,6 +416,9 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Path path) {
+		if (isParquet()) {
+			return ParquetTableIO.maps(path);
+		}
 		if (path != null && isEmptyRegularFile(path) && supportsEmptyTextData()) {
 			return java.util.Collections.emptyList();
 		}
@@ -437,6 +454,7 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
+		if (isParquet()) throw new IllegalArgumentException("Parquet requires a seekable File or Path and a row iterator.");
 		if (isJson()) {
 			return new JsonMapIterable(inputStream);
 		}
@@ -454,6 +472,7 @@ public enum DataFormat {
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Reader reader) {
+		if (isParquet()) throw new IllegalArgumentException("Parquet is binary; use a File or Path row iterator.");
 		if (isJson()) {
 			return new JsonMapIterable(reader);
 		}
@@ -476,6 +495,10 @@ public enum DataFormat {
 	}
 
 	public boolean isJson() {
+		return false;
+	}
+
+	public boolean isParquet() {
 		return false;
 	}
 
@@ -519,7 +542,7 @@ public enum DataFormat {
 	 * Returns whether this format can be exposed as rows of map values.
 	 */
 	public boolean supportsMapRows() {
-		return getObjectReader() != null || isJson() || isXml() || isWorkbook();
+		return getObjectReader() != null || isJson() || isXml() || isWorkbook() || isParquet();
 	}
 
 	/**
@@ -546,6 +569,9 @@ public enum DataFormat {
 			final JsonConverter jsonConverter, final YamlConverter yamlConverter,
 			final TomlConverter tomlConverter, final RowValueConverter valueConverter) {
 		Objects.requireNonNull(file, "file");
+		if (isParquet()) {
+			return new ParquetRowIteratorHandler(file, valueConverter);
+		}
 		if (isCsv()) {
 			final CsvRowIteratorHandler handler = new CsvRowIteratorHandler(file, csvEncoding,
 					csvSkipHeaderRowsSize, valueConverter);

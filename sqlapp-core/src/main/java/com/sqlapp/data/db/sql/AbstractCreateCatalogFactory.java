@@ -90,13 +90,23 @@ public abstract class AbstractCreateCatalogFactory<S extends AbstractSqlBuilder<
 
 	protected void addCreateDbObjectCollection(String propertyName,
 			AbstractDbObjectCollection<?> sc, List<SqlOperation> sqlList) {
+		List<SqlOperation> projections = list();
 		for(AbstractDbObject<?> schemaObject:sc){
 			@SuppressWarnings("rawtypes")
 			SqlFactory sqlFactory=this.getSqlFactoryRegistry().getSqlFactory(schemaObject, SqlType.CREATE);
 			@SuppressWarnings("unchecked")
 			List<SqlOperation> operations=sqlFactory.createSql(schemaObject);
-			sqlList.addAll(operations);
+			for (SqlOperation operation : operations) {
+				if (SchemaObjectProperties.SCHEMAS.getLabel().equals(propertyName)
+						&& operation.getOriginal() instanceof com.sqlapp.data.schemas.Projection) {
+					projections.add(operation);
+				} else {
+					sqlList.add(operation);
+				}
+			}
 		}
+		// Projection sources can belong to a later schema in the same catalog.
+		sqlList.addAll(projections);
 	}
 
 }

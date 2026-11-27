@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +62,7 @@ import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLTriConsumer;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SqlBuilder;
 import com.sqlapp.util.DbUtils;
 import com.sqlapp.util.function.TriConsumer;
 import com.sqlapp.util.function.TriFunction;
@@ -75,7 +77,11 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	private SqlFactoryRegistry sqlFactoryRegistry;
 	private final Connection connection;
 	private JdbcTreeDataExecutionTracker executionTracker = new JdbcTreeDataExecutionTracker();
+	/** Runs before each commit of this session; a failure rolls the transaction back. */
+	SQLConsumer<Connection> beforeCommit = conn -> {
+	};
 	private SQLConsumer<Connection> commitHandler = conn -> {
+		this.beforeCommit.accept(conn);
 		executionTracker.context = new FailureContext(Phase.COMMIT, null, null);
 		conn.commit();
 		executionTracker.committed();
@@ -143,6 +149,28 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	public void setSqlHandler(TriFunction<Table, SqlType, String, String> sqlHandler) {
 		this.sqlHandler = sqlHandler;
+	}
+
+	private JdbcTreeDataRestart restart = JdbcTreeDataRestart.none();
+	private JdbcTreeDataCheckpointState checkpointState;
+	private Object rootSelectContext;
+	private String rootSqlText;
+	private boolean rootCursorCommitted;
+	private boolean rootExhausted;
+	private Boolean holdableRootCursor;
+
+	/**
+	 * Sets how root processing continues after periodic commits and after an
+	 * interrupted execution. Set it before registering the root SELECT.
+	 *
+	 * @param restart restart policy; {@link JdbcTreeDataRestart#none()} by default
+	 */
+	public void setRestart(JdbcTreeDataRestart restart) {
+		this.restart = java.util.Objects.requireNonNull(restart, "restart");
+	}
+
+	public JdbcTreeDataRestart getRestart() {
+		return restart;
 	}
 
 	protected void commitForce() throws SQLException {
@@ -219,6 +247,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		if (tableRelation.isRoot()) {
 			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT_BY_ROW, sql);
 			tableRelation.setSelectSqlNode(sqlNode);
+			rootSqlText = sql;
 			selectRoot(tableRelation, sqlNode, context);
 		} else {
 			final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, SqlType.SELECT_BY_ROOT_ROWS, sql);
@@ -230,6 +259,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	private void selectRoot(final TableRelation tableRelation, final SqlNode sqlNode, Object context) {
 		tableRelation.setSelectRegistered(true);
+		rootSelectContext = context;
+		tableRelation.setSelectSqlParameters(evaluateRootSelect(tableRelation, sqlNode, rootContext(null)));
+		reSelectRoot();
+	}
+
+	private SqlParameterCollection evaluateRootSelect(final TableRelation tableRelation, final SqlNode sqlNode,
+			final Object context) {
 		final Table table = tableRelation.getTable();
 		final SqlParameterCollection sqlParameters = this.getTableOptions()
 				.useSelectByRowComparisonOperatorStrategy(tbl -> RowComparisonOperator.GREATER_THAN, () -> {
@@ -238,17 +274,44 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					});
 				});
 		sqlParameters.fixed();
-		tableRelation.setSelectSqlParameters(sqlParameters);
-		reSelectRoot();
+		return sqlParameters;
+	}
+
+	/**
+	 * Root SQL context. A {@code Map} context always provides the
+	 * {@code checkpoint} variable ({@code null} without checkpoint progress), so the
+	 * same root SQL can be registered before or after {@link #setRestart}.
+	 */
+	@SuppressWarnings("unchecked")
+	private Object rootContext(final Map<String, Object> checkpoint) {
+		if (rootSelectContext != null && !(rootSelectContext instanceof Map)) {
+			if (restart instanceof JdbcTreeDataRestart.Checkpoint) {
+				throw new IllegalStateException("Checkpoint restart requires a Map root SELECT context.");
+			}
+			return rootSelectContext;
+		}
+		final Map<String, Object> context = rootSelectContext == null ? new LinkedHashMap<>()
+				: new LinkedHashMap<>((Map<String, Object>) rootSelectContext);
+		if (checkpoint != null || !context.containsKey("checkpoint")) {
+			context.put("checkpoint", checkpoint);
+		}
+		return context;
 	}
 
 	protected void reSelectRoot() {
 		TableRelation tableRelation = this.tableRelationTreeHolder.getRootTableRelation();
 		tableRelation.setResultSet(() -> {
+			if (checkpointState != null && tableRelation.getSelectSqlNode() != null) {
+				// Each (re)opened root cursor starts after the last processed key.
+				tableRelation.setSelectSqlParameters(evaluateRootSelect(tableRelation,
+						tableRelation.getSelectSqlNode(), rootContext(checkpointState.variable())));
+			}
 			final SqlParameterCollection sqlParameters = tableRelation.getSelectSqlParameters();
+			final ResultSetHoldability holdability = dialect.supportsHoldCursorsOverCommit(connection)
+					? ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT : ResultSetHoldability.CLOSE_CURSORS_AT_COMMIT;
 			final PreparedStatement statement = sqlParameters.createStatementForQuery(connection,
 					ResultSetType.TYPE_FORWARD_ONLY, ResultSetConcurrency.CONCUR_READ_ONLY,
-					ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
+					holdability);
 			statement.setFetchSize(this.getRootBatchSize());
 			tableRelation.setSelectStatement(statement);
 			preparedStatementBeforeExecuteHandler.accept(statement);
@@ -256,6 +319,9 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			tableRelation.getSelectSqlParameters().setBind(tableRelation.getSelectStatement());
 			return tableRelation.getSelectStatement().executeQuery();
 		}, this.getRootBatchSize(), () -> {
+			if (checkpointState != null) {
+				checkpointState.validateOrder(tableRelation.getRows());
+			}
 			for (TableRelation tabRelation : tableRelationTreeHolder) {
 				if (tabRelation.isRoot() || !tabRelation.isSelectRegistered()) {
 					continue;
@@ -285,12 +351,25 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		tableRelation.setSelectRegistered(true);
 		if (tableRelation.isRoot()) {
-			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(),
-					SqlType.SELECT_BY_ROWS);
+			// This entry point scans the root table; an empty key set must not be
+			// interpreted as an unrestricted SELECT_BY_ROWS predicate.
+			var signature = new SqlSignature(table, table.getRows());
+			var orderColumns = getTableOptions().getSelectOrderByColumnsStrategy().apply(table).getWithoutCheck(signature);
+			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSql(table, SqlType.SELECT_TABLE).stream().map(operation -> {
+				var builder = new SqlBuilder(dialect);
+				builder._add(operation.getSqlText());
+				if (!orderColumns.getKeyColumns().isEmpty()) {
+					builder.lineBreak().orderBy();
+					orderColumns.forEachKeyColumn((i, column) -> builder.comma(i > 0).name(column));
+				}
+				return SqlParser.getInstance().parse(dialect, SqlType.SELECT_TABLE, builder.toString());
+			}).toList();
 			for (final SqlNode sqlNode : sqlNodes) {
 				registerStatementHolder(tableRelation, sqlNode);
 			}
 			final SqlNode sqlNode = sqlNodes.getFirst();
+			// Generated SQL cannot use the checkpoint variable; checkpoint restart rejects it.
+			rootSqlText = null;
 			selectRoot(tableRelation, sqlNode, CommonUtils.map());
 		}
 	}
@@ -324,7 +403,69 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			throw new IllegalStateException("Table[name=" + tableRelation.getTable().getName()
 					+ "] has not been selected. Call select(table) before next().");
 		}
-		return tableRelation.next();
+		if (!tableRelation.isRoot()) {
+			return tableRelation.next();
+		}
+		prepareRootRestart(tableRelation);
+		if (checkpointState != null && checkpointState.isComplete()) {
+			return false;
+		}
+		if (!externallyManagedCommits && rootCursorCommitted && !tableRelation.hasBufferedRows()) {
+			// The commit closed the root cursor: finish the current batch, then
+			// re-execute the root SELECT, which continues after processed roots.
+			flushRootBatch();
+			reSelectRoot();
+			rootCursorCommitted = false;
+		}
+		final boolean next = tableRelation.next();
+		if (!next) {
+			rootExhausted = true;
+		}
+		return next;
+	}
+
+	private void prepareRootRestart(final TableRelation tableRelation) throws SQLException {
+		// A copy session commits and reopens this cursor itself.
+		if (holdableRootCursor == null && !externallyManagedCommits) {
+			holdableRootCursor = dialect.supportsHoldCursorsOverCommit(connection);
+			if (!holdableRootCursor && getCommitEveryRootBatches() != Long.MAX_VALUE
+					&& !restart.reopensRootCursor()) {
+				throw new IllegalStateException("The JDBC driver closes the root cursor at commit, so periodic commits"
+						+ " (commitEveryRootBatches) need JdbcTreeDataRestart.selfExcluding() or checkpoint(...) to"
+						+ " re-execute the root SELECT after each commit. Otherwise commit once at the end.");
+			}
+		}
+		if (checkpointState == null && restart instanceof JdbcTreeDataRestart.Checkpoint checkpoint) {
+			checkpointState = JdbcTreeDataCheckpointState.load(checkpoint,
+					checkpointConnection == null ? connection : checkpointConnection, tableRelation.getTable(),
+					rootSqlText);
+		}
+	}
+
+	/** Connection whose transaction saves checkpoints; a copy session uses its target. */
+	Connection checkpointConnection;
+
+	/** Checkpoint progress of the current execution, or {@code null}. */
+	JdbcTreeDataCheckpointState checkpointState() {
+		return checkpointState;
+	}
+
+	/** True when the root cursor of the current execution returned its last row. */
+	boolean isRootExhausted() {
+		return rootExhausted;
+	}
+
+	/** Ensures the final commit includes writes made outside this session's batches. */
+	void markPendingCommit() {
+		commitCountHandler.countUp();
+	}
+
+	TableOperationMode tableOperationMode(Table table) {
+		return tableOperationMode.apply(table);
+	}
+
+	JdbcTreeDataExecutionResult.Counts executedCounts(Table table, SqlType operation) {
+		return executionTracker.executed(table, operation);
 	}
 
 	public Row getRow(Table table) throws SQLException {
@@ -447,11 +588,20 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		if (root) {
 			Row row = CommonUtils.last(tableRelation.getRows());
 			executionTracker.completedBatches++;
-			if (!externallyManagedCommits && (updated || executionTracker.dirty)) {
+			boolean checkpointed = false;
+			if (checkpointState != null && !externallyManagedCommits) {
+				// Saved in the batch's transaction, so the key commits with its changes.
+				checkpointState.processed(tableRelation.getRows());
+				checkpointed = true;
+			}
+			if (!externallyManagedCommits && (updated || executionTracker.dirty || checkpointed)) {
 				if (commitCountHandler.isCommit()) {
 					beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), row);
 				}
 				if (commitCountHandler.commit(connection)) {
+					if (Boolean.FALSE.equals(holdableRootCursor) && restart.reopensRootCursor()) {
+						rootCursorCommitted = true;
+					}
 					afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), row);
 				}
 			}
@@ -568,9 +718,21 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		identitySequenceGenerators.clear();
 		childSelectContexts.clear();
 		commitCountHandler.reset();
+		checkpointState = null;
+		rootCursorCommitted = false;
+		rootExhausted = false;
+		holdableRootCursor = null;
 		lastRow = null;
 		batchUpdateCounter = 0;
 		rootFinish = true;
+	}
+
+	void flushRootBatch() throws SQLException {
+		requireExecuting();
+		if (!rootFinish) {
+			throw new IllegalStateException("A root batch failed; this execution cannot be committed.");
+		}
+		executeUpdate(tableRelationTreeHolder.getRootTableRelation());
 	}
 
 	void finishExecution() throws SQLException {
@@ -581,6 +743,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableRelation();
 		if (!rootTableRelation.getRows().isEmpty()) {
 			executeUpdate(rootTableRelation);
+		}
+		if (checkpointState != null && rootExhausted && !externallyManagedCommits) {
+			// Only a fully read root cursor completes the checkpoint; an early exit
+			// keeps the last processed key for the next execution.
+			checkpointState.completed();
+			commitCountHandler.countUp();
 		}
 		if (!externallyManagedCommits && commitCountHandler.isFinalCommit()) {
 			beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), this.lastRow);

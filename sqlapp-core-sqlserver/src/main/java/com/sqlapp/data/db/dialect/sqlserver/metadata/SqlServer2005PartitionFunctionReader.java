@@ -25,7 +25,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
-import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.PartitionFunctionReader;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -64,21 +64,24 @@ public class SqlServer2005PartitionFunctionReader extends PartitionFunctionReade
 					obj = createPartitionFunction(rs);
 					map.put(catalog_name, name, obj);
 				}
-//				final String typeName = getString(rs, TYPE_NAME);
-//				final Column column=new Column();
-//				column.setDialect(getDialect());
-//				column.setDialect(getDialect());
-//				column.setTableName(typeName);
-//				final DbDataType<?> dbDataType = getDialect().getDbDataTypes().getDbType(column.getDataType());
-				final Object val = getObject(rs, "value");
-				if (val instanceof Number) {
-					obj.getValues().add(Converters.getDefault().convertString(val));
-				} else {
-					obj.getValues().add("'" + getString(rs, "value") + "'");
-				}
+				addBoundary(obj, rs);
 			}
 		});
 		return map.toList();
+	}
+
+	/** A missing joined row is not the same as an actual SQL NULL boundary. */
+	protected void addBoundary(PartitionFunction function, ExResultSet rs) throws SQLException {
+		if (rs.getObject("boundary_id") == null)
+			return;
+		Column column = new Column().setDataType(function.getDataType()).setLength(function.getLength())
+				.setScale(function.getScale());
+		if (function.getDataTypeName() != null && !getDialect().setDbType(function.getDataTypeName(),
+				function.getLength(), function.getScale(), column))
+			throw new SQLException("Unsupported partition boundary type: " + function.getDataTypeName());
+		// getObject preserves trailing spaces, Unicode and binary values. The
+		// shared dialect formatter supplies quoting, escaping and native literals.
+		function.getValues().add(getDialect().getSqlValueDefinition(column, rs.getObject("value")));
 	}
 
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
@@ -98,7 +101,10 @@ public class SqlServer2005PartitionFunctionReader extends PartitionFunctionReade
 		final Long precision = rs.getLongValue("precision");
 		final Integer scale = rs.getInteger("scale");
 		obj.setDataTypeName(productDataType);
-		this.getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, precision), scale, obj);
+		Long lengthOrPrecision = "decimal".equalsIgnoreCase(productDataType)
+				|| "numeric".equalsIgnoreCase(productDataType) ? precision : CommonUtils.notZero(maxLength, precision);
+		if (!this.getDialect().setDbType(productDataType, lengthOrPrecision, scale, obj))
+			throw new SQLException("Unsupported SQL Server partition function type: " + productDataType);
 		obj.setBoundaryValueOnRight(rs.getBoolean("boundary_value_on_right"));
 		obj.setId("" + rs.getInt("function_id"));
 		return obj;

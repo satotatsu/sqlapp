@@ -44,6 +44,15 @@ import com.sqlapp.jdbc.bulk.BulkMigrationRepairOption;
  * Disposable local YSQL integration test, enabled only by the dockerTest task.
  */
 class YugabyteMetadataReaderTest {
+	@org.junit.jupiter.api.Test
+	void verifiesPostgresFamilyDataTypes() throws Exception {
+		try (var connection = connect()) {
+			com.sqlapp.data.db.dialect.test.DataTypeServerAssertions.verify(connection, "REAL", "DOUBLE PRECISION",
+					"FLOAT(24)", "FLOAT(53)", "NUMERIC(12,3)", "CHARACTER VARYING(12)", "TIME(3) WITHOUT TIME ZONE",
+					"TIMESTAMP(3) WITH TIME ZONE", "INTEGER[]", "DOUBLE PRECISION[]", "REAL[]");
+		}
+	}
+
 	private static final GenericContainer<?> YSQL = ReusableTestcontainers
 			.configure(new GenericContainer<>(DockerImageName
 					.parse(System.getProperty("sqlapp.test.yugabyte.image", "yugabytedb/yugabyte:2026.1.2.0-b137")))
@@ -524,7 +533,11 @@ class YugabyteMetadataReaderTest {
 				assertTrue(domain.isNotNull());
 				assertEquals("金額 'comment'", domain.getRemarks());
 				assertNotNull(domain.getDefaultValue());
-				assertTrue(domain.getCheck().contains("AND"), domain.getCheck());
+				// Multiple CHECK constraints are kept as named domain checks, not one combined
+				// expression.
+				assertNull(domain.getCheck());
+				assertEquals(List.of("amount_high", "amount_low"),
+						domain.getChecks().stream().map(check -> check.getName()).sorted().toList());
 				statement.execute("DROP DOMAIN " + schemaName + ".amount");
 				var registry = dialect.createSqlFactoryRegistry();
 				registry.getOptions().setDecorateSchemaName(true);
@@ -533,6 +546,7 @@ class YugabyteMetadataReaderTest {
 				var recreated = reader.getAllFull(connection).stream().filter(t -> "amount".equals(t.getName()))
 						.findFirst().orElseThrow();
 				assertEquals(domain.getRemarks(), recreated.getRemarks());
+				assertEquals(2, recreated.getChecks().size());
 				assertEquals(domain.getDataType(), recreated.getDataType());
 				assertEquals(domain.getLength(), recreated.getLength());
 				assertEquals(domain.getScale(), recreated.getScale());
@@ -876,7 +890,7 @@ class YugabyteMetadataReaderTest {
 						assertEquals(3, restored.getScale());
 						assertTrue(restored.isNotNull());
 						assertNotNull(restored.getDefaultValue());
-						assertNotNull(restored.getCheck());
+						assertEquals(1, restored.getChecks().size());
 					}
 					case "Label Grid" -> assertEquals(7L, restored.getLength());
 					case "Moment Grid" -> assertEquals(3L, restored.getLength());

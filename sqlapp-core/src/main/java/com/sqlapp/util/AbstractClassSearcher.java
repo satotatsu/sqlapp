@@ -56,6 +56,16 @@ abstract class AbstractClassSearcher implements ClassSearcher {
 		return classLoader;
 	}
 
+	final Class<?> loadDiscoveryClass(String name) throws ClassNotFoundException {
+		try {
+			return getClassLoader().loadClass(name);
+		} catch (ClassSearchLinkageError failure) {
+			throw failure;
+		} catch (IncompatibleClassChangeError failure) {
+			throw new ClassSearchLinkageError(name, failure);
+		}
+	}
+
 	/**
 	 * @param classLoader the classLoader to set
 	 */

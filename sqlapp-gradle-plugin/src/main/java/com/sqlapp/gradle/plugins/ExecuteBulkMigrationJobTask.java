@@ -126,6 +126,8 @@ public abstract class ExecuteBulkMigrationJobTask extends AbstractDbTask<Execute
 		if (getConfigurationFile().isPresent()) {
 			command.setConfigurationFile(getConfigurationFile().get().getAsFile());
 			command.setSourceDataSource(getSourceDataSource().createDataSource());
+		} else if (getSourceDataSource().isConfigured()) {
+			getLogger().warn("sourceDataSource is ignored because configurationFile is not set.");
 		}
 		if (getExpectedConfigurationFingerprint().isPresent()) {
 			command.setExpectedConfigurationFingerprint(getExpectedConfigurationFingerprint().get());

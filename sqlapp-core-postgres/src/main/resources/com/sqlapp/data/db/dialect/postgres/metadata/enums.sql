@@ -2,6 +2,7 @@ SELECT
   current_database() AS catalog_name
 , n.nspname
 , t.typname
+, t.oid AS type_id
 , e.enumlabel
 , obj_description(t.oid, 'pg_type') AS remarks
 FROM pg_catalog.pg_enum e

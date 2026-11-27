@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.resolver;
 
 import java.sql.DatabaseMetaData;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,6 +64,49 @@ public abstract class ProductNameDialectResolver extends AbstractDialectResolver
 	 */
 	public Dialect resolveDatabaseMetaData(DatabaseMetaData metadata) {
 		return null;
+	}
+
+	/**
+	 * Metadata-based identification that also receives the dialect options of the
+	 * data source (for example {@code oracle.maxStringSize}). The default delegates
+	 * to {@link #resolveDatabaseMetaData(DatabaseMetaData)}; the caller applies the
+	 * options to a non-null result with
+	 * {@link #applyDialectOptions(Dialect, Map)}.
+	 * 
+	 * @param metadata       JDBC database metadata
+	 * @param dialectOptions dialect options, never null
+	 * @return identified dialect, or null when this resolver does not recognize it
+	 */
+	public Dialect resolveDatabaseMetaData(DatabaseMetaData metadata, Map<String, String> dialectOptions) {
+		return resolveDatabaseMetaData(metadata);
+	}
+
+	/**
+	 * Applies dialect options to a dialect resolved by this resolver. The default
+	 * accepts no options.
+	 * 
+	 * @param dialect        resolved dialect
+	 * @param dialectOptions dialect options, never null
+	 * @return the dialect to use
+	 * @throws IllegalArgumentException for an option this product does not support
+	 *                                  or an invalid value
+	 */
+	public Dialect applyDialectOptions(Dialect dialect, Map<String, String> dialectOptions) {
+		if (dialectOptions == null || dialectOptions.isEmpty()) {
+			return dialect;
+		}
+		throw new IllegalArgumentException("Unsupported dialect options for "
+				+ (dialect == null ? "this database" : dialect.getProductName()) + ": " + dialectOptions.keySet());
+	}
+
+	/**
+	 * Whether this resolver handles the product name.
+	 * 
+	 * @param productName database product name
+	 * @return true when the name matches this resolver
+	 */
+	public boolean matchesProductName(final String productName) {
+		return productName != null && match(productName);
 	}
 
 	public ProductNameDialectResolver[] getRelatedProducts() {

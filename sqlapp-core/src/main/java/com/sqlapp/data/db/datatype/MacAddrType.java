@@ -43,7 +43,7 @@ public class MacAddrType extends AbstractNoSizeType<MacAddrType>{
 	}
 	
 	protected MacAddrType(String dataTypeName){
-		this.setDataType(DataType.MCHAR);
+		this.setDataType(DataType.MACADDR);
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
 		initialize(dataTypeName);
 	}

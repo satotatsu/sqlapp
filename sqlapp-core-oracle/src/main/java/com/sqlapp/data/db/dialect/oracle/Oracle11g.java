@@ -46,20 +46,8 @@ public class Oracle11g extends Oracle10g {
 		super(nextVersionDialectSupplier);
 	}
 
-	@Override
-	public int hashCode() {
-		return getProductName().hashCode() + 1;
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
+	protected Oracle11g(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
 	}
 
 	/*
@@ -82,8 +70,11 @@ public class Oracle11g extends Oracle10g {
 		return new Oracle11gSqlFactoryRegistry(this);
 	}
 
+	/**
+	 * 仮想列(GENERATED ALWAYS AS (...) VIRTUAL)は11gから
+	 */
 	@Override
 	public boolean supportsColumnFormula() {
-		return false;
+		return true;
 	}
 }

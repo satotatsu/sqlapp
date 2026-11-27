@@ -8,10 +8,10 @@ SELECT
 FROM SYSCAT.TABLES t
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(t.TABSCHEMA) IN /*schemaName*/('%')
+  AND t.TABSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(t.TABNAME) IN /*tableName*/('%')
+  AND t.TABNAME IN /*tableName*/('%')
   /*end*/
   AND t.TYPE IN ('L', 'T', 'U')
 ORDER BY t.TABSCHEMA, t.TABNAME

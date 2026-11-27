@@ -24,7 +24,7 @@ ON (
 	AND
 	B.COLUMN_POSITION=C.COLUMN_POSITION
 )
-WHERE A.INDEX_TYPE NOT IN ('LOB') 
+WHERE A.INDEX_TYPE NOT IN ('LOB', 'IOT - TOP')
   /*if isNotEmpty(schemaName)*/
   AND A.OWNER IN /*schemaName*/('%')
   /*end*/

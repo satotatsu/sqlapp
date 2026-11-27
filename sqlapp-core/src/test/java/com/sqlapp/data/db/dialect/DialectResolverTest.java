@@ -20,10 +20,14 @@
 package com.sqlapp.data.db.dialect;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import com.sqlapp.data.db.dialect.resolver.DefaultDialectResolver;
 
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -39,6 +43,45 @@ public class DialectResolverTest {
 	@Test
 	public void testCompareTo() throws XMLStreamException, IOException {
 		assertEquals(1, DialectResolver.getInstance().getResolverList().size());
+	}
+
+	@Test
+	public void defaultInstanceUsesContextClassLoader() {
+		assertSame(DialectResolver.getInstance(),
+				DialectResolver.getInstance(Thread.currentThread().getContextClassLoader()));
+	}
+
+	@Test
+	public void nullClassLoaderUsesResolverClassLoader() {
+		assertSame(DialectResolver.getInstance(DialectResolver.class.getClassLoader()),
+				DialectResolver.getInstance(null));
+	}
+
+	@Test
+	public void resolverIsCachedPerClassLoader() throws IOException {
+		try (URLClassLoader first = new URLClassLoader(new URL[0], getClass().getClassLoader());
+				URLClassLoader second = new URLClassLoader(new URL[0], getClass().getClassLoader())) {
+			try {
+				assertSame(DialectResolver.getInstance(first), DialectResolver.getInstance(first));
+				assertNotSame(DialectResolver.getInstance(first), DialectResolver.getInstance(second));
+			} finally {
+				DialectResolver.release(first);
+				DialectResolver.release(second);
+			}
+		}
+	}
+
+	@Test
+	public void releaseDiscardsCachedResolver() throws IOException {
+		try (URLClassLoader loader = new URLClassLoader(new URL[0], getClass().getClassLoader())) {
+			try {
+				final DialectResolver before = DialectResolver.getInstance(loader);
+				DialectResolver.release(loader);
+				assertNotSame(before, DialectResolver.getInstance(loader));
+			} finally {
+				DialectResolver.release(loader);
+			}
+		}
 	}
 
 }

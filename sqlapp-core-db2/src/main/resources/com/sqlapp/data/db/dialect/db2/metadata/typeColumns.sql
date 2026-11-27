@@ -17,10 +17,10 @@ FROM
 	FROM SYSCAT.ATTRIBUTES a
 	WHERE 1=1
 	  /*if isNotEmpty(schemaName) */
-	  AND rtrim(a.TYPESCHEMA) IN /*schemaName*/('%')
+	  AND a.TYPESCHEMA IN /*schemaName*/('%')
 	  /*end*/
 	  /*if isNotEmpty(typeName) */
-	  AND rtrim(a.TYPENAME) IN /*typeName*/('%')
+	  AND a.TYPENAME IN /*typeName*/('%')
 	  /*end*/
 	UNION ALL
 	SELECT
@@ -39,10 +39,10 @@ FROM
 	FROM SYSCAT.ROWFIELDS a
 	WHERE 1=1
 	  /*if isNotEmpty(schemaName) */
-	  AND rtrim(a.TYPESCHEMA) IN /*schemaName*/('%')
+	  AND a.TYPESCHEMA IN /*schemaName*/('%')
 	  /*end*/
 	  /*if isNotEmpty(typeName) */
-	  AND rtrim(a.TYPENAME) IN /*typeName*/('%')
+	  AND a.TYPENAME IN /*typeName*/('%')
 	  /*end*/
 ) a
 ORDER BY a.schema_name, a.type_name, a.ORDINAL

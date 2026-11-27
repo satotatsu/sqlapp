@@ -34,6 +34,8 @@ public final class BulkUpsertPlan {
 	private BulkUpsertPlan(final Table table, final BulkUpsertOption option) {
 		this.table = java.util.Objects.requireNonNull(table, "table");
 		this.option = java.util.Objects.requireNonNull(option, "option");
+		if (option.getBulkOption().getInsertMethod() != BulkInsertMethod.AUTO)
+			throw new IllegalArgumentException("Explicit insertMethod currently requires INSERT, not UPSERT.");
 		if (!option.isUpdateWhenMatched() && !option.isInsertWhenNotMatched())
 			throw new IllegalArgumentException("At least one upsert action must be enabled");
 		option.validateDuplicateKeyStrategy();

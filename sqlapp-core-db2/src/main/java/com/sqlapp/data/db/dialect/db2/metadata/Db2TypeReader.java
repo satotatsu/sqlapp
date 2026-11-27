@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.Type;
 import com.sqlapp.data.schemas.Type.MetaType;
 
 /**
- * Postgresのタイプ読み込みクラス
+ * Db2のタイプ読み込みクラス
  * 
  * @author satoh
  * 
@@ -70,7 +70,8 @@ public class Db2TypeReader extends TypeReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("types.sql");
+		return getSqlNodeCache().getString(
+				getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "types1110.sql" : "types.sql");
 	}
 
 	protected Type createType(ExResultSet rs) throws SQLException {
@@ -86,6 +87,18 @@ public class Db2TypeReader extends TypeReader {
 			obj.setMetaType(MetaType.Cursor);
 		}
 		obj.setRemarks(getString(rs, REMARKS));
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			obj.setDialect(getDialect());
+			obj.getSpecifics().put("METATYPE", metaType);
+			if ("C".equals(metaType))
+				for (String key : List.of("CURSOR_KIND", "CURSOR_ROW_SCHEMA", "CURSOR_ROW_MODULE", "CURSOR_ROW_NAME")) {
+					String value = getString(rs, key);
+					if (value != null)
+						obj.getSpecifics().put("DB2_" + key, value);
+				}
+			obj.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
+			obj.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
+		}
 		return obj;
 	}
 }

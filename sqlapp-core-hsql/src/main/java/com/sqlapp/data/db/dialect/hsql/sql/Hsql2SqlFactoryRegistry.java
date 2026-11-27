@@ -33,6 +33,10 @@ public class Hsql2SqlFactoryRegistry extends HsqlSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(com.sqlapp.data.schemas.Role.class, SqlType.CREATE, HsqlCreateRoleFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoleMember.class, SqlType.CREATE, HsqlGrantRoleMemberFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoleMember.class, SqlType.GRANT, HsqlGrantRoleMemberFactory.class);
+		registerSqlFactory(com.sqlapp.data.schemas.RoleMember.class, SqlType.REVOKE, HsqlRevokeRoleMemberFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, Hsql2LockTableFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, Hsql2SequenceNextValuesFactory.class);
 		// SQLとしてはHsql2MergeRowsFactoryは動くけど、Identityが取れないので使わない

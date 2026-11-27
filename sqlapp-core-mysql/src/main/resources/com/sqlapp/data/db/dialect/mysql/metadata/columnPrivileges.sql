@@ -2,6 +2,9 @@ SELECT
 *
 FROM information_schema.column_privileges
 WHERE 1=1
+  /*if isNotEmpty(schemaName)*/
+  AND table_schema IN /*schemaName*/('%')
+  /*end*/
   /*if isNotEmpty(tableName)*/
   AND TABLE_NAME IN /*tableName*/('%')
   /*end*/

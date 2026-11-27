@@ -18,6 +18,13 @@ public class SpannerCreateSequenceFactory extends AbstractCreateSequenceFactory<
 	public static final String SKIP_RANGE_MAX = "SKIP_RANGE_MAX";
 
 	@Override
+	protected void addCreateObject(final Sequence sequence, final SpannerSqlBuilder builder) {
+		if (sequence.getSpecifics().get(SpannerAlterSequenceFactory.RESTART_COUNTER_WITH) != null)
+			throw new IllegalArgumentException("Spanner restart requests require ALTER SEQUENCE; use startValue for CREATE");
+		super.addCreateObject(sequence, builder);
+	}
+
+	@Override
 	protected void addIfNotExists(final Sequence sequence, final SpannerSqlBuilder builder) {
 		builder.ifNotExists(getOptions().isCreateIfNotExists());
 	}
@@ -28,9 +35,9 @@ public class SpannerCreateSequenceFactory extends AbstractCreateSequenceFactory<
 
 	@Override
 	protected void addStartWith(final Sequence sequence, final SpannerSqlBuilder builder) {
-		if (sequence.getStartValue().signum() <= 0) {
+		if (sequence.getStartValue().signum() <= 0 || sequence.getStartValue().bitLength() > Long.SIZE - 1) {
 			throw new IllegalArgumentException(
-					"Cloud Spanner sequence start counter must be positive: " + sequence.getName());
+					"Cloud Spanner sequence start counter must be a positive INT64: " + sequence.getName());
 		}
 		builder.start().space()._add("COUNTER WITH").space()._add(sequence.getStartValue());
 	}
@@ -57,6 +64,14 @@ public class SpannerCreateSequenceFactory extends AbstractCreateSequenceFactory<
 
 	@Override
 	protected void addOptions(final Sequence sequence, final SpannerSqlBuilder builder) {
+		final var range = skipRange(sequence);
+		builder.space()._add("BIT_REVERSED_POSITIVE");
+		if (range.minimum() != null) {
+			builder.space()._add("SKIP RANGE").space()._add(range.minimum())._add(",").space()._add(range.maximum());
+		}
+	}
+
+	static SkipRange skipRange(final Sequence sequence) {
 		final Long skipMin = sequence.getSpecifics().get(SKIP_RANGE_MIN, Long.class);
 		final Long skipMax = sequence.getSpecifics().get(SKIP_RANGE_MAX, Long.class);
 		if ((skipMin == null) != (skipMax == null)) {
@@ -67,10 +82,9 @@ public class SpannerCreateSequenceFactory extends AbstractCreateSequenceFactory<
 			throw new IllegalArgumentException(
 					"Cloud Spanner sequence skip range minimum must not " + "exceed maximum: " + sequence.getName());
 		}
-		builder.space()._add("BIT_REVERSED_POSITIVE");
-		if (skipMin != null) {
-			builder.space()._add("SKIP RANGE").space()._add(skipMin)._add(",").space()._add(skipMax);
-		}
+		return new SkipRange(skipMin, skipMax);
 	}
 
+	record SkipRange(Long minimum, Long maximum) {
+	}
 }

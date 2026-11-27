@@ -48,48 +48,10 @@ public class Postgres83 extends Postgres82 {
 		// GEOGRAPHY
 		// getDataTypes().addGeography();
 		// GEOMETRY
-		// GEOMETRY
-		GeometryUtils.run(new Runnable() {
-			@Override
-			public void run() {
-				getDbDataTypes().addGeometry(type -> {
-					type.setJdbcTypeHandler(new PostgresGeometryJdbcTypeHandler());
-					type.convertColumnTypeMatchers(columnTypeMatcherConverter);
-				});
-			}
-		});
-	}
-
-	/**
-	 * WITHステートメントのサポート
-	 */
-	@Override
-	public boolean supportsWith() {
-		return true;
-	}
-
-	/**
-	 * WITHステートメント再帰のサポート
-	 */
-	@Override
-	public boolean supportsWithRecursive() {
-		return false;
-	}
-
-	@Override
-	public int hashCode() {
-		return super.hashCode() + 1;
-	}
-
-	/**
-	 * 同値判定
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
+		GeometryUtils.run(() -> getDbDataTypes().addGeometry(type -> {
+			type.setJdbcTypeHandler(new PostgresGeometryJdbcTypeHandler());
+			enableArray(type);
+		}));
 	}
 
 	/*

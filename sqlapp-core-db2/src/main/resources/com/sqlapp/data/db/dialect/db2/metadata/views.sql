@@ -3,12 +3,13 @@ SELECT
   , v.VIEWNAME AS table_name
   , v.*
 FROM SYSCAT.VIEWS v
-WHERE 1=1 
+JOIN SYSCAT.TABLES t ON t.TABSCHEMA=v.VIEWSCHEMA AND t.TABNAME=v.VIEWNAME
+WHERE t.TYPE IN ('V', 'W')
   /*if isNotEmpty(schemaName)*/
-  AND rtrim(v.VIEWSCHEMA) IN /*schemaName*/('%')
+  AND v.VIEWSCHEMA IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(tableName)*/
-  AND rtrim(v.VIEWNAME) IN /*tableName*/('%')
+  AND v.VIEWNAME IN /*tableName*/('%')
   /*end*/
 ORDER BY v.VIEWSCHEMA, v.VIEWNAME
 WITH UR

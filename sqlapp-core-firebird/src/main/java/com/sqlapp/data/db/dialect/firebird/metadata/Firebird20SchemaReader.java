@@ -29,6 +29,10 @@ import com.sqlapp.data.db.metadata.SequenceReader;
  * 
  */
 public class Firebird20SchemaReader extends FirebirdSchemaReader {
+	@Override
+	protected com.sqlapp.data.db.metadata.TableReader newTableReader() {
+		return new Firebird20TableReader(getDialect());
+	}
 
 	protected Firebird20SchemaReader(Dialect dialect) {
 		super(dialect);

@@ -66,7 +66,7 @@ public class SimpleBeanUtilsTest3 {
 		//
 		column = table.getColumns().get(i++);
 		assertEquals("VAL1", column.getName());
-		assertEquals(true, column.isNotNull());
+		assertEquals(false, column.isNotNull()); // JPA unique=true retains the default nullable=true.
 		assertEquals(128, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
@@ -137,7 +137,7 @@ public class SimpleBeanUtilsTest3 {
 		//
 		column = table.getColumns().get(i++);
 		assertEquals("VALUE", column.getName());
-		assertEquals(true, column.isNotNull());
+		assertEquals(false, column.isNotNull());
 		assertEquals(128, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//

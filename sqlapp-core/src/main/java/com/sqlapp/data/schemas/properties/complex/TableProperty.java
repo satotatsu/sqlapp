@@ -71,6 +71,7 @@ public interface TableProperty<T extends DbCommonObject<?>> extends TableNamePro
 		} else{
 			if (this.getTable()==null||!CommonUtils.eq(this.getTableName(), name)){
 				Table obj=new Table(name);
+				obj.setSchemaName(this.getTableSchemaName());
 				this.setTable(obj);
 			}
 		}
@@ -82,6 +83,7 @@ public interface TableProperty<T extends DbCommonObject<?>> extends TableNamePro
 	default T setTableSchemaName(String name) {
 		if (this.getTable()==null||!CommonUtils.eq(this.getTableSchemaName(), name)){
 			Table obj=new Table();
+			obj.setName(this.getTableName());
 			obj.setSchemaName(name);
 			this.setTable(obj);
 		}

@@ -1,0 +1,15 @@
+plugins {
+	id ('com.sqlapp.maven-deploy')
+}
+
+// The Dr.Sum JDBC driver (dwodsjd4.jar) is distributed only with the Dr.Sum
+// Development Kit and is not available from Maven Central. This module uses
+// java.sql only, so the driver is supplied at runtime by the user.
+dependencies {
+	api project(':sqlapp-core')
+	testImplementation project(':sqlapp-core-test')
+}
+
+javadoc {
+	include '**/drsum/*'
+}

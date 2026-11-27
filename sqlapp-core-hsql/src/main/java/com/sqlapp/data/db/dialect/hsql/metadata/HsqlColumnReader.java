@@ -71,20 +71,37 @@ public class HsqlColumnReader extends ColumnReader {
 		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE"));
 		String data_type = getString(rs, "DATA_TYPE");
 		boolean identity = toBoolean(getString(rs, "IS_IDENTITY"));
+		obj.setNullable(nullable);
+		obj.setIdentity(identity);
+		if ("ALWAYS".equalsIgnoreCase(getString(rs, "IS_GENERATED"))) {
+			obj.setFormula(getString(rs, "GENERATION_EXPRESSION"));
+		}
 		if (identity) {
 			setIdentityInfo(rs, obj);
 		}
 		String interval_type = getString(rs, "INTERVAL_TYPE");
 		String domainName = getString(rs, DOMAIN_NAME);
+		String udtName = getString(rs, "UDT_NAME");
 		// String domain_name=getString(rs, "DOMAIN_NAME");
 		// String udt_name=getString(rs, "UDT_NAME");
 		Long char_maxlength = getLong(rs, "CHARACTER_MAXIMUM_LENGTH");
 		Long numeric_precision = getLong(rs, "NUMERIC_PRECISION");
 		Integer numeric_scale = getInteger(rs, "NUMERIC_SCALE");
 		Long datetime_scale = getLong(rs, "DATETIME_PRECISION");
-		if (!isEmpty(domainName)) {
-			obj.setDataTypeName(domainName);
+		if ("ARRAY".equalsIgnoreCase(data_type) && isEmpty(domainName) && isEmpty(udtName)) {
+			String definition = getString(rs, "DTD_IDENTIFIER");
+			var array = java.util.regex.Pattern.compile("(?is)^(.+) ARRAY\\[(\\d+)\\]$")
+					.matcher(definition == null ? "" : definition);
+			if (!array.matches())
+				throw new SQLException("Cannot read HSQLDB array element type: " + definition);
+			getDialect().setDbType(array.group(1), null, null, obj);
+			obj.setArrayDimension(1).setArrayDimensionUpperBound(Integer.parseInt(array.group(2)));
+		} else if (!isEmpty(domainName)) {
 			obj.setDataType(DataType.DOMAIN);
+			obj.setDataTypeName(qualifiedType(getString(rs, "DOMAIN_SCHEMA"), domainName));
+		} else if (!isEmpty(udtName)) {
+			obj.setDataType(DataType.OTHER);
+			obj.setDataTypeName(qualifiedType(getString(rs, "UDT_SCHEMA"), udtName));
 		} else if (!isEmpty(interval_type)) {
 			Long interval_precision = getLong(rs, "INTERVAL_PRECISION");
 			obj.setNullable(nullable);
@@ -107,6 +124,13 @@ public class HsqlColumnReader extends ColumnReader {
 		return obj;
 	}
 
+	private String qualifiedType(String schema, String name) {
+		var sql = getDialect().createSqlBuilder();
+		if (schema != null)
+			sql.name(schema)._add(".");
+		return sql.name(name).toString();
+	}
+
 	protected void setIdentityInfo(ExResultSet rs, Column obj) throws SQLException {
 		String identity_generation = getString(rs, "IDENTITY_GENERATION");
 		obj.setIdentityGenerationType("ALWAYS".equalsIgnoreCase(identity_generation) ? IdentityGenerationType.Always
@@ -118,6 +142,8 @@ public class HsqlColumnReader extends ColumnReader {
 			seqColumn.setDataTypeName(sequence_data_type);
 			this.getDialect().setDbType(sequence_data_type, null, null, seqColumn);
 			Sequence sequence = new Sequence(sequence_name);
+			sequence.setSchemaName(getString(rs, "COLUMN_SEQUENCE_SCHEMA"));
+			sequence.setCatalogName(getString(rs, "COLUMN_SEQUENCE_CATALOG"));
 			// sequence.setDataTypeName(sequence_data_type);
 			sequence.setDataType(seqColumn.getDataType());
 			sequence.setStartValue(getLong(rs, "START_WITH"));
@@ -132,8 +158,6 @@ public class HsqlColumnReader extends ColumnReader {
 			Long identity_maximum = getLong(rs, "IDENTITY_MAXIMUM");
 			Long identity_miniimum = getLong(rs, "IDENTITY_MINIMUM");
 			boolean identity_cycle = !"NO".equals(getString(rs, "IDENTITY_CYCLE"));
-			String is_generated = getString(rs, "IS_GENERATED");
-			String generation_expression = getString(rs, "GENERATION_EXPRESSION");
 			obj.setIdentityStartValue(identity_start);
 			obj.setIdentityStep(identity_increment);
 			obj.setIdentityMaxValue(identity_maximum);

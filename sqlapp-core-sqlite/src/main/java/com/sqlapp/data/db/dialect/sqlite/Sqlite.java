@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlite.metadata.SqliteCatalogReader;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.dialect.sqlite.sql.SqliteSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteJdbcTypeHandlers;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -60,6 +61,9 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addVarchar("TEXT", LEN_2GB, type -> {
 			type.setCreateFormat("TEXT");
 		});
+		getDbDataTypes().addChar("CHAR", LEN_2GB, type -> {
+			type.setCreateFormat("TEXT");
+		});
 		// Binary
 		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
 			type.setCreateFormat("BLOB").setLiteral("X'", "'");
@@ -68,12 +72,15 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addBoolean();
 		// TinyInt
 		getDbDataTypes().addTinyInt("INTEGER", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// SmallInt
 		getDbDataTypes().addSmallInt("INTEGER", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// Int
 		getDbDataTypes().addInt("INTEGER", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// Int64
 		getDbDataTypes().addBigInt("INTEGER", type -> {
@@ -82,10 +89,39 @@ public class Sqlite extends Dialect {
 		getDbDataTypes().addUUID("BLOB");
 		// Double
 		getDbDataTypes().addDouble("REAL", type -> {
+			type.addColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION", "FLOAT");
 		});
 		// Decimal
 		getDbDataTypes().addNumeric(type -> {
 		});
+		getDbDataTypes().addDecimal(type -> {
+		});
+		// SQLite has no date storage class: ISO-8601 text, as CURRENT_TIMESTAMP writes.
+		getDbDataTypes().addDate(type -> {
+			type.setCreateFormat("DATE").setLiteral("'", "'");
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.DateHandler());
+		});
+		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME").setLiteral("'", "'");
+			type.setDefaultValueLiteral(getCurrentTimeFunction());
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.TimeHandler());
+		});
+		getDbDataTypes().addTimestamp(type -> {
+			type.setCreateFormat("TIMESTAMP").setLiteral("'", "'");
+			type.addColumnTypeMatcher("DATETIME");
+			type.addColumnTypeMatcher("DATETIME2");
+			type.addColumnTypeMatcher("SMALLDATETIME");
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.TimestampHandler());
+		});
+		getDbDataTypes().addTimestampWithTimeZone(type -> {
+			type.setCreateFormat("TIMESTAMP WITH TIME ZONE").setLiteral("'", "'");
+			type.addColumnTypeMatcher("DATETIMEOFFSET");
+			type.setJdbcTypeHandler(new SqliteJdbcTypeHandlers.TimestampWithTimeZoneHandler());
+		});
+		// Values in STRICT ANY columns must reach JDBC without coercion.
+		getDbDataTypes().addAnyData("ANY");
 	}
 
 	/**
@@ -116,7 +152,114 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public boolean supportsTop() {
+		return false;
+	}
+
+	@Override
+	public boolean supportsLimit() {
 		return true;
+	}
+
+	@Override
+	public boolean supportsLimitOffset() {
+		return true;
+	}
+
+	/** Whether WAL checkpoints accept an explicit mode (SQLite 3.7.6+). */
+	public boolean supportsWalCheckpointModes() {
+		return false;
+	}
+
+	/** Whether WAL checkpoints support TRUNCATE (SQLite 3.8.8+). */
+	public boolean supportsWalCheckpointTruncate() {
+		return false;
+	}
+
+	/** Whether PRAGMA foreign_key_check is available (SQLite 3.7.16+). */
+	public boolean supportsForeignKeyCheck() {
+		return false;
+	}
+
+	/** Whether VACUUM can target a database other than main. */
+	public boolean supportsVacuumSchema() {
+		return false;
+	}
+
+	/** Whether VACUUM can write a separate database file (SQLite 3.27+). */
+	public boolean supportsVacuumInto() {
+		return false;
+	}
+
+	/** Whether PRAGMA optimize is available (SQLite 3.18+). */
+	public boolean supportsOptimize() {
+		return false;
+	}
+
+	/**
+	 * Whether optimize can consider unused tables with a temporary analysis limit
+	 * (SQLite 3.46+).
+	 */
+	public boolean supportsOptimizeAllTables() {
+		return false;
+	}
+
+	public boolean supportsViewColumnList() {
+		return false;
+	}
+
+	public boolean supportsUpsert() {
+		return false;
+	}
+
+	public boolean supportsRenameColumn() {
+		return false;
+	}
+
+	public boolean supportsGeneratedColumns() {
+		return false;
+	}
+
+	public boolean supportsDropColumn() {
+		return false;
+	}
+
+	/** Whether ALTER COLUMN can SET/DROP NOT NULL (SQLite 3.53+). */
+	public boolean supportsAlterColumnNullability() {
+		return false;
+	}
+
+	/**
+	 * Native named CHECK changes with reliable quoted-name removal (SQLite
+	 * 3.53.1+).
+	 */
+	public boolean supportsAlterCheckConstraints() {
+		return false;
+	}
+
+	public boolean supportsStrictTables() {
+		return false;
+	}
+
+	/** PRAGMA table_list identifies virtual-table shadow tables (SQLite 3.37+). */
+	public boolean supportsTableList() {
+		return false;
+	}
+
+	public boolean supportsWithoutRowid() {
+		return false;
+	}
+
+	public boolean supportsPartialIndexes() {
+		return false;
+	}
+
+	public boolean supportsExpressionIndexes() {
+		return false;
+	}
+
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 999;
 	}
 
 	@Override
@@ -131,11 +274,13 @@ public class Sqlite extends Dialect {
 
 	@Override
 	public boolean supportsInsertReturningResultSet() {
-		return true;
+		return false;
 	}
 
 	@Override
 	public String handleInsertReturningSql(final Table table, final Column identityColumn, final String sql) {
+		if (!supportsInsertReturningResultSet())
+			throw new IllegalArgumentException("SQLite INSERT RETURNING requires SQLite 3.35 or later");
 		return sql + "\nRETURNING " + getObjectFullName(identityColumn.getName());
 	}
 
@@ -149,12 +294,75 @@ public class Sqlite extends Dialect {
 		return '[';
 	}
 
+	/** Keywords listed by SQLite; quoting a non-reserved one is harmless. */
+	private static final java.util.Set<String> KEYWORDS = java.util.Set.of("ABORT", "ACTION", "ADD", "AFTER", "ALL",
+			"ALTER", "ALWAYS", "ANALYZE", "AND", "AS", "ASC", "ATTACH", "AUTOINCREMENT", "BEFORE", "BEGIN", "BETWEEN",
+			"BY", "CASCADE", "CASE", "CAST", "CHECK", "COLLATE", "COLUMN", "COMMIT", "CONFLICT", "CONSTRAINT", "CREATE",
+			"CROSS", "CURRENT", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "DATABASE", "DEFAULT",
+			"DEFERRABLE", "DEFERRED", "DELETE", "DESC", "DETACH", "DISTINCT", "DO", "DROP", "EACH", "ELSE", "END",
+			"ESCAPE", "EXCEPT", "EXCLUDE", "EXCLUSIVE", "EXISTS", "EXPLAIN", "FAIL", "FILTER", "FIRST", "FOLLOWING",
+			"FOR", "FOREIGN", "FROM", "FULL", "GENERATED", "GLOB", "GROUP", "GROUPS", "HAVING", "IF", "IGNORE",
+			"IMMEDIATE", "IN", "INDEX", "INDEXED", "INITIALLY", "INNER", "INSERT", "INSTEAD", "INTERSECT", "INTO", "IS",
+			"ISNULL", "JOIN", "KEY", "LAST", "LEFT", "LIKE", "LIMIT", "MATCH", "MATERIALIZED", "NATURAL", "NO", "NOT",
+			"NOTHING", "NOTNULL", "NULL", "NULLS", "OF", "OFFSET", "ON", "OR", "ORDER", "OTHERS", "OUTER", "OVER",
+			"PARTITION", "PLAN", "PRAGMA", "PRECEDING", "PRIMARY", "QUERY", "RAISE", "RANGE", "RECURSIVE", "REFERENCES",
+			"REGEXP", "REINDEX", "RELEASE", "RENAME", "REPLACE", "RESTRICT", "RETURNING", "RIGHT", "ROLLBACK", "ROW",
+			"ROWS", "SAVEPOINT", "SELECT", "SET", "TABLE", "TEMP", "TEMPORARY", "THEN", "TIES", "TO", "TRANSACTION",
+			"TRIGGER", "UNBOUNDED", "UNION", "UNIQUE", "UPDATE", "USING", "VACUUM", "VALUES", "VIEW", "VIRTUAL", "WHEN",
+			"WHERE", "WINDOW", "WITH", "WITHOUT");
+
+	/**
+	 * SQLite does not fold identifier case, so an all-uppercase name still needs
+	 * quoting when it is a keyword or cannot start an unquoted identifier.
+	 */
+	@Override
+	public boolean needQuote(final String target) {
+		if (target == null || target.isEmpty() || isQuoted(target))
+			return false;
+		final char first = target.charAt(0);
+		return !(Character.isLetter(first) || first == '_')
+				|| KEYWORDS.contains(target.toUpperCase(java.util.Locale.ROOT)) || super.needQuote(target);
+	}
+
+	@Override
+	public boolean isQuoted(final String target) {
+		if (super.isQuoted(target))
+			return true;
+		// Recognize the alternate form emitted by doQuote, preserving existing
+		// handling of literal names delimited by double quotes or backticks.
+		return target != null && target.length() >= 2 && target.indexOf(']') >= 0 && target.charAt(0) == '"'
+				&& target.charAt(target.length() - 1) == '"';
+	}
+
+	@Override
+	protected String doQuote(final String target) {
+		// SQLite's bracket syntax cannot escape an embedded closing bracket.
+		if (target.indexOf(']') >= 0)
+			return "\"" + target.replace("\"", "\"\"") + "\"";
+		return super.doQuote(target);
+	}
+
+	@Override
+	public String unQuote(final String target) {
+		if (!isQuoted(target))
+			return target;
+		String value = target.substring(1, target.length() - 1);
+		if (target.charAt(0) == '"')
+			return value.replace("\"\"", "\"");
+		return value;
+	}
+
+	@Override
+	public boolean storesMixedCaseIdentifiers() {
+		return true;
+	}
+
 	/**
 	 * 現在日付の取得関数
 	 */
 	@Override
 	public String getCurrentDateFunction() {
-		return null;
+		return "CURRENT_DATE";
 	}
 
 	/**
@@ -162,7 +370,7 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentDateTimeFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -170,7 +378,7 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimestampFunction() {
-		return null;
+		return "CURRENT_TIMESTAMP";
 	}
 
 	/**
@@ -186,12 +394,12 @@ public class Sqlite extends Dialect {
 	 */
 	@Override
 	public String getCurrentTimeFunction() {
-		return null;
+		return "CURRENT_TIME";
 	}
 
 	@Override
 	public boolean supportsDropCascade() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -266,11 +474,11 @@ public class Sqlite extends Dialect {
 
 	@Override
 	public boolean supportsRowValueComparison() {
-		return true;
+		return false;
 	}
 
 	@Override
 	public boolean supportsRowValueComparisonIn() {
-		return true;
+		return false;
 	}
 }

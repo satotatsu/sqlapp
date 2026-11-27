@@ -82,6 +82,23 @@ public class FirebirdSchemaReader extends SchemaReader {
 	}
 
 	@Override
+	protected void setSchemaAfter(Connection connection, Schema schema) {
+		super.setSchemaAfter(connection, schema);
+		if (!getReaderOptions().isReadStatement()
+				|| !(getDialect() instanceof com.sqlapp.data.db.dialect.firebird.Firebird25))
+			return;
+		try {
+			com.sqlapp.data.db.dialect.firebird.FirebirdSchemaObjects.set(schema,
+					new FirebirdSchemaObjectReader(getDialect()).read(connection,
+							getReaderOptions().isExcludeSystemObjects()));
+			com.sqlapp.data.db.dialect.firebird.FirebirdSchemaDependencies.set(schema,
+					new FirebirdSchemaDependencyReader(getDialect()).read(connection));
+		} catch (java.sql.SQLException e) {
+			throw new IllegalStateException("Unable to read Firebird native schema object definitions", e);
+		}
+	}
+
+	@Override
 	protected ViewReader newViewReader() {
 		return new FirebirdViewReader(this.getDialect());
 	}

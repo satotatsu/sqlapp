@@ -51,9 +51,11 @@ public class H2FunctionReader extends FunctionReader {
 	protected List<Function> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final boolean modern = productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2;
+		final boolean modern = H2Versions.isModern(productVersionInfo);
 		final List<Function> result = list();
+		final var aliases = new java.util.LinkedHashMap<java.util.List<String>, Function>();
+		final var registry = getDialect().createSqlFactoryRegistry();
+		registry.getOptions().setCreateIfNotExists(false);
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -70,8 +72,32 @@ public class H2FunctionReader extends FunctionReader {
 				obj.setMethodName(java_method);
 				if (modern) {
 					obj.setSpecificName(getString(rs, "SPECIFIC_NAME"));
+					obj.setStatement(getString(rs, "ROUTINE_DEFINITION"));
+					obj.setDeterministic("YES".equalsIgnoreCase(getString(rs, "IS_DETERMINISTIC")));
+					if (java_method != null) {
+						int signature = java_method.indexOf('(');
+						int separator = java_method.lastIndexOf('.', signature < 0 ? java_method.length() : signature);
+						if (separator >= 0) {
+							obj.setClassName(java_method.substring(0, separator));
+							obj.setMethodName(java_method.substring(separator + 1));
+						}
+					}
 				}
 				obj.setRemarks(remarks);
+				if (modern) {
+					var key = java.util.Arrays.asList(alias_Catalog, alias_Schema, alias_Name);
+					var previous = aliases.putIfAbsent(key, obj);
+					if (previous != null) {
+						if (previous.getDefinition().isEmpty()) {
+							previous.setDefinition(registry.createSql(previous, com.sqlapp.data.db.sql.SqlType.CREATE)
+									.get(0).getSqlText());
+						}
+						int overloads = Integer
+								.parseInt(previous.getSpecifics().getOrDefault("h2.aliasOverloadCount", "1"));
+						previous.getSpecifics().put("h2.aliasOverloadCount", String.valueOf(overloads + 1));
+						return;
+					}
+				}
 				result.add(obj);
 			}
 		});
@@ -79,8 +105,7 @@ public class H2FunctionReader extends FunctionReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		if (productVersionInfo != null && productVersionInfo.getMajorVersion() != null
-				&& productVersionInfo.getMajorVersion() >= 2) {
+		if (H2Versions.isModern(productVersionInfo)) {
 			return getSqlNodeCache().getString("functionAliases_200.sql");
 		}
 		return getSqlNodeCache().getString("functionAliases.sql");

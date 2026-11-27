@@ -80,19 +80,54 @@ retain another function overload and a dependent view during replacement.
 Enums support ordered label additions and one label rename while retaining
 rows using the type. Removal and reordering are rejected.
 
-Sequence metadata also models start, increment, minimum, maximum and cycle.
-ALTER supports increment/range/start configuration without resetting the
-current value. Restart/high-water replay, CYCLE, cache and ownership changes
-require separate handling. CockroachDB documents CYCLE as unimplemented in its
-[ALTER SEQUENCE reference](https://docs.cockroachlabs.com/docs/stable/alter-sequence).
+Sequence metadata also models start, increment, minimum, maximum, cycle and
+cache size. The reader takes the cache size from the saved CREATE definition
+within the existing definition query. Values beyond the shared integer field's
+range remain in the complete definition. ALTER supports increment, range,
+start and cache configuration without resetting the
+current value. Use a separate explicit `originalSequence.diff(renamedSequence)`
+for a same-schema rename. It emits one `ALTER SEQUENCE … RENAME TO` statement.
+Review dependent table expressions before applying it, as CockroachDB documents
+that the new name does not propagate to tables using the sequence.
+
+For a move within the current database, change only the schema name on a
+clone and pass its explicit sequence diff to the registry. The resulting
+`ALTER SEQUENCE … SET SCHEMA` qualifies the original sequence and targets an
+existing schema. Execute it on a connection to the intended database.
+[CockroachDB ALTER SEQUENCE reference](https://www.cockroachlabs.com/docs/v24.3/alter-sequence)
+
+Change `Sequence.cacheSize` on a cloned sequence for a cache-only change. The generated
+SQL preserves an explicit PER SESSION or PER NODE clause from the source
+definition. Use 1 to disable caching. Changing the scope requires explicit SQL.
+Column ownership can be set or cleared with a separate sequence definition
+diff. Keep the same CREATE SEQUENCE body and edit only its trailing
+`OWNED BY schema.table.column` clause. Use `OWNED BY NONE` to detach.
+The registry emits one ALTER statement against the modeled sequence. Quote
+mixed-case or special identifiers in the owner reference. Use this after the
+owner table exists. [CockroachDB ownership semantics](https://www.cockroachlabs.com/docs/v24.3/alter-sequence)
+
+For an ordinary sequence, `dialect.createSequenceRestartSql(sequence, 42L)`
+returns a reviewable ALTER operation requesting 42 as the next value. Use a
+schema-qualified sequence model and execute against its database. Any modeled
+minimum and maximum values are checked. Choose the restart value from the
+target data and coordinate it with concurrent writers. Ordinary schema diffs
+treat START WITH as configuration and reject last-value changes. High-water
+capture and automatic replay remain separate work.
+
+Use `dialect.createSequenceOwnerChangeSql(sequence, "Reporting Owners")` to
+generate a reviewable `ALTER SEQUENCE … OWNER TO` operation. Pass the name of
+an existing role. The generator quotes the name as a literal identifier,
+including names such as `CURRENT_USER`. Role ownership is an explicit operation
+apart from Schema diff and column ownership. [CockroachDB ALTER SEQUENCE reference](https://www.cockroachlabs.com/docs/v24.3/alter-sequence)
 
 Schema differences delete views/functions before tables and tables before
 sequences/types; foreign-key child tables precede their parents. Additions and
 changes process prerequisites before the tested dependents. This qualifies
 ordinary acyclic dependencies, not every cross-object routine/view dependency
 or simultaneous key-and-reference change. Primary-key changes, generated or
-identity column alterations/additions, schema/database moves and advanced
-storage changes and in-place locality alterations require explicit migrations. Unsupported changes fail
+identity column alterations/additions, object moves beyond the explicit sequence
+move above, advanced storage changes and in-place locality alterations require
+explicit migrations. Unsupported changes fail
 at generation rather than silently returning empty SQL.
 
 Multiple DDL statements are not guaranteed to be atomic. Review and execute
@@ -200,7 +235,7 @@ It does not authorize an external or production database.
 
 Not yet qualified: multi-node failure/retry/performance, locality/region/zone
 topology mapping and arbitrary zone configurations, ACL/owner replay, procedures, triggers,
-domains, materialized views, all-database enumeration, sequence high-water
+domains, all-database enumeration, sequence high-water
 snapshots and general transactional DDL guarantees.
 These remain separate work; PostgreSQL compatibility alone does not establish
 support for them. See the [compatibility evidence and backlog](../docs/compatibility.md#cockroachdb-dedicated-dialect).
@@ -214,3 +249,74 @@ Metadata reads use one query per table/view/sequence definition set and one
 joined ENUM query; index definitions reuse the ordinary index query.
 Query-count regression tests cover growing object sets. See the
 [metadata audit fixes](../docs/compatibility.md#postgresql-family-metadata-audit-fixes-2026-10-11).
+
+## Materialized views
+
+The 24.3 baseline does not support materialized view comments through
+`COMMENT ON TABLE`. CREATE rejects a model with view-level or column-level
+`remarks` set. It also rejects a modeled `TABLESPACE`.
+The server resolver requires `IsTable()`, which excludes views.
+See [the comment planner](https://github.com/cockroachdb/cockroach/blob/v24.3.0/pkg/sql/comment_on_table.go)
+and [descriptor type checks](https://github.com/cockroachdb/cockroach/blob/v24.3.0/pkg/sql/catalog/descpb/structured.go).
+
+CockroachDB 24.3+ reads materialized views into `Schema.mviews`, separately
+from ordinary tables and views. The reader keeps the query in `statement`
+and reads columns in bulk. CREATE uses the visible column names in order to
+preserve aliases from the original column list. An explicitly supplied full
+CREATE definition takes precedence.
+The materialized view definition query binds schema and object-name filters
+and fetches the requested set in a single SELECT.
+
+Schema diffs create materialized views after ordinary views and drop them
+before ordinary views. More complex dependency graphs require explicit
+ordering. Schema diffs support index-only changes to existing materialized
+views. They use the same CREATE, DROP and replacement rules as table indexes.
+Changes to the view definition require an explicit migration.
+Generate a rename with `registry.createSql(originalView.diff(renamedView))`
+using the same schema. The rename qualifies the original name and preserves
+the existing view. A Schema diff matches materialized views by name and
+represents a name change as a deletion and addition.
+Metadata preserves the materialized view's catalog ID through XML. A Schema
+diff rejects a deletion and addition with the same ID as a possible rename.
+Use the view-level diff to express that rename explicitly.
+For a move within the same database, first clone the loaded view to obtain
+a detached original. Clone that original again and set its target schema.
+Pass the two detached views' diff to the registry. It generates
+`ALTER MATERIALIZED VIEW … SET SCHEMA` with a schema-qualified source.
+
+```java
+var original = schema.getMviews().get("totals").clone();
+var target = original.clone().setSchemaName("archive");
+var operations = registry.createSql(original.diff(target));
+```
+
+Generate an explicit ownership change with
+`dialect.createMaterializedViewOwnerChangeSql(view, "Reporting Owners")`.
+Pass an existing role name and a view with its schema set. The method returns
+SQL for the caller to execute.
+The reader records the current role in the shared `Mview.ownerName` property,
+serialized as an optional `ownerName` XML attribute. CREATE restores a specified
+owner after creating the view and its indexes, and an ownership-only diff
+generates `ALTER MATERIALIZED VIEW … OWNER TO`. The role must already exist.
+Legacy XML with `specifics["COCKROACH_OWNER"]` is accepted by the CockroachDB
+CREATE factory when `ownerName` is absent. An explicit `ownerName` takes
+precedence. New metadata uses the common property.
+The reader keeps secondary indexes and their CREATE definitions. Schema
+creation emits those indexes after the materialized view. CockroachDB creates
+the primary index as part of creating the view.
+Generate a manual refresh with `registry.createSql(view, SqlType.REFRESH)`.
+Enable `decorateSchemaName` on the registry to qualify the view name.
+The call returns SQL for the caller to execute.
+
+Recreating from catalog metadata populates the view from its query. Preserving
+refresh schedules or the original population state remains outside this scope.
+The 24.3.0 and 25.4.0 Docker matrix includes a case that reads a quoted alias
+and secondary index, round-trips them through XML and recreates both.
+
+On 2026-11-11, the three materialized view tests passed on each of 24.3.0 and
+25.4.0. They cover XML/CREATE/DROP, index differences, manual refresh, rename,
+schema move and explicit role ownership changes.
+
+```shell
+./gradlew :sqlapp-core-dialect-test:cockroach24CompatibilityTest --tests '*MaterializedView*' :sqlapp-core-dialect-test:cockroach25CompatibilityTest --tests '*MaterializedView*'
+```

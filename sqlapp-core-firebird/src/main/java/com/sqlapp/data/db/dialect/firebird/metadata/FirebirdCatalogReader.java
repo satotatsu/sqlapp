@@ -73,7 +73,8 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
-		return new FirebirdTableSpaceReader(this.getDialect());
+		// Pre-2.0 servers have neither monitoring tables nor RDB$GET_CONTEXT.
+		return null;
 	}
 
 	@Override
@@ -103,7 +104,7 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleReader newRoleReader() {
-		return null;
+		return new FirebirdRoleReader(getDialect());
 	}
 
 	@Override
@@ -113,7 +114,7 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoutinePrivilegeReader newRoutinePrivilegeReader() {
-		return null;
+		return new FirebirdRoutinePrivilegeReader(getDialect());
 	}
 
 	@Override
@@ -128,7 +129,7 @@ public class FirebirdCatalogReader extends CatalogReader {
 
 	@Override
 	protected RoleMemberReader newRoleMemberReader() {
-		return null;
+		return new FirebirdRoleMemberReader(getDialect());
 	}
 
 	@Override

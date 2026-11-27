@@ -1,0 +1,10 @@
+formatVersion: 1
+tables:
+  PUBLIC.CUSTOMERS:
+    targetTable: customers_copy
+    columns:
+      ID: customer_id
+  PUBLIC.ORDERS:
+    targetTable: orders_copy
+    columns:
+      CUSTOMER_ID: customer_id

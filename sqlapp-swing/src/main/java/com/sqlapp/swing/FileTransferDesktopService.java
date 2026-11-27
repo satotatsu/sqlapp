@@ -1,0 +1,122 @@
+/* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
+package com.sqlapp.swing;
+
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Arrays;
+import com.sqlapp.data.db.command.migration.transfer.*;
+
+/**
+ * Desktop connection lifetime only; all file/copy semantics belong to shared
+ * commands.
+ */
+final class FileTransferDesktopService implements FileTransferPanel.Backend {
+	private static final class PackageSelectionException extends IllegalArgumentException {
+		private static final long serialVersionUID = 1L;
+
+		PackageSelectionException() {
+			super("The selected package folder must contain manifest.json directly. Choose a completed export folder, not its parent or data subfolder.");
+		}
+	}
+
+	record Reviewed(TransferFileImportService.Review review, TransferFilePackageIO.Manifest manifest,
+			@com.fasterxml.jackson.annotation.JsonIgnore String schemaSqlDraft) {
+		Reviewed(TransferFileImportService.Review review, TransferFilePackageIO.Manifest manifest) {
+			this(review, manifest, null);
+		}
+	}
+
+	static String draftFor(TransferFileImportService.Outcome outcome, Reviewed reviewed) {
+		return reviewed != null && outcome.manifestFingerprint().equals(reviewed.review().manifestFingerprint())
+				&& outcome.planFingerprint().equals(reviewed.review().planFingerprint())
+				&& outcome.schemaPreparation().planned().equals(reviewed.review().schemaPreparation().statements())
+				&& outcome.schemaPreparation().warnings().equals(reviewed.review().schemaPreparation().warnings())
+						? reviewed.schemaSqlDraft()
+						: null;
+	}
+
+	record Inspected(TransferFilePackageIO.Snapshot snapshot, boolean valuesValidated,
+			TransferJobConfiguration configuration,
+			@com.fasterxml.jackson.annotation.JsonIgnore TransferFileImportService.PackageDescription description) {
+		Inspected(TransferFilePackageIO.Snapshot snapshot, boolean valuesValidated,
+				TransferJobConfiguration configuration) {
+			this(snapshot, valuesValidated, configuration, null);
+		}
+
+		Inspected(TransferFilePackageIO.Snapshot snapshot) {
+			this(snapshot, false, null);
+		}
+	}
+
+	@Override
+	public Object perform(FileTransferPanel.Action action, Path input, Path workspace, PlanningJdbc.Spec spec,
+			char[] password, String schema, Reviewed reviewed) throws Exception {
+		try {
+			if (action == FileTransferPanel.Action.TEST)
+				return new JdbcConnectionTestService().test(spec, password);
+			if (action == FileTransferPanel.Action.COMPARE_STAGING) {
+				try (var pool = PlanningJdbc.open(spec, password)) {
+					return TransferStagedReplacement.compareRetainedStageReport(input, pool);
+				}
+			}
+			if (action == FileTransferPanel.Action.DISCOVER) {
+				final var prepared = new DataMigrationDraftService().discover(spec, password, schema, workspace);
+				return new DataMigrationDraftService.Prepared(prepared.directory(),
+						new TransferFileJobDraftBuilder().inspect(prepared.schema()));
+			}
+			if (action == FileTransferPanel.Action.EXPORT) {
+				final var definition = new TransferFileExportService().inspectConfiguration(input);
+				try (var pool = PlanningJdbc.open(spec, password)) {
+					return new TransferFileExportService().export(input,
+							Map.of(definition.configuration().source(), pool));
+				}
+			}
+			final var manifestPath = java.nio.file.Files.isDirectory(input) ? input.resolve("manifest.json") : input;
+			if (java.nio.file.Files.isDirectory(input) && !java.nio.file.Files.isRegularFile(manifestPath))
+				throw new PackageSelectionException();
+			if (action.isInspection()) {
+				var service = new TransferFileImportService();
+				var description = service.describePackage(manifestPath, null);
+				if (action == FileTransferPanel.Action.INSPECT_DATA)
+					service.validatePackage(description.snapshot().file(), description.snapshot().fingerprint());
+				return new Inspected(description.snapshot(), action == FileTransferPanel.Action.INSPECT_DATA,
+						description.configuration(), description);
+			}
+			final var manifest = action == FileTransferPanel.Action.IMPORT
+					? new TransferFilePackageIO().read(manifestPath, reviewed.review().manifestFingerprint())
+					: new TransferFilePackageIO().read(manifestPath, null);
+			final var definition = new TransferJobConfigurationIO()
+					.read(manifest.file().getParent().resolve("transfer.yaml"));
+			if (!definition.fingerprint().equals(manifest.manifest().jobFingerprint()))
+				throw new IllegalArgumentException("Package job changed.");
+			try (var pool = action == FileTransferPanel.Action.IMPORT
+					? PlanningJdbc.openForDataExecution(spec, password)
+					: PlanningJdbc.open(spec, password)) {
+				final var bindings = Map.of(definition.configuration().target(), pool);
+				final var service = new TransferFileImportService();
+				if (action == FileTransferPanel.Action.IMPORT)
+					return service.execute(reviewed.review(), bindings, workspace);
+				final var captured = service.reviewWithSqlDraft(manifest.file(), manifest.fingerprint(), bindings);
+				return new Reviewed(captured.review(), manifest.manifest(), captured.schemaSqlDraft());
+			}
+		} catch (TransferFileImportService.ImportException failure) {
+			throw failure;
+		} catch (TransferSchemaPreparation.ValidationException failure) {
+			throw new TransferPreparationFailure(failure);
+		} catch (PackageSelectionException failure) {
+			throw failure;
+		} catch (Exception failure) {
+			if (action == FileTransferPanel.Action.INSPECT_DATA)
+				throw new IllegalArgumentException(
+						"Package value validation failed. Check recorded row counts, headers, types, keys and export warnings. Use package-only inspection to view warnings. No database connection was opened.");
+			if (action.isInspection())
+				throw new IllegalArgumentException(
+						"Package inspection failed. Check manifest.json, all package members and their recorded sizes/hashes. No database connection was opened.");
+			throw new IllegalArgumentException(
+					"File transfer operation failed. Check the connection, supported scalar columns, compatibility policy, "
+							+ "existing empty target tables, file settings and package integrity. No automatic retry or target reset was performed.");
+		} finally {
+			Arrays.fill(password, '\0');
+		}
+	}
+}

@@ -23,7 +23,9 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * Oracle11gR2のテーブル情報読み込み
@@ -38,8 +40,28 @@ public class Oracle11gR2TableReader extends Oracle11gTableReader {
 	}
 
 	@Override
+	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("tables11gR2.sql");
+	}
+
+	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
+		if (!"INDEX".equals(table.getSpecifics().get("oracle.table.organization"))) {
+			String compression = getString(rs, "PARTITION_COMPRESSION");
+			boolean partitionDefault = "ENABLED".equals(compression) || "DISABLED".equals(compression);
+			if (partitionDefault)
+				table.setCompression("ENABLED".equals(compression));
+			String mode = table.isCompression()
+					? getString(rs, partitionDefault ? "PARTITION_COMPRESS_FOR" : "TABLE_COMPRESS_FOR")
+					: null;
+			table.setCompressionType(mode);
+			// Keep the existing Oracle CREATE factory's catalog representation in sync.
+			if (mode == null)
+				table.getSpecifics().remove("COMPRESS_FOR");
+			else
+				table.getSpecifics().put("COMPRESS_FOR", mode);
+		}
 		return table;
 	}
 }

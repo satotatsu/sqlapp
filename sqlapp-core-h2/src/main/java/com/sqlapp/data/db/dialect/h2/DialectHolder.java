@@ -25,6 +25,7 @@ import com.sqlapp.data.db.dialect.Dialect;
  * DialectHolder
  */
 public class DialectHolder {
-	public final static Dialect defaultDialect200 = new H2_200(() -> null);
+	public final static Dialect defaultDialect220 = new H2_220(() -> null);
+	public final static Dialect defaultDialect200 = new H2_200(() -> defaultDialect220);
 	public final static Dialect defaultDialect = new H2(() -> defaultDialect200);
 }

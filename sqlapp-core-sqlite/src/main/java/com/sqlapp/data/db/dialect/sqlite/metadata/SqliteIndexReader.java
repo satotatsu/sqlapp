@@ -17,6 +17,7 @@ import java.util.Map;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcIndexReader;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteDdl;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Column;
@@ -25,7 +26,8 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SchemaProperties;
 
 /**
- * Uses table-valued PRAGMAs on SQLite 3.16+, retaining the legacy JDBC path.
+ * Uses table-valued PRAGMAs on SQLite 3.16+, with catalog/PRAGMA retrieval on
+ * older versions.
  */
 public class SqliteIndexReader extends JdbcIndexReader {
 
@@ -36,18 +38,11 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	@Override
 	protected List<Index> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final List<Index> result = list();
 		try {
 			if (supportsBulkIndexes(productVersionInfo)) {
 				return readBulkIndexes(connection, context);
 			}
-			for (String tableName : tableNames(context)) {
-				final ParametersContext tableContext = context.clone();
-				tableContext.put(SchemaProperties.TABLE_NAME.getLabel(), tableName);
-				result.addAll(getAllIndex(connection.getMetaData(), tableContext, false));
-			}
-			loadPartialIndexPredicates(connection, result);
-			return result;
+			return readLegacyIndexes(connection, context, productVersionInfo);
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
@@ -56,6 +51,12 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	static boolean supportsBulkIndexes(final ProductVersionInfo version) {
 		return version.getMajorVersion() != null && (version.getMajorVersion() > 3 || version.getMajorVersion() == 3
 				&& version.getMinorVersion() != null && version.getMinorVersion() >= 16);
+	}
+
+	static boolean supportsExtendedIndexes(final ProductVersionInfo version) {
+		return version.getMajorVersion() != null && (version.getMajorVersion() > 3 || version.getMajorVersion() == 3
+				&& version.getMinorVersion() != null && (version.getMinorVersion() > 8 || version.getMinorVersion() == 8
+						&& version.getRevision() != null && version.getRevision() >= 9));
 	}
 
 	private List<Index> readBulkIndexes(final Connection connection, final ParametersContext context)
@@ -89,7 +90,7 @@ public class SqliteIndexReader extends JdbcIndexReader {
 						index = new Index(name);
 						index.setDialect(getDialect());
 						index.setCatalogName(getCatalogName(context));
-						index.setSchemaName(getSchemaName(context));
+						index.setSchemaName(schema);
 						index.setTableName(rs.getString("table_name"));
 						index.setUnique(rs.getBoolean("is_unique"));
 						index.setWhere(extractWhere(rs.getString("definition")));
@@ -110,31 +111,62 @@ public class SqliteIndexReader extends JdbcIndexReader {
 		return new java.util.ArrayList<>(indexes.values());
 	}
 
-	private void loadPartialIndexPredicates(final Connection connection, final List<Index> indexes)
-			throws SQLException {
-		for (Index index : indexes) {
-			final String schemaName = index.getSchemaName() == null ? "main" : index.getSchemaName();
-			final String sql = "SELECT sql FROM " + quoteIdentifier(schemaName)
-					+ ".sqlite_master WHERE type='index' AND name=?";
-			String definition = null;
-			try (var statement = connection.prepareStatement(sql)) {
-				statement.setString(1, index.getName());
-				try (var resultSet = statement.executeQuery()) {
-					if (resultSet.next()) {
-						definition = resultSet.getString(1);
-						index.setWhere(extractWhere(definition));
-						retainKeys(index, definition);
-					}
+	private List<Index> readLegacyIndexes(final Connection connection, final ParametersContext context,
+			final ProductVersionInfo version) throws SQLException {
+		final String schema = getSchemaName(context) == null ? "main" : getSchemaName(context);
+		final List<String> tables = tableNames(context);
+		final String requestedIndex = getObjectName(context);
+		final String sql = "SELECT name, tbl_name, sql FROM " + quoteIdentifier(schema)
+				+ ".sqlite_master WHERE type='index'"
+				+ (tables.isEmpty() ? ""
+						: " AND tbl_name IN (" + String.join(",", java.util.Collections.nCopies(tables.size(), "?"))
+								+ ")")
+				+ (requestedIndex == null ? "" : " AND name=?") + " ORDER BY tbl_name, name";
+		final Map<Index, String> definitions = new LinkedHashMap<>();
+		try (var statement = connection.prepareStatement(sql)) {
+			for (int i = 0; i < tables.size(); i++)
+				statement.setString(i + 1, tables.get(i));
+			if (requestedIndex != null)
+				statement.setString(tables.size() + 1, requestedIndex);
+			try (var rows = statement.executeQuery()) {
+				while (rows.next()) {
+					var index = new Index(rows.getString("name"));
+					String definition = rows.getString("sql");
+					index.setDialect(getDialect());
+					index.setCatalogName(getCatalogName(context));
+					index.setSchemaName(schema);
+					index.setTableName(rows.getString("tbl_name"));
+					index.setUnique(definition == null || SqliteDdl.isUniqueIndex(definition));
+					index.setWhere(extractWhere(definition));
+					retainKeys(index, definition);
+					definitions.put(index, definition);
 				}
 			}
-			loadColumnDetails(connection, schemaName, index, definition);
 		}
+		for (var entry : definitions.entrySet()) {
+			var keys = SqliteColumnReader.splitColumnDefinitions(entry.getValue());
+			if (!keys.isEmpty()) {
+				for (String key : keys) {
+					Order order = SqliteDdl.isDescendingIndexKey(key) ? Order.Desc : Order.Asc;
+					if (SqliteDdl.hasIndexExpressions(key))
+						entry.getKey().getColumns().add(stripOrder(key), order);
+					else
+						entry.getKey().getColumns().add(new Column(SqliteDdl.firstIdentifier(key)), order);
+				}
+			} else {
+				// Internal indexes have no CREATE SQL. Before 3.16 their key details
+				// cannot be joined in a bulk query and require one PRAGMA per index.
+				loadColumnDetails(connection, schema, entry.getKey(), entry.getValue(),
+						supportsExtendedIndexes(version));
+			}
+		}
+		return new java.util.ArrayList<>(definitions.keySet());
 	}
 
 	private void loadColumnDetails(final Connection connection, final String schemaName, final Index index,
-			final String definition) throws SQLException {
-		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + ".index_xinfo(" + quoteString(index.getName())
-				+ ")";
+			final String definition, final boolean extended) throws SQLException {
+		final String sql = "PRAGMA " + quoteIdentifier(schemaName) + (extended ? ".index_xinfo(" : ".index_info(")
+				+ quoteString(index.getName()) + ")";
 		final List<String> definitions = SqliteColumnReader.splitColumnDefinitions(definition);
 		try (var statement = connection.createStatement(); var resultSet = statement.executeQuery(sql)) {
 			final boolean hasDescending = hasColumn(resultSet, "desc");
@@ -146,11 +178,13 @@ public class SqliteIndexReader extends JdbcIndexReader {
 				if (hasKey && !resultSet.getBoolean("key") || !hasKey && columnName == null && columnId != -2) {
 					continue;
 				}
-				final Order order = hasDescending && resultSet.getBoolean("desc") ? Order.Desc : Order.Asc;
+				final int position = resultSet.getInt("seqno");
+				final boolean descending = hasDescending ? resultSet.getBoolean("desc")
+						: position < definitions.size() && SqliteDdl.isDescendingIndexKey(definitions.get(position));
+				final Order order = descending ? Order.Desc : Order.Asc;
 				if (columnName != null) {
 					index.getColumns().add(new Column(columnName), order);
 				} else {
-					final int position = resultSet.getInt("seqno");
 					if (position < definitions.size()) {
 						index.getColumns().add(stripOrder(definitions.get(position)), order);
 					}
@@ -166,7 +200,7 @@ public class SqliteIndexReader extends JdbcIndexReader {
 	}
 
 	static String stripOrder(final String definition) {
-		return definition.replaceFirst("(?is)\\s+(?:ASC|DESC)\\s*$", "").trim();
+		return SqliteDdl.stripIndexKeyOrder(definition);
 	}
 
 	private boolean hasColumn(final java.sql.ResultSet resultSet, final String name) throws SQLException {

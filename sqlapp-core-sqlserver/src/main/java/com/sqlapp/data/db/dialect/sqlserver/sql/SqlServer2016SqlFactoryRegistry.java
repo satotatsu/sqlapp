@@ -23,6 +23,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Catalog;
 
 public class SqlServer2016SqlFactoryRegistry extends SqlServer2014SqlFactoryRegistry {
 
@@ -33,6 +35,8 @@ public class SqlServer2016SqlFactoryRegistry extends SqlServer2014SqlFactoryRegi
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Schema.class, SqlType.CREATE, SqlServer2016CreateSchemaFactory.class);
+		registerSqlFactory(Catalog.class, SqlType.CREATE, SqlServer2016CreateCatalogFactory.class);
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2016CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2016AlterTableFactory.class);

@@ -26,6 +26,12 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.core.test.AbstractTest;
 
 public class SybaseUtilsTest extends AbstractTest {
+	@Test
+	void missingNationalCharacterLengthRemainsUnknown() {
+		assertEquals(null, SybaseUtils.getMaxLength("NCHAR", null));
+		assertEquals(null, SybaseUtils.getMaxLength("NVARCHAR", null));
+		assertEquals(null, SybaseUtils.getMaxLength("NTEXT", null));
+	}
 
 	/**
 	 * プロシージャのステートメント部分抜き出しテスト1

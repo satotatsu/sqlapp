@@ -20,8 +20,6 @@
 package com.sqlapp.data.db.dialect.h2.metadata;
 
 import java.sql.SQLException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.information_schema.metadata.AbstractISViewReader;
@@ -48,19 +46,38 @@ public class H2ViewReader extends AbstractISViewReader {
 		return new H2ColumnReader(this.getDialect());
 	}
 
-	private static final Pattern pattern = Pattern.compile("CREATE.+VIEW.+[\\s]+AS[\\s]+(.*)",
-			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
-
 	@Override
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
-		String viewDefinition = getString(rs, "VIEW_DEFINITION");
-		Matcher matcher = pattern.matcher(viewDefinition);
-		if (matcher.matches()) {
-			viewDefinition = matcher.group(1);
+		String definition = getString(rs, "VIEW_DEFINITION");
+		if (definition == null && isSystemSchema(table.getSchemaName())) {
+			// Built-in INFORMATION_SCHEMA views expose no definition and are never
+			// recreated.
+			table.setDefinition((String) null);
+			return table;
 		}
-		table.setDefinition(viewDefinition);
+		setViewDefinition(table, definition);
 		return table;
+	}
+
+	private boolean isSystemSchema(String schemaName) {
+		for (String system : getDialect().getSystemSchema())
+			if (system.equalsIgnoreCase(schemaName))
+				return true;
+		return false;
+	}
+
+	static void setViewDefinition(Table table, String viewDefinition) throws SQLException {
+		if (viewDefinition == null || viewDefinition.isBlank())
+			throw new SQLException("H2 view definition is unavailable: " + table.getName());
+		if (viewDefinition.matches("(?is)\\s*CREATE\\b.*")) {
+			// Some legacy catalogs expose complete DDL, including FORCE and output names.
+			table.setDefinition(viewDefinition);
+			table.setStatement((String) null);
+		} else {
+			table.setDefinition((String) null);
+			table.setStatement(viewDefinition);
+		}
 	}
 
 	@Override

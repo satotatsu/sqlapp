@@ -4,6 +4,7 @@ package com.sqlapp.data.db.dialect.cockroach.metadata;
 import java.sql.*;
 import java.util.*;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.cockroach.util.CockroachSequenceOptions;
 import com.sqlapp.data.db.metadata.SequenceReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.*;
@@ -33,7 +34,8 @@ public class CockroachSequenceReader extends SequenceReader {
 							.setMaxValue(new java.math.BigInteger(rows.getString(5)))
 							.setIncrementBy(new java.math.BigInteger(rows.getString(6)))
 							.setCycle("YES".equals(rows.getString(7)));
-					object.setDefinition(CockroachMetadata.definition(definitions, schema, name));
+					String definition = CockroachMetadata.definition(definitions, schema, name);
+					object.setDefinition(definition).setCacheSize(CockroachSequenceOptions.cache(definition).size());
 					result.add(object);
 				}
 			}

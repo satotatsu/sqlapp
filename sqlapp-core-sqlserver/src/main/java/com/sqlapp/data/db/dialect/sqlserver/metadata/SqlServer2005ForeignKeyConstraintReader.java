@@ -63,7 +63,6 @@ public class SqlServer2005ForeignKeyConstraintReader extends ForeignKeyConstrain
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String pk_table_catalog = getString(rs, CATALOG_NAME);
 				String pk_table_schema = getString(rs, SCHEMA_NAME);
-				String pk_table_name = getString(rs, TABLE_NAME);
 				String pk_columnName = getString(rs, COLUMN_NAME);
 				String fk_table_schema = getString(rs, "referential_schema_name");
 				String fk_table_name = getString(rs, "referential_table_name");
@@ -72,15 +71,7 @@ public class SqlServer2005ForeignKeyConstraintReader extends ForeignKeyConstrain
 				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				if (c == null) {
-					c = new ForeignKeyConstraint(fk_name);
-					c.setCatalogName(pk_table_catalog);
-					c.setSchemaName(pk_table_schema);
-					c.setTableName(pk_table_name);
-					c.setUpdateRule(CascadeRule.parse(getString(rs, "update_referential_action_desc")));
-					c.setDeleteRule(CascadeRule.parse(getString(rs, "delete_referential_action_desc")));
-					c.setEnable(rs.getInt("is_disabled") != 1);
-					c.setCreatedAt(rs.getTimestamp("create_date"));
-					c.setLastAlteredAt(rs.getTimestamp("modify_date"));
+					c = createForeignKeyConstraint(rs);
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(pk_table_catalog, pk_table_schema, fk_name, c);
 					tColMap.put(pk_table_catalog, pk_table_schema, fk_name, colList);
@@ -97,6 +88,21 @@ public class SqlServer2005ForeignKeyConstraintReader extends ForeignKeyConstrain
 		});
 		setForeignKeyConstraintColumns(tColMap, list);
 		return list;
+	}
+
+	protected ForeignKeyConstraint createForeignKeyConstraint(ExResultSet rs) throws SQLException {
+		ForeignKeyConstraint c = new ForeignKeyConstraint(getString(rs, CONSTRAINT_NAME));
+		c.setCatalogName(getString(rs, CATALOG_NAME));
+		c.setSchemaName(getString(rs, SCHEMA_NAME));
+		c.setTableName(getString(rs, TABLE_NAME));
+		c.setUpdateRule(CascadeRule.parse(getString(rs, "update_referential_action_desc")));
+		c.setDeleteRule(CascadeRule.parse(getString(rs, "delete_referential_action_desc")));
+		c.setEnable(rs.getInt("is_disabled") != 1);
+		setSpecifics(rs, "is_not_trusted", c);
+		setSpecifics(rs, "is_not_for_replication", c);
+		c.setCreatedAt(rs.getTimestamp("create_date"));
+		c.setLastAlteredAt(rs.getTimestamp("modify_date"));
+		return c;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {

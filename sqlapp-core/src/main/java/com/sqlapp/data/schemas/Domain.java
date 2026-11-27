@@ -29,6 +29,8 @@ import javax.xml.stream.XMLStreamException;
 import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.DeferrabilityProperty;
 import com.sqlapp.data.schemas.properties.OnUpdateProperty;
+import com.sqlapp.data.schemas.properties.object.DomainChecksProperty;
+import com.sqlapp.data.schemas.properties.object.DomainColumnsProperty;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.ToStringBuilder;
 
@@ -38,7 +40,7 @@ import com.sqlapp.util.ToStringBuilder;
  */
 public final class Domain extends AbstractColumn<Domain> implements
 		HasParent<DomainCollection>,OnUpdateProperty<Domain>,DeferrabilityProperty<Domain>
-		,CheckProperty<Domain>{
+		,CheckProperty<Domain>, DomainChecksProperty<Domain>, DomainColumnsProperty<Domain>{
 	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
 
@@ -65,6 +67,30 @@ public final class Domain extends AbstractColumn<Domain> implements
 	private String check = null;
 	/** 制約のチェックの遅延 */
 	private Deferrability deferrability=null;
+	private final DomainCheckConstraintCollection checks = new DomainCheckConstraintCollection(this);
+	private final DomainColumnCollection columns = new DomainColumnCollection(this);
+
+	/** Optional typed components; empty for a scalar domain. */
+	@Override
+	public DomainColumnCollection getColumns() {
+		return columns;
+	}
+
+	/** Named checks for domains requiring more than the legacy single expression. */
+	@Override
+	public DomainCheckConstraintCollection getChecks() {
+		return checks;
+	}
+
+	@Override
+	protected void cloneProperties(final Domain clone) {
+		if (clone == this)
+			return;
+		// Collection merges also copy into an existing domain, whose old checks
+		// must be replaced before the generic property copier adds the new ones.
+		clone.getChecks().clear();
+		super.cloneProperties(clone);
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -80,6 +106,12 @@ public final class Domain extends AbstractColumn<Domain> implements
 			return false;
 		}
 		Domain val = (Domain) obj;
+		if (!equals(SchemaObjectProperties.DOMAIN_COLUMNS, val, equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaObjectProperties.DOMAIN_CHECKS, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.CHECK, val, equalsHandler)) {
 			return false;
 		}
@@ -96,6 +128,9 @@ public final class Domain extends AbstractColumn<Domain> implements
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
+		if (!checks.isEmpty()) {
+			builder.add(SchemaObjectProperties.DOMAIN_CHECKS, checks);
+		}
 		if (!isEmpty(getCheck())) {
 			builder.add(SchemaProperties.CHECK, this.getCheck());
 		}
@@ -105,6 +140,13 @@ public final class Domain extends AbstractColumn<Domain> implements
 	protected void writeXmlOptionalAttributes(StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
+		// A domain's source length or precision remains part of its definition,
+		// including types whose ordinary columns do not serialize a size.
+		if (getDataType() != null && !getDataType().isFixedSize() && !getDataType().isInterval()) {
+			stax.writeAttribute(SchemaProperties.LENGTH.getLabel(), getLength());
+			if (!java.util.Objects.equals(getLength(), getOctetLength()))
+				stax.writeAttribute(SchemaProperties.OCTET_LENGTH.getLabel(), getOctetLength());
+		}
 		stax.writeAttribute(SchemaProperties.CHECK.getLabel(), this.getCheck());
 		stax.writeAttribute(SchemaProperties.ON_UPDATE.getLabel(), this.getOnUpdate());
 		if (!isEmpty(this.getCheck())) {
@@ -116,6 +158,12 @@ public final class Domain extends AbstractColumn<Domain> implements
 	protected void writeXmlOptionalValues(StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
+		if (!columns.isEmpty()) {
+			columns.writeXml(stax);
+		}
+		if (!checks.isEmpty()) {
+			checks.writeXml(stax);
+		}
 	}
 
 	public String getCheck() {

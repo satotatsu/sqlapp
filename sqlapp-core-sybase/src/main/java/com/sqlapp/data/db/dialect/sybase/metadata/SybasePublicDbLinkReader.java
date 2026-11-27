@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.PublicDbLink;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SQLServerのDBリンク作成クラス
  * 
@@ -46,8 +47,7 @@ public class SybasePublicDbLinkReader extends PublicDbLinkReader {
 	}
 
 	@Override
-	protected List<PublicDbLink> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<PublicDbLink> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<PublicDbLink> result = list();

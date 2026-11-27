@@ -20,6 +20,22 @@
 package com.sqlapp.data.schemas;
 
 public class ObjectPrivilegeTest extends AbstractDbObjectTest<ObjectPrivilege> {
+	@org.junit.jupiter.api.Test
+	void hierarchyFlagSurvivesXmlForBothValues() throws Exception {
+		for (boolean hierarchy : new boolean[] { false, true }) {
+			var original = getPrivilege().setHierachy(hierarchy);
+			ObjectPrivilege restored = SchemaUtils.readXml(new java.io.StringReader(original.asXml()));
+			org.junit.jupiter.api.Assertions.assertEquals(hierarchy, restored.isHierachy());
+			org.junit.jupiter.api.Assertions.assertEquals(original, restored);
+		}
+	}
+
+	@org.junit.jupiter.api.Test
+	void absentHierarchyKeepsLegacyDefault() throws Exception {
+		String xml = getPrivilege().asXml().replaceAll("\\s+hierachy=\"(?:true|false)\"", "");
+		ObjectPrivilege restored = SchemaUtils.readXml(new java.io.StringReader(xml));
+		org.junit.jupiter.api.Assertions.assertTrue(restored.isHierachy());
+	}
 
 	public static ObjectPrivilege getPrivilege() {
 		ObjectPrivilege privilege = new ObjectPrivilege();

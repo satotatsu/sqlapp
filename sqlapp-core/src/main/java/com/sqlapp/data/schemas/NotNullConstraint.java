@@ -64,7 +64,7 @@ public final class NotNullConstraint extends Constraint
 		columns.clear();
 		if (column != null) {
 			columns.add(new ReferenceColumn(column));
-			column.setNotNull(true);
+			if (isEnable()) column.setNotNull(true);
 		}
 		return this;
 	}
@@ -97,7 +97,7 @@ public final class NotNullConstraint extends Constraint
 
 	void resetColumn(Table table) {
 		columns.setTable(table);
-		if (getColumn() != null) {
+		if (isEnable() && getColumn() != null) {
 			getColumn().setNotNull(true);
 		}
 	}

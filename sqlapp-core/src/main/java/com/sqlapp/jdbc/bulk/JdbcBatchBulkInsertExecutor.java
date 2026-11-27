@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
@@ -103,8 +105,16 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 			}
 			insertTable.getColumns().add(column);
 		}
-		final var nodes = dialect.createSqlFactoryRegistry()
-				.createSqlNodes(insertTable, SqlType.INSERT);
+		final var registry = dialect.createSqlFactoryRegistry();
+		// This executor binds by position, independently of column names. Named
+		// expressions cannot safely represent quoted identifiers containing spaces.
+		registry.getTableOptions().setParameterExpression((column, defaultValue) -> "?");
+		// Bulk copy binds source values, including audit timestamps and version
+		// counters; ordinary CRUD conventions must not replace them with literals.
+		registry.getTableOptions().setCreatedAtColumn(column -> false);
+		registry.getTableOptions().setUpdatedAtColumn(column -> false);
+		registry.getTableOptions().setOptimisticLockColumn(column -> false);
+		final var nodes = registry.createSqlNodes(insertTable, SqlType.INSERT);
 		if (nodes.isEmpty()) {
 			throw new IllegalStateException("No INSERT SQL factory is available for "
 					+ dialect.getClass().getName());
@@ -116,8 +126,39 @@ public class JdbcBatchBulkInsertExecutor implements BulkInsertExecutor {
 			final List<Column> columns) throws SQLException {
 		for (int i = 0; i < columns.size(); i++) {
 			final Column column = columns.get(i);
-			JdbcParameterBinder.bind(statement, dialect, null, i + 1, row.get(column));
+			bindValue(statement, i + 1, column, row.get(column));
 		}
+	}
+
+	/**
+	 * Binds one value with the JDBC type handler of the column's data type, the
+	 * same binding used for typed parameters elsewhere. Values of columns without
+	 * a concrete dialect type (no data type, OTHER or DOMAIN, or no registered
+	 * handler) are bound by their Java class.
+	 *
+	 * @param statement statement
+	 * @param index     one-based parameter index
+	 * @param column    target column
+	 * @param value     value to bind
+	 * @throws SQLException when binding fails
+	 */
+	protected void bindValue(final PreparedStatement statement, final int index,
+			final Column column, final Object value) throws SQLException {
+		final DbDataType<?> dbDataType = typedDbDataType(column);
+		if (dbDataType == null) {
+			JdbcParameterBinder.bind(statement, dialect, null, index, value);
+		} else {
+			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
+		}
+	}
+
+	private DbDataType<?> typedDbDataType(final Column column) {
+		final DataType type = column.getDataType();
+		if (type == null || type.isOther() || type.isDomain() || column.getArrayDimension() > 0) {
+			return null;
+		}
+		final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
+		return dbDataType == null || dbDataType.getJdbcTypeHandler() == null ? null : dbDataType;
 	}
 
 	private long count(final int[] counts) throws SQLException {

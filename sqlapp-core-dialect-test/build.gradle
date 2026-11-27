@@ -7,10 +7,10 @@ plugins {
 java {
 	withJavadocJar();
 	withSourcesJar();
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -47,6 +47,9 @@ tasks.register('dockerTest', Test) {
 	def oracleExpectedDialect = providers.gradleProperty('oracleExpectedDialect').orElse('23ai')
 	systemProperty 'sqlapp.test.oracle.image', oracleTestImage.get()
 	systemProperty 'sqlapp.test.oracle.expectedDialect', oracleExpectedDialect.get()
+	def informixTestImage = providers.gradleProperty('informixTestImage')
+		.orElse('icr.io/informix/informix-developer-database:14.10.FC9W1DE')
+	systemProperty 'sqlapp.test.informix.image', informixTestImage.get()
 	def yugabyteTestImage = providers.gradleProperty('yugabyteTestImage')
 		.orElse('yugabytedb/yugabyte:2026.1.2.0-b137')
 	systemProperty 'sqlapp.test.yugabyte.image', yugabyteTestImage.get()
@@ -92,6 +95,7 @@ dependencies {
 	implementation project(':sqlapp-command')
 	implementation project(':sqlapp-core-test')
 	implementation project(':sqlapp-core-db2')
+	implementation project(':sqlapp-core-duckdb')
 	implementation project(':sqlapp-core-firebird')
 	implementation project(':sqlapp-core-h2')
 	implementation project(':sqlapp-core-hsql')
@@ -102,6 +106,8 @@ dependencies {
 	implementation project(':sqlapp-core-oracle')
 	implementation project(':sqlapp-core-postgres')
 	implementation project(':sqlapp-core-aurora-postgres')
+	implementation project(':sqlapp-core-aurora-mysql')
+	implementation project(':sqlapp-core-edb-oracle')
 	implementation project(':sqlapp-core-alloydb')
 	implementation project(':sqlapp-core-yugabyte')
 	implementation project(':sqlapp-core-cockroach')
@@ -110,7 +116,7 @@ dependencies {
 	implementation project(':sqlapp-core-sqlite')
 	implementation project(':sqlapp-core-sqlserver')
 	implementation project(':sqlapp-core-sybase')
-	implementation project(':sqlapp-core-virtica')
+	implementation project(':sqlapp-core-vertica')
 	implementation fileTree(dir: 'lib', include: '*.jar')
 	//hsql
 	testImplementation('org.hsqldb:hsqldb:2.7.4')
@@ -127,6 +133,8 @@ dependencies {
 	testImplementation('org.mariadb.jdbc:mariadb-java-client:3.5.9')
 	//sqlite
 	testImplementation('org.xerial:sqlite-jdbc:3.53.1.0')
+	//DuckDB (embedded)
+	testImplementation('org.duckdb:duckdb_jdbc:2.0.0.1')
 	//SQL Server
 	testImplementation('net.sourceforge.jtds:jtds:1.3.1')
 	testImplementation('com.microsoft.sqlserver:mssql-jdbc:13.4.0.jre11')
@@ -296,6 +304,15 @@ tasks.register('alloydbCompatibilityTest') {
 }
 
 tasks.named('dockerTest') { exclude '**/alloydb/AlloyDBExternalTest.class' }
+
+tasks.register('db2PostgresAudit', JavaExec) {
+	description = 'Writes offline Db2/PostgreSQL factory evidence; does not connect to databases or validate server SQL.'
+	group = 'verification'
+	dependsOn tasks.named('dockerTestClasses')
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	mainClass = 'com.sqlapp.data.db.dialect.test.audit.Db2PostgresCapabilityAudit'
+	args rootProject.file('docs/development/db2-postgres-audit-evidence.tsv').absolutePath
+}
 tasks.register('alloydbExternalTest', Test) {
 	group = 'verification'
 	description = 'Opt-in destructive checks on an explicitly authorized disposable managed AlloyDB database.'
@@ -309,4 +326,101 @@ tasks.register('alloydbExternalTest', Test) {
 			throw new GradleException('Explicit SQLAPP_ALLOYDB_ALLOW_DESTRUCTIVE_TESTS=true is required for an authorized disposable AlloyDB database.')
 		}
 	}
+}
+
+
+def edbControlTasks = []
+['14': 'postgres:14.22', '15': 'postgres:15.17', '16': 'postgres:16.13', '17': 'postgres:17.9', '18': 'postgres:18.4'].each { engine, image ->
+    def controlTask = tasks.register("edbOraclePostgres"+engine+"Test", Test) {
+        description = 'Runs EDB dialect controls on upstream PostgreSQL '+engine+'; does not emulate EPAS.'
+        group = 'verification'
+        testClassesDirs = sourceSets.dockerTest.output.classesDirs
+        classpath = sourceSets.dockerTest.runtimeClasspath
+        useJUnitPlatform()
+        filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.edb.oracle.EdbOraclePostgresCompatibilityTest'
+        systemProperty 'sqlapp.test.edb.postgresImage', image
+        if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+            environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+        }
+        testLogging { events 'passed', 'failed', 'skipped'; exceptionFormat = 'full' }
+    }
+    if (!edbControlTasks.isEmpty()) {
+        def previousControl = edbControlTasks.last()
+        controlTask.configure { mustRunAfter previousControl }
+    }
+    edbControlTasks.add(controlTask)
+}
+tasks.register('edbOracleCompatibilityTest') {
+    description = 'Runs upstream PostgreSQL 14–18 controls for the EDB Oracle dialect; no EPAS execution.'
+    group = 'verification'
+    dependsOn edbControlTasks
+}
+
+tasks.register('firebirdCompatibilityTest', Test) {
+	description = 'Runs Firebird unit tests and disposable 2.5/3/4/5 schema, bulk and JDBC-tree integration tests.'
+	group = 'verification'
+	dependsOn ':sqlapp-core-firebird:test'
+	testClassesDirs = sourceSets.dockerTest.output.classesDirs
+	classpath = sourceSets.dockerTest.runtimeClasspath
+	useJUnitPlatform()
+	filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.firebird.*'
+	outputs.upToDateWhen { false }
+	if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+		environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+	}
+	jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+	testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+}
+
+// Fixed, disposable MariaDB metadata/XML/DDL compatibility matrix.
+['105': '10.5', '114': '11.4', '118': '11.8'].each { baseline, version ->
+	tasks.register("mariadb${baseline}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Runs MariaDB ${version} metadata/XML/DDL round trips in disposable containers."
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.mariadb.integration.*'
+		systemProperty 'sqlapp.test.mariadb.image', "mariadb:${version}"
+		systemProperty 'sqlapp.testcontainers.reuse', false
+		outputs.upToDateWhen { false }
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+tasks.named('mariadb114CompatibilityTest') { mustRunAfter tasks.named('mariadb105CompatibilityTest') }
+tasks.named('mariadb118CompatibilityTest') { mustRunAfter tasks.named('mariadb114CompatibilityTest') }
+tasks.register('mariadbIntegrationTest') {
+	group = 'verification'
+	description = 'Runs the MariaDB 10.5/11.4/11.8 Testcontainers compatibility matrix.'
+	dependsOn tasks.named('mariadb105CompatibilityTest'), tasks.named('mariadb114CompatibilityTest'),
+			tasks.named('mariadb118CompatibilityTest')
+}
+
+// Upstream MySQL compatibility only; these containers do not emulate AWS Aurora.
+['80': 'mysql:8.0', '84': 'mysql:8.4'].each { baseline, image ->
+	tasks.register("auroraMySql${baseline}CompatibilityTest", Test) {
+		group = 'verification'
+		description = "Checks the Aurora MySQL dialect on ${image}; no Aurora service verification."
+		testClassesDirs = sourceSets.dockerTest.output.classesDirs
+		classpath = sourceSets.dockerTest.runtimeClasspath
+		useJUnitPlatform()
+		filter.includeTestsMatching 'com.sqlapp.data.db.dialect.test.aurora.mysql.AuroraMySqlCompatibilityTest'
+		systemProperty 'sqlapp.test.aurora.mysqlImage', image
+		systemProperty 'sqlapp.test.aurora.mysqlMinor', baseline == '80' ? '0' : '4'
+		if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') && !System.getenv('DOCKER_HOST')) {
+			environment 'DOCKER_HOST', 'npipe:////./pipe/docker_engine'
+		}
+		jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+		testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full' }
+	}
+}
+tasks.named('auroraMySql84CompatibilityTest') { mustRunAfter tasks.named('auroraMySql80CompatibilityTest') }
+tasks.register('auroraMySqlCompatibilityTest') {
+	group = 'verification'
+	description = 'Runs upstream MySQL 8.0/8.4 checks for Aurora MySQL. Does not connect to AWS.'
+	dependsOn tasks.named('auroraMySql80CompatibilityTest'), tasks.named('auroraMySql84CompatibilityTest')
 }

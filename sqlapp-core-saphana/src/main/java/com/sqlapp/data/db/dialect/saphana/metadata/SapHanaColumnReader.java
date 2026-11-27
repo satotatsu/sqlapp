@@ -25,7 +25,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.saphana.SapHanaSpatial;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -70,6 +72,19 @@ public class SapHanaColumnReader extends ColumnReader {
 		Column obj = new Column(getString(rs, COLUMN_NAME));
 		obj.setNullable(allowDBNull);
 		this.getDialect().setDbType(productDataType, max_length, scale, obj);
+		if (obj.getDataType() == DataType.TIMESTAMP)
+			obj.setLength((Long) null);
+		if (obj.getDataType() == DataType.GEOMETRY) {
+			obj.setLength((Long) null);
+			obj.setScale((Integer) null);
+			if (SapHanaSpatial.ST_POINT.equalsIgnoreCase(productDataType)) {
+				obj.getSpecifics().put(SapHanaSpatial.TYPE, SapHanaSpatial.ST_POINT);
+			}
+			final Integer srid = getInteger(rs, "SPATIAL_SRS_ID");
+			if (srid != null && srid.intValue() != 0) {
+				obj.getSpecifics().put(SapHanaSpatial.SRID, srid.toString());
+			}
+		}
 		obj.setTableName(getString(rs, TABLE_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));
 		obj.setDefaultValue(getString(rs, "DEFAULT_VALUE"));
@@ -80,8 +95,13 @@ public class SapHanaColumnReader extends ColumnReader {
 		} else if ("BY DEFAULT AS IDENTITY".equalsIgnoreCase(generationType)) {
 			obj.setIdentity(true);
 			obj.setIdentityGenerationType(IdentityGenerationType.ByDefault);
+		} else if ("ALWAYS AS".equalsIgnoreCase(generationType)) {
+			obj.setFormula(getString(rs, "GENERATED_ALWAYS_AS"));
+			obj.setFormulaPersisted(true);
 		}
 		obj.setRemarks(getString(rs, "COMMENTS"));
+		// Optional catalog field: older HANA versions do not expose NSE load units.
+		setSpecifics(rs, "LOAD_UNIT", obj);
 		return obj;
 	}
 

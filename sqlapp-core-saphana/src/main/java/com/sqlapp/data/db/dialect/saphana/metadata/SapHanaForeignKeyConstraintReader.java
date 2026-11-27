@@ -60,7 +60,7 @@ public class SapHanaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String fk_catalog = null;
+				String fk_table = getString(rs, TABLE_NAME);
 				String fk_schema = getString(rs, SCHEMA_NAME);
 				String fk_name = getString(rs, CONSTRAINT_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
@@ -68,15 +68,15 @@ public class SapHanaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 				String referenced_table_schema = getString(rs, "REFERENCED_SCHEMA_NAME");
 				String referenced_table_name = getString(rs, "REFERENCED_TABLE_NAME");
 				String referenced_column_name = getString(rs, "REFERENCED_COLUMN_NAME");
-				ForeignKeyConstraint c = tCMap.get(fk_catalog, fk_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_catalog, fk_schema, fk_name);
+				ForeignKeyConstraint c = tCMap.get(fk_schema, fk_table, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(fk_schema, fk_table, fk_name);
 				if (c == null) {
 					c = createConstraint(rs);
 					// unique_constraint_name
 					// c.setDeferrability(Deferrability.parse(rs.getInt("DEFERRABILITY")));
 					colList = new FlexList<ColumnPair>();
-					tCMap.put(fk_catalog, fk_schema, fk_name, c);
-					tColMap.put(fk_catalog, fk_schema, fk_name, colList);
+					tCMap.put(fk_schema, fk_table, fk_name, c);
+					tColMap.put(fk_schema, fk_table, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();
@@ -88,7 +88,14 @@ public class SapHanaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 				colList.add(cPair);
 			}
 		});
-		setForeignKeyConstraintColumns(tColMap, list);
+		// The shared helper keys by catalog/schema/name. HANA constraint names
+		// are table scoped, so give it each constraint's column list separately.
+		for (ForeignKeyConstraint constraint : list) {
+			final TripleKeyMap<String, String, String, FlexList<ColumnPair>> columns = tripleKeyMap();
+			columns.put(constraint.getCatalogName(), constraint.getSchemaName(), constraint.getName(),
+					tColMap.get(constraint.getSchemaName(), constraint.getTableName(), constraint.getName()));
+			setForeignKeyConstraintColumns(columns, java.util.Collections.singletonList(constraint));
+		}
 		return list;
 	}
 
@@ -101,7 +108,6 @@ public class SapHanaForeignKeyConstraintReader extends ForeignKeyConstraintReade
 		c = new ForeignKeyConstraint(getString(rs, CONSTRAINT_NAME));
 		c.setSchemaName(getString(rs, SCHEMA_NAME));
 		c.setTableName(getString(rs, TABLE_NAME));
-		c.setMatchOption(getString(rs, MATCH_OPTION));
 		c.setUpdateRule(getString(rs, UPDATE_RULE));
 		c.setDeleteRule(getString(rs, DELETE_RULE));
 		return c;

@@ -7,3 +7,5 @@
 /.settings/
 /.project
 /.tmp
+# JVM crash logs (keep locally for diagnosis; do not commit)
+hs_err_pid*.log

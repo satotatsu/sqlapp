@@ -626,6 +626,19 @@ public class SimpleBeanWrapper {
 		}
 	}
 
+	/** Explicitly clears a reference field; preserves the legacy setField null semantics. */
+	public boolean setNullableField(final Object obj, final String fieldName, final Object value) {
+		if (value != null) return setField(obj, fieldName, value);
+		final Field field = this.protectedFieldMap.get(fieldName);
+		if (field == null || field.getType().isPrimitive()) return false;
+		try {
+			field.set(obj, null);
+			return true;
+		} catch (final Exception error) {
+			throw new InvalidPropertyException(fieldName, null, field.getType(), error);
+		}
+	}
+
 	/**
 	 * Fieldから値を取得します
 	 * 

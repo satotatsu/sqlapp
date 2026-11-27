@@ -1,0 +1,31 @@
+// Run against a project where generateData is already configured:
+// ./gradlew -I /absolute/path/to/preview.init.gradle previewData
+// Uses the existing task's data source and generator configuration directory.
+allprojects {
+    afterEvaluate { project ->
+        def source = project.tasks.findByName('generateData')
+        if (source != null) {
+            def taskType = source.class.classLoader.loadClass('com.sqlapp.gradle.plugins.GenerateDataTask')
+            project.tasks.register('previewData', taskType) {
+                dataSource = source.dataSource
+                directory.set(source.directory)
+                includes.set(source.includes.getOrElse([]))
+                excludes.set(source.excludes.getOrElse([]))
+                includeSchemas.set(source.includeSchemas)
+                excludeSchemas.set(source.excludeSchemas)
+                includeTables.set(source.includeTables)
+                excludeTables.set(source.excludeTables)
+                onlyCurrentSchema.set(source.onlyCurrentSchema)
+                onlyCurrentCatalog.set(source.onlyCurrentCatalog)
+                evaluator = source.evaluator
+                generatorConfigFactory = source.generatorConfigFactory
+                tableOptions = source.tableOptions
+                useSchemaNameDirectory.set(source.useSchemaNameDirectory)
+                preview.set(true)
+                previewLimit.set(10)
+                randomSeed.set(42L)
+                baseTime.set('2026-01-02T03:04:00')
+            }
+        }
+    }
+}

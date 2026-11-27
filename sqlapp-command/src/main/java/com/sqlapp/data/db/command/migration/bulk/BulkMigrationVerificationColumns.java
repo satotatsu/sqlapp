@@ -13,11 +13,11 @@ import com.sqlapp.jdbc.bulk.BulkUpsertPlan;
 /**
  * Selects the columns actually written by a migration for default verification.
  */
-final class BulkMigrationVerificationColumns {
+public final class BulkMigrationVerificationColumns {
 	private BulkMigrationVerificationColumns() {
 	}
 
-	static List<String> resolve(final Table table, final BulkMigrationMode mode, final BulkOption bulkOption,
+	public static List<String> resolve(final Table table, final BulkMigrationMode mode, final BulkOption bulkOption,
 			final BulkUpsertOption upsertOption) {
 		Objects.requireNonNull(table, "table");
 		Objects.requireNonNull(mode, "mode");

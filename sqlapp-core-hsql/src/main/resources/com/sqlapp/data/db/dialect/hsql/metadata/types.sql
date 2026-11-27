@@ -1,0 +1,12 @@
+SELECT * FROM INFORMATION_SCHEMA.USER_DEFINED_TYPES
+WHERE USER_DEFINED_TYPE_CATEGORY = 'DISTINCT'
+  /*if isNotEmpty(catalogName)*/
+  AND USER_DEFINED_TYPE_CATALOG IN /*catalogName*/('%')
+  /*end*/
+  /*if isNotEmpty(schemaName)*/
+  AND USER_DEFINED_TYPE_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(typeName)*/
+  AND USER_DEFINED_TYPE_NAME IN /*typeName*/('%')
+  /*end*/
+ORDER BY USER_DEFINED_TYPE_CATALOG, USER_DEFINED_TYPE_SCHEMA, USER_DEFINED_TYPE_NAME

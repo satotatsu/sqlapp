@@ -21,7 +21,6 @@ package com.sqlapp.data.db.dialect.db2.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.trim;
-import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -37,7 +36,6 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.TripleKeyMap;
 
 /**
  * DB2のチェック制約作成クラス
@@ -55,8 +53,8 @@ public class Db2CheckConstraintReader extends CheckConstraintReader {
 	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
-		final TripleKeyMap<String, String, String, List<Column>> colMap = tripleKeyMap();
-		final TripleKeyMap<String, String, String, CheckConstraint> tMap = tripleKeyMap();
+		final java.util.Map<List<String>, List<Column>> colMap = new java.util.LinkedHashMap<>();
+		final java.util.Map<List<String>, CheckConstraint> tMap = new java.util.LinkedHashMap<>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -66,8 +64,8 @@ public class Db2CheckConstraintReader extends CheckConstraintReader {
 				String source = trim(getString(rs, "TEXT"));
 				String column_name = trim(getString(rs, COLUMN_NAME));
 				String tableName = trim(getString(rs, TABLE_NAME));
-				CheckConstraint c = tMap.get(catalog_name, schema_name, name);
-				List<Column> cols = colMap.get(catalog_name, schema_name, name);
+				CheckConstraint c = tMap.get(List.of(schema_name, tableName, name));
+				List<Column> cols = colMap.get(List.of(schema_name, tableName, name));
 				// short triggetType=rs.getShort("RDB$TRIGGER_TYPE");
 				if (c == null) {
 					c = new CheckConstraint(name, source);
@@ -75,8 +73,8 @@ public class Db2CheckConstraintReader extends CheckConstraintReader {
 					c.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					c.setTableName(tableName);
 					cols = list();
-					tMap.put(catalog_name, schema_name, name, c);
-					colMap.put(catalog_name, schema_name, name, cols);
+					tMap.put(List.of(schema_name, tableName, name), c);
+					colMap.put(List.of(schema_name, tableName, name), cols);
 				}
 				if (column_name != null) {
 					Column column = new Column(column_name);
@@ -85,13 +83,13 @@ public class Db2CheckConstraintReader extends CheckConstraintReader {
 				}
 			}
 		});
-		for (CheckConstraint c : tMap.toList()) {
-			List<Column> cols = colMap.get(c.getCatalogName(), c.getSchemaName(), c.getName());
+		for (CheckConstraint c : new java.util.ArrayList<>(tMap.values())) {
+			List<Column> cols = colMap.get(List.of(c.getSchemaName(), c.getTableName(), c.getName()));
 			if (cols.size() == 1) {
 				CommonUtils.first(cols).setCheckConstraint(c);
 			}
 		}
-		return tMap.toList();
+		return new java.util.ArrayList<>(tMap.values());
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

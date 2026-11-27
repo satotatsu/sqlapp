@@ -28,7 +28,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2019TableReader extends SqlServer2016TableReader {
+public class SqlServer2019TableReader extends SqlServer2017TableReader {
 
 	protected SqlServer2019TableReader(final Dialect dialect) {
 		super(dialect);

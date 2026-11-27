@@ -9,6 +9,6 @@ WHERE routine_type='FUNCTION'
   AND specific_schema IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(functionName) */
-  AND specific_name IN /*functionName*/('%')
+  AND routine_name IN /*functionName*/('%')
   /*end*/
 ORDER BY specific_catalog, specific_schema, specific_name

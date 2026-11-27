@@ -8,7 +8,7 @@ WHERE routine_type='PROCEDURE'
   /*if isNotEmpty(schemaName) */
   AND specific_schema IN /*schemaName*/('%')
   /*end*/
-  /*if isNotEmpty(functionName) */
-  AND specific_name IN /*functionName*/('%')
+  /*if isNotEmpty(procedureName) */
+  AND routine_name IN /*procedureName*/('%')
   /*end*/
 ORDER BY specific_catalog, specific_schema, specific_name

@@ -79,6 +79,7 @@ public class PostgresTypeReader extends TypeReader {
 
 	protected Type createType(ExResultSet rs) throws SQLException {
 		Type obj = new Type(getString(rs, "type_name"));
+		obj.setId(getString(rs, "oid"));
 		// obj.setSpecificName(getString(rs, "oid"));
 		// obj.setCatalogName(getString(rs, "type_catalog"));
 		obj.setSchemaName(getString(rs, "type_schema"));

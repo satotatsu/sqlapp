@@ -103,4 +103,11 @@ class Mariadb105MetadataReaderTest {
 		statement.execute("CREATE PROCEDURE metadata105_procedure(IN p_id BIGINT) "
 				+ "SELECT code FROM metadata105_parent WHERE id = p_id");
 	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
+		}
+	}
 }

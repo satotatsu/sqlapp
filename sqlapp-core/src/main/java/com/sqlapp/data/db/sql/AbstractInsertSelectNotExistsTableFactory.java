@@ -26,6 +26,7 @@ import java.util.List;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * UPDATE生成クラス
@@ -94,9 +95,13 @@ public abstract class AbstractInsertSelectNotExistsTableFactory<S extends Abstra
 			}
 		});
 		builder.lineBreak();
-		builder.from();
-		builder.space()._add(this.getDialect().getSelectDummyTableName());
-		builder.lineBreak();
+		final String dummyTableName = this.getDialect().getSelectDummyTableName();
+		if (!CommonUtils.isEmpty(dummyTableName)) {
+			// FROM句なしのSELECTをサポートするDBではダミーテーブルを省略する
+			builder.from();
+			builder.space()._add(dummyTableName);
+			builder.lineBreak();
+		}
 		builder.where().not().exists().lineBreak();
 		builder.brackets(true, () -> {
 			builder.select().space()._add("1");

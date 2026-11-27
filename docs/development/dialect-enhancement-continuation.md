@@ -39,6 +39,10 @@ together with the `Less-covered database dialects` section of `docs/development/
 
 ### SAP HANA
 
+See [SAP HANA dialect](saphana-dialect.md) for the 2026-10-22 metadata,
+column DDL, identity, identifier, index and synonym enhancements and their
+verification limits.
+
 - BOOLEAN, JSON, and REAL_VECTOR types.
 - HANA Cloud version split.
 - Vector functions and HNSW vector-index DDL.

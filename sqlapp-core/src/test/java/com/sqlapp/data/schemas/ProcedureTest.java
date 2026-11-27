@@ -20,6 +20,15 @@
 package com.sqlapp.data.schemas;
 
 public class ProcedureTest extends AbstractDbObjectTest<Procedure> {
+	@org.junit.jupiter.api.Test
+	void sqlDataAccessSurvivesXmlForEveryValue() throws Exception {
+		for (var access : SqlDataAccess.values()) {
+			var procedure = new Procedure("P").setSqlDataAccess(access);
+			Procedure restored = SchemaUtils.readXml(new java.io.StringReader(procedure.asXml()));
+			org.junit.jupiter.api.Assertions.assertEquals(access, restored.getSqlDataAccess());
+			org.junit.jupiter.api.Assertions.assertEquals(access, SqlDataAccess.parse(access.name()));
+		}
+	}
 
 	public static Procedure getProcedure(String name) {
 		Procedure obj = new Procedure(name);

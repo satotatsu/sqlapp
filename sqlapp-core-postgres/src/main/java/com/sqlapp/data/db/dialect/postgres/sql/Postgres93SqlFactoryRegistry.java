@@ -20,6 +20,11 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.DropNamedObjectFactory;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Mview;
+import com.sqlapp.data.schemas.State;
 
 public class Postgres93SqlFactoryRegistry extends Postgres92SqlFactoryRegistry {
 
@@ -36,6 +41,17 @@ public class Postgres93SqlFactoryRegistry extends Postgres92SqlFactoryRegistry {
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
+		registerSqlFactory(Mview.class, State.Modified, SqlType.ALTER);
+	}
+
+	@Override
+	protected void initializeAllSqls() {
+		super.initializeAllSqls();
+		registerSqlFactory(Mview.class, SqlType.CREATE, Postgres93CreateMviewFactory.class);
+		registerSqlFactory(Mview.class, SqlType.ALTER, Postgres93AlterMviewFactory.class);
+		registerSqlFactory(Mview.class, SqlType.DROP, Postgres93DropMviewFactory.class);
+		registerSqlFactory(Mview.class, SqlType.REFRESH, Postgres93RefreshMviewFactory.class);
+		registerSqlFactory(Index.class, SqlType.DROP, DropNamedObjectFactory.class);
 	}
 
 }

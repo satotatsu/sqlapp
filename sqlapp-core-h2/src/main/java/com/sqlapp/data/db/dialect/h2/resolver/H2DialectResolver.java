@@ -57,6 +57,9 @@ public class H2DialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
+			if (majorVersion > 2 || majorVersion == 2 && minorVersion >= 2) {
+				return DialectHolder.defaultDialect220;
+			}
 			if (majorVersion >= 2) {
 				return DialectHolder.defaultDialect200;
 			}

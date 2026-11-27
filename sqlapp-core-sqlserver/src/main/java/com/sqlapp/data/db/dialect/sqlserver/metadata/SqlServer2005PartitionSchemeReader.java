@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerPartitionOptions;
 import com.sqlapp.data.db.metadata.PartitionSchemeReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.PartitionScheme;
@@ -63,12 +64,18 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 					obj = createPartitionScheme(rs);
 					map.put(catalog_name, name, obj);
 				}
-				TableSpace ts = new TableSpace(getString(rs, "file_group_name"));
-				ts.setId("" + rs.getInt("destination_id"));
-				obj.getTableSpaces().add(ts);
+				addDestination(obj, rs);
 			}
 		});
 		return map.toList();
+	}
+
+	protected void addDestination(PartitionScheme scheme, ExResultSet rs) throws SQLException {
+		TableSpace tableSpace = new TableSpace(getString(rs, "file_group_name"));
+		tableSpace.setId("" + rs.getInt("destination_id"));
+		scheme.getTableSpaces().add(tableSpace);
+		if (rs.getInt("destination_id") == rs.getInt("fanout") + 1)
+			SqlServerPartitionOptions.nextUsed(scheme, tableSpace.getName());
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
@@ -83,6 +90,7 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 		obj.setDefault(rs.getBoolean("is_default"));
 		obj.setName(name);
 		obj.setPartitionFunctionName(getString(rs, "function_name"));
+		SqlServerPartitionOptions.clearNextUsed(obj);
 		return obj;
 	}
 

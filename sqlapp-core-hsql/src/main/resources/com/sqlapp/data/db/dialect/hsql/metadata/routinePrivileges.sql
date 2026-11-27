@@ -2,6 +2,7 @@ SELECT
     r.*
 FROM information_schema.routine_privileges r
 WHERE 1=1
+  AND r.grantee NOT IN ('_SYSTEM', 'DBA', 'CREATE_SCHEMA', 'CHANGE_AUTHORIZATION', 'SCRIPT_OPS')
   /*if isNotEmpty(catalogName)*/
   AND r.routine_catalog IN /*catalogName*/('%')
   /*end*/

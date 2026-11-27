@@ -98,7 +98,8 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 				case 6:
 					return DialectHolder.postgreSQL96;
 				default:
-					return DialectHolder.postgreSQL90;
+					// 9.6 was the last 9.x release.
+					return DialectHolder.postgreSQL96;
 				}
 
 			} else if (majorVersion >= 8) {

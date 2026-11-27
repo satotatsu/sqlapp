@@ -305,6 +305,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return nextHandler.next();
 		}
 
+		/** Whether already loaded rows remain, without advancing a JDBC cursor. */
+		public boolean hasBufferedRows() {
+			return nextHandler != null && nextHandler.hasBufferedRows();
+		}
+
 		public Row get() throws SQLException {
 			return nextHandler.get();
 		}
@@ -322,6 +327,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 			public abstract boolean next() throws SQLException;
 
+			public abstract boolean hasBufferedRows();
+
 			public abstract Row get() throws SQLException;
 
 			public abstract void close();
@@ -331,6 +338,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			private int currentIndex = 0;
 			private final List<Row> subList = CommonUtils.list();
 			private Row currentParentRow;
+
+			@Override
+			public boolean hasBufferedRows() {
+				return currentIndex < subList.size();
+			}
 
 			public ParentListHandler(TableRelation tableRelation, SQLRunnable afterRootBatchLoaded,
 					SQLRunnable beforeNextRootBatch) {
@@ -387,6 +399,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			private boolean resultSetNext = true;
 			private final List<Row> loadedList = CommonUtils.list();
 			private final List<Column> resultSetColumns = CommonUtils.list();
+
+			@Override
+			public boolean hasBufferedRows() {
+				return currentIndex < rows.size() || !loadedList.isEmpty();
+			}
 
 			@Override
 			public boolean next() throws SQLException {

@@ -1,1 +1,1 @@
-CREATE INDEX IF NOT EXISTS [IDX_tableA1] ON [tableA] ( [colC] DESC )
+CREATE INDEX IF NOT EXISTS "IDX_tableA1" ON "tableA" ( "colC" DESC )

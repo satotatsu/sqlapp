@@ -34,19 +34,15 @@ public class SqlServer2005DropTableFactory extends AbstractDropTableFactory<SqlS
 	@Override
 	public List<SqlOperation> createSql(Table obj) {
 		SqlServerSqlBuilder builder = createSqlBuilder();
-		addDropObject(obj, builder);
+		if (this.getOptions().isDropIfExists()) {
+			// SQL Server 2016より前はDROP TABLE IF EXISTSが無いため、OBJECT_IDで存在を確認する
+			builder.dropIfExists(obj, this.getOptions().isDecorateSchemaName());
+		} else {
+			addDropObject(obj, builder);
+		}
 		List<SqlOperation> sqlList = list();
-		addIfNotExists(obj, sqlList);
 		addSql(sqlList, builder, SqlType.DROP, obj);
 		return sqlList;
-	}
-
-	protected void addIfNotExists(Table obj, List<SqlOperation> sqlList) {
-		if (this.getOptions().isDropIfExists()) {
-			SqlServerSqlBuilder builder = this.newSqlBuilder(getDialect());
-			builder.dropIfExists(obj);
-			addSql(sqlList, builder, SqlType.DROP, obj);
-		}
 	}
 
 }

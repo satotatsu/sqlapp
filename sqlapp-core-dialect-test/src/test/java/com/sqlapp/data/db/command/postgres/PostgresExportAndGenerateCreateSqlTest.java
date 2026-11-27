@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 
-public class PostgresExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class PostgresExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
@@ -35,17 +35,18 @@ public class PostgresExportAndGenerateCreateSqlTest extends AbstractExportAndGen
 	/**
 	 * JDBC User Name
 	 */
-	private String username="postgres";
+	private String username = "postgres";
 	/**
 	 * JDBC Password
 	 */
-	private String password="postgres";
+	private String password = "postgres";
 
-	public PostgresExportAndGenerateCreateSqlTest() throws IOException{
-		this.url=getTestProp("postgres.jdbc.url");
-		this.username=getTestProp("postgres.jdbc.username");
-		this.password=getTestProp("postgres.jdbc.password");
+	public PostgresExportAndGenerateCreateSqlTest() throws IOException {
+		this.url = getTestProp("postgres.jdbc.url");
+		this.username = getTestProp("postgres.jdbc.username");
+		this.password = getTestProp("postgres.jdbc.password");
 	}
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -73,6 +74,5 @@ public class PostgresExportAndGenerateCreateSqlTest extends AbstractExportAndGen
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

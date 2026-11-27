@@ -512,7 +512,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	}
 
 	private void setFailOnUnknownProperties(final MapperBuilder<?, ?> builder, final boolean failOnUnknownProperties) {
-		if (indentOutput) {
+		if (failOnUnknownProperties) {
 			builder.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 		} else {
 			builder.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);

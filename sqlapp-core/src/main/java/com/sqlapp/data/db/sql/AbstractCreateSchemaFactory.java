@@ -60,6 +60,7 @@ public abstract class AbstractCreateSchemaFactory<S extends AbstractSqlBuilder<?
 		addCollectionOrder(SchemaObjectProperties.EXTERNAL_TABLES.getLabel());
 		addCollectionOrder(SchemaObjectProperties.DB_LINKS.getLabel());
 		addCollectionOrder(SchemaObjectProperties.TABLES.getLabel());
+		addCollectionOrder(SchemaObjectProperties.PROJECTIONS.getLabel());
 		addCollectionOrder(SchemaObjectProperties.TABLE_LINKS.getLabel());
 		addCollectionOrder(SchemaObjectProperties.VIEWS.getLabel());
 		addCollectionOrder(SchemaObjectProperties.MVIEW_LOGS.getLabel());

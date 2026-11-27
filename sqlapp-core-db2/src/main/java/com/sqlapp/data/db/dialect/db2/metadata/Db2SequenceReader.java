@@ -65,7 +65,9 @@ public class Db2SequenceReader extends SequenceReader {
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("sequences.sql");
+		return getSqlNodeCache()
+				.getString(getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110 ? "sequences1110.sql"
+						: "sequences.sql");
 	}
 
 	protected Sequence createSequence(ExResultSet rs) throws SQLException {
@@ -80,6 +82,7 @@ public class Db2SequenceReader extends SequenceReader {
 		sequence.setIncrementBy(rs.getBigDecimal("INCREMENT"));
 		sequence.setCacheSize(cacheSize);
 		sequence.setCache(cacheSize != null && cacheSize.compareTo(BigDecimal.ONE) > 0);
+		// The next cache allocation boundary: never below the next value to issue.
 		sequence.setLastValue(rs.getBigDecimal("NEXTCACHEFIRSTVALUE"));
 		sequence.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 		sequence.setLastAlteredAt(rs.getTimestamp("ALTER_TIME"));
@@ -108,6 +111,27 @@ public class Db2SequenceReader extends SequenceReader {
 			sequence.setOrder(true);
 		} else {
 			sequence.setOrder(false);
+		}
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+			String schema = getString(rs, "SEQUENCE_TYPE_SCHEMA"), type = getString(rs, "SEQUENCE_TYPE_NAME");
+			if (schema == null || type == null)
+				throw new SQLException("Db2 sequence data type could not be resolved: " + sequence.getName());
+			sequence.getSpecifics().put("SEQUENCE_TYPE_SCHEMA", schema);
+			sequence.getSpecifics().put("SEQUENCE_TYPE_NAME", type);
+			if (!"SYSIBM".equals(schema)) {
+				sequence.setDataType(DataType.OTHER).setDataTypeName(
+						com.sqlapp.data.db.dialect.db2.util.Db2CreationContext.qualified(schema, type));
+			} else {
+				sequence.setDataType(switch (type) {
+				case "SMALLINT" -> DataType.SMALLINT;
+				case "INTEGER" -> DataType.INT;
+				case "BIGINT" -> DataType.BIGINT;
+				case "DECIMAL", "NUMERIC" -> DataType.DECIMAL;
+				default -> throw new SQLException("Unsupported Db2 sequence type: " + type);
+				});
+				if (sequence.getDataType() == DataType.DECIMAL)
+					sequence.setPrecision(precision).setScale(0);
+			}
 		}
 		return sequence;
 	}

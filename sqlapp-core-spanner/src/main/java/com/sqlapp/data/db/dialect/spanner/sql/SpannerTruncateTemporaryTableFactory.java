@@ -35,8 +35,9 @@ public class SpannerTruncateTemporaryTableFactory extends AbstractTruncateTempor
 	protected void addTruncateTable(final Table obj, final SpannerSqlBuilder builder) {
 		String prefix = this.getTableOptions().getTemporaryTableNamePrefix().apply(obj);
 		String suffix = this.getTableOptions().getTemporaryTableNameSuffix().apply(obj);
-		builder.delete().from().table();
+		builder.delete().from();
 		builder.space()._add(
 				this.getDialect().getTemporaryTableName(obj, prefix, suffix, this.getOptions().isDecorateSchemaName()));
+		builder.where().space()._add("TRUE");
 	}
 }

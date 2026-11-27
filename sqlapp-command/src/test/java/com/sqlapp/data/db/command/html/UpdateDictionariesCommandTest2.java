@@ -42,7 +42,7 @@ public class UpdateDictionariesCommandTest2 {
 	private Properties testRun(String fileType) {
 		UpdateDictionariesCommand command = new UpdateDictionariesCommand();
 		command.setWithSchema((o) -> true);
-		command.setTargetFile(new File("src/test/resources/schemas/Catalog.xml"));
+		command.setTargetFile(new File("src/test/resources/schemas/catalog.xml"));
 		File directory = new File("src/test/resources/html/" + fileType);
 		command.setDirectory(directory);
 		command.setFileType(fileType);

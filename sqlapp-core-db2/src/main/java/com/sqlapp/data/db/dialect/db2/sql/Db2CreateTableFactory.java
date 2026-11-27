@@ -35,6 +35,42 @@ import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
 public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuilder> {
+	@Override
+	public List<SqlOperation> createSql(Table table) {
+		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table) && !table.getDefinition().isEmpty()) {
+			List<SqlOperation> result = new java.util.ArrayList<>();
+			for (String statement : Db2DefinitionSql.statements(table.getDefinition(), getDialect())) {
+				if (statement == null || statement.isBlank() || statement.indexOf('\0') >= 0)
+					throw new IllegalArgumentException("Db2 table definition must contain executable statements");
+				addSql(result, createSqlBuilder()._add(statement), SqlType.CREATE, table);
+			}
+			// A full definition owns its columns, constraints and organization. Indexes
+			// remain separate Schema objects, as on the modeled CREATE TABLE path.
+			addIndexDefinitions(table, result);
+			addOtherDefinitions(table, result);
+			return result;
+		}
+		if (!com.sqlapp.data.db.dialect.db2.Db2Nickname.isNickname(table)) {
+			List<SqlOperation> result = super.createSql(table);
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110) {
+				List<SqlOperation> physical = new java.util.ArrayList<>();
+				for (String option : Db2TableOptionsSql.afterCreate(table)) {
+					Db2SqlBuilder builder = createSqlBuilder()._add("ALTER TABLE ")
+							.name(table, getOptions().isDecorateSchemaName()).space()._add(option);
+					addSql(physical, builder, SqlType.ALTER, table);
+				}
+				result.addAll(1, physical);
+			}
+			return result;
+		}
+		var sql = Db2NicknameSql.create(table, this::createSqlBuilder);
+		List<SqlOperation> result = new java.util.ArrayList<>();
+		for (String statement : sql)
+			addSql(result, createSqlBuilder()._add(statement),
+					statement.startsWith("ALTER ") ? SqlType.ALTER : SqlType.CREATE, table);
+		addOtherDefinitions(table, result);
+		return result;
+	}
 
 	@Override
 	protected void addCreateObject(final Table table, final Db2SqlBuilder builder) {
@@ -44,7 +80,7 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 
 	/**
 	 * オプションを追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
@@ -52,68 +88,96 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 	protected void addOption(final Table table, final Db2SqlBuilder builder) {
 		addTableOption(table, builder);
 		addPartitionByDefinition(table, builder);
+		if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110)
+			Db2TableOptionsSql.create(table, builder);
 	}
 
 	protected void addTableOption(final Table table, final Db2SqlBuilder builder) {
 		addCollateDefinition(table, builder);
-		addAutoIncrementDefinition(table, builder);
-		addRemarkDefinition(table, builder);
+		if (table.getTableSpaceName() != null)
+			builder.space()._add("IN").space().name(table.getTableSpaceName());
+		if (table.getIndexTableSpaceName() != null)
+			builder.space()._add("INDEX IN").space().name(table.getIndexTableSpaceName());
+		if (table.getLobTableSpaceName() != null)
+			builder.space()._add("LONG IN").space().name(table.getLobTableSpaceName());
 	}
 
 	@Override
 	protected void addIndexDefinitions(final Table table, final List<SqlOperation> result) {
+		for (Index index : table.getIndexes()) {
+			// Db2 creates SYSIBM backing indexes when their constraints are created.
+			// They cannot be explicitly recreated in the reserved system schema.
+			if (getDialect() instanceof com.sqlapp.data.db.dialect.db2.Db2_1110
+					&& "SYSIBM".equals(index.getSpecifics().getOrDefault("INDEX_SCHEMA", "").stripTrailing())
+					&& table.getConstraints().stream()
+							.filter(com.sqlapp.data.schemas.UniqueConstraint.class::isInstance)
+							.map(com.sqlapp.data.schemas.UniqueConstraint.class::cast)
+							.anyMatch(c -> java.util.Objects.equals(c.getName(),
+									index.getSpecifics().get("DB2_CONSTRAINT_NAME"))
+									|| (java.util.Objects.equals(c.getIndex().getName(), index.getName())
+											&& "SYSIBM".equals(c.getIndex().getSpecifics()
+													.getOrDefault("INDEX_SCHEMA", "").stripTrailing()))))
+				continue;
+			com.sqlapp.data.db.sql.SqlFactory<Index> factory = getSqlFactoryRegistry().getSqlFactory(index,
+					SqlType.CREATE);
+			result.addAll(factory.createSql(index));
+		}
+	}
+
+	@Override
+	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
+		super.addOtherDefinitions(table, result);
+		if (!CommonUtils.isEmpty(table.getRemarks())) {
+			Db2SqlBuilder builder = createSqlBuilder();
+			builder.comment().on().table().name(table, getOptions().isDecorateSchemaName()).is().space()
+					.sqlChar(table.getRemarks());
+			addSql(result, builder, SqlType.SET_COMMENT, table);
+		}
+		for (Column column : table.getColumns()) {
+			if (CommonUtils.isEmpty(column.getRemarks()))
+				continue;
+			Db2SqlBuilder builder = createSqlBuilder();
+			builder.comment().on().column().space().name(table, getOptions().isDecorateSchemaName());
+			builder._add(".").name(column.getName()).is().space().sqlChar(column.getRemarks());
+			addSql(result, builder, SqlType.SET_COMMENT, column);
+		}
 	}
 
 	/**
 	 * Collate定義を追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
 	protected void addCollateDefinition(final Table table, final Db2SqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getCollation())) {
-			builder.collate().eq()._add(table.getCollation());
+			throw new IllegalArgumentException("Db2 does not support a table-level COLLATE clause");
 		}
 	}
 
 	/**
 	 * COMMENT定義を追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
 	protected void addRemarkDefinition(final Table table, final Db2SqlBuilder builder) {
-		if (!CommonUtils.isEmpty(table.getRemarks())) {
-			builder.comment().eq().space().sqlChar(table.getRemarks());
-		}
+		// Comments are emitted by addOtherDefinitions as COMMENT ON statements.
 	}
 
 	/**
 	 * AUTO_INCREMENTの初期値を設定DDLを取得します
-	 * 
+	 *
 	 * @param colDiff
 	 * @param builder
 	 */
 	protected void addAutoIncrementDefinition(final Table table, final Db2SqlBuilder builder) {
-		for (final Column column : table.getColumns()) {
-			if (!column.isIdentity()) {
-				continue;
-			} else {
-				Long current = column.getIdentityLastValue();
-				if (current == null) {
-					current = column.getIdentityStartValue();
-				}
-				if (current != null && !CommonUtils.eq(current, Long.valueOf(1))) {
-					builder.space().property("AUTO_INCREMENT", current);
-				}
-				return;
-			}
-		}
+		// Db2 identity start/increment belong to each column's identity clause.
 	}
 
 	/**
 	 * Partition定義を追加します
-	 * 
+	 *
 	 * @param table
 	 * @param builder
 	 */
@@ -128,27 +192,23 @@ public class Db2CreateTableFactory extends AbstractCreateTableFactory<Db2SqlBuil
 	@Override
 	protected void addConstraintDefinitions(final Table table, final Db2SqlBuilder builder) {
 		super.addConstraintDefinitions(table, builder);
-		addIndexDefinitions(table, builder);
 	}
 
 	/**
 	 * インデックスを追加します
-	 * 
+	 *
 	 * @param index
 	 * @param builder
 	 */
 	@Override
 	protected void addIndexDefinitions(final Table table, final Db2SqlBuilder builder) {
-		for (final Index index : table.getIndexes()) {
-			if (!table.getConstraints().contains(index.getName())) {
-				addIndexDefinition(index, builder);
-			}
-		}
+		// Db2 indexes are separate CREATE INDEX statements, never inline table
+		// elements.
 	}
 
 	/**
 	 * インデックスを追加します
-	 * 
+	 *
 	 * @param index
 	 * @param builder
 	 */

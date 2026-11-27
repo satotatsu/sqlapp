@@ -89,7 +89,7 @@ public class SpannerCreateTemporaryTableFactoryTest extends SpannerSqlFactoryTes
 		table.getColumns().add(column);
 		//
 		Index index = new Index("indexa");
-		index.setIndexType(IndexType.Hash);
+		index.setIndexType(IndexType.BTree);
 		table.getIndexes().add(index);
 		index.getColumns().add("colc");
 		Partitioning partitionInfo = getPartitionInfo(table);

@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlDefiner;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.ReaderUtils;
 import com.sqlapp.data.schemas.ArgumentRoutine;
@@ -40,7 +42,36 @@ import com.sqlapp.util.FileUtils;
 
 public class MySqlUtils extends ReaderUtils {
 
+	private static final Pattern VALUE_LITERAL = Pattern.compile("'(?:''|\\\\.|[^'\\\\])*'");
+
+	static void setRoutineArgumentValues(String declaration, NamedArgument argument) {
+		if (argument.getDataType() != DataType.ENUM && argument.getDataType() != DataType.SET) {
+			return;
+		}
+		int start = declaration.indexOf('(');
+		int last = declaration.lastIndexOf(')');
+		if (start < 0 || last <= start) {
+			throw new IllegalArgumentException("Invalid MySQL routine value-list type: " + declaration);
+		}
+		String values = declaration.substring(start + 1, last);
+		Matcher matcher = VALUE_LITERAL.matcher(values);
+		argument.getValues().clear();
+		int end = 0;
+		while (matcher.find()) {
+			String separator = values.substring(end, matcher.start()).trim();
+			if (!separator.equals(end == 0 ? "" : ",")) {
+				throw new IllegalArgumentException("Invalid MySQL routine value-list type: " + declaration);
+			}
+			argument.getValues().add(matcher.group());
+			end = matcher.end();
+		}
+		if (end == 0 || !values.substring(end).isBlank()) {
+			throw new IllegalArgumentException("Invalid MySQL routine value-list type: " + declaration);
+		}
+	}
+
 	protected static void setRoutineInfo(ResultSet rs, ArgumentRoutine<?> routine) throws SQLException {
+		com.sqlapp.data.db.dialect.mysql.util.MySqlStoredObjectContext.read(rs, routine);
 		routine.setCatalogName(rs.getString("ROUTINE_CATALOG"));
 		routine.setSchemaName(rs.getString("ROUTINE_SCHEMA"));
 		routine.setRemarks(rs.getString("ROUTINE_COMMENT"));
@@ -51,6 +82,7 @@ public class MySqlUtils extends ReaderUtils {
 		routine.setStatement(rs.getString("ROUTINE_DEFINITION"));
 		routine.setSqlDataAccess(rs.getString(MetadataReader.SQL_DATA_ACCESS));
 		routine.setSqlSecurity(rs.getString(MetadataReader.SECURITY_TYPE));
+		MySqlDefiner.read(routine.getSpecifics(), rs.getString("DEFINER"));
 	}
 
 	/**

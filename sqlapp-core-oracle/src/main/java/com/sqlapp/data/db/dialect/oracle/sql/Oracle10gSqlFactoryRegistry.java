@@ -30,5 +30,8 @@ public class Oracle10gSqlFactoryRegistry extends OracleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		for (var type : new com.sqlapp.data.db.sql.SqlType[] { com.sqlapp.data.db.sql.SqlType.CREATE,
+				com.sqlapp.data.db.sql.SqlType.ALTER, com.sqlapp.data.db.sql.SqlType.DROP })
+			registerSqlFactory(com.sqlapp.data.schemas.Event.class, type, OracleSchedulerJobSqlFactory.class);
 	}
 }

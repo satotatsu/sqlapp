@@ -755,7 +755,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	 */
 	public void setMonths(final int months) {
 		int calc = 0;
-		if (months > MONTH_LIMIT) {
+		if (months >= MONTH_LIMIT) {
 			calc = months;
 		} else {
 			calc = getYears() * MONTH_LIMIT + months;
@@ -808,7 +808,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	 */
 	public void setHours(final int hours) {
 		int calc = 0;
-		if (hours > HOUR_LIMIT) {
+		if (hours >= HOUR_LIMIT) {
 			setDays(hours / HOUR_LIMIT);
 		}
 		calc = getDays() * DAY_SECONDS + (hours % HOUR_LIMIT) * HOUR_SECONDS + getMinutes() * MINUTE_SECONDS
@@ -846,10 +846,10 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	 */
 	public void setMinutes(final int minutes) {
 		int calc = 0;
-		if (minutes > MINUTE_LIMIT) {
+		if (minutes >= MINUTE_LIMIT) {
 			setHours(minutes / MINUTE_LIMIT);
 		}
-		calc = getDays() * DAY_SECONDS + getHours() * HOUR_SECONDS + (minutes % MINUTE_SECONDS) * MINUTE_SECONDS
+		calc = getDays() * DAY_SECONDS + getHours() * HOUR_SECONDS + (minutes % MINUTE_LIMIT) * MINUTE_SECONDS
 				+ getSeconds();
 		;
 		setValue(months, calc, nanos);
@@ -893,7 +893,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	 */
 	public void setSeconds(final int seconds) {
 		int calc = 0;
-		if (seconds > SECOND_LIMIT) {
+		if (seconds >= SECOND_LIMIT) {
 			setMinutes(seconds / SECOND_LIMIT);
 		}
 		calc = getDays() * DAY_SECONDS + getHours() * HOUR_SECONDS + getMinutes() * MINUTE_SECONDS
@@ -991,12 +991,9 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval> {
 	 */
 	public Interval toInterval() {
 		final Interval interval = new Interval();
-		interval.setMonths(this.months);
-		interval.setSeconds(this.seconds);
-		interval.setNanos(this.nanos);
-		if (!isPositive()) {
-			interval.scale(-1);
-		}
+		// Copy the stored totals; the component setters expect a single unit.
+		interval.setValue(this.months, this.seconds, this.nanos);
+		interval.positive = this.positive;
 		return interval;
 	}
 

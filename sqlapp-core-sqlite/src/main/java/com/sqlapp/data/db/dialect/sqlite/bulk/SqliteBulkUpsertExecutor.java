@@ -25,6 +25,8 @@ public class SqliteBulkUpsertExecutor implements BulkUpsertExecutor {
 
 	public SqliteBulkUpsertExecutor(final Dialect d) {
 		dialect = java.util.Objects.requireNonNull(d, "dialect");
+		if (!(d instanceof com.sqlapp.data.db.dialect.sqlite.Sqlite sqlite) || !sqlite.supportsUpsert())
+			throw new IllegalArgumentException("SQLite UPSERT requires SQLite 3.24 or later");
 	}
 
 	@Override

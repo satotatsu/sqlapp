@@ -63,6 +63,8 @@ public class SapHanaSynonymReader extends SynonymReader {
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		if (productVersionInfo.getMajorVersion() != null && productVersionInfo.getMajorVersion() >= 2)
+			return getSqlNodeCache().getString("synonyms2.sql");
 		return getSqlNodeCache().getString("synonyms.sql");
 	}
 
@@ -72,6 +74,7 @@ public class SapHanaSynonymReader extends SynonymReader {
 		synonym.setSchemaName(getString(rs, SCHEMA_NAME));
 		synonym.setObjectSchemaName(getString(rs, OBJECT_SCHEMA));
 		synonym.setObjectName(getString(rs, OBJECT_NAME));
+		synonym.setDbLinkName(getString(rs, "TARGET_DATABASE"));
 		return synonym;
 	}
 }

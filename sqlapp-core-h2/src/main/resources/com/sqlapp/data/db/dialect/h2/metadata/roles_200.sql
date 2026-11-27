@@ -1,0 +1,9 @@
+SELECT
+  r.ROLE_NAME AS "NAME"
+, r.REMARKS
+FROM INFORMATION_SCHEMA.ROLES r
+WHERE TRUE
+  /*if isNotEmpty(roleName)*/
+  AND r.ROLE_NAME IN /*roleName*/('%')
+  /*end*/
+ORDER BY r.ROLE_NAME

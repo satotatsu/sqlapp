@@ -30,7 +30,7 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public class Postgres110CreateIndexFactory extends PostgresCreateIndexFactory {
+public class Postgres110CreateIndexFactory extends Postgres95CreateIndexFactory {
 
 	@Override
 	protected void addIncludes(final Index obj, final Table table, final PostgresSqlBuilder builder) {

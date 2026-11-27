@@ -22,6 +22,8 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Assembly;
+import com.sqlapp.data.schemas.CheckConstraint;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.PartitionFunction;
@@ -39,8 +41,21 @@ public class SqlServer2005SqlFactoryRegistry extends SqlServerSqlFactoryRegistry
 	}
 
 	@Override
+	protected void setDialect(com.sqlapp.data.db.sql.SqlFactory<?> factory, Object source) {
+		super.setDialect(factory, source);
+		// A hand-authored Schema has the generic default dialect. Keep the explicitly
+		// selected SQL Server registry.
+		Object sourceDialect = source == null ? null : com.sqlapp.util.SimpleBeanUtils.getValue(source, "dialect");
+		if (factory != null && !(sourceDialect instanceof com.sqlapp.data.db.dialect.sqlserver.SqlServer2000))
+			factory.setDialect(getDialect());
+	}
+
+	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(CheckConstraint.class, SqlType.CREATE, SqlServer2005CreateCheckConstraintFactory.class);
+		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE,
+				SqlServer2005CreateForeignKeyConstraintFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2005CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2005AlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DROP, SqlServer2005DropTableFactory.class);
@@ -61,8 +76,11 @@ public class SqlServer2005SqlFactoryRegistry extends SqlServerSqlFactoryRegistry
 		registerSqlFactory(Trigger.class, SqlType.CREATE, SqlServer2005CreateTriggerFactory.class);
 		//
 		registerSqlFactory(PartitionScheme.class, SqlType.CREATE, SqlServer2005CreatePartitionSchemeFactory.class);
+		registerSqlFactory(PartitionScheme.class, SqlType.ALTER, SqlServer2005AlterPartitionSchemeFactory.class);
+		registerSqlFactory(PartitionScheme.class, SqlType.DROP, SqlServer2005DropPartitionSchemeFactory.class);
 		//
 		registerSqlFactory(PartitionFunction.class, SqlType.CREATE, SqlServer2005CreatePartitionFunctionFactory.class);
+		registerSqlFactory(PartitionFunction.class, SqlType.DROP, SqlServer2005DropPartitionFunctionFactory.class);
 		registerSqlFactory(PartitionFunction.class, SqlType.ALTER, SqlServer2005AlterPartitionFunctionFactory.class);
 	}
 

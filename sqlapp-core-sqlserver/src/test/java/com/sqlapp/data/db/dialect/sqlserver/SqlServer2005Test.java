@@ -92,7 +92,7 @@ public class SqlServer2005Test {
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_1GB - 1), column.getLength());
 	}
 
 	@Test
@@ -101,7 +101,7 @@ public class SqlServer2005Test {
 		column.setDataTypeName("nvarchar( max )");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_1GB - 1), column.getLength());
 	}
 
 	@Test
@@ -150,7 +150,7 @@ public class SqlServer2005Test {
 		column.setDataTypeName("varchar(8001)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_2GB), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_2GB - 1), column.getLength());
 	}
 
 	@Test
@@ -159,7 +159,7 @@ public class SqlServer2005Test {
 		column.setDataTypeName("varchar( max )");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_2GB), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_2GB - 1), column.getLength());
 	}
 
 	@Test

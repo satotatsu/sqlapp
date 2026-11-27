@@ -31,6 +31,8 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.schemas.IndexType;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -69,13 +71,24 @@ public class MySqlUniqueConstraintReader extends UniqueConstraintReader {
 					c.setCatalogName(catalog_name);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
+					c.setIndexType(IndexType.parse(getString(rs, "INDEX_TYPE")));
+					c.setRemarks(getString(rs, "INDEX_COMMENT"));
+					String visible = getString(rs, "IS_VISIBLE");
+					if (visible != null) {
+						c.getIndex().setEnable("YES".equalsIgnoreCase(visible));
+					}
+					String ignored = getString(rs, "IGNORED");
+					if (ignored != null) {
+						c.getIndex().setEnable(!"YES".equalsIgnoreCase(ignored));
+					}
 					// CONSTRAINT_TYPE
 					result.add(c);
 					map.put(catalog_name, schema_name, table_name, constraint_name, c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(table_name);
-				c.getColumns().add(column);
+				c.getColumns().add(column, Order.parse(getString(rs, "ASC_OR_DESC")))
+						.setLength(getLong(rs, "SUB_PART"));
 			}
 		});
 		return result;

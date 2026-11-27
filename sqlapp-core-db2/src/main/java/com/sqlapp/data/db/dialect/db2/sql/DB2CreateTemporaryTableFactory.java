@@ -25,11 +25,27 @@ import com.sqlapp.data.schemas.Table;
 
 /**
  * CREATE TEMPORARY TABLE
- * 
+ *
  * @author satoh
- * 
+ *
  */
 public class DB2CreateTemporaryTableFactory extends AbstractCreateTemporaryTableFactory<Db2SqlBuilder> {
+	@Override
+	protected void addCreateIndexDefinition(Table table, com.sqlapp.data.schemas.Index index,
+			java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
+		String prefix = getTableOptions().getTemporaryTableNamePrefix().apply(table);
+		String suffix = getTableOptions().getTemporaryTableNameSuffix().apply(table);
+		Table temporary = new Table((prefix == null ? "" : prefix) + table.getName() + (suffix == null ? "" : suffix));
+		temporary.setSchemaName("SESSION");
+		temporary.setDialect(getDialect());
+		com.sqlapp.data.schemas.Index copy = index.clone();
+		copy.setSchemaName("SESSION");
+		copy.getSpecifics().remove("INDEX_SCHEMA");
+		temporary.getIndexes().add(copy);
+		com.sqlapp.data.db.sql.SqlFactory<com.sqlapp.data.schemas.Index> factory = getSqlFactoryRegistry()
+				.getSqlFactory(copy, com.sqlapp.data.db.sql.SqlType.CREATE);
+		result.addAll(factory.createSql(copy));
+	}
 
 	@Override
 	protected void addCreateObject(final Table obj, final Db2SqlBuilder builder) {

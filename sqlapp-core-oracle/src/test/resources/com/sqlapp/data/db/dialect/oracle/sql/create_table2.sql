@@ -1,6 +1,6 @@
 CREATE TABLE "tableA"
 (
-	  "cola" NUMBER(9,0)
+	  "cola" NUMBER(10,0)
 	, "colb" VARCHAR2(50 Char)
 	, "colc" DATE
 )

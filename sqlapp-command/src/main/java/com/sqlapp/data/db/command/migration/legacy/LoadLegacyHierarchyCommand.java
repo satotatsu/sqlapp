@@ -60,8 +60,16 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 		validateViewpointResolution(plan, schema);
 		LegacyMigrationLoadPlanIO.validateSchema(plan, SchemaUtils.toTables(schema));
 		execute(getDataSource(), connection -> {
-			long roots = new JdbcTreeStagingLoader(connection, schema, plan).load();
-			info("Legacy hierarchy load completed. roots=", roots);
+			JdbcTreeStagingLoadResult result = new JdbcTreeStagingLoader(connection, schema, plan).load();
+			info("Legacy hierarchy load completed. roots=", result.roots());
+			for (JdbcTreeStagingLoadResult.DataSetCount count : result.dataSets()) {
+				info("  ", count.dataSetId(), ": read=", count.read(), ", copied=", count.copied(), ", inserted=",
+						count.inserted() == null ? "-" : count.inserted(), count.verified() ? " (verified)" : "");
+				if (count.ignored() > 0) {
+					info("  WARNING ", count.dataSetId(), ": ", count.ignored(),
+							" rows were ignored by INSERT_IGNORE because the target rows already existed.");
+				}
+			}
 		});
 	}
 

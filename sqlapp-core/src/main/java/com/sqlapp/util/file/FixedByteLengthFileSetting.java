@@ -130,7 +130,7 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 					field.setLength(5);
 				} else if (column.getDataType() == DataType.TINYINT) {
 					field.setLength(3);
-				} else if (column.getDataType() == DataType.BOOLEAN || column.getDataType() == DataType.BIT) {
+				} else if (column.getDataType() == DataType.BOOLEAN) {
 					field.setLength(1);
 				}
 				field.setPaddingType(PaddingType.LEFT);

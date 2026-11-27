@@ -19,9 +19,7 @@
 
 package com.sqlapp.data.db.dialect.oracle.metadata;
 
-import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.StringUtils.getGroupString;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -36,7 +34,6 @@ import com.sqlapp.data.schemas.PublicDbLink;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.SqlExecuter;
 
 public class OraclePublicDbLinkReader extends PublicDbLinkReader {
 
@@ -74,7 +71,7 @@ public class OraclePublicDbLinkReader extends PublicDbLinkReader {
 	}
 
 	/**
-	 * DBリンクのパスワード設定
+	 * DBリンクの詳細情報は一覧クエリで取得済み。パスワードは推測しない。
 	 * 
 	 * @param connection
 	 * @param dbLink
@@ -82,22 +79,8 @@ public class OraclePublicDbLinkReader extends PublicDbLinkReader {
 	 */
 	@Override
 	protected void setMetadataDetail(Connection connection, PublicDbLink dbLink) throws SQLException {
-		if (!isEmpty(dbLink.getUserId())) {
-			return;
-		}
-		SqlExecuter sql = new SqlExecuter("SELECT ");
-		sql.addSql("DBMS_METADATA.GET_DDL(");
-		sql.addSqlLine("FROM ALL_DB_LINKS");
-		sql.addSqlLine("WHERE 0=0");
-		String ddl = OracleMetadataUtils.getDdl(connection, "DB_LINK", "PUBLIC", dbLink.getName());
-		String val = getGroupString(OracleDbLinkReader.DB_LINK_PATTERN1, ddl, 1);
-		if (val != null) {
-			dbLink.setPasswordEncrypted(true);
-			dbLink.setPassword(val);
-		} else {
-			val = getGroupString(OracleDbLinkReader.DB_LINK_PATTERN2, ddl, 1);
-			dbLink.setPassword(val);
-		}
+		// Passwords and non-fixed-user authentication cannot be inferred from a
+		// null USERNAME. Keep the catalog metadata without per-link DDL queries.
 	}
 
 }

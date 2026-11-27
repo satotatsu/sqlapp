@@ -13,8 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.TriggerReader;
@@ -27,11 +25,6 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /** Reads Informix triggers and their catalog-stored SQL text. */
 public class InformixTriggerReader extends TriggerReader {
-	private static final Pattern TIMING_PATTERN = Pattern.compile("\\b(BEFORE|AFTER|INSTEAD\\s+OF)\\b",
-			Pattern.CASE_INSENSITIVE);
-	private static final Pattern ORIENTATION_PATTERN = Pattern.compile("\\bFOR\\s+EACH\\s+(ROW|STATEMENT)\\b",
-			Pattern.CASE_INSENSITIVE);
-
 	public InformixTriggerReader(final Dialect dialect) {
 		super(dialect);
 	}
@@ -52,6 +45,10 @@ public class InformixTriggerReader extends TriggerReader {
 					trigger.setSchemaName(getString(rs, SCHEMA_NAME));
 					trigger.setTableSchemaName(getString(rs, "table_schema_name"));
 					trigger.setTableName(getString(rs, TABLE_NAME));
+					final String state = getString(rs, "trigger_state");
+					if (state != null && !"E".equals(state) && !"D".equals(state))
+						throw new IllegalStateException("Unknown Informix trigger mode: " + state);
+					trigger.setEnable(!"D".equals(state));
 					setEvent(trigger, getString(rs, "trigger_event"));
 					trigger.setActionReferenceOldRow(getString(rs, "old_reference"));
 					trigger.setActionReferenceNewRow(getString(rs, "new_reference"));
@@ -60,54 +57,52 @@ public class InformixTriggerReader extends TriggerReader {
 				}
 				String dataKey = getString(rs, "data_key");
 				if ("D".equals(dataKey)) {
-					triggerText.definition.append(getString(rs, "trigger_text"));
+					triggerText.definition.append(text(rs));
 				} else if ("A".equals(dataKey)) {
-					triggerText.statement.append(getString(rs, "trigger_text"));
+					triggerText.statement.append(text(rs));
 				}
 			}
 		});
 		List<Trigger> result = list();
 		triggers.values().forEach(triggerText -> {
 			Trigger trigger = triggerText.trigger;
-			String definition = triggerText.definition.toString();
-			String statement = triggerText.statement.toString();
-			if (getReaderOptions().isReadDefinition()) {
-				trigger.setDefinition(definition);
+			String header = triggerText.definition.toString().stripTrailing();
+			String statement = triggerText.statement.toString().stripTrailing();
+			if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
+				if (header.isBlank() || statement.isBlank())
+					throw new IllegalStateException("Incomplete Informix trigger text: " + trigger.getName());
+				// D is only the header; A contains all action phases. Neither is executable
+				// alone.
+				trigger.setDefinition(header + "\n" + statement);
 			}
 			if (getReaderOptions().isReadStatement()) {
 				trigger.setStatement(statement);
 			}
-			setHeaderAttributes(trigger, definition + statement);
 			result.add(trigger);
 		});
 		return result;
 	}
 
+	private static String text(final ExResultSet rs) throws SQLException {
+		final String text = rs.getString("trigger_text");
+		if (text == null)
+			throw new IllegalStateException("Missing Informix trigger text segment");
+		return text; // Preserve whitespace at the boundary of the catalog's 256-character chunks.
+	}
+
 	private static void setEvent(final Trigger trigger, final String event) {
+		if (event == null)
+			throw new IllegalStateException("Missing Informix trigger event");
 		String normalized = event.toUpperCase(Locale.ROOT);
 		switch (normalized) {
 		case "I" -> trigger.getEventManipulation().add("INSERT");
 		case "U" -> trigger.getEventManipulation().add("UPDATE");
 		case "D" -> trigger.getEventManipulation().add("DELETE");
 		case "S" -> trigger.getEventManipulation().add("SELECT");
-		default -> {
-		}
+		default -> throw new UnsupportedOperationException("Unsupported Informix trigger event: " + event);
 		}
 		if (!event.equals(normalized)) {
 			trigger.setActionTiming("INSTEAD OF");
-		} else {
-			trigger.setActionTiming("AFTER");
-		}
-	}
-
-	private static void setHeaderAttributes(final Trigger trigger, final String definition) {
-		Matcher timing = TIMING_PATTERN.matcher(definition);
-		if (timing.find()) {
-			trigger.setActionTiming(timing.group(1).toUpperCase(Locale.ROOT).replaceAll("\\s+", " "));
-		}
-		Matcher orientation = ORIENTATION_PATTERN.matcher(definition);
-		if (orientation.find()) {
-			trigger.setActionOrientation(orientation.group(1).toUpperCase(Locale.ROOT));
 		}
 	}
 

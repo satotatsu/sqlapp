@@ -19,6 +19,25 @@
 
 package com.sqlapp.jdbc.sql;
 
-/** Independent execution evidence for both sides of a copy operation. */
+import java.util.List;
+
+import com.sqlapp.jdbc.sql.JdbcTreeDataExecutionResult.TableIdentity;
+
+/**
+ * Independent execution evidence for both sides of a copy operation, and the rows
+ * read and copied per source/target table pair.
+ */
 public record JdbcTreeDataCopyExecutionResult(JdbcTreeDataExecutionResult source,
-        JdbcTreeDataExecutionResult target) { }
+        JdbcTreeDataExecutionResult target, List<CopyCount> counts) {
+	public JdbcTreeDataCopyExecutionResult {
+		counts = List.copyOf(counts);
+	}
+
+	/**
+	 * Rows of the source table read by the work and rows copied with newCopy to the
+	 * target table. {@code verified} is true when the pair was checked by
+	 * {@code verifyCounts}.
+	 */
+	public record CopyCount(TableIdentity source, TableIdentity target, long read, long copied,
+			boolean verified) { }
+}

@@ -72,6 +72,10 @@ public class Db2_1010MaskReader extends MaskReader {
 		obj.setStatement(rs.getString("RULETEXT"));
 		obj.setRemarks(getString(rs, REMARKS));
 		setSpecifics(rs, "CLASS", obj);
+		setSpecifics(rs, "TABCORRELATION", obj);
+		setSpecifics(rs, "QUALIFIER", obj);
+		setSpecifics(rs, "FUNC_PATH", obj);
+		setSpecifics(rs, "VALID", "SOURCE_VALID", obj);
 		return obj;
 	}
 }

@@ -54,12 +54,22 @@ public class SpannerTruncateTableFactoryTest extends SpannerSqlFactoryTest {
 	}
 
 	@Test
+	public void deletesAllRowsWithQualifiedIdentity() {
+		operation.getOptions().setDecorateSchemaName(true);
+		Table table = new Table("Order Details").setSchemaName("Sales");
+		List<SqlOperation> operations = operation.createSql(table);
+		assertEquals(1, operations.size());
+		assertEquals("DELETE FROM `Sales`.`Order Details` WHERE TRUE", operations.get(0).getSqlText());
+		assertEquals(SqlType.TRUNCATE, operations.get(0).getSqlType());
+	}
+
+	@Test
 	public void testCreateTable1() {
 		Table table1 = getTable1("tableA");
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = """
-				DELETE FROM `tableA`""";
+				DELETE FROM `tableA` WHERE TRUE""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

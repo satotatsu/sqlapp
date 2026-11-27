@@ -2,6 +2,8 @@ SELECT
   c.*
 FROM information_schema.column_privileges c
 WHERE 1=1
+  AND c.grantee NOT IN ('_SYSTEM', 'DBA', 'CREATE_SCHEMA', 'CHANGE_AUTHORIZATION', 'SCRIPT_OPS')
+  AND c.privilege_type IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
   /*if isNotEmpty(catalogName)*/
   AND c.table_catalog IN /*catalogName*/('%')
   /*end*/

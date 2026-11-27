@@ -7,9 +7,24 @@ apply plugin: "io.freefair.lombok"
 apply plugin: 'groovy'
 
 dependencies {
+	// Typed local Parquet I/O shared by commands and Schema row iterators.
+	implementation 'org.apache.parquet:parquet-hadoop:1.17.0'
+	implementation('org.apache.hadoop:hadoop-common:3.4.2') {
+		exclude group: 'org.slf4j', module: 'slf4j-reload4j'
+		// Local Parquet uses PlainParquetConfiguration; retain the application's XML provider.
+		exclude group: 'com.fasterxml.woodstox', module: 'woodstox-core'
+		exclude group: 'org.codehaus.woodstox', module: 'stax2-api'
+		exclude group: 'javax.xml.stream', module: 'stax-api'
+	}
+	// Parquet read options reference FileInputFormat even for local InputFile reads.
+	runtimeOnly('org.apache.hadoop:hadoop-mapreduce-client-core:3.4.2') {
+		exclude group: 'org.slf4j', module: 'slf4j-reload4j'
+		exclude group: 'com.fasterxml.woodstox', module: 'woodstox-core'
+		exclude group: 'org.codehaus.woodstox', module: 'stax2-api'
+	}
 
 	//MVEL
-	api 'org.mvel:mvel2:2.5.2.Final'
+	api 'org.mvel:mvel2:2.6.0.Final'
 	
 	//logging
 	/*

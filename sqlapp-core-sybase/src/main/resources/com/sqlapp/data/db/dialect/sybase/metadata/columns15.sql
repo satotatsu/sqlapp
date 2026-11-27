@@ -7,15 +7,18 @@ SELECT
   , c.name AS column_name
   , t.name AS type_name
   , c.length AS max_length
+  , @@ncharsize AS nchar_size
   , c.prec AS precision
   , c.scale
   , NULL AS collation_name
   , CASE WHEN (c.status & 8) = 8 THEN 1 ELSE 0 END AS is_nullable
   , CASE WHEN (ISNULL(c.status2, 0) & 16) = 16 THEN 1 ELSE 0 END AS is_computed
   , CASE WHEN (ISNULL(c.status2, 0) & 32) = 32 THEN 1 ELSE 0 END AS is_computed_persisted
-  , cc.text AS computed_definition
+  , CAST(NULL AS VARCHAR(16384)) AS computed_definition
+  , c.computedcol AS computed_id
   , c.colid AS colorder
-  , cm.text AS default_definition
+  , CAST(NULL AS VARCHAR(16384)) AS default_definition
+  , c.cdefault AS default_id
   , CASE WHEN (c.status & 128) = 128 THEN 1 ELSE 0 END AS is_identity
   , NULL AS ident_seed
   , NULL AS ident_increment
@@ -28,10 +31,6 @@ INNER JOIN sysusers su
   ON (so.uid = su.uid)
 INNER JOIN systypes t
   ON (c.usertype = t.usertype)
-LEFT OUTER JOIN syscomments cm
-  ON (c.cdefault = cm.id)
-LEFT OUTER JOIN syscomments cc
-  ON (c.computedcol = cc.id)
 WHERE 1=1
   /*if isNotEmpty(schemaName) */
   AND su.name IN /*schemaName;type=VARCHAR*/('%')

@@ -16,6 +16,9 @@ The companion example registers `exportData`, `importData`, `toExcel`,
 and several query tasks. See the [example project map](example-project.md) for
 the source locations and corresponding documentation.
 
+For Excel generation templates, flexible value rules, and JDBC batch loading of
+large test datasets, see the [test-data generator guide](../data/test-data-generation.md).
+
 ## Export table data
 
 ```groovy
@@ -43,6 +46,10 @@ behavior. Exported rows are distinct from the metadata-only workflow in the
 [schema guide](schema-sql-and-html.md).
 
 ## Convert saved data files
+
+For typed Parquet export/import and conversion, use
+`outputFileType = 'PARQUET'`; see [Parquet data files](../data/parquet.md)
+for supported types, precision checks and dependency impact.
 
 ```groovy
 import com.sqlapp.gradle.plugins.ConvertDataTask
@@ -110,18 +117,23 @@ See [Versioned SQL migrations](versioned-migrations.md#compare-migration-state-a
 
 ## Additional task types
 
-These classes are not registered under fixed names by `DbPlugin`:
+These classes are not registered under fixed names by `DbPlugin`. Their database
+effects are listed in the [task reference](task-reference.md#public-task-types-without-fixed-names).
 
 | Task type | Purpose |
 |---|---|
+| `ExportDataTask` | Export selected table rows to data files |
 | `ImportDataTask` | Load data files into a database |
 | `GenerateDataConfigTask` | Generate test-data configuration |
 | `GenerateDataTask` | Generate test data |
+| `ConvertDataTask` | Convert data files between supported formats |
 | `ConvertGeneratorConfigTask` | Convert generator configuration files |
+| `SqlExecuteTask` | Execute SQL text or files |
 | `SqlQueryTask` | Execute SQL queries |
 | `TableSqlExecuteTask` | Execute table-oriented SQL |
 | `DropObjectsTask` | Drop selected database objects |
 | `SynchronizeSchemaTask` | Synchronize schema objects |
+| `MigrationDownTask` | Execute down migration |
 | `MigrationSeriesDownTask` | Execute series-oriented down migration |
 | `UpdateDictionariesTask` | Update documentation dictionaries |
 | `AvailableFontsTask` | List available fonts |

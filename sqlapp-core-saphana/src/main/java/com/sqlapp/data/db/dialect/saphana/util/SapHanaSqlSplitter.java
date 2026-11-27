@@ -33,6 +33,9 @@ public class SapHanaSqlSplitter extends SqlSplitter {
 		super(dialect);
 	}
 
+	private static final Pattern ANONYMOUS_PATTERN = Pattern.compile("\\s*DO\\b.*",
+			Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+
 	private static final Pattern CREATE_PATTERN = Pattern.compile("\\s*(CREATE|ALTER)\\s*.*",
 			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
 
@@ -47,6 +50,10 @@ public class SapHanaSqlSplitter extends SqlSplitter {
 		return new SqlTokenizer(input) {
 			@Override
 			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				if (stringHolder.substringMatcher(ANONYMOUS_PATTERN).matches()) {
+					setPosition(anonymousBlockEnd(stringHolder));
+					return true;
+				}
 				Matcher matcher = CREATE_PATTERN.matcher(text);
 				if (matcher.matches()) {
 					int delPos = stringHolder.indexOf(this.getCurrentDelimiter(), stringHolder.getPosition() + 10);
@@ -83,6 +90,81 @@ public class SapHanaSqlSplitter extends SqlSplitter {
 				}
 				return false;
 			}
+
+			private int anonymousBlockEnd(StringHolder holder) {
+				var blocks = new java.util.ArrayDeque<String>();
+				boolean started = false;
+				boolean statementStart = false;
+				String suffix = null;
+				for (int i = holder.getPosition(); i < holder.getContextLength();) {
+					TextMarker marker = getTextMarker(i);
+					if (marker != null) {
+						if (started && blocks.isEmpty() && !marker.getType().isComment())
+							holder.throwInvalidTextException("Expected delimiter after anonymous DO block END");
+						if (!marker.getType().isComment())
+							suffix = null;
+						i = marker.getEnd();
+						continue;
+					}
+					char c = holder.charAt(i);
+					if (Character.isWhitespace(c)) {
+						i++;
+						continue;
+					}
+					if (started && blocks.isEmpty()) {
+						if (c == ';')
+							return i;
+						holder.throwInvalidTextException("Expected delimiter after anonymous DO block END");
+					}
+					if (c == ';') {
+						suffix = null;
+						if (!started)
+							holder.throwInvalidTextException("BEGIN not found in anonymous DO block");
+						statementStart = true;
+						i++;
+						continue;
+					}
+					if (!Character.isJavaIdentifierStart(c)) {
+						suffix = null;
+						if (c == ':')
+							statementStart = true;
+						i++;
+						continue;
+					}
+					StringBuilder word = new StringBuilder();
+					while (i < holder.getContextLength() && Character.isJavaIdentifierPart(holder.charAt(i)))
+						word.append(holder.charAt(i++));
+					String token = word.toString().toUpperCase(java.util.Locale.ROOT);
+					if (!started) {
+						if (token.equals("BEGIN")) {
+							started = true;
+							statementStart = true;
+							blocks.push(token);
+						}
+						continue;
+					}
+					if (token.equals(suffix)) {
+						suffix = null;
+						statementStart = false;
+						continue;
+					}
+					suffix = null;
+					if (token.equals("END")) {
+						suffix = blocks.pop();
+						statementStart = false;
+					} else if (token.equals("BEGIN") || token.equals("CASE")
+							|| statementStart && java.util.Set.of("IF", "WHILE", "FOR", "LOOP").contains(token)) {
+						blocks.push(token);
+						statementStart = token.equals("BEGIN") || token.equals("LOOP");
+					} else {
+						statementStart = java.util.Set.of("THEN", "ELSE", "DO").contains(token);
+					}
+				}
+				if (!started || !blocks.isEmpty())
+					holder.throwInvalidTextException("Unclosed anonymous DO block; expected BEGIN ... END");
+				return -1;
+			}
+
 		};
 	}
 }

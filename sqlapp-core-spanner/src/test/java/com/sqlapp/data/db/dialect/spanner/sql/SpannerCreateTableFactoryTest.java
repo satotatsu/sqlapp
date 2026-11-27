@@ -25,6 +25,44 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 
 class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 	@Test
+	void rejectsAmbiguousInterleavedRecreationAndMissingNames() {
+		final var table = new Table("Child");
+		table.getColumns().add(new Column("id").setDataType(DataType.BIGINT));
+		table.getSpecifics().put("parent_table_name", "Parent");
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+		assertThrows(IllegalArgumentException.class,
+				() -> sqlFactoryRegistry.createSql(new Table(" "), SqlType.CREATE));
+	}
+
+	@Test
+	void decoratesUniqueConstraintIndexesAndRejectsEmptyKeys() {
+		final var table = new Table("Orders").setSchemaName("Sales");
+		final var id = new Column("id").setDataType(DataType.BIGINT);
+		table.getColumns().add(id);
+		final var unique = new com.sqlapp.data.schemas.UniqueConstraint("unique_id", false);
+		unique.getColumns().add(id);
+		table.getConstraints().add(unique);
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(true);
+		final var operations = sqlFactoryRegistry.createSql(table, SqlType.CREATE);
+		assertTrue(operations.get(1).getSqlText().contains("`Sales`.`unique_id`"), operations.get(1).getSqlText());
+		unique.getColumns().clear();
+		assertThrows(IllegalArgumentException.class, () -> sqlFactoryRegistry.createSql(table, SqlType.CREATE));
+	}
+
+	@Test
+	void ordersNotNullBeforeParenthesizedDefaultWithoutChangingTheModel() {
+		final var table = new Table("defaults");
+		final var column = new Column("count").setDataType(DataType.BIGINT).setNotNull(true).setDefaultValue("0");
+		table.getColumns().add(column);
+		final String sql = sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText();
+		assertTrue(sql.contains("INT64 NOT NULL DEFAULT (0)"), sql);
+		assertEquals("0", column.getDefaultValue());
+		column.setDefaultValue("(1 + 2)");
+		assertTrue(sqlFactoryRegistry.createSql(table, SqlType.CREATE).get(0).getSqlText()
+				.contains("INT64 NOT NULL DEFAULT ((1 + 2))"));
+	}
+
+	@Test
 	void omitsUnsupportedNumericPrecisionAndScale() {
 		final Table table = new Table("CHECKPOINTS");
 		table.setDialect(dialect);
@@ -145,7 +183,7 @@ class SpannerCreateTableFactoryTest extends SpannerSqlFactoryTest {
 		table.setDialect(dialect);
 		final Column id = new Column("ID").setDataType(DataType.BIGINT);
 		final Column updatedAt = new Column("UPDATED_AT").setDataType(DataType.TIMESTAMP)
-				.setDefaultValue("(PENDING_COMMIT_TIMESTAMP())").setOnUpdate("PENDING_COMMIT_TIMESTAMP()");
+				.setDefaultValue("PENDING_COMMIT_TIMESTAMP()").setOnUpdate("PENDING_COMMIT_TIMESTAMP()");
 		updatedAt.getSpecifics().put(SpannerSqlBuilder.ALLOW_COMMIT_TIMESTAMP, true);
 		table.getColumns().add(id);
 		table.getColumns().add(updatedAt);

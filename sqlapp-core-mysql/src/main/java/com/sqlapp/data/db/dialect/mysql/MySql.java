@@ -27,9 +27,15 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.function.Supplier;
+import java.util.Optional;
+import java.util.Locale;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.FloatType;
+import com.sqlapp.data.db.datatype.util.TypeInformation;
+import com.sqlapp.data.db.dialect.mysql.util.MySqlSpatialReference;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.mysql.db.datatype.util.MysqlNumberColumnTypeMatcher;
@@ -38,7 +44,6 @@ import com.sqlapp.data.db.dialect.mysql.metadata.MySqlCatalogReader;
 import com.sqlapp.data.db.dialect.mysql.sql.MySqlSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlSplitter;
-import com.sqlapp.data.db.dialect.util.GeometryUtils;
 import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -52,6 +57,33 @@ import com.sqlapp.data.schemas.Column;
  * 
  */
 public class MySql extends Dialect {
+	/**
+	 * MySQL defines BOOLEAN as TINYINT(1) and reports BOOLEAN columns as
+	 * tinyint(1).
+	 */
+	private static final java.util.regex.Pattern BOOLEAN_TINYINT = java.util.regex.Pattern
+			.compile("\\s*tinyint\\s*\\(\\s*1\\s*\\)\\s*", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+	@Override
+	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final com.sqlapp.data.schemas.properties.DataTypeLengthProperties<?> column) {
+		if (productDataType != null && BOOLEAN_TINYINT.matcher(productDataType).matches()) {
+			return super.setDbType(DataType.BOOLEAN, "BOOLEAN", null, null, column);
+		}
+		return super.setDbType(dataType, productDataType, lengthOrPrecision, scale, column);
+	}
+
+	@Override
+	public Optional<TypeInformation> matchDbType(DataType dataType, String productDataType, Long lengthOrPrecision,
+			Integer scale) {
+		Optional<TypeInformation> result = super.matchDbType(dataType, productDataType, lengthOrPrecision, scale);
+		if (MySqlSpatialReference.isSpatialType(productDataType)) {
+			result.filter(info -> info.getDataType().orElse(null) == DataType.GEOMETRY)
+					.ifPresent(info -> info.setDataTypeName(productDataType.trim().toUpperCase(Locale.ROOT)));
+		}
+		return result;
+	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -91,7 +123,7 @@ public class MySql extends Dialect {
 		});
 		// BLOB
 		getDbDataTypes().addBlob("TINYBLOB", 255, type -> {
-			type.setCreateFormat("BLOB");
+			type.setCreateFormat("TINYBLOB");
 		});
 		getDbDataTypes().addBlob("BLOB", LEN_64KB - 1, type -> {
 		});
@@ -101,8 +133,13 @@ public class MySql extends Dialect {
 		getDbDataTypes().addBlob("LONGBLOB", LEN_4GB - 1, type -> {
 			type.setCreateFormat("LONGBLOB");
 		});
+		// BIT(n): bit-field of 1 to 64 bits, held as a bit string such as "0101".
 		getDbDataTypes().addBit("BIT", 64, type -> {
 			type.setLiteral("b'", "'").setDefaultValueLiteral("b'0'");
+			type.setJdbcTypeHandler(new MySqlBitStringJdbcTypeHandler());
+		});
+		// BOOLEAN is a synonym for TINYINT(1); see setDbType for reading tinyint(1).
+		getDbDataTypes().addBoolean("BOOLEAN", type -> {
 		});
 
 		// Int8
@@ -163,15 +200,17 @@ public class MySql extends Dialect {
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID", type -> {
-			type.setAsBinaryType();
+			type.setAsBinaryType().setCreateFormat("BINARY(16)");
 		});
 		// Single
 		getDbDataTypes().addReal("FLOAT", type -> {
 		});
 		// Single
 		getDbDataTypes().addFloat(53);
+		FloatType.class.cast(getDbDataTypes().getDbType(DataType.FLOAT)).setDefaultPrecision(24);
 		// Double
 		getDbDataTypes().addDouble(type -> {
+			type.addColumnTypeMatcher("REAL");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -199,14 +238,10 @@ public class MySql extends Dialect {
 		getDbDataTypes().addNumeric(type -> {
 			type.setMaxPrecision(65).setMaxScale(30);
 		});
-		GeometryUtils.run(new Runnable() {
-			@Override
-			public void run() {
-				// GEOMETRY
-				getDbDataTypes().addGeometry(type -> {
-					type.setJdbcTypeHandler(new MySqlGeometryJdbcTypeHandler()).setJdbcType(java.sql.JDBCType.ARRAY);
-				});
-			}
+		getDbDataTypes().addGeometry(type -> {
+			type.setJdbcTypeHandler(new MySqlGeometryJdbcTypeHandler()).setJdbcType(java.sql.JDBCType.ARRAY);
+			type.addColumnTypeMatcher("POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
+					"GEOMETRYCOLLECTION", "GEOMCOLLECTION");
 		});
 		// ENUM
 		getDbDataTypes().addEnum();

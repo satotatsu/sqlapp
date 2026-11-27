@@ -22,6 +22,10 @@ public class Oracle19c extends Oracle18c {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected Oracle19c(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
+		super(nextVersionDialectSupplier, maxStringSize);
+	}
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Oracle19cSqlFactoryRegistry(this);

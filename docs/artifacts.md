@@ -182,6 +182,7 @@ recommended.
 | Database family | Artifact | Current bundled JDBC implementation dependency |
 |---|---|---|
 | IBM Db2 | `sqlapp-core-db2` | None |
+| DuckDB | `sqlapp-core-duckdb` | DuckDB JDBC (`org.duckdb:duckdb_jdbc`); see [scope and limits](../sqlapp-core-duckdb/README.md) |
 | Firebird | `sqlapp-core-firebird` | Jaybird |
 | H2 | `sqlapp-core-h2` | None |
 | HSQLDB | `sqlapp-core-hsql` | HSQLDB JDBC driver |
@@ -193,6 +194,7 @@ recommended.
 | Apache Phoenix | `sqlapp-core-phoenix` | None |
 | AlloyDB / AlloyDB Omni | `sqlapp-core-alloydb` | Reuses `sqlapp-core-postgres`; no additional driver; [managed-service verification pending](../sqlapp-core-alloydb/README.md) |
 | Aurora PostgreSQL (experimental) | `sqlapp-core-aurora-postgres` | Reuses `sqlapp-core-postgres`; no additional driver; [Aurora execution unverified](../sqlapp-core-aurora-postgres/README.md) |
+| Aurora MySQL (experimental) | `sqlapp-core-aurora-mysql` | Reuses `sqlapp-core-mysql`; no additional driver; [Aurora execution unverified](../sqlapp-core-aurora-mysql/README.md) |
 | YugabyteDB YSQL | `sqlapp-core-yugabyte` | Reuses `sqlapp-core-postgres`; no additional driver |
 | CockroachDB | `sqlapp-core-cockroach` | Reuses `sqlapp-core-postgres`; no additional driver |
 | PostgreSQL | `sqlapp-core-postgres` | PostgreSQL JDBC driver |
@@ -202,7 +204,7 @@ recommended.
 | Microsoft SQL Server | `sqlapp-core-sqlserver` | Microsoft JDBC driver; currently a preview driver coordinate |
 | Sybase ASE | `sqlapp-core-sybase` | None |
 | Symfoware Server (Postgres) | `sqlapp-core-postgres` | PostgreSQL JDBC identification; vendor behavior unverified |
-| Vertica | `sqlapp-core-virtica` | Vertica JDBC driver |
+| Vertica | `sqlapp-core-vertica` | Vertica JDBC driver |
 
 The Vertica artifact ID is currently spelled `sqlapp-core-virtica`; use that
 published identifier even though the database product is spelled “Vertica”.

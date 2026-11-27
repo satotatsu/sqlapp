@@ -1,0 +1,155 @@
+// Keep dependency JARs intact: JDBC services, native resources and notices are preserved.
+def packagingJdk = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+}
+def packageVersion = providers.gradleProperty('desktopVersion').orElse(project.version.toString())
+def runtimeDirectory = layout.buildDirectory.dir('desktop/runtime')
+def imageDirectory = layout.buildDirectory.dir('desktop/image')
+def applicationImage = imageDirectory.map { it.dir('sqlapp-swing') }
+def installerDirectory = layout.buildDirectory.dir('desktop/installer')
+def inputDirectory = layout.buildDirectory.dir('desktop/input')
+def windows = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
+
+def requireWindows = {
+    if (!windows) {
+        throw new GradleException('Windows desktop packages must be built on Windows with a Java 25 JDK.')
+    }
+}
+def jdkTool = { String name ->
+    def release = new Properties()
+    packagingJdk.get().metadata.installationPath.file('release').asFile.withInputStream { release.load(it) }
+    def normalizeArch = { String arch ->
+        def value = arch.replace('"', '').toLowerCase(Locale.ROOT)
+        ['x86_64': 'amd64', 'arm64': 'aarch64'].get(value, value)
+    }
+    if (normalizeArch(release.getProperty('OS_ARCH', 'unknown')) != normalizeArch(System.getProperty('os.arch'))) {
+        throw new GradleException('Use the same architecture for the build JVM and Java 25 toolchain.')
+    }
+    def tool = packagingJdk.get().metadata.installationPath.file("bin/${name}.exe").asFile
+    if (!tool.isFile()) {
+        throw new GradleException("Java 25 JDK tool is missing: ${tool}")
+    }
+    tool.absolutePath
+}
+
+tasks.register('desktopRuntime', Exec) {
+    group = 'distribution'
+    description = 'Creates a Java 25 runtime with all JDK modules for optional JDBC drivers.'
+    inputs.property('jdk', packagingJdk.map { it.metadata.installationPath.asFile.absolutePath })
+    inputs.file(packagingJdk.map { it.metadata.installationPath.file('release') })
+    outputs.dir(runtimeDirectory)
+    doFirst {
+        requireWindows()
+        delete(runtimeDirectory)
+        commandLine(jdkTool('jlink'), '--module-path',
+                packagingJdk.get().metadata.installationPath.dir('jmods').asFile.absolutePath,
+                '--add-modules', 'ALL-MODULE-PATH', '--bind-services',
+                '--strip-debug', '--no-header-files', '--no-man-pages',
+                '--output', runtimeDirectory.get().asFile.absolutePath)
+    }
+}
+
+tasks.register('desktopInput', Sync) {
+    dependsOn tasks.named('installDist')
+    into(inputDirectory)
+    from(tasks.named('installDist', Sync).map { new File(it.destinationDir, 'lib') })
+    from('README.md')
+    from(rootProject.file('build-logic/license')) {
+        include 'COPYING', 'COPYING.LESSER'
+        into 'legal/sqlapp'
+    }
+}
+
+tasks.register('desktopImage', Exec) {
+    group = 'distribution'
+    description = 'Creates a Windows application folder including its Java runtime.'
+    dependsOn tasks.named('desktopInput'), tasks.named('desktopRuntime')
+    inputs.dir(inputDirectory)
+    inputs.dir(runtimeDirectory)
+    inputs.property('version', packageVersion)
+    inputs.property('mainClass', application.mainClass)
+    inputs.property('jvmArgs', provider { application.applicationDefaultJvmArgs })
+    outputs.dir(imageDirectory)
+    doFirst {
+        requireWindows()
+        def version = packageVersion.get()
+        if (!(version ==~ /\d+\.\d+\.\d+/)) {
+            throw new GradleException('Set -PdesktopVersion=major.minor.patch (numeric Windows package version).')
+        }
+        def parts = version.tokenize('.').collect { new BigInteger(it) }
+        if (parts[0] > 255 || parts[1] > 255 || parts[2] > 65535) {
+            throw new GradleException('Windows package version limits: major/minor <= 255, patch <= 65535.')
+        }
+        delete(imageDirectory)
+        def args = [jdkTool('jpackage'), '--type', 'app-image', '--name', 'sqlapp-swing',
+                '--app-version', version, '--vendor', 'sqlapp',
+                '--input', inputDirectory.get().asFile.absolutePath,
+                '--main-jar', tasks.named('jar', Jar).get().archiveFileName.get(),
+                '--main-class', application.mainClass.get(),
+                '--runtime-image', runtimeDirectory.get().asFile.absolutePath,
+                '--dest', imageDirectory.get().asFile.absolutePath]
+        application.applicationDefaultJvmArgs.each { args.addAll(['--java-options', it]) }
+        commandLine(args)
+    }
+}
+
+tasks.register('verifyDesktopImage') {
+    group = 'verification'
+    description = 'Checks packaged JARs and runs local JDBC smoke checks with the bundled Java.'
+    dependsOn tasks.named('desktopImage')
+    doLast {
+        def image = applicationImage.get().asFile
+        def app = new File(image, 'app')
+        def config = new File(app, 'sqlapp-swing.cfg').getText('UTF-8')
+        if (!new File(image, 'sqlapp-swing.exe').isFile()
+                || !config.contains(application.mainClass.get())
+                || !config.contains('--enable-native-access=ALL-UNNAMED')) {
+            throw new GradleException('The packaged launcher or its JVM configuration is incomplete.')
+        }
+        inputDirectory.get().asFile.listFiles().findAll { it.name.endsWith('.jar') }.each { original ->
+            def packaged = new File(app, original.name)
+            if (!packaged.isFile() || java.nio.file.Files.mismatch(original.toPath(), packaged.toPath()) != -1L
+                    || !config.contains(original.name)) {
+                throw new GradleException("Missing, changed or unreachable packaged dependency: ${original.name}")
+            }
+        }
+        def result = providers.exec {
+            commandLine(new File(image, 'runtime/bin/java.exe').absolutePath,
+                    '--enable-native-access=ALL-UNNAMED', '-Djava.awt.headless=true',
+                    '--class-path', new File(app, '*').absolutePath,
+                    file('gradle/DesktopDistributionSmoke.java').absolutePath)
+        }
+        logger.lifecycle(result.standardOutput.asText.get())
+        result.result.get().assertNormalExitValue()
+    }
+}
+
+tasks.register('desktopZip', Zip) {
+    group = 'distribution'
+    description = 'Creates a portable Windows ZIP; users do not need to install Java.'
+    dependsOn tasks.named('verifyDesktopImage')
+    archiveBaseName = 'sqlapp-swing'
+    archiveVersion = packageVersion
+    archiveClassifier = "windows-${System.getProperty('os.arch')}-portable"
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    from(applicationImage) { into 'sqlapp-swing' }
+}
+
+tasks.register('desktopInstaller', Exec) {
+    group = 'distribution'
+    description = 'Creates a per-user Windows EXE installer (requires WiX on PATH).'
+    dependsOn tasks.named('verifyDesktopImage')
+    inputs.dir(applicationImage)
+    inputs.property('version', packageVersion)
+    outputs.dir(installerDirectory)
+    doFirst {
+        requireWindows()
+        delete(installerDirectory)
+        commandLine(jdkTool('jpackage'), '--type', 'exe', '--name', 'sqlapp-swing',
+                '--app-version', packageVersion.get(), '--vendor', 'sqlapp',
+                '--app-image', applicationImage.get().asFile.absolutePath,
+                '--dest', installerDirectory.get().asFile.absolutePath,
+                '--win-per-user-install', '--win-menu', '--win-shortcut',
+                '--win-upgrade-uuid', 'b9cded84-1fc5-4cba-b8f7-07f66bf71780')
+    }
+}

@@ -56,6 +56,7 @@ SELECT
   , case partstrat 
     when 'l' then 'list' 
     when 'r' then 'range'
+    when 'h' then 'hash'
     end as partition_strategy
   , pn.nspname AS parent_schema_name
   , pc.relname AS parent_table_name

@@ -22,10 +22,12 @@ package com.sqlapp.data.db.dialect.oracle;
 import static com.sqlapp.data.db.datatype.DataType.CLOB;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.FloatType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleCatalogReader;
 import com.sqlapp.data.db.dialect.oracle.sql.OracleSqlFactoryRegistry;
@@ -52,31 +54,89 @@ public class Oracle extends Dialect {
 	 */
 	private static final long serialVersionUID = 5104596865028027867L;
 	/**
-	 * システム予約スキーマ
+	 * システム予約スキーマ。12c以降はDBA_USERS.ORACLE_MAINTAINEDでも判定できるが、ここでは名前だけで判定できる既知の
+	 * Oracle管理スキーマを列挙する。
 	 */
-	private final String[] SYSTEM_SCHEMA = new String[] { "SYS" // データベース管理タスクを実行するために使用するアカウント
-			, "SYSTEM" // データベース管理タスクを実行するために使用するもう1つのアカウント
-			, "SYSMAN" // Oracle Enterprise
-						// Managerのデータベース管理タスクを実行するために使用するアカウント。SYSおよびSYSTEMもこれらのタスクを実行できる。
-			, "DBSNMP" // Oracle Enterprise ManagerのコンポーネントであるManagement
-						// Agentで、データベースの監視および管理に使用する
-			, "CTXSYS" // Oracle Textのアカウント
-			, "MDDATA" // ジオコーダおよびルーター・データを格納するためにOracle Spatialが使用するスキーマ
-			, "MDSYS" // Oracle SpatialおよびOracle interMedia Locatorの管理者アカウント
-			, "DMSYS" // データ・マイニング・アカウント
-			, "OLAPSYS" // OLAPメタデータ構造体の作成に使用するアカウント
-			, "ORDPLUGINS" // Oracle
-							// interMediaのユーザー。Oracle提供のプラグインやサード・パーティのフォーマット・プラグインは、このスキーマにインストールされる。
-			, "ORDSYS" // Oracle interMediaの管理者アカウント
-			, "OUTLN" // プラン・スタビリティをサポートするアカウント。プラン・スタビリティによって、同じSQL文に対して同じ実行計画を保持できる。
-			, "SI_INFORMTN_SCHEMA" // SQL/MM Still Image規格の情報ビューを格納するアカウント
-	};
+	private static final String[] SYSTEM_SCHEMA = new String[] { "SYS", "SYSTEM", "SYSMAN", "DBSNMP", "CTXSYS",
+			"MDDATA", "MDSYS", "DMSYS", "OLAPSYS", "ORDPLUGINS", "ORDSYS", "ORDDATA", "OUTLN", "SI_INFORMTN_SCHEMA",
+			"XDB", "ANONYMOUS", "WMSYS", "EXFSYS", "LBACSYS", "DVSYS", "DVF", "AUDSYS", "APPQOSSYS",
+			"GSMADMIN_INTERNAL", "GSMCATUSER", "GSMUSER", "GSMROOTUSER", "GGSYS", "OJVMSYS", "DBSFWUSER",
+			"REMOTE_SCHEDULER_AGENT", "SYSBACKUP", "SYSDG", "SYSKM", "SYSRAC", "SYS$UMF", "XS$NULL", "DIP",
+			"ORACLE_OCM", "SPATIAL_CSW_ADMIN_USR", "SPATIAL_WFS_ADMIN_USR", "FLOWS_FILES", "APEX_PUBLIC_USER",
+			"MGMT_VIEW", "OWBSYS", "OWBSYS_AUDIT", "OPS$ORACLE", "VECSYS" };
+
+	/**
+	 * MAX_STRING_SIZE
+	 */
+	private final OracleMaxStringSize maxStringSize;
 
 	/**
 	 * コンストラクタ
 	 */
 	protected Oracle(final Supplier<Dialect> nextVersionDialectSupplier) {
+		this(nextVersionDialectSupplier, OracleMaxStringSize.STANDARD);
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param nextVersionDialectSupplier 次のバージョンのDialect
+	 * @param maxStringSize              MAX_STRING_SIZE
+	 */
+	protected Oracle(final Supplier<Dialect> nextVersionDialectSupplier, final OracleMaxStringSize maxStringSize) {
 		super(nextVersionDialectSupplier);
+		this.maxStringSize = Objects.requireNonNull(maxStringSize, "maxStringSize");
+		if (maxStringSize == OracleMaxStringSize.EXTENDED) {
+			if (!supportsExtendedMaxStringSize()) {
+				throw new IllegalArgumentException(
+						"MAX_STRING_SIZE=EXTENDED requires Oracle 12c or later: " + this.getClass().getSimpleName());
+			}
+			registerExtendedStringTypes();
+		}
+	}
+
+	/**
+	 * MAX_STRING_SIZE=EXTENDEDをサポートするか
+	 */
+	public boolean supportsExtendedMaxStringSize() {
+		return false;
+	}
+
+	/**
+	 * MAX_STRING_SIZEを返します。
+	 * 
+	 * @return MAX_STRING_SIZE
+	 */
+	public OracleMaxStringSize getMaxStringSize() {
+		return maxStringSize;
+	}
+
+	/**
+	 * 同じバージョンで指定したMAX_STRING_SIZEのDialectを返します。
+	 * 
+	 * @param maxStringSize MAX_STRING_SIZE
+	 * @return Dialect
+	 * @throws IllegalArgumentException 12c未満でEXTENDEDを指定した場合
+	 */
+	public Oracle withMaxStringSize(final OracleMaxStringSize maxStringSize) {
+		return DialectHolder.getDialect(this, maxStringSize);
+	}
+
+	/**
+	 * MAX_STRING_SIZE=EXTENDEDのVARCHAR2/NVARCHAR2/RAWを登録します。
+	 */
+	protected void registerExtendedStringTypes() {
+		final OracleMaxStringSize size = OracleMaxStringSize.EXTENDED;
+		// VARCHAR
+		getDbDataTypes().addVarchar("VARCHAR2", size.getMaxVarcharLength(), type -> {
+			type.setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
+		});
+		// NVARCHAR
+		getDbDataTypes().addNVarchar("NVARCHAR2", size.getMaxVarcharLength());
+		// VARBINARY
+		getDbDataTypes().addVarBinary("RAW", size.getMaxRawLength(), type -> {
+			type.setLiteral("HEXTORAW('", "')");
+		});
 	}
 
 	/**
@@ -114,7 +174,7 @@ public class Oracle extends Dialect {
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID(RAW(16))", type -> {
-			type.setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')").setDefaultValueLiteral("NEW_GUID()");
+			type.setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')").setDefaultValueLiteral("SYS_GUID()");
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("RAW", 2000, type -> {
@@ -133,23 +193,28 @@ public class Oracle extends Dialect {
 			type.setCreateFormat("NUMBER(1,0)");
 		});
 		// TinyInt
-		getDbDataTypes().addTinyInt("NUMBER(2,0)", type -> {
-			type.setCreateFormat("NUMBER(2,0)");
+		getDbDataTypes().addTinyInt("NUMBER(3,0)", type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("NUMBER(3,0)");
 		});
 		// SmallInt
 		getDbDataTypes().addSmallInt("NUMBER(5,0)", type -> {
+			type.clearColumnTypeMatchers();
 			type.setCreateFormat("NUMBER(5,0)");
 		});
 		// MediumInt
 		getDbDataTypes().addMediumInt("NUMBER(7,0)", type -> {
+			type.clearColumnTypeMatchers();
 			type.setCreateFormat("NUMBER(7,0)");
 		});
 		// Int
-		getDbDataTypes().addInt("NUMBER(9,0)", type -> {
-			type.setCreateFormat("NUMBER(9,0)");
+		getDbDataTypes().addInt("NUMBER(10,0)", type -> {
+			type.clearColumnTypeMatchers();
+			type.setCreateFormat("NUMBER(10,0)");
 		});
 		// BigInt
 		getDbDataTypes().addBigInt("NUMBER(19,0)", type -> {
+			type.clearColumnTypeMatchers();
 			type.setCreateFormat("NUMBER(19,0)");
 		});
 		// Decimal
@@ -164,6 +229,7 @@ public class Oracle extends Dialect {
 		});
 		// Float
 		getDbDataTypes().addFloat(126);
+		FloatType.class.cast(getDbDataTypes().getDbType(DataType.FLOAT)).setDefaultPrecision(126);
 		// DATETIME
 		getDbDataTypes().addDateTime("DATE", type -> {
 			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
@@ -189,10 +255,10 @@ public class Oracle extends Dialect {
 		});
 		// ANYDATA
 		getDbDataTypes().addAnyData("ANYDATA");
-		// Single
+		// XMLType
 		getDbDataTypes().addSqlXml("XMLType", type -> {
+			type.setCreateFormat("XMLType");
 		});
-		;
 		// Indexタイプの設定
 		setIndexTypeName("NORMAL", IndexType.BTree);
 		setIndexTypeName("FUNCTION-BASED NORMAL", IndexType.Function);
@@ -217,6 +283,22 @@ public class Oracle extends Dialect {
 	@Override
 	public String getSimpleName() {
 		return "oracle";
+	}
+
+	/**
+	 * 現在日付(時刻部分を切り捨てたDATE)の取得関数
+	 */
+	@Override
+	public String getCurrentDateFunction() {
+		return "TRUNC(CURRENT_DATE)";
+	}
+
+	/**
+	 * 現在日時(DATE)の取得関数。OracleのDATEは秒までの日時を持つ。
+	 */
+	@Override
+	public String getCurrentDateTimeFunction() {
+		return "CURRENT_DATE";
 	}
 
 	@Override
@@ -325,30 +407,7 @@ public class Oracle extends Dialect {
 	 */
 	@Override
 	public String[] getSystemSchema() {
-		return SYSTEM_SCHEMA;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.DbDialect#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return getProductName().hashCode();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
-	 */
-	@Override
-	public boolean equals(final Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		return true;
+		return SYSTEM_SCHEMA.clone();
 	}
 
 	/*
@@ -359,6 +418,22 @@ public class Oracle extends Dialect {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new OracleCatalogReader(this);
+	}
+
+	/**
+	 * 同値判定。同じバージョンでもMAX_STRING_SIZEが異なれば別のDialect。
+	 */
+	@Override
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
+			return false;
+		}
+		return this.maxStringSize == ((Oracle) obj).maxStringSize;
+	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode() * 31 + maxStringSize.ordinal();
 	}
 
 	/*
@@ -397,15 +472,12 @@ public class Oracle extends Dialect {
 
 	@Override
 	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName) {
-		if (!super.matchDataTypeName(dataType, dataTypeName)) {
-			if (dataType != null && dataType.isCharacter()
-					&& CommonUtils.eqIgnoreCase(dataTypeName, dataType.name() + "2")) {
-				return true;
-			}
-			return true;
-		} else {
+		if (super.matchDataTypeName(dataType, dataTypeName)) {
 			return true;
 		}
+		// VARCHAR2/NVARCHAR2
+		return dataType != null && dataType.isCharacter()
+				&& CommonUtils.eqIgnoreCase(dataTypeName, dataType.name() + "2");
 	}
 
 	@Override
@@ -419,7 +491,10 @@ public class Oracle extends Dialect {
 		if (!CommonUtils.isEmpty(suffix)) {
 			name = name + suffix;
 		}
-		return getObjectFullName(table.getSchemaName(), name);
+		if (witSchema) {
+			return getObjectFullName(table.getSchemaName(), name);
+		}
+		return getObjectFullName(name);
 	}
 
 	@Override

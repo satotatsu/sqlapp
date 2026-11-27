@@ -78,4 +78,11 @@ class Mariadb114MetadataReaderTest {
 			assertEquals(2, view.getColumns().size());
 		}
 	}
+
+	@Test
+	void recreatesNativeDdlAndStoredObjectContexts() throws SQLException {
+		try (Connection connection = MARIADB.createConnection("")) {
+			com.sqlapp.data.db.dialect.test.MySqlRecreationAssertions.verify(connection);
+		}
+	}
 }

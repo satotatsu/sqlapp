@@ -27,7 +27,7 @@ java {
 	withJavadocJar();
 	withSourcesJar();
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21);
+		languageVersion = JavaLanguageVersion.of(25);
 	}
 }
 
@@ -62,6 +62,9 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-command"))
 	nmcpAggregation(project(":sqlapp-core-test"))
 	nmcpAggregation(project(":sqlapp-core-db2"))
+	nmcpAggregation(project(":sqlapp-core-db2-zos"))
+	nmcpAggregation(project(":sqlapp-core-db2-i"))
+	nmcpAggregation(project(":sqlapp-core-drsum"))
 	nmcpAggregation(project(":sqlapp-core-firebird"))
 	nmcpAggregation(project(":sqlapp-core-h2"))
 	nmcpAggregation(project(":sqlapp-core-informix"))
@@ -71,15 +74,18 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-oracle"))
 	nmcpAggregation(project(":sqlapp-core-postgres"))
 	nmcpAggregation(project(":sqlapp-core-aurora-postgres"))
+	nmcpAggregation(project(":sqlapp-core-aurora-mysql"))
+	nmcpAggregation(project(":sqlapp-core-edb-oracle"))
 	nmcpAggregation(project(":sqlapp-core-alloydb"))
 	nmcpAggregation(project(":sqlapp-core-yugabyte"))
 	nmcpAggregation(project(":sqlapp-core-cockroach"))
 	nmcpAggregation(project(":sqlapp-core-saphana"))
 	nmcpAggregation(project(":sqlapp-core-spanner"))
 	nmcpAggregation(project(":sqlapp-core-sqlite"))
+	nmcpAggregation(project(":sqlapp-core-duckdb"))
 	nmcpAggregation(project(":sqlapp-core-sqlserver"))
 	nmcpAggregation(project(":sqlapp-core-sybase"))
-	nmcpAggregation(project(":sqlapp-core-virtica"))
+	nmcpAggregation(project(":sqlapp-core-vertica"))
 	nmcpAggregation(project(":sqlapp-core-phoenix"))
 //	nmcpAggregation(project(":sqlapp-core-dialect-test"))
 	nmcpAggregation(project(":sqlapp-core-hsql"))
@@ -113,6 +119,18 @@ subprojects {
 	repositories {
 		mavenCentral()
 		google()
+	}
+
+	// On Linux the JVM takes the file-name encoding (sun.jnu.encoding) from the locale. Under a
+	// POSIX/C locale (minimal CI images, containers) tests that use non-ASCII file names fail,
+	// so test JVMs get a UTF-8 locale unless one is already configured.
+	tasks.withType(Test).configureEach {
+		if (System.getProperty('os.name', '').toLowerCase(Locale.ROOT).contains('linux')) {
+			def locale = (System.getenv('LC_ALL') ?: System.getenv('LC_CTYPE') ?: System.getenv('LANG') ?: '').toUpperCase(Locale.ROOT)
+			if (!locale.contains('UTF-8') && !locale.contains('UTF8')) {
+				environment 'LC_ALL', 'C.UTF-8'
+			}
+		}
 	}
 
 }

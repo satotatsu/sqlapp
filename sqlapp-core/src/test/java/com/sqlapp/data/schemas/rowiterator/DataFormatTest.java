@@ -29,6 +29,8 @@ class DataFormatTest {
 
 	@Test
 	void testParse() {
+		parseFileTest("items.PARQUET", DataFormat.PARQUET);
+		parseFileTest("PARQUET", DataFormat.PARQUET);
 		parseFileTest("aaaa.xls", DataFormat.EXCEL2003);
 		parseFileTest("aaaa.xlsx", DataFormat.EXCEL);
 		parseFileTest("aaaa.json", DataFormat.JSON);

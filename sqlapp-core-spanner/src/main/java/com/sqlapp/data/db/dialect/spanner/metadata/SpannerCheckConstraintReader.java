@@ -10,6 +10,9 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Arrays;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
@@ -30,6 +33,7 @@ public class SpannerCheckConstraintReader extends CheckConstraintReader {
 	protected List<CheckConstraint> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final List<CheckConstraint> result = list();
+		final Set<List<String>> identities = new HashSet<>();
 		execute(connection, getSqlNode(productVersionInfo), context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
@@ -40,6 +44,15 @@ public class SpannerCheckConstraintReader extends CheckConstraintReader {
 				constraint.setSchemaName(getString(rs, TABLE_SCHEMA));
 				constraint.setTableName(getString(rs, TABLE_NAME));
 				setSpecifics(rs, "spanner_state", constraint);
+				if (constraint.getName() == null || constraint.getName().isBlank() || constraint.getTableName() == null
+						|| constraint.getTableName().isBlank() || constraint.getExpression() == null
+						|| constraint.getExpression().isBlank()) {
+					throw new IllegalArgumentException("Spanner CHECK metadata requires a name, table and expression");
+				}
+				if (!identities.add(
+						Arrays.asList(constraint.getCatalogName(), constraint.getSchemaName(), constraint.getName()))) {
+					throw new IllegalArgumentException("Duplicate Spanner CHECK metadata: " + constraint.getName());
+				}
 				result.add(constraint);
 			}
 		});

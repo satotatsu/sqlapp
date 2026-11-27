@@ -74,7 +74,11 @@ public class PostgresSequenceReader extends SequenceReader {
 					sequence.setIncrementBy(rs.getBigDecimal("increment_by"));
 					sequence.setCacheSize(rs.getBigDecimal("cache_size"));
 					sequence.setCycle(rs.getBoolean("cycle"));
-					sequence.setLastValue(rs.getBigDecimal("last_value"));
+					// last_value is the last value written (possibly ahead of the last one
+					// handed out with caching); the model holds the next value to issue.
+					sequence.setLastValue(com.sqlapp.data.db.metadata.SequenceNextValues.after(
+							rs.getBigDecimal("last_value"), rs.getBigDecimal("increment_by"),
+							rs.getBigDecimal("min_value"), rs.getBigDecimal("max_value"), sequence.isCycle()));
 				}
 				result.add(sequence);
 			}
@@ -104,7 +108,7 @@ public class PostgresSequenceReader extends SequenceReader {
 			if (!isEmpty(sequence.getSchemaName()))
 				name = getDialect().quote(sequence.getSchemaName()) + "." + name;
 			parts.add("SELECT " + i
-					+ " AS position,min_value,max_value,start_value,last_value,increment_by,cache_value,is_cycled FROM "
+					+ " AS position,min_value,max_value,start_value,last_value,is_called,increment_by,cache_value,is_cycled FROM "
 					+ name);
 		}
 		try (var sql = connection.createStatement(); var rows = sql.executeQuery(String.join(" UNION ALL ", parts))) {
@@ -113,10 +117,16 @@ public class PostgresSequenceReader extends SequenceReader {
 				sequence.setMinValue(rows.getBigDecimal("min_value"));
 				sequence.setMaxValue(rows.getBigDecimal("max_value"));
 				sequence.setStartValue(rows.getBigDecimal("start_value"));
-				sequence.setLastValue(rows.getBigDecimal("last_value"));
 				sequence.setIncrementBy(rows.getBigDecimal("increment_by"));
 				sequence.setCacheSize(rows.getBigDecimal("cache_value"));
 				sequence.setCycle(rows.getBoolean("is_cycled"));
+				// Before the first nextval (is_called=false) last_value is itself the next
+				// value.
+				var last = rows.getBigDecimal("last_value");
+				sequence.setLastValue(rows.getBoolean("is_called")
+						? com.sqlapp.data.db.metadata.SequenceNextValues.after(last, rows.getBigDecimal("increment_by"),
+								rows.getBigDecimal("min_value"), rows.getBigDecimal("max_value"), sequence.isCycle())
+						: last);
 			}
 		}
 	}

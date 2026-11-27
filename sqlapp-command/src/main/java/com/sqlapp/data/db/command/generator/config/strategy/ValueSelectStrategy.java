@@ -65,7 +65,16 @@ public enum ValueSelectStrategy {
 				return enm;
 			}
 		}
-		return NEXT_VALUE;
+		throw new IllegalArgumentException("Unknown selectionStrategy: " + value + ". Expected NEXT_VALUE or RANDOM");
+	}
+
+	public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values,
+			String weightExpression, CachedEvaluator evaluator, java.util.Random random) {
+		if (this == NEXT_VALUE) {
+			return new SimpleValueSelectionFunction(values);
+		}
+		return CommonUtils.isEmpty(weightExpression) ? new RandomValueSelectionFunction(values, random)
+				: new WeightedSelectionFunction(values, weightExpression, evaluator, random);
 	}
 
 	public static String[] stringValues() {

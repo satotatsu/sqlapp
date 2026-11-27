@@ -155,8 +155,82 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 		return instance();
 	}
 
+	/**
+	 * Domain component types retain the character semantics used by table columns.
+	 */
+	public OracleSqlBuilder domainTypeDefinition(final AbstractColumn<?> component) {
+		Column physical = new Column().setDataType(component.getDataType()).setDataTypeName(component.getDataTypeName())
+				.setLength(component.getLength()).setScale(component.getScale())
+				.setCharacterSemantics(component.getCharacterSemantics());
+		return typeDefinition(physical);
+	}
+
 	@Override
 	protected OracleSqlBuilder typeDefinition(final Column column) {
+		if (column.getDomain() != null && column.getDomainName() == null) {
+			throw new IllegalArgumentException("Column domain reference requires a name: " + column.getName());
+		}
+		if (column.getDomainName() != null) {
+			if (com.sqlapp.data.db.dialect.oracle.sql.OracleDomainAssociationUtils.isFlexible(column.getDomain())
+					&& (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle26ai)
+							|| column.getDomain().getColumns().isEmpty())) {
+				throw new IllegalArgumentException(
+						"Flexible domain USING mappings require Oracle26ai and resolved components: "
+								+ column.getDomainSchemaName() + "." + column.getDomainName());
+			}
+			if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle23ai)) {
+				throw new IllegalArgumentException(
+						"Data use case domains require Oracle 23ai or later: " + column.getName());
+			}
+			if (column.getDomain().getColumns().isEmpty() && column.getDomain().getParent() == null
+					&& column.getDomainColumnName() != null
+					&& !column.getDomainColumnName().equals(column.getDomainName())
+					&& !"VALUE".equals(column.getDomainColumnName())) {
+				throw new IllegalArgumentException(
+						"Resolve the domain components from the full Schema before generating this association: "
+								+ column.getDomainName());
+			}
+			if (column.getDataType() == null && column.getDataTypeName() == null
+					&& column.getDomain().getColumns().isEmpty()) {
+				return name(column.getDomain(), true);
+			}
+			Column physical = column.clone().setDomain(null);
+			if (physical.getDataType() == null && physical.getDataTypeName() == null) {
+				if (com.sqlapp.data.db.dialect.oracle.sql.OracleDomainAssociationUtils.isFlexible(column.getDomain())) {
+					throw new IllegalArgumentException(
+							"Flexible domain association requires an explicit table column type: " + column.getName());
+				}
+				String part = column.getDomainColumnName() == null ? column.getName() : column.getDomainColumnName();
+				var component = column.getDomain().getColumns().get(part);
+				if (component == null)
+					throw new IllegalArgumentException("Unknown domain component: " + part);
+				var dataType = component.getDataType() == null ? null
+						: getDialect().getDbDataTypes().getDbTypeStrict(component.getDataType());
+				if (!com.sqlapp.util.CommonUtils.isEmpty(column.getDomain().getDefinition()) && dataType != null
+						&& dataType.getSupportCharacterSemantics().size() > 1
+						&& component.getCharacterSemantics() == null) {
+					throw new IllegalArgumentException(
+							"Cannot infer BYTE/CHAR semantics from a complete domain definition; specify the physical column type and characterSemantics: "
+									+ column.getName());
+				}
+				physical.setDataType(component.getDataType()).setDataTypeName(component.getDataTypeName())
+						.setLength(component.getLength()).setScale(component.getScale())
+						.setCharacterSemantics(component.getCharacterSemantics());
+			}
+			typeDefinition(physical);
+			if (column.getDomain().getColumns().isEmpty()) {
+				space()._add("DOMAIN").space().name(column.getDomain(), true);
+			}
+			return instance();
+		}
+		if (column.getLength() == null
+				&& (column.getDataType() == DataType.DECIMAL || column.getDataType() == DataType.NUMERIC)
+				&& (column.getDataTypeName() == null || "NUMBER".equalsIgnoreCase(column.getDataTypeName()))) {
+			_add("NUMBER");
+			if (column.getScale() != null)
+				_add("(*,")._add(column.getScale())._add(")");
+			return instance();
+		}
 		if (column.getDataType() != DataType.VECTOR) {
 			return super.typeDefinition(column);
 		}
@@ -628,17 +702,24 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	 */
 	@Override
 	public OracleSqlBuilder argument(NamedArgument obj) {
-		argumentBefore(obj);
-		if (obj.getName() != null) {
-			this._add(obj.getName());
-			this.space();
+		if (obj.getName() == null || obj.getName().isBlank()) {
+			throw new IllegalArgumentException("Oracle routine arguments require a name");
+		}
+		boolean hasDefault = obj.getDefaultValue() != null && !obj.getDefaultValue().isBlank();
+		if (hasDefault && obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
+			throw new IllegalArgumentException("Oracle argument defaults require IN mode: " + obj.getName());
+		}
+		this.name(obj.getName()).space();
+		if (obj.getDirection() == ParameterDirection.Output) {
+			this._add("OUT").space();
+		} else if (obj.getDirection() == ParameterDirection.Inout) {
+			this._add("IN OUT").space();
 		}
 		argumentTypeDefinition(obj.getDataType(), obj.getDataTypeName(),
 				CommonUtils.notZero(obj.getLength(), obj.getOctetLength()), obj.getScale());
-		if (obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
-			this.space()._add(obj.getDirection());
+		if (hasDefault) {
+			this.space()._add("DEFAULT").space()._add(obj.getDefaultValue());
 		}
-		argumentAfter(obj);
 		return instance();
 	}
 
@@ -678,6 +759,9 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	private static final Pattern NUMBER_PATTERN = Pattern.compile("[0-9]+");
 
 	private String removeLength(String val) {
+		if (val == null || val.isBlank()) {
+			throw new IllegalArgumentException("Oracle routine arguments and return values require a data type");
+		}
 		if (!val.contains("(")) {
 			return val;
 		}
@@ -707,7 +791,112 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	}
 
 	@Override
+	public OracleSqlBuilder definition(Column column, boolean withRemarks) {
+		String onNull = column.getSpecifics().get("DEFAULT_ON_NULL");
+		if (onNull != null && !"true".equalsIgnoreCase(onNull) && !"false".equalsIgnoreCase(onNull))
+			throw new IllegalArgumentException("Invalid DEFAULT_ON_NULL: " + column.getName());
+		if (CommonUtils.isEmpty(column.getFormula())) {
+			if ("true".equalsIgnoreCase(onNull) && !column.isIdentity()
+					&& CommonUtils.isEmpty(column.getDefaultValue()))
+				throw new IllegalArgumentException(
+						"DEFAULT ON NULL requires a default expression: " + column.getName());
+			if (column.isIdentity()) {
+				if (column.getDefaultValue() != null)
+					throw new IllegalArgumentException(
+							"Identity column cannot specify a separate default expression: " + column.getName());
+				typeDefinition(column);
+				addColumnVisibility(column);
+				autoIncrement(column);
+				notNullDefinition(column);
+				if (column.getCheck() != null)
+					checkConstraintDefinition(column);
+				if (withRemarks && !CommonUtils.isEmpty(column.getRemarks()))
+					comment(column);
+				return instance();
+			}
+			return super.definition(column, withRemarks);
+		}
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11g)
+				&& !(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle11gR2))
+			throw new IllegalArgumentException("Virtual columns require Oracle 11g or later");
+		if (column.isFormulaPersisted() || column.isIdentity() || column.getDefaultValue() != null
+				|| column.getDomainName() != null)
+			throw new IllegalArgumentException("Conflicting Oracle virtual column settings: " + column.getName());
+		typeDefinition(column);
+		addColumnVisibility(column);
+		space()._add("GENERATED ALWAYS AS (")._add(column.getFormula())._add(") VIRTUAL");
+		notNullDefinition(column);
+		if (column.getCheck() != null)
+			checkConstraintDefinition(column);
+		if (withRemarks && !CommonUtils.isEmpty(column.getRemarks()))
+			comment(column);
+		return instance();
+	}
+
+	@Override
+	protected OracleSqlBuilder characterSetDefinition(Column column) {
+		super.characterSetDefinition(column);
+		return addColumnVisibility(column);
+	}
+
+	private OracleSqlBuilder addColumnVisibility(Column column) {
+		String value = column.getSpecifics().get("oracle.column.invisible");
+		if (value == null)
+			return instance();
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+			throw new IllegalArgumentException("Invisible columns require Oracle 12c or later");
+		if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
+			throw new IllegalArgumentException("Invalid column visibility: " + column.getName());
+		return space()._add(Boolean.parseBoolean(value) ? "INVISIBLE" : "VISIBLE");
+	}
+
+	@Override
+	protected OracleSqlBuilder defaultDefinition(Column column) {
+		if (!column.getSpecifics().containsKey("DEFAULT_ON_NULL"))
+			return super.defaultDefinition(column);
+		String value = column.getSpecifics().get("DEFAULT_ON_NULL");
+		if (!"true".equalsIgnoreCase(value) && !"false".equalsIgnoreCase(value))
+			throw new IllegalArgumentException("Invalid DEFAULT_ON_NULL: " + column.getName());
+		if (!Boolean.parseBoolean(value))
+			return super.defaultDefinition(column);
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+			throw new IllegalArgumentException("DEFAULT ON NULL requires Oracle 12c or later");
+		return space()._add("DEFAULT ON NULL ")._add(column.getDefaultValue());
+	}
+
+	@Override
 	protected OracleSqlBuilder autoIncrement(AbstractColumn<?> column) {
+		if (!(getDialect() instanceof com.sqlapp.data.db.dialect.oracle.Oracle12c))
+			throw new IllegalArgumentException("Identity columns require Oracle 12c or later");
+		var generation = column.getIdentityGenerationType();
+		boolean onNull = "true".equalsIgnoreCase(column.getSpecifics().get("DEFAULT_ON_NULL"));
+		if (onNull && generation == com.sqlapp.data.schemas.IdentityGenerationType.Always)
+			throw new IllegalArgumentException("ALWAYS identity cannot use ON NULL: " + column.getName());
+		space()._add("GENERATED ")
+				._add(generation == com.sqlapp.data.schemas.IdentityGenerationType.Always ? "ALWAYS" : "BY DEFAULT");
+		if (onNull)
+			space()._add("ON NULL");
+		space()._add("AS IDENTITY");
+		var sequence = column.getSequence();
+		if (sequence != null) {
+			space()._add("(");
+			if (sequence.getStartValue() != null)
+				_add("START WITH ")._add(sequence.getStartValue()).space();
+			if (sequence.getIncrementBy() != null)
+				_add("INCREMENT BY ")._add(sequence.getIncrementBy()).space();
+			if (sequence.getMinValue() != null)
+				_add("MINVALUE ")._add(sequence.getMinValue()).space();
+			if (sequence.getMaxValue() != null)
+				_add("MAXVALUE ")._add(sequence.getMaxValue()).space();
+			_add(sequence.isCycle() ? "CYCLE " : "NOCYCLE ");
+			if (sequence.getCacheSize() != null) {
+				if (sequence.getCacheSize().longValue() == 0)
+					_add("NOCACHE ");
+				else
+					_add("CACHE ")._add(sequence.getCacheSize()).space();
+			}
+			_add(sequence.isOrder() ? "ORDER" : "NOORDER")._add(")");
+		}
 		return instance();
 	}
 

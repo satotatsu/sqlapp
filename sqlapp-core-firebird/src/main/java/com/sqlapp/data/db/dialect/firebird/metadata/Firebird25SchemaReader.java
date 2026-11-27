@@ -28,6 +28,15 @@ import com.sqlapp.data.db.dialect.Dialect;
  * 
  */
 public class Firebird25SchemaReader extends Firebird20SchemaReader {
+	@Override
+	protected com.sqlapp.data.db.metadata.ProcedureReader newProcedureReader() {
+		return new Firebird25ProcedureReader(getDialect());
+	}
+
+	@Override
+	protected com.sqlapp.data.db.metadata.TriggerReader newTriggerReader() {
+		return new Firebird25TriggerReader(getDialect());
+	}
 
 	protected Firebird25SchemaReader(Dialect dialect) {
 		super(dialect);

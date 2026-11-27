@@ -6,7 +6,6 @@
 package com.sqlapp.data.db.dialect.db2.sql;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.CreateIndexFactory;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
@@ -19,7 +18,7 @@ import com.sqlapp.util.CommonUtils;
 /**
  * CREATE INDEX factory with VECTOR INDEX support introduced in Db2 LUW 12.1.5.
  */
-public class Db2_1215CreateIndexFactory extends CreateIndexFactory {
+public class Db2_1215CreateIndexFactory extends Db2CreateIndexFactory {
 
 	public static final String COMPRESSED_VECTORS_TABLE_SPACE_NAME = "COMPRESSED_VECTORS_TABLE_SPACE_NAME";
 	public static final String EXCLUDE_NULL_KEYS = "EXCLUDE_NULL_KEYS";

@@ -86,7 +86,7 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * CLUSTERED COLUMN STORE
 	 */
-	ClusteredColumnStore("CLUSTERED", "CLUSTERED\\s*COLUMN\\s*STORE") {
+	ClusteredColumnStore("CLUSTERED COLUMNSTORE", "CLUSTERED\\s*COLUMN\\s*STORE") {
 		@Override
 		public boolean isClusterd() {
 			return true;
@@ -100,7 +100,7 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * NON CLUSTERED COLUMNSTORE
 	 */
-	NonClusteredColumnStore("NONCLUSTERED COLUMNSTORE", "CLUSTERED\\s*COLUMN\\s*STORE") {
+	NonClusteredColumnStore("NONCLUSTERED COLUMNSTORE", "NON\\s*CLUSTERED\\s*COLUMN\\s*STORE") {
 		@Override
 		public boolean isColumnStore() {
 			return true;
@@ -236,6 +236,13 @@ public enum IndexType implements EnumProperties {
 		final IndexType type = typeCache.get(text);
 		if (type != null) {
 			return type;
+		}
+		// XML stores enum names; vendor display-name patterns do not cover every name.
+		for (final IndexType enm : IndexType.values()) {
+			if (enm.name().equalsIgnoreCase(text)) {
+				typeCache.put(text, enm);
+				return enm;
+			}
 		}
 		for (final IndexType enm : IndexType.values()) {
 			final Matcher matcher = enm.pattern.matcher(text);

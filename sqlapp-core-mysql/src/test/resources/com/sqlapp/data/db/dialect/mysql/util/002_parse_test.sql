@@ -9,7 +9,7 @@ COALESCE(ai.name, aid.name, 'UNKNOWN') AS name
 FROM jobs j;
 
 -- ###################################################################################################
---//@UNDO
+-- Undo statements
 use schema1/*#schemaNameSuffix*/;
 SET SESSION FOREIGN_KEY_CHECKS=0;
 

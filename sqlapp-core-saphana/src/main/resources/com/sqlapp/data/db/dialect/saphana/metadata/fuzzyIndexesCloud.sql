@@ -1,0 +1,15 @@
+SELECT F.*, F.COLUMN_NAME AS SOURCE_COLUMN_NAME
+FROM M_FUZZY_SEARCH_INDEXES F
+JOIN INDEXES I ON I.SCHEMA_NAME = F.SCHEMA_NAME AND I.TABLE_NAME = F.TABLE_NAME
+  AND I.INDEX_NAME = F.INDEX_NAME AND I.INDEX_TYPE = 'FUZZY SEARCH'
+WHERE 1=1
+  /*if isNotEmpty(schemaName)*/
+  AND F.SCHEMA_NAME IN /*schemaName;type=NVARCHAR*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND F.TABLE_NAME IN /*tableName;type=NVARCHAR*/('%')
+  /*end*/
+  /*if isNotEmpty(indexName)*/
+  AND F.INDEX_NAME IN /*indexName;type=NVARCHAR*/('%')
+  /*end*/
+ORDER BY F.SCHEMA_NAME, F.TABLE_NAME, F.INDEX_NAME

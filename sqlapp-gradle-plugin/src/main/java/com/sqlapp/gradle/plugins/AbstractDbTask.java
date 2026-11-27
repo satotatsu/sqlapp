@@ -23,8 +23,28 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OptionalDataSourceTaskProperty;
 
-@DisableCachingByDefault
+@DisableCachingByDefault(because = "Reads or changes live database state")
 public abstract class AbstractDbTask<T extends AbstractCommand> extends AbstractTask<T>
 		implements DataSourceTaskProperty {
+
+	public AbstractDbTask() {
+		// Database state is not a tracked input, so declared outputs alone must
+		// never make a task that talks to a live database UP-TO-DATE.
+		getOutputs().upToDateWhen(task -> !((AbstractDbTask<?>) task).usesLiveDatabase());
+	}
+
+	/**
+	 * Whether this execution connects to a live database.
+	 * 
+	 * @return {@code false} only when the data source is optional and not
+	 *         configured.
+	 */
+	protected boolean usesLiveDatabase() {
+		if (this instanceof OptionalDataSourceTaskProperty) {
+			return getDataSource().isConfigured();
+		}
+		return true;
+	}
 }

@@ -19,7 +19,7 @@ class DatabaseMigrationAssessmentProviderTest {
 		final var schema = new Schema("source").setProductName("Microsoft Access");
 		final var parent = new Table("Parent");
 		final var parentId = new Column("ID").setIdentity(true);
-		final var parentAlt = new Column("Alt");
+		final var parentAlt = new Column("Alt").setNotNull(true);
 		parent.getColumns().add(parentId);
 		parent.getColumns().add(parentAlt);
 		parent.setPrimaryKey("PK_PARENT", parentId);

@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlBuilder;
 import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.IdentityGenerationType;
 import com.sqlapp.data.schemas.IndexType;
@@ -94,8 +95,12 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
 			type.setLiteral("X'", "'");
 		});
-		// SByte
-		getDbDataTypes().addTinyInt(type -> {
+		// HANA TINYINT is unsigned; signed Java bytes require SMALLINT.
+		getDbDataTypes().addUTinyInt("TINYINT", type -> {
+		});
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			// Output mapping for signed bytes only; native SMALLINT must remain SMALLINT.
+			type.clearColumnTypeMatchers();
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
@@ -113,21 +118,37 @@ public class SapHana extends Dialect {
 		getDbDataTypes().addDouble(type -> {
 		});
 		// Decimal
+		getDbDataTypes().addNumeric("DECIMAL", type -> {
+			type.setMaxPrecision(38).setMaxScale(38);
+		});
 		getDbDataTypes().addDecimal(type -> {
+			type.setMaxPrecision(38).setMaxScale(38);
 		});
 		// SmallDecimal
 		getDbDataTypes().addDecimalFloat("SMALLDECIMAL");
 		// Date
 		getDbDataTypes().addDate(type -> {
+			type.setDefaultValueLiteral(getCurrentDateFunction());
 		});
 		// DateTime
 		getDbDataTypes().addDateTime("SECONDDATE", type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// TIMESTAMP
 		getDbDataTypes().addTimestamp(type -> {
+			// HANA's catalog length is a display width, not a DDL precision.
+			type.setCreateFormat("TIMESTAMP");
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME");
+			type.setDefaultValueLiteral(getCurrentTimeFunction());
+		});
+		// ST_GEOMETRY, ST_POINT
+		getDbDataTypes().addGeometry(SapHanaSpatial.ST_GEOMETRY, type -> {
+			type.addColumnTypeMatcher(SapHanaSpatial.ST_POINT);
+			type.setJdbcTypeHandler(new SapHanaGeometryJdbcTypeHandler());
 		});
 		// インデックスタイプ
 		this.setIndexTypeName(IndexType.BTree);
@@ -179,6 +200,101 @@ public class SapHana extends Dialect {
 	}
 
 	@Override
+	public boolean supportsSequence() {
+		return true;
+	}
+
+	@Override
+	public String getSequenceNextValString(final String sequenceName) {
+		return "SELECT " + sequenceName + ".NEXTVAL FROM DUMMY";
+	}
+
+	@Override
+	public boolean supportsLimit() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsLimitOffset() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsWith() {
+		return true;
+	}
+
+	/**
+	 * SAP HANA supports GENERATED ALWAYS AS (expression) columns. The column reader
+	 * stores that expression in {@link Column#getFormula()}, so DML must skip those
+	 * columns instead of writing the expression as a value.
+	 */
+	@Override
+	public boolean supportsColumnFormula() {
+		return true;
+	}
+
+	/**
+	 * SAP HANA 2.0 accepts up to 65535 parameters per statement and rejects more
+	 * with SQL error 307 (verified on HANA express 2.00.088). SAP HANA 1.x is not
+	 * supported.
+	 */
+	@Override
+	public int getMaxStatementParameterCount() {
+		return 65535;
+	}
+
+	@Override
+	public String getCurrentDateFunction() {
+		return "CURRENT_DATE";
+	}
+
+	@Override
+	public String getCurrentDateTimeFunction() {
+		return "CURRENT_TIMESTAMP";
+	}
+
+	@Override
+	public String getCurrentTimeWithTimeZoneFunction() {
+		return null;
+	}
+
+	@Override
+	public String getCurrentTimestampWithTimeZoneFunction() {
+		return null;
+	}
+
+	@Override
+	public boolean supportsCascadeDelete() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsCascadeUpdate() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsCascadeRistrict() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
+		return rule != null;
+	}
+
+	@Override
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
+		return rule != null;
+	}
+
+	@Override
+	public boolean supportsSchema() {
+		return true;
+	}
+
+	@Override
 	public boolean supportsIdentitySequencePreallocation() {
 		return true;
 	}
@@ -211,6 +327,33 @@ public class SapHana extends Dialect {
 	@Override
 	public char getOpenQuote() {
 		return '"';
+	}
+
+	private static final java.util.Set<String> IDENTIFIER_KEYWORDS = java.util.Set.of("ALL", "ALTER", "ARRAY", "AS",
+			"AT", "AUTHORIZATION", "BEFORE", "BEGIN", "BETWEEN", "BOTH", "BY", "CASE", "CHAR", "COLLATE", "CONDITION",
+			"CONNECT", "CROSS", "CUBE", "CURRENT_CONNECTION", "CURRENT_DATE", "CURRENT_SCHEMA", "CURRENT_TIME",
+			"CURRENT_TIMESTAMP", "CURRENT_TRANSACTION_ISOLATION_LEVEL", "CURRENT_USER", "CURRENT_UTCDATE",
+			"CURRENT_UTCTIME", "CURRENT_UTCTIMESTAMP", "CURRVAL", "CURSOR", "DECLARE", "DISTINCT", "ELSE", "ELSEIF",
+			"EMPTY", "END", "EXCEPT", "EXCEPTION", "EXEC", "FALSE", "FILTER", "FOR", "FROM", "FULL", "GROUP",
+			"GROUPING", "HAVING", "IF", "IN", "INNER", "INOUT", "INTERSECT", "INTO", "IS", "JOIN", "LATERAL", "LEADING",
+			"LEFT", "LIMIT", "LOOP", "MINUS", "NATURAL", "NCHAR", "NEXTVAL", "NO", "NOT", "NULL", "OF", "ON", "ORDER",
+			"OUT", "OVER", "PRIOR", "RECURSIVE", "RETURN", "RETURNS", "REVERSE", "RIGHT", "ROLLUP", "ROW", "ROWID",
+			"SELECT", "SESSION_USER", "SET", "SQL", "START", "SYSUUID", "TABLE", "TABLESAMPLE", "TO", "TOP", "TRAILING",
+			"TRUE", "UNION", "UNKNOWN", "UNNEST", "USING", "UTCTIMESTAMP", "VALUES", "WHEN", "WHERE", "WHILE", "WINDOW",
+			"WITH", "WITHIN");
+
+	@Override
+	public boolean needQuote(final String target) {
+		if (target == null || target.isEmpty() || isQuoted(target)) {
+			return false;
+		}
+		return IDENTIFIER_KEYWORDS.contains(target.toUpperCase(java.util.Locale.ROOT))
+				|| !Character.isLetter(target.charAt(0)) || super.needQuote(target);
+	}
+
+	@Override
+	protected String doQuote(final String target) {
+		return "\"" + target.replace("\"", "\"\"") + "\"";
 	}
 
 	@Override

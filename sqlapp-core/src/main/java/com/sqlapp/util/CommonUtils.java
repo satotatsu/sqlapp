@@ -3117,9 +3117,9 @@ public final class CommonUtils {
 			return null;
 		}
 		final StringBuilder builder = new StringBuilder(text.length());
-		final int len = text.codePointCount(0, text.length());
-		for (int i = 0; i < len; i++) {
+		for (int i = 0; i < text.length();) {
 			final int codePoint = text.codePointAt(i);
+			i += Character.charCount(codePoint);
 			if (codePoint == '\n') {
 				builder.appendCodePoint(codePoint);
 			} else if (codePoint == '\t') {

@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SqlServerのプロシージャ作成クラス
  * 
@@ -50,8 +51,7 @@ public class SybaseProcedureReader extends ProcedureReader {
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Procedure> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Procedure> result = list();
@@ -61,12 +61,17 @@ public class SybaseProcedureReader extends ProcedureReader {
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
 				String name = getString(rs, ROUTINE_NAME);
 				Procedure procedure = result.isEmpty() ? null : result.get(result.size() - 1);
-				if (procedure == null || !name.equals(procedure.getName())) {
+				if (procedure == null || !name.equals(procedure.getName())
+						|| !java.util.Objects.equals(getString(rs, "specific_schema"), procedure.getSchemaName())
+						|| !java.util.Objects.equals(getString(rs, "specific_catalog"), procedure.getCatalogName())) {
 					procedure = createProcedure(rs);
 					result.add(procedure);
 					definitions.put(procedure, new StringBuilder());
 				}
-				definitions.get(procedure).append(getString(rs, "routine_definition"));
+				if (getReaderOptions().isReadDefinition() || getReaderOptions().isReadStatement()) {
+					final String text = SybaseSourceText.required(rs, "routine_definition", name);
+					definitions.get(procedure).append(text);
+				}
 			}
 		});
 		definitions.forEach((procedure, definition) -> setDefinition(procedure, definition.toString()));
@@ -88,16 +93,16 @@ public class SybaseProcedureReader extends ProcedureReader {
 		obj.setCreatedAt(created);
 		obj.setLastAlteredAt(lastAltered);
 		String difinition = getString(rs, "routine_definition");
-		if (this.getReaderOptions().isReadDefinition()
-				|| this.getReaderOptions().isReadStatement()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
 			obj.setDefinition(difinition);
 		}
 		return obj;
 	}
 
 	private void setDefinition(Procedure obj, String definition) {
-		if (this.getReaderOptions().isReadDefinition()
-				|| this.getReaderOptions().isReadStatement()) {
+		if (this.getReaderOptions().isReadDefinition() || this.getReaderOptions().isReadStatement()) {
+			if (definition.isBlank())
+				throw new IllegalStateException("Empty SAP ASE procedure source: " + obj.getName());
 			obj.setDefinition(definition);
 		}
 	}

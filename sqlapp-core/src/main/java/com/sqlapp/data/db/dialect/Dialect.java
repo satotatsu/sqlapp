@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect;
 
 import static com.sqlapp.data.db.datatype.DataType.BIGINT;
-import static com.sqlapp.data.db.datatype.DataType.BIT;
 import static com.sqlapp.data.db.datatype.DataType.DECIMAL;
 import static com.sqlapp.data.db.datatype.DataType.INT;
 import static com.sqlapp.data.db.datatype.DataType.SMALLINT;
@@ -986,9 +985,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (column.getScale() != 0) {
 			return;
 		}
-		if (column.getLength() == 1) {
-			column.setDataType(BIT);
-		} else if (column.getLength() < 3) {
+		// NUMBER(1) holds -9..9: it is a small integer, not a boolean or a bit string.
+		if (column.getLength() < 3) {
 			column.setDataType(TINYINT);
 		} else if (column.getLength() < 5) {
 			column.setDataType(SMALLINT);
@@ -1499,6 +1497,22 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	public boolean isDdlRollbackable() {
+		return false;
+	}
+
+	/**
+	 * Whether a REPEATABLE READ transaction reads one consistent snapshot of the
+	 * whole database, without phantom rows (snapshot isolation).
+	 * <p>
+	 * Consistency checks that read a database while nothing else may change it,
+	 * such as migration verification, otherwise require SERIALIZABLE. A database
+	 * that provides snapshot isolation but does not offer SERIALIZABLE through
+	 * JDBC can return {@code true} so that these checks use REPEATABLE READ.
+	 * </p>
+	 *
+	 * @return {@code true} when REPEATABLE READ is snapshot isolation
+	 */
+	public boolean isRepeatableReadSnapshotIsolation() {
 		return false;
 	}
 

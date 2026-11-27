@@ -19,14 +19,14 @@
 
 package com.sqlapp.data.db.dialect.db2;
 
-import static com.sqlapp.data.db.datatype.DataType.BIT;
+import static com.sqlapp.data.db.datatype.DataType.BOOLEAN;
 import static com.sqlapp.data.db.datatype.DataType.CHAR;
 import static com.sqlapp.data.db.datatype.DataType.DECIMAL;
-import static com.sqlapp.data.db.datatype.DataType.LONGVARBINARY;
 import static com.sqlapp.data.db.datatype.DataType.NCHAR;
 import static com.sqlapp.data.db.datatype.DataType.NUMERIC;
 import static com.sqlapp.data.db.datatype.DataType.NVARCHAR;
 import static com.sqlapp.data.db.datatype.DataType.UUID;
+import static com.sqlapp.data.db.datatype.DataType.VARBINARY;
 import static com.sqlapp.data.db.datatype.DataType.VARCHAR;
 import static com.sqlapp.util.CommonUtils.LEN_1GB;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
@@ -110,29 +110,30 @@ public class Db2 extends Dialect {
 		// BIT
 		getDbDataTypes().addBoolean("CHAR(1) FOR BIT DATA", type -> {
 			type.setPetternColumnTypeMatcher("CHAR(ACTER)?\\s*\\(\\s*1\\s*\\)\\s*FOR\\s+BIT\\s+DATA");
-			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
 		});
 		// BINARY
 		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
 			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
-			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
-					.setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
+			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'")
+					.setSizeSarrogation(1, BOOLEAN).setSizeSarrogation(16, UUID);
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {
 			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
-			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
 		});
 		// LONGVARBINARY(非推奨)
-		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
+		getDbDataTypes().addLongVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
 			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
-					.setDefaultValueLiteral("X'0'").setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+					.setDefaultValueLiteral("X'00'").setDeprecated(getDbDataTypes().getDbType(VARBINARY));
 		});
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
 		});
 		// Byte
-		getDbDataTypes().addTinyInt(type -> {
+		getDbDataTypes().addTinyInt("SMALLINT", type -> {
+			type.clearColumnTypeMatchers();
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
@@ -144,7 +145,11 @@ public class Db2 extends Dialect {
 		getDbDataTypes().addBigInt(type -> {
 		});
 		// XML
-		getDbDataTypes().addSqlXml("XML", type -> {
+		getDbDataTypes().addSqlXml("XML", LEN_2GB, type -> {
+			type.setCreateFormat("XML");
+			type.addColumnTypeMatcher("XMLVARCHAR");
+			type.addColumnTypeMatcher("XMLCLOB");
+			type.setLiteral("'", "'");
 		});
 		// REAL
 		getDbDataTypes().addReal(type -> {
@@ -154,12 +159,17 @@ public class Db2 extends Dialect {
 		});
 		// DecimalFloat
 		getDbDataTypes().addDecimalFloat(34);
+		// Db2 spells the type DECFLOAT(16) / DECFLOAT(34).
+		((com.sqlapp.data.db.datatype.DecimalFloatType) getDbDataTypes()
+				.getDbType(com.sqlapp.data.db.datatype.DataType.DECIMALFLOAT)).setMaxPrecision(34)
+				.setDefaultPrecision(34).setCreateFormat("DECFLOAT(", ")").addColumnTypeMatcher("DECFLOAT");
 		// Date
 		getDbDataTypes().addDate(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME");
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
 		});
 		// Timestamp
@@ -173,13 +183,6 @@ public class Db2 extends Dialect {
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
 			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
-		});
-		// XML
-		getDbDataTypes().addSqlXml("XMLVARCHAR", 32672, type -> {
-			type.setLiteral("'", "'");
-		});
-		getDbDataTypes().addSqlXml("XMLCLOB", CommonUtils.LEN_2GB, type -> {
-			type.setLiteral("'", "'");
 		});
 		// 推奨される型の登録
 		getDbDataTypes().registerRecommend(CHAR, VARCHAR);
@@ -304,7 +307,8 @@ public class Db2 extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull || rule == CascadeRule.Cascade) {
+		if (rule == CascadeRule.None || rule == CascadeRule.Restrict || rule == CascadeRule.SetNull
+				|| rule == CascadeRule.Cascade) {
 			return true;
 		}
 		return false;
@@ -317,7 +321,7 @@ public class Db2 extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
-		if (rule == CascadeRule.None) {
+		if (rule == CascadeRule.None || rule == CascadeRule.Restrict) {
 			return true;
 		}
 		return false;

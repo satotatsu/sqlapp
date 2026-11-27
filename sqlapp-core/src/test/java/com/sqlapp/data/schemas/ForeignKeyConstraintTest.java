@@ -24,6 +24,37 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyConstraint> {
 	@org.junit.jupiter.api.Test
+	public void namedReferencesRetainExplicitSchemaWithoutBoundColumns() throws Exception {
+		Table child = new Table("Child").setSchemaName("Sales");
+		child.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		ForeignKeyConstraint key = new ForeignKeyConstraint("fk").setRelatedTableName("Parent")
+				.setRelatedTableSchemaName("Archive");
+		key.getColumns().add(child.getColumns().getFirst());
+		key.getRelatedColumns().add("id");
+		child.getConstraints().add(key);
+		assertEquals("Archive", key.getRelatedTableSchemaName());
+		assertTrue(child.asXml().contains("schemaName=\"Archive\""));
+		Table restored = SchemaUtils.readXml(new java.io.StringReader(child.asXml()));
+		ForeignKeyConstraint restoredKey = (ForeignKeyConstraint) restored.getConstraints().get("fk");
+		assertEquals("Archive", restoredKey.getRelatedTableSchemaName());
+		assertEquals("Parent", restoredKey.getRelatedTableName());
+		key.setRelatedTableSchemaName(null);
+		assertEquals("Sales", key.getRelatedTableSchemaName());
+	}
+
+	@org.junit.jupiter.api.Test
+	public void boundReferenceColumnsContinueToDetermineTheirSchema() {
+		Table parent = new Table("Parent").setSchemaName("Archive");
+		parent.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		Table child = new Table("Child").setSchemaName("Sales");
+		child.getColumns().add("id", c -> c.setDataType(DataType.INT));
+		ForeignKeyConstraint key = new ForeignKeyConstraint("fk", child.getColumns().getFirst(),
+				parent.getColumns().getFirst()).setRelatedTableSchemaName("PreviousSchema");
+		child.getConstraints().add(key);
+		assertEquals("Archive", key.getRelatedTableSchemaName());
+	}
+
+	@org.junit.jupiter.api.Test
 	public void standaloneTableXmlPreservesReferencedOwnershipAndCompositeOrder() throws Exception {
 		for (String schemaName : new String[] {"Child Schema", "Parent Schema"}) {
 			Table parent = new Table("Parent Table").setSchemaName(schemaName);

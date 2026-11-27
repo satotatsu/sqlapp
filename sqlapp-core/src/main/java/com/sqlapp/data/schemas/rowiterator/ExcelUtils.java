@@ -78,8 +78,6 @@ public class ExcelUtils {
 				}
 			} else {
 				switch (column.getDataType()) {
-				case BIT:
-					return 1;
 				case TINYINT:
 				case UTINYINT:
 					return 3;

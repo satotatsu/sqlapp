@@ -55,8 +55,7 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = quadKeyMap();
@@ -87,8 +86,7 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 		return getSqlNodeCache().getString("aseUniqueConstraints.sql");
 	}
 
-	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)
-			throws SQLException {
+	protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
 		UniqueConstraint obj = new UniqueConstraint(getString(rs, INDEX_NAME));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));

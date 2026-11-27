@@ -19,14 +19,23 @@ public final class BulkMigrationTargetValidator {
 	}
 
 	public static void validate(final Connection connection, final BulkMigrationJobPlan plan) throws SQLException {
+		validate(connection, plan, true);
+	}
+
+	/** Structural preflight only; never authorizes copying into an occupied target. */
+	public static void validateStructure(final Connection connection, final BulkMigrationJobPlan plan) throws SQLException {
+		validate(connection, plan, false);
+	}
+
+	private static void validate(final Connection connection, final BulkMigrationJobPlan plan, boolean checkEmpty) throws SQLException {
 		java.util.Objects.requireNonNull(connection, "connection");
 		java.util.Objects.requireNonNull(plan, "plan").validateUnchanged();
 		for (final BulkMigrationJobTask task : plan.getTasks()) {
-			validate(connection, task);
+			validate(connection, task, checkEmpty);
 		}
 	}
 
-	private static void validate(final Connection connection, final BulkMigrationJobTask task) throws SQLException {
+	private static void validate(final Connection connection, final BulkMigrationJobTask task, boolean checkEmpty) throws SQLException {
 		final Table target = task.getEffectiveTargetTable();
 		final List<Identity> matches = new ArrayList<>();
 		try (ResultSet tables = connection.getMetaData().getTables(target.getCatalogName(), null, "%",
@@ -69,13 +78,29 @@ public final class BulkMigrationTargetValidator {
 					+ ": " + missing);
 		}
 		validateKey(connection, task, identity, nullable);
-		if (task.isRequireEmptyTarget()) {
+		if (checkEmpty && task.isRequireEmptyTarget()) {
 			validateEmpty(connection, task);
 		}
 	}
 
 	private static void validateEmpty(final Connection connection, final BulkMigrationJobTask task)
 			throws SQLException {
+		if (task.isFullScan()) {
+			final var table = task.getEffectiveTargetTable().clone();
+			table.setRowIteratorHandler(new com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler(connection));
+			final var rows = table.getRows().iterator();
+			Throwable failure = null;
+			try {
+				if (rows.hasNext())
+					throw new SQLException("Bulk migration target must be empty for task " + task.getTaskId() + ": " + qualified(table));
+			} catch (SQLException | RuntimeException | Error rejected) {
+				failure = rejected;
+				throw rejected;
+			} finally {
+				BulkMigrationIteratorSupport.close(failure, rows);
+			}
+			return;
+		}
 		final List<String> keyColumns = targetKeyColumns(task);
 		if (keyColumns.isEmpty()) {
 			throw new SQLException("Bulk migration target emptiness cannot be checked without a key for task "

@@ -55,16 +55,16 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
 		} else if (value instanceof Number) {
-			return ((Number) value).byteValue();
+			return toByte((Number) value, value);
 		} else if (value instanceof OptionalInt) {
 			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? Integer.valueOf(op.getAsInt()).byteValue() : null;
+			return op.isPresent() ? toByte(op.getAsInt(), value) : null;
 		} else if (value instanceof OptionalLong) {
 			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? Long.valueOf(op.getAsLong()).byteValue() : null;
+			return op.isPresent() ? toByte(op.getAsLong(), value) : null;
 		} else if (value instanceof OptionalDouble) {
 			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? Double.valueOf(op.getAsDouble()).byteValue() : null;
+			return op.isPresent() ? toByte(op.getAsDouble(), value) : null;
 		} else if (value instanceof Boolean) {
 			if (((Boolean) value).booleanValue()) {
 				return ONE;
@@ -80,15 +80,13 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			try {
-				return Long.valueOf(value).byteValue();
-			} catch (NumberFormatException e) {
-				Double dval = Double.valueOf(value);
-				return dval.byteValue();
-			}
-
+			return (byte) IntegralNumbers.parse(value, "Byte", Byte.MIN_VALUE, Byte.MAX_VALUE);
 		}
-		return parse(value).byteValue();
+		return toByte(parse(value), value);
+	}
+
+	private static Byte toByte(final Number value, final Object original) {
+		return (byte) IntegralNumbers.toLong(value, original, "Byte", Byte.MIN_VALUE, Byte.MAX_VALUE);
 	}
 
 	@Override

@@ -30,6 +30,32 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		super("DB2.*", new Db2VersionResolver());
 	}
 
+	@Override
+	protected boolean match(String productName) {
+		if (productName != null && productName.toUpperCase(java.util.Locale.ROOT)
+				.matches(".*(Z/OS|OS/390|AS/400|ISERIES|FOR (?:IBM )?I(?:\\s.*)?).*")) {
+			return false;
+		}
+		return super.match(productName);
+	}
+
+	@Override
+	public Dialect resolveDatabaseMetaData(java.sql.DatabaseMetaData metadata) {
+		try {
+			String name = metadata.getDatabaseProductName();
+			if (name == null || !name.toUpperCase(java.util.Locale.ROOT).startsWith("DB2"))
+				return null;
+			String version = metadata.getDatabaseProductVersion();
+			if (version != null && version.matches("(?i)\\s*(DSN|QSQ).*")) {
+				throw new IllegalArgumentException("Db2 host server requires sqlapp-core-db2-"
+						+ (version.stripLeading().toUpperCase(java.util.Locale.ROOT).startsWith("DSN") ? "zos" : "i"));
+			}
+			return null;
+		} catch (java.sql.SQLException e) {
+			throw new IllegalStateException("Cannot identify Db2 server", e);
+		}
+	}
+
 	/**
 	 * DB2用のバージョンResolver
 	 * 
@@ -67,6 +93,9 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 				return DialectHolder.Db2_1210Dialect;
 			} else if (majorVersion >= 11) {
 				if (minorVersion >= 5) {
+					if (minorVersion > 5 || (revision != null && revision >= 5)) {
+						return DialectHolder.Db2_1155Dialect;
+					}
 					return DialectHolder.Db2_1150Dialect;
 				}
 				return DialectHolder.Db2_1110Dialect;
@@ -82,6 +111,8 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 					return DialectHolder.Db2_970Dialect;
 				} else if (minorVersion >= 5) {
 					return DialectHolder.Db2_950Dialect;
+				} else if (minorVersion >= 1) {
+					return DialectHolder.Db2_910Dialect;
 				}
 			}
 			return DialectHolder.defaultDialect;

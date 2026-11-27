@@ -17,6 +17,6 @@ public class MdbUnsupportedMergeFactory extends SimpleSqlFactory<Table, MdbSqlBu
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		throw new UnsupportedOperationException("Microsoft Access MERGE is not supported by UCanAccess 5.1.6");
+		throw new UnsupportedOperationException("Microsoft Access MERGE is not supported by UCanAccess 5.2.0");
 	}
 }

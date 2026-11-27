@@ -20,6 +20,16 @@
 package com.sqlapp.data.schemas;
 
 public class FunctionTest extends AbstractDbObjectTest<Function> {
+	@org.junit.jupiter.api.Test
+	void literalSpecificNameSurvivesXmlWithoutChangingSchema() throws Exception {
+		var function = new Function("Function.With.Dot").setSchemaName("APP");
+		function.setSpecificNameLiteral("Specific.With.Dot");
+		org.junit.jupiter.api.Assertions.assertEquals("Specific.With.Dot", function.clone().getSpecificName());
+		org.junit.jupiter.api.Assertions.assertEquals("APP", function.clone().getSchemaName());
+		Function restored = SchemaUtils.readXml(new java.io.StringReader(function.asXml()));
+		org.junit.jupiter.api.Assertions.assertEquals("Specific.With.Dot", restored.getSpecificName());
+		org.junit.jupiter.api.Assertions.assertEquals("APP", restored.getSchemaName());
+	}
 
 	public static Function getFunction(String name) {
 		Function obj = new Function(name);

@@ -18,6 +18,6 @@ WHERE 1=1
   AND p.specific_schema IN /*schemaName*/('%')
   /*end*/
   /*if isNotEmpty(routineName) */
-  AND p.specific_name IN /*routineName*/('%')
+  AND r.routine_name IN /*routineName*/('%')
   /*end*/
 ORDER BY p.specific_catalog, p.specific_schema, p.specific_name, p.ordinal_position

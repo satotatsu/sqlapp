@@ -36,6 +36,7 @@ import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.QuadKeyMap;
+
 /**
  * SqlServerのインデックス作成クラス
  * 
@@ -49,8 +50,7 @@ public class SybaseIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final QuadKeyMap<String, String, String, String, Index> map = quadKeyMap();

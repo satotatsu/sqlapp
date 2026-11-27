@@ -39,6 +39,17 @@ public class OracleSqlSplitter extends SqlSplitter {
 
 	private static final Pattern BEGIN_PATTERN = Pattern.compile("\\s*(BEGIN|DECLARE)\\s*",
 			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+	private static final Pattern ANONYMOUS_PATTERN = Pattern.compile("\\s*(BEGIN|DECLARE)\\b.*",
+			Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
+	private static final Pattern SLASH_LINE = Pattern.compile("(?m)^[\\t ]*/[\\t ]*\\r?$");
+
+	@Override
+	protected String getResult(SqlTokenizer tokenizer) {
+		String result = super.getResult(tokenizer);
+		if (result != null && ANONYMOUS_PATTERN.matcher(result).matches() && !result.endsWith(";"))
+			return result + ";";
+		return result;
+	}
 
 	private static final Pattern END_PATTERN = Pattern.compile("\\s*END\\s*(?<term>[^\\s;])?\\s*;\\s*/\\s*.*",
 			Pattern.MULTILINE + Pattern.CASE_INSENSITIVE + Pattern.DOTALL);
@@ -47,7 +58,45 @@ public class OracleSqlSplitter extends SqlSplitter {
 	protected SqlTokenizer createSqlTokenizer(String input) {
 		return new SqlTokenizer(input) {
 			@Override
+			protected int getQuotedTextEnd(String sql, int start) {
+				if (start > 0 && Character.isJavaIdentifierPart(sql.charAt(start - 1)))
+					return super.getQuotedTextEnd(sql, start);
+				int prefix = sql.regionMatches(true, start, "nq'", 0, 3) ? 3
+						: sql.regionMatches(true, start, "q'", 0, 2) ? 2 : 0;
+				if (prefix == 0)
+					return super.getQuotedTextEnd(sql, start);
+				if (start + prefix >= sql.length())
+					stringHolder.throwInvalidTextException("Alternative quote delimiter not found");
+				char open = sql.charAt(start + prefix);
+				if (Character.isWhitespace(open) || open == '\'')
+					stringHolder.throwInvalidTextException("Invalid alternative quote delimiter");
+				char close = switch (open) {
+				case '[' -> ']';
+				case '(' -> ')';
+				case '{' -> '}';
+				case '<' -> '>';
+				default -> open;
+				};
+				int end = sql.indexOf("" + close + "'", start + prefix + 1);
+				if (end < 0)
+					stringHolder.throwInvalidTextException("Closing alternative quote [" + close + "'] not found");
+				return end + 2;
+			}
+
+			@Override
 			protected boolean isStartStatement(String text, StringHolder stringHolder) {
+				if (ANONYMOUS_PATTERN.matcher(text).matches()) {
+					String remainder = stringHolder.substringAt();
+					Matcher slash = SLASH_LINE.matcher(remainder);
+					while (slash.find()) {
+						int position = stringHolder.getPosition() + slash.start() + slash.group().indexOf('/');
+						if (getTextMarker(position) == null) {
+							setPosition(position);
+							return true;
+						}
+					}
+					stringHolder.throwInvalidTextException("Delimiter[/] not found for anonymous PL/SQL block");
+				}
 				Matcher matcher = CREATE_PATTERN.matcher(text);
 				if (matcher.matches()) {
 					int delPos = stringHolder.indexOf(this.getCurrentDelimiter(), stringHolder.getPosition() + 10);
