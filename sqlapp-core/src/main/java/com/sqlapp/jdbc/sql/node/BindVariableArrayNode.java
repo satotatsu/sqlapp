@@ -42,7 +42,7 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 	 */
 	private static final long serialVersionUID = 8430153028619529776L;
 
-	private final BindParameter bindParameter = new BindParameter();
+	private BindParameter bindParameter = new BindParameter();
 
 	@Override
 	public void setExpression(final String expression) {
@@ -93,14 +93,20 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 				final BindParameter parameter = originalParameter.clone();
 				parameter.setCommentNode(own);
 				Object val;
-				if (column != null) {
-					parameter.setDataType(column.getDataType());
+				// Resolve the column from each element so that rows are read individually.
+				final Column elementColumn = column != null ? column
+						: obj instanceof Row ? getColumn((Row) obj, originalParameter.getName()) : null;
+				if (elementColumn != null) {
+					parameter.setDataType(elementColumn.getDataType());
 					if (obj instanceof Row) {
-						final Row row = (Row) context;
-						val = row.get(column);
+						final Row row = (Row) obj;
+						val = row.get(elementColumn);
 					} else {
 						val = obj;
 					}
+				} else if (obj instanceof Row) {
+					throw new IllegalArgumentException("Column " + originalParameter.getName()
+							+ " was not found for a Row element. " + getMatchText());
 				} else {
 					val = obj;
 				}
@@ -114,11 +120,20 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 		};
 		try {
 			itr.execute(val);
+		} catch (final RuntimeException e) {
+			throw e;
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
 		if (parameters.size() > 1) {
-			Collections.sort(parameters);
+			// Sort a copy: a failed sort must not leave the list partially reordered.
+			final List<BindParameter> sorted = CommonUtils.list(parameters);
+			try {
+				Collections.sort(sorted);
+				return sorted;
+			} catch (final ClassCastException e) {
+				// Values of mutually incomparable types keep their iteration order.
+			}
 		}
 		return parameters;
 	}
@@ -241,6 +256,9 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 	 */
 	@Override
 	public BindVariableArrayNode clone() {
-		return (BindVariableArrayNode) super.clone();
+		final BindVariableArrayNode clone = (BindVariableArrayNode) super.clone();
+		// Do not share the parsed parameter template between clones.
+		clone.bindParameter = this.bindParameter.clone();
+		return clone;
 	}
 }

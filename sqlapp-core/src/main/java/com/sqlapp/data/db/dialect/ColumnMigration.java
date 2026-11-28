@@ -64,11 +64,11 @@ public final class ColumnMigration {
 			final DefaultValueMigration.Options options, final DefaultValueMigration.Override override) {
 		Objects.requireNonNull(source, "source");
 		Objects.requireNonNull(target, "target");
-		final Result typed = target.convertColumnForMigration(source.clone().setDefaultValue(null).setOnUpdate(null));
+		final Result typed = target.convertColumnForMigration(detached(source).setDefaultValue(null).setOnUpdate(null));
 		final Column candidate;
 		final List<MigrationDiagnostic> diagnostics = new ArrayList<>();
 		if (typed.isNoTypeRule()) {
-			candidate = source.clone();
+			candidate = detached(source);
 		} else if (typed.candidate() == null) {
 			return typed;
 		} else {
@@ -91,6 +91,16 @@ public final class ColumnMigration {
 			}
 		}
 		return new Result(candidate, diagnostics, defaultValue);
+	}
+
+	/**
+	 * Copies the column into a holder table without a dialect, so that type names
+	 * set by a target rule are not resolved with the source table's dialect.
+	 */
+	private static Column detached(final Column source) {
+		final Column copy = source.clone();
+		new com.sqlapp.data.schemas.Table("column_migration").getColumns().add(copy);
+		return copy;
 	}
 
 	static Result noRule(final Column source, final Dialect target) {

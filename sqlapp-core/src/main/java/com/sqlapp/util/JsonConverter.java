@@ -469,6 +469,25 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 		}
 	}
 
+	/**
+	 * Reads a data file (JSON, TOML, YAML rows). Decimals are read as BigDecimal so
+	 * that values such as 0.1 or 12345678901234567.89 are kept exactly. The row
+	 * readers call this method, so a custom converter can override it to change how
+	 * data files are read.
+	 * 
+	 * @param file  data file
+	 * @param clazz result type
+	 * @return the file contents
+	 */
+	public <T> T readRows(final File file, final Class<T> clazz) {
+		try {
+			return getObjectMapper().readerFor(clazz).with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+					.readValue(file);
+		} catch (final JacksonException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

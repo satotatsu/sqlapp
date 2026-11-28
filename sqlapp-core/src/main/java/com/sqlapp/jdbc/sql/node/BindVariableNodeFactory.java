@@ -35,17 +35,17 @@ public class BindVariableNodeFactory extends AbstractColumnNodeFactory<BindVaria
 			Pattern.compile(OPEREATOR_PATTERN + "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TRUE|False))",
 					Pattern.CASE_INSENSITIVE),
 			Pattern.compile(OPEREATOR_PATTERN
-					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TIME\\s*'.*?'|TIMESTAMP\\s*'.*?'|TIMESTAMP\\s+WITH\\s+TIMEZONE\\s*'.*?'|DATE\\s*'.*?'|DATETIME\\s*'.*?'))",
+					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(TIME\\s*'.*?'|TIMESTAMP\\s*'.*?'|TIMESTAMP\\s+WITH\\s+TIME\\s*ZONE\\s*'.*?'|DATE\\s*'.*?'|DATETIME\\s*'.*?'))",
 					Pattern.CASE_INSENSITIVE),
 			Pattern.compile(OPEREATOR_PATTERN
-					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOUND)\\s*(//([0-9]+//)){0,1}\\s*TO\\s+(MONTH|DAY|HOUR|MINUTE|SECOUND)))",
+					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s']*'[^']*'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND)\\s*(\\(\\s*[0-9]+\\s*\\)){0,1}\\s*TO\\s+(MONTH|DAY|HOUR|MINUTE|SECOND)(\\s*\\(\\s*[0-9]+\\s*\\)){0,1}))",
 					Pattern.CASE_INSENSITIVE),
 			Pattern.compile(OPEREATOR_PATTERN
-					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOUND)(//([0-9]+//)){0,1}))",
+					+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s']*'[^']*'\\s*(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND)(\\s*\\(\\s*[0-9]+\\s*\\)){0,1}))",
 					Pattern.CASE_INSENSITIVE),
 			Pattern.compile(
 					OPEREATOR_PATTERN
-							+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s]+?'))",
+							+ "(?<value>\\s*?/\\*(?<expression>[^+*#$\\s][\\S]*?)\\*/(INTERVAL\\s*[^\\s']*'[^']*'))",
 					Pattern.CASE_INSENSITIVE),
 			Pattern.compile(
 					OPEREATOR_PATTERN

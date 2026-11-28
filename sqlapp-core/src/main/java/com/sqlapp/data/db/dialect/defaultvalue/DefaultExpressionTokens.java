@@ -6,12 +6,19 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Minimal tokenizer for recognizing default expressions.
+ * Minimal tokenizer for recognizing SQL expressions.
  * <p>
  * It distinguishes string literals (optionally with an {@code N} prefix),
  * delimited identifiers ({@code "..."} and {@code [...]}), numbers, regular
- * identifiers and symbols. It never evaluates anything. Malformed input
- * (an unterminated literal or identifier) yields {@code null}.
+ * identifiers and symbols. Line comments ({@code --}) and block comments,
+ * including nested ones, are skipped. It never evaluates anything. Malformed input
+ * (an unterminated literal, identifier or comment) yields {@code null}.
+ * </p>
+ * <p>
+ * Each token keeps its position in the source text, so a recognized part of a
+ * longer text (for example a function call inside a CHECK constraint or a
+ * trigger body) can be replaced without touching the rest, using
+ * {@link #replace(String, List)}.
  * </p>
  */
 public final class DefaultExpressionTokens {
@@ -27,11 +34,13 @@ public final class DefaultExpressionTokens {
 	/**
 	 * A token.
 	 *
-	 * @param type token kind
-	 * @param text unescaped value for strings and quoted identifiers, otherwise
-	 *             the source text
+	 * @param type  token kind
+	 * @param text  unescaped value for strings and quoted identifiers, otherwise
+	 *              the source text
+	 * @param start index of the first source character
+	 * @param end   index after the last source character
 	 */
-	public record Token(Type type, String text) {
+	public record Token(Type type, String text, int start, int end) {
 
 		/** Whether this token is a regular or delimited identifier equal to the name, ignoring case. */
 		public boolean isName(final String name) {
@@ -71,12 +80,21 @@ public final class DefaultExpressionTokens {
 			final char c = sql.charAt(i);
 			if (Character.isWhitespace(c)) {
 				i++;
+			} else if (c == '-' && i + 1 < length && sql.charAt(i + 1) == '-') {
+				final int newline = sql.indexOf('\n', i);
+				i = newline < 0 ? length : newline + 1;
+			} else if (c == '/' && i + 1 < length && sql.charAt(i + 1) == '*') {
+				final int end = commentEnd(sql, i);
+				if (end < 0) {
+					return null;
+				}
+				i = end;
 			} else if ((c == 'N' || c == 'n') && i + 1 < length && sql.charAt(i + 1) == '\'') {
 				final int end = closing(sql, i + 1, '\'');
 				if (end < 0) {
 					return null;
 				}
-				tokens.add(new Token(Type.NATIONAL_STRING, unescape(sql, i + 2, end, '\'')));
+				tokens.add(new Token(Type.NATIONAL_STRING, unescape(sql, i + 2, end, '\''), i, end + 1));
 				i = end + 1;
 			} else if (c == '\'' || c == '"' || c == '[') {
 				final char close = c == '[' ? ']' : c;
@@ -84,7 +102,8 @@ public final class DefaultExpressionTokens {
 				if (end < 0) {
 					return null;
 				}
-				tokens.add(new Token(c == '\'' ? Type.STRING : Type.QUOTED_IDENTIFIER, unescape(sql, i + 1, end, close)));
+				tokens.add(new Token(c == '\'' ? Type.STRING : Type.QUOTED_IDENTIFIER, unescape(sql, i + 1, end, close), i,
+						end + 1));
 				i = end + 1;
 			} else if (Character.isDigit(c) || c == '.' && i + 1 < length && Character.isDigit(sql.charAt(i + 1))) {
 				int end = i;
@@ -103,7 +122,7 @@ public final class DefaultExpressionTokens {
 						}
 					}
 				}
-				tokens.add(new Token(Type.NUMBER, sql.substring(i, end)));
+				tokens.add(new Token(Type.NUMBER, sql.substring(i, end), i, end));
 				i = end;
 			} else if (Character.isLetter(c) || c == '_') {
 				int end = i + 1;
@@ -114,13 +133,13 @@ public final class DefaultExpressionTokens {
 					}
 					end++;
 				}
-				tokens.add(new Token(Type.IDENTIFIER, sql.substring(i, end)));
+				tokens.add(new Token(Type.IDENTIFIER, sql.substring(i, end), i, end));
 				i = end;
 			} else if (c == ':' && i + 1 < length && sql.charAt(i + 1) == ':') {
-				tokens.add(new Token(Type.SYMBOL, "::"));
+				tokens.add(new Token(Type.SYMBOL, "::", i, i + 2));
 				i += 2;
 			} else {
-				tokens.add(new Token(Type.SYMBOL, String.valueOf(c)));
+				tokens.add(new Token(Type.SYMBOL, String.valueOf(c), i, i + 1));
 				i++;
 			}
 		}
@@ -174,6 +193,91 @@ public final class DefaultExpressionTokens {
 			return (tokens.getFirst().isSymbol("-") ? "-" : "") + tokens.get(1).text();
 		}
 		return null;
+	}
+
+	/**
+	 * Returns the source text covered by the tokens, from the first token's
+	 * start to the last token's end.
+	 *
+	 * @param sql    source text the tokens were read from
+	 * @param tokens non-empty contiguous tokens
+	 * @return source text
+	 */
+	public static String text(final String sql, final List<Token> tokens) {
+		if (tokens.isEmpty()) {
+			return "";
+		}
+		return sql.substring(tokens.getFirst().start(), tokens.getLast().end());
+	}
+
+	/**
+	 * Replacement of a source range.
+	 *
+	 * @param start index of the first replaced character
+	 * @param end   index after the last replaced character
+	 * @param text  replacement text
+	 */
+	public record Replacement(int start, int end, String text) {
+		public Replacement {
+			if (start < 0 || end < start) {
+				throw new IllegalArgumentException("Invalid replacement range " + start + ".." + end);
+			}
+			java.util.Objects.requireNonNull(text, "text");
+		}
+
+		/** Replacement of the source range covered by the tokens. */
+		public static Replacement of(final List<Token> tokens, final String text) {
+			if (tokens.isEmpty()) {
+				throw new IllegalArgumentException("No tokens to replace");
+			}
+			return new Replacement(tokens.getFirst().start(), tokens.getLast().end(), text);
+		}
+	}
+
+	/**
+	 * Applies replacements to the source text. Text outside the replaced ranges,
+	 * including comments and whitespace, is kept as is.
+	 *
+	 * @param sql          source text
+	 * @param replacements non-overlapping replacements in any order
+	 * @return replaced text
+	 * @throws IllegalArgumentException when ranges overlap or exceed the text
+	 */
+	public static String replace(final String sql, final List<Replacement> replacements) {
+		final List<Replacement> sorted = new ArrayList<>(replacements);
+		sorted.sort(java.util.Comparator.comparingInt(Replacement::start).thenComparingInt(Replacement::end));
+		final StringBuilder builder = new StringBuilder(sql.length());
+		int position = 0;
+		for (final Replacement replacement : sorted) {
+			if (replacement.start() < position || replacement.end() > sql.length()) {
+				throw new IllegalArgumentException(
+						"Overlapping or out-of-range replacement " + replacement.start() + ".." + replacement.end());
+			}
+			builder.append(sql, position, replacement.start()).append(replacement.text());
+			position = replacement.end();
+		}
+		return builder.append(sql, position, sql.length()).toString();
+	}
+
+	/** Index after a possibly nested block comment starting at {@code start}, or -1. */
+	private static int commentEnd(final String sql, final int start) {
+		int depth = 0;
+		int i = start;
+		while (i + 1 < sql.length()) {
+			if (sql.charAt(i) == '/' && sql.charAt(i + 1) == '*') {
+				depth++;
+				i += 2;
+			} else if (sql.charAt(i) == '*' && sql.charAt(i + 1) == '/') {
+				depth--;
+				i += 2;
+				if (depth == 0) {
+					return i;
+				}
+			} else {
+				i++;
+			}
+		}
+		return -1;
 	}
 
 	private static int closing(final String value, final int start, final char close) {

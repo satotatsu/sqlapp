@@ -19,7 +19,6 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
@@ -53,7 +52,8 @@ public class ElseIfNode extends NeedsEndNode implements Cloneable {
 	protected boolean evalBoolean(Object context) {
 		try {
 			return getEvaluator().evalBoolean(this.getExpression(), context);
-		} catch (ExpressionExecutionException e) {
+		} catch (RuntimeException e) {
+			// The evaluator may throw its own exceptions (e.g. MVEL); report the SQL position.
 			throw handleExceptrion(e);
 		}
 	}

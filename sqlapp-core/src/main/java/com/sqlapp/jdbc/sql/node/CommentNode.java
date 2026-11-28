@@ -21,7 +21,6 @@ package com.sqlapp.jdbc.sql.node;
 
 import static com.sqlapp.util.CommonUtils.trim;
 
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -80,7 +79,7 @@ public class CommentNode extends Node {
 		if (text == null || text.isEmpty()) {
 			return text;
 		}
-		if (text.charAt(0) == '\'' && text.charAt(text.length() - 1) == '\'') {
+		if (text.length() >= 2 && text.charAt(0) == '\'' && text.charAt(text.length() - 1) == '\'') {
 			return "'" + sanitizeInternal(text.substring(1, text.length() - 1)) + "'";
 		} else {
 			return sanitizeInternal(text);
@@ -96,7 +95,15 @@ public class CommentNode extends Node {
 		if (text == null) {
 			return text;
 		}
-		return text.replace("'", "''").replace("/*", "").replace("*/", "").replace("--", "").replace(";", "");
+		// Repeat token removal until stable: a single pass can rebuild a token (for
+		// example "//**" -> "/*" or "-;-" -> "--"). Quotes are escaped once afterwards.
+		String current = text;
+		String previous;
+		do {
+			previous = current;
+			current = current.replace("/*", "").replace("*/", "").replace("--", "").replace(";", "");
+		} while (!current.equals(previous));
+		return current.replace("'", "''");
 	}
 
 	private ParameterDefinition parameterDefinition;
@@ -120,28 +127,5 @@ public class CommentNode extends Node {
 	protected boolean containsSqlWord(String text) {
 		Matcher matcher = SQL_PATTERN.matcher(text);
 		return matcher.find();
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(this.getClass(), getIndex(), expression, matchText, this.getChildNodes().size());
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (!super.equals(obj)) {
-			return false;
-		}
-		if (!(obj instanceof CommentNode)) {
-			return false;
-		}
-		CommentNode node = (CommentNode) obj;
-		if (Objects.equals(expression, node.expression)) {
-			return false;
-		}
-		if (Objects.equals(matchText, node.matchText)) {
-			return false;
-		}
-		return true;
 	}
 }

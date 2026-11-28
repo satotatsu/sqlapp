@@ -414,4 +414,66 @@ class ConverterReviewFixesTest {
 		assertThrows(UnsupportedOperationException.class,
 				() -> converters.convertObject("2026-02-30", java.time.LocalDate.class));
 	}
+	@Test
+	void durationKeepsDaysSignAndTimeOfDay() {
+		final Converters converters = new Converters();
+		assertEquals(java.time.Duration.ofHours(26), converters.convertObject("0-0-1 2:0:0", java.time.Duration.class));
+		assertEquals(java.time.Duration.ofHours(-26), converters.convertObject("-0-0-1 2:0:0", java.time.Duration.class));
+		assertEquals(java.time.Duration.ofHours(26),
+				converters.convertObject(com.sqlapp.data.interval.Interval.parse("0-0-1 2:0:0"), java.time.Duration.class));
+		assertEquals(java.time.Duration.parse("-PT252H4M13S"),
+				converters.convertObject("Interval '-10 12:4:13' day to second", java.time.Duration.class));
+		assertEquals(java.time.Duration.parse("PT252H4M13S"),
+				converters.convertObject("Interval '10 12:4:13' day to second", java.time.Duration.class));
+		// years and months: 365.25 and 30 days, as PostgreSQL EXTRACT(EPOCH FROM interval)
+		assertEquals(java.time.Duration.ofSeconds(31_557_600L).plusDays(60),
+				converters.convertObject("Interval '1-2' year to month", java.time.Duration.class));
+		assertEquals(java.time.Duration.ofSeconds(-31_557_600L - 30L * 86400 - 86400),
+				converters.convertObject("-1-1-1 0:0:0", java.time.Duration.class));
+		assertEquals(java.time.Duration.ofDays(1), converters.convertObject(java.time.Period.ofDays(1), java.time.Duration.class));
+		assertEquals(java.time.Duration.ofDays(30),
+				converters.convertObject(java.time.Period.ofMonths(1), java.time.Duration.class));
+		assertEquals(java.time.Duration.ofSeconds(31_557_600L * 2).plusDays(3),
+				converters.convertObject(java.time.Period.of(2, 0, 3), java.time.Duration.class));
+		assertEquals(java.time.Duration.parse("PT1H30M15S"),
+				converters.convertObject(LocalTime.of(1, 30, 15), java.time.Duration.class));
+		// Timestamp keeps micro- and nanoseconds (the Calendar path has only milliseconds)
+		assertEquals(java.time.Duration.parse("PT1H30M15.123456789S"), converters
+				.convertObject(java.sql.Timestamp.valueOf("2025-11-28 01:30:15.123456789"), java.time.Duration.class));
+		// a plain java.util.Date keeps its milliseconds
+		final java.util.Date date = new java.util.Date(
+				java.sql.Timestamp.valueOf("2025-11-28 01:30:15.123").getTime());
+		assertEquals(java.time.Duration.parse("PT1H30M15.123S"), converters.convertObject(date, java.time.Duration.class));
+	}
+	@Test
+	void dateTimeOutputKeepsNonZeroFractions() {
+		final TimeZone original = TimeZone.getDefault();
+		try {
+			TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tokyo"));
+			final Converters converters = new Converters();
+			final java.util.Date withMillis = new java.util.Date(1764287581123L);
+			assertEquals("2025-11-28 08:53:01.123", converters.convertString(withMillis));
+			assertEquals(withMillis, converters.convertObject(converters.convertString(withMillis), java.util.Date.class));
+			assertEquals("2025-11-28 08:53:01", converters.convertString(new java.util.Date(1764287581000L)));
+			assertEquals("2025-11-28 08:53:01.5", converters.convertString(new java.util.Date(1764287581500L)));
+			final java.util.Calendar calendar = java.util.Calendar.getInstance();
+			calendar.setTime(withMillis);
+			assertEquals("2025-11-28 08:53:01.123 +09:00[JST]", converters.convertString(calendar));
+			assertEquals("2025-11-28 08:53:01.123", converters.convertString(java.sql.Timestamp.valueOf("2025-11-28 08:53:01.123")));
+			assertEquals("2025-11-28 08:53:01.123456789",
+					converters.convertString(java.sql.Timestamp.valueOf("2025-11-28 08:53:01.123456789")));
+			assertEquals("2025-11-28 08:53:01", converters.convertString(java.sql.Timestamp.valueOf("2025-11-28 08:53:01")));
+			assertEquals("2025-11-28 08:53:01.000001",
+					converters.convertString(LocalDateTime.of(2025, 11, 28, 8, 53, 1, 1000)));
+			assertEquals("08:53:01.25", converters.convertString(LocalTime.of(8, 53, 1, 250_000_000)));
+			assertEquals("2025-11-28 08:53:01.5 +09:00",
+					converters.convertString(OffsetDateTime.of(2025, 11, 28, 8, 53, 1, 500_000_000, ZoneOffset.ofHours(9))));
+			// Instant is written in the default zone, as before
+			assertEquals("2025-11-28 08:53:01.123", converters.convertString(java.time.Instant.ofEpochMilli(1764287581123L)));
+			// java.sql.Time keeps its fixed milliseconds
+			assertEquals("08:53:01.000", converters.convertString(java.sql.Time.valueOf("08:53:01")));
+		} finally {
+			TimeZone.setDefault(original);
+		}
+	}
 }

@@ -217,7 +217,7 @@ class DefaultValueMigrationTest {
 				}
 
 				@Override
-				public List<TemporalCandidate> temporalCandidates(final com.sqlapp.data.schemas.Column column) {
+				public List<TemporalCandidate> temporalCandidates(final TemporalKind kind) {
 					return candidates;
 				}
 			};

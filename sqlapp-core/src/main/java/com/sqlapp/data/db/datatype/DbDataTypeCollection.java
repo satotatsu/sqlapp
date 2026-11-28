@@ -429,6 +429,7 @@ public class DbDataTypeCollection implements Serializable {
 	 * @param maxlength  最大長
 	 */
 	protected void registerDataLength(DbDataType<?> dbDataType, Long maxlength) {
+		clearResolutionCaches();
 		TreeMap<Long, DbDataType<?>> sortDic = null;
 		// nationalCharDataLengthType
 		if (dataLengthType.containsKey(dbDataType.getDataType())) {
@@ -461,17 +462,32 @@ public class DbDataTypeCollection implements Serializable {
 
 	/**
 	 * データ型を登録します。独自のDialect型は型の解決を始める前の初期化時に登録します。
+	 * <p>
+	 * Dialectの継承階層では、親クラスの初期化中に型を解決した後で子クラスが型を登録することがあるため、
+	 * 登録時に型の解決結果のキャッシュを破棄します。
+	 * </p>
 	 * 
 	 * @param dbDataType データ型
 	 * @return 登録した型
 	 */
 	public DbDataType<?> register(DbDataType<?> dbDataType) {
+		clearResolutionCaches();
 		if (dataTypeMap.containsKey(dbDataType.getDataType())) {
 			dataTypeMap.remove(dbDataType.getDataType());
 		}
 		dbDataType.setParent(this);
 		dataTypeMap.put(dbDataType.getDataType(), dbDataType);
 		return dbDataType;
+	}
+
+	/**
+	 * 型の解決結果のキャッシュを破棄します。型の登録・非推奨化など、解決結果が変わる変更の後に呼び出します。
+	 */
+	void clearResolutionCaches() {
+		getDtTypeCacheMap.clear();
+		productDataTypeDbTypeCache.clear();
+		noMatchProductDataTypeDbTypeCache.clear();
+		productDataLengthTypeDbTypeCache.clear();
 	}
 
 	/**

@@ -75,6 +75,11 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	private List<Node> childNodeList = new ArrayList<Node>();
 
 	private String sql = null;
+	/**
+	 * The whole SQL text this node was parsed from. {@link #getIndex()} is an
+	 * offset into this text.
+	 */
+	private String sourceSql = null;
 
 	private transient SqlRegistry sqlRegistry = null;
 	/**
@@ -140,7 +145,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection eval(Object context, Consumer<SqlParameterCollection> initializer) {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(getDialect());
 		sqlParameters.setTable(getTable(context));
 		List<Row> rows = this.getRowList(context);
 		initializer.accept(sqlParameters);
@@ -164,7 +169,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 */
 	public SqlParameterCollection eval(TableRelation obj, List<Row> rows,
 			Consumer<SqlParameterCollection> initializer) {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(getDialect());
 		sqlParameters.setTableRelation(obj);
 		initializer.accept(sqlParameters);
 		this.eval(rows, sqlParameters);
@@ -179,7 +184,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection eval(TableRelation obj, List<Row> rows) {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(getDialect());
 		sqlParameters.setTableRelation(obj);
 		this.eval(rows, sqlParameters);
 		return sqlParameters;
@@ -193,7 +198,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection eval(TableRelation obj, Row row) {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(getDialect());
 		sqlParameters.setTableRelation(obj);
 		sqlParameters.setRow(row);
 		this.eval(null, sqlParameters);
@@ -208,7 +213,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection eval(Number number) {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(getDialect());
 		Map<String, Object> context = CommonUtils.map();
 		context.put("context", number);
 		this.eval(context, sqlParameters);
@@ -222,7 +227,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection createSqlParameters() {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(getDialect());
 		Map<String, Object> context = CommonUtils.map();
 		this.eval(context, sqlParameters);
 		return sqlParameters;
@@ -517,7 +522,8 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	protected Object evalExpression(String expression, Object context) {
 		try {
 			return getEvaluator().eval(expression, context);
-		} catch (ExpressionExecutionException e) {
+		} catch (RuntimeException e) {
+			// The evaluator may throw its own exceptions (e.g. MVEL); report the SQL position.
 			throw handleExceptrion(e);
 		}
 	}
@@ -585,20 +591,48 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	/**
-	 * このノードのSQL上の行数を取得します。
+	 * このノードの、解析元SQL全体における行番号（1始まり）を取得します。
 	 * 
 	 */
 	public int getLine() {
-		if (this.getIndex() == 0) {
-			return 0;
-		} else {
-			if (this.getIndex() <= sql.length()) {
-				String sub = sql.substring(0, this.getIndex() - 1);
-				return sub.split("[\\n]").length - 1;
-			} else {
-				return sql.split("[\\n]").length - 1;
+		final String text = getPositionText();
+		final int start = getPositionStart(text);
+		int line = 1;
+		for (int i = 0; i < start; i++) {
+			if (text.charAt(i) == '\n') {
+				line++;
 			}
 		}
+		return line;
+	}
+
+	/**
+	 * The whole SQL text this node was parsed from.
+	 */
+	public String getSourceSql() {
+		return sourceSql;
+	}
+
+	/**
+	 * Sets the whole SQL text this node was parsed from. Set by the parser.
+	 */
+	public void setSourceSql(String sourceSql) {
+		this.sourceSql = sourceSql;
+	}
+
+	private String getPositionText() {
+		if (sourceSql != null) {
+			return sourceSql;
+		}
+		return sql != null ? sql : "";
+	}
+
+	private int getPositionStart(final String text) {
+		if (sourceSql == null) {
+			// Without the source text the index cannot be mapped; report the start.
+			return 0;
+		}
+		return Math.max(0, Math.min(this.getIndex(), text.length()));
 	}
 
 	/**
@@ -619,21 +653,14 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	/**
-	 * このノードのSQL上の位置を取得します。
+	 * このノードの、解析元SQL全体における行内の位置（0始まり）を取得します。
 	 * 
 	 */
 	public int getOffset() {
-		int i = 0;
-		int start = this.getIndex();
-		if (start >= this.getSql().length()) {
-			start = this.getSql().length() - 1;
-		}
-		for (i = start; i >= 0; i--) {
-			if (this.getSql().charAt(i) == '\n') {
-				break;
-			}
-		}
-		return (start - i - 1);
+		final String text = getPositionText();
+		final int start = getPositionStart(text);
+		final int lineStart = text.lastIndexOf('\n', start - 1) + 1;
+		return start - lineStart;
 	}
 
 	/*
@@ -677,26 +704,9 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		return this.getSql();
 	}
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(this.getClass(), sql, this.getChildNodes().size(), index);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (obj == this) {
-			return true;
-		}
-		if (!(obj instanceof Node)) {
-			return false;
-		}
-		Node node = (Node) obj;
-		if (this.index != node.index) {
-			return false;
-		}
-		if (!Objects.equals(this.getClass(), obj.getClass())) {
-			return false;
-		}
-		return true;
-	}
+	/*
+	 * Nodes use identity equality. A parsed tree may contain clones at the same
+	 * index (for example the same SQL included twice), and evaluation results such
+	 * as {@code SqlParameterCollection#getSqlParts()} are keyed per node instance.
+	 */
 }

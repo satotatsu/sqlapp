@@ -184,6 +184,8 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 		};
 		try {
 			itr.execute(val);
+		} catch (RuntimeException e) {
+			throw e;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -209,6 +211,8 @@ public class ForNode extends NeedsEndNode implements Cloneable {
 		};
 		try {
 			itr.execute(val);
+		} catch (RuntimeException e) {
+			throw e;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

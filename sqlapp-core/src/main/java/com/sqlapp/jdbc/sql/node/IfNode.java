@@ -24,7 +24,6 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.util.List;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
-import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
 /**
@@ -70,7 +69,8 @@ public class IfNode extends NeedsEndNode {
 	protected boolean evalBoolean(Object context) {
 		try {
 			return getEvaluator().evalBoolean(this.getExpression(), context);
-		} catch (ExpressionExecutionException e) {
+		} catch (RuntimeException e) {
+			// The evaluator may throw its own exceptions (e.g. MVEL); report the SQL position.
 			throw handleExceptrion(e);
 		}
 	}

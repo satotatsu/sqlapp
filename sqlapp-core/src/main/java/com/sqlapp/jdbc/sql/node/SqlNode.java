@@ -20,7 +20,6 @@
 package com.sqlapp.jdbc.sql.node;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -155,10 +154,5 @@ public class SqlNode extends Node {
 			builder.append(child.toString());
 		}
 		return builder.toString();
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(this.getClass(), sqlType, this.getChildNodes().size());
 	}
 }

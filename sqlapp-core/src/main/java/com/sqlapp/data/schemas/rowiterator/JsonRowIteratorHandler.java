@@ -118,7 +118,8 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 				iterator = list.iterator();
 				return;
 			}
-			final Object value = JsonRowSchema.reader(jsonConverter, Object.class).readValue(file);
+			// through the converter, so that a custom JSON/YAML converter is honored
+			final Object value = jsonConverter.readRows(file, Object.class);
 			list = JsonMapIterable.getRows(value, file.getAbsolutePath());
 			iterator = list.iterator();
 		}

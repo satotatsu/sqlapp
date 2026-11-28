@@ -192,8 +192,7 @@ public class JdbcBatchIterateHander implements AutoCloseable {
 			} else {
 				sqlParameters = holder.getSqlParameters(columnSize, rowSize);
 				statement = holder.getPreparedStatement(columnSize, rowSize);
-				holder.getSqlNode().reEval(obj.converted, sqlParameters);
-				sqlParameters.setBind(statement);
+				holder.rebind(obj.converted, sqlParameters, statement);
 			}
 			if (holder.getBatchExecResult() == null) {
 				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rowSize));
@@ -233,8 +232,7 @@ public class JdbcBatchIterateHander implements AutoCloseable {
 				} else {
 					sqlParameters = holder.getSqlParameters(columnSize, rowSize);
 					statement = holder.getPreparedStatement(columnSize, rowSize);
-					holder.getSqlNode().reEval(valueHolder.converted(), sqlParameters);
-					sqlParameters.setBind(statement);
+					holder.rebind(valueHolder.converted(), sqlParameters, statement);
 				}
 				int ret = statement.executeUpdate();
 				int[] retArray = new int[1];

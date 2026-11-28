@@ -41,7 +41,7 @@ public class BindVariableNode extends AbstractColumnNode {
 	 */
 	private static final long serialVersionUID = 1700573849729755073L;
 
-	private final BindParameter bindParameter = new BindParameter();
+	private BindParameter bindParameter = new BindParameter();
 
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
@@ -95,7 +95,10 @@ public class BindVariableNode extends AbstractColumnNode {
 	 */
 	@Override
 	public BindVariableNode clone() {
-		return (BindVariableNode) super.clone();
+		final BindVariableNode clone = (BindVariableNode) super.clone();
+		// Do not share the parsed parameter template between clones.
+		clone.bindParameter = this.bindParameter.clone();
+		return clone;
 	}
 
 }

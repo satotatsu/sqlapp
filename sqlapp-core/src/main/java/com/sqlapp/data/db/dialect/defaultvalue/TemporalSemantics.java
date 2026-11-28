@@ -76,15 +76,18 @@ public record TemporalSemantics(EvaluationPoint point, TimeBasis basis, Temporal
 			};
 		}
 
-		boolean hasTime() {
+		/** Whether values of this kind include a time of day. */
+		public boolean hasTime() {
 			return this != DATE;
 		}
 
-		boolean hasDate() {
+		/** Whether values of this kind include a date. */
+		public boolean hasDate() {
 			return this == DATE || this == DATETIME || this == DATETIME_WITH_TIME_ZONE;
 		}
 
-		boolean hasTimeZone() {
+		/** Whether values of this kind include a time zone offset. */
+		public boolean hasTimeZone() {
 			return this == TIME_WITH_TIME_ZONE || this == DATETIME_WITH_TIME_ZONE;
 		}
 	}

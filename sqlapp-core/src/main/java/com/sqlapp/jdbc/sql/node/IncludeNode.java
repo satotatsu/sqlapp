@@ -19,7 +19,12 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
+import com.sqlapp.jdbc.sql.SqlRegistry;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -42,9 +47,20 @@ public class IncludeNode extends CommentNode {
 		if (registered == null) {
 			throw new IllegalArgumentException("Included SQL not found: " + getExpression());
 		}
+		checkCircularInclude();
 		Node node = registered.clone();
 		node.setParent(this);
 		return node.eval(context, sqlParameters);
+	}
+
+	private static final ThreadLocal<Set<String>> EXPANDING = ThreadLocal.withInitial(HashSet::new);
+
+	private void checkCircularInclude() {
+		for (Node parent = this.getParent(); parent != null; parent = parent.getParent()) {
+			if (parent instanceof IncludeNode && Objects.equals(((IncludeNode) parent).getExpression(), getExpression())) {
+				throw new IllegalStateException("Circular SQL include: " + getExpression());
+			}
+		}
 	}
 
 	@Override
@@ -72,8 +88,17 @@ public class IncludeNode extends CommentNode {
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(super.toString());
-		Node node = this.getSqlRegistry().get(getExpression(), null);
-		builder.append(node.toString());
+		final SqlRegistry registry = this.getSqlRegistry();
+		final Node node = registry != null ? registry.get(getExpression(), null) : null;
+		final Set<String> expanding = EXPANDING.get();
+		// Stop at a circular include instead of recursing forever.
+		if (node != null && expanding.add(getExpression())) {
+			try {
+				builder.append(node.toString());
+			} finally {
+				expanding.remove(getExpression());
+			}
+		}
 		return builder.toString();
 	}
 }

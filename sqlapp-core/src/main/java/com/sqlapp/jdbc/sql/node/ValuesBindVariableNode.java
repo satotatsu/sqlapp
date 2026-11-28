@@ -69,26 +69,25 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final boolean supportsValues = supportsValues(sqlParameters.getDialect());
 		final List<Row> rows = getRowList(context);
-		final ColumnCollection columns = sqlParameters.getTable().getColumns();
-		final int size = rows.size();
-		if (size == 0) {
+		if (rows == null || rows.isEmpty()) {
 			throw new IllegalArgumentException("VALUES requires at least one source row");
 		}
-		boolean hasRowNo = hasRowNo(rows);
-		final String questionText;
-		if (hasRowNo) {
-			questionText = getQuestionText(columns.size() + 1);
-		} else {
-			questionText = getQuestionText(columns.size());
-		}
+		final int size = rows.size();
+		final boolean hasRowNo = hasRowNo(rows);
 		final BindParameterHolder holder = new BindParameterHolder(size);
+		// Evaluate the row template once per row; the first result decides the form.
+		final SqlParameterCollection firstRowParameters = evalRow(rows.get(0), sqlParameters);
+		final boolean useRowTemplate = firstRowParameters.getParameterSize() > 0;
+		final ColumnCollection columns = useRowTemplate ? null : getTableColumns(sqlParameters);
+		final String questionText = useRowTemplate ? null
+				: getQuestionText(hasRowNo ? columns.size() + 1 : columns.size());
 		if (supportsValues) {
 			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n, ");
 			builder.setStart("\n" + this.getExpression() + "\n  ");
-			final SqlParameterCollection firstRowParameters = evalRow(rows.get(0), sqlParameters);
-			if (firstRowParameters.getParameterSize() > 0) {
-				for (Row row : rows) {
-					final SqlParameterCollection rowParameters = evalRow(row, sqlParameters);
+			if (useRowTemplate) {
+				for (int i = 0; i < size; i++) {
+					final SqlParameterCollection rowParameters = i == 0 ? firstRowParameters
+							: evalRow(rows.get(i), sqlParameters);
 					builder.add(rowParameters.getSql().trim());
 					rowParameters.getBindParameters().forEach(parameter -> parameter.stream()
 							.forEach(holder.getBindParameters()::add));
@@ -113,10 +112,10 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 			String dummyTable = getDummyTableNamme(sqlParameters.getDialect());
 			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n" + UNION_ALL + "\n");
 			builder.setStart("\n");
-			final SqlParameterCollection firstRowParameters = evalRow(rows.get(0), sqlParameters);
-			if (firstRowParameters.getParameterSize() > 0) {
-				for (Row row : rows) {
-					final SqlParameterCollection rowParameters = evalRow(row, sqlParameters);
+			if (useRowTemplate) {
+				for (int i = 0; i < size; i++) {
+					final SqlParameterCollection rowParameters = i == 0 ? firstRowParameters
+							: evalRow(rows.get(i), sqlParameters);
 					builder.add(createSelectText(unwrapRowExpression(rowParameters.getSql()), dummyTable));
 					rowParameters.getBindParameters().forEach(parameter -> parameter.stream()
 							.forEach(holder.getBindParameters()::add));
@@ -150,6 +149,13 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 		rowParameters.setSqlSignature(sqlParameters.getSqlSignature());
 		super.evalChilds(row, rowParameters);
 		return rowParameters;
+	}
+
+	private ColumnCollection getTableColumns(final SqlParameterCollection sqlParameters) {
+		if (sqlParameters.getTable() == null) {
+			throw new IllegalArgumentException("VALUES without a row template requires a table");
+		}
+		return sqlParameters.getTable().getColumns();
 	}
 
 	private String unwrapRowExpression(final String sql) {
