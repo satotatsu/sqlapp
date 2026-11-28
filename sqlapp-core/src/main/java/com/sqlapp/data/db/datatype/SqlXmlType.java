@@ -66,7 +66,6 @@ public class SqlXmlType extends AbstractLengthType<SqlXmlType>{
 	 */
 	public SqlXmlType setAsNVarchar(){
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(DataType.NVARCHAR.getJdbcType(), converter));
-        setDefaultValueLiteral("'0'");
 		return this;
 	}
 

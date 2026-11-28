@@ -31,6 +31,19 @@ public sealed interface DefaultExpression {
 	}
 
 	/**
+	 * Bit string literal such as {@code B'101'}.
+	 *
+	 * @param bits digits {@code 0} and {@code 1}
+	 */
+	record BitStringLiteral(String bits) implements DefaultExpression {
+		public BitStringLiteral {
+			if (bits == null || !bits.matches("[01]*")) {
+				throw new IllegalArgumentException("Bit string literal must contain only 0 and 1.");
+			}
+		}
+	}
+
+	/**
 	 * Numeric literal.
 	 *
 	 * @param text SQL text of the number including an optional leading minus sign

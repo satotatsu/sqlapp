@@ -21,12 +21,14 @@ package com.sqlapp.data.db.datatype.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.VarcharType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.FunctionReturning;
@@ -147,6 +149,27 @@ class TypeInformationTest {
 		typeInfomation.setLength(10);
 		typeInfomation.set(column);
 		assertEquals(10L, column.getLength());
+	}
+
+	@Test
+	void lengthUnitsExpandAndRejectInvalidInput() {
+		TypeInformation info = new TypeInformation();
+		info.setLength("2", "K");
+		assertEquals(2048L, info.getLength().orElseThrow());
+		info.setLength("3", "g");
+		assertEquals(3L * 1024 * 1024 * 1024, info.getLength().orElseThrow());
+
+		info.setLength(7);
+		assertThrows(IllegalArgumentException.class, () -> info.setLength("2", "T"));
+		assertThrows(IllegalArgumentException.class, () -> info.setLength("17179869184", "G"));
+		assertThrows(IllegalArgumentException.class, () -> info.setLength(null, "K"));
+		assertEquals(7L, info.getLength().orElseThrow());
+	}
+
+	@Test
+	void overflowingTypeNameLengthIsRejected() {
+		assertThrows(IllegalArgumentException.class,
+				() -> new VarcharType().matchDataTypeName("VARCHAR(17179869184G)"));
 	}
 
 	@Test

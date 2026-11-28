@@ -307,6 +307,22 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param scale             Scale
 	 * @return 条件と一致した型情報
 	 */
+	/**
+	 * A precision taken from elsewhere (metadata, another database) that the type
+	 * cannot hold, such as 14 for DATETIME2 (at most 7), becomes the type's maximum,
+	 * which keeps as much of the value as the type allows during a migration. Length
+	 * types are not limited here: they are replaced by a larger type instead.
+	 */
+	private static Long limitToMaxPrecision(final DbDataType<?> dbDataType, final Long precision) {
+		if (precision != null && dbDataType instanceof com.sqlapp.data.db.datatype.PrecisionProperties<?> properties) {
+			final Integer max = properties.getMaxPrecision();
+			if (max != null && precision > max) {
+				return max.longValue();
+			}
+		}
+		return precision;
+	}
+
 	public Optional<TypeInformation> matchDbType(final DataType dataType, String productDataType,
 			Long lengthOrPrecision, Integer scale) {
 		productDataType = normalize(productDataType);
@@ -322,7 +338,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			TypeInformation typeInformation = optional.get();
 			if (typeInformation.getLength().isEmpty()
 					|| (lengthOrPrecision != null && typeInformation.isSetDefaultLength())) {
-				typeInformation.setLength(lengthOrPrecision);
+				typeInformation.setLength(limitToMaxPrecision(typeInformation.getDbDataType(), lengthOrPrecision));
 			}
 			if (typeInformation.getScale().isEmpty()
 					|| (scale != null && typeInformation.isSetDefaultScale())) {
@@ -961,6 +977,59 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		final String close = String.valueOf(getCloseQuote());
 		builder.append(getOpenQuote()).append(target.replace(close, close + close)).append(getCloseQuote());
 		return builder.toString();
+	}
+
+	/**
+	 * 値全体を1つの識別子として常にクォートし、内部の終了引用符をエスケープします。
+	 * <p>
+	 * {@link #quote(String)} と異なり、既にクォートされているように見える値や、クォートが不要な値も
+	 * そのまま返しません。信頼できない値を識別子として出力する場合に使用します。
+	 * </p>
+	 * 
+	 * @param target 識別子
+	 * @return クォートした識別子。{@code null} の場合は {@code null}
+	 */
+	public String quoteIdentifier(final String target) {
+		if (target == null) {
+			return null;
+		}
+		return doQuote(target);
+	}
+
+	/**
+	 * 値をSQLの文字列リテラルとして出力します。
+	 * <p>
+	 * 既定では {@code '} で囲み、{@code '} を {@code ''} にエスケープします。バックスラッシュの扱いは
+	 * データベースや接続設定によって異なるため、既定ではバックスラッシュを含む値を拒否します。
+	 * 扱いが確定できるDialectはオーバーライドしてください。
+	 * </p>
+	 * 
+	 * @param value 値
+	 * @return 文字列リテラル。{@code null} の場合は {@code null}
+	 * @throws IllegalArgumentException 値がNUL文字、または既定の実装でバックスラッシュを含む場合
+	 */
+	public String toStringLiteral(final String value) {
+		if (value == null) {
+			return null;
+		}
+		checkStringLiteral(value);
+		if (value.indexOf('\\') >= 0) {
+			throw new IllegalArgumentException(
+					"Backslash in a string literal is not supported for " + getProductName() + ".");
+		}
+		return "'" + value.replace("'", "''") + "'";
+	}
+
+	/**
+	 * 文字列リテラルに出力できない文字を検査します。
+	 * 
+	 * @param value 値
+	 * @throws IllegalArgumentException NUL文字を含む場合
+	 */
+	protected void checkStringLiteral(final String value) {
+		if (value.indexOf('\0') >= 0) {
+			throw new IllegalArgumentException("NUL character is not supported in a string literal.");
+		}
 	}
 
 	/**

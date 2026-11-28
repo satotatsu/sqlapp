@@ -191,8 +191,7 @@ public class StatementHolder implements Closeable {
 			return null;
 		}
 		final PreparedStatement statement = getPreparedStatement(columnSize, rowSize);
-		getSqlNode().reEval(obj, sqlParameters);
-		sqlParameters.setBind(statement);
+		rebind(obj, sqlParameters, statement);
 		return statement;
 	}
 
@@ -205,9 +204,18 @@ public class StatementHolder implements Closeable {
 		if (holder == null) {
 			return null;
 		}
-		getSqlNode().reEval(obj, holder.getSqlParameters());
-		holder.getSqlParameters().setBind(holder.getStatement());
+		rebind(obj, holder.getSqlParameters(), holder.getStatement());
 		return holder.getStatement();
+	}
+
+	/** Refreshes cached values without rebuilding SQL or executing pending batches. */
+	void rebind(Object context, SqlParameterCollection parameters, PreparedStatement statement) throws SQLException {
+		if (!getSqlNode().reEval(context, parameters)) {
+			throw new SQLException("Cannot reuse prepared SQL: parameter structure changed or requires SQL evaluation. "
+					+ "Use inputs with a fixed parameter structure, or JdbcBatchUpdateHandler with "
+					+ "setEvaluateSqlPerRow(true) for dynamic SQL.");
+		}
+		parameters.setBind(statement);
 	}
 
 	@Getter

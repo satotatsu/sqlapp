@@ -7,6 +7,7 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionTokens.Token;
 import com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionTokens.Type;
+import com.sqlapp.data.db.dialect.defaultvalue.TemporalSemantics.TemporalKind;
 import com.sqlapp.data.schemas.Column;
 
 /**
@@ -31,23 +32,42 @@ public class StandardDefaultExpressionSupport implements DefaultExpressionSuppor
 		if (all == null || all.isEmpty()) {
 			return new DefaultExpression.Unrecognized(sql);
 		}
-		final List<Token> tokens = DefaultExpressionTokens.unwrap(all);
+		final DefaultExpression expression = recognize(sql, all, column);
+		return expression instanceof DefaultExpression.Unrecognized ? new DefaultExpression.Unrecognized(sql)
+				: expression;
+	}
+
+	@Override
+	public DefaultExpression recognize(final String sql, final List<Token> range, final Column column) {
+		if (range.isEmpty()) {
+			return new DefaultExpression.Unrecognized("");
+		}
+		final List<Token> tokens = DefaultExpressionTokens.unwrap(range);
 		final DefaultExpression literal = parseLiteral(tokens, column);
 		if (literal != null) {
 			return literal;
 		}
 		final DefaultExpression other = parseExpression(tokens, column);
-		return other != null ? other : new DefaultExpression.Unrecognized(sql);
+		return other != null ? other : new DefaultExpression.Unrecognized(DefaultExpressionTokens.text(sql, range));
 	}
 
 	/**
 	 * Recognizes NULL, numbers and string literals.
 	 *
+	 * @param tokens tokens without enclosing parentheses
+	 * @param column column whose value the expression produces, or {@code null}
 	 * @return the literal, or {@code null}
 	 */
 	protected DefaultExpression parseLiteral(final List<Token> tokens, final Column column) {
 		if (tokens.size() == 1 && tokens.getFirst().isKeyword("NULL")) {
 			return new DefaultExpression.NullValue();
+		}
+		if (tokens.size() == 1 && (tokens.getFirst().isKeyword("TRUE") || tokens.getFirst().isKeyword("FALSE"))) {
+			return new DefaultExpression.BooleanLiteral(tokens.getFirst().isKeyword("TRUE"));
+		}
+		final String bits = bitString(tokens);
+		if (bits != null) {
+			return new DefaultExpression.BitStringLiteral(bits);
 		}
 		final String number = DefaultExpressionTokens.number(tokens);
 		if (number != null) {
@@ -64,6 +84,8 @@ public class StandardDefaultExpressionSupport implements DefaultExpressionSuppor
 	 * Recognizes product-specific expressions such as current date/time
 	 * functions. Tokens have their enclosing parentheses removed.
 	 *
+	 * @param tokens tokens without enclosing parentheses
+	 * @param column column whose value the expression produces, or {@code null}
 	 * @return the expression, or {@code null} when not recognized
 	 */
 	protected DefaultExpression parseExpression(final List<Token> tokens, final Column column) {
@@ -71,7 +93,7 @@ public class StandardDefaultExpressionSupport implements DefaultExpressionSuppor
 	}
 
 	@Override
-	public List<TemporalCandidate> temporalCandidates(final Column column) {
+	public List<TemporalCandidate> temporalCandidates(final TemporalKind kind) {
 		return List.of();
 	}
 
@@ -90,8 +112,23 @@ public class StandardDefaultExpressionSupport implements DefaultExpressionSuppor
 		return source != null && Objects.equals(source.getProductName(), dialect.getProductName());
 	}
 
+	/**
+	 * Returns the digits of a bit string literal {@code B'0101'} (either case of
+	 * the prefix), or {@code null}.
+	 */
+	protected static String bitString(final List<Token> tokens) {
+		if (tokens.size() == 2 && (tokens.get(0).isKeyword("B")) && tokens.get(1).type() == Type.STRING
+				&& tokens.get(0).end() == tokens.get(1).start() && tokens.get(1).text().matches("[01]*")) {
+			return tokens.get(1).text();
+		}
+		return null;
+	}
+
 	/** Whether the column stores national character data. */
 	protected static boolean isNationalCharacter(final Column column) {
+		if (column == null) {
+			return false;
+		}
 		final DataType type = column.getDataType();
 		return type == DataType.NCHAR || type == DataType.NVARCHAR || type == DataType.LONGNVARCHAR
 				|| type == DataType.NCLOB;

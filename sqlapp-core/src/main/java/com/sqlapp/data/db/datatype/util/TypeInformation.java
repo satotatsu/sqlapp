@@ -284,22 +284,40 @@ public class TypeInformation {
 	 *
 	 * @param value length
 	 * @param multi K OR M OR G
+	 * @throws IllegalArgumentException 単位が不正な場合、単位に長さがない場合、長さがlongを超える場合。
+	 *                                  例外時は長さを変更しません
 	 */
 	public void setLength(String value, String multi) {
-		setDefaultLength = false;
-		Long val = Converters.getDefault().convertObject(value, Long.class);
+		final Long val = Converters.getDefault().convertObject(value, Long.class);
+		final Long expanded;
 		if (CommonUtils.isEmpty(multi)) {
-			length = Optional.ofNullable(getCaluculatedLength(val));
+			expanded = val;
 		} else {
-			if ("K".equalsIgnoreCase(multi)) {
-				length = Optional.of(getCaluculatedLength(val.longValue() * CommonUtils.LEN_1KB));
-			} else if ("M".equalsIgnoreCase(multi)) {
-				length = Optional.of(getCaluculatedLength(val.longValue() * CommonUtils.LEN_1MB));
-			} else if ("G".equalsIgnoreCase(multi)) {
-				length = Optional.of(getCaluculatedLength(val.longValue() * CommonUtils.LEN_1GB));
+			if (val == null) {
+				throw new IllegalArgumentException("A length unit requires a length: " + multi);
 			}
+			expanded = multiplyLength(val.longValue(), multi);
 		}
+		length = Optional.ofNullable(getCaluculatedLength(expanded));
 		setDefaultLength = val == null && length.isPresent();
+	}
+
+	private static long multiplyLength(final long value, final String multi) {
+		final long unit;
+		if ("K".equalsIgnoreCase(multi)) {
+			unit = CommonUtils.LEN_1KB;
+		} else if ("M".equalsIgnoreCase(multi)) {
+			unit = CommonUtils.LEN_1MB;
+		} else if ("G".equalsIgnoreCase(multi)) {
+			unit = CommonUtils.LEN_1GB;
+		} else {
+			throw new IllegalArgumentException("Unsupported length unit: " + multi);
+		}
+		try {
+			return Math.multiplyExact(value, unit);
+		} catch (final ArithmeticException e) {
+			throw new IllegalArgumentException("Length exceeds the supported range: " + value + multi, e);
+		}
 	}
 
 	private Long getCaluculatedLength(Long val) {

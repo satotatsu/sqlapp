@@ -128,7 +128,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-01-02T12:30:15.123+0100";
 		dateTime = converters.convertObject(dateText, ZonedDateTime.class);
-		assertEquals("2011-01-02 12:30:15 +01:00[+01:00]", converters.convertString(dateTime));
+		assertEquals("2011-01-02 12:30:15.123 +01:00[+01:00]", converters.convertString(dateTime));
 		assertEquals("2011-01-02T12:30:15.123+01:00", dateTime.toString());
 		assertEquals(123000000, dateTime.getNano());
 		//
@@ -202,7 +202,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-01-02T12:30:15.123+0100";
 		dateTime = converters.convertObject(dateText, OffsetDateTime.class);
-		assertEquals("2011-01-02 12:30:15 +01:00", converters.convertString(dateTime));
+		assertEquals("2011-01-02 12:30:15.123 +01:00", converters.convertString(dateTime));
 		assertEquals("2011-01-02T12:30:15.123+01:00", dateTime.toString());
 		assertEquals(123000000, dateTime.getNano());
 		//
@@ -276,7 +276,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-01-02T12:30:15.123+0100";
 		dateTime = converters.convertObject(dateText, LocalDateTime.class);
-		assertEquals("2011-01-02 12:30:15", converters.convertString(dateTime));
+		assertEquals("2011-01-02 12:30:15.123", converters.convertString(dateTime));
 		assertEquals("2011-01-02T12:30:15.123", dateTime.toString());
 		assertEquals(123000000, dateTime.getNano());
 		//
@@ -347,7 +347,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-01-02T12:30:15.123+0100";
 		dateTime = converters.convertObject(dateText, Date.class);
-		assertEquals("2011-01-02 20:30:15", converters.convertString(dateTime));
+		assertEquals("2011-01-02 20:30:15.123", converters.convertString(dateTime));
 		assertEquals("Sun Jan 02 20:30:15 JST 2011", dateTime.toString());
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(dateTime);
@@ -435,7 +435,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-01-02T12:30:15.123+0100";
 		dateTime = converters.convertObject(dateText, Timestamp.class);
-		assertEquals("2011-01-02 20:30:15.123000000", converters.convertString(dateTime));
+		assertEquals("2011-01-02 20:30:15.123", converters.convertString(dateTime));
 		assertEquals(123000000, dateTime.getNanos());
 		//
 		dateText = "2011-01-02 12:30:15.123456789";
@@ -505,7 +505,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-01-02T12:30:15.123+0100";
 		dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-01-02 12:30:15 +01:00[GMT+01:00]", converters.convertString(dateTime));
+		assertEquals("2011-01-02 12:30:15.123 +01:00[GMT+01:00]", converters.convertString(dateTime));
 		assertEquals(123, dateTime.get(Calendar.MILLISECOND));
 		//
 		dateText = "2011-01-02T12:30:15.000+0100";

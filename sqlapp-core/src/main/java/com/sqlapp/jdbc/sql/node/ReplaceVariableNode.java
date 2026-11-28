@@ -23,7 +23,6 @@ import static com.sqlapp.util.CommonUtils.parseKeyValue;
 import static com.sqlapp.util.CommonUtils.trim;
 
 import java.util.Map;
-import java.util.Objects;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParameterDefinition;
@@ -63,6 +62,9 @@ public class ReplaceVariableNode extends CommentNode {
 			} else {
 				sqlParameters.getSqlParts().put(this, text);
 			}
+		} else if (this.length != null) {
+			// Keep the SQL that follows the replaced dummy text.
+			sqlParameters.addSql(this.replaceString);
 		}
 		return true;
 	}
@@ -80,7 +82,7 @@ public class ReplaceVariableNode extends CommentNode {
 		Map<String, String> map = parseKeyValue(expression);
 		for (Map.Entry<String, String> entry : map.entrySet()) {
 			if ("length".equalsIgnoreCase(entry.getKey())) {
-				this.length = Integer.valueOf(entry.getValue());
+				this.length = parseLength(entry.getValue());
 			}
 			if ("sqlKeywordCheck".equalsIgnoreCase(entry.getKey())) {
 				this.sqlKeywordCheck = Converters.getDefault().convertObject(entry.getValue(), Boolean.class);
@@ -88,9 +90,26 @@ public class ReplaceVariableNode extends CommentNode {
 		}
 		if (this.length != null) {
 			String txt = this.getMatchText().substring(this.getMatchText().lastIndexOf("*/") + 2);
+			if (this.length > txt.length()) {
+				throw new IllegalArgumentException("length=" + this.length + " exceeds the dummy text length "
+						+ txt.length() + ". " + this.getMatchText());
+			}
 			this.replaceString = txt.substring(this.length);
 		}
 		this.setParameterDefinition(new ParameterDefinition(this.expression));
+	}
+
+	private Integer parseLength(final String value) {
+		final int result;
+		try {
+			result = Integer.parseInt(trim(value));
+		} catch (final NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid length=" + value + ". " + this.getMatchText(), e);
+		}
+		if (result < 0) {
+			throw new IllegalArgumentException("Invalid length=" + value + ". " + this.getMatchText());
+		}
+		return Integer.valueOf(result);
 	}
 
 	private Boolean sqlKeywordCheck = false;
@@ -121,10 +140,5 @@ public class ReplaceVariableNode extends CommentNode {
 	@Override
 	public ReplaceVariableNode clone() {
 		return (ReplaceVariableNode) super.clone();
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(this.getClass(), this.getSql(), this.getChildNodes().size(), replaceString);
 	}
 }

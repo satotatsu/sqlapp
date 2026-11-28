@@ -307,6 +307,10 @@ public class SqlParser {
 		}
 		// SQL
 		parseSql(sql, sortedNodes);
+		// Nodes keep the whole text so that error positions refer to the source SQL.
+		for (Node node : sortedNodes.values()) {
+			node.setSourceSql(sql);
+		}
 		return sortedNodes;
 	}
 

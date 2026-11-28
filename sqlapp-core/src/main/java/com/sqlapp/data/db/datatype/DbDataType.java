@@ -908,6 +908,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 			}
 		}
 		this.deprecatedSurrogateType = surrogateType;
+		getParent().clearResolutionCaches();
 		return this.instance();
 	}
 

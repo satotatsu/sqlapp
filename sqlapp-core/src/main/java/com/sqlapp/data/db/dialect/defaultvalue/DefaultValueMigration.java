@@ -1,7 +1,6 @@
 package com.sqlapp.data.db.dialect.defaultvalue;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -46,6 +45,8 @@ public final class DefaultValueMigration {
 		REPLACED,
 		/** Removed by an explicit column override. */
 		REMOVED,
+		/** The default is the column's identity generator, which the target column keeps as an identity. */
+		GENERATOR,
 		/** Not converted; the target default is omitted until corrected. */
 		REQUIRES_ACTION
 	}
@@ -197,6 +198,12 @@ public final class DefaultValueMigration {
 					List.of());
 		}
 		if (sourceSupport.isGeneratorDefault(sql, source)) {
+			if (source.isIdentity() && target.isIdentity()) {
+				return new Result(Outcome.GENERATOR, sql, null, "generator", List.of(), Verification.STATICALLY_CHECKED,
+						List.of(new MigrationDiagnostic(Severity.INFO, "DEFAULT_GENERATOR", "Column " + name
+								+ ": DEFAULT " + sql + " is the column's identity generator; the target column uses its "
+								+ "identity instead. Restore the next value after loading explicit values.")));
+			}
 			return requiresAction(sql, "generator", "GENERATOR_DEFAULT", "Column " + name + ": DEFAULT " + sql
 					+ " belongs to the column's identity/sequence generator; generator conversion is handled separately.");
 		}
@@ -205,8 +212,9 @@ public final class DefaultValueMigration {
 		case DefaultExpression.StringLiteral string -> string(sql, string, source, target, targetSupport);
 		case DefaultExpression.NumericLiteral number -> numeric(sql, number, source, target, targetSupport);
 		case DefaultExpression.BooleanLiteral bool -> bool(sql, bool.value(), source, target, targetSupport);
+		case DefaultExpression.BitStringLiteral bits -> bits(sql, bits.bits(), source, target, targetSupport);
 		case DefaultExpression.CurrentTime time ->
-			temporal(sql, time.semantics(), source, target, targetSupport, targetDialect, effective);
+			temporal(sql, time.semantics(), source, sourceSupport, target, targetSupport, targetDialect, effective);
 		case DefaultExpression.Unrecognized unrecognized -> requiresAction(sql, "unrecognized", "DEFAULT_UNRECOGNIZED",
 				"Column " + name + ": DEFAULT " + sql + " is not recognized for " + targetDialect.getProductName()
 						+ "; it is omitted until replaced or explicitly removed.");
@@ -226,10 +234,25 @@ public final class DefaultValueMigration {
 						+ target.getDataType() + "; check its format on the target.")));
 	}
 
+	private static Result bits(final String sql, final String bits, final Column source, final Column target,
+			final DefaultExpressionSupport support) {
+		if (target.getDataType() == DataType.BIT || target.getDataType() == DataType.VARBIT) {
+			return exact(sql, support.bitLiteral(bits, target), "literal-bit");
+		}
+		if (target.getDataType() == DataType.BOOLEAN && bits.length() == 1) {
+			return exact(sql, support.booleanLiteral("1".equals(bits), target), "literal-boolean");
+		}
+		return requiresAction(sql, "literal-bit", "DEFAULT_TARGET_TYPE", "Column " + source.getName()
+				+ ": bit string DEFAULT " + sql + " has no translation for target type " + target.getDataType() + ".");
+	}
+
 	private static Result bool(final String sql, final boolean value, final Column source, final Column target,
 			final DefaultExpressionSupport support) {
 		if (target.getDataType() == DataType.BOOLEAN) {
 			return exact(sql, support.booleanLiteral(value, target), "literal-boolean");
+		}
+		if (target.getDataType() == DataType.BIT && (target.getLength() == null || target.getLength() == 1L)) {
+			return exact(sql, support.bitLiteral(value ? "1" : "0", target), "literal-bit");
 		}
 		return requiresAction(sql, "literal-boolean", "DEFAULT_TARGET_TYPE", "Column " + source.getName()
 				+ ": boolean DEFAULT " + sql + " has no translation for target type " + target.getDataType() + ".");
@@ -248,52 +271,43 @@ public final class DefaultValueMigration {
 	}
 
 	private static Result temporal(final String sql, final TemporalSemantics function, final Column source,
-			final Column target, final DefaultExpressionSupport support, final Dialect targetDialect,
-			final Options options) {
+			final DefaultExpressionSupport sourceSupport, final Column target, final DefaultExpressionSupport support,
+			final Dialect targetDialect, final Options options) {
 		final String name = source.getName();
-		final TemporalKind targetKind = TemporalKind.of(target.getDataType());
+		final TemporalKind targetKind = support.storedKind(target);
 		if (targetKind == null) {
 			return requiresAction(sql, "temporal", "DEFAULT_TARGET_TYPE", "Column " + name + ": current date/time DEFAULT "
 					+ sql + " has no translation for target type " + target.getDataType() + ".");
 		}
-		final TemporalSemantics stored = storedSemantics(function, source);
-		final List<TemporalCandidate> candidates = support.temporalCandidates(target).stream()
-				.filter(candidate -> candidate.semantics().kind() == targetKind).toList();
-		if (candidates.isEmpty()) {
+		final TemporalSemantics stored = storedSemantics(function, source, sourceSupport.storedKind(source));
+		if (stored.kind() == TemporalKind.DATE && targetKind.hasTime()) {
+			return requiresAction(sql, "temporal", "DEFAULT_DATE_IN_DATETIME", "Column " + name + ": DEFAULT " + sql
+					+ " stores the current date at midnight; " + targetDialect.getProductName()
+					+ " has no equivalent date/time candidate. Replace the DEFAULT explicitly.");
+		}
+		final Integer targetPrecision = precisionOf(target, targetKind);
+		final var selection = TemporalTranslator.select(stored, targetKind, targetPrecision,
+				support.temporalCandidates(target));
+		if (selection.isEmpty()) {
 			return requiresAction(sql, "temporal", "DEFAULT_NO_CANDIDATE", "Column " + name + ": "
 					+ targetDialect.getProductName() + " has no current date/time DEFAULT for " + targetKind + ".");
 		}
-		final Integer targetPrecision = precisionOf(target, targetKind);
-		final TemporalCandidate selected = candidates.stream()
-				.min(Comparator.comparingInt((TemporalCandidate c) -> mismatch(stored.basis(), c.semantics().basis()))
-						.thenComparingInt(c -> mismatch(stored.point(), c.semantics().point()))
-						.thenComparingInt(c -> precisionLoss(stored.precision(),
-								min(c.semantics().precision(), targetPrecision)))
-						.thenComparingInt(candidates::indexOf))
-				.orElseThrow();
+		final TemporalCandidate selected = selection.get().candidate();
+		final TemporalSemantics chosen = selected.semantics();
 		final List<Difference> differences = new ArrayList<>();
 		final List<MigrationDiagnostic> diagnostics = new ArrayList<>();
-		final TemporalSemantics chosen = selected.semantics();
-		if (stored.basis() == TimeBasis.UNKNOWN || chosen.basis() == TimeBasis.UNKNOWN
-				|| stored.point() == EvaluationPoint.UNKNOWN || chosen.point() == EvaluationPoint.UNKNOWN) {
-			add(differences, diagnostics, Difference.UNKNOWN_SEMANTICS, options,
-					"Column " + name + ": semantics of " + sql + " or " + selected.sql() + " are not fully known.");
-		}
-		if (stored.basis() != chosen.basis() && stored.basis() != TimeBasis.UNKNOWN
-				&& chosen.basis() != TimeBasis.UNKNOWN) {
-			add(differences, diagnostics, Difference.TIME_BASIS, options, "Column " + name + ": " + sql + " uses "
-					+ describe(stored.basis()) + " but " + selected.sql() + " uses " + describe(chosen.basis()) + ".");
-		}
-		if (stored.point() != chosen.point() && stored.point() != EvaluationPoint.UNKNOWN
-				&& chosen.point() != EvaluationPoint.UNKNOWN) {
-			add(differences, diagnostics, Difference.EVALUATION_POINT, options, "Column " + name + ": " + sql
-					+ " is evaluated at " + describe(stored.point()) + " but " + selected.sql() + " at "
-					+ describe(chosen.point()) + ".");
-		}
-		final Integer targetDigits = min(chosen.precision(), targetPrecision);
-		if (targetKind.hasTime() && precisionLoss(stored.precision(), targetDigits) > 0) {
-			add(differences, diagnostics, Difference.PRECISION, options, "Column " + name + ": fractional seconds "
-					+ stored.precision() + " of " + sql + " become " + targetDigits + " in the target.");
+		for (final Difference difference : selection.get().differences()) {
+			add(differences, diagnostics, difference, options, switch (difference) {
+			case UNKNOWN_SEMANTICS ->
+				"Column " + name + ": semantics of " + sql + " or " + selected.sql() + " are not fully known.";
+			case TIME_BASIS -> "Column " + name + ": " + sql + " uses " + describe(stored.basis()) + " but "
+					+ selected.sql() + " uses " + describe(chosen.basis()) + ".";
+			case EVALUATION_POINT -> "Column " + name + ": " + sql + " is evaluated at " + describe(stored.point())
+					+ " but " + selected.sql() + " at " + describe(chosen.point()) + ".";
+			case PRECISION -> "Column " + name + ": fractional seconds " + stored.precision() + " of " + sql
+					+ " become " + TemporalTranslator.min(chosen.precision(), targetPrecision) + " in the target.";
+			default -> "Column " + name + ": " + difference + ".";
+			});
 		}
 		coercion(stored.kind(), targetKind, name, differences, diagnostics, options);
 		final boolean approximate = differences.stream().anyMatch(Difference::isTranslation);
@@ -302,16 +316,32 @@ public final class DefaultValueMigration {
 				diagnostics);
 	}
 
-	/** Semantics of the value the source column stores, after coercion to the source column type. */
-	private static TemporalSemantics storedSemantics(final TemporalSemantics function, final Column source) {
-		final TemporalKind sourceKind = TemporalKind.of(source.getDataType());
+	/**
+	 * Semantics of the value the source column stores, after coercion to the
+	 * source column type. A session-local value stored in a column with a time
+	 * zone is interpreted in the session zone, which yields the current instant;
+	 * an instant stored without its offset becomes session-local time. Dialects
+	 * whose functions carry another offset recognize them per column. A date-only
+	 * value keeps its kind in a date/time column, because it is stored as midnight.
+	 */
+	private static TemporalSemantics storedSemantics(final TemporalSemantics function, final Column source,
+			final TemporalKind sourceKind) {
 		TemporalSemantics stored = function;
-		if (sourceKind != null && sourceKind != function.kind()) {
-			stored = stored.withKind(sourceKind);
+		if (sourceKind != null && sourceKind != function.kind() && function.kind() != TemporalKind.DATE) {
+			if (sourceKind.hasTimeZone() && !function.kind().hasTimeZone()
+					&& function.basis() == TimeBasis.SESSION_TIME_ZONE) {
+				stored = new TemporalSemantics(function.point(), TimeBasis.INSTANT, sourceKind, function.precision());
+			} else if (!sourceKind.hasTimeZone() && function.kind().hasTimeZone()
+					&& function.basis() == TimeBasis.INSTANT) {
+				stored = new TemporalSemantics(function.point(), TimeBasis.SESSION_TIME_ZONE, sourceKind,
+						function.precision());
+			} else {
+				stored = stored.withKind(sourceKind);
+			}
 		}
 		final Integer columnPrecision = precisionOf(source, stored.kind());
 		if (stored.kind().hasTime()) {
-			stored = stored.withPrecision(min(stored.precision(), columnPrecision));
+			stored = stored.withPrecision(TemporalTranslator.min(stored.precision(), columnPrecision));
 		}
 		return stored;
 	}
@@ -354,27 +384,6 @@ public final class DefaultValueMigration {
 			return null;
 		}
 		return length.intValue();
-	}
-
-	private static Integer min(final Integer a, final Integer b) {
-		if (a == null) {
-			return b;
-		}
-		if (b == null) {
-			return a;
-		}
-		return Math.min(a, b);
-	}
-
-	private static int precisionLoss(final Integer source, final Integer target) {
-		if (source == null || target == null) {
-			return 0;
-		}
-		return Math.max(0, source - target);
-	}
-
-	private static <E extends Enum<E>> int mismatch(final E source, final E target) {
-		return source == target ? 0 : 1;
 	}
 
 	private static String describe(final TimeBasis basis) {

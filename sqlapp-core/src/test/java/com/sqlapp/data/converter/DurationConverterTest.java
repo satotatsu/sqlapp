@@ -40,9 +40,10 @@ class DurationConverterTest {
 		final Duration p3 = converter.convertObject("Interval 4:13 minute to second");
 		assertEquals(p3, p2);
 		final Duration p4 = converter.convertObject("Interval '10 12:4:13' day to second");
-		assertEquals("PT12H4M13S", p4.toString());// 日付は無視される
+		assertEquals("PT252H4M13S", p4.toString());// 日数も時間に含める
 		final Duration p5 = converter.convertObject("Interval '12:4:13' hour to second");
-		assertEquals(p5, p4);
+		assertEquals("PT12H4M13S", p5.toString());
+		assertEquals(p4, p5.plusDays(10));
 	}
 
 }

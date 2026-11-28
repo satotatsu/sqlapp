@@ -120,6 +120,9 @@ public class RowComparisonOperatorBindVariableNode extends CommentNode {
 			return;
 		}
 		TableRelation tableRelation = sqlParameters.getTableRelation();
+		if (tableRelation == null && ("ROOT".equalsIgnoreCase(getTarget()) || "PARENT".equalsIgnoreCase(getTarget()))) {
+			throw new IllegalArgumentException("ROW target " + getTarget() + " requires a TableRelation");
+		}
 		final TableRelation parentTableRelation;
 		if ("ROOT".equalsIgnoreCase(getTarget())) {
 			parentTableRelation = tableRelation.getRootTableRelation();
@@ -128,16 +131,24 @@ public class RowComparisonOperatorBindVariableNode extends CommentNode {
 		} else {
 			parentTableRelation = tableRelation;
 		}
+		final var table = parentTableRelation != null ? parentTableRelation.getTable() : sqlParameters.getTable();
+		if (table == null || ("PARENT".equalsIgnoreCase(getTarget()) && parentTableRelation == null)) {
+			throw new IllegalArgumentException("ROW requires a table and a resolvable target relation");
+		}
+		if (getRowComparisonOperator() == null) {
+			throw new IllegalArgumentException("ROW requires a comparison operator. " + getMatchText());
+		}
 		List<Row> rows = CommonUtils.list();
 		rows.add(row);
-		final SqlSignature sqlSignature = parentTableRelation.getOrCreateSqlSignature(rows);
+		final SqlSignature sqlSignature = parentTableRelation != null
+				? parentTableRelation.getOrCreateSqlSignature(rows) : new SqlSignature(table, rows);
 		final ColumnsHolder columnsHolder;
 		if (!CommonUtils.isEmpty(getColumns())) {
 			final Set<Column> columns = CommonUtils.linkedSet();
 			getColumns().forEach(c -> {
-				Column column = parentTableRelation.getTable().getColumns().get(c);
+				Column column = table.getColumns().get(c);
 				if (column == null) {
-					throw new MissingColumnException(parentTableRelation.getTable(), c, getMatchText());
+					throw new MissingColumnException(table, c, getMatchText());
 				}
 				columns.add(column);
 			});

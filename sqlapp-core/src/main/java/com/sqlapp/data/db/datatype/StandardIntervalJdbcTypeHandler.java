@@ -39,8 +39,8 @@ public class StandardIntervalJdbcTypeHandler implements IntervalTypeHandler, jav
 	public final StandardIntervalCodec codec(Column column) {
 		if (column != null && (column.getArrayDimension() > 0 || column.getDataType() != type))
 			throw new IllegalArgumentException("Expected scalar " + type + " column");
-		int precision = column == null || column.getLength() == null ? 2 : Math.toIntExact(column.getLength());
-		int scale = column == null || column.getScale() == null ? Math.min(6, maximumScale) : column.getScale();
+		int precision = leadingPrecision(column);
+		int scale = fractionalPrecision(column);
 		if (scale < 0 || scale > maximumScale)
 			throw new IllegalArgumentException("Fractional interval precision must be 0.." + maximumScale);
 		if (precision < minimumPrecision || precision > maximumPrecision)
@@ -95,8 +95,18 @@ public class StandardIntervalJdbcTypeHandler implements IntervalTypeHandler, jav
 
 	@Override
 	public IntervalPrecision intervalPrecision(Column column) {
-		return new IntervalPrecision(column.getLength() == null ? 2 : Math.toIntExact(column.getLength()),
-				type.name().endsWith("SECOND") ? column.getScale() == null ? 6 : column.getScale() : 0);
+		return new IntervalPrecision(leadingPrecision(column),
+				type.name().endsWith("SECOND") ? fractionalPrecision(column) : 0);
+	}
+
+	/** Leading precision, defaulting to 2 when the column omits it. */
+	private int leadingPrecision(Column column) {
+		return column == null || column.getLength() == null ? 2 : Math.toIntExact(column.getLength());
+	}
+
+	/** Fractional precision, defaulting to 6 limited by the handler's maximum scale. */
+	private int fractionalPrecision(Column column) {
+		return column == null || column.getScale() == null ? Math.min(6, maximumScale) : column.getScale();
 	}
 
 	@Override

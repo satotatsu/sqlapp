@@ -55,16 +55,20 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 		} else if (value instanceof Duration) {
 			return (Duration) value;
 		} else if (value instanceof ChronoPeriod) {
-			final ChronoPeriod cst = ChronoPeriod.class.cast(value);
-			return Duration.from(cst);
+			return fromPeriod(ChronoPeriod.class.cast(value), value);
 		} else if (value instanceof Temporal) {
-			final LocalTime localDate = LOCAL_TIME_CONVERTER.convertObject(value);
-			return Duration.ofSeconds(localDate.getSecond(), localDate.getNano());
+			// time of day as the elapsed time since midnight (01:30:15 is PT1H30M15S)
+			final LocalTime localTime = LOCAL_TIME_CONVERTER.convertObject(value);
+			return Duration.ofSeconds(localTime.toSecondOfDay(), localTime.getNano());
 		} else if (value instanceof Calendar) {
 			final Calendar cst = Calendar.class.cast(value);
 			return Duration.ofSeconds(toSecond(cst), toNano(cst));
+		} else if (value instanceof java.sql.Timestamp timestamp) {
+			// keep the nanoseconds: the Calendar path below has only milliseconds
+			final LocalTime localTime = timestamp.toLocalDateTime().toLocalTime();
+			return Duration.ofSeconds(localTime.toSecondOfDay(), localTime.getNano());
 		} else if (value instanceof java.util.Date) {
-			// any java.util.Date (Timestamp, java.sql.Date, ...), not only java.sql.Date
+			// any other java.util.Date (java.sql.Date, java.sql.Time, ...): milliseconds
 			final java.util.Date dt = java.util.Date.class.cast(value);
 			final Calendar cst = DateUtils.toCalendar(dt);
 			return Duration.ofSeconds(toSecond(cst), toNano(cst));
@@ -86,11 +90,6 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 	private long toSecond(final Calendar cst) {
 		final long val = cst.get(Calendar.SECOND) + cst.get(Calendar.MINUTE) * 60
 				+ cst.get(Calendar.HOUR_OF_DAY) * 3600;
-		return val;
-	}
-
-	private long toSecond(final long hour, final long minute, final long second) {
-		final long val = second + minute * 60 + hour * 3600;
 		return val;
 	}
 
@@ -122,10 +121,57 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 				}
 				return "-".equals(clock.group(1)) ? duration.negated() : duration;
 			}
-			final Interval interval = Interval.parse(text);
-			return Duration.ofSeconds(toSecond(interval.getHours(), interval.getMinutes(), interval.getSeconds()),
-					interval.getNanos());
+			return fromInterval(Interval.parse(text), text);
 		}
+	}
+
+	/**
+	 * Average lengths used for years and months, as PostgreSQL does for
+	 * {@code EXTRACT(EPOCH FROM interval)}: a year is 365.25 days and a month is
+	 * 30 days.
+	 */
+	static final Duration YEAR_LENGTH = Duration.ofSeconds(31_557_600L);
+
+	static final Duration MONTH_LENGTH = Duration.ofDays(30);
+
+	/**
+	 * Days, hours, minutes, seconds and the sign are kept ("10 12:4:13" day to
+	 * second is PT252H4M13S). Years and months have no fixed length; they are
+	 * converted with {@link #YEAR_LENGTH} and {@link #MONTH_LENGTH} so that the
+	 * value is converted instead of being dropped.
+	 */
+	private static Duration fromInterval(final Interval interval, final Object original) {
+		final Duration duration = YEAR_LENGTH.multipliedBy(interval.getYears())
+				.plus(MONTH_LENGTH.multipliedBy(interval.getMonths())).plusDays(interval.getDays())
+				.plusHours(interval.getHours())
+				.plusMinutes(interval.getMinutes()).plusSeconds(interval.getSeconds()).plusNanos(interval.getNanos());
+		return interval.isPositive() ? duration : duration.negated();
+	}
+
+	/**
+	 * Period.ofDays(1) is PT24H; years and months use {@link #YEAR_LENGTH} and
+	 * {@link #MONTH_LENGTH}.
+	 */
+	private static Duration fromPeriod(final ChronoPeriod period, final Object original) {
+		Duration duration = Duration.ZERO;
+		for (final java.time.temporal.TemporalUnit unit : period.getUnits()) {
+			final long amount = period.get(unit);
+			if (amount == 0) {
+				continue;
+			}
+			if (unit == java.time.temporal.ChronoUnit.DAYS) {
+				duration = duration.plusDays(amount);
+			} else if (unit == java.time.temporal.ChronoUnit.YEARS) {
+				duration = duration.plus(YEAR_LENGTH.multipliedBy(amount));
+			} else if (unit == java.time.temporal.ChronoUnit.MONTHS) {
+				duration = duration.plus(MONTH_LENGTH.multipliedBy(amount));
+			} else if (!unit.isDurationEstimated()) {
+				duration = duration.plus(amount, unit);
+			} else {
+				throw new ConverterException("Cannot convert a period with " + unit + " to Duration: " + original);
+			}
+		}
+		return duration;
 	}
 
 	/*

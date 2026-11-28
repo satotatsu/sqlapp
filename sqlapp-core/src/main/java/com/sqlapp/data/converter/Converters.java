@@ -98,6 +98,36 @@ public class Converters implements Serializable {
 	private boolean enumEmptyToNull = false;
 
 	/**
+	 * Output formats with an optional fraction of a second: nothing when it is
+	 * zero ("2026-11-28 08:53:01"), otherwise the digits needed without trailing
+	 * zeros ("...:01.123", "...:01.5", "...:01.123456789"), so values with
+	 * fractions survive a round trip without changing second-precision output.
+	 * A holder class, so that they exist before the static DEFAULT_CONVERTER is
+	 * created.
+	 */
+	private static final class Formats {
+		static final DateTimeFormatter DATE_TIME = withOptionalFraction("uuuu-MM-dd HH:mm:ss", "");
+
+		static final DateTimeFormatter ZONED_DATE_TIME = withOptionalFraction("uuuu-MM-dd HH:mm:ss",
+				" xxxxx'['zzz']'");
+
+		static final DateTimeFormatter OFFSET_DATE_TIME = withOptionalFraction("uuuu-MM-dd HH:mm:ss", " xxxxx");
+
+		static final DateTimeFormatter TIME = withOptionalFraction("HH:mm:ss", "");
+
+		static final DateTimeFormatter OFFSET_TIME = withOptionalFraction("HH:mm:ss", " xxxxx");
+
+		private static DateTimeFormatter withOptionalFraction(final String before, final String after) {
+			final java.time.format.DateTimeFormatterBuilder builder = new java.time.format.DateTimeFormatterBuilder()
+					.appendPattern(before).appendFraction(java.time.temporal.ChronoField.NANO_OF_SECOND, 0, 9, true);
+			if (!after.isEmpty()) {
+				builder.appendPattern(after);
+			}
+			return builder.toFormatter();
+		}
+	}
+
+	/**
 	 * コンストラクタ
 	 */
 	public Converters() {
@@ -318,7 +348,7 @@ public class Converters implements Serializable {
 		puts(new CalendarArrayConverter(this.getConverter(Calendar.class)), Calendar[].class);
 		//
 		put(java.util.Date.class, DateConverter.newInstance()
-				.setZonedDateTimeConverter(zonedDateTimeConverter.clone().setFormat("uuuu-MM-dd HH:mm:ss")));
+				.setZonedDateTimeConverter(zonedDateTimeConverter.clone().setFormat(Formats.DATE_TIME)));
 		puts(new DateArrayConverter(this.getConverter(java.util.Date.class)), java.util.Date[].class);
 		//
 		final SqlDateConverter sqlDateConverter = SqlDateConverter.newInstance()
@@ -342,7 +372,7 @@ public class Converters implements Serializable {
 		final TimestampConverter timestampConverter = new TimestampConverter();
 		timestampConverter
 				.setZonedDateTimeConverter(zonedDateTimeConverter.clone().addParseFormat(0, "uuuu-M-d H:m:s.nnnnnnnnn")
-						.addParseFormat(0, "uuuu-M-d H:m:s.SSS").setFormat("uuuu-MM-dd HH:mm:ss.nnnnnnnnn"));
+						.addParseFormat(0, "uuuu-M-d H:m:s.SSS").setFormat(Formats.DATE_TIME));
 		put(Timestamp.class, timestampConverter);
 		puts(new TimestampArrayConverter(this.getConverter(Timestamp.class)), Timestamp[].class);
 		//
@@ -373,7 +403,7 @@ public class Converters implements Serializable {
 						"uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS XXXX", "uuuu-M-d H:m:s.SSS zzz",
 						"uuuu-M-d H:m:s.nnnnnnnnn", "uuuu-M-d H:m:s.SSS", "uuuu-M-d H:m:s VV", "uuuu-M-d H:m:s zzz",
 						"uuuu-M-d H:m:s XXXX", "uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d")
-				.setFormat("uuuu-MM-dd HH:mm:ss xxxxx'['zzz']'");
+				.setFormat(Formats.ZONED_DATE_TIME);
 		return zonedDateTimeConverter;
 	}
 
@@ -429,7 +459,7 @@ public class Converters implements Serializable {
 						"uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d H:m:s.SSS zzz", "uuuu-M-d H:m:s.SSS", "uuuu-M-d H:m:s VV", "uuuu-M-d H:m:s zzz",
 						"uuuu-M-d H:m:s XXXX", "uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d")
-						.setFormat("uuuu-MM-dd HH:mm:ss xxxxx"));
+						.setFormat(Formats.OFFSET_DATE_TIME));
 		puts(new OffsetDateTimeArrayConverter(this.getConverter(java.time.OffsetDateTime.class)),
 				java.time.OffsetDateTime[].class);
 		// Instant
@@ -437,7 +467,7 @@ public class Converters implements Serializable {
 				InstantConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS XXXX",
 						"uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat("uuuu-MM-dd HH:mm:ss"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat(Formats.DATE_TIME));
 		puts(new InstantArrayConverter(this.getConverter(java.time.Instant.class)), java.time.Instant[].class);
 		// LocalDate
 		put(java.time.LocalDate.class,
@@ -451,20 +481,20 @@ public class Converters implements Serializable {
 				LocalDateTimeConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.RFC_1123_DATE_TIME, "uuuu-M-d'T'H:m:s.SSSXXXX", "uuuu-M-d H:m:s.SSS xxxx",
 						"uuuu-M-d'T'H:m:s.SSS", "uuuu-M-d'T'H:m:s", "uuuu-M-d'T'H:m", "uuuu-M-d H:m:s.SSS",
-						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat("uuuu-MM-dd HH:mm:ss"));
+						"uuuu-M-d H:m:s", "uuuu-M-d H:m", "uuuu-M-d").setFormat(Formats.DATE_TIME));
 		puts(new LocalDateTimeArrayConverter(this.getConverter(java.time.LocalDateTime.class)),
 				java.time.LocalDateTime[].class);
 		// LocalTime
 		put(java.time.LocalTime.class,
 				LocalTimeConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.ISO_OFFSET_TIME // 10:15:30+01:00
-						, "H:m:s.SSS xxxx", "H:m:s.SSS", "H:m:s xxxx", "H:m:s", "H:m").setFormat("HH:mm:ss"));
+						, "H:m:s.SSS xxxx", "H:m:s.SSS", "H:m:s xxxx", "H:m:s", "H:m").setFormat(Formats.TIME));
 		puts(new LocalTimeArrayConverter(this.getConverter(java.time.LocalTime.class)), java.time.LocalTime[].class);
 		// OffsetTime
 		put(java.time.OffsetTime.class,
 				OffsetTimeConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.ISO_OFFSET_TIME // 10:15:30+01:00
-						, "H:m:s.SSS xxxx", "H:m:s.SSS", "H:m:s xxxx", "H:m:s", "H:m").setFormat("HH:mm:ss xxxxx"));
+						, "H:m:s.SSS xxxx", "H:m:s.SSS", "H:m:s xxxx", "H:m:s", "H:m").setFormat(Formats.OFFSET_TIME));
 		puts(new OffsetTimeArrayConverter(this.getConverter(java.time.OffsetTime.class)), java.time.OffsetTime[].class);
 		// YearMonth
 		put(java.time.YearMonth.class,

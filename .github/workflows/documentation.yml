@@ -1,0 +1,86 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'site/**'
+      - '*.md'
+      - 'sqlapp-*/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - '*.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/documentation.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'site/**'
+      - '*.md'
+      - 'sqlapp-*/**'
+      - 'build-logic/**'
+      - 'gradle/**'
+      - '*.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/documentation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+      - name: Generate actual offline demos
+        run: bash ./gradlew --init-script docs/examples/offline-html/demo.init.gradle --init-script site/demo.init.gradle demoSqlapp demoSiteDataEngineering --console=plain
+      - name: Test translation checks
+        working-directory: site
+        run: npm test
+      - name: Build site and validate local references
+        working-directory: site
+        run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/.generated/.vitepress/dist
+  translations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require complete, current translations before publishing
+        run: node site/scripts/translations.mjs --strict
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [build, translations]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
