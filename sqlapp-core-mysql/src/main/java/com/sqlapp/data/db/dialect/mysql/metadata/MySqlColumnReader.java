@@ -124,6 +124,11 @@ public class MySqlColumnReader extends ColumnReader {
 				column.setDefaultValue(def);
 				return;
 			}
+			// BIT defaults are reported as bit literals already, for example b'1'.
+			if (BIT_LITERAL_PATTERN.matcher(def).matches()) {
+				column.setDefaultValue(def);
+				return;
+			}
 			DbDataType<?> dataType = this.getDialect().getDbDataType(column);
 			column.setDefaultValue(dataType.withLiteral(def));
 		}
@@ -137,6 +142,8 @@ public class MySqlColumnReader extends ColumnReader {
 
 	private static final Pattern ON_UPDATE_PATTERN = Pattern
 			.compile("\\bon\\s+update\\s+(current_timestamp(?:\\(\\d*\\))?)", Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern BIT_LITERAL_PATTERN = Pattern.compile("[bB]'[01]*'");
 
 	private static final Pattern CURRENT_TIMESTAMP_PATTERN = Pattern.compile("current_timestamp(?:\\(\\d*\\))?",
 			Pattern.CASE_INSENSITIVE);

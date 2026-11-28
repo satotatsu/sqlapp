@@ -121,9 +121,10 @@ public class InformixSqlBuilder extends AbstractSqlBuilder<InformixSqlBuilder> {
 				throw new IllegalArgumentException(
 						"Blank Informix NOT NULL constraint identifier: " + column.getName());
 			space().constraint().space();
+			// name() quotes and doubles embedded quotes (Dialect.doQuote)
 			if (owner != null)
-				name(owner.replace("\"", "\"\""))._add('.');
-			name(name.replace("\"", "\"\""));
+				name(owner)._add('.');
+			name(name);
 		} else if (owner != null)
 			throw new IllegalArgumentException(
 					"Informix NOT NULL owner requires a constraint name: " + column.getName());

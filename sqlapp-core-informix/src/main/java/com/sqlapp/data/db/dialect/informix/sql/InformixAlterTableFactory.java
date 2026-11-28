@@ -123,6 +123,28 @@ public class InformixAlterTableFactory extends AbstractAlterTableFactory<Informi
 		add(result, createOperation(builder.toString(), SqlType.ALTER, column));
 	}
 
+	/**
+	 * Informix keeps MODIFY before RENAME COLUMN: addAlterColumn addresses the
+	 * existing column name, so the shared rename-first order would modify a column
+	 * that no longer exists.
+	 */
+	@Override
+	protected void addRenameOrAlterColumn(final Table originalTable, final Table table, final DbObjectDifference diff,
+			final List<SqlOperation> result) {
+		final Column oldColumn = diff.getOriginal(Column.class);
+		final Column column = diff.getTarget(Column.class);
+		final Map<String, com.sqlapp.data.schemas.Difference<?>> colDiff = diff.toDifference().getProperties(
+				this.getDialect(), com.sqlapp.data.schemas.State.Added, com.sqlapp.data.schemas.State.Modified);
+		final com.sqlapp.data.schemas.Difference<?> nameDiff = colDiff
+				.get(com.sqlapp.data.schemas.SchemaProperties.NAME.getLabel());
+		if (colDiff.size() > 1 || (nameDiff == null && colDiff.size() == 1)) {
+			addAlterColumn(originalTable, table, oldColumn, column, diff, result);
+		}
+		if (nameDiff != null) {
+			addRenameColumn(originalTable, table, oldColumn, column, diff, result);
+		}
+	}
+
 	@Override
 	protected void addAlterColumn(final Table original, final Table table, final Column oldColumn, final Column column,
 			final DbObjectDifference diff, final List<SqlOperation> result) {

@@ -357,6 +357,11 @@ public class Sqlite extends Dialect {
 		return true;
 	}
 
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new SqliteDefaultExpressionSupport(this);
+	}
+
 	/**
 	 * 現在日付の取得関数
 	 */

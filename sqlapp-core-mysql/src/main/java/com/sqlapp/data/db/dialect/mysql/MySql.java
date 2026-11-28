@@ -283,6 +283,11 @@ public class MySql extends Dialect {
 		return new MysqlUnsignedNumberColumnTypeMatcher(dataTypeName);
 	}
 
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new MySqlDefaultExpressionSupport(this);
+	}
+
 	/**
 	 * DB名
 	 */
@@ -522,6 +527,20 @@ public class MySql extends Dialect {
 	@Override
 	public boolean supportsRowValueComparisonIn() {
 		return true;
+	}
+
+	/**
+	 * MySQLでは既定でバックスラッシュがエスケープ文字になるため、{@code \} を {@code \\} に、{@code '} を
+	 * {@code ''} にエスケープします。{@code NO_BACKSLASH_ESCAPES} が有効な接続でも安全ですが、その場合は
+	 * バックスラッシュが2つのまま格納されます。
+	 */
+	@Override
+	public String toStringLiteral(final String value) {
+		if (value == null) {
+			return null;
+		}
+		checkStringLiteral(value);
+		return "'" + value.replace("\\", "\\\\").replace("'", "''") + "'";
 	}
 
 	@Override

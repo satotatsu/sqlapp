@@ -112,22 +112,7 @@ public class Db2 extends Dialect {
 			type.setPetternColumnTypeMatcher("CHAR(ACTER)?\\s*\\(\\s*1\\s*\\)\\s*FOR\\s+BIT\\s+DATA");
 			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
 		});
-		// BINARY
-		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
-			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
-			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'")
-					.setSizeSarrogation(1, BOOLEAN).setSizeSarrogation(16, UUID);
-		});
-		// VARBINARY
-		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {
-			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
-			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'");
-		});
-		// LONGVARBINARY(非推奨)
-		getDbDataTypes().addLongVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
-			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
-					.setDefaultValueLiteral("X'00'").setDeprecated(getDbDataTypes().getDbType(VARBINARY));
-		});
+		registerBinaryStringTypes();
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
 		});
@@ -188,6 +173,31 @@ public class Db2 extends Dialect {
 		getDbDataTypes().registerRecommend(CHAR, VARCHAR);
 		getDbDataTypes().registerRecommend(NCHAR, NVARCHAR);
 		getDbDataTypes().registerRecommend(NUMERIC, DECIMAL);
+	}
+
+	/**
+	 * BINARY・VARBINARY・LONGVARBINARY(非推奨)を登録します。
+	 * ネイティブのバイナリ文字列型を使うDialectはオーバーライドします。
+	 */
+	protected void registerBinaryStringTypes() {
+		// BINARY
+		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
+			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'")
+					.setSizeSarrogation(1, BOOLEAN).setSizeSarrogation(16, UUID);
+		});
+		// VARBINARY: a missing length uses the maximum so data of unknown size is not
+		// truncated.
+		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
+			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'00'")
+					.setDefaultLength(32672);
+		});
+		// LONGVARBINARY(非推奨)
+		getDbDataTypes().addLongVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
+			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'00'").setDeprecated(getDbDataTypes().getDbType(VARBINARY));
+		});
 	}
 
 	/**

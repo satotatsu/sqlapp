@@ -829,6 +829,22 @@ public class Postgres extends Dialect {
 		return builder.toString();
 	}
 
+	/**
+	 * バックスラッシュを含む値は、{@code standard_conforming_strings} の設定に依存しないエスケープ文字列
+	 * {@code E'...'} として出力します。
+	 */
+	@Override
+	public String toStringLiteral(final String value) {
+		if (value == null) {
+			return null;
+		}
+		checkStringLiteral(value);
+		if (value.indexOf('\\') >= 0) {
+			return "E'" + value.replace("\\", "\\\\").replace("'", "''") + "'";
+		}
+		return "'" + value.replace("'", "''") + "'";
+	}
+
 	@Override
 	public PostgresJdbcHandler createJdbcHandler(final SqlNode sqlNode) {
 		final PostgresJdbcHandler jdbcHandler = new PostgresJdbcHandler(sqlNode);

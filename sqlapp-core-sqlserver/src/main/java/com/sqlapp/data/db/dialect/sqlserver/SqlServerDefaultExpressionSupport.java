@@ -48,7 +48,7 @@ public class SqlServerDefaultExpressionSupport extends StandardDefaultExpression
 	protected DefaultExpression parseExpression(final List<Token> tokens, final Column column) {
 		final TemporalSemantics function = currentTime(tokens);
 		if (function != null) {
-			return new DefaultExpression.CurrentTime(function);
+			return new DefaultExpression.CurrentTime(withoutOffset(function, column));
 		}
 		// CONVERT([date],f()) / CONVERT([time],f()), which is also how CAST is stored.
 		if (tokens.size() >= 6 && tokens.get(0).isKeyword("CONVERT") && tokens.get(1).isSymbol("(")
@@ -71,6 +71,19 @@ public class SqlServerDefaultExpressionSupport extends StandardDefaultExpression
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * SYSDATETIMEOFFSET stored in a column without an offset keeps the local time
+	 * of the server clock.
+	 */
+	private TemporalSemantics withoutOffset(final TemporalSemantics function, final Column column) {
+		final TemporalKind stored = column == null ? null : storedKind(column);
+		if (stored != null && !stored.hasTimeZone() && function.kind().hasTimeZone()) {
+			return new TemporalSemantics(function.point(), TimeBasis.SERVER_CLOCK, stored,
+					stored == TemporalKind.DATE ? Integer.valueOf(0) : function.precision());
+		}
+		return function;
 	}
 
 	private static TemporalKind convertedKind(final Token type) {
@@ -96,8 +109,7 @@ public class SqlServerDefaultExpressionSupport extends StandardDefaultExpression
 	}
 
 	@Override
-	public List<TemporalCandidate> temporalCandidates(final Column column) {
-		final TemporalKind kind = TemporalKind.of(column.getDataType());
+	public List<TemporalCandidate> temporalCandidates(final TemporalKind kind) {
 		if (kind == null) {
 			return List.of();
 		}

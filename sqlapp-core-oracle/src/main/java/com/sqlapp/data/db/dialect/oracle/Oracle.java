@@ -297,6 +297,11 @@ public class Oracle extends Dialect {
 		return "oracle";
 	}
 
+	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new OracleDefaultExpressionSupport(this);
+	}
+
 	/**
 	 * 現在日付(時刻部分を切り捨てたDATE)の取得関数
 	 */

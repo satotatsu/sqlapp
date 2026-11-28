@@ -64,6 +64,10 @@ public class PostgresDefaultExpressionSupport extends StandardDefaultExpressionS
 		if (value.size() == 1 && value.getFirst().isKeyword("NULL")) {
 			return new DefaultExpression.NullValue();
 		}
+		final String bits = bitString(value);
+		if (bits != null && ("bit".equals(type) || "bit varying".equals(type) || "varbit".equals(type))) {
+			return new DefaultExpression.BitStringLiteral(bits);
+		}
 		if (value.size() == 1 && value.getFirst().type() == Type.STRING) {
 			final String text = value.getFirst().text();
 			if (CHARACTER_TYPES.contains(type)) {
@@ -85,38 +89,72 @@ public class PostgresDefaultExpressionSupport extends StandardDefaultExpressionS
 
 	@Override
 	protected DefaultExpression parseExpression(final List<Token> tokens, final Column column) {
+		final TemporalSemantics semantics = temporal(tokens);
+		return semantics == null ? null : new DefaultExpression.CurrentTime(semantics);
+	}
+
+	/**
+	 * Recognizes a current time function, optionally converted with {@code ::type},
+	 * {@code CAST(... AS type)} or {@code AT TIME ZONE 'UTC'}.
+	 */
+	private static TemporalSemantics temporal(final List<Token> range) {
+		final List<Token> tokens = DefaultExpressionTokens.unwrap(range);
 		final TemporalSemantics function = currentTime(tokens);
 		if (function != null) {
-			return new DefaultExpression.CurrentTime(function);
+			return function;
+		}
+		// AT TIME ZONE binds more loosely than ::, so 'UTC'::text is the zone.
+		final int at = atTimeZoneIndex(tokens);
+		if (at > 0) {
+			final TemporalSemantics inner = temporal(tokens.subList(0, at));
+			if (inner != null && inner.kind() == TemporalKind.DATETIME_WITH_TIME_ZONE
+					&& isUtc(tokens.subList(at + 3, tokens.size()))) {
+				return new TemporalSemantics(inner.point(), TimeBasis.UTC, TemporalKind.DATETIME, inner.precision());
+			}
+			return null;
 		}
 		final int cast = castIndex(tokens);
 		if (cast > 0) {
-			final TemporalSemantics inner = currentTime(DefaultExpressionTokens.unwrap(tokens.subList(0, cast)));
-			final String type = typeName(tokens.subList(cast + 1, tokens.size()));
-			if (inner != null && type != null) {
-				final TemporalKind kind = switch (type) {
-				case "date" -> TemporalKind.DATE;
-				case "timestamp", "timestamp without time zone" -> TemporalKind.DATETIME;
-				case "time", "time without time zone" -> TemporalKind.TIME;
-				case "timestamp with time zone", "timestamptz" -> TemporalKind.DATETIME_WITH_TIME_ZONE;
-				default -> null;
-				};
-				if (kind != null) {
-					return new DefaultExpression.CurrentTime(local(inner, kind));
-				}
-			}
+			return converted(temporal(tokens.subList(0, cast)), typeName(tokens.subList(cast + 1, tokens.size())));
 		}
-		// f() AT TIME ZONE 'UTC'
-		final int at = atTimeZoneIndex(tokens);
-		if (at > 0) {
-			final TemporalSemantics inner = currentTime(DefaultExpressionTokens.unwrap(tokens.subList(0, at)));
-			final List<Token> zone = tokens.subList(at + 3, tokens.size());
-			if (inner != null && inner.kind() == TemporalKind.DATETIME_WITH_TIME_ZONE && isUtc(zone)) {
-				return new DefaultExpression.CurrentTime(
-						new TemporalSemantics(inner.point(), TimeBasis.UTC, TemporalKind.DATETIME, inner.precision()));
+		if (tokens.size() >= 6 && tokens.getFirst().isKeyword("CAST") && tokens.get(1).isSymbol("(")
+				&& DefaultExpressionTokens.closingIndex(tokens, 1) == tokens.size() - 1) {
+			final List<Token> inside = tokens.subList(2, tokens.size() - 1);
+			final int as = topLevelKeyword(inside, "AS");
+			if (as > 0) {
+				return converted(temporal(inside.subList(0, as)), typeName(inside.subList(as + 1, inside.size())));
 			}
 		}
 		return null;
+	}
+
+	private static TemporalSemantics converted(final TemporalSemantics inner, final String type) {
+		if (inner == null || type == null) {
+			return null;
+		}
+		final TemporalKind kind = switch (type) {
+		case "date" -> TemporalKind.DATE;
+		case "timestamp", "timestamp without time zone" -> TemporalKind.DATETIME;
+		case "time", "time without time zone" -> TemporalKind.TIME;
+		case "timestamp with time zone", "timestamptz" -> TemporalKind.DATETIME_WITH_TIME_ZONE;
+		default -> null;
+		};
+		return kind == null ? null : local(inner, kind);
+	}
+
+	private static int topLevelKeyword(final List<Token> tokens, final String keyword) {
+		int depth = 0;
+		for (int i = 0; i < tokens.size(); i++) {
+			final Token token = tokens.get(i);
+			if (token.isSymbol("(")) {
+				depth++;
+			} else if (token.isSymbol(")")) {
+				depth--;
+			} else if (depth == 0 && token.isKeyword(keyword)) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	private static TemporalSemantics local(final TemporalSemantics instant, final TemporalKind kind) {
@@ -139,8 +177,14 @@ public class PostgresDefaultExpressionSupport extends StandardDefaultExpressionS
 	}
 
 	private static int atTimeZoneIndex(final List<Token> tokens) {
-		for (int i = 1; i + 2 < tokens.size(); i++) {
-			if (tokens.get(i).isKeyword("AT") && tokens.get(i + 1).isKeyword("TIME")
+		int depth = 0;
+		for (int i = 0; i + 2 < tokens.size(); i++) {
+			final Token token = tokens.get(i);
+			if (token.isSymbol("(")) {
+				depth++;
+			} else if (token.isSymbol(")")) {
+				depth--;
+			} else if (i > 0 && depth == 0 && token.isKeyword("AT") && tokens.get(i + 1).isKeyword("TIME")
 					&& tokens.get(i + 2).isKeyword("ZONE")) {
 				return i;
 			}
@@ -240,8 +284,7 @@ public class PostgresDefaultExpressionSupport extends StandardDefaultExpressionS
 	}
 
 	@Override
-	public List<TemporalCandidate> temporalCandidates(final Column column) {
-		final TemporalKind kind = TemporalKind.of(column.getDataType());
+	public List<TemporalCandidate> temporalCandidates(final TemporalKind kind) {
 		if (kind == null) {
 			return List.of();
 		}

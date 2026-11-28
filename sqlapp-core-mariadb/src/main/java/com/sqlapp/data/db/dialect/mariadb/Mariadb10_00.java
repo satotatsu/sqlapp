@@ -43,6 +43,11 @@ public class Mariadb10_00 extends MySql564 {
 	}
 
 	@Override
+	public com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionSupport getDefaultExpressionSupport() {
+		return new MariadbDefaultExpressionSupport(this);
+	}
+
+	@Override
 	public String getProductName() {
 		return "MariaDB";
 	}

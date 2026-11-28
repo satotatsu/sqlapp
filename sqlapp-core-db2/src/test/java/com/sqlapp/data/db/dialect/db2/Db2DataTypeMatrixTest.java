@@ -20,6 +20,37 @@ class Db2DataTypeMatrixTest {
 	}
 
 	@org.junit.jupiter.api.Test
+	void nativeVarbinaryReplacesTheTypeResolvedDuringBaseInitialization() {
+		var dialect = DialectResolver.getInstance().getDialect("db2", 11, 1, null);
+		var types = dialect.getDbDataTypes();
+		assertEquals("VARBINARY", types.getDbType(DataType.VARBINARY).getTypeName());
+		assertSame(types.getDbType(DataType.VARBINARY, 100L), types.getDbType(DataType.VARBINARY));
+	}
+
+	@ParameterizedTest(name = "Db2 {0}.{1}: {2}")
+	@CsvSource({ "10, 5, VARCHAR(1000) FOR BIT DATA", "11, 1, VARBINARY(1000)", "12, 1, VARBINARY(1000)" })
+	void deprecatedLongVarbinaryUsesTheVersionVarbinary(int major, int minor, String expectedSql) {
+		var dialect = DialectResolver.getInstance().getDialect("db2", major, minor, null);
+		var types = dialect.getDbDataTypes();
+		assertSame(types.getDbType(DataType.VARBINARY), types.getDbType(DataType.LONGVARBINARY));
+		assertSame(types.getDbType(DataType.VARBINARY), types.getDbType(DataType.LONGVARBINARY, 1000L));
+		assertEquals(expectedSql,
+				dialect.createSqlBuilder()
+						.addTypeDefinition(new Column("C").setDataType(DataType.LONGVARBINARY).setLength(1000L))
+						.toString().toUpperCase(Locale.ROOT));
+	}
+
+	@ParameterizedTest(name = "Db2 {0}.{1} {2}: {3}")
+	@CsvSource({ "10, 5, VARBINARY, VARCHAR(32672) FOR BIT DATA", "10, 5, LONGVARBINARY, VARCHAR(32672) FOR BIT DATA",
+			"11, 1, VARBINARY, VARBINARY(32672)", "11, 1, LONGVARBINARY, VARBINARY(32672)",
+			"12, 1, VARBINARY, VARBINARY(32672)", "12, 1, LONGVARBINARY, VARBINARY(32672)" })
+	void binaryStringWithoutLengthUsesTheMaximumLength(int major, int minor, DataType type, String expectedSql) {
+		var dialect = DialectResolver.getInstance().getDialect("db2", major, minor, null);
+		assertEquals(expectedSql, dialect.createSqlBuilder().addTypeDefinition(new Column("C").setDataType(type))
+				.toString().toUpperCase(Locale.ROOT));
+	}
+
+	@org.junit.jupiter.api.Test
 	void generatesPortableDoubleWithoutSourceTypeName() {
 		var dialect = DialectResolver.getInstance().getDialect("db2", 11, 5, null);
 		for (String nativeName : new String[] { null, "DOUBLE", "DOUBLE PRECISION" }) {

@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.defaultvalue.DefaultExpression;
+import com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionTokens;
+import com.sqlapp.data.db.dialect.defaultvalue.DefaultExpressionTokens.Replacement;
+import com.sqlapp.data.db.dialect.defaultvalue.TemporalTranslator;
 import com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration;
 import com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.Outcome;
 import com.sqlapp.data.db.dialect.defaultvalue.TemporalCandidate;
@@ -44,7 +47,14 @@ class SqlServerDefaultExpressionSupportTest {
 		assertEquals(7, temporal("sysdatetime()").precision());
 		assertEquals(TimeBasis.UTC, temporal("getutcdate()").basis());
 		assertEquals(TimeBasis.UTC, temporal("sysutcdatetime()").basis());
-		assertEquals(TemporalKind.DATETIME_WITH_TIME_ZONE, temporal("sysdatetimeoffset()").kind());
+		final var offset = assertInstanceOf(DefaultExpression.CurrentTime.class,
+				parse("sysdatetimeoffset()", DataType.TIMESTAMP_WITH_TIMEZONE)).semantics();
+		assertEquals(TemporalKind.DATETIME_WITH_TIME_ZONE, offset.kind());
+		assertEquals(TimeBasis.INSTANT, offset.basis());
+		// Stored without its offset, the value is the server's local time.
+		final var local = temporal("sysdatetimeoffset()");
+		assertEquals(TemporalKind.DATETIME, local.kind());
+		assertEquals(TimeBasis.SERVER_CLOCK, local.basis());
 		assertEquals(TemporalKind.DATE, temporal("CONVERT([date],getdate())").kind());
 		assertEquals(TemporalKind.DATE, temporal("CAST(SYSDATETIME() AS date)").kind());
 		final var time = temporal("CONVERT([time],sysdatetime())");
@@ -96,5 +106,24 @@ class SqlServerDefaultExpressionSupportTest {
 		assertEquals(Outcome.CONVERTED_APPROXIMATE, older.outcome());
 		assertEquals("CURRENT_TIMESTAMP", older.targetExpression());
 		assertFalse(older.isBlocking());
+	}
+
+	/**
+	 * A recognized call inside a longer body is replaced without touching the rest.
+	 */
+	@Test
+	void recognizesARangeInsideABodyAndReplacesOnlyThatRange() {
+		final String body = "UPDATE t SET modified = getdate() /* getdate() */ WHERE id = 1 -- getdate()";
+		final var tokens = DefaultExpressionTokens.tokenize(body);
+		final var call = tokens.subList(5, 8);
+		final var semantics = assertInstanceOf(DefaultExpression.CurrentTime.class, support.recognize(body, call, null))
+				.semantics();
+		assertEquals(TimeBasis.SERVER_CLOCK, semantics.basis());
+		assertInstanceOf(DefaultExpression.Unrecognized.class, support.recognize(body, tokens.subList(0, 3), null));
+		final var selection = TemporalTranslator.select(semantics.withPrecision(7), null, null, support).orElseThrow();
+		assertEquals("SYSDATETIME()", selection.candidate().sql());
+		assertTrue(selection.isExact());
+		assertEquals("UPDATE t SET modified = SYSDATETIME() /* getdate() */ WHERE id = 1 -- getdate()",
+				DefaultExpressionTokens.replace(body, List.of(Replacement.of(call, selection.candidate().sql()))));
 	}
 }

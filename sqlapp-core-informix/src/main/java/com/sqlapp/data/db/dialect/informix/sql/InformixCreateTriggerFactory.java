@@ -26,7 +26,7 @@ public class InformixCreateTriggerFactory extends AbstractCreateTriggerFactory<I
 			final java.util.List<com.sqlapp.data.db.sql.SqlOperation> result) {
 		// Catalog CREATE text may retain an older mode after SET TRIGGERS changes it.
 		final InformixSqlBuilder builder = createSqlBuilder();
-		builder._add("SET TRIGGERS").space().name(trigger.getName().replace("\"", "\"\"")).space()
+		builder._add("SET TRIGGERS").space().name(trigger.getName()).space()
 				._add(trigger.isEnable() ? "ENABLED" : "DISABLED");
 		addSql(result, builder, com.sqlapp.data.db.sql.SqlType.ALTER, trigger);
 	}

@@ -365,10 +365,37 @@ A PostgreSQL serial `nextval` default whose column stays an identity is
 reported as GENERATOR (handled by the identity); next-value restoration uses
 the existing generated-key checks.
 
-Not yet implemented: Oracle, MySQL/MariaDB and SQLite supports, broader
-sequence conversion, an explicit source-dialect setting for Schemas without
-product metadata, configuration of overrides, strict mode and function
-mappings in transfer jobs, and a REQUIRES_DEFAULT impact for paths that omit
-columns (none exist in transfer today).
+Transfer job settings (2026-11-28): the optional `defaultConversion` section of
+the transfer job YAML (`TransferJobConfiguration.DefaultConversion`) sets an
+explicit source product and major version (taking precedence over Schema
+metadata), `strict`, and per-column `replace`/`remove: true` decisions by target
+table and column name after name mapping. Entries that match no selected column
+are rejected. Strict mode analyzes every DEFAULT and then stops preparation with
+all open findings. Copies of the configuration (pipeline, file export, staged
+replacement, GUI settings) carry the section.
+
+Dialect supports (2026-11-28): MySQL (`MySqlDefaultExpressionSupport`;
+CURRENT_TIMESTAMP candidates use the column's fractional precision, other
+expression defaults from 8.0.13 via the 8.0.19 dialect), MariaDB (from 10.2),
+SQLite (host clock with `'localtime'` or UTC; candidates write the
+`YYYY-MM-DD HH:MM:SS[.SSS]` text sqlapp stores) and Oracle (`SYSDATE`/
+`SYSTIMESTAMP` on the server clock, `CURRENT_*`/`LOCALTIMESTAMP` in the session
+zone; `TRUNC(...)` as a date at midnight). Bit string literals (`b'1'`,
+`B'1'::"bit"`) are part of the model. `DefaultExpressionSupport.storedKind`
+lets a dialect describe product types the shared type cannot, such as MySQL
+`TIMESTAMP` (an instant). A date-only DEFAULT in a date/time column is reported
+as requiring action rather than translated as the current time. Verified with
+docker tests: MySQL 8.4 to PostgreSQL 17, SQL Server definitions to MySQL 8.4
+and Oracle, MariaDB 11.8 to SQLite, Oracle 26ai Free to PostgreSQL 17.
+
+Fixed along the way: the MySQL reader doubled the quoting of BIT defaults
+(`b'1'` was read as `b'b''1'''`); `ColumnMigration.convert` with a source
+dialect now applies target type rules to a copy detached from the source
+table, so type names are not resolved with the source dialect.
+
+Not yet implemented: broader sequence conversion, UUID and user functions,
+function mappings in transfer jobs, difference-specific policies, GUI display
+or editing of the conversion report, and a REQUIRES_DEFAULT impact for paths
+that omit columns (none exist in transfer today).
 PostgreSQL DATE candidates use `CURRENT_DATE` rather than the existing
 `getCurrentDateFunction()` text, whose semantics are the same.

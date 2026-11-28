@@ -83,4 +83,53 @@ class PostgresDefaultExpressionSupportTest {
 					.allMatch(s -> s.kind() == TemporalKind.of(type)), type.name());
 		}
 	}
+
+	/**
+	 * Planned candidates are recognized again, so equivalent stored spellings
+	 * compare equal.
+	 */
+	@Test
+	void recognizesItsOwnCandidates() {
+		for (final TemporalKind kind : TemporalKind.values()) {
+			for (final TemporalCandidate candidate : support.temporalCandidates(kind)) {
+				assertEquals(candidate.semantics(), temporal(candidate.sql()), candidate.sql());
+			}
+		}
+		assertEquals(temporal("CAST(statement_timestamp() AS date)"), temporal("(statement_timestamp())::date"));
+		assertEquals(temporal("CAST(statement_timestamp() AS timestamp)"),
+				temporal("(statement_timestamp())::timestamp without time zone"));
+		assertEquals(temporal("(statement_timestamp() AT TIME ZONE 'UTC')"),
+				temporal("(statement_timestamp() AT TIME ZONE 'UTC'::text)"));
+	}
+
+	/**
+	 * A serial nextval is the identity generator; the target keeps the identity and
+	 * no DEFAULT.
+	 */
+	@Test
+	void serialDefaultIsHandledByTheTargetIdentity() {
+		final var postgres = DialectResolver.getInstance().getDialect("PostgreSQL", 17, 0, 0);
+		final var other = new com.sqlapp.data.db.dialect.Dialect(() -> null) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public String getProductName() {
+				return "Other";
+			}
+		};
+		final Column serial = new Column("id").setDataType(DataType.INT).setIdentity(true)
+				.setDefaultValue("nextval('t_id_seq'::regclass)");
+		final var handled = com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.convert(serial, postgres,
+				serial.clone().setDefaultValue(null), other, null, null);
+		assertEquals(com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.Outcome.GENERATOR,
+				handled.outcome());
+		assertEquals(null, handled.targetExpression());
+		assertFalse(handled.isBlocking());
+		final var notIdentity = com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.convert(serial, postgres,
+				serial.clone().setDefaultValue(null).setIdentity(false), other, null, null);
+		assertTrue(notIdentity.isBlocking());
+		final var same = com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.convert(serial, postgres,
+				serial.clone().setDefaultValue(null), postgres, null, null);
+		assertEquals("nextval('t_id_seq'::regclass)", same.targetExpression());
+	}
 }

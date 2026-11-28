@@ -175,6 +175,39 @@ versions cannot consume jobs using it. No module dependency was added.
 
 See [the schema-only example](../examples/direct-transfer/schema-only.yaml).
 
+### Column defaults between database products
+
+When tables are created or changed in another product, column DEFAULT
+expressions are converted for the target before its CREATE or ALTER SQL is
+generated. The captured source Schema keeps its expressions. The source product
+comes from the captured Schema metadata. For example, SQL Server
+`getdate()` becomes `CAST(statement_timestamp() AS timestamp)` on PostgreSQL,
+`N'a''b'` becomes `'a''b'`, and a `bit` default `1` becomes `TRUE`. The same
+product keeps the source text.
+
+Approximate translations proceed with `[SCHEMA_DEFAULT_CONVERTED]` warnings
+that name the difference (time basis, evaluation point, precision). Expressions
+that are not recognized are omitted from the target SQL and reported as
+`[SCHEMA_DEFAULT_UNRESOLVED]`. Copied rows bind every column, so an omitted
+DEFAULT does not change transferred data; it affects later inserts and remains
+to be corrected or accepted before cutover. Java callers read the same results
+from `Plan.defaults()`.
+
+```yaml
+defaultConversion:              # optional
+  # sourceProductName: Microsoft SQL Server   # when the captured Schema lacks it
+  # sourceProductMajorVersion: 16
+  # strict: true                # stop on any approximate or unresolved DEFAULT
+  columns:                      # target table and column names after name mapping
+    - {table: ORDERS, column: TOTAL, replace: '0'}
+    - {table: ORDERS, column: CHECKSUM, remove: true}
+```
+
+A column entry takes precedence over conversion and requires exactly one of
+`replace` or `remove: true`. Entries that match no selected column are rejected.
+With `strict: true`, every DEFAULT is analyzed first and preparation then stops
+when any finding remains open, listing them all.
+
 ### INSERT tables without a usable primary key
 
 Direct JDBC initial copy now accepts tables without a complete NOT NULL primary

@@ -92,7 +92,9 @@ public class SqlServer2005Test {
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_1GB - 1), column.getLength());
+		// The declared length is kept; it cannot occur in SQL Server itself and keeps
+		// the length constraint when the definition comes from another database.
+		assertEquals(Long.valueOf(4001), column.getLength());
 	}
 
 	@Test
@@ -150,7 +152,9 @@ public class SqlServer2005Test {
 		column.setDataTypeName("varchar(8001)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_2GB - 1), column.getLength());
+		// The declared length is kept; it cannot occur in SQL Server itself and keeps
+		// the length constraint when the definition comes from another database.
+		assertEquals(Long.valueOf(8001), column.getLength());
 	}
 
 	@Test

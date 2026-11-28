@@ -1,6 +1,7 @@
 /* Copyright (C) 2026-2026 Tatsuo Satoh <multisqllib@gmail.com> */
 package com.sqlapp.data.db.dialect.db2.common;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.db2.Db2;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
@@ -59,12 +60,35 @@ public abstract class AbstractDb2HostDialect extends Db2 {
 		getDbDataTypes().addVarchar(maxVarcharLength());
 		getDbDataTypes().addNChar("GRAPHIC", maxGraphicLength(), type -> type.setLiteral("G'", "'"));
 		getDbDataTypes().addNVarchar("VARGRAPHIC", maxVargraphicLength(), type -> type.setLiteral("G'", "'"));
-		getDbDataTypes().addBinary("BINARY", maxCharLength(), type -> type.setLiteral("X'", "'"));
-		getDbDataTypes().addVarBinary("VARBINARY", maxVarcharLength(), type -> type.setLiteral("X'", "'"));
 		getDbDataTypes().addDecimal(type -> type.setDefaultPrecision(19).setDefaultScale(5)
 				.setMaxPrecision(maxDecimalPrecision()).setMaxScale(maxDecimalPrecision()));
 		getDbDataTypes().addNumeric(type -> type.setDefaultPrecision(19).setDefaultScale(5)
 				.setMaxPrecision(maxDecimalPrecision()).setMaxScale(maxDecimalPrecision()));
+	}
+
+	/**
+	 * Uses the native binary string types instead of the Db2 LUW FOR BIT DATA
+	 * types. FOR BIT DATA columns read from the catalog remain CHAR/VARCHAR with
+	 * CODEPAGE 0, so their DDL keeps the original spelling.
+	 */
+	@Override
+	protected void registerBinaryStringTypes() {
+		getDbDataTypes().addBinary("BINARY", maxCharLength(), type -> {
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
+			// Db2 uses length 1 when BINARY is declared without a length.
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'").setDefaultLength(1);
+		});
+		getDbDataTypes().addVarBinary("VARBINARY", maxVarcharLength(), type -> {
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
+			// A missing length uses the maximum so data of unknown size is not truncated.
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'00'").setDefaultLength(maxVarcharLength());
+		});
+		// Deprecated: resolves to VARBINARY up to the VARBINARY maximum, then BLOB.
+		getDbDataTypes().addLongVarBinary("LONG VARCHAR FOR BIT DATA", maxVarcharLength(), type -> {
+			type.setDefaultLength(maxVarcharLength()).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'00'")
+					.setDeprecated(getDbDataTypes().getDbTypeStrict(com.sqlapp.data.db.datatype.DataType.VARBINARY));
+		});
 	}
 
 	@Override

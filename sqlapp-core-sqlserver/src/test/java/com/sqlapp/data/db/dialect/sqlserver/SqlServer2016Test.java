@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.util.CommonUtils;
 
 public class SqlServer2016Test {
 
@@ -73,7 +72,9 @@ public class SqlServer2016Test {
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
-		assertEquals(Long.valueOf(CommonUtils.LEN_1GB - 1), column.getLength());
+		// The declared length is kept; it cannot occur in SQL Server itself and keeps
+		// the length constraint when the definition comes from another database.
+		assertEquals(Long.valueOf(4001), column.getLength());
 	}
 
 }
