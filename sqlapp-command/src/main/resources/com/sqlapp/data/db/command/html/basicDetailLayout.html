@@ -62,7 +62,7 @@ function activateTabs(anchor, hash){
 $(window).on('hashchange', function(){
 	$('.tabs').each(function(){
 		var tabPane=$(this);
-		var nav=tab.children(".nav");
+		var nav=tabPane.children(".nav");
 		var tabContent=tabPane.next(".tab-content");
 		if (!(tabContent[0])){
 			return;

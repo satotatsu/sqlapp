@@ -59,11 +59,13 @@ final class TransferSchemaOnlyPreparation {
 		}
 		final var base = TransferSchemaPreparation.schemaOnly(target, projection == null ? schema : projection.schema(),
 				tasks, job.fingerprint(), job.configuration().compatibilityPolicy(), job.configuration().schemaMode(),
-				job.configuration().effectiveGeneratedKeyColumn());
+				job.configuration().effectiveGeneratedKeyColumn(), job.configuration().defaultConversion());
 		warnings.addAll(base.warnings());
 		final var plan = projection == null ? base
-				: TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(base.fingerprint(),
-						base.statements(), warnings, job.configuration().schemaMode()), base.tables());
+				: TransferSchemaPreparation.withDefaults(
+						TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(base.fingerprint(),
+								base.statements(), warnings, job.configuration().schemaMode()), base.tables()),
+						base.defaults());
 		final var io = new TransferJobConfigurationIO();
 		if (!io.read(job.file()).fingerprint().equals(job.fingerprint()))
 			throw new IllegalArgumentException("Transfer definition changed during schema-only preparation.");

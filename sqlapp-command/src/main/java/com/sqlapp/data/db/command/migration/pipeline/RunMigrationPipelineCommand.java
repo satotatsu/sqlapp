@@ -359,7 +359,8 @@ public class RunMigrationPipelineCommand extends AbstractDataSourceCommand {
 		final var derived = new TransferJobConfiguration(job.formatVersion(), job.source(), job.target(), job.tables(),
 				job.schemaMode(), job.sourceSchema(), job.targetSchema(), mappingFile, job.chunkSize(), job.verify(),
 				job.dataMode(), job.files(), job.compatibilityPolicy(), job.allowDestructiveSchemaChanges(),
-				job.generatedKeyColumn(), job.insertMethod(), job.targetPreparation(), job.generatedKeyCounters());
+				job.generatedKeyColumn(), job.insertMethod(), job.targetPreparation(), job.generatedKeyCounters(),
+				job.defaultConversion());
 		final var written = io.write(directory.resolve("publish.yaml"), io.format(derived), null);
 		stepNote = releaseRetainedStage();
 		final Outcome outcome = transfer(written.file(), written.fingerprint(), getDataSource(), targetDataSource,

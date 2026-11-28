@@ -194,7 +194,7 @@ public final class TransferFileExportService {
 					configuration.chunkSize(), configuration.verify(), configuration.dataMode(), configuration.files(),
 					configuration.compatibilityPolicy(), configuration.allowDestructiveSchemaChanges(),
 					configuration.generatedKeyColumn(), configuration.insertMethod(), configuration.targetPreparation(),
-					configuration.generatedKeyCounters());
+					configuration.generatedKeyCounters(), configuration.defaultConversion());
 			capturedText = TransferNameMappingIO.pinDataJob(io.format(captured), mapping);
 		}
 		var captured = io.write(directory.resolve("transfer.yaml"), capturedText, null);

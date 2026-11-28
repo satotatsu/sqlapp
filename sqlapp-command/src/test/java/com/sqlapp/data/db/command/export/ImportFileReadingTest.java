@@ -37,8 +37,8 @@ class ImportFileReadingTest {
 		final var calls = new AtomicInteger();
 		final var converter = new com.sqlapp.util.TomlConverter() {
 			@Override
-			public <T> T fromJsonString(final java.io.File input, final Class<T> type) {
-				final T document = super.fromJsonString(input, type);
+			public <T> T readRows(final java.io.File input, final Class<T> type) {
+				final T document = super.readRows(input, type);
 				calls.incrementAndGet();
 				assertInstanceOf(java.util.Map.class, document);
 				return type.cast(java.util.Map.of("items", List.of(java.util.Map.of("ID", 42))));

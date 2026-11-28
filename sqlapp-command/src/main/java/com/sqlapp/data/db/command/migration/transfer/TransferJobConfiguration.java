@@ -14,7 +14,87 @@ public record TransferJobConfiguration(int formatVersion, String source, String 
 		Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
 		@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT) Boolean allowDestructiveSchemaChanges,
 		String generatedKeyColumn, com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod,
-		TargetPreparation targetPreparation, GeneratedKeyCounterMode generatedKeyCounters) {
+		TargetPreparation targetPreparation, GeneratedKeyCounterMode generatedKeyCounters,
+		DefaultConversion defaultConversion) {
+
+	/**
+	 * Optional control of column DEFAULT conversion in target Schema SQL.
+	 *
+	 * @param sourceProductName         product that produced the source Schema;
+	 *                                  overrides the Schema metadata, for example
+	 *                                  for hand-written XML without it
+	 * @param sourceProductMajorVersion major version of that product
+	 * @param strict                    when {@code true}, any approximate or
+	 *                                  unresolved conversion stops preparation
+	 *                                  after all defaults are analyzed
+	 * @param columns                   per-column decisions, by target table and
+	 *                                  column name after name mapping
+	 */
+	@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+	public record DefaultConversion(String sourceProductName, Integer sourceProductMajorVersion, Boolean strict,
+			List<ColumnDefault> columns) {
+		public DefaultConversion {
+			if (sourceProductName != null
+					&& (sourceProductName.isBlank() || !sourceProductName.equals(sourceProductName.strip())))
+				throw new IllegalArgumentException(
+						"defaultConversion.sourceProductName must be a product name without surrounding whitespace.");
+			if (sourceProductMajorVersion != null && (sourceProductName == null || sourceProductMajorVersion < 0))
+				throw new IllegalArgumentException(
+						"defaultConversion.sourceProductMajorVersion requires sourceProductName and must not be negative.");
+			columns = columns == null ? List.of() : List.copyOf(columns);
+			final var seen = new java.util.HashSet<List<String>>();
+			for (final var column : columns)
+				if (!seen.add(List.of(column.table(), column.column())))
+					throw new IllegalArgumentException("defaultConversion.columns names " + column.table() + "."
+							+ column.column() + " more than once.");
+		}
+
+		/** Whether strict conversion was requested. */
+		public boolean strictConversion() {
+			return Boolean.TRUE.equals(strict);
+		}
+	}
+
+	/**
+	 * Explicit DEFAULT for one target column: either {@code replace} with target
+	 * SQL or {@code remove: true}. It takes precedence over conversion.
+	 */
+	public record ColumnDefault(String table, String column, String replace, Boolean remove) {
+		public ColumnDefault {
+			if (table == null || table.isBlank() || column == null || column.isBlank())
+				throw new IllegalArgumentException("defaultConversion.columns entries require table and column.");
+			final boolean removal = Boolean.TRUE.equals(remove);
+			if (remove != null && !removal)
+				throw new IllegalArgumentException(
+						"defaultConversion.columns remove must be true; omit it to replace the DEFAULT.");
+			if (removal == (replace != null))
+				throw new IllegalArgumentException("defaultConversion.columns entry " + table + "." + column
+						+ " requires exactly one of replace or remove: true.");
+			if (replace != null && replace.isBlank())
+				throw new IllegalArgumentException("defaultConversion.columns entry " + table + "." + column
+						+ " has a blank replace; use remove: true to omit the DEFAULT.");
+		}
+
+		/** The corresponding conversion override. */
+		public com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.Override toOverride() {
+			return replace != null
+					? new com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.Override.Replace(replace)
+					: new com.sqlapp.data.db.dialect.defaultvalue.DefaultValueMigration.Override.Remove();
+		}
+	}
+
+	/** Retains the constructor without DEFAULT conversion settings. */
+	public TransferJobConfiguration(int formatVersion, String source, String target, List<String> tables,
+			SchemaMode schemaMode, String sourceSchema, String targetSchema, String mappingFile, Integer chunkSize,
+			Boolean verify, DataMode dataMode, FileTransfer files, CompatibilityPolicy compatibilityPolicy,
+			Boolean allowDestructiveSchemaChanges, String generatedKeyColumn,
+			com.sqlapp.jdbc.bulk.BulkInsertMethod insertMethod, TargetPreparation targetPreparation,
+			GeneratedKeyCounterMode generatedKeyCounters) {
+		this(formatVersion, source, target, tables, schemaMode, sourceSchema, targetSchema, mappingFile, chunkSize,
+				verify, dataMode, files, compatibilityPolicy, allowDestructiveSchemaChanges, generatedKeyColumn,
+				insertMethod, targetPreparation, generatedKeyCounters, null);
+	}
+
 	public enum TargetPreparation {
 		REQUIRE_EMPTY, STAGED_REPLACE
 	}

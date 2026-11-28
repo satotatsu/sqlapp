@@ -477,7 +477,7 @@ public final class TransferFileImportService {
 		var stageCopy = BulkMigrationJobPlanner.plan(stageTasks, original.getLifecycle());
 		var stageSchema = TransferSchemaPreparation.plan(target, schema, stageCopy,
 				TransferJobConfiguration.SchemaMode.CREATE_MISSING, loaded.configuration().compatibilityPolicy(),
-				projection, null, false, true);
+				projection, null, false, true, loaded.configuration().defaultConversion());
 		if (stageSchema.tables().stream()
 				.anyMatch(table -> table.action() != TransferSchemaPreparation.TableAction.CREATE))
 			throw new TransferSchemaPreparation.ValidationException(
@@ -792,7 +792,8 @@ public final class TransferFileImportService {
 			BulkMigrationJobPlan plan) throws Exception {
 		var schema = TransferSchemaPreparation.plan(target, loaded.schema(), plan, loaded.configuration().schemaMode(),
 				loaded.configuration().compatibilityPolicy(), loaded.projection(),
-				loaded.configuration().effectiveGeneratedKeyColumn(), staged(loaded));
+				loaded.configuration().effectiveGeneratedKeyColumn(), staged(loaded), false,
+				loaded.configuration().defaultConversion());
 		var warnings = new ArrayList<>(schema.warnings());
 		// Counter state is independent of table creation and row-copy verification.
 		for (String check : TransferGeneratedKeyChecks.required(plan, TransferJobPreparationService.dialect(target),
@@ -806,8 +807,10 @@ public final class TransferFileImportService {
 						"[FILE_FULL_SCAN_INSERT] Table " + task.getEffectiveSourceTable().getName()
 								+ " uses non-resumable INSERT without portable numeric-key ordering. Duplicates are preserved; verification compares unordered row hashes including multiplicity. Hash-sort chunk positions are not file row positions. MERGE, resume and key-based repair are unavailable.");
 		return warnings.equals(schema.warnings()) ? schema
-				: TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(schema.fingerprint(),
-						schema.statements(), warnings, loaded.configuration().schemaMode()), schema.tables());
+				: TransferSchemaPreparation.withDefaults(
+						TransferSchemaPreparation.withTables(TransferSchemaPreparation.result(schema.fingerprint(),
+								schema.statements(), warnings, loaded.configuration().schemaMode()), schema.tables()),
+						schema.defaults());
 	}
 
 	private static void writeAudit(Outcome outcome) throws java.io.IOException {
