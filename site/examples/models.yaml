@@ -1,0 +1,21 @@
+models:
+  - name: raw_order
+    query: SELECT * FROM (VALUES ('alice', 10), ('alice', 20), ('bob', 7)) AS v(customer, amount)
+  - name: customer_sales
+    materialized: table
+    query: |
+      SELECT upper(customer) AS customer, sum(amount) AS total
+      FROM /*$ref('raw_order')*/raw_order
+      GROUP BY customer
+unitTests:
+  - name: sums-customer-orders
+    model: customer_sales
+    given:
+      raw_order:
+        columns: [customer, amount]
+        rows:
+          - [alice, 10]
+          - [alice, 20]
+    expect:
+      rows:
+        - [ALICE, 30]

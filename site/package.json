@@ -1,0 +1,18 @@
+{
+  "name": "sqlapp-documentation",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "prepare:docs": "node scripts/prepare.mjs",
+    "dev": "npm run prepare:docs && vitepress dev .generated",
+    "build": "npm run prepare:docs && vitepress build .generated && node scripts/check-output.mjs",
+    "preview": "vitepress preview .generated",
+    "translations": "node scripts/translations.mjs",
+    "test": "node --test scripts/translations.test.mjs scripts/check-output.test.mjs scripts/demo-tabs.test.mjs"
+  },
+  "devDependencies": {
+    "mermaid": "12.4.0",
+    "vitepress": "1.6.4"
+  }
+}

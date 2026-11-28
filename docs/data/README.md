@@ -12,6 +12,9 @@
 | Process related rows as a hierarchy | [JDBC tree data sessions](jdbc-tree-data-session.md) |
 | Port hierarchical COBOL processing to Java | [COBOL migration example](jdbc-tree-data-cobol-migration-example.md) |
 | Export or convert saved data files with Gradle | [Custom tasks](../gradle-plugin/custom-tasks-and-migrations.md) |
+| Generate MySQL MERGE (`ON DUPLICATE KEY UPDATE`) SQL | [MySQL MERGE](mysql-merge.md) |
+| Check MySQL TEXT type capacities | [MySQL TEXT types](mysql-text-types.md) |
+| Map MySQL DATETIME and TIMESTAMP precision | [MySQL TIMESTAMP](mysql-timestamp.md) |
 
 For resumable transfers, migration jobs, verification, repair, and snapshots,
 see [data movement and migration](../migration/README.md).

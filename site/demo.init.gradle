@@ -1,0 +1,36 @@
+// Optional site-only demo. Ordinary Java builds do not apply this script.
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    if (root.findProject(':sqlapp-command') == null) return
+    def command = root.project(':sqlapp-command')
+    def dialect = root.project(':sqlapp-core-duckdb')
+    // The public dialect intentionally does not export a driver. Reuse its
+    // declared test driver version for this isolated, opt-in embedded example.
+    def driver = root.configurations.create('siteDuckDbDriver')
+    driver.canBeConsumed = false
+    driver.canBeResolved = true
+    def driverDependency = dialect.configurations.testRuntimeClasspath.allDependencies.find {
+        it.group == 'org.duckdb' && it.name == 'duckdb_jdbc'
+    }
+    if (driverDependency == null) throw new GradleException('DuckDB demo requires the module test driver dependency')
+    root.dependencies.add(driver.name, driverDependency.copy())
+    def demoClasspath = command.sourceSets.main.runtimeClasspath + dialect.sourceSets.main.runtimeClasspath + driver
+    def compile = root.tasks.register('compileSiteDataEngineeringDemo', JavaCompile) {
+        dependsOn(command.tasks.named('classes'), dialect.tasks.named('classes'))
+        source(root.file('site/examples/DataEngineeringDemo.java'))
+        classpath = demoClasspath
+        destinationDirectory = root.layout.buildDirectory.dir('classes/site-demo')
+        options.encoding = 'UTF-8'
+        options.release = 25
+    }
+    root.tasks.register('demoSiteDataEngineering', JavaExec) {
+        group = 'documentation'
+        description = 'Run SQL model transformation and unit tests on embedded DuckDB.'
+        dependsOn(compile)
+        classpath = demoClasspath + root.files(compile.flatMap { it.destinationDirectory })
+        mainClass = 'DataEngineeringDemo'
+        jvmArgs '--enable-native-access=ALL-UNNAMED'
+        args(root.file('site/examples/models.yaml').absolutePath,
+                root.layout.buildDirectory.dir('docs/site-engineering').get().asFile.absolutePath)
+    }
+}

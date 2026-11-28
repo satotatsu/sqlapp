@@ -338,9 +338,37 @@ Server 2022 are converted, the table is created on PostgreSQL 17, inserted
 values are checked, statement-start evaluation is checked within one
 transaction, and the stored PostgreSQL defaults are recognized again.
 
-Not yet implemented: Oracle, MySQL/MariaDB and SQLite supports, the serial to
-identity conversion and next-value restoration, transfer/command integration
-(`TransferSchemaPreparation` still copies defaults verbatim), configuration of
-overrides and function mappings, report output, and transfer-impact decisions.
+Reuse beyond defaults: tokens keep their source positions and comments are
+skipped, `DefaultExpressionTokens.replace` rewrites only recognized ranges,
+`DefaultExpressionSupport.recognize` accepts a token range with no column, and
+`TemporalTranslator` selects a target expression by expected kind (or the
+source kind) without a column. These are the extension points for CHECK
+constraints, computed columns and, together with AI-assisted logic migration,
+routine and trigger bodies. Finding calls inside longer expressions and
+mappings for non-temporal functions with argument rewriting are not
+implemented.
+
+Transfer integration (2026-11-28): `TransferSchemaPreparation` converts the
+defaults of tables it creates or changes, using the source dialect resolved
+from the Schema product metadata, before generating target SQL. The source
+Schema keeps its expressions. `Plan.defaults()` holds a
+`TransferDefaultConversion` per column (outcome, expressions, differences,
+verification, transfer impact, diagnostics); warnings carry the same findings
+prefixed `[SCHEMA_DEFAULT_CONVERTED]` or `[SCHEMA_DEFAULT_UNRESOLVED]`, and
+`TransferSchemaChangeChecks.openDefaultCount` counts open ones. Bulk copies map
+every column one to one and bind every value, so transfer impact is
+INDEPENDENT for copied tables and NOT_APPLICABLE for schema-only preparation;
+open defaults are omitted from the target SQL and remain cutover obligations.
+APPLY_DIFFERENCES keeps an existing target DEFAULT whose recognized meaning
+equals the planned one, so normalized spellings are not reported as changes.
+A PostgreSQL serial `nextval` default whose column stays an identity is
+reported as GENERATOR (handled by the identity); next-value restoration uses
+the existing generated-key checks.
+
+Not yet implemented: Oracle, MySQL/MariaDB and SQLite supports, broader
+sequence conversion, an explicit source-dialect setting for Schemas without
+product metadata, configuration of overrides, strict mode and function
+mappings in transfer jobs, and a REQUIRES_DEFAULT impact for paths that omit
+columns (none exist in transfer today).
 PostgreSQL DATE candidates use `CURRENT_DATE` rather than the existing
 `getCurrentDateFunction()` text, whose semantics are the same.

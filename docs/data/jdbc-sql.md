@@ -44,6 +44,16 @@ executed, then releases values no longer referenced by its parameter template.
 The final template values are released on completion or failure. SQL is still
 evaluated once; stream cleanup does not require rebuilding it for each row.
 
+`JdbcBatchIterateHander` and `StatementHolder` reuse prepared SQL and refresh
+its bind values. If `reEval()` returns false (for example, an IN-list changes
+length), they throw `SQLException` before binding or executing that input.
+They do not flush pending batches, switch to individual updates, or change
+commit boundaries to accommodate it. Fixed-shape inputs retain JDBC batching
+and statement reuse. For dynamic SQL, use `JdbcBatchUpdateHandler` with
+`setEvaluateSqlPerRow(true)` and manage its transaction in the caller.
+After an execution failure, close the failed handler and apply the caller's
+rollback policy; earlier completed batches may already have executed or committed.
+
 `SqlRegistry` expands `/*include 'sqlId'*/` using the registry that supplied the
 template. For a directly parsed template, call `node.setSqlRegistry(registry)`.
 Conditional templates use `/*if condition*/`, optional `-- else if condition`

@@ -8,7 +8,7 @@ demos use fictional customer/order data and require no external database.
 
 ## Run once and open the results
 
-With Java 21, run from the repository root:
+With Java 25, run from the repository root:
 
 ```shell
 ./gradlew --init-script docs/examples/offline-html/demo.init.gradle demoSqlapp

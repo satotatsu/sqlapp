@@ -26,6 +26,17 @@
 | Review HSQLDB metadata and DDL recreation | [HSQLDB dialect coverage](hsqldb-dialect-parity.md) |
 | Validate Oracle assessment against a source database | [Oracle assessment verification](oracle-assessment-verification.md) |
 | Review or rerun JDBC tree real-engine tests | [JDBC tree verification](jdbc-tree-data-real-db-verification.md) |
+| Track open migration and review items | [Migration TODO](TODO.md) |
+| Review SQL splitter quoting and session policy | [SQL splitter review](sql-splitter-review.md) |
+| Review shared utility mutation and conversion rules | [Shared utility behavior](utilities.md) |
+| Review the default value migration proposal | [Default value migration](default-value-migration.md) |
+| Review Access complex column design and pending verification | [Access complex columns](access-complex-columns.md) |
+| Review Db2 LUW metadata and DDL recreation | [Db2 dialect coverage](db2-dialect-parity.md) |
+| Check Db2 dialect completion gates | [Db2 dialect completion](db2-dialect-completion.md) |
+| Review the Db2 / PostgreSQL parity audit | [Db2 / PostgreSQL audit](db2-postgres-final-audit.md) |
+| Review MySQL SQL generation regression fixes | [MySQL SQL generation fixes](mysql-independent-sql-fixes.md) and [stage-one fixes](mysql-stage-one-fixes.md) |
+| Review MySQL bulk UPSERT match keys | [MySQL bulk UPSERT match keys](mysql-bulk-upsert-match-keys.md) |
+| Review MySQL LOAD DATA safety | [MySQL LOAD DATA safety](mysql-load-data-safety.md) |
 
 Follow the repository [contribution rules](../../CONTRIBUTING.md).
 Consult the [compatibility matrix](../compatibility.md) for database version
